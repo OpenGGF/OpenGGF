@@ -80,22 +80,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests report native failure row",
                 ReportsNativeFailureRow));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests correlate deferred begin callbacks to one release",
-                CorrelatesDeferredBeginCallbacksToOneRelease));
+                "S1CompleteRunAudioReferenceCaptureTests correlate deferred begin callbacks to one consume",
+                CorrelatesDeferredBeginCallbacksToOneConsume));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests reject corrupt deferred begin identity and release",
-                RejectsCorruptDeferredBeginIdentityAndRelease));
+                "S1CompleteRunAudioReferenceCaptureTests reject corrupt deferred begin identity and consume",
+                RejectsCorruptDeferredBeginIdentityAndConsume));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests roll back deferred begin publication",
                 RollsBackDeferredBeginPublication));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests preserve frame order across deferred release",
-                PreservesFrameOrderAcrossDeferredRelease));
+                "S1CompleteRunAudioReferenceCaptureTests preserve frame order across deferred consume",
+                PreservesFrameOrderAcrossDeferredConsume));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests accept variable deferred observation counts",
                 AcceptsVariableDeferredObservationCounts));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests materialize one deferred begin after row 8775 wait service",
+                "S1CompleteRunAudioReferenceCaptureTests reserve again after deferred child end",
+                ReservesAgainAfterDeferredChildEnd));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
         }
@@ -156,6 +159,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             JObject directParentRetry = null;
             ushort retryToken=0;
             ushort deferredHookToken=0;
+            ushort consumeHookToken=0;
             foreach (GpgxAudioObserverAdapter.ServiceHook hook
                 in manifest.NativeServiceHooks)
             {
@@ -164,13 +168,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if(hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==11
                     &&hook.ExpectedActiveKind==6)
                     deferredHookToken=hook.HookToken;
+                if(hook.Cpu==2&&hook.Pc==0x071B82&&hook.Action==12
+                    &&hook.ExpectedActiveKind==6)
+                    consumeHookToken=hook.HookToken;
             }
             uint waitBeginOrdinal=uint.MaxValue;
             uint waitEndOrdinal=uint.MaxValue;
             uint priorMusicEndOrdinal=uint.MaxValue;
-            uint deferredBeginOrdinal=uint.MaxValue;
+            uint consumeBeginOrdinal=uint.MaxValue;
+            uint childObservationOrdinal=uint.MaxValue;
+            uint childEndOrdinal=uint.MaxValue;
             ushort waitServiceToken=0;
-            ushort releasedServiceToken=0;
+            ushort consumedServiceToken=0;
             int deferredBegins=0;
             var deferredEvidence=new List<JObject>();
             foreach (string line in output.ToString().Split(new[]{'\n'},
@@ -181,7 +190,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==2
                     &&(int)record["pc"]==0x071C4C
-                    &&(int)record["service_kind"]==4)
+                    &&(int)record["service_kind"]==4
+                    &&priorMusicEndOrdinal==uint.MaxValue)
                     priorMusicEndOrdinal=(uint)record["ordinal"];
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==1
@@ -211,18 +221,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==1
-                    &&(int)record["pc"]==0x071B4C
+                    &&(int)record["pc"]==0x071B82
                     &&(int)record["service_kind"]==4)
                 {
                     deferredBegins++;
-                    deferredBeginOrdinal=(uint)record["ordinal"];
-                    releasedServiceToken=(ushort)record["service_token"];
-                    AssertEx.Equal(0,(int)record["parent_token"]);
-                    AssertEx.Equal(0,(int)record["depth"]);
+                    consumeBeginOrdinal=(uint)record["ordinal"];
+                    consumedServiceToken=(ushort)record["service_token"];
+                    AssertEx.Equal(waitServiceToken,(ushort)record["parent_token"]);
+                    AssertEx.Equal(1,(int)record["depth"]);
                     AssertEx.Equal(2,(int)record["source_cpu"]);
-                    AssertEx.Equal(deferredHookToken,
+                    AssertEx.Equal(consumeHookToken,
                         (ushort)record["subject"]);
                 }
+                if((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==10
+                    &&(int)record["pc"]==0x071BB2)
+                {
+                    childObservationOrdinal=(uint)record["ordinal"];
+                    AssertEx.Equal(consumedServiceToken,
+                        (ushort)record["service_token"]);
+                    AssertEx.Equal(waitServiceToken,
+                        (ushort)record["parent_token"]);
+                    AssertEx.Equal(4,(int)record["service_kind"]);
+                    AssertEx.Equal(1,(int)record["depth"]);
+                }
+                if((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==2
+                    &&(int)record["pc"]==0x071C4C
+                    &&(int)record["service_kind"]==4
+                    &&(ushort)record["parent_token"]==waitServiceToken)
+                    childEndOrdinal=(uint)record["ordinal"];
                 if((string)record["type"]=="managed_hook_evidence"
                     &&(int)record["row"]==8775
                     &&(int)record["pc"]==0x071B4C)
@@ -236,7 +264,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(0,(int)directParentRetry["depth"]);
             AssertEx.Equal((uint)12,priorMusicEndOrdinal);
             AssertEx.Equal((uint)13,waitBeginOrdinal);
-            AssertEx.Equal((uint)20,waitEndOrdinal);
             AssertEx.Equal(3,deferredEvidence.Count);
             var markerOrdinals=new List<uint>();
             for(int i=0;i<deferredEvidence.Count;i++)
@@ -272,18 +299,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     (uint)deferredEvidence[i]["deferred_a7"]);
                 AssertEx.Equal((uint)0x00000B64,
                     (uint)deferredEvidence[i]["deferred_return_pc"]);
-                AssertEx.Equal(waitEndOrdinal,
-                    (uint)deferredEvidence[i]["blocker_end_ordinal"]);
-                AssertEx.Equal(releasedServiceToken,
-                    (ushort)deferredEvidence[i]["released_service_token"]);
-                AssertEx.Equal(deferredBeginOrdinal,
-                    (uint)deferredEvidence[i]["released_begin_ordinal"]);
+                AssertEx.Equal(consumeHookToken,
+                    (ushort)deferredEvidence[i]["consume_hook_token"]);
+                AssertEx.Equal((uint)0x071B82,
+                    (uint)deferredEvidence[i]["consume_pc"]);
+                AssertEx.Equal(consumedServiceToken,
+                    (ushort)deferredEvidence[i]["consumed_service_token"]);
+                AssertEx.Equal(consumeBeginOrdinal,
+                    (uint)deferredEvidence[i]["consume_begin_ordinal"]);
             }
             AssertEx.Equal(1,deferredBegins);
-            AssertEx.Equal((uint)21,deferredBeginOrdinal);
-            AssertEx.Equal(waitEndOrdinal+1,deferredBeginOrdinal);
-            AssertEx.Equal(true,releasedServiceToken!=0);
-            AssertEx.Equal(false,releasedServiceToken==waitServiceToken);
+            AssertEx.Equal(true,consumeBeginOrdinal<childObservationOrdinal
+                &&childObservationOrdinal<childEndOrdinal
+                &&childEndOrdinal<waitEndOrdinal);
+            AssertEx.Equal(true,consumedServiceToken!=0);
+            AssertEx.Equal(false,consumedServiceToken==waitServiceToken);
         }
 
         private static string Sha256(string path)
@@ -307,8 +337,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertHook(manifest, 0x001394, "11c0f00b", "QueueSound2", "REQUEST_QUEUE_1");
             AssertHook(manifest, 0x00139A, "11c0f00c", "QueueSound3", "REQUEST_QUEUE_2");
             AssertHook(manifest, 0x071B4C, "33fc010000a11100", "UpdateMusic", "SERVICE_BEGIN");
+            AssertHook(manifest, 0x071B82, "4df900fff000", ".driverinput",
+                "DEFERRED_SERVICE_CONSUME");
             AssertObservationKinds(manifest, 0x071BB2, 2, 3, 4);
-            AssertDeferredBeginHook(manifest);
+            AssertDeferredBeginHooks(manifest);
             AssertHook(manifest, 0x071FD2, "0c070088", "PlaySoundID", "BGM_CANDIDATE");
             AssertHook(manifest, 0x072098, "08d10007", ".bgm_fmloadloop", "LOAD_FM_DAC");
             AssertHook(manifest, 0x072126, "08d10007", ".bgm_psgloadloop", "LOAD_PSG");
@@ -353,25 +385,35 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertNative(manifest, 0x00138C, "4e75", "DACDriverLoad", "POP_END_AT_PC");
         }
 
-        private static void AssertDeferredBeginHook(
+        private static void AssertDeferredBeginHooks(
             S1CompleteRunAudioReferenceCapture.Manifest manifest)
         {
-            int deferred=0;var ordinary=new List<byte>();
+            int reserve=0,consume=0;var ordinary=new List<byte>();
             foreach(GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
             {
-                if(hook.Cpu!=2||hook.Pc!=0x071B4C)continue;
-                if(hook.Action==11)
+                if(hook.Cpu!=2)continue;
+                if(hook.Pc==0x071B4C&&hook.Action==11)
                 {
-                    deferred++;
+                    reserve++;
                     AssertEx.Equal((byte)4,hook.ServiceKindId);
                     AssertEx.Equal((byte)6,hook.ExpectedActiveKind);
                     AssertEx.Equal((ushort)0,hook.RangeCount);
                     AssertEx.Equal((ulong)0,hook.Reserved);
                 }
-                else if(hook.Action==1)ordinary.Add(hook.ExpectedActiveKind);
+                else if(hook.Pc==0x071B82&&hook.Action==12)
+                {
+                    consume++;
+                    AssertEx.Equal((byte)4,hook.ServiceKindId);
+                    AssertEx.Equal((byte)6,hook.ExpectedActiveKind);
+                    AssertEx.Equal((ushort)0,hook.RangeCount);
+                    AssertEx.Equal((ulong)0,hook.Reserved);
+                }
+                else if(hook.Pc==0x071B4C&&hook.Action==1)
+                    ordinary.Add(hook.ExpectedActiveKind);
             }
             ordinary.Sort();
-            AssertEx.Equal(1,deferred);
+            AssertEx.Equal(1,reserve);
+            AssertEx.Equal(1,consume);
             AssertEx.Equal(3,ordinary.Count);
             AssertEx.Equal((byte)0,ordinary[0]);
             AssertEx.Equal((byte)2,ordinary[1]);
@@ -381,7 +423,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal((byte)3,blocker.Flags);
         }
 
-        private static void CorrelatesDeferredBeginCallbacksToOneRelease()
+        private static void CorrelatesDeferredBeginCallbacksToOneConsume()
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
@@ -394,9 +436,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Visit(current,api,0x071B4C);
                 Visit(current,api,0x071B4C);
                 Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071BB2);
+                api.EmitChip(3,0,0x2A,0x071BB6);
+                Visit(current,api,0x071C4C);
                 api.VisitZ80(0x0077,current);
                 api.VisitZ80(0x00AC,current);
-                Visit(current,api,0x071C4C);
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -420,18 +465,34 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(true,(bool)chain[0]["terminal"]);
                 AssertEx.Equal((uint)0xFFFDB2,(uint)evidence["deferred_a7"]);
                 AssertEx.Equal((uint)0x00000B64,(uint)evidence["deferred_return_pc"]);
-                AssertEx.Equal(true,(ushort)evidence["released_service_token"]!=0);
+                AssertEx.Equal((uint)0x071B82,(uint)evidence["consume_pc"]);
+                AssertEx.Equal(true,(ushort)evidence["consumed_service_token"]!=0);
             }
             List<JObject> native=NativeRecords(raw,860);
-            int end=FindNative(native,value=>(int)value["kind"]==2
+            int consume=FindNative(native,value=>(int)value["kind"]==1
+                &&(int)value["service_kind"]==4&&(uint)value["pc"]==0x071B82);
+            ushort blocker=(ushort)native[consume]["parent_token"];
+            ushort child=(ushort)native[consume]["service_token"];
+            AssertEx.Equal((ushort)2,blocker);
+            AssertEx.Equal(1,(int)native[consume]["depth"]);
+            int observation=FindNative(native,value=>(int)value["kind"]==10
+                &&(uint)value["pc"]==0x071BB2);
+            int chip=FindNative(native,value=>(int)value["kind"]==3
+                &&(uint)value["pc"]==0x071BB6);
+            int childEnd=FindNative(native,value=>(int)value["kind"]==2
+                &&(int)value["service_kind"]==4&&(uint)value["pc"]==0x071C4C
+                &&(ushort)value["parent_token"]==blocker);
+            int blockerEnd=FindNative(native,value=>(int)value["kind"]==2
                 &&(int)value["service_kind"]==6);
-            int released=FindNative(native,value=>(int)value["kind"]==1
-                &&(int)value["service_kind"]==4&&(uint)value["pc"]==0x071B4C
-                &&(uint)value["ordinal"]>(uint)native[end]["ordinal"]);
-            AssertEx.Equal(end+1,released);
+            AssertEx.Equal(true,consume<observation&&observation<chip
+                &&chip<childEnd&&childEnd<blockerEnd);
+            AssertEx.Equal(child,(ushort)native[observation]["service_token"]);
+            AssertEx.Equal(child,(ushort)native[chip]["service_token"]);
+            AssertEx.Equal(blocker,(ushort)native[observation]["parent_token"]);
+            AssertEx.Equal(blocker,(ushort)native[chip]["parent_token"]);
         }
 
-        private static void RejectsCorruptDeferredBeginIdentityAndRelease()
+        private static void RejectsCorruptDeferredBeginIdentityAndConsume()
         {
             AssertDeferredCaptureFails((current,api,index)=>
             {
@@ -441,6 +502,55 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 if(index==1)current.SetU32(0xFDB2,0x00000B68);
             },"identity");
+            AssertDeferredConsumeFails((current,api)=>
+                current.SetCpuRegister("A7",0x00FFFDB6),"identity");
+            AssertDeferredConsumeFails((current,api)=>
+                current.SetU32(0xFDB2,0x00000B68),"identity");
+            AssertDeferredConsumeEventFails(api=>api.RemoveFirst(value=>
+                value.Kind==1&&value.Pc==0x071B82),"managed");
+            AssertDeferredConsumeEventFails(api=>api.DuplicateLast(),"invalid");
+        }
+
+        private static void AssertDeferredConsumeEventFails(
+            Action<FakeTraceApi> corrupt,string message)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                corrupt(api);
+            });
+            using(var session=CreateSession(host,api,new StringWriter()))
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),message);
+        }
+
+        private static void AssertDeferredConsumeFails(
+            Action<FakeS1Host,FakeTraceApi> beforeConsume,string message)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                beforeConsume(current,api);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int baselineLength=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),message);
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+            }
         }
 
         private static void AssertDeferredCaptureFails(
@@ -484,8 +594,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     Visit(current,api,0x071B4C);
                     return;
                 }
-                api.VisitZ80(0x0077,current);
-                api.MutateLast(value=>{value.ParentToken++;return value;});
+                Visit(current,api,0x071B82);
+                api.MutateLast(value=>{value.ParentToken=0;return value;});
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -500,7 +610,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void PreservesFrameOrderAcrossDeferredRelease()
+        private static void PreservesFrameOrderAcrossDeferredConsume()
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
@@ -514,9 +624,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     return;
                 }
                 Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
                 api.VisitZ80(0x0077,current);
                 api.VisitZ80(0x00AC,current);
-                Visit(current,api,0x071C4C);
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -554,6 +665,42 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertDeferredObservationCount(4);
         }
 
+        private static void ReservesAgainAfterDeferredChildEnd()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    Visit(current,api,0x071C4C);
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                AssertEx.Equal(1,session.PendingDeferredObservationCountForTesting);
+                session.CaptureFrame(861,host.Advance);
+                session.Complete(862);
+            }
+            AssertEx.Equal(2,CountNativeMarkerValue(output.ToString(),4));
+            AssertEx.Equal(2,Records(output.ToString(),"managed_hook_evidence",
+                value=>value["native_marker_value"]!=null
+                    &&value["native_marker_value"].Type==JTokenType.Integer
+                    &&(int)value["native_marker_value"]==4).Count);
+        }
+
         private static void AssertDeferredObservationCount(int count)
         {
             var api=new FakeTraceApi();
@@ -563,9 +710,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 current.SetU32(0xFDB2,0x00000B64);
                 api.VisitZ80(0x003A,current);
                 for(int i=0;i<count;i++)Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
                 api.VisitZ80(0x0077,current);
                 api.VisitZ80(0x00AC,current);
-                Visit(current,api,0x071C4C);
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -736,6 +884,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             byte[] rom = RomForManifest(FixturePath());
             rom[0x071B4C] ^= 0x01;
+            AssertEx.Throws<InvalidDataException>(
+                () => S1CompleteRunAudioReferenceCapture.LoadManifest(
+                    FixturePath(), rom), "opcode");
+
+            rom = RomForManifest(FixturePath());
+            rom[0x071B82] ^= 0x01;
             AssertEx.Throws<InvalidDataException>(
                 () => S1CompleteRunAudioReferenceCapture.LoadManifest(
                     FixturePath(), rom), "opcode");
@@ -1770,8 +1924,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             private GpgxAudioObserverAdapter.ServiceHook[] hooks;
             private GpgxAudioObserverAdapter.SnapshotRange[] ranges;
             private GpgxAudioObserverAdapter.ServiceKind[] kinds;
-            private GpgxAudioObserverAdapter.ServiceHook deferredHook;
-            private bool hasDeferred;
+            private GpgxAudioObserverAdapter.ServiceHook deferredReserveHook;
+            private GpgxAudioObserverAdapter.ServiceHook deferredConsumeHook;
+            private bool hasDeferredPair;
+            private bool deferredPending;
             private ushort nextServiceToken = 1;
             public uint AbiVersion { get { return 3; } }
             public uint EventSize { get { return 32; } }
@@ -1866,6 +2022,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             ||hook.RangeCount!=0||hook.Flags!=0||hook.Reserved!=0)
                             return -2;
                     }
+                    else if(hook.Action==12)
+                    {
+                        GpgxAudioObserverAdapter.ServiceKind blocker=Array.Find(
+                            kinds,value=>value.KindId==hook.ExpectedActiveKind);
+                        if(hook.Cpu!=2||hook.ServiceKindId==0
+                            ||hook.ExpectedActiveKind==0||(blocker.Flags&4)!=0
+                            ||hook.RangeCount!=0||hook.Flags!=0||hook.Reserved!=0)
+                            return -2;
+                    }
                     else if (hook.Action == 7)
                     {
                         if (hook.Cpu != 2 || hook.ServiceKindId != 0
@@ -1898,9 +2063,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 this.hooks = (GpgxAudioObserverAdapter.ServiceHook[])hooks.Clone();
                 this.ranges = (GpgxAudioObserverAdapter.SnapshotRange[])ranges.Clone();
                 this.kinds = (GpgxAudioObserverAdapter.ServiceKind[])kinds.Clone();
-                hasDeferred=false;
-                for(int i=0;i<hooks.Length;i++)if(hooks[i].Action==11)
-                {deferredHook=hooks[i];hasDeferred=true;}
+                int reserveCount=0,consumeCount=0;
+                for(int i=0;i<hooks.Length;i++)
+                {
+                    if(hooks[i].Action==11)
+                    {deferredReserveHook=hooks[i];reserveCount++;}
+                    else if(hooks[i].Action==12)
+                    {deferredConsumeHook=hooks[i];consumeCount++;}
+                }
+                hasDeferredPair=reserveCount==1&&consumeCount==1
+                    &&deferredReserveHook.ServiceKindId==deferredConsumeHook.ServiceKindId
+                    &&deferredReserveHook.ExpectedActiveKind
+                        ==deferredConsumeHook.ExpectedActiveKind;
+                if((reserveCount!=0||consumeCount!=0)&&!hasDeferredPair)return -2;
+                deferredPending=false;
                 return 0;
             }
             public int BeginFrame()
@@ -2014,7 +2190,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 else if(hook.Action==11)
                 {
+                    if(!hasDeferredPair)
+                        throw new InvalidOperationException(
+                            "Fake native deferred reserve had no consume pair.");
                     Add(Owned(hook,10,4));
+                    deferredPending=true;
+                }
+                else if(hook.Action==12)
+                {
+                    if(!deferredPending||active.Count!=1
+                        ||active[0].Kind!=hook.ExpectedActiveKind)
+                        throw new InvalidOperationException(
+                            "Fake native deferred consume had no exact reservation.");
+                    Push(hook);
+                    deferredPending=false;
                 }
                 else if (hook.Action == 7)
                 {
@@ -2117,6 +2306,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 frameEvents[last] = mutate(frameEvents[last]);
             }
 
+            internal void DuplicateLast()
+            {
+                GpgxAudioTraceEvent value=frameEvents[frameEvents.Count-1];
+                value.Ordinal=(uint)frameEvents.Count;
+                frameEvents.Add(value);
+            }
+
             internal void RemoveFirst(
                 Func<GpgxAudioTraceEvent, bool> predicate)
             {
@@ -2180,7 +2376,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 if(active.Count==0)throw new InvalidOperationException(
                     "Fake native tail had no active service.");
-                ActiveService blocker=active[active.Count-1];
                 GpgxAudioObserverAdapter.SnapshotRange range=ranges[hook.RangeFirst];
                 Add(Owned(hook,5,0,range.RangeId));
                 GpgxAudioTraceEvent chunk=Owned(hook,6,0,range.RangeId);
@@ -2189,14 +2384,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 snapshotEnd.Offset=range.Length;Add(snapshotEnd);
                 Add(Owned(hook,2,0,hook.HookToken));
                 active.RemoveAt(active.Count-1);
-                if(hasDeferred&&blocker.Kind==deferredHook.ExpectedActiveKind)
-                {
-                    var root=new ActiveService{Token=nextServiceToken++,Kind=deferredHook.ServiceKindId,Depth=0};
-                    Add(new GpgxAudioTraceEvent{ServiceToken=root.Token,Pc=deferredHook.Pc,
-                        Subject=deferredHook.HookToken,Kind=1,ServiceKindId=root.Kind,
-                        SourceCpu=deferredHook.Cpu});
-                    active.Add(root);
-                }
                 Push(hook);
             }
 

@@ -295,6 +295,7 @@ namespace OpenGGF.BizHawk.Headless
             RequireManagedBoundary(managed, 0x001394, "REQUEST_QUEUE_1");
             RequireManagedBoundary(managed, 0x00139A, "REQUEST_QUEUE_2");
             RequireManagedBoundary(managed, 0x071B4C, "SERVICE_BEGIN");
+            RequireManagedBoundary(managed, 0x071B82, "DEFERRED_SERVICE_CONSUME");
             RequireManagedBoundary(managed, 0x071C4C, "SERVICE_CLOSE");
             RequireManagedBoundary(managed, 0x071FD0, "SERVICE_CLOSE");
             RequireManagedBoundary(managed, 0x0721B8, "SERVICE_CLOSE");
@@ -520,6 +521,12 @@ namespace OpenGGF.BizHawk.Headless
                             deferredBeginBlockerKind,0,0,0);
                     }
                 }
+                else if(managedHook.Action=="DEFERRED_SERVICE_CONSUME")
+                {
+                    AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                        hookTokens,managedHook,ref nextToken,12,serviceKind,
+                        deferredBeginBlockerKind,0,0,0);
+                }
                 else if (managedHook.Action == "SERVICE_CLOSE")
                 {
                     AddManagedNativeHook(hookList, publicHooks, managedByToken,
@@ -706,8 +713,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 internal ushort BlockerToken,BlockerParentToken,HookToken;
                 internal byte BlockerKind,BlockerDepth,TargetKind,SourceCpu;
-                internal uint Pc,Stack,ReturnPc,EndOrdinal;
-                internal bool AwaitingRelease;
+                internal uint Pc,Stack,ReturnPc;
                 internal readonly List<PendingManagedOccurrence> Observations=
                     new List<PendingManagedOccurrence>();
             }
@@ -957,9 +963,6 @@ namespace OpenGGF.BizHawk.Headless
                             if (publish) CorrelateManaged(events[i]);
                         }
                     });
-                    if(pendingDeferredBegin!=null&&pendingDeferredBegin.AwaitingRelease)
-                        throw new InvalidOperationException(
-                            "Deferred S1 blocker completion had no adjacent released begin.");
                     if (pendingResetEvidence != null)
                         throw new InvalidOperationException(
                             "A reset input had no native ordered reset lifecycle.");
@@ -1064,7 +1067,8 @@ namespace OpenGGF.BizHawk.Headless
                     if (returnPc.HasValue) record["return_pc"] = returnPc.Value;
                     WriteFrame(record);
 
-                    if (hook.Action == "SERVICE_BEGIN")
+                    if (hook.Action == "SERVICE_BEGIN"
+                        ||hook.Action=="DEFERRED_SERVICE_CONSUME")
                     {
                         occurrence.Stack = ReadM68kRegister("A7");
                         occurrence.ReturnPc = ReadReturnPc();
@@ -1127,31 +1131,6 @@ namespace OpenGGF.BizHawk.Headless
 
             private void CorrelateManaged(GpgxAudioTraceEvent value)
             {
-                if(pendingDeferredBegin!=null&&pendingDeferredBegin.AwaitingRelease)
-                {
-                    if(value.Kind!=1||value.Subject!=pendingDeferredBegin.HookToken
-                        ||value.Pc!=pendingDeferredBegin.Pc||value.SourceCpu!=pendingDeferredBegin.SourceCpu
-                        ||value.ParentToken!=0||value.Depth!=0
-                        ||value.ServiceKindId!=pendingDeferredBegin.TargetKind)
-                        throw new InvalidOperationException(
-                            "Deferred S1 blocker end was not followed by its exact released begin.");
-                    EmitDeferredManaged(value);
-                    managedServices.Begin(value.ServiceToken,pendingDeferredBegin.Stack);
-                    pendingDeferredBegin=null;
-                    return;
-                }
-                if(pendingDeferredBegin!=null&&value.Kind==2
-                    &&value.ServiceToken==pendingDeferredBegin.BlockerToken)
-                {
-                    if(value.ParentToken!=pendingDeferredBegin.BlockerParentToken
-                        ||value.ServiceKindId!=pendingDeferredBegin.BlockerKind
-                        ||value.Depth!=pendingDeferredBegin.BlockerDepth)
-                        throw new InvalidOperationException(
-                            "Deferred S1 blocker completion identity changed.");
-                    pendingDeferredBegin.AwaitingRelease=true;
-                    pendingDeferredBegin.EndOrdinal=value.Ordinal;
-                    return;
-                }
                 // SERVICE_PROMOTE uses Subject for the promoted service token,
                 // not a managed-hook token. Service tokens and manifest hook
                 // tokens occupy independent bounded spaces and may coincide.
@@ -1210,6 +1189,25 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     else return;
                 }
+                else if(expected.Action=="DEFERRED_SERVICE_CONSUME")
+                {
+                    byte nativeAction;
+                    if(!manifest.NativeActionByToken.TryGetValue(value.Subject,
+                            out nativeAction)||nativeAction!=12
+                        ||value.Kind!=1||pendingDeferredBegin==null
+                        ||occurrence.Stack!=pendingDeferredBegin.Stack
+                        ||occurrence.ReturnPc!=pendingDeferredBegin.ReturnPc
+                        ||value.ParentToken!=pendingDeferredBegin.BlockerToken
+                        ||value.ServiceKindId!=pendingDeferredBegin.TargetKind
+                        ||value.Depth!=pendingDeferredBegin.BlockerDepth+1
+                        ||value.SourceCpu!=pendingDeferredBegin.SourceCpu)
+                        throw new InvalidOperationException(
+                            "Deferred S1 consume identity or nested begin differs.");
+                    EmitDeferredManaged(value);
+                    managedServices.Begin(value.ServiceToken,occurrence.Stack);
+                    pendingDeferredBegin=null;
+                    completeOccurrence=true;
+                }
                 else if (expected.Action == "SERVICE_BEGIN")
                 {
                     if(value.Kind==10&&value.Value==4)
@@ -1227,8 +1225,7 @@ namespace OpenGGF.BizHawk.Headless
                                 TargetKind=4,HookToken=value.Subject,SourceCpu=value.SourceCpu,
                                 Pc=value.Pc,Stack=occurrence.Stack,ReturnPc=occurrence.ReturnPc};
                         }
-                        else if(pendingDeferredBegin.AwaitingRelease
-                            ||pendingDeferredBegin.BlockerToken!=value.ServiceToken
+                        else if(pendingDeferredBegin.BlockerToken!=value.ServiceToken
                             ||pendingDeferredBegin.BlockerParentToken!=value.ParentToken
                             ||pendingDeferredBegin.BlockerKind!=value.ServiceKindId
                             ||pendingDeferredBegin.BlockerDepth!=value.Depth
@@ -1310,7 +1307,7 @@ namespace OpenGGF.BizHawk.Headless
                 }
             }
 
-            private void EmitDeferredManaged(GpgxAudioTraceEvent released)
+            private void EmitDeferredManaged(GpgxAudioTraceEvent consumed)
             {
                 for(int i=0;i<pendingDeferredBegin.Observations.Count;i++)
                 {
@@ -1330,9 +1327,10 @@ namespace OpenGGF.BizHawk.Headless
                         record["native_marker_value"]=4;
                         record["deferred_a7"]=pendingDeferredBegin.Stack;
                         record["deferred_return_pc"]=pendingDeferredBegin.ReturnPc;
-                        record["blocker_end_ordinal"]=pendingDeferredBegin.EndOrdinal;
-                        record["released_service_token"]=released.ServiceToken;
-                        record["released_begin_ordinal"]=released.Ordinal;
+                        record["consume_hook_token"]=consumed.Subject;
+                        record["consume_pc"]=consumed.Pc;
+                        record["consumed_service_token"]=consumed.ServiceToken;
+                        record["consume_begin_ordinal"]=consumed.Ordinal;
                         if((int)record["row"]==currentRow)
                         {
                             frameTransaction.Write(record.ToString(Formatting.None));
@@ -1384,8 +1382,7 @@ namespace OpenGGF.BizHawk.Headless
                     HookToken=source.HookToken,BlockerKind=source.BlockerKind,
                     BlockerDepth=source.BlockerDepth,TargetKind=source.TargetKind,
                     SourceCpu=source.SourceCpu,Pc=source.Pc,Stack=source.Stack,
-                    ReturnPc=source.ReturnPc,EndOrdinal=source.EndOrdinal,
-                    AwaitingRelease=source.AwaitingRelease};
+                    ReturnPc=source.ReturnPc};
                 for(int i=0;i<source.Observations.Count;i++)
                     copy.Observations.Add(CloneOccurrence(source.Observations[i]));
                 return copy;
@@ -1792,7 +1789,8 @@ namespace OpenGGF.BizHawk.Headless
                     action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":
                     action==9?"POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE":
                     action==10?"DIRECT_PARENT_RETRY_MARKER":
-                    action==11?"DEFER_BEGIN_UNTIL_TOP_END":
+                    action==11?"RESERVE_DEFERRED_BEGIN":
+                    action==12?"CONSUME_DEFERRED_BEGIN":
                     "OBSERVATION_MARKER"
             };
             AddPublicHook(publicHooks, native);
@@ -1805,6 +1803,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 case "REQUEST_QUEUE_0": case "REQUEST_QUEUE_1":
                 case "REQUEST_QUEUE_2": case "SERVICE_BEGIN":
+                case "DEFERRED_SERVICE_CONSUME":
                 case "SERVICE_CLOSE": case "CLOSE_IF_RETURN_OUTSIDE":
                 case "QUEUE_TRIGGER": case "QUEUE_CYCLE":
                 case "CYCLE_ITERATION_BEGIN": case "CYCLE_ITERATION_END":

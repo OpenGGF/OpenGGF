@@ -93,8 +93,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 KeepsProjectionResultAllocationFree,
                 serial: true));
             tests.Add(new TestMain.TestCase(
-                "CompleteRunAudioObserverTests project one deferred root begin transaction",
-                ProjectsDeferredRootBeginTransaction,
+                "CompleteRunAudioObserverTests consume one deferred nested begin transaction",
+                ConsumesDeferredNestedBeginTransaction,
                 serial: true));
             tests.Add(new TestMain.TestCase(
                 "CompleteRunAudioObserverTests reject corrupt deferred begin transactions",
@@ -104,11 +104,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "CompleteRunAudioObserverTests roll back deferred begin reservations",
                 RollsBackDeferredBeginReservations,
                 serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests reserve again after deferred child end",
+                ReservesAgainAfterDeferredChildEnd,
+                serial: true));
         }
 
-        private static void ProjectsDeferredRootBeginTransaction()
+        private static void ReservesAgainAfterDeferredChildEnd()
         {
-            var api = new FakeTraceApi { Events = DeferredFrame(true) };
+            var events=new List<GpgxAudioTraceEvent>(DeferredFrame(1,true));
+            events.RemoveRange(events.Count-2,2);
+            events.Add(DeferredMarker((uint)events.Count,2));
+            var api=new FakeTraceApi{Events=events.ToArray()};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            CompleteRunAudioObserver.FrameCapture capture=
+                observer.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(2,capture.DeferredBegins.Count);
+            AssertEx.Equal(true,capture.DeferredBegins[0].Consumed);
+            AssertEx.Equal(false,capture.DeferredBegins[1].Consumed);
+            AssertEx.Equal(1,capture.DeferredBegins[1].ObservationCount);
+            AssertEx.Equal(1,observer.PendingDeferredObservationCountForTesting);
+            AssertEx.Equal((byte)6,
+                observer.CaptureCutoffFrontier().ActiveServices[0].Kind);
+        }
+
+        private static void ConsumesDeferredNestedBeginTransaction()
+        {
+            var api = new FakeTraceApi { Events = DeferredFrame(4,true) };
             CompleteRunAudioObserver observer = CreateDeferred(api);
             CompleteRunAudioObserver.FrameCapture capture =
                 observer.CaptureCanonicalFrame(() => { });
@@ -119,67 +141,82 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal((byte)6, consumed.BlockerKind);
             AssertEx.Equal((byte)4, consumed.TargetKind);
             AssertEx.Equal((ushort)3, consumed.HookToken);
-            AssertEx.Equal(3, consumed.ObservationCount);
+            AssertEx.Equal(4, consumed.ObservationCount);
             AssertEx.Equal(true, consumed.Consumed);
-            AssertEx.Equal((ushort)3, consumed.ReleasedToken);
-            AssertEx.Equal(8L, consumed.ReleaseCoordinate);
-            AssertEx.Equal(2, capture.Services.Count);
-            CompleteRunAudioObserver.DriverService released = observer
+            AssertEx.Equal((ushort)3, consumed.ConsumedToken);
+            AssertEx.Equal(7L, consumed.ConsumeCoordinate);
+            AssertEx.Equal(3, capture.Services.Count);
+            CompleteRunAudioObserver.DriverService child = null;
+            for(int i=0;i<capture.Services.Count;i++)
+                if(capture.Services[i].BeginPc==0x71B82)child=capture.Services[i];
+            AssertEx.Equal(true,child!=null);
+            AssertEx.Equal((byte)4, child.Kind);
+            AssertEx.Equal((ushort)2, child.ParentToken);
+            AssertEx.Equal((byte)1, child.Depth);
+            AssertEx.Equal((ushort)5, child.BeginHookToken);
+            AssertEx.Equal(1,child.OwnedChipEvents.Count);
+            AssertEx.Equal((ushort)3,child.Token);
+            AssertEx.Equal((uint)0x71BB6,child.OwnedChipEvents[0].Pc);
+            CompleteRunAudioObserver.DriverService dpcm = observer
                 .CaptureCutoffFrontier().ActiveServices[0];
-            AssertEx.Equal((byte)4, released.Kind);
-            AssertEx.Equal((ushort)0, released.ParentToken);
-            AssertEx.Equal((byte)0, released.Depth);
+            AssertEx.Equal((byte)2, dpcm.Kind);
+            AssertEx.Equal((ushort)0, dpcm.ParentToken);
+            AssertEx.Equal((byte)0, dpcm.Depth);
             AssertEx.Equal(0,observer.PendingDeferredObservationCountForTesting);
         }
 
         private static void RejectsCorruptDeferredBeginTransactions()
         {
-            AssertDeferredInvalid(events => events[5].Depth=1, "invalid");
-            AssertDeferredInvalid(events => events[5].ServiceToken=99, "invalid");
-            AssertDeferredInvalid(events => events[5].ServiceKindId=5, "invalid");
-            AssertDeferredInvalid(events => events[7].ServiceToken=99, "invalid");
-            AssertDeferredInvalid(events => events[8].ParentToken=2, "invalid");
-            AssertDeferredInvalid(events => events[8].Depth=1, "invalid");
-            AssertDeferredInvalid(events => events[8].ServiceKindId=5, "invalid");
-            AssertDeferredInvalid(events => events[8].Kind=3, "invalid");
-            AssertDeferredInvalid(events => events[6].SourceCpu=2, "interposed M68K");
+            AssertDeferredInvalid(events => events[4].ServiceToken=99, "invalid");
+            AssertDeferredInvalid(events => events[4].ServiceKindId=5, "invalid");
+            AssertDeferredInvalid(events => events[4].Depth=1, "invalid");
+            AssertDeferredInvalid(events => events[6].Subject=3, "invalid");
+            AssertDeferredInvalid(events => events[6].Pc=0x71B84, "invalid");
+            AssertDeferredInvalid(events => events[6].ParentToken=0, "invalid");
+            AssertDeferredInvalid(events => events[6].Depth=0, "invalid");
+            AssertDeferredInvalid(events => events[6].ServiceKindId=5, "invalid");
+            AssertDeferredInvalid(events => events[6].ServiceToken=2, "invalid");
+            AssertDeferredInvalid(events => RemoveDeferredEvent(events,6),"invalid");
+            AssertDeferredInvalid(events => InsertDeferredEvent(events,6,events[6]),"invalid");
             AssertDeferredInvalid(events => InsertDeferredEvent(events,6,
                 new GpgxAudioTraceEvent{Kind=10,ServiceToken=2,ServiceKindId=6,
-                    Subject=6,Pc=0x71BB2,SourceCpu=2,Value=3}),"interposed M68K");
+                    Subject=6,Pc=0x71BB2,SourceCpu=2,Value=3}),"invalid");
+            AssertDeferredInvalid(events => InsertDeferredEvent(events,6,
+                new GpgxAudioTraceEvent{Kind=3,ServiceToken=2,ServiceKindId=6,
+                    Pc=0x71BB6,SourceCpu=2,Value=0x2A}),"invalid");
             AssertDeferredInvalid(events => InsertDeferredEvent(events,6,
                 new GpgxAudioTraceEvent{Kind=8,ServiceToken=9,ServiceKindId=1,
                     SourceCpu=3,Subject=1}),"reset");
-            AssertDeferredInvalid(events => RemoveDeferredEvent(events,8),"release adjacency");
-            AssertDeferredInvalid(events => InsertDeferredEvent(events,9,events[8]),"deferred tail release");
-            AssertDeferredInvalid(events => events[9]=events[8], "invalid");
         }
 
         private static void RollsBackDeferredBeginReservations()
         {
-            var invalidApi = new FakeTraceApi { Events = DeferredFrame(false) };
+            var invalidApi = new FakeTraceApi { Events = DeferredFrame(3,false) };
             CompleteRunAudioObserver invalid = CreateDeferred(invalidApi);
             invalid.CaptureCanonicalFrame(() => { });
             AssertEx.Equal(3, invalid.PendingDeferredObservationCountForTesting);
-            GpgxAudioTraceEvent[] later = DeferredReleaseFrame();
-            later[1].ParentToken = 2;
+            GpgxAudioTraceEvent[] later = DeferredConsumeFrame();
+            later[0].ParentToken = 0;
             invalidApi.Events = later;
             AssertEx.Throws<InvalidOperationException>(
-                () => invalid.CaptureCanonicalFrame(() => { }), "deferred tail release");
+                () => invalid.CaptureCanonicalFrame(() => { }), "deferred consume");
             AssertEx.Equal(3, invalid.PendingDeferredObservationCountForTesting);
 
-            var rejectedApi = new FakeTraceApi { Events = DeferredFrame(false) };
+            var rejectedApi = new FakeTraceApi { Events = DeferredFrame(3,false) };
             CompleteRunAudioObserver rejected = CreateDeferred(rejectedApi);
+            rejected.CaptureCanonicalFrame(() => { });
+            rejectedApi.Events=DeferredConsumeFrame();
             AssertEx.Throws<InvalidOperationException>(() => rejected.CaptureFrame(
                 () => { }, (events, count) =>
-                { throw new InvalidOperationException("consumer rejected deferred marker"); }),
-                "consumer rejected deferred marker");
-            AssertEx.Equal(0, rejected.PendingDeferredObservationCountForTesting);
+                { throw new InvalidOperationException("consumer rejected deferred consume"); }),
+                "consumer rejected deferred consume");
+            AssertEx.Equal(3, rejected.PendingDeferredObservationCountForTesting);
         }
 
         private static void AssertDeferredInvalid(
             Action<GpgxAudioTraceEvent[]> corrupt, string message)
         {
-            GpgxAudioTraceEvent[] events = DeferredFrame(true);
+            GpgxAudioTraceEvent[] events = DeferredFrame(3,true);
             corrupt(events);
             var api = new FakeTraceApi { Events=events };
             AssertEx.Throws<InvalidOperationException>(
@@ -203,37 +240,46 @@ namespace OpenGGF.BizHawk.Headless.Tests
             for(int i=0;i<events.Length;i++)events[i].Ordinal=(uint)i;
         }
 
-        private static GpgxAudioTraceEvent[] DeferredFrame(bool release)
+        private static GpgxAudioTraceEvent[] DeferredFrame(int markerCount,bool consume)
         {
             var values = new List<GpgxAudioTraceEvent>
             {
                 Canonical(0,1,1,0,4,0,1,0x71B4C,0),
                 Canonical(1,2,1,0,4,0,2,0x71C4C,0),
-                Canonical(2,1,2,0,6,0,4,0x003A,0),
-                DeferredMarker(3,2), DeferredMarker(4,2), DeferredMarker(5,2),
-                Canonical(6,3,2,0,6,0,0,0x0040,0,0x2A)
+                Canonical(2,1,2,0,6,0,4,0x003A,0)
             };
-            if (release)
+            for(int i=0;i<markerCount;i++)
+                values.Add(DeferredMarker((uint)values.Count,2));
+            if (consume)
             {
-                values.Add(Canonical(7,2,2,0,6,0,5,0x0077,0));
-                values.Add(Canonical(8,1,3,0,4,0,3,0x71B4C,0));
-                values.Add(Canonical(9,1,4,3,2,1,5,0x0077,0));
+                values.Add(Canonical((uint)values.Count,1,3,2,4,1,5,0x71B82,0));
+                values.Add(Canonical((uint)values.Count,10,3,2,4,1,6,0x71BB2,0,3));
+                values.Add(Canonical((uint)values.Count,3,3,2,4,1,0,0x71BB6,0,0x2A));
+                values.Add(Canonical((uint)values.Count,2,3,2,4,1,2,0x71C4C,0));
+                values.Add(Canonical((uint)values.Count,2,2,0,6,0,7,0x0077,0));
+                values.Add(Canonical((uint)values.Count,1,4,0,2,0,7,0x0077,0));
             }
             GpgxAudioTraceEvent mBegin=values[0];mBegin.SourceCpu=2;values[0]=mBegin;
             GpgxAudioTraceEvent mEnd=values[1];mEnd.SourceCpu=2;values[1]=mEnd;
-            if(release){GpgxAudioTraceEvent released=values[8];released.SourceCpu=2;values[8]=released;}
+            if(consume)
+            {
+                int first=3+markerCount;
+                for(int i=first;i<first+4;i++)
+                {GpgxAudioTraceEvent m68k=values[i];m68k.SourceCpu=2;values[i]=m68k;}
+            }
             return values.ToArray();
         }
 
-        private static GpgxAudioTraceEvent[] DeferredReleaseFrame()
+        private static GpgxAudioTraceEvent[] DeferredConsumeFrame()
         {
             GpgxAudioTraceEvent[] values = new[]
             {
-                Canonical(0,2,2,0,6,0,5,0x0077,0),
-                Canonical(1,1,3,0,4,0,3,0x71B4C,0),
-                Canonical(2,1,4,3,2,1,5,0x0077,0)
+                Canonical(0,1,3,2,4,1,5,0x71B82,0),
+                Canonical(1,10,3,2,4,1,6,0x71BB2,0,3),
+                Canonical(2,2,3,2,4,1,2,0x71C4C,0)
             };
-            GpgxAudioTraceEvent released=values[1];released.SourceCpu=2;values[1]=released;
+            for(int i=0;i<values.Length;i++)
+            {GpgxAudioTraceEvent m68k=values[i];m68k.SourceCpu=2;values[i]=m68k;}
             return values;
         }
 
@@ -946,7 +992,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 Magic=0x31544147,AbiVersion=3,StructSize=64,KindSize=16,
                 HookSize=32,RangeSize=16,EventSize=32,MaxDepth=8,
-                WatchMaskBytes=8192,HookCount=6,RangeCount=1,
+                WatchMaskBytes=8192,HookCount=7,RangeCount=1,
                 EventCapacity=65536,KindCount=4,ResetServiceKind=1
             };
             var kinds = new[]
@@ -962,8 +1008,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=2,Action=2,Cpu=2,Pc=0x71C4C,ExpectedActiveKind=4},
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=3,Action=11,Cpu=2,Pc=0x71B4C,ServiceKindId=4,ExpectedActiveKind=6},
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=4,Action=1,Cpu=1,Pc=0x003A,ServiceKindId=6},
-                new GpgxAudioObserverAdapter.ServiceHook {HookToken=5,Action=4,Cpu=1,Pc=0x0077,ServiceKindId=2,ExpectedActiveKind=6}
-                ,new GpgxAudioObserverAdapter.ServiceHook {HookToken=6,Action=7,Cpu=2,Pc=0x71BB2,ExpectedActiveKind=6}
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=5,Action=12,Cpu=2,Pc=0x71B82,ServiceKindId=4,ExpectedActiveKind=6},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=6,Action=7,Cpu=2,Pc=0x71BB2,ExpectedActiveKind=4},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=7,Action=4,Cpu=1,Pc=0x0077,ServiceKindId=2,ExpectedActiveKind=6}
             };
             var ranges = new[] { new GpgxAudioObserverAdapter.SnapshotRange
                 {RangeId=7,Start=0,Length=0} };

@@ -14,6 +14,7 @@
     { "name": "queue1", "pc": 5012, "opcode": "11c0f00b", "source_label": "QueueSound2", "source": "docs/s1disasm/_inc/Queue Sound Routines.asm:23-27", "action": "REQUEST_QUEUE_1" },
     { "name": "queue2", "pc": 5018, "opcode": "11c0f00c", "source_label": "QueueSound3", "source": "docs/s1disasm/_inc/Queue Sound Routines.asm:38-42", "action": "REQUEST_QUEUE_2" },
     { "name": "update_begin", "pc": 465740, "opcode": "33fc010000a11100", "source_label": "UpdateMusic", "source": "docs/s1disasm/s1.sounddriver.asm:146-165", "action": "SERVICE_BEGIN" },
+    { "name": "update_consume", "pc": 465794, "opcode": "4df900fff000", "source_label": ".driverinput", "source": "docs/s1disasm/s1.sounddriver.asm:169-183", "action": "DEFERRED_SERVICE_CONSUME" },
     { "name": "queue_trigger", "pc": 465842, "opcode": "4a6e000a", "source_label": ".skipfadein", "source": "docs/s1disasm/s1.sounddriver.asm:187-198", "action": "QUEUE_TRIGGER" },
     { "name": "dac_command", "pc": 466084, "opcode": "13c000a01fff", "source_label": "DACUpdateTrack", "source": "docs/s1disasm/s1.sounddriver.asm:285-302", "action": "DAC_COMMAND" },
     { "name": "normal_close", "pc": 465996, "opcode": "4e75", "source_label": "UpdateMusic", "source": "docs/s1disasm/s1.sounddriver.asm:269-273", "action": "SERVICE_CLOSE" },
