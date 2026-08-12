@@ -107,3 +107,38 @@ no finding was available to ignore, and parent review follows this commit.
 
 Policy-checked local commit subject: `fix(audio): make managed services
 identity-only`. No push was performed.
+
+## Review fix round 1: boundary retry identity parity
+
+Parent review found that pre-publication action-6/action-10 retry markers were
+dequeued without the token+A7 check used by published correlation. The finding
+was reproduced before production edits with a root retry whose callback changed
+A7. The exact RED was:
+
+```text
+FAIL S1CompleteRunAudioReferenceCaptureTests reject boundary retry token A7 changes
+Expected exception of type System.InvalidOperationException.
+```
+
+The boundary retry branch now requires
+`boundaryManagedServices.Matches(ServiceToken, A7)` before dequeueing. Focused
+coverage pins root, kind-2, and kind-3 retry ownership with both a direct A7
+change and a native-valid prior-lifetime token/A7 association mismatch.
+
+The earlier wrong-token observation probes were also strengthened. They no
+longer mutate native service or parent tokens into invalid topology. Each probe
+creates one kind-4 lifetime at A7 A, closes it, creates and promotes a second
+kind-4 lifetime at A7 B, then presents the exact action-7 callback at A7 A.
+Native topology is valid; managed token+A7 correlation alone rejects the stale
+cross-lifetime association. Both pre-publication and published paths cover a
+kind-4 root and kind-2/kind-3 direct children.
+
+Fresh verification after the fix:
+
+```text
+S1CompleteRunAudioReferenceCaptureTests: 41 passed, 0 failed,
+1 expected opt-in skip
+CompleteRunAudioObserverTests: 25 passed, 0 failed, 0 skipped
+```
+
+The follow-up is a separate local commit; no amend and no push.

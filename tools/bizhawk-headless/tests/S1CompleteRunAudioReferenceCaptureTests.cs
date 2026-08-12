@@ -122,6 +122,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests cancel and roll back promoted managed identity",
                 CancelsAndRollsBackPromotedManagedIdentity));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject boundary retry token A7 changes",
+                RejectsBoundaryRetryTokenA7Changes));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject native-valid cross-lifetime observations",
+                RejectsNativeValidCrossLifetimeObservations));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests track a deferred child wholly before the epoch",
                 TracksDeferredChildWhollyBeforeEpoch));
             tests.Add(new TestMain.TestCase(
@@ -945,9 +951,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertPromotedObservationA7Fails(0,0);
             AssertPromotedObservationA7Fails(0x0077,0x00AC);
             AssertPromotedObservationA7Fails(0x00C1,0x00D0);
-            AssertPromotedObservationTokenFails(0,0);
-            AssertPromotedObservationTokenFails(0x0077,0x00AC);
-            AssertPromotedObservationTokenFails(0x00C1,0x00D0);
 
             var tracker=new S1CompleteRunAudioReferenceCapture.ManagedServiceTracker();
             tracker.Begin(3,0x00FFFDAE);
@@ -998,33 +1001,105 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void AssertPromotedObservationTokenFails(
-            uint childBegin,uint childEnd)
+        private static void RejectsBoundaryRetryTokenA7Changes()
+        {
+            AssertBoundaryRetryIdentityFails(0,false);
+            AssertBoundaryRetryIdentityFails(0x0077,false);
+            AssertBoundaryRetryIdentityFails(0x00C1,false);
+            AssertBoundaryRetryIdentityFails(0,true);
+            AssertBoundaryRetryIdentityFails(0x0077,true);
+            AssertBoundaryRetryIdentityFails(0x00C1,true);
+        }
+
+        private static void AssertBoundaryRetryIdentityFails(
+            uint childBegin,bool priorLifetime)
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
             {
-                current.SetCpuRegister("A7",0x00FFFDAE);
-                api.VisitZ80(0x0077,current);
-                Visit(current,api,0x071B4C);
-                api.VisitZ80(0x00AC,current);
-                if(childBegin!=0)api.VisitZ80(childBegin,current);
-                Visit(current,api,0x071B82);
-                api.MutateLast(value=>
+                if(frame==1)
                 {
-                    if(childBegin==0)value.ServiceToken++;
-                    else value.ParentToken++;
-                    return value;
-                });
+                    current.SetCpuRegister("A7",0x00FFFDAE);
+                    if(priorLifetime)
+                    {
+                        Visit(current,api,0x071B4C);
+                        Visit(current,api,0x071C4C);
+                        current.SetCpuRegister("A7",0x00FFFDB2);
+                    }
+                    Visit(current,api,0x071B4C);
+                    if(childBegin!=0)api.VisitZ80(childBegin,current);
+                    return;
+                }
+                current.SetCpuRegister("A7",(uint)(priorLifetime
+                    ?0x00FFFDAE:0x00FFFDB2));
+                Visit(current,api,0x071B4C);
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
             {
-                session.BeginEpoch();
-                int before=output.ToString().Length;
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
                 AssertEx.Throws<InvalidOperationException>(
-                    ()=>session.CaptureFrame(860,host.Advance),
-                    "native audio observer returned invalid");
+                    ()=>session.ObservePreEpochFrame(859,null,host.Advance),
+                    "retry changed its native service identity");
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Equal(0,output.ToString().Length);
+            }
+        }
+
+        private static void RejectsNativeValidCrossLifetimeObservations()
+        {
+            AssertNativeValidCrossLifetimeObservationFails(0,false);
+            AssertNativeValidCrossLifetimeObservationFails(0x0077,false);
+            AssertNativeValidCrossLifetimeObservationFails(0x00C1,false);
+            AssertNativeValidCrossLifetimeObservationFails(0,true);
+            AssertNativeValidCrossLifetimeObservationFails(0x0077,true);
+            AssertNativeValidCrossLifetimeObservationFails(0x00C1,true);
+        }
+
+        private static void AssertNativeValidCrossLifetimeObservationFails(
+            uint childBegin,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                if(frame==1)
+                {
+                    current.SetCpuRegister("A7",0x00FFFDAE);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071C4C);
+                    api.VisitZ80(0x0077,current);
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x00AC,current);
+                    if(childBegin!=0)api.VisitZ80(childBegin,current);
+                    return;
+                }
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(858,null,host.Advance);
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "managed identity differs");
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    return;
+                }
+                session.BeginEpoch();
+                session.CaptureFrame(860,host.Advance);
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(861,host.Advance),
+                    "managed identity differs");
                 AssertEx.Equal(before,output.ToString().Length);
             }
         }

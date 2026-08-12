@@ -1339,6 +1339,10 @@ namespace OpenGGF.BizHawk.Headless
                         if(value.Kind==1)
                             boundaryManagedServices.Begin(value.ServiceToken,
                                 occurrence.Stack);
+                        else if(!boundaryManagedServices.Matches(
+                            value.ServiceToken,occurrence.Stack))
+                            throw new InvalidOperationException(
+                                "Managed boundary retry changed its native service identity.");
                         pendingBoundaryManaged.Dequeue();
                         return;
                     }
