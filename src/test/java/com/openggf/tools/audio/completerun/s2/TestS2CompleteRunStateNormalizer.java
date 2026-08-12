@@ -178,6 +178,14 @@ class TestS2CompleteRunStateNormalizer {
                 state.globals(), state.sourceSlots().reversed(), null));
         assertThrows(IllegalArgumentException.class, () -> S2CompleteRunStateNormalizer.normalizeReference(
                 new S2CompleteRunStateNormalizer.LiveState(globals(false, 0xff), state.sourceSlots(), null), ASSETS));
+
+        var endReturn = activeTrack(EHZ.key(), 0x1390, 6, 0x80,
+                new UnionBytes(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 0x28,
+                List.of(0, 0, 0, 0, 0, 0, 0, 0, 0x80, 0x1b));
+        var endSlots = new ArrayList<>(state.sourceSlots());
+        endSlots.set(0, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.DAC, endReturn));
+        assertThrows(IllegalArgumentException.class, () -> S2CompleteRunStateNormalizer.normalizeReference(
+                new S2CompleteRunStateNormalizer.LiveState(state.globals(), endSlots, null), ASSETS));
     }
 
     private static Object value(com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState state,

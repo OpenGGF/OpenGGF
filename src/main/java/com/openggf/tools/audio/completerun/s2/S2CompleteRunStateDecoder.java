@@ -136,22 +136,22 @@ public final class S2CompleteRunStateDecoder {
             throw new IllegalArgumentException("S2 active track has invalid stack pointer");
         }
         int data = word(raw, base + 3);
-        catalog.require(asset, data, false, "S2 track data pointer");
+        catalog.require(asset, data, "S2 track data pointer");
         boolean dac = role == HardwareRole.DAC;
         boolean psg = role == HardwareRole.PSG1 || role == HardwareRole.PSG2 || role == HardwareRole.PSG3;
         boolean fm = !dac && !psg;
         int modulation = word(raw, base + 0x11);
         if (!dac && (playback & 8) != 0 && modulation != 0)
-            catalog.require(asset, modulation, false, "S2 modulation pointer");
+            catalog.require(asset, modulation, "S2 modulation pointer");
         int voicePointer = word(raw, base + 0x1c);
         if (layer == SourceLayer.SFX && fm && voicePointer != 0)
-            catalog.require(asset, voicePointer, false, "S2 SFX voice pointer");
+            catalog.require(asset, voicePointer, "S2 SFX voice pointer");
         int tlPointer = word(raw, base + 0x1e);
-        if (fm && tlPointer != 0) catalog.require(asset, tlPointer, false, "S2 TL pointer");
+        if (fm && tlPointer != 0) catalog.require(asset, tlPointer, "S2 TL pointer");
         List<Integer> loops = new ArrayList<>(10);
         for (int offset = 0x20; offset < 0x2a; offset++) loops.add(u8(raw, base + offset));
         for (int offset = stack; offset < 0x2a; offset += 2)
-            catalog.require(asset, word(raw, base + offset), true, "S2 return pointer");
+            catalog.require(asset, word(raw, base + offset), "S2 return pointer");
         return new Track(true, asset.key(), data, playback, voice, u8(raw, base + 2),
                 u8(raw, base + 5), u8(raw, base + 6), u8(raw, base + 7), u8(raw, base + 8),
                 u8(raw, base + 9), stack, u8(raw, base + 0x0b), u8(raw, base + 0x0c),
@@ -165,7 +165,7 @@ public final class S2CompleteRunStateDecoder {
             Asset asset, int pointer, String label) {
         if (pointer == 0) return new AssetPointer(null, 0);
         if (asset == null) throw new IllegalArgumentException(label + " has no asset owner");
-        catalog.require(asset, pointer, false, label);
+        catalog.require(asset, pointer, label);
         return new AssetPointer(asset.key(), pointer);
     }
 

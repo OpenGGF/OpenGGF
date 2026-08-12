@@ -22,7 +22,8 @@ class TestS2CompleteRunStateDecoder {
         assertEquals(0x1380, catalog.assets().get("music.82").addressBase());
         assertTrue(catalog.assets().get("music.82").addressEndExclusive() > 0x1380);
         assertEquals(0xef33, catalog.assets().get("sfx.A0").addressBase());
-        assertTrue(catalog.assets().get("sfx.F0").addressEndExclusive() <= 0x10000);
+        assertEquals(0xffec, catalog.assets().get("sfx.F0").addressEndExclusive());
+        assertThrows(IllegalArgumentException.class, () -> catalog.sfx(0xfff0));
     }
 
     @Test
@@ -109,9 +110,22 @@ class TestS2CompleteRunStateDecoder {
         track(badStack, MUSIC, 0x80, 0x06, 0x1390, 0x29);
         assertThrows(IllegalArgumentException.class,
                 () -> S2CompleteRunStateDecoder.decode(badStack, catalog));
+        byte[] nextAsset = baseState();
+        AssetRange ehz = range(catalog, "music.82");
+        track(nextAsset, MUSIC, 0x80, 0x06, ehz.base(), 0x28);
+        word(nextAsset, MUSIC + 0x28, ehz.end());
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunStateDecoder.decode(nextAsset, catalog));
         assertThrows(IllegalArgumentException.class,
                 () -> S2CompleteRunAssetCatalog.load(Path.of("pom.xml")));
     }
+
+    private static AssetRange range(S2CompleteRunAssetCatalog catalog, String key) {
+        var asset = catalog.assets().get(key);
+        return new AssetRange(asset.addressBase(), asset.addressEndExclusive());
+    }
+
+    private record AssetRange(int base, int end) { }
 
     private static Path rom() {
         String configured = System.getProperty("sonic2.rom.path");

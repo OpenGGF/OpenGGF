@@ -306,10 +306,12 @@ public final class S2CompleteRunStateNormalizer {
         List<Integer> returns = new ArrayList<>();
         for (int index = firstStack; index < 10; index += 2) {
             int pointer = track.loopAndStack().get(index) | track.loopAndStack().get(index + 1) << 8;
-            returns.add(relative(pointer, asset, true, "return pointer"));
+            // cfJumpReturn dereferences the saved address immediately
+            // (s2.sounddriver.asm:3071-3083); one-past-end is not owned.
+            returns.add(relative(pointer, asset, "return pointer"));
         }
         return List.of(
-                field("assetKey", asset.key()), field("cursor", relative(track.dataPointer(), asset, false, "data pointer")),
+                field("assetKey", asset.key()), field("cursor", relative(track.dataPointer(), asset, "data pointer")),
                 field("resting", (track.playbackControl() & 2) != 0),
                 field("doNotAttack", (track.playbackControl() & 0x10) != 0), field("voiceControl", track.voiceControl()),
                 field("tempoDivider", track.tempoDivider()), field("transpose", signedByte(track.transpose())),
@@ -324,7 +326,7 @@ public final class S2CompleteRunStateNormalizer {
                 field("modulationCursor", !modulationEnabled || track.modulationPointer() == 0
                         ? Map.of("active", false)
                         : Map.of("active", true, "assetKey", asset.key(),
-                                "cursor", relative(track.modulationPointer(), asset, false, "modulation pointer"))),
+                                "cursor", relative(track.modulationPointer(), asset, "modulation pointer"))),
                 field("modulationWait", modulationEnabled ? track.modulationWait() : 0),
                 field("modulationSpeed", modulationEnabled ? track.modulationSpeed() : 0),
                 field("modulationDelta", modulationEnabled ? signedByte(track.modulationDelta()) : 0),
@@ -343,14 +345,14 @@ public final class S2CompleteRunStateNormalizer {
 
     private static Map<String, Object> pointer(int pointer, Asset asset) {
         return pointer == 0 ? Map.of("active", false)
-                : Map.of("active", true, "assetKey", asset.key(), "cursor", relative(pointer, asset, false, "track pointer"));
+                : Map.of("active", true, "assetKey", asset.key(), "cursor", relative(pointer, asset, "track pointer"));
     }
 
     private static Map<String, Object> pointer(AssetPointer pointer, Map<String, Asset> assets) {
         if (pointer.address() == 0) return Map.of("active", false);
         Asset asset = asset(pointer.assetKey(), assets);
         return Map.of("active", true, "assetKey", asset.key(),
-                "cursor", relative(pointer.address(), asset, false, "global voice table pointer"));
+                "cursor", relative(pointer.address(), asset, "global voice table pointer"));
     }
 
     private static EnumMap<CompleteRunAudioTrace.HardwareRole, SourceSlot> effectiveSlots(List<SourceSlot> slots) {
@@ -366,9 +368,8 @@ public final class S2CompleteRunStateNormalizer {
         return asset;
     }
 
-    private static int relative(int pointer, Asset asset, boolean allowEnd, String label) {
-        if (pointer < asset.addressBase() || pointer > asset.addressEndExclusive()
-                || !allowEnd && pointer == asset.addressEndExclusive()) {
+    private static int relative(int pointer, Asset asset, String label) {
+        if (pointer < asset.addressBase() || pointer >= asset.addressEndExclusive()) {
             throw new IllegalArgumentException(label + " is outside its S2 asset");
         }
         return pointer - asset.addressBase();

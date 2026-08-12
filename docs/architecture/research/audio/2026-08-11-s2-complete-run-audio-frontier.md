@@ -261,6 +261,10 @@ playback, saved tracks are therefore attributed only when the saved bank,
 pointer extent, and full current decompressed-buffer bytes identify exactly one
 source song. Unknown, ambiguous, padding, and out-of-window pointers fail
 closed. No asset bytes are loaded from the disassembly at runtime.
+The final `Sound70` range ends exclusively at Z80 `$FFEC` (its 10-byte header
+plus 14-byte PSG stream); `$FFEC..$FFFF` is rejected bank padding. Saved return
+pointers are dereferenced by `cfJumpReturn`, so an address equal to an asset's
+exclusive end is likewise rejected rather than attributed to its predecessor.
 
 The shipped one-up union follows `s2.sounddriver.asm:1667-1724` and
 `:3087-3155`. In particular, `fixBugs=0` copies the original nonzero SFX

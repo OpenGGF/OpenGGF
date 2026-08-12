@@ -25,6 +25,7 @@ public final class S2CompleteRunAssetCatalog {
     private static final int BANK1 = 0xf0000;
     private static final int BANK2 = 0xf8000;
     private static final int SFX_TABLE = 0xfee91;
+    private static final int FINAL_SFX_END = 0xfffec;
     // s2.asm:91488-91652 installs one song in bank $1E and thirty in bank $1F;
     // the table order below is the exact MusicPoint2 pointer order, not ID order.
     private static final int[] TABLE2_IDS = {
@@ -80,7 +81,10 @@ public final class S2CompleteRunAssetCatalog {
         List<Asset> sfxValues = new ArrayList<>();
         for (int id = 0xa0; id <= 0xf0; id++) {
             int start = physical(BANK2, word(rom, SFX_TABLE + (id - 0xa0) * 2));
-            int end = nextStart(occupiedStarts, start, rom.length);
+            // Sound70 (Oil Slide) is a 10-byte SMPS header plus a 14-byte PSG
+            // stream and ends at REV01 $FFFEC. $FFFEC..$FFFFF is bank padding,
+            // not part of the asset (s2.asm:91836 through finishBank).
+            int end = id == 0xf0 ? FINAL_SFX_END : nextStart(occupiedStarts, start, rom.length);
             String key = String.format("sfx.%02X", id);
             Asset asset = new Asset(key, z80(BANK2, start), z80(BANK2, end));
             values.put(key, asset);
@@ -103,7 +107,7 @@ public final class S2CompleteRunAssetCatalog {
 
     Asset music(int songId, int pointer) {
         Song song = songs.get(songId);
-        if (song == null || !contains(song.asset, pointer, false)) {
+        if (song == null || !contains(song.asset, pointer)) {
             throw new IllegalArgumentException("S2 music pointer has no exact current-song owner");
         }
         return song.asset;
@@ -119,7 +123,7 @@ public final class S2CompleteRunAssetCatalog {
     Asset savedMusic(byte[] raw, int bankByte, int pointer) {
         List<Song> matches = new ArrayList<>();
         for (Song song : songs.values()) {
-            if (song.bankByte() != bankByte || !contains(song.asset, pointer, false)) continue;
+            if (song.bankByte() != bankByte || !contains(song.asset, pointer)) continue;
             if (song.decoded == null || matchesBuffer(raw, song.decoded)) matches.add(song);
         }
         if (matches.size() != 1) {
@@ -130,7 +134,7 @@ public final class S2CompleteRunAssetCatalog {
 
     Asset sfx(int pointer) {
         Asset match = null;
-        for (Asset asset : sfx) if (contains(asset, pointer, false)) {
+        for (Asset asset : sfx) if (contains(asset, pointer)) {
             if (match != null) throw new IllegalArgumentException("ambiguous S2 SFX pointer");
             match = asset;
         }
@@ -138,8 +142,8 @@ public final class S2CompleteRunAssetCatalog {
         return match;
     }
 
-    void require(Asset asset, int pointer, boolean allowEnd, String label) {
-        if (!contains(asset, pointer, allowEnd)) {
+    void require(Asset asset, int pointer, String label) {
+        if (!contains(asset, pointer)) {
             throw new IllegalArgumentException(label + " is outside its exact S2 asset");
         }
     }
@@ -151,9 +155,8 @@ public final class S2CompleteRunAssetCatalog {
         return true;
     }
 
-    private static boolean contains(Asset asset, int pointer, boolean allowEnd) {
-        return pointer >= asset.addressBase() && (pointer < asset.addressEndExclusive()
-                || allowEnd && pointer == asset.addressEndExclusive());
+    private static boolean contains(Asset asset, int pointer) {
+        return pointer >= asset.addressBase() && pointer < asset.addressEndExclusive();
     }
 
     private static SongSeed songSeed(byte[] rom, int id, int bank, int pointerOffset) {
