@@ -26,6 +26,11 @@ namespace OpenGGF.BizHawk.Headless
             "9FEEB724052C39982D432A7851C98D3E";
         internal const int FirstRow = 769;
         internal const int ExclusiveEnd = 259590;
+        // The complete shipped 8 KiB Z80 RAM image.
+        // It includes self-modifying driver code, the decompressed song buffer, zVar,
+        // live tracks, SFX tracks, and the fixBugs=0 one-up save payload.
+        internal const int DriverStateStart = 0x0000;
+        internal const int DriverStateExclusiveEnd = 0x2000;
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
         internal const string CapabilityTemplateSha256Expected =

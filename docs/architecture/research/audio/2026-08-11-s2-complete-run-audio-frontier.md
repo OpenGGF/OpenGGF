@@ -169,3 +169,47 @@ The clean two-root verifier reproduced production SHA-256
 `9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31`
 and test SHA-256
 `3a10293d6d41bff0fb637c91953e4f3644e990b49f72b09414437b6b81f1c30b`.
+
+## Round 4: transactional raw reference staging
+
+S2 now owns a lossless native raw sink and strict Java streaming adapter. The
+captured state span is the complete `$0000..$1FFF` 8 KiB Z80 RAM image. A
+smaller `zVar`-only span would be lossy: the shipped driver holds
+future-affecting DAC, channel-pointer, voice, and Saxman decompressor state in
+self-modifying instructions throughout the code image
+(`docs/s2disasm/s2.sounddriver.asm:516-533,694-722,806-814,2196-2247,`
+`2314-2400,4051-4075`). The same image contains the globals at
+`$12FE..$1307`, the decompressed song buffer at `zMusicData=$1380`, and the
+live/SFX/`fixBugs=0` saved tracks from `zStack=$1B80` through the hard `$2000`
+RAM ceiling (`docs/s2disasm/s2.sounddriver.asm:31-227,4087-4096`).
+
+The C# sink writes one strict JSONL envelope with pinned ROM, BK2, manifest,
+interval, and state-range identities; lossless ABI-v3 events; typed active and
+pending services; chip ownership; snapshots; and ancestry transitions. Output
+uses the shared no-replace staging primitive, so a late capture failure removes
+the private staging file and an existing target is never replaced. This is raw
+staging only: no CLI route, Java producer binding, canonical-store publication,
+or trace comparison was enabled.
+
+The Java adapter rejects duplicate or extra fields, non-integral numeric
+tokens, noncanonical uint64 payload strings, row gaps, out-of-range ABI-v3
+values, malformed immutable/effective ancestry, wrong snapshot widths, and
+records after cutoff. It begins its consumer transaction only after validating
+metadata and the row-769 baseline, aborts every staged callback on any later
+failure, and commits only after a validated cutoff followed by EOF.
+
+The real read-only proof against the action-9 observer installation reproduced
+the reviewed boundary exactly: row 769, epoch 1, one open kind-4 DPCM service,
+zero pending descendants, YM latches `$2A/$A1`, 1,491 events, and a 16,384-digit
+lowercase state snapshot. The pinned ROM and BK2 identities were unchanged and
+no ROM, movie, raw payload, or native binary was copied or published.
+
+Focused verification passed 22 S2 Java tests, eight S2 profile tests, eight S2
+capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
+production C# addition changes the deterministic harness identities to
+`ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`
+for the main executable and
+`0fde5216cfb819919d29e10287ffd500e4a63b1e72437eb8b0ea78db7a05d3a2`
+for the test executable in this worktree. The tracked capability remains on the
+integration identity; the conductor must perform the single combined
+cross-game deterministic rebuild and repin after merging all game rounds.

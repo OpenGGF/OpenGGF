@@ -77,6 +77,7 @@
     <Compile Include="tests/S2AuxArmBlockTests.cs" />
     <Compile Include="tests/S2AudioObserverProfileTests.cs" />
     <Compile Include="tests/S2CompleteAudioCaptureRunnerTests.cs" />
+    <Compile Include="tests/S2CompleteAudioRawSinkTests.cs" />
     <Compile Include="tests/S2AuxEventEngineTests.cs" />
     <Compile Include="tests/S2RunCaptureRunnerTests.cs" />
     <Compile Include="tests/S2RunManifestWriterTests.cs" />
