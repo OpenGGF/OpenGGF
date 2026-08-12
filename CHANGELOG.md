@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 resets `Level_frame_counter` when the title card releases, on a
+  special-stage return as well as a fresh entry. `GM_Level` clears the counter on every
+  non-demo level entry (s2.asm:4771-4773) and nothing before `Level_MainLoop` advances it
+  -- its sole increment is that loop's own `addq` (:5092). The counter lives in
+  `CrossResetRAM` (s2.constants.asm:1661-1665), so `Level_ClrRam` does not clear it and
+  that explicit store is the only reset. The engine reset it only when a load requested a
+  sprite-lifecycle change, which a returned-level load does not, so the returned level
+  inherited the previous segment's count (0xE9B where the ROM had 0x0002). Tails' CPU
+  auto-jump is gated on `andi.b #$3F` over that counter
+  (`TailsCPU_Normal_FilterAction_Part2`, :39368-39376), so the jump the ROM makes on the
+  return never fired; 1678 rows later the engine's Sonic was 906px off-route and died on
+  spikes. Resetting at the title-card release boundary rather than at load also drops the
+  26 pre-main-loop passes' worth of drift, since the ROM's passes never touch the counter.
+  `TestS2CompleteEmeraldRunChain` stops dying and reaches its returned-segment physics
+  assert (8633 errors); `TestS2EhzHalfpipeRoundTripChain` seg2 22426 -> 7662. Both
+  standalone seg2 oracles stay at 0 errors and `TestS1GhzMazeRoundTripChain` stays green.
 - Fix: S2 runs player physics only for the 26 object passes the ROM dispatches before
   `Level_MainLoop`. `Level_ClrRam` wipes the player objects
   (`clearRAM Object_RAM,LevelOnly_Object_RAM_End`, s2.asm:4808) and `Level_TtlCard`'s

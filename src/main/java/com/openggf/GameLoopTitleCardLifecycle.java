@@ -59,6 +59,13 @@ final class GameLoopTitleCardLifecycle {
             if (!preparedByFrameStep) {
                 preparePhase.accept(PlcLifecyclePhase.LEVEL_TITLE_CARD);
             }
+            // GM_Level clears Level_frame_counter on every non-demo level entry
+            // (docs/s2disasm/s2.asm:4771-4773), and none of the pre-Level_MainLoop
+            // object passes advance it -- the only increment is Level_MainLoop's
+            // own addq at s2.asm:5092. The counter lives in CrossResetRAM, so
+            // Level_ClrRam does not clear it; this store is the sole reset and it
+            // runs for a special-stage return exactly as for a fresh entry.
+            spriteManager.setFrameCounter(0);
             releaseResult.accept(destination.completeRelease(levelManager, exitTitleCard));
             return true;
         }
