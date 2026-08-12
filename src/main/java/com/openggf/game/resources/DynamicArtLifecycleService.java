@@ -81,6 +81,29 @@ public final class DynamicArtLifecycleService
     private int movieLogicalFrame;
     private boolean movieLogicalFrameSuppliedExternally;
     /**
+     * Rows the movie advanced without anyone announcing them.
+     *
+     * <p>A run advances the movie one row per driven frame, and a driver that
+     * knows the row announces it ({@link #setMovieLogicalFrame}). Some spans
+     * are driven with no announcement at all: a harness that pre-seeks the
+     * shared cursor for an uncompared interior keeps re-announcing the same
+     * frozen row for the whole interior and the transition gap after it, so
+     * every gap edge is stamped with one stale row however many rows apart
+     * they were emitted. Across such a span the engine's own production
+     * iterations are the only evidence rows are passing, and one iteration is
+     * one row.
+     *
+     * <p>Counting them makes a stale stamp recoverable: an edge whose stamp
+     * was followed by {@code n} unannounced iterations is {@code n} rows
+     * earlier than it says. Where rows are announced this count never moves
+     * and the stamp is already right.
+     */
+    private int unannouncedRows;
+    /** Last row announced, so a re-announced row is not a row advance. */
+    private int lastAnnouncedMovieRow = -1;
+    /** Whether a NEW row was announced since the last iteration closed. */
+    private boolean newMovieRowAnnouncedSinceIteration;
+    /**
      * Gap-ledger length, movie row and outstanding ledger as they stood the
      * instant the comparison segment closed — the state a transition gap
      * opens on.
@@ -237,6 +260,9 @@ public final class DynamicArtLifecycleService
             int gapOpeningMovieLogicalFrame,
             int gapEdgesBeforeLastIteration,
             int gapEdgesBeforeCurrentIteration,
+            int unannouncedRows,
+            int lastAnnouncedMovieRow,
+            boolean newMovieRowAnnouncedSinceIteration,
             List<Descriptor> gapOpeningLedger,
             List<Descriptor> ledgerBeforeBufferedBatch) {
         public RewindState {
@@ -274,6 +300,7 @@ public final class DynamicArtLifecycleService
     public DynamicArtGapDiagnosticsSnapshot gapOpeningSnapshot() {
         return new DynamicArtGapDiagnosticsSnapshot(
                 gapOpeningMovieLogicalFrame,
+                unannouncedRows,
                 gapTransitions.subList(0, Math.min(
                         gapOpeningTransitionCount, gapTransitions.size())),
                 gapOpeningLedger.stream()
@@ -291,6 +318,7 @@ public final class DynamicArtLifecycleService
     public DynamicArtGapDiagnosticsSnapshot gapSnapshot() {
         return new DynamicArtGapDiagnosticsSnapshot(
                 movieLogicalFrame,
+                unannouncedRows,
                 gapTransitions,
                 ledger.values().stream()
                         .map(descriptor ->
@@ -964,6 +992,10 @@ public final class DynamicArtLifecycleService
         }
         movieLogicalFrame = movieRow;
         movieLogicalFrameSuppliedExternally = true;
+        if (movieRow != lastAnnouncedMovieRow) {
+            lastAnnouncedMovieRow = movieRow;
+            newMovieRowAnnouncedSinceIteration = true;
+        }
     }
 
     public void serviceProductionVBlank() {
@@ -1169,6 +1201,11 @@ public final class DynamicArtLifecycleService
         }
         gapEdgesBeforeLastIteration = gapEdgesBeforeCurrentIteration;
         gapEdgesBeforeCurrentIteration = gapTransitions.size();
+        if (newMovieRowAnnouncedSinceIteration) {
+            newMovieRowAnnouncedSinceIteration = false;
+        } else {
+            unannouncedRows++;
+        }
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
@@ -1235,6 +1272,8 @@ public final class DynamicArtLifecycleService
                 nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
                 gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
                 gapEdgesBeforeLastIteration, gapEdgesBeforeCurrentIteration,
+                unannouncedRows, lastAnnouncedMovieRow,
+                newMovieRowAnnouncedSinceIteration,
                 gapOpeningLedger, ledgerBeforeBufferedBatch);
     }
 
@@ -1274,6 +1313,10 @@ public final class DynamicArtLifecycleService
         gapEdgesBeforeLastIteration = snapshot.gapEdgesBeforeLastIteration();
         gapEdgesBeforeCurrentIteration =
                 snapshot.gapEdgesBeforeCurrentIteration();
+        unannouncedRows = snapshot.unannouncedRows();
+        lastAnnouncedMovieRow = snapshot.lastAnnouncedMovieRow();
+        newMovieRowAnnouncedSinceIteration =
+                snapshot.newMovieRowAnnouncedSinceIteration();
         gapOpeningLedger = List.copyOf(snapshot.gapOpeningLedger());
         ledgerBeforeBufferedBatch =
                 List.copyOf(snapshot.ledgerBeforeBufferedBatch());
@@ -1313,6 +1356,9 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
         movieLogicalFrameSuppliedExternally = false;
+        unannouncedRows = 0;
+        lastAnnouncedMovieRow = -1;
+        newMovieRowAnnouncedSinceIteration = false;
         gapOpeningTransitionCount = 0;
         gapOpeningMovieLogicalFrame = 0;
         gapEdgesBeforeLastIteration = 0;
@@ -1376,6 +1422,10 @@ public final class DynamicArtLifecycleService
                         edgeOrdinal, transferId, phase, owner,
                 mappingFrame, movieLogicalFrame,
                 nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
+                // The edge's own iteration is itself an unannounced row
+                // when nothing announced one for it.
+                unannouncedRows
+                        + (newMovieRowAnnouncedSinceIteration ? 0 : 1),
                 requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
                 afterOutstanding));

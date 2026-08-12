@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: transition-gap art edges are stamped from rows that actually passed, not from a frozen
+  playback cursor -- `TestS2EhzHalfpipeRoundTripChain` is now fully green. During an S2 gap the
+  shared cursor is pre-seeked to the destination and never advances (measured: 3908 calls
+  announcing the identical row 9701, 4203 announcing 19159), so all eight of a gap's edges
+  carried the same stale row and their indices collapsed with them. The engine's work cadence
+  was already exactly right, anchored at the end of the gap: its edge iterations counting back
+  from admission are -26, -26, -25, -25, -10, -9, -2, -1 in all five gaps, identical to the
+  recorded rows' offsets from the destination's first main-loop row. The rule landed counts
+  rows that pass with no row announced -- re-announcing the same row is not an advance, and an
+  iteration with nothing announced is one row -- so an edge followed by n unannounced rows sits
+  n rows before its stamp. That is an identity where the cursor is live and the only available
+  answer where it is frozen, and it is anchored at admission rather than run forward from the
+  gap start (a forward run cannot work: engine gap iterations are 156/139/200/136/133 against
+  the ROM's invariant 173). Recorded because it contradicts the obvious approach: counting back
+  *gap iterations* instead of unannounced rows regressed `TestS1CompleteEmeraldVisualRun`, whose
+  gap runs on a live cursor that advances 9730 to 9741 while barely one production iteration
+  completes -- iterations and movie rows are different clocks and only S2's freezes. Both
+  implementations of the contract now share one helper; the chains use the harness's own probe
+  rather than the production journal. No constant was introduced: the only literals in the diff
+  are 0 and 1. Every `run_gap` axis on both S2 chains is green, and the emerald chain's only
+  remaining failures are its segment-6 walk failure and segment-6 physics divergence.
 - Fix: S2's special-stage results sequence runs the ROM's length instead of two invented
   durations. `Obj6F`'s main object slides 448 -> 160 at 16 px per frame, so it arrives on
   frame 19 (metadata row s2.asm:28537, mover s2.asm:27494), latches `anim_frame_duration`

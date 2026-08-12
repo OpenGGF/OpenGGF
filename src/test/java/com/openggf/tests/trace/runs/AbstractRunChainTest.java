@@ -46,6 +46,7 @@ import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
+import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
@@ -240,6 +241,13 @@ abstract class AbstractRunChainTest {
          * <p>Mirrors {@link TraceRunDynamicArtGapJournal}, which implements the
          * same contract for the production visual run path.
          */
+        /**
+         * Unannounced rows counted when the gap opened, on the same clock the
+         * gap's edges carry. A frozen cursor stamps the gap's start with the
+         * same stale row it stamps every edge with, so the gap's own start row
+         * is recovered the same way at admission.
+         */
+        private Integer gapOpenedUnannouncedRows;
         private Integer sourceClosedTransitionCount;
         private Integer sourceClosedMovieLogicalFrame;
         private Long sourceClosedLastEdgeOrdinal;
@@ -286,6 +294,8 @@ abstract class AbstractRunChainTest {
                         "dynamic-art gap opened before source close for " + segmentDir);
             }
             gapOpenedOrdinal = ++structuralOrdinal;
+            gapOpenedUnannouncedRows =
+                    lifecycle.capture().unannouncedRows();
             if (sourceClosedTransitionCount != null) {
                 gapStartMovieLogicalFrame = sourceClosedMovieLogicalFrame;
                 openingLedger = sourceClosedLedger;
@@ -311,6 +321,8 @@ abstract class AbstractRunChainTest {
             }
             int nextSegmentArmMovieLogicalFrame =
                     lifecycle.capture().movieLogicalFrame();
+            int nextSegmentArmUnannouncedRows =
+                    lifecycle.capture().unannouncedRows();
             long destinationOpenedOrdinal = ++structuralOrdinal;
             List<DynamicArtGapTransition> afterNextArm =
                     lifecycle.gapTransitions();
@@ -320,10 +332,19 @@ abstract class AbstractRunChainTest {
                                     transitionCountAtGapStart,
                                     afterNextArm.size())
                             : List.of();
+            added = TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
+                    added, nextSegmentArmUnannouncedRows);
+            // The same recovery for the gap's own first row: a frozen cursor
+            // reports the gap's END row at both ends of the span.
+            int recoveredGapStartMovieLogicalFrame =
+                    TraceRunDynamicArtGapJournal.rowCountedBackFromAdmission(
+                            gapStartMovieLogicalFrame,
+                            nextSegmentArmUnannouncedRows,
+                            gapOpenedUnannouncedRows);
             structuralGaps.add(new DynamicArtStructuralGapEvidence(
                     representedSegmentDir,
                     nextSegmentDir,
-                    gapStartMovieLogicalFrame,
+                    recoveredGapStartMovieLogicalFrame,
                     nextSegmentArmMovieLogicalFrame,
                     transitionCountAtGapStart,
                     lastEdgeOrdinalAtGapStart,
@@ -337,6 +358,7 @@ abstract class AbstractRunChainTest {
                     added));
             representedSegmentDir = null;
             gapStartMovieLogicalFrame = null;
+            gapOpenedUnannouncedRows = null;
             sourceClosedOrdinal = null;
             gapOpenedOrdinal = null;
             openingLedger = List.of();

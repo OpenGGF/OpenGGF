@@ -282,7 +282,7 @@ class TestTraceRunDynamicArtGapComparator {
             List<Long> after) {
         DynamicArtGapTransition.GapEdge edge = new DynamicArtGapTransition.GapEdge(
                 ordinal, descriptor.transferId(), phase, descriptor.owner(),
-                descriptor.mappingFrame(), movieFrame, gapIndex,
+                descriptor.mappingFrame(), movieFrame, gapIndex, 0,
                 descriptor.requests().stream().map(TestTraceRunDynamicArtGapComparator::runtimeRequest)
                         .toList());
         return new DynamicArtGapTransition(edge, before, after);
