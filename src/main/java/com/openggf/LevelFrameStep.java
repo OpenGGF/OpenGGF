@@ -258,6 +258,17 @@ public final class LevelFrameStep {
 
         boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         SpriteManager spriteManager = context.spriteManager();
+        // ROM RunObjects covers the level-only fixed slots (Tails' tails, dust,
+        // shields, bubbles, stars) only while the game mode carries no title-card
+        // flag; see TitleCardProvider#shouldRunLevelOnlyFixedSlotsDuringLockedPhase
+        // for the S2/S3K citations. A locked title-card frame must therefore skip
+        // that half of the dispatch in games whose ROM excludes it.
+        SpriteManager levelOnlyFixedSlots = spriteManager != null
+                && (phase != PlcLifecyclePhase.LEVEL_TITLE_CARD
+                        || context.gameModule().getTitleCardProvider()
+                                .shouldRunLevelOnlyFixedSlotsDuringLockedPhase())
+                ? spriteManager
+                : null;
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch
             //    state because player-slot ReactToItem runs before ExecuteObjects.
@@ -275,9 +286,9 @@ public final class LevelFrameStep {
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
-            Runnable afterExecBeforePlacement = spriteManager != null
+            Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
                     ? () -> {
-                        spriteManager.advancePlayableFixedSlotsAfterObjectExecution();
+                        levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
                         levelManager.updateZoneFeaturesAfterObjectExecution();
                     }
                     : levelManager::updateZoneFeaturesAfterObjectExecution;
@@ -368,8 +379,8 @@ public final class LevelFrameStep {
         if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
-        if (spriteManager != null && !inlineSolidResolution) {
-            wrapper.wrap("fixed-dust", spriteManager::advancePlayableFixedSlotsAfterObjectExecution);
+        if (levelOnlyFixedSlots != null && !inlineSolidResolution) {
+            wrapper.wrap("fixed-dust", levelOnlyFixedSlots::advancePlayableFixedSlotsAfterObjectExecution);
         }
 		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
 		// handlers. Event-owned camera motion after this point must not move the

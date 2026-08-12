@@ -251,6 +251,34 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Whether the level-only fixed object slots (Tails' tails, spindash dust,
+     * shields, bubbles, invincibility stars) execute while the title card is up.
+     *
+     * <p>Sonic 2's {@code RunObjects} chooses its slot count from the game mode:
+     * it runs the first {@code $80} slots ({@code Object_RAM..Object_RAM_End})
+     * unless {@code Game_Mode} equals {@code GameModeID_Level} exactly, in which
+     * case it extends to {@code LevelOnly_Object_RAM_End}
+     * (docs/s2disasm/s2.asm:29805-29824). {@code Level} sets
+     * {@code GameModeFlag_TitleCard} on entry (s2.asm:4758) and only
+     * {@code Level_StartGame} clears it, immediately before {@code Level_MainLoop}
+     * (s2.asm:5087). Every pre-main-loop {@code RunObjects} call — the one at
+     * s2.asm:5006 and each title-card wait-loop iteration at s2.asm:5060-5066 —
+     * therefore runs with the flag set and never reaches
+     * {@code LevelOnly_Object_RAM}, which begins at {@code Tails_Tails}
+     * (docs/s2disasm/s2.constants.asm:1145-1176). Obj05's first execution is
+     * consequently the first {@code Level_MainLoop} pass,
+     * {@code Level_frame_counter == 1}.
+     *
+     * <p>Sonic 3 &amp; Knuckles has no such gate: {@code Process_Sprites} always
+     * walks the whole {@code Object_RAM}, including {@code Level_object_RAM}
+     * (docs/skdisasm/sonic3k.asm:35963-35976, sonic3k.constants.asm:309).
+     * Sonic 1 has no level-only fixed slot family at all.
+     */
+    default boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {
+        return true;
+    }
+
+    /**
      * Number of object-only passes to run immediately before the title card
      * releases into the first normal level frame.
      *
