@@ -47,6 +47,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests carry an open pre-epoch DPCM iteration into row 860",
                 CarriesOpenPreEpochDpcmIntoFirstPublishedRow));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests carry a deferred reservation across the epoch boundary",
+                CarriesDeferredReservationAcrossEpochBoundary));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject corrupt deferred boundary identity",
+                RejectsCorruptDeferredBoundaryIdentity));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests publish the epoch exactly once after a drained boundary",
                 PublishesEpochExactlyOnceAfterDrainedBoundary));
             tests.Add(new TestMain.TestCase(
@@ -1136,6 +1142,140 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, CountNativeKind(output.ToString(), 2));
             AssertEx.Equal("configure,begin,end,count,drain:2,publication,begin,end,count,drain:5,disable",
                 string.Join(",", api.Calls));
+        }
+
+        private static void CarriesDeferredReservationAcrossEpochBoundary()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071BB2);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                session.BeginEpoch();
+                string boundary=output.ToString();
+                AssertEx.Equal(0,CountRecords(boundary,"native_event"));
+                AssertEx.Equal(0,CountRecords(boundary,"managed_hook_evidence"));
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            string raw=output.ToString();
+            AssertEx.Equal(0,CountNativeMarkerValue(raw,4));
+            AssertEx.Equal(0,Records(raw,"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B4C).Count);
+            List<JObject> native=NativeRecords(raw,860);
+            int consume=FindNative(native,value=>(int)value["kind"]==1
+                &&(int)value["service_kind"]==4
+                &&(uint)value["pc"]==0x071B82);
+            ushort blocker=(ushort)native[consume]["parent_token"];
+            ushort child=(ushort)native[consume]["service_token"];
+            AssertEx.Equal((ushort)1,blocker);
+            AssertEx.Equal(1,(int)native[consume]["depth"]);
+            int observation=FindNative(native,value=>(int)value["kind"]==10
+                &&(uint)value["pc"]==0x071BB2);
+            int childEnd=FindNative(native,value=>(int)value["kind"]==2
+                &&(ushort)value["service_token"]==child);
+            int blockerEnd=FindNative(native,value=>(int)value["kind"]==2
+                &&(ushort)value["service_token"]==blocker);
+            AssertEx.Equal(true,consume<observation&&observation<childEnd
+                &&childEnd<blockerEnd);
+            AssertEx.Equal(child,(ushort)native[observation]["service_token"]);
+            JObject consumeEvidence=Records(raw,"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82)[0];
+            AssertEx.Equal((uint)0x00FFFDB2,
+                (uint)consumeEvidence["registers"]["A7"]);
+            AssertEx.Equal(child,(ushort)consumeEvidence["native_service_token"]);
+            AssertEx.Equal(blocker,(ushort)consumeEvidence["native_parent_token"]);
+        }
+
+        private static void RejectsCorruptDeferredBoundaryIdentity()
+        {
+            var missingApi=new FakeTraceApi();
+            var missingHost=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                missingApi.VisitZ80(0x003A,current);
+                missingApi.VisitManaged(0x071B4C,current);
+            });
+            var missingOutput=new StringWriter();
+            using(var session=CreateSession(missingHost,missingApi,missingOutput))
+            {
+                session.ObservePreEpochFrame(859,null,missingHost.Advance);
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.BeginEpoch(),"managed identity");
+                AssertEx.Equal(0,missingOutput.ToString().Length);
+            }
+
+            var mismatchApi=new FakeTraceApi();
+            var mismatchHost=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                mismatchApi.VisitZ80(0x003A,current);
+                Visit(current,mismatchApi,0x071B4C);
+                current.SetCpuRegister("A7",0x00FFFDB6);
+                Visit(current,mismatchApi,0x071B4C);
+            });
+            var mismatchOutput=new StringWriter();
+            using(var session=CreateSession(mismatchHost,mismatchApi,mismatchOutput))
+            {
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.ObservePreEpochFrame(859,null,mismatchHost.Advance),
+                    "identity");
+                AssertEx.Equal(0,mismatchOutput.ToString().Length);
+            }
+
+            AssertDeferredBoundaryConsumeFails(current=>
+                current.SetCpuRegister("A7",0x00FFFDB6));
+            AssertDeferredBoundaryConsumeFails(current=>
+                current.SetU32(0xFDB2,0x00000B68));
+        }
+
+        private static void AssertDeferredBoundaryConsumeFails(
+            Action<FakeS1Host> corrupt)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                corrupt(current);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                session.BeginEpoch();
+                int baselineLength=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),"identity");
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+            }
         }
 
         private static void PublishesEpochExactlyOnceAfterDrainedBoundary()

@@ -714,6 +714,7 @@ namespace OpenGGF.BizHawk.Headless
                 internal ushort BlockerToken,BlockerParentToken,HookToken;
                 internal byte BlockerKind,BlockerDepth,TargetKind,SourceCpu;
                 internal uint Pc,Stack,ReturnPc;
+                internal int CorrelatedObservationCount;
                 internal readonly List<PendingManagedOccurrence> Observations=
                     new List<PendingManagedOccurrence>();
             }
@@ -732,8 +733,11 @@ namespace OpenGGF.BizHawk.Headless
             private readonly List<IDisposable> callbacks = new List<IDisposable>();
             private readonly Queue<PendingManagedOccurrence> pendingManaged =
                 new Queue<PendingManagedOccurrence>();
+            private readonly Queue<PendingManagedOccurrence> pendingBoundaryManaged =
+                new Queue<PendingManagedOccurrence>();
             private PendingManagedOccurrence collectingManaged;
             private DeferredManagedBegin pendingDeferredBegin;
+            private DeferredManagedBegin boundaryDeferredBegin;
             private StringWriter frameTransaction;
             private StringWriter deferredPublication;
             private readonly List<JObject> deferredEvidencePublication=
@@ -768,7 +772,8 @@ namespace OpenGGF.BizHawk.Headless
             private bool complete;
             private bool disposed;
             internal int PendingDeferredObservationCountForTesting
-            {get{return pendingDeferredBegin==null?0:pendingDeferredBegin.Observations.Count;}}
+            {get{return pendingDeferredBegin==null
+                ?0:pendingDeferredBegin.CorrelatedObservationCount;}}
 
             internal Session(IGpgxHost host, ICpuRegisterReader registers,
                 IGpgxAudioTraceApi api, Manifest manifest, TextWriter output)
@@ -806,10 +811,16 @@ namespace OpenGGF.BizHawk.Headless
             internal void BeginEpoch()
             {
                 if (epochStarted) throw new InvalidOperationException("The comparison epoch already began.");
-                if (capturing || pendingManaged.Count != 0)
+                if (capturing || pendingManaged.Count != 0
+                    || pendingBoundaryManaged.Count != 0)
                     throw new InvalidOperationException("Cannot begin the epoch with an incomplete native drain.");
                 CompleteRunAudioObserver.CutoffFrontier frontier =
-                    observer.CaptureBoundaryFrontierAndResetPublication();
+                    observer.CaptureCutoffFrontier();
+                DeferredManagedBegin carriedDeferred=ValidateBoundaryDeferredBegin(
+                    frontier.PendingDeferredBegin);
+                frontier=observer.CaptureBoundaryFrontierAndResetPublication();
+                pendingDeferredBegin=carriedDeferred;
+                boundaryDeferredBegin=null;
                 Write(new JObject
                 {
                     ["type"]="metadata", ["schema"]=RawSchema,
@@ -902,7 +913,11 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException("Missing or out-of-order S1 audio row.");
                 ManagedServiceTracker servicesBefore=managedServices.Clone();
                 DeferredManagedBegin deferredBefore=CloneDeferred(pendingDeferredBegin);
+                DeferredManagedBegin boundaryDeferredBefore=
+                    CloneDeferred(boundaryDeferredBegin);
                 PendingManagedOccurrence[] managedBefore=pendingManaged.ToArray();
+                PendingManagedOccurrence[] boundaryManagedBefore=
+                    pendingBoundaryManaged.ToArray();
                 int deferredEvidenceBefore=deferredEvidencePublication.Count;
                 var transaction=new StringWriter(CultureInfo.InvariantCulture);
                 frameTransaction=transaction;
@@ -961,12 +976,14 @@ namespace OpenGGF.BizHawk.Headless
                             WriteNative(events[i]);
                             ApplyNativeLifecycle(events[i]);
                             if (publish) CorrelateManaged(events[i]);
+                            else CorrelateBoundaryManaged(events[i]);
                         }
                     });
                     if (pendingResetEvidence != null)
                         throw new InvalidOperationException(
                             "A reset input had no native ordered reset lifecycle.");
-                    if (pendingManaged.Count != 0)
+                    if (pendingManaged.Count != 0
+                        || pendingBoundaryManaged.Count != 0)
                         throw new InvalidOperationException(
                             "A managed S1 callback had no native ordered marker.");
                     WriteFrame(new JObject { ["type"]="frame_end", ["row"]=row });
@@ -992,8 +1009,12 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     managedServices.Restore(servicesBefore);
                     pendingDeferredBegin=deferredBefore;
+                    boundaryDeferredBegin=boundaryDeferredBefore;
                     pendingManaged.Clear();
                     for(int i=0;i<managedBefore.Length;i++)pendingManaged.Enqueue(managedBefore[i]);
+                    pendingBoundaryManaged.Clear();
+                    for(int i=0;i<boundaryManagedBefore.Length;i++)
+                        pendingBoundaryManaged.Enqueue(boundaryManagedBefore[i]);
                     if(deferredEvidencePublication.Count>deferredEvidenceBefore)
                         deferredEvidencePublication.RemoveRange(deferredEvidenceBefore,
                             deferredEvidencePublication.Count-deferredEvidenceBefore);
@@ -1043,10 +1064,25 @@ namespace OpenGGF.BizHawk.Headless
                 if (!capturing)
                     throw new InvalidOperationException(
                         "S1 audio callback contamination outside an active row.");
-                // Before the comparison epoch the native observer alone owns
-                // continuity. Managed snapshots are publication evidence and
-                // are intentionally neither queued nor retained.
-                if (!publishing) return;
+                // Before publication retain only the bounded A7/return identity
+                // needed to carry an action-11 reservation across the cutoff.
+                // No managed evidence from the preceding epoch is published.
+                if (!publishing)
+                {
+                    if(hook.Action!="SERVICE_BEGIN"
+                        &&hook.Action!="DEFERRED_SERVICE_CONSUME")return;
+                    if(pendingBoundaryManaged.Count>=manifest.MaximumRecordsPerFrame)
+                        throw new InvalidOperationException(
+                            "The bounded S1 boundary-correlation stream overflowed.");
+                    var boundaryOccurrence=new PendingManagedOccurrence
+                    {
+                        Hook=hook,
+                        Stack=ReadM68kRegister("A7"),
+                        ReturnPc=ReadReturnPc()
+                    };
+                    pendingBoundaryManaged.Enqueue(boundaryOccurrence);
+                    return;
+                }
                 var occurrence = new PendingManagedOccurrence { Hook=hook };
                 collectingManaged = occurrence;
                 bool captured = false;
@@ -1127,6 +1163,122 @@ namespace OpenGGF.BizHawk.Headless
                     if (captured)
                         pendingManaged.Enqueue(occurrence);
                 }
+            }
+
+            private DeferredManagedBegin ValidateBoundaryDeferredBegin(
+                CompleteRunAudioObserver.DeferredBeginEvidence native)
+            {
+                if(native==null)
+                {
+                    if(boundaryDeferredBegin!=null)
+                        throw new InvalidOperationException(
+                            "Native/managed deferred boundary identity differs.");
+                    return null;
+                }
+                if(boundaryDeferredBegin==null)
+                    throw new InvalidOperationException(
+                        "Native deferred boundary reservation had no managed identity.");
+                if(native.Consumed
+                    ||native.BlockerToken!=boundaryDeferredBegin.BlockerToken
+                    ||native.BlockerParentToken
+                        !=boundaryDeferredBegin.BlockerParentToken
+                    ||native.BlockerKind!=boundaryDeferredBegin.BlockerKind
+                    ||native.BlockerDepth!=boundaryDeferredBegin.BlockerDepth
+                    ||native.TargetKind!=boundaryDeferredBegin.TargetKind
+                    ||native.HookToken!=boundaryDeferredBegin.HookToken
+                    ||native.SourceCpu!=boundaryDeferredBegin.SourceCpu
+                    ||native.Pc!=boundaryDeferredBegin.Pc
+                    ||native.ObservationCount
+                        !=boundaryDeferredBegin.CorrelatedObservationCount)
+                    throw new InvalidOperationException(
+                        "Native/managed deferred boundary identity differs.");
+                return CloneDeferred(boundaryDeferredBegin);
+            }
+
+            private void CorrelateBoundaryManaged(GpgxAudioTraceEvent value)
+            {
+                if(!IsManagedCorrelationEventKind(value.Kind))return;
+                ManagedHook expected;
+                if(!manifest.ManagedByNativeToken.TryGetValue(value.Subject,out expected)
+                    ||expected.Action!="SERVICE_BEGIN"
+                        &&expected.Action!="DEFERRED_SERVICE_CONSUME")return;
+                if(pendingBoundaryManaged.Count==0)return;
+                PendingManagedOccurrence occurrence=pendingBoundaryManaged.Peek();
+                if(!object.ReferenceEquals(occurrence.Hook,expected)
+                    ||occurrence.Hook.Pc!=value.Pc)
+                    throw new InvalidOperationException(
+                        "Managed/native S1 boundary marker order or PC differs.");
+                byte nativeAction;
+                if(!manifest.NativeActionByToken.TryGetValue(value.Subject,
+                    out nativeAction))
+                    throw new InvalidOperationException(
+                        "Managed boundary marker has no native action identity.");
+                if(expected.Action=="SERVICE_BEGIN")
+                {
+                    if(value.Kind==10&&value.Value==4)
+                    {
+                        if(nativeAction!=11)
+                            throw new InvalidOperationException(
+                                "Deferred S1 boundary marker has no action-11 identity.");
+                        if(boundaryDeferredBegin==null)
+                        {
+                            boundaryDeferredBegin=new DeferredManagedBegin
+                            {
+                                BlockerToken=value.ServiceToken,
+                                BlockerParentToken=value.ParentToken,
+                                BlockerKind=value.ServiceKindId,
+                                BlockerDepth=value.Depth,
+                                TargetKind=4,
+                                HookToken=value.Subject,
+                                SourceCpu=value.SourceCpu,
+                                Pc=value.Pc,
+                                Stack=occurrence.Stack,
+                                ReturnPc=occurrence.ReturnPc,
+                                CorrelatedObservationCount=1
+                            };
+                        }
+                        else
+                        {
+                            if(boundaryDeferredBegin.BlockerToken!=value.ServiceToken
+                                ||boundaryDeferredBegin.BlockerParentToken
+                                    !=value.ParentToken
+                                ||boundaryDeferredBegin.BlockerKind
+                                    !=value.ServiceKindId
+                                ||boundaryDeferredBegin.BlockerDepth!=value.Depth
+                                ||boundaryDeferredBegin.HookToken!=value.Subject
+                                ||boundaryDeferredBegin.SourceCpu!=value.SourceCpu
+                                ||boundaryDeferredBegin.Pc!=value.Pc
+                                ||boundaryDeferredBegin.Stack!=occurrence.Stack
+                                ||boundaryDeferredBegin.ReturnPc
+                                    !=occurrence.ReturnPc)
+                                throw new InvalidOperationException(
+                                    "Deferred S1 boundary callback A7/return identity changed.");
+                            boundaryDeferredBegin.CorrelatedObservationCount++;
+                        }
+                        pendingBoundaryManaged.Dequeue();
+                        return;
+                    }
+                    if(value.Kind==1&&nativeAction==1
+                        ||value.Kind==10&&value.Value==2
+                            &&(nativeAction==6||nativeAction==10))
+                    {
+                        pendingBoundaryManaged.Dequeue();
+                        return;
+                    }
+                    return;
+                }
+                if(nativeAction!=12||value.Kind!=1
+                    ||boundaryDeferredBegin==null
+                    ||occurrence.Stack!=boundaryDeferredBegin.Stack
+                    ||occurrence.ReturnPc!=boundaryDeferredBegin.ReturnPc
+                    ||value.ParentToken!=boundaryDeferredBegin.BlockerToken
+                    ||value.ServiceKindId!=boundaryDeferredBegin.TargetKind
+                    ||value.Depth!=boundaryDeferredBegin.BlockerDepth+1
+                    ||value.SourceCpu!=boundaryDeferredBegin.SourceCpu)
+                    throw new InvalidOperationException(
+                        "Deferred S1 boundary consume identity or nested begin differs.");
+                boundaryDeferredBegin=null;
+                pendingBoundaryManaged.Dequeue();
             }
 
             private void CorrelateManaged(GpgxAudioTraceEvent value)
@@ -1246,6 +1398,7 @@ namespace OpenGGF.BizHawk.Headless
                         occurrence.ManagedCorrelationOrdinal=
                             nextManagedCorrelationOrdinal++;
                         frameRecords+=occurrence.Records.Count;
+                        pendingDeferredBegin.CorrelatedObservationCount++;
                         pendingDeferredBegin.Observations.Add(occurrence);
                         pendingManaged.Dequeue();
                         return;
@@ -1382,7 +1535,8 @@ namespace OpenGGF.BizHawk.Headless
                     HookToken=source.HookToken,BlockerKind=source.BlockerKind,
                     BlockerDepth=source.BlockerDepth,TargetKind=source.TargetKind,
                     SourceCpu=source.SourceCpu,Pc=source.Pc,Stack=source.Stack,
-                    ReturnPc=source.ReturnPc};
+                    ReturnPc=source.ReturnPc,
+                    CorrelatedObservationCount=source.CorrelatedObservationCount};
                 for(int i=0;i<source.Observations.Count;i++)
                     copy.Observations.Add(CloneOccurrence(source.Observations[i]));
                 return copy;
