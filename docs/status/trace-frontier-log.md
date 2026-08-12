@@ -73269,3 +73269,117 @@ paths.
   `TestS3kMhzCompleteRunTraceReplay`). Both oracles
   (`TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`,
   `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`) stay at 0 errors.
+
+## 2026-08-12 - run-chain transition gap: the destination's row zero is adopted, not skipped
+
+Command (dedicated worktree, base `803384822`):
+`rm -rf target/surefire-reports target/trace-reports; mvn -Ptrace-replay -Dmse=off
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dsonic{1,2}.rom.path=...
+-Ds3k.rom.path=... test`
+
+- Root cause, MEASURED. Destination admission is polled BETWEEN host steps and
+  `TraceRunPlaybackCoordinator.destinationReady` needs `observation.mode() == LEVEL`,
+  so the destination's first row has already run when its comparison window opens.
+  Both the launcher and the chain test then called
+  `DynamicArtLifecycleService.advanceComparisonCursor(1)`, which SKIPS that row:
+  it is never published, the art it produced stays in the gap ledger as a surplus
+  gap edge, and the transfer it opened completes on segment row 1 still carrying
+  the `run_gap` stamp its gap-time submission gave it.
+- Objective boundary evidence (probe on `s2-ehz-halfpipe-roundtrip`, gap
+  `ss_2 -> seg3_ehz1`): the gap ledger held 27 edges with the last completed
+  production iteration's watermark at 26, i.e. exactly ONE edge emitted in that
+  iteration - ordinal 22634 / transfer 11317 / submitted / sonic / mapping frame
+  15. The fixture's `seg3_ehz1` row 0 carries exactly and only that edge, same
+  ordinal, transfer id, phase, owner and mapping frame. The preceding gap
+  (`ss -> seg2_ehz1`) had watermark == size, i.e. zero edges, and shows no
+  surplus-edge or origin symptom - the rule degenerates by itself.
+- Fix: `adoptGapResidentOpeningRow()`, the exact inverse of
+  `endComparisonSegmentAtRomModeChange()`. It moves that iteration's gap
+  transitions out of the gap ledger, re-stamps their submissions `segment`, and
+  publishes them as segment row zero. No constant, no zone/route/frame predicate.
+- Row zero is now genuinely COMPARED, not merely relabelled:
+  `LiveTraceComparator.compareAdoptedOpeningRow` compares the published row-zero
+  snapshot against the fixture's row 0. Mutation-tested by leaving the adopted
+  edge stamped `run_gap`: that produces a first error at trace frame 0 on
+  `dynamic_art.edge[0].submission_origin` with 32 other fields (ordinal, transfer
+  id, phase, owner, mapping frame, logical frame/index, publication frame,
+  terminal-forwarded, and all three requests' rom address, tile index, ram
+  address, vram destination and byte length) reported MATCH. Unmutated, all 33
+  match.
+- Frontier movement, `s2-ehz-halfpipe-roundtrip`: 4 axes -> 3. The
+  `[segment-physics]` axis for returned-level segment 4 (1 error,
+  `dynamic_art.edge[0].submission_origin` rom=segment engine=run_gap at frame 1)
+  is GONE. Gap `ss_2 -> seg3_ehz1` 50 -> 48 divergent fields, `run_gap.edge_count`
+  exp 8 act 9 resolved.
+- Frontier movement, `s2-sonic-tails-complete-emeralds`: 9 axes -> 8. The seg4
+  `[segment-physics]` axis is GONE; seg6 13837 -> 13836 errors (its
+  `submission_origin` error only). Gap `ss_2 -> seg3_ehz1` 50 -> 48 fields and
+  `ss_3 -> seg4_ehz1` 18 -> 14 fields, both `edge_count` errors resolved.
+- STILL RED and NOT choreography - correcting an earlier claim that the gap
+  content defects were closed. Every remaining gap on both chains diverges on
+  `before/after_outstanding_transfer_ids` because the ROM carries one extra
+  outstanding transfer through the whole gap that the engine never has (id 8078
+  on halfpipe, 8984 on the emerald chain), plus
+  `run_gap.edge[0].submission_origin` exp `segment` act `missing` - the engine's
+  `DynamicArtGapTransition.GapEdge` has no submission-origin field at all - and
+  `forwarded_completion`. Those are content, not row placement.
+- SYMPTOM 1 (row spreading) remains open and is a genuine work-placement
+  divergence, not a recorder timestamping convention: the recorder's eight gap
+  edges for `ss_2 -> seg3_ehz1` fall as four submit/complete PAIRS at movie rows
+  20220/20221, 20236/20237, 20244/20245 (emerald chain) - real per-row DPLC work
+  spread across the gap - where the engine emits all eight at the destination
+  offset 20246. Not addressed here.
+- Regression check: after = 770 tests, 2 failures, 3 errors, 4 skipped, identical
+  failing-class set to the control at `803384822`
+  (`TestS2CompleteEmeraldRunChain`, `TestS2EhzHalfpipeRoundTripChain`,
+  `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`,
+  `TestS3kMhzCompleteRunTraceReplay`). Both oracles at 0 errors.
+  `TestTraceRunDynamicArtGapJournal`, `TestTraceRunDynamicArtGapComparator`,
+  `TestVisualTraceRunTerminalTail`, `TestHardwareTimingAuthorityGuard`,
+  `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+  `TestS1GhzMazeRoundTripChain` green; `TestS3kBonusRoundTripChain` unchanged
+  (skipped in this environment, so the Option B path is NOT covered by evidence
+  here even though it shares the adoption branch).
+
+### Remediation pass (same day, same branch)
+
+- The tracked root-level `probe-gaptail.txt` diagnostic dump was removed from the
+  tree and from this branch's history. Its content is preserved above as the
+  "objective boundary evidence" bullet; no raw dump is committed.
+- OPTION B is no longer routed through adoption. `AbstractRunChainTest`'s
+  bonus-interior branch sets `returnRowsConsumed = 1` after
+  `playback.startSession(movie, returnOffset + 1)` re-anchors the cursor past
+  rows the engine never ran, so its "1" names no executed row zero. Adoption is
+  now gated on `returnCursorArrivedOrganically`, true only where the count came
+  from the cursor's own arrival (`playback.getCursorFrame() - returnOffset`).
+  Production needs no such gate: `destinationRowsConsumedForAdmission()` is
+  cursor-derived by construction, and that is now stated at the call site.
+  MEASURED: `TestS3kBonusRoundTripChain` is skipped in this environment (2
+  skipped, 0 run), so OPTION B is unexercisable here either way -- which is
+  precisely why it must not silently take a new path.
+- The two paths now agree. `TraceSessionLauncher` compares the adopted row too,
+  calling `LiveTraceComparator.compareAdoptedOpeningRow(0, ...)` immediately
+  after `installRunComparator`. Previously only the chain harness compared it.
+- New `TestAdoptedOpeningRowComparison` (3 tests, green) defends the property:
+  adoption moves only the last gap iteration into segment row zero; the adopted
+  row reaches the ordinary counters, observer and mismatch frontier (a fixture
+  row zero advertising no edges against a two-edge adopted row must report
+  errors, which falls to zero if the comparison is ever removed or stubbed); and
+  every adopting call site must also compare.
+- MEASURED after remediation. Full `-Ptrace-replay`: 770 tests, 2 failures,
+  3 errors, 4 skipped -- unchanged. `s2-ehz-halfpipe-roundtrip` 3 axes,
+  `s2-sonic-tails-complete-emeralds` 8 axes, no `[segment-physics]` axis for
+  segment 4 on either, seg6 13836 errors. Both oracles
+  (`TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`) pass. `TestRewindCoverageGuard`
+  and `TestStaticStateRewindCoverageGuard` RUN and green (they were never run
+  before this pass despite the new `RewindState` components).
+  `TestS1GhzMazeRoundTripChain` unchanged (2/2).
+- SYMPTOM 1 persists, unaddressed by design this pass: gap edges still carry the
+  destination's own `movie_logical_frame` where the recorder spreads them over
+  the preceding 26 rows, and `gap_edge_index` collapses with them.
+- Pre-existing, NOT from this work: `TestS1S2PlcComparisonOnlyGuard`.
+  `traceAndGhostSourcesCannotReachDynamicArtMutation` fails on
+  `com/openggf/trace/replay/TraceReplaySessionBootstrap.java`, whose
+  `DynamicArtLifecycleService` import was introduced by `1761bcf9a`, already on
+  `develop`. The class is outside the `trace-replay` profile.

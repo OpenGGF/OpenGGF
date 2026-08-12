@@ -1311,6 +1311,14 @@ abstract class AbstractRunChainTest {
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 // Attach the return comparator, keying on interior kind.
                 int returnRowsConsumed;
+                // True only when the playback cursor ARRIVED at the consumed
+                // row by running it, which is the sole footing on which an
+                // opening row can be adopted. Production's
+                // destinationRowsConsumedForAdmission() is cursor-derived and
+                // therefore always organic; OPTION B below re-anchors the
+                // cursor past rows the engine never ran, so its "1" names no
+                // executed row zero.
+                boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
@@ -1334,6 +1342,7 @@ abstract class AbstractRunChainTest {
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, framesConsumed, i + 1);
                     returnRowsConsumed = framesConsumed;
+                    returnCursorArrivedOrganically = true;
                 } else {
                     // OPTION B (bonus interior): the engine's bonus-exit sequence is
                     // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
@@ -1352,10 +1361,23 @@ abstract class AbstractRunChainTest {
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, 1, i + 1);
                     returnRowsConsumed = 1;
+                    returnCursorArrivedOrganically = false;
                 }
                 dynamicArtSegments.beginSegment();
-                gameplayMode.dynamicArtLifecycle()
-                        .advanceComparisonCursor(returnRowsConsumed);
+                if (returnRowsConsumed == 1 && returnCursorArrivedOrganically) {
+                    // The interior's fall-through iteration already ran the
+                    // return segment's row zero; adopt it rather than skipping
+                    // past it, so its art is stamped and compared as segment
+                    // work instead of staying gap-resident.
+                    gameplayMode.dynamicArtLifecycle()
+                            .adoptGapResidentOpeningRow();
+                    activeComparator.compareAdoptedOpeningRow(0,
+                            gameplayMode.dynamicArtLifecycle()
+                                    .latestSnapshot());
+                } else {
+                    gameplayMode.dynamicArtLifecycle()
+                            .advanceComparisonCursor(returnRowsConsumed);
+                }
                 dynamicArtGapJournal.nextSegmentArmed(
                         plans.get(i + 1).segment().dir());
                 i++;
