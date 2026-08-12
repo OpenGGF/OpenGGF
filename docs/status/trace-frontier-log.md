@@ -73574,3 +73574,62 @@ oracles, all eight S2 standalone special-stage classes,
 `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
 `TestAdoptedOpeningRowComparison`, `TestDynamicArtLifecycleService`,
 `TestCheckpointStateRewind` (66/66).
+
+## 2026-08-12 — S2 post-act fade stops running as live gameplay (Obj3A `Level_Inactive_flag`)
+
+Worktree `<scratch-worktree>` at base `5b4004b27`.
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Dsonic{1,2}.rom.path=... -Ds3k.rom.path=... test`.
+
+ROM ground re-verified in the listing this round:
+`Level_MainLoop` tests `Level_Inactive_flag` in the instruction immediately after
+`jsr (RunObjects).l` and branches to `Level` (s2.asm:5095-5097), *before*
+`JmpTo_DeformBgLayer` (:5098) — so the flag-set pass takes no camera step.
+`Level` then runs `ClearPLC` + `Pal_FadeToBlack` (:4764-4765), and
+`Pal_FadeToBlack` is `move.w #$15,d4` plus a `dbf` loop of
+`WaitForVint`/`UpdateAllColours`/`RunPLC_RAM` with no `RunObjects` (:3369-3382):
+22 frozen frames, zero object passes, zero DPLC submissions.
+
+The frame the flag is written was settled from the routine split, not a probe.
+`Obj3A`'s wait routine `loc_1419C` (:27906-27913) decrements
+`anim_frame_duration`, and on the pass that reaches zero it does only
+`addq.b #2,routine(a0)` and falls into `BranchTo18_DisplaySprite` — it never
+reaches `loc_14270`. `loc_14270`/`loc_1429C` (:27987-28004), which writes
+`Level_Inactive_flag`, therefore runs on the FOLLOWING pass. The engine's shared
+`AbstractResultsScreen.updateWait` fired `onExitReady()` on the expiry pass, one
+pass early — which is exactly why the earlier attempt at raising the flag inside
+`triggerFadeToBlack` produced `camera_y` row 1287 rom=0x0268 engine=0x0262: it
+suppressed a camera step the ROM still took. Sonic 1's `GotThroughCard` has the
+identical two-routine shape (`_incObj/3A Got Through Card.asm`:110-115,193-210);
+that site was left unchanged.
+
+Landed: the one-pass hold in the S2 object plus the `Level_Inactive_flag` write.
+No constant was introduced beyond `ROM_EXIT_ROUTINE_PASS = 1`, which is the
+routine split itself.
+
+`TestS2CompleteEmeraldRunChain` — still fails, 3 axes, measured before -> after:
+
+- `[dynamic-art-gap]` seg4_ehz1 -> seg5_ehz2 `run_gap.edge_count`
+  expected 12, actual **96 -> 72** (surplus 84 -> 60). Edge-0 field mismatches
+  remain. Not closed.
+- `[walk-failure]` segment 7 ownership, BK2 cursor **37620 -> 38993**
+  (mode=TITLE_CARD). 38993 is past segment 7's last recorded row 38976, but **no
+  seg7 report is emitted**, so nothing here establishes that EHZ2 compares clean.
+- `[segment-physics]` segment 6 **5 errors -> 5 errors**, same five
+  `dynamic_art.*` fields on terminal row 1287; `dynamic_art.frame` engine value
+  1309 -> 1310. No `camera_y` error appeared.
+
+Full profile after: 770 / 1 failure / 3 errors / 4 skipped — identical to the
+control, same pre-existing S3K KOS #14/#15/#335 errors. Green in the companion
+run: `TestS2EhzHalfpipeRoundTripChain` (its Seg2 oracle at 0 errors), all eight
+S2 standalone special-stage classes, `TestS1GhzMazeRoundTripChain`,
+`TestS1CompleteEmeraldVisualRun`, `TestS1CompleteEmeraldRunPrefix`,
+`TestTraceRunDynamicArtGapJournal`, `TestTraceRunDynamicArtGapComparator`,
+`TestVisualTraceRunTerminalTail`, `TestHardwareTimingAuthorityGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestAdoptedOpeningRowComparison`, `TestDynamicArtLifecycleService`,
+`TestCheckpointStateRewind` (93/93).
+
+Next: 60 surplus gap edges survive the freeze. They are not the post-act fade
+frames — those are gone. Find which span still submits them before touching
+segment 6's terminal row again.

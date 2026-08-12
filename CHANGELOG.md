@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's post-act fade no longer runs as live gameplay. ROM `Level_MainLoop` tests
+  `Level_Inactive_flag` in the instruction immediately after `jsr (RunObjects).l` and
+  branches back to `Level` (s2.asm:5095-5097), so `ClearPLC` + `Pal_FadeToBlack`
+  (:4764-4765, :3369-3382) run as 22 frozen frames with no object pass and no DPLC
+  submission. `ResultsScreenObjectInstance` now raises that flag where `loc_1429C` writes it
+  (:28003). It also holds the exit one object pass, because `loc_1419C` only bumps the
+  routine and displays on the pass its wait expires and `loc_14270` runs the pass after
+  (:27906-27913, :27987-28004); firing on the expiry pass suppressed a camera step the ROM
+  still takes. Surplus transition-gap edges on the emerald run drop from 96 to 72
+  (expected 12).
 - Fix: the star post banks and reinstates the act timer, and S2's end-of-act slide-in runs
   the ROM's own length. Two independent invented durations were driving the emerald run's
   end-of-EHZ1 results screen 600+ frames long. (1) `CheckpointState` mirrored the ROM

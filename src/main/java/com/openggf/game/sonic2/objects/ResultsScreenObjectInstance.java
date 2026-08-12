@@ -53,6 +53,12 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     private static final int ROM_MASTER_TARGET_X = 0x80 + (320 / 2);
     /** Obj34_MoveTowardsTargetPosition: moveq #$10,d0 (docs/s2disasm/s2.asm:27494). */
     private static final int ROM_SLIDE_STEP_PIXELS = 0x10;
+    /**
+     * The one object pass that ROM {@code Obj3A} spends in the routine bumped
+     * by {@code loc_1419C} before {@code loc_14270} executes. Structural, from
+     * the routine split itself, not measured from any recording.
+     */
+    private static final int ROM_EXIT_ROUTINE_PASS = 1;
 
     // Bonus values
     private int timeBonus;
@@ -181,6 +187,32 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         return totalBonus >= 1000 ? 0x12C : 0xB4;
     }
 
+    /**
+     * ROM {@code Obj3A} splits the post-tally wait and the level-order handoff
+     * across two object passes. {@code loc_1419C}
+     * (docs/s2disasm/s2.asm:27906-27913) decrements
+     * {@code anim_frame_duration}, and on the pass that reaches zero it only
+     * does {@code addq.b #2,routine(a0)} and falls into
+     * {@code BranchTo18_DisplaySprite} — it never reaches {@code loc_14270}.
+     * {@code loc_14270} (:27987-28004), which resolves {@code LevelOrder} and
+     * writes {@code Level_Inactive_flag}, therefore runs on the FOLLOWING
+     * pass. The shared base fires {@code onExitReady()} on the expiry pass
+     * itself, which is one pass early; hold it for exactly one pass here.
+     *
+     * <p>Sonic 1's {@code GotThroughCard} has the identical two-routine shape
+     * ({@code Got_Wait} bumps the routine and branches to {@code .display};
+     * {@code Got_NextLevel} sets {@code f_restart} the next pass —
+     * docs/s1disasm/_incObj/3A Got Through Card.asm:110-115,193-210). That site
+     * is left unchanged here; only the S2 object is modelled in this change.
+     */
+    @Override
+    protected void updateWait() {
+        if (stateTimer >= getWaitDuration() + ROM_EXIT_ROUTINE_PASS) {
+            state = STATE_EXIT;
+            onExitReady();
+        }
+    }
+
     @Override
     protected void onExitReady() {
         triggerFadeToBlack();
@@ -191,6 +223,20 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Persist progression before the level transition
         services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+
+        // ROM loc_1429C writes move.w #1,(Level_Inactive_flag).w from inside
+        // RunObjects (docs/s2disasm/s2.asm:28003). Level_MainLoop tests the
+        // flag in the instruction immediately after jsr (RunObjects).l and
+        // branches back to Level (:5095-5097), so this pass never reaches
+        // JmpTo_DeformBgLayer (:5098) and Level's ClearPLC + Pal_FadeToBlack
+        // (:4764-4765) run with no further RunObjects at all — Pal_FadeToBlack
+        // is move.w #$15,d4 plus a dbf loop of WaitForVint + UpdateAllColours
+        // + RunPLC_RAM (:3369-3382). Raising the engine's equivalent here stops
+        // the post-act fade running as ordinary gameplay frames.
+        var levelManager = services().levelManager();
+        if (levelManager != null) {
+            levelManager.setLevelInactiveForTransition(true);
+        }
 
         // Start fade to black, then transition to next level when fade completes
         var fadeManager = services().fadeManager();
