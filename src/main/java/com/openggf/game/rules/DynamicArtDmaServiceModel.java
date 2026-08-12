@@ -51,11 +51,20 @@ public enum DynamicArtDmaServiceModel {
                 return false;
             }
             return switch (phase) {
+                // Level_TtlCard's wait loop (s2.asm:4914-4925) and the 25
+                // leave-loop iterations that follow InitPlayers
+                // (s2.asm:5060-5066) both run with
+                // Vint_routine = VintID_TitleCard, so their V-int is
+                // Vint_TitleCard (s2.asm:1005), which calls ProcessDMAQueue at
+                // s2.asm:1046 -- the same site listed above. Player DPLC work
+                // those pre-Level_MainLoop passes queue is therefore drained
+                // by the very next V-int and never survives into the level's
+                // first main-loop row.
                 case ORDINARY_LEVEL, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
                         TWO_PLAYER_RESULTS, CREDITS_TEXT, CREDITS_DEMO,
                         ENDING, POST_CREDITS, NORMAL_PAUSE,
-                        SPECIAL_STAGE_PAUSE -> true;
-                case TITLE_SCREEN, LEVEL_SELECT, LEVEL_TITLE_CARD,
+                        SPECIAL_STAGE_PAUSE, LEVEL_TITLE_CARD -> true;
+                case TITLE_SCREEN, LEVEL_SELECT,
                         PALETTE_FADE, CREDITS_DEMO_FADE, LAG -> false;
             };
         }
