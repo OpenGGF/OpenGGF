@@ -29,6 +29,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Terminal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -273,14 +274,25 @@ class TestCompleteRunAudioCutoffFrontier {
                         13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                         40, 41, 12, 13, 2, false, 0, 0);
         CutoffFrontier projected = frontier(List.of(blocker), List.of());
+        ArrayList<FrontierService> mutableActive = new ArrayList<>(List.of(blocker));
+        ArrayList<FrontierService> mutablePending = new ArrayList<>();
+        ArrayList<FrontierOwnedChip> mutableChips = new ArrayList<>();
+        ArrayList<FrontierOwnedSnapshot> mutableSnapshots = new ArrayList<>();
         CompleteRunAudioTrace.CutoffNativeDiagnostics raw =
                 new CompleteRunAudioTrace.CutoffNativeDiagnostics(
-                        List.of(blocker), List.of(), List.of(), List.of(), pending,
+                        mutableActive, mutablePending, mutableChips, mutableSnapshots, pending,
                         1, true, "b".repeat(64));
         CutoffFrontier withPending = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
                 raw, 0, 0, STATE);
         CutoffFrontier withoutPending = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
                 null, 0, 0, STATE);
+        String retainedJson = CompleteRunAudioJson.writeRecord(withPending);
+        String retainedDigest = CutoffFrontierPolicy.nativeCapabilityDigest(raw);
+
+        mutableActive.clear();
+        mutablePending.add(blocker);
+        mutableChips.clear();
+        mutableSnapshots.clear();
 
         assertNotEquals(CompleteRunAudioJson.writeRecord(withPending),
                 CompleteRunAudioJson.writeRecord(withoutPending));
@@ -288,6 +300,11 @@ class TestCompleteRunAudioCutoffFrontier {
                 CompleteRunAudioJson.writeSemanticRecord(withoutPending));
         assertEquals(withPending, CompleteRunAudioJson.readRecord(
                 CompleteRunAudioJson.writeRecord(withPending)));
+        assertEquals(List.of(blocker), raw.activeStack());
+        assertEquals(pending, raw.pendingDeferredServiceBegin());
+        assertEquals(retainedJson, CompleteRunAudioJson.writeRecord(withPending));
+        assertEquals(retainedDigest, CutoffFrontierPolicy.nativeCapabilityDigest(raw));
+        assertThrows(UnsupportedOperationException.class, raw.activeStack()::clear);
         assertThrows(IllegalArgumentException.class, () ->
                 new CompleteRunAudioTrace.CutoffNativeDiagnostics(
                         List.of(), List.of(), List.of(), List.of(), pending,

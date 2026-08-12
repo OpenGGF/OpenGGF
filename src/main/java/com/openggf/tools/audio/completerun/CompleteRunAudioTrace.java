@@ -812,6 +812,10 @@ public final class CompleteRunAudioTrace {
                         || !result.getLast().equals(record)) {
                     throw new IllegalArgumentException(
                             "duplicate managed callback records do not carry identical correlations");
+                } else if (record.events().stream()
+                        .anyMatch(event -> event.eventKind() == 10 && event.value() == 4)) {
+                    throw new IllegalArgumentException(
+                            "deferred service-begin marker correlation is duplicated");
                 }
             }
             return List.copyOf(result);

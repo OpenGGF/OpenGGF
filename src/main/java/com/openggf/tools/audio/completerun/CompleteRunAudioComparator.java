@@ -1147,7 +1147,9 @@ public final class CompleteRunAudioComparator {
                             "native frame diagnostics do not match the observer identity");
                 }
                 if (buffered) {
-                    nativeRawOrder(frame.nativeDiagnostics());
+                    DeferredFrameEvidence deferred = deferredServiceBegins(
+                            frame.absoluteFrame(), frame.nativeDiagnostics());
+                    nativeRawOrder(frame.nativeDiagnostics(), deferred);
                     for (int serviceIndex = 0;
                             serviceIndex < frame.nativeDiagnostics().services().size(); serviceIndex++) {
                         FrontierService service = frame.nativeDiagnostics().services().get(serviceIndex);
@@ -1170,7 +1172,7 @@ public final class CompleteRunAudioComparator {
                             previousNativeBeginOrdinal = service.beginOrdinal();
                         }
                     }
-                    deferredServiceBegins(frame.nativeDiagnostics());
+                    commitDeferredServiceBegin(deferred);
                     managedBoundaries(frame.absoluteFrame(), frame.nativeDiagnostics());
                     List<FrontierService> resetRoots = new ArrayList<>();
                     for (NativeResetDiagnostic reset : frame.nativeDiagnostics().resets()) {
@@ -1429,26 +1431,49 @@ public final class CompleteRunAudioComparator {
             nativeCarriedServices.clear();
         }
 
-        private void nativeRawOrder(FrameNativeDiagnostics diagnostics) throws ValidationException {
-            List<Long> coordinates = java.util.stream.Stream.concat(
+        private void nativeRawOrder(FrameNativeDiagnostics diagnostics,
+                DeferredFrameEvidence deferred) throws ValidationException {
+            List<NativeRawSlot> slots = java.util.stream.Stream.concat(
                     java.util.stream.Stream.concat(
-                            diagnostics.rawChipInventory().stream().map(owned -> owned.event().coordinate()),
+                            diagnostics.rawChipInventory().stream().map(owned -> new NativeRawSlot(
+                                    owned.event().coordinate(), owned.event().ordinal())),
                             diagnostics.managedCorrelations().stream()
                                     .flatMap(correlation -> correlation.events().stream())
-                                    .map(NativeManagedEvent::coordinate)),
+                                    .map(event -> new NativeRawSlot(event.coordinate(), event.ordinal()))),
                     diagnostics.rawAncestryTransitionInventory().stream()
-                            .map(owned -> owned.event().coordinate()))
-                    .sorted().toList();
-            for (long coordinate : coordinates) {
-                if (coordinate <= previousNativeRawCoordinate) {
-                    throw nativeEvidence("native managed/chip coordinates are not globally increasing");
+                            .map(owned -> new NativeRawSlot(
+                                    owned.event().coordinate(), owned.event().ordinal())))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+            slots.addAll(deferred.rawSlots());
+            slots.sort(Comparator.comparingLong(NativeRawSlot::coordinate)
+                    .thenComparingLong(NativeRawSlot::ordinal));
+            long previousOrdinal = -1;
+            Long coordinateBase = null;
+            for (NativeRawSlot slot : slots) {
+                if (slot.coordinate() <= previousNativeRawCoordinate
+                        || slot.ordinal() <= previousOrdinal) {
+                    throw nativeEvidence(
+                            "native raw coordinates/ordinals collide or are not globally increasing");
                 }
-                previousNativeRawCoordinate = coordinate;
+                long candidateBase = Math.subtractExact(slot.coordinate(), slot.ordinal());
+                if (coordinateBase != null && candidateBase != coordinateBase) {
+                    throw nativeEvidence("native frame coordinates do not share one exact ordinal base");
+                }
+                coordinateBase = candidateBase;
+                previousNativeRawCoordinate = slot.coordinate();
+                previousOrdinal = slot.ordinal();
+            }
+            if (deferred.releasedBegin() != null
+                    && (coordinateBase == null
+                            || deferred.releasedBegin().coordinate()
+                                    != coordinateBase + deferred.releasedBegin().ordinal())) {
+                throw nativeEvidence("deferred service-begin release coordinate is not exact");
             }
             recordNativePromotions(diagnostics);
         }
 
-        private void deferredServiceBegins(FrameNativeDiagnostics diagnostics)
+        private DeferredFrameEvidence deferredServiceBegins(int frame,
+                FrameNativeDiagnostics diagnostics)
                 throws ValidationException {
             List<NativeManagedEvent> markers = diagnostics.managedCorrelations().stream()
                     .flatMap(correlation -> correlation.events().stream())
@@ -1459,7 +1484,7 @@ public final class CompleteRunAudioComparator {
                 if (!markers.isEmpty() || pendingDeferredBegin != null) {
                     throw nativeEvidence("deferred service-begin evidence is missing");
                 }
-                return;
+                return DeferredFrameEvidence.empty();
             }
             if (pendingDeferredBegin == null && markers.isEmpty()) {
                 throw nativeEvidence("deferred service-begin evidence has no first marker");
@@ -1501,8 +1526,7 @@ public final class CompleteRunAudioComparator {
                 throw nativeEvidence("reset occurs while a deferred service begin is retained");
             }
             if (!published.consumed()) {
-                pendingDeferredBegin = published;
-                return;
+                return new DeferredFrameEvidence(published, null, -1, List.of());
             }
             FrontierService blocker = diagnostics.services().stream()
                     .filter(service -> service.token() == blockerToken).findFirst().orElse(null);
@@ -1511,17 +1535,12 @@ public final class CompleteRunAudioComparator {
                     || blocker.currentParentToken() != blockerParent
                     || blocker.currentDepth() != blockerDepth || blocker.endFrame() == null
                     || blocker.endOrdinal() == null || blocker.endPc() == null
-                    || blocker.endHookToken() == null) {
+                    || blocker.endHookToken() == null || blocker.endFrame() != frame) {
                 throw nativeEvidence("deferred service-begin release has no exact blocker completion");
             }
             long releaseOrdinal = blocker.endOrdinal() + 1;
             if (releaseOrdinal >= MAX_NATIVE_FRAME_EVENTS) {
                 throw nativeEvidence("deferred service-begin release ordinal exceeds native capacity");
-            }
-            Long coordinateBase = nativeFrameCoordinateBase(diagnostics);
-            if (coordinateBase != null
-                    && published.releaseCoordinate() != coordinateBase + releaseOrdinal) {
-                throw nativeEvidence("deferred service-begin release coordinate is not exact");
             }
             FrontierService released = diagnostics.services().stream()
                     .filter(service -> service.token() == published.releasedToken()).findFirst().orElse(null);
@@ -1538,25 +1557,17 @@ public final class CompleteRunAudioComparator {
             NativeManagedEvent syntheticBegin = new NativeManagedEvent(
                     published.releaseCoordinate(), releaseOrdinal, "M68K", pc, 1, 0,
                     published.releasedToken(), 0, targetKind, 0, hookToken, true);
-            beginManagedService(blocker.endFrame(), syntheticBegin);
-            pendingDeferredBegin = null;
+            return new DeferredFrameEvidence(null, syntheticBegin, blocker.endFrame(), List.of(
+                    new NativeRawSlot(published.releaseCoordinate() - 1, blocker.endOrdinal()),
+                    new NativeRawSlot(published.releaseCoordinate(), releaseOrdinal)));
         }
 
-        private Long nativeFrameCoordinateBase(FrameNativeDiagnostics diagnostics)
+        private void commitDeferredServiceBegin(DeferredFrameEvidence deferred)
                 throws ValidationException {
-            List<long[]> coordinates = new ArrayList<>();
-            diagnostics.managedCorrelations().stream().flatMap(value -> value.events().stream())
-                    .forEach(event -> coordinates.add(new long[] { event.coordinate(), event.ordinal() }));
-            diagnostics.rawChipInventory().forEach(owned -> coordinates.add(new long[] {
-                    owned.event().coordinate(), owned.event().ordinal() }));
-            diagnostics.rawAncestryTransitionInventory().forEach(owned -> coordinates.add(new long[] {
-                    owned.event().coordinate(), owned.event().ordinal() }));
-            if (coordinates.isEmpty()) return null;
-            long base = coordinates.getFirst()[0] - coordinates.getFirst()[1];
-            if (coordinates.stream().anyMatch(value -> value[0] - value[1] != base)) {
-                throw nativeEvidence("native frame coordinates do not share one exact ordinal base");
+            pendingDeferredBegin = deferred.pending();
+            if (deferred.releasedBegin() != null) {
+                beginManagedService(deferred.releaseFrame(), deferred.releasedBegin());
             }
-            return base;
         }
 
         private void deferredCutoff(NativeDeferredServiceBegin cutoff) throws ValidationException {
@@ -1775,6 +1786,17 @@ public final class CompleteRunAudioComparator {
         }
 
         private record NativeBeginCoordinate(int frame, long ordinal) {}
+        private record NativeRawSlot(long coordinate, long ordinal) {}
+        private record DeferredFrameEvidence(NativeDeferredServiceBegin pending,
+                NativeManagedEvent releasedBegin, int releaseFrame, List<NativeRawSlot> rawSlots) {
+            private DeferredFrameEvidence {
+                rawSlots = List.copyOf(rawSlots);
+            }
+
+            static DeferredFrameEvidence empty() {
+                return new DeferredFrameEvidence(null, null, -1, List.of());
+            }
+        }
         private record ManagedServiceEvidence(NativeBeginCoordinate begin, NativeManagedEvent beginEvent,
                 Integer endFrame, NativeManagedEvent endEvent) {}
         private record ManagedBoundaryOperation(long ordinal, NativeManagedEvent event,

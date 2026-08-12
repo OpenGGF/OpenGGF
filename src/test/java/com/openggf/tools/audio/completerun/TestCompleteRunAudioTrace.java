@@ -51,6 +51,12 @@ class TestCompleteRunAudioTrace {
         assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
                 List.of(), List.of(), List.of(), List.of(), List.of(),
                 List.of(pending, changed), List.of()));
+        NativeManagedCorrelation deferredMarker = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(40, 12, "M68K", 0x71b4c,
+                        10, 4, 13, 0, 6, 0, 77, true)));
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(), List.of(), List.of(), List.of(),
+                List.of(deferredMarker, deferredMarker), List.of(pending), List.of()));
         assertThrows(IllegalArgumentException.class, () -> new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 40, 41, 12, 13, 1, false, 0, 0));
