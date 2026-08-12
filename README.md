@@ -284,6 +284,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **A throwaway fixture load was priming the art ledger before the replay
+  started (2026-08-12):** with the run chains' gap comparison finally reachable and
+  the surplus-work defects closed, the gap axes failed only on identity and clock.
+  Both had mundane causes and neither was in the engine's art pipeline. The
+  engine's transfer ids ran a constant +2 and edge ordinals +4 ahead of the
+  recording because a throwaway `HeadlessTestFixture` level load ran before the
+  replay's own load and primed both playables' DPLCs — transfers 0 and 1, ordinals
+  0 to 3 — with nothing resetting the dynamic-art run, since the gameplay context
+  only begins a run when none is active. It is the same class of pre-boot leakage
+  the replay bootstrap already zeroes for the RNG seed, and it is now zeroed there
+  too. Separately, the chain announced the real movie row only for rows owned by a
+  frame driver; ordinary segment rows, mode waits and boundary crossings announced
+  nothing, so the ledger fell back to counting production iterations from zero.
+  It now states the row from the shared playback cursor, the same source the
+  production visual path uses. Every transfer-id and edge-ordinal error is gone
+  from both chains, one gap is fully green, and gap field errors fall 107 → 68 on
+  the halfpipe chain and 190 → 138 on the emerald one. Two residuals are named
+  rather than absorbed: a gap's edges all carry the destination segment's own
+  `bk2_frame_offset` where the recorder spreads them over the preceding 26 rows,
+  which is harness choreography and was deliberately not closed with an offset; and
+  the engine runs more production iterations during a special-stage segment than
+  the movie has rows (83 and 66 on the halfpipe run), which is plausibly by design
+  but is now stated rather than counted, so it no longer distorts this axis.
 - **`RunObjects` never reaches the level-only slots while the title card holds
   (2026-08-12):** the engine was making two dynamic-art transfers at every
   special-stage return that the ROM never makes — the whole of the transition

@@ -2006,6 +2006,29 @@ abstract class AbstractRunChainTest {
                 .setMovieLogicalFrame(step.movieRow());
     }
 
+    /**
+     * States the physical row for every other engine step the chain drives.
+     *
+     * <p>{@link #stateMovieLogicalRow(TraceRunFrameDriver.Step)} only covers
+     * the rows a {@code TraceRunFrameDriver} owns; ordinary segment rows,
+     * mode waits and boundary crossings run through {@link #stepEngineFrame}
+     * and stated nothing, so the service fell back to counting production
+     * iterations for them. A chain runs a different number of iterations than
+     * the movie has rows — the pre-segment prefix runs none, a special-stage
+     * segment runs more than one per row — so the counter is not the movie
+     * clock and never converges on it. The shared playback cursor is that
+     * clock, and it is the same value the production visual path announces
+     * per physical row (TraceSessionLauncher.driveRunPhysicalRow).
+     */
+    private static void stateMovieLogicalRow() {
+        var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        lifecycle.setMovieLogicalFrame(
+                GameServices.playbackDebug().getCursorFrame());
+    }
+
     private void driveHeadlessTransitionRow(
             TraceRunFrameDriver driver,
             TraceRunFrameDriver.Disposition disposition,
@@ -3314,6 +3337,7 @@ abstract class AbstractRunChainTest {
 
     /** Advances one engine frame through the same outer PLC/fade lifecycle as live play. */
     void stepEngineFrame(GameLoop loop) {
+        stateMovieLogicalRow();
         DynamicArtDiagnosticsSnapshot before =
                 GameServices.captureDynamicArtDiagnostics();
         HeadlessRunCoordinatorAdapter coordinator = activeRunCoordinator;

@@ -275,6 +275,28 @@ public final class DynamicArtLifecycleService
         runActive = true;
     }
 
+    /**
+     * Restarts an already-active run so the ledger holds only work the
+     * replay's own level load produced.
+     *
+     * <p>A replay session boots on top of whatever the host had already
+     * loaded — the master title screen live, a throwaway engine-init level
+     * load headless — and that load's player DPLC priming submits through the
+     * same service. Nothing resets it, because
+     * {@link com.openggf.game.session.GameplayModeContext#attachGameplayManagers}
+     * only calls {@link #beginRun()} when no run is active, so the pre-boot
+     * transfers keep their ids and every id the replay mints afterwards is
+     * displaced by that count. The recorder's ledger starts at the movie, so
+     * the replay's must start at the replay's own load: this is the
+     * dynamic-art half of the same leakage
+     * {@code TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay}
+     * already zeroes for the RNG seed and the level subsystems.
+     */
+    public void restartRunForReplayBootstrap() {
+        resetState();
+        runActive = true;
+    }
+
     public void openComparisonSegment() {
         requireRunActive();
         if (comparisonSegmentOpen || comparisonSegmentReserved) {

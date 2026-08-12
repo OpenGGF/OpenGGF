@@ -11,6 +11,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
@@ -103,6 +104,17 @@ public final class TraceReplaySessionBootstrap {
             GameRng rng = GameServices.rngOrNull();
             if (rng != null) {
                 rng.setSeed(0L);
+            }
+            // Same leakage, dynamic-art side: whatever level the host had
+            // loaded before the replay booted (master title screen live, the
+            // engine-init level load headless) primed the playables' DPLCs
+            // through this service, and the ids it minted displace every id
+            // the replay mints afterwards. The recorder's ledger starts at the
+            // movie, so the replay's starts at the replay's own load.
+            DynamicArtLifecycleService dynamicArt =
+                    GameServices.dynamicArtLifecycleOrNull();
+            if (dynamicArt != null && dynamicArt.isRunActive()) {
+                dynamicArt.restartRunForReplayBootstrap();
             }
         }
     }
