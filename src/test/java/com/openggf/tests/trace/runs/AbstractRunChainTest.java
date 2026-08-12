@@ -22,6 +22,7 @@ import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.TraceSessionLauncher;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
@@ -1085,6 +1086,10 @@ abstract class AbstractRunChainTest {
                         sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                // Re-arm the production one-row latch that decides which gap
+                // rows still belong to the source level's own main loop; the
+                // launcher does this from its EnterTransitionGap action.
+                TraceSessionLauncher.beginDriverOnlyRunTransitionGap();
                 if (last) {
                     productionComparator = null;
                     TraceRunFrameDriver terminalRows =
@@ -1489,7 +1494,7 @@ abstract class AbstractRunChainTest {
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
                 int rowsConsumed = admitLevelWhenReady(
-                        loop, playback, runCoordinator, exit, obs, next,
+                        gameplayMode, loop, playback, runCoordinator, exit, obs, next,
                         prepared, stepCap,
                         Objects.requireNonNull(observedLoad[0],
                                 "production level-load receipt was not observed"),
@@ -2609,6 +2614,7 @@ abstract class AbstractRunChainTest {
      * own {@code afterStep} transition timeout.
      */
     private int admitLevelWhenReady(
+            GameplayModeContext gameplayMode,
             GameLoop loop,
             PlaybackDebugManager playback,
             HeadlessRunCoordinatorAdapter runCoordinator,
@@ -2642,7 +2648,8 @@ abstract class AbstractRunChainTest {
                                 + ", offset " + destinationOffset + ") for "
                                 + runDir);
             }
-            stepEngineFrame(loop);
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame());
         }
         throw new AssertionError(
                 "Segment " + segmentIndex + " destination "
@@ -3496,6 +3503,86 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError("Mode never left " + from + " within "
                         + maxSteps + " frames (expected title-card entry)");
             }
+        }
+    }
+
+    /**
+     * Drives one shared-transition-gap row.
+     *
+     * <p>The visual launcher runs every gap row under
+     * {@link TraceRunFrameDriver.Disposition#SHARED_GAP}, which is what makes
+     * {@code GameLoop.suppressesRunNativeLevelBody} stop the source level's
+     * body once its own main loop has ended -- the ROM spends a level-advance
+     * gap inside the blocking {@code Level:} load path
+     * (docs/s2disasm/s2.asm:4757-4926), not in {@code Level_MainLoop}, and the
+     * players do not even exist there until {@code InitPlayers}
+     * (docs/s2disasm/s2.asm:4945). This adapter used to step the gap with a
+     * bare {@code loop.step()}, so the level body kept running and kept
+     * animating the players for the whole gap. Same contract, two drivers; the
+     * disposition is the only thing that differed.
+     *
+     * <p>Exactly which rows the body still owns is decided by production, in
+     * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}: the
+     * first gap row, and no other.
+     */
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow) {
+        TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
+        gameplayMode.installTraceRunFrameDriver(gapRows);
+        try {
+            gapRows.execute(
+                    new TraceRunFrameDriver.Step(
+                            TraceRunFrameDriver.Disposition.SHARED_GAP,
+                            movieRow, false),
+                    new TraceRunFrameDriver.Hooks<Void>() {
+                        @Override
+                        public void preparePhysicalRow(TraceRunFrameDriver.Step step) {
+                        }
+
+                        @Override
+                        public void prepareHardwareTiming(TraceRunFrameDriver.Step step) {
+                        }
+
+                        @Override
+                        public Void captureBefore(TraceRunFrameDriver.Step step) {
+                            return null;
+                        }
+
+                        @Override
+                        public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
+                            stepEngineFrame(loop);
+                        }
+
+                        @Override
+                        public boolean shouldAdvancePhysicalRow(TraceRunFrameDriver.Step step) {
+                            // The shared clock advances once per gap row
+                            // whoever moved it: the source level's own body on
+                            // the one row it still owns, and this adapter on
+                            // every suppressed row after it.
+                            return playback.getCursorFrame() == movieRow;
+                        }
+
+                        @Override
+                        public void advancePhysicalRow(TraceRunFrameDriver.Step step) {
+                            playback.onLevelFrameAdvanced();
+                        }
+
+                        @Override
+                        public Void captureAfter(TraceRunFrameDriver.Step step) {
+                            return null;
+                        }
+
+                        @Override
+                        public void compare(TraceRunFrameDriver.Step step, Void before, Void after) {
+                        }
+
+                        @Override
+                        public void afterStep(TraceRunFrameDriver.Step step) {
+                        }
+                    });
+        } finally {
+            gameplayMode.clearTraceRunFrameDriver(gapRows);
         }
     }
 

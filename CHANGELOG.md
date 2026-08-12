@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the run-chain replay adapter drives a level-advance transition gap under the same
+  `SHARED_GAP` disposition the visual launcher uses, so the source level's body stops
+  running once its own main loop has ended. The adapter previously stepped the whole gap
+  with a bare `loop.step()`, leaving `GameLoop.suppressesRunNativeLevelBody` inert because
+  no `TraceRunFrameDriver` was installed; the S2 EHZ1 -> EHZ2 gap therefore kept animating
+  Sonic, Tails and Obj05 for 163 rows and minted 60 surplus dynamic-art gap edges (72
+  emitted against 12 recorded). The ROM spends that span in the blocking `Level:` load
+  path -- `ClearScreen`/`LoadTitleCard` with interrupts off, `Pal_FadeToBlack`,
+  `Level_ClrRam`, `LoadZoneTiles` -- and does not create the players at all until
+  `InitPlayers` (docs/s2disasm/s2.asm:4757-4770, :4806, :4945), so no player DPLC can be
+  submitted there. Which rows the body still owns is decided entirely by the existing
+  production rule `TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop` (the first
+  gap row and no other), which now also resolves its disposition from the installed frame
+  driver when no launcher session exists. No constant, window, or measured position was
+  introduced.
 - Fix: Sonic 2's title card holds for its pattern load cue instead of an invented second.
   `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60`, documented as a stand-in for
   hardware decompression time. `Level_TtlCard` re-loops while the zone-name piece is off
