@@ -34,7 +34,7 @@ namespace OpenGGF.BizHawk.Headless
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
         internal const string CapabilityTemplateSha256Expected =
-            "715305b0ee6e8bfcd1e3d7656b29f3801f94721ca4c14cd3e23a5f40a2f66442";
+            "a5b5a07529f3e7c908601e7dc1ce552c8fd70390a9619e6847ccb00e16f984d3";
         internal const string ObserverIdentitySha256 =
             "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3";
         internal const string CompleteEventDigestSha256 =

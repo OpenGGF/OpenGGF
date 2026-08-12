@@ -57,13 +57,13 @@ public final class CompleteRunAudioProfiles {
     public static final String BIZHAWK_BASE_COMMON_SHA256 =
             "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33";
     public static final String TASK8_HARNESS_EXECUTABLE_SHA256 =
-            "935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1";
+            "a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965";
     public static final String TASK8_COLLECTOR_SOURCE_SHA256 =
             "92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560";
     public static final String TASK8_HOST_SOURCE_SHA256 =
             "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7";
     public static final String GPGX_AUDIO_CAPABILITY_SHA256 =
-            "08c4bc15c0c7c29a3d2993a21fdb4dbb8a47b9ff8cfdd7953d3342a0cb6a55db";
+            "8a06a63e4a5c8b1d4c9445e4333537caed3c8e67df7df946135e273d911ab0fb";
     public static final String REFERENCE_INSTALLATION_TREE_SHA256 =
             "7c89e8c74c0da446f644561289c3d564479ac30274db96dc8844516bd67765ad";
 

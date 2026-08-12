@@ -229,13 +229,11 @@ is the current strict real-run frontier, not a complete-run publication claim.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
-- Paired interleaved observer performance on the final optimized managed
-  collector and action-10 core passed at 9.76% median slowdown for S2 (11.26%
-  worst) and 8.10% for S3K (10.38% worst). The identity-bound fixture retains
-  the immediately preceding same-source measurements: S2 9.42% median/9.98%
-  worst and S3K 9.16% median/12.02% worst. Earlier candidate and predecessor
-  diagnostics demonstrated near-threshold host variance and are not used as
-  acceptance evidence.
+- Fresh paired interleaved observer performance after the R4 managed-harness
+  identity cascade passed at 9.41% median slowdown for S2 (9.53% worst) and
+  9.72% for S3K (10.75% worst). These measurements are bound into the current
+  capability fixture; earlier candidate and predecessor diagnostics are not
+  used as acceptance evidence.
 - Two fresh locked builds and two create-new installs are byte-identical. The
   compressed core SHA-256 is `ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61`
   and the observer identity is
@@ -247,12 +245,12 @@ that complete-game audio parity is finished.
 The capability fixture now binds collector source SHA-256
 `92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560`,
 production harness SHA-256
-`935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1`,
+`a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965`,
 and full raw fixture SHA-256
-`08c4bc15c0c7c29a3d2993a21fdb4dbb8a47b9ff8cfdd7953d3342a0cb6a55db`.
+`8a06a63e4a5c8b1d4c9445e4333537caed3c8e67df7df946135e273d911ab0fb`.
 To avoid a self-hash cycle while preserving production-executable authority,
 the S2 runtime pins normalized template SHA-256
-`715305b0ee6e8bfcd1e3d7656b29f3801f94721ca4c14cd3e23a5f40a2f66442`:
+`a5b5a07529f3e7c908601e7dc1ce552c8fd70390a9619e6847ccb00e16f984d3`:
 exactly the one canonical 64-hex executable field is zeroed for that template
 hash, while runtime validation separately requires its actual value to equal
 SHA-256 of `typeof(GpgxHost).Assembly.Location`. Every other raw byte remains
@@ -262,8 +260,8 @@ The harness executable is now built by the project contract with the pinned
 Mono Roslyn 3.9 compiler, `/deterministic+`, and a canonical checkout-root path
 map. A clean two-root build, including a root with spaces and hostile ambient
 compiler properties, produced identical production executable SHA-256
-`935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1`
+`a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965`
 and test executable SHA-256
-`952ca51d188571c4168ba90d20a149e0f3c58df5d68841869d0953f1a4026b3e`.
+`1c110cf9011af53100a48e9a414d0d06da5510710840db944af8336d1a428bfd`.
 Their PDBs are byte-identical as well. Direct ambient `xbuild` is rejected, and
 both copied production assemblies pass the strict S2 capability binding.

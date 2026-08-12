@@ -2,7 +2,7 @@
   "schema": "openggf.gpgx-audio-capability.v1",
   "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
   "observer_identity_sha256": "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3",
-  "task8_harness_executable_sha256": "935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1",
+  "task8_harness_executable_sha256": "a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965",
   "collector_source_sha256": "92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560",
   "host_source_sha256": "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7",
   "runs": {
@@ -23,7 +23,7 @@
       "state_digest_sha256": "b9933a71bebbf7ea4d546a28e0e3895c4704ec9c16155ced7d03a3276ebc0541",
       "lifecycle": {"reset":{"events":91122,"warmup_frame":595,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":12,"arm_frame":8,"arm_ordinal":1026,"first_z80_frame":13,"first_z80_ordinal":0,"action_frame_events":13,"cancelled":2,"cancelled_depth":2},"power":{"events":52729,"warmup_frame":112,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":4,"arm_frame":112,"arm_ordinal":1026,"first_z80_frame":117,"first_z80_ordinal":0,"action_frame_events":5,"cancelled":0,"cancelled_depth":0}},
       "complete": {"frames":259590,"events":169986419,"maximum_frame_occupancy":1825,"open_services_at_cutoff":0,"pending_services_at_cutoff":0,"frontier_digest_sha256":"2afa645a9471a7e084fa4273a9cfa0978868fe7be4f9a33f72f73de2ca907804","terminal_z80_sha256":"355ee9b9b697e674482dd8fe9329e0216d5d32a136454a223f79e784b74ccc02","event_digest_sha256":"c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d"},
-      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[1853397,1829623,1830953,1854937,1842947],"enabled_ticks":[2022358,2012184,2003340,2007353,2021203],"paired_slowdowns":[0.0912,0.0998,0.0942,0.0822,0.0967],"median_slowdown":0.0942,"worst_slowdown":0.0998}
+      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[1935080,1887526,1875003,1898511,1872525],"enabled_ticks":[2070948,2067331,2053602,2075635,2048721],"paired_slowdowns":[0.0702,0.0953,0.0953,0.0933,0.0941],"median_slowdown":0.0941,"worst_slowdown":0.0953}
     },
     "s3k": {
       "movie": {"name":"s3k-knuckles-complete-superemeralds.bk2","sha256":"aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc","rows":434417},
@@ -42,7 +42,7 @@
       "state_digest_sha256": "c5874c833d75f17cdfdfecb455c50e2f4f7a6b11aabd0ddff75645c21d12fce9",
       "lifecycle": {"reset":{"events":176014,"warmup_frame":236,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":12,"arm_frame":9,"arm_ordinal":1026,"first_z80_frame":9,"first_z80_ordinal":1027,"action_frame_events":13,"cancelled":2,"cancelled_depth":2},"power":{"events":175902,"warmup_frame":100,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":8,"arm_frame":13,"arm_ordinal":1026,"first_z80_frame":13,"first_z80_ordinal":1027,"action_frame_events":9,"cancelled":1,"cancelled_depth":1}},
       "complete": {"frames":434417,"events":254921281,"maximum_frame_occupancy":1446,"open_services_at_cutoff":1,"pending_services_at_cutoff":4,"frontier_digest_sha256":"88d87b134b63df1b819321a95f4244f5204f45aa4be85267d0ab3f0876ec6c0c","terminal_z80_sha256":"96837adb198c520e42cc3a3a7aef5b6802fde97cfe0ec5f2afd9f6e230bbe373","event_digest_sha256":"08c2f6249dc379b18b0362c04ed757f4f053a3c1cf7c28c110b09b82af6cee7e"},
-      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[2235484,2205044,2204171,2237392,2219908],"enabled_ticks":[2412232,2406921,2469038,2441899,2439846],"paired_slowdowns":[0.0791,0.0916,0.1202,0.0914,0.0991],"median_slowdown":0.0916,"worst_slowdown":0.1202}
+      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[2258204,2241527,2244589,2259646,2288273],"enabled_ticks":[2500988,2470768,2462741,2451562,2510763],"paired_slowdowns":[0.1075,0.1023,0.0972,0.0849,0.0972],"median_slowdown":0.0972,"worst_slowdown":0.1075}
     }
   }
 }
