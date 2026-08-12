@@ -284,6 +284,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **One title-card tail for displayed and omitted cards, and both S2 run chains
+  clear the returned level (2026-08-12):** `TitleCardManager` held two
+  implementations of ROM `Obj34_WaitAndGoAway` (`s2.asm:27605-27637`), the routine
+  whose slide-off fires the two `LoadPLC` calls for standard-water and animal art.
+  The omitted-presentation tail modelled it exactly; the displayed-presentation
+  overlay re-derived the same event from a state-transition pass that consumed a
+  frame without moving the piece, and from the overlay's viewport-relative
+  `hasExited()` rather than the ROM's `x_pixel > $200` test. `Level` writes routine
+  `$16` and `anim_frame_duration = $2D` to the surviving pieces at `:5066-5080`,
+  after the leave loop and before `Level_MainLoop`, whether or not the card was
+  displayed — so the 45-wait plus 8-slide count always starts on the first
+  main-loop iteration. The standalone segment class takes the omitted path and the
+  run chains take the displayed one, which is exactly why identical rows produced
+  identical queue-event sequences with the art loads landing two compared rows
+  late. Both paths now share one owner armed at the ROM's own arming point, with
+  no constant introduced. Both chains take returned-level segment 2 from 65 errors
+  to zero, clear segment 3 as well, and advance to a new segment-4 frontier — a
+  single error where the engine attributes the first art edge to the run gap and
+  the recorder attributes it to the segment.
 - **The title card was not treated as a DMA service boundary, and four player
   DPLC transfers rode across the gap (2026-08-12):** with the returned-level
   segment asserting its physics and the frame counter fixed, both S2 chains

@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2's displayed title card runs the same `Obj34_WaitAndGoAway` tail as the omitted
+  one. `TitleCardManager` carried two implementations of that ROM routine
+  (s2.asm:27605-27637) -- the omitted-presentation tail modelled it exactly, while the
+  displayed-presentation TEXT_WAIT/TEXT_EXIT overlay re-derived it from a state-transition
+  pass that consumed a frame without moving the piece, plus the overlay element's
+  viewport-relative `hasExited()` instead of the ROM's `x_pixel > $200` test. `Level`
+  writes routine $16 and `anim_frame_duration = $2D` to the surviving pieces at
+  s2.asm:5066-5080 -- after the leave loop and before `Level_MainLoop` -- whether or not
+  the card was displayed, so the 45-wait plus 8-slide count always starts on the first
+  main-loop iteration. The standalone segment class takes the omitted path and the run
+  chains take the displayed one, so the two `LoadPLC` calls for standard-water and animal
+  art arrived two compared rows late on every chain. Both paths now share one
+  `advanceZoneNamePieceTail()` owner armed at the ROM's own arming point. Both S2 run
+  chains clear returned-level segments 2 and 3 (65 -> 0 errors each) and advance to a new
+  segment-4 frontier.
 - Fix: S2's title-card V-int is a dynamic-art DMA service boundary.
   `Level_TtlCard`'s wait loop (s2.asm:4914-4925) and the 25 leave-loop iterations
   that follow `InitPlayers` (:5060-5066) both run with
