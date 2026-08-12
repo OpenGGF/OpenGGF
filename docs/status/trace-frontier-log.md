@@ -73115,3 +73115,31 @@ same iteration). No constant was introduced.
   at control: `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain` (KOS queue
   completion) and `TestS3kMhzCompleteRunTraceReplay` (`KOS_DECOMPRESSION_QUEUE#335`,
   verified solo at `b87f1174f`). No regressions.
+
+## 2026-08-12 - S2 title-card exit passes; emerald chain frontier becomes an in-segment death
+
+- Worktree: a detached scratch worktree on branch `bugfix/ai-r83-titlecard-exit-passes`,
+  based on `067691278`.
+- Command (all runs): `rm -rf target/surefire-reports target/trace-reports; mvn
+  -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... -Dtest=<class> test`
+- `TestS2EhzHalfpipeRoundTripChain`: FAIL, seg2 39612 -> 22426 errors. First non-camera
+  mismatch moved off sidekick physics: was `sidekick_x` rom=0x0DDE engine=0x0DF1 at frame
+  1, now `dynamic_art.edges` rom=[0] engine=[0,1,2,3,4] at frame 1.
+- `TestS2CompleteEmeraldRunChain`: FAIL, and the failure moved EARLIER. Control at
+  `067691278` reached the seg2 assert with 58129 errors; with this change the chain aborts
+  at `segment 2 lost production ownership before source closure (mode=TITLE_CARD,
+  loadGeneration=4, BK2 cursor=12459)`. Instrumented cause:
+  `LevelManager.restartCurrentLevelAfterDeath` via
+  `TraceSessionLauncher.runDeathRestartLoad` -- the engine's Sonic DIES at seg2 row 2125
+  and the level reloads, so production genuinely left the segment. The coordinator's
+  ownership assertion is correct; this is a gameplay divergence, not a harness expectation
+  defect. Reverting only the sidekick sub-pixel half moves the death to cursor 12634, so
+  the death is owned by the title-card pass gating. Control (both halves reverted) does
+  not die at all.
+- `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`,
+  `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`: PASS, 0 errors, unchanged.
+  `TestS1GhzMazeRoundTripChain`: PASS, unchanged.
+- Next frontier: the seg2 leader-physics residual that kills Sonic on the emerald route.
+  The seg2 report exposes only `errorCount`, `firstNonCameraPhysicsMismatch` and
+  `recentMismatches`, so a per-frame first-leader-divergence probe is the next step.

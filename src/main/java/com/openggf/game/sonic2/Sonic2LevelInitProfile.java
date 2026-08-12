@@ -37,6 +37,20 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     /** Fixed length of the s2.asm:5060-5066 title-card leave loop. */
     private static final int TITLE_CARD_LEAVE_LOOP_FRAMES = 25;
 
+    /**
+     * {@code Level:} dispatches {@code RunObjects} once at s2.asm:5006 -- after
+     * {@code InitPlayers} (s2.asm:4945) and after the {@code ObjectsManager} /
+     * {@code RingsManager} / {@code SpecialCNZBumpers} calls at s2.asm:5003-5005
+     * -- before it arms the leave flags at s2.asm:5056-5058 and enters the
+     * leave loop. That pass is not preceded by a {@code WaitForVint} of its
+     * own: the previous vertical interrupt is the one at s2.asm:4923-4924, back
+     * when the players did not yet exist. So the omitted presentation runs
+     * {@code 1 + 25} player object passes but only the leave loop's 25
+     * V-blanks, and the first of those V-blanks drains the queue built by this
+     * leading pass.
+     */
+    private static final int TITLE_CARD_LEADING_OBJECT_PASSES = 1;
+
     private final Sonic2LevelEventManager levelEventManager;
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
 
@@ -156,11 +170,19 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     /**
      * The 25-frame title-card leave loop (s2.asm:5060-5066) runs after
      * InitPlayers (s2.asm:4945), so it is exactly the omitted presentation
-     * window in which the player objects animate and load their DPLCs.
+     * window in which the player objects animate and load their DPLCs -- and
+     * the leading s2.asm:5006 {@code RunObjects} pass, which runs with the
+     * players already created, belongs to that window too.
      */
     @Override
     public int skippedPresentationPlayableFrames() {
-        return TITLE_CARD_LEAVE_LOOP_FRAMES;
+        return TITLE_CARD_LEADING_OBJECT_PASSES + TITLE_CARD_LEAVE_LOOP_FRAMES;
+    }
+
+    /** {@inheritDoc} See {@link #TITLE_CARD_LEADING_OBJECT_PASSES}. */
+    @Override
+    public int skippedPresentationPlayableFramesBeforeFirstVBlank() {
+        return TITLE_CARD_LEADING_OBJECT_PASSES;
     }
 
     @Override

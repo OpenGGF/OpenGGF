@@ -58,6 +58,45 @@ public class TitleCardManager implements TitleCardProvider {
      */
     private static final int DISPLAY_HOLD_DURATION = 60;
 
+    /*
+     * The leave sequence's length is fixed by the Obj34 leave routines, not by
+     * how far this engine's overlay elements happen to have travelled. ROM
+     * order (docs/s2disasm/s2.asm:4913-5066):
+     *
+     *   Level_TtlCard's scroll-in wait loop (:4914-4925) runs before
+     *   InitPlayers (:4945), so the players do not exist for it at all.
+     *   :5003-5006 then run ObjectsManager / RingsManager /
+     *   SpecialCNZBumpers / RunObjects once -- one player object pass with no
+     *   WaitForVint of its own. :5056-5058 arm the leave flags
+     *   (TitleCard_ZoneName titlecard_leaveflag = -1, TitleCard_Left routine
+     *   $E, titlecard_location $A) and :5060-5066 loop WaitForVint /
+     *   RunObjects / BuildSprites / RunPLC_RAM until TitleCard_Background is
+     *   unloaded.
+     *
+     * That loop is exactly 25 iterations:
+     *   Obj34_LeftPartOut (:27518-27540) steps titlecard_location
+     *   $A -> 6 -> 2 -> 0 (the -2 clamp) -> -4 and, on the pass that reads a
+     *   negative location, hands TitleCard_Bottom routine $10 and deletes
+     *   itself: 5 passes.
+     *   Obj34_BottomPartOut (:27542-27551) starts at location 0 and adds 4
+     *   per pass, deleting itself and handing TitleCard_Background routine
+     *   $12 on the pass that reads $28: 11 passes.
+     *   Obj34_BackgroundOutInit/Out (:27587-27604) sets location $F0 and
+     *   subtracts $20 per pass, deleting itself on the pass that computes
+     *   -$30: 9 passes.
+     *
+     * So the players run 1 + 25 = 26 object passes between InitPlayers and
+     * Level_MainLoop (:5087).
+     */
+    private static final int LEAVE_PRELOOP_PASSES = 1;
+    private static final int LEAVE_LEFT_PASSES = 5;
+    private static final int LEAVE_BOTTOM_PASSES = 11;
+    private static final int LEAVE_BACKGROUND_PASSES = 9;
+    private static final int LEAVE_LOOP_PASSES =
+            LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + LEAVE_BACKGROUND_PASSES;
+    private static final int LEAVE_PLAYABLE_PASSES =
+            LEAVE_PRELOOP_PASSES + LEAVE_LOOP_PASSES;
+
     /**
      * Text wait duration in frames before sliding out.
      * From disassembly: $2D = 45 frames (lines 5066-5072 in s2.asm).
@@ -261,6 +300,15 @@ public class TitleCardManager implements TitleCardProvider {
     private boolean exitPlcsQueued;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
+    /**
+     * Object passes dispatched since {@code Level:} armed the title-card leave
+     * flags, or {@code 0} while the card is still in its pre-{@code InitPlayers}
+     * phases. Pass 1 is the {@code jsr (RunObjects).l} at
+     * docs/s2disasm/s2.asm:5006; passes 2..26 are the 25 iterations of the
+     * leave loop at docs/s2disasm/s2.asm:5060-5066.
+     */
+    private int leavePass;
+
     /** Whether the gameplay-phase Obj34_WaitAndGoAway tail is running. */
     private boolean exitTailActive;
     /** anim_frame_duration of the zone-name piece during that tail. */
@@ -288,6 +336,7 @@ public class TitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.exitPlcsQueued = false;
         this.exitTailActive = false;
+        this.leavePass = 0;
         this.state = TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.frameCounter = 0;
@@ -523,6 +572,16 @@ public class TitleCardManager implements TitleCardProvider {
             return;
         }
 
+        if (leavePass > 0) {
+            leavePass++;
+            if (leavePass > LEAVE_PLAYABLE_PASSES) {
+                // The leave loop's exit condition has been met, so Level:
+                // falls through to :5068-5080 and Level_StartGame.
+                enterTextWait();
+                return;
+            }
+        }
+
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
@@ -564,6 +623,10 @@ public class TitleCardManager implements TitleCardProvider {
         if (stateTimer >= DISPLAY_HOLD_DURATION) {
             state = TitleCardState.EXIT_LEFT_SWOOSH;
             stateTimer = 0;
+            // This frame is the s2.asm:5003-5006 pass: InitPlayers has run and
+            // RunObjects dispatches the players once, but the leave flags at
+            // :5056-5058 are only armed after it, so no leave piece moves yet.
+            leavePass = LEAVE_PRELOOP_PASSES;
             // Initialize left swoosh exit - from disassembly line 5054:
             // move.w #$A,(TitleCard_Left+titlecard_location).w
             if (leftSwooshElement != null) {
@@ -581,25 +644,33 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitLeftSwoosh() {
         if (leftSwooshElement != null) {
             leftSwooshElement.updateSlideOut();
-
-            if (leftSwooshElement.hasExited()) {
-                // Trigger bottom bar exit - from disassembly line 27303:
-                // move.b #$10,TitleCard_Bottom-TitleCard_Left+routine(a0)
-                state = TitleCardState.EXIT_BOTTOM_BAR;
-                stateTimer = 0;
-                if (bottomBarElement != null) {
-                    bottomBarElement.startExit();
-                }
-                LOGGER.fine("Title card entered EXIT_BOTTOM_BAR state at frame " + frameCounter);
-            }
-        } else {
-            // No left swoosh, skip to bottom bar
+        }
+        // Obj34_LeftPartOut hands the bottom piece routine $10 on its fifth
+        // pass, whatever the overlay's own travel has reached
+        // (docs/s2disasm/s2.asm:27518-27540).
+        if (leaveLoopPass() >= LEAVE_LEFT_PASSES) {
             state = TitleCardState.EXIT_BOTTOM_BAR;
             stateTimer = 0;
             if (bottomBarElement != null) {
                 bottomBarElement.startExit();
             }
+            LOGGER.fine("Title card entered EXIT_BOTTOM_BAR state at frame " + frameCounter);
         }
+    }
+
+    /**
+     * Iterations of the s2.asm:5060-5066 leave loop completed so far, i.e. the
+     * leave-sequence pass count less the leading s2.asm:5006 pass.
+     */
+    private int leaveLoopPass() {
+        return leavePass - LEAVE_PRELOOP_PASSES;
+    }
+
+    private void enterTextWait() {
+        state = TitleCardState.TEXT_WAIT;
+        stateTimer = 0;
+        leavePass = 0;
+        LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
     }
 
     /**
@@ -610,24 +681,17 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitBottomBar() {
         if (bottomBarElement != null) {
             bottomBarElement.updateSlideOut();
-
-            if (bottomBarElement.hasExited()) {
-                // Trigger background exit - from disassembly line 27328:
-                // move.b #$12,TitleCard_Background-TitleCard_Bottom+routine(a0)
-                state = TitleCardState.EXIT_BACKGROUND;
-                stateTimer = 0;
-                if (blueBackgroundElement != null) {
-                    blueBackgroundElement.startExit();
-                }
-                LOGGER.fine("Title card entered EXIT_BACKGROUND state at frame " + frameCounter);
-            }
-        } else {
-            // No bottom bar, skip to background
+        }
+        // Obj34_BottomPartOut hands the background routine $12 on the pass that
+        // reads titlecard_location $28, its eleventh
+        // (docs/s2disasm/s2.asm:27542-27551).
+        if (leaveLoopPass() >= LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES) {
             state = TitleCardState.EXIT_BACKGROUND;
             stateTimer = 0;
             if (blueBackgroundElement != null) {
                 blueBackgroundElement.startExit();
             }
+            LOGGER.fine("Title card entered EXIT_BACKGROUND state at frame " + frameCounter);
         }
     }
 
@@ -647,25 +711,11 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitBackground() {
         if (blueBackgroundElement != null) {
             blueBackgroundElement.updateSlideOut();
-
-            if (blueBackgroundElement.hasExited()) {
-                // Verify background is completely off-screen (blueY + 152 <= 0)
-                int blueBottom = blueBackgroundElement.getCurrentY() + 152;
-                if (blueBottom <= 0) {
-                    // Background is fully gone - now text gets its wait timer
-                    // From disassembly lines 5065-5072:
-                    // move.w #$2D,TitleCard_ZoneName-TitleCard+anim_frame_duration(a1)
-                    state = TitleCardState.TEXT_WAIT;
-                    stateTimer = 0;
-                    LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
-                }
-                // If blueBottom > 0, wait another frame for it to fully disappear
-            }
-        } else {
-            // No background element, skip to text wait
-            state = TitleCardState.TEXT_WAIT;
-            stateTimer = 0;
         }
+        // Obj34_BackgroundOut deletes itself on the pass that computes -$30,
+        // its ninth (docs/s2disasm/s2.asm:27587-27604). The loop's
+        // tst.b (TitleCard_Background+id).w then falls through on the NEXT
+        // iteration, which update() handles via LEAVE_PLAYABLE_PASSES.
     }
 
     /**
@@ -1076,8 +1126,25 @@ public class TitleCardManager implements TitleCardProvider {
         frameCounter = 0;
         textExitTransitionPending = false;
         exitTailActive = false;
+        leavePass = 0;
         elements.clear();
     }
+
+    /**
+     * Player physics runs only for the object passes the ROM dispatches with
+     * the player objects created.
+     *
+     * <p>{@code InitPlayers} is at docs/s2disasm/s2.asm:4945, after the
+     * {@code Level_TtlCard} scroll-in wait loop at :4914-4925, so Sonic and
+     * Tails do not exist for the card's slide-in and hold at all. They exist
+     * for the single {@code RunObjects} at :5006 and for the 25 iterations of
+     * the leave loop at :5060-5066 -- 26 passes, tracked by {@link #leavePass}.
+     */
+    @Override
+    public boolean shouldRunPlayerPhysics() {
+        return leavePass > 0;
+    }
+
 
     /**
      * Gets the current zone index.

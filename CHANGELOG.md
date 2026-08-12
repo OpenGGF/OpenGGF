@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 runs player physics only for the 26 object passes the ROM dispatches before
+  `Level_MainLoop`. `Level_ClrRam` wipes the player objects
+  (`clearRAM Object_RAM,LevelOnly_Object_RAM_End`, s2.asm:4808) and `Level_TtlCard`'s
+  scroll-in wait loop (:4914-4925) runs before `InitPlayers` (:4945), so the players do
+  not exist for the card's slide-in at all; they exist for the single `RunObjects` at
+  :5006 and the 25 iterations of the leave loop at :5060-5066. The engine instead ran
+  physics for the whole presented card -- a length the engine invents -- and additionally
+  replayed the skipped-presentation animation for presented cards that had already
+  dispatched those passes live. The leave-piece handoffs now follow the Obj34 routine pass
+  counts (:27518-27540, :27542-27551, :27587-27604) rather than overlay travel. Because
+  :4808 zeroes the object RAM block, the sidekick sub-pixel is zero at `InitPlayers` on
+  every entry including a special-stage return, so `spawnSidekicks` no longer preserves it
+  across the re-seed. `TestS2EhzHalfpipeRoundTripChain` seg2: 39612 -> 22426 errors, and
+  the first non-camera mismatch stops being a sidekick physics field (now
+  `dynamic_art.edges` at frame 1). Both standalone seg2 oracles stay at 0 errors and
+  `TestS1GhzMazeRoundTripChain` stays green. `TestS2CompleteEmeraldRunChain` now aborts
+  earlier than its seg2 assert: the engine's Sonic dies inside segment 2 (BK2 cursor
+  12459) and the run coordinator correctly reports the lost production ownership -- a real
+  gameplay divergence exposed by this change, recorded as the new frontier.
 - Test: the run chains now ASSERT the returned-level segment's physics comparator error
   count they already computed. A level a run re-enters after an interior (special stage /
   bonus) had its `LiveTraceComparator.errorCount()` written to
