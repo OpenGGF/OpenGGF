@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 special-stage return re-establishes the sidekick's level boundaries, so Tails'
+  kill plane survives a return. ROM `LevelSizeLoad` writes `Tails_Min/Max_X_pos` and
+  `Tails_Min/Max_Y_pos` from the same `LevelSize` longs that seed `Camera_Min/Max_*`
+  (s2.asm:14695-14706), on every entry to `Level:` -- and a special-stage return re-runs that
+  routine in full. `GameLoop`'s special-stage-return re-init is a hand-rolled replica of
+  `InitPlayers` that calls the sidekick controller's `reset()` but, unlike
+  `LevelManager.spawnSidekicks`, never re-established those boundary words, so
+  `Tails_Max_Y_pos` stayed unset and the sidekick's kill plane was disabled for the whole
+  remainder of the run. Measured: the dead-fall threshold resolver returned `Integer.MIN_VALUE`
+  on all 864 calls of the run. In the recording, a dead falling Tails crossing
+  `Tails_Max_Y_pos + $100` reaches `TailsCPU_Despawn`, which warps her to `x_pos = $4000,
+  y_pos = 0` with `TailsAni_Fly` and `in_air` (s2.asm:39396-39405 via `Obj02_CheckGameOver`,
+  :41146-41155) -- the `sidekick_x = 0x4000` the comparator was reporting. The engine already
+  modelled that branch faithfully; it simply never fired. The boundary application is now one
+  helper shared by both entry paths, with no constant introduced. Emerald-chain segment 6 goes
+  13836 to 11348 errors and its first non-camera mismatch moves from frame 615 to 821, with no
+  player or sidekick physics mismatch remaining -- the residual is entirely PLC/dynamic-art.
+  Recorded honestly: the segment-6 `level_advance` walk failure is NOT downstream of this and
+  is unchanged.
 - Fix: transition-gap art edges are stamped from rows that actually passed, not from a frozen
   playback cursor -- `TestS2EhzHalfpipeRoundTripChain` is now fully green. During an S2 gap the
   shared cursor is pre-seeked to the destination and never advances (measured: 3908 calls

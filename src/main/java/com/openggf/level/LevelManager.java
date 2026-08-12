@@ -2950,10 +2950,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setHighPriority(false);
             sidekick.setDirection(Direction.RIGHT);
             if (sidekick.getCpuController() != null) {
-                sidekick.getCpuController().setLevelBounds(
-                        (int) camera.getMinX(),
-                        (int) camera.getMaxX(),
-                        (int) Math.max(camera.getMaxY(), camera.getMaxYTarget()));
+                applySidekickLevelBounds(sidekick);
                 // Capture the leader's spawn centre as the level-start anchor for
                 // the deferred sidekick placement / Pos_table prefill. ROM
                 // SpawnLevelMainSprites_SpawnPlayers places the CPU sidekick and
@@ -2970,6 +2967,37 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 }
             }
         }
+    }
+
+    /**
+     * Re-establishes the CPU sidekick's own level boundary words from the
+     * level's boundary values.
+     *
+     * <p>ROM {@code LevelSizeLoad} writes {@code Tails_Min_X_pos} /
+     * {@code Tails_Max_X_pos} and {@code Tails_Min_Y_pos} /
+     * {@code Tails_Max_Y_pos} from the same {@code LevelSize} table longs that
+     * seed {@code Camera_Min_X_pos} / {@code Camera_Max_Y_pos}
+     * (docs/s2disasm/s2.asm:14695-14706), on <em>every</em> entry to the
+     * {@code Level:} routine — including the special-stage return, which
+     * re-runs the whole level routine. Those words are what
+     * {@code Obj02_CheckGameOver} reads before branching to
+     * {@code TailsCPU_Despawn} (s2.asm:41146-41155) and what
+     * {@code Tails_LevelBound} clamps against, so leaving them unset disables
+     * the sidekick kill plane entirely.
+     *
+     * <p>Shared by the level-load path ({@link #spawnSidekicks}) and the
+     * special-stage-return re-init replica in {@code GameLoop}, which resets
+     * the CPU controller and must restore the same boundary words rather than
+     * leaving them cleared.
+     */
+    public void applySidekickLevelBounds(AbstractPlayableSprite sidekick) {
+        if (sidekick == null || sidekick.getCpuController() == null) {
+            return;
+        }
+        sidekick.getCpuController().setLevelBounds(
+                (int) camera.getMinX(),
+                (int) camera.getMaxX(),
+                (int) Math.max(camera.getMaxY(), camera.getMaxYTarget()));
     }
 
     /**
