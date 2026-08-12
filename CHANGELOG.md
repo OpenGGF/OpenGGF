@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's title card holds for its pattern load cue instead of an invented second.
+  `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60`, documented as a stand-in for
+  hardware decompression time. `Level_TtlCard` re-loops while the zone-name piece is off
+  target *or* `tst.l (Plc_Buffer).w` is non-zero (s2.asm:4914-4924), and each iteration's
+  `VintID_TitleCard` VBlank tails into `ProcessDPLC`, which decompresses exactly six
+  patterns per frame (s2.asm:1071, 2202-2213). The hold is therefore outstanding patterns
+  divided by six, which the PLC queue already tracks, so `updateDisplay` now tests the
+  queue directly and the constant is gone. This matches how S1 already models the same
+  loop (`Sonic1TitleCardManager`). Trace-replay axes are unaffected: the replay path skips
+  the visual title-card presentation.
 - Fix: Sonic 2's post-act fade no longer runs as live gameplay. ROM `Level_MainLoop` tests
   `Level_Inactive_flag` in the instruction immediately after `jsr (RunObjects).l` and
   branches back to `Level` (s2.asm:5095-5097), so `ClearPLC` + `Pal_FadeToBlack`

@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -43,20 +44,6 @@ public class TitleCardManager implements TitleCardProvider {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
 
     private static TitleCardManager instance;
-
-    /**
-     * Display hold duration in frames before starting the exit sequence.
-     *
-     * On original hardware, the title card would remain visible while the console
-     * performed expensive operations: decompressing Nemesis/Kosinski art, loading
-     * level layout data, initializing objects, etc. This created a natural pause
-     * where the title card was fully visible before exiting.
-     *
-     * Our engine loads data much faster (often in a single frame), so we add an
-     * artificial hold period to simulate the original timing and give players
-     * time to read the zone name. 60 frames ≈ 1 second at 60fps.
-     */
-    private static final int DISPLAY_HOLD_DURATION = 60;
 
     /*
      * The leave sequence's length is fixed by the Obj34 leave routines, not by
@@ -612,7 +599,14 @@ public class TitleCardManager implements TitleCardProvider {
             element.updateSlideIn();
         }
 
-        // Check if all elements have reached their targets
+        // Check if all elements have reached their targets. This is the first
+        // half of Level_TtlCard's compound re-loop test (docs/s2disasm/s2.asm:
+        // 4919-4924): the zone-name piece's x_pos must equal its
+        // titlecard_x_target. The second half -- tst.l (Plc_Buffer).w -- is
+        // enforced by updateDisplay(), so the pair of states together exits
+        // only when both halves hold, exactly as the ROM loop does. S1 splits
+        // the same loop the same way (Sonic1TitleCardManager.updateSlideIn /
+        // updateDisplay).
         boolean allAtTarget = elements.stream().allMatch(TitleCardElement::isAtTarget);
         if (allAtTarget) {
             state = TitleCardState.DISPLAY;
@@ -621,18 +615,23 @@ public class TitleCardManager implements TitleCardProvider {
         }
     }
 
+    /**
+     * Second half of Level_TtlCard's re-loop test (docs/s2disasm/s2.asm:
+     * 4923-4924): {@code tst.l (Plc_Buffer).w / bne.s Level_TtlCard} keeps the
+     * card locked until the queued pattern load cue has fully drained. Each
+     * iteration of that loop runs one {@code VintID_TitleCard} VBlank, whose
+     * {@code Vint_TitleCard} tail is {@code bra.w ProcessDPLC}
+     * (docs/s2disasm/s2.asm:1071), and {@code ProcessDPLC} decompresses exactly
+     * six patterns per VBlank (docs/s2disasm/s2.asm:2202-2213,
+     * {@code move.w #6,(Plc_FramePatternsLeft).w}). The card's hold is
+     * therefore outstanding patterns divided by six per frame -- a quantity the
+     * PLC queue already tracks -- not a wall-clock constant. Asking the queue
+     * whether it is still busy models the ROM's own test directly and at the
+     * ROM's own rate; the prior {@code DISPLAY_HOLD_DURATION = 60} stand-in for
+     * "hardware decompression time" was a fitted number with no ROM source.
+     */
     private void updateDisplay() {
-        // Hold the title card visible for DISPLAY_HOLD_DURATION frames.
-        //
-        // On original hardware, the Mega Drive would spend significant time here
-        // decompressing art (Nemesis, Kosinski), loading level layouts, and
-        // initializing game objects. The title card naturally stayed visible
-        // during this loading period.
-        //
-        // Our engine completes these operations nearly instantly, so we add an
-        // artificial hold to match the original game's pacing and give players
-        // time to see which zone they're entering.
-        if (stateTimer >= DISPLAY_HOLD_DURATION) {
+        if (!plcQueueBusy()) {
             state = TitleCardState.EXIT_LEFT_SWOOSH;
             stateTimer = 0;
             // This frame is the s2.asm:5003-5006 pass: InitPlayers has run and
@@ -646,6 +645,16 @@ public class TitleCardManager implements TitleCardProvider {
             }
             LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
         }
+    }
+
+    /** Models {@code tst.l (Plc_Buffer).w} (docs/s2disasm/s2.asm:4923). */
+    private boolean plcQueueBusy() {
+        if (SessionManager.getCurrentWorldSession() == null) {
+            return false;
+        }
+        Sonic2PlcService plcService =
+                GameServices.module().getGameService(Sonic2PlcService.class);
+        return plcService != null && plcService.isBusy();
     }
 
     /**
