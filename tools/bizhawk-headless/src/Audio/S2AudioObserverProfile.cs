@@ -29,9 +29,9 @@ namespace OpenGGF.BizHawk.Headless
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
         internal const string CapabilityTemplateSha256Expected =
-            "cd495746b7c8bd877586aa59b570797c075712e4a2e4412d3c8f07e935ca6397";
+            "715305b0ee6e8bfcd1e3d7656b29f3801f94721ca4c14cd3e23a5f40a2f66442";
         internal const string ObserverIdentitySha256 =
-            "f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2";
+            "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3";
         internal const string CompleteEventDigestSha256 =
             "c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d";
         internal const string TerminalZ80Sha256 =
@@ -40,9 +40,9 @@ namespace OpenGGF.BizHawk.Headless
             "2afa645a9471a7e084fa4273a9cfa0978868fe7be4f9a33f72f73de2ca907804";
 
         private const string CompressedCoreSha256 =
-            "bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790";
+            "ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61";
         private const string DecompressedCoreSha256 =
-            "4715106ed3711e610b900f0dee19dcfc34de347be2717692d1c25f836d957bf5";
+            "0410b3a90e355fd6a774059a0a7945d97742841cb97a05423f116fed130e483e";
         private const string ManagedCoreSha256 =
             "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7";
         private const string ManagedCommonSha256 =

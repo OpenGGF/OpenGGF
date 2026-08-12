@@ -446,7 +446,8 @@ namespace OpenGGF.BizHawk.Headless
             JObject binding = RequiredObject(native, "m68k_binding");
             ExactProperties(binding, "m68k_binding", "first_token", "service_kind",
                 "proof_range", "predicate_ranges", "queue_expected_kinds",
-                "begin_expected_kinds", "retry_expected_kind", "internal_expected_kind");
+                "begin_expected_kinds", "direct_parent_retry_async_kinds",
+                "retry_expected_kind", "internal_expected_kind");
             ushort nextToken = StrictUShort(binding["first_token"], "M68K first token");
             byte serviceKind = StrictByte(binding["service_kind"], "M68K service kind");
             if (nextToken != 100 || serviceKind != 4
@@ -469,6 +470,8 @@ namespace OpenGGF.BizHawk.Headless
                     throw Invalid("M68K predicate range is not source-exact");
             byte[] queueKinds = ExactKindList(binding, "queue_expected_kinds", 0, 2, 3);
             byte[] beginKinds = ExactKindList(binding, "begin_expected_kinds", 0, 2, 3);
+            byte[] directParentRetryKinds = ExactKindList(binding,
+                "direct_parent_retry_async_kinds", 2, 3);
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));
@@ -487,6 +490,12 @@ namespace OpenGGF.BizHawk.Headless
                             hookTokens, managedHook, ref nextToken, 1, serviceKind, expected, 0, 0, 0);
                     AddManagedNativeHook(hookList, publicHooks, managedByToken,
                         hookTokens, managedHook, ref nextToken, 6, 0, serviceKind, 0, 0, 0);
+                    if (managedHook.Pc == 0x071B4C)
+                        foreach (byte expected in directParentRetryKinds)
+                            AddManagedNativeHook(hookList, publicHooks,
+                                managedByToken, hookTokens, managedHook,
+                                ref nextToken, 10, serviceKind, expected,
+                                0, 0, 0);
                 }
                 else if (managedHook.Action == "SERVICE_CLOSE")
                 {
@@ -1542,6 +1551,7 @@ namespace OpenGGF.BizHawk.Headless
                     action==6?"RETRY_MARKER":
                     action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":
                     action==9?"POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE":
+                    action==10?"DIRECT_PARENT_RETRY_MARKER":
                     "OBSERVATION_MARKER"
             };
             AddPublicHook(publicHooks, native);

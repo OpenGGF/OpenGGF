@@ -4,7 +4,7 @@
   "patched_managed_dll_permitted": false,
   "build_recipe": {
     "file": "task7-build-recipe.json",
-    "sha256": "3b01a7c86be24e563defc30bd3f6bc52630218efcf97b6ab4d02aad508263abf"
+    "sha256": "0c67d1a7e48565093c780f07d630dfde083fd77fd14e98052a15d55d0e94ddbb"
   },
   "abi": {
     "version": 3,
@@ -18,21 +18,21 @@
   },
   "native_patch": {
     "file": "0001-buffer-z80-audio-events.patch",
-    "sha256": "8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa"
+    "sha256": "c9c50f034e11044a6769a9d331fd1d42e529cb0302dbeb93b354c45c88039dcb"
   },
   "core": {
-    "decompressed_size": 41740152,
-    "decompressed_sha256": "4715106ed3711e610b900f0dee19dcfc34de347be2717692d1c25f836d957bf5",
-    "compressed_size": 414887,
-    "compressed_sha256": "bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790",
-    "build_id": "44fb4d8c232fc98f",
+    "decompressed_size": 41744296,
+    "decompressed_sha256": "0410b3a90e355fd6a774059a0a7945d97742841cb97a05423f116fed130e483e",
+    "compressed_size": 415056,
+    "compressed_sha256": "ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61",
+    "build_id": "5c7cc70998c8b5b1",
     "invis_size": 2140400,
     "invis_alignment": 32,
     "observer_added_invis_bytes": 2137056
   },
   "source_bundle": {
-    "uncompressed_sha256": "d7e6562115715490fd58d34e20b9b13e7646881e4c88f59428b045ea430bbbd3",
-    "compressed_sha256": "d6dbc370e05ed1732500cd8262e0c77f3a1dafc0ddf01fa0e44fbaa45299f1bc",
+    "uncompressed_sha256": "491d01230341451edd93c0e311b953003523744ce6aacdf79a3bc5adae53cf04",
+    "compressed_sha256": "447de95351c12e28758ddb3fb5128b0a10ebae2d4f25b9194331da98bec8cf66",
     "path_manifest_sha256": "ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1",
     "path_mode_manifest_sha256": "03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440",
     "source_date_epoch": 1758367997,
@@ -47,7 +47,7 @@
     "log_sha256": "74d5e2fe2e120dc862514040507d7be836fd5a43f48be0712647255f4f0773a2"
   },
   "elf_proof": {
-    "sha256": "e96cbb5eb3016192e4ad072d088c70d7942d46e04db87f385e0fb36245b43cc2"
+    "sha256": "9cb6ab33d231c67ce64c578adbe928cea2f7cc45426ef778212825724fe8a69b"
   },
   "callgraph_proof": {
     "sha256": "536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6"
@@ -59,7 +59,7 @@
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
   },
   "identity": {
-    "sha256": "f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2"
+    "sha256": "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3"
   },
   "notices": {
     "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",

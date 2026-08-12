@@ -20,9 +20,9 @@
     ["${LOCKED_ZSTD}", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/source-bundle.tar", "-o", "${BUILD_STAGE}/source-bundle.tar.zst"]
   ],
   "versioned_inputs": {
-    "build-core.sh": "2db214fd32968350411901ebc043c494d265858a1d02d6853361bd7baab21240",
+    "build-core.sh": "7521bfab163559c9d9fb8f59c7823ee97f997db6939cb903d03f9743f99aa8c9",
     "install-core.sh": "107a4661cb6fd837d94fa3ecc879a1d931a9bfa26b015ffdcd19c0a5b12744c1",
-    "0001-buffer-z80-audio-events.patch": "8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa",
+    "0001-buffer-z80-audio-events.patch": "c9c50f034e11044a6769a9d331fd1d42e529cb0302dbeb93b354c45c88039dcb",
     "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
     "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
     "verify-inputs.sh": "33126e725b52d511b8b20360512d054f36666fa23ad884ca4d7c4fe0d99dcef5",
@@ -34,7 +34,7 @@
     ,"selftest/shared.h": "7b884c4ebea3e4639f48070122e44df3c5cc03c8760e2502b60f210d61e144ce"
     ,"selftest/emulibc.h": "449757babbb19ef05cf3d6c859d5bdeba60124ff49a2e0695a28364886c4afc8"
     ,"selftest/wrap_harness.c": "f5afa77f98e4c99a8be643718a831350f96a1ed9a6ffa9a22535b2c091df2b9c"
-    ,"selftest/matrix_harness.c": "7de485164955607bfa2cf2fa4cc6f67c3725b3dff5a09f414bb17fc69c7e0270"
+    ,"selftest/matrix_harness.c": "9ee81af8e194c7c4d93ebaf664335e519e24b9b7b02656e79ce279eb93a95eac"
     ,"selftest/cpu_boundary_harness.c": "7e9aa324446d4f15306dfe472b90c14f6f434f14b92e470027055b8ea31651d8"
     ,"selftest/m68k_boundary_harness.c": "d15d893b51e8a372fa88e6ce2854df3db91f828b6224776d9bd2afa2b2bc118c"
   },

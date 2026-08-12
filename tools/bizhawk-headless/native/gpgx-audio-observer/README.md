@@ -21,7 +21,12 @@ applies the same direct-work-RAM M68K return-address predicate as action 5. A
 listed return emits the existing exact KEEP observation marker and leaves the
 stack unchanged; an unlisted return performs the same atomic close and
 promotion as action 8. Both actions require exact expected-child and
-direct-parent kinds; there is no wildcard alternative. Begin ancestry remains
+direct-parent kinds; there is no wildcard alternative. Action 10 emits the
+existing retry marker bound to the direct parent beneath a typed async top,
+without allocating, snapshotting, closing, promoting, or mutating the stack.
+It is valid only as the sole paired override for a source-identical ordinary
+begin; the override wins exactly when its declared direct parent is present,
+and otherwise the ordinary begin remains authoritative. Begin ancestry remains
 immutable; managed and stored diagnostics retain the bounded transition
 history, while producer-neutral semantic records retain the effective ancestry
 without depending on native event coordinates.

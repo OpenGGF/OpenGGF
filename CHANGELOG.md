@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: preserve Sonic 1 service identity when the driver retries a root
+  DAC service beneath a typed asynchronous PCM child. The ABI-v3 observer now
+  emits a parent-token retry marker for the exact `$71B4C` topology without
+  mutating its service stack, while strict native and managed guards reject
+  malformed selector alternatives and event ownership.
 - Tooling: require a canonical cutoff-frontier record in every complete-run
   audio capture, preserving open and withheld service ownership at arbitrary
   movie cutoffs. Add create-new duplicate-gated orchestration with strict

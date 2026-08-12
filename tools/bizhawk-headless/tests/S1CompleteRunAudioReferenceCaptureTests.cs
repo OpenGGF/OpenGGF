@@ -29,6 +29,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests correlate conditional direct-parent promotion",
                 CorrelatesConditionalDirectParentPromotion));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests require direct-parent retry under async PCM",
+                RequiresDirectParentRetryUnderAsyncPcm));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests correlate direct-parent retry to managed service",
+                CorrelatesDirectParentRetryToManagedService));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject orphan close and frame overflow",
                 RejectsOrphanCloseAndFrameOverflow));
             tests.Add(new TestMain.TestCase(
@@ -74,7 +80,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests report native failure row",
                 ReportsNativeFailureRow));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests cross row 523 and reach the row 860 boundary",
+                "S1CompleteRunAudioReferenceCaptureTests cross row 1548 with direct-parent retry",
                 CrossesRealRow523AndReachesBoundary,
                 game: "s1", serial: true, estimatedSeconds: 15.0));
         }
@@ -115,17 +121,42 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     });
                 }
                 session.BeginEpoch();
+                for (int row=manifest.FirstRow;row<=1548;row++)
+                {
+                    AssertEx.Equal(true, frames.MoveNext());
+                    Bk2Frame frame=frames.Current;
+                    int captured=row;
+                    session.CaptureFrame(captured,frame,() =>
+                    {
+                        S1TraceCaptureRunner.ApplyFrame(frame,host);
+                        host.Advance();
+                    });
+                }
+                session.Complete(1549);
             }
             JObject baseline = null;
+            JObject directParentRetry = null;
+            ushort retryToken=0;
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook
+                in manifest.NativeServiceHooks)
+                if (hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==10
+                    &&hook.ExpectedActiveKind==2) retryToken=hook.HookToken;
             foreach (string line in output.ToString().Split(new[]{'\n'},
                 StringSplitOptions.RemoveEmptyEntries))
             {
                 JObject record = JObject.Parse(line);
                 if ((string)record["type"] == "baseline") baseline = record;
+                if ((string)record["type"]=="native_event"
+                    &&(int)record["row"]==1548&&(int)record["kind"]==10
+                    &&(int)record["subject"]==retryToken
+                    &&(int)record["value"]==2) directParentRetry=record;
             }
             AssertEx.Equal(true, baseline != null);
             AssertEx.Equal(860, (int)baseline["row"]);
             AssertEx.Equal(true, ((JArray)baseline["active_services"]).Count > 0);
+            AssertEx.Equal(true,directParentRetry!=null);
+            AssertEx.Equal(4,(int)directParentRetry["service_kind"]);
+            AssertEx.Equal(0,(int)directParentRetry["depth"]);
         }
 
         private static string Sha256(string path)
@@ -245,6 +276,97 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(2,crossing.Count);
             AssertEx.Equal((byte)2,crossing[0]);
             AssertEx.Equal((byte)3,crossing[1]);
+        }
+
+        private static void RequiresDirectParentRetryUnderAsyncPcm()
+        {
+            S1CompleteRunAudioReferenceCapture.Manifest manifest =
+                S1CompleteRunAudioReferenceCapture.LoadManifest(
+                    FixturePath(), RomForManifest(FixturePath()));
+            var asyncKinds = new List<byte>();
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook
+                in manifest.NativeServiceHooks)
+            {
+                if (hook.Cpu == 2 && hook.Pc == 0x071B4C
+                    && hook.Action == 10 && hook.ServiceKindId == 4
+                    && hook.RangeCount == 0 && hook.Reserved == 0)
+                {
+                    asyncKinds.Add(hook.ExpectedActiveKind);
+                }
+            }
+            asyncKinds.Sort();
+            AssertEx.Equal(2, asyncKinds.Count);
+            AssertEx.Equal((byte)2, asyncKinds[0]);
+            AssertEx.Equal((byte)3, asyncKinds[1]);
+        }
+
+        private static void CorrelatesDirectParentRetryToManagedService()
+        {
+            CorrelatesDirectParentRetryToManagedService(0x0077, 0x00AC, 2);
+            CorrelatesDirectParentRetryToManagedService(0x00C1, 0x00D0, 3);
+            RejectsCorruptDirectParentRetryOwnership(false);
+            RejectsCorruptDirectParentRetryOwnership(true);
+        }
+
+        private static void CorrelatesDirectParentRetryToManagedService(
+            uint beginPc, uint closePc, byte asyncKind)
+        {
+            var api = new FakeTraceApi();
+            var host = new FakeS1Host((current, frame) =>
+            {
+                current.SetCpuRegister("A7", 0x00FFFDB2);
+                Visit(current, api, 0x071B4C);
+                api.VisitZ80(beginPc, current);
+                Visit(current, api, 0x071B4C);
+                api.VisitZ80(closePc, current);
+                Visit(current, api, 0x071C4C);
+            });
+            var output = new StringWriter();
+            using (var session = CreateSession(host, api, output))
+            {
+                session.CaptureFrame(860, host.Advance);
+                session.Complete(861);
+            }
+            string raw = output.ToString();
+            AssertEx.Equal(2, CountNativeKind(raw, 1));
+            AssertEx.Equal(2, CountNativeKind(raw, 2));
+            AssertEx.Equal(1, CountNativeMarkerValue(raw, 2));
+            JObject retry = Record(raw, "managed_hook_evidence", 1);
+            JArray correlation = (JArray)retry["native_correlation_events"];
+            AssertEx.Equal(1, correlation.Count);
+            AssertEx.Equal(10, (int)correlation[0]["event_kind"]);
+            AssertEx.Equal(2, (int)correlation[0]["value"]);
+            AssertEx.Equal(4, (int)correlation[0]["service_kind"]);
+            AssertEx.Equal(0, (int)correlation[0]["depth"]);
+            JObject asyncBegin = NativeRecords(raw, 860).Find(value =>
+                (int)value["kind"] == 1 && (uint)value["pc"] == beginPc);
+            AssertEx.Equal(true, asyncBegin != null);
+            AssertEx.Equal(asyncKind, (byte)asyncBegin["service_kind"]);
+        }
+
+        private static void RejectsCorruptDirectParentRetryOwnership(
+            bool corruptDepth)
+        {
+            var api = new FakeTraceApi();
+            var host = new FakeS1Host((current, frame) =>
+            {
+                current.SetCpuRegister("A7", 0x00FFFDB2);
+                Visit(current, api, 0x071B4C);
+                api.VisitZ80(0x0077, current);
+                Visit(current, api, 0x071B4C);
+                api.MutateLast(value =>
+                {
+                    if (corruptDepth) value.Depth++;
+                    else value.ParentToken++;
+                    return value;
+                });
+            });
+            using (var session = CreateSession(host, api, new StringWriter()))
+            {
+                AssertEx.Throws<InvalidOperationException>(
+                    () => session.CaptureFrame(860, host.Advance),
+                    "retry marker parent ownership");
+            }
         }
 
         private static void RejectsMalformedAndMismatchedManifest()
@@ -1354,6 +1476,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             || hook.ServiceKindId != 0 || hook.RangeCount != 0
                             || hook.Reserved != 0) return -2;
                     }
+                    else if (hook.Action == 10)
+                    {
+                        if (hook.Cpu != 2 || hook.ExpectedActiveKind == 0
+                            || hook.ServiceKindId == 0
+                            || hook.ServiceKindId == hook.ExpectedActiveKind
+                            || hook.RangeCount != 0 || hook.Flags != 0
+                            || hook.Reserved != 0) return -2;
+                    }
                     else if (hook.Action == 7)
                     {
                         if (hook.Cpu != 2 || hook.ServiceKindId != 0
@@ -1427,11 +1557,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxAudioObserverAdapter.ServiceHook hook = default(
                     GpgxAudioObserverAdapter.ServiceHook);
                 bool found = false;
+                bool directParentOverride = false;
                 for (int i = 0; i < hooks.Length; i++)
                 {
                     if (hooks[i].Cpu == 2 && hooks[i].Pc == pc
                         && hooks[i].ExpectedActiveKind == activeKind)
                     {
+                        bool directParent = hooks[i].Action == 10
+                            && active.Count >= 2
+                            && active[active.Count-2].Kind
+                                == hooks[i].ServiceKindId;
+                        if (directParent)
+                        {
+                            hook = hooks[i];
+                            found = true;
+                            directParentOverride = true;
+                            continue;
+                        }
+                        if (directParentOverride) continue;
+                        if (hooks[i].Action == 10) continue;
                         if (found)
                             throw new InvalidOperationException(
                                 "Fake native M68K visit was ambiguous.");
@@ -1473,6 +1617,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 else if (hook.Action == 6)
                 {
                     Add(Owned(hook, 10, 2));
+                }
+                else if (hook.Action == 10)
+                {
+                    if (active.Count < 2
+                        || active[active.Count-2].Kind != hook.ServiceKindId)
+                        throw new InvalidOperationException(
+                            "Fake native direct-parent retry had no exact parent.");
+                    Add(OwnedBy(active[active.Count-2], hook, 10,
+                        hook.HookToken, 2));
                 }
                 else if (hook.Action == 7)
                 {
@@ -1663,11 +1816,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             private static GpgxAudioTraceEvent OwnedBy(ActiveService owner,
                 GpgxAudioObserverAdapter.ServiceHook hook,byte kind,ushort subject)
             {
+                return OwnedBy(owner, hook, kind, subject, 0);
+            }
+
+            private static GpgxAudioTraceEvent OwnedBy(ActiveService owner,
+                GpgxAudioObserverAdapter.ServiceHook hook, byte kind,
+                ushort subject, byte value)
+            {
                 return new GpgxAudioTraceEvent
                 {
                     ServiceToken=owner.Token,ParentToken=owner.Parent,
                     Pc=hook.Pc,Subject=subject,Kind=kind,
-                    ServiceKindId=owner.Kind,Depth=owner.Depth,SourceCpu=hook.Cpu
+                    ServiceKindId=owner.Kind,Depth=owner.Depth,
+                    SourceCpu=hook.Cpu,Value=value
                 };
             }
 

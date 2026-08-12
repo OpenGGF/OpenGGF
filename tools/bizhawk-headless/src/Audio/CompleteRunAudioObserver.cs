@@ -730,10 +730,23 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     else if(e.Value==2)
                     {
-                        if(hook.Action!=6||active.Count==0
+                        if((hook.Action!=6&&hook.Action!=10)||active.Count==0
                             ||hook.ExpectedActiveKind!=active[active.Count-1].Kind)
                             throw Invalid("retry marker action/ownership");
-                        OwnedBuilder(ref e,active,reset);
+                        if(hook.Action==6) OwnedBuilder(ref e,active,reset);
+                        else
+                        {
+                            if(active.Count<2
+                                ||hook.ServiceKindId!=active[active.Count-2].Kind)
+                                throw Invalid("retry marker direct parent");
+                            ServiceBuilder parent=active[active.Count-2];
+                            if(e.ServiceToken!=parent.Token
+                                ||e.ParentToken!=parent.CurrentParentToken
+                                ||e.ServiceKindId!=parent.Kind
+                                ||e.Depth!=parent.CurrentDepth)
+                                throw Invalid("retry marker parent ownership");
+                            parent.EventCount++;
+                        }
                     }
                     else if(e.Value==3)
                     {

@@ -214,14 +214,14 @@ bad_state=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
 [[ -z "$bad_state" ]] || fail "observer state escaped .invis: $bad_state"
 enabled_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "gpgx_audio_trace_enabled" { print $2, $3, $4, $5, $7 }')
-[[ "$enabled_symbol" = "0000036f0035f074 1 OBJECT LOCAL 10" ]] \
+[[ "$enabled_symbol" = "0000036f00360074 1 OBJECT LOCAL 10" ]] \
   || fail "observer enable flag escaped .invis: $enabled_symbol"
 events_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "trace_events" { print $2, $3, $4, $5, $7 }')
-[[ "$events_symbol" = "0000036f00360ae0 0x200000 OBJECT LOCAL 10" ]] \
+[[ "$events_symbol" = "0000036f00361ae0 0x200000 OBJECT LOCAL 10" ]] \
   || fail "observer event array layout differs: $events_symbol"
-((0x00360ae0 % 32 == 0 && 0x00360ae0 >= 0x00357000 \
-  && 0x00360ae0 + 0x200000 <= 0x00357000 + 0x20a8f0)) \
+((0x00361ae0 % 32 == 0 && 0x00361ae0 >= 0x00358000 \
+  && 0x00361ae0 + 0x200000 <= 0x00358000 + 0x20a8f0)) \
   || fail "observer event array is not aligned and contained in .invis"
 bad_internal=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$4 == "FUNC" && $8 ~ /^gpgx_audio_trace_(enter_cpu|leave_cpu|instruction|fm_write|psg_write|reset_begin|reset_end)$/ && $5 != "LOCAL" { print $8 }')

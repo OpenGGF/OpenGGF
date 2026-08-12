@@ -6,7 +6,7 @@ observer build/install toolchain, the native BizHawk headless bridge, the
 lossless raw/semantic trace schema, and the first Sonic 1 reference producer.
 
 The reviewed canonical native patch at this checkpoint is ABI v3, SHA-256
-`8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa`.
+`c9c50f034e11044a6769a9d331fd1d42e529cb0302dbeb93b354c45c88039dcb`.
 Build and create-new installation instructions are in
 `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`; trust-boundary
 details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
@@ -39,14 +39,41 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 
   The same real no-replace capture crosses row 1219 and next stops fail-closed
   at row 1548 with no published output. The preserved first fault is
-  `5:2:1394:4:1:0:255`: hook/opcode proof, Z80 instruction-start PC `$1394`,
-  active kind 4, depth 1, continuation `0/255`. The final native lifecycle has
-  M68K token 3 kind 4 beginning at `$71B4C`, async token 4 kind 2 beneath a
-  nested M68K token 5 kind 4, token 5 ending at `$71C4C`, and token 4 ending at
-  `$00AC`, followed by ordinary root DPCM iterations. The managed queue at the
-  failed frame ends with `normal_close,queue1`. This checkpoint records that
-  diagnostic as the next frontier without proposing a new hook or action. No
-  reference capture is published at this frontier.
+  `5:2:1394:4:1:0:255`: hook/opcode proof, source CPU M68K, instruction-start
+  PC `$1394`, active kind 4, depth 1, continuation `0/255`. `$1394` is the
+  REV01 `QueueSound2` write, not a Z80-driver address. Its exact caller is the
+  ring-collection tail path: ROM `$A2CC` calls `CollectRing`, whose `$A32E`
+  `jmp (QueueSound2).l` returns to `$A2D0`
+  (`docs/s1disasm/_incObj/25, 37 Rings.asm:149-210`). The captured M68K stack
+  agrees: `A7=$FFFDF0`, return `$00A2D0`.
+
+  The fault is earlier lifecycle debt, not a missing queue allowance. In one
+  physical frame M68K token 3 kind 4 begins at `$71B4C` with `A7=$FFFDB2` and
+  return `$000B64`; async DPCM token 4 kind 2 then begins; the same `$71B4C`
+  invocation is re-observed with the same managed stack identity while token 4
+  is top. The current manifest can express action 6 retry only when kind 4 is
+  itself top, so it incorrectly selects the ordinary kind-2 begin alternative
+  and pushes nested token 5 kind 4. `$71C4C` closes token 5 and `$00AC` closes
+  token 4, leaving token 3 falsely open until the legitimate ring request.
+  The final managed queue ends with `normal_close,queue1`; the final lifecycle
+  tail is token 5 END, token 4 END, then ordinary root DPCM iterations.
+
+  The conductor-owned native contract is an exact direct-parent retry at
+  `$71B4C`: while top kind 2 or 3 has direct parent kind 4, verify the same
+  immutable parent service and emit the existing retry proof (`SERVICE_MARKER`,
+  event kind 10, value 2) bound to that parent token, with no snapshots, END,
+  promotion, token allocation, or stack mutation. Ordinary root begins for
+  active kinds 0/2/3 and ordinary action-6 retry when kind 4 is top remain
+  unchanged. `RequiresDirectParentRetryUnderAsyncPcm` pins the two exact
+  kind-2/kind-3 alternatives. Action 10 is a configure-time paired override:
+  the only permitted same-PC pair is one source-identical `PUSH_BEGIN` and one
+  direct-parent retry with exact CPU, PC, opcode, active kind, and service
+  kind. The retry wins only when the declared direct parent exists; otherwise
+  the ordinary begin remains authoritative. At row 1548 the real REV01 run
+  emits `SERVICE_MARKER` value 2 bound to the original kind-4 token at depth 0,
+  then closes the async child and that parent normally. A bounded diagnostic
+  capture also terminates cleanly after row 5000, so the proven S1 reference
+  frontier is now **through row 5000** with no published partial output.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -134,24 +161,26 @@ The final power-on-to-row-860 and row-1548 frontier reproductions used Sonic 1 W
 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
 and durable BizHawk home
-`target/audio-parity/native/action9-install-a`. Its compressed core
+`target/audio-parity/native/action10-final-install-a` (byte-identical to the
+paired `action10-final-install-b`). Its compressed core
 SHA-256 is
-`bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790`,
+`ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61`,
 raw core SHA-256 is
-`4715106ed3711e610b900f0dee19dcfc34de347be2717692d1c25f836d957bf5`,
-Build ID is `44fb4d8c232fc98f`, and observer identity is
-`f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2`.
-The row-860 proof remains a bounded prefix/capture-boundary result. The later
-row-1548 first fault above is the current strict real-run frontier, not a
-complete-run publication claim.
+`0410b3a90e355fd6a774059a0a7945d97742841cb97a05423f116fed130e483e`,
+Build ID is `5c7cc70998c8b5b1`, and observer identity is
+`6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3`.
+The row-860 proof remains a bounded prefix/capture-boundary result. Row 1548
+was the action-10 contract fault; the clean bounded diagnostic through row 5000
+is the current strict real-run frontier, not a complete-run publication claim.
 
 ## Verified checkpoint gates
 
-- Complete-run Java schema/store/comparator/CLI focused gate: 154 tests passing
-  (47 trace, 21 store, 61 comparator, 13 cutoff, 8 CLI).
+- Complete-run Java schema/store/comparator/CLI and authority focused gate: 155
+  tests passing.
 - Sonic 1 normalized state/profile: 68 tests passing.
-- Sonic 1 native/managed reference session: 20 tests passing, including exact
-  action-9 KEEP and direct-parent promotion correlation.
+- Sonic 1 native/managed reference session: 22 synthetic tests passing plus
+  the opt-in real row-1548 proof, including exact action-9 KEEP/direct-parent
+  promotion correlation and action-10 parent-token retry correlation.
 - Shared observer projection: 21 tests passing, including conditional
   direct-parent promotion and the allocation-free per-frame projection-result
   wrapper.
@@ -168,29 +197,29 @@ complete-run publication claim.
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
 - Paired interleaved observer performance on the final optimized managed
-  collector and action-9 core passed at 9.67% median slowdown for S2 (12.09%
-  worst) and 8.67% for S3K (10.41% worst). The identity-bound fixture retains
+  collector and action-10 core passed at 9.76% median slowdown for S2 (11.26%
+  worst) and 8.10% for S3K (10.38% worst). The identity-bound fixture retains
   the immediately preceding same-source measurements: S2 9.42% median/9.98%
   worst and S3K 9.16% median/12.02% worst. Earlier candidate and predecessor
   diagnostics demonstrated near-threshold host variance and are not used as
   acceptance evidence.
 - Two fresh locked builds and two create-new installs are byte-identical. The
-  compressed core SHA-256 is `bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790`
+  compressed core SHA-256 is `ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61`
   and the observer identity is
-  `f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2`.
+  `6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3`.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
 
 The capability fixture now binds collector source SHA-256
-`516555cdef86d403fca64571bf0300711894da16b74ca46856cbdfce817a49b0`,
+`92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560`,
 production harness SHA-256
-`01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec`,
+`935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1`,
 and full raw fixture SHA-256
-`0a2be19ae646e3a06da37e05f87dff0616c81a2b531725c9b736cf5b0bda5eaf`.
+`08c4bc15c0c7c29a3d2993a21fdb4dbb8a47b9ff8cfdd7953d3342a0cb6a55db`.
 To avoid a self-hash cycle while preserving production-executable authority,
 the S2 runtime pins normalized template SHA-256
-`cd495746b7c8bd877586aa59b570797c075712e4a2e4412d3c8f07e935ca6397`:
+`715305b0ee6e8bfcd1e3d7656b29f3801f94721ca4c14cd3e23a5f40a2f66442`:
 exactly the one canonical 64-hex executable field is zeroed for that template
 hash, while runtime validation separately requires its actual value to equal
 SHA-256 of `typeof(GpgxHost).Assembly.Location`. Every other raw byte remains
@@ -200,8 +229,8 @@ The harness executable is now built by the project contract with the pinned
 Mono Roslyn 3.9 compiler, `/deterministic+`, and a canonical checkout-root path
 map. A clean two-root build, including a root with spaces and hostile ambient
 compiler properties, produced identical production executable SHA-256
-`01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec`
+`935b8ac05d86ecd2c469d4f14e35f3b9e2a3e8c041dd5847d086b05e27d259e1`
 and test executable SHA-256
-`505ca52b78bf99d286eb8f3ec4a2b5b9a04696bd5508e29bcc532a2c1884018f`.
+`952ca51d188571c4168ba90d20a149e0f3c58df5d68841869d0953f1a4026b3e`.
 Their PDBs are byte-identical as well. Direct ambient `xbuild` is rejected, and
 both copied production assemblies pass the strict S2 capability binding.

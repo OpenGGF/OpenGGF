@@ -323,7 +323,7 @@ new file mode 100644
 index 000000000..52a635ab4
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1159 @@
+@@ -0,0 +1,1223 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -367,6 +367,7 @@ index 000000000..52a635ab4
 +#define ACTION_OBSERVATION_MARKER 7u
 +#define ACTION_POP_DIRECT_PARENT_PROMOTE_TOP 8u
 +#define ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE 9u
++#define ACTION_DIRECT_PARENT_RETRY_MARKER 10u
 +
 +#define HOOK_ARM_Z80_PROOFS_ON_COMPLETION 0x01u
 +#define HOOK_PREARM_PERMITTED 0x02u
@@ -744,7 +745,7 @@ index 000000000..52a635ab4
 +    if (!hook->hook_token || hook->action < ACTION_PUSH_BEGIN
 +        || hook->action > (trace_config.abi_version == 1u ? ACTION_TAIL_POP_PUSH
 +          : trace_config.abi_version == 2u ? ACTION_OBSERVATION_MARKER
-+          : ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE)
++          : ACTION_DIRECT_PARENT_RETRY_MARKER)
 +        || (hook->cpu != GPGX_AUDIO_TRACE_CPU_Z80 && hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K)
 +        || (hook->flags & ~HOOK_FLAGS_ALL) || !hook->opcode_length || hook->opcode_length > 8
 +        || !bytes_are_zero(hook->opcode + hook->opcode_length, 8u - hook->opcode_length)) return 0;
@@ -772,7 +773,17 @@ index 000000000..52a635ab4
 +    {
 +      if (trace_hooks[j].hook_token == hook->hook_token) return 0;
 +      if (trace_hooks[j].cpu == hook->cpu && trace_hooks[j].pc == hook->pc
-+          && trace_hooks[j].expected_active_kind == hook->expected_active_kind) return 0;
++          && trace_hooks[j].expected_active_kind == hook->expected_active_kind)
++      {
++        const struct gpgx_audio_service_hook_v1 *other = &trace_hooks[j];
++        int paired = (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++            && other->action == ACTION_PUSH_BEGIN)
++          || (hook->action == ACTION_PUSH_BEGIN
++            && other->action == ACTION_DIRECT_PARENT_RETRY_MARKER);
++        if (!paired || hook->service_kind != other->service_kind
++            || hook->opcode_length != other->opcode_length
++            || memcmp(hook->opcode, other->opcode, hook->opcode_length)) return 0;
++      }
 +    }
 +    if (hook->action == ACTION_PUSH_BEGIN)
 +    {
@@ -789,6 +800,27 @@ index 000000000..52a635ab4
 +      if (hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K || !hook->expected_active_kind
 +          || !kind_for(hook->expected_active_kind) || hook->service_kind
 +          || hook->flags || hook->range_first || hook->range_count) return 0;
++    }
++    else if (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER)
++    {
++      uint32_t pair_count = 0;
++      if (trace_config.abi_version != 3u
++          || hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K
++          || !hook->expected_active_kind || !kind_for(hook->expected_active_kind)
++          || !hook->service_kind || hook->service_kind == hook->expected_active_kind
++          || !kind_for(hook->service_kind) || hook->flags
++          || hook->range_first || hook->range_count) return 0;
++      for (j = 0; j < trace_config.hook_count; j++)
++      {
++        const struct gpgx_audio_service_hook_v1 *pair = &trace_hooks[j];
++        if (pair->action == ACTION_PUSH_BEGIN && pair->cpu == hook->cpu
++            && pair->pc == hook->pc
++            && pair->expected_active_kind == hook->expected_active_kind
++            && pair->service_kind == hook->service_kind
++            && pair->opcode_length == hook->opcode_length
++            && !memcmp(pair->opcode, hook->opcode, hook->opcode_length)) pair_count++;
++      }
++      if (pair_count != 1u) return 0;
 +    }
 +    else if (hook->action == ACTION_OBSERVATION_MARKER)
 +    {
@@ -1127,6 +1159,23 @@ index 000000000..52a635ab4
 +  event->value = 2u;
 +}
 +
++static void direct_parent_retry_marker(
++  const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
++{
++  struct gpgx_audio_trace_event *event;
++  const struct trace_stack_entry *parent;
++  if (trace_depth < 2
++      || trace_stack[trace_depth - 1].kind != hook->expected_active_kind
++      || trace_stack[trace_depth - 2].kind != hook->service_kind)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  parent = &trace_stack[trace_depth - 2];
++  event = new_event(EVENT_HOOK_MARKER);
++  if (!event) return;
++  fill_ownership(event, parent);
++  event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
++  event->value = 2u;
++}
++
 +static void observation_marker(const struct gpgx_audio_service_hook_v1 *hook,
 +  uint8_t source, uint32_t pc)
 +{
@@ -1157,6 +1206,7 @@ index 000000000..52a635ab4
 +  uint8_t active_kind;
 +  const struct gpgx_audio_service_hook_v1 *selected = NULL;
 +  uint32_t matches = 0, pc_matches = 0;
++  int direct_parent_override = 0;
 +  if (trace_phase != PHASE_RECORDING) return;
 +  if (cpu == GPGX_AUDIO_TRACE_CPU_Z80) trace_z80_instruction_pc = pc;
 +  else trace_m68k_instruction_pc = pc;
@@ -1187,7 +1237,19 @@ index 000000000..52a635ab4
 +            || hook->expected_active_kind != arm_kind))) continue;
 +    }
 +    pc_matches++;
-+    if (hook->expected_active_kind == active_kind) { selected = hook; matches++; }
++    if (hook->expected_active_kind == active_kind)
++    {
++      int direct_parent = hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++        && trace_depth >= 2
++        && trace_stack[trace_depth - 2].kind == hook->service_kind;
++      if (direct_parent)
++      {
++        selected = hook; matches = 1; direct_parent_override = 1;
++      }
++      else if (!direct_parent_override
++          && hook->action != ACTION_DIRECT_PARENT_RETRY_MARKER)
++      { selected = hook; matches++; }
++    }
 +  }
 +  if (!pc_matches) return;
 +  if (matches != 1 || !proof_matches(selected))
@@ -1215,6 +1277,8 @@ index 000000000..52a635ab4
 +    conditional_pop_service(selected, cpu, pc);
 +  else if (selected->action == ACTION_RETRY_MARKER)
 +    retry_marker(selected, cpu, pc);
++  else if (selected->action == ACTION_DIRECT_PARENT_RETRY_MARKER)
++    direct_parent_retry_marker(selected, cpu, pc);
 +  else if (selected->action == ACTION_OBSERVATION_MARKER)
 +    observation_marker(selected, cpu, pc);
 +  else if (selected->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP)
