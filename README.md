@@ -317,7 +317,9 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   errors — because every class after `TestS3kMegaRunChain` alphabetically, including
   the 64 new ones, never ran. Measured with GC logging, the profile's peak live set
   is 2,069 MB, 21 MB above the 2 GB it had; it now runs at 3 GB and completes all
-  834 tests.
+  834 tests. The trace-replay profile therefore grows from 770 to 834 tests, with
+  the new run's payloads committed compressed (133 MB, largest single file 11 MB)
+  under `src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/`.
 - **The S2 title card holds for its PLC drain, not a fitted 60 frames
   (2026-08-12):** `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60` under a
   comment openly rationalising it as a stand-in for hardware decompression time —

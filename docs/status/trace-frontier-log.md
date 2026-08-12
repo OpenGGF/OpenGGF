@@ -73633,3 +73633,93 @@ S2 standalone special-stage classes, `TestS1GhzMazeRoundTripChain`,
 Next: 60 surplus gap edges survive the freeze. They are not the post-act fade
 frames — those are gone. Find which span still submits them before touching
 segment 6's terminal row again.
+
+
+## 2026-08-12 — S3K Sonic+Tails complete-emeralds run re-captured and harnessed
+
+New fixture `src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/`
+— 63 segments (43 level, 14 special stage, 6 bonus), 40 transitions, 514,619
+recorded rows, 133 MB committed, every `physics.csv`/`aux_state.jsonl` payload
+gzipped. Captured from
+`docs/BizHawk-2.11-linux-x64/Movies/s3k-sonic-tails-complete-emeralds.bk2`
+(130,155 bytes, 539,492 movie frames) with
+`tools/bizhawk-headless/run.sh --mode trace --run-id s3k-sonic-tails-complete-emeralds`,
+trace schema 5, `recorder_version` 3.0, ROM checksum C5B1C655C19F462ADE0AC4E17A844D10.
+Worktree branch `feature/ai-s3k-st-emeralds-recapture` over `e5cb39a1b`.
+
+This is the third committed S3K route and the first to carry a sidekick across a
+whole playthrough. It re-lands the capture that was published as d885bdfc9 and
+reverted wholesale as f8a266aad.
+
+**The recorder's "Kosinski backreference precedes output" check was kept
+intact and did not fire.** d885bdfc9 had removed it, claiming
+`ArtKosM_ResultsSONIC` had a second module that legitimately back-referenced the
+previous module's residue; f8a266aad showed from the ROM that the archive has
+exactly one module (size word 0x0240 → `Kos_modules_left` = 1) and that
+`Process_Kos_Module_Queue` re-seats `a2` to `Kos_decomp_buffer` per module
+(sonic3k.asm:2739-2740), so the check models the ROM correctly. With the
+sampling race fixed separately in 15b46e543 ("read a direct-queue sample taken
+inside the head-retirement write"), the capture now runs to completion with the
+check in place — exit 0, no abort, no decoder diagnostic anywhere in the log.
+The removal was never necessary.
+
+Command for every result below (one invocation):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`
+`"-Dsurefire.argLine=-Xmx4g" -Ds3k.rom.path=<s3k.gen> "-Dtest=TestS3kSonicTails*" test`
+
+Result: **64 tests, 8 failures + 53 errors, 3 passing.** All new classes are
+deliberate frontier harnesses and are expected red; nothing is weakened or
+tolerance-fitted. These totals and every frontier below reproduce d885bdfc9's
+reported values exactly, which is the evidence that the removed check was not
+load-bearing for this capture's shape.
+
+| Outcome | Count | First error |
+|---|---|---|
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | ERROR | segment 0 (`aiz`), raw_frame 1188, boundary PRE_MAIN_LOOP, `KOS_DECOMPRESSION_QUEUE#16 sha256:dae421a2…`, `engine pending: <none>` |
+| Special stages `ss`, `ss_2`, `ss_6` | PASS | — |
+| Level + SS segments on `KOS_DECOMPRESSION_QUEUE` | 41 | `engine pending: <none>` (31) or a fingerprint mismatch (10, all `sha256:3c96d8b9…` except `aiz` at `#43 dae421a2…`) |
+| `dez23`…`dez23_8` (zone_id 23) | 8 | `IndexOutOfBoundsException: Index 23 out of bounds for length 22` |
+| `hpz22`, `hpz22_2` (zone_id 22) | 2 | `IndexOutOfBoundsException: Index 22 out of bounds for length 22` |
+| `ddz` (zone_id 13 act 2) | 1 | `IndexOutOfBoundsException: Index: 1 Size: 1` |
+| Bonus `pachinko`×3 | 3 | `tails_y_speed` frame 0 (expected 0x01B2, actual 0x0000) |
+| Bonus `gumball`×2 | 2 | `tails_x` frame 33 (expected 0x00CF, actual 0x00D1) / `tails_x_speed` frame 33 |
+| Bonus `slots` | 1 | `player_mapping_frame` frame 5 (expected 0x0097, actual 0x0096) |
+| `ss_4`, `ss_5` | 2 | `spheres_left` frame 1689 (80 vs 79) / frame 3906 (3 vs 2), one sphere ahead |
+
+The chain frontier is the same class as `TestS3kKnucklesSuperEmeraldRunChain`'s
+(`KOS_DECOMPRESSION_QUEUE` completion with `engine pending: <none>`) and bites
+earlier on this route: raw_frame 1188 in AIZ1 against 1617 there. The zone_id
+22/23 and DDZ-act-2 index errors are structural, not timing: this is the first
+committed route whose segments enter HPZ22, DEZ23 and DDZ act 2, and the engine
+has no level-list entries for them.
+
+Next: the shared `engine pending: <none>` frontier — the engine never submits
+the Kosinski job the recording expects — is the single highest-value S3K target,
+now witnessed by three independent routes.
+
+## 2026-08-12 — full `-Ptrace-replay` sweep with the Sonic+Tails capture present
+
+Isolated worktree on branch `feature/ai-s3k-st-emeralds-recapture`, on the pom heap raise
+(parent `ec4d4763d`). Command:
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> test
+```
+
+**Tests run: 834, Failures: 9, Errors: 56, Skipped: 4** (220 surefire report
+files, no `OutOfMemoryError`). At the previous `-Xmx2g` the same command died
+mid-fork and reported a truncated 401 — a truncation that looks *better* than
+the real result, because every class alphabetically after `TestS3kMegaRunChain`
+never executed. Any trace-suite number below 834 on this branch is a truncation,
+whatever its failure counts say.
+
+Red set, unchanged from the pre-capture baseline apart from the new route:
+
+| Class | Result |
+|---|---|
+| `TestS2CompleteEmeraldRunChain` | FAIL (1) — pre-existing |
+| `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`, `TestS3kMhzCompleteRunTraceReplay` | ERROR (3) — pre-existing |
+| `TestS3kSonicTails*` (64 classes) | 8 FAIL + 53 ERROR — new frontier, as captured above |
+| `TestS2EhzHalfpipeRoundTripChain` | PASS |

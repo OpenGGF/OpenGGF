@@ -188,19 +188,33 @@
                 s1-sonic-complete-withemeralds        34 segments    322 MB
                 s3k-multibonus / s3-knux-multibonus-ss 25 segments   286 MB
 
-              Only the Knuckles super-emerald run exceeds 1g, which is why it
+              Only the Knuckles super-emerald run exceeded 1g, which is why it
               alone died with "Java heap space" and wrote no report while every
               other chain passed. Its measured peak live heap including the
-              engine is 1245 MB, so 2g leaves ~60% headroom, and forkCount still
-              defaults to 4 here (4 x 2g = 8g worst case).
+              engine was 1245 MB, which is what took this profile from 1g to 2g.
 
-              The cost is aux events, not physics rows: across that run,
+              2g in turn stopped being enough once the 63-segment
+              s3k-sonic-tails-complete-emeralds run landed. Measured on this
+              worktree with -Xlog:gc* over the whole profile at -Xmx2500m
+              (forkCount=1, 834 tests, no OOM): four Full GCs, the largest
+              post-Full-GC live set 2069 MB, just above 2g's 2048 MB, so the
+              fork died mid-suite after 41 report files with every class
+              alphabetically after TestS3kMegaRunChain unexecuted, and reported
+              a truncated 401 tests that looked healthier than the real run.
+              The same profile completes all 834 tests at both 3g and 4g with
+              an identical red set, so 3g is the landed value: ~48% headroom
+              over the 2069 MB measured live set, and forkCount still defaults
+              to 4 here (4 x 3g = 12g worst case).
+
+              The cost is aux events, not physics rows: across the Knuckles run,
               aux_state.jsonl is 1476 MB uncompressed against 56 MB of
               physics.csv, and a heap histogram puts TraceFrame at 3% of the
-              retained bytes. Streaming the rows would not have helped.
+              retained bytes. Streaming the rows would not have helped; streaming
+              the aux events would, and is the durable fix if a future capture
+              pushes past this ceiling again.
             -->
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx2g</surefire.argLine>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
             </properties>
             <build>
                 <plugins>
