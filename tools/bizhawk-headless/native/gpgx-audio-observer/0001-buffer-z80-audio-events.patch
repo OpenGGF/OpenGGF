@@ -323,7 +323,7 @@ new file mode 100644
 index 000000000..52a635ab4
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1330 @@
+@@ -0,0 +1,1388 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -1091,6 +1091,74 @@ index 000000000..52a635ab4
 +  return 1;
 +}
 +
++static void tail_pop_push(const struct gpgx_audio_service_hook_v1 *hook,
++  uint8_t source, uint32_t pc)
++{
++  uint16_t token;
++  const struct gpgx_audio_service_kind_v1 *parent_kind = trace_depth > 1
++    ? kind_for(trace_stack[trace_depth - 2].kind) : NULL;
++  uint32_t reservation = range_group_reservation(
++    hook->range_first, hook->range_count, 0) + 1u;
++  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  if (!trace_deferred_begin.pending)
++  {
++    if (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN))
++    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++    if (reserve_events(reservation) && (token = allocate_token()) != 0
++        && pop_service(hook, source, pc))
++      push_service_with_token(hook, source, pc, token);
++    return;
++  }
++  else
++  {
++    struct trace_stack_entry blocker, root, child;
++    struct gpgx_audio_trace_event *event;
++    uint16_t child_token;
++    const struct gpgx_audio_service_kind_v1 *deferred_kind =
++      kind_for(trace_deferred_begin.target_kind);
++    blocker = trace_stack[trace_depth - 1];
++    if (trace_depth != 1
++        || blocker.token != trace_deferred_begin.blocker.token
++        || blocker.parent != trace_deferred_begin.blocker.parent
++        || blocker.kind != trace_deferred_begin.blocker.kind
++        || blocker.depth != trace_deferred_begin.blocker.depth
++        || !deferred_kind || !(deferred_kind->flags & KIND_ALLOW_CHILDREN))
++    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++    reservation++;
++    if (!reserve_events(reservation)) return;
++    token = allocate_token();
++    if (!token) return;
++    child_token = allocate_token();
++    if (!child_token) return;
++    memset(&root, 0, sizeof(root));
++    root.token = token;
++    root.kind = trace_deferred_begin.target_kind;
++    memset(&child, 0, sizeof(child));
++    child.token = child_token;
++    child.parent = token;
++    child.kind = hook->service_kind;
++    child.depth = 1;
++    if (!emit_completion(&blocker, hook->range_first, hook->range_count,
++        source, pc, hook->hook_token, 0)) return;
++    event = new_event(EVENT_SERVICE_BEGIN);
++    if (!event) return;
++    fill_ownership(event, &root);
++    event->pc = trace_deferred_begin.pc;
++    event->subject = trace_deferred_begin.hook_token;
++    event->source_cpu = trace_deferred_begin.cpu;
++    event = new_event(EVENT_SERVICE_BEGIN);
++    if (!event) return;
++    fill_ownership(event, &child);
++    event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
++    memset(trace_stack, 0, sizeof(trace_stack));
++    trace_stack[0] = root;
++    trace_stack[1] = child;
++    trace_depth = 2;
++    memset(&trace_deferred_begin, 0, sizeof(trace_deferred_begin));
++  }
++}
++
 +static int pop_direct_parent_promote_top(
 +  const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
 +{
@@ -1359,17 +1427,7 @@ index 000000000..52a635ab4
 +        && !arm_z80_proofs()) fail_runtime_at(GPGX_AUDIO_TRACE_FAULT_ARM_PROOF, cpu, pc);
 +  }
 +  else if (selected->action == ACTION_TAIL_POP_PUSH)
-+  {
-+    uint16_t token;
-+    const struct gpgx_audio_service_kind_v1 *parent_kind = trace_depth > 1
-+      ? kind_for(trace_stack[trace_depth - 2].kind) : NULL;
-+    uint32_t reservation = range_group_reservation(selected->range_first, selected->range_count, 0) + 1u;
-+    if (!trace_depth || trace_stack[trace_depth - 1].kind != selected->expected_active_kind
-+        || (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN)))
-+      fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE);
-+    else if (reserve_events(reservation) && (token = allocate_token()) != 0
-+      && pop_service(selected, cpu, pc)) push_service_with_token(selected, cpu, pc, token);
-+  }
++    tail_pop_push(selected, cpu, pc);
 +  else if (selected->action == ACTION_POP_END_IF_RETURN_OUTSIDE)
 +    conditional_pop_service(selected, cpu, pc);
 +  else if (selected->action == ACTION_RETRY_MARKER)
