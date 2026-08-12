@@ -832,6 +832,15 @@ namespace OpenGGF.BizHawk.Headless
                 ?0:pendingDeferredBegin.CorrelatedObservationCount;}}
             internal int BoundaryManagedServiceCountForTesting
             {get{return boundaryManagedServices.Count;}}
+            internal bool ResetScratchClearForTesting
+            {get{return pendingResetEvidence==null
+                &&pendingResetServiceSnapshot==null
+                &&pendingResetCancelledServiceToken==0
+                &&activeResetToken==0&&expectedResetGroups==0
+                &&completedResetGroups==0&&!expectedResetCancellationSeen
+                &&expectedResetCancellationOrdinal==0
+                &&!frameServiceOpenBeforeAdvance
+                &&!resetInputAssertedThisFrame;}}
 
             internal Session(IGpgxHost host, ICpuRegisterReader registers,
                 IGpgxAudioTraceApi api, Manifest manifest, TextWriter output)
@@ -985,6 +994,19 @@ namespace OpenGGF.BizHawk.Headless
                 PendingManagedOccurrence[] boundaryManagedBefore=
                     pendingBoundaryManaged.ToArray();
                 int deferredEvidenceBefore=deferredEvidencePublication.Count;
+                JObject resetEvidenceBefore=pendingResetEvidence==null?null
+                    :(JObject)pendingResetEvidence.DeepClone();
+                JObject resetServiceSnapshotBefore=
+                    pendingResetServiceSnapshot==null?null
+                    :(JObject)pendingResetServiceSnapshot.DeepClone();
+                ushort resetCancelledTokenBefore=pendingResetCancelledServiceToken;
+                ushort activeResetTokenBefore=activeResetToken;
+                int expectedResetGroupsBefore=expectedResetGroups;
+                int completedResetGroupsBefore=completedResetGroups;
+                bool resetCancellationSeenBefore=expectedResetCancellationSeen;
+                uint resetCancellationOrdinalBefore=expectedResetCancellationOrdinal;
+                bool serviceOpenBeforeAdvanceBefore=frameServiceOpenBeforeAdvance;
+                bool resetInputAssertedBefore=resetInputAssertedThisFrame;
                 var transaction=new StringWriter(CultureInfo.InvariantCulture);
                 frameTransaction=transaction;
                     currentRow = row;
@@ -1001,10 +1023,14 @@ namespace OpenGGF.BizHawk.Headless
                     expectedResetCancellationSeen = false;
                     expectedResetCancellationOrdinal = 0;
                     resetInputAssertedThisFrame = false;
-                    frameServiceOpenBeforeAdvance = managedServices.Count != 0;
+                    ManagedServiceTracker resetManagedServices=publish
+                        ?managedServices:boundaryManagedServices;
+                    frameServiceOpenBeforeAdvance =
+                        resetManagedServices.Count != 0;
                     if (input != null && (input.Power || input.Reset))
                     {
-                        if(pendingDeferredBegin!=null)
+                        if(publish?pendingDeferredBegin!=null
+                            :boundaryDeferredBegin!=null)
                             throw new InvalidOperationException(
                                 "Reset while a deferred M68K service begin is pending.");
                         resetInputAssertedThisFrame = true;
@@ -1015,14 +1041,14 @@ namespace OpenGGF.BizHawk.Headless
                             ["type"]="input_reset", ["row"]=row,
                             ["power"]=input.Power, ["reset"]=input.Reset
                         };
-                        if (managedServices.Count != 0)
+                        if (resetManagedServices.Count != 0)
                         {
-                            if (managedServices.Count != 1)
+                            if (resetManagedServices.Count != 1)
                                 throw new InvalidOperationException(
                                     "Reset with multiple open M68K services requires"
                                     + " distinct managed snapshots.");
                             pendingResetCancelledServiceToken =
-                                managedServices.SingleToken;
+                                resetManagedServices.SingleToken;
                             pendingResetServiceSnapshot = new JObject
                             {
                                 ["type"]="managed_reset_service_snapshot",
@@ -1033,7 +1059,7 @@ namespace OpenGGF.BizHawk.Headless
                                     pendingResetCancelledServiceToken
                             };
                         }
-                        managedServices.Clear();
+                        if(publish)managedServices.Clear();
                     }
                     observer.CaptureFrame(advance, (events, count) =>
                     {
@@ -1085,6 +1111,16 @@ namespace OpenGGF.BizHawk.Headless
                     if(deferredEvidencePublication.Count>deferredEvidenceBefore)
                         deferredEvidencePublication.RemoveRange(deferredEvidenceBefore,
                             deferredEvidencePublication.Count-deferredEvidenceBefore);
+                    pendingResetEvidence=resetEvidenceBefore;
+                    pendingResetServiceSnapshot=resetServiceSnapshotBefore;
+                    pendingResetCancelledServiceToken=resetCancelledTokenBefore;
+                    activeResetToken=activeResetTokenBefore;
+                    expectedResetGroups=expectedResetGroupsBefore;
+                    completedResetGroups=completedResetGroupsBefore;
+                    expectedResetCancellationSeen=resetCancellationSeenBefore;
+                    expectedResetCancellationOrdinal=resetCancellationOrdinalBefore;
+                    frameServiceOpenBeforeAdvance=serviceOpenBeforeAdvanceBefore;
+                    resetInputAssertedThisFrame=resetInputAssertedBefore;
                     var pendingNames = new List<string>();
                     foreach (PendingManagedOccurrence occurrence in pendingManaged)
                         pendingNames.Add(occurrence.Hook.Name);
@@ -1787,7 +1823,8 @@ namespace OpenGGF.BizHawk.Headless
                         pendingResetEvidence = null;
                         pendingResetServiceSnapshot = null;
                         pendingResetCancelledServiceToken = 0;
-                        managedServices.Clear();
+                        if(publishing)managedServices.Clear();
+                        else boundaryManagedServices.Clear();
                     }
                 }
                 activeResetToken = 0;

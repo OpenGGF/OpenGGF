@@ -116,6 +116,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests carry a consumed deferred child across the epoch",
                 CarriesConsumedDeferredChildAcrossEpoch));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests cancel boundary deferred child on reset",
+                CancelsBoundaryDeferredChildOnReset));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
@@ -945,6 +948,111 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             AssertEx.Equal(1,Records(output.ToString(),"managed_hook_evidence",
                 value=>(uint)value["pc"]==0x071B82).Count);
+        }
+
+        private static void CancelsBoundaryDeferredChildOnReset()
+        {
+            AssertBoundaryDeferredReset(false,true);
+            AssertBoundaryDeferredReset(true,false);
+            AssertBoundaryDeferredReset(true,true);
+            RollsBackMalformedBoundaryDeferredReset();
+            RollsBackAbortedBoundaryDeferredPower();
+        }
+
+        private static void AssertBoundaryDeferredReset(bool power,bool reset)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    return;
+                }
+                if(power)api.EmitReset(true,current);
+                if(reset)api.EmitReset(false,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                session.ObservePreEpochFrame(859,
+                    new Bk2Frame{Power=power,Reset=reset},host.Advance);
+                AssertEx.Equal(0,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Equal(0,output.ToString().Length);
+                session.BeginEpoch();
+            }
+            JObject baseline=Record(output.ToString(),"baseline",0);
+            AssertEx.Equal(0,((JArray)baseline["active_services"]).Count);
+            AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+            AssertEx.Equal(0,CountRecords(output.ToString(),"input_reset"));
+        }
+
+        private static void RollsBackMalformedBoundaryDeferredReset()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    return;
+                }
+                api.EmitReset(false,current);
+                api.RemoveFirst(value=>value.Kind==2&&(value.Flags&2)!=0
+                    &&value.ServiceKindId==4);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.ObservePreEpochFrame(859,
+                        new Bk2Frame{Reset=true},host.Advance),
+                    "innermost service");
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Equal(0,output.ToString().Length);
+            }
+        }
+
+        private static void RollsBackAbortedBoundaryDeferredPower()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    return;
+                }
+                api.EmitReset(true,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                api.EventCountStatus=-3;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.ObservePreEpochFrame(859,
+                        new Bk2Frame{Power=true},host.Advance),"event count");
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Equal(true,session.ResetScratchClearForTesting);
+                AssertEx.Equal(true,api.Calls.Contains("abort"));
+                AssertEx.Equal(0,output.ToString().Length);
+            }
         }
 
         private static void AssertDeferredObservationCount(int count)
@@ -2285,6 +2393,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private sealed class FakeTraceApi : IGpgxAudioTraceApi
         {
             internal int EndFrameStatus;
+            internal int EventCountStatus;
             private sealed class ActiveService
             {
                 internal ushort Token;
@@ -2475,7 +2584,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             public int EndFrame() { Calls.Add("end"); return EndFrameStatus; }
             public int EventCount(out uint count, out uint overflow)
-            { Calls.Add("count"); count=(uint)frameEvents.Count; overflow=0; return 0; }
+            { Calls.Add("count"); count=(uint)frameEvents.Count; overflow=0;
+                return EventCountStatus; }
             public int Drain(GpgxAudioTraceEvent[] events, uint capacity,
                 out uint count)
             { Calls.Add("drain:"+capacity); count=(uint)frameEvents.Count;
