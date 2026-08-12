@@ -169,6 +169,19 @@ namespace OpenGGF.BizHawk.Headless
                     "Native completion had no open managed M68K service token.");
             }
             internal void Clear(){entries.Clear();}
+            internal ManagedServiceTracker Clone()
+            {
+                var copy=new ManagedServiceTracker();
+                for(int i=0;i<entries.Count;i++)copy.entries.Add(new Entry
+                    {Token=entries[i].Token,Stack=entries[i].Stack});
+                return copy;
+            }
+            internal void Restore(ManagedServiceTracker source)
+            {
+                entries.Clear();
+                for(int i=0;i<source.entries.Count;i++)entries.Add(new Entry
+                    {Token=source.entries[i].Token,Stack=source.entries[i].Stack});
+            }
             private bool MatchesToken(ushort token)
             {
                 for(int i=0;i<entries.Count;i++)
@@ -447,6 +460,7 @@ namespace OpenGGF.BizHawk.Headless
             ExactProperties(binding, "m68k_binding", "first_token", "service_kind",
                 "proof_range", "predicate_ranges", "queue_expected_kinds",
                 "begin_expected_kinds", "direct_parent_retry_async_kinds",
+                "deferred_begin_blocker_kind",
                 "retry_expected_kind", "internal_expected_kind");
             ushort nextToken = StrictUShort(binding["first_token"], "M68K first token");
             byte serviceKind = StrictByte(binding["service_kind"], "M68K service kind");
@@ -472,6 +486,10 @@ namespace OpenGGF.BizHawk.Headless
             byte[] beginKinds = ExactKindList(binding, "begin_expected_kinds", 0, 2, 3);
             byte[] directParentRetryKinds = ExactKindList(binding,
                 "direct_parent_retry_async_kinds", 2, 3);
+            byte deferredBeginBlockerKind=StrictByte(
+                binding["deferred_begin_blocker_kind"],"deferred begin blocker kind");
+            if(deferredBeginBlockerKind!=6)
+                throw Invalid("deferred begin blocker kind differs");
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));
@@ -491,11 +509,16 @@ namespace OpenGGF.BizHawk.Headless
                     AddManagedNativeHook(hookList, publicHooks, managedByToken,
                         hookTokens, managedHook, ref nextToken, 6, 0, serviceKind, 0, 0, 0);
                     if (managedHook.Pc == 0x071B4C)
+                    {
                         foreach (byte expected in directParentRetryKinds)
                             AddManagedNativeHook(hookList, publicHooks,
                                 managedByToken, hookTokens, managedHook,
                                 ref nextToken, 10, serviceKind, expected,
                                 0, 0, 0);
+                        AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                            hookTokens,managedHook,ref nextToken,11,serviceKind,
+                            deferredBeginBlockerKind,0,0,0);
+                    }
                 }
                 else if (managedHook.Action == "SERVICE_CLOSE")
                 {
@@ -670,11 +693,23 @@ namespace OpenGGF.BizHawk.Headless
             {
                 internal ManagedHook Hook;
                 internal uint Stack;
+                internal uint ReturnPc;
+                internal long ManagedCorrelationOrdinal;
                 internal bool ClosesService;
                 internal bool ConditionalPopMarkerSeen;
                 internal readonly List<JObject> Records = new List<JObject>();
                 internal readonly List<JObject> NativeCorrelationEvents =
                     new List<JObject>();
+            }
+
+            private sealed class DeferredManagedBegin
+            {
+                internal ushort BlockerToken,BlockerParentToken,HookToken;
+                internal byte BlockerKind,BlockerDepth,TargetKind,SourceCpu;
+                internal uint Pc,Stack,ReturnPc,EndOrdinal;
+                internal bool AwaitingRelease;
+                internal readonly List<PendingManagedOccurrence> Observations=
+                    new List<PendingManagedOccurrence>();
             }
 
             private static readonly string[] RegisterNames =
@@ -692,6 +727,11 @@ namespace OpenGGF.BizHawk.Headless
             private readonly Queue<PendingManagedOccurrence> pendingManaged =
                 new Queue<PendingManagedOccurrence>();
             private PendingManagedOccurrence collectingManaged;
+            private DeferredManagedBegin pendingDeferredBegin;
+            private StringWriter frameTransaction;
+            private StringWriter deferredPublication;
+            private readonly List<JObject> deferredEvidencePublication=
+                new List<JObject>();
             private JObject pendingResetEvidence;
             private JObject pendingResetServiceSnapshot;
             private ushort pendingResetCancelledServiceToken;
@@ -721,6 +761,8 @@ namespace OpenGGF.BizHawk.Headless
             private bool epochStarted;
             private bool complete;
             private bool disposed;
+            internal int PendingDeferredObservationCountForTesting
+            {get{return pendingDeferredBegin==null?0:pendingDeferredBegin.Observations.Count;}}
 
             internal Session(IGpgxHost host, ICpuRegisterReader registers,
                 IGpgxAudioTraceApi api, Manifest manifest, TextWriter output)
@@ -852,6 +894,12 @@ namespace OpenGGF.BizHawk.Headless
                 int expected = publish ? (lastRow < 0 ? manifest.FirstRow : lastRow + 1) : row;
                 if (row != expected || publish && row >= manifest.ExclusiveEnd)
                     throw new InvalidOperationException("Missing or out-of-order S1 audio row.");
+                ManagedServiceTracker servicesBefore=managedServices.Clone();
+                DeferredManagedBegin deferredBefore=CloneDeferred(pendingDeferredBegin);
+                PendingManagedOccurrence[] managedBefore=pendingManaged.ToArray();
+                int deferredEvidenceBefore=deferredEvidencePublication.Count;
+                var transaction=new StringWriter(CultureInfo.InvariantCulture);
+                frameTransaction=transaction;
                     currentRow = row;
                     frameRecords = 0;
                     nextManagedCorrelationOrdinal = 0;
@@ -869,6 +917,9 @@ namespace OpenGGF.BizHawk.Headless
                     frameServiceOpenBeforeAdvance = managedServices.Count != 0;
                     if (input != null && (input.Power || input.Reset))
                     {
+                        if(pendingDeferredBegin!=null)
+                            throw new InvalidOperationException(
+                                "Reset while a deferred M68K service begin is pending.");
                         resetInputAssertedThisFrame = true;
                         expectedResetGroups = (input.Power ? 1 : 0)
                             + (input.Reset ? 1 : 0);
@@ -906,6 +957,9 @@ namespace OpenGGF.BizHawk.Headless
                             if (publish) CorrelateManaged(events[i]);
                         }
                     });
+                    if(pendingDeferredBegin!=null&&pendingDeferredBegin.AwaitingRelease)
+                        throw new InvalidOperationException(
+                            "Deferred S1 blocker completion had no adjacent released begin.");
                     if (pendingResetEvidence != null)
                         throw new InvalidOperationException(
                             "A reset input had no native ordered reset lifecycle.");
@@ -914,9 +968,32 @@ namespace OpenGGF.BizHawk.Headless
                             "A managed S1 callback had no native ordered marker.");
                     WriteFrame(new JObject { ["type"]="frame_end", ["row"]=row });
                     if (publish) lastRow = row;
+                    if(pendingDeferredBegin!=null)
+                    {
+                        if(deferredPublication==null)
+                            deferredPublication=new StringWriter(
+                                CultureInfo.InvariantCulture);
+                        deferredPublication.Write(transaction.ToString());
+                    }
+                    else
+                    {
+                        if(deferredPublication!=null)
+                        {
+                            FlushDeferredPublication();
+                            deferredPublication=null;
+                        }
+                        output.Write(transaction.ToString());
+                    }
                 }
                 catch (Exception error)
                 {
+                    managedServices.Restore(servicesBefore);
+                    pendingDeferredBegin=deferredBefore;
+                    pendingManaged.Clear();
+                    for(int i=0;i<managedBefore.Length;i++)pendingManaged.Enqueue(managedBefore[i]);
+                    if(deferredEvidencePublication.Count>deferredEvidenceBefore)
+                        deferredEvidencePublication.RemoveRange(deferredEvidenceBefore,
+                            deferredEvidencePublication.Count-deferredEvidenceBefore);
                     var pendingNames = new List<string>();
                     foreach (PendingManagedOccurrence occurrence in pendingManaged)
                         pendingNames.Add(occurrence.Hook.Name);
@@ -932,6 +1009,7 @@ namespace OpenGGF.BizHawk.Headless
                     capturing = false;
                     publishing = false;
                     currentRow = -1;
+                    frameTransaction=null;
                 }
             }
 
@@ -944,6 +1022,9 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException("The S1 audio terminal does not follow the final row.");
                 if (managedServices.Count != 0)
                     throw new InvalidOperationException("An M68K audio service is open at the terminal.");
+                if(pendingDeferredBegin!=null)
+                    throw new InvalidOperationException(
+                        "A deferred M68K audio service begin is pending at the terminal.");
                 Write(new JObject
                 {
                     ["type"]="terminal", ["exclusive_end"]=exclusiveEnd,
@@ -986,6 +1067,7 @@ namespace OpenGGF.BizHawk.Headless
                     if (hook.Action == "SERVICE_BEGIN")
                     {
                         occurrence.Stack = ReadM68kRegister("A7");
+                        occurrence.ReturnPc = ReadReturnPc();
                     }
                     else if (hook.Action == "SERVICE_CLOSE")
                     {
@@ -1045,6 +1127,31 @@ namespace OpenGGF.BizHawk.Headless
 
             private void CorrelateManaged(GpgxAudioTraceEvent value)
             {
+                if(pendingDeferredBegin!=null&&pendingDeferredBegin.AwaitingRelease)
+                {
+                    if(value.Kind!=1||value.Subject!=pendingDeferredBegin.HookToken
+                        ||value.Pc!=pendingDeferredBegin.Pc||value.SourceCpu!=pendingDeferredBegin.SourceCpu
+                        ||value.ParentToken!=0||value.Depth!=0
+                        ||value.ServiceKindId!=pendingDeferredBegin.TargetKind)
+                        throw new InvalidOperationException(
+                            "Deferred S1 blocker end was not followed by its exact released begin.");
+                    EmitDeferredManaged(value);
+                    managedServices.Begin(value.ServiceToken,pendingDeferredBegin.Stack);
+                    pendingDeferredBegin=null;
+                    return;
+                }
+                if(pendingDeferredBegin!=null&&value.Kind==2
+                    &&value.ServiceToken==pendingDeferredBegin.BlockerToken)
+                {
+                    if(value.ParentToken!=pendingDeferredBegin.BlockerParentToken
+                        ||value.ServiceKindId!=pendingDeferredBegin.BlockerKind
+                        ||value.Depth!=pendingDeferredBegin.BlockerDepth)
+                        throw new InvalidOperationException(
+                            "Deferred S1 blocker completion identity changed.");
+                    pendingDeferredBegin.AwaitingRelease=true;
+                    pendingDeferredBegin.EndOrdinal=value.Ordinal;
+                    return;
+                }
                 // SERVICE_PROMOTE uses Subject for the promoted service token,
                 // not a managed-hook token. Service tokens and manifest hook
                 // tokens occupy independent bounded spaces and may coincide.
@@ -1105,6 +1212,47 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 else if (expected.Action == "SERVICE_BEGIN")
                 {
+                    if(value.Kind==10&&value.Value==4)
+                    {
+                        byte nativeAction;
+                        if(!manifest.NativeActionByToken.TryGetValue(value.Subject,out nativeAction)
+                            ||nativeAction!=11)
+                            throw new InvalidOperationException(
+                                "Deferred S1 marker has no action-11 identity.");
+                        if(pendingDeferredBegin==null)
+                        {
+                            pendingDeferredBegin=new DeferredManagedBegin
+                            {BlockerToken=value.ServiceToken,BlockerParentToken=value.ParentToken,
+                                BlockerKind=value.ServiceKindId,BlockerDepth=value.Depth,
+                                TargetKind=4,HookToken=value.Subject,SourceCpu=value.SourceCpu,
+                                Pc=value.Pc,Stack=occurrence.Stack,ReturnPc=occurrence.ReturnPc};
+                        }
+                        else if(pendingDeferredBegin.AwaitingRelease
+                            ||pendingDeferredBegin.BlockerToken!=value.ServiceToken
+                            ||pendingDeferredBegin.BlockerParentToken!=value.ParentToken
+                            ||pendingDeferredBegin.BlockerKind!=value.ServiceKindId
+                            ||pendingDeferredBegin.BlockerDepth!=value.Depth
+                            ||pendingDeferredBegin.HookToken!=value.Subject
+                            ||pendingDeferredBegin.SourceCpu!=value.SourceCpu
+                            ||pendingDeferredBegin.Pc!=value.Pc
+                            ||pendingDeferredBegin.Stack!=occurrence.Stack
+                            ||pendingDeferredBegin.ReturnPc!=occurrence.ReturnPc)
+                            throw new InvalidOperationException(
+                                "Deferred S1 callback A7/return identity changed.");
+                        occurrence.NativeCorrelationEvents.Add(
+                            NativeCorrelationEvent(value,true));
+                        if(nextManagedCorrelationOrdinal>=manifest.MaximumRecordsPerFrame
+                            ||frameRecords+occurrence.Records.Count
+                                >manifest.MaximumRecordsPerFrame)
+                            throw new InvalidOperationException(
+                                "The bounded S1 managed-correlation stream overflowed.");
+                        occurrence.ManagedCorrelationOrdinal=
+                            nextManagedCorrelationOrdinal++;
+                        frameRecords+=occurrence.Records.Count;
+                        pendingDeferredBegin.Observations.Add(occurrence);
+                        pendingManaged.Dequeue();
+                        return;
+                    }
                     if (value.Kind == 10 && value.Value == 2)
                     {
                         if (!managedServices.Matches(
@@ -1162,9 +1310,43 @@ namespace OpenGGF.BizHawk.Headless
                 }
             }
 
+            private void EmitDeferredManaged(GpgxAudioTraceEvent released)
+            {
+                for(int i=0;i<pendingDeferredBegin.Observations.Count;i++)
+                {
+                    PendingManagedOccurrence occurrence=
+                        pendingDeferredBegin.Observations[i];
+                    var chain=new JArray(occurrence.NativeCorrelationEvents);
+                    foreach(JObject record in occurrence.Records)
+                    {
+                        record["managed_correlation_ordinal"]=
+                            occurrence.ManagedCorrelationOrdinal;
+                        record["native_correlation_events"]=chain.DeepClone();
+                        JObject marker=occurrence.NativeCorrelationEvents[0];
+                        record["native_ordinal"]=(uint)marker["ordinal"];
+                        record["native_hook_token"]=pendingDeferredBegin.HookToken;
+                        record["native_service_token"]=pendingDeferredBegin.BlockerToken;
+                        record["native_parent_token"]=pendingDeferredBegin.BlockerParentToken;
+                        record["native_marker_value"]=4;
+                        record["deferred_a7"]=pendingDeferredBegin.Stack;
+                        record["deferred_return_pc"]=pendingDeferredBegin.ReturnPc;
+                        record["blocker_end_ordinal"]=pendingDeferredBegin.EndOrdinal;
+                        record["released_service_token"]=released.ServiceToken;
+                        record["released_begin_ordinal"]=released.Ordinal;
+                        if(deferredPublication==null)
+                        {
+                            frameTransaction.Write(record.ToString(Formatting.None));
+                            frameTransaction.Write('\n');
+                        }
+                        else deferredEvidencePublication.Add(
+                            (JObject)record.DeepClone());
+                    }
+                }
+            }
+
             private bool HasManagedServiceCandidate()
             {
-                int count = managedServices.Count;
+                int count = managedServices.Count+(pendingDeferredBegin==null?0:1);
                 foreach (PendingManagedOccurrence pending in pendingManaged)
                 {
                     if (pending.Hook.Action == "SERVICE_BEGIN") count++;
@@ -1191,6 +1373,63 @@ namespace OpenGGF.BizHawk.Headless
                     ["flags"]=value.Flags,
                     ["terminal"]=terminal
                 };
+            }
+
+            private static DeferredManagedBegin CloneDeferred(
+                DeferredManagedBegin source)
+            {
+                if(source==null)return null;
+                var copy=new DeferredManagedBegin
+                {BlockerToken=source.BlockerToken,BlockerParentToken=source.BlockerParentToken,
+                    HookToken=source.HookToken,BlockerKind=source.BlockerKind,
+                    BlockerDepth=source.BlockerDepth,TargetKind=source.TargetKind,
+                    SourceCpu=source.SourceCpu,Pc=source.Pc,Stack=source.Stack,
+                    ReturnPc=source.ReturnPc,EndOrdinal=source.EndOrdinal,
+                    AwaitingRelease=source.AwaitingRelease};
+                for(int i=0;i<source.Observations.Count;i++)
+                    copy.Observations.Add(CloneOccurrence(source.Observations[i]));
+                return copy;
+            }
+
+            private static PendingManagedOccurrence CloneOccurrence(
+                PendingManagedOccurrence source)
+            {
+                var copy=new PendingManagedOccurrence
+                {Hook=source.Hook,Stack=source.Stack,ReturnPc=source.ReturnPc,
+                    ManagedCorrelationOrdinal=source.ManagedCorrelationOrdinal,
+                    ClosesService=source.ClosesService,
+                    ConditionalPopMarkerSeen=source.ConditionalPopMarkerSeen};
+                for(int i=0;i<source.Records.Count;i++)
+                    copy.Records.Add((JObject)source.Records[i].DeepClone());
+                for(int i=0;i<source.NativeCorrelationEvents.Count;i++)
+                    copy.NativeCorrelationEvents.Add((JObject)
+                        source.NativeCorrelationEvents[i].DeepClone());
+                return copy;
+            }
+
+            private void FlushDeferredPublication()
+            {
+                using(var reader=new StringReader(deferredPublication.ToString()))
+                {
+                    string line;
+                    while((line=reader.ReadLine())!=null)
+                    {
+                        JObject value=JObject.Parse(line);
+                        if((string)value["type"]=="frame_end")
+                        {
+                            int row=(int)value["row"];
+                            for(int i=0;i<deferredEvidencePublication.Count;i++)
+                                if((int)deferredEvidencePublication[i]["row"]==row)
+                                {
+                                    output.Write(deferredEvidencePublication[i]
+                                        .ToString(Formatting.None));
+                                    output.Write('\n');
+                                }
+                        }
+                        output.Write(line);output.Write('\n');
+                    }
+                }
+                deferredEvidencePublication.Clear();
             }
 
             private void ApplyNativeLifecycle(GpgxAudioTraceEvent value)
@@ -1455,8 +1694,9 @@ namespace OpenGGF.BizHawk.Headless
 
             private void Write(JObject record)
             {
-                output.Write(record.ToString(Formatting.None));
-                output.Write('\n');
+                TextWriter target=frameTransaction==null?output:frameTransaction;
+                target.Write(record.ToString(Formatting.None));
+                target.Write('\n');
             }
 
             public void Dispose()
@@ -1552,6 +1792,7 @@ namespace OpenGGF.BizHawk.Headless
                     action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":
                     action==9?"POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE":
                     action==10?"DIRECT_PARENT_RETRY_MARKER":
+                    action==11?"DEFER_BEGIN_UNTIL_TOP_END":
                     "OBSERVATION_MARKER"
             };
             AddPublicHook(publicHooks, native);

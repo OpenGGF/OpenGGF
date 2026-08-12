@@ -148,6 +148,7 @@
       "queue_expected_kinds": [0, 2, 3],
       "begin_expected_kinds": [0, 2, 3],
       "direct_parent_retry_async_kinds": [2, 3],
+      "deferred_begin_blocker_kind": 6,
       "retry_expected_kind": 4,
       "internal_expected_kind": 4
     }
