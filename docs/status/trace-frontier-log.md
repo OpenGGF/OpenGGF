@@ -73074,3 +73074,72 @@ same iteration). No constant was introduced.
   `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`.
 - No constant was introduced. The only literals added are the ROM immediates
   `-$20` and `+4` from `Obj01_Init_Continued` (s2.asm:36206-36207).
+
+## 2026-08-12 - S2 run chains: the returned-level segment is now asserted, and its camera closed
+
+- Dedicated candidate worktree over `b87f1174f`, plus a separate control worktree at
+  the same commit (both outside the repository tree).
+- Command (both control and after):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen>
+  -Dtest=... test`, with `rm -rf target/surefire-reports target/trace-reports` first.
+- **The chain never asserted the returned-level segment's physics.** Both S2 chains
+  computed a `LiveTraceComparator.errorCount()` for the level they re-enter after a
+  special stage, wrote it to `<run>_seg2_report.json`, and asserted only the boundary
+  observation plus dynamic art. Control at `b87f1174f`: `s2-sonic-tails-complete-emeralds`
+  seg2 = 58184 errors, `s2-ehz-halfpipe-roundtrip` seg2 = 39645 errors, both
+  `complete: true`, and both chains failed LATER (seg3 interior dynamic art, 17071 /
+  17042). `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay` replays the identical rows
+  standalone to 0 errors. `AbstractRunChainTest.assertReturnedLevelSegmentPhysics` now
+  asserts that count; both chains fail at seg2 instead.
+- **Correction to the brief that drove this round:** the seg2 first blip is NOT row 327.
+  Measured at control, the first mismatch is frame 1, on `camera_x` (0x0D50 vs 0x0D60)
+  and the `sidekick_*` group; `firstNonCameraPhysicsMismatch` is `sidekick_x` at frame 1.
+- **Camera closed.** A camera probe measured `savedCameraX = 0x0D68` at the restore while
+  the live camera was already the correct `0x0D50` -- the engine banked a left-scroll rest
+  position (`x-$90`) from an earlier pass of the star post and wrote it over the level
+  re-init's correct snap. The ROM discards its saved camera: `Obj79_LoadData`
+  (s2.asm:44793-44794) returns into `LevelSizeLoad`'s `subi.w #$A0,d1` / `subi.w #$60,d0`
+  clamped tail (s2.asm:14775-14814); S1 and S3K have the identical shape
+  (`_inc/LevelSizeLoad & BgScrollSpeed.asm`:79-146, sonic3k.asm:38244-38266).
+  `CheckpointState.restoreToPlayer` now recomputes via `Camera.updatePosition(true)`,
+  which already is that formula. seg2 errors 39645 -> 39612 and 58184 -> 58129.
+- **New frontier:** both S2 chains, seg2, first non-camera mismatch `sidekick_x` frame 1
+  (rom 0x0DDE / engine 0x0DF1) -- the CPU-Tails title-card-duration divergence, previously
+  a diagnostic note and now a hard failure.
+- Regression sweep after the change: `-Dtest='*TraceReplay',TestS1GhzMazeRoundTripChain,
+  TestS3kBonusRoundTripChain,TestS3kKnucklesSuperEmeraldRunChain,TestS3kMegaRunChain,
+  TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils,TestS1CompleteEmeraldRunPrefix,TestS1CompleteEmeraldVisualRun`
+  -> 191 tests, 0 failures, 3 errors, 2 skips. All three errors reproduce byte-identically
+  at control: `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain` (KOS queue
+  completion) and `TestS3kMhzCompleteRunTraceReplay` (`KOS_DECOMPRESSION_QUEUE#335`,
+  verified solo at `b87f1174f`). No regressions.
+
+## 2026-08-12 - S2 title-card exit passes; emerald chain frontier becomes an in-segment death
+
+- Worktree: a detached scratch worktree on branch `bugfix/ai-r83-titlecard-exit-passes`,
+  based on `067691278`.
+- Command (all runs): `rm -rf target/surefire-reports target/trace-reports; mvn
+  -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... -Dtest=<class> test`
+- `TestS2EhzHalfpipeRoundTripChain`: FAIL, seg2 39612 -> 22426 errors. First non-camera
+  mismatch moved off sidekick physics: was `sidekick_x` rom=0x0DDE engine=0x0DF1 at frame
+  1, now `dynamic_art.edges` rom=[0] engine=[0,1,2,3,4] at frame 1.
+- `TestS2CompleteEmeraldRunChain`: FAIL, and the failure moved EARLIER. Control at
+  `067691278` reached the seg2 assert with 58129 errors; with this change the chain aborts
+  at `segment 2 lost production ownership before source closure (mode=TITLE_CARD,
+  loadGeneration=4, BK2 cursor=12459)`. Instrumented cause:
+  `LevelManager.restartCurrentLevelAfterDeath` via
+  `TraceSessionLauncher.runDeathRestartLoad` -- the engine's Sonic DIES at seg2 row 2125
+  and the level reloads, so production genuinely left the segment. The coordinator's
+  ownership assertion is correct; this is a gameplay divergence, not a harness expectation
+  defect. Reverting only the sidekick sub-pixel half moves the death to cursor 12634, so
+  the death is owned by the title-card pass gating. Control (both halves reverted) does
+  not die at all.
+- `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`,
+  `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`: PASS, 0 errors, unchanged.
+  `TestS1GhzMazeRoundTripChain`: PASS, unchanged.
+- Next frontier: the seg2 leader-physics residual that kills Sonic on the emerald route.
+  The seg2 report exposes only `errorCount`, `firstNonCameraPhysicsMismatch` and
+  `recentMismatches`, so a per-frame first-leader-divergence probe is the next step.

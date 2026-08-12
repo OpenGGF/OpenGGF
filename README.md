@@ -284,6 +284,32 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S2 run chains: the returned-level segment now asserts its own physics, and
+  the title card stops ticking players (2026-08-12):** both S2 run chains were
+  computing a full physics comparison for the segment they return into after a
+  special stage — 58,184 and 39,645 errors — writing it to the segment report
+  with `complete: true`, and then asserting only the boundary observation and
+  dynamic art. The chains sailed past it and failed downstream, so thirteen
+  rounds of candidate fixes were graded by which wrong route a
+  broken-but-unasserted segment happened to take, while the standalone segment
+  class replayed the identical rows to zero. Asserting the error count the chain
+  already computed made both chains fail at the real defect and turned that into
+  one measurable target. Two ROM divergences fell out of it. The engine ran the
+  player objects for the whole returned-level title card, where `Level_ClrRam`
+  has just cleared `Object_RAM` (`s2.asm:4808`) so they do not exist for the
+  `Level_TtlCard` loop at all — `InitPlayers` only runs afterwards, giving the
+  ROM one `RunObjects` pass plus 25 leave-loop iterations. Those ~103 extra
+  playable ticks let the sidekick finish her catch-up ramp and settle, so she was
+  compared at rest instead of mid-ramp; the same clear is why her sub-pixel is
+  zero at `InitPlayers` on every entry including a re-entry. Separately, the
+  checkpoint restore wrote a banked left-scroll camera position over the level
+  re-init's snap, where the ROM discards its saved camera and falls into the same
+  `x-$A0` clamp tail as a fresh start (`s2.asm:14775-14814`, matching shapes in
+  S1 and S3K). Halfpipe segment 2 fell 39,612 → 22,426 and the sidekick stopped
+  being its frontier field. Removing the title-card ticks also exposed a
+  load-bearing compensator: they had been masking a genuine engine-only player
+  death mid-segment on the emerald route, which the ownership assertion caught
+  rather than hid, and which is the next frontier.
 - **Repeated SMPS playback no longer recopies whole audio assets (2026-08-11):**
   music, base/donor SFX, and named SFX now reuse one immutable,
   generation-aware program/DAC/configuration catalog entry while retaining

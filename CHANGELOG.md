@@ -3,6 +3,49 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 runs player physics only for the 26 object passes the ROM dispatches before
+  `Level_MainLoop`. `Level_ClrRam` wipes the player objects
+  (`clearRAM Object_RAM,LevelOnly_Object_RAM_End`, s2.asm:4808) and `Level_TtlCard`'s
+  scroll-in wait loop (:4914-4925) runs before `InitPlayers` (:4945), so the players do
+  not exist for the card's slide-in at all; they exist for the single `RunObjects` at
+  :5006 and the 25 iterations of the leave loop at :5060-5066. The engine instead ran
+  physics for the whole presented card -- a length the engine invents -- and additionally
+  replayed the skipped-presentation animation for presented cards that had already
+  dispatched those passes live. The leave-piece handoffs now follow the Obj34 routine pass
+  counts (:27518-27540, :27542-27551, :27587-27604) rather than overlay travel. Because
+  :4808 zeroes the object RAM block, the sidekick sub-pixel is zero at `InitPlayers` on
+  every entry including a special-stage return, so `spawnSidekicks` no longer preserves it
+  across the re-seed. `TestS2EhzHalfpipeRoundTripChain` seg2: 39612 -> 22426 errors, and
+  the first non-camera mismatch stops being a sidekick physics field (now
+  `dynamic_art.edges` at frame 1). Both standalone seg2 oracles stay at 0 errors and
+  `TestS1GhzMazeRoundTripChain` stays green. `TestS2CompleteEmeraldRunChain` now aborts
+  earlier than its seg2 assert: the engine's Sonic dies inside segment 2 (BK2 cursor
+  12459) and the run coordinator correctly reports the lost production ownership -- a real
+  gameplay divergence exposed by this change, recorded as the new frontier.
+- Test: the run chains now ASSERT the returned-level segment's physics comparator error
+  count they already computed. A level a run re-enters after an interior (special stage /
+  bonus) had its `LiveTraceComparator.errorCount()` written to
+  `target/trace-reports/<run>_seg<N>_report.json` and then ignored -- the only assertions
+  at that seam were the boundary observation and dynamic art -- so both S2 chains walked
+  past a returned segment carrying tens of thousands of physics errors while reporting it
+  `complete`. `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay` replays the identical
+  rows standalone to zero errors, so the rows can replay clean and the divergence is owned
+  by the chain's return path. Both S2 chains now fail at seg2 instead of further
+  downstream: not a regression, the true state of the return path becoming visible.
+  `TestS1GhzMazeRoundTripChain` and the S3K chains are unchanged.
+- Fix: a checkpoint restore no longer writes the camera back from `Saved_Camera_X/Y_pos`.
+  All three ROMs write those in their checkpoint-load routine and then immediately
+  overwrite `Camera_X_pos` / `Camera_Y_pos` from the RESTORED PLAYER POSITION, in the
+  shared level-size-init tail the checkpoint branch falls into: S2 `Obj79_LoadData`
+  (s2.asm:44793-44794) returns into `LevelSizeLoad`'s `subi.w #$A0,d1` / `subi.w #$60,d0`
+  clamped tail (s2.asm:14775-14814); S1 `Lamp_LoadInfo` then `LevSz_InitCameraPositions`
+  (`_inc/LevelSizeLoad & BgScrollSpeed.asm`:79-146); S3K the same tail at
+  sonic3k.asm:38244-38266. `Camera.updatePosition(true)` already IS that formula. Writing
+  the saved values over it left the S2 special-stage return's `camera_x` 16px right of the
+  recording from its first frame -- the engine had banked `x-$90`, a left-scroll rest
+  position from an earlier pass of the star post, where the ROM recomputes `x-$A0`.
+  Returned-segment physics errors: 39645 -> 39612 (half-pipe round trip) and
+  58184 -> 58129 (complete emeralds).
 - Fix: a level (re)init refills the leader's delayed position ring and clears the status
   ring, so a star-post restart or a return from a special stage no longer follows the
   previous level's recorded leader data. ROM `Obj01_Init_Continued` (s2.asm:36201-36217)

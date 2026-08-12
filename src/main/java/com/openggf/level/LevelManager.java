@@ -246,6 +246,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // All transition request/consume state lives in the coordinator
     private final LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
     private boolean initialPresentationPlcsCompleted;
+    /**
+     * Whether the current load's initial title-card presentation is omitted
+     * rather than presented, so its player object passes must be replayed.
+     */
+    private boolean initialPresentationOmitted;
 
     // ROM: LZ3/SBZ2 vertical wrapping — FG layer wraps Y instead of clamping
     boolean verticalWrapEnabled = false;
@@ -2905,8 +2910,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     (short) (leaderInit.getCentreY() + 4));
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
-            sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));
+            // ROM writes only the x_pos/y_pos words here (S2 InitPlayers
+            // s2.asm:5191-5195; S3K SpawnLevelMainSprites_SpawnPlayers
+            // sonic3k.asm:8364-8367), which on a 68000 leaves the adjacent
+            // sub-pixel words untouched -- but the level routine zeroed the
+            // whole object RAM block before reaching this point
+            // (clearRAM Object_RAM,LevelOnly_Object_RAM_End, s2.asm:4808;
+            // clearRAM Object_RAM,(Kos_decomp_buffer-Object_RAM),
+            // sonic3k.asm:7619, ahead of the SpawnLevelMainSprites call at
+            // :7849), so the sidekick's sub-pixel is ZERO here on every level
+            // entry -- including a re-entry such as the special-stage return,
+            // which runs the whole Level: routine again.
+            sidekick.setCentreX((short) (player.getCentreX() + xOffset));
+            sidekick.setCentreY((short) (player.getCentreY() + yOffset));
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
@@ -2944,6 +2960,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
         initialPresentationPlcsCompleted = false;
+        initialPresentationOmitted = false;
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (!ctx.isShowTitleCard()) {
@@ -3024,6 +3041,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void completeSkippedInitialTitleCardPresentation() {
+        initialPresentationOmitted = true;
         completeInitialTitleCardPresentation();
         // A headless fresh load omits presentation, but the title-card owner
         // object is not deleted with it: it keeps running through
@@ -3070,8 +3088,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         profile.completeInitialPresentationPlcs();
-        replaySkippedPresentationPlayerAnimation(
-                profile.skippedPresentationPlayableFrames());
+        // Only an OMITTED presentation needs its player object passes replayed.
+        // A presented card really dispatches them: the provider runs the ROM's
+        // own pre-Level_MainLoop passes (S2: the s2.asm:5006 RunObjects plus
+        // the 25 iterations of the s2.asm:5060-5066 leave loop) with player
+        // physics live, so replaying them here would advance the animation and
+        // the persistent last-loaded-DPLC byte a second time.
+        if (initialPresentationOmitted) {
+            replaySkippedPresentationPlayerAnimation(
+                    profile.skippedPresentationPlayableFrames(),
+                    profile.skippedPresentationPlayableFramesBeforeFirstVBlank());
+        }
         initialPresentationPlcsCompleted = true;
     }
 
@@ -3097,7 +3124,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
      * they contribute no iterations unless their own init profile declares one.
      */
-    private void replaySkippedPresentationPlayerAnimation(int iterations) {
+    private void replaySkippedPresentationPlayerAnimation(
+            int iterations, int passesBeforeFirstVBlank) {
         if (iterations <= 0 || spriteManager == null) {
             return;
         }
@@ -3112,7 +3140,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
         for (int frame = 0; frame < iterations; frame++) {
-            if (dynamicArt != null && dynamicArt.isRunActive()) {
+            // The leading object passes the profile declares run outside the
+            // omitted presentation's wait loop, so no V-blank precedes them;
+            // the loop's first WaitForVint drains the queue they built.
+            if (frame >= passesBeforeFirstVBlank
+                    && dynamicArt != null && dynamicArt.isRunActive()) {
                 dynamicArt.serviceProductionVBlank();
             }
             for (AbstractPlayableSprite playable : playables) {
