@@ -370,10 +370,12 @@ A later, sole fresh configured-terminal session at selective-sink commit
 former aggregate-writer failure and stopped at the next exact native observer
 frontier, movie row 119247: status `-3`,
 `first_fault=4:1:77:6:1:0:4`. This is native reason `SERVICE`, Z80 `$0077`,
-active kind 6 at depth 1, continuation count/limit 0/4; the configured
-`TAIL_POP_PUSH` expects active kind 6 and would replace it with kind 2. The
-tuple identifies a rejected service invariant at that depth but does not
-distinguish the native deferred-pending and parent-kind guards. The session was
+active kind 6, stack-entry count 1, and continuation count/limit 0/4. The sole
+root entry stores depth 0; packed `active_depth` reports the stack count. The
+tuple alone does not name the failed predicate. Manifest selection and native
+action order identify token 11's `TAIL_POP_PUSH`: its expected top kind 6
+passes, and its parent is null at stack count 1, so the exact reachable
+reason-4 predicate is the pending deferred reservation guard. The session was
 not retried and did not reach `Complete(225101)`. No final reference or partial
 output was published. The preserved log SHA-256 is
 `71e9549406dfa7bb7b9baacf913558878c4371beb7dd7ad224fe3cfc02dcbe9e`.

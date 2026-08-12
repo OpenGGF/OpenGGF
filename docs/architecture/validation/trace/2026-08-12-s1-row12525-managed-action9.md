@@ -219,12 +219,14 @@ The row-21766 aggregate-writer failure did not recur and the selective writer
 did not fault. The one session stopped at the next exact native observer
 frontier, movie row 119247, with status `-3` and
 `first_fault=4:1:77:6:1:0:4`. In the packed first-fault contract this is reason
-4 (`SERVICE`), source CPU 1 (Z80), PC `$0077`, active service kind 6 at depth
-1, and continuation count/limit 0/4. The configured `$0077` `TAIL_POP_PUSH`
-expects active kind 6 and would replace it with kind 2; the first-fault tuple
-establishes that a service invariant rejected this depth-1 topology, but does
-not distinguish the action's native deferred-pending and parent-kind service
-guards.
+4 (`SERVICE`), source CPU 1 (Z80), PC `$0077`, active service kind 6, native
+stack-entry count 1, and continuation count/limit 0/4. The sole root entry's
+stored depth is 0; the packed `active_depth` field reports the current stack
+count. The tuple alone does not name the failed service predicate. Combined
+with the manifest and native action order, however, it selects token 11's
+`TAIL_POP_PUSH`, whose expected top kind 6 passes. At stack count 1 it has no
+parent, so its parent-kind guard cannot reject; the exact reachable reason-4
+predicate is the pending deferred reservation guard.
 
 The native lifecycle diagnostic records the earlier root kind-6 begin at
 `$003A` (ordinal 32), deferred kind-4 child begin at `$71B82` (ordinal 37),

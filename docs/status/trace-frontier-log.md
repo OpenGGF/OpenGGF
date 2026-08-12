@@ -66566,11 +66566,13 @@ for. Read the count with that in mind.
 - The sole fresh session crossed row 21766 without the prior test aggregate
   failure and stopped at movie row 119247 with native status `-3`:
   `first_fault=4:1:77:6:1:0:4`. This decodes to native `SERVICE` fault, Z80
-  `$0077`, active kind 6 at depth 1, continuation count 0 and limit 4. The
-  configured `$0077` `TAIL_POP_PUSH` expects active kind 6 and would replace
-  it with kind 2. The tuple proves that a service invariant rejected this
-  depth-1 topology, but not whether the native deferred-pending or parent-kind
-  guard was decisive.
+  `$0077`, active kind 6, native stack-entry count 1, continuation count 0 and
+  limit 4. The sole root entry itself stores depth 0; packed `active_depth`
+  reports the stack count. The tuple alone does not identify the failed
+  predicate. With the manifest and native action order it selects token 11's
+  `TAIL_POP_PUSH`; the expected top kind 6 passes and, at stack count 1, its
+  parent is null, so the parent-kind guard cannot reject. The exact reachable
+  reason-4 predicate is the pending deferred reservation guard.
 - Diagnostic lifecycle excerpt: kind-6 root begin `$003A` at ordinal 32;
   deferred kind-4 child begin `$71B82` at 37; child end `$71C4C` at 46;
   kind-6 end `$0077` at 54; root kind-2 begin `$0077` at 55. The separate
