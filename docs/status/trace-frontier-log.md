@@ -66411,3 +66411,28 @@ for. Read the count with that in mind.
   fallback. The opt-in row-8775 gate remains intentionally RED at observer
   configuration until the conductor-owned native selector admits that exact
   retry-only contract and fails closed when its direct parent is absent.
+
+## 2026-08-12 - S1 row-8775 direct-parent hypothesis rejected
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, based on `94ea332d9` plus the
+  row-8775 RED contract. Command: `OPENGGF_S1_AUDIO_PREFIX=1
+  S1_ROM_PATH=<S1 REV01> S1_AUDIO_BK2_PATH=<all-emeralds BK2>
+  BIZHAWK_HOME=<retry-only ABI-v3 diagnostic install>
+  mono <headless tests> --filter 'S1CompleteRunAudioReferenceCaptureTests
+  materialize one deferred begin after row 8775 wait service' --jobs 1`.
+  Result: one capture error at row 8775,
+  `first_fault=5:2:71b4c:6:1:0:4`; no raw output published.
+- Exact native order: kind-4 token 1 END at global ordinal 12, M68K `$71C4C`;
+  kind-6 token 2 root BEGIN at ordinal 13, Z80 `$003A`; kind-6 END at ordinal
+  20, Z80 `$0077`. The three intervening managed `$71B4C` callbacks each have
+  `A7=$FFFDB2`, return `$000B64`, proving genuine loop re-entry with the same
+  managed stack identity. They are not duplicate callback delivery, and kind
+  6 has no native direct parent at any of them.
+- The retry-only action-10 implementation and regenerated identities were
+  discarded. The corrected next contract is a bounded deferred/coalesced
+  begin: exactly one new kind-4 semantic begin must materialize after ordinal
+  20, with no retroactive ownership or recently-closed-ancestry rule. The
+  opt-in gate remains RED and now pins that required order/multiplicity while
+  native pending-state, reset/overflow behavior, managed correlation, and raw
+  proof representation remain explicit design questions.

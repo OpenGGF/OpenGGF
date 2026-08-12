@@ -97,6 +97,32 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   the declared immutable direct parent and fail closed when that parent is
   absent, never fall back to a push. The opt-in row-8775 gate is intentionally
   RED at observer configuration until that native contract lands.
+
+  **2026-08-12 conductor correction.** A real run against the proposed
+  retry-only core disproved the direct-parent interpretation above. The global
+  native order at row 8775 is: kind-4 token 1 ends at ordinal 12 and `$71C4C`;
+  kind-6 token 2 then begins as a root at ordinal 13 and Z80 `$003A`; the
+  managed bridge observes three genuine `$71B4C` executions while kind 6 is
+  active; and kind 6 ends at ordinal 20 and `$0077`. All three `$71B4C`
+  observations have `A7=$FFFDB2` and return `$000B64`, but the immutable
+  native stack correctly contains no kind-4 direct parent. The callbacks are
+  real loop re-entries, not duplicate bridge notifications. Consequently the
+  unpaired action-10 experiment was rejected and its production/identity
+  cascade was discarded.
+
+  The corrected RED contract is one bounded deferred/coalesced begin: the
+  three source-identical `$71B4C` observations while the root wait service
+  blocks must yield exactly one new kind-4 semantic begin, ordered after the
+  kind-6 completion, without retroactively parenting kind 6 and without a
+  push, retry, or recently-closed-ancestry fiction. The native action and
+  state representation remain deliberately unspecified pending design. That
+  design must answer how the bounded deferred record proves CPU/PC/opcode,
+  stack identity and multiplicity; how cancellation/reset/overflow act while
+  it is pending; how three managed callbacks correlate to one semantic begin;
+  and whether raw ABI events need a distinct deferral/materialization proof or
+  can express the order with existing events without ambiguity. The opt-in
+  real gate now asserts only the externally required order and multiplicity;
+  it remains intentionally RED at row 8775.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is

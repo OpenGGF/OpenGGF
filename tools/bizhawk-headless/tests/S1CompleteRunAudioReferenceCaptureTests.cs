@@ -29,7 +29,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests correlate conditional direct-parent promotion",
                 CorrelatesConditionalDirectParentPromotion));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests require retry-only direct-parent handling under async PCM",
+                "S1CompleteRunAudioReferenceCaptureTests require direct-parent retry under async PCM",
                 RequiresDirectParentRetryUnderAsyncPcm));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests correlate direct-parent retry to managed service",
@@ -80,12 +80,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests report native failure row",
                 ReportsNativeFailureRow));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests cross row 8775 with direct-parent retry",
-                CrossesRealRow8775WithWaitServiceRetry,
+                "S1CompleteRunAudioReferenceCaptureTests materialize one deferred begin after row 8775 wait service",
+                MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
         }
 
-        private static void CrossesRealRow8775WithWaitServiceRetry()
+        private static void MaterializesDeferredBeginAfterWaitService()
         {
             if (Environment.GetEnvironmentVariable("OPENGGF_S1_AUDIO_PREFIX") != "1")
                 throw new TestMain.SkipTestException("OPENGGF_S1_AUDIO_PREFIX is not enabled.");
@@ -136,30 +136,41 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             JObject baseline = null;
             JObject directParentRetry = null;
-            JObject waitLoopRetry = null;
             ushort retryToken=0;
-            ushort waitLoopRetryToken=0;
             foreach (GpgxAudioObserverAdapter.ServiceHook hook
                 in manifest.NativeServiceHooks)
-                if (hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==10)
-                {
-                    if (hook.ExpectedActiveKind==2) retryToken=hook.HookToken;
-                    if (hook.ExpectedActiveKind==6)
-                        waitLoopRetryToken=hook.HookToken;
-                }
+                if (hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==10
+                    &&hook.ExpectedActiveKind==2) retryToken=hook.HookToken;
+            uint waitBeginOrdinal=uint.MaxValue;
+            uint waitEndOrdinal=uint.MaxValue;
+            uint deferredBeginOrdinal=uint.MaxValue;
+            int deferredBegins=0;
             foreach (string line in output.ToString().Split(new[]{'\n'},
                 StringSplitOptions.RemoveEmptyEntries))
             {
                 JObject record = JObject.Parse(line);
                 if ((string)record["type"] == "baseline") baseline = record;
                 if ((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==1
+                    &&(int)record["pc"]==0x003A
+                    &&(int)record["service_kind"]==6)
+                    waitBeginOrdinal=(uint)record["ordinal"];
+                if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==1548&&(int)record["kind"]==10
                     &&(int)record["subject"]==retryToken
                     &&(int)record["value"]==2) directParentRetry=record;
                 if ((string)record["type"]=="native_event"
-                    &&(int)record["row"]==8775&&(int)record["kind"]==10
-                    &&(int)record["subject"]==waitLoopRetryToken
-                    &&(int)record["value"]==2) waitLoopRetry=record;
+                    &&(int)record["row"]==8775&&(int)record["kind"]==2
+                    &&(int)record["service_kind"]==6)
+                    waitEndOrdinal=(uint)record["ordinal"];
+                if ((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==1
+                    &&(int)record["pc"]==0x071B4C
+                    &&(int)record["service_kind"]==4)
+                {
+                    deferredBegins++;
+                    deferredBeginOrdinal=(uint)record["ordinal"];
+                }
             }
             AssertEx.Equal(true, baseline != null);
             AssertEx.Equal(860, (int)baseline["row"]);
@@ -167,9 +178,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true,directParentRetry!=null);
             AssertEx.Equal(4,(int)directParentRetry["service_kind"]);
             AssertEx.Equal(0,(int)directParentRetry["depth"]);
-            AssertEx.Equal(true,waitLoopRetry!=null);
-            AssertEx.Equal(4,(int)waitLoopRetry["service_kind"]);
-            AssertEx.Equal(0,(int)waitLoopRetry["depth"]);
+            AssertEx.Equal((uint)13,waitBeginOrdinal);
+            AssertEx.Equal((uint)20,waitEndOrdinal);
+            AssertEx.Equal(1,deferredBegins);
+            AssertEx.Equal((uint)21,deferredBeginOrdinal);
         }
 
         private static string Sha256(string path)
@@ -308,10 +320,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
             asyncKinds.Sort();
-            AssertEx.Equal(3, asyncKinds.Count);
+            AssertEx.Equal(2, asyncKinds.Count);
             AssertEx.Equal((byte)2, asyncKinds[0]);
             AssertEx.Equal((byte)3, asyncKinds[1]);
-            AssertEx.Equal((byte)6, asyncKinds[2]);
         }
 
         private static void CorrelatesDirectParentRetryToManagedService()
