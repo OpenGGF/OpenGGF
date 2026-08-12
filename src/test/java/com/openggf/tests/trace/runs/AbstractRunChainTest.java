@@ -106,6 +106,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 abstract class AbstractRunChainTest {
 
     private static final Path REPORT_OUTPUT_DIR = Path.of("target", "trace-reports");
+
+    /**
+     * Failing axes accumulated during one {@link #assertChainReplay} walk.
+     *
+     * <p><b>Why this exists.</b> Every chain assertion used to throw at its own
+     * site, which serialized the run's failure axes: the FIRST one to fire
+     * aborted the walk, and everything downstream of it -- including
+     * {@code DynamicArtGapJournalProbe#verify}, which only runs after the walk
+     * completes -- was never evaluated at all. With the returned-level physics
+     * assertion live, that meant the transition-gap ledger comparison had never
+     * been reached on either S2 chain, so a comparison that is computed and
+     * recorded was grading nothing. A run now enumerates every failing axis it
+     * can observe, each attributed, and fails once at the end.
+     *
+     * <p>This defers WHEN a failure is reported, never WHETHER: each axis keeps
+     * exactly the predicate it had, and a run with any recorded axis failure
+     * still fails.
+     */
+    private final List<String> chainAxisFailures = new ArrayList<>();
     private LiveTraceComparator productionComparator;
     private HeadlessRunCoordinatorAdapter activeRunCoordinator;
     /**
@@ -189,6 +208,12 @@ abstract class AbstractRunChainTest {
         private final long lastEdgeOrdinalAfterFirstArm;
         private final List<DynamicArtStructuralGapEvidence> structuralGaps =
                 new ArrayList<>();
+        /**
+         * Terminal-tail divergences, recorded rather than thrown so this axis
+         * is additive with the segment-physics and structural-gap axes (see
+         * {@link AbstractRunChainTest#chainAxisFailures}).
+         */
+        private final List<String> terminalFailures = new ArrayList<>();
 
         private String representedSegmentDir;
         private Integer gapStartMovieLogicalFrame;
@@ -282,7 +307,17 @@ abstract class AbstractRunChainTest {
             openingLedger = List.of();
         }
 
-        private void verify(TraceRunManifest run) {
+        /**
+         * Compares every recorded structural gap and returns one attributed
+         * failure line per divergent gap.
+         *
+         * <p>Returns rather than throws so a run enumerates ALL divergent gaps
+         * in one pass instead of one per run, and so the caller can report this
+         * axis alongside the segment-physics axis. The comparison itself is
+         * unchanged and every divergent gap still fails the build.
+         */
+        private List<String> collectVerificationFailures(TraceRunManifest run) {
+            List<String> failures = new ArrayList<>();
             for (int sourceIndex = 0;
                     sourceIndex < structuralGaps.size(); sourceIndex++) {
                 DynamicArtStructuralGapEvidence evidence =
@@ -299,13 +334,14 @@ abstract class AbstractRunChainTest {
                                         evidence.openingLedger(),
                                         evidence.transitionsAddedAcrossBoundary()));
                 if (comparison.hasError()) {
-                    throw new AssertionError(
-                            "shared dynamic-art gap comparison failed for "
-                                    + evidence.representedSegmentDir() + " -> "
-                                    + evidence.nextSegmentDir() + ": "
-                                    + comparison.divergentFields());
+                    failures.add("[dynamic-art-gap] shared dynamic-art gap"
+                            + " comparison failed for "
+                            + evidence.representedSegmentDir() + " -> "
+                            + evidence.nextSegmentDir() + ": "
+                            + comparison.divergentFields());
                 }
             }
+            return failures;
         }
 
         /**
@@ -360,10 +396,10 @@ abstract class AbstractRunChainTest {
                                     openingLedger,
                                     added));
             if (comparison.hasError()) {
-                throw new AssertionError(
-                        "shared terminal dynamic-art comparison failed for "
-                                + representedSegmentDir + ": "
-                                + comparison.divergentFields());
+                terminalFailures.add("[dynamic-art-terminal-tail] shared"
+                        + " terminal dynamic-art comparison failed for "
+                        + representedSegmentDir + ": "
+                        + comparison.divergentFields());
             }
             representedSegmentDir = null;
             gapStartMovieLogicalFrame = null;
@@ -743,6 +779,7 @@ abstract class AbstractRunChainTest {
 
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
+        chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
         try {
@@ -1367,8 +1404,11 @@ abstract class AbstractRunChainTest {
             prefixReached = true;
             hardwareTiming.abort();
         } catch (Exception | Error failure) {
+            // Recorded, not rethrown here, so the gap-ledger axis below is
+            // still evaluated and reported alongside the walk failure. The
+            // failure is rethrown (or attached to the combined report) at the
+            // end of this method; nothing is swallowed.
             primaryFailure = failure;
-            throw failure;
         } finally {
             activeRunCoordinator = null;
             productionComparator = null;
@@ -1391,8 +1431,51 @@ abstract class AbstractRunChainTest {
                 }
             }
         }
+        // --- Step 4: evaluate EVERY axis, then fail once ------------------------
+        // The gap-ledger comparison is reached whatever happened above: a
+        // segment physics divergence or a walk failure no longer aborts before
+        // it. A prefix-target run stops deliberately mid-chain, so its
+        // structural gaps are incomplete and are not compared -- unchanged
+        // behaviour.
+        List<String> gapFailures = new ArrayList<>();
         if (!prefixReached) {
-            dynamicArtGapJournal.verify(run);
+            gapFailures.addAll(
+                    dynamicArtGapJournal.collectVerificationFailures(run));
+        }
+        gapFailures.addAll(dynamicArtGapJournal.terminalFailures);
+        List<String> axisFailures = new ArrayList<>(chainAxisFailures);
+        axisFailures.addAll(gapFailures);
+        try {
+            writeChainGapReport(run.runId(), dynamicArtGapJournal, gapFailures);
+        } catch (IOException reportFailure) {
+            axisFailures.add("[gap-report-io] failed to write the dynamic-art"
+                    + " gap report: " + reportFailure);
+        }
+        if (!axisFailures.isEmpty() || primaryFailure != null) {
+            if (axisFailures.isEmpty()) {
+                if (primaryFailure instanceof Error error) {
+                    throw error;
+                }
+                throw (Exception) primaryFailure;
+            }
+            StringBuilder message = new StringBuilder("chain replay of ")
+                    .append(run.runId())
+                    .append(" failed on ")
+                    .append(axisFailures.size()
+                            + (primaryFailure == null ? 0 : 1))
+                    .append(" axis/axes:");
+            if (primaryFailure != null) {
+                message.append("\n  - [walk-failure] ")
+                        .append(primaryFailure);
+            }
+            for (String failure : axisFailures) {
+                message.append("\n  - ").append(failure);
+            }
+            AssertionError combined = new AssertionError(message.toString());
+            if (primaryFailure != null) {
+                combined.addSuppressed(primaryFailure);
+            }
+            throw combined;
         }
         return dynamicArtGapJournal.evidence(runCoordinator.actions());
     }
@@ -3223,17 +3306,23 @@ abstract class AbstractRunChainTest {
         if (!returnedLevelSegmentIndices.contains(segmentIndex)) {
             return;
         }
+        if (comparator.errorCount() == 0) {
+            return;
+        }
         MismatchEntry first = comparator.firstNonCameraPhysicsMismatch();
-        assertEquals(0, comparator.errorCount(),
-                "returned-level segment " + segmentIndex + " of " + runId
-                        + " diverged: " + comparator.errorCount()
-                        + " physics comparator errors"
-                        + (first == null ? "" : ", first non-camera mismatch at frame "
-                                + first.frame() + " field " + first.field()
-                                + " rom=" + first.romValue()
-                                + " engine=" + first.engineValue())
-                        + "; report=" + REPORT_OUTPUT_DIR.resolve(
-                                runId + "_seg" + segmentIndex + "_report.json"));
+        // Recorded, not thrown: see chainAxisFailures. The predicate is
+        // unchanged (errorCount() must be 0); only the throw site moved to the
+        // end of the walk so the gap-ledger axis is also evaluated.
+        chainAxisFailures.add("[segment-physics] returned-level segment "
+                + segmentIndex + " of " + runId
+                + " diverged: " + comparator.errorCount()
+                + " physics comparator errors"
+                + (first == null ? "" : ", first non-camera mismatch at frame "
+                        + first.frame() + " field " + first.field()
+                        + " rom=" + first.romValue()
+                        + " engine=" + first.engineValue())
+                + "; report=" + REPORT_OUTPUT_DIR.resolve(
+                        runId + "_seg" + segmentIndex + "_report.json"));
     }
 
     /** Adapter-neutral assertions a committed route can add at a completed source segment. */
@@ -3247,6 +3336,50 @@ abstract class AbstractRunChainTest {
         Path jsonPath = REPORT_OUTPUT_DIR.resolve(runId + "_seg" + segmentIndex + "_report.json");
         Files.writeString(jsonPath, buildComparatorSummaryJson(comparator));
         assertTrue(Files.exists(jsonPath), "Chain segment report must be written: " + jsonPath);
+    }
+
+    /**
+     * Writes the transition-gap axis's report artifact, whichever axis failed.
+     *
+     * <p>The gap ledger was previously only ever consumed by an assertion the
+     * walk never reached, so this axis had no artifact at all; a run that fails
+     * on segment physics now still leaves the gap evidence on disk.
+     */
+    private void writeChainGapReport(
+            String runId,
+            DynamicArtGapJournalProbe journal,
+            List<String> gapFailures) throws IOException {
+        Files.createDirectories(REPORT_OUTPUT_DIR);
+        List<Map<String, Object>> gaps = new ArrayList<>();
+        for (DynamicArtStructuralGapEvidence gap : journal.structuralGaps) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("representedSegmentDir", gap.representedSegmentDir());
+            row.put("nextSegmentDir", gap.nextSegmentDir());
+            row.put("gapStartMovieLogicalFrame",
+                    gap.gapStartMovieLogicalFrame());
+            row.put("nextSegmentArmMovieLogicalFrame",
+                    gap.nextSegmentArmMovieLogicalFrame());
+            row.put("transitionCountAtGapStart",
+                    gap.transitionCountAtGapStart());
+            row.put("transitionCountAfterNextArm",
+                    gap.transitionCountAfterNextArm());
+            row.put("transitionsAddedAcrossBoundary",
+                    gap.transitionsAddedAcrossBoundary().stream()
+                            .map(String::valueOf)
+                            .toList());
+            gaps.add(row);
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("runId", runId);
+        summary.put("gapCount", gaps.size());
+        summary.put("failureCount", gapFailures.size());
+        summary.put("failures", List.copyOf(gapFailures));
+        summary.put("gaps", gaps);
+        Path jsonPath = REPORT_OUTPUT_DIR.resolve(
+                runId + "_dynamic_art_gap_report.json");
+        Files.writeString(jsonPath, new ObjectMapper()
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .writeValueAsString(summary));
     }
 
     private void writeDynamicArtInteriorReport(

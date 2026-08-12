@@ -73222,3 +73222,50 @@ same iteration). No constant was introduced.
   `refreshPlayableSpriteArt` path; that wiped an established dedup mid-segment
   and turned both S2 segment oracles red (3051 and 2232 errors). The clear
   belongs on the level-load phase only, matching `Level_ClrRam`.
+
+## 2026-08-12 - run-chain failure axes made additive; the gap ledger was never reached
+
+Dedicated worktree on `bugfix/ai-r87-gap-reach`, branched from `d371b736e`. Command for every number below: `mvn -Ptrace-replay -Dmse=off
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical` with all three ROM
+paths.
+
+- CONFIRMED, structurally and from the control stack traces:
+  `DynamicArtGapJournalProbe.verify(run)` sat after `assertChainReplay`'s
+  try/catch, and the catch rethrew. Control stacks show both S2 chains aborting
+  in `assertReturnedLevelSegmentPhysics:3227`, so the transition-gap ledger
+  comparison had never been evaluated on either S2 chain.
+- Change is test-harness only: every chain axis (returned-level segment
+  physics, structural gap ledger, terminal tail, walk failure) is now recorded
+  and the run fails once at the end listing all of them, each tagged. No
+  predicate was relaxed and nothing became advisory. A per-run
+  `<runId>_dynamic_art_gap_report.json` artifact is written whichever axis
+  failed.
+- Newly visible, `s2-ehz-halfpipe-roundtrip` (5 axes): seg4 physics 1 error
+  (`dynamic_art.edge[0].submission_origin` rom=segment engine=run_gap at frame
+  1) plus 4 divergent gaps - `seg1_ehz1 -> ss` edge_count exp 1 act 0;
+  `ss -> seg2_ehz1` exp 8 act 12; `seg2_ehz1 -> ss_2` exp 1 act 0;
+  `ss_2 -> seg3_ehz1` exp 8 act 13.
+- Newly visible, `s2-sonic-tails-complete-emeralds` (9 axes): the walk no longer
+  stops at seg4, so it now reaches a seg6 boundary failure (`seg4_ehz1`
+  level_advance never observed) and a seg6 physics count of 13837 errors; six
+  divergent gaps - `seg1_ehz1 -> ss` exp 2 act 0; `ss -> seg2_ehz1` exp 8 act
+  12; `seg2_ehz1 -> ss_2` exp 1 act 0; `ss_2 -> seg3_ehz1` exp 8 act 13;
+  `seg3_ehz1 -> ss_3` exp 1 act 0; `ss_3 -> seg4_ehz1` exp 8 act 13.
+- The level -> special-stage direction is MISSING edges (act 0), not carrying
+  spurious ones; the return direction carries 4-5 extra. The return gaps also
+  diverge on `movie_logical_frame` by ~742 (exp 9675 act 8933 at edge[0] of
+  `ss -> seg2_ehz1`) and on `edge_ordinal`/`transfer_id`, which is wider than
+  the "4 spurious tails-tails edges per gap" residual recorded on 2026-08-11;
+  that earlier figure was not measured through this comparator.
+- Other chains: `s1-ghz-maze-roundtrip` and `s1-sonic-complete-withemeralds`
+  compare 2 structural gaps each with 0 failures (green, and already reachable).
+  `s3k-knuckles-complete-superemeralds` and `s3-knux-multibonus-ss` reach 0
+  structural gaps because their walks error before the first gap forms - their
+  gap axis is unmeasured, not green.
+- Regression check: after = 770 tests, 2 failures, 3 errors, 4 skipped, with an
+  identical failing-class set to the control at `d371b736e`
+  (`TestS2CompleteEmeraldRunChain`, `TestS2EhzHalfpipeRoundTripChain`,
+  `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`,
+  `TestS3kMhzCompleteRunTraceReplay`). Both oracles
+  (`TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`) stay at 0 errors.
