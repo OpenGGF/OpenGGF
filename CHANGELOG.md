@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the run-chain transition-gap journal snapshots the opening ledger at the segment
+  boundary itself. The engine was emitting the correct level-to-special-stage gap edge --
+  right phase, owner, mapping frame and requests -- but the journal sampled the ledger
+  after `endComparisonSegmentAtRomModeChange()` had already appended the boundary batch,
+  so the edge fell outside the compared slice and its transfer had already left the
+  opening ledger. Every level-to-special-stage gap in both S2 run chains reported
+  `run_gap.edge_count` expected 1 actual 0; those axes now carry the recorded edge and
+  match on phase, owner, mapping frame and requests. Mirrored in both implementations of
+  the contract. The gaps still diverge on identity skew, clock base and an extra
+  player-art owner, each now cleanly separable.
 - Fix: the S2 player last-loaded-DPLC registers are one byte per art bank and are
   cleared by every level load. Sonic 2 has exactly three
   (`Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC` / `TailsTails_LastLoadedDPLC`,

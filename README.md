@@ -284,6 +284,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The gap journal sampled its opening ledger one batch too late (2026-08-12):**
+  with the gap comparison finally reachable, the level→special-stage gaps reported
+  `run_gap.edge_count` expected 1, actual 0 — the engine appearing to emit nothing.
+  It emits exactly the right edge; the journal sampled the ledger *after*
+  `endComparisonSegmentAtRomModeChange()` had appended the boundary batch, so the
+  edge fell outside the compared slice and its transfer had already left the
+  opening ledger. Recording gap-opening state at the segment boundary itself, in
+  both implementations of the contract, restores the recorded edge on every such
+  gap with phase, owner, mapping frame and requests all matching. The comparison
+  got *stricter*, not looser — more edges are now present and compared, so field
+  comparison counts rise (halfpipe 135 → 162, emerald 206 → 271). No axis closed
+  yet, but three residual defects are now cleanly separable: a wrong
+  `movie_logical_frame` clock base (the chain never calls `setMovieLogicalFrame`,
+  so it counts production iterations from zero while the production visual path
+  announces the real movie row — the error is exactly the first segment's
+  `bk2_frame_offset`), an identity skew where the engine's transfer ids and edge
+  ordinals run ahead of the recording, and an extra player-art owner at every
+  return, where the engine submits three DPLC transfers against the recording's
+  two.
 - **The run chains' transition-gap comparison had never once been evaluated
   (2026-08-12):** `DynamicArtGapJournalProbe.verify(run)` sat after
   `assertChainReplay`'s try/catch, and the catch rethrew — so any earlier assertion
@@ -303,10 +322,13 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   missing their recorded edges entirely (expected 1–2, actual 0), and the return
   gaps carry 12–13 against 8 expected while diverging on ordinal, transfer id,
   owner, mapping frame and `movie_logical_frame` (8,933 against a recorded 9,675).
-  Recorded honestly: the S3K chains report zero gaps not because they agree but
-  because their walks error before any gap forms — that axis is **unmeasured**, not
-  green. The S1 chains compare two gaps each with no failures and were already
-  reachable.
+  Recorded honestly, and corrected after a later round measured it properly: **no
+  chain outside S2 actually exercises this axis.** The S3K chains report zero gaps
+  because their walks error before any gap forms. The S1 chains' two mid-run gaps
+  contain no recorded edges at all — `s1-ghz-maze-roundtrip`'s four gap transitions
+  sit at movie frames 748 and 9071, outside both gaps — so they compare
+  expected-0 against actual-0 and pass trivially. Both are **unmeasured**, not
+  green, and S1 is not the working reference it first appeared to be.
 - **The special stage and the level share Sonic 2's three last-loaded-DPLC
   registers (2026-08-12):** dumping the run chains' transition-gap art ledger
   against the fixture showed the engine never submitting Tails' body art at a

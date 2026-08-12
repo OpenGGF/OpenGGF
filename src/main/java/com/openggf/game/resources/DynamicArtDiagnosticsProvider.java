@@ -14,4 +14,11 @@ public interface DynamicArtDiagnosticsProvider {
     List<DynamicArtGapTransition> gapTransitions();
 
     DynamicArtGapDiagnosticsSnapshot gapSnapshot();
+
+    /**
+     * State as of the comparison segment's close — the state the following
+     * transition gap opens on, including any gap edges the close itself
+     * emitted.
+     */
+    DynamicArtGapDiagnosticsSnapshot gapOpeningSnapshot();
 }
