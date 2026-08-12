@@ -26,7 +26,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests resolve adjusted-return exits",
                 ResolvesAdjustedReturnExits));
             tests.Add(new TestMain.TestCase(
-                "S1CompleteRunAudioReferenceCaptureTests correlate conditional direct-parent promotion",
+                "S1CompleteRunAudioReferenceCaptureTests correlate conditional close topologies and identity",
                 CorrelatesConditionalDirectParentPromotion));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests require direct-parent retry under async PCM",
@@ -458,6 +458,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(860, manifest.FirstRow);
             AssertEx.Equal(225101, manifest.ExclusiveEnd);
             AssertEx.Equal(RomIdentity.Sonic1Rev01Sha1, manifest.RomSha1);
+            AssertEx.Equal((uint)285,manifest.NativeConfig.HookCount);
+            AssertEx.Equal((uint)16412,
+                manifest.NativeConfig.SnapshotBytesTotal);
             AssertHook(manifest, 0x00138E, "11c0f00a", "QueueSound1", "REQUEST_QUEUE_0");
             AssertHook(manifest, 0x001394, "11c0f00b", "QueueSound2", "REQUEST_QUEUE_1");
             AssertHook(manifest, 0x00139A, "11c0f00c", "QueueSound3", "REQUEST_QUEUE_2");
@@ -499,6 +502,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertHook(manifest, 0x072B9C, "4e75", "cfFadeInToPrevious", "SERVICE_CLOSE");
             AssertHook(manifest, 0x072C24, "4e75", "cfStopSpecialFM4", "CLOSE_IF_RETURN_OUTSIDE");
             AssertHook(manifest, 0x072E04, "4e75", "cfStopTrack", "CLOSE_IF_RETURN_OUTSIDE");
+            AssertConditionalCloseAlternatives(manifest, 0x072C24);
             AssertConditionalCloseAlternatives(manifest, 0x072E04);
             AssertNative(manifest, 0x003A, "d681", "zCheckForSamples", "PUSH_BEGIN");
             AssertNative(manifest, 0x0077, "1a", "zPlayPCMLoop", "PUSH_BEGIN");
@@ -1627,16 +1631,26 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AssertConditionalCloseAlternatives(
             S1CompleteRunAudioReferenceCapture.Manifest manifest, uint pc)
         {
-            int ordinary=0;var crossing=new List<byte>();
+            int ordinary=0,total=0;var crossing=new List<byte>();
             foreach (GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
             {
                 if (hook.Cpu!=2||hook.Pc!=pc) continue;
+                total++;
+                AssertEx.Equal((byte)2,hook.OpcodeLength);
+                AssertEx.Equal((ulong)0x754e,hook.Opcode);
+                AssertEx.Equal((ushort)2,hook.RangeFirst);
+                AssertEx.Equal((ushort)1,hook.RangeCount);
+                AssertEx.Equal((byte)0,hook.Flags);
+                AssertEx.Equal((ulong)0x00070003,hook.Reserved);
                 if (hook.Action==5&&hook.ServiceKindId==0
                     &&hook.ExpectedActiveKind==4) ordinary++;
                 else if (hook.Action==9&&hook.ServiceKindId==4)
                     crossing.Add(hook.ExpectedActiveKind);
+                else throw new InvalidOperationException(
+                    "Unexpected conditional-close topology alternative.");
             }
             crossing.Sort();
+            AssertEx.Equal(3,total);
             AssertEx.Equal(1,ordinary);
             AssertEx.Equal(2,crossing.Count);
             AssertEx.Equal((byte)2,crossing[0]);
@@ -1806,13 +1820,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var api = new FakeTraceApi();
             var host = new FakeS1Host((current, frame) =>
             {
-                current.SetCpuRegister("A7", 0x00FFF000);
+                current.SetCpuRegister("A7", 0x00FFF004);
                 Visit(current, api, 0x071B4C);
+                current.SetCpuRegister("A7", 0x00FFF000);
                 current.SetU32(0xF000, 0x00071BD4);
                 Visit(current, api, 0x072E04);
+                current.SetCpuRegister("A7", 0x00FFF004);
                 Visit(current, api, 0x071C4C);
-                current.SetCpuRegister("A7", 0x00FFF010);
+                current.SetCpuRegister("A7", 0x00FFF014);
                 Visit(current, api, 0x071B4C);
+                current.SetCpuRegister("A7", 0x00FFF010);
                 current.SetU32(0xF010, 0x00010000);
                 Visit(current, api, 0x072C24);
             });
@@ -1846,29 +1863,316 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void CorrelatesConditionalDirectParentPromotion()
         {
+            foreach(uint pc in new uint[]{0x072C24,0x072E04})
+            {
+                AssertConditionalDirectParent(pc,0x0077,0x00AC,2,true,false);
+                AssertConditionalDirectParent(pc,0x0077,0x00AC,2,false,false);
+                AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,true,false);
+                AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,false,false);
+                AssertConditionalDirectParent(pc,0x0077,0x00AC,2,true,true);
+                AssertConditionalDirectParent(pc,0x0077,0x00AC,2,false,true);
+                AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,true,true);
+                AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,false,true);
+            }
+            AssertConditionalTopKindFourAt72C24(true);
+            AssertConditionalTopKindFourAt72C24(false);
+            AssertConditionalCallbackIdentityFails(false,false);
+            AssertConditionalCallbackIdentityFails(false,true);
+            AssertConditionalCallbackIdentityFails(true,false);
+            AssertConditionalCallbackIdentityFails(true,true);
+            AssertInvalidConditionalReturnProof(0x0000FDAE,0x00071C38);
+            AssertInvalidConditionalReturnProof(0x00FFFDAF,0x00071C38);
+            AssertInvalidConditionalReturnProof(0x00FFFFFE,0x00071C38);
+            AssertInvalidConditionalReturnProof(0x00FFFDAE,0x00071C39);
+            AssertInvalidConditionalReturnProof(0x00FFFDAE,0x01000000);
+            foreach(bool preEpoch in new[]{false,true})
+            {
+                AssertConditionalPromotionReset(false,true,preEpoch);
+                AssertConditionalPromotionReset(true,false,preEpoch);
+                AssertConditionalPromotionReset(true,true,preEpoch);
+                AssertConditionalPromotionRollback(false,preEpoch);
+                AssertConditionalPromotionRollback(true,preEpoch);
+            }
+        }
+
+        private static void AssertConditionalDirectParent(uint pc,
+            uint childBegin,uint childEnd,byte childKind,bool keep,bool preEpoch)
+        {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame) =>
             {
-                current.SetCpuRegister("A7",0x00FFF000);
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
                 Visit(current,api,0x071B4C);
-                api.VisitZ80(0x0077,current);
-                current.SetU32(0xF000,0x00010000);
-                Visit(current,api,0x072E04);
-                api.VisitZ80(0x00AC,current);
+                api.VisitZ80(childBegin,current);
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                current.SetU32(0xFDAE,keep?0x00071C38u:0x00010000u);
+                Visit(current,api,pc);
+                if(preEpoch)return;
+                if(keep)
+                {
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    Visit(current,api,0x071C4C);
+                }
+                api.VisitZ80(childEnd,current);
             });
             var output=new StringWriter();
-            using (var session=CreateSession(host,api,output))
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(keep?1:0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    JArray active=(JArray)Record(output.ToString(),
+                        "baseline",0)["active_services"];
+                    AssertEx.Equal(keep?2:1,active.Count);
+                    if(keep)
+                    {
+                        AssertEx.Equal(4,(int)active[0]["kind"]);
+                        AssertEx.Equal(childKind,(byte)active[1]["kind"]);
+                        AssertEx.Equal((ushort)active[0]["token"],
+                            (ushort)active[1]["parent_token"]);
+                        AssertEx.Equal(1,(int)active[1]["depth"]);
+                    }
+                    else
+                    {
+                        AssertEx.Equal(childKind,(byte)active[0]["kind"]);
+                        AssertEx.Equal(0,(int)active[0]["current_parent_token"]);
+                        AssertEx.Equal(0,(int)active[0]["current_depth"]);
+                    }
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "native_event"));
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "managed_hook_evidence"));
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            List<JObject> native=NativeRecords(output.ToString(),860);
+            int begin=FindNative(native,value=>(int)value["kind"]==1
+                &&(int)value["service_kind"]==4);
+            int child=FindNative(native,value=>(int)value["kind"]==1
+                &&(int)value["service_kind"]==childKind);
+            ushort rootToken=(ushort)native[begin]["service_token"];
+            ushort childToken=(ushort)native[child]["service_token"];
+            if(keep)
+            {
+                List<JObject> markers=Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==pc&&(int)value["kind"]==10);
+                AssertEx.Equal(1,markers.Count);
+                AssertEx.Equal(0,(int)markers[0]["value"]);
+                AssertEx.Equal(childToken,(ushort)markers[0]["service_token"]);
+                AssertEx.Equal(rootToken,(ushort)markers[0]["parent_token"]);
+                AssertEx.Equal(childKind,(byte)markers[0]["service_kind"]);
+                AssertEx.Equal(1,(int)markers[0]["depth"]);
+                AssertEx.Equal(0,Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==pc
+                        &&((int)value["kind"]==2||(int)value["kind"]==11)).Count);
+                JObject close=Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==0x071C4C
+                        &&(int)value["kind"]==2)[0];
+                AssertEx.Equal(rootToken,(ushort)close["service_token"]);
+            }
+            else
+            {
+                AssertEx.Equal(0,CountNativeMarkerValue(output.ToString(),1));
+                List<JObject> close=Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==pc&&(int)value["kind"]==2);
+                List<JObject> promotion=Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==pc&&(int)value["kind"]==11);
+                AssertEx.Equal(1,close.Count);
+                AssertEx.Equal(1,promotion.Count);
+                AssertEx.Equal(rootToken,(ushort)close[0]["service_token"]);
+                AssertEx.Equal(childToken,(ushort)promotion[0]["service_token"]);
+                AssertEx.Equal(0,(int)promotion[0]["parent_token"]);
+                AssertEx.Equal(0,(int)promotion[0]["depth"]);
+            }
+        }
+
+        private static void AssertConditionalTopKindFourAt72C24(bool keep)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                current.SetU32(0xFDAE,keep?0x00071C38u:0x00010000u);
+                Visit(current,api,0x072C24);
+                if(keep)
+                {
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    Visit(current,api,0x071C4C);
+                }
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
             {
                 session.CaptureFrame(860,host.Advance);
                 session.Complete(861);
             }
-            AssertEx.Equal(1,CountNativeKind(output.ToString(),11));
-            AssertEx.Equal(0,CountNativeMarkerValue(output.ToString(),1));
-            JObject snapshot=Record(output.ToString(),"managed_service_snapshot",0);
-            JArray correlation=(JArray)snapshot["native_correlation_events"];
-            AssertEx.Equal(1,correlation.Count);
-            AssertEx.Equal(2,(int)correlation[0]["event_kind"]);
-            AssertEx.Equal(true,(bool)correlation[0]["terminal"]);
+            AssertEx.Equal(keep?0:1,CountNativeMarkerValue(output.ToString(),1));
+            AssertEx.Equal(keep?1:0,CountNativeMarkerValue(output.ToString(),0));
+            AssertEx.Equal(0,CountNativeKind(output.ToString(),11));
+        }
+
+        private static void AssertConditionalCallbackIdentityFails(
+            bool directParent,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                if(directParent)api.VisitZ80(0x0077,current);
+                current.SetCpuRegister("A7",0x00FFFDAA);
+                current.SetU32(0xFDAA,0x00071C38);
+                Visit(current,api,0x072E04);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "conditional managed identity");
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    return;
+                }
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "conditional managed identity");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
+        private static void AssertInvalidConditionalReturnProof(
+            uint stack,uint returnPc)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                current.SetCpuRegister("A7",stack);
+                SetWrappedU32(current,(int)(stack&0xFFFF),returnPc);
+                current.FireExecuteCallback(0x072C24);
+            });
+            using(var session=CreateSession(host,api,new StringWriter()))
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "conditional return proof");
+        }
+
+        private static void AssertConditionalPromotionReset(
+            bool power,bool reset,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                if(frame==1)
+                {
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x0077,current);
+                    current.SetCpuRegister("A7",0x00FFFDAE);
+                    current.SetU32(0xFDAE,0x00010000);
+                    Visit(current,api,0x072C24);
+                    return;
+                }
+                if(power)api.EmitReset(true,current);
+                if(reset)api.EmitReset(false,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(858,null,host.Advance);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.ObservePreEpochFrame(859,
+                        new Bk2Frame{Power=power,Reset=reset},host.Advance);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,((JArray)Record(output.ToString(),
+                        "baseline",0)["active_services"]).Count);
+                    return;
+                }
+                session.BeginEpoch();
+                session.CaptureFrame(860,host.Advance);
+                ushort child=(ushort)Records(output.ToString(),"native_event",
+                    value=>(uint)value["pc"]==0x072C24
+                        &&(int)value["kind"]==11)[0]["service_token"];
+                session.CaptureFrame(861,
+                    new Bk2Frame{Power=power,Reset=reset},host.Advance);
+                session.Complete(862);
+                List<JObject> cancellations=Records(output.ToString(),
+                    "native_event",value=>(int)value["kind"]==2
+                        &&((int)value["flags"]&2)!=0
+                        &&(ushort)value["service_token"]==child);
+                AssertEx.Equal(1,cancellations.Count);
+                AssertEx.Equal(0,(int)cancellations[0]["parent_token"]);
+                AssertEx.Equal(0,(int)cancellations[0]["depth"]);
+                AssertEx.Equal(0,CountRecords(output.ToString(),
+                    "managed_reset_service_snapshot"));
+            }
+        }
+
+        private static void AssertConditionalPromotionRollback(
+            bool removePromotion,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                if(frame==1)
+                {
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x0077,current);
+                    return;
+                }
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                current.SetU32(0xFDAE,0x00010000);
+                Visit(current,api,0x072C24);
+                api.RemoveFirst(value=>value.Pc==0x072C24
+                    &&value.Kind==(removePromotion?(byte)11:(byte)2));
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(858,null,host.Advance);
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "native audio observer returned invalid");
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    return;
+                }
+                session.BeginEpoch();
+                session.CaptureFrame(860,host.Advance);
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(861,host.Advance),
+                    "native audio observer returned invalid");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
         }
 
         private static void RejectsOrphanCloseAndFrameOverflow()
@@ -2673,6 +2977,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             api.VisitManaged(pc, host);
         }
 
+        private static void SetWrappedU32(FakeS1Host host,int offset,uint value)
+        {
+            host.WriteMainRamByte(offset&0xFFFF,(byte)(value>>24));
+            host.WriteMainRamByte((offset+1)&0xFFFF,(byte)(value>>16));
+            host.WriteMainRamByte((offset+2)&0xFFFF,(byte)(value>>8));
+            host.WriteMainRamByte((offset+3)&0xFFFF,(byte)value);
+        }
+
         private static void AssertHook(
             S1CompleteRunAudioReferenceCapture.Manifest manifest,
             uint pc, string opcode, string label, string action)
@@ -3172,6 +3484,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         ||returnPc==0x71C44;
                     if (keep) Add(Owned(hook,10,0));
                     else SnapshotDirectParentAndPromote(hook,host);
+                }
+                else if(hook.Action==8)
+                {
+                    SnapshotDirectParentAndPromote(hook,host);
                 }
                 else if (hook.Action == 6)
                 {

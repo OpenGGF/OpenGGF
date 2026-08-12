@@ -573,17 +573,14 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 5, 0, serviceKind,
                         proofFirst, proofCount, predicate);
                     snapshotBytes = checked(snapshotBytes + RangeLength(ranges, proofFirst, proofCount));
-                    if (managedHook.Pc == 0x072E04)
+                    for (int i=0;i<kinds.Length;i++)
                     {
-                        for (int i=0;i<kinds.Length;i++)
-                        {
-                            if ((kinds[i].Flags&5)!=5) continue;
-                            AddManagedNativeHook(hookList,publicHooks,managedByToken,
-                                hookTokens,managedHook,ref nextToken,9,serviceKind,
-                                kinds[i].KindId,proofFirst,proofCount,predicate);
-                            snapshotBytes=checked(snapshotBytes
-                                +RangeLength(ranges,proofFirst,proofCount));
-                        }
+                        if ((kinds[i].Flags&5)!=5) continue;
+                        AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                            hookTokens,managedHook,ref nextToken,9,serviceKind,
+                            kinds[i].KindId,proofFirst,proofCount,predicate);
+                        snapshotBytes=checked(snapshotBytes
+                            +RangeLength(ranges,proofFirst,proofCount));
                     }
                 }
                 else
@@ -1137,21 +1134,29 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException(
                         "S1 audio callback contamination outside an active row.");
                 // Before publication retain only the bounded A7/return identity
-                // needed to carry an action-11 reservation across the cutoff.
-                // No managed evidence from the preceding epoch is published.
+                // needed for service lifecycle, conditional close, and deferred
+                // begin correlation. No preceding-epoch evidence is published.
                 if (!publishing)
                 {
                     if(hook.Action!="SERVICE_BEGIN"
                         &&hook.Action!="DEFERRED_SERVICE_CONSUME"
-                        &&hook.Action!="SERVICE_CLOSE")return;
+                        &&hook.Action!="SERVICE_CLOSE"
+                        &&hook.Action!="CLOSE_IF_RETURN_OUTSIDE")return;
                     if(pendingBoundaryManaged.Count>=manifest.MaximumRecordsPerFrame)
                         throw new InvalidOperationException(
                             "The bounded S1 boundary-correlation stream overflowed.");
+                    uint boundaryStack=ReadM68kRegister("A7");
+                    uint boundaryReturn=hook.Action=="CLOSE_IF_RETURN_OUTSIDE"
+                        ?ReadConditionalReturnPc(boundaryStack):ReadReturnPc();
                     var boundaryOccurrence=new PendingManagedOccurrence
                     {
                         Hook=hook,
-                        Stack=ReadM68kRegister("A7"),
-                        ReturnPc=ReadReturnPc()
+                        Stack=boundaryStack,
+                        ReturnPc=boundaryReturn,
+                        ClosesService=hook.Action=="SERVICE_CLOSE"
+                            ||hook.Action=="CLOSE_IF_RETURN_OUTSIDE"
+                                &&!manifest.LegalContinuations.Contains(
+                                    boundaryReturn)
                     };
                     pendingBoundaryManaged.Enqueue(boundaryOccurrence);
                     return;
@@ -1163,7 +1168,10 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     uint? returnPc = null;
                     if (hook.Action == "CLOSE_IF_RETURN_OUTSIDE")
-                        returnPc = ReadReturnPc();
+                    {
+                        occurrence.Stack=ReadM68kRegister("A7");
+                        returnPc=ReadConditionalReturnPc(occurrence.Stack);
+                    }
                     JObject registerJson = new JObject();
                     foreach (string name in RegisterNames)
                         registerJson[name] = ReadM68kRegister(name);
@@ -1275,7 +1283,8 @@ namespace OpenGGF.BizHawk.Headless
                 if(!manifest.ManagedByNativeToken.TryGetValue(value.Subject,out expected)
                     ||expected.Action!="SERVICE_BEGIN"
                         &&expected.Action!="DEFERRED_SERVICE_CONSUME"
-                        &&expected.Action!="SERVICE_CLOSE")return;
+                        &&expected.Action!="SERVICE_CLOSE"
+                        &&expected.Action!="CLOSE_IF_RETURN_OUTSIDE")return;
                 if(pendingBoundaryManaged.Count==0)return;
                 PendingManagedOccurrence occurrence=pendingBoundaryManaged.Peek();
                 if(!object.ReferenceEquals(occurrence.Hook,expected)
@@ -1287,6 +1296,49 @@ namespace OpenGGF.BizHawk.Headless
                     out nativeAction))
                     throw new InvalidOperationException(
                         "Managed boundary marker has no native action identity.");
+                if(expected.Action=="CLOSE_IF_RETURN_OUTSIDE")
+                {
+                    if(value.Kind==10&&value.Value==0)
+                    {
+                        if((nativeAction!=5&&nativeAction!=9)
+                            ||occurrence.ClosesService
+                            ||!MatchesConditionalManagedIdentity(
+                                boundaryManagedServices,value,occurrence,
+                                nativeAction))
+                            throw new InvalidOperationException(
+                                "S1 boundary conditional managed identity differs.");
+                        pendingBoundaryManaged.Dequeue();
+                        return;
+                    }
+                    if(value.Kind==10&&value.Value==1)
+                    {
+                        if(nativeAction!=5||!occurrence.ClosesService
+                            ||occurrence.ConditionalPopMarkerSeen
+                            ||!MatchesConditionalManagedIdentity(
+                                boundaryManagedServices,value,occurrence,
+                                nativeAction))
+                            throw new InvalidOperationException(
+                                "S1 boundary conditional managed identity differs.");
+                        occurrence.ConditionalPopMarkerSeen=true;
+                        return;
+                    }
+                    if(value.Kind==2)
+                    {
+                        if(!occurrence.ClosesService
+                            ||(nativeAction==5
+                                ?!occurrence.ConditionalPopMarkerSeen
+                                :nativeAction!=9
+                                    ||occurrence.ConditionalPopMarkerSeen)
+                            ||!MatchesConditionalManagedIdentity(
+                                boundaryManagedServices,value,occurrence,
+                                nativeAction))
+                            throw new InvalidOperationException(
+                                "S1 boundary conditional managed identity differs.");
+                        boundaryManagedServices.End(value.ServiceToken);
+                        pendingBoundaryManaged.Dequeue();
+                    }
+                    return;
+                }
                 if(expected.Action=="SERVICE_BEGIN")
                 {
                     if(value.Kind==10&&value.Value==4)
@@ -1412,17 +1464,21 @@ namespace OpenGGF.BizHawk.Headless
                     if (value.Kind == 10 && value.Value == 0)
                     {
                         if ((nativeAction != 5 && nativeAction != 9)
-                            || occurrence.ClosesService)
+                            || occurrence.ClosesService
+                            ||!MatchesConditionalManagedIdentity(
+                                managedServices,value,occurrence,nativeAction))
                             throw new InvalidOperationException(
-                                "Native conditional keep disagreed with the managed return snapshot.");
+                                "S1 conditional managed identity or return decision differs.");
                         completeOccurrence = true;
                     }
                     else if (value.Kind == 10 && value.Value == 1)
                     {
                         if (nativeAction != 5 || !occurrence.ClosesService
-                            || occurrence.ConditionalPopMarkerSeen)
+                            || occurrence.ConditionalPopMarkerSeen
+                            ||!MatchesConditionalManagedIdentity(
+                                managedServices,value,occurrence,nativeAction))
                             throw new InvalidOperationException(
-                                "Native conditional POP disagreed with the managed return snapshot.");
+                                "S1 conditional managed identity or return decision differs.");
                         occurrence.ConditionalPopMarkerSeen = true;
                         occurrence.NativeCorrelationEvents.Add(
                             NativeCorrelationEvent(value, false));
@@ -1434,9 +1490,11 @@ namespace OpenGGF.BizHawk.Headless
                             || (nativeAction == 5
                                 ? !occurrence.ConditionalPopMarkerSeen
                                 : nativeAction != 9
-                                    || occurrence.ConditionalPopMarkerSeen))
+                                    || occurrence.ConditionalPopMarkerSeen)
+                            ||!MatchesConditionalManagedIdentity(
+                                managedServices,value,occurrence,nativeAction))
                             throw new InvalidOperationException(
-                                "Native conditional completion lacked its POP marker.");
+                                "S1 conditional managed identity or return decision differs.");
                         completeOccurrence = true;
                         managedServices.End(value.ServiceToken);
                     }
@@ -1621,6 +1679,16 @@ namespace OpenGGF.BizHawk.Headless
                     return services.Matches(value.ServiceToken,stack);
                 return (value.ServiceKindId==2||value.ServiceKindId==3)
                     &&services.Matches(value.ParentToken,stack);
+            }
+
+            private static bool MatchesConditionalManagedIdentity(
+                ManagedServiceTracker services,GpgxAudioTraceEvent value,
+                PendingManagedOccurrence occurrence,byte nativeAction)
+            {
+                ushort rootToken=nativeAction==9&&value.Kind==10
+                    ?value.ParentToken:value.ServiceToken;
+                return occurrence.Stack<=0x00FFFFFC
+                    &&services.Matches(rootToken,occurrence.Stack+4);
             }
 
             private bool HasManagedServiceCandidate()
@@ -1910,6 +1978,23 @@ namespace OpenGGF.BizHawk.Headless
                     | ((uint)host.ReadMainRamByte((offset + 1) & 0xFFFF) << 16)
                     | ((uint)host.ReadMainRamByte((offset + 2) & 0xFFFF) << 8)
                     | host.ReadMainRamByte((offset + 3) & 0xFFFF);
+            }
+
+            private uint ReadConditionalReturnPc(uint stack)
+            {
+                if((stack&0xFFFF0000)!=0x00FF0000||(stack&1)!=0
+                    ||stack>0x00FFFFFC)
+                    throw new InvalidOperationException(
+                        "Invalid S1 conditional return proof A7.");
+                int offset=(int)(stack&0xFFFF);
+                uint returnPc=((uint)host.ReadMainRamByte(offset)<<24)
+                    |((uint)host.ReadMainRamByte(offset+1)<<16)
+                    |((uint)host.ReadMainRamByte(offset+2)<<8)
+                    |host.ReadMainRamByte(offset+3);
+                if(returnPc>0x00FFFFFF||(returnPc&1)!=0)
+                    throw new InvalidOperationException(
+                        "Invalid S1 conditional return proof PC.");
+                return returnPc;
             }
 
             private uint ReadM68kRegister(string name)
