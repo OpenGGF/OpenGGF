@@ -485,6 +485,37 @@ public final class CompleteRunAudioTrace {
         }
     }
 
+    /** One lossless native reservation for a service begin deferred until its blocker ends. */
+    public record NativeDeferredServiceBegin(long blockerToken, long blockerParentToken,
+            int blockerKind, int blockerDepth, int targetKind, int hookToken, int sourceCpu, int pc,
+            long firstCoordinate, long latestCoordinate, long firstOrdinal, long latestOrdinal,
+            int observationCount, boolean consumed, long releasedToken, long releaseCoordinate) {
+        public NativeDeferredServiceBegin {
+            if (blockerToken <= 0 || blockerToken > 0xffff
+                    || blockerParentToken < 0 || blockerParentToken > 0xffff
+                    || blockerParentToken == blockerToken
+                    || blockerKind <= 0 || blockerKind > 0xff
+                    || blockerDepth < 0 || blockerDepth > 7
+                    || (blockerParentToken == 0) != (blockerDepth == 0)
+                    || targetKind <= 0 || targetKind > 0xff
+                    || hookToken <= 0 || hookToken > 0xffff
+                    || sourceCpu != 2 || pc < 0 || pc > 0xffffff || (pc & 1) != 0
+                    || firstCoordinate < 0 || latestCoordinate < firstCoordinate
+                    || firstOrdinal < 0 || firstOrdinal >= MAX_NATIVE_FRAME_EVENTS
+                    || latestOrdinal < 0 || latestOrdinal >= MAX_NATIVE_FRAME_EVENTS
+                    || observationCount <= 0
+                    || (observationCount == 1)
+                            != (firstCoordinate == latestCoordinate && firstOrdinal == latestOrdinal)
+                    || consumed != (releasedToken > 0)
+                    || releasedToken < 0 || releasedToken > 0xffff
+                    || consumed && (releasedToken == blockerToken
+                            || releaseCoordinate <= latestCoordinate)
+                    || !consumed && releaseCoordinate != 0) {
+                throw new IllegalArgumentException("native deferred service-begin evidence is invalid");
+            }
+        }
+    }
+
     /** One native boundary/marker retained by a managed-callback correlation. */
     public record NativeManagedEvent(long coordinate, long ordinal, String sourceCpu, int pc,
             int eventKind, int value, long serviceToken, long parentToken, int serviceKind, int depth,
@@ -503,14 +534,15 @@ public final class CompleteRunAudioTrace {
             if (ordinal >= MAX_NATIVE_FRAME_EVENTS || !"M68K".equals(sourceCpu)
                     || pc < 0 || pc > 0xffffff || (pc & 1) != 0
                     || eventKind != 1 && eventKind != 2 && !marker
-                    || (marker ? value < 0 || value > 3 : value != 0)
+                    || (marker ? value < 0 || value > 4 : value != 0)
                     || serviceToken < 0 || serviceToken > 0xffff
                     || parentToken < 0 || parentToken > 0xffff || parentToken == serviceToken
                     || serviceKind < 0 || serviceKind > 0xff || depth < 0 || depth > 7
                     || hookToken <= 0 || hookToken > 0xffff || flags != 0
                     || serviceToken == 0 && (parentToken != 0 || serviceKind != 0 || depth != 0)
                     || serviceToken != 0 && serviceKind == 0
-                    || (eventKind == 1 || eventKind == 2 || marker && value < 3) && serviceToken == 0) {
+                    || (eventKind == 1 || eventKind == 2 || marker && value < 3
+                            || marker && value == 4) && serviceToken == 0) {
                 throw new IllegalArgumentException("native managed-event identity is invalid");
             }
         }
@@ -557,18 +589,21 @@ public final class CompleteRunAudioTrace {
             List<FrontierOwnedSnapshot> rawSnapshotInventory,
             List<NativeResetDiagnostic> resets,
             List<NativeManagedCorrelation> managedCorrelations,
+            List<NativeDeferredServiceBegin> deferredServiceBegins,
             List<FrontierOwnedAncestryTransition> rawAncestryTransitionInventory) {
         public FrameNativeDiagnostics(List<FrontierService> services,
                 List<FrontierOwnedChip> rawChipInventory,
                 List<FrontierOwnedSnapshot> rawSnapshotInventory) {
-            this(services, rawChipInventory, rawSnapshotInventory, List.of(), List.of(), List.of());
+            this(services, rawChipInventory, rawSnapshotInventory,
+                    List.of(), List.of(), List.of(), List.of());
         }
 
         public FrameNativeDiagnostics(List<FrontierService> services,
                 List<FrontierOwnedChip> rawChipInventory,
                 List<FrontierOwnedSnapshot> rawSnapshotInventory,
                 List<NativeResetDiagnostic> resets) {
-            this(services, rawChipInventory, rawSnapshotInventory, resets, List.of(), List.of());
+            this(services, rawChipInventory, rawSnapshotInventory,
+                    resets, List.of(), List.of(), List.of());
         }
 
         public FrameNativeDiagnostics(List<FrontierService> services,
@@ -577,7 +612,17 @@ public final class CompleteRunAudioTrace {
                 List<NativeResetDiagnostic> resets,
                 List<NativeManagedCorrelation> managedCorrelations) {
             this(services, rawChipInventory, rawSnapshotInventory, resets,
-                    managedCorrelations, List.of());
+                    managedCorrelations, List.of(), List.of());
+        }
+
+        public FrameNativeDiagnostics(List<FrontierService> services,
+                List<FrontierOwnedChip> rawChipInventory,
+                List<FrontierOwnedSnapshot> rawSnapshotInventory,
+                List<NativeResetDiagnostic> resets,
+                List<NativeManagedCorrelation> managedCorrelations,
+                List<FrontierOwnedAncestryTransition> rawAncestryTransitionInventory) {
+            this(services, rawChipInventory, rawSnapshotInventory, resets,
+                    managedCorrelations, List.of(), rawAncestryTransitionInventory);
         }
 
         public FrameNativeDiagnostics {
@@ -588,9 +633,14 @@ public final class CompleteRunAudioTrace {
                     "native frame snapshot inventory"));
             resets = List.copyOf(Objects.requireNonNull(resets, "native frame resets"));
             managedCorrelations = canonicalManagedCorrelations(managedCorrelations);
+            deferredServiceBegins = List.copyOf(Objects.requireNonNull(
+                    deferredServiceBegins, "native deferred service begins"));
             rawAncestryTransitionInventory = List.copyOf(Objects.requireNonNull(
                     rawAncestryTransitionInventory, "native frame ancestry-transition inventory"));
             if (resets.size() > 8) throw new IllegalArgumentException("native reset bound exceeded");
+            if (deferredServiceBegins.size() > 1) {
+                throw new IllegalArgumentException("native deferred service-begin bound exceeded");
+            }
             if (managedCorrelations.size() > MAX_NATIVE_FRAME_EVENTS
                     || managedCorrelations.stream().mapToLong(value -> value.events().size()).sum()
                             > MAX_NATIVE_FRAME_EVENTS) {
@@ -1358,8 +1408,17 @@ public final class CompleteRunAudioTrace {
     /** Buffered-native-only token/tree/PC/source inventory; absent for callback and OpenGGF producers. */
     public record CutoffNativeDiagnostics(List<FrontierService> activeStack,
             List<FrontierService> pendingDescendants, List<FrontierOwnedChip> rawChipInventory,
-            List<FrontierOwnedSnapshot> rawSnapshotInventory, long armEpoch, boolean armed,
+            List<FrontierOwnedSnapshot> rawSnapshotInventory,
+            NativeDeferredServiceBegin pendingDeferredServiceBegin, long armEpoch, boolean armed,
             String terminalZ80Digest) {
+        public CutoffNativeDiagnostics(List<FrontierService> activeStack,
+                List<FrontierService> pendingDescendants, List<FrontierOwnedChip> rawChipInventory,
+                List<FrontierOwnedSnapshot> rawSnapshotInventory, long armEpoch, boolean armed,
+                String terminalZ80Digest) {
+            this(activeStack, pendingDescendants, rawChipInventory, rawSnapshotInventory,
+                    null, armEpoch, armed, terminalZ80Digest);
+        }
+
         public CutoffNativeDiagnostics {
             activeStack = List.copyOf(Objects.requireNonNull(activeStack, "native cutoff active stack"));
             pendingDescendants = List.copyOf(Objects.requireNonNull(pendingDescendants,
@@ -1368,9 +1427,24 @@ public final class CompleteRunAudioTrace {
                     "native cutoff raw chip inventory"));
             rawSnapshotInventory = List.copyOf(Objects.requireNonNull(rawSnapshotInventory,
                     "native cutoff raw snapshot inventory"));
+            if (pendingDeferredServiceBegin != null && pendingDeferredServiceBegin.consumed()) {
+                throw new IllegalArgumentException("native cutoff deferred service begin is already consumed");
+            }
             nonNegative(armEpoch, "native cutoff arm epoch");
             lowercaseHex(terminalZ80Digest, SHA256, "native cutoff terminal Z80 digest");
             validateNativeFrontier(activeStack, pendingDescendants, rawChipInventory, rawSnapshotInventory);
+            if (pendingDeferredServiceBegin != null) {
+                FrontierService blocker = activeStack.isEmpty() ? null : activeStack.getLast();
+                if (blocker == null || blocker.token() != pendingDeferredServiceBegin.blockerToken()
+                        || blocker.currentParentToken()
+                                != pendingDeferredServiceBegin.blockerParentToken()
+                        || blocker.kind().isBlank()
+                        || blocker.currentDepth() != pendingDeferredServiceBegin.blockerDepth()
+                        || blocker.state() != FrontierServiceState.OPEN) {
+                    throw new IllegalArgumentException(
+                            "native cutoff deferred begin has no exact active blocker");
+                }
+            }
         }
     }
 

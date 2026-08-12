@@ -1071,6 +1071,7 @@ public final class CompleteRunAudioComparator {
                 new LinkedHashMap<>();
         private final Map<Long, List<NativeAncestryTransition>> nativePromotionEvidence =
                 new LinkedHashMap<>();
+        private NativeDeferredServiceBegin pendingDeferredBegin;
         private final LinkedHashMap<Long, CutoffService> carriedServices = new LinkedHashMap<>();
         private final Map<Long, FrontierService> nativeCarriedServices = new LinkedHashMap<>();
         private final Set<Long> releasedNativeCarriedTokens = new HashSet<>();
@@ -1169,6 +1170,7 @@ public final class CompleteRunAudioComparator {
                             previousNativeBeginOrdinal = service.beginOrdinal();
                         }
                     }
+                    deferredServiceBegins(frame.nativeDiagnostics());
                     managedBoundaries(frame.absoluteFrame(), frame.nativeDiagnostics());
                     List<FrontierService> resetRoots = new ArrayList<>();
                     for (NativeResetDiagnostic reset : frame.nativeDiagnostics().resets()) {
@@ -1233,6 +1235,7 @@ public final class CompleteRunAudioComparator {
                 }
                 accountCarriedAtCutoff(frontier);
                 if (buffered) {
+                    deferredCutoff(frontier.nativeDiagnostics().pendingDeferredServiceBegin());
                     List<FrontierService> terminalServices = java.util.stream.Stream.concat(
                             frontier.nativeDiagnostics().activeStack().stream(),
                             frontier.nativeDiagnostics().pendingDescendants().stream())
@@ -1279,7 +1282,7 @@ public final class CompleteRunAudioComparator {
                             "terminal leaves carried-in services unresolved");
                 }
                 if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()
-                        || !nativePromotionEvidence.isEmpty()) {
+                        || !nativePromotionEvidence.isEmpty() || pendingDeferredBegin != null) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves native managed-service evidence unaccounted");
                 }
@@ -1320,6 +1323,7 @@ public final class CompleteRunAudioComparator {
                         "callback baseline cannot carry buffered-native proof");
             }
             if (frontier.nativeDiagnostics() == null) return;
+            pendingDeferredBegin = frontier.nativeDiagnostics().pendingDeferredServiceBegin();
             List<FrontierService> nativeBoundaryServices = java.util.stream.Stream.concat(
                     frontier.nativeDiagnostics().activeStack().stream(),
                     frontier.nativeDiagnostics().pendingDescendants().stream())
@@ -1442,6 +1446,124 @@ public final class CompleteRunAudioComparator {
                 previousNativeRawCoordinate = coordinate;
             }
             recordNativePromotions(diagnostics);
+        }
+
+        private void deferredServiceBegins(FrameNativeDiagnostics diagnostics)
+                throws ValidationException {
+            List<NativeManagedEvent> markers = diagnostics.managedCorrelations().stream()
+                    .flatMap(correlation -> correlation.events().stream())
+                    .filter(event -> event.eventKind() == 10 && event.value() == 4).toList();
+            NativeDeferredServiceBegin published = diagnostics.deferredServiceBegins().isEmpty()
+                    ? null : diagnostics.deferredServiceBegins().getFirst();
+            if (published == null) {
+                if (!markers.isEmpty() || pendingDeferredBegin != null) {
+                    throw nativeEvidence("deferred service-begin evidence is missing");
+                }
+                return;
+            }
+            if (pendingDeferredBegin == null && markers.isEmpty()) {
+                throw nativeEvidence("deferred service-begin evidence has no first marker");
+            }
+            NativeDeferredServiceBegin prior = pendingDeferredBegin;
+            NativeManagedEvent first = markers.isEmpty() ? null : markers.getFirst();
+            NativeManagedEvent latest = markers.isEmpty() ? null : markers.getLast();
+            long firstCoordinate = prior == null ? first.coordinate() : prior.firstCoordinate();
+            long firstOrdinal = prior == null ? first.ordinal() : prior.firstOrdinal();
+            long latestCoordinate = latest == null ? prior.latestCoordinate() : latest.coordinate();
+            long latestOrdinal = latest == null ? prior.latestOrdinal() : latest.ordinal();
+            int observations = Math.addExact(prior == null ? 0 : prior.observationCount(), markers.size());
+            NativeManagedEvent identity = first == null ? null : first;
+            long blockerToken = prior == null ? identity.serviceToken() : prior.blockerToken();
+            long blockerParent = prior == null ? identity.parentToken() : prior.blockerParentToken();
+            int blockerKind = prior == null ? identity.serviceKind() : prior.blockerKind();
+            int blockerDepth = prior == null ? identity.depth() : prior.blockerDepth();
+            int hookToken = prior == null ? identity.hookToken() : prior.hookToken();
+            int pc = prior == null ? identity.pc() : prior.pc();
+            int targetKind = prior == null ? published.targetKind() : prior.targetKind();
+            NativeDeferredServiceBegin expected = new NativeDeferredServiceBegin(
+                    blockerToken, blockerParent, blockerKind, blockerDepth, targetKind,
+                    hookToken, 2, pc, firstCoordinate, latestCoordinate, firstOrdinal,
+                    latestOrdinal, observations, published.consumed(), published.releasedToken(),
+                    published.releaseCoordinate());
+            for (NativeManagedEvent marker : markers) {
+                if (!"M68K".equals(marker.sourceCpu()) || marker.pc() != pc
+                        || marker.serviceToken() != blockerToken
+                        || marker.parentToken() != blockerParent
+                        || marker.serviceKind() != blockerKind || marker.depth() != blockerDepth
+                        || marker.hookToken() != hookToken) {
+                    throw nativeEvidence("deferred service-begin marker identity changed");
+                }
+            }
+            if (!published.equals(expected)) {
+                throw nativeEvidence("deferred service-begin diagnostic does not exactly extend its markers");
+            }
+            if (!diagnostics.resets().isEmpty()) {
+                throw nativeEvidence("reset occurs while a deferred service begin is retained");
+            }
+            if (!published.consumed()) {
+                pendingDeferredBegin = published;
+                return;
+            }
+            FrontierService blocker = diagnostics.services().stream()
+                    .filter(service -> service.token() == blockerToken).findFirst().orElse(null);
+            if (blocker == null || blocker.state() != FrontierServiceState.COMPLETED
+                    || blocker.parentToken() != blockerParent || blocker.depth() != blockerDepth
+                    || blocker.currentParentToken() != blockerParent
+                    || blocker.currentDepth() != blockerDepth || blocker.endFrame() == null
+                    || blocker.endOrdinal() == null || blocker.endPc() == null
+                    || blocker.endHookToken() == null) {
+                throw nativeEvidence("deferred service-begin release has no exact blocker completion");
+            }
+            long releaseOrdinal = blocker.endOrdinal() + 1;
+            if (releaseOrdinal >= MAX_NATIVE_FRAME_EVENTS) {
+                throw nativeEvidence("deferred service-begin release ordinal exceeds native capacity");
+            }
+            Long coordinateBase = nativeFrameCoordinateBase(diagnostics);
+            if (coordinateBase != null
+                    && published.releaseCoordinate() != coordinateBase + releaseOrdinal) {
+                throw nativeEvidence("deferred service-begin release coordinate is not exact");
+            }
+            FrontierService released = diagnostics.services().stream()
+                    .filter(service -> service.token() == published.releasedToken()).findFirst().orElse(null);
+            // The native BEGIN is mandatory in the consumed reservation and becomes retained
+            // managed evidence here. Its completed FrontierService may be published in a later
+            // frame; cutoff/terminal validation rejects that evidence if it is never discharged.
+            if (released != null && (released.parentToken() != 0 || released.depth() != 0
+                    || released.beginFrame() != blocker.endFrame()
+                    || released.beginOrdinal() != releaseOrdinal || released.beginPc() != pc
+                    || released.beginHookToken() != hookToken
+                    || !"M68K".equals(released.beginSourceCpu()))) {
+                throw nativeEvidence("deferred service-begin release is not the exact adjacent root");
+            }
+            NativeManagedEvent syntheticBegin = new NativeManagedEvent(
+                    published.releaseCoordinate(), releaseOrdinal, "M68K", pc, 1, 0,
+                    published.releasedToken(), 0, targetKind, 0, hookToken, true);
+            beginManagedService(blocker.endFrame(), syntheticBegin);
+            pendingDeferredBegin = null;
+        }
+
+        private Long nativeFrameCoordinateBase(FrameNativeDiagnostics diagnostics)
+                throws ValidationException {
+            List<long[]> coordinates = new ArrayList<>();
+            diagnostics.managedCorrelations().stream().flatMap(value -> value.events().stream())
+                    .forEach(event -> coordinates.add(new long[] { event.coordinate(), event.ordinal() }));
+            diagnostics.rawChipInventory().forEach(owned -> coordinates.add(new long[] {
+                    owned.event().coordinate(), owned.event().ordinal() }));
+            diagnostics.rawAncestryTransitionInventory().forEach(owned -> coordinates.add(new long[] {
+                    owned.event().coordinate(), owned.event().ordinal() }));
+            if (coordinates.isEmpty()) return null;
+            long base = coordinates.getFirst()[0] - coordinates.getFirst()[1];
+            if (coordinates.stream().anyMatch(value -> value[0] - value[1] != base)) {
+                throw nativeEvidence("native frame coordinates do not share one exact ordinal base");
+            }
+            return base;
+        }
+
+        private void deferredCutoff(NativeDeferredServiceBegin cutoff) throws ValidationException {
+            if (!Objects.equals(pendingDeferredBegin, cutoff)) {
+                throw nativeEvidence("native cutoff does not carry the exact deferred service begin");
+            }
+            pendingDeferredBegin = null;
         }
 
         private void recordNativePromotions(FrameNativeDiagnostics diagnostics)

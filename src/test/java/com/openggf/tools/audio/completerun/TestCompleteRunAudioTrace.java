@@ -17,6 +17,49 @@ import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioTrace {
     @Test
+    void nativeDeferredServiceBeginRetainsExactImmutableManagedEvidence() {
+        NativeDeferredServiceBegin pending = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, false, 0, 0);
+        FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(
+                List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(pending), List.of());
+
+        assertEquals(List.of(pending), diagnostics.deferredServiceBegins());
+        assertEquals(13, pending.blockerToken());
+        assertEquals(4, pending.targetKind());
+        assertEquals(41, pending.latestCoordinate());
+        assertEquals(2, pending.observationCount());
+        assertThrows(UnsupportedOperationException.class,
+                () -> diagnostics.deferredServiceBegins().clear());
+
+        Frame withDiagnostic = new Frame(3, "deferred", false, List.of(), List.of(), List.of(), diagnostics);
+        Frame withoutDiagnostic = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of()));
+        NativeDeferredServiceBegin changed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 42, 12, 14, 2, false, 0, 0);
+        Frame changedRaw = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        List.of(changed), List.of()));
+        assertNotEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(withDiagnostic)),
+                assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(changedRaw)));
+        assertEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(withDiagnostic)),
+                assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(withoutDiagnostic)));
+        assertEquals(withDiagnostic, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
+                () -> CompleteRunAudioJson.writeRecord(withDiagnostic))));
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(pending, changed), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 1, false, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, true, 13, 42));
+    }
+
+    @Test
     void frameRawChipInventoryPreservesNestedGlobalOrderWithoutDuplicatingOwnership() {
         NormalizedState state = new NormalizedState(List.of(), List.of());
         DriverService parent = new DriverService(0, "parent", ServiceCompletion.COMPLETED, List.of(), state,

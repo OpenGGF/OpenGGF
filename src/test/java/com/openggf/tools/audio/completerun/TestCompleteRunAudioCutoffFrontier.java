@@ -266,6 +266,35 @@ class TestCompleteRunAudioCutoffFrontier {
     }
 
     @Test
+    void pendingDeferredBeginIsRawOnlyImmutableCutoffEvidence() throws Exception {
+        FrontierService blocker = service(13, 0, 0, FrontierServiceState.OPEN, 10);
+        CompleteRunAudioTrace.NativeDeferredServiceBegin pending =
+                new CompleteRunAudioTrace.NativeDeferredServiceBegin(
+                        13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                        40, 41, 12, 13, 2, false, 0, 0);
+        CutoffFrontier projected = frontier(List.of(blocker), List.of());
+        CompleteRunAudioTrace.CutoffNativeDiagnostics raw =
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        List.of(blocker), List.of(), List.of(), List.of(), pending,
+                        1, true, "b".repeat(64));
+        CutoffFrontier withPending = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
+                raw, 0, 0, STATE);
+        CutoffFrontier withoutPending = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
+                null, 0, 0, STATE);
+
+        assertNotEquals(CompleteRunAudioJson.writeRecord(withPending),
+                CompleteRunAudioJson.writeRecord(withoutPending));
+        assertEquals(CompleteRunAudioJson.writeSemanticRecord(withPending),
+                CompleteRunAudioJson.writeSemanticRecord(withoutPending));
+        assertEquals(withPending, CompleteRunAudioJson.readRecord(
+                CompleteRunAudioJson.writeRecord(withPending)));
+        assertThrows(IllegalArgumentException.class, () ->
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        List.of(), List.of(), List.of(), List.of(), pending,
+                        1, true, "b".repeat(64)));
+    }
+
+    @Test
     void exactPolicyRejectsTruncatedOwnershipAndPinsCanonicalCapabilityBytes() {
         CutoffFrontier empty = CutoffFrontier.empty(STATE);
         assertEquals("2f2c00122d6e952e8f3fe2bdb1aa853acd70dba92630a6fe885fac34c3880d9a",

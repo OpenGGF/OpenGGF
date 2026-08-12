@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun;
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -274,6 +275,25 @@ class TestCompleteRunAudioCaptureStore {
             assertEquals(records.get(2), actual.get(2));
             assertEquals(records.get(3), actual.get(3));
         }
+    }
+
+    @Test
+    void deferredReservationChangesRawStorageRootButNotSemanticRoot() {
+        NativeDeferredServiceBegin first = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, false, 0, 0);
+        NativeDeferredServiceBegin changed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 42, 12, 14, 2, false, 0, 0);
+        Frame left = new Frame(860, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        List.of(first), List.of()));
+        Frame right = new Frame(860, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        List.of(changed), List.of()));
+
+        assertNotEquals(root(List.of(left)), root(List.of(right)));
+        assertEquals(semanticRoot(List.of(left)), semanticRoot(List.of(right)));
     }
 
     @Test
