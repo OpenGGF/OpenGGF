@@ -705,6 +705,40 @@ abstract class AbstractRunChainTest {
                     emitted, destinationIndex, rowsConsumed);
         }
 
+        /**
+         * Offers a level destination for admission without demanding one, so a
+         * caller can keep stepping while the coordinator legitimately denies.
+         * Returns true only when the coordinator actually admitted.
+         */
+        private boolean tryAdmitLevel(
+                TraceRunManifest.Transition boundary,
+                int observedBk2Frame,
+                GameMode mode,
+                int rowsConsumed,
+                RunLevelLoadTracker.Receipt observedLoad) {
+            int destinationIndex = coordinator.currentSegmentIndex() + 1;
+            if (boundary != null && "stage_exit".equals(boundary.entryKind())) {
+                coordinator.observeBoundary(
+                        new RunBoundarySignal.StageExit(observedBk2Frame));
+            }
+            RunPlaybackObservation observed =
+                    observation(mode, false, rowsConsumed, false);
+            RunBoundarySignal.LevelLoaded loaded =
+                    new RunBoundarySignal.LevelLoaded(
+                            observedBk2Frame, observedLoad.cause(),
+                            observedLoad.identity());
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.beforeLoadedLevelActivation(loaded, observed);
+            if (emitted.isEmpty()) {
+                emitted = coordinator.beforeAdmission(observed);
+            }
+            if (emitted.isEmpty()) {
+                return false;
+            }
+            requireAdmission(emitted, destinationIndex, rowsConsumed);
+            return true;
+        }
+
         private DestinationAdmissionReceipt admitPresentationBridge(
                 TraceRunManifest.Transition boundary,
                 int observedBk2Frame,
@@ -1451,15 +1485,15 @@ abstract class AbstractRunChainTest {
                                 + ") was never observed within the boundary window for "
                                 + runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
-                int rowsConsumed = prepareAcrossLevelBoundary(
+                int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                runCoordinator.admitLevel(
-                        exit, obs.observedBk2Frame(),
-                        loop.getCurrentGameMode(),
-                        rowsConsumed, false,
+                int rowsConsumed = admitLevelWhenReady(
+                        loop, playback, runCoordinator, exit, obs, next,
+                        prepared, stepCap,
                         Objects.requireNonNull(observedLoad[0],
-                                "production level-load receipt was not observed"));
+                                "production level-load receipt was not observed"),
+                        i, runDir);
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
@@ -2552,6 +2586,71 @@ abstract class AbstractRunChainTest {
         }
         completeInterLevelVblankBudget(currentLevel, nextLevel, 0, sourceTailVblank);
         return 0;
+    }
+
+    /**
+     * Offers the destination for admission every frame, stepping the engine
+     * until the coordinator accepts -- exactly what production does, where
+     * {@code TraceSessionLauncher#runCoordinatorTick} polls
+     * {@link TraceRunPlaybackCoordinator#beforeAdmission} on every tick and
+     * simply keeps stepping while it is denied.
+     *
+     * <p>The chain previously admitted one-shot. That is correct only when the
+     * destination happens to be admissible the instant its level became active;
+     * at a level-advance boundary whose act title card is still running, and
+     * whose shared movie cursor has not yet reached the destination's first
+     * recorded row, the coordinator legitimately denies and the one-shot call
+     * failed the run. This is additive: a boundary that admits immediately
+     * exits on iteration zero with the prepared row count unchanged.
+     *
+     * <p>Nothing here weakens the admission rule -- the engine must genuinely
+     * become admissible. The loop is bounded by the same manifest-derived
+     * {@code stepCap} every other await uses, and each step runs the coordinator's
+     * own {@code afterStep} transition timeout.
+     */
+    private int admitLevelWhenReady(
+            GameLoop loop,
+            PlaybackDebugManager playback,
+            HeadlessRunCoordinatorAdapter runCoordinator,
+            TraceRunManifest.Transition exit,
+            BoundaryObservation obs,
+            SegmentPlan next,
+            int preparedRowsConsumed,
+            int stepCap,
+            RunLevelLoadTracker.Receipt observedLoad,
+            int segmentIndex,
+            Path runDir) {
+        int destinationOffset = next.segment().bk2FrameOffset();
+        for (int step = 0; step <= stepCap; step++) {
+            int cursor = playback.getCursorFrame();
+            int rowsConsumed = step == 0
+                    ? preparedRowsConsumed
+                    : cursor - destinationOffset;
+            if (rowsConsumed >= 0 && rowsConsumed <= 1
+                    && runCoordinator.tryAdmitLevel(
+                            exit, obs.observedBk2Frame(),
+                            loop.getCurrentGameMode(),
+                            rowsConsumed, observedLoad)) {
+                return rowsConsumed;
+            }
+            if (rowsConsumed > 1) {
+                throw new AssertionError(
+                        "Segment " + segmentIndex + " destination "
+                                + next.segment().dir()
+                                + " cursor advanced past its first recorded row"
+                                + " without admission (cursor " + cursor
+                                + ", offset " + destinationOffset + ") for "
+                                + runDir);
+            }
+            stepEngineFrame(loop);
+        }
+        throw new AssertionError(
+                "Segment " + segmentIndex + " destination "
+                        + next.segment().dir()
+                        + " never became admissible within " + stepCap
+                        + " steps (cursor " + playback.getCursorFrame()
+                        + ", offset " + destinationOffset + ", mode "
+                        + loop.getCurrentGameMode() + ") for " + runDir);
     }
 
     private LiveTraceComparator attachPreparedLevelSegment(
