@@ -704,7 +704,7 @@ namespace OpenGGF.BizHawk.Headless
             if(deferredBeginBlockerKind!=6)
                 throw Invalid("deferred begin blocker kind differs");
             byte[] deferredConsumeObservationKinds=ExactKindList(binding,
-                "deferred_consume_observation_kinds",2,3,4);
+                "deferred_consume_observation_kinds",2,3,4,6);
             var deferredConsumeKinds=new List<byte>{deferredBeginBlockerKind};
             for(int i=0;i<hookList.Count;i++)
             {
@@ -2199,7 +2199,8 @@ namespace OpenGGF.BizHawk.Headless
             {
                 if(value.ServiceKindId==4)
                     return services.Matches(value.ServiceToken,stack);
-                return (value.ServiceKindId==2||value.ServiceKindId==3)
+                return (value.ServiceKindId==2||value.ServiceKindId==3
+                        ||value.ServiceKindId==6)
                     &&services.Matches(value.ParentToken,stack);
             }
 

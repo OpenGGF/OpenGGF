@@ -82,13 +82,13 @@ int main(void)
 
   {
     struct gpgx_audio_service_kind_v1 kinds[6];
-    struct gpgx_audio_service_hook_v1 deferred_hooks[7];
+    struct gpgx_audio_service_hook_v1 deferred_hooks[9];
     uint8_t rom[65536];
     memset(kinds,0,sizeof(kinds)); memset(deferred_hooks,0,sizeof(deferred_hooks));
     memset(mask,0,sizeof(mask)); memset(memory,0,sizeof(memory)); memset(zram,0,sizeof(zram));
     memset(rom,0,sizeof(rom)); memset(&m68k,0,sizeof(m68k));
     assert(gpgx_audio_trace_disable()==0);
-    config.abi_version=3; config.kind_count=6; config.hook_count=7;
+    config.abi_version=3; config.kind_count=6; config.hook_count=9;
     config.snapshot_bytes_total=8; config.max_continuation_frames=2;
     for (i=0;i<6;i++)
     {
@@ -130,13 +130,25 @@ int main(void)
     deferred_hooks[6].expected_active_kind=4; deferred_hooks[6].range_count=1;
     deferred_hooks[6].opcode_length=2; deferred_hooks[6].opcode[0]=0x4e;
     deferred_hooks[6].opcode[1]=0x75;
+    memmove(&deferred_hooks[3],&deferred_hooks[2],5*sizeof(deferred_hooks[0]));
+    memset(&deferred_hooks[2],0,sizeof(deferred_hooks[2]));
+    deferred_hooks[2].hook_token=8; deferred_hooks[2].action=1;
+    deferred_hooks[2].cpu=1; deferred_hooks[2].pc=0x1000;
+    deferred_hooks[2].service_kind=6; deferred_hooks[2].expected_active_kind=4;
+    deferred_hooks[2].opcode_length=1; deferred_hooks[2].opcode[0]=0xa2;
+    deferred_hooks[8]=deferred_hooks[7];
+    deferred_hooks[7]=deferred_hooks[6]; deferred_hooks[7].hook_token=9;
+    deferred_hooks[7].action=7; deferred_hooks[7].service_kind=0;
     mask[0]=(uint8_t)(1u<<0); mask[0x77>>3]|=(uint8_t)(1u<<(0x77&7));
+    mask[0x1000>>3]|=(uint8_t)(1u<<(0x1000&7));
     zram[0]=memory[0]=0x32; zram[1]=memory[1]=0;
     zram[2]=memory[2]=0x40; zram[0x77]=memory[0x77]=0x1a;
+    zram[0x1000]=memory[0x1000]=0xa2;
     memory[3]=0xc3; memory[4]=0x77; memory[5]=0x00;
-    for (i=2;i<7;i++)
+    for (i=0;i<9;i++)
     {
       unsigned int j;
+      if(deferred_hooks[i].cpu!=GPGX_AUDIO_TRACE_CPU_M68K)continue;
       for (j=0;j<deferred_hooks[i].opcode_length;j++)
         rom[((deferred_hooks[i].pc+j)&0xffffu)^1u]=deferred_hooks[i].opcode[j];
     }

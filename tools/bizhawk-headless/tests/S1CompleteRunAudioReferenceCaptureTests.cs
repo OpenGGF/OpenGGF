@@ -1023,7 +1023,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(860, manifest.FirstRow);
             AssertEx.Equal(225101, manifest.ExclusiveEnd);
             AssertEx.Equal(RomIdentity.Sonic1Rev01Sha1, manifest.RomSha1);
-            AssertEx.Equal((uint)290,manifest.NativeConfig.HookCount);
+            AssertEx.Equal((uint)291,manifest.NativeConfig.HookCount);
             AssertEx.Equal((uint)16412,
                 manifest.NativeConfig.SnapshotBytesTotal);
             AssertHook(manifest, 0x00138E, "11c0f00a", "QueueSound1", "REQUEST_QUEUE_0");
@@ -1315,10 +1315,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal((byte)6,consume[2]);
             AssertEx.Equal(3,consumeTokens.Count);
             ordinaryEntry.Sort();
-            AssertEx.Equal(3,ordinaryEntry.Count);
+            AssertEx.Equal(4,ordinaryEntry.Count);
             AssertEx.Equal((byte)2,ordinaryEntry[0]);
             AssertEx.Equal((byte)3,ordinaryEntry[1]);
             AssertEx.Equal((byte)4,ordinaryEntry[2]);
+            AssertEx.Equal((byte)6,ordinaryEntry[3]);
             AssertEx.Equal(3,ordinary.Count);
             AssertEx.Equal((byte)0,ordinary[0]);
             AssertEx.Equal((byte)2,ordinary[1]);
@@ -2249,6 +2250,41 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertOrdinaryDriverInputEntry(0x0077,0x00AC,2,false);
             AssertOrdinaryDriverInputEntry(0x00C1,0x00D0,3,false);
             AssertOrdinaryDriverInputEntry(0x0077,0x00AC,2,true);
+            AssertNestedKindSixDriverInputEntry(false);
+            AssertNestedKindSixDriverInputEntry(true);
+        }
+
+        private static void AssertNestedKindSixDriverInputEntry(bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B82);
+                api.EmitReset(false,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "managed_hook_evidence"));
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+            }
+            JObject evidence=Records(output.ToString(),"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82)[0];
+            JArray correlation=(JArray)evidence["native_correlation_events"];
+            AssertEx.Equal(1,correlation.Count);
+            AssertEx.Equal(6,(byte)correlation[0]["service_kind"]);
+            AssertEx.Equal(1,(int)correlation[0]["depth"]);
         }
 
         private static void AssertOrdinaryDriverInputEntry(uint childBegin,
@@ -2302,7 +2338,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertDriverInputVisitFails((current,api)=>
                 api.VisitZ80(0x0077,current),"identity");
             AssertDriverInputVisitFails((current,api)=>
-                api.VisitZ80(0x003A,current),"reservation");
+                api.VisitZ80(0x003A,current),"identity");
             AssertDriverInputManagedIdentityFails();
         }
 
