@@ -7,8 +7,8 @@ or savestated state. The observer is disabled until explicitly configured.
 
 The supported managed integration is `REFLECTION` against the exact stock
 BizHawk assemblies locked by Task 6. No patched managed DLL is built or shipped.
-The native API reports ABI v3 while continuing to accept exact legacy v1 and
-v2 configurations. Events remain little-endian, 32 bytes each, with a fixed
+The native API reports ABI v4 while continuing to accept exact legacy v1,
+v2, and v3 configurations. Events remain little-endian, 32 bytes each, with a fixed
 capacity of 65,536. ABI v2 added profile-gated pre-arm filtering and a one-shot
 publication-epoch transition: prepublication frames are fully validated and
 drained without aging continuation budgets, then a drained, proof-armed READY
@@ -30,6 +30,13 @@ and otherwise the ordinary begin remains authoritative. Begin ancestry remains
 immutable; managed and stored diagnostics retain the bounded transition
 history, while producer-neutral semantic records retain the effective ancestry
 without depending on native event coordinates.
+
+ABI v4 gives action-7 M68K observation markers one exact contemporaneous A7
+sample: `payload_length` is 4 and `payload[0..3]` stores the full register in
+little-endian order; `payload[4..7]` stays zero. ABI v1-v3 action-7 markers and
+every non-action-7 marker retain zero payload length and bytes. The sample is
+taken at the reviewed instruction boundary after the managed execute callback
+and before opcode execution, without mutating emulated state.
 
 `gpgx_audio_trace_first_fault` returns a read-only, packed 16-byte snapshot of
 the first runtime fault in the configured session: stable reason, source CPU,

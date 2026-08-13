@@ -53,6 +53,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 RejectsMalformedCanonicalEvents,
                 serial: true));
             tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests validate ABI four observation A7 payloads atomically",
+                ValidatesAbiFourObservationA7PayloadsAtomically,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
                 "CompleteRunAudioObserverTests publish projection and lifecycle atomically",
                 PublishesAtomically,
                 serial: true));
@@ -1243,6 +1247,43 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 () => CreateCanonical(gap).CaptureFrame(() => { }), "snapshot");
         }
 
+        private static void ValidatesAbiFourObservationA7PayloadsAtomically()
+        {
+            const ulong stack=0x89ABCDEFu;
+            var acceptedApi=new FakeTraceApi{Events=MarkerFrame(4,stack,3)};
+            CompleteRunAudioObserver accepted=CreateMarkerObserver(
+                acceptedApi,4,7);
+            CompleteRunAudioObserver.FrameCapture capture=
+                accepted.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(2,capture.RawEvents.Count);
+            AssertEx.Equal((byte)4,capture.RawEvents[1].PayloadLength);
+            AssertEx.Equal(stack,capture.RawEvents[1].Payload);
+
+            byte[] invalidLengths={0,1,3,5,8};
+            for(int i=0;i<invalidLengths.Length;i++)
+                AssertMarkerPayloadRejected(4,7,3,invalidLengths[i],stack);
+            AssertMarkerPayloadRejected(4,7,3,4,0x100000000ul|stack);
+            AssertMarkerPayloadRejected(3,7,3,4,stack);
+            AssertMarkerPayloadRejected(4,5,0,4,stack);
+            AssertMarkerPayloadRejected(4,5,1,4,stack);
+            AssertMarkerPayloadRejected(4,6,2,4,stack);
+            AssertMarkerPayloadRejected(4,11,4,4,stack);
+        }
+
+        private static void AssertMarkerPayloadRejected(ushort abi,byte action,
+            byte value,byte payloadLength,ulong payload)
+        {
+            var api=new FakeTraceApi{Events=MarkerFrame(payloadLength,payload,value)};
+            CompleteRunAudioObserver observer=CreateMarkerObserver(api,abi,action);
+            int consumed=0;
+            AssertEx.Throws<InvalidOperationException>(()=>observer.CaptureFrame(
+                ()=>{},(events,count)=>consumed++),"marker fields");
+            AssertEx.Equal(0,consumed);
+            AssertEx.Equal(0,observer.ActiveServiceDepth);
+            AssertEx.Equal(0,observer.PendingServiceCount);
+            AssertEx.Equal(true,observer.LastCapture==null);
+        }
+
         private static void PublishesAtomically()
         {
             var api=new FakeTraceApi{Events=new[]{Event(0,1,1,0,1,0),
@@ -1370,6 +1411,47 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ServiceToken=token, ParentToken=parent, ServiceKindId=serviceKind,
                 Depth=depth, Subject=subject, Pc=pc, Offset=offset, Value=value,
                 PayloadLength=payloadLength, Payload=payload, SourceCpu=1 };
+        }
+
+        private static GpgxAudioTraceEvent[] MarkerFrame(
+            byte payloadLength,ulong payload,byte value)
+        {
+            return new[]
+            {
+                new GpgxAudioTraceEvent{Ordinal=0,Kind=1,ServiceToken=1,
+                    ServiceKindId=4,SourceCpu=2,Pc=0x100,Subject=1},
+                new GpgxAudioTraceEvent{Ordinal=1,Kind=10,ServiceToken=1,
+                    ServiceKindId=4,SourceCpu=2,Pc=0x102,Subject=2,Value=value,
+                    PayloadLength=payloadLength,Payload=payload}
+            };
+        }
+
+        private static CompleteRunAudioObserver CreateMarkerObserver(
+            FakeTraceApi api,ushort abi,byte markerAction)
+        {
+            var config=new GpgxAudioObserverAdapter.Config
+            {
+                Magic=0x31544147,AbiVersion=abi,StructSize=64,KindSize=16,
+                HookSize=32,RangeSize=16,EventSize=32,MaxDepth=8,
+                WatchMaskBytes=8192,HookCount=2,EventCapacity=65536,
+                KindCount=2,ResetServiceKind=1
+            };
+            var kinds=new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceKind{KindId=1},
+                new GpgxAudioObserverAdapter.ServiceKind{KindId=4}
+            };
+            var hooks=new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceHook{HookToken=1,Action=1,
+                    Cpu=2,Pc=0x100,ServiceKindId=4},
+                new GpgxAudioObserverAdapter.ServiceHook{HookToken=2,
+                    Action=markerAction,Cpu=2,Pc=0x102,
+                    ServiceKindId=markerAction==11?(byte)4:(byte)0,
+                    ExpectedActiveKind=4}
+            };
+            return new CompleteRunAudioObserver(api,config,new byte[8192],
+                kinds,hooks,new GpgxAudioObserverAdapter.SnapshotRange[0]);
         }
 
         private static CompleteRunAudioObserver CreateCanonical(FakeTraceApi api)

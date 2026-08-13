@@ -292,12 +292,14 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 return nativeCount==entries.Count;
             }
-            private bool MatchesToken(ushort token)
+            internal bool Contains(ushort token)
             {
                 for(int i=0;i<entries.Count;i++)
                     if(entries[i].Token==token)return true;
                 return false;
             }
+
+            private bool MatchesToken(ushort token){return Contains(token);}
         }
 
         internal static Manifest LoadManifest(string path, byte[] rom)
@@ -826,7 +828,7 @@ namespace OpenGGF.BizHawk.Headless
                 nativeActionByToken.Add(hook.HookToken,hook.Action);
             var config = new GpgxAudioObserverAdapter.Config
             {
-                Magic=0x31544147, AbiVersion=3, StructSize=64,
+                Magic=0x31544147, AbiVersion=4, StructSize=64,
                 HookSize=32, RangeSize=16, EventSize=32,
                 MaxDepth=8, MaxOpcodeBytes=8, ResetServiceKind=1,
                 MaxContinuationFrames=maximumContinuation, Flags=1, WatchMaskBytes=8192,
@@ -2208,11 +2210,14 @@ namespace OpenGGF.BizHawk.Headless
                 ManagedServiceTracker services,GpgxAudioTraceEvent value,
                 uint stack)
             {
-                if(value.ServiceKindId==4)
-                    return services.Matches(value.ServiceToken,stack);
-                return (value.ServiceKindId==2||value.ServiceKindId==3
-                        ||value.ServiceKindId==6)
-                    &&services.Matches(value.ParentToken,stack);
+                ushort ownerToken;
+                if(value.ServiceKindId==4)ownerToken=value.ServiceToken;
+                else if(value.ServiceKindId==2||value.ServiceKindId==3
+                    ||value.ServiceKindId==6)ownerToken=value.ParentToken;
+                else return false;
+                return ownerToken!=0&&services.Contains(ownerToken)
+                    &&value.PayloadLength==4&&(value.Payload>>32)==0
+                    &&(uint)value.Payload==stack;
             }
 
             private static bool MatchesConditionalManagedIdentity(

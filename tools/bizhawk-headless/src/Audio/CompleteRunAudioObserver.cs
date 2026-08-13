@@ -901,7 +901,13 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(e.Subject,"marker");
                     if(e.Pc!=hook.Pc||e.SourceCpu!=2||hook.Cpu!=2||e.Offset!=0
-                        ||e.PayloadLength!=0||e.Payload!=0||e.Flags!=0)
+                        ||e.Flags!=0)
+                        throw Invalid("marker fields");
+                    bool carriesA7=config.AbiVersion==4&&hook.Action==7
+                        &&e.Value==3;
+                    if(carriesA7
+                        ?e.PayloadLength!=4||(e.Payload>>32)!=0
+                        :e.PayloadLength!=0||e.Payload!=0)
                         throw Invalid("marker fields");
                     if(e.Value==4)
                     {
@@ -1240,7 +1246,8 @@ namespace OpenGGF.BizHawk.Headless
         {
             if(e.Kind<1||e.Kind>11)throw Invalid("unknown event kind");
             if(e.Reserved!=0)throw Invalid("reserved field");
-            if(e.Kind!=6&&e.Payload!=0)throw Invalid("unexpected payload");
+            if(e.Kind!=6&&e.Kind!=10&&e.Payload!=0)
+                throw Invalid("unexpected payload");
             if(e.Kind!=3&&e.Kind!=4&&e.Kind!=10&&e.Value!=0)throw Invalid("unexpected value");
         }
         private GpgxAudioObserverAdapter.ServiceHook RequireHook(ushort token,string where)

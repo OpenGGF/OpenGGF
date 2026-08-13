@@ -102,7 +102,7 @@ int main(void)
   assert(gpgx_audio_trace_event_count(&count,&overflow)==-3);
   assert(gpgx_audio_trace_drain(events,1100,&drained)==-3);
   assert(gpgx_audio_trace_abort_frame()==-3);
-  assert(gpgx_audio_trace_abi_version()==3 && gpgx_audio_trace_event_size()==32
+  assert(gpgx_audio_trace_abi_version()==4 && gpgx_audio_trace_event_size()==32
     && gpgx_audio_trace_capacity()==65536);
   assert(gpgx_audio_trace_disable()==0);
   return 0;

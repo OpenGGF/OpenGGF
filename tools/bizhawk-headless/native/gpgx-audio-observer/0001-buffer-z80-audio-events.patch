@@ -323,7 +323,7 @@ new file mode 100644
 index 000000000..abbff34e9
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1799 @@
+@@ -0,0 +1,1809 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -1028,6 +1028,7 @@ index 000000000..abbff34e9
 +
 +  if (trace_config.magic != TRACE_MAGIC
 +      || (trace_config.abi_version != 1u && trace_config.abi_version != 2u
++        && trace_config.abi_version != 3u
 +        && trace_config.abi_version != GPGX_AUDIO_TRACE_ABI_VERSION)
 +      || trace_config.struct_size != sizeof(trace_config)
 +      || trace_config.kind_size != sizeof(trace_kinds[0])
@@ -1188,7 +1189,7 @@ index 000000000..abbff34e9
 +    else if (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER)
 +    {
 +      uint32_t pair_count = 0;
-+      if (trace_config.abi_version != 3u
++      if (trace_config.abi_version < 3u
 +          || hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K
 +          || !hook->expected_active_kind || !kind_for(hook->expected_active_kind)
 +          || !hook->service_kind || hook->service_kind == hook->expected_active_kind
@@ -1212,7 +1213,7 @@ index 000000000..abbff34e9
 +        || hook->action == ACTION_CONSUME_DEFERRED_BEGIN)
 +    {
 +      const struct gpgx_audio_service_kind_v1 *blocker;
-+      if (trace_config.abi_version != 3u
++      if (trace_config.abi_version < 3u
 +          || hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K
 +          || !hook->service_kind || !kind_for(hook->service_kind)
 +          || !hook->expected_active_kind
@@ -1234,7 +1235,7 @@ index 000000000..abbff34e9
 +    else if (hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP
 +        || hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE)
 +    {
-+      if (trace_config.abi_version != 3u || !hook->expected_active_kind
++      if (trace_config.abi_version < 3u || !hook->expected_active_kind
 +          || !kind_for(hook->expected_active_kind) || !hook->service_kind
 +          || hook->service_kind == hook->expected_active_kind
 +          || !(ended = kind_for(hook->service_kind)) || hook->flags
@@ -1670,6 +1671,15 @@ index 000000000..abbff34e9
 +  if (trace_depth) fill_ownership(event, &trace_stack[trace_depth - 1]);
 +  event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
 +  event->value = 3u;
++  if (trace_config.abi_version == 4u)
++  {
++    uint32_t a7 = m68k_get_reg(M68K_REG_A7);
++    event->payload_length = 4u;
++    event->payload[0] = (uint8_t)a7;
++    event->payload[1] = (uint8_t)(a7 >> 8);
++    event->payload[2] = (uint8_t)(a7 >> 16);
++    event->payload[3] = (uint8_t)(a7 >> 24);
++  }
 +}
 +
 +static void reserve_deferred_begin(
@@ -2134,7 +2144,7 @@ index 000000000..738b6b619
 +
 +#include <stdint.h>
 +
-+#define GPGX_AUDIO_TRACE_ABI_VERSION 3u
++#define GPGX_AUDIO_TRACE_ABI_VERSION 4u
 +#define GPGX_AUDIO_TRACE_EVENT_CAPACITY 65536u
 +#define GPGX_AUDIO_TRACE_EVENT_SIZE 32u
 +

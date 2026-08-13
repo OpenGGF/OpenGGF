@@ -147,6 +147,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests reject invalid typed async internal ownership",
                 RejectsInvalidTypedAsyncInternalOwnership));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests bind internal observations to contemporaneous A7",
+                BindsInternalObservationsToContemporaneousA7));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject invalid driverinput ownership",
                 RejectsInvalidDriverInputOwnership));
             tests.Add(new TestMain.TestCase(
@@ -2134,7 +2137,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     ["schema"]="openggf.s1-complete-run-audio-raw.v1",
                     ["rom_sha1"]=RomIdentity.Sonic1Rev01Sha1,
                     ["first_row"]=860,["exclusive_end"]=225101,
-                    ["native_abi"]=3,["native_event_size"]=32,
+                    ["native_abi"]=4,["native_event_size"]=32,
                     ["native_capacity"]=65536
                 })+JsonLine(new JObject
                 {
@@ -2418,22 +2421,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void RejectsInvalidTypedAsyncInternalOwnership()
         {
-            AssertKindSixInternalOwnershipFails(false,false);
-            AssertKindSixInternalOwnershipFails(true,false);
-            AssertKindSixInternalOwnershipFails(false,true);
-            AssertKindSixInternalOwnershipFails(true,true);
+            AssertKindSixInternalOwnershipFails(false);
+            AssertKindSixInternalOwnershipFails(true);
         }
 
-        private static void AssertKindSixInternalOwnershipFails(
-            bool preEpoch,bool wrongA7)
+        private static void AssertKindSixInternalOwnershipFails(bool preEpoch)
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
             {
                 current.SetCpuRegister("A7",0x00FFFDB2);
-                if(wrongA7)Visit(current,api,0x071B4C);
                 api.VisitZ80(0x003A,current);
-                if(wrongA7)current.SetCpuRegister("A7",0x00FFFDB6);
                 Visit(current,api,0x071BB2);
             });
             var output=new StringWriter();
@@ -2445,6 +2443,96 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         session.ObservePreEpochFrame(859,null,host.Advance),
                         "managed identity differs for internal observation");
                     AssertEx.Equal(0,output.ToString().Length);
+                    return;
+                }
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "managed identity differs for internal observation");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
+        private static void BindsInternalObservationsToContemporaneousA7()
+        {
+            AssertNestedInternalA7(0,0,false);
+            AssertNestedInternalA7(0,0,true);
+            AssertNestedInternalA7(0x0077,0x00AC,false);
+            AssertNestedInternalA7(0x0077,0x00AC,true);
+            AssertNestedInternalA7(0x00C1,0x00D0,false);
+            AssertNestedInternalA7(0x00C1,0x00D0,true);
+            AssertNestedInternalA7(0x003A,0x0077,false);
+            AssertNestedInternalA7(0x003A,0x0077,true);
+            AssertForgedInternalA7RollsBack(false);
+            AssertForgedInternalA7RollsBack(true);
+        }
+
+        private static void AssertNestedInternalA7(
+            uint childBegin,uint childEnd,bool preEpoch)
+        {
+            const uint entryStack=0x00FFFDAE;
+            const uint callbackStack=0x00FFFDAA;
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",entryStack);
+                Visit(current,api,0x071B4C);
+                if(childBegin!=0)api.VisitZ80(childBegin,current);
+                current.SetCpuRegister("A7",callbackStack);
+                Visit(current,api,0x071F02);
+                current.SetCpuRegister("A7",entryStack);
+                Visit(current,api,0x071C4C);
+                if(childEnd!=0)api.VisitZ80(childEnd,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            JObject metadata=Record(output.ToString(),"metadata",0);
+            AssertEx.Equal(4,(int)metadata["native_abi"]);
+            JObject marker=Records(output.ToString(),"native_event",value=>
+                (uint)value["pc"]==0x071F02&&(int)value["kind"]==10)[0];
+            AssertEx.Equal(4,(int)marker["payload_length"]);
+            AssertEx.Equal((ulong)callbackStack,(ulong)marker["payload"]);
+            int propertyCount=0;
+            foreach(JProperty ignored in marker.Properties())propertyCount++;
+            AssertEx.Equal(16,propertyCount);
+        }
+
+        private static void AssertForgedInternalA7RollsBack(bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                Visit(current,api,0x071B4C);
+                current.SetCpuRegister("A7",0x00FFFDAA);
+                Visit(current,api,0x071F02);
+                api.MutateLast(value=>
+                {value.Payload=0x00FFFDA8;return value;});
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "managed identity differs for internal observation");
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
                     return;
                 }
                 session.BeginEpoch();
@@ -2555,6 +2643,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 api.VisitZ80(0x0077,current);
                 current.SetCpuRegister("A7",0x00FFFDB6);
                 Visit(current,api,0x071B82);
+                api.MutateLast(value=>
+                {value.Payload=0x00FFFDB2;return value;});
             });
             using(var session=CreateSession(host,api,new StringWriter()))
                 AssertEx.Throws<InvalidOperationException>(
@@ -2728,6 +2818,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if(childBegin!=0)api.VisitZ80(childBegin,current);
                 current.SetCpuRegister("A7",0x00FFFDB2);
                 Visit(current,api,0x071B82);
+                api.MutateLast(value=>
+                {value.Payload=0x00FFFDAE;return value;});
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -2800,6 +2892,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             uint childBegin,bool preEpoch)
         {
             var api=new FakeTraceApi();
+            ushort staleToken=0;
             var host=new FakeS1Host((current,frame)=>
             {
                 if(frame==1)
@@ -2816,6 +2909,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 current.SetCpuRegister("A7",0x00FFFDAE);
                 Visit(current,api,0x071B82);
+                api.MutateLast(value=>
+                {
+                    if(value.ServiceKindId==4)value.ServiceToken=staleToken;
+                    else value.ParentToken=staleToken;
+                    return value;
+                });
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -2823,11 +2922,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if(preEpoch)
                 {
                     session.ObservePreEpochFrame(858,null,host.Advance);
+                    staleToken=FirstCompletedKindFourToken(api);
                     AssertEx.Equal(1,
                         session.BoundaryManagedServiceCountForTesting);
                     AssertEx.Throws<InvalidOperationException>(()=>
                         session.ObservePreEpochFrame(859,null,host.Advance),
-                        "managed identity differs");
+                        "native audio observer returned invalid");
                     AssertEx.Equal(1,
                         session.BoundaryManagedServiceCountForTesting);
                     AssertEx.Equal(0,output.ToString().Length);
@@ -2835,10 +2935,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 session.BeginEpoch();
                 session.CaptureFrame(860,host.Advance);
+                staleToken=FirstCompletedKindFourToken(api);
                 int before=output.ToString().Length;
                 AssertEx.Throws<InvalidOperationException>(()=>
                     session.CaptureFrame(861,host.Advance),
-                    "managed identity differs");
+                    "native audio observer returned invalid");
                 AssertEx.Equal(before,output.ToString().Length);
             }
         }
@@ -3054,6 +3155,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 current.SetCpuRegister("A7",0x00FFFDB6);
                 Visit(current,api,0x071B82);
+                api.MutateLast(value=>
+                {value.Payload=0x00FFFDB2;return value;});
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -4616,7 +4719,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 AssertEx.Throws<InvalidOperationException>(
                     () => session.CaptureFrame(860, wrongHost.Advance),
-                    "retry marker");
+                    "marker fields");
             }
 
             var orderApi = new FakeTraceApi
@@ -5112,6 +5215,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             throw new InvalidOperationException("Missing expected native event.");
         }
 
+        private static ushort FirstCompletedKindFourToken(FakeTraceApi api)
+        {
+            for(int i=0;i<api.LastDrainedEvents.Count;i++)
+            {
+                GpgxAudioTraceEvent value=api.LastDrainedEvents[i];
+                if(value.Kind==2&&value.ServiceKindId==4)
+                    return value.ServiceToken;
+            }
+            throw new InvalidOperationException(
+                "Missing completed prior-lifetime kind-four token.");
+        }
+
         private static JObject Record(string jsonl, string type, int ordinal)
         {
             int found = 0;
@@ -5198,7 +5313,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return new GpgxAudioTraceEvent
             {
                 Ordinal=ordinal, Kind=10, SourceCpu=2,
-                Subject=markerToken, Pc=pc, Value=3
+                Subject=markerToken, Pc=pc, Value=3,
+                PayloadLength=4
             };
         }
 
@@ -5240,7 +5356,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             private byte deferredOriginKind,deferredOriginDepth;
             private byte deferredCurrentKind,deferredCurrentDepth;
             private ushort nextServiceToken = 1;
-            public uint AbiVersion { get { return 3; } }
+            public uint AbiVersion { get { return 4; } }
             public uint EventSize { get { return 32; } }
             public uint Capacity { get { return 65536; } }
             public int Configure(ref GpgxAudioObserverAdapter.Config config,
@@ -5249,7 +5365,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxAudioObserverAdapter.SnapshotRange[] ranges)
             {
                 Calls.Add("configure");
-                if (config.AbiVersion != 3 || config.StructSize != 64
+                if (config.AbiVersion != 4 || config.StructSize != 64
                     || config.HookSize != 32 || config.RangeSize != 16
                     || config.EventSize != 32 || config.KindSize != 16
                     || config.Flags != 1 || config.MaxContinuationFrames != 255
@@ -5600,7 +5716,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 else if (hook.Action == 7)
                 {
-                    Add(Owned(hook, 10, 3));
+                    GpgxAudioTraceEvent observation=Owned(hook,10,3);
+                    observation.PayloadLength=4;
+                    observation.Payload=host.ReadCpuRegister("A7");
+                    Add(observation);
                 }
                 else throw new InvalidOperationException(
                     "Fake native M68K visit used an unsupported action.");
