@@ -1670,30 +1670,67 @@ s2.asm:6751-6761, which carries no Nemesis stream). S1's interior return masks *
 
 Two are not.
 
-- **The ordinary level seam is not derivable.** Measured across 22 `level_advance`
-  boundaries it masks 9 rows at 21 of them and 8 at one. A fixed ROM window whose
-  whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
-  frame granularity.
+- **The ordinary level seam is probably not derivable — but one check remains.**
+  Measured across 22 `level_advance` boundaries it masks 9 rows at 21 of them and 8 at
+  one. If that is sub-frame opening phase, it cannot be modelled at frame granularity
+  and this stands. **First identify which boundary masks 8.** An act advance within a
+  zone takes a structurally different ROM path from a full zone load — it skips zone
+  tile loading and much of the init — so "act-advance masks 8, full-load masks 9" would
+  be a *code-path* predicate, derivable and citable rather than phase variance. One
+  measurement settles which it is.
 - **An unexplained 32 ticks** are lost inside one special-stage interior (`ss_3`). Its
   entry and return gaps are identical to the crossings that reconcile exactly, so the
-  loss is internal and unattributed. Being 32, it is invisible to every known consumer
-  (0 mod 2, 16 and 32) — but it makes any "exact" clock inexact from that point on.
+  loss is internal and unattributed. Being 32, it is invisible to every
+  **currently implemented** consumer (0 mod 2, 16 and 32) — but that is a property of
+  the consumers enumerated today, not a guarantee: any future object gating on a
+  non-power-of-two cadence would expose it. It makes any "exact" clock inexact from
+  that point on regardless.
 
-The current baseline survives by cancellation: the odd deficit at one special-stage
-crossing is cancelled by an odd deficit at the EHZ1→EHZ2 act seam, leaving parity
-correct by luck. Correcting the special-stage crossings alone breaks that cancellation,
-inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run wholesale. That
-failure has a fingerprint — **122,139 errors at segment 7, frame 524, `sidekick_y`** —
-which has now been produced five times under four different descriptions.
+  **Not yet tested, and worth one bounded round:** 32 is a suspiciously clean lump to
+  lose inside a single interior whose entry and exit gaps reconcile exactly, which is
+  more like a structural event than drift. Special-stage interiors contain their own
+  interrupt-masked windows — checkpoint tallies, message plane rewrites, ring-requirement
+  transitions. Enumerate those events per interior from the aux stream and test whether
+  the deficit is proportional (does 32 factor as a per-event constant times an event
+  delta?). If it does not factor, it is a dead end and this entry stands.
+
+### The cancellation trap — read this before "fixing" a partial correction
+
+The current baseline survives by **cancellation, not correctness**: the odd deficit at
+one special-stage crossing is cancelled by an odd deficit at the EHZ1→EHZ2 act seam,
+leaving parity correct by luck. Correcting the special-stage crossings **alone** breaks
+that cancellation, inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run
+wholesale.
+
+That failure has an exact fingerprint:
+
+> **122,139 errors at segment 7, frame 524, field `sidekick_y` (rom=0x0271
+> engine=0x0272).**
+
+It has been produced **five times under four different descriptions** — boolean-only
+alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. If you see
+it, you have corrected **one seam of a cancelling pair**. It does not mean your change
+was wrong; it means the paired seam must move in the same change. Fix both or neither,
+and do not revert a correct partial fix as if it were a regression.
 
 Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
 against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
 rows early because a differently-chosen animal survives last.
 
-Closing this needs either per-row lag data for the undriven interiors (a recorder and
-fixture change), or cycle-level modelling of the level-entry window sufficient to
-predict its 9-or-8 split. Both are larger than a trace fix. Fitting the constant is
-excluded: it would go green here and desync the first differently-timed recording.
+### Routes considered and rejected, so the wall is not re-derived
+
+- **Write down the measured deficit.** Excluded: a fitted model. It would go green here
+  and desync the first differently-timed recording — the failure this project's rule 3
+  exists to prevent.
+- **Model the level-entry window at 68000 cycle level** to predict the 9-or-8 split.
+  Rule-compliant and would also predict the art-volume spread seen elsewhere, but
+  frame-exactness needs plane draws, VDP wait states and V-blank interleaving — a
+  partial cycle emulator. Impractical, not forbidden.
+- **The rule-4 hardware-timing sidecar.** Does not apply: it may only delay readiness of
+  engine-submitted art jobs, and nothing here polls a queue.
+
+What would actually close it: per-row lag data for the undriven interiors, which is a
+recorder and fixture change rather than a trace fix.
 
 ### Verification
 
