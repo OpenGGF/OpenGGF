@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
+  `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
+  `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,
+  `LoadCollisionIndexes` and `WaterEffects` (:4938-4945), so the playables do not
+  exist -- and their art is not submitted -- until the level-entry load ends. The
+  engine's load costs no frames, so its playables took their first art decision
+  while the ROM was still loading. A level-entry hold now stages that decision and
+  publishes it when the load finishes; the dedup register and the renderer's tiles
+  are unaffected, and nothing arms the hold in production.
 - Sonic 2: do not fade back in when an act ends. `Level:` runs `ClearPLC` +
   `Pal_FadeToBlack` (s2.asm:4764-4765) and then writes the level palette straight
   to the active palette with `PalLoad_Now` (:4881); there is no

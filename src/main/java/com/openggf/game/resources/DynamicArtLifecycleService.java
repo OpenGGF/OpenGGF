@@ -65,6 +65,26 @@ public final class DynamicArtLifecycleService
      * until a run whose movie spans the load publishes it.
      */
     private Preparation initialLoadPreparation;
+    /**
+     * Whether the level-entry load that creates the playables is still
+     * running, so a playable art decision taken now belongs to the row that
+     * load finishes on rather than to the row the engine happened to take it.
+     *
+     * <p>The ROM does not own playables during its level-entry load at all:
+     * {@code Level:} reaches {@code InitPlayers} only after
+     * {@code LoadZoneTiles}, {@code loadZoneBlockMaps},
+     * {@code LoadAnimatedBlocks}, {@code DrawInitialBG},
+     * {@code ConvertCollisionArray}, {@code LoadCollisionIndexes} and
+     * {@code WaterEffects} (docs/s2disasm/s2.asm:4938-4946), so the players'
+     * art is submitted at the END of that load, not at its start. The engine
+     * performs the same load with no frame cost, so its playables exist -- and
+     * take their first art decision -- while the ROM was still loading. Held
+     * decisions stage here and are released by whoever knows the load has
+     * finished; nothing arms this in production, where the hold is never set
+     * and the path below is exactly as it was.
+     */
+    private boolean levelEntryPlayerArtHeld;
+    private final List<Preparation> heldLevelEntryPlayerArt = new ArrayList<>();
     private List<Long> publishedOutstanding = List.of();
     private DynamicArtDiagnosticsSnapshot latest =
             DynamicArtDiagnosticsSnapshot.empty();
@@ -245,6 +265,8 @@ public final class DynamicArtLifecycleService
             boolean latestPublished,
             Preparation s1Preparation,
             Preparation initialLoadPreparation,
+            boolean levelEntryPlayerArtHeld,
+            List<Preparation> heldLevelEntryPlayerArt,
             boolean runActive,
             boolean comparisonSegmentOpen,
             boolean comparisonSegmentReserved,
@@ -275,6 +297,7 @@ public final class DynamicArtLifecycleService
             latestEdges = List.copyOf(latestEdges);
             latestOutstandingTransferIds =
                     List.copyOf(latestOutstandingTransferIds);
+            heldLevelEntryPlayerArt = List.copyOf(heldLevelEntryPlayerArt);
             gapOpeningLedger = List.copyOf(gapOpeningLedger);
             ledgerBeforeBufferedBatch =
                     List.copyOf(ledgerBeforeBufferedBatch);
@@ -697,6 +720,10 @@ public final class DynamicArtLifecycleService
         if (gameId == GameId.S1) {
             return prepareS1(owner, mappingFrame, requests, profile);
         }
+        if (levelEntryPlayerArtHeld) {
+            return holdLevelEntryDecision(owner, mappingFrame, requests,
+                    profile);
+        }
         ArtUpdate update = observeRomDplc(owner, mappingFrame, requests,
                 profile.romArtBase(), profile.vramDestination());
         if (gameId == GameId.S2 && update.submitted()) {
@@ -946,6 +973,88 @@ public final class DynamicArtLifecycleService
                 toDiagnosticRequests(checked, profile.romArtBase(), -1,
                         profile.vramDestination()));
         return new ArtUpdate(true, -1, checked);
+    }
+
+    /**
+     * Holds playable art decisions taken while the level-entry load is still
+     * running, so they surface on the row that load finishes on.
+     *
+     * <p>Arming this is a scheduling decision about work the engine creates
+     * itself: it changes only WHEN a submission the engine already made
+     * becomes visible, never what is submitted, and it reads no gameplay
+     * value. Nothing arms it in production.
+     */
+    public void holdPlayerArtDuringLevelEntryLoad() {
+        requireRunActive();
+        levelEntryPlayerArtHeld = true;
+    }
+
+    /** Whether a level-entry hold is currently armed. */
+    public boolean isPlayerArtHeldDuringLevelEntryLoad() {
+        return levelEntryPlayerArtHeld;
+    }
+
+    /**
+     * Releases the level-entry hold, submitting every held decision in the
+     * order it was taken, on the row this is called from -- the ROM's
+     * {@code InitPlayers} (docs/s2disasm/s2.asm:4946).
+     *
+     * <p>Releasing is idempotent and safe when nothing was held: a level entry
+     * whose playables took no art decision publishes nothing.
+     */
+    public void releasePlayerArtHeldDuringLevelEntryLoad() {
+        levelEntryPlayerArtHeld = false;
+        if (heldLevelEntryPlayerArt.isEmpty()) {
+            return;
+        }
+        List<Preparation> held = List.copyOf(heldLevelEntryPlayerArt);
+        heldLevelEntryPlayerArt.clear();
+        for (Preparation preparation : held) {
+            submitPreparedTransfer(preparation);
+        }
+    }
+
+    private ArtUpdate holdLevelEntryDecision(
+            String owner,
+            int mappingFrame,
+            List<TileLoadRequest> tileRequests,
+            ProductionArtProfile profile) {
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException("mappingFrame must be nonnegative");
+        }
+        List<TileLoadRequest> checked =
+                List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
+        // The dedup register is the ROM's own per-owner last-frame byte and is
+        // maintained here exactly as the unheld path maintains it; only the
+        // edge's row changes.
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
+        if (previous != null && previous == mappingFrame) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        if (checked.isEmpty()) {
+            return new ArtUpdate(true, -1, List.of());
+        }
+        heldLevelEntryPlayerArt.add(new Preparation(owner, mappingFrame,
+                toDiagnosticRequests(checked, profile.romArtBase(), -1,
+                        profile.vramDestination())));
+        // The tiles still reach the renderer, as a priming does; only the
+        // ledger edge waits for the load to finish.
+        return new ArtUpdate(true, -1, checked);
+    }
+
+    private void submitPreparedTransfer(Preparation preparation) {
+        long transferId = nextTransferId++;
+        List<Long> before = List.copyOf(ledger.keySet());
+        Descriptor descriptor = new Descriptor(
+                transferId, preparation.owner(), preparation.mappingFrame(),
+                comparisonSegmentOpen ? "segment" : "run_gap",
+                preparation.requests());
+        ledger.put(transferId, descriptor);
+        buffer(transferId, "submitted", descriptor.owner(),
+                descriptor.mappingFrame(), descriptor.requests(), before,
+                descriptor.submissionOrigin());
+        pendingS2TransferIds.add(transferId);
     }
 
     public void completeApplied(ArtUpdate update) {
@@ -1263,7 +1372,9 @@ public final class DynamicArtLifecycleService
                 pendingS2TransferIds, gapTransitions,
                 publishedOutstanding, latest.frame(), latest.edges(),
                 latest.outstandingTransferIds(), latest.published(),
-                s1Preparation, initialLoadPreparation, runActive,
+                s1Preparation, initialLoadPreparation,
+                levelEntryPlayerArtHeld,
+                List.copyOf(heldLevelEntryPlayerArt), runActive,
                 comparisonSegmentOpen,
                 comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
@@ -1299,6 +1410,9 @@ public final class DynamicArtLifecycleService
                 segmentGeneration, snapshot.latestPublished());
         s1Preparation = snapshot.s1Preparation();
         initialLoadPreparation = snapshot.initialLoadPreparation();
+        levelEntryPlayerArtHeld = snapshot.levelEntryPlayerArtHeld();
+        heldLevelEntryPlayerArt.clear();
+        heldLevelEntryPlayerArt.addAll(snapshot.heldLevelEntryPlayerArt());
         runActive = snapshot.runActive();
         comparisonSegmentOpen = snapshot.comparisonSegmentOpen();
         comparisonSegmentReserved = snapshot.comparisonSegmentReserved();
@@ -1343,6 +1457,8 @@ public final class DynamicArtLifecycleService
         gapTransitions.clear();
         s1Preparation = null;
         initialLoadPreparation = null;
+        levelEntryPlayerArtHeld = false;
+        heldLevelEntryPlayerArt.clear();
         publishedOutstanding = List.of();
         latest = DynamicArtDiagnosticsSnapshot.unpublished(
                 deliverySerial, segmentGeneration);
