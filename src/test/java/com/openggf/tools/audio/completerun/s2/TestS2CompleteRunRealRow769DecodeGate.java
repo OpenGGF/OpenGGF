@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.Header;
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.RawBoundary;
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.RawFrame;
+import com.openggf.tests.TestTempFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +23,7 @@ class TestS2CompleteRunRealRow769DecodeGate {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         Path rom = requiredPath("S2_ROM_PATH");
         Path movie = requiredPath("S2_BK2_PATH");
-        Path raw = Files.createTempFile("openggf-s2-row769-", ".jsonl");
+        Path raw = TestTempFiles.createTempFile("openggf-s2-row769-", ".jsonl");
         Files.delete(raw);
         try {
             ProcessBuilder builder = new ProcessBuilder(

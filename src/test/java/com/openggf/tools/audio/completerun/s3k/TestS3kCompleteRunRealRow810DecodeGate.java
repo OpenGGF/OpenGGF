@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun.s3k;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.openggf.tests.TestTempFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -18,7 +19,7 @@ class TestS3kCompleteRunRealRow810DecodeGate {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         Path rom = requiredPath("S3K_ROM_PATH");
         Path movie = requiredPath("S3K_BK2_PATH");
-        Path raw = Files.createTempFile("openggf-s3k-row810-", ".jsonl");
+        Path raw = TestTempFiles.createTempFile("openggf-s3k-row810-", ".jsonl");
         Files.delete(raw); // The C# publisher deliberately requires a create-new target.
         try {
             ProcessBuilder builder = new ProcessBuilder(
