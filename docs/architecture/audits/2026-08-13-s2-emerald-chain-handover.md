@@ -1,7 +1,27 @@
 # S2 emerald chain — handover
 
 **Date:** 2026-08-13
-**Status:** halfpipe chain green; emerald chain red with one root cause, boundary proven.
+**Status: THIS AUDIT'S CENTRAL CLAIM IS RETRACTED (same day, by measurement).** "The
+remaining 63 rows are unreachable within the rules" is false. A probe of the native S2 run
+recorder over the canonical emerald BK2 measured **62 lag frames** inside the
+`seg4_ehz1 -> seg5_ehz2` seam against the 63-row residual, arranged in three runs whose
+boundaries land exactly on the failing edges. They are `Vint_Lag` frames — the ROM's own
+classification (`s2.asm:481-484, 501, 529-583`) — i.e. contract-1 main-loop-admission
+outcomes, which is the disposition the cross-game contract already assigns to long
+synchronous decompression. The blockers are two **capture** defects, both in the recorder,
+and neither is a modelling impossibility. Full decomposition, ROM attribution, and the
+five-precondition audit are in
+[the design note](../designs/2026-08-13-level-entry-seam-frame-costing.md#2026-08-13-measured-the-63-rows-are-vint_lag-frames).
+The three "avenues measured, not assumed" below were each measured against the wrong
+question: none of them asked whether the missing frames were *recorded as lag*.
+
+Two further corrections measured at `8c9adc250`: the residual seam delta is **63 and 10**
+(the pre-card title-card edges are 10 rows **late**, not early), and **only one** of the five
+axes is this seam — `ss_4 -> seg6_ehz2` is a 1-row offset and `ss_5 -> seg7_ehz2` is an
+edge-count/content mismatch (16 vs 18).
+
+**Older status line (superseded):** halfpipe chain green; emerald chain red with one root
+cause, boundary proven.
 **Asks a decision.** Everything reachable within the project's rules has been done.
 
 ## Summary

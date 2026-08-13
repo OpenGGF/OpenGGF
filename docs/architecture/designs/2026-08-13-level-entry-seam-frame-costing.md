@@ -1,6 +1,17 @@
 # Level-entry seam frame costing
 
-**Status:** diagnosed; blocked on a **capture-side** change, not an engine one. The
+**Status: REOPENED 2026-08-13 by direct measurement. The verdict below ("abandon; no
+candidate throughput of any kind") is WRONG, and so is the handover audit that repeats it.**
+The 63 residual rows are **`Vint_Lag` frames** — the ROM's own name for them — and the
+emulator records them. They are neither incomputable nor a decompression rate: they are
+main-loop-admission outcomes, exactly the contract-1 disposition the cross-game timing
+contract already assigns to "long synchronous decompression or level initialization".
+See [the measurement section](#2026-08-13-measured-the-63-rows-are-vint_lag-frames) at the
+foot of this note. Everything between here and there is retained for its ROM citations and
+its correctly-ruled-out shortcuts; its *conclusion* is superseded.
+
+**Older status line (superseded):** diagnosed; blocked on a **capture-side** change, not an
+engine one. The
 original framing of this note (that it needed a suspendable level-load state machine) was
 **refuted by the feasibility pass below** — the ordering is already correct and the only
 missing quantity is the pre-card span's duration, for which no permitted source exists in
@@ -312,3 +323,164 @@ decompression rate. The authorised regeneration cannot be spent on this.
 bad one. The `LoadZoneTiles` V-int cost is landed on its own merits as ROM accuracy, closing
 8 of the 71; the remaining 63 stay an un-timed residual, the same class S1 already absorbs
 as 34–40 rows.
+
+## 2026-08-13, measured: the 63 rows are `Vint_Lag` frames
+
+The section above concludes the residual has "no candidate throughput of any kind". That is
+false, and the error was reasoning about the seam instead of observing it. A throwaway probe
+was added to the native S2 run recorder — logging `(frame, Game_Mode, IGpgxHost.IsLagged)`
+for every physical emulator frame — and run against the canonical emerald BK2. It is not
+committed; it existed only to answer this question.
+
+### The seam, decomposed
+
+`seg4_ehz1` closes at BK2 row 32760; `seg5_ehz2` opens at 32931. Every frame between reads
+`Game_Mode = $8C`. Run-length encoding the probe over that span, and attributing each run to
+the ROM:
+
+| BK2 rows | n | lag | ROM span |
+|---|---|---|---|
+| 32761–32783 | 23 | no | `Pal_FadeToBlack`, `move.w #$15,d4` + `WaitForVint`/pass (`s2.asm:3370-3383`) |
+| 32784–32794 | **11** | **YES** | `move #$2700,sr`; `ClearScreen`; `LoadTitleCard` (`s2.asm:4767-4770`) |
+| 32795–32847 | 53 | no | `Level_TtlCard` loop, one `WaitForVint`/pass, PLC drain (`s2.asm:4914-4920`) |
+| 32848–32861 | **14** | **YES** | `Hud_Base`, `PalLoad_ForFade`, `LevelSizeLoad`, `DeformBgLayer`, `Horiz_Scroll_Buf` clear (`s2.asm:4923-4936`) |
+| 32862–32869 | 8 | no | `LoadZoneTiles`, one `WaitForVint` per `$1000`-byte chunk (`s2.asm:6519`) |
+| 32870–32906 | **37** | **YES** | `loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`, `LoadCollisionIndexes`, `WaterEffects`, `InitPlayers` (`s2.asm:4938-4946`) |
+| 32907–32930 | 24 | no | leave loop, `VintID_TitleCard` + `WaitForVint`/pass (`s2.asm:5060-5066`) |
+
+**Lag frames: 11 + 14 + 37 = 62. The residual this note abandoned is 63.**
+
+Two independent cross-checks fall out of the same table and were not used to build it:
+
+- the 8 non-lag rows at 32862–32869 are exactly the `LoadZoneTiles` count `8695c029e`
+  derived for EHZ from `ArtTile_ArtKos_NumTiles_*`, arrived at from the ROM with no
+  reference to any recording;
+- the 53 non-lag rows at 32795–32847 are the 52-row PLC drain the engine already models.
+
+The failing edges land on the run boundaries, not near them — and this is checkable without
+rerunning anything, straight out of the committed
+`run_manifest.json` `dynamic_art_gap_transitions`, whose `movie_logical_frame` is in the same
+absolute BK2 coordinates as the probe:
+
+| edge | frame | phase/owner | falls on |
+|---|---|---|---|
+| 0,1 | 32760 | submitted `tails` | last recorded gameplay row |
+| 2,3 | **32794** | completed | **last frame of the 11-frame masked `LoadTitleCard` lag run** |
+| 4,5 | **32905** | submitted `sonic`/`tails` | **penultimate frame of the 37-frame `InitPlayers` lag run** |
+| 6,7 | **32906** | completed | **last frame of that lag run** |
+| 8,9 | 32921/32922 | submitted/completed | inside the leave loop (non-lag) |
+| 10,11 | 32929/32930 | submitted/completed | inside the leave loop (non-lag) |
+
+`run_gap.edge[2]`/`[3]`
+(title-card art) is recorded at **32794** — the last frame of the masked `LoadTitleCard`
+run. `edge[4]`–`[7]` (player art, submitted by `InitPlayers`) are recorded at **32905/32906**
+— the last frames of the 37-frame lag run that ends at `InitPlayers`. The lag structure does
+not merely total 63; it places every edge.
+
+### A second seam, and the cross-check that proves the probe reads ROM structure
+
+The probe was repeated over `seg7_ehz2 -> seg8_cpz1` (61028 → 61206, length 178), a
+different zone with a different art payload:
+
+| BK2 rows | n | lag | same ROM span as above |
+|---|---|---|---|
+| 61029–61051 | 23 | no | `Pal_FadeToBlack` |
+| 61052–61062 | **11** | **YES** | masked `ClearScreen` / `LoadTitleCard` |
+| 61063–61124 | 62 | no | `Level_TtlCard` PLC drain |
+| 61125–61138 | **14** | **YES** | `Hud_Base` … `Horiz_Scroll_Buf` clear |
+| 61139–61145 | **7** | no | `LoadZoneTiles` |
+| 61146–61181 | **36** | **YES** | `loadZoneBlockMaps` … `InitPlayers` |
+| 61182–61205 | 24 | no | leave loop |
+
+Total lag **61** against EHZ's 62. Note what varies and what does not. The two fixed-code
+lag runs are **11** and **14** at both seams. The payload-dependent runs move: the PLC drain
+53 → 62, the art-conversion lag run 37 → 36.
+
+And `LoadZoneTiles` reads **8 at the EHZ seam and 7 at the CPZ seam** — which is exactly the
+per-zone table `8695c029e` derived from `ArtTile_ArtKos_NumTiles_*` and
+`floor(size/$1000)+1`, with no reference to any recording (EHZ 8, CPZ 7). Two independent
+routes to the same two numbers is the check that the probe is reading the ROM's scheduling
+and not an emulator artefact.
+
+The manifest's edges follow the same rule at this seam: card art completes at **61062**, the
+last frame of the 11-frame masked run; player art is submitted at **61180** and completes at
+**61181**, the last frame of the 36-frame `InitPlayers` run. Both anchors are fixed
+(`+34` from the seam start, `len-26` from its end) and the middle is payload-dependent —
+**111 rows at the EHZ seam, 118 at the CPZ seam** — which is why no constant can serve and
+why the middle must come from the recording as an admission outcome.
+
+### Why the flag discriminates, from the ROM
+
+`V_Int` branches to `Vint_Lag` whenever `Vint_routine` is zero (`s2.asm:481-484`) and writes
+`VintID_Lag` back after every dispatch (`s2.asm:501`), so a routine set by `WaitForVint`
+runs exactly once. Straight-line 68K code between `WaitForVint` calls therefore takes the
+`Vint_Lag` path, and neither `Vint_Lag` nor its in-level branch calls `ReadJoypads`
+(`s2.asm:529-583`) — whereas `Vint_TitleCard` does (`s2.asm:1005-1008`). BizHawk's
+`IInputPollable.IsLagFrame` is "no controller poll this frame", so the emulator flag and the
+ROM's own `Vint_Lag` classification coincide **by construction**. This is not an emulator
+artefact standing in for game behaviour; it is the game's own scheduling outcome.
+
+`VintRet` still does `addq.l #1,(Vint_runcount).w` (`s2.asm:505-506`) on the lag path, which
+is what replay must advance on such a row — and is the principled form of the
+`interLevelVblankBudget` trap, which advances the same counter by a frame-index arithmetic
+without spending the rows.
+
+### Which precondition actually fails
+
+Against the contract's five lag-sufficiency preconditions
+([the cross-game contract](2026-07-27-cross-game-hardware-timing-trace-contract.md), "S1/S2
+lag-frame coverage audit"):
+
+1. **raw capture includes every physical emulator frame — FAILS.** `S2RunCaptureRunner`
+   `continue`s without writing a row on every frame where no segment is armed
+   (`tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs`, the `if (!state.Started)`
+   arm gate), so all 170 seam frames are recorded nowhere.
+2. **the lag flag distinguishes a serviced interrupt from an executed gameplay loop —
+   FAILS, and independently of (1).** `S2TraceCsvWriter` writes the level `lag_counter`
+   column as a literal `Hex4(0)` placeholder; measured over `seg4_ehz1`'s 1288 rows the
+   column has exactly one distinct value, `0000`. S2 **special-stage** rows carry a real
+   `lag` column, so the discriminator exists in the harness and is simply not wired to the
+   level writer. Both failures are capture defects, not modelling impossibilities: the
+   underlying flag does discriminate, as measured above.
+3. **replay advances the required VInt-owned counters and queues on that row** —
+   implementable; `Vint_runcount` advances (`s2.asm:505-506`), `Level_frame_counter` does
+   not (the level main loop owns it).
+4. **input sampling/reuse follows the game's lag path** — holds; `Vint_Lag` performs no
+   `ReadJoypads`, so no controller word is republished on those rows.
+5. **no ordinary main-loop routine polls a still-pending readiness value across multiple
+   non-lag rows** — holds. The one polled gate in the seam is `tst.l (Plc_Buffer).w`
+   (`s2.asm:4919`) inside `Level_TtlCard`, and it is already reproduced deterministically as
+   the 52-row drain.
+
+So lag **is** sufficient here, and the two failures are both in the recorder.
+
+### What this does and does not license
+
+The consumed quantity is one bit per physical frame: *did the main loop run*. It carries no
+position, speed, object state, or any physics/aux comparison value, and it changes only
+*when* engine-created work becomes ready — the sanctioned shape. It is categorically not the
+reverted end-anchoring attempt, which fed a recorded **frame index**
+(`next.segment().bk2FrameOffset()`) into `TitleCardManager`, a gameplay owner. A per-seam
+run-length census of that bit is *observation, not authority*, which is precisely what the
+superseded S1 note
+([2026-08-10-s1-pre-main-loop-load-span-timing-extension.md](2026-08-10-s1-pre-main-loop-load-span-timing-extension.md))
+recommended for the same problem class: "Publish the tail rows, or a movie-wide V-int
+census, as recorded fixture data."
+
+No completion event, no new hardware-timing kind, and no codec authority is involved, in
+line with the contract's inventory rows for synchronous decompression.
+
+### Remaining work, unstarted
+
+1. Populate the S2 level `lag_counter` column from `IGpgxHost.IsLagged` instead of the
+   placeholder, and emit the unarmed seam frames' admission outcome (the smallest form is a
+   per-transition run-length census in `run_manifest.json`; the fuller form is rows).
+2. Regenerate the S2 emerald and halfpipe fixtures, payloads compressed, `trace_schema: 5`.
+3. Spend the seam rows in replay as lag rows: advance `Vint_runcount`, service the V-int
+   equivalent, run no gameplay, follow the lag input path, and hold the title-card request
+   consumption behind the recorded admission outcomes rather than any constant.
+
+Nothing above was implemented this round; only the measurement was taken. Note also that the
+handover's "four of five axes trace to one defect" does not reproduce at `8c9adc250`: the
+`ss_4 -> seg6_ehz2` axis is a 1-row offset and the `ss_5 -> seg7_ehz2` axis is an edge-count
+and content/ordering mismatch (16 vs 18), neither of which is this seam.
