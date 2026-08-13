@@ -2741,6 +2741,21 @@ abstract class AbstractRunChainTest {
         // recorded row index -- the destination offset minus that sum.
         boolean[] gapLag = expandGapAdmissionCensus(exit);
         int gapOrigin = destinationOffset - gapLag.length;
+        // CONTRACT 1, ordering. The ROM's level-entry load creates the
+        // playables at its very END: Level: reaches InitPlayers
+        // (docs/s2disasm/s2.asm:4946) only after LoadZoneTiles,
+        // loadZoneBlockMaps, LoadAnimatedBlocks, DrawInitialBG,
+        // ConvertCollisionArray, LoadCollisionIndexes and WaterEffects
+        // (:4938-4945), and everything after it -- the leave loop at
+        // :5060-5066 -- waits on V-int every pass, so the main loop is
+        // admitted on every remaining row of the gap. The span that ends with
+        // the players' creation is therefore the census's LAST non-admitted
+        // run, located structurally and not by any length. The engine runs the
+        // same load with no frame cost, so its playables take their first art
+        // decision while the ROM was still loading; holding that decision
+        // until this row moves only WHEN engine-created work becomes visible.
+        int loadCompletionIndex = lastNonAdmittedRow(gapLag);
+        holdPlayerArtForLevelEntryLoad(loadCompletionIndex >= 0);
         for (int step = 0; step <= stepCap; step++) {
             int cursor = playback.getCursorFrame();
             int rowsConsumed = step == 0
@@ -2751,6 +2766,10 @@ abstract class AbstractRunChainTest {
                             exit, obs.observedBk2Frame(),
                             loop.getCurrentGameMode(),
                             rowsConsumed, observedLoad)) {
+                // Fail-safe: a gap that admitted before its load-completion
+                // row publishes the held decisions here rather than leaking
+                // them into the next segment.
+                releasePlayerArtForLevelEntryLoad();
                 return rowsConsumed;
             }
             if (rowsConsumed > 1) {
@@ -2767,8 +2786,9 @@ abstract class AbstractRunChainTest {
                     && gapLag[gapIndex];
             stepEngineFrameInTransitionGap(
                     gameplayMode, loop, playback, playback.getCursorFrame(),
-                    lagRow);
+                    lagRow, gapIndex == loadCompletionIndex);
         }
+        releasePlayerArtForLevelEntryLoad();
         throw new AssertionError(
                 "Segment " + segmentIndex + " destination "
                         + next.segment().dir()
@@ -3722,6 +3742,46 @@ abstract class AbstractRunChainTest {
     private void stepEngineFrameInTransitionGap(
             GameplayModeContext gameplayMode, GameLoop loop,
             PlaybackDebugManager playback, int movieRow, boolean lag) {
+        stepEngineFrameInTransitionGap(gameplayMode, loop, playback, movieRow,
+                lag, false);
+    }
+
+    /**
+     * Index of the last row of a gap the main loop was not admitted on, or
+     * {@code -1} when the census records no such row. In the ROM's level-entry
+     * sequence that row is the one {@code InitPlayers} runs on
+     * (docs/s2disasm/s2.asm:4946): every span after it waits on V-int per pass
+     * (the leave loop, :5060-5066) and so admits the main loop.
+     */
+    private static int lastNonAdmittedRow(boolean[] gapLag) {
+        for (int index = gapLag.length - 1; index >= 0; index--) {
+            if (gapLag[index]) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static void holdPlayerArtForLevelEntryLoad(boolean arm) {
+        var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+        if (!arm || lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        lifecycle.holdPlayerArtDuringLevelEntryLoad();
+    }
+
+    private static void releasePlayerArtForLevelEntryLoad() {
+        var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        lifecycle.releasePlayerArtHeldDuringLevelEntryLoad();
+    }
+
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow, boolean lag,
+            boolean levelEntryLoadCompletes) {
         TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(gapRows);
         try {
@@ -3747,9 +3807,23 @@ abstract class AbstractRunChainTest {
                         public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
                             if (lag) {
                                 serviceLagRowVint();
+                                if (levelEntryLoadCompletes) {
+                                    // The ROM's level-entry load finishes on
+                                    // this row, at InitPlayers
+                                    // (docs/s2disasm/s2.asm:4946). Publishing
+                                    // the held playable art here runs no
+                                    // gameplay lifecycle: it only makes work
+                                    // the engine already created visible on
+                                    // the row the ROM created it on.
+                                    stateMovieLogicalRow(step);
+                                    releasePlayerArtForLevelEntryLoad();
+                                }
                                 return;
                             }
                             stepEngineFrame(loop);
+                            if (levelEntryLoadCompletes) {
+                                releasePlayerArtForLevelEntryLoad();
+                            }
                         }
 
                         @Override

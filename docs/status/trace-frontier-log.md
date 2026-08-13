@@ -74178,3 +74178,19 @@ failure counts.
   `com.openggf.level.objects.**`, `TestCollisionLogic` + four guards): **3496 / 17 / 7 /
   3, 12 red**, and a control run at the same commit with the fix reverted gave the same
   12 classes with identical per-class failure/error counts.
+
+## 2026-08-13 - S2 level-entry player art lands on `InitPlayers` (edge[4]-[7] -38 -> 0)
+
+- Worktree `wt/seam-initplayers`, branch
+  `bugfix/ai-s2-level-entry-initplayers-art`, over `0bc7cc4be`.
+- Command: `mvn -Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain test` with
+  the S2 REV01 ROM property.
+- `TestS2CompleteEmeraldRunChain` still FAILS, on the same 5 axes with the same
+  fields. First error frame/field unchanged: segment 11, frame 3525,
+  `queue.s2_nemesis_plc.busy`, 236 physics errors.
+- Frontier movement: the `seg4_ehz1 -> seg5_ehz2` dynamic-art gap axis lost its
+  four player-art errors. `run_gap.edge[4]`-`[7]` -38 -> **0**; `edge[2]/[3]`
+  still 0, `edge[8]`-`[11]` still -1, `edge_count` still 12. The `seg7_ehz2`
+  source-comparator frontier is unchanged at 3977 of 3997, so no comparator was
+  starved.
+- Full `-Ptrace-replay` on the base and fix trees: identical 68-test red sets.

@@ -545,3 +545,69 @@ Contract 1 forbids the fix: a lag row runs no gameplay, and the cause of the mis
 deliberately absent. Making the level-load pipeline progress *during* the lag rows is exactly
 the frame-costing of the level load this note recommended deferring — but the census now
 supplies the missing input it would need, which the earlier sections concluded did not exist.
+
+## 2026-08-13, implemented: the player art lands on `InitPlayers`, exactly
+
+The section above ends by saying the remaining fix — making the level-load pipeline
+progress *during* the lag rows — is forbidden by contract 1. That reading was too strong,
+and this round tested it against the contract text rather than restating it.
+
+Contract 1 says replay "services the ROM-equivalent interrupt work, retains/re-samples
+controls according to the game's lag policy, **and does not run gameplay**". It forbids
+*gameplay* on a lag row. Publishing a submission the engine already created is not
+gameplay: it creates no work, calls no gameplay owner, reads no gameplay value, and changes
+only *when* engine-created work becomes visible — the sanctioned shape the contract names.
+No object update, physics step, or lifecycle tick runs on the released row.
+
+### What was measured first
+
+A throwaway probe on `DynamicArtLifecycleService.emitGapEdge` (stack-filtered, not
+committed) showed the `seg4_ehz1 -> seg5_ehz2` player-art edges being submitted from
+`PlayableSpriteAnimation.update` → `DynamicArtDecisionOwner.observe`, inside
+`GameLoopTitleCardLifecycle`, at BK2 row **32867** — during the census's 8-row
+`LoadZoneTiles` run. The ROM submits at **32905**, the last row of the following 37-row lag
+run, because `Level:` reaches `InitPlayers` (`s2.asm:4946`) only after `LoadZoneTiles`,
+`loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,
+`LoadCollisionIndexes` and `WaterEffects` (`:4938-4945`). The engine's load has no frame
+cost, so its playables exist — and take their first art decision — while the ROM was still
+loading.
+
+### Where the run is located, and why it is not a constant
+
+`InitPlayers` ends the census's **last non-admitted run**, and that is a ROM-structural
+fact, not a measurement: everything after `InitPlayers` is the leave loop
+(`s2.asm:5060-5066`), which does `WaitForVint` every pass and therefore admits the main
+loop on every remaining row of the gap. So the load-completion row is
+`lastNonAdmittedRow(census)` — no length, no index, no 37 and no 38 anywhere in the code.
+A zone with a different payload moves that run's length and the code follows it.
+
+### What landed
+
+- `DynamicArtLifecycleService` gains a level-entry hold. While armed, a playable art
+  decision maintains the ROM's per-owner dedup register exactly as before and still hands
+  its tiles to the renderer, but stages the ledger edge instead of emitting it. The release
+  submits every staged decision, in order, on the row it is called from. Nothing arms it in
+  production, where the path is byte-for-byte the old one.
+- `AbstractRunChainTest.admitLevelWhenReady` arms the hold when the census has a
+  non-admitted run and releases it on that run's last row, after the row's lag V-int
+  service. A gap that admits early releases at admission, so nothing leaks forward.
+
+### Measured, base `0bc7cc4be` vs this change
+
+| edge | expected | before | after |
+|---|---|---|---|
+| `run_gap.edge[2]/[3]` (title-card art) | 32794 | 32794 (**0**) | 32794 (**0**) |
+| `run_gap.edge[4]/[5]` (player art submitted) | 32905 | 32867 (**-38**) | 32905 (**0**) |
+| `run_gap.edge[6]/[7]` (player art completed) | 32906 | 32868 (**-38**) | 32906 (**0**) |
+| `run_gap.edge[8]`–`[11]` (leave loop) | 32921–32930 | **-1** | **-1** |
+
+Nothing else moved: `edge_count` still 12 (no edge vanished — edges 4-7 are compared and
+match), segment 11 stays at 236 physics errors, the `seg7_ehz2` source comparator frontier
+stays at 3977 of 3997, and the test still reports the same **5** axes. The two full
+`-Ptrace-replay` runs, one per tree, ended on **identical 68-test red sets**.
+
+### What is left on this seam
+
+Only `edge[8]`–`[11]`, a uniform **-1** across the leave loop. That is a different defect
+from the one this note has chased: both ends are now anchored correctly and the residual
+is a single row inside the leave loop, not a payload-dependent span.
