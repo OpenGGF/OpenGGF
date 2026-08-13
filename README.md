@@ -229,6 +229,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
   complete-emerald level seam halves (398 to 196), with two edge pairs landing within
   one row of the recording. The census carries lengths only, never a row index, and a
   lag row runs no gameplay -- it is a scheduling outcome, not trace-driven state.
+  A companion fix removes a 21-frame reveal fade the engine performed on returning to
+  a level: the ROM's level-entry path contains no `Pal_FadeFromBlack` at all, showing
+  the title card at full intensity via `PalLoad_Now`. With both landed, the
+  complete-emerald level seam's title-card art transfers now match the recording
+  exactly.
   Alongside it, two ROM-derived seam fixes: `Pal_FadeToBlack`'s 22 counted V-blanks
   are no longer stepped through with the movie clock frozen, and `LoadZoneTiles` now
   spends one V-blank per `$1000`-byte DMA chunk as the ROM does.
