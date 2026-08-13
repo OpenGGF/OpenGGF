@@ -1353,8 +1353,8 @@ abstract class AbstractRunChainTest {
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
                 if (activeComparator != null) {
-                    completePinnedSourceTailAfterBoundary(
-                            loop, activeComparator, seg, stepCap,
+                    completeSourceTailReportingOnFailure(
+                            run.runId(), i, loop, activeComparator, seg, stepCap,
                             activeComparator.cursor(), levelAtSegmentStart);
                 }
                 // Write the interior's comparator report BEFORE asserting the
@@ -1512,8 +1512,8 @@ abstract class AbstractRunChainTest {
                                                 receipt.identity()));
                             }
                         });
-                completePinnedSourceTailAfterBoundary(
-                        loop, activeComparator, seg, stepCap,
+                completeSourceTailReportingOnFailure(
+                        run.runId(), i, loop, activeComparator, seg, stepCap,
                         activeComparator.cursor(), levelAtSegmentStart);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
@@ -1561,8 +1561,8 @@ abstract class AbstractRunChainTest {
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(
                                 probe, exit, stepCap, () -> stepEngineFrame(loop));
-                completePinnedSourceTailAfterBoundary(
-                        loop, activeComparator, seg, stepCap,
+                completeSourceTailReportingOnFailure(
+                        run.runId(), i, loop, activeComparator, seg, stepCap,
                         initialComparisonCursor, levelAtSegmentStart);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
@@ -2292,6 +2292,38 @@ abstract class AbstractRunChainTest {
         return comparator.isComplete()
                 || comparator.cursor()
                         >= TraceRunReplayWalker.levelLoopRowCount(segment.trace());
+    }
+
+    /**
+     * Runs {@link #completePinnedSourceTailAfterBoundary} and, if the pinned
+     * tail cannot complete, emits this segment's comparator evidence before
+     * rethrowing.
+     *
+     * <p>The tail assertion aborts the whole walk, so a segment that fails it
+     * never reaches its own {@link #maybeWriteReport} call further down the
+     * branch: its report is never written and its already-computed physics
+     * error count is never asserted, leaving the segment-physics axis silently
+     * absent from the failure. That is the same reporting-before-asserting
+     * order the interior and entry branches already use ("Write the interior's
+     * comparator report BEFORE asserting the boundary was observed"), applied
+     * to the one assertion that still preceded it.
+     *
+     * <p>Nothing is weakened: the tail failure is rethrown unchanged and still
+     * fails the run. {@link #assertSegmentPhysics} only records into
+     * {@code chainAxisFailures}, so both axes are reported together, additively.
+     */
+    private void completeSourceTailReportingOnFailure(
+            String runId, int segmentIndex, GameLoop loop,
+            LiveTraceComparator comparator, SegmentPlan segment, int stepCap,
+            int initialCursor, Object sourceLevel) throws IOException {
+        try {
+            completePinnedSourceTailAfterBoundary(
+                    loop, comparator, segment, stepCap, initialCursor,
+                    sourceLevel);
+        } catch (AssertionError tailFailure) {
+            maybeWriteReport(runId, segmentIndex, comparator);
+            throw tailFailure;
+        }
     }
 
     private void completePinnedSourceTailAfterBoundary(
