@@ -1003,3 +1003,67 @@ code written in a hurry, and a hypothesis derived from mislabelled output is
 indistinguishable from one derived from real data until someone re-instruments the
 actual site. When a probe seems to show the engine doing something structurally
 impossible, suspect the probe first.
+
+## Axis 4 is not closable at frame granularity — and the anchor is luckier than it looks
+
+`ss_4 -> seg6_ehz2` reports `run_gap.edge[0]`/`[1]`.`movie_logical_frame` expected 46347,
+actual 46348 — the engine one row **late**, opposite to every other seam defect. Aligned by
+transfer id: edge[0] = tid 28084 submitted/sonic/`run_gap`/mapping frame 1/pc `0x1B89A`;
+edge[1] = tid 28085 submitted/tails/pc `0x1D1FE`. The matching *completed* pair at 46349
+**matches** — only the submission row is wrong.
+
+### The anchor is an approximation that happens to work
+
+`admitLevelWhenReady` releases the held player art on `lastNonAdmittedRow(census)`. For
+`ss_4` the census is `[23,11,53,14,8,38,25]`, so the `InitPlayers` lag run is 46311..46348
+and the anchor lands on 46348 — exactly the engine's actual.
+
+Computing the tail (`lastLagEnd − submit + 1`) for **all 27 censused transitions**:
+
+| tail | count | meaning |
+|---|---|---|
+| **1** | 20 seams | the anchor coincides with the ROM |
+| **2** | 4 seams | `ss_4`, `ss_5`, `seg15_cnz2→seg16_htz1`, `seg27_wfz1→seg28_dez1` — engine one late |
+| ragged | 6 seams | `ss_6` tail 47, `ss_7` tail 8, and four level seams at 20–27 |
+
+**Nothing zone-, act-, route- or path-dependent distinguishes them.**
+`seg4_ehz1 → seg5_ehz2` (level_advance) has tail 1 while `ss_4 → seg6_ehz2` (stage_exit) has
+tail 2 — *same destination act, opposite tail*. Likewise `seg15_cnz2 → seg16_htz1` is 2 while
+`seg16_htz1 → seg17_htz2` is 1.
+
+### Why, from the ROM
+
+`Level:` reaches `InitPlayers` (`:4946`) after the load routines (`:4938-4945`). The player
+art is **not** submitted by `InitPlayers` — it is submitted by the leading `jsr (RunObjects)`
+at `:5003`, where Obj01/Obj02 display runs the DPLC. Between `:5003` and the leave loop's
+first `bsr.w WaitForVint` (`:5060-5061`) the ROM runs **only straight-line 68000 code** —
+`BuildSprites` (`:5004`), `AniArt_Load` (`:5005`), `SetLevelEndType` (`:5006`), demo setup
+(`:5007-5044`), `PalLoad_Water_ForFade` (`:5045-5056`), the leave-flag writes (`:5057-5059`)
+— with no `WaitForVint` and no polled readiness gate.
+
+So the masked-frame count in that tail is a **pure 68000 cycle count**, dominated by
+`BuildSprites`/`AniArt_Load`, whose cost depends on the object set `ObjectsManager` loaded at
+the entry position (`:5000`). The distance from the submission to the end of the masked span
+is **sub-frame CPU position**, which is why the same destination act yields 1 at one seam and
+2 at another.
+
+**Therefore axis 4 cannot close at frame granularity** without either a fitted `−1`
+(forbidden) or consuming the recorded `movie_logical_frame` that the field itself compares —
+round-tripping the answer, forbidden by rule 4. Closing it legitimately needs the capture to
+record the submission row.
+
+### Two things this exposes
+
+**`ss_6` and `ss_7` are not passing — they are unreached.** The chain aborts around segment
+11, so they are never compared. Their anchor error is 8–47 rows, far larger than axis 4 and
+currently latent.
+
+**A ROM-derived anchor improvement, found and deliberately not landed.** The leave loop
+performs exactly one `WaitForVint` per pass (`:5060-5061`), so a leave-loop pass can
+contribute **at most one** consecutive lag row — therefore any lag run of length ≥ 2 cannot
+be inside the leave loop. Anchoring on *the last lag run of length ≥ 2* is ROM-derived rather
+than a fitted threshold, and would correct the 8–47-row errors at `ss_6`, `ss_7` and the four
+ragged level seams. It changes nothing at `ss_4` and nothing on any seam the test currently
+reaches, so it is **unverifiable by measurement today**. Landing an unverifiable change to
+this heavily contested harness path was judged the wrong call; it is recommended for a round
+that can reach those seams.
