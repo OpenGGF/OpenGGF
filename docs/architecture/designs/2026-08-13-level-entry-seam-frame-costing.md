@@ -1,7 +1,10 @@
 # Level-entry seam frame costing
 
-**Status:** diagnosed, not built. Escalated — the decision is a priority call, not a
-technical one.
+**Status:** diagnosed; blocked on a **capture-side** change, not an engine one. The
+original framing of this note (that it needed a suspendable level-load state machine) was
+**refuted by the feasibility pass below** — the ordering is already correct and the only
+missing quantity is the pre-card span's duration, for which no permitted source exists in
+the current fixtures.
 
 **Date:** 2026-08-13
 
@@ -12,9 +15,12 @@ gap between two recorded segments is the correct *length*, but the engine spends
 front-loaded: it runs the entire title card first and then idles. The ROM fades, clears
 and decompresses first, and shows the card last.
 
-Correcting this requires giving the level load a **frame cost**, which today it cannot
-have. That is a cross-cutting change, and this document exists so the decision to make it
-is taken deliberately rather than as a side effect of chasing a trace test.
+~~Correcting this requires giving the level load a **frame cost**, which today it cannot
+have.~~ **Superseded.** The seam is already split at one boundary and the ordering is
+already load-then-card; see the feasibility pass. What is missing is only *how long* the
+pre-card phase should take, and that duration has no rule-compliant source today. Closing
+it needs the **recorder** to capture the S2 load span — a capture-side change, legitimate
+under the project's rules but requiring a fixture regeneration.
 
 ## What was measured
 
@@ -47,16 +53,21 @@ five failing axis slots on that test trace to this single defect.
 
 ## Why it cannot be fixed cheaply
 
-The engine executes all 20 level-init steps synchronously in one loop
-(`LevelManager.java:385-394`), so the title card necessarily begins at gap row 0.
-`InitStep` is `record(String, String, Runnable)` — **there is no frame-cost concept
-anywhere in the type**.
+> **This section's central claim is WRONG and is retained only so the error is not
+> repeated.** It asserted that the title card necessarily begins at gap row 0 because
+> `InitStep` carries no frame cost, and that ROM ordering therefore requires a suspendable
+> cross-frame state machine across all three games. The feasibility pass below measured
+> otherwise: the card is raised by a *request flag* consumed on a later frame, so the seam
+> is **already** split at one boundary and the ordering is **already** load-then-card.
+> Anyone building this should start from `consumeTitleCardRequest()`, not from `InitStep`.
 
-Giving the seam ROM ordering therefore means converting the shared level load into a
-**suspendable cross-frame state machine**, used by all three games, every test, the editor
-and level select.
+~~The engine executes all 20 level-init steps synchronously in one loop
+(`LevelManager.java:385-394`), so the title card necessarily begins at gap row 0.~~
+~~Giving the seam ROM ordering therefore means converting the shared level load into a
+suspendable cross-frame state machine.~~
 
-Two tempting shortcuts are both wrong:
+The shortcuts below remain correctly ruled out, and are the real obstacle — both are
+attempts to supply the missing *duration*:
 
 - **A pre-card hold of 22 rows** (the `Pal_FadeToBlack` count). This is a fitted constant
   in ROM costume. The remaining ~70 rows are interrupts-off screen work plus Kosinski
@@ -106,7 +117,55 @@ frame costs and no 20-step state machine: only the seam itself becomes two suspe
 phases.
 
 This may still founder on the same "init runs synchronously in one loop" blocker, in which
-case it collapses back to the full job. It has not been attempted.
+case it collapses back to the full job.
+
+### 2026-08-13 feasibility pass: attempted, and it does not thread the rules
+
+The pass was run and landed no code. Three findings, in increasing order of finality.
+
+**The ordering is already correct; only the duration is missing.** The engine does not run
+the card before the load. `LevelManager.loadLevel` completes every init step, and the card
+is raised by a *request flag* consumed on a later frame update
+(`GameLoop.java:1645-1653`, `presentPendingTitleCardDuringSuppressedRunRow`
+`GameLoop.java:914-921`, both via `levelManager.consumeTitleCardRequest()`). The seam is
+therefore *already* split at exactly one boundary, and the "two coarse ROM-ordered phases"
+shape needs no new suspension point at all — holding the request consumption is a few
+lines. Nothing here is blocked by `InitStep` lacking a frame-cost concept. The entire
+93-row delta is that the load phase costs **zero** frames, so the variant reduces, with no
+residue, to "how many frames does the pre-card phase cost" — the one question the fitted
+constant is forbidden to answer.
+
+**The sanctioned timing port has no data for S1 or S2, and cannot acquire any within the
+existing fixtures.** `hardware_timing.jsonl` is emitted only by the S3K output set
+(`tools/bizhawk-headless/src/Program.cs:25-38`: `TraceOutputFileNames` is physics/aux/
+metadata, `S3kTraceOutputFileNames` adds the timing stream), and the recorder defines
+exactly two kinds, `kos_module_queue` and `kos_decompression_queue`
+(`HardwareTimingEventEngine.cs:18,21`). Of the 202 `hardware_timing*` files under
+`src/test/resources/traces`, **zero** are under `s1/` or `s2/`. Using the port for the S2
+emerald run would require extending the S2 recorder, minting a new event kind, and
+republishing the fixture.
+
+**Even with such a stream, the pre-card span fails contract 3's preconditions.** Between
+`Level:` and `Level_TtlCard` the ROM performs no `WaitForVint` other than the 22 inside
+`Pal_FadeToBlack`; `ClearScreen`/`LoadTitleCard` run under `move #$2700,sr`
+(`s2.asm:4767-4770`) and everything through `Level_ClrRam`, the VDP setup, `Level_LoadPal`
+and `Level_PlayBgm` (`:4806-4913`) runs inline. The main loop does **not** continue while
+this work is pending, and no readiness gate for it is polled. The one readiness gate that
+does exist — `tst.l (Plc_Buffer).w`, `s2.asm:4919` — is polled *inside* `Level_TtlCard`,
+i.e. after the card object already exists, so it cannot gate card creation; it is the
+52-row drain the engine already models. By the contract's own governing principle
+("record the smallest scheduling outcome observable to the game… a new completion event is
+reserved for work that remains pending while the main loop continues"), this span is
+contract 1 (lag) / contract 2 (execution phase) work, not contract 3. Recording it as a
+completion event would be recording the hardware cause, which the contract forbids.
+
+Measuring host decompression time instead is closed by the contract's goals: "keep replay
+independent of host decompression, rendering, I/O, and CPU speed."
+
+**Verdict:** the smaller variant is not viable. The blocker is not the state machine — the
+suspension point already exists — it is that no permitted source can supply the pre-card
+duration. The recommendation below stands unchanged, and whoever builds this deliberately
+should start from `consumeTitleCardRequest()`, not from `InitStep`.
 
 ## Recommendation
 
