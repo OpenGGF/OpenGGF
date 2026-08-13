@@ -250,10 +250,20 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
                 services().advanceToNextLevel();
             }
 
-            // Keep transition atomic: once the new level is loaded, immediately
-            // start the reveal fade to avoid remaining in HOLD_BLACK.
-            var reveal = services().nativeFadeLifecycle().beginNativeBlockingFade();
-            fadeManager.startFadeFromBlack(reveal.wrapCompletion(() -> { }));
+            // The ROM does not fade back in here. `Level:` runs
+            // ClearPLC + Pal_FadeToBlack (docs/s2disasm/s2.asm:4764-4765) and
+            // then, with no Pal_FadeFromBlack anywhere between `Level:`
+            // (:4757) and `Level_MainLoop` (:5087), writes the level palette
+            // straight to the active palette with `bsr.w PalLoad_Now` (:4881).
+            // So the title card appears at full intensity on the first V-blank
+            // of `Level_TtlCard`'s loop (:4914-4915). Running a reveal fade
+            // here instead holds PALETTE_FADE for its whole duration and
+            // pushes the first title-card-owned V-blank -- and the
+            // ProcessDMAQueue that retires the outgoing act's last player DPLC
+            // pair -- that many rows late. This is the same correction, and
+            // the same mechanism, as the special-stage results screen's
+            // clearOverlayForImmediatePaletteLoad (GameLoop#enterResultsScreen).
+            fadeManager.clearOverlayForImmediatePaletteLoad();
         }));
     }
 

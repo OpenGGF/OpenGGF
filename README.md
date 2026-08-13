@@ -233,7 +233,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   a level: the ROM's level-entry path contains no `Pal_FadeFromBlack` at all, showing
   the title card at full intensity via `PalLoad_Now`. With both landed, the
   complete-emerald level seam's title-card art transfers now match the recording
-  exactly.
+  exactly, and the seam's total art-edge error falls by more than half.
   Alongside it, two ROM-derived seam fixes: `Pal_FadeToBlack`'s 22 counted V-blanks
   are no longer stepped through with the movie clock frozen, and `LoadZoneTiles` now
   spends one V-blank per `$1000`-byte DMA chunk as the ROM does.
