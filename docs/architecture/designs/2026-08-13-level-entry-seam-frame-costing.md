@@ -972,3 +972,34 @@ now measured and refuted.
 
 Fingerprint so the lever is recognisable: *census-walk-alone = 58,355 at segment 2, frame 1,
 `sidekick_x` 0x0DDE vs 0x0DDD, four sidekick-only fields, player clean to frame 52.*
+
+## Seventh refutation, and a warning about probe output
+
+**Claim:** the engine takes `Stand` on a pass where dx = 32, where the ROM's
+`beq` (`s2.asm:39302-39303`) requires dx = 0 — one missing accelerating pass.
+
+**Refuted.** Direct instrumentation of the comparison site shows the engine does *not*
+stand on that pass:
+
+```
+f=2986  dx=0   targetX=3536              legitimate Stand (seeded target)
+f=2987  dx=32  targetX=3568  inR=true    FollowRight taken
+f=2988  gv=12                            accelerating
+```
+
+The ROM detail that matters, and which the claim got wrong: the delta compared is the
+**delayed/seeded target** minus Tails (`:39284-39291`, seed = `Sonic.x − $20` from
+`Obj01_Init_Continued` `:36206-36216`), **not** the live leader x. S2's
+`sidekickFollowLeadOffset` is 0 (`GameRules.java:282-285`), so the engine's dx is the
+ROM's `d2` exactly.
+
+**How the false contradiction arose — worth remembering.** An earlier probe printed
+`liveLeaderX` under the `delayedTargetX` column heading, and reported a *pre-pass*
+inertia as post-pass. Reading those columns at face value produced an apparent
+`Stand`-with-dx=32 that does not exist in the engine.
+
+**A probe's column labels are not measurements.** They are as fallible as any other
+code written in a hurry, and a hypothesis derived from mislabelled output is
+indistinguishable from one derived from real data until someone re-instruments the
+actual site. When a probe seems to show the engine doing something structurally
+impossible, suspect the probe first.
