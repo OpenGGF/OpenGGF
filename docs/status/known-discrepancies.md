@@ -1655,9 +1655,31 @@ still taken the moment `enable_ints` runs.
 
 ### Our Implementation
 
+**S2 applies no clock alignment at all.** `TracePlaybackProfile` defines exactly two
+constants (`TracePlaybackProfile.java:18-21`): `DISABLED` and `SONIC_1`. There is no
+`SONIC_2`, `Sonic2GameModule` does not override `getTracePlaybackProfile()`
+(`Sonic2GameModule.java:81`), and the `GameModule` default returns `DISABLED`
+(`GameModule.java:334-335`). The whole S2 package contains zero references to the type.
+S3K is in the same position.
+
+Every alignment path is gated on that profile and therefore never runs for S2:
+`alignsInterLevelVblank()` is `interLevelNonAdvancingMovieRows >= 0` → false, so
+`TraceRunVblankClock.levelDestinationTarget` returns empty and
+`AbstractRunChainTest.completeInterLevelVblankBudget` returns immediately;
+`alignsStageResultsPresentationVblank()` and `alignUncomparedInteriorReturnVblank` are
+likewise false; every `ifPresent(objects::initVblaCounter)` in `TraceSessionLauncher`
+receives an empty Optional. The S2 object clock is seeded once at bootstrap and
+free-runs — **no seam mask, no 9, no 11, no interior alignment.**
+
 The chain never drives uncompared special-stage interiors, so the engine advances its
-object-visible counter by **79 ticks** across an interior the ROM spends 5,800–8,500
-V-blanks in. The deficit accumulates to roughly 33,500 by the run's final segment.
+object-visible counter by a uniform **78 ticks** (measured live, all five interiors
+reached before the walk stops: `ss`, `ss_2`, `ss_3`, `ss_4`, `ss_5` — each exactly 78)
+across an interior the ROM spends 5,800–8,500 V-blanks in. S2 special-stage rows never
+tick the clock: `TraceRunSpecialStageRows.S2Rows.admission` hardcodes
+`advancePreservedVblankIfUnchanged = false` (`TraceRunSpecialStageRows.java:205-211`) and
+no level loop runs on those rows, so `advanceVblaCounter()` is never called. The 78 is
+entirely boundary choreography, and it is uniform because the choreography is. The deficit
+accumulates to roughly 33,500 by the run's final segment.
 
 ### Rationale
 
@@ -1717,49 +1739,65 @@ Two are not.
   32 was measured exists anywhere in `docs/` or `src/`. Whoever picks this up should start
   by re-deriving it against the engine rather than trusting the number.
 
-### The cancellation trap — read this before "fixing" a partial correction
+### Retracted: there is no cancellation mechanism
 
-The current baseline survives by **cancellation, not correctness**: the odd deficit at
-one special-stage crossing is cancelled by the odd deficit at the **OOZ1→OOZ2** act seam
-(measured; an earlier revision of this entry named EHZ1→EHZ2, which is wrong — EHZ1→EHZ2
-masks 9 like every other boundary),
-leaving parity correct by luck.
+Earlier revisions of this entry described the baseline as surviving by "cancellation, not
+correctness" — an odd deficit at one special-stage crossing cancelling an odd deficit at
+an act seam, leaving whole-run parity correct by luck. **That mechanism is wrong and is
+retracted.** Three independent reasons, any one sufficient:
 
-The pairing was re-measured and is **arithmetically exact**. The parity axis is the
-recorded crossing advance, not the deficit-vs-11. Of the seven crossings, `ss_3` (7256)
-is the **unique even** one; the other six are odd. So under a uniform per-interior engine
-advance, exactly one odd deficit arises on the special-stage side, at `ss_3`. On the seam
-side the engine models a uniform 9, and exactly one seam deviates — OOZ1→OOZ2, at 8. Two
-odd deficits, one from each source, on the same `Vint_runcount` parity axis that
-`Obj4B_ChkPlayers` reads with `btst #0` (`s2.asm:60989-60998`). They cancel.
+1. It reasons about deficits relative to a uniform-9 *engine* seam model. S2 has no such
+   model — the profile is `DISABLED` and no seam-alignment code runs. The 9/8 split is a
+   property of the **recording only**; nothing in the S2 engine path consumes it.
+2. Its per-interior constant was 79. Measured, it is **78** — and the parity of that
+   constant was the entire argument. 78 is even, which inverts the odd/even split the
+   section described.
+3. Its prediction is empirically false. Engine clock at segment start against that
+   segment's recorded first-row `vblank_counter`:
 
-**Open contradiction — resolve this before trusting the model.** The two odd deficits are
-far apart in run order: `ss_3` sits at segment index 5, OOZ1→OOZ2 is boundary 13 of 19.
-Parity should therefore be *inverted* for the ~16 segments between them and restored only
-at OOZ1→OOZ2. But segments 0–10 currently compare at **zero errors**, and segments 4–10
-lie inside that span. Parity is evidently not inverted there, so one of the inputs is
-wrong — most likely the assumption that the engine advances a uniform constant per
-interior. That assumption has never been verified. Verifying it is cheap and would sharpen
-this entry either way.
+   | segment | engine | recorded | delta | parity |
+   |---|---|---|---|---|
+   | seg1_ehz1 | 553 | 554 | −1 | in phase |
+   | seg2_ehz1 | 4342 | 10108 | −5766 | **inverted** |
+   | seg3_ehz1 | 7797 | 20009 | −12212 | **inverted** |
+   | seg4_ehz1 | 11835 | 31224 | −19389 | in phase |
+   | seg5_ehz2 | 13200 | 32673 | −19473 | in phase |
+   | seg6_ehz2 | 19325 | 46105 | −26780 | **inverted** |
+   | seg7_ehz2 | 23197 | 56751 | −33554 | **inverted** |
 
-Correcting the special-stage crossings **alone** breaks
-that cancellation, inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run
-wholesale.
+   Parity is inverted in **four of the seven** level segments reached, and it flips back
+   and forth rather than inverting once and cancelling once. Segments 2 and 3 are
+   parity-inverted **and compare clean**.
 
-That failure has an exact fingerprint:
+**Parity inversion does not by itself produce compared divergence.** `Obj4B` is
+implemented and genuinely parity-gated — `BuzzerBadnikInstance.selectTargetPlayer`
+(`BuzzerBadnikInstance.java:166-172`) is a faithful port of the ROM's
+`btst #0,(Vint_runcount+3).w` (`s2.asm:60989-60998`; `+3` is the low byte of the
+longword, so this is the parity of the full counter). But `Obj4B` is the Buzzer, an EHZ
+badnik (`s2.asm:29991`, body at `:60850`), and its parity branch sits behind
+`Obj4B_shooting_flag` and a subsequent narrow x-window test. The gate is reached rarely
+and usually picks a player on the same side, so it is not a sensitive detector of clock
+phase.
+
+### The fingerprint is real; its explanation was not
 
 > **122,139 errors at segment 7, frame 524, field `sidekick_y` (rom=0x0271
 > engine=0x0272).**
 
-It has been produced **five times under four different descriptions** — boolean-only
-alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. If you see
-it, you have corrected **one seam of a cancelling pair**. It does not mean your change
-was wrong; it means the paired seam must move in the same change. Fix both or neither,
-and do not revert a correct partial fix as if it were a regression.
+This has been produced **five times under four different descriptions** — boolean-only
+alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. Treat it as
+an empirical warning that a clock-alignment change has destabilised the run, **not** as
+evidence of a cancelling pair. The "fix both seams or neither" advice attached to it in
+earlier revisions followed from the retracted mechanism and should be ignored.
 
 Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
 against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
 rows early because a differently-chosen animal survives last.
+
+**What the next agent should actually know:** S2 has no clock model, not a delicate one.
+Before treating any of this as a constraint, decide whether S2 *should* carry a
+`TracePlaybackProfile` at all — the S1 machinery exists and is inert here, which is a
+very different starting position from "the model is fitted and fragile".
 
 ### Routes considered and rejected, so the wall is not re-derived
 
