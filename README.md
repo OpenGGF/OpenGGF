@@ -226,7 +226,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   ROM's own terms, and the regenerated capture reproduces the hand-measured run
   decomposition independently, including per-zone `LoadZoneTiles` costs derived from
   the disassembly with no recording involved. Total art-edge error across the
-  complete-emerald level seam halves, with two edge pairs landing within one row.
+  complete-emerald level seam halves (398 to 196), with two edge pairs landing within
+  one row of the recording. The census carries lengths only, never a row index, and a
+  lag row runs no gameplay -- it is a scheduling outcome, not trace-driven state.
   Alongside it, two ROM-derived seam fixes: `Pal_FadeToBlack`'s 22 counted V-blanks
   are no longer stepped through with the movie clock frozen, and `LoadZoneTiles` now
   spends one V-blank per `$1000`-byte DMA chunk as the ROM does.

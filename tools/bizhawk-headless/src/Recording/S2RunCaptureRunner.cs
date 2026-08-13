@@ -228,6 +228,12 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     int frameNow = rowsConsumed;
 
+                    // Precondition 1 of the contract's S1/S2 lag-frame
+                    // coverage audit: raw capture includes every physical
+                    // emulator frame. Recorded before any arm gate, so the
+                    // unarmed inter-segment frames are covered too.
+                    state.RecordPhysicalAdmission(rowsConsumed - 1, host);
+
                     // 4b. Top-of-function movie-done guard (spec §2): fires
                     // before any row/detour processing on this frame, so a
                     // movie ending mid-$10 stops the ss tail promptly and a
@@ -356,6 +362,15 @@ namespace OpenGGF.BizHawk.Headless
                 dynamicArtGapTransitions =
                     new List<DynamicArtGapTransition>();
 
+            // Contract-1 main-loop admission, one bit per physical emulator
+            // frame, indexed by BK2 movie row (the same coordinate as
+            // RunManifestSegment.Bk2FrameOffset). Recorded unconditionally,
+            // including on the frames where no segment is armed, so the
+            // inter-segment gaps a run capture otherwise records nowhere
+            // still carry their scheduling outcome. Nothing but the flag is
+            // kept: no RAM, no position, no comparison value.
+            private readonly List<bool> physicalLag = new List<bool>();
+
             // Armed-segment state (shared between level and ss segments,
             // exactly one of which can be armed at a time). The two writers
             // belong to the sink and are live only between the arm and its
@@ -447,6 +462,67 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     dynamicArt.MarkAdvanceBoundary(movieLogicalFrame);
                     dynamicArtAdvanceMarked = true;
+                }
+            }
+
+            /// <summary>
+            /// Records this physical frame's main-loop admission outcome at
+            /// its BK2 movie-row index. <paramref name="movieRow"/> is the
+            /// row just advanced through, so the list stays dense and
+            /// index-aligned with <c>bk2_frame_offset</c>.
+            /// </summary>
+            internal void RecordPhysicalAdmission(int movieRow, IGpgxHost host)
+            {
+                if (movieRow != physicalLag.Count)
+                {
+                    throw new InvalidOperationException(
+                        "admission census expected movie row "
+                        + physicalLag.Count + " but was " + movieRow + ".");
+                }
+                physicalLag.Add(host.IsLagged);
+            }
+
+            /// <summary>
+            /// Fills every transition's contract-1 gap census from the
+            /// per-frame admission record, over the rows strictly between the
+            /// source segment's last recorded row and the destination
+            /// segment's first recorded row. Run-length encoded, alternating,
+            /// starting non-lag. Only counts leave here — never a row index.
+            /// </summary>
+            private void AttachGapAdmissionCensus()
+            {
+                foreach (RunManifestTransition tx in transitions)
+                {
+                    if (tx.FromSegment < 0 || tx.ToSegment < 0
+                        || tx.FromSegment >= segments.Count
+                        || tx.ToSegment >= segments.Count)
+                    {
+                        continue;
+                    }
+                    RunManifestSegment from = segments[tx.FromSegment];
+                    RunManifestSegment to = segments[tx.ToSegment];
+                    int start = from.Bk2FrameOffset + from.TraceFrameCount;
+                    int end = to.Bk2FrameOffset;
+                    if (start < 0 || end < start || end > physicalLag.Count)
+                    {
+                        continue;
+                    }
+                    var runs = new List<int>();
+                    bool expectLag = false;
+                    int length = 0;
+                    for (int row = start; row < end; row++)
+                    {
+                        if (physicalLag[row] == expectLag)
+                        {
+                            length++;
+                            continue;
+                        }
+                        runs.Add(length);
+                        expectLag = !expectLag;
+                        length = 1;
+                    }
+                    runs.Add(length);
+                    tx.GapAdmissionRuns = runs;
                 }
             }
 
@@ -827,6 +903,7 @@ namespace OpenGGF.BizHawk.Headless
                 pendingReload = null;
                 if (!manifestWritten)
                 {
+                    AttachGapAdmissionCensus();
                     runManifestJson = S2RunManifestWriter.Format(
                         runId, sourceBk2, segments, transitions,
                         dynamicArt == null
