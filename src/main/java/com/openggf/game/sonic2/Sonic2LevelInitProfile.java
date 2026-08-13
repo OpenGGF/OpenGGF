@@ -167,6 +167,20 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
                 TITLE_CARD_LEAVE_LOOP_FRAMES);
     }
 
+    @Override
+    public int preLevelFadeOutFrames() {
+        // Level: runs ClearPLC then Pal_FadeToBlack (s2.asm:4764-4765) before
+        // it clears the screen, decompresses the title-card art and creates
+        // Obj34 at s2.asm:4912. Pal_FadeToBlack is an unconditional
+        // "move.w #$15,d4" dbf loop with one "bsr.w WaitForVint" per pass
+        // (s2.asm:3370-3383), so it is 22 counted V-blank rows during which
+        // the title card does not yet exist. Same shape as S1's PaletteFadeOut
+        // (Sonic1LevelInitProfile.preLevelFadeOutFrames) -- the returning
+        // level's card and its art therefore start 22 rows after the
+        // results-screen handoff, not at it.
+        return 22;
+    }
+
     /**
      * The 25-frame title-card leave loop (s2.asm:5060-5066) runs after
      * InitPlayers (s2.asm:4945), so it is exactly the omitted presentation

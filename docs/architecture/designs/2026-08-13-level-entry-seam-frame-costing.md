@@ -755,3 +755,87 @@ One rendering gap remains and is deliberately left alone: the ROM draws a second
 which the engine does not draw. The engine's single rings row now shows
 `Bonus_Countdown_1` rather than the combined total, which is the ROM's value for
 that row.
+
+## 2026-08-13, measured: the interior-return seam's fade, and the refutation of the walk premise
+
+Three stacked changes were specified for the `stage_exit` interior return. The first
+landed on its predicted number exactly; the other two fit the row budget exactly and
+still do not move the test, which refutes the reason they were stacked.
+
+### Fix 1 — the interior fade ordering (LANDED)
+
+MEASURED at all five `stage_exit` interiors, by a throwaway probe counting
+`stepOneFrame` invocations after the interior's rows are exhausted, labelled by
+`GameLoop` mode and `FadeManager.isActive()`:
+
+| | steps | decomposition |
+|---|---|---|
+| before | **87** | `SPECIAL_STAGE_RESULTS+fade` 1, `TITLE_CARD+fade` 21, `TITLE_CARD` 65 |
+| after | **109** | `SPECIAL_STAGE_RESULTS+fade` 23, `TITLE_CARD+fade` 21, `TITLE_CARD` 65 |
+
+The census non-lag total is 109 at every one of the five seams
+(`[23,11,53,14,8,39,25]` for `ss`/`ss_2`/`ss_3`, `[23,11,53,14,8,38,25]` for
+`ss_4`/`ss_5`; 23 + 53 + 8 + 25 = 109 either way). 87 → 109 is exact.
+
+The defect was ordering, not duration: the engine's 86 title-card rows already equal
+the ROM's `53 + 8 + 25`, and its 22-row fade ran *concurrently* with them, where
+`Level:` runs `Pal_FadeToBlack` (call site s2.asm:4765, routine :3370-3383,
+`move.w #$15,d4` + `dbf`, one `bsr.w WaitForVint` per pass = 22 counted rows)
+**entirely before** `Level_TtlCard` (:4914). S1 already models the same span as
+`preLevelFadeOutFrames` = 22 for `PaletteFadeOut`; S2's was 0.
+
+No constant was introduced that is not the ROM's own immediate. The change is one
+override on an existing per-game profile — no game-name check, no zone, route or
+frame predicate.
+
+`TestS2CompleteEmeraldRunChain` is **unchanged** by it: still 5 axes, segment 11 at
+236, `seg7_ehz2` comparator cursor 3977 of 3997, the same four `edge[8]`–`[11]` −1
+slots. That is expected — the interior return still freezes the shared cursor, so
+these rows are not yet compared against anything. Two full `-Ptrace-replay` sweeps,
+one per tree at `4d51aa04f`, ended on **identical** results: 842 run / 9 failures /
+58 errors / 4 skipped, and the same 66-name red class set.
+
+### Fix 2 — the interior-return census walk (NOT LANDED)
+
+Implemented as specified: pre-seek to `returnOffset - sum(census)` (arithmetic only,
+no recorded index), walk the seam with `stepEngineFrameInTransitionGap` using
+`expandGapAdmissionCensus` / `lastNonAdmittedRow` / `holdPlayerArtForLevelEntryLoad`.
+
+**The budget fits exactly.** With fix 3 also applied the walk spends **174** steps at
+`ss` and `ss_2` — 173 census rows plus the one title-card-exit fall-through frame —
+with no `rowsConsumed must be 0 or 1`, no cursor overrun, and `framesConsumed == 1`
+preserved. The frame-0 input rationale is preserved by construction, one cursor row
+per gap row.
+
+**Without fix 3 it is one non-lag row short** and must not land on its own: the
+boundary then latches inside the census and the run fails on
+`run_boundary.position.x` expected 4735 actual 4736, which hides segment 11 and both
+later special-stage gap axes.
+
+### Fix 3 — defect A (NOT LANDED), and what it refutes
+
+`updateZoneTileUpload` changed to test-then-decrement. It does close
+`edge[8]`–`[11]`, and it does supply the 110th engine step the walk needs.
+
+But the premise that "the freed row has nowhere to go until fix 2 lands" is **false**,
+measured three ways:
+
+| configuration | post-interior steps | result |
+|---|---|---|
+| fix 1 only | 109 | 5 axes; segment 11 = 236; cursor 3977 |
+| fix 1 + fix 3 | 110 | 3 axes; segment 2 = **47639**; `sidekick_y` f1132 rom=0x02CB engine=0x02CC; seg3 DPLC |
+| fix 1 + fix 2 + fix 3 | 174 (173 census + fall-through) | 3 axes; segment 2 = **47639**; `sidekick_y` f1132; seg3 DPLC |
+
+The last two are byte-identical fingerprints. Spending the whole census — 64 lag rows
+and all 109 non-lag rows, with the level-entry art hold released at
+`lastNonAdmittedRow` — changes segment 2 by **nothing**. Defect A's regression is
+therefore not a movie-row phase error that the walk could absorb; the quantity it
+perturbs is a **playable-pass count** inside the title-card span, which no amount of
+row-spending in the gap can compensate.
+
+Per the skill's "name the lever" rule: **47639 / segment 2 / `sidekick_y` frame 1132 /
+seg3 DPLC is defect A's fingerprint, and it is invariant under the census walk.** A
+future round that reproduces it has pulled the same lever again. The next question is
+not "where do the rows go" but "which pass count does `leavePass` arming actually
+change, and what does the ROM run there" — `LEAVE_PRELOOP_PASSES` and the
+`s2.asm:5003-5006` leading `RunObjects` pass are the place to start, not the gap.

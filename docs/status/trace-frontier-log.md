@@ -74232,3 +74232,37 @@ failure counts.
 - No fixture was regenerated or consumed as an input. No constant was
   introduced: every term of the tally length is a ROM immediate or a ROM step
   count.
+
+## 2026-08-13 -- S2 interior-return seam: the fade lands, the census walk does not
+
+Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
+
+- Targeted command:
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS2CompleteEmeraldRunChain -DfailIfNoTests=false
+  -Dsonic2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  -Dtest.cds.argLine="-Xshare:off -Djava.io.tmpdir=<scratch>" test`,
+  with `rm -rf target/surefire-reports` before every run.
+- LANDED: `Sonic2LevelInitProfile.preLevelFadeOutFrames` = 22
+  (`Pal_FadeToBlack`, s2.asm:3370-3383, called from `Level:` at :4765).
+  MEASURED by a throwaway step probe: post-interior engine consumption goes
+  **87 -> 109** at all five `stage_exit` interiors, matching the recorded
+  admission census's non-lag total (109) exactly at every one of them.
+- `TestS2CompleteEmeraldRunChain` frontier UNMOVED and unregressed: 5 axes;
+  segment 11 = 236 physics errors (first non-camera mismatch frame 3525,
+  `queue.s2_nemesis_plc.busy`); `seg7_ehz2` source comparator cursor 3977 of
+  3997; `seg4_ehz1 -> seg5_ehz2` still the four `edge[8]`-`[11]` -1 slots. The
+  interior return still freezes the shared cursor, so these rows are not yet
+  compared.
+- Full sweep, same command without `-Dtest`, run on BOTH trees: base
+  842 run / 9 failures / 58 errors / 4 skipped, 66 red classes; candidate
+  **identical** totals and an identical 66-name red class set.
+- NOT LANDED, and reverted: the interior-return census walk and the
+  `updateZoneTileUpload` test-then-decrement fix. The walk's row budget fits
+  exactly (174 steps = 173 census rows + 1 fall-through, `framesConsumed == 1`
+  preserved), but segment 2 reports 47639 errors / `sidekick_y` frame 1132 /
+  seg3 DPLC **identically with and without the walk** -- so defect A's
+  regression is a playable-pass count, not a movie-row phase, and the walk
+  cannot absorb it. See the design note's closing section.
+- No fixture was regenerated or consumed as an input; no constant was
+  introduced that is not a ROM immediate.
