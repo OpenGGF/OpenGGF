@@ -284,6 +284,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The EHZ2 boss moved before it checked where it was, and the camera took the
+  blame (2026-08-13):** the emerald run died in its last level, and the visible
+  symptom was a camera 61–80px right of the recording — which turned out to be a
+  *downstream* effect measured 30 rows after the real divergence. The engine
+  matches the ROM exactly through row 1267; the player diverges at 1268 and the
+  camera only at 1298. The ROM's camera is simply pinned to the EHZ2 boss arena
+  bounds (`LevEvents_EHZ2_Routine2` writes `$28F0`/`$2940`, `s2.asm:20428-20441`),
+  which the engine already had right — it sat elsewhere in that band because its
+  player was elsewhere. The cause was the boss vehicle running four frames ahead.
+  `loc_2F27C` and `loc_2F2BA` both compare the arrival position *before* stepping,
+  so the ROM spends each arrival frame in the follow-on routine without moving; the
+  engine moved first and tested after, and clamped a y the ROM never clamps. Since
+  the damaging spike sits at vehicle x − `$36`, it was 6–8px left of the ROM's, a
+  leftward-rolling player reached it a frame late, and the hurt tail's
+  `subq.w #5,y_pos` radius restore landed late. The knock-on was severe and
+  entirely invisible: the shifted hit cost the player a spilled ring whose
+  on-screen latch never set, so its floor probe was skipped, it fell through the
+  floor, and the engine met the next hit with no rings and **died** — restarting
+  the level and breaking segment ownership. With the ordering corrected the run
+  survives, and **segment 11 produces a comparator report for the first time**
+  (30,707 errors). Two further frames of the boss's lead are measured and cited but
+  not landed: the ROM does not execute the boss on its allocation frame, and
+  `Obj56_Init` consumes another — both touch shared zone-event spawn cadence.
 - **Bridges never let a player balance, and they allocate real child objects
   (2026-08-13):** two ROM facts about `Obj11` that the engine had modelled by
   approximation. First, the ROM writes a **fixed** `move.b #$80,width_pixels(a0)`
