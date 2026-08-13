@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sonic 2: drain the special-stage results tally the way `Obj6F_TallyScore` does.
+  The stage exit copies each player's rings into its own bonus countdown --
+  `move.w (Ring_count).w,(Bonus_Countdown_1).w` /
+  `move.w (Ring_count_2P).w,(Bonus_Countdown_2).w` (s2.asm:6784-6785) -- and the
+  tally routine tests and decrements both, plus `Total_Bonus_Countdown`, in a
+  single pass (s2.asm:28381-28392), leaving only on the pass where all three are
+  already zero. The tally therefore lasts as long as the LONGER countdown. The
+  engine tallied one countdown holding the combined Sonic+Tails total, i.e. their
+  sum, so the results choreography ran for as many extra frames as the second
+  player had rings -- 67 on the emerald run's first special stage (91 + 76 against
+  `max(91, 76, 1000/10)`). Score awarded is unchanged; only the cadence is.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

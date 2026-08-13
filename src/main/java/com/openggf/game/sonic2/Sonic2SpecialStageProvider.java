@@ -18,6 +18,7 @@ import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -40,6 +41,18 @@ import java.util.Optional;
 public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
     private boolean resultsPlcSubmitted;
+
+    /**
+     * The two per-player ring totals latched at the ROM's own copy point, the
+     * {@code move.w (Ring_count).w,(Bonus_Countdown_1).w} /
+     * {@code move.w (Ring_count_2P).w,(Bonus_Countdown_2).w} pair that runs
+     * immediately before {@code Obj6F} is created (docs/s2disasm/s2.asm:6784-6785,
+     * :6797). They must be read before {@link #resetForResults()} clears the
+     * stage's players.
+     */
+    private int bonusCountdown1;
+    private int bonusCountdown2;
+    private boolean ringsLatched;
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
@@ -153,6 +166,11 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void resetForResults() {
+        bonusCountdown1 = manager.getRingsCollected(
+                Sonic2SpecialStagePlayer.PlayerType.SONIC);
+        bonusCountdown2 = manager.getRingsCollected(
+                Sonic2SpecialStagePlayer.PlayerType.TAILS);
+        ringsLatched = true;
         reset();
         resultsPlcSubmitted = false;
         onEnterResults();
@@ -294,9 +312,18 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
+        // The ROM's two bonus countdowns drain in parallel, one ring each per
+        // frame (Obj6F_TallyScore, docs/s2disasm/s2.asm:28376-28396), so the
+        // tally lasts as long as the LONGER of them -- never their sum. Use the
+        // split latched at the ROM's copy point; a caller that never ran
+        // resetForResults() has no split to offer, which is the ROM's
+        // single-player shape (one countdown loaded, the other left at zero,
+        // s2.asm:6773-6785).
+        int countdown1 = ringsLatched ? bonusCountdown1 : ringsCollected;
+        int countdown2 = ringsLatched ? bonusCountdown2 : 0;
         return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
                 () -> new SpecialStageResultsScreenObjectInstance(
-                        ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services)),
+                        countdown1, countdown2, gotEmerald, stageIndex, totalEmeraldCount, services)),
                 this::onEnterResults);
     }
 

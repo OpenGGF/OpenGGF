@@ -3329,6 +3329,28 @@ public class Sonic2SpecialStageManager {
     }
 
     /**
+     * Ring count belonging to a single playable — the engine's equivalent of the
+     * ROM's per-player {@code Ring_count} / {@code Ring_count_2P} words.
+     *
+     * <p>The special-stage exit copies those two words into two independent
+     * bonus countdowns, {@code move.w (Ring_count).w,(Bonus_Countdown_1).w} and
+     * {@code move.w (Ring_count_2P).w,(Bonus_Countdown_2).w}
+     * (docs/s2disasm/s2.asm:6784-6785), so the results tally needs the split and
+     * not the combined total {@link #getRingsCollected()} reports.
+     *
+     * @param type which playable's count to read
+     * @return that playable's rings, or 0 when it is not present in the stage
+     */
+    public int getRingsCollected(Sonic2SpecialStagePlayer.PlayerType type) {
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (player.getPlayerType() == type) {
+                return player.getRings();
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Assembles a read-only snapshot of manager/animator/player state for a trace
      * replay harness to compare against a recorded ROM trace. Pure read — no
      * mutation, no caching. {@code trackAnimator} is null until the stage is fully

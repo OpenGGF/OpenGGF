@@ -665,3 +665,93 @@ blind at the end of a long session, not because anything blocks it.
 | leave-loop fall-through altered | 12 axes; segment 11 = 7,104 |
 | ownership released early | "lost production ownership before source closure"; 2 axes; segment 11 hidden |
 | V-int counter bumped | 122,139 errors; segment 7 frame 524; `sidekick_y` |
+
+## 2026-08-13: the special-stage results tally overran, and it was a summed countdown
+
+The note above defers the interior-return census walk (transition 1->2,
+`[23, 11, 53, 14, 8, 39, 25]`, sum 173). A probe over that return measured the
+engine spending materially more rows in `SPECIAL_STAGE_RESULTS` than the census
+allows. The cause is upstream of the seam entirely and is now closed.
+
+### The ROM's tally length, derived and then cross-checked
+
+`SpecialStage`'s exit loads **two** bonus countdowns from the two players'
+separate ring words -- `move.w (Ring_count).w,(Bonus_Countdown_1).w` and
+`move.w (Ring_count_2P).w,(Bonus_Countdown_2).w` (`s2.asm:6784-6785`) -- plus
+`Total_Bonus_Countdown` = 1000 when an emerald was won (`:6779-6781`).
+`Obj6F_TallyScore` tests and decrements all three in a **single pass**
+(`:28381-28392`: `subq.w #1` on each ring countdown, `subi.w #10` on the total)
+and advances the routine only on the pass where all three are already zero
+(`:28395-28400`). So
+
+```
+tally passes = max(Ring_count, Ring_count_2P, 1000/10) + 1
+```
+
+and the whole results loop is
+
+```
+plc drain + 18 Obj34_MoveTowardsTargetPosition steps (:27494)
+          + 1 latch pass (:28243-28248, $B4)
+          + 180 Obj6F_TimedDisplay passes (:28367-28371)
+          + tally passes
+          + 120 Obj6F_TimedDisplay passes ($78, :28399-28400)
+          + 1 Obj6F_DisplayOnly pass that raises Level_Inactive_flag (:28428-28430)
+```
+
+The five special-stage segments of the emerald run confirm this from the
+recording, without any of it being used to build the model. Each fixture's
+tail run-length-encodes as `[1 lag, 22 non-lag, 16 lag, N non-lag]`; the 22 is
+`Pal_FadeToWhite` (`move.w #$15,d4` + `dbf`, `s2.asm:3571-3581`, called at
+`:6749`), the 16 is the interrupts-off screen rebuild (`:6752-6795`), and the
+final run is the results loop plus the *second* `Pal_FadeToWhite` (`:6806`):
+
+| segment | recorded final run | loop = run - 22 | P1/P2 rings | derived loop |
+|---|---|---|---|---|
+| `ss`   | 465 | 443 | 91 / 76  | 22 + 18+1+180+101+120+1 = 443 |
+| `ss_2` | 527 | 505 | 162 / 3  | 505 |
+| `ss_3` | 526 | 504 | 161 / 0  | 504 |
+| `ss_4` | 531 | 509 | 166 / 17 | 509 |
+| `ss_5` | 560 | 538 | 195 / 6  | 538 |
+
+The PLC drain reads **22 at all five**, and every other term is a ROM immediate
+or a ROM-derived step count. `ss` is the only segment where P2's rings are large
+enough to distinguish `max` from `sum`, and it lands on `max`.
+
+### The engine's defect
+
+`SpecialStageResultsScreenObjectInstance` carried **one** countdown, seeded from
+`Sonic2SpecialStageManager.getRingsCollected()` -- the *combined* total. A single
+countdown of `P1 + P2` drained one per frame is their sum, so the tally ran
+`min(P1, P2)` frames long wherever the second player had rings: **+67 rows on
+`ss`** (167 against 100), +3 on `ss_2`, +17 on `ss_4`, +6 on `ss_5`, 0 on `ss_3`.
+That is the overrun, and it is per-stage rather than constant -- which is why no
+single number could have absorbed it.
+
+The fix splits the countdown, latching `Ring_count` / `Ring_count_2P` at the
+ROM's own copy point (`Sonic2SpecialStageProvider.resetForResults()`, immediately
+before the card is created as at `s2.asm:6797`). Total score awarded is
+unchanged: both shapes add `(P1 + P2) * 10 + 1000`.
+
+Measured after the change, via a throwaway probe on the tally's exhausted pass
+across the emerald run's five stages: 101, 163, 162, 167, 196 passes for
+(91,76), (162,3), (161,0), (166,17), (195,6) -- every one exactly
+`max(P1, P2, 100) + 1`.
+
+### What it does and does not move
+
+`TestS2CompleteEmeraldRunChain` is **unchanged**: still 5 axes, segment 11 at
+236, `seg7_ehz2` comparator cursor 3977 of 3997, the same four `edge[8]`-`[11]`
+-1 slots. That is expected, and is the point of recording it here: the
+`stage_exit` interior return still freezes the shared cursor and pre-seeks
+straight to `returnOffset` (`AbstractRunChainTest.java:1348-1351`), so the length
+of the results choreography is not yet compared against anything. The defect was
+real and is now closed; the walk that would have exposed it can be attempted
+without first having to explain a 44-67 row overrun that had nothing to do with
+the seam.
+
+One rendering gap remains and is deliberately left alone: the ROM draws a second
+"Miles/Tails rings" row from `Bonus_Countdown_2` (`Obj6F_P2Rings`, `:28306-28318`)
+which the engine does not draw. The engine's single rings row now shows
+`Bonus_Countdown_1` rather than the combined total, which is the ROM's value for
+that row.

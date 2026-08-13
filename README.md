@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 special-stage bonus tally drains two countdowns (2026-08-13):** the ROM
+  seeds a separate bonus countdown from each player's own ring word and decrements
+  both, plus the emerald's 1000-point total, in the same pass -- so the tally lasts as
+  long as the *longer* countdown, never their sum. The engine ran a single countdown
+  holding the combined total and so overran by the smaller player's ring count, a
+  per-stage error of up to 67 frames. Ring counts, score awarded and the surrounding
+  hold durations are unchanged.
+
 - **Sonic 2 level-entry seam admission census (2026-08-13):** the run recorder now
   records the main-loop admission outcome for every physical frame of a level-entry
   transition, and replay spends those rows as lag rows under the existing
