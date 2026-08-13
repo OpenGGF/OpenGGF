@@ -212,7 +212,9 @@ rows. It would only help zones whose drain is under 45 (WFZ 28, ARZ 36, SCZ 40).
 player art, submitted after `InitPlayers` (`s2.asm:4946`) and stamped across the 25-pass
 leave loop (`:5060-5066`). `InitPlayers` sits behind `LoadZoneTiles`, `loadZoneBlockMaps`,
 `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray` and `LoadCollisionIndexes`
-(`:4939-4945`) — **none of which contain a `WaitForVint`**. So the residual decomposes as
+(`:4939-4945`). ~~none of which contain a `WaitForVint`~~ — **CORRECTED 2026-08-13:
+`LoadZoneTiles` DOES contain one** (`s2.asm:6519`, inside the `dbf` loop), so it costs
+`floor(size/$1000)+1` V-blanks. The other five do not. See the derivation section below. So the residual decomposes as
 ~8 rows of pre-card interrupts-off `ClearScreen`/`LoadTitleCard`/`Level_ClrRam`
 (`:4767-4806`) plus ~61 rows of post-card, payload-dependent level-art load.
 
@@ -262,3 +264,51 @@ the loop's fall-through pass) puts those edges at delta **0** — the acceptance
 exactly — but the run then collapses to **2 axes**, losing segment 11 and both
 special-stage gap axes, because the walk dies earlier with "lost production ownership
 before source closure". Hitting the target number while hiding three axes is not progress.
+
+## 2026-08-13: blind rate derivation — ABANDON, with one salvage
+
+Every rate below was read from the disassembly and written down before any comparison.
+*Disclosure:* the seam lengths were already stated in this note, so the derivation was not
+blind in the strict sense. Evidence against fitting: the one new derivable component lands
+at **8 rows**, an order of magnitude below the 63 it would have needed to "explain" the
+residual. A fitter would not have produced 8.
+
+| component | throughput + citation | frames | bucket |
+|---|---|---|---|
+| `Pal_FadeToBlack` | `move.w #$15,d4` + `dbf`, one `WaitForVint`/pass (`s2.asm:3370-3383`) | 22 | ROM loop — **landed** `edc396f5e` |
+| `Level_TtlCard` PLC drain | `move.w #6,(Plc_FramePatternsLeft).w` (`:2202-2213`), per-entry `ceil(patterns/6)` | 52 (EHZ; zone-keyed 28–81) | ROM immediate — **already exact** |
+| **`LoadZoneTiles`** | **counted `dbf` with one `WaitForVint` per `$1000`-byte DMA chunk (`s2.asm:6505-6523`, `bsr.w WaitForVint` at `:6519`); `rol.w #4,d7 / andi.w #$F,d7` ⇒ `floor(size/$1000)`, loop runs `d7+1`** | **EHZ 8, MCZ 8, ARZ 8, MTZ/WFZ/HTZ/CNZ/CPZ/DEZ/SCZ 7, OOZ 6** | **ROM loop — NEW, derivable** |
+| leave loop | `s2.asm:5060-5066` | 26 | ROM loop — already modelled |
+| `ClearScreen` DMA fill | VDP DMA fill rate (hardware reference, not opened in-repo) | 0.71 | hardware rate — sub-frame |
+| `LoadTitleCard` `NemDec`, `Level_ClrRam`, `loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`, `LoadCollisionIndexes` | **68000 cycle-bound; no ROM quantum, no hardware rate, no `WaitForVint`** | **not derivable** | **CPU-bound** |
+
+**Derived total (EHZ): 22 + 52 + 8 + 26 = 108. Recorded seam: 171. Shortfall 63.**
+
+That is not a near miss with a rate to nudge — **the 63 rows have no candidate throughput of
+any kind.** They are entirely CPU-cycle-bound decode and array conversion, with no
+`WaitForVint` and no polled readiness gate between `Level:` and the leave loop other than
+the `Plc_Buffer` test already modelled.
+
+### The sidecar cannot take them either
+
+Verified this round: `hardware_timing.jsonl` is emitted only by the S3K path
+(`tools/bizhawk-headless/src/Program.cs:25-38`); kinds are exactly `kos_module_queue` and
+`kos_decompression_queue` (`HardwareTimingEventEngine.cs:18,21`); of 202 such files under
+`src/test/resources/traces`, **zero** are under `s1/` or `s2/`.
+
+More decisively, these jobs **fail contract 3 on preconditions**: the ROM exposes no
+readiness value for `KosDec`/`NemDec` here — each is a synchronous `bsr` inside `Level:`
+with no queue and no count word — and the main loop is not running at all during them
+(interrupts masked at `s2.asm:4767`). The contract's own inventory pre-decides this twice:
+*"Long synchronous decompression or level initialization … Lag … S1/S2 substantially
+covered"* and *"Nemesis, Enigma, Saxman, raw map decompression … Lag … **No codec-specific
+trace authority**"*.
+
+So this is **not** a capture-side regeneration item — minting an S2 event kind here would
+claim authority the contract explicitly denies — and emphatically not a licence to invent a
+decompression rate. The authorised regeneration cannot be spent on this.
+
+**Verdict: the frame-costed seam model is abandoned.** One good component may not carry a
+bad one. The `LoadZoneTiles` V-int cost is landed on its own merits as ROM accuracy, closing
+8 of the 71; the remaining 63 stay an un-timed residual, the same class S1 already absorbs
+as 34–40 rows.
