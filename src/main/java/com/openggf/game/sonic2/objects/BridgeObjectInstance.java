@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
@@ -101,8 +102,18 @@ public class BridgeObjectInstance extends BoxObjectInstance
      * {@code Obj11_child1} / {@code Obj11_child2} — {@code objoff_30} /
      * {@code objoff_34} (docs/s2disasm/s2.asm:21913-21914). Real SST occupants
      * allocated once by {@code Obj11_Init}; see {@link BridgeSegmentObjectInstance}.
+     *
+     * <p>Rewind: the link is re-established from the child side by
+     * {@link BridgeSegmentObjectInstance#recreateForRewind} calling
+     * {@link #adoptSegmentForRewind}, the same parent-driven relink used by
+     * {@code ARZRotPformsObjectInstance}'s Obj83 slot children and
+     * {@code EggPrisonObjectInstance}'s routine-6/8 slot children.
      */
+    @RewindTransient(reason = "structural Obj11 child slot link is recreated by the segment's "
+            + "recreate path calling adoptSegmentForRewind")
     private BridgeSegmentObjectInstance segment1;
+    @RewindTransient(reason = "structural Obj11 child slot link is recreated by the segment's "
+            + "recreate path calling adoptSegmentForRewind")
     private BridgeSegmentObjectInstance segment2;
     private boolean segmentsAllocated;
 

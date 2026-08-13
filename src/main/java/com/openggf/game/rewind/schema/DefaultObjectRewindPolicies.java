@@ -180,12 +180,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "cylinderAngles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "ridingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.ARZBossArrow", "mainBoss"), RewindFieldPolicy.CAPTURED),
-            // Obj11 bridge subsprite children (s2.asm:21966-21988): real SST
-            // occupants, restored by object-reference id like the other
-            // AllocateObjectAfterCurrent child links above.
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BridgeObjectInstance", "segment1"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BridgeObjectInstance", "segment2"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BridgeSegmentObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            // Obj11 bridge subsprite children (s2.asm:21966-21988) are real SST
+            // occupants, but the parent/child links between them are rebuilt by
+            // the segment's own recreate path
+            // (BridgeSegmentObjectInstance#recreateForRewind ->
+            // BridgeObjectInstance#adoptSegmentForRewind), exactly like
+            // LbzTubeElevatorInstance#overlayChild and
+            // SnaleBlasterBadnikInstance#cover. The links are declared
+            // `transient` on the fields themselves; no policy entry belongs here.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.PointPokeyObjectInstance", "slotMachineManager"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.RivetObjectInstance", "lastNativeMainPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SeesawBallObjectInstance", "originalSpawn"), RewindFieldPolicy.TRANSIENT),

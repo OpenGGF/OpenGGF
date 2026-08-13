@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -62,9 +63,20 @@ public class BridgeSegmentObjectInstance extends AbstractObjectInstance implemen
     private static final int ROM_MAINSPR_WIDTH = 0x40;
 
     /**
-     * Parent bridge. Restored by object-reference id; see
-     * {@code DefaultObjectRewindPolicies} for the CAPTURED policy entry.
+     * Parent bridge. Not captured: the link is rebuilt by
+     * {@link #recreateForRewind}, which locates the live parent from the
+     * captured {@code firstLogX}/{@code segmentY} scalars and re-registers
+     * itself through {@link BridgeObjectInstance#adoptSegmentForRewind} — the
+     * established parent-lookup relink used by
+     * {@code EggPrisonObjectInstance}'s component links and
+     * {@code CheckpointDongleInstance}. Capturing it as an object reference
+     * instead requires a {@code RewindIdentityTable}, which the scalar-only
+     * seeding every recreate path uses ({@code RewindCaptureContext.none()} in
+     * {@code CompactFieldCapturer#restoreDefaultObjectSubclassScalars}) does not
+     * carry.
      */
+    @RewindTransient(reason = "structural Obj11 parent link is restored by parent lookup in "
+            + "recreateForRewind")
     private BridgeObjectInstance parent;
 
     /**
