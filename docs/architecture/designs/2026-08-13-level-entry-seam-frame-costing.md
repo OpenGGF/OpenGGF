@@ -222,3 +222,43 @@ number — the same class the S1 path already absorbs as 34–40 rows
 change described above, which measurement shows is practical (recorder builds in 3s,
 whole-movie replay 3m20s, fixture 34M) but is not required for any currently failing field
 beyond this residual.
+
+## 2026-08-13, final: end-anchoring is the right model and cannot be implemented legally
+
+The remaining residual is a **phase-anchoring** error, confirmed by measurement across all
+20 level-destination seams (lengths 156–198):
+
+- title-card art sits at a fixed **33 rows from the seam START**;
+- player art sits at a fixed **26–27 rows from the seam END** (len−26 on 17 of 20).
+
+That len−26 is the ROM's 25-pass leave loop (`s2.asm:5060-5066`), which
+`TitleCardManager`'s `LEAVE_*` passes already model correctly. Both ends are fixed; only
+the payload-dependent middle varies. So anchoring the engine's leave phase to the seam
+**end** would absorb the middle automatically, with no duration and no constant.
+
+**It was implemented, and it works — and it is a hard-rule-4 violation.** Measured:
+the eight player-art edges went **71 → 1**, segment 11 went **287 → 236**, and the
+source-comparator frontier advanced 3970 → 3977, with all five axes still reported.
+
+It is nonetheless **rejected and reverted**, because the anchor it needs is
+`next.segment().bk2FrameOffset()` — a recorded BK2 frame index. Piping that into
+`TitleCardManager` to drive a state transition breaks rule 4 three ways at once: it calls
+a gameplay owner, it drives gameplay state, and it keys on a frame index. The
+hardware-timing port does not cover it either — that exception may only release readiness
+of a matching production-submitted ROM-backed art job.
+
+**Why there is no legal variant.** A legitimate predicate must read *engine* state, as the
+landed fade fix does (`FadeManager.isActive()`). But the seam's end is determined by the
+duration of the ROM's level-art load, and **the engine's load is instantaneous** — so no
+engine-side quantity corresponds to it. The anchor exists only in the recording.
+
+That closes the question: the last ~71 rows cannot be recovered by anchoring, by capture,
+or by derivation. They require the engine's level load to actually take time — the
+frame-costed seam this document describes. The earlier escalation was correct, and is now
+proven rather than asserted.
+
+**One more rejected fake success.** Anchoring at exactly `LEAVE_PLAYABLE_PASSES` (without
+the loop's fall-through pass) puts those edges at delta **0** — the acceptance target hit
+exactly — but the run then collapses to **2 axes**, losing segment 11 and both
+special-stage gap axes, because the walk dies earlier with "lost production ownership
+before source closure". Hitting the target number while hiding three axes is not progress.
