@@ -1498,7 +1498,31 @@ abstract class AbstractRunChainTest {
                 closeSourceArtWindow.run();
                 BoundaryObservation obs = TraceRunReplayWalker.awaitBoundary(
                         probe, exit, stepCap, () -> {
+                            // ROM Pal_FadeToBlack spends its fade inside the
+                            // Level: load path, and every one of its iterations
+                            // is a counted V-blank: "move.w #$15,d4" then
+                            // "bsr.w WaitForVint" per pass
+                            // (docs/s2disasm/s2.asm:3370-3383, called from
+                            // Level: at :4765). Those 22 passes therefore
+                            // consume 22 movie rows before the title card is
+                            // created at :4912. This boundary wait used to step
+                            // the engine through them with the shared movie
+                            // clock frozen, so the destination's title card and
+                            // every art edge after it were stamped 22 rows
+                            // early. The predicate is the fade's own liveness,
+                            // not a zone, route or frame index.
+                            com.openggf.graphics.FadeManager boundaryFade =
+                                    GameServices.fadeOrNull();
+                            // Only rows past the source segment's declared
+                            // recorded coverage are the gap's to spend; a fade
+                            // that starts while the source comparator still has
+                            // rows to consume would otherwise skip them.
+                            boolean fadeVblankRow = sourceArtWindowClosed[0]
+                                    && boundaryFade != null && boundaryFade.isActive();
                             stepEngineFrame(loop);
+                            if (fadeVblankRow) {
+                                playback.onLevelFrameAdvanced();
+                            }
                             closeSourceArtWindow.run();
                             if (isNewActiveLevelSegment(
                                     next, levelAtSegmentStart)) {
