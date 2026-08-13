@@ -926,3 +926,49 @@ The `+1` is structural: the census's leading non-lag run begins on the **source*
 own last recorded row, which `TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop`
 leaves to the source body. Pre-seeking to the bare origin overshoots by exactly one and
 throws `rowsConsumed must be 0 or 1` at `framesConsumed = −1`.
+
+## 2026-08-13, closing: the residual is a sidekick-only simulation deficit
+
+The boundary-adoption hypothesis — engine right, recording right, comparison misaligned by
+one row — is **refuted by a discriminating experiment**, and the refutation localises the
+defect properly for the first time.
+
+### The experiment
+
+With the interior-return census walk applied (reproducing its stated baseline exactly:
+3 axes, segment 2 = 58,355, frame 1, `sidekick_x` rom=0x0DDE engine=0x0DDD), the comparison
+for that segment was offset by one row as a **probe only**. If adoption were the cause the
+residual had to vanish uniformly across all fields and rows.
+
+| | baseline | one-row shift |
+|---|---|---|
+| segment 2 errors | 58,355 | **99,105** |
+| distinct failing fields | 106 | 134 |
+| frames carrying errors | 3,002 | 3,362 |
+| player's first error | frame 52 | **frame 15** |
+
+It nearly doubles, and it breaks the one thing that was exact: every player field matched
+the recording row-for-row through frame 51, and after the shift the player accumulates
+23,346 errors from frame 15. The sidekick's own first error merely moves 1 → 31.
+
+### Why that settles it
+
+**The misalignment is confined to one object.** Read from the committed fixture
+(`seg2_ehz1/physics.csv.gz`), the engine's sidekick at compared row N carries the
+recording's row N−1 value for frames 1–20 — 20 of 20 exact — **while the player is aligned
+row-for-row over the same span**. One comparator cursor serves every field, so an adoption
+error must shift them all; it cannot align one playable and misalign the other.
+
+**And the lag is a seed, not a standing offset.** Of 2,847 `sidekick_x_speed` mismatches
+across the segment, only 22 satisfy `engine[N] == rom[N-1]`. The one-pass relation holds
+over the seam's opening ~20 frames and then the sidekick genuinely diverges.
+
+### What the next round should ask
+
+**Why does the engine's sidekick execute one playable pass fewer than the player across the
+interior-return seam?** That is an object-clock question inside the seam walk — not a
+boundary, comparison, lookback, follow-direction or ring-delivery question, all of which are
+now measured and refuted.
+
+Fingerprint so the lever is recognisable: *census-walk-alone = 58,355 at segment 2, frame 1,
+`sidekick_x` 0x0DDE vs 0x0DDD, four sidekick-only fields, player clean to frame 52.*

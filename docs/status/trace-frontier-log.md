@@ -74266,3 +74266,39 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
   cannot absorb it. See the design note's closing section.
 - No fixture was regenerated or consumed as an input; no constant was
   introduced that is not a ROM immediate.
+
+## 2026-08-13 - S2 complete-emerald level-entry seam closed to four fields
+
+- Command: `mvn -Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain test`, develop
+  at `324a54f0e`. Result FAIL, 5 axes. `TestS2EhzHalfpipeRoundTripChain` GREEN
+  throughout.
+- Frontier moved: the `seg4_ehz1 -> seg5_ehz2` level_advance gap went from ten
+  mismatching fields at -93 rows to four fields at -1
+  (`edge[8]`-`[11]`.`movie_logical_frame`); `edge[2]`-`[7]` are exact. Segment 11
+  287 -> 236 errors, first error frame 3518 -> 3525 on the same field
+  `queue.s2_nemesis_plc.busy`.
+- Landed, all ROM-cited and independently verified: `edc396f5e` the fade's 22
+  counted V-blanks; `8695c029e` `LoadZoneTiles` per-chunk V-blanks; `a04774b31`
+  the admission census plus lag-row replay; `0bc7cc4be` removal of a 21-frame
+  reveal fade the ROM never performs; `cd0d893a1` player art submitted at
+  `InitPlayers`; `4d51aa04f` the bonus tally draining two countdowns and
+  finishing with the longer of them; `609361da8` the pre-level fade ordered
+  before the title card (87 -> 109 rows at all five interior returns);
+  `bad614ae6` and `7c7aa5901` a wrong test expectation and a wrong ROM claim in
+  a javadoc.
+- Open frontier: the special-stage interior return. The engine's sidekick
+  executes one playable pass fewer than the player across the seam. Fingerprint:
+  census-walk-alone = 58355 errors at segment 2, frame 1, `sidekick_x` 0x0DDE vs
+  0x0DDD, four sidekick-only fields, player clean to frame 52.
+- Five explanations measured and refuted, each with the measurement that killed
+  it: an extra entry pass (both paths run 26); a follow-direction flip (no
+  `FollowLeft` exists in the seam); a ring refill without a CPU pass (strictly
+  1:1 at all seven level entries); a 16-vs-17 follow delay (an arithmetic error
+  of mine, published and retracted -- the engine was right); and boundary
+  adoption (a one-row comparison shift nearly doubles the residual, 58355 ->
+  99105, and breaks the previously-exact player from frame 15).
+- The adoption refutation is decisive because the misalignment is confined to one
+  object: the sidekick reads the recording's row N-1 for frames 1-20 while the
+  player is aligned row-for-row, and one comparator cursor serves every field.
+- Full analysis and regression fingerprints in
+  [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
