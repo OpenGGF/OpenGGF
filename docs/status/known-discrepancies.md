@@ -38,6 +38,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
+27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 
 ---
 
@@ -1628,3 +1629,74 @@ shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
 bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
 stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
 determinism measurement of its own.
+
+---
+
+## S2 Whole-Run V-int Clock Cannot Be Made Exact
+
+`TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven
+rounds of investigation. Recording it so the next attempt starts from the evidence
+rather than repeating the sequence.
+
+### Original Implementation
+
+`Vint_runcount` is free-running and absolute: `VintRet: addq.l #1,(Vint_runcount).w`
+(docs/s2disasm/s2.asm:508) is unconditional and every mode path reaches it. ROM objects
+gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:60989-60998,
+period 2, "target Sidekick on uneven frames"), `Obj2C_Leaf` `& $1F`
+(s2.asm:52200-52208, period 32), and `Obj28_Main` `btst #4` for animal bounce
+direction (s2.asm:24660-24665, verified against the recording on all 31 floor-contact
+events).
+
+A tick is lost only inside an interrupts-off window, and only when that window spans
+**two or more** V-blanks: `disable_ints` masks the CPU but not the VDP, which holds its
+interrupt asserted until acknowledged, so a single V-int raised inside a window is
+still taken the moment `enable_ints` runs.
+
+### Our Implementation
+
+The chain never drives uncompared special-stage interiors, so the engine advances its
+object-visible counter by **79 ticks** across an interior the ROM spends 5,800–8,500
+V-blanks in. The deficit accumulates to roughly 33,500 by the run's final segment.
+
+### Rationale
+
+Two of the three inputs are derivable and were derived. The S2 special-stage return
+masks 11 rows (10 for the level-entry block at s2.asm:4766-4770, whose two Nemesis
+streams are 94 and 92 tiles by their 0x805E/0x805C headers; 1 for the results block at
+s2.asm:6751-6761, which carries no Nemesis stream). S1's interior return masks **0** —
+`GM_Special` has one interrupts-off block (s1disasm/sonic.asm:3231-3239) that runs
+`disable_display` before `ClearScreen`, about a quarter of a frame.
+
+Two are not.
+
+- **The ordinary level seam is not derivable.** Measured across 22 `level_advance`
+  boundaries it masks 9 rows at 21 of them and 8 at one. A fixed ROM window whose
+  whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
+  frame granularity.
+- **An unexplained 32 ticks** are lost inside one special-stage interior (`ss_3`). Its
+  entry and return gaps are identical to the crossings that reconcile exactly, so the
+  loss is internal and unattributed. Being 32, it is invisible to every known consumer
+  (0 mod 2, 16 and 32) — but it makes any "exact" clock inexact from that point on.
+
+The current baseline survives by cancellation: the odd deficit at one special-stage
+crossing is cancelled by an odd deficit at the EHZ1→EHZ2 act seam, leaving parity
+correct by luck. Correcting the special-stage crossings alone breaks that cancellation,
+inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run wholesale. That
+failure has a fingerprint — **122,139 errors at segment 7, frame 524, `sidekick_y`** —
+which has now been produced five times under four different descriptions.
+
+Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
+against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
+rows early because a differently-chosen animal survives last.
+
+Closing this needs either per-row lag data for the undriven interiors (a recorder and
+fixture change), or cycle-level modelling of the level-entry window sufficient to
+predict its 9-or-8 split. Both are larger than a trace fix. Fitting the constant is
+excluded: it would go green here and desync the first differently-timed recording.
+
+### Verification
+
+`TestS2EhzHalfpipeRoundTripChain` is fully green and unaffected. Emerald segments 0–10
+report zero errors and player physics matches the recording on every row of the run.
+Segment 11 carries 287 errors, all of them the Nemesis PLC queue, downstream of this.
