@@ -695,7 +695,7 @@ namespace OpenGGF.BizHawk.Headless
                 if (ranges[predicateFirst+i].Flags != 1
                     || !legalContinuations.Contains(ranges[predicateFirst+i].Reserved0))
                     throw Invalid("M68K predicate range is not source-exact");
-            byte[] queueKinds = ExactKindList(binding, "queue_expected_kinds", 0, 2, 3);
+            byte[] queueKinds = ExactKindList(binding, "queue_expected_kinds", 0, 2, 3, 6);
             byte[] beginKinds = ExactKindList(binding, "begin_expected_kinds", 0, 2, 3);
             byte[] directParentRetryKinds = ExactKindList(binding,
                 "direct_parent_retry_async_kinds", 2, 3);

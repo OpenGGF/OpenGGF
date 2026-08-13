@@ -21,6 +21,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests pin every reviewed REV01 boundary",
                 PinsReviewedRev01Boundaries));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests keep kind six queue observations bounded",
+                KeepsKindSixQueueObservationsBounded));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject malformed and mismatched manifests",
                 RejectsMalformedAndMismatchedManifest));
             tests.Add(new TestMain.TestCase(
@@ -1020,12 +1023,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(860, manifest.FirstRow);
             AssertEx.Equal(225101, manifest.ExclusiveEnd);
             AssertEx.Equal(RomIdentity.Sonic1Rev01Sha1, manifest.RomSha1);
-            AssertEx.Equal((uint)287,manifest.NativeConfig.HookCount);
+            AssertEx.Equal((uint)290,manifest.NativeConfig.HookCount);
             AssertEx.Equal((uint)16412,
                 manifest.NativeConfig.SnapshotBytesTotal);
             AssertHook(manifest, 0x00138E, "11c0f00a", "QueueSound1", "REQUEST_QUEUE_0");
             AssertHook(manifest, 0x001394, "11c0f00b", "QueueSound2", "REQUEST_QUEUE_1");
             AssertHook(manifest, 0x00139A, "11c0f00c", "QueueSound3", "REQUEST_QUEUE_2");
+            AssertQueueObservationKinds(manifest, 0x00138E, 0, 2, 3, 6);
+            AssertQueueObservationKinds(manifest, 0x001394, 0, 2, 3, 6);
+            AssertQueueObservationKinds(manifest, 0x00139A, 0, 2, 3, 6);
             AssertHook(manifest, 0x071B4C, "33fc010000a11100", "UpdateMusic", "SERVICE_BEGIN");
             AssertHook(manifest, 0x071B82, "4df900fff000", ".driverinput",
                 "DEFERRED_SERVICE_CONSUME");
@@ -1074,6 +1080,185 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertNative(manifest, 0x00D0, "c2c100", "zPlaySEGAPCMLoop", "POP_END_AT_PC");
             AssertNative(manifest, 0x00134A, "4e71", "DACDriverLoad", "PUSH_BEGIN");
             AssertNative(manifest, 0x00138C, "4e75", "DACDriverLoad", "POP_END_AT_PC");
+        }
+
+        private static void KeepsKindSixQueueObservationsBounded()
+        {
+            AssertPublishedKindSixQueueObservations();
+            AssertPreEpochKindSixQueueObservationsDoNotPublish();
+            AssertKindSixQueueCorrelationRollsBack(false);
+            AssertKindSixQueueCorrelationRollsBack(true);
+            AssertQueueKindRemainsRejected(4);
+            AssertQueueKindRemainsRejected(5);
+        }
+
+        private static void AssertPublishedKindSixQueueObservations()
+        {
+            var api=new FakeTraceApi();
+            const uint stack=0x00FFFDF0;
+            var host=new FakeS1Host((current,frame)=>
+            {
+                api.VisitZ80(0x003A,current);
+                current.SetCpuRegister("D0",0x81);
+                current.SetCpuRegister("A7",stack);
+                Visit(current,api,0x00138E);
+                current.SetCpuRegister("D0",0x82);
+                current.SetCpuRegister("A7",stack+4);
+                Visit(current,api,0x001394);
+                current.SetCpuRegister("D0",0x83);
+                current.SetCpuRegister("A7",stack+8);
+                Visit(current,api,0x00139A);
+                api.EmitChip(3,1,0x2A,0x0089,1);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                AssertEx.Equal(0,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(0L,session.PendingGenerationIdForTesting);
+                session.Complete(861);
+            }
+
+            string raw=output.ToString();
+            AssertEx.Equal(0,CountRecords(raw,"managed_service_snapshot"));
+            List<JObject> begins=Records(raw,"native_event",value=>
+                (int)value["kind"]==1);
+            AssertEx.Equal(2,begins.Count);
+            AssertEx.Equal(6,(int)begins[0]["service_kind"]);
+            ushort root=(ushort)begins[0]["service_token"];
+            List<JObject> markers=Records(raw,"native_event",value=>
+                (int)value["kind"]==10&&(int)value["value"]==3);
+            AssertEx.Equal(3,markers.Count);
+            for(int i=0;i<markers.Count;i++)
+            {
+                AssertEx.Equal((uint)(0x00138E+i*6),(uint)markers[i]["pc"]);
+                AssertEx.Equal(root,(ushort)markers[i]["service_token"]);
+                AssertEx.Equal(0,(int)markers[i]["parent_token"]);
+                AssertEx.Equal(6,(int)markers[i]["service_kind"]);
+                AssertEx.Equal(0,(int)markers[i]["depth"]);
+                AssertEx.Equal(2,(int)markers[i]["source_cpu"]);
+            }
+            List<JObject> chips=Records(raw,"native_event",value=>
+                (int)value["kind"]==3);
+            AssertEx.Equal(1,chips.Count);
+            AssertEx.Equal(root,(ushort)chips[0]["service_token"]);
+            AssertEx.Equal(6,(int)chips[0]["service_kind"]);
+
+            JObject queue0=Record(raw,"managed_hook_evidence",0);
+            JObject queue1=Record(raw,"managed_hook_evidence",1);
+            JObject queue2=Record(raw,"managed_hook_evidence",2);
+            AssertEx.Equal((uint)0x00138E,(uint)queue0["pc"]);
+            AssertEx.Equal((uint)0x001394,(uint)queue1["pc"]);
+            AssertEx.Equal((uint)0x00139A,(uint)queue2["pc"]);
+            uint actual0=(uint)queue0["registers"]["A7"];
+            uint actual1=(uint)queue1["registers"]["A7"];
+            uint actual2=(uint)queue2["registers"]["A7"];
+            AssertEx.Equal(stack,actual0);
+            AssertEx.Equal(actual0+4,actual1);
+            AssertEx.Equal(actual1+4,actual2);
+            foreach(JObject queue in new[]{queue0,queue1,queue2})
+            {
+                AssertEx.Equal(root,(ushort)queue["native_service_token"]);
+                AssertEx.Equal(0,(int)queue["native_parent_token"]);
+                AssertEx.Equal(3,(int)queue["native_marker_value"]);
+                AssertEx.Equal(1,((JArray)queue["native_correlation_events"]).Count);
+            }
+        }
+
+        private static void AssertPreEpochKindSixQueueObservationsDoNotPublish()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    current.SetCpuRegister("A7",0x00FFFDF0);
+                    Visit(current,api,0x001394);
+                    return;
+                }
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                AssertEx.Equal(2,api.LastDrainedEvents.Count);
+                AssertEx.Equal(1,(int)api.LastDrainedEvents[0].Kind);
+                AssertEx.Equal((uint)0x003A,api.LastDrainedEvents[0].Pc);
+                AssertEx.Equal(10,(int)api.LastDrainedEvents[1].Kind);
+                AssertEx.Equal((uint)0x001394,api.LastDrainedEvents[1].Pc);
+                AssertEx.Equal(3,(int)api.LastDrainedEvents[1].Value);
+                AssertEx.Equal(6,(int)api.LastDrainedEvents[1].ServiceKindId);
+                session.BeginEpoch();
+                AssertEx.Equal(1,((JArray)Record(output.ToString(),"baseline",0)
+                    ["active_services"]).Count);
+                AssertEx.Equal(0,CountRecords(output.ToString(),"request"));
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+        }
+
+        private static void AssertKindSixQueueCorrelationRollsBack(bool wrongOrder)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                api.VisitZ80(0x003A,current);
+                current.SetCpuRegister("A7",0x00FFFDF0);
+                if(wrongOrder)
+                {
+                    current.FireExecuteCallback(0x00138E);
+                    api.VisitManaged(0x001394,current);
+                }
+                else
+                {
+                    Visit(current,api,0x001394);
+                    api.MutateLast(value=>
+                    {
+                        value.Subject=checked((ushort)(value.Subject+1));
+                        return value;
+                    });
+                }
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    wrongOrder?"order or PC":"invalid marker fields");
+                AssertEx.Equal(before,output.ToString().Length);
+                AssertEx.Equal(0,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(0L,session.PendingGenerationIdForTesting);
+            }
+        }
+
+        private static void AssertQueueKindRemainsRejected(byte kind)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDF0);
+                if(kind==4)Visit(current,api,0x071B4C);
+                else api.VisitManaged(0x00134A,current);
+                Visit(current,api,0x001394);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "no active-kind alternative");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
         }
 
         private static void AssertDeferredBeginHooks(
@@ -3003,6 +3188,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidDataException>(
                 () => S1CompleteRunAudioReferenceCapture.LoadManifest(
                     duplicate, RomForManifest(duplicate)), "duplicate");
+
+            foreach(string queueKinds in new[]{
+                "[0,2,3]", "[0,2,3,6,5]", "[0,2,3,6,6]", "[0,2,6,3]"})
+            {
+                root=JObject.Parse(original);
+                root["native_observer"]["m68k_binding"]["queue_expected_kinds"]=
+                    JArray.Parse(queueKinds);
+                string mismatchedKinds=WriteScratch(root.ToString());
+                AssertEx.Throws<InvalidDataException>(
+                    ()=>S1CompleteRunAudioReferenceCapture.LoadManifest(
+                        mismatchedKinds,RomForManifest(mismatchedKinds)),
+                    "queue_expected_kinds");
+            }
         }
 
         private static void BoundsManifestBytesStringsAndUtf8()
@@ -4124,7 +4322,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Events = new[]
                 {
                     NativeMarkerEvent(0, 100, 0x00138E),
-                    NativeMarkerEvent(1, 103, 0x001394)
+                    NativeMarkerEvent(1, 104, 0x001394)
                 }
             };
             var reversed = new FakeS1Host((current, frame) =>
@@ -4427,6 +4625,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             throw new InvalidOperationException("Missing native action " + action + ".");
         }
 
+        private static void AssertQueueObservationKinds(
+            S1CompleteRunAudioReferenceCapture.Manifest manifest,uint pc,
+            params byte[] expectedKinds)
+        {
+            var actual=new List<byte>();
+            foreach(GpgxAudioObserverAdapter.ServiceHook hook
+                in manifest.NativeServiceHooks)
+            {
+                if(hook.Pc!=pc||hook.Action!=7)continue;
+                actual.Add(hook.ExpectedActiveKind);
+                AssertEx.Equal((byte)2,hook.Cpu);
+                AssertEx.Equal((byte)0,hook.ServiceKindId);
+                AssertEx.Equal((byte)0,hook.Flags);
+                AssertEx.Equal((ushort)0,hook.RangeFirst);
+                AssertEx.Equal((ushort)0,hook.RangeCount);
+                AssertEx.Equal((ulong)0,hook.Reserved);
+            }
+            AssertEx.Equal(expectedKinds.Length,actual.Count);
+            for(int i=0;i<expectedKinds.Length;i++)
+                AssertEx.Equal(expectedKinds[i],actual[i]);
+            AssertEx.Equal(false,actual.Contains(4));
+            AssertEx.Equal(false,actual.Contains(5));
+        }
+
         private static string FixturePath()
         {
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
@@ -4695,6 +4917,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public GpgxAudioTraceEvent[] Events = new GpgxAudioTraceEvent[0];
             public int PublicationStatus;
             public int PublicationCalls;
+            public readonly List<GpgxAudioTraceEvent> LastDrainedEvents=
+                new List<GpgxAudioTraceEvent>();
             private readonly List<GpgxAudioTraceEvent> frameEvents =
                 new List<GpgxAudioTraceEvent>();
             private readonly List<ActiveService> active =
@@ -4926,6 +5150,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public int Drain(GpgxAudioTraceEvent[] events, uint capacity,
                 out uint count)
             { Calls.Add("drain:"+capacity); count=(uint)frameEvents.Count;
+                LastDrainedEvents.Clear();LastDrainedEvents.AddRange(frameEvents);
                 if(events!=null)frameEvents.CopyTo(events);return 0; }
             public int AbortFrame() { Calls.Add("abort"); return 0; }
             public int Disable() { Calls.Add("disable"); return 0; }

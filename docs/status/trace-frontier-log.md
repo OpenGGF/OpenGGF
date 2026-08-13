@@ -66588,3 +66588,40 @@ for. Read the count with that in mind.
 - This moves the reference-observer frontier; it is not a semantic audio MATCH.
   The separate production deferred-retention issue remains unmodified and is
   not claimed fixed by the test-only selective sink.
+## 2026-08-13 — S1 complete-run audio tail-transfer freeze
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, pre-freeze source commit
+  `594edfd61e00f442ed840753c83e7a911f4909b1` plus uncommitted identity cascade.
+- Command: `OPENGGF_S1_AUDIO_PREFIX=1 OPENGGF_S1_AUDIO_TERMINAL_PROBE=1`
+  with the exact S1 REV01 ROM, complete-with-emeralds BK2, installation A, and
+  the focused row-8775 transaction test from the finalization plan.
+- Result: FAIL at movie row 185877, status `-3`, first error
+  `first_fault=5:2:1394:6:1:0:4` (M68K QueueSound2 hook proof while kind 6 is
+  the sole active root). Error count: one terminal observer error. The former
+  row-119247 `4:1:77:6:1:0:4` tail-transfer frontier did not recur.
+- Evidence: log SHA-256
+  `b7e5c6493aaa2ad2dc9db4248d1b96cfeab19edc48888b2efd260093977dca0d`.
+  Candidate patch/core/identity/install trees reproduced byte-identically;
+  installation B was not rerun after the new semantic frontier pending source
+  audit. No capture or partial output was published; no complete-run or MATCH
+  claim is made.
+
+## 2026-08-13 — S1 row-185877 QueueSound kind-6 topology fix
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, based on
+  `594edfd61e00f442ed840753c83e7a911f4909b1` plus the preserved final-freeze
+  identity cascade.
+- Source-backed change: the exact QueueSound action-7 expected-kind list is
+  `[0, 2, 3, 6]` for PCs `$138E`, `$1394`, and `$139A`. This adds only the
+  observed kind-6 root; kinds 4/5 remain invalid, the begin-kind list stays
+  `[0, 2, 3]`, and no native observer or ABI surface changed.
+- Synthetic result: the focused S1 capture suite and `CompleteRunAudioObserver`
+  suite pass. Tests pin 290 hooks, unchanged 16,412 snapshot bytes, kind-6
+  publication/pre-epoch ordering and PC identity, non-mutating service/chip
+  ownership, transactional rejection, and relational retention of the actual
+  callback A7 values.
+- Frontier status: the 88-minute real gate was deliberately not rerun before
+  the frozen identity cascade resumes. Row 185877 remains the last measured
+  real frontier; no semantic MATCH or publication is claimed.

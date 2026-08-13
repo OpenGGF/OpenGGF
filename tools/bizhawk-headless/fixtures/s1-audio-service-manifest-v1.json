@@ -146,7 +146,7 @@
       "service_kind": 4,
       "proof_range": 10,
       "predicate_ranges": [20, 21, 22, 23, 24, 25, 26],
-      "queue_expected_kinds": [0, 2, 3],
+      "queue_expected_kinds": [0, 2, 3, 6],
       "begin_expected_kinds": [0, 2, 3],
       "direct_parent_retry_async_kinds": [2, 3],
       "deferred_begin_blocker_kind": 6,
