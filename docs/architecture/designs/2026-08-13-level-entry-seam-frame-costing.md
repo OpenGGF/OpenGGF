@@ -883,3 +883,46 @@ moves 1 → 0 under the fall-through collapse.
 **The next question is follow direction, not pass count.** Instrument which branch
 `TailsCPU_Normal` takes on the interior-return seam's passes and compare the delayed target
 the engine reads from its position-record buffer against the ROM's.
+
+## 2026-08-13, final: the residual is one compared pass, and four explanations are dead
+
+The `seg4_ehz1 → seg5_ehz2` gap is four fields from exact (`edge[8]`–`[11]` at −1), and the
+interior-return seam is one playable pass from agreeing. Four candidate explanations were
+each implemented or instrumented and **each is refuted**. Recording them so none is retried.
+
+### Dead ends, with the measurement that killed each
+
+| explanation | how it died |
+|---|---|
+| **the return needs one more entry pass** | ROM: both paths run 26. `LEAVE_PRELOOP` 1 (`:5003-5006`) is unconditional straight-line code; the leave loop (`:5060-5066`) tests only `TitleCard_Background`'s id; the return's `Pal_FadeToWhite` (`:6809`, `:3570-3582`) has **zero** `RunObjects`. |
+| **the sidekick follows the wrong direction** | Per-pass probe: **no `FollowLeft` anywhere** in the seam. Every pass is `Stand` (dx=0, seeded target) or `FollowRight` (+1), `dir` RIGHT throughout, `inertia` 0 for the whole `Stand` run so the `:39328` guard is moot. |
+| **the position ring refills without a CPU pass** | Instrumented at the write site across **all seven** level entries: strictly **1:1**, contiguous slots 0–15, including a plain level start with no seam. Census lag rows, fade rows and the fall-through row are all refuted. |
+| **the engine's delay is 16 where the ROM's is 17** | **My arithmetic error.** `Sonic_RecordPos` (`:36341-36347`) increments the index *after* the write, so the index is next-free and the `$44` read is last-written **−16**, not −17. Walking `Obj01_Init_Continued` (`:36206-36216`) forward, the ROM reads the seed on passes 1–16 and flips on 17 — exactly what the engine does. `SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES = 16` already documents this in its own comment. |
+
+### What the residual actually is
+
+Post-flip acceleration is one `$C` per pass. The engine reaches `0x84` (11 × `$C`) on pass
+28 and `0x90` (12 × `$C`) on pass 29; the recording's segment-2 frame 1 carries `0x90`.
+**The comparison lands one pass early** — the destination's first compared row sits one
+playable pass before where the recording puts it.
+
+That is a *boundary adoption* question, not a pass-count, follow-direction or ring-delivery
+one. The engine runs the right number of passes, in the right directions, with a correctly
+delivered follow delay; the seam simply begins comparing one pass too soon. The relevant
+machinery is the `framesConsumed == 1` adopt-opening-row contract
+(`AbstractRunChainTest.java:1455-1463`) and the pre-seek rationale at `:1322-1330`.
+
+### The census walk is sound and ready
+
+Not landed, because it exposes the above rather than causing it — but the mechanism is
+proven and fits to the row:
+
+```
+census 173, interiorGapOrigin = destinationOffset − 173, pre-seek to origin + 1,
+cursor → returnOffset + 1, framesConsumed == 1, no overrun
+```
+
+The `+1` is structural: the census's leading non-lag run begins on the **source** segment's
+own last recorded row, which `TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop`
+leaves to the source body. Pre-seeking to the bare origin overshoots by exactly one and
+throws `rowsConsumed must be 0 or 1` at `framesConsumed = −1`.
