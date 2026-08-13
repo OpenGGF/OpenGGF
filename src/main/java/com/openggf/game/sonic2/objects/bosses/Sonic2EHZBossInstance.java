@@ -156,42 +156,47 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
     // ROM: s2.asm:62922-62934 (loc_2F27C - SUB0: Approaching diagonally)
     private void updateSub0ApproachDiagonal() {
-        // ROM: s2.asm:62926 - subi_.w #1,x_pos(a0)
-        state.x--;
-        // ROM: s2.asm:62927 - addi_.w #1,y_pos(a0)
-        state.y++;
-        syncFixedFromPosition();
-
-        // ROM: s2.asm:62924 - cmpi.w #$29D0,x_pos(a0)
+        // ROM loc_2F27C tests the arrival BEFORE it moves, and the arrival frame
+        // is spent entirely on the snap-and-advance branch (loc_2F29A) with no
+        // diagonal step (docs/s2disasm/s2.asm:63434-63447). Moving first and
+        // testing afterwards folds that frame away and starts the descent one
+        // frame early, which carries all the way to the spike's contact frame.
+        // ROM: s2.asm:63437 - cmpi.w #$29D0,x_pos(a0) / ble.s loc_2F29A
         if (state.x <= INITIAL_X) {
+            // ROM: s2.asm:63444-63445 - move.w #$29D0,x_pos(a0) / addq.b #2,routine_secondary(a0)
             state.x = INITIAL_X;
             syncFixedFromPosition();
             state.routineSecondary = SUB2_DESCEND_VERTICAL;
             state.routineTertiary = 0;
+            return;
         }
+        // ROM: s2.asm:63439 - subi_.w #1,x_pos(a0)
+        state.x--;
+        // ROM: s2.asm:63440 - addi_.w #1,y_pos(a0)
+        state.y++;
+        syncFixedFromPosition();
     }
 
     // ROM: s2.asm:62937-62969 (loc_2F2A8 - SUB2: Descending vertically/waiting)
     private void updateSub2DescendVertical() {
         switch (state.routineTertiary) {
             case 0 -> {
-                // ROM: s2.asm:62948-62959 (loc_2F2BA - Sub2_0: moving down)
-                // ROM: s2.asm:62949 - cmpi.w #$41E,y_pos(a0)
-                // Descending: move 1 pixel down per frame
-                // ROM: s2.asm:62951 - addi_.w #1,y_pos(a0)
+                // ROM loc_2F2BA tests the target height BEFORE it descends, and the
+                // frame that reaches it is spent on loc_2F2CC alone, with no further
+                // step down and no clamp of y_pos (docs/s2disasm/s2.asm:63465-63478).
+                // ROM: s2.asm:63466 - cmpi.w #$41E,y_pos(a0) / bge.s loc_2F2CC
+                if (state.y >= TARGET_Y) {
+                    // ROM: s2.asm:63473 - addq.b #2,objoff_2C(a0)
+                    state.routineTertiary = 2;
+                    // ROM: s2.asm:63475 - move.w #60,objoff_2A(a0)
+                    waitTimer = DESCEND_WAIT_FRAMES;
+                    // ROM: s2.asm:63474 - bset #0,objoff_2D(a0)
+                    setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_GROUNDED);
+                    return;
+                }
+                // ROM: s2.asm:63468 - addi_.w #1,y_pos(a0)
                 state.y++;
                 syncFixedFromPosition();
-
-                if (state.y >= TARGET_Y) {
-                    state.y = TARGET_Y;
-                    syncFixedFromPosition();
-                    // ROM: s2.asm:62956 - addq.b #2,objoff_2C(a0)
-                    state.routineTertiary = 2;
-                    // ROM: s2.asm:62958 - move.w #60,objoff_2A(a0)
-                    waitTimer = DESCEND_WAIT_FRAMES;
-                    // ROM: s2.asm:62957 - bset #0,objoff_2D(a0)
-                    setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_GROUNDED);
-                }
             }
             case 2 -> {
                 // ROM: s2.asm:62962-62969 (loc_2F2E0 - Sub2_2: waiting)

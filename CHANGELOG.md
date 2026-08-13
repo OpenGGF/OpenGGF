@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 EHZ2 boss tests its arrival positions before moving, as the ROM does. `loc_2F27C`
+  compares `cmpi.w #$29D0,x_pos` and branches BEFORE the diagonal step, and `loc_2F2BA`
+  compares `cmpi.w #$41E,y_pos` before the descent -- so in both cases the ROM spends the
+  arrival frame entirely in the follow-on routine with no movement. The engine moved first and
+  tested after, and additionally clamped y to `$41E` where the ROM never does, putting the boss
+  vehicle two frames ahead. Measured consequence: the boss spike (`Obj56` routine `$A`, x =
+  vehicle x - `$36`) sat 6-8px left of the ROM's, so a leftward-rolling player reached it one
+  frame late; the hurt tail's `subq.w #5,y_pos` roll-to-stand radius restore
+  (s2.asm:38127-38140) then landed a frame late, diverging the player at seg7_ehz2 row 1268 and
+  the camera only at row 1298. The camera was a symptom, not the cause -- it is pinned to the
+  EHZ2 boss arena bounds `LevEvents_EHZ2_Routine2` writes (`$28F0`/`$2940`, s2.asm:20428-20441),
+  which the engine already had right; it merely sat elsewhere inside that band because its
+  player was elsewhere. The engine no longer dies in segment 11: the single `applyDeath` and its
+  title-card restart are gone, and segment 11 produces a comparator report for the first time
+  (30,707 errors, first non-camera mismatch frame 1259 `x_speed`). Two further frames of the
+  measured 4-frame boss lead are diagnosed and cited but not landed -- the boss executing on its
+  own allocation frame, and `Obj56_Init` consuming a frame -- as both touch shared zone-event
+  spawn cadence.
 - Fix: the EHZ/HPZ bridge allocates its ROM subsprite child objects. `Obj11_Init` calls
   `Obj11_MakeBdgSegment` once unconditionally with `move.w #8,d1` (s2.asm:21969-21970) and
   again when `subtype - 8 > 0` (`subq.w #8,d1 / bls.s +`, s2.asm:21975-21978), so every
