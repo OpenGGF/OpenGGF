@@ -41,6 +41,11 @@ public class BridgeObjectInstance extends BoxObjectInstance
     private static final int MAX_LOGS = 16;
     /** {@code Obj11_Init}: {@code move.b #$80,width_pixels(a0)} (s2.asm:21951). */
     private static final int ROM_BALANCE_WIDTH_PIXELS = 0x80;
+    /**
+     * {@code Obj11_Init}: {@code move.w #8,d1} before the first
+     * {@code Obj11_MakeBdgSegment} call (docs/s2disasm/s2.asm:21969-21970).
+     */
+    private static final int ROM_FIRST_SEGMENT_LOGS = 8;
     private static final int MAX_DEPRESSION_ANGLE = 0x40;
     private static final int DEPRESSION_RATE = 4;
 
@@ -91,6 +96,15 @@ public class BridgeObjectInstance extends BoxObjectInstance
 
     private int logCount;
     private final int[] logYOffsets;
+
+    /**
+     * {@code Obj11_child1} / {@code Obj11_child2} — {@code objoff_30} /
+     * {@code objoff_34} (docs/s2disasm/s2.asm:21913-21914). Real SST occupants
+     * allocated once by {@code Obj11_Init}; see {@link BridgeSegmentObjectInstance}.
+     */
+    private BridgeSegmentObjectInstance segment1;
+    private BridgeSegmentObjectInstance segment2;
+    private boolean segmentsAllocated;
 
     private byte[] slopeData;
     private int depressionAngle;
@@ -199,6 +213,8 @@ public class BridgeObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        releaseDeadSegments();
+        allocateSegmentsOnce();
         updateDepressionState();
         rebuildBridgeShape();
         updateSlopeData();
@@ -207,6 +223,125 @@ public class BridgeObjectInstance extends BoxObjectInstance
                 ? playable
                 : null;
         latchStandingState(mainPlayer, checkpointAll());
+    }
+
+    /**
+     * {@code Obj11_Init}'s subsprite-object allocation (docs/s2disasm/s2.asm:21966-21988).
+     *
+     * <p>{@code d3} starts at the bridge's left edge:
+     * {@code move.w x_pos(a0),d3 / move.b (a2),d1 / move.w d1,d0 / lsr.w #1,d0 /
+     * lsl.w #4,d0 / sub.w d0,d3} (s2.asm:21955-21962), i.e.
+     * {@code x_pos - (subtype div 2) * $10}. The first
+     * {@code Obj11_MakeBdgSegment} call always passes {@code move.w #8,d1}
+     * (s2.asm:21969) — eight child sprites even for a shorter bridge — and its
+     * write loop advances {@code d3} by {@code $10} per log
+     * (s2.asm:22001-22007), so the second segment (when
+     * {@code subtype - 8 > 0}: {@code subq.w #8,d1 / bls.s +}, s2.asm:21975-21978)
+     * starts {@code $80} further right and takes the remainder as its child
+     * count.
+     *
+     * <p>Both calls go through {@code JmpTo_AllocateObjectAfterCurrent}
+     * (s2.asm:21992), which scans for the first slot with {@code id == 0}
+     * strictly after the running object (s2.asm:33705-33724) — the engine's
+     * {@code spawnChild} contract. Slot <em>order</em> is the load-bearing part:
+     * {@code TailsCPU_CheckDespawn} (s2.asm:39408-39434) reads back the slot
+     * index Tails recorded when he landed and compares the id living there.
+     */
+    /**
+     * Drops {@code Obj11_child1/2} pointers whose object has already left the
+     * live set. The ROM pointers can only ever be stale between
+     * {@code Obj11_Unload}'s two {@code DeleteObject2} calls and its own
+     * {@code DeleteObject} (s2.asm:22069-22076); this keeps the engine's
+     * object-reference closure from seeing a dangling link if anything else
+     * retires a segment.
+     */
+    private void releaseDeadSegments() {
+        if (segment1 != null && segment1.isDestroyed()) {
+            segment1 = null;
+        }
+        if (segment2 != null && segment2.isDestroyed()) {
+            segment2 = null;
+        }
+    }
+
+    private void allocateSegmentsOnce() {
+        if (segmentsAllocated) {
+            return;
+        }
+        segmentsAllocated = true;
+        if (services().objectManager() == null) {
+            return;
+        }
+
+        int leftEdgeX = romLeftEdgeX();
+        int segmentY = spawn.y();
+        segment1 = spawnChild(() ->
+                new BridgeSegmentObjectInstance(this, leftEdgeX, segmentY, ROM_FIRST_SEGMENT_LOGS));
+
+        int remainder = romSubtype() - ROM_FIRST_SEGMENT_LOGS;
+        if (remainder <= 0) {
+            return;
+        }
+        int secondStartX = leftEdgeX + ROM_FIRST_SEGMENT_LOGS * LOG_WIDTH;
+        segment2 = spawnChild(() ->
+                new BridgeSegmentObjectInstance(this, secondStartX, segmentY, remainder));
+    }
+
+    /** Raw {@code subtype(a0)} byte, as {@code Obj11_Init} reads it (s2.asm:21957). */
+    private int romSubtype() {
+        return spawn.subtype() & 0xFF;
+    }
+
+    /** {@code d3} at s2.asm:21962: {@code x_pos - (subtype div 2) * $10}. */
+    private int romLeftEdgeX() {
+        return spawn.x() - ((romSubtype() >> 1) * LOG_WIDTH);
+    }
+
+    /**
+     * {@code Obj11_Unload} (docs/s2disasm/s2.asm:22054-22076): when the bridge
+     * scrolls out of range it runs {@code DeleteObject2} on
+     * {@code Obj11_child1}, then on {@code Obj11_child2} when
+     * {@code subtype > 8} ({@code cmpi.b #8,subtype(a0) / bls.s +}), and only
+     * then {@code DeleteObject}s itself. The children have no unload path of
+     * their own, so they must go with the parent.
+     */
+    @Override
+    public void onUnload() {
+        if (segment1 != null) {
+            segment1.setDestroyed(true);
+            segment1 = null;
+        }
+        if (segment2 != null) {
+            segment2.setDestroyed(true);
+            segment2 = null;
+        }
+        segmentsAllocated = false;
+    }
+
+    /**
+     * Rewind reconstruction: a recreated {@link BridgeSegmentObjectInstance}
+     * identifies its parent by the segment's first-log X, which is fixed by the
+     * parent's spawn position and subtype (see {@link #allocateSegmentsOnce()}).
+     */
+    boolean acceptsRewindSegmentAt(int firstLogX) {
+        int leftEdgeX = romLeftEdgeX();
+        if (firstLogX == leftEdgeX) {
+            return segment1 == null;
+        }
+        int remainder = romSubtype() - ROM_FIRST_SEGMENT_LOGS;
+        if (remainder > 0 && firstLogX == leftEdgeX + ROM_FIRST_SEGMENT_LOGS * LOG_WIDTH) {
+            return segment2 == null;
+        }
+        return false;
+    }
+
+    void adoptSegmentForRewind(BridgeSegmentObjectInstance segment) {
+        segmentsAllocated = true;
+        if (segment.getFirstLogX() == romLeftEdgeX()) {
+            segment1 = segment;
+        } else {
+            segment2 = segment;
+        }
     }
 
     private void updateDepressionState() {

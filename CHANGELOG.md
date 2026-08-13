@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the EHZ/HPZ bridge allocates its ROM subsprite child objects. `Obj11_Init` calls
+  `Obj11_MakeBdgSegment` once unconditionally with `move.w #8,d1` (s2.asm:21969-21970) and
+  again when `subtype - 8 > 0` (`subq.w #8,d1 / bls.s +`, s2.asm:21975-21978), so every
+  bridge occupies one or two SST slots in addition to the parent. Each child is allocated
+  by `AllocateObjectAfterCurrent` (s2.asm:21992, :33705-33724) and inherits the parent's
+  object id via `_move.b id(a0),id(a1)` (s2.asm:21994); it never runs the routine table
+  because `Obj11` tests `render_flags.multi_sprite` first (s2.asm:21918-21928), and it is
+  deleted only by `Obj11_Unload`'s `DeleteObject2` pair (s2.asm:22054-22076). The engine
+  allocated none of them, so `TailsCPU_CheckDespawn` (s2.asm:39408-39434) reloaded
+  `(Tails_interact_ID).w`, found the slot empty, read id 0 instead of $11 and despawned
+  Tails on the bridge-landing frame where the ROM keeps him. Segment 7 of the S2 complete
+  emerald run goes from 22,458 physics comparator errors to zero, and the chain's failing
+  axes fall from seven to four (the `seg5_ehz2 -> ss_4` and `seg6_ehz2 -> ss_5` dynamic-art
+  gap comparisons also clear).
 - Fix: the EHZ/HPZ bridge reports the ROM's fixed object-edge balance width. `Obj11_Init`
   writes `move.b #$80,width_pixels(a0)` regardless of how many logs the subtype asks for
   (s2.asm:21951), and the object-edge balance branches of `Sonic_Move` / `Tails_Move` read
