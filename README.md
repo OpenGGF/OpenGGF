@@ -284,6 +284,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **A fifth hidden comparison, and the V-int phase behind it (2026-08-13):**
+  segment 11 of the emerald run carried 4,215 physics errors that nothing asserted
+  — the tail-exhaust walk-failure was rethrown before the segment report was
+  written, so no report existed and no axis was reported. Writing the report first
+  takes the chain from 4 axes to 5, which is a failing comparison becoming visible
+  rather than a regression. That is the fifth computed-but-never-reached comparison
+  in this work. The walk-failure itself is a real engine defect and is now traced
+  end to end: the engine leaves `LEVEL` 28 rows before the recording does; all 27
+  remaining rows are genuine level rows; `Load_EndOfAct` fires 28 frames early
+  because `Obj3E` triggers it on the first frame no animal remains
+  (`s2.asm:85004-85012`) and the engine's last animal dies at row 3517 against the
+  ROM's 3545; the animal spawn gate is `Vint_runcount & 7`
+  (`s2.asm:84969-84974`), the recording's 22 spawns land exactly on rows where the
+  counter is 0 mod 8, and the engine produces 23 — because **its object-visible
+  V-int counter runs a constant 33,555 behind the recorded ROM counter, and
+  33555 mod 8 = 3**, so every such gate in the segment fires three phases out. The
+  owning knob is per-game: S2 uses a disabled trace-playback profile where S1
+  declares measured V-blank alignment values. Deriving S2's from the ROM's
+  interrupt-disabled blocks is the follow-up; inventing them from this fixture
+  would be exactly the fitted model this project forbids, so nothing was changed
+  here.
 - **The sidekick stayed clamped to a dead boss arena (2026-08-13):**
   `LevEvents_EHZ2_Routine4` is a terminal routine that does nothing until the boss
   dies and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and
