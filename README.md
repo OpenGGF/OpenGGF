@@ -284,6 +284,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Bridges never let a player balance, and they allocate real child objects
+  (2026-08-13):** two ROM facts about `Obj11` that the engine had modelled by
+  approximation. First, the ROM writes a **fixed** `move.b #$80,width_pixels(a0)`
+  in `Obj11_Init` (`s2.asm:21951`) regardless of how many logs a bridge has, and
+  `Tails_Move` reads that field for its balance window (`:39712`) — since a
+  bridge's standable span is at most ±96, a `$80`-derived window is unreachable,
+  so **the ROM never lets Sonic or Tails balance on a bridge at all**. The engine
+  derived the width from real log geometry (96) and let Tails balance, which
+  pinned his tails object on Blank and suppressed a dynamic-art transfer. Second,
+  `Obj11_Init` allocates one or two **real object slots** per bridge via
+  `Obj11_MakeBdgSegment` (`:21966-22009`), each inheriting the parent id `0x11`;
+  the engine drew those subsprites as overlays and allocated nothing. That left
+  the slot the sidekick had landed on empty, so `TailsCPU_CheckDespawn`'s
+  `cmp.b id(a3),d0` (`:39423-39425`) mismatched and despawned Tails where the ROM
+  keeps him — the engine landing on slot 21 where the ROM lands on 23, exactly the
+  two-slot deficit. Segment 7 of the emerald run falls from 22,458 physics errors
+  to **zero**, and every one of its eleven segment reports is now clean. The first
+  attempt at the child allocation also broke rewind outside the trace profile
+  (`RewindIdentityTable is required for player-reference rewind fields`), caught
+  only because the classes live in `com.openggf.game.rewind.**` which
+  `**/tests/trace/**` cannot see; the links are now relinked by parent lookup as
+  the ARZ platform, Egg Prison and checkpoint-dongle children already do, with no
+  baseline exemption.
 - **A third unasserted comparison, and the one-frame sidekick behind it
   (2026-08-12):** the emerald chain looked two axes from done. It was not: segment
   7 carried **149,522 physics errors** with `complete: true` and nothing asserted
