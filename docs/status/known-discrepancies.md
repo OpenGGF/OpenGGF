@@ -1689,21 +1689,33 @@ Two are not.
   across a gap, the same shape as those mid-segment slips. A fixed ROM window whose
   whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
   frame granularity.
-- **An unexplained 32 ticks** are lost inside one special-stage interior (`ss_3`). Its
-  entry and return gaps are identical to the crossings that reconcile exactly, so the
-  loss is internal and unattributed. Being 32, it is invisible to every
-  **currently implemented** consumer (0 mod 2, 16 and 32) — but that is a property of
-  the consumers enumerated today, not a guarantee: any future object gating on a
-  non-power-of-two cadence would expose it. It makes any "exact" clock inexact from
-  that point on regardless.
+- **A 32-tick loss was recorded here against `ss_3`. It is not in the recording.**
+  Re-measured directly from the fixture, **all seven special-stage crossings reconcile at
+  exactly 11** — the derived value (10 for the level-entry block at `s2.asm:4766-4770`
+  plus 1 for the results block at `s2.asm:6751-6761`). There is no `ss_3` outlier and no
+  unattributed internal loss:
 
-  **Not yet tested, and worth one bounded round:** 32 is a suspiciously clean lump to
-  lose inside a single interior whose entry and exit gaps reconcile exactly, which is
-  more like a structural event than drift. Special-stage interiors contain their own
-  interrupt-masked windows — checkpoint tallies, message plane rewrites, ring-requirement
-  transitions. Enumerate those events per interior from the aux stream and test whether
-  the deficit is proportional (does 32 factor as a per-event constant times an event
-  delta?). If it does not factor, it is a dead end and this entry stands.
+  | interior | crossing | ss rows | movie rows | vbl delta | deficit |
+  |---|---|---|---|---|---|
+  | `ss`   | seg1_ehz1 → seg2_ehz1   | 5681 | 5856 | 5845 | 11 |
+  | `ss_2` | seg2_ehz1 → seg3_ehz1   | 6361 | 6536 | 6525 | 11 |
+  | `ss_3` | seg3_ehz1 → seg4_ehz1   | 7092 | 7267 | 7256 | 11 |
+  | `ss_4` | seg5_ehz2 → seg6_ehz2   | 7224 | 7398 | 7387 | 11 |
+  | `ss_5` | seg6_ehz2 → seg7_ehz2   | 6690 | 6864 | 6853 | 11 |
+  | `ss_6` | seg9_cpz2 → seg10_cpz2  | 8310 | 8510 | 8499 | 11 |
+  | `ss_7` | seg11_arz1 → seg12_arz1 | 8498 | 8672 | 8661 | 11 |
+
+  The interiors differ wildly on every event axis available — 5681 to 8498 rows, 41 to 60
+  segment changes, 55 to 140 rings-to-go transitions, 6 to 14 orientation changes — while
+  the deficit stays pinned at 11. The deficit is therefore **independent of every
+  measurable event axis**, which also disposes of the "does 32 factor as a per-event
+  constant times an event delta" hypothesis: there is no per-interior variation for an
+  event count to be proportional to. Do not re-run that test either.
+
+  If a 32-tick discrepancy is real it is **engine-side**, not a property of the ROM or the
+  recording, and this entry previously mis-attributed it. No prior note recording how the
+  32 was measured exists anywhere in `docs/` or `src/`. Whoever picks this up should start
+  by re-deriving it against the engine rather than trusting the number.
 
 ### The cancellation trap — read this before "fixing" a partial correction
 
@@ -1711,7 +1723,26 @@ The current baseline survives by **cancellation, not correctness**: the odd defi
 one special-stage crossing is cancelled by the odd deficit at the **OOZ1→OOZ2** act seam
 (measured; an earlier revision of this entry named EHZ1→EHZ2, which is wrong — EHZ1→EHZ2
 masks 9 like every other boundary),
-leaving parity correct by luck. Correcting the special-stage crossings **alone** breaks
+leaving parity correct by luck.
+
+The pairing was re-measured and is **arithmetically exact**. The parity axis is the
+recorded crossing advance, not the deficit-vs-11. Of the seven crossings, `ss_3` (7256)
+is the **unique even** one; the other six are odd. So under a uniform per-interior engine
+advance, exactly one odd deficit arises on the special-stage side, at `ss_3`. On the seam
+side the engine models a uniform 9, and exactly one seam deviates — OOZ1→OOZ2, at 8. Two
+odd deficits, one from each source, on the same `Vint_runcount` parity axis that
+`Obj4B_ChkPlayers` reads with `btst #0` (`s2.asm:60989-60998`). They cancel.
+
+**Open contradiction — resolve this before trusting the model.** The two odd deficits are
+far apart in run order: `ss_3` sits at segment index 5, OOZ1→OOZ2 is boundary 13 of 19.
+Parity should therefore be *inverted* for the ~16 segments between them and restored only
+at OOZ1→OOZ2. But segments 0–10 currently compare at **zero errors**, and segments 4–10
+lie inside that span. Parity is evidently not inverted there, so one of the inputs is
+wrong — most likely the assumption that the engine advances a uniform constant per
+interior. That assumption has never been verified. Verifying it is cheap and would sharpen
+this entry either way.
+
+Correcting the special-stage crossings **alone** breaks
 that cancellation, inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run
 wholesale.
 
