@@ -26,6 +26,38 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+/**
+ * <h2>Seven tests here are currently RED, and the ENGINE IS NOT THE DEFECT.</h2>
+ *
+ * <p>They encode a superseded model of the pre-start pass cadence. This class was green at
+ * {@code 06d570718} and was broken by {@code 649f21886} ("fix(trace): S2 special stage
+ * intro pass pipeline and Obj88 startup tick"), which corrected the engine against the
+ * recordings but never ran the default profile, so these expectations were left behind.
+ * Bisected in 10 steps; a further failure accreted at {@code 8c6a701dc}.
+ *
+ * <p><b>The recordings outrank this class.</b> The recorder's own {@code run_objects_end}
+ * ledger shows the first pre-start iteration overrunning, identically in <b>eight</b>
+ * independent special-stage fixtures. So {@code introFirstRecurringPassDeferred} plus the
+ * duplicate pre-start pass is a faithful model of recorded behaviour, <i>not</i> a
+ * compensator to be removed — an earlier reading of it as a hack was refuted by
+ * measurement.
+ *
+ * <p><b>Three engine "fixes" have been measured and rejected. Do not retry them:</b>
+ * <ul>
+ *   <li>Removing the duplicate pass (pure deferral, one pass per tick): this class goes
+ *       green, but every special-stage trace goes 0 → 1375 errors, first error frame 161
+ *       {@code sonic_slide_timer} exp 28 act 29.</li>
+ *   <li>Removing the deferral, keeping unconditional immediate execution: traces go
+ *       0 → 1 error, frame 159 {@code sonic_ss_y} exp 128 act 110.</li>
+ *   <li>Adding a frozen {@code CTRL_DMA_WAIT} observation before {@code Pal_FadeFromWhite}
+ *       (s2.asm:6665-6666) and then removing the deferral: all eight classes abort at
+ *       {@code frameCounter=225} where HEAD reports 224 — one pre-start pass behind.</li>
+ * </ul>
+ *
+ * <p>Fixing this means correcting the expectations in this class against the ROM and the
+ * recorded ledger, per assertion and with citations — not changing the engine, and not
+ * rewriting expected values to whatever the engine currently prints.
+ */
 class Sonic2SpecialStageBootstrapCadenceTest {
 
     private static final int STARTUP_WAIT_UPDATES = 10;
