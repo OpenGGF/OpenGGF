@@ -1779,16 +1779,52 @@ badnik (`s2.asm:29991`, body at `:60850`), and its parity branch sits behind
 and usually picks a player on the same side, so it is not a sensitive detector of clock
 phase.
 
+### Decision: `DISABLED` is retained deliberately
+
+Nobody chose `DISABLED` for S2 — it is an inherited default. It is nonetheless **correct
+for what is currently compared**, and is retained as a decision rather than left as an
+accident:
+
+- Engine-vs-recorded parity inverts four times across the seven level segments reached,
+  and those segments compare clean. The comparison set does not consume clock phase.
+- The only implemented parity-gated object, `Obj4B`, is ported faithfully but is a poor
+  detector (shooting flag plus a narrow x-window).
+
+Building a `SONIC_2` profile now would be speculative machinery validated against nothing
+— the shape of work the fitted-constant rule exists to prevent. S1's profile is
+legitimate because its alignment is derived from the ROM's own frame accounting.
+
+**Tripwire that reopens this.** Build a profile when, and only when, a *compared* field
+demonstrably keys on the clock and desyncs because of it — a parity- or modulo-gated
+object whose compared behaviour diverges. The two known drift consequences below are the
+candidates to watch. Note the PLC one may not be a clock problem at all: "a differently
+chosen animal survives last" sounds like object-lifetime or RNG-consumption, which would
+be addressable at the animal-selection level.
+
 ### The fingerprint is real; its explanation was not
 
 > **122,139 errors at segment 7, frame 524, field `sidekick_y` (rom=0x0271
 > engine=0x0272).**
 
 This has been produced **five times under four different descriptions** — boolean-only
-alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. Treat it as
-an empirical warning that a clock-alignment change has destabilised the run, **not** as
-evidence of a cancelling pair. The "fix both seams or neither" advice attached to it in
-earlier revisions followed from the retracted mechanism and should be ignored.
+alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. The "fix
+both seams or neither" advice attached to it in earlier revisions followed from the
+retracted mechanism and should be ignored.
+
+**Best current explanation (INFERRED, not yet measured).** The counter *value* is inert
+to the comparison (four inverted segments compare clean), but the alignment *mechanism*
+is destructive — which is consistent only if every attempt changed something other than
+the counter: executed-frame count, row admission, or segment start phase. `sidekick_y`
+is the expected casualty: the sidekick follows via a position-history buffer indexed by
+elapsed frames, so inserting or dropping engine frames to "catch the clock up" shifts
+every entry in it. That makes the sidekick a far more sensitive detector of frame-count
+perturbation than `Obj4B` is of counter phase. That five differently-described attempts
+produced an *identical* error count and first-error location is itself diagnostic — they
+collapsed to the same underlying mutation.
+
+The cheap experiment that would confirm this, if it ever matters: an alignment that
+rewrites **only** the counter value, with no frame insertion and no row-admission change.
+The findings above predict it compares clean or near-clean.
 
 Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
 against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
