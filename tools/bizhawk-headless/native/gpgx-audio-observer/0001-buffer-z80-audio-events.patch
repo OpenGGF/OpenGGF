@@ -320,10 +320,10 @@ index 32e2f2004..2bbcd0c67 100644
  include ../common.mak
 diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
 new file mode 100644
-index 000000000..5ad6bd412
+index 000000000..abbff34e9
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1623 @@
+@@ -0,0 +1,1799 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -686,6 +686,64 @@ index 000000000..5ad6bd412
 +    && a->kind == b->kind && a->depth == b->depth;
 +}
 +
++static int same_hook_site(const struct gpgx_audio_service_hook_v1 *a,
++  const struct gpgx_audio_service_hook_v1 *b)
++{
++  return a->cpu == b->cpu && a->pc == b->pc
++    && a->opcode_length == b->opcode_length
++    && !memcmp(a->opcode, b->opcode, a->opcode_length);
++}
++
++static int is_deferred_pair_hook(
++  const struct gpgx_audio_service_hook_v1 *hook);
++
++static const struct gpgx_audio_service_hook_v1 *deferred_reserve_for_origin(
++  uint8_t origin)
++{
++  uint32_t i;
++  for (i = 0; i < trace_config.hook_count; i++)
++    if (trace_hooks[i].action == ACTION_RESERVE_DEFERRED_BEGIN
++        && trace_hooks[i].expected_active_kind == origin)
++      return &trace_hooks[i];
++  return NULL;
++}
++
++static uint32_t matching_observation_count(
++  const struct gpgx_audio_service_hook_v1 *source, uint8_t expected)
++{
++  uint32_t i, count = 0;
++  for (i = 0; i < trace_config.hook_count; i++)
++    if (trace_hooks[i].action == ACTION_OBSERVATION_MARKER
++        && trace_hooks[i].expected_active_kind == expected
++        && same_hook_site(source, &trace_hooks[i])) count++;
++  return count;
++}
++
++static int is_closed_origin_observation(
++  const struct gpgx_audio_service_hook_v1 *hook)
++{
++  const struct gpgx_audio_service_hook_v1 *reserve =
++    deferred_reserve_for_origin(hook->expected_active_kind);
++  return reserve && hook->action == ACTION_OBSERVATION_MARKER
++    && (is_deferred_pair_hook(hook)
++      || matching_observation_count(hook, reserve->service_kind) == 1u);
++}
++
++static int exact_closed_origin_topology(
++  const struct gpgx_audio_service_hook_v1 *hook)
++{
++  const struct gpgx_audio_service_hook_v1 *reserve =
++    deferred_reserve_for_origin(hook->expected_active_kind);
++  const struct trace_stack_entry *parent, *origin;
++  if (!reserve) return 1;
++  if (trace_deferred_begin.pending || trace_depth != 2u) return 0;
++  parent = &trace_stack[0]; origin = &trace_stack[1];
++  return parent->token && !parent->parent && parent->kind == reserve->service_kind
++    && parent->depth == 0u && origin->token
++    && origin->parent == parent->token
++    && origin->kind == hook->expected_active_kind && origin->depth == 1u;
++}
++
 +static const struct gpgx_audio_service_hook_v1 *deferred_consume_for_kind(uint8_t kind)
 +{
 +  uint32_t i;
@@ -762,6 +820,115 @@ index 000000000..5ad6bd412
 +      && parent->kind == reserve->service_kind;
 +  }
 +  return 1;
++}
++
++static uint32_t matching_exit_count(
++  const struct gpgx_audio_service_hook_v1 *source, uint8_t action,
++  uint8_t expected)
++{
++  uint32_t i, count = 0;
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *candidate = &trace_hooks[i];
++    if (candidate->action == action
++        && candidate->expected_active_kind == expected
++        && same_hook_site(source, candidate)
++        && candidate->range_first == source->range_first
++        && candidate->range_count == source->range_count
++        && !memcmp(candidate->reserved, source->reserved,
++          sizeof(candidate->reserved))) count++;
++  }
++  return count;
++}
++
++static int validate_closed_deferred_origin_family(
++  const struct gpgx_audio_service_hook_v1 *reserve,
++  const struct gpgx_audio_service_hook_v1 *origin_consume)
++{
++  const struct gpgx_audio_service_kind_v1 *origin_kind =
++    kind_for(reserve->expected_active_kind);
++  uint32_t i, retry_count = 0, origin_internal = 0, target_internal = 0;
++  uint32_t origin_close = 0, target_close = 0;
++  uint32_t origin_conditional = 0, target_conditional = 0;
++  uint32_t family_members = 0;
++  uint8_t origin = reserve->expected_active_kind;
++  uint8_t target = reserve->service_kind;
++  if (!origin_kind) return 0;
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (hook->expected_active_kind != origin) continue;
++    if (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++        || hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP
++        || hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE
++        || (hook->action == ACTION_OBSERVATION_MARKER
++          && !same_deferred_consume_proof(hook, origin_consume)
++          && matching_observation_count(hook, target) == 1u)) family_members++;
++  }
++  if (!family_members) return 1;
++  if (!(origin_kind->flags & KIND_TYPED_ASYNC)
++      || (origin_kind->flags & KIND_ALLOW_CHILDREN)) return 0;
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++        && hook->expected_active_kind == origin)
++    {
++      if (hook->service_kind != target || !same_hook_site(hook, reserve)) return 0;
++      retry_count++;
++    }
++    if (hook->action == ACTION_OBSERVATION_MARKER
++        && hook->expected_active_kind == origin
++        && !same_deferred_consume_proof(hook, origin_consume))
++    {
++      uint32_t target_count = matching_observation_count(hook, target);
++      uint32_t root_count = matching_observation_count(hook, 0);
++      if (target_count == 1u) origin_internal++;
++      else if (target_count || root_count != 1u) return 0;
++    }
++    if (hook->action == ACTION_OBSERVATION_MARKER
++        && hook->expected_active_kind == target
++        && !same_hook_site(hook, origin_consume))
++    {
++      if (matching_observation_count(hook, origin) != 1u) return 0;
++      target_internal++;
++    }
++    if (hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP
++        && hook->expected_active_kind == origin)
++    {
++      if (hook->service_kind != target
++          || matching_exit_count(hook, ACTION_POP_END_AT_PC, target) != 1u)
++        return 0;
++      origin_close++;
++    }
++    if (hook->action == ACTION_POP_END_AT_PC
++        && hook->expected_active_kind == target)
++    {
++      if (matching_exit_count(hook,
++          ACTION_POP_DIRECT_PARENT_PROMOTE_TOP, origin) != 1u) return 0;
++      target_close++;
++    }
++    if (hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE
++        && hook->expected_active_kind == origin)
++    {
++      if (hook->service_kind != target
++          || matching_exit_count(hook,
++            ACTION_POP_END_IF_RETURN_OUTSIDE, target) != 1u) return 0;
++      origin_conditional++;
++    }
++    if (hook->action == ACTION_POP_END_IF_RETURN_OUTSIDE
++        && hook->expected_active_kind == target)
++    {
++      if (matching_exit_count(hook,
++          ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE, origin) != 1u)
++        return 0;
++      target_conditional++;
++    }
++  }
++  return retry_count == 1u && origin_internal
++    && origin_internal == target_internal
++    && origin_close && origin_close == target_close
++    && origin_conditional == target_conditional;
 +}
 +
 +static int validate_deferred_family(uint32_t reserve_count,
@@ -846,7 +1013,7 @@ index 000000000..5ad6bd412
 +    if (hook->action == ACTION_TAIL_POP_PUSH && successors[hook->expected_active_kind])
 +      return 0;
 +  }
-+  return 1;
++  return validate_closed_deferred_origin_family(reserve, origin_consume);
 +}
 +
 +static int validate_config(void)
@@ -976,9 +1143,11 @@ index 000000000..5ad6bd412
 +      {
 +        const struct gpgx_audio_service_hook_v1 *other = &trace_hooks[j];
 +        int direct_parent_pair = (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
-+            && other->action == ACTION_PUSH_BEGIN)
-+          || (hook->action == ACTION_PUSH_BEGIN
-+            && other->action == ACTION_DIRECT_PARENT_RETRY_MARKER);
++            && (other->action == ACTION_PUSH_BEGIN
++              || other->action == ACTION_RESERVE_DEFERRED_BEGIN))
++          || (other->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++            && (hook->action == ACTION_PUSH_BEGIN
++              || hook->action == ACTION_RESERVE_DEFERRED_BEGIN));
 +        int deferred_pair = (hook->action == ACTION_CONSUME_DEFERRED_BEGIN
 +            && other->action == ACTION_OBSERVATION_MARKER)
 +          || (hook->action == ACTION_OBSERVATION_MARKER
@@ -1028,7 +1197,9 @@ index 000000000..5ad6bd412
 +      for (j = 0; j < trace_config.hook_count; j++)
 +      {
 +        const struct gpgx_audio_service_hook_v1 *pair = &trace_hooks[j];
-+        if (pair->action == ACTION_PUSH_BEGIN && pair->cpu == hook->cpu
++        if ((pair->action == ACTION_PUSH_BEGIN
++              || pair->action == ACTION_RESERVE_DEFERRED_BEGIN)
++            && pair->cpu == hook->cpu
 +            && pair->pc == hook->pc
 +            && pair->expected_active_kind == hook->expected_active_kind
 +            && pair->service_kind == hook->service_kind
@@ -1346,7 +1517,8 @@ index 000000000..5ad6bd412
 +  struct gpgx_audio_trace_event *event;
 +  uint32_t reservation = range_group_reservation(
 +    hook->range_first, hook->range_count, 0) + 1u;
-+  if (trace_depth < 2
++  if (!exact_closed_origin_topology(hook)
++      || trace_depth < 2
 +      || trace_stack[trace_depth - 1].kind != hook->expected_active_kind
 +      || trace_stack[trace_depth - 2].kind != hook->service_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
@@ -1433,7 +1605,8 @@ index 000000000..5ad6bd412
 +{
 +  int allowed;
 +  struct gpgx_audio_trace_event *event;
-+  if (trace_depth < 2
++  if (!exact_closed_origin_topology(hook)
++      || trace_depth < 2
 +      || trace_stack[trace_depth - 1].kind != hook->expected_active_kind
 +      || trace_stack[trace_depth - 2].kind != hook->service_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
@@ -1469,7 +1642,8 @@ index 000000000..5ad6bd412
 +{
 +  struct gpgx_audio_trace_event *event;
 +  const struct trace_stack_entry *parent;
-+  if (trace_depth < 2
++  if (!exact_closed_origin_topology(hook)
++      || trace_depth < 2
 +      || trace_stack[trace_depth - 1].kind != hook->expected_active_kind
 +      || trace_stack[trace_depth - 2].kind != hook->service_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
@@ -1485,7 +1659,9 @@ index 000000000..5ad6bd412
 +  uint8_t source, uint32_t pc)
 +{
 +  struct gpgx_audio_trace_event *event;
-+  if ((hook->expected_active_kind == 0 && trace_depth)
++  if ((is_closed_origin_observation(hook)
++        && !exact_closed_origin_topology(hook))
++      || (hook->expected_active_kind == 0 && trace_depth)
 +      || (hook->expected_active_kind != 0
 +        && (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)))
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }

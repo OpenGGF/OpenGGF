@@ -148,7 +148,7 @@
       "predicate_ranges": [20, 21, 22, 23, 24, 25, 26],
       "queue_expected_kinds": [0, 2, 3, 6],
       "begin_expected_kinds": [0, 2, 3],
-      "direct_parent_retry_async_kinds": [2, 3],
+      "typed_async_kinds": [2, 3, 6],
       "deferred_begin_blocker_kind": 6,
       "deferred_consume_observation_kinds": [2, 3, 4, 6],
       "retry_expected_kind": 4,

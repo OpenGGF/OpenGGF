@@ -671,7 +671,7 @@ namespace OpenGGF.BizHawk.Headless
             JObject binding = RequiredObject(native, "m68k_binding");
             ExactProperties(binding, "m68k_binding", "first_token", "service_kind",
                 "proof_range", "predicate_ranges", "queue_expected_kinds",
-                "begin_expected_kinds", "direct_parent_retry_async_kinds",
+                "begin_expected_kinds", "typed_async_kinds",
                 "deferred_begin_blocker_kind",
                 "deferred_consume_observation_kinds",
                 "retry_expected_kind", "internal_expected_kind");
@@ -697,8 +697,13 @@ namespace OpenGGF.BizHawk.Headless
                     throw Invalid("M68K predicate range is not source-exact");
             byte[] queueKinds = ExactKindList(binding, "queue_expected_kinds", 0, 2, 3, 6);
             byte[] beginKinds = ExactKindList(binding, "begin_expected_kinds", 0, 2, 3);
-            byte[] directParentRetryKinds = ExactKindList(binding,
-                "direct_parent_retry_async_kinds", 2, 3);
+            byte[] typedAsyncKinds = ExactKindList(binding,
+                "typed_async_kinds", 2, 3, 6);
+            for(int i=0;i<kinds.Length;i++)
+                if(((kinds[i].Flags&1)!=0)
+                    !=(Array.IndexOf(typedAsyncKinds,kinds[i].KindId)>=0))
+                    throw Invalid(
+                        "typed_async_kinds differs from the native kind flags");
             byte deferredBeginBlockerKind=StrictByte(
                 binding["deferred_begin_blocker_kind"],"deferred begin blocker kind");
             if(deferredBeginBlockerKind!=6)
@@ -736,7 +741,7 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 6, 0, serviceKind, 0, 0, 0);
                     if (managedHook.Pc == 0x071B4C)
                     {
-                        foreach (byte expected in directParentRetryKinds)
+                        foreach (byte expected in typedAsyncKinds)
                             AddManagedNativeHook(hookList, publicHooks,
                                 managedByToken, hookTokens, managedHook,
                                 ref nextToken, 10, serviceKind, expected,
@@ -763,12 +768,11 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 2, 0, serviceKind,
                         proofFirst, proofCount, 0);
                     snapshotBytes = checked(snapshotBytes + RangeLength(ranges, proofFirst, proofCount));
-                    for (int i=0;i<kinds.Length;i++)
+                    for (int i=0;i<typedAsyncKinds.Length;i++)
                     {
-                        if ((kinds[i].Flags&5)!=5) continue;
                         AddManagedNativeHook(hookList, publicHooks, managedByToken,
                             hookTokens, managedHook, ref nextToken, 8, serviceKind,
-                            kinds[i].KindId, proofFirst, proofCount, 0);
+                            typedAsyncKinds[i], proofFirst, proofCount, 0);
                         snapshotBytes=checked(snapshotBytes
                             +RangeLength(ranges,proofFirst,proofCount));
                     }
@@ -780,23 +784,21 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 5, 0, serviceKind,
                         proofFirst, proofCount, predicate);
                     snapshotBytes = checked(snapshotBytes + RangeLength(ranges, proofFirst, proofCount));
-                    for (int i=0;i<kinds.Length;i++)
+                    for (int i=0;i<typedAsyncKinds.Length;i++)
                     {
-                        if ((kinds[i].Flags&5)!=5) continue;
                         AddManagedNativeHook(hookList,publicHooks,managedByToken,
                             hookTokens,managedHook,ref nextToken,9,serviceKind,
-                            kinds[i].KindId,proofFirst,proofCount,predicate);
+                            typedAsyncKinds[i],proofFirst,proofCount,predicate);
                         snapshotBytes=checked(snapshotBytes
                             +RangeLength(ranges,proofFirst,proofCount));
                     }
                 }
                 else
                 {
-                    for (int i=0;i<kinds.Length;i++)
-                        if ((kinds[i].Flags&5)==5)
-                            AddManagedNativeHook(hookList, publicHooks, managedByToken,
-                                hookTokens, managedHook, ref nextToken, 7, 0,
-                                kinds[i].KindId, 0, 0, 0);
+                    for (int i=0;i<typedAsyncKinds.Length;i++)
+                        AddManagedNativeHook(hookList, publicHooks, managedByToken,
+                            hookTokens, managedHook, ref nextToken, 7, 0,
+                            typedAsyncKinds[i], 0, 0, 0);
                     AddManagedNativeHook(hookList, publicHooks, managedByToken,
                         hookTokens, managedHook, ref nextToken, 7, 0, serviceKind, 0, 0, 0);
                 }
@@ -1424,10 +1426,8 @@ namespace OpenGGF.BizHawk.Headless
                 // begin correlation. No preceding-epoch evidence is published.
                 if (!publishing)
                 {
-                    if(hook.Action!="SERVICE_BEGIN"
-                        &&hook.Action!="DEFERRED_SERVICE_CONSUME"
-                        &&hook.Action!="SERVICE_CLOSE"
-                        &&hook.Action!="CLOSE_IF_RETURN_OUTSIDE")return;
+                    if(hook.Action.StartsWith(
+                        "REQUEST_QUEUE_",StringComparison.Ordinal))return;
                     if(pendingBoundaryManaged.Count>=manifest.MaximumRecordsPerFrame)
                         throw new InvalidOperationException(
                             "The bounded S1 boundary-correlation stream overflowed.");
@@ -1473,6 +1473,13 @@ namespace OpenGGF.BizHawk.Headless
                     if (returnPc.HasValue) record["return_pc"] = returnPc.Value;
                     WriteFrame(record);
 
+                    if(hook.Action!="SERVICE_BEGIN"
+                        &&hook.Action!="DEFERRED_SERVICE_CONSUME"
+                        &&hook.Action!="SERVICE_CLOSE"
+                        &&hook.Action!="CLOSE_IF_RETURN_OUTSIDE"
+                        &&!hook.Action.StartsWith(
+                            "REQUEST_QUEUE_",StringComparison.Ordinal))
+                        occurrence.Stack=ReadM68kRegister("A7");
                     if (hook.Action == "SERVICE_BEGIN"
                         ||hook.Action=="DEFERRED_SERVICE_CONSUME")
                     {
@@ -1651,10 +1658,8 @@ namespace OpenGGF.BizHawk.Headless
                 if(!IsManagedCorrelationEventKind(value.Kind))return;
                 ManagedHook expected;
                 if(!manifest.ManagedByNativeToken.TryGetValue(value.Subject,out expected)
-                    ||expected.Action!="SERVICE_BEGIN"
-                        &&expected.Action!="DEFERRED_SERVICE_CONSUME"
-                        &&expected.Action!="SERVICE_CLOSE"
-                        &&expected.Action!="CLOSE_IF_RETURN_OUTSIDE")return;
+                    ||expected.Action.StartsWith(
+                        "REQUEST_QUEUE_",StringComparison.Ordinal))return;
                 if(pendingBoundaryManaged.Count==0)return;
                 PendingManagedOccurrence occurrence=pendingBoundaryManaged.Peek();
                 if(!object.ReferenceEquals(occurrence.Hook,expected)
@@ -1779,7 +1784,7 @@ namespace OpenGGF.BizHawk.Headless
                     if(!MatchesManagedObservationOwner(boundaryManagedServices,
                         value,occurrence.Stack))
                         throw new InvalidOperationException(
-                            "Ordinary S1 driverinput managed identity differs.");
+                            "S1 managed identity differs for internal observation.");
                     pendingBoundaryManaged.Dequeue();
                     return;
                 }
@@ -2052,6 +2057,12 @@ namespace OpenGGF.BizHawk.Headless
                     if (value.Kind != 10 || value.Value != 3)
                         throw new InvalidOperationException(
                             "Managed observation did not match a native observation marker.");
+                    if(!expected.Action.StartsWith(
+                            "REQUEST_QUEUE_",StringComparison.Ordinal)
+                        &&!MatchesManagedObservationOwner(
+                            managedServices,value,occurrence.Stack))
+                        throw new InvalidOperationException(
+                            "S1 managed identity differs for internal observation.");
                     completeOccurrence = true;
                 }
                 if (!completeOccurrence) return;

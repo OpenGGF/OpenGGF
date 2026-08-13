@@ -141,6 +141,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests observe ordinary driverinput entry without consuming",
                 ObservesOrdinaryDriverInputEntryWithoutConsuming));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests close the typed async internal route",
+                ClosesTypedAsyncInternalRoute));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject invalid typed async internal ownership",
+                RejectsInvalidTypedAsyncInternalOwnership));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject invalid driverinput ownership",
                 RejectsInvalidDriverInputOwnership));
             tests.Add(new TestMain.TestCase(
@@ -1023,8 +1029,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(860, manifest.FirstRow);
             AssertEx.Equal(225101, manifest.ExclusiveEnd);
             AssertEx.Equal(RomIdentity.Sonic1Rev01Sha1, manifest.RomSha1);
-            AssertEx.Equal((uint)291,manifest.NativeConfig.HookCount);
-            AssertEx.Equal((uint)16412,
+            AssertEx.Equal((uint)376,manifest.NativeConfig.HookCount);
+            AssertEx.Equal((uint)16418,
                 manifest.NativeConfig.SnapshotBytesTotal);
             AssertHook(manifest, 0x00138E, "11c0f00a", "QueueSound1", "REQUEST_QUEUE_0");
             AssertHook(manifest, 0x001394, "11c0f00b", "QueueSound2", "REQUEST_QUEUE_1");
@@ -1035,7 +1041,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertHook(manifest, 0x071B4C, "33fc010000a11100", "UpdateMusic", "SERVICE_BEGIN");
             AssertHook(manifest, 0x071B82, "4df900fff000", ".driverinput",
                 "DEFERRED_SERVICE_CONSUME");
-            AssertObservationKinds(manifest, 0x071BB2, 2, 3, 4);
+            AssertObservationKinds(manifest, 0x071BB2, 2, 3, 4, 6);
+            AssertTypedAsyncInternalFamily(manifest);
             AssertDeferredBeginHooks(manifest);
             AssertHook(manifest, 0x071FD2, "0c070088", "PlaySoundID", "BGM_CANDIDATE");
             AssertHook(manifest, 0x072098, "08d10007", ".bgm_fmloadloop", "LOAD_FM_DAC");
@@ -2254,6 +2261,201 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertNestedKindSixDriverInputEntry(true);
         }
 
+        private static void ClosesTypedAsyncInternalRoute()
+        {
+            AssertKindSixInternalRoute(false,false);
+            AssertKindSixInternalRoute(true,false);
+            AssertKindSixInternalRoute(false,true);
+            AssertKindSixConditionalRoute(0x072C24,true,false);
+            AssertKindSixConditionalRoute(0x072C24,false,false);
+            AssertKindSixConditionalRoute(0x072E04,true,false);
+            AssertKindSixConditionalRoute(0x072E04,false,false);
+            AssertKindSixConditionalRoute(0x072C24,true,true);
+            AssertKindSixConditionalRoute(0x072C24,false,true);
+            AssertKindSixRetry();
+        }
+
+        private static void AssertKindSixInternalRoute(
+            bool preEpoch,bool z80First)
+        {
+            uint[] internalPcs={
+                0x071BB2,0x071F02,0x071F52,0x072688,
+                0x07273A,0x0729AE,0x072B14,0x072DFA
+            };
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x003A,current);
+                if(z80First)api.VisitZ80(0x0077,current);
+                for(int i=0;i<internalPcs.Length;i++)
+                {
+                    Visit(current,api,internalPcs[i]);
+                    if(internalPcs[i]==0x07273A)
+                        api.EmitChip(3,0,0x2A,internalPcs[i]);
+                    if(internalPcs[i]==0x0729AE)
+                        api.EmitChip(4,0,0x9F,internalPcs[i]);
+                }
+                Visit(current,api,0x071C4C);
+                if(!z80First)api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,((JArray)Record(output.ToString(),
+                        "baseline",0)["active_services"]).Count);
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            string raw=output.ToString();
+            List<JObject> begins=Records(raw,"native_event",
+                value=>(int)value["kind"]==1);
+            ushort parent=(ushort)begins[0]["service_token"];
+            ushort wait=(ushort)begins[1]["service_token"];
+            byte expectedOwner=z80First?(byte)2:(byte)6;
+            for(int i=0;i<internalPcs.Length;i++)
+            {
+                JObject marker=Records(raw,"native_event",value=>
+                    (int)value["kind"]==10&&(int)value["value"]==3
+                    &&(uint)value["pc"]==internalPcs[i])[0];
+                AssertEx.Equal(expectedOwner,(byte)marker["service_kind"]);
+                AssertEx.Equal(parent,(ushort)marker["parent_token"]);
+                AssertEx.Equal(1,(byte)marker["depth"]);
+            }
+            if(!z80First)
+            {
+                List<JObject> close=Records(raw,"native_event",value=>
+                    (uint)value["pc"]==0x071C4C
+                    &&((int)value["kind"]==2||(int)value["kind"]==11));
+                AssertEx.Equal(2,close.Count);
+                AssertEx.Equal(2,(int)close[0]["kind"]);
+                AssertEx.Equal(parent,(ushort)close[0]["service_token"]);
+                AssertEx.Equal(11,(int)close[1]["kind"]);
+                AssertEx.Equal(wait,(ushort)close[1]["service_token"]);
+                AssertEx.Equal(0,(ushort)close[1]["parent_token"]);
+                AssertEx.Equal(0,(byte)close[1]["depth"]);
+            }
+        }
+
+        private static void AssertKindSixConditionalRoute(
+            uint pc,bool keep,bool preEpoch)
+        {
+            const uint rootStack=0x00FFFDB2;
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",rootStack);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x003A,current);
+                uint callbackStack=keep?rootStack-4:rootStack;
+                current.SetCpuRegister("A7",callbackStack);
+                current.SetU32((int)(callbackStack&0xFFFF),
+                    keep?0x00071C38u:0x00010000u);
+                Visit(current,api,pc);
+                current.SetCpuRegister("A7",rootStack);
+                if(keep)Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            AssertEx.Equal(keep?1:0,Records(output.ToString(),"native_event",
+                value=>(uint)value["pc"]==pc&&(int)value["kind"]==10
+                    &&(int)value["value"]==0).Count);
+            AssertEx.Equal(keep?0:1,Records(output.ToString(),"native_event",
+                value=>(uint)value["pc"]==pc&&(int)value["kind"]==11).Count);
+        }
+
+        private static void AssertKindSixRetry()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            JObject retry=Records(output.ToString(),"native_event",value=>
+                (uint)value["pc"]==0x071B4C&&(int)value["kind"]==10
+                    &&(int)value["value"]==2)[0];
+            AssertEx.Equal(4,(byte)retry["service_kind"]);
+            AssertEx.Equal(0,(ushort)retry["parent_token"]);
+            AssertEx.Equal(0,(byte)retry["depth"]);
+        }
+
+        private static void RejectsInvalidTypedAsyncInternalOwnership()
+        {
+            AssertKindSixInternalOwnershipFails(false,false);
+            AssertKindSixInternalOwnershipFails(true,false);
+            AssertKindSixInternalOwnershipFails(false,true);
+            AssertKindSixInternalOwnershipFails(true,true);
+        }
+
+        private static void AssertKindSixInternalOwnershipFails(
+            bool preEpoch,bool wrongA7)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                if(wrongA7)Visit(current,api,0x071B4C);
+                api.VisitZ80(0x003A,current);
+                if(wrongA7)current.SetCpuRegister("A7",0x00FFFDB6);
+                Visit(current,api,0x071BB2);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "managed identity differs for internal observation");
+                    AssertEx.Equal(0,output.ToString().Length);
+                    return;
+                }
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "managed identity differs for internal observation");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
         private static void AssertNestedKindSixDriverInputEntry(bool preEpoch)
         {
             var api=new FakeTraceApi();
@@ -3056,6 +3258,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(expectedKinds[i], actual[i]);
         }
 
+        private static void AssertTypedAsyncInternalFamily(
+            S1CompleteRunAudioReferenceCapture.Manifest manifest)
+        {
+            var direct=new Dictionary<uint,GpgxAudioObserverAdapter.ServiceHook>();
+            var nested=new Dictionary<uint,GpgxAudioObserverAdapter.ServiceHook>();
+            foreach(GpgxAudioObserverAdapter.ServiceHook hook
+                in manifest.NativeServiceHooks)
+            {
+                if(hook.Cpu!=2||hook.Action!=7||hook.Pc==0x071B82
+                    ||hook.Pc==0x00138E||hook.Pc==0x001394
+                    ||hook.Pc==0x00139A)continue;
+                if(hook.ExpectedActiveKind==4)direct.Add(hook.Pc,hook);
+                if(hook.ExpectedActiveKind==6)nested.Add(hook.Pc,hook);
+            }
+            AssertEx.Equal(78,direct.Count);
+            AssertEx.Equal(78,nested.Count);
+            foreach(KeyValuePair<uint,GpgxAudioObserverAdapter.ServiceHook>
+                pair in direct)
+            {
+                AssertEx.Equal(true,nested.ContainsKey(pair.Key));
+                GpgxAudioObserverAdapter.ServiceHook counterpart=nested[pair.Key];
+                AssertEx.Equal(pair.Value.Cpu,counterpart.Cpu);
+                AssertEx.Equal(pair.Value.Pc,counterpart.Pc);
+                AssertEx.Equal(pair.Value.OpcodeLength,counterpart.OpcodeLength);
+                AssertEx.Equal(pair.Value.Opcode,counterpart.Opcode);
+                AssertEx.Equal((byte)6,counterpart.ExpectedActiveKind);
+            }
+            GpgxAudioObserverAdapter.ServiceKind kind6=Array.Find(
+                manifest.NativeKinds,value=>value.KindId==6);
+            AssertEx.Equal((byte)3,kind6.Flags);
+        }
+
         private static void AssertCloseAlternatives(
             S1CompleteRunAudioReferenceCapture.Manifest manifest, uint pc)
         {
@@ -3070,9 +3304,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             crossing.Sort();
             AssertEx.Equal(1,ordinary);
-            AssertEx.Equal(2,crossing.Count);
+            AssertEx.Equal(3,crossing.Count);
             AssertEx.Equal((byte)2,crossing[0]);
             AssertEx.Equal((byte)3,crossing[1]);
+            AssertEx.Equal((byte)6,crossing[2]);
         }
 
         private static void AssertConditionalCloseAlternatives(
@@ -3097,11 +3332,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "Unexpected conditional-close topology alternative.");
             }
             crossing.Sort();
-            AssertEx.Equal(3,total);
+            AssertEx.Equal(4,total);
             AssertEx.Equal(1,ordinary);
-            AssertEx.Equal(2,crossing.Count);
+            AssertEx.Equal(3,crossing.Count);
             AssertEx.Equal((byte)2,crossing[0]);
             AssertEx.Equal((byte)3,crossing[1]);
+            AssertEx.Equal((byte)6,crossing[2]);
         }
 
         private static void RequiresDirectParentRetryUnderAsyncPcm()
@@ -3121,9 +3357,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
             asyncKinds.Sort();
-            AssertEx.Equal(2, asyncKinds.Count);
+            AssertEx.Equal(3, asyncKinds.Count);
             AssertEx.Equal((byte)2, asyncKinds[0]);
             AssertEx.Equal((byte)3, asyncKinds[1]);
+            AssertEx.Equal((byte)6, asyncKinds[2]);
         }
 
         private static void CorrelatesDirectParentRetryToManagedService()
@@ -3237,6 +3474,35 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         mismatchedKinds,RomForManifest(mismatchedKinds)),
                     "queue_expected_kinds");
             }
+            foreach(string typedAsyncKinds in new[]{
+                "[2,3]", "[2,3,4,6]", "[2,3,6,5]",
+                "[2,3,6,6]", "[2,6,3]"})
+            {
+                root=JObject.Parse(original);
+                root["native_observer"]["m68k_binding"]["typed_async_kinds"]=
+                    JArray.Parse(typedAsyncKinds);
+                string mismatchedKinds=WriteScratch(root.ToString());
+                AssertEx.Throws<InvalidDataException>(
+                    ()=>S1CompleteRunAudioReferenceCapture.LoadManifest(
+                        mismatchedKinds,RomForManifest(mismatchedKinds)),
+                    "typed_async_kinds");
+            }
+            root=JObject.Parse(original);
+            ((JArray)root["native_observer"]["kinds"])[5]["flags"]=
+                new JArray("ALLOW_CONTINUATION");
+            string mismatchedTypedFlag=WriteScratch(root.ToString());
+            AssertEx.Throws<InvalidDataException>(
+                ()=>S1CompleteRunAudioReferenceCapture.LoadManifest(
+                    mismatchedTypedFlag,RomForManifest(mismatchedTypedFlag)),
+                "typed_async_kinds");
+            root=JObject.Parse(original);
+            ((JArray)root["native_observer"]["kinds"])[4]["flags"]=
+                new JArray("TYPED_ASYNC","ALLOW_CONTINUATION");
+            mismatchedTypedFlag=WriteScratch(root.ToString());
+            AssertEx.Throws<InvalidDataException>(
+                ()=>S1CompleteRunAudioReferenceCapture.LoadManifest(
+                    mismatchedTypedFlag,RomForManifest(mismatchedTypedFlag)),
+                "typed_async_kinds");
         }
 
         private static void BoundsManifestBytesStringsAndUtf8()
