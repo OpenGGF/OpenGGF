@@ -74194,3 +74194,41 @@ failure counts.
   source-comparator frontier is unchanged at 3977 of 3997, so no comparator was
   starved.
 - Full `-Ptrace-replay` on the base and fix trees: identical 68-test red sets.
+
+## 2026-08-13 - S2 special-stage results tally drained the two ring countdowns serially
+
+- Worktree `<wt>/ss-tally`, branch
+  `bugfix/ai-ss-results-tally-split`, over `a0ef4ab8e`.
+- `Obj6F_TallyScore` decrements `Bonus_Countdown_1`, `Bonus_Countdown_2` and
+  `Total_Bonus_Countdown` in one pass (docs/s2disasm/s2.asm:28381-28392) and the
+  two ring countdowns are loaded from the two players' separate ring words
+  (:6784-6785), so the tally lasts `max(P1, P2, 1000/10) + 1` passes. The engine
+  tallied one countdown seeded with the combined total, i.e. their sum, so the
+  results choreography overran by `min(P1, P2)` frames -- 67 on the emerald run's
+  first special stage, 3/0/17/6 on the other four.
+- Derived from the disassembly and then cross-checked against all five
+  special-stage fixtures of `s2-sonic-tails-complete-emeralds`: each tail
+  run-length-encodes as `[1 lag, 22, 16 lag, N]`, and `N - 22` equals
+  `22 + 18 + 1 + 180 + max(P1,P2,100) + 1 + 120 + 1` at every one of the five,
+  with the PLC drain reading 22 at all five. Full derivation in
+  docs/architecture/designs/2026-08-13-level-entry-seam-frame-costing.md.
+- Full sweep command, run identically on a base worktree at `a0ef4ab8e` and on
+  the candidate: `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest.cds.argLine="-Xshare:off -Djava.io.tmpdir=<scratch>" -Dsonic1.rom.path=...
+  -Dsonic2.rom.path=... -Ds3k.rom.path=... test`.
+  Base: 842 run / 9 failures / 56 errors / 4 skipped, 65 red classes.
+  Candidate: 842 run / 9 failures / 58 errors / 4 skipped, 66 red classes. The
+  single extra class is `TestTraceStructuralRowComparator`, which fails
+  identically (`GameServices.hardwareTiming() requires an active gameplay mode`,
+  2 errors) when run in isolation on BOTH trees -- a known ambient flake, not a
+  regression. Every other red class is byte-identical between the two runs.
+- `TestS2CompleteEmeraldRunChain` frontier is UNMOVED and unregressed: 5 axes,
+  segment 11 at 236 physics errors (first non-camera mismatch frame 3525
+  `queue.s2_nemesis_plc.busy`), `seg7_ehz2` source comparator cursor 3977 of
+  3997, `seg4_ehz1 -> seg5_ehz2` still the four `edge[8]`-`[11]` -1 slots. The
+  `stage_exit` interior return does not yet spend movie rows, so the tally's
+  length is not compared by any current assertion; the fix is a prerequisite for
+  the census walk rather than a mover of it.
+- No fixture was regenerated or consumed as an input. No constant was
+  introduced: every term of the tally length is a ROM immediate or a ROM step
+  count.
