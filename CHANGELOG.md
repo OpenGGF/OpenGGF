@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 Egg Prison button rises again the frame nobody is standing on it. ROM
+  `loc_3F354` (s2.asm:84937-84950) is `jsr (SolidObject)` -> `move.w objoff_30(a0),y_pos(a0)`
+  -> `andi.b #standing_mask` -> `addq.w #8,y_pos(a0)`: only `objoff_32`, the "prison opened"
+  flag the body's routine 2 polls at `loc_3F2B4` (:84884-84886), latches. The 8-pixel
+  depression is recomputed from the stored base y and the *current* standing bit on every
+  pass. The engine latched the depression too, so once any player had pressed the button it
+  stayed 8 pixels low forever. Measured on the emerald run's seg7_ehz2 fixture, the recorded
+  button oscillates between y=$03FA and y=$0402 across the act (`object_near` slot 17), and
+  at frame 3383 the ROM's Tails lands on the raised button (air 1->0, rolling 1->0,
+  `y_speed` $0588->0, status $07->$09 with the on-object bit, `stand_on_obj` -> $11) while
+  the engine's Tails falls straight past a surface still pressed from a much earlier contact.
+  The button now models the ROM order via `SolidExecutionMode.MANUAL_CHECKPOINT`, as `Obj47`
+  already does, so `SolidObject` still sees the previous frame's y. The invented
+  `player.getYSpeed() >= 0` trigger gate is gone -- ROM tests `standing_mask` alone. Segment
+  11 of the emerald run falls from 4,192 errors to 287, and its first non-camera mismatch
+  moves from frame 3383 (`sidekick_y`) to frame 3518 (`queue.s2_nemesis_plc.busy`); every
+  surviving error in the segment is now `queue.s2_nemesis_plc.*`.
 - Fix: S2 Egg Prison pieces keep their own solid push/standing bits. ROM `Obj3E` allocates the
   capsule body, button, lock and broken half into four separate SST slots (`loc_3F212` /
   `loc_3F220`, s2.asm:84832-84865), so each piece owns a distinct `status(a0)` byte, and
