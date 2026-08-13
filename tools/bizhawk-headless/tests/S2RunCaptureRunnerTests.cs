@@ -420,7 +420,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "{\"from_segment\": 1, \"to_segment\": 2,"
                     + " \"entry_kind\": \"stage_exit\","
                     + " \"mode_change_bk2_frame\": 22,"
-                    + " \"rings_after\": 0, \"emeralds_after\": 1}");
+                    + " \"rings_after\": 0, \"emeralds_after\": 1,"
+                    + " \"gap_admission_runs\": [1]}");
             });
         }
 
@@ -741,7 +742,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " \"saved_x_pos\": 100, \"saved_y_pos\": 50,"
                     + " \"last_star_post_hit\": 2,"
                     + " \"rings_before\": 7, \"rings_after\": 0,"
-                    + " \"emeralds_before\": 3, \"emeralds_after\": 4}");
+                    + " \"emeralds_before\": 3, \"emeralds_after\": 4,"
+                    + " \"gap_admission_runs\": [5]}");
             });
         }
 
@@ -819,7 +821,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " \"entry_kind\": \"level_advance\","
                     + " \"mode_change_bk2_frame\": 8,"
                     + " \"rings_before\": 12, \"rings_after\": 12,"
-                    + " \"emeralds_before\": 1, \"emeralds_after\": 1}");
+                    + " \"emeralds_before\": 1, \"emeralds_after\": 1,"
+                    + " \"gap_admission_runs\": [4]}");
             });
         }
 

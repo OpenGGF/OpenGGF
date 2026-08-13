@@ -149,8 +149,42 @@ public record TraceRunManifest(
         @JsonProperty("rings_before") Integer ringsBefore,
         @JsonProperty("rings_after") Integer ringsAfter,
         @JsonProperty("emeralds_before") Integer emeraldsBefore,
-        @JsonProperty("emeralds_after") Integer emeraldsAfter
-    ) {}
+        @JsonProperty("emeralds_after") Integer emeraldsAfter,
+        @JsonProperty("gap_admission_runs") List<Integer> gapAdmissionRuns
+    ) {
+
+        /**
+         * Contract-1 main-loop admission census for this transition's movie
+         * gap, run-length encoded, alternating, starting with a NON-lag run.
+         *
+         * <p>Each entry is a COUNT of physical frames on which the ROM's main
+         * loop did (even index) or did not (odd index) run — the recorder's
+         * {@code IsLagFrame}, which coincides with the S2 ROM's own
+         * {@code Vint_Lag} classification because {@code Vint_Lag} never calls
+         * {@code ReadJoypads} (s2.asm:481-484, 501, 529-583). It carries no
+         * position, speed, object state, or any comparison value, and it holds
+         * lengths, never a movie frame index.
+         *
+         * @return the census, or an empty list when the recorder did not
+         *         publish one for this transition
+         */
+        public List<Integer> gapAdmissionRuns() {
+            return gapAdmissionRuns == null ? List.of() : gapAdmissionRuns;
+        }
+
+        /** Legacy shape for fixtures and tests without an admission census. */
+        public Transition(
+                int fromSegment, int toSegment, String entryKind,
+                int modeChangeBk2Frame, Integer specialBonusEntryFlag,
+                Integer savedXPos, Integer savedYPos, Integer lastStarPostHit,
+                Integer ringsBefore, Integer ringsAfter,
+                Integer emeraldsBefore, Integer emeraldsAfter) {
+            this(fromSegment, toSegment, entryKind, modeChangeBk2Frame,
+                    specialBonusEntryFlag, savedXPos, savedYPos,
+                    lastStarPostHit, ringsBefore, ringsAfter, emeraldsBefore,
+                    emeraldsAfter, List.of());
+        }
+    }
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
         JsonFactory factory = new JsonFactory()

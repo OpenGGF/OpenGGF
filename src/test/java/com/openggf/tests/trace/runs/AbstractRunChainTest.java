@@ -2733,6 +2733,14 @@ abstract class AbstractRunChainTest {
         // leaves the answer to whatever the previous gap (or the previous test
         // class in this fork) happened to leave behind.
         gameplayMode.beginRunTransitionGap();
+        // CONTRACT 1. The recorder's per-transition admission census covers
+        // exactly the movie rows this loop walks: from the source segment's
+        // end through the row before the destination's first recorded row. It
+        // is run-length encoded and alternates starting non-lag, so its sum is
+        // the gap length and its origin is derivable without carrying any
+        // recorded row index -- the destination offset minus that sum.
+        boolean[] gapLag = expandGapAdmissionCensus(exit);
+        int gapOrigin = destinationOffset - gapLag.length;
         for (int step = 0; step <= stepCap; step++) {
             int cursor = playback.getCursorFrame();
             int rowsConsumed = step == 0
@@ -2754,8 +2762,12 @@ abstract class AbstractRunChainTest {
                                 + ", offset " + destinationOffset + ") for "
                                 + runDir);
             }
+            int gapIndex = cursor - gapOrigin;
+            boolean lagRow = gapIndex >= 0 && gapIndex < gapLag.length
+                    && gapLag[gapIndex];
             stepEngineFrameInTransitionGap(
-                    gameplayMode, loop, playback, playback.getCursorFrame());
+                    gameplayMode, loop, playback, playback.getCursorFrame(),
+                    lagRow);
         }
         throw new AssertionError(
                 "Segment " + segmentIndex + " destination "
@@ -3633,9 +3645,83 @@ abstract class AbstractRunChainTest {
      * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}: the
      * first gap row, and no other.
      */
+    /**
+     * Expands a transition's run-length admission census into one flag per
+     * movie row of its gap. The census alternates, starting with a NON-lag
+     * run, so even indices are executed-main-loop runs and odd indices are
+     * lag runs. An absent census expands to no rows, which leaves the gap walk
+     * exactly as it behaved before any census existed.
+     */
+    private static boolean[] expandGapAdmissionCensus(
+            TraceRunManifest.Transition transition) {
+        if (transition == null) {
+            return new boolean[0];
+        }
+        List<Integer> runs = transition.gapAdmissionRuns();
+        int total = 0;
+        for (int run : runs) {
+            if (run < 0) {
+                throw new AssertionError(
+                        "admission census run length must be non-negative");
+            }
+            total += run;
+        }
+        boolean[] flags = new boolean[total];
+        int cursor = 0;
+        for (int index = 0; index < runs.size(); index++) {
+            boolean lag = (index & 1) == 1;
+            for (int i = 0; i < runs.get(index); i++) {
+                flags[cursor++] = lag;
+            }
+        }
+        return flags;
+    }
+
+    /**
+     * The whole of a lag row's engine-visible V-int work: the ROM's
+     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:505-506) on
+     * every dispatch, lag included, and that counter is what
+     * {@code ObjectInstance.update} sees as {@code vblaCounter}. Everything
+     * else {@code Vint_Lag} does on the in-level path (sound-driver input,
+     * the water palette DMA, the H-int flag) is presentation or audio and
+     * owns no gameplay state.
+     */
+    private void serviceLagRowVint() {
+        var objectManager = GameServices.level().getObjectManager();
+        objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
+    }
+
     private void stepEngineFrameInTransitionGap(
             GameplayModeContext gameplayMode, GameLoop loop,
             PlaybackDebugManager playback, int movieRow) {
+        stepEngineFrameInTransitionGap(gameplayMode, loop, playback, movieRow, false);
+    }
+
+    /**
+     * CONTRACT 1 (main-loop admission). When {@code lag} is set, this physical
+     * row is one the ROM's main loop never ran on: the recorded admission
+     * census for this transition's movie gap says the emulator polled no
+     * controller, which for S2 is exactly the ROM's own {@code Vint_Lag}
+     * classification ({@code Vint_Lag} performs no {@code ReadJoypads},
+     * s2.asm:529-642, whereas the routines {@code WaitForVint} dispatches do,
+     * e.g. {@code Vint_TitleCard} at s2.asm:1008).
+     *
+     * <p>Such a row therefore services the interrupt and nothing else: the ROM
+     * still reaches {@code VintRet} and executes
+     * {@code addq.l #1,(Vint_runcount).w} (s2.asm:505-506), which is the
+     * object-visible V-blank clock, while {@code Level_frame_counter} is
+     * advanced only by the level main loop that did not run
+     * ({@code Level_MainLoop}, s2.asm:5092). No gameplay lifecycle runs, and
+     * no controller word is republished.
+     *
+     * <p>The consumed quantity is one bit per physical frame — whether the
+     * main loop ran. It carries no position, speed, object state, or any
+     * physics/aux comparison value, and it changes only WHEN engine-created
+     * work becomes ready.
+     */
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow, boolean lag) {
         TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(gapRows);
         try {
@@ -3659,6 +3745,10 @@ abstract class AbstractRunChainTest {
 
                         @Override
                         public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
+                            if (lag) {
+                                serviceLagRowVint();
+                                return;
+                            }
                             stepEngineFrame(loop);
                         }
 

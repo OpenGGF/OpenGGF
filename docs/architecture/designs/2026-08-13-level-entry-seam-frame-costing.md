@@ -312,3 +312,64 @@ decompression rate. The authorised regeneration cannot be spent on this.
 bad one. The `LoadZoneTiles` V-int cost is landed on its own merits as ROM accuracy, closing
 8 of the 71; the remaining 63 stay an un-timed residual, the same class S1 already absorbs
 as 34–40 rows.
+
+## 2026-08-13, implemented: the admission census lands; the seam does not close
+
+The two capture defects above are fixed, the emerald fixture is regenerated, and replay now
+spends the recorded lag rows. Measured outcome: the seam moves substantially and does not
+close, for a reason the measurement makes precise.
+
+### What landed
+
+1. **Capture (precondition 1).** `S2RunCaptureRunner` now records
+   `IGpgxHost.IsLagged` for *every* physical emulator frame, before any arm gate, indexed by
+   BK2 movie row. At run end each manifest transition gains
+   `gap_admission_runs`: a run-length census, alternating and starting NON-lag, over the rows
+   strictly between the source segment's end and the destination segment's first recorded
+   row. Only lengths are emitted — never a row index.
+2. **Replay (contract 1).** `AbstractRunChainTest.admitLevelWhenReady` expands the census
+   (its origin is `destinationOffset - sum`, so no recorded index is consumed) and, on a lag
+   row, runs no gameplay lifecycle and only advances the object-visible V-blank counter —
+   the ROM's `addq.l #1,(Vint_runcount).w` at `VintRet` (`s2.asm:505-506`), which executes on
+   the lag path too, while `Level_frame_counter` (`Level_MainLoop`, `s2.asm:5092`) does not.
+
+The regenerated capture **independently reproduces this note's hand-taken decomposition**,
+which is the strongest available check that the census reads ROM scheduling:
+
+| transition | census | lag |
+|---|---|---|
+| `seg4_ehz1 -> seg5_ehz2` | `[23, 11, 53, 14, 8, 37, 25]` | 62 |
+| `seg7_ehz2 -> seg8_cpz1` | `[23, 11, 62, 14, 7, 36, 25]` | 61 |
+
+The two fixed-code lag runs are 11 and 14 at both seams; `LoadZoneTiles` reads 8 at EHZ and
+7 at CPZ, matching the per-zone table `8695c029e` derived from `ArtTile_ArtKos_NumTiles_*`
+with no reference to any recording.
+
+Every one of the 70 payload files in the regenerated capture is **byte-identical** to the
+committed fixture; only `run_manifest.json` (the new field) and `recording_date` differ. The
+census is therefore purely additive: no segment offset or row count moved.
+
+### The measured result, both directions
+
+| edge | expected | before | after |
+|---|---|---|---|
+| `run_gap.edge[2]/[3]` (title-card art) | 32794 | 32804 (**+10**) | 32815 (**+21**) |
+| `run_gap.edge[4]`–`[7]` (player art) | 32905/32906 | 32842/32843 (**-63**) | 32867/32868 (**-38**) |
+
+Segment 11 physics errors 252 → **236**; the `seg7_ehz2` walk-failure comparator cursor
+3975 → 3977. The axis count stays **5** with the same five fields — no comparator was
+starved, which is the failure mode this note warned about twice.
+
+### Why it does not close, precisely
+
+Lag insertion delays the engine's subsequent work by the cumulative lag ahead of it, and
+nothing else. That is right for the player-art edges, which sit after all 62 lag frames, and
+it recovered 25 of their 63 rows. It is wrong for the title-card edges, because the ROM
+submits that art **inside** the 11-frame masked `LoadTitleCard` run — on a frame whose main
+loop never ran — whereas the engine's load is instantaneous and its submission lands on the
+next row it is allowed to run on, so those 11 rows push it further away rather than closer.
+
+Contract 1 forbids the fix: a lag row runs no gameplay, and the cause of the missed frame is
+deliberately absent. Making the level-load pipeline progress *during* the lag rows is exactly
+the frame-costing of the level load this note recommended deferring — but the census now
+supplies the missing input it would need, which the earlier sections concluded did not exist.
