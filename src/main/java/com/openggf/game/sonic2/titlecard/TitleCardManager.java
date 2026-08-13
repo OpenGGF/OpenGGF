@@ -794,9 +794,20 @@ public class TitleCardManager implements TitleCardProvider {
      * When complete, starts the text wait period.
      *
      * <p>In the original game, the background object is deleted when its internal
-     * location counter reaches -$30, and the main loop (lines 5061-5062) checks
-     * on the NEXT VBlank whether the object is gone. This creates a 1-frame delay
-     * between the background finishing and the text timer starting.
+     * location counter reaches -$30. There is <em>no</em> extra V-blank between
+     * that deletion and the loop falling through: the leave loop at
+     * docs/s2disasm/s2.asm:5060-5066 does
+     * {@code move.b #VintID_TitleCard,(Vint_routine).w} / {@code bsr.w WaitForVint}
+     * (:5060-5061), then {@code jsr (RunObjects).l} (:5062) -- which is the pass
+     * that deletes {@code TitleCard_Background} -- and then reads the cleared id
+     * three instructions later, {@code tst.b (TitleCard_Background+id).w} /
+     * {@code bne.s -} (:5065-5066), in the <em>same</em> iteration. The fall-through
+     * at :5068 runs on through {@code Level_StartGame} (:5084) into
+     * {@code Level_MainLoop}, whose own {@code bsr.w WaitForVint} (:5089-5091) is
+     * the next V-blank, so no V-blank is spent between the delete and the
+     * fall-through. The deleting iteration is therefore both the last leave-loop
+     * pass and the fall-through row -- a previous version of this javadoc claimed a
+     * 1-frame delay here, and the disassembly refutes it.
      *
      * <p>We also verify the background is completely off-screen (blueBottom <= 0)
      * before transitioning, to ensure no visual remnant remains.
@@ -807,8 +818,11 @@ public class TitleCardManager implements TitleCardProvider {
         }
         // Obj34_BackgroundOut deletes itself on the pass that computes -$30,
         // its ninth (docs/s2disasm/s2.asm:27587-27604). The loop's
-        // tst.b (TitleCard_Background+id).w then falls through on the NEXT
-        // iteration, which update() handles via LEAVE_PLAYABLE_PASSES.
+        // tst.b (TitleCard_Background+id).w (:5065) reads the cleared id in the
+        // SAME iteration as the RunObjects call that deleted it (:5062), so that
+        // iteration is both the last pass and the fall-through row -- it is the
+        // 26th and final pass counted by LEAVE_PLAYABLE_PASSES, not a pass
+        // followed by a separate fall-through frame.
     }
 
     /**
