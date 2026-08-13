@@ -339,7 +339,17 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
                 Camera camera = services().camera();
                 if (camera.getMaxX() < CAMERA_MAX_X_TARGET) {
-                    camera.setMaxXTarget((short) (camera.getMaxX() + 2));
+                    // ROM: s2.asm:63596-63599 (loc_2F460) -
+                    //   cmpi.w #$2AB0,(Camera_Max_X_pos).w / bhs.s loc_2F46E
+                    //   addq.w #2,(Camera_Max_X_pos).w
+                    // The ROM adds 2 to the boundary word ITSELF from inside the boss's own
+                    // object pass; Camera_Max_X_pos carries no target/easing indirection here.
+                    // Routing this through setMaxXTarget() instead deferred every +2 step to
+                    // the NEXT frame's boundary easing (Camera.updateBoundaryEasing runs ahead
+                    // of the object pass), leaving the engine's right boundary - and hence
+                    // camera_x - a permanent one-step (2px) behind the ROM for the whole flee.
+                    // Write the boundary immediately, exactly as the ROM does.
+                    camera.setMaxX((short) (camera.getMaxX() + 2));
                 } else if (!isOnScreen()) {
                     // ROM: s2.asm:63094-63100 (loc_2F46E) - once the camera has eased to
                     // its target max-X and the flying body is off-screen, the ROM calls
@@ -408,6 +418,29 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     @Override
     protected boolean usesDefeatSequencer() {
         return false;
+    }
+
+    /**
+     * Obj56 is a read-once-at-head dispatcher, so its defeat routine first runs next frame.
+     *
+     * <p>{@code loc_2F262} (docs/s2disasm/s2.asm:63420-63424) reads
+     * {@code routine_secondary(a0)} exactly once into d0 and {@code jmp}s through
+     * {@code off_2F270}; the selected handler never re-reads the field. The defeat write
+     * {@code move.b #6,routine_secondary(a0)} (docs/s2disasm/s2.asm:63665, in
+     * {@code loc_2F4EE}) is reached from {@code loc_2F4A6} (:63632-63636), which
+     * {@code loc_2F304} / Sub4 calls at :63486 - i.e. strictly downstream of that head
+     * read. So the ROM finishes the frame in Sub4 and only dispatches Sub6 on the
+     * following frame.
+     *
+     * <p>The engine runs touch responses before this object's own {@code update()}, so
+     * without the deferral the defeat sub-routine ran on the defeat frame itself. That
+     * pulled the whole defeat chain - and with it the {@code LoadPLC_AnimalExplosion}
+     * submission at {@code loc_2F424} (docs/s2disasm/s2.asm:63579 ->
+     * :21893-21901) - one frame early relative to the ROM.
+     */
+    @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        return true;
     }
 
     @Override

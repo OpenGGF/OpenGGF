@@ -67,7 +67,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      *
      * <p>ROM model: ObjAF reads {@code routine(a0)} once at the top of its dispatch
      * (docs/s2disasm/s2.asm:77412-77415). When loc_39CF0 sets {@code routine=$C}
-     * mid-frame (docs/s2disasm/s2.asm:78003-78004), routine $C (loc_39B92:
+     * mid-frame (docs/s2disasm/s2.asm:78091-78095), routine $C (loc_39B92:
      * {@code subq.w #1,objoff_32; bmi}, docs/s2disasm/s2.asm:77848-77853) does not
      * begin its per-frame countdown until the next frame. Without this deferral the
      * engine would run an extra same-frame countdown decrement, releasing
@@ -312,27 +312,52 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Whether this boss's defeat needs the one-frame "routine-read-once" dispatch
      * deferral (see {@link #deferDefeatRoutineDispatch}).
      *
-     * <p>Models <em>which ROM defeat-dispatch mechanism</em> the boss uses, exposed
-     * at the owning boss class. The deferral is only correct for bosses whose defeat
-     * is selected by overwriting the <strong>primary {@code routine}</strong> during
-     * the hit pass, where the object dispatches on {@code routine(a0)} read <em>once</em>
-     * at the top of its update (ObjAF / DEZ Mecha Sonic:
-     * docs/s2disasm/s2.asm:77412-77415, loc_39CF0 sets {@code routine=$C} at
-     * docs/s2disasm/s2.asm:78003-78004), or whose object routine only observes the
-     * defeated status at its own tail before selecting the defeat subroutine and
-     * returning (Obj5D / CPZ boss: docs/s2disasm/s2.asm:61723-61772). For those, the
-     * newly-selected defeat routine must not be dispatched until the next frame, and
-     * because the engine runs touch responses before this object's own {@code update()},
-     * the deferral restores that one-frame offset.
+     * <p>Models <em>which ROM defeat-dispatch mechanism</em> the boss uses, exposed at
+     * the owning boss class. The discriminator is <strong>read-once-at-head versus
+     * re-read-per-dispatch</strong>, not primary {@code routine} versus
+     * {@code routine_secondary}. Nearly every S2 boss head is the same idiom -
+     * {@code moveq #0,d0 / move.b <field>(a0),d0 / move.w Index(pc,d0.w),d1 / jmp} - and
+     * it loads the selector <em>once</em> per object update, whichever field it names:
      *
-     * <p>It must stay {@code false} for bosses whose defeat is selected via a different
-     * dispatch — e.g. ObjC5 / Wing Fortress, which sets {@code routine_secondary=$1E}
-     * (docs/s2disasm/s2.asm:81954-81962) dispatched fresh every frame from within the
-     * already-running main routine ({@code ObjC5_LaserCase} reads
-     * {@code routine_secondary} each frame, docs/s2disasm/s2.asm:81155-81160). That path
-     * does not carry ObjAF's primary-routine read-once offset, so the engine's existing
-     * post-hit countdown already matches the ROM camera-release timing. Defaults to
-     * {@code false}; override {@code true} only on the ObjAF main-routine defeat path.
+     * <ul>
+     *   <li>Obj56 / EHZ, on {@code routine_secondary}: {@code loc_2F262},
+     *       docs/s2disasm/s2.asm:63420-63424</li>
+     *   <li>ObjC5 / WFZ, on {@code routine_secondary}: {@code ObjC5_LaserCase},
+     *       docs/s2disasm/s2.asm:81246-81251</li>
+     *   <li>ObjAF / DEZ Mecha Sonic, on {@code routine}: docs/s2disasm/s2.asm:77502-77506</li>
+     *   <li>Obj5D / CPZ, on {@code routine}: docs/s2disasm/s2.asm:61470-61474</li>
+     * </ul>
+     *
+     * <p>The deferral is correct whenever the defeat write lands <em>downstream</em> of
+     * that head read, so the newly selected handler cannot run until the next frame.
+     * Because the engine runs touch responses before this object's own {@code update()},
+     * the deferral restores exactly that one-frame offset. Worked cases: ObjAF's
+     * {@code loc_39CF0} sets {@code routine=$C} (docs/s2disasm/s2.asm:78091-78095);
+     * Obj5D observes the defeated status at its own tail (docs/s2disasm/s2.asm:61723-61772);
+     * Obj56's {@code loc_2F4EE} sets {@code routine_secondary=6}
+     * (docs/s2disasm/s2.asm:63665) from {@code loc_2F4A6} (:63632-63636), called by
+     * {@code loc_2F304} / Sub4 at :63486.
+     *
+     * <p><strong>Open question - Wing Fortress (ObjC5).</strong> The previous wording of
+     * this javadoc justified WFZ's {@code false} by claiming {@code ObjC5_LaserCase}
+     * re-reads {@code routine_secondary} per dispatch, citing
+     * docs/s2disasm/s2.asm:81155-81160 (which is ObjC2 level-layout code, not a dispatch)
+     * and :81954-81962 (which is {@code ObjC5_RobotnikInit}, not the defeat write). Both
+     * citations had drifted. Opened afresh: ObjC5 reads the selector once at :81246-81251,
+     * and its defeat write {@code move.b #$1E,routine_secondary(a0)} (:82045-82050) sits
+     * downstream of that head read via {@code bra.w ObjC5_HandleHits} (:82013) ->
+     * {@code ObjC5_NoHitPointsLeft} (:82045). On the restated criterion WFZ's {@code false}
+     * is therefore <em>unexplained</em>. Nobody has established whether that is a latent
+     * defect or is compensated elsewhere in the engine, so WFZ is deliberately left
+     * unchanged pending a measurement.
+     *
+     * <p><strong>Not settled by this criterion.</strong> Obj89 / ARZ
+     * (docs/s2disasm/s2.asm:64759-64763) and Obj54 / MTZ
+     * (docs/s2disasm/s2.asm:67210-67214) dispatch on {@code boss_subtype}, which is a
+     * piece selector rather than a defeat state machine. Their values are open; do not
+     * change them on the strength of this note alone.
+     *
+     * <p>Defaults to {@code false}.
      */
     protected boolean defeatDeferralAppliesToThisBoss() {
         return false;
@@ -407,7 +432,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 // ROM reads routine(a0) once per object update, or selects a defeated
                 // routine_secondary at the tail of the object's own update and returns,
                 // so the defeat routine first runs next frame (docs/s2disasm/s2.asm:
-                // 77412-77415, 78003-78004, 77848-77853; Obj5D tail:
+                // 77412-77415, 78091-78095, 77848-77853; Obj5D tail:
                 // 61723-61772). Defer the first defeat dispatch by one frame only for
                 // bosses whose ROM dispatch shape carries that offset. Bosses that
                 // select defeat via routine_secondary dispatched fresh each frame

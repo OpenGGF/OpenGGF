@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 EHZ2 boss defers its defeat routine by a frame, and releases the camera boundary
+  directly. `Obj56` dispatches with the read-once-at-head idiom at `loc_2F262`
+  (s2.asm:63420-63424), and its defeat write `move.b #6,routine_secondary(a0)`
+  (s2.asm:63665, via `loc_2F4A6` :63632-63636 from `loc_2F304` :63486) sits strictly
+  downstream of that read -- so the ROM runs the defeat sub-routine on the FOLLOWING frame.
+  The engine ran it on the defeat frame itself, submitting `LoadPLC_AnimalExplosion`
+  (s2.asm:21893-21911) one frame early. Landing that alone exposed a second, pre-existing
+  defect it had been masking: `loc_2F460` does `cmpi.w #$2AB0,(Camera_Max_X_pos).w / bhs.s /
+  addq.w #2,(Camera_Max_X_pos).w` (s2.asm:63584-63599) -- a direct write to the boundary word
+  with no target indirection -- while the engine went through `setMaxXTarget`, and boundary
+  easing runs ahead of the object pass, so every `+2` was deferred a frame. Both land together;
+  separately the first is a net regression. Also corrects the
+  `defeatDeferralAppliesToThisBoss()` contract, which claimed the discriminator was primary
+  routine versus `routine_secondary` "dispatched fresh every frame": measured, `Obj56`
+  (:63420-63424), `ObjC5_LaserCase` (:81246-81251), `ObjAF` (:77502-77506) and `Obj5D`
+  (:61470-61474) all read once at the head, and ObjC5's defeat write (:82045) is downstream of
+  its read too, so the stated distinction does not exist in the ROM. The javadoc now says
+  read-once-at-head versus re-read-per-dispatch, with three drifted `loc_39CF0` citations
+  corrected to s2.asm:78091-78095. Wing Fortress is recorded as an OPEN QUESTION -- its `false`
+  is unexplained under the corrected reading and was deliberately not changed -- and ARZ/MTZ
+  dispatch on `boss_subtype`, which the restated criterion does not settle. Segment 11 of the
+  emerald run falls 11,893 to 11,849 errors with no `camera_x` span appearing.
 - Fix: the S2 EHZ2 boss spends its first executed frame on `Obj56_Init` alone, as the ROM does.
   `Obj56_Init` advances `routine(a0)` from 0 to 2, allocates the vehicle top, ground vehicle,
   wheels and spike, moves the main object to `x_pos=$2AF0 / y_pos=$2F8`, and then `rts`
