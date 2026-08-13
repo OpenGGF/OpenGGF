@@ -1670,14 +1670,25 @@ s2.asm:6751-6761, which carries no Nemesis stream). S1's interior return masks *
 
 Two are not.
 
-- **The ordinary level seam is probably not derivable — but one check remains.**
-  Measured across 22 `level_advance` boundaries it masks 9 rows at 21 of them and 8 at
-  one. If that is sub-frame opening phase, it cannot be modelled at frame granularity
-  and this stands. **First identify which boundary masks 8.** An act advance within a
-  zone takes a structurally different ROM path from a full zone load — it skips zone
-  tile loading and much of the init — so "act-advance masks 8, full-load masks 9" would
-  be a *code-path* predicate, derivable and citable rather than phase variance. One
-  measurement settles which it is.
+- **The ordinary level seam is not derivable, and the obvious alternative is refuted.**
+  Measured across the **19** `level_advance` boundaries of the complete-emerald run, it
+  masks 9 rows at 18 of them and 8 at **OOZ1→OOZ2**. (The halfpipe chain contributes no
+  `level_advance` boundaries at all — its four transitions are starpost_special and
+  stage_exit — so an earlier "21 of 22" in this entry was wrong.)
+
+  The tempting hypothesis was that an act advance within a zone takes a structurally
+  different ROM path from a full zone load, making "act-advance masks 8, full-load masks
+  9" a derivable code-path predicate rather than phase variance. **Measured and refuted:**
+  the run has 9 act advances and 10 full loads, and 8 of the 9 act advances mask 9 exactly
+  like every full load. The classes do not separate; the single deviation is *inside* the
+  act-advance class. Do not re-run this hypothesis.
+
+  Positive evidence for the phase reading: the recorded `vblank_counter` is not
+  one-per-row even *inside* segments — seg15_cnz2 and seg27_wfz1 both contain internal
+  row-to-row deltas of 0 and 2. The OOZ outlier is the counter gaining one extra tick
+  across a gap, the same shape as those mid-segment slips. A fixed ROM window whose
+  whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
+  frame granularity.
 - **An unexplained 32 ticks** are lost inside one special-stage interior (`ss_3`). Its
   entry and return gaps are identical to the crossings that reconcile exactly, so the
   loss is internal and unattributed. Being 32, it is invisible to every
@@ -1697,7 +1708,9 @@ Two are not.
 ### The cancellation trap — read this before "fixing" a partial correction
 
 The current baseline survives by **cancellation, not correctness**: the odd deficit at
-one special-stage crossing is cancelled by an odd deficit at the EHZ1→EHZ2 act seam,
+one special-stage crossing is cancelled by the odd deficit at the **OOZ1→OOZ2** act seam
+(measured; an earlier revision of this entry named EHZ1→EHZ2, which is wrong — EHZ1→EHZ2
+masks 9 like every other boundary),
 leaving parity correct by luck. Correcting the special-stage crossings **alone** breaks
 that cancellation, inverts `Obj4B_ChkPlayers` for a whole segment, and diverges the run
 wholesale.
