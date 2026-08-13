@@ -284,6 +284,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The Egg Prison's button cleared the push bit its own body had set
+  (2026-08-13):** ROM `Obj3E` allocates the capsule body, button, lock and broken
+  half into four separate object slots (`s2.asm:84832-84865`), and
+  `SolidObject_TestClearPush` releases the player's push status only when the
+  *calling* object's own pushing bit is set, otherwise leaving `status(a1)`
+  untouched (`:35462-35466`, `:35483-35490`). The engine keyed its push latch on
+  the shared spawn rather than the slot, so within a single object pass the body
+  set the bit and the button cleared it — measured directly, both objects using the
+  same latch key. Sonic's animation handler then ran with pushing false and
+  published walk frame `$0F` where the ROM publishes push frame `$48`. Opting the
+  three Egg Prison classes into the existing per-slot latch hook, alongside 26
+  prior users of it, takes segment 11 from 4,215 errors to 4,192 and advances its
+  frontier 244 frames. Worth recording as a pattern: this is the second defect in
+  as many days where the ROM allocates several real object slots and the engine
+  models them as one — the bridge subsprites were the first, and both surfaced as
+  something entirely unrelated (a sidekick despawn, and a player animation frame).
+  It also disproved the hypothesis it was sent to test: the divergence is not
+  inherited from the preceding transition gap, whose errors are Tails' DPLC and
+  which are byte-identical either side of this fix.
 - **A fifth hidden comparison, and the V-int phase behind it (2026-08-13):**
   segment 11 of the emerald run carried 4,215 physics errors that nothing asserted
   — the tail-exhaust walk-failure was rethrown before the segment report was

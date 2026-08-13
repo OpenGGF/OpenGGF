@@ -73850,3 +73850,29 @@ rewind/object sweep (`com.openggf.game.rewind.**`, the four object packages,
 `TestHardwareTimingAuthorityGuard`, `TestCheckpointStateRewind`, `TestCollisionLogic`):
 5,666 tests, `Failures: 20, Errors: 8, Skipped: 3` in both, with identical per-class
 failure counts.
+
+## 2026-08-13 - S2 emerald run seg7_ehz2 Egg Prison push-bit frontier
+
+- Worktree a clean worktree over `ea9aeac2d`, branch `bugfix/ai-s2-egg-prison-push-latch`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=s2.gen test`.
+- Before: 5 axes; `[segment-physics]` segment 11 (seg7_ehz2) 4215 errors, first non-camera
+  mismatch frame 3139 field `dynamic_art.edge[0].mapping_frame` rom=72 engine=15.
+- After: 5 axes; segment 11 4192 errors, first non-camera mismatch frame 3383 field
+  `sidekick_y` rom=0x03E2 engine=0x03E1. The `[walk-failure]` axis and all three
+  `[dynamic-art-gap]` axes are byte-identical before and after.
+- The 72/15 pair is Sonic mapping frame `$48` (`SonAni_Push` frame 0) versus `$0F`
+  (`SonAni_Walk` frame 0); the recorded `physics.csv` keeps `player_animation_id = 00`
+  across the divergence, which is the `SAnim_WalkRun` -> `btst Status_Push` -> `SAnim_Push`
+  redirect, not an animation-id change. Cause: engine Egg Prison pieces shared one
+  push-latch key. Fix: per-instance latch key on the three capsule classes.
+- Trace profile unchanged: 834 / 9 / 56 / 4, 65 red, red set identical BY NAME against a
+  control run of the same command at `ea9aeac2d` in a second clean worktree.
+- Still open on this segment: the `ss_5 -> seg7_ehz2` gap axis, whose `mapping_frame`
+  1-vs-105 and 16-vs-1 errors resolve against **ArtUnc_Tails** (base 0x64320,
+  `Sonic2Constants.ART_UNC_TAILS_ADDR`), not Sonic's art. Decoded against
+  `mappings/spriteDPLC/Tails.asm`: expected 1 = `DPLC_Tails_0118` (6@0, 6@6),
+  expected 16 = `DPLC_Tails_0168` (6@$96, 6@$9C, 6@$D6), expected 17 = `DPLC_Tails_0170`,
+  engine 105 = `DPLC_Tails_0390` (2@$47E, $C@$480). Frame `$69` is `TailsAni_Balance`
+  frame 0 and frames `$10`/`$11` are `TailsAni_Walk` frames 0/1, so the engine emits an
+  extra balancing pair and runs the whole tail two edges late (edge_count 18 vs 16).
