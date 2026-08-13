@@ -179,3 +179,46 @@ The ROM's load-then-card ordering is **shared structure**, not an S2 nicety, so 
 accuracy is likely to want the same machinery eventually. At that point the S2 emerald chain
 goes green as a side effect — which is the correct order of causation: the architecture pulls
 the test green, rather than the test pulling the architecture in.
+
+## 2026-08-13, later: the fade is modelled; the residual is post-card, not pre-card
+
+`edc396f5e` landed the ROM-derived half. **Delta 93 → 71.**
+
+**What was wrong.** The chain's boundary wait stepped the engine through
+`Pal_FadeToBlack` with the shared movie clock *frozen*. Those iterations are counted
+V-blanks in the ROM — `move.w #$15,d4` with `bsr.w WaitForVint` per pass
+(`s2.asm:3370-3383`, called from `Level:` at `:4765`) — and the card is not created until
+`:4912`, so the fade consumes 22 movie rows before the card exists and the harness
+consumed none. Instrumented, not reasoned: a per-frame probe showed 22 consecutive
+iterations at frozen cursor 32761 with fade active, pinned by a stack-filtered probe to
+the boundary-wait stepper rather than the gap loop. The fix introduces no constant — the
+predicate is the fade's own liveness.
+
+**A required gate, worth knowing about.** Without a source-coverage gate the same advance
+reports **4** axes instead of 5 and segment 11 vanishes — because the cursor runs past rows
+the `seg7_ehz2` source comparator has not consumed (it stops at 3970 of 3997), trading the
+walk-failure for a non-atomic-publish error. That is hiding a failure, not fixing one.
+
+**The card animation is NOT where the remaining rows are — this note previously implied it
+was.** `Obj34`'s slide is fully derivable: zone name `xstart` = `screen_width+128` = `0x240`,
+`xstop` = centred `0x120`, `anim_frame_duration` = `$1B`, and
+`Obj34_MoveTowardsTargetPosition` steps `moveq #$10,d0` = 16px/pass — so 1 init pass + 26
+`Obj34_Wait` skips + 18 moves = **45 iterations** to reach `titlecard_x_target`
+(`s2.asm:27326-27510`). That is *below* EHZ's 52-row PLC drain, so implementing the ROM's
+`x == target AND Plc_Buffer empty` exit (`s2.asm:4917-4920`) changes this seam by **zero**
+rows. It would only help zones whose drain is under 45 (WFZ 28, ARZ 36, SCZ 40).
+
+**Where the 71 actually are.** The gap's edge ledger shows edges 4–11 are the *new* level's
+player art, submitted after `InitPlayers` (`s2.asm:4946`) and stamped across the 25-pass
+leave loop (`:5060-5066`). `InitPlayers` sits behind `LoadZoneTiles`, `loadZoneBlockMaps`,
+`LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray` and `LoadCollisionIndexes`
+(`:4939-4945`) — **none of which contain a `WaitForVint`**. So the residual decomposes as
+~8 rows of pre-card interrupts-off `ClearScreen`/`LoadTitleCard`/`Level_ClrRam`
+(`:4767-4806`) plus ~61 rows of post-card, payload-dependent level-art load.
+
+Neither span has a counted ROM form. They stay an un-timed residual rather than a fitted
+number — the same class the S1 path already absorbs as 34–40 rows
+(`TraceRunPlaybackCoordinator.java:382-395`). Closing them would need the capture-side
+change described above, which measurement shows is practical (recorder builds in 3s,
+whole-movie replay 3m20s, fixture 34M) but is not required for any currently failing field
+beyond this residual.
