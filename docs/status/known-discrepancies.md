@@ -1869,13 +1869,19 @@ re-arms at the first `$0C` (cleared at `Level_StartGame`, `s2.asm:5084`). The va
 payload-dependent **un-timed load cost** — the same class already documented for S1 at
 `TraceRunPlaybackCoordinator.java:382-395` (34–40 rows there).
 
-**Known modellable portion.** `Pal_FadeToBlack` (`s2.asm:3370-3383`, `move.w #$15,d4` + `dbf`)
-is 22 counted `WaitForVint` iterations, and the seam does not currently spend them at all.
-Modelling that plus giving the level-init phases a frame cost should move 22 of the 93 and
-correct the ledger order. The remaining ~70 rows are interrupts-off `ClearScreen`/
-`LoadTitleCard` plus Kosinski level-art decompression — un-timed and payload-dependent, and
-should stay idle padding *after* the modelled choreography rather than be closed with a
-constant.
+**Fixing it needs a frame-costed level load, which does not exist.** The engine runs all 20
+level-init steps synchronously in one loop (`LevelManager.java:385-394`) and `InitStep` is
+`record(String, String, Runnable)` with no frame-cost concept, so the title card necessarily
+begins at gap row 0. ROM ordering requires a suspendable cross-frame level load shared by all
+three games, every test, the editor and level select.
+
+That is deliberately **not built**. Full diagnosis, the ruled-out shortcuts, a smaller
+sidecar-based variant worth one feasibility pass, and the priority argument are in
+[docs/architecture/designs/2026-08-13-level-entry-seam-frame-costing.md](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+Do not attempt a 22-row pre-card hold: the remaining ~70 rows are payload-dependent, so any
+fixed boundary offset is a fitted constant, and it would disturb S1's currently-green gap
+edges, which absorb 34–40 un-timed rows as padding
+(`TraceRunPlaybackCoordinator.java:382-395`).
 
 ### The fingerprint is real; its explanation was not
 
