@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 EHZ2 keeps the sidekick's horizontal bounds following the camera after the boss dies.
+  `LevEvents_EHZ2_Routine4` is a terminal, never-advancing routine that does nothing before
+  defeat and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and `Camera_X_pos` into
+  `Tails_Min_X_pos` every frame. The engine stopped updating those bounds at defeat, leaving
+  the sidekick clamped against the frozen arena maximum: measured, `doLevelBoundary` zeroed the
+  sidekick's x-speed at exactly `0x2940 + screen_width - 24 + $40 = 0x2AA8`, the engine value the
+  comparator reported. Segment 11 of the emerald run falls from 11,849 errors to 4,215.
+  Recorded because the axis count is misleading on its own: the `[segment-physics]` axis
+  disappears from the chain's failure list not because those 4,215 errors are resolved but
+  because the walk now aborts earlier, before the segment report is written -- the count comes
+  from instrumentation, not from a report. Making that comparison reachable again is the next
+  target, not a completed one.
 - Fix: the S2 EHZ2 boss defers its defeat routine by a frame, and releases the camera boundary
   directly. `Obj56` dispatches with the read-once-at-head idiom at `loc_2F262`
   (s2.asm:63420-63424), and its defeat write `move.b #6,routine_secondary(a0)`
