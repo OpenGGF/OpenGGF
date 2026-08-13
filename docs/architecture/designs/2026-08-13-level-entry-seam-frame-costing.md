@@ -839,3 +839,47 @@ future round that reproduces it has pulled the same lever again. The next questi
 not "where do the rows go" but "which pass count does `leavePass` arming actually
 change, and what does the ROM run there" — `LEAVE_PRELOOP_PASSES` and the
 `s2.asm:5003-5006` leading `RunObjects` pass are the place to start, not the gap.
+
+## 2026-08-13, closed line: the two entry paths run the same number of passes
+
+A long thread assumed the special-stage return needed **one more playable pass** into
+`Level:` than an act advance. **The disassembly refutes it. Do not add a pass.**
+
+Entry is identical in object-pass terms. The act advance branches in at `Level_MainLoop`
+`:5096` (`bne.w Level`) after that frame's `RunObjects` at `:5095`. The special-stage
+return exits its results loop (`:6798-6805`), runs `Pal_FadeToWhite` (`:6809`, routine
+`:3570-3582` — 22 V-blanks of `WaitForVint`/`UpdateAllColours`/`RunPLC_RAM` and **zero**
+`RunObjects`), sets `Game_Mode` (`:6813`), `rts`, and reaches `Level:` via `MainGameLoop`
+`:424-428` → `GameModesArray` `:431`.
+
+- `LEAVE_PRELOOP_PASSES = 1` is correct for both: `:5003-5006` is unconditional
+  straight-line code.
+- `LEAVE_LOOP_PASSES = 25` is path-independent: the only re-loop test at `:5060-5066` is
+  `tst.b (TitleCard_Background+id).w`, with no `Plc_Buffer` term, and `Obj34`'s
+  out-routines (`:27518-27604`) are pure step counters.
+- `Last_star_pole_hit` — the only entry-provenance-sensitive flag in `Level:`
+  (`:4896-4898`, `:4970-4977`) — is pass-neutral.
+
+So **26 passes on both paths**, and the leave fall-through collapse is correct for both.
+
+### What the evidence actually points at
+
+`TailsCPU_Normal_FollowRight`'s `addq.w #1,x_pos(a0)` (`:39332`, mirrored by `subq.w #1`
+at `:39318`) is reached via `Obj02_Control` `:38962-38969` → `TailsCPU_Control` `:39070` →
+`TailsCPU_Normal` `:39259`, and is **not** gated by `Control_Locked_P2` (`:38963` gates
+only the `Ctrl_2` copy) or `Level_started_flag`. So it does fire on the leave passes — but
+it is a **ceiling of ±1px per pass, not an identity**: guards at `:39302` (`d2 != 0`),
+`:39328` (`inertia != 0`) and `:39330-39331` (`x_flip` clear) can suppress it, and the
+**sign** comes from `Sonic_Pos_Record_Buf` read 17 entries back (`:39284-39291`,
+`$10<<2 + 4 = $44`) — a buffer cleared by `clearRAM Misc_Variables` at `:4809` and refilled
+one entry per pass.
+
+Therefore "engine 2px behind" is **equally consistent with a single pass where the engine
+takes `FollowLeft` and the ROM takes `FollowRight`** (−1 against +1 = 2px in one pass).
+That reading reconciles everything the measurements show: the walk budget fits exactly,
+both paths run 26 passes, the ROM has no provenance branch, and the first-mismatch frame
+moves 1 → 0 under the fall-through collapse.
+
+**The next question is follow direction, not pass count.** Instrument which branch
+`TailsCPU_Normal` takes on the interior-return seam's passes and compare the delayed target
+the engine reads from its position-record buffer against the ROM's.
