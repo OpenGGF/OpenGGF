@@ -34,9 +34,9 @@ namespace OpenGGF.BizHawk.Headless
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
         internal const string CapabilityTemplateSha256Expected =
-            "a5b5a07529f3e7c908601e7dc1ce552c8fd70390a9619e6847ccb00e16f984d3";
+            "f8e8f212b8f920ca42319351934b7a11fff911b7aa3c70be15d4936c262ba568";
         internal const string ObserverIdentitySha256 =
-            "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3";
+            "815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86";
         internal const string CompleteEventDigestSha256 =
             "c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d";
         internal const string TerminalZ80Sha256 =
@@ -45,9 +45,9 @@ namespace OpenGGF.BizHawk.Headless
             "2afa645a9471a7e084fa4273a9cfa0978868fe7be4f9a33f72f73de2ca907804";
 
         private const string CompressedCoreSha256 =
-            "ba4fdc0ce6fff92899b9640f53d13b20bebc96ed143d96f9becb4bd57c3b3b61";
+            "e65315743a6a122843907a85314e380eee03fdc06bf0885b44c3dbc3bab88c6d";
         private const string DecompressedCoreSha256 =
-            "0410b3a90e355fd6a774059a0a7945d97742841cb97a05423f116fed130e483e";
+            "f57b7a94237653879fb99af197937500a8b591f801f56284b4d2f53ca7ea6b0c";
         private const string ManagedCoreSha256 =
             "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7";
         private const string ManagedCommonSha256 =
@@ -198,7 +198,7 @@ namespace OpenGGF.BizHawk.Headless
                 RequiredString(identity, "decompressed_sha256"),
                 "installed decompressed core identity");
             int abi = RequiredInt(identity, "abi_version");
-            if (abi != 3 || RequiredInt(identity, "event_size") != 32
+            if (abi != 4 || RequiredInt(identity, "event_size") != 32
                 || RequiredInt(identity, "capacity") != 65536)
                 throw new InvalidDataException(
                     "Installed observer ABI identity changed.");

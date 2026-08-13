@@ -157,8 +157,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal("bizhawk-2.11-gpgx-audio-observer-v3",
                 identity.InstallationId);
             AssertEx.Equal("gpgx-audio-observer-v3", identity.CoreId);
-            AssertEx.Equal(3, identity.AbiVersion);
-            AssertEx.Equal("5c7cc70998c8b5b1", identity.BuildId);
+            AssertEx.Equal(4, identity.AbiVersion);
+            AssertEx.Equal("cba4d8c88cf968a9", identity.BuildId);
 
             string root = TestScratch.CreateRootPath("s2-audio-install");
             Directory.CreateDirectory(Path.Combine(root,

@@ -1,9 +1,9 @@
 {
   "schema": "openggf.gpgx-audio-capability.v1",
   "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
-  "observer_identity_sha256": "6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3",
-  "task8_harness_executable_sha256": "a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965",
-  "collector_source_sha256": "92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560",
+  "observer_identity_sha256": "815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86",
+  "task8_harness_executable_sha256": "0b96b3dfb0ce8a246533ebd2b5d197833bce1024c1ef221113792d5ffd0ed679",
+  "collector_source_sha256": "e0be4819556cf74b82273cba7b748ddd13529f2dcc61029a302f4b0f8acfda89",
   "host_source_sha256": "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7",
   "runs": {
     "s2": {

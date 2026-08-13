@@ -216,6 +216,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1 complete-run audio observer terminal freeze (2026-08-13):** the
+  source-authentic deferred tail transfer and contemporaneous M68K A7 binding
+  now carry the pinned 225,101-row movie through the configured terminal gate
+  on two independently built, byte-identical ABI-v4 GPGX installations. The
+  freeze also re-authenticates managed collector/capability identities, real
+  S2/S3K boundaries, Reset/Power lifecycle, and bounded paired performance;
+  it publishes no ROM, movie, native binary, or reference capture and makes no
+  semantic audio-MATCH claim.
 - **Sonic 2/Sonic 3&K source-owned audio parity observer (2026-08-11):** a
   reproducible, separately installed BizHawk 2.11 GPGX observer now records
   ordered Z80 service, YM2612, PSG, DAC, DPCM, and SEGA-PCM ownership from

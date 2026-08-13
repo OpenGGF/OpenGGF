@@ -320,7 +320,7 @@ index 32e2f2004..2bbcd0c67 100644
  include ../common.mak
 diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
 new file mode 100644
-index 000000000..abbff34e9
+index 000000000..f1104ac26
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
 @@ -0,0 +1,1809 @@
@@ -2135,7 +2135,7 @@ index 000000000..abbff34e9
 +}
 diff --git a/waterbox/gpgx/cinterface/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
 new file mode 100644
-index 000000000..738b6b619
+index 000000000..41d1caabf
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.h
 @@ -0,0 +1,174 @@

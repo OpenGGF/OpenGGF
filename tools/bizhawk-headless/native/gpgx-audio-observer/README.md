@@ -29,7 +29,16 @@ begin; the override wins exactly when its declared direct parent is present,
 and otherwise the ordinary begin remains authoritative. Begin ancestry remains
 immutable; managed and stored diagnostics retain the bounded transition
 history, while producer-neutral semantic records retain the effective ancestry
-without depending on native event coordinates.
+without depending on native event coordinates. Action 11 reserves one future
+service begin while an exact non-child-bearing root blocker remains active.
+Every matching callback emits marker value 4 without changing the stack. The
+reservation may remain on the origin blocker, or one exact configured action-4
+tail may atomically emit the origin END and successor BEGIN before rebinding
+its current owner. Action 12 alone consumes the reservation and emits the
+target as a child of that exact current owner. Repeated callbacks coalesce by
+immutable origin token, hook, opcode proof, target kind, A7, and return
+identity; neither transfer nor consumption is fitted to a recorded retry
+count.
 
 ABI v4 gives action-7 M68K observation markers one exact contemporaneous A7
 sample: `payload_length` is 4 and `payload[0..3]` stores the full register in
@@ -109,6 +118,19 @@ corresponding normalized source archive, literal patch, build evidence, and
 verbatim notices. Genesis Plus GX's license prohibits commercial use and
 requires complete corresponding source for modified distributions; read the
 installed `GPGX-LICENSE.txt` in full before redistributing.
+
+The reviewed action-11/action-12 tail-transfer freeze has raw core SHA-256
+`f57b7a94237653879fb99af197937500a8b591f801f56284b4d2f53ca7ea6b0c`,
+compressed core SHA-256
+`e65315743a6a122843907a85314e380eee03fdc06bf0885b44c3dbc3bab88c6d`,
+Build ID `cba4d8c88cf968a9`, compressed source-bundle SHA-256
+`de73c512b2120f63f064f5e8fd59dee230f0ff50d0debbd648a9112efe18b83b`,
+build-recipe SHA-256
+`f419cc73426f1356c30577c04231a0cc3356bdd99bc4760dfba55abecefdf748`,
+and observer identity SHA-256
+`815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86`.
+These values are one identity family: consumers must not mix them with an
+earlier patch, recipe, core, source archive, or capability fixture.
 
 Task 7 validates only the generic native observer artifact and its deterministic
 build. Game-specific S2/S3K hooks and real capture capability belong to Task 8.

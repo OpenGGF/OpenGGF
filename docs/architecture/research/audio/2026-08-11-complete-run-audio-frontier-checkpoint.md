@@ -486,3 +486,47 @@ No native patch, ABI, selector, kind flags, begin-kind alternatives, or runtime
 service mutation changed. Synthetic S1 and observer tests passed; the real
 complete-run gate remains intentionally frozen at row 185877 for the next
 identity-cascade and paired-installation run.
+
+## ABI-v4 terminal freeze (2026-08-13)
+
+The reviewed native A7 binding and tail-transfer family regenerated and
+reversed byte-exactly. Two locked builds from distinct source/toolchain roots,
+including a path containing spaces, produced the same raw core SHA-256
+`f57b7a94237653879fb99af197937500a8b591f801f56284b4d2f53ca7ea6b0c`,
+compressed core SHA-256
+`e65315743a6a122843907a85314e380eee03fdc06bf0885b44c3dbc3bab88c6d`,
+Build ID `cba4d8c88cf968a9`, recipe SHA-256
+`f419cc73426f1356c30577c04231a0cc3356bdd99bc4760dfba55abecefdf748`,
+observer identity SHA-256
+`815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86`,
+and installation-tree digest
+`830351fbda507637719647ffe283a542fcb319b0b2609dc53d675fe553e31c87`.
+
+Fresh exact configured-terminal sessions against both installations reached
+the terminal proof and passed. Each reported `total_records=107016559`,
+`retained_records=3419`, and `retained_chars=794614`; installation-A log
+SHA-256 is
+`ac6298ebf4c150346474fccaaff9d91bc76a874b4fcdcca8cc738bcf18ff1567`
+and installation-B log SHA-256 is
+`cdcfb4820353c513b4514fa87f00276ff7398f1d7d9fafa74466a091b8e05354`.
+The former row-119247 and row-185877 frontiers did not recur. The terminal
+gate is observer/lifecycle evidence; it does not assert semantic audio MATCH
+or publish a reference capture.
+
+Independent review found that the capability still named the pre-A7 collector
+source. The corrected collector SHA-256 is
+`e0be4819556cf74b82273cba7b748ddd13529f2dcc61029a302f4b0f8acfda89`.
+The final deterministic two-root managed build pins production executable
+SHA-256
+`0b96b3dfb0ce8a246533ebd2b5d197833bce1024c1ef221113792d5ffd0ed679`,
+test executable SHA-256
+`7b5043f8edce403fbbe16c6e3fd5f5438389fb0104f377dd481cf426479dcf53`,
+normalized capability SHA-256
+`f8e8f212b8f920ca42319351934b7a11fff911b7aa3c70be15d4936c262ba568`,
+and full capability SHA-256
+`845323d7fa50af24b4f516c8937fa231737d3e66df648a90e035fdd56072f326`.
+The Java audio aggregate passed 275 tests with two opt-in skips. Real S2 row
+769 and S3K row 810 gates, S3K Java decoding, Reset/Power lifecycle, and the
+native harnesses passed. Paired overhead was within the frozen bounds: S2
+median/worst 9.99%/13.78% on the unchanged confirmation run and S3K
+9.90%/10.50%.

@@ -20,23 +20,23 @@
     ["${LOCKED_ZSTD}", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/source-bundle.tar", "-o", "${BUILD_STAGE}/source-bundle.tar.zst"]
   ],
   "versioned_inputs": {
-    "build-core.sh": "7521bfab163559c9d9fb8f59c7823ee97f997db6939cb903d03f9743f99aa8c9",
+    "build-core.sh": "1386fedf1e5381aa91a0ae33cfa682125b96a8b06519c204028b8b3b0d67f89b",
     "install-core.sh": "107a4661cb6fd837d94fa3ecc879a1d931a9bfa26b015ffdcd19c0a5b12744c1",
-    "0001-buffer-z80-audio-events.patch": "c9c50f034e11044a6769a9d331fd1d42e529cb0302dbeb93b354c45c88039dcb",
+    "0001-buffer-z80-audio-events.patch": "9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c",
     "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
     "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
     "verify-inputs.sh": "33126e725b52d511b8b20360512d054f36666fa23ad884ca4d7c4fe0d99dcef5",
     "secure-runtime.sh": "5acab791f8f9c6e37cece73f2f48bcb3a6d319fa483fe1aa39a27e9baef94860",
     "notices/zstd-LICENSE": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
     ,"selftest/run.sh": "4116302d81967734c9914e4b3de7224e99a4dbd0d629f0eea0bb0cd22204ea7a"
-    ,"selftest/harness.c": "668e9b44b5fd19672ff5b7814cabd0a56ef5df8ec1c187653717a7c54d92e67f"
-    ,"selftest/arming_harness.c": "f51cae741864813c5216468ab66150aea832db7daeeab286fd6fafaa8db4c3d8"
+    ,"selftest/harness.c": "8f4313acc196f78b0a6b31685a14957c86ac3e39273762563fa360175fe1926b"
+    ,"selftest/arming_harness.c": "a5c0386f21098b3179bde011c96fb9dabb4f60d1879136157e449e0a7eef1958"
     ,"selftest/shared.h": "7b884c4ebea3e4639f48070122e44df3c5cc03c8760e2502b60f210d61e144ce"
     ,"selftest/emulibc.h": "449757babbb19ef05cf3d6c859d5bdeba60124ff49a2e0695a28364886c4afc8"
     ,"selftest/wrap_harness.c": "f5afa77f98e4c99a8be643718a831350f96a1ed9a6ffa9a22535b2c091df2b9c"
-    ,"selftest/matrix_harness.c": "9ee81af8e194c7c4d93ebaf664335e519e24b9b7b02656e79ce279eb93a95eac"
-    ,"selftest/cpu_boundary_harness.c": "7e9aa324446d4f15306dfe472b90c14f6f434f14b92e470027055b8ea31651d8"
-    ,"selftest/m68k_boundary_harness.c": "d15d893b51e8a372fa88e6ce2854df3db91f828b6224776d9bd2afa2b2bc118c"
+    ,"selftest/matrix_harness.c": "7829e8b813e88921da6ca9def77edae7082f2be758ec05e771bb51aa7f2f2573"
+    ,"selftest/cpu_boundary_harness.c": "568c94ae0eb0a917e6613a9b64a91a39f7a39ae23dd495e8376e902e496f9101"
+    ,"selftest/m68k_boundary_harness.c": "2913214165e97724ea01aad772381810cdf6b801583bc74f19a85fb5add7de04"
   },
   "managed_reflection_inputs": {
     "adapter_source_sha256": "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93",

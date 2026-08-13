@@ -66625,3 +66625,27 @@ for. Read the count with that in mind.
 - Frontier status: the 88-minute real gate was deliberately not rerun before
   the frozen identity cascade resumes. Row 185877 remains the last measured
   real frontier; no semantic MATCH or publication is claimed.
+
+## 2026-08-13 — S1 complete-run audio configured-terminal PASS
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; source baseline
+  `d8c92d6b6f180dc7ef2d17be0e2e7a17bb39e2d2` plus the final identity cascade.
+- Exact command: the Task-6 configured-terminal row-8775 command with the
+  pinned S1 REV01 ROM and complete-with-emeralds BK2, run once against each of
+  the two byte-identical installations.
+- Result: PASS for installation A and installation B. Both terminal proofs
+  report 107,016,559 total records, 3,419 retained records, and 794,614
+  retained characters. Error count: zero; first-error row/field: none. The
+  former row-119247 and row-185877 native frontiers did not recur.
+- Evidence: A log SHA-256
+  `ac6298ebf4c150346474fccaaff9d91bc76a874b4fcdcca8cc738bcf18ff1567`;
+  B log SHA-256
+  `cdcfb4820353c513b4514fa87f00276ff7398f1d7d9fafa74466a091b8e05354`.
+  Native identity SHA-256 is
+  `815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86`;
+  both installation trees digest to
+  `830351fbda507637719647ffe283a542fcb319b0b2609dc53d675fe553e31c87`.
+- Publication status: no reference capture was published. This closes the
+  configured observer/lifecycle frontier; semantic audio comparison remains a
+  separate gate and no semantic MATCH is claimed.

@@ -45,7 +45,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 "openggf.gpgx-audio-observer-artifact-lock.v1",
                 (string)artifact["schema"]);
-            AssertEx.Equal(3, (int)artifact["abi"]["version"]);
+            AssertEx.Equal(4, (int)artifact["abi"]["version"]);
             AssertEx.Equal(64, (int)artifact["abi"]["config_size"]);
             AssertEx.Equal(16, (int)artifact["abi"]["kind_size"]);
             AssertEx.Equal(32, (int)artifact["abi"]["hook_size"]);
@@ -53,8 +53,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(32, (int)artifact["abi"]["event_size"]);
             AssertEx.Equal(65536, (int)artifact["abi"]["capacity"]);
             AssertEx.Equal("little-endian", (string)artifact["abi"]["byte_order"]);
-            AssertEx.Equal(41740152, (int)artifact["core"]["decompressed_size"]);
-            AssertEx.Equal(414887, (int)artifact["core"]["compressed_size"]);
+            AssertEx.Equal(41757016, (int)artifact["core"]["decompressed_size"]);
+            AssertEx.Equal(421764, (int)artifact["core"]["compressed_size"]);
             AssertEx.Equal(32, (int)artifact["core"]["invis_alignment"]);
         }
 

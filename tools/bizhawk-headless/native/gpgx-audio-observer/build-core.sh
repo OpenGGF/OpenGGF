@@ -206,22 +206,22 @@ fi
   "$stage/gpgx.wbx" > "$stage/gpgx.wbx.zst"
 
 section_line=$(/usr/bin/readelf -SW "$stage/gpgx.wbx" | /usr/bin/grep ' \.invis ')
-[[ "$section_line" = *" 20a8f0 "* && "$section_line" = *" WA "* && "$section_line" = *" 32" ]] \
+[[ "$section_line" = *" 20a910 "* && "$section_line" = *" WA "* && "$section_line" = *" 32" ]] \
   || fail "observer .invis section layout differs: $section_line"
-((0x20a8f0 < 4 * 1024 * 1024)) || fail "observer .invis exceeds Waterbox invisible heap"
+((0x20a910 < 4 * 1024 * 1024)) || fail "observer .invis exceeds Waterbox invisible heap"
 bad_state=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$4 == "OBJECT" && $8 ~ /^trace_/ && $7 != "10" { print $8 }')
 [[ -z "$bad_state" ]] || fail "observer state escaped .invis: $bad_state"
 enabled_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "gpgx_audio_trace_enabled" { print $2, $3, $4, $5, $7 }')
-[[ "$enabled_symbol" = "0000036f00360074 1 OBJECT LOCAL 10" ]] \
+[[ "$enabled_symbol" = "0000036f00363090 1 OBJECT LOCAL 10" ]] \
   || fail "observer enable flag escaped .invis: $enabled_symbol"
 events_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "trace_events" { print $2, $3, $4, $5, $7 }')
-[[ "$events_symbol" = "0000036f00361ae0 0x200000 OBJECT LOCAL 10" ]] \
+[[ "$events_symbol" = "0000036f00364b00 0x200000 OBJECT LOCAL 10" ]] \
   || fail "observer event array layout differs: $events_symbol"
-((0x00361ae0 % 32 == 0 && 0x00361ae0 >= 0x00358000 \
-  && 0x00361ae0 + 0x200000 <= 0x00358000 + 0x20a8f0)) \
+((0x00364b00 % 32 == 0 && 0x00364b00 >= 0x0035b000 \
+  && 0x00364b00 + 0x200000 <= 0x0035b000 + 0x20a910)) \
   || fail "observer event array is not aligned and contained in .invis"
 bad_internal=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$4 == "FUNC" && $8 ~ /^gpgx_audio_trace_(enter_cpu|leave_cpu|instruction|fm_write|psg_write|reset_begin|reset_end)$/ && $5 != "LOCAL" { print $8 }')
@@ -296,7 +296,7 @@ while IFS= read -r -d '' relative; do
 done < <(cd "$toolchain_dir/clang/usr/share/doc" && /usr/bin/find -P . -type f -print0)
 /usr/bin/cp -- "$adapter_source" "$stage/GpgxAudioObserverAdapter.cs"
 /usr/bin/cp -- "$host_bridge_source" "$stage/GpgxHost.AudioObserver.cs"
-/usr/bin/printf '{"schema":"openggf.gpgx-audio-observer-build.v1","installation_id":"bizhawk-2.11-gpgx-audio-observer-v3","core_id":"gpgx-audio-observer-v3","adapter":"REFLECTION","adapter_source_sha256":"%s","host_bridge_source_sha256":"%s","bizinvoke_sha256":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","bizhawk_common_sha256":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33","abi_version":3,"event_size":32,"capacity":65536,"patch_sha256":"%s","build_recipe_sha256":"%s","decompressed_sha256":"%s","compressed_sha256":"%s","build_id":"%s","source_bundle_sha256":"%s","source_bundle_uncompressed_sha256":"%s","path_manifest_sha256":"%s","path_mode_manifest_sha256":"%s","build_log_sha256":"%s","native_selftest_sha256":"%s","elf_proof_sha256":"%s","callgraph_proof_sha256":"%s","verified_input_identity_sha256":"%s"}\n' \
+/usr/bin/printf '{"schema":"openggf.gpgx-audio-observer-build.v1","installation_id":"bizhawk-2.11-gpgx-audio-observer-v3","core_id":"gpgx-audio-observer-v3","adapter":"REFLECTION","adapter_source_sha256":"%s","host_bridge_source_sha256":"%s","bizinvoke_sha256":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","bizhawk_common_sha256":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33","abi_version":4,"event_size":32,"capacity":65536,"patch_sha256":"%s","build_recipe_sha256":"%s","decompressed_sha256":"%s","compressed_sha256":"%s","build_id":"%s","source_bundle_sha256":"%s","source_bundle_uncompressed_sha256":"%s","path_manifest_sha256":"%s","path_mode_manifest_sha256":"%s","build_log_sha256":"%s","native_selftest_sha256":"%s","elf_proof_sha256":"%s","callgraph_proof_sha256":"%s","verified_input_identity_sha256":"%s"}\n' \
   "$adapter_source_sha" "$host_bridge_source_sha" "$actual_patch" "$actual_recipe" "$raw_sha" "$zst_sha" "$build_id" "$bundle_sha" "$bundle_raw_sha" "$path_list_sha" "$paths_sha" "$build_log_sha" "$selftest_sha" "$elf_proof_sha" "$callgraph_proof_sha" "$verified_identity" > "$stage/identity.json"
 identity_sha=$(/usr/bin/sha256sum "$stage/identity.json"); identity_sha=${identity_sha%% *}
 [[ "$identity_sha" = "$(/usr/bin/jq -er '.identity.sha256' "$script_dir/artifact-lock.json")" ]] \
