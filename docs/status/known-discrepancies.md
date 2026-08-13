@@ -1841,10 +1841,30 @@ processes the ROM's own `PlrList_Ehz1`+`PlrList_Std2` payload in 52 rows. `Level
 is empty, so seam length is `max(slide, backlog)`; for EHZ the backlog is 52 and the slide
 dominates. The missing rows are in slide/leave choreography, not the queue.
 
-The rule-3-compliant fix is to advance uncompared gaps by the **movie's own frame count**
-with recorded inputs — which needs no derived constant. Feeding recorded controller inputs
-through the normal input path is replay, not trace hydration; copying positions or speeds
-out of the trace would be hydration and stays forbidden.
+**The actual defect is an invented presentation-duration constant.** Every uncompared gap
+in the run is 169–199 movie frames and the engine crosses every one in 78 — a consistent
+~94-frame shortfall. The engine's 78 decomposes as 52 rows draining the PLC queue (correct)
+plus a 26-row tail. Nothing is being replayed too fast; the choreography simply *ends too
+early*. This is the **seventh** invented duration constant found in this codebase, all of
+them in presentation, results or title-card code.
+
+Note that "replay the gap by its movie frame count" — an earlier proposal here — is
+incoherent on inspection: you cannot feed 190 frames of input into a choreography that
+ends after 78. The choreography has to genuinely last that long first.
+
+**The 169–199 variance is the proof, and the acceptance test.** It is not noise or lag.
+The ROM's results duration depends on the bonus tally (ring and time bonuses count down at
+a fixed rate, so a richer act takes longer), and title-card length depends on the slide
+reaching `titlecard_x_target` *and* the PLC buffer draining (`Level_TtlCard`,
+`s2.asm:4914-4924`). A choreography built from the ROM's own timers therefore **produces
+per-transition variable gap lengths naturally, for any BK2, with no table and no
+per-transition number** — which is precisely what certifies it as ROM-derived rather than
+fitted. An implementation that yields a *constant* gap length is wrong even if the constant
+is 190. Equally, the durations must be ported from the disassembly and never backed out of
+the measured 169–199, which would be the same fixture-measurement trap one level up.
+
+Expect a small residual from lag frames. That is a documented limitation, not something to
+close with an adjustment constant.
 
 ### The fingerprint is real; its explanation was not
 
@@ -1856,20 +1876,26 @@ alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. Th
 both seams or neither" advice attached to it in earlier revisions followed from the
 retracted mechanism and should be ignored.
 
-**Best current explanation (INFERRED, not yet measured).** The counter *value* is inert
-to the comparison (four inverted segments compare clean), but the alignment *mechanism*
-is destructive — which is consistent only if every attempt changed something other than
-the counter: executed-frame count, row admission, or segment start phase. `sidekick_y`
-is the expected casualty: the sidekick follows via a position-history buffer indexed by
-elapsed frames, so inserting or dropping engine frames to "catch the clock up" shifts
-every entry in it. That makes the sidekick a far more sensitive detector of frame-count
-perturbation than `Obj4B` is of counter phase. That five differently-described attempts
-produced an *identical* error count and first-error location is itself diagnostic — they
-collapsed to the same underlying mutation.
+**Explained: it is the signature of a correct number applied by the wrong mechanism.**
+Every one of the five attempts ultimately bumped the V-int counter by the gap's true
+movie-row count. That makes the counter say ~190 frames passed while every other piece of
+engine state says 78 — ring timers, animation phases, and critically the sidekick's
+position-record buffer. The Tails CPU has counter-gated logic sitting immediately next to
+that buffer, so the object runs on **two different clocks at once**, which is a
+deterministic wreck rather than a random one. Same number, same mechanism, same failure —
+which is exactly why five differently-described attempts produced an identical error count
+and first-error location. The fingerprint was never mysterious; it is the machinery's
+signature.
 
-The cheap experiment that would confirm this, if it ever matters: an alignment that
-rewrites **only** the counter value, with no frame insertion and no row-admission change.
-The findings above predict it compares clean or near-clean.
+This also dissolves the apparent contradiction with the parity finding above. The counter
+value is inert **to what the clean segments happen to contain** — it was never a general
+claim. Segment 7's sidekick is counter-sensitive.
+
+**Do not "fix" this by enabling the budget machinery.**
+`TraceRunReplayWalker.interLevelVblankBudget` (`:731-746`) already computes the correct
+movie-row count, and every call site is gated on the profile that returns `DISABLED` for
+S2. Enabling it is a one-line change whose arithmetic is right and whose mechanism is the
+one described above. Being one already-tested line makes it more dangerous, not less.
 
 Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
 against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
