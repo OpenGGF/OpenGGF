@@ -611,3 +611,57 @@ stays at 3977 of 3997, and the test still reports the same **5** axes. The two f
 Only `edge[8]`–`[11]`, a uniform **-1** across the leave loop. That is a different defect
 from the one this note has chased: both ends are now anchored correctly and the residual
 is a single row inside the leave loop, not a payload-dependent span.
+
+## 2026-08-13, final state: one scoped change remains, and it is not a boundary
+
+The level_advance seam is closed except for four fields. `edge[2]`–`[7]` match the recording
+exactly; `edge[8]`–`[11]` sit at a uniform **−1**.
+
+### The cause is fully localised
+
+**Defect A (engine, real, confirmed three times).** `updateZoneTileUpload`
+(`TitleCardManager.java:693-700`) decrements-then-transitions, arming `leavePass` on the
+same row that consumes a `LoadZoneTiles` `WaitForVint` (`s2.asm:6519`). The ROM cannot do
+this: the playables do not exist until `InitPlayers` (`s2.asm:4946`), reached only after the
+load routines at `:4940-4945`. So the engine runs **two** playable passes inside the load
+span where the ROM runs **one**.
+
+**Fixing A alone closes `edge[8]`–`[11]`** — measured, the gap axis disappears. But the
+surplus row it removes resurfaces at segment 2 as a permanent +1 clock phase: 3 axes,
+segment 2 at 47,639 errors, first non-camera mismatch frame 1132 `sidekick_y`
+rom=0x02CB engine=0x02CC, plus a seg3 special-stage DPLC walk failure that hides the later
+axes.
+
+### Why segment 2 cannot absorb it today
+
+Segment 2 is entered through the **stage_exit / `BoundaryEntryMode.LEVEL_MODE` interior-return
+branch** (`AbstractRunChainTest.java:1171-1466`), which never reads `gapAdmissionRuns`. The
+census has exactly one consumer in the tree — `expandGapAdmissionCensus` (`:3680`) via
+`admitLevelWhenReady` (`:2742`), reached only from the `LEVEL_LOAD` branch (`:1562`).
+
+Transition 1→2 **does** carry a full census — `[23, 11, 53, 14, 8, 39, 25]`, sum 173, 64 lag
+rows, with the same ROM decomposition as the level_advance seam — and replay spends **zero**
+movie rows on it: the interior freezes the shared cursor and pre-seeks straight to
+`returnOffset` (`:1348-1351`), discarding all 173 rows.
+
+### The remaining change, stated precisely
+
+Make the interior return stop its pre-seek at `returnOffset - sum(census)` and walk the seam
+with lag rows and the level-entry art hold, exactly as `admitLevelWhenReady` already does for
+`LEVEL_LOAD`. Land it together with defect A, never separately.
+
+**This is scoped work, not a wall.** It collides with two live contracts on that path — the
+pre-seek's frame-0 input rationale (`:1322-1330`) and the `framesConsumed == 1`
+adopt-opening-row contract (`:1455-1463`) — and it affects every `stage_exit` in the run,
+of which the complete-emerald route has seven. That blast radius is why it was not attempted
+blind at the end of a long session, not because anything blocks it.
+
+### Regression fingerprints, so a wrong turn is recognised immediately
+
+| what was pulled | signature |
+|---|---|
+| defect A alone | 3 axes; segment 2 = 47,639; `sidekick_y` frame 1132; seg3 DPLC |
+| engine-side release pass | 4 axes; segment 2 = 50,679; frame 0; `dynamic_art.edges rom=[] engine=[0]` |
+| leave-loop fall-through altered | 12 axes; segment 11 = 7,104 |
+| ownership released early | "lost production ownership before source closure"; 2 axes; segment 11 hidden |
+| V-int counter bumped | 122,139 errors; segment 7 frame 524; `sidekick_y` |
