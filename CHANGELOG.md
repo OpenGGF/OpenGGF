@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 Egg Prison pieces keep their own solid push/standing bits. ROM `Obj3E` allocates the
+  capsule body, button, lock and broken half into four separate SST slots (`loc_3F212` /
+  `loc_3F220`, s2.asm:84832-84865), so each piece owns a distinct `status(a0)` byte, and
+  `SolidObject_TestClearPush` releases the player's `Status_Push` only when the *calling*
+  object's own pushing bit is set -- otherwise it branches to `SolidObject_NoCollision`
+  without touching `status(a1)` (s2.asm:35462-35466,35483-35490). The engine keyed its
+  push/standing latch on the shared `ObjectSpawn`, so measured, the button's no-contact pass
+  cleared the body's push mark inside the same object pass: `EggPrisonObjectInstance` set the
+  bit and `EggPrisonButtonObjectInstance` cleared it, leaving `Sonic_Animate` with
+  `Status_Push` clear. Sonic then published a `SonAni_Walk` mapping frame where the ROM
+  publishes `SonAni_Push`. The three capsule classes now opt into
+  `usesInstanceSolidStateLatchKey()`. Segment 11 of the emerald run falls from 4,215 to 4,192
+  errors and its first non-camera mismatch moves from frame 3139
+  (`dynamic_art.edge[0].mapping_frame` rom=$48 engine=$0F) to frame 3383 (`sidekick_y`).
 - Fix: S2 EHZ2 keeps the sidekick's horizontal bounds following the camera after the boss dies.
   `LevEvents_EHZ2_Routine4` is a terminal, never-advancing routine that does nothing before
   defeat and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and `Camera_X_pos` into
