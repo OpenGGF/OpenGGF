@@ -73811,3 +73811,42 @@ ROM keeps him.
 
 Full profile: 834 tests both before and after, `Failures: 9, Errors: 56, Skipped: 4` in
 both, and the 62 red class names are identical between control and fix.
+
+## 2026-08-13 - S2 complete-emeralds segment 11 (seg7_ehz2): EHZ2 boss init frame
+
+Isolated worktree on branch `bugfix/ai-s2-ehz2-boss-reflection`,
+over `93c57e093`. Command for every number below, in both the control worktree and the
+fix worktree:
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    "-Dtest.cds.argLine=-Xshare:off -Djava.io.tmpdir=<off-tmpfs>" \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
+```
+
+Before: `TestS2CompleteEmeraldRunChain` failed on 5 axes; segment 11 carried 30,707
+comparator errors with first non-camera mismatch at row 1259, field `x_speed`,
+`rom=-07AC engine=0x07AC`.
+
+After: still 5 axes -- the three dynamic-art-gap axes and the segment-11 `level_advance`
+boundary are unchanged -- but segment 11 carries 11,893 errors and its first non-camera
+mismatch is row 3026, field `queue.s2_nemesis_plc.busy`, `rom=false engine=true`.
+Segments 0-10 remain at 0 errors, and no player position/velocity/angle/air/rolling
+mismatch remains on any row of any segment of the run.
+
+Root cause: the engine ran `Obj56`'s routine-2 dispatch on the object's first `update()`
+instead of spending that frame on `Obj56_Init` (docs/s2disasm/s2.asm:63256-63325, which
+ends in `rts`). Measured from the fixture's own `object_near` slot-20 stream, the
+engine's boss X equalled the ROM's *next-frame* value on every compared row; the player
+consequently took the spike's hurt at row 1732 where the ROM takes it at 1733. The
+row-1259 `x_speed` sign flip was a two-row self-healing artefact of the same lead --
+positions and ground speed agreed on both rows -- not a reflection off a mispositioned
+solid, and it disappeared with the lead.
+
+Full profile: 834 tests both before and after, `Failures: 9, Errors: 56, Skipped: 4` in
+both, and the 65 red class names are identical between control and fix. Default-profile
+rewind/object sweep (`com.openggf.game.rewind.**`, the four object packages,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestHardwareTimingAuthorityGuard`, `TestCheckpointStateRewind`, `TestCollisionLogic`):
+5,666 tests, `Failures: 20, Errors: 8, Skipped: 3` in both, with identical per-class
+failure counts.

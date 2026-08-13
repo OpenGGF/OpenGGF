@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 EHZ2 boss spends its first executed frame on `Obj56_Init` alone, as the ROM does.
+  `Obj56_Init` advances `routine(a0)` from 0 to 2, allocates the vehicle top, ground vehicle,
+  wheels and spike, moves the main object to `x_pos=$2AF0 / y_pos=$2F8`, and then `rts`
+  (docs/s2disasm/s2.asm:63256-63325), so the routine-2 dispatch to `loc_2F262` cannot run until
+  the following `RunObjects` pass. The engine performs the whole init in the constructor and
+  then ran the routine-2 diagonal step on the object's very first `update()`, leaving the entire
+  boss -- vehicle, wheels and spike -- exactly one frame ahead of the ROM for the whole fight.
+  Measured against `seg7_ehz2`'s `object_near` slot-20 stream, the engine's vehicle X equalled
+  the ROM's *next-frame* value on every compared row. The visible consequence was the player
+  taking the spike's hurt one frame early (engine row 1732 against ROM row 1733) and never
+  recovering. With the init frame modelled, segment 11 of the S2 complete-emeralds chain drops
+  from 30,707 to 11,893 comparator errors, its first non-camera mismatch moves from row 1259
+  `x_speed` to row 3026 `queue.s2_nemesis_plc.busy`, and the whole run carries no player
+  position/velocity/angle/air/rolling mismatch on any row of any segment. The previously
+  reported row-1259 `x_speed` sign flip was a two-row, self-healing artefact of the same
+  one-frame boss lead -- positions and ground speed already agreed on both rows -- not a
+  reflection off a mispositioned solid.
 - Fix: the S2 EHZ2 boss tests its arrival positions before moving, as the ROM does. `loc_2F27C`
   compares `cmpi.w #$29D0,x_pos` and branches BEFORE the diagonal step, and `loc_2F2BA`
   compares `cmpi.w #$41E,y_pos` before the descent -- so in both cases the ROM spends the

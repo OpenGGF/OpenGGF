@@ -91,6 +91,25 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     private int defeatTimer;
     private int currentVIntRunCount;
 
+    /**
+     * ROM {@code Obj56_Init} occupies the object's whole first executed frame: it
+     * advances {@code routine(a0)} from 0 to 2, allocates the vehicle top, ground
+     * vehicle, wheels and spike children, sets the main object to
+     * {@code x_pos=$2AF0 / y_pos=$2F8}, and then {@code rts}
+     * (docs/s2disasm/s2.asm:63256-63325). The routine-2 dispatch to
+     * {@code loc_2F262} therefore does not run until the following
+     * {@code RunObjects} pass.
+     *
+     * <p>The engine performs the whole init in the constructor, so without this
+     * flag the boss's first {@code update()} already executes the routine-2
+     * diagonal step and the entire boss — vehicle, wheels and spike — runs one
+     * frame ahead of ROM for the rest of the fight. Measured against
+     * {@code seg7_ehz2}'s {@code object_near} slot-20 stream, the engine's vehicle
+     * X equalled the ROM's next-frame value on every compared row before this was
+     * modelled.
+     */
+    private boolean initRoutineFrameConsumed;
+
     public Sonic2EHZBossInstance(ObjectSpawn spawn) {
         super(spawn, "EHZ Boss");
     }
@@ -143,6 +162,15 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentVIntRunCount = vIntRunCount;
+        if (!initRoutineFrameConsumed) {
+            // ROM: Obj56_Init ends in rts (docs/s2disasm/s2.asm:63325) after
+            // addq.b #2,routine(a0) (:63278), so the first executed frame runs the
+            // init only. The children it allocates sit in higher SST slots and do
+            // still run in that same pass, which is why only the main object's
+            // routine dispatch is withheld here.
+            initRoutineFrameConsumed = true;
+            return;
+        }
         // Run state machine
         switch (state.routineSecondary) {
             case SUB0_APPROACH_DIAGONAL -> updateSub0ApproachDiagonal();
