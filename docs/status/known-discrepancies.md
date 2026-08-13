@@ -1841,30 +1841,41 @@ processes the ROM's own `PlrList_Ehz1`+`PlrList_Std2` payload in 52 rows. `Level
 is empty, so seam length is `max(slide, backlog)`; for EHZ the backlog is 52 and the slide
 dominates. The missing rows are in slide/leave choreography, not the queue.
 
-**The actual defect is an invented presentation-duration constant.** Every uncompared gap
-in the run is 169–199 movie frames and the engine crosses every one in 78 — a consistent
-~94-frame shortfall. The engine's 78 decomposes as 52 rows draining the PLC queue (correct)
-plus a 26-row tail. Nothing is being replayed too fast; the choreography simply *ends too
-early*. This is the **seventh** invented duration constant found in this codebase, all of
-them in presentation, results or title-card code.
+**The defect is seam ORDER, not gap length.** Measured directly: the gap length is already
+correct — for the level→level `level_advance` gap the recording spans 171 rows and the
+engine drives 170, because `destinationReady`
+(`TraceRunPlaybackCoordinator.java:396-399`) refuses admission until the shared cursor
+reaches the destination's `bk2_frame_offset`. What differs is the composition:
 
-Note that "replay the gap by its movie frame count" — an earlier proposal here — is
-incoherent on inspection: you cannot feed 190 frames of input into a choreography that
-ends after 78. The choreography has to genuinely last that long first.
+| | order inside the gap |
+|---|---|
+| **engine** | `TITLE_CARD` for 78 rows, then 92 rows idling in `LEVEL` |
+| **ROM** | fade → interrupts-off `ClearScreen`/`LoadTitleCard` → `Level_ClrRam` → level art decompression (**~93 rows of pre-card work**) → *then* `Level_TtlCard` |
 
-**The 169–199 variance is the proof, and the acceptance test.** It is not noise or lag.
-The ROM's results duration depends on the bonus tally (ring and time bonuses count down at
-a fixed rate, so a richer act takes longer), and title-card length depends on the slide
-reaching `titlecard_x_target` *and* the PLC buffer draining (`Level_TtlCard`,
-`s2.asm:4914-4924`). A choreography built from the ROM's own timers therefore **produces
-per-transition variable gap lengths naturally, for any BK2, with no table and no
-per-transition number** — which is precisely what certifies it as ROM-derived rather than
-fitted. An implementation that yields a *constant* gap length is wrong even if the constant
-is 190. Equally, the durations must be ported from the disassembly and never backed out of
-the measured 169–199, which would be the same fixture-measurement trap one level up.
+So the engine's title-card art edges land **93 rows early** — exactly the `delta=93` seen on
+every failing `run_gap.edge[N].movie_logical_frame`.
 
-Expect a small residual from lag frames. That is a documented limitation, not something to
-close with an adjustment constant.
+**The 78 is not invented and must not be "fixed".** Both halves are already ROM-derived and
+cited in place: 52 rows of genuine PLC drain at `move.w #6,(Plc_FramePatternsLeft).w`
+(`s2.asm:2202-2213`) over `PlrList_Ehz1` + `PlrList_Std2` with the ROM's per-entry
+`ceil(patterns/6)` quantisation, and 26 rows of `LEAVE_*_PASSES` in
+`TitleCardManager.java:78-84`, each cited to the leave loop at `s2.asm:5060-5066`.
+
+**A retracted theory, recorded so it is not retried.** An earlier revision claimed the
+169–199 variance came from the results bonus tally counting down at a fixed rate. It cannot:
+the tally runs inside `Level_MainLoop` while `Game_Mode` is still `$0C`, and the capture
+finalises a segment at the first `$8C` frame (set by `Level:`'s first instruction) and
+re-arms at the first `$0C` (cleared at `Level_StartGame`, `s2.asm:5084`). The variance is
+payload-dependent **un-timed load cost** — the same class already documented for S1 at
+`TraceRunPlaybackCoordinator.java:382-395` (34–40 rows there).
+
+**Known modellable portion.** `Pal_FadeToBlack` (`s2.asm:3370-3383`, `move.w #$15,d4` + `dbf`)
+is 22 counted `WaitForVint` iterations, and the seam does not currently spend them at all.
+Modelling that plus giving the level-init phases a frame cost should move 22 of the 93 and
+correct the ledger order. The remaining ~70 rows are interrupts-off `ClearScreen`/
+`LoadTitleCard` plus Kosinski level-art decompression — un-timed and payload-dependent, and
+should stay idle padding *after* the modelled choreography rather than be closed with a
+constant.
 
 ### The fingerprint is real; its explanation was not
 
