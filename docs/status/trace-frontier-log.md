@@ -73785,3 +73785,29 @@ with no ROM counterpart at that site: `Obj79_MakeSpecialStars`
 `Ring_count >= 50`. It is provably NOT implicated in the seg7 failure — star-post
 activation never occurs in EHZ2 at all — so it was left alone here. Recorded so it is
 not lost.
+
+## 2026-08-13 — S2 emerald run seg7: EHZ bridge object-edge balance width
+
+Isolated worktree branched from `b183215fe`.
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... \
+    -Dtest=TestS2CompleteEmeraldRunChain test
+```
+
+| | control `b183215fe` | with the bridge balance-width fix |
+|---|---|---|
+| `TestS2CompleteEmeraldRunChain` | FAIL, 7 axes | FAIL, 7 axes |
+| seg7 (`seg5_ehz2`) errors | 23,128 | 22,458 |
+| seg7 first non-camera mismatch | row 1512, `dynamic_art.edges`, rom `[2408, 2409]` engine `[2408]` | row 1675, `sidekick_x`, rom `0x068B` engine `0x4000` |
+
+Missing edge 2409 identified as recorder `edge_ordinal` 41711 / `transfer_id` 20856,
+owner `tails-tails`, `mapping_frame` 9 — the tail object's swish restart when Tails stops
+walking. The engine's Tails entered Balance (mapping frame `$69`) instead of Wait because
+`BridgeObjectInstance` reported a geometry-derived balance width; see the CHANGELOG entry.
+The new frontier at row 1675 is the engine despawning Tails (`0x4000` marker) where the
+ROM keeps him.
+
+Full profile: 834 tests both before and after, `Failures: 9, Errors: 56, Skipped: 4` in
+both, and the 62 red class names are identical between control and fix.

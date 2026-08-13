@@ -39,6 +39,8 @@ public class BridgeObjectInstance extends BoxObjectInstance
     private static final int LOG_HALF_HEIGHT = 8;
     private static final int COLLISION_X_OFFSET = -8;
     private static final int MAX_LOGS = 16;
+    /** {@code Obj11_Init}: {@code move.b #$80,width_pixels(a0)} (s2.asm:21951). */
+    private static final int ROM_BALANCE_WIDTH_PIXELS = 0x80;
     private static final int MAX_DEPRESSION_ANGLE = 0x40;
     private static final int DEPRESSION_RATE = 4;
 
@@ -112,6 +114,23 @@ public class BridgeObjectInstance extends BoxObjectInstance
     @Override
     protected int getHalfWidth() {
         return (logCount * LOG_WIDTH) / 2;
+    }
+
+    /**
+     * {@code Obj11_Init} writes a fixed {@code width_pixels = $80} regardless of
+     * how many logs the subtype asks for (docs/s2disasm/s2.asm:21951), and the
+     * object-edge balance branches of {@code Sonic_Move} / {@code Tails_Move}
+     * read that SST byte for {@code d1 = x_pos(a0) + width_pixels(a1) -
+     * x_pos(a1)} (docs/s2disasm/s2.asm:36586-36601, :39707-39722). The bridge's
+     * standable span is only {@code logCount * 16} wide, so with the ROM's
+     * $80 the whole span sits strictly inside the (shift, 2*width - shift)
+     * window and neither player ever balances on a bridge. Deriving the balance
+     * width from the real log geometry instead shrank that window onto the
+     * bridge itself and made Tails balance where the ROM leaves him standing.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return ROM_BALANCE_WIDTH_PIXELS;
     }
 
     @Override

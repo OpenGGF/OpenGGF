@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the EHZ/HPZ bridge reports the ROM's fixed object-edge balance width. `Obj11_Init`
+  writes `move.b #$80,width_pixels(a0)` regardless of how many logs the subtype asks for
+  (s2.asm:21951), and the object-edge balance branches of `Sonic_Move` / `Tails_Move` read
+  that SST byte for `d1 = x_pos(a0) + width_pixels(a1) - x_pos(a1)` (s2.asm:36586-36601,
+  :39707-39722). The engine derived the balance width from the real log geometry
+  (`logCount * 16 / 2`), which shrank the (shift, 2*width - shift) window onto the bridge
+  itself; with the ROM's $80 the bridge's whole standable span sits strictly inside that
+  window, so neither player ever balances on a bridge. Measured on the emerald run: Tails
+  stood at x=832 on a bridge whose x_pos is 936, giving the engine d1=-8 (< 4, "balance on
+  left edge") where the ROM gets d1=24 and falls through to `Tails_Lookup`/Wait. That
+  spurious Balance animation suppressed the tail object's swish restart, so the
+  `tails-tails` DPLC latch never left frame 9 and the ROM's second dynamic-art edge at row
+  1512 was never emitted. Segment 7 of the emerald run falls from 23,128 to 22,458 errors
+  and its first non-camera mismatch moves from row 1512 (`dynamic_art.edges`) to row 1675
+  (`sidekick_x`).
 - Fix: a title-card release row no longer inherits the source level's main-loop latch, so the
   sidekick is not one frame ahead when the next act begins. `GameLoop`'s one-row "this gap row
   still belongs to the source level's main loop" latch is cleared when the source loop is seen
