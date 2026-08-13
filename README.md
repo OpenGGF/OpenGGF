@@ -284,6 +284,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The Egg Prison button stayed pressed forever (2026-08-13):** ROM `loc_3F354`
+  restores the button's stored base `y_pos` on *every* frame and re-applies its
+  8-pixel depression only while something is actually standing on it — the sole
+  latched value is `objoff_32`, the flag the capsule body polls to know it has been
+  opened (`s2.asm:84937-84950`, `:84884-84886`). The engine latched the depression
+  as well, so once either player had pressed the button its solid surface stayed
+  8px low for the rest of the act. The recording shows the real button oscillating
+  between `$03FA` and `$0402` throughout. The consequence appeared 3,383 frames
+  later and looked like nothing to do with a button: Tails fell through the sunken
+  surface where the ROM's raised one caught him, reported as a one-pixel
+  `sidekick_y` difference. It was neither a pixel drift nor — as the two previous
+  one-pixel reports had been — a hurt divergence; it was a **landing**, with the
+  ROM going air-to-grounded and the engine simply never landing. Segment 11 falls
+  from 4,192 errors to **287**, every sidekick, player and dynamic-art error in the
+  segment eliminated, and the entire residual is now one subsystem: the Nemesis PLC
+  queue. An invented `y_speed >= 0` trigger gate was removed at the same time; the
+  ROM tests the standing mask alone.
 - **The Egg Prison's button cleared the push bit its own body had set
   (2026-08-13):** ROM `Obj3E` allocates the capsule body, button, lock and broken
   half into four separate object slots (`s2.asm:84832-84865`), and

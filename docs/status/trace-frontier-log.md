@@ -73876,3 +73876,47 @@ failure counts.
   engine 105 = `DPLC_Tails_0390` (2@$47E, $C@$480). Frame `$69` is `TailsAni_Balance`
   frame 0 and frames `$10`/`$11` are `TailsAni_Walk` frames 0/1, so the engine emits an
   extra balancing pair and runs the whole tail two edges late (edge_count 18 vs 16).
+
+## 2026-08-13 - S2 emerald-run seg11: Egg Prison button depression un-latched (4192 -> 287)
+
+- Isolated worktree `seg11-sk`, branch `bugfix/ai-seg11-sidekick-3383`,
+  parent `d9518261b`.
+- Characterisation first: the reported `sidekick_y rom=0x03E2 engine=0x03E1` at seg11
+  frame 3383 is **not** a pixel drift. The full sidekick field set from
+  `seg7_ehz2/physics.csv` rows 3370-3396 shows frame 3383 is a LANDING: air 1->0,
+  rolling 1->0, `y_speed` $0588->$0000, `g_speed` 0->$FEF6, status $07->$09 (on-object
+  bit), anim $02->$00, `stand_on_obj` $10->$11. The engine keeps Tails airborne and
+  rolling. The $03E1 is exactly the free-fall result ($03DC.2100 + $0588) that both
+  sides compute; the ROM's extra pixel is the landing snap.
+- An instrumented dump of every comparator mismatch (temporary probe in
+  `LiveTraceComparator.absorbDivergentFields`, reverted before commit) confirmed
+  **3383 is the first mismatch of any kind** - there is no earlier camera divergence.
+- Root cause: ROM slot $11 is the `Obj3E` routine-4 button. `loc_3F354`
+  (s2.asm:84937-84950) restores `y_pos` from `objoff_30` and re-applies the +8
+  depression from the *current* `standing_mask` every frame; only `objoff_32` latches.
+  `EggPrisonButtonObjectInstance` latched the depression itself, so the button's solid
+  surface sat 8px low permanently after the first press. The recorded button
+  (`object_near` slot 17) oscillates $03FA/$0402 through the act, confirming the ROM's
+  per-frame recomputation.
+- Fix: recompute `currentY` in `update()` from the base y and this frame's standing
+  bit, under `SolidExecutionMode.MANUAL_CHECKPOINT` so `SolidObject` still runs before
+  the restore (the same shape `Obj47`'s `ButtonObjectInstance` already uses). Removed
+  the invented `y_speed >= 0` trigger gate. No constant introduced: the +8, the
+  $1B/8/8 solid box and the -$28 base offset are all ROM immediates at the cited lines
+  (`Obj3E_ObjLoadData` entry `$28,4,$10,5,4`, s2.asm:84825).
+- `TestS2CompleteEmeraldRunChain`: 5 axes before and after. `[segment-physics]` seg11
+  **4192 -> 287** errors, first non-camera mismatch **frame 3383 `sidekick_y`** ->
+  **frame 3518 `queue.s2_nemesis_plc.busy`**. All 287 survivors are
+  `queue.s2_nemesis_plc.{remaining_work,queued_fingerprints,prepared,busy}`. Segments
+  0-10 remain at 0. The `[walk-failure]` and three `[dynamic-art-gap]` axis strings are
+  byte-identical before and after.
+- `TestS2EhzHalfpipeRoundTripChain`: PASS.
+- Full trace profile (`-Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical` with
+  all three ROM paths): **834 / 9 / 56 / 4, 65 red**, unchanged. Red set is
+  `TestS2CompleteEmeraldRunChain` + `TestS3kKnucklesSuperEmeraldRunChain` +
+  `TestS3kMegaRunChain` + `TestS3kMhzCompleteRunTraceReplay` + 61 `TestS3kSonicTails*`;
+  no S2 class newly red.
+- Default battery (`com.openggf.game.rewind.**`, `com.openggf.game.sonic2.objects.**`,
+  `com.openggf.level.objects.**`, `TestCollisionLogic` + four guards): **3496 / 17 / 7 /
+  3, 12 red**, and a control run at the same commit with the fix reverted gave the same
+  12 classes with identical per-class failure/error counts.
