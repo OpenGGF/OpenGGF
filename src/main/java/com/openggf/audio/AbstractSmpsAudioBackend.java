@@ -10,6 +10,15 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SfxContentionObserver.Admission;
+import com.openggf.audio.driver.SfxContentionObserver.Arbitration;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.RejectionReason;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -98,6 +107,16 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private int speedMultiplier = 1;
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
+    private AudioAdmissionObserver admissionObserver =
+            AudioAdmissionObserver.NONE;
+    private SmpsDriverServiceObserver driverServiceObserver =
+            SmpsDriverServiceObserver.NONE;
+    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+    private SfxContentionObserver sfxContentionObserver =
+            SfxContentionObserver.NONE;
+    private long nextServiceOrdinal;
+    private long nextDriverInstanceOrdinal;
+    private long nextDriverAdmissionOrdinal;
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;
@@ -194,6 +213,28 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void setAudioProfile(GameAudioProfile profile) {
         this.audioProfile = profile;
         this.smpsConfig = profile != null ? profile.getSequencerConfig() : null;
+    }
+
+    @Override
+    public void setAdmissionObserver(AudioAdmissionObserver observer) {
+        admissionObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    @Override
+    public void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+        driverServiceObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    @Override
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        chipWriteObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    @Override
+    public void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+        sfxContentionObserver = Objects.requireNonNull(observer, "observer");
     }
 
     @Override
@@ -407,27 +448,46 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             DacData dacData,
             float pitch,
             SmpsSequencerConfig config,
-            SmpsSfxPlaybackPolicy policy) {
-        // ROM behavior: completely block SFX during override jingle and fade-in period
-        if (sfxBlocked) {
+            SmpsSfxPlaybackPolicy playbackPolicy) {
+        Objects.requireNonNull(playbackPolicy, "playbackPolicy");
+        int sfxPriority = playbackPolicy.priority();
+        boolean specialSfx = playbackPolicy.special();
+
+        // --- Continuous SFX detection (Z80: zPlaySound_Bankswitch lines 1937-1965) ---
+        // If this SFX is continuous (S3K >= 0xBC) and the same one is already playing,
+        // extend playback (set the flag) instead of restarting from scratch.
+        boolean isContinuous = playbackPolicy.continuous();
+        SmpsAdmissionContext admissionContext = new SmpsAdmissionContext(
+                data.getId(), data.getId(), sfxPriority,
+                SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                specialSfx, false);
+        SmpsRequestAdmissionPolicy admissionPolicy = audioProfile != null
+                ? audioProfile.getSfxAdmissionPolicy()
+                : SmpsRequestAdmissionPolicy.PERMISSIVE;
+        AdmissionResult admission = Objects.requireNonNull(
+                admissionPolicy.evaluate(admissionContext),
+                "SFX admission policy returned no result");
+        if (!admission.accepted()) {
+            observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
+                    admissionContext, admission));
             return;
         }
-
-        Objects.requireNonNull(policy, "policy");
-
+        // ROM behavior: completely block SFX during override jingle and fade-in period.
+        // The whole resolved request has already crossed the game policy exactly once.
+        if (sfxBlocked) {
+            observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
+                    admissionContext,
+                    new AdmissionResult(false, RejectionReason.BLOCKED,
+                            admission.priorityBefore(),
+                            admission.priorityBefore(),
+                            admission.resolvedSoundId())));
+            return;
+        }
         SmpsSequencerConfig effectiveConfig = legacySequencerConfig(
                 (config != null) ? config : requireSmpsConfig());
 
         boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
         boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
-        int sfxPriority = policy.priority();
-        boolean specialSfx = policy.special();
-
-        // --- Continuous SFX detection (Z80: zPlaySound_Bankswitch lines 1937-1965) ---
-        // If this SFX is continuous (S3K >= 0xBC) and the same one is already playing,
-        // extend playback (set the flag) instead of restarting from scratch.
-        boolean isContinuous = policy.continuous();
         int contTrackCount = data.getChannels() + data.getPsgChannels();
         if (isContinuous) {
             SmpsDriver targetDriver = null;
@@ -441,6 +501,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 }
             }
             if (targetDriver != null && targetDriver.extendContinuousSfx(data.getId(), contTrackCount)) {
+                observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
+                        admissionContext, admission));
                 return; // Extended existing playback — no new sequencer needed
             }
         }
@@ -469,7 +531,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 if (sfxStream instanceof SmpsDriver) {
                     sfxDriver = (SmpsDriver) sfxStream;
                 } else {
-                    sfxDriver = new SmpsDriver(getSmpsOutputRate());
+                    sfxDriver = newConfiguredSmpsDriver(
+                            driverOrigin(
+                                    SmpsDriverServiceObserver.DriverOriginKind.SFX,
+                                    data.getId()));
                     sfxDriver.setDacInterpolate(dacInterpolate);
                     sfxStream = sfxDriver;
                     applyUserMasks(sfxDriver, hasAnyUserSolo());
@@ -496,6 +561,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
         // Ensure stream is running
         hookRestartStreamIfDry();
+        observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
+                admissionContext, admission));
     }
 
     protected void startStream() {
@@ -568,6 +635,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
 
         startStream();
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.registry(
+                                SmpsDriverServiceObserver.LifecycleKind.RESTORE,
+                                SmpsDriverServiceObserver.LifecycleSource.MUSIC_OVERRIDE)));
     }
 
     protected double getSmpsOutputRate() {
@@ -672,12 +744,112 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
-    private SmpsDriver newConfiguredSmpsDriver() {
-        SmpsDriver driver = new SmpsDriver(getSmpsOutputRate());
+    private SmpsDriver newConfiguredSmpsDriver(
+            SmpsDriverServiceObserver.DriverAdmissionOrigin origin) {
+        SmpsDriver driver = new SmpsDriver(
+                getSmpsOutputRate(), diagnosticChipWriteObserver());
+        driver.setDiagnosticIdentity(
+                new SmpsDriverServiceObserver.DriverIdentity(
+                        nextDriverInstanceOrdinal++, origin));
+        installDiagnosticObservers(driver);
         driver.setDacInterpolate(configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE));
         driver.setOutputSampleRate(getSmpsOutputRate());
         applyPsgNoiseConfig(driver);
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
         return driver;
+    }
+
+    private void installDiagnosticObservers(SmpsDriver driver) {
+        if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            SfxContentionObserver observer = sfxContentionObserver;
+            driver.setSfxContentionObserver(new SfxContentionObserver() {
+                @Override
+                public void onSfxAdmitted(Admission admission) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            observer.onSfxAdmitted(admission));
+                }
+
+                @Override
+                public void onRoleArbitrated(Arbitration arbitration) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            observer.onRoleArbitrated(arbitration));
+                }
+            });
+        }
+        if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
+            return;
+        }
+        SmpsDriverServiceObserver observer = driverServiceObserver;
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            private ServiceEvent activeEvent;
+
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (activeEvent != null) {
+                    throw new IllegalStateException(
+                            "SMPS driver service observer was re-entered");
+                }
+                activeEvent = new ServiceEvent(nextServiceOrdinal++,
+                        event.driver(), event.sequencer(), event.kind());
+                ServiceEvent emitted = activeEvent;
+                AudioDiagnosticObserverException.invoke(() ->
+                        observer.onServiceBegin(emitted));
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event,
+                    SmpsDriverSnapshot snapshot) {
+                ServiceEvent completed = activeEvent;
+                if (completed == null) {
+                    throw new IllegalStateException(
+                            "SMPS driver service ended without a begin");
+                }
+                activeEvent = null;
+                AudioDiagnosticObserverException.invoke(() ->
+                        observer.onServiceEnd(completed, snapshot));
+            }
+
+            @Override
+            public void onLifecycle(LifecycleEvent event) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        observer.onLifecycle(event));
+            }
+        });
+    }
+
+    private SmpsDriverServiceObserver.DriverAdmissionOrigin driverOrigin(
+            SmpsDriverServiceObserver.DriverOriginKind kind, int soundId) {
+        return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
+                kind, nextDriverAdmissionOrdinal++, soundId);
+    }
+
+    private ChipWriteObserver diagnosticChipWriteObserver() {
+        if (chipWriteObserver == ChipWriteObserver.NONE) {
+            return ChipWriteObserver.NONE;
+        }
+        return new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onYm2612Write(
+                                port, register, value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onPsgWrite(value));
+            }
+        };
+    }
+
+    private void observeAdmission(
+            AudioAdmissionObserver.AudioAdmissionDecision decision) {
+        AudioDiagnosticObserverException.invoke(() ->
+                admissionObserver.onDecision(decision));
     }
 
     private SmpsCompositeVoice createLegacyMusic(
@@ -685,7 +857,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             DacData dacData,
             SmpsSequencerConfig sequencerConfig,
             AudioSourceDescriptor descriptor) {
-        SmpsDriver driver = newConfiguredSmpsDriver();
+        SmpsDriver driver = newConfiguredSmpsDriver(
+                driverOrigin(
+                        SmpsDriverServiceObserver.DriverOriginKind.MUSIC,
+                        data.getId()));
         driver.setRegion("PAL".equalsIgnoreCase(
                 configService.getString(SonicConfiguration.REGION))
                 ? SmpsSequencer.Region.PAL
@@ -942,6 +1117,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
         musicStack.push(new MusicState(currentStream, currentSmps, smpsDriver, currentMusicId,
                 currentMusicDescriptor));
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.registry(
+                                SmpsDriverServiceObserver.LifecycleKind.SAVE,
+                                SmpsDriverServiceObserver.LifecycleSource.MUSIC_OVERRIDE)));
     }
 
     private void clearMusicStack() {
@@ -1022,10 +1202,18 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void pause() {
         hookPause();
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.session(
+                                SmpsDriverServiceObserver.LifecycleKind.PAUSE)));
     }
 
     @Override
     public void resume() {
         hookResume();
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.session(
+                                SmpsDriverServiceObserver.LifecycleKind.RESUME)));
     }
 }

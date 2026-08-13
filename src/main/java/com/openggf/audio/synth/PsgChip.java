@@ -163,6 +163,55 @@ public class PsgChip {
                 blip.captureSnapshot());
     }
 
+    SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
+        int mask = affectedChannelMask & 0x0F;
+        if ((mask & (1 << 2)) != 0) {
+            mask |= 1 << 3;
+        }
+        int[] selectedRegs = new int[8];
+        int[] selectedFreqInc = new int[4];
+        int[] selectedFreqCounter = new int[4];
+        int[] selectedPolarity = new int[4];
+        int[][] selectedOut = new int[4][];
+        int[][] selectedDelta = new int[4][];
+        for (int channel = 0; channel < 4; channel++) {
+            if ((mask & (1 << channel)) == 0) {
+                continue;
+            }
+            int register = channel << 1;
+            selectedRegs[register] = regs[register];
+            selectedRegs[register + 1] = regs[register + 1];
+            selectedFreqInc[channel] = freqInc[channel];
+            selectedFreqCounter[channel] = freqCounter[channel];
+            selectedPolarity[channel] = polarity[channel];
+            selectedOut[channel] = Arrays.copyOf(chanOut[channel], 2);
+            selectedDelta[channel] = Arrays.copyOf(chanDelta[channel], 2);
+        }
+        return new SfxAdmissionState(
+                mask, selectedRegs, selectedFreqInc, selectedFreqCounter,
+                selectedPolarity, selectedOut, selectedDelta, latch, clocks,
+                noiseShiftValue);
+    }
+
+    void restoreSfxAdmissionState(SfxAdmissionState state) {
+        for (int channel = 0; channel < 4; channel++) {
+            if ((state.affectedChannelMask() & (1 << channel)) == 0) {
+                continue;
+            }
+            int register = channel << 1;
+            regs[register] = state.regs()[register];
+            regs[register + 1] = state.regs()[register + 1];
+            freqInc[channel] = state.freqInc()[channel];
+            freqCounter[channel] = state.freqCounter()[channel];
+            polarity[channel] = state.polarity()[channel];
+            copyInto(state.chanOut()[channel], chanOut[channel]);
+            copyInto(state.chanDelta()[channel], chanDelta[channel]);
+        }
+        latch = state.latch();
+        clocks = state.clocks();
+        noiseShiftValue = state.noiseShiftValue();
+    }
+
     public void restoreSnapshot(Snapshot snapshot) {
         copyInto(snapshot.regs(), regs);
         copyInto(snapshot.freqInc(), freqInc);
@@ -529,6 +578,18 @@ public class PsgChip {
         @Override
         public int[][] chanDelta() { return copy(chanDelta); }
     }
+
+    record SfxAdmissionState(
+            int affectedChannelMask,
+            int[] regs,
+            int[] freqInc,
+            int[] freqCounter,
+            int[] polarity,
+            int[][] chanOut,
+            int[][] chanDelta,
+            int latch,
+            int clocks,
+            int noiseShiftValue) { }
 
     private static int[] copy(int[] values) {
         return Arrays.copyOf(values, values.length);

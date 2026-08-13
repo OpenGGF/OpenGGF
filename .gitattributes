@@ -5,3 +5,6 @@
 
 # Preserve archived third-party research snapshots byte-for-byte.
 docs/architecture/research/audio/*.htm -whitespace
+
+# Preserve exact upstream-context bytes in the reproducible native observer patch.
+tools/bizhawk-headless/native/gpgx-audio-observer/*.patch -whitespace

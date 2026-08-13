@@ -701,6 +701,8 @@ class TestAudioPresentationCommandResolver {
         HashSet<Integer> mutableEndFlags = new HashSet<>(List.of(0xEE));
         fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
                 .extraTrkEndFlags(mutableEndFlags)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .build();
         byte[] mutableDacBytes = { 0x12 };
         Map<Integer, byte[]> mutableDacSamples = new HashMap<>();
@@ -733,6 +735,8 @@ class TestAudioPresentationCommandResolver {
                 .dacData().sample(1).byteAt(0));
         assertEquals(Set.of(0xEE), snapshot.sequencers().get(0)
                 .config().getExtraTrkEndFlags());
+        assertEquals(SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE,
+                snapshot.sequencers().get(0).config().getFmSfxTakeoverMode());
     }
 
     @Test

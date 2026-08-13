@@ -1,0 +1,53 @@
+{
+  "schema": "openggf.gpgx-observer-source-lock.v1",
+  "bizhawk": {
+    "version": "2.11",
+    "repository": "https://github.com/TASEmulators/BizHawk.git",
+    "commit": "427556b5ef3ac437eba754d90c5e7e9096c9a8df",
+    "tree": "7281227ed2f3b89c0962b2792b28539e35361c6b"
+  },
+  "gpgx": {
+    "repository": "https://github.com/TASEmulators/Genesis-Plus-GX.git",
+    "commit": "051d430d3d1b54625f9900c8f152d7f232e06daf",
+    "tree": "1bb96ca74d660d383e70d9cd56b88906a0773519"
+  },
+  "musl": {
+    "repository": "https://github.com/nattthebear/musl.git",
+    "commit": "2063abc4e16c84218757b1db10d3cdf9f36ef3f8",
+    "tree": "a9969a63cd1780cdcc4c09745a8789206a72b8b4"
+  },
+  "git_objects": {
+    "waterbox/emulibc": "e5311f37d0e50d50b49975b8e01891bc034d5dcc",
+    "waterbox/common.mak": "34a36f41e708fb600e5bb86f9f27ca3566a546b8",
+    "waterbox/linkscript.T": "6a5f010d2553c159936953a62ef6408bd76946e4",
+    "waterbox/gpgx/Makefile": "32e2f2004749496b0d1644494a1c2b41530a18ee"
+  },
+  "critical_files": {
+    "waterbox/emulibc/emulibc.c": "4b86754f2c5d8ebe759efa90f9e74a985098492ad011bfe197ba23a93e1173fd",
+    "waterbox/emulibc/emulibc.h": "90eadc83d089550dfbbfe012839ba5804cbe46628c3264b0b7bbea1b0ccabb89",
+    "waterbox/emulibc/waterboxcore.h": "b4be11bda3c1e608fd5d38be48d70a4d506f92c32249e64ca9338c26a06810f3",
+    "waterbox/emulibc/Makefile": "0524d95e1e350a42ef8f3676b6d59b06d959a72574a18261edf9fa0c8d029a9a",
+    "waterbox/common.mak": "c328932fde7df37ce21759045b5b90f13170b9df88b1798e064c35a34b8fbb1f",
+    "waterbox/linkscript.T": "3a5f16e86596f0bb4b254b0fa0c4ba68effbf8a438ef34bbfbe7b179692cd536",
+    "waterbox/gpgx/Makefile": "c92fd9b2cbce52c75b580bf91d357cc028c5ea5c935475b042cce7110ef4caaa",
+    "waterbox/musl/configure": "1c6b2127d864cdc912645e7130debcd55e47ba1ce63e8e004ea3cd08fed71b22",
+    "waterbox/musl/wbox_configure.sh": "34abbf5b7c115b3c8c1cf58cc4b2efef87d20a175dccfef1739b0444a022662c",
+    "waterbox/musl/wbox_build.sh": "ef7b3279e8be2e1b519f73812a217f4027bd97c8f09dd6a691f1061766d2af2b"
+  },
+  "historical_paths_utf8_hex": {
+    "build_root": "2f686f6d652f66656f732f7368617265732f73686172652f42697a4861776b",
+    "interpreter": "2f686f6d652f66656f732f7368617265732f73686172652f42697a4861776b2f7761746572626f782f737973726f6f742f7379736c69622f6c642d6d75736c2d7761746572626f782e736f2e31"
+  },
+  "stock": {
+    "emu_hawk_size": 5320192,
+    "emu_hawk_sha256": "b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3",
+    "gpgx_compressed_size": 400161,
+    "gpgx_compressed_sha256": "c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12",
+    "gpgx_decompressed_size": 39558192,
+    "gpgx_decompressed_sha256": "b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218",
+    "gpgx_build_id": "7696adca7ad14b79",
+    "cores_sha256": "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7",
+    "common_sha256": "f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4",
+    "waterbox_host_sha256": "d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78"
+  }
+}

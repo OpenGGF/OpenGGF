@@ -18,13 +18,19 @@ public class VirtualSynthesizer implements Synthesizer {
     private int[] scratchRight = new int[0];
 
     public VirtualSynthesizer() {
-        this(Ym2612Chip.getDefaultOutputRate());
+        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE);
     }
 
     public VirtualSynthesizer(double outputSampleRate) {
+        this(outputSampleRate, ChipWriteObserver.NONE);
+    }
+
+    public VirtualSynthesizer(
+            double outputSampleRate, ChipWriteObserver observer) {
         // Use the GPGX PSG core for better timing/pitch parity with Genesis hardware.
         this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.ym = new Ym2612Chip();
+        setChipWriteObserver(observer);
         setOutputSampleRate(outputSampleRate);
         // Match typical driver init: silence chips on startup to avoid power-on noise.
         silenceAll();
@@ -67,6 +73,31 @@ public class VirtualSynthesizer implements Synthesizer {
         outputSampleRate = snapshot.outputSampleRate();
         ym.restoreSnapshot(snapshot.ym());
         psg.restoreSnapshot(snapshot.psg());
+    }
+
+    /** Channel-bounded rollback state for one prepared SFX admission. */
+    public static final class SfxAdmissionState {
+        private final Ym2612Chip.SfxAdmissionState ym;
+        private final PsgChip.SfxAdmissionState psg;
+
+        private SfxAdmissionState(
+                Ym2612Chip.SfxAdmissionState ym,
+                PsgChip.SfxAdmissionState psg) {
+            this.ym = ym;
+            this.psg = psg;
+        }
+    }
+
+    public SfxAdmissionState captureSfxAdmissionState(
+            int affectedFmMask, int affectedPsgMask) {
+        return new SfxAdmissionState(
+                ym.captureSfxAdmissionState(affectedFmMask),
+                psg.captureSfxAdmissionState(affectedPsgMask));
+    }
+
+    public void restoreSfxAdmissionState(SfxAdmissionState state) {
+        ym.restoreSfxAdmissionState(state.ym);
+        psg.restoreSfxAdmissionState(state.psg);
     }
 
     public void setDacData(DacData data) {

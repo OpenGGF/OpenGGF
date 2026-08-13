@@ -12,27 +12,12 @@ import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSmpsInstrumentParsing {
 
     static class MockSynthesizer extends VirtualSynthesizer {
-        boolean setInstrumentCalled = false;
-        int lastChannelId = -1;
-        byte[] lastVoice = null;
-
-        List<String> writeLog = new ArrayList<>();
-
-        @Override
-        public void setInstrument(Object source, int channelId, byte[] voice) {
-            this.setInstrumentCalled = true;
-            this.lastChannelId = channelId;
-            // Copy voice to avoid mutation issues if any
-            this.lastVoice = new byte[voice.length];
-            System.arraycopy(voice, 0, this.lastVoice, 0, voice.length);
-            super.setInstrument(source, channelId, voice);
-        }
+        final List<String> writeLog = new ArrayList<>();
 
         @Override
         public void writeFm(Object source, int port, int reg, int val) {
@@ -98,14 +83,16 @@ public class TestSmpsInstrumentParsing {
         short[] buf = new short[2000];
         seq.read(buf);
 
-        // 1. Verify setInstrument received raw data in Slot Order (1,3,2,4)
-        assertTrue(synth.setInstrumentCalled, "setInstrument should be called");
-        assertEquals(0, synth.lastChannelId, "Channel ID should be 0 (FM1)");
-
+        // 1. Verify the data source preserves the raw S2 register-order voice.
         byte[] expectedVoice = new byte[25];
         System.arraycopy(data, v, expectedVoice, 0, 25);
+        assertArrayEquals(expectedVoice, smps.getVoice(0), "S2 voice data should remain in driver register order");
 
-        assertArrayEquals(expectedVoice, synth.lastVoice, "Voice data should be passed exactly as read (Slot Order)");
+        // The sequencer must issue the shipped zSetVoice register mapping itself.
+        assertTrue(synth.writeLog.contains("P0_R30_V0B"), "voice[1] should reach register 30");
+        assertTrue(synth.writeLog.contains("P0_R34_V0C"), "voice[2] should reach register 34");
+        assertTrue(synth.writeLog.contains("P0_R38_V0D"), "voice[3] should reach register 38");
+        assertTrue(synth.writeLog.contains("P0_R3C_V0E"), "voice[4] should reach register 3C");
 
         // 2. Verify SND_OFF (F9) writes
         // Should write 0x0F to 0x88 (Op2) and 0x8C (Op4) on Port 0 (FM1 is ch 0, port 0)
@@ -124,5 +111,3 @@ public class TestSmpsInstrumentParsing {
         assertTrue(found8C, "Should write 0x0F to 0x8C (Op4)");
     }
 }
-
-

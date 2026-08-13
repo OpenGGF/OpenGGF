@@ -76,17 +76,22 @@ class TestChipWriteObserver {
 
         synth.silenceAll();
 
-        List<String> expected = new ArrayList<>();
-        expected.addAll(List.of(
-                "YM:0:28:00", "YM:0:28:04",
-                "YM:0:28:01", "YM:0:28:05",
-                "YM:0:28:02", "YM:0:28:06"));
-        for (int register = 0x30; register < 0x90; register++) {
-            expected.add("YM:0:%02X:FF".formatted(register));
-            expected.add("YM:1:%02X:FF".formatted(register));
-        }
-        expected.addAll(List.of("PSG:9F", "PSG:BF", "PSG:DF", "PSG:FF"));
-        assertEquals(expected, observer.events);
+        assertEquals(expectedSilenceWrites(), observer.events);
+    }
+
+    @Test
+    void constructorObserverSeesTheCompleteInitialSilenceInExactOrder() {
+        RecordingObserver observer = new RecordingObserver();
+
+        new VirtualSynthesizer(
+                Ym2612Chip.getDefaultOutputRate(), observer);
+
+        assertEquals(202, observer.events.size());
+        assertEquals(198, observer.events.stream()
+                .filter(event -> event.startsWith("YM:")).count());
+        assertEquals(4, observer.events.stream()
+                .filter(event -> event.startsWith("PSG:")).count());
+        assertEquals(expectedSilenceWrites(), observer.events);
     }
 
     @Test
@@ -115,6 +120,20 @@ class TestChipWriteObserver {
         synth.writePsg(synth, 0x84);
         synth.writePsg(synth, 0x12);
         synth.writePsg(synth, 0x92);
+    }
+
+    private static List<String> expectedSilenceWrites() {
+        List<String> expected = new ArrayList<>();
+        expected.addAll(List.of(
+                "YM:0:28:00", "YM:0:28:04",
+                "YM:0:28:01", "YM:0:28:05",
+                "YM:0:28:02", "YM:0:28:06"));
+        for (int register = 0x30; register < 0x90; register++) {
+            expected.add("YM:0:%02X:FF".formatted(register));
+            expected.add("YM:1:%02X:FF".formatted(register));
+        }
+        expected.addAll(List.of("PSG:9F", "PSG:BF", "PSG:DF", "PSG:FF"));
+        return expected;
     }
 
     private static final class RecordingObserver implements ChipWriteObserver {

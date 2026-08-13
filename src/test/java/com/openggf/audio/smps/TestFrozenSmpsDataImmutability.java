@@ -121,7 +121,8 @@ class TestFrozenSmpsDataImmutability {
                 "fmPointerCount", "fmPointerAt", "fmKeyOffsetAt",
                 "fmVolumeOffsetAt", "psgPointerCount", "psgPointerAt",
                 "psgKeyOffsetAt", "psgVolumeOffsetAt",
-                "psgModEnvelopeAt", "psgInstrumentAt",
+                "psgModEnvelopeAt", "psgInstrumentCount",
+                "psgInstrumentAt",
                 "voiceLength", "voiceByteAt",
                 "psgEnvelopeLength", "psgEnvelopeByteAt",
                 "modEnvelopeLength", "modEnvelopeByteAt");

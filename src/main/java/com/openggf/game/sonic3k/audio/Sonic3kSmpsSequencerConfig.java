@@ -56,6 +56,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)
                 .tempoOnFirstTick(true)     // Tempo1Tick = DOTEMPO
+                .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)
                 .noteOnPrevent(SmpsSequencerConfig.NoteOnPrevent.HOLD)

@@ -257,6 +257,25 @@ class TestAudioParityJsonl {
     }
 
     @Test
+    void activeDacOmitsTheAliasedSavedDacFrequencyWord() throws Exception {
+        ObjectNode withoutFrequency = tickJson(goldenTick());
+        ArrayNode tracks = withoutFrequency.withObject("state").withArray("tracks");
+        ObjectNode dac = ((ObjectNode) tracks.get(1)).deepCopy();
+        dac.put("role", "DAC").put("hardware", "DAC");
+        dac.remove("baseFrequency");
+        tracks.set(0, dac);
+
+        AudioParityTick parsed = AudioParityJsonl.parseTick(withoutFrequency.toString());
+        assertEquals(null, parsed.tracks().get(0).baseFrequency());
+
+        ObjectNode withAliasedWord = withoutFrequency.deepCopy();
+        ((ObjectNode) withAliasedWord.withObject("state").withArray("tracks").get(0))
+                .put("baseFrequency", 0x8000);
+        assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.parseTick(withAliasedWord.toString()));
+    }
+
+    @Test
     void activeFadeFieldsAreConditionalAndStrict() throws Exception {
         // Break caught: fade-only fields gate inactive state or disappear during an active fade.
         ObjectNode inactiveExtra = tickJson(goldenTick());

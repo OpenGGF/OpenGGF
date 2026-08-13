@@ -1,5 +1,6 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.AudioDiagnosticObserverException;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -43,6 +44,7 @@ public final class AudioPresentationMixer {
             try {
                 voice.mixInto(voiceScratch, stereoFrames);
             } catch (RuntimeException failure) {
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
                 failedVoice.accept(voice);
                 continue;
             }

@@ -262,12 +262,58 @@ public final class S1OpenGgfAudioCapture {
             this.contract = contract;
             this.terminalCount = terminalCount;
             driver = new SmpsDriver(SAMPLE_RATE);
-            // Power-on silence has already completed in the driver constructor.
-            driver.setChipWriteObserver(this);
             sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic1SmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);
             driver.addSequencer(sequencer, false);
+            // The BizHawk epoch begins at S1 InitMusicPlayback. Chip power-on and
+            // Java construction precede it; the shipped FixBugs=0 path then performs
+            // this exact music-load silence sequence before the first track update.
+            driver.setChipWriteObserver(this);
+            initializeS1MusicPlayback(driver, song);
+        }
+
+        private static void initializeS1MusicPlayback(SmpsDriver driver, AbstractSmpsData song) {
+            for (int channel = 2; channel >= 0; channel--) {
+                driver.writeFm(driver, 0, 0x28, channel);
+                driver.writeFm(driver, 0, 0x28, channel + 4);
+            }
+            for (int channel = 0; channel < 3; channel++) {
+                for (int operator = 0; operator < 4; operator++) {
+                    int register = 0x40 + channel + operator * 4;
+                    driver.writeFm(driver, 0, register, 0x7f);
+                    driver.writeFm(driver, 1, register, 0x7f);
+                }
+            }
+            driver.writePsg(driver, 0x9f);
+            driver.writePsg(driver, 0xbf);
+            driver.writePsg(driver, 0xdf);
+            driver.writePsg(driver, 0xff);
+
+            int declaredFmDacTracks = song.getFmPointers().length;
+            int[] fmOrder = Sonic1SmpsSequencerConfig.FM_CHANNEL_ORDER;
+            if (declaredFmDacTracks < fmOrder.length) {
+                driver.writeFm(driver, 0, 0x28, 6);
+                for (int register : new int[] { 0x42, 0x4a, 0x46, 0x4e }) {
+                    driver.writeFm(driver, 1, register, 0x7f);
+                }
+                driver.writeFm(driver, 1, 0xb6, 0xc0);
+            } else {
+                driver.writeFm(driver, 0, 0x2b, 0);
+            }
+
+            // FixBugs=0 clears undefined track slots instead of assigning their
+            // hardware bytes. FMNoteOff therefore aliases any absent FM slot to FM1.
+            for (int musicFmSlot = 1; musicFmSlot < fmOrder.length; musicFmSlot++) {
+                int channel = musicFmSlot < declaredFmDacTracks ? fmOrder[musicFmSlot] : 0;
+                driver.writeFm(driver, 0, 0x28, channel);
+            }
+            int[] psgOrder = Sonic1SmpsSequencerConfig.PSG_CHANNEL_ORDER;
+            int declaredPsgTracks = song.getPsgPointers().length;
+            for (int slot = 0; slot < psgOrder.length; slot++) {
+                int channel = slot < declaredPsgTracks ? psgOrder[slot] : 0;
+                driver.writePsg(driver, channel | 0x1f);
+            }
         }
 
         @Override

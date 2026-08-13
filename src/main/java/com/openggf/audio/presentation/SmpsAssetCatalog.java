@@ -318,9 +318,10 @@ final class SmpsAssetCatalog {
     private static int resolveAssetId(
             SmpsAssetKey key, AbstractSmpsData data) {
         return switch (key.route()) {
-            case BASE_MUSIC, DONOR_MUSIC, BASE_ID, DONOR_ID ->
+            case BASE_MUSIC, DONOR_MUSIC ->
                     key.assetId();
-            case BASE_NAME, FALLBACK_NAME -> data.getId();
+            case BASE_ID, BASE_NAME, DONOR_ID, FALLBACK_NAME ->
+                    data.getId();
         };
     }
 
@@ -460,6 +461,9 @@ final class SmpsAssetCatalog {
                         source.getExtraTrkEndFlags()))
                 .relativePointers(source.isRelativePointers())
                 .tempoOnFirstTick(source.isTempoOnFirstTick())
+                .direct68kDriver(source.isDirect68kDriver())
+                .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
                 .noteOnPrevent(source.getNoteOnPrevent())

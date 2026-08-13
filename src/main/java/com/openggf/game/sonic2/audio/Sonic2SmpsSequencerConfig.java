@@ -58,6 +58,7 @@ public final class Sonic2SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }
 

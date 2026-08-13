@@ -218,6 +218,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1 complete-run audio observer terminal freeze (2026-08-13):** the
+  source-authentic deferred tail transfer and contemporaneous M68K A7 binding
+  now carry the pinned 225,101-row movie through the configured terminal gate
+  on two independently built, byte-identical ABI-v4 GPGX installations. The
+  freeze also re-authenticates managed collector/capability identities, real
+  S2/S3K boundaries, Reset/Power lifecycle, and bounded paired performance;
+  it publishes no ROM, movie, native binary, or reference capture and makes no
+  semantic audio-MATCH claim.
+- **Sonic 2/Sonic 3&K source-owned audio parity observer (2026-08-11):** a
+  reproducible, separately installed BizHawk 2.11 GPGX observer now records
+  ordered Z80 service, YM2612, PSG, DAC, DPCM, and SEGA-PCM ownership from
+  reviewed disassembly boundaries. Exact movie/hash gates, Reset/Power reupload,
+  savestate epochs, stock/disabled/enabled identity, bounded performance, and
+  duplicate complete S2 and S3K runs are locked without shipping ROMs or native
+  binaries in the repository.
+- **Sonic 1 GHZ1 gameplay-audio causal timeline (2026-08-09):** the pinned
+  complete-game replay now records raw caller/ROM queue requests separately
+  from resolved driver/presentation admissions. Both producers agree on the
+  first jump request (`$A0`, ordinal 1, frame 958); the first mismatch is now
+  the meaningful one-frame admission delay (OpenGGF 958, REV01 959), while
+  ring requests retain raw `$B5` and admit resolved `$CE`. The hardened runner
+  pins the installed BizHawk core assembly and GPGX binary, proves both music/SFX
+  and SFX/SFX contention, and discards failed producer staging without publication.
 - **Shared movement and S3K trace-parity corrections (2026-08-06):** the
   shared movement path now keeps ROM `move_lock` semantics through a full
   dispatch, and the shared oscillator no longer gains a duplicate transition

@@ -318,7 +318,7 @@ Active roles use this field map (`T` is the slot base):
 | PSG envelope cursor | `T+$0C` | `envPos` | PSG only; unsigned byte |
 | duration countdown | `T+$0E` | `duration` | unsigned byte |
 | duration reload | `T+$0F` | `scaledDuration` | unsigned byte; `rawDuration` is diagnostic |
-| base frequency | `T+$10` | `(baseBlock << 11) | baseFnum` for FM; `baseFnum` for PSG | unsigned word; gate after derivation tests, not `note` |
+| base frequency | FM/PSG `T+$10` | `(baseBlock << 11) | baseFnum` for FM; `baseFnum` for PSG | unsigned word; gate after derivation tests, not `note`; omit for DAC because its `T+$10` aliases `SavedDAC` rather than `Freq` |
 | note-fill countdown/reload | `T+$12/$13` | derived from `fill`, `duration`, `scaledDuration` | gate only after focused transition tests prove the derivation |
 | modulation delay/speed/delta/steps/value | `T+$18..$1D` | `modDelay`, `modRateCounter`, `modCurrentDelta`, `modStepCounter`, `modAccumulator` | signed delta/value; individual fields become gates only after transition tests |
 | detune | `T+$1E` | `detune` | signed byte |
@@ -407,6 +407,31 @@ occurs:
 Driver-generated DAC note activity is part of GHZ music and is not
 contamination. DAC sample bytes and sample timing remain outside the MVP
 comparison.
+
+## Gameplay timeline runner trust boundary
+
+The gameplay timeline runner's trust boundary begins only when control reaches
+`run_s1_ghz1_gameplay_audio_timeline.sh`. The kernel, the system dynamic loader,
+and the parent launch environment through creation of the runner process are
+trusted. Callers must launch the runner without dynamic-loader injection,
+including any `LD_*` environment variable.
+
+The runner is a dynamically linked Bash process. `LD_PRELOAD`, `LD_AUDIT`, or
+another loader control can therefore load code before Bash executes the first
+script instruction. Even a nonexistent preload or audit library can make the
+system loader print its own diagnostic before the runner can respond. That
+pre-start execution and diagnostic are outside the runner's protection; a
+hostile parent environment requires an external clean launcher or static
+bootstrap, neither of which this tool claims to provide.
+
+Once control reaches the script, its first guard rejects every inherited
+`LD_*` variable with exit status `4`, before argument parsing, repository path
+resolution, or project/tool work. The runner then rejects the separately named
+Java, Maven, Mono, Bash, and producer replacement variables, fixes `PATH` to
+`/usr/bin:/bin`, selects bootstrap executables by absolute system path, and
+starts every Maven, Java, Mono/BizHawk, and comparator child through `env -i`
+with only the explicit display/session values needed by those tools. These
+post-start controls do not weaken or imply protection before process creation.
 
 ## Verification
 

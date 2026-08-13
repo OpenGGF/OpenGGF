@@ -69586,6 +69586,264 @@ for. Read the count with that in mind.
   Recorded rejected alternative, so it is not retried blindly: publishing at
   `completion_cursor_frame` instead of the bound observation turns ss_1..ss_7 ALL red.
 
+## 2026-08-12 - S1 complete-run audio reference frontier reaches row 8775
+
+- Worktree/branch: `.worktrees/s1-complete-audio-frontier-r5`,
+  `bugfix/ai-s1-complete-audio-frontier-r5`, based on `94ea332d9` with the
+  final action-10 BizHawk installation. The bounded opt-in reference gate is
+  green through row 5000 (one test, 152.8 seconds).
+- Full no-replace command: `tools/bizhawk-headless/run.sh --mode trace
+  --rom <S1 REV01> --movie <all-emeralds BK2> --output
+  target/audio-parity/s1-r5-full --trace-profile
+  complete_run_audio_reference`. Result: one capture error, first at row 8775,
+  `first_fault=5:2:71b4c:6:1:0:4`; no final raw file was published.
+- The fault is the `UpdateMusic` restart at
+  `docs/s1disasm/s1.sounddriver.asm:147-165` while the direct-child
+  `zCheckForSamples` wait service from `docs/s1disasm/sound/z80.asm:71-82`
+  remains active. This is the same kind-4 managed invocation, not a nested
+  call. The S1 manifest pins a retry-only action-10 top-kind-6/direct-parent-4
+  selector without granting kind 6 child ownership or inventing a PUSH
+  fallback. The opt-in row-8775 gate remains intentionally RED at observer
+  configuration until the conductor-owned native selector admits that exact
+  retry-only contract and fails closed when its direct parent is absent.
+
+## 2026-08-12 - S1 row-8775 direct-parent hypothesis rejected
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, based on `94ea332d9` plus the
+  row-8775 RED contract. Command: `OPENGGF_S1_AUDIO_PREFIX=1
+  S1_ROM_PATH=<S1 REV01> S1_AUDIO_BK2_PATH=<all-emeralds BK2>
+  BIZHAWK_HOME=<retry-only ABI-v3 diagnostic install>
+  mono <headless tests> --filter 'S1CompleteRunAudioReferenceCaptureTests
+  materialize one deferred begin after row 8775 wait service' --jobs 1`.
+  Result: one capture error at row 8775,
+  `first_fault=5:2:71b4c:6:1:0:4`; no raw output published.
+- Exact native order: kind-4 token 1 END at global ordinal 12, M68K `$71C4C`;
+  kind-6 token 2 root BEGIN at ordinal 13, Z80 `$003A`; kind-6 END at ordinal
+  20, Z80 `$0077`. The three intervening managed `$71B4C` callbacks each have
+  `A7=$FFFDB2`, return `$000B64`, proving genuine loop re-entry with the same
+  managed stack identity. They are not duplicate callback delivery, and kind
+  6 has no native direct parent at any of them.
+- The retry-only action-10 implementation and regenerated identities were
+  discarded. The corrected next contract is a bounded deferred/coalesced
+  begin: exactly one new kind-4 semantic begin must materialize after ordinal
+  20, with no retroactive ownership or recently-closed-ancestry rule. The
+  opt-in gate remains RED and now pins that required order/multiplicity while
+  native pending-state, reset/overflow behavior, managed correlation, and raw
+  proof representation remain explicit design questions.
+
+## 2026-08-12 - S1 reserve/consume transaction green; terminal frontier row 12525
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, base `6dbfe0406`. Exact regular-file
+  inputs, used in place without copying, renaming, or symlinking: Sonic 1 World
+  REV01 `Sonic The Hedgehog (W) (REV01) [!].gen`, SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`; BK2
+  `sonic1-complete-withemeralds.bk2`, SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+- The complete old release-at-END RED is preserved at
+  `target/audio-parity/native/action11-final-row8775-repro.log` (68 lines,
+  SHA-256
+  `07f9a1965b4a9c1e82f56193975ecbf00f290a8c14de5e497dcdb423099b8e24`).
+  It proves the source-false model fails at M68K `$71BB2` while kind 6 is still
+  the active root. The stale 12/13/20/21 released-root sequence and terminal
+  `Complete(225101)` claim are retracted.
+- Strict real RED against that old install used `OPENGGF_S1_AUDIO_PREFIX=1`,
+  the exact paths above, `BIZHAWK_HOME=target/audio-parity/native/action11-diagnostic/install`,
+  and `tools/bizhawk-headless/test.sh --filter 'S1CompleteRunAudioReferenceCaptureTests
+  consume one deferred child begin during row 8775 wait service' --jobs 1`.
+  It failed configuration with status `-3`, as the old core has no paired
+  action-12 consume. Log:
+  `target/audio-parity/native/task4-old-action11-real-red.log`, SHA-256
+  `cb703f0f753ffd58e3c6d0c25c3957be580db6a716aafda4dcc154de460c170c`.
+- A create-new diagnostic core/install was then built from locked input identity
+  `36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4`.
+  All six native selftests passed. Committed patch SHA-256 was
+  `fefab1d5f69ff1657d14eb744e3c4b57c0eefa351ee236c3166fe2614faa8504`;
+  raw core SHA-256 was
+  `ae8d7176bc283a1ec8db288eb634c31bcdfb4b610280a458cefb407427394e35`;
+  compressed core SHA-256 was
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`;
+  diagnostic Build ID was `23efb896258c515d`. No committed identity,
+  capability, recipe, or artifact lock was changed by Task 4.
+- Reviewed managed authority fixes through `2b123f4bc` advanced the same real
+  gate through the pre-epoch `$71B82` topologies and made the exact row-8775
+  transaction GREEN. The row proves root kind-6 BEGIN `$003A`; three distinct,
+  strictly ordered marker-value-4 `$71B4C` retries with identical
+  `A7=$FFFDB2` / return `$000B64`; `$71B82` consume and fresh depth-1 kind-4
+  child BEGIN; `$71BB2` owned by the child; depth-1 child END `$71C4C`; an empty
+  manifest M68K callback inventory between child END and the kind-6 `$0077`
+  END; and the adjacent fresh root DPCM BEGIN. Exact command: the real command
+  above with
+  `BIZHAWK_HOME=target/audio-parity/native/task4-reserve-consume-diagnostic-install`.
+  GREEN log: `target/audio-parity/native/task4-row8775-2b123f4bc-green.log`,
+  SHA-256
+  `7c4e6da896a56f896e0e36befaa44335ede52715c073fd858b7a419b3a36b761`.
+- Adding `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1` to the same command stopped at the
+  next exact observer frontier, movie row 12525:
+  `first_fault=5:2:72c24:2:2:0:4`. At M68K `$72C24`
+  (`cfStopSpecialFM4`), kind-2 DPCM token 6 is the active depth-1 child of root
+  kind-4 token 5. The current conditional-close hook set does not admit that
+  topology. Log: `target/audio-parity/native/task4-terminal-2b123f4bc.log`,
+  SHA-256
+  `22dccba2f6c221fdbfc8428133182e07cdebd61577865ee83a3b506e6976942c`.
+  No capture or partial output was published. Row 12525 `$72C24` is the next
+  reference-observer frontier; this is not a reference-vs-OpenGGF semantic
+  MATCH, and Task 4 did not broaden the conditional-close contract.
+
+## 2026-08-12 - S1 row-12525 action-9 proof green; capture-sink frontier row 21766
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; managed action-9 base
+  `7ba71fc889dd91f39347d117864c9cf16740e9ca`, plus separately reviewed
+  callback-stack prerequisite `71a8d889c35d0977a055ffd883b1bc9dcc744124`.
+  Exact regular-file inputs were Sonic 1 World REV01 SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` and complete-run BK2 SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+- The unchanged Task 4 diagnostic install retained compressed core SHA-256
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`
+  and installed regular-file aggregate SHA-256
+  `be7850247e8b011fa85c20f558edd9349cbac44360a5217c41eacc2215e28e1f`.
+- Exact command: `OPENGGF_S1_AUDIO_ROW12525=1 S1_ROM_PATH=<REV01>
+  S1_AUDIO_BK2_PATH=<BK2> BIZHAWK_HOME=<Task4-install>
+  tools/bizhawk-headless/test.sh --jobs 1 --filter 'S1CompleteRunAudioReferenceCaptureTests
+  prove row 12525 action 9 keep and promotion'`. Result: PASS. Row 12525 proves
+  `$72C24` action-9 KEEP/value 0 with callback `A7=$FFFDAE`, return `$71C38`,
+  kind-2 child token 6 parented by kind-4 token 5, unchanged begin ancestry,
+  marker ordinal 219, later adjacent `$71C4C` root END/action-8 child promotion
+  at ordinals 223/224, then `$AC` child close at ordinal 230. The selector binds
+  identities relationally before secondarily checking the deterministic token
+  values. Final exact-gate log SHA-256:
+  `c9169ac7644eaf3eae8b9cc9f09571e81117d5f44d7822b0f05320018a446bfd`.
+- One bounded configured-terminal run then crossed row 12525 and stopped at
+  the sole next frontier, row 21766: `StringBuilder.Append` rejected the
+  test-only real-proof aggregate `StringWriter` during `Session.ProcessFrame`.
+  The production `NoReplacePublisher` was not involved. This is an
+  infrastructure frontier, not a native first fault or semantic mismatch.
+  Error count: 1; first-error row/field: `21766` / test aggregate-writer
+  capacity. No raw file was published, and the run was not retried or
+  broadened. Terminal log SHA-256:
+  `b0a1473e3d827cf037bb4759ec266bf25a01b28b003b268a31695bd99586c9d7`.
+- A follow-up test-only sink change replaces that whole-run aggregate with a
+  line-validating selective JSONL writer. It streams and discards every valid
+  unselected line, retains only baseline/selected proof rows/terminal under
+  explicit line, record, and character limits, and requires a fresh writer and
+  session after any sink failure. No `Session`, `NoReplacePublisher`, native,
+  ABI, capability, or Task 5 identity changed.
+- RED: the focused selector failed to compile with `CS0246` before the writer
+  existed. GREEN: `tools/bizhawk-headless/test.sh --jobs 1 --no-gates --filter
+  'S1CompleteRunAudioReferenceCaptureTests'` passed 43 synthetics, with the two
+  opt-in real gates skipped; the corresponding
+  `CompleteRunAudioObserverTests` command passed 25 synthetics. Error count: 0.
+  A long terminal capture was intentionally not run, so row 21766 remains the
+  last observed infrastructure frontier pending the separate real-proof task.
+
+## 2026-08-12 - S1 selective sink clears row 21766; native frontier row 119247
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; selective-sink commit
+  `348aa119624ad514656ccbc4f013fcffb1a1c3a1`. Exact inputs remained Sonic 1
+  World REV01 SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` and complete-run BK2 SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+  The unchanged Task 4 install retained compressed-core SHA-256
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`,
+  installed regular-file aggregate SHA-256
+  `be7850247e8b011fa85c20f558edd9349cbac44360a5217c41eacc2215e28e1f`,
+  and zero symlinks.
+- Exact command: `OPENGGF_S1_AUDIO_PREFIX=1
+  OPENGGF_S1_AUDIO_TERMINAL_PROBE=1 S1_ROM_PATH=<REV01>
+  S1_AUDIO_BK2_PATH=<BK2> BIZHAWK_HOME=<Task4-install>
+  tools/bizhawk-headless/test.sh --jobs 1 --filter
+  'S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin
+  during row 8775 wait service'`. The optional row-12525 selector was not
+  repeated because this unchanged test flow did not require it.
+- The sole fresh session crossed row 21766 without the prior test aggregate
+  failure and stopped at movie row 119247 with native status `-3`:
+  `first_fault=4:1:77:6:1:0:4`. This decodes to native `SERVICE` fault, Z80
+  `$0077`, active kind 6, native stack-entry count 1, continuation count 0 and
+  limit 4. The sole root entry itself stores depth 0; packed `active_depth`
+  reports the stack count. The tuple alone does not identify the failed
+  predicate. With the manifest and native action order it selects token 11's
+  `TAIL_POP_PUSH`; the expected top kind 6 passes and, at stack count 1, its
+  parent is null, so the parent-kind guard cannot reject. The exact reachable
+  reason-4 predicate is the pending deferred reservation guard.
+- Diagnostic lifecycle excerpt: kind-6 root begin `$003A` at ordinal 32;
+  deferred kind-4 child begin `$71B82` at 37; child end `$71C4C` at 46;
+  kind-6 end `$0077` at 54; root kind-2 begin `$0077` at 55. The separate
+  last-16-event tail has token 185 end `$AC` at 1692, token 186 begin `$0077`
+  at 1693, and chip events at 1694-1695. `pending_managed` was empty.
+- Error count: 1; first-error row/field: `119247` / native observer service
+  topology at Z80 `$0077`. The failed session was not retried and did not reach
+  `Complete(225101)`. No final reference or partial output was published.
+  Preserved log:
+  `target/audio-parity/native/row21766-348aa1196-configured-terminal.log` (69
+  lines, 7,765 bytes), SHA-256
+  `71e9549406dfa7bb7b9baacf913558878c4371beb7dd7ad224fe3cfc02dcbe9e`.
+- This moves the reference-observer frontier; it is not a semantic audio MATCH.
+  The separate production deferred-retention issue remains unmodified and is
+  not claimed fixed by the test-only selective sink.
+## 2026-08-13 — S1 complete-run audio tail-transfer freeze
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, pre-freeze source commit
+  `594edfd61e00f442ed840753c83e7a911f4909b1` plus uncommitted identity cascade.
+- Command: `OPENGGF_S1_AUDIO_PREFIX=1 OPENGGF_S1_AUDIO_TERMINAL_PROBE=1`
+  with the exact S1 REV01 ROM, complete-with-emeralds BK2, installation A, and
+  the focused row-8775 transaction test from the finalization plan.
+- Result: FAIL at movie row 185877, status `-3`, first error
+  `first_fault=5:2:1394:6:1:0:4` (M68K QueueSound2 hook proof while kind 6 is
+  the sole active root). Error count: one terminal observer error. The former
+  row-119247 `4:1:77:6:1:0:4` tail-transfer frontier did not recur.
+- Evidence: log SHA-256
+  `b7e5c6493aaa2ad2dc9db4248d1b96cfeab19edc48888b2efd260093977dca0d`.
+  Candidate patch/core/identity/install trees reproduced byte-identically;
+  installation B was not rerun after the new semantic frontier pending source
+  audit. No capture or partial output was published; no complete-run or MATCH
+  claim is made.
+
+## 2026-08-13 — S1 row-185877 QueueSound kind-6 topology fix
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, based on
+  `594edfd61e00f442ed840753c83e7a911f4909b1` plus the preserved final-freeze
+  identity cascade.
+- Source-backed change: the exact QueueSound action-7 expected-kind list is
+  `[0, 2, 3, 6]` for PCs `$138E`, `$1394`, and `$139A`. This adds only the
+  observed kind-6 root; kinds 4/5 remain invalid, the begin-kind list stays
+  `[0, 2, 3]`, and no native observer or ABI surface changed.
+- Synthetic result: the focused S1 capture suite and `CompleteRunAudioObserver`
+  suite pass. Tests pin 290 hooks, unchanged 16,412 snapshot bytes, kind-6
+  publication/pre-epoch ordering and PC identity, non-mutating service/chip
+  ownership, transactional rejection, and relational retention of the actual
+  callback A7 values.
+- Frontier status: the 88-minute real gate was deliberately not rerun before
+  the frozen identity cascade resumes. Row 185877 remains the last measured
+  real frontier; no semantic MATCH or publication is claimed.
+
+## 2026-08-13 — S1 complete-run audio configured-terminal PASS
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; source baseline
+  `d8c92d6b6f180dc7ef2d17be0e2e7a17bb39e2d2` plus the final identity cascade.
+- Exact command: the Task-6 configured-terminal row-8775 command with the
+  pinned S1 REV01 ROM and complete-with-emeralds BK2, run once against each of
+  the two byte-identical installations.
+- Result: PASS for installation A and installation B. Both terminal proofs
+  report 107,016,559 total records, 3,419 retained records, and 794,614
+  retained characters. Error count: zero; first-error row/field: none. The
+  former row-119247 and row-185877 native frontiers did not recur.
+- Evidence: A log SHA-256
+  `ac6298ebf4c150346474fccaaff9d91bc76a874b4fcdcca8cc738bcf18ff1567`;
+  B log SHA-256
+  `cdcfb4820353c513b4514fa87f00276ff7398f1d7d9fafa74466a091b8e05354`.
+  Native identity SHA-256 is
+  `815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86`;
+  both installation trees digest to
+  `830351fbda507637719647ffe283a542fcb319b0b2609dc53d675fe553e31c87`.
+- Publication status: no reference capture was published. This closes the
+  configured observer/lifecycle frontier; semantic audio comparison remains a
+  separate gate and no semantic MATCH is claimed.
 ## 2026-08-09 — round nineteen: CPZ2 -82.5%, mid-act bootstrap scoped, and a RECORDER off-by-one
 
 Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 378aeabe6 (769 / 18 / 63).

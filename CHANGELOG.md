@@ -3,6 +3,71 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: preserve Sonic 1 service identity when the driver retries a root
+  DAC service beneath a typed asynchronous PCM child. The ABI-v3 observer now
+  emits a parent-token retry marker for the exact `$71B4C` topology without
+  mutating its service stack, while strict native and managed guards reject
+  malformed selector alternatives and event ownership.
+- Tooling: require a canonical cutoff-frontier record in every complete-run
+  audio capture, preserving open and withheld service ownership at arbitrary
+  movie cutoffs. Add create-new duplicate-gated orchestration with strict
+  validation, fixed exit classes, sanitized producer environments, and atomic
+  report publication.
+- Tooling: add a deterministic, separately installed BizHawk 2.11 GPGX audio
+  observer core. Its bounded native ABI records nested driver-service, FM, PSG,
+  reset, and synchronous Z80-RAM snapshot events without changing emulated
+  results or cycles. The exact patch, core, complete corresponding source,
+  non-commercial notices, Waterbox toolchain, and build recipe are content
+  addressed; the stock managed assemblies remain unchanged and use the locked
+  reflection adapter path. Installation rejects linked stock artifacts and
+  non-self-contained notice trees before copying or publishing.
+- Tooling: complete-run audio captures now bind a typed, profile-owned observer
+  runtime identity and its exact managed adapter/artifact set. The BizHawk 2.11
+  GPGX source, historical Waterbox toolchain, and stock core have reproducible
+  content-addressed locks; two clean builds byte-match the installed core. The
+  exact historical managed release environment was not frozen, and the pinned
+  date-adjacent candidate does not reproduce the installed assemblies. The
+  distribution is therefore locked to the exact-hash reflection path and
+  cannot ship a replacement managed DLL. Reproduction now rejects ambient
+  shell/toolchain/Git/loader overrides, authenticates a canonical build recipe
+  and all 114 offline NuGet package files, and exposes a registered two-run
+  gate which requires both fresh native outputs to match each other and stock.
+- Fix: Sonic 2 and Sonic 3 & Knuckles FM music and sound effects now upload
+  voices using their shipped Z80-driver register tables and write order. Their
+  effective operator assignment remains identical, while Sonic 2 preserves its
+  `FixDriverBugs=0` 8-bit total-level behavior and Sonic 3 & Knuckles preserves
+  its distinct raw voice traversal and SSG-EG register order.
+- Fix: Sonic 1 FM sound effects no longer upload their instrument into a
+  still-music-owned channel during construction or forcibly clear the YM2612's
+  internal envelope and feedback state on acquisition. The SFX now takes the
+  channel through the shipped driver's visible SetVoice, note-off, frequency,
+  and note-on sequence, removing the brief badnik-explosion onset artifact
+  without changing operator or chip-port ordering.
+- Tooling: correct the Sonic 1 GHZ1 gameplay-audio timeline's causal boundary.
+  Strict schema v2 records raw caller/ROM queue requests at submission and
+  resolved driver/presentation admissions separately with one stable ordinal.
+  Both producers now agree on the first `$A0` jump request at BK2 frame 958;
+  the first mismatch is `ADMISSION_EXTRA` because OpenGGF admits it on 958 and
+  REV01 on 959. Ring requests likewise compare as raw `$B5` while admission
+  correctly resolves to `$CE`, without modifying gameplay or chip ports.
+- Tooling: harden the GHZ1 timeline runner and contention evidence. Validation
+  pins the exact installed `BizHawk.Emulation.Cores.dll` and `gpgx.wbx.zst`
+  hashes, nonzero BizHawk exits can only discard fresh staging, comparator
+  context is bounded to 8 + mismatch + 8, and same-ID SFX retriggers retain the
+  displaced old SFX ordinal through the authoritative production arbitration.
+  Two reference and two OpenGGF captures remain byte-identical per producer and
+  both music/SFX takeover-restoration and SFX/SFX contention are required.
+- Fix: YM2612 synthesis now keeps the chip's register-slot permutation at the
+  register boundary instead of applying it a second time in the FM algorithm
+  graph. Envelope reset phase, decay-to-sustain overshoot, and discrete-chip
+  carrier quantization also match Genesis Plus GX, restoring the intended
+  timbre of asymmetric voices such as Sonic 1's badnik explosion.
+- Fix: Sonic 1 GHZ music playback now matches the shipped `FixBugs=0` audio
+  driver for a complete 14,690-tick reference-controlled cycle, including
+  initialization writes, 68k voice upload/TL order, PSG rest and maximum-note
+  semantics, note-fill exit behavior, tied-note keying, and modulation phase.
+  Two independent OpenGGF captures are byte-identical and their ordered
+  normalized state/write projection matches the BizHawk reference exactly.
 - Fix: the S2 Egg Prison button rises again the frame nobody is standing on it. ROM
   `loc_3F354` (s2.asm:84937-84950) is `jsr (SolidObject)` -> `move.w objoff_30(a0),y_pos(a0)`
   -> `andi.b #standing_mask` -> `addq.w #8,y_pos(a0)`: only `objoff_32`, the "prison opened"

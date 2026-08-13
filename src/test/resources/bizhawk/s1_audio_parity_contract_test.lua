@@ -329,6 +329,25 @@ local function runConditionalGlobalGates()
     check(not ok, "non-shipped f_speedup transition byte was accepted")
 end
 
+local function runActiveDacSavedSampleIsNotFrequency()
+    -- Break caught: the DAC-only SavedDAC byte at T+$10 is decoded as the
+    -- overlapping FM/PSG Freq word and creates a false tick-zero mismatch.
+    local raw = {
+        assetBase = 476636,
+        assetEnd = 478532,
+        global = {fadeActive = 0, fadeDelay = 0, fadeOut = 0, fadeSteps = 0,
+            speedUp = 0, tempoReload = 21, tempoTimeout = 3},
+        tracks = {
+            rawTrack(128, 6), rawTrack(0, 0), rawTrack(0, 1), rawTrack(0, 2), rawTrack(0, 4),
+            rawTrack(0, 5), rawTrack(0, 6), rawTrack(0, 128), rawTrack(0, 160), rawTrack(0, 192)
+        }
+    }
+    raw.tracks[1].baseFrequency = 0x8000
+    local dac = Contract.normalizeRom(raw, {}).tracks[1]
+    check(dac.active and dac.baseFrequency == nil,
+        "active DAC exposed SavedDAC as an FM/PSG frequency")
+end
+
 local function runFixedRoleAndDescendingStackNormalization()
     -- Break caught: duplicate hardware channel 6 relabels DAC as FM6 or exposes stale descending stack words.
     local raw = {
@@ -477,6 +496,7 @@ runCycleProof()
 runCycleLimit()
 runPeriodOneCycleProof()
 runConditionalGlobalGates()
+runActiveDacSavedSampleIsNotFrequency()
 runFixedRoleAndDescendingStackNormalization()
 runInvocationLifecycle()
 runPsg3ToneNoiseAliasNormalization()

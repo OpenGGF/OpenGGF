@@ -1,0 +1,78 @@
+{
+  "schema": "openggf.gpgx-audio-observer-artifact-lock.v1",
+  "managed_adapter": "REFLECTION",
+  "patched_managed_dll_permitted": false,
+  "build_recipe": {
+    "file": "task7-build-recipe.json",
+    "sha256": "f419cc73426f1356c30577c04231a0cc3356bdd99bc4760dfba55abecefdf748"
+  },
+  "abi": {
+    "version": 4,
+    "config_size": 64,
+    "kind_size": 16,
+    "hook_size": 32,
+    "range_size": 16,
+    "event_size": 32,
+    "capacity": 65536,
+    "byte_order": "little-endian"
+  },
+  "native_patch": {
+    "file": "0001-buffer-z80-audio-events.patch",
+    "sha256": "9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c"
+  },
+  "core": {
+    "decompressed_size": 41757016,
+    "decompressed_sha256": "f57b7a94237653879fb99af197937500a8b591f801f56284b4d2f53ca7ea6b0c",
+    "compressed_size": 421764,
+    "compressed_sha256": "e65315743a6a122843907a85314e380eee03fdc06bf0885b44c3dbc3bab88c6d",
+    "build_id": "cba4d8c88cf968a9",
+    "invis_size": 2140432,
+    "invis_alignment": 32,
+    "observer_added_invis_bytes": 2137088
+  },
+  "source_bundle": {
+    "uncompressed_sha256": "d5a884f151bd9f29ef362f88de743746338d135c6ba8c6015717dc7db71e2e2d",
+    "compressed_sha256": "de73c512b2120f63f064f5e8fd59dee230f0ff50d0debbd648a9112efe18b83b",
+    "path_manifest_sha256": "ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1",
+    "path_mode_manifest_sha256": "03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440",
+    "source_date_epoch": 1758367997,
+    "tar_format": "posix",
+    "zstd_arguments": ["--ultra", "-22", "--threads=0", "--no-progress", "--force"]
+  },
+  "build_log": {
+    "sha256": "bbcf129399c7f7c85791df02ece5c3bfa81bb02f63748591691caea58390f79f",
+    "recipe_sha256": "74b7fd8af13f27653479a4170a946ef0fe0a1002fbae1b62ad627f4148ab41b2"
+  },
+  "native_selftest": {
+    "log_sha256": "74d5e2fe2e120dc862514040507d7be836fd5a43f48be0712647255f4f0773a2"
+  },
+  "elf_proof": {
+    "sha256": "e14109ae6c28cff58cb8016949a770cb1509a8002e43eb32b4d6b7fc6b66330b"
+  },
+  "callgraph_proof": {
+    "sha256": "536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6"
+  },
+  "managed_reflection": {
+    "adapter_source_sha256": "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93",
+    "host_bridge_source_sha256": "af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1",
+    "bizinvoke_sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
+    "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
+  },
+  "identity": {
+    "sha256": "815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86"
+  },
+  "notices": {
+    "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",
+    "gpgx_license_sha256": "0a2318b0d9f8ad4cb0c34f8072231417673bcc775746e660cd418b83a9d17600",
+    "musl_copyright_sha256": "afe1df384787fce3577f3356b8b0d417381483f7c704eacb63f8050349fac77a",
+    "zstd_license_sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+    "llvm_debian_notices_tree_sha256": "e8df18fb120730c10d8a30b5665132bed57f074eedfafdfae5a01e7de06ff2b0"
+  },
+  "toolchain": {
+    "clang_sha256": "bb6556bdcdeb00dca0c758da9966a9982542a23ddcaffa784a2de9344ede3fc0",
+    "musl_clang_sha256": "08b20f771fa51719ba64c84eb9cfefe54fde05d6a6948ffcd9753fba38da2f5d",
+    "musl_linker_sha256": "8a3b835e2cbdc52db8259d8c03c5e32227fd1c350af22925438cd8b54fd2d2db",
+    "sysroot_tree_sha256": "fc06187ae45bcedeea4f76f33868ccb05a8c80831d5dce19adbd5eee6e6e06e1",
+    "zstd_sha256": "7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307"
+  }
+}

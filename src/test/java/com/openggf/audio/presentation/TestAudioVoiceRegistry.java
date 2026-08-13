@@ -752,14 +752,12 @@ class TestAudioVoiceRegistry {
                 new ObserverSfxInstantiation(
                         channelMask, handlerOwner.handlerFor("observer-test"));
         SmpsDriver driver = new SmpsDriver();
-        if (psg) {
-            SmpsSequencer existing = new SmpsSequencer(
-                    new FixtureSfxData(0xAF,
-                            new FixtureSfxTrack(0x80, 1, 0, 0)),
-                    dacData(), driver, AudioManager.getInstance(),
-                    new SmpsSequencerConfig.Builder().build());
-            driver.addSequencer(existing, true);
-        }
+        SmpsSequencer existing = new SmpsSequencer(
+                new FixtureSfxData(0xAF,
+                        new FixtureSfxTrack(channelMask, 1, 0, 0)),
+                dacData(), driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
+        driver.addSequencer(existing, true);
         instantiation.enqueueMusicDriver(driver);
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 instantiation, instantiation, handlerOwner, ignored -> {

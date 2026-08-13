@@ -30,6 +30,8 @@ public interface SmpsProgramView {
 
     int psgModEnvelopeAt(int index);
 
+    int psgInstrumentCount();
+
     int psgInstrumentAt(int index);
 
     int voiceLength(int voiceId);

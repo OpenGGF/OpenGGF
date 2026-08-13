@@ -1,11 +1,14 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.util.function.Consumer;
 
@@ -21,6 +24,20 @@ public interface AudioBackend {
     void init();
 
     void setAudioProfile(GameAudioProfile profile);
+
+    default void setAdmissionObserver(AudioAdmissionObserver observer) {
+    }
+
+    default void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+    }
+
+    default void setChipWriteObserver(ChipWriteObserver observer) {
+    }
+
+    default void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+    }
 
     default void registerAudioProfileCoordHandlers(GameAudioProfile profile) {
     }
