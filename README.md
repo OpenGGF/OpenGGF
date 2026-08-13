@@ -284,6 +284,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **A boss defeat that ran a frame early, a camera bound it was masking, and a
+  contract built on a distinction the ROM does not make (2026-08-13):** three
+  connected findings. `Obj56` dispatches read-once-at-head (`s2.asm:63420-63424`)
+  and its defeat write sits downstream of that read (`:63665`), so the ROM runs
+  the defeat routine on the *following* frame; the engine ran it immediately and
+  submitted the animal/explosion art a frame early. Landing that alone was a **net
+  regression**, because it stopped masking a second defect: `loc_2F460` does
+  `addq.w #2,(Camera_Max_X_pos).w` straight to the boundary word
+  (`:63584-63599`), while the engine went through a target with easing that runs
+  ahead of the object pass — deferring every step by a frame. The pair had to land
+  together, and the 171-error `camera_x` span that appeared with the first fix
+  alone does not appear with both. Third, the `defeatDeferralAppliesToThisBoss()`
+  contract claimed the discriminator was primary routine versus `routine_secondary`
+  "dispatched fresh every frame," and forbade the deferral for Wing Fortress on
+  that basis. All four bosses — `Obj56`, `ObjC5`, `ObjAF`, `Obj5D` — use the
+  identical read-once-at-head idiom, and ObjC5's defeat write is downstream of its
+  own head read too, so the distinction does not exist in the ROM. The javadoc now
+  states read-once-at-head versus re-read-per-dispatch, and three drifted
+  `loc_39CF0` citations are corrected from `:78003-78004` (which is
+  `mapping_frame`/`x_pos`) to `:78091-78095`. That citation predated the change and
+  had propagated into the restatement by copy — plausibly how the rule came to be
+  written around the wrong distinction in the first place. Wing Fortress is
+  recorded as an open question rather than changed on inference, and ARZ/MTZ
+  dispatch on `boss_subtype`, which the corrected criterion does not settle.
 - **Player physics is now byte-accurate across the whole emerald run
   (2026-08-13):** the last player-physics divergence came from the EHZ2 boss
   skipping the frame the ROM spends inside `Obj56_Init` (`s2.asm:63256-63325`,
