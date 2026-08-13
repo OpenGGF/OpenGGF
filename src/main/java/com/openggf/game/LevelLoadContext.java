@@ -39,10 +39,14 @@ public class LevelLoadContext {
     private boolean hasCheckpointSolidBits;
     private byte checkpointTopSolidBit;
     private byte checkpointLrbSolidBit;
+    private boolean hasCheckpointTimer;
+    private long checkpointTimerFrames;
 
     // Post-load assembly fields
     private boolean includePostLoadAssembly;
     private boolean showTitleCard = true;
+    private boolean titleCardRequiredInHeadlessMode;
+    private boolean queueFreshLevelRuntimeArt;
     private LevelData levelData;
     private int spawnY = -1;
     private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
@@ -89,6 +93,9 @@ public class LevelLoadContext {
     public boolean hasCheckpointSolidBits() { return hasCheckpointSolidBits; }
     public byte getCheckpointTopSolidBit() { return checkpointTopSolidBit; }
     public byte getCheckpointLrbSolidBit() { return checkpointLrbSolidBit; }
+    /** ROM Saved_Timer / v_lamp_time / Saved_timer -- see CheckpointState. */
+    public boolean hasCheckpointTimer() { return hasCheckpointTimer; }
+    public long getCheckpointTimerFrames() { return checkpointTimerFrames; }
 
     // Post-load assembly accessors
 
@@ -97,6 +104,33 @@ public class LevelLoadContext {
 
     public boolean isShowTitleCard() { return showTitleCard; }
     public void setShowTitleCard(boolean showTitleCard) { this.showTitleCard = showTitleCard; }
+
+    /**
+     * Returns whether this load must retain its title-card request even when
+     * rendering is headless. Whole-run playback reaches the same production
+     * level-load boundary as live play and therefore needs the title-card
+     * owner to execute its hardware-timed lifecycle.
+     */
+    public boolean isTitleCardRequiredInHeadlessMode() {
+        return titleCardRequiredInHeadlessMode;
+    }
+
+    public void setTitleCardRequiredInHeadlessMode(boolean required) {
+        this.titleCardRequiredInHeadlessMode = required;
+    }
+
+    /**
+     * Returns whether this fresh load owns the runtime hardware-art handoff.
+     * Standalone fixture/bootstrap loads leave this false so their initial
+     * synchronous level assembly cannot consume a later run's ordinals.
+     */
+    public boolean isQueueFreshLevelRuntimeArt() {
+        return queueFreshLevelRuntimeArt;
+    }
+
+    public void setQueueFreshLevelRuntimeArt(boolean queue) {
+        this.queueFreshLevelRuntimeArt = queue;
+    }
 
     public LevelData getLevelData() { return levelData; }
     public void setLevelData(LevelData levelData) { this.levelData = levelData; }
@@ -166,6 +200,8 @@ public class LevelLoadContext {
             hasCheckpointSolidBits = false;
             checkpointTopSolidBit = 0;
             checkpointLrbSolidBit = 0;
+            hasCheckpointTimer = false;
+            checkpointTimerFrames = 0;
             return;
         }
         hasCheckpoint = true;
@@ -203,6 +239,14 @@ public class LevelLoadContext {
             hasCheckpointSolidBits = false;
             checkpointTopSolidBit = 0;
             checkpointLrbSolidBit = 0;
+        }
+
+        if (state instanceof CheckpointState cs && cs.hasSavedTimer()) {
+            hasCheckpointTimer = true;
+            checkpointTimerFrames = cs.getSavedTimerFrames();
+        } else {
+            hasCheckpointTimer = false;
+            checkpointTimerFrames = 0;
         }
     }
 }

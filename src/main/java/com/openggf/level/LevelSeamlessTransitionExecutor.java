@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.GameServices;
+import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.io.IOException;
@@ -33,10 +34,12 @@ final class LevelSeamlessTransitionExecutor {
                             levelManager.currentZone,
                             levelManager.currentAct));
                     advanceFrameCounterAcrossReload();
+                    levelManager.consumeActTransitionExecutedDuringFrame();
                 }
                 case RELOAD_TARGET_LEVEL -> {
                     levelManager.executeActTransition(request);
                     advanceFrameCounterAcrossReload();
+                    levelManager.consumeActTransitionExecutedDuringFrame();
                 }
             }
         } catch (IOException e) {
@@ -72,6 +75,9 @@ final class LevelSeamlessTransitionExecutor {
                         request.inLevelTitleCardExitAdditionalDispatches())
                 .inLevelTitleCardExitPhaseOneDispatchOverlap(
                         request.inLevelTitleCardExitPhaseOneDispatchOverlap())
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(
+                        request.inLevelTitleCardPreloadedActCameraReleaseDispatches())
+                .carriedResultsRetireDispatches(request.carriedResultsRetireDispatches())
                 .forceAirOnStaleObjectSupportLoss(
                         request.forceAirOnStaleObjectSupportLoss())
                 .preserveOffsetCameraPosition(
@@ -111,13 +117,23 @@ final class LevelSeamlessTransitionExecutor {
      * without skipping the rest of the gameplay loop.
      */
     void advanceFrameCounterAcrossReload() {
-        // The reload is requested by ScreenEvents, but the ROM returns to the
-        // remainder of LevelLoop afterward: OscillateNumDo still runs before
-        // the next VBlank (docs/skdisasm/sonic3k.asm:7884-7910,
-        // 104722-104774). The engine applies the pending reload at the next
-        // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
-        // that native post-ScreenEvents oscillator tick explicitly.
-        levelManager.advanceGlobalOscillation();
+        // The outer transition is consumed at the frame boundary, so the
+        // driver returns before the ordinary level-loop tail can run. Preserve
+        // the native OscillateNumDo dispatch for this transition-only row at
+        // the same post-Level_frame_counter boundary as LevelLoop. Using the
+        // old counter value here is deduplicated after the preceding tail and
+        // drops one oscillator tick across the AIZ reload (sonic3k.asm:7889,
+        // 7931).
+        levelManager.advanceGlobalOscillationAtLevelLoopTail();
+        // This boundary-owned reload returns before the ordinary level update,
+        // so preserve the adjacent ChangeRingFrame dispatch here. In-frame
+        // event reloads continue into LevelManager.update() and advance there;
+        // advancing inside the shared act-transition executor would tick those
+        // paths twice (notably AIZ1BGE_Finish).
+        if (levelManager.animatedPatternManager
+                instanceof SeamlessTransitionAnimationClock clock) {
+            clock.advanceForSeamlessTransition();
+        }
 
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int

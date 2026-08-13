@@ -91,6 +91,25 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     private int defeatTimer;
     private int currentVIntRunCount;
 
+    /**
+     * ROM {@code Obj56_Init} occupies the object's whole first executed frame: it
+     * advances {@code routine(a0)} from 0 to 2, allocates the vehicle top, ground
+     * vehicle, wheels and spike children, sets the main object to
+     * {@code x_pos=$2AF0 / y_pos=$2F8}, and then {@code rts}
+     * (docs/s2disasm/s2.asm:63256-63325). The routine-2 dispatch to
+     * {@code loc_2F262} therefore does not run until the following
+     * {@code RunObjects} pass.
+     *
+     * <p>The engine performs the whole init in the constructor, so without this
+     * flag the boss's first {@code update()} already executes the routine-2
+     * diagonal step and the entire boss — vehicle, wheels and spike — runs one
+     * frame ahead of ROM for the rest of the fight. Measured against
+     * {@code seg7_ehz2}'s {@code object_near} slot-20 stream, the engine's vehicle
+     * X equalled the ROM's next-frame value on every compared row before this was
+     * modelled.
+     */
+    private boolean initRoutineFrameConsumed;
+
     public Sonic2EHZBossInstance(ObjectSpawn spawn) {
         super(spawn, "EHZ Boss");
     }
@@ -143,6 +162,15 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentVIntRunCount = vIntRunCount;
+        if (!initRoutineFrameConsumed) {
+            // ROM: Obj56_Init ends in rts (docs/s2disasm/s2.asm:63325) after
+            // addq.b #2,routine(a0) (:63278), so the first executed frame runs the
+            // init only. The children it allocates sit in higher SST slots and do
+            // still run in that same pass, which is why only the main object's
+            // routine dispatch is withheld here.
+            initRoutineFrameConsumed = true;
+            return;
+        }
         // Run state machine
         switch (state.routineSecondary) {
             case SUB0_APPROACH_DIAGONAL -> updateSub0ApproachDiagonal();
@@ -156,42 +184,47 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
     // ROM: s2.asm:62922-62934 (loc_2F27C - SUB0: Approaching diagonally)
     private void updateSub0ApproachDiagonal() {
-        // ROM: s2.asm:62926 - subi_.w #1,x_pos(a0)
-        state.x--;
-        // ROM: s2.asm:62927 - addi_.w #1,y_pos(a0)
-        state.y++;
-        syncFixedFromPosition();
-
-        // ROM: s2.asm:62924 - cmpi.w #$29D0,x_pos(a0)
+        // ROM loc_2F27C tests the arrival BEFORE it moves, and the arrival frame
+        // is spent entirely on the snap-and-advance branch (loc_2F29A) with no
+        // diagonal step (docs/s2disasm/s2.asm:63434-63447). Moving first and
+        // testing afterwards folds that frame away and starts the descent one
+        // frame early, which carries all the way to the spike's contact frame.
+        // ROM: s2.asm:63437 - cmpi.w #$29D0,x_pos(a0) / ble.s loc_2F29A
         if (state.x <= INITIAL_X) {
+            // ROM: s2.asm:63444-63445 - move.w #$29D0,x_pos(a0) / addq.b #2,routine_secondary(a0)
             state.x = INITIAL_X;
             syncFixedFromPosition();
             state.routineSecondary = SUB2_DESCEND_VERTICAL;
             state.routineTertiary = 0;
+            return;
         }
+        // ROM: s2.asm:63439 - subi_.w #1,x_pos(a0)
+        state.x--;
+        // ROM: s2.asm:63440 - addi_.w #1,y_pos(a0)
+        state.y++;
+        syncFixedFromPosition();
     }
 
     // ROM: s2.asm:62937-62969 (loc_2F2A8 - SUB2: Descending vertically/waiting)
     private void updateSub2DescendVertical() {
         switch (state.routineTertiary) {
             case 0 -> {
-                // ROM: s2.asm:62948-62959 (loc_2F2BA - Sub2_0: moving down)
-                // ROM: s2.asm:62949 - cmpi.w #$41E,y_pos(a0)
-                // Descending: move 1 pixel down per frame
-                // ROM: s2.asm:62951 - addi_.w #1,y_pos(a0)
+                // ROM loc_2F2BA tests the target height BEFORE it descends, and the
+                // frame that reaches it is spent on loc_2F2CC alone, with no further
+                // step down and no clamp of y_pos (docs/s2disasm/s2.asm:63465-63478).
+                // ROM: s2.asm:63466 - cmpi.w #$41E,y_pos(a0) / bge.s loc_2F2CC
+                if (state.y >= TARGET_Y) {
+                    // ROM: s2.asm:63473 - addq.b #2,objoff_2C(a0)
+                    state.routineTertiary = 2;
+                    // ROM: s2.asm:63475 - move.w #60,objoff_2A(a0)
+                    waitTimer = DESCEND_WAIT_FRAMES;
+                    // ROM: s2.asm:63474 - bset #0,objoff_2D(a0)
+                    setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_GROUNDED);
+                    return;
+                }
+                // ROM: s2.asm:63468 - addi_.w #1,y_pos(a0)
                 state.y++;
                 syncFixedFromPosition();
-
-                if (state.y >= TARGET_Y) {
-                    state.y = TARGET_Y;
-                    syncFixedFromPosition();
-                    // ROM: s2.asm:62956 - addq.b #2,objoff_2C(a0)
-                    state.routineTertiary = 2;
-                    // ROM: s2.asm:62958 - move.w #60,objoff_2A(a0)
-                    waitTimer = DESCEND_WAIT_FRAMES;
-                    // ROM: s2.asm:62957 - bset #0,objoff_2D(a0)
-                    setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_GROUNDED);
-                }
             }
             case 2 -> {
                 // ROM: s2.asm:62962-62969 (loc_2F2E0 - Sub2_2: waiting)
@@ -306,7 +339,17 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
                 Camera camera = services().camera();
                 if (camera.getMaxX() < CAMERA_MAX_X_TARGET) {
-                    camera.setMaxXTarget((short) (camera.getMaxX() + 2));
+                    // ROM: s2.asm:63596-63599 (loc_2F460) -
+                    //   cmpi.w #$2AB0,(Camera_Max_X_pos).w / bhs.s loc_2F46E
+                    //   addq.w #2,(Camera_Max_X_pos).w
+                    // The ROM adds 2 to the boundary word ITSELF from inside the boss's own
+                    // object pass; Camera_Max_X_pos carries no target/easing indirection here.
+                    // Routing this through setMaxXTarget() instead deferred every +2 step to
+                    // the NEXT frame's boundary easing (Camera.updateBoundaryEasing runs ahead
+                    // of the object pass), leaving the engine's right boundary - and hence
+                    // camera_x - a permanent one-step (2px) behind the ROM for the whole flee.
+                    // Write the boundary immediately, exactly as the ROM does.
+                    camera.setMaxX((short) (camera.getMaxX() + 2));
                 } else if (!isOnScreen()) {
                     // ROM: s2.asm:63094-63100 (loc_2F46E) - once the camera has eased to
                     // its target max-X and the flying body is off-screen, the ROM calls
@@ -375,6 +418,29 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     @Override
     protected boolean usesDefeatSequencer() {
         return false;
+    }
+
+    /**
+     * Obj56 is a read-once-at-head dispatcher, so its defeat routine first runs next frame.
+     *
+     * <p>{@code loc_2F262} (docs/s2disasm/s2.asm:63420-63424) reads
+     * {@code routine_secondary(a0)} exactly once into d0 and {@code jmp}s through
+     * {@code off_2F270}; the selected handler never re-reads the field. The defeat write
+     * {@code move.b #6,routine_secondary(a0)} (docs/s2disasm/s2.asm:63665, in
+     * {@code loc_2F4EE}) is reached from {@code loc_2F4A6} (:63632-63636), which
+     * {@code loc_2F304} / Sub4 calls at :63486 - i.e. strictly downstream of that head
+     * read. So the ROM finishes the frame in Sub4 and only dispatches Sub6 on the
+     * following frame.
+     *
+     * <p>The engine runs touch responses before this object's own {@code update()}, so
+     * without the deferral the defeat sub-routine ran on the defeat frame itself. That
+     * pulled the whole defeat chain - and with it the {@code LoadPLC_AnimalExplosion}
+     * submission at {@code loc_2F424} (docs/s2disasm/s2.asm:63579 ->
+     * :21893-21901) - one frame early relative to the ROM.
+     */
+    @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        return true;
     }
 
     @Override

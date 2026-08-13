@@ -88,6 +88,19 @@ public interface LevelInitProfile {
     }
 
     /**
+     * How many of {@link #skippedPresentationPlayableFrames()} run before the
+     * omitted presentation's first {@code WaitForVint}.
+     *
+     * <p>A game whose omitted presentation is a plain {@code WaitForVint} /
+     * object-loop wait returns zero; a game that dispatches its object loop
+     * once outside that wait reports that leading pass here so the replay does
+     * not service a V-blank the ROM never reached.
+     */
+    default int skippedPresentationPlayableFramesBeforeFirstVBlank() {
+        return 0;
+    }
+
+    /**
      * Frames the game's {@code Level:} routine spends fading out the previous
      * screen before it queues the returning level's initial PLCs.
      *

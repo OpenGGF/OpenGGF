@@ -177,6 +177,24 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.holdFrameCount = 0;
     }
 
+    /**
+     * Skips the next {@link #update()} step of the fade that was just started.
+     *
+     * <p>The ROM fade routines are synchronous wait loops whose first action is a
+     * V-int wait, not a colour step: {@code Pal_FadeToWhite} does
+     * {@code move.b #VintID_Fade,(Vint_routine).w / bsr.w WaitForVint /
+     * bsr.s .UpdateAllColours} (docs/s2disasm/s2.asm:3571-3582; the S1 and S3K
+     * equivalents have the same shape). The V-int on which the caller decided to
+     * fade has therefore already been consumed by the loop iteration that made the
+     * decision, so the first colour step belongs to the following V-int. Engine
+     * callers that start a fade from inside a frame's logic — where
+     * {@code FadeManager.update()} still runs later in that same frame — use this
+     * to keep the fade window the same length as the ROM's.
+     */
+    public void deferFirstStepToNextVint() {
+        this.holdRestoredFrameForNextUpdate = true;
+    }
+
     /** Holds a fully opaque white overlay until another fade is started or cancelled. */
     public void holdWhite() {
         holdOpaque(FadeState.HOLD_WHITE, FadeType.WHITE);
@@ -722,6 +740,30 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     public void cancel() {
         holdRestoredFrameForNextUpdate = false;
         reversePresentationDepth = 0;
+        state = FadeState.NONE;
+        fadeType = FadeType.WHITE;
+        frameCount = 0;
+        fadeR = 0f;
+        fadeG = 0f;
+        fadeB = 0f;
+        fadeAlpha = 0f;
+        onFadeComplete = null;
+        holdDuration = 0;
+        holdFrameCount = 0;
+        exactToFadeDuration = false;
+    }
+
+    /**
+     * Clears any held or in-flight overlay immediately, modelling a ROM routine
+     * that writes a whole new palette straight to the active palette instead of
+     * fading back into it — {@code PalLoad_Now} in Sonic 2
+     * (docs/s2disasm/s2.asm:3799) and {@code PalLoad} in Sonic 1
+     * (docs/s1disasm/sonic.asm:3383). Unlike {@link #cancel()} this leaves the
+     * reverse-presentation depth alone, so a rewind restore in flight keeps
+     * owning fade advancement.
+     */
+    public void clearOverlayForImmediatePaletteLoad() {
+        holdRestoredFrameForNextUpdate = false;
         state = FadeState.NONE;
         fadeType = FadeType.WHITE;
         frameCount = 0;

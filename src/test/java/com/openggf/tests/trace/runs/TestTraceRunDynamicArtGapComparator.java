@@ -4,6 +4,7 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.Severity;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator.RuntimeGap;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -151,6 +153,74 @@ class TestTraceRunDynamicArtGapComparator {
                 "the terminal-tail contract has no fabricated destination");
     }
 
+    @Test
+    void excusesOnlyTheRowStampInsideAnUnrepresentedUnclosedSpan() {
+        DynamicArtTransfer.Descriptor terminal = descriptor(
+                7, "sonic", 4, "run_gap", request(0x50000, 4));
+        TraceRunManifest manifest = terminalManifest(List.of(
+                expectedGap(10, terminal, "submitted", 118, 0,
+                        List.of(), List.of(terminal)),
+                expectedGap(11, terminal, "completed", 118, 1,
+                        List.of(terminal), List.of())));
+        RuntimeTerminalTail actual = new RuntimeTerminalTail(
+                "source", 0, 1, 2, List.of(), List.of(
+                        actualGap(10, terminal, "submitted", 112, 0,
+                                List.of(), List.of(7L)),
+                        actualGap(11, terminal, "completed", 112, 1,
+                                List.of(7L), List.of())));
+
+        FrameComparison comparison =
+                TraceRunDynamicArtGapComparator.compareTerminalTail(
+                        110, manifest, 0, 120, actual);
+
+        assertFalse(comparison.hasError(), comparison.divergentFields()::toString);
+        assertEquals(Severity.WARNING, comparison.fields()
+                .get("run_tail.edge[0].movie_logical_frame").severity(),
+                "an excused row stamp must stay visible as a warning");
+    }
+
+    @Test
+    void stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan() {
+        DynamicArtTransfer.Descriptor terminal = descriptor(
+                7, "sonic", 4, "run_gap", request(0x50000, 4));
+        DynamicArtTransfer.Descriptor wrongFrame = descriptor(
+                7, "sonic", 5, "run_gap", request(0x50000, 4));
+        TraceRunManifest manifest = terminalManifest(List.of(
+                expectedGap(10, terminal, "submitted", 118, 0,
+                        List.of(), List.of(terminal))));
+        RuntimeTerminalTail actual = new RuntimeTerminalTail(
+                "source", 0, 1, 2, List.of(), List.of(
+                        actualGap(10, wrongFrame, "submitted", 112, 0,
+                                List.of(), List.of(7L))));
+
+        FrameComparison comparison =
+                TraceRunDynamicArtGapComparator.compareTerminalTail(
+                        110, manifest, 0, 120, actual);
+
+        assertTrue(comparison.hasErrorInField(
+                        "run_tail.edge[0].mapping_frame"),
+                "identity is never excused, whatever the span declares");
+    }
+
+    @Test
+    void comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan() {
+        DynamicArtTransfer.Descriptor moved = descriptor(
+                7, "sonic", 4, "run_gap", request(0x50000, 4));
+        TraceRunManifest manifest = manifest(List.of(
+                expectedGap(10, moved, "submitted", 112, 0,
+                        List.of(), List.of(moved))), null);
+        RuntimeGap actual = runtimeGap(List.of(), List.of(
+                actualGap(10, moved, "submitted", 115, 0,
+                        List.of(), List.of(7L))));
+
+        FrameComparison comparison =
+                TraceRunDynamicArtGapComparator.compare(0, manifest, 0, actual);
+
+        assertTrue(comparison.hasErrorInField(
+                        "run_gap.edge[0].movie_logical_frame"),
+                "a span closed by later recorded coverage still compares by row");
+    }
+
     private static RuntimeGap runtimeGap(
             List<DynamicArtTransfer.Descriptor> opening,
             List<DynamicArtGapTransition> transitions) {
@@ -212,7 +282,7 @@ class TestTraceRunDynamicArtGapComparator {
             List<Long> after) {
         DynamicArtGapTransition.GapEdge edge = new DynamicArtGapTransition.GapEdge(
                 ordinal, descriptor.transferId(), phase, descriptor.owner(),
-                descriptor.mappingFrame(), movieFrame, gapIndex,
+                descriptor.mappingFrame(), movieFrame, gapIndex, 0,
                 descriptor.requests().stream().map(TestTraceRunDynamicArtGapComparator::runtimeRequest)
                         .toList());
         return new DynamicArtGapTransition(edge, before, after);

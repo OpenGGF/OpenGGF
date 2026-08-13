@@ -68,6 +68,860 @@ All notable changes to the OpenGGF project are documented in this file.
   semantics, note-fill exit behavior, tied-note keying, and modulation phase.
   Two independent OpenGGF captures are byte-identical and their ordered
   normalized state/write projection matches the BizHawk reference exactly.
+- Fix: the S2 Egg Prison button rises again the frame nobody is standing on it. ROM
+  `loc_3F354` (s2.asm:84937-84950) is `jsr (SolidObject)` -> `move.w objoff_30(a0),y_pos(a0)`
+  -> `andi.b #standing_mask` -> `addq.w #8,y_pos(a0)`: only `objoff_32`, the "prison opened"
+  flag the body's routine 2 polls at `loc_3F2B4` (:84884-84886), latches. The 8-pixel
+  depression is recomputed from the stored base y and the *current* standing bit on every
+  pass. The engine latched the depression too, so once any player had pressed the button it
+  stayed 8 pixels low forever. Measured on the emerald run's seg7_ehz2 fixture, the recorded
+  button oscillates between y=$03FA and y=$0402 across the act (`object_near` slot 17), and
+  at frame 3383 the ROM's Tails lands on the raised button (air 1->0, rolling 1->0,
+  `y_speed` $0588->0, status $07->$09 with the on-object bit, `stand_on_obj` -> $11) while
+  the engine's Tails falls straight past a surface still pressed from a much earlier contact.
+  The button now models the ROM order via `SolidExecutionMode.MANUAL_CHECKPOINT`, as `Obj47`
+  already does, so `SolidObject` still sees the previous frame's y. The invented
+  `player.getYSpeed() >= 0` trigger gate is gone -- ROM tests `standing_mask` alone. Segment
+  11 of the emerald run falls from 4,192 errors to 287, and its first non-camera mismatch
+  moves from frame 3383 (`sidekick_y`) to frame 3518 (`queue.s2_nemesis_plc.busy`); every
+  surviving error in the segment is now `queue.s2_nemesis_plc.*`.
+- Fix: S2 Egg Prison pieces keep their own solid push/standing bits. ROM `Obj3E` allocates the
+  capsule body, button, lock and broken half into four separate SST slots (`loc_3F212` /
+  `loc_3F220`, s2.asm:84832-84865), so each piece owns a distinct `status(a0)` byte, and
+  `SolidObject_TestClearPush` releases the player's `Status_Push` only when the *calling*
+  object's own pushing bit is set -- otherwise it branches to `SolidObject_NoCollision`
+  without touching `status(a1)` (s2.asm:35462-35466,35483-35490). The engine keyed its
+  push/standing latch on the shared `ObjectSpawn`, so measured, the button's no-contact pass
+  cleared the body's push mark inside the same object pass: `EggPrisonObjectInstance` set the
+  bit and `EggPrisonButtonObjectInstance` cleared it, leaving `Sonic_Animate` with
+  `Status_Push` clear. Sonic then published a `SonAni_Walk` mapping frame where the ROM
+  publishes `SonAni_Push`. The three capsule classes now opt into
+  `usesInstanceSolidStateLatchKey()`. Segment 11 of the emerald run falls from 4,215 to 4,192
+  errors and its first non-camera mismatch moves from frame 3139
+  (`dynamic_art.edge[0].mapping_frame` rom=$48 engine=$0F) to frame 3383 (`sidekick_y`).
+- Fix: S2 EHZ2 keeps the sidekick's horizontal bounds following the camera after the boss dies.
+  `LevEvents_EHZ2_Routine4` is a terminal, never-advancing routine that does nothing before
+  defeat and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and `Camera_X_pos` into
+  `Tails_Min_X_pos` every frame. The engine stopped updating those bounds at defeat, leaving
+  the sidekick clamped against the frozen arena maximum: measured, `doLevelBoundary` zeroed the
+  sidekick's x-speed at exactly `0x2940 + screen_width - 24 + $40 = 0x2AA8`, the engine value the
+  comparator reported. Segment 11 of the emerald run falls from 11,849 errors to 4,215.
+  Recorded because the axis count is misleading on its own: the `[segment-physics]` axis
+  disappears from the chain's failure list not because those 4,215 errors are resolved but
+  because the walk now aborts earlier, before the segment report is written -- the count comes
+  from instrumentation, not from a report. Making that comparison reachable again is the next
+  target, not a completed one.
+- Fix: the S2 EHZ2 boss defers its defeat routine by a frame, and releases the camera boundary
+  directly. `Obj56` dispatches with the read-once-at-head idiom at `loc_2F262`
+  (s2.asm:63420-63424), and its defeat write `move.b #6,routine_secondary(a0)`
+  (s2.asm:63665, via `loc_2F4A6` :63632-63636 from `loc_2F304` :63486) sits strictly
+  downstream of that read -- so the ROM runs the defeat sub-routine on the FOLLOWING frame.
+  The engine ran it on the defeat frame itself, submitting `LoadPLC_AnimalExplosion`
+  (s2.asm:21893-21911) one frame early. Landing that alone exposed a second, pre-existing
+  defect it had been masking: `loc_2F460` does `cmpi.w #$2AB0,(Camera_Max_X_pos).w / bhs.s /
+  addq.w #2,(Camera_Max_X_pos).w` (s2.asm:63584-63599) -- a direct write to the boundary word
+  with no target indirection -- while the engine went through `setMaxXTarget`, and boundary
+  easing runs ahead of the object pass, so every `+2` was deferred a frame. Both land together;
+  separately the first is a net regression. Also corrects the
+  `defeatDeferralAppliesToThisBoss()` contract, which claimed the discriminator was primary
+  routine versus `routine_secondary` "dispatched fresh every frame": measured, `Obj56`
+  (:63420-63424), `ObjC5_LaserCase` (:81246-81251), `ObjAF` (:77502-77506) and `Obj5D`
+  (:61470-61474) all read once at the head, and ObjC5's defeat write (:82045) is downstream of
+  its read too, so the stated distinction does not exist in the ROM. The javadoc now says
+  read-once-at-head versus re-read-per-dispatch, with three drifted `loc_39CF0` citations
+  corrected to s2.asm:78091-78095. Wing Fortress is recorded as an OPEN QUESTION -- its `false`
+  is unexplained under the corrected reading and was deliberately not changed -- and ARZ/MTZ
+  dispatch on `boss_subtype`, which the restated criterion does not settle. Segment 11 of the
+  emerald run falls 11,893 to 11,849 errors with no `camera_x` span appearing.
+- Fix: the S2 EHZ2 boss spends its first executed frame on `Obj56_Init` alone, as the ROM does.
+  `Obj56_Init` advances `routine(a0)` from 0 to 2, allocates the vehicle top, ground vehicle,
+  wheels and spike, moves the main object to `x_pos=$2AF0 / y_pos=$2F8`, and then `rts`
+  (docs/s2disasm/s2.asm:63256-63325), so the routine-2 dispatch to `loc_2F262` cannot run until
+  the following `RunObjects` pass. The engine performs the whole init in the constructor and
+  then ran the routine-2 diagonal step on the object's very first `update()`, leaving the entire
+  boss -- vehicle, wheels and spike -- exactly one frame ahead of the ROM for the whole fight.
+  Measured against `seg7_ehz2`'s `object_near` slot-20 stream, the engine's vehicle X equalled
+  the ROM's *next-frame* value on every compared row. The visible consequence was the player
+  taking the spike's hurt one frame early (engine row 1732 against ROM row 1733) and never
+  recovering. With the init frame modelled, segment 11 of the S2 complete-emeralds chain drops
+  from 30,707 to 11,893 comparator errors, its first non-camera mismatch moves from row 1259
+  `x_speed` to row 3026 `queue.s2_nemesis_plc.busy`, and the whole run carries no player
+  position/velocity/angle/air/rolling mismatch on any row of any segment. The previously
+  reported row-1259 `x_speed` sign flip was a two-row, self-healing artefact of the same
+  one-frame boss lead -- positions and ground speed already agreed on both rows -- not a
+  reflection off a mispositioned solid.
+- Fix: the S2 EHZ2 boss tests its arrival positions before moving, as the ROM does. `loc_2F27C`
+  compares `cmpi.w #$29D0,x_pos` and branches BEFORE the diagonal step, and `loc_2F2BA`
+  compares `cmpi.w #$41E,y_pos` before the descent -- so in both cases the ROM spends the
+  arrival frame entirely in the follow-on routine with no movement. The engine moved first and
+  tested after, and additionally clamped y to `$41E` where the ROM never does, putting the boss
+  vehicle two frames ahead. Measured consequence: the boss spike (`Obj56` routine `$A`, x =
+  vehicle x - `$36`) sat 6-8px left of the ROM's, so a leftward-rolling player reached it one
+  frame late; the hurt tail's `subq.w #5,y_pos` roll-to-stand radius restore
+  (s2.asm:38127-38140) then landed a frame late, diverging the player at seg7_ehz2 row 1268 and
+  the camera only at row 1298. The camera was a symptom, not the cause -- it is pinned to the
+  EHZ2 boss arena bounds `LevEvents_EHZ2_Routine2` writes (`$28F0`/`$2940`, s2.asm:20428-20441),
+  which the engine already had right; it merely sat elsewhere inside that band because its
+  player was elsewhere. The engine no longer dies in segment 11: the single `applyDeath` and its
+  title-card restart are gone, and segment 11 produces a comparator report for the first time
+  (30,707 errors, first non-camera mismatch frame 1259 `x_speed`). Two further frames of the
+  measured 4-frame boss lead are diagnosed and cited but not landed -- the boss executing on its
+  own allocation frame, and `Obj56_Init` consuming a frame -- as both touch shared zone-event
+  spawn cadence.
+- Fix: the EHZ/HPZ bridge allocates its ROM subsprite child objects. `Obj11_Init` calls
+  `Obj11_MakeBdgSegment` once unconditionally with `move.w #8,d1` (s2.asm:21969-21970) and
+  again when `subtype - 8 > 0` (`subq.w #8,d1 / bls.s +`, s2.asm:21975-21978), so every
+  bridge occupies one or two SST slots in addition to the parent. Each child is allocated
+  by `AllocateObjectAfterCurrent` (s2.asm:21992, :33705-33724) and inherits the parent's
+  object id via `_move.b id(a0),id(a1)` (s2.asm:21994); it never runs the routine table
+  because `Obj11` tests `render_flags.multi_sprite` first (s2.asm:21918-21928), and it is
+  deleted only by `Obj11_Unload`'s `DeleteObject2` pair (s2.asm:22054-22076). The engine
+  allocated none of them, so `TailsCPU_CheckDespawn` (s2.asm:39408-39434) reloaded
+  `(Tails_interact_ID).w`, found the slot empty, read id 0 instead of $11 and despawned
+  Tails on the bridge-landing frame where the ROM keeps him. Segment 7 of the S2 complete
+  emerald run goes from 22,458 physics comparator errors to zero, and the chain's failing
+  axes fall from seven to four (the `seg5_ehz2 -> ss_4` and `seg6_ehz2 -> ss_5` dynamic-art
+  gap comparisons also clear).
+- Fix: the EHZ/HPZ bridge reports the ROM's fixed object-edge balance width. `Obj11_Init`
+  writes `move.b #$80,width_pixels(a0)` regardless of how many logs the subtype asks for
+  (s2.asm:21951), and the object-edge balance branches of `Sonic_Move` / `Tails_Move` read
+  that SST byte for `d1 = x_pos(a0) + width_pixels(a1) - x_pos(a1)` (s2.asm:36586-36601,
+  :39707-39722). The engine derived the balance width from the real log geometry
+  (`logCount * 16 / 2`), which shrank the (shift, 2*width - shift) window onto the bridge
+  itself; with the ROM's $80 the bridge's whole standable span sits strictly inside that
+  window, so neither player ever balances on a bridge. Measured on the emerald run: Tails
+  stood at x=832 on a bridge whose x_pos is 936, giving the engine d1=-8 (< 4, "balance on
+  left edge") where the ROM gets d1=24 and falls through to `Tails_Lookup`/Wait. That
+  spurious Balance animation suppressed the tail object's swish restart, so the
+  `tails-tails` DPLC latch never left frame 9 and the ROM's second dynamic-art edge at row
+  1512 was never emitted. Segment 7 of the emerald run falls from 23,128 to 22,458 errors
+  and its first non-camera mismatch moves from row 1512 (`dynamic_art.edges`) to row 1675
+  (`sidekick_x`).
+- Fix: a title-card release row no longer inherits the source level's main-loop latch, so the
+  sidekick is not one frame ahead when the next act begins. `GameLoop`'s one-row "this gap row
+  still belongs to the source level's main loop" latch is cleared when the source loop is seen
+  to end, but a locked title-card iteration returns `SETUP_ONLY` and never reaches the
+  gap-body suppression test -- so across a level advance the latch survived all 26 title-card
+  rows and was consumed by the release row, giving the sidekick a 27th pre-row-0 object pass
+  where the ROM gives 26. Measured: it is the only such row in the entire 35-segment run.
+  The ROM cannot dispatch there -- the release is `Level_StartGame` (s2.asm:5081-5082), reached
+  only after the leave loop's last iteration (:5060-5066), and `Level_MainLoop` runs
+  `PauseGame` and `WaitForVint` before its `jsr (RunObjects).l` (:5088-5095), so the first pass
+  is the destination's next V-blank, its own recorded row 0. Same ordering holds in S1
+  (sonic.asm:2990-3006) and S3K (sonic3k.asm:7882-7894). Special-stage and bonus returns are
+  untouched: their fall-through row runs under a different disposition where the latch is never
+  consulted. Segment 7 of the emerald run falls from 149,522 to 23,128 errors, the entire
+  sidekick-phase cascade with it; the player stops dying short of the star post, the
+  `starpost_special` boundary is observed for the first time, segments 8-10 report zero errors,
+  and the walk advances four segments. Also clears a pre-existing `TestS1CompleteEmeraldVisualRun`
+  error ("hardware timing run is already closed").
+- Fix: the run-gap edge stamp recovery only rewinds a stamp that is actually stale. The
+  end-anchored recovery in `TraceRunDynamicArtGapJournal` counts back from admission over
+  rows that passed with nothing announced, which is correct for a gap whose shared cursor is
+  frozen -- and every special-stage-return gap in the S2 emerald run is exactly that, with
+  every edge carrying the admission row. The `seg4_ehz1 -> seg5_ehz2` level-advance gap is
+  not: its cursor stays live and its edges march 32760 to 32837 against an admission stamp of
+  32930. The recovery subtracted from two already-live stamps and moved them off their own
+  rows. It now applies only to a stamp equal to the admission's own `movie_logical_frame` --
+  the mechanism's own javadoc premise expressed as a predicate rather than assumed. Both
+  inputs remain engine-produced; no recorded row, offset or constant is involved. The gap's
+  errors fall 12 to 10, with those two edges exact.
+- Fix: the one-row latch that decides which rows of a run-chain transition gap still
+  belong to the source level's own main loop lives on the current session's
+  `GameplayModeContext` instead of a static field on `TraceSessionLauncher`. As a static
+  it was armed on one boundary flavour (the plain level->level path) and consumed on
+  another (the semantic level-load path, the only place the chain steps rows under
+  `SHARED_GAP`), so the answer any given gap got depended on what had run before it --
+  earlier gaps in the same run, and earlier test classes sharing a reused surefire fork.
+  The latch is now re-armed where it is consumed, once per gap. Behaviour is unchanged on
+  every measured run style (isolated, paired and full `-Ptrace-replay` all report the same
+  chain frontier before and after).
+- Fix: the run-chain replay adapter drives a level-advance transition gap under the same
+  `SHARED_GAP` disposition the visual launcher uses, so the source level's body stops
+  running once its own main loop has ended. The adapter previously stepped the whole gap
+  with a bare `loop.step()`, leaving `GameLoop.suppressesRunNativeLevelBody` inert because
+  no `TraceRunFrameDriver` was installed; the S2 EHZ1 -> EHZ2 gap therefore kept animating
+  Sonic, Tails and Obj05 for 163 rows and minted 60 surplus dynamic-art gap edges (72
+  emitted against 12 recorded). The ROM spends that span in the blocking `Level:` load
+  path -- `ClearScreen`/`LoadTitleCard` with interrupts off, `Pal_FadeToBlack`,
+  `Level_ClrRam`, `LoadZoneTiles` -- and does not create the players at all until
+  `InitPlayers` (docs/s2disasm/s2.asm:4757-4770, :4806, :4945), so no player DPLC can be
+  submitted there. Which rows the body still owns is decided entirely by the existing
+  production rule `TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop` (the first
+  gap row and no other), which now also resolves its disposition from the installed frame
+  driver when no launcher session exists. No constant, window, or measured position was
+  introduced.
+- Fix: Sonic 2's title card holds for its pattern load cue instead of an invented second.
+  `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60`, documented as a stand-in for
+  hardware decompression time. `Level_TtlCard` re-loops while the zone-name piece is off
+  target *or* `tst.l (Plc_Buffer).w` is non-zero (s2.asm:4914-4924), and each iteration's
+  `VintID_TitleCard` VBlank tails into `ProcessDPLC`, which decompresses exactly six
+  patterns per frame (s2.asm:1071, 2202-2213). The hold is therefore outstanding patterns
+  divided by six, which the PLC queue already tracks, so `updateDisplay` now tests the
+  queue directly and the constant is gone. This matches how S1 already models the same
+  loop (`Sonic1TitleCardManager`). Trace-replay axes are unaffected: the replay path skips
+  the visual title-card presentation.
+- Fix: Sonic 2's post-act fade no longer runs as live gameplay. ROM `Level_MainLoop` tests
+  `Level_Inactive_flag` in the instruction immediately after `jsr (RunObjects).l` and
+  branches back to `Level` (s2.asm:5095-5097), so `ClearPLC` + `Pal_FadeToBlack`
+  (:4764-4765, :3369-3382) run as 22 frozen frames with no object pass and no DPLC
+  submission. `ResultsScreenObjectInstance` now raises that flag where `loc_1429C` writes it
+  (:28003). It also holds the exit one object pass, because `loc_1419C` only bumps the
+  routine and displays on the pass its wait expires and `loc_14270` runs the pass after
+  (:27906-27913, :27987-28004); firing on the expiry pass suppressed a camera step the ROM
+  still takes. Surplus transition-gap edges on the emerald run drop from 96 to 72
+  (expected 12).
+- Fix: the star post banks and reinstates the act timer, and S2's end-of-act slide-in runs
+  the ROM's own length. Two independent invented durations were driving the emerald run's
+  end-of-EHZ1 results screen 600+ frames long. (1) `CheckpointState` mirrored the ROM
+  `Saved_*` set but omitted `Saved_Timer`; all three games bank the running act timer at the
+  star post (S2 s2.asm:44743, S1 `_incObj/79 Lamppost.asm`:158, S3K sonic3k.asm:61721) and
+  reinstate it in the checkpoint-load routine with `move.l (Saved_Timer),(Timer)` /
+  `move.b #59,(Timer_frame)` / `subq.b #1,(Timer_second)` (s2.asm:4783-4785,
+  `79 Lamppost.asm`:193-195, sonic3k.asm:61776-61778 and :61803-61805). `Level_ClrHUD`
+  correspondingly skips the timer clear when the star-post flag is set (s2.asm:4971-4977,
+  sonic.asm:2901-2905, sonic3k.asm:7538-7539). The engine instead restarted the act timer at
+  every special-stage return, so `TimeBonuses` was indexed at 12s rather than 188s and the
+  tally ran 500 frames instead of 26. Carried across the level reload on `LevelLoadContext`
+  alongside the existing water/runtime/solid-bit checkpoint state. (2) `Obj3A` has no
+  slide-in duration: its master sub-object leaves routine 2 only when `x_pixel` reaches
+  `titlecard_x_target` (s2.asm:28128-28131), and metadata row 0 (s2.asm:28159) slides
+  (288-32) px at `moveq #$10,d0` (s2.asm:27494) = 16 frames, where the shared base class
+  defaulted to 60. Measured on the emerald chain's segment 6: every ROM phase now matches
+  exactly -- slide 16, pre-tally 180, tally 27, wait 180 -- and the segment goes 24 to 5
+  errors, with its level-load boundary now reached instead of never observed.
+- Fix: S2's signpost end-of-act fires on the shipped ROM's `fixBugs = 0` branch, so the
+  results art is queued on the first walk-off frame instead of 29 frames later.
+  `Obj0D_Main_State3` is a `fixBugs` site (s2.asm:34815-34838), and the disassembly is built
+  with `fixBugs = 0` (s2.asm:27) because that is what the shipped ROM does. On that un-fixed
+  branch an airborne player takes `bne.s loc_19434`, which skips *only* the `Control_Locked`
+  and `Ctrl_1_Logical` writes and then falls through to the `x_pos >= Camera_Max_X_pos + $128`
+  test -- so end of act fires mid-air. The disassembly's own comment calls the checks "a mess"
+  and describes the edge case. `SignpostObjectInstance.updateWalkOff` had implemented the
+  bug-*fixed* branch (`bne.w return_194D0`), returning outright while airborne, so the engine
+  burned 29 extra airborne frames and only spawned results on landing. Measured: the engine's
+  first walk-off frame already had `centreX` 10966 against a trigger of 10952. The submission
+  at the divergence was identified by brute-forcing the recorder's own fingerprint function
+  against every list in `ArtLoadCues` -- PLC 38 = `PLCptr_Results` (s2.asm:89232), queued by
+  `Load_EndOfAct`'s `LoadPLC2` (:34856-34862) -- not by inference. Emerald-chain segment 6
+  goes 11348 to 24 errors, with the residual now a single terminal row.
+- Fix: the S2 special-stage return re-establishes the sidekick's level boundaries, so Tails'
+  kill plane survives a return. ROM `LevelSizeLoad` writes `Tails_Min/Max_X_pos` and
+  `Tails_Min/Max_Y_pos` from the same `LevelSize` longs that seed `Camera_Min/Max_*`
+  (s2.asm:14695-14706), on every entry to `Level:` -- and a special-stage return re-runs that
+  routine in full. `GameLoop`'s special-stage-return re-init is a hand-rolled replica of
+  `InitPlayers` that calls the sidekick controller's `reset()` but, unlike
+  `LevelManager.spawnSidekicks`, never re-established those boundary words, so
+  `Tails_Max_Y_pos` stayed unset and the sidekick's kill plane was disabled for the whole
+  remainder of the run. Measured: the dead-fall threshold resolver returned `Integer.MIN_VALUE`
+  on all 864 calls of the run. In the recording, a dead falling Tails crossing
+  `Tails_Max_Y_pos + $100` reaches `TailsCPU_Despawn`, which warps her to `x_pos = $4000,
+  y_pos = 0` with `TailsAni_Fly` and `in_air` (s2.asm:39396-39405 via `Obj02_CheckGameOver`,
+  :41146-41155) -- the `sidekick_x = 0x4000` the comparator was reporting. The engine already
+  modelled that branch faithfully; it simply never fired. The boundary application is now one
+  helper shared by both entry paths, with no constant introduced. Emerald-chain segment 6 goes
+  13836 to 11348 errors and its first non-camera mismatch moves from frame 615 to 821, with no
+  player or sidekick physics mismatch remaining -- the residual is entirely PLC/dynamic-art.
+  Recorded honestly: the segment-6 `level_advance` walk failure is NOT downstream of this and
+  is unchanged.
+- Fix: transition-gap art edges are stamped from rows that actually passed, not from a frozen
+  playback cursor -- `TestS2EhzHalfpipeRoundTripChain` is now fully green. During an S2 gap the
+  shared cursor is pre-seeked to the destination and never advances (measured: 3908 calls
+  announcing the identical row 9701, 4203 announcing 19159), so all eight of a gap's edges
+  carried the same stale row and their indices collapsed with them. The engine's work cadence
+  was already exactly right, anchored at the end of the gap: its edge iterations counting back
+  from admission are -26, -26, -25, -25, -10, -9, -2, -1 in all five gaps, identical to the
+  recorded rows' offsets from the destination's first main-loop row. The rule landed counts
+  rows that pass with no row announced -- re-announcing the same row is not an advance, and an
+  iteration with nothing announced is one row -- so an edge followed by n unannounced rows sits
+  n rows before its stamp. That is an identity where the cursor is live and the only available
+  answer where it is frozen, and it is anchored at admission rather than run forward from the
+  gap start (a forward run cannot work: engine gap iterations are 156/139/200/136/133 against
+  the ROM's invariant 173). Recorded because it contradicts the obvious approach: counting back
+  *gap iterations* instead of unannounced rows regressed `TestS1CompleteEmeraldVisualRun`, whose
+  gap runs on a live cursor that advances 9730 to 9741 while barely one production iteration
+  completes -- iterations and movie rows are different clocks and only S2's freezes. Both
+  implementations of the contract now share one helper; the chains use the harness's own probe
+  rather than the production journal. No constant was introduced: the only literals in the diff
+  are 0 and 1. Every `run_gap` axis on both S2 chains is green, and the emerald chain's only
+  remaining failures are its segment-6 walk failure and segment-6 physics divergence.
+- Fix: S2's special-stage results sequence runs the ROM's length instead of two invented
+  durations. `Obj6F`'s main object slides 448 -> 160 at 16 px per frame, so it arrives on
+  frame 19 (metadata row s2.asm:28537, mover s2.asm:27494), latches `anim_frame_duration`
+  `$B4` = 180 (:28247-28248), tallies `Bonus_Countdown_1` at 1/frame and
+  `Total_Bonus_Countdown` at 10/frame (:28380-28392), then holds `$78` = 120 frames
+  (:28399-28400) before `Obj6F_DisplayOnly` raises `Level_Inactive_flag` (:28428-28430),
+  which is the mode loop's exit test (:6804-6806). The ROM length is therefore not fixed --
+  it is 19 + 180 + the ring tally + 120 + 1, ring-count dependent. The engine carried
+  `RESULTS_SLIDE_DURATION = 60` commented "1 second slide-in" against the ROM's 19, and
+  `RESULTS_WAIT_DURATION = 180` commented "3 seconds after tally" against the ROM's 120 --
+  two fitted constants whose combined error was exactly 101 frames. Measured on the
+  halfpipe chain, the results sequence goes 583 -> 482 frames, exactly -101. Recorded
+  honestly: this does NOT move the run chains' transition-gap axis, whose reports are
+  byte-identical before and after -- `movie_logical_frame` is invariant to how many
+  iterations the engine spends in results, so the remaining gap defect is the frozen
+  pre-seeked movie cursor and not sequence length.
+- Fix: the run-chain transition-gap journal opens on the ledger its own boundary batch was
+  measured against, and the harness closes the source window before reading the snapshot.
+  Two observer-side snapshot-timing bugs, neither of which changed any engine behaviour or
+  transfer lifecycle. `endComparisonSegmentAtRomModeChange` re-stamps the ROM-mode-change
+  iteration's buffered batch as the gap's first edges, but recorded the gap-opening state
+  against the live ledger those same edges had already mutated -- so an edge whose own
+  `before` membership listed an outstanding transfer was replayed onto a ledger that no
+  longer had it. Separately, `AbstractRunChainTest` called `sourceClosed(...)` before
+  `enterGap()` at all seven sites, capturing the snapshot recorded at the segment's open,
+  where production's walker already does close-then-`sourceClosed`. Every ledger,
+  fingerprint, submission-origin and forwarded-completion error is now green on both
+  affected axes; the halfpipe chain goes 3 axes / 66 gap fields to 2 / 28 with its first
+  gap fully green, and the emerald chain 8 axes / 132 fields to 5 / 42. Every remaining
+  gap failure on both chains is now exactly `movie_logical_frame` and `gap_edge_index` --
+  the separately-tracked row-placement defect and nothing else.
+- Fix: a run-chain destination adopts the row that already ran during its transition
+  gap instead of skipping it. Admission is polled between host steps and the
+  coordinator's readiness test needs an observed LEVEL mode, so the destination's
+  first row has always executed by the time its comparison window opens. Skipping it
+  left its player-DPLC work in the transition-gap ledger as a surplus gap edge and let
+  the transfer it opened complete on segment row 1 still stamped `run_gap`. The new
+  `DynamicArtLifecycleService.adoptGapResidentOpeningRow()` is the exact inverse of
+  `endComparisonSegmentAtRomModeChange()`: it moves that iteration's gap transitions
+  into the opening segment, re-stamps their submissions `segment`, and publishes them
+  as row zero, which `LiveTraceComparator.compareAdoptedOpeningRow` then compares
+  against the fixture's row zero on both the production launcher and the run-chain
+  harness. Adoption is scoped to a consumed row the playback cursor reached by RUNNING
+  it: production derives its count from the cursor's own position, while the harness's
+  bonus-exit path re-anchors the cursor past rows the engine never ran and so keeps
+  advancing the comparison cursor instead. An iteration that emitted no art adopts
+  nothing.
+- Fix: S2 does not run the level-only fixed object slots during the title card. `RunObjects`
+  picks its slot count from the game mode -- it walks only the first `$80` slots unless
+  `Game_Mode` equals `GameModeID_Level` exactly (s2.asm:29805-29819) -- and `Level` sets
+  `GameModeFlag_TitleCard` on entry (:4758), which only `Level_StartGame` clears immediately
+  before `Level_MainLoop` (:5087). So every pre-main-loop `RunObjects`, the one at :5006 and
+  all 25 leave-loop iterations at :5060-5066, runs with the flag set and never reaches
+  `LevelOnly_Object_RAM`, which begins at `Tails_Tails` (s2.constants.asm:1145-1176). A
+  hardware capture confirmed the first `Obj05_Main` execution is at `Level_frame_counter == 1`
+  on both a fresh entry and a special-stage return. The engine ran those slots anyway, so
+  Tails' tails object took 16 spurious passes while the parked, control-locked Tails had
+  animated into Wait, publishing two dynamic-art transfers the ROM never makes. This is a
+  slot-range rule, not an Obj05 property: it also covers spindash dust, shields, bubbles and
+  invincibility stars. S3K's `Process_Sprites` has no such gate and always walks
+  `Level_object_RAM` (sonic3k.asm:35963-35976), and S1 has no level-only fixed-slot family, so
+  the rule is expressed as a `TitleCardProvider` predicate defaulting to true with an S2
+  override. Removes 4 surplus edges from each special-stage-return gap in both S2 run chains;
+  `ss -> seg2_ehz1` edge_count now matches exactly, and the single remaining surplus on the
+  later gaps is the separately-tracked row-0-executed-in-gap boundary defect.
+- Fix: the run-chain transition-gap journal snapshots the opening ledger at the segment
+  boundary itself. The engine was emitting the correct level-to-special-stage gap edge --
+  right phase, owner, mapping frame and requests -- but the journal sampled the ledger
+  after `endComparisonSegmentAtRomModeChange()` had already appended the boundary batch,
+  so the edge fell outside the compared slice and its transfer had already left the
+  opening ledger. Every level-to-special-stage gap in both S2 run chains reported
+  `run_gap.edge_count` expected 1 actual 0; those axes now carry the recorded edge and
+  match on phase, owner, mapping frame and requests. Mirrored in both implementations of
+  the contract. The gaps still diverge on identity skew, clock base and an extra
+  player-art owner, each now cleanly separable.
+- Fix: the S2 player last-loaded-DPLC registers are one byte per art bank and are
+  cleared by every level load. Sonic 2 has exactly three
+  (`Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC` / `TailsTails_LastLoadedDPLC`,
+  s2.constants.asm:1556, 1625-1626), and the special stage writes the very same
+  bytes as the level does -- `Obj09`/`Obj10`/`Obj88` init them to `#1`
+  (s2.asm:69095, 70378, 70403) and `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` /
+  `LoadSSTailsTailsDynPLC` keep deduping against them (:69205, 70504,
+  70586-70588), while the level's `LoadSonicDynPLC` / `LoadTailsDynPLC` /
+  `LoadTailsTailsDynPLC` read and write them at :38834-38836, 41639-41641,
+  41663-41665. The engine instead gave the special-stage submitters a private
+  dedup namespace and never reset the level's, so a level entered after a
+  special stage suppressed a player's first mapping-frame transfer against a
+  value stale since before the stage. Dedup is now keyed by the ROM register
+  (bank), and `LevelManager.initArt` clears the registers where `Level_ClrRam`
+  does (`clearRAM Misc_Variables,Misc_Variables_End`; S1's
+  `clearRAM v_levelvariables`, sonic.asm:2742, covers `v_sonframenum`
+  identically). Both S2 run chains' special-stage-return gap ledgers now carry
+  the recorded `sonic mf1` and `tails mf1` submissions, in the recorded order,
+  where before each gap was missing one of the two owners.
+- Fix: S2's displayed title card runs the same `Obj34_WaitAndGoAway` tail as the omitted
+  one. `TitleCardManager` carried two implementations of that ROM routine
+  (s2.asm:27605-27637) -- the omitted-presentation tail modelled it exactly, while the
+  displayed-presentation TEXT_WAIT/TEXT_EXIT overlay re-derived it from a state-transition
+  pass that consumed a frame without moving the piece, plus the overlay element's
+  viewport-relative `hasExited()` instead of the ROM's `x_pixel > $200` test. `Level`
+  writes routine $16 and `anim_frame_duration = $2D` to the surviving pieces at
+  s2.asm:5066-5080 -- after the leave loop and before `Level_MainLoop` -- whether or not
+  the card was displayed, so the 45-wait plus 8-slide count always starts on the first
+  main-loop iteration. The standalone segment class takes the omitted path and the run
+  chains take the displayed one, so the two `LoadPLC` calls for standard-water and animal
+  art arrived two compared rows late on every chain. Both paths now share one
+  `advanceZoneNamePieceTail()` owner armed at the ROM's own arming point. Both S2 run
+  chains clear returned-level segments 2 and 3 (65 -> 0 errors each) and advance to a new
+  segment-4 frontier.
+- Fix: S2's title-card V-int is a dynamic-art DMA service boundary.
+  `Level_TtlCard`'s wait loop (s2.asm:4914-4925) and the 25 leave-loop iterations
+  that follow `InitPlayers` (:5060-5066) both run with
+  `Vint_routine = VintID_TitleCard`, so their V-int is `Vint_TitleCard`
+  (:1005), which calls `ProcessDMAQueue` at :1046 -- a site
+  `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE`'s own doc comment
+  already listed while the switch classified `LEVEL_TITLE_CARD` as no service.
+  Player DPLC work those pre-`Level_MainLoop` passes queue is therefore drained
+  by the very next V-int and never survives into the level's first main-loop
+  row. The engine instead carried it across the whole transition gap and retired
+  all of it on the returned level's first serviced V-blank, publishing spurious
+  `completed` gap edges on segment row 1 and skewing every later edge ordinal by
+  the same count for the rest of the segment. Measured on the returned-level
+  seg2 physics assert: `TestS2EhzHalfpipeRoundTripChain` 7662 -> 65 errors and
+  `TestS2CompleteEmeraldRunChain` 8633 -> 65, both now first diverging at frame
+  52 on `queue.s2_nemesis_plc.busy`. Both standalone seg2 oracles stay at 0
+  errors, `TestS1GhzMazeRoundTripChain` stays green, and the full
+  `-Ptrace-replay` profile is unchanged elsewhere (770 tests; the same three
+  pre-existing S3K `KOS_DECOMPRESSION_QUEUE` errors before and after).
+- Fix: S2 resets `Level_frame_counter` when the title card releases, on a
+  special-stage return as well as a fresh entry. `GM_Level` clears the counter on every
+  non-demo level entry (s2.asm:4771-4773) and nothing before `Level_MainLoop` advances it
+  -- its sole increment is that loop's own `addq` (:5092). The counter lives in
+  `CrossResetRAM` (s2.constants.asm:1661-1665), so `Level_ClrRam` does not clear it and
+  that explicit store is the only reset. The engine reset it only when a load requested a
+  sprite-lifecycle change, which a returned-level load does not, so the returned level
+  inherited the previous segment's count (0xE9B where the ROM had 0x0002). Tails' CPU
+  auto-jump is gated on `andi.b #$3F` over that counter
+  (`TailsCPU_Normal_FilterAction_Part2`, :39368-39376), so the jump the ROM makes on the
+  return never fired; 1678 rows later the engine's Sonic was 906px off-route and died on
+  spikes. Resetting at the title-card release boundary rather than at load also drops the
+  26 pre-main-loop passes' worth of drift, since the ROM's passes never touch the counter.
+  `TestS2CompleteEmeraldRunChain` stops dying and reaches its returned-segment physics
+  assert (8633 errors); `TestS2EhzHalfpipeRoundTripChain` seg2 22426 -> 7662. Both
+  standalone seg2 oracles stay at 0 errors and `TestS1GhzMazeRoundTripChain` stays green.
+- Fix: S2 runs player physics only for the 26 object passes the ROM dispatches before
+  `Level_MainLoop`. `Level_ClrRam` wipes the player objects
+  (`clearRAM Object_RAM,LevelOnly_Object_RAM_End`, s2.asm:4808) and `Level_TtlCard`'s
+  scroll-in wait loop (:4914-4925) runs before `InitPlayers` (:4945), so the players do
+  not exist for the card's slide-in at all; they exist for the single `RunObjects` at
+  :5006 and the 25 iterations of the leave loop at :5060-5066. The engine instead ran
+  physics for the whole presented card -- a length the engine invents -- and additionally
+  replayed the skipped-presentation animation for presented cards that had already
+  dispatched those passes live. The leave-piece handoffs now follow the Obj34 routine pass
+  counts (:27518-27540, :27542-27551, :27587-27604) rather than overlay travel. Because
+  :4808 zeroes the object RAM block, the sidekick sub-pixel is zero at `InitPlayers` on
+  every entry including a special-stage return, so `spawnSidekicks` no longer preserves it
+  across the re-seed. `TestS2EhzHalfpipeRoundTripChain` seg2: 39612 -> 22426 errors, and
+  the first non-camera mismatch stops being a sidekick physics field (now
+  `dynamic_art.edges` at frame 1). Both standalone seg2 oracles stay at 0 errors and
+  `TestS1GhzMazeRoundTripChain` stays green. `TestS2CompleteEmeraldRunChain` now aborts
+  earlier than its seg2 assert: the engine's Sonic dies inside segment 2 (BK2 cursor
+  12459) and the run coordinator correctly reports the lost production ownership -- a real
+  gameplay divergence exposed by this change, recorded as the new frontier.
+- Test: the run chains now ASSERT the returned-level segment's physics comparator error
+  count they already computed. A level a run re-enters after an interior (special stage /
+  bonus) had its `LiveTraceComparator.errorCount()` written to
+  `target/trace-reports/<run>_seg<N>_report.json` and then ignored -- the only assertions
+  at that seam were the boundary observation and dynamic art -- so both S2 chains walked
+  past a returned segment carrying tens of thousands of physics errors while reporting it
+  `complete`. `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay` replays the identical
+  rows standalone to zero errors, so the rows can replay clean and the divergence is owned
+  by the chain's return path. Both S2 chains now fail at seg2 instead of further
+  downstream: not a regression, the true state of the return path becoming visible.
+  `TestS1GhzMazeRoundTripChain` and the S3K chains are unchanged.
+- Fix: a checkpoint restore no longer writes the camera back from `Saved_Camera_X/Y_pos`.
+  All three ROMs write those in their checkpoint-load routine and then immediately
+  overwrite `Camera_X_pos` / `Camera_Y_pos` from the RESTORED PLAYER POSITION, in the
+  shared level-size-init tail the checkpoint branch falls into: S2 `Obj79_LoadData`
+  (s2.asm:44793-44794) returns into `LevelSizeLoad`'s `subi.w #$A0,d1` / `subi.w #$60,d0`
+  clamped tail (s2.asm:14775-14814); S1 `Lamp_LoadInfo` then `LevSz_InitCameraPositions`
+  (`_inc/LevelSizeLoad & BgScrollSpeed.asm`:79-146); S3K the same tail at
+  sonic3k.asm:38244-38266. `Camera.updatePosition(true)` already IS that formula. Writing
+  the saved values over it left the S2 special-stage return's `camera_x` 16px right of the
+  recording from its first frame -- the engine had banked `x-$90`, a left-scroll rest
+  position from an earlier pass of the star post, where the ROM recomputes `x-$A0`.
+  Returned-segment physics errors: 39645 -> 39612 (half-pipe round trip) and
+  58184 -> 58129 (complete emeralds).
+- Fix: a level (re)init refills the leader's delayed position ring and clears the status
+  ring, so a star-post restart or a return from a special stage no longer follows the
+  previous level's recorded leader data. ROM `Obj01_Init_Continued` (s2.asm:36201-36217)
+  and its S3K twin `Sonic_Init_Continued` -> `Reset_Player_Position_Array`
+  (sonic3k.asm:21931-21941, 22166-22178) offset the leader by `(-$20, +4)`, zero
+  `Sonic_Pos_Record_Index`, then run `Sonic_RecordPos` 64 times, each iteration
+  re-zeroing the `Sonic_Stat_Record_Buf` entry it just wrote
+  (`subq.w #4,a1 / move.l #0,(a1)`); the `tst.b (Last_star_pole_hit).w /
+  bne.s Obj01_Init_Continued` branch above it skips only the art and saved-position
+  block, never the refill. Neither buffer lies in a `GM_Level` `clearRAM` range, so the
+  engine -- which prefilled the ring only on the trace bootstrap path -- carried the
+  pre-special-stage ring across the return and drove the CPU sidekick's delayed follow
+  from it. In the S2 half-pipe round-trip run this was the missing first inter-segment
+  dynamic-art gap edge (`run_gap.edge_count` 1 vs 0) for `seg1_ehz1 -> ss`.
+- Fix: only a HORIZONTAL spring locks the player's grounded controls. `move_lock` is the
+  ROM's sole grounded-input lock, and among the spring family only the horizontal launch
+  writes it -- S2 `loc_18B1C` `move.w #$F,move_lock(a1)` (s2.asm:34031), S1
+  `move.w #15,locktime(a1)` (`_incObj/41 Springs.asm`:144), S3K `loc_231BE`
+  `move.w #$F,$32(a1)` (sonic3k.asm:47907). The up, down and diagonal launches (S2
+  `loc_189CA`/`loc_18CC6`, S1 `Spring_Up`/`Spring_Down`, S3K `sub_22F98`), the S2
+  springboard `Obj40` and the CPZ pipe-exit spring `Obj7B` write no lock at all, yet the
+  engine's `springing` marker -- which those objects set for their own re-contact and carry
+  tests -- also gated horizontal input, inventing a 15-frame grounded control lock. Because
+  the ROM's `move_lock` is decremented only in the grounded `Sonic_SlopeRepel`, the invented
+  lock survived the whole airborne arc and then ate the first grounded frames: in the S2
+  half-pipe round-trip run's third EHZ1 segment it swallowed two frames of post-landing
+  acceleration after a down-spring at row 381, and the resulting drift ended the act 191
+  rows before the recording does.
+- Fix: Sonic 2's special stage leaves its main loop through the same startup boundary in
+  the run chain as in the standalone harness, and its exit `Pal_FadeToWhite` occupies the
+  22 V-ints its `dbf` loop runs rather than 23. Two separate off-by-one-row errors, which
+  had been cancelling: `S2SpecialStageReplayHarness.stepPasses` routed the pre-start loop's
+  terminal pass through the startup boundary but `AbstractRunChainTest.recordedPassPacing`
+  bound every pass identically, so the chain started the stage one V-int late and stayed
+  behind (the pre-start loop copies `Ctrl_1`/`Ctrl_2` before its `WaitForVint`,
+  s2.asm:6684-6685, and tests `SpecialStage_Started` only after `RunObjects` returns,
+  s2.asm:6689-6692, so that pass owns no post-V-int controller sample); and
+  `GameLoopPlcLifecycle.startToWhite` deferred the first colour step for a caller that had
+  already spent its iteration's `FadeManager` tick, stretching `Pal_FadeToWhite`
+  (`move.w #$15,d4` + `dbf`, s2.asm:3571-3582) over 23 rows and pushing the results loop's
+  first `VintID_Level` — with the `ProcessDMAQueue` that retires the stage's last player
+  DPLC pair (s2.asm:6797-6803, 781, 1770) — one row late.
+- Fix: Sonic 2's special stage runs a freshly streamed object exactly once on the iteration
+  that allocates it, and binds each `RunObjects` pass to the drawing index the ROM is on.
+  `SSObjectsManager` (s2.asm:6935-7001) only allocates -- the object's first execution is the
+  same main-loop iteration's `jsr (RunObjects)` two calls later (s2.asm:6684-6686) -- but the
+  engine both ran the object inline at allocation and ran it again in the deferred pass, and
+  from the `SpecialStage_Started` boundary onward executed each pass one drawing index behind
+  the ROM. The two errors concealed each other: the inline execution supplied the depth
+  decrement the late pass binding had lost, so every streamed ring and bomb carried the right
+  total while reaching each depth on the wrong pass.
+- Fixed: the level main-loop iteration whose object pass writes the next game
+  mode is no longer counted as a row of the level's dynamic-art comparison
+  window. S2 `Obj79_Star` does `move.b #GameModeID_SpecialStage,(Game_Mode).w`
+  from inside `RunObjects` (s2.asm:44877) and the iteration then runs to
+  completion — `BuildSprites` at s2.asm:5108, the mode test that leaves
+  `Level_MainLoop` only at s2.asm:5122-5125 — so the engine correctly keeps
+  running it, but nothing samples it: the run recorder finalizes the level
+  segment on the first frame that reads `$10` and writes no row for it
+  (`S2RunCaptureRunner.cs`:249-259), reclassifying that iteration's whole edge
+  batch as `run_gap` (`S2DynamicArtObserver.cs`:867-897). The engine published
+  a segment row for it instead and stamped its submissions `segment`, so every
+  transfer queued on a special-stage entry frame — including player art queued
+  earlier in the same iteration, Sonic running in a lower slot than the star
+  post — carried the wrong `submission_origin` into the following special-stage
+  segment's inherited ledger.
+- Fixed: the Sonic 2 special stage's entry fade rows are no longer treated as
+  DMA-queue service boundaries. `SpecialStage` opens with `Pal_FadeToWhite`
+  (s2.asm:6547), whose 22 `dbf` iterations each set `VintID_Fade` and wait for a
+  V-int (s2.asm:3571-3581); `Vint_Fade` (s2.asm:1068-1070) never reaches
+  `ProcessDMAQueue`, and the stage's own `VintID_S2SS` is not installed until
+  after the entry load at s2.asm:6642. The engine claimed `SPECIAL_STAGE` for
+  those rows, so a player-art transfer still queued when the stage was entered
+  retired on the segment's first row instead of surviving the whole entry load.
+  Any run whose special-stage entry inherits an outstanding transfer therefore
+  carried a permanent transfer-id/edge-ordinal skew from frame 0.
+  Special-stage providers now report the lifecycle phase their current row
+  belongs to, and Sonic 2 reports `PALETTE_FADE` for the `Pal_FadeToWhite`
+  window.
+- Fixed: Knuckles' glide-slide get-up now grounds him the way
+  `Knuckles_Sliding .getUp`'s `bsr.w Knux_TouchFloor` does
+  (sonic3k.asm:30984, `loc_17B6A` tail at 32854-32864). The slide deliberately
+  runs with `Status_InAir` still set, so the get-up frame is where Knuckles
+  becomes grounded; leaving the flag set kept the next few frames on the
+  airborne control path, which `move_lock` does not gate, and a held direction
+  re-accelerated `x_vel` away from the ROM's zero. The tail's `flip_type` and
+  `flips_remaining` clears are ported alongside it; the fields with no modelled
+  engine state at that site are named in the code comment rather than silently
+  dropped.
+- Fixed: the Sonic 2 special-stage player DPLC dedup baseline is now seeded the
+  way each object's init routine writes its own `LastLoadedDPLC` register --
+  Obj09 (s2.asm:69095), Obj10 (s2.asm:70378) and the Obj88 tail (s2.asm:70403)
+  each store `#1`. Previously the engine carried the register value left behind
+  by an earlier special-stage instance, so a second entry whose first pass used
+  the same mapping frame suppressed a transfer the ROM performs.
+- Performance: repeated public base-id, base-name, and donor SMPS SFX starts
+  now reuse the generation-aware catalog entry already consumed by the
+  presentation resolver. The manager registers the first immutable program
+  and dependency tuple before publishing its command, so later triggers do not
+  reload or recopy asset-sized data and a reentrant source replacement cannot
+  splice a new generation into the in-flight start. The legacy donor overload
+  that supplies only loader and DAC now freezes the active base profile's
+  sequencer configuration and SFX policy as its explicit compatibility owner,
+  so its direct and `GameSound` routes are admitted by the presentation owner
+  and do not revert to per-trigger loading. Invalid blank/negative requests
+  still probe their loader before falling back or returning a no-op, without
+  constructing an invalid catalog key. Cached legacy-backend starts now also
+  dispatch the registered priority, special-SFX, and continuous-SFX policy
+  with the retained program/DAC/config tuple, so a later profile replacement
+  cannot reclassify an already-registered playback. ROM replacement keeps the
+  existing audio-to-data ownership edge while atomically publishing the new
+  loader, DAC, config, and generation tuple.
+- Performance: prepared SMPS SFX admission now bypasses the presentation
+  registry's whole-music-driver rollback capture on the ordinary and rejected
+  SFX paths. Coordination still rolls back at its narrow admission boundary,
+  while diagnostic chip observers retain the driver-local fallback needed to
+  make their callbacks retryable.
+- Performance: repeated SMPS SFX resolution and base/donor music starts now consult the
+  generation-aware asset catalog before invoking a loader. Each program and immutable
+  dependency tuple is frozen once per generation, while every music start still receives
+  distinct mutable playback state and rewind restores reuse the registered identities.
+- Fix: replacing a base ROM/audio profile or donor SMPS source now publishes its loader,
+  DAC, configuration, and monotonically increasing catalog generation as one transaction.
+  Command resolution captures that complete source and its SFX policy once, so reentrant or
+  concurrent replacement cannot mix generations. Failed source, coordination-handler, or
+  backend/profile setup (including fatal error paths) restores the prior configuration, while
+  live and rewind voices retain their original generation without allowing new commands to
+  reuse stale programs. Source-changing callbacks are rejected if they try to re-enter a base,
+  donor, clear, or reset transaction, preventing nested publications from reusing a generation
+  or invalidating the outer transaction's rollback state.
+- Change: dynamic-art gap/tail comparison no longer treats an edge's movie row stamp as
+  engine evidence inside a span the run fixture's own recorded coverage declares
+  unrepresented and unclosed -- no recorded row inside the span, and no recorded coverage
+  after it. `TraceRunDynamicArtGapComparator` derives that predicate from segment
+  `bk2_frame_offset` / `trace_frame_count` alone, never from a zone, act, route, segment
+  name, game or frame index, and downgrades only `movie_logical_frame` to a warning there.
+  Everything else about the edge -- presence, count, ordinal, transfer id, phase, owner,
+  submission origin, mapping frame, gap edge index, requests, forwarded completion, and the
+  before/after ledger fingerprints -- stays a hard error inside the span, and every field
+  including the row stamp stays a hard error outside it. The reason is finding 1 of
+  `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`:
+  `TraceRunPlaybackCoordinator.destinationReady` gates on the shared BK2 cursor against a
+  recorded offset and `GameLoop.suppressesRunNativeLevelBody()` stops the level body while
+  the coordinator is in `TRANSITION_GAP`, so "the engine's real load duration is never
+  observed, in either direction" -- the row count there is harness choreography, and
+  matching it by delaying the harness or importing the recorded span length would fit the
+  measurement instrument to its own reference. The cost is written down in
+  `docs/status/known-discrepancies.md`: the S1 GHZ round-trip chain now verifies
+  load-window work and order but **not** load-window timing, which stays unobserved until
+  the roadmap's level-load-span strand reworks admission. No constant was introduced.
+- Fix: a recorded run's special-stage segment identity is now read from the stage the engine
+  is presenting, not from the live provider. The run recorder samples
+  `Current_Special_Stage` once, on the first `GameModeID_SpecialStage` frame
+  (`S2RunCaptureRunner.StartSsSegment`), so a segment's `special_stage_index` is that
+  pre-increment number for the whole segment -- the ROM byte itself is not constant, since a
+  won stage increments it inside the stage alongside `SS_Check_Rings_flag`
+  (`s2.asm:72467-72477`) and it is zeroed only on a later entry past 7 (`s2.asm:6538-6540`).
+  The engine splits that one ROM mode into `SPECIAL_STAGE` plus `SPECIAL_STAGE_RESULTS`, and
+  entering results deinitialises the stage manager, dropping its scratch index to 0. Segment
+  ownership therefore failed for every recorded stage but stage 0, where the zeroed reading
+  matched by coincidence: the EHZ half-pipe round trip lost ownership of its `ss_2` segment
+  the moment the results screen opened. Both observation builders -- the production
+  `TraceSessionLauncher` and the headless run-chain adapter -- now read
+  `GameLoop.recordedSpecialStageIdentity`, and `ss_2` replays all 6381 rows.
+- Fix: Sonic 2's star-post special-stage stars now orbit and collide the way `Obj79_Star`
+  does. Three ROM divergences moved the star the player jumps into: `Obj79_MakeSpecialStars`
+  allocates with `AllocateObjectAfterCurrent` (`s2.asm:44841-44845`) so the four stars sit
+  above the post's own slot and run on their creation frame, but the engine allocated them
+  lowest-free and lost a frame of orbit phase; the orbit maths used `Math.sin`/`Math.cos`
+  rather than `CalcSine`'s `Sine_Data` table (`s2.asm:4012-4024`, whose index $93 holds -117,
+  not a rounded -115) and mis-ported `neg.w d2 / andi.w #7,d2` (`s2.asm:44900`) as
+  `-(d2 & 7)` instead of `(-d2) & 7`, leaving the following `lsr.w` loop on a negative value;
+  and the touch used an invented `dx<16 && dy<16` test against the player's top-left render
+  bounds instead of the shared `TouchResponse` pass, which the star joins with
+  `collision_flags = $D8` (Touch_Special, Touch_Sizes index $18 = 4,4; `s2.asm:44926`,
+  `s2.asm:85286-85302`). With ROM geometry the second EHZ 1 star post's special-stage entry
+  lands on the frame the recording requires instead of three frames early.
+- Fix: the level title card no longer advances the global oscillation table. `OscillateNumDo`
+  is reached only from the main level loop in all three games (S1 `sonic.asm:3033`, S2
+  `s2.asm:5108`, S3K `sonic3k.asm:7909`), with `OscillateNumInit` running once at level init,
+  so the title-card / level-load passes must not tick it. The title-card lifecycle already
+  raised a one-shot suppression flag, but the canonical level-loop-tail advance -- a second
+  implementation of the same contract -- ignored it, so every title-card frame stepped the
+  table. On the Sonic 2 EHZ 1 star-post re-entry that was 128 extra ticks, which left the
+  Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of its $80-pixel travel;
+  the player landed on it at seg2 frame 907 where the ROM falls past, and the recorded route
+  to the second star post was never reached.
+- Fix: Sonic 1's special-stage results card now runs its `SSR_Exit` frame. The wait that ends
+  the card only advances `obRoutine`; `SSR_Exit` is a routine of its own ("_incObj/7E, 7F Special
+  Stage Results and Chaos Emeralds.asm":156-158), so `ExecuteObjects` has to reach it -- and set
+  `f_restart` -- on a further whole `SS_NormalExit` iteration before that loop's
+  `tst.w (f_restart).w` can see it (sonic.asm:3401-3412). The engine ended the card one row
+  early on both the plain (routine $A) and post-continue (routine $12) exits, so everything
+  downstream of it -- the exit white-out, `GM_Level`'s fade-out, the title card and the
+  returning level's art -- landed one movie row early.
+- Fix: Sonic 3&K's star-post bonus star now tests the player with the ROM's own touch geometry
+  and at the ROM's point in the frame. It had used an invented 16x16 box evaluated after the
+  star had already been repositioned; the ROM reads `collision_property` first (`loc_2D47E`)
+  and the box comes from `collision_flags` $D8 -> `Touch_Sizes` entry $18 = 4x4 against the
+  player's `Touch_NoInstaShield` extents. The star was capturing the player two frames early.
+- Fix: the S3K direct-decompression queue's `prepared` heartbeat no longer reports a false
+  divergence when the engine's boundary-granular model of it runs ahead of the ROM. The recorded
+  field is bit 15 of `Kos_decomp_queue_count`, which the ROM sets only once execution is inside
+  `Process_Kos_Queue_Loop`, so a recorded sample reads it set only when that frame's vertical
+  interrupt happened to land mid-decompression -- a sub-frame position no frame-granularity model
+  can reconstruct. The comparator now excuses exactly one polarity, the engine reading true while
+  the recording read false and the head's own completion is still ahead of it; the opposite
+  polarity, which would mean a completion landed early, stays an error, and every other queue
+  field is compared unchanged.
+- Fix: the S3K load-queue comparator no longer rewrites a recorded direct-queue row on a held
+  loop tail. That substitution was itself measured off a single recording -- its unit fixture
+  hardcoded the very Carnival Night child it was written for -- and it hid a real recorded state:
+  `Process_Kos_Queue` decompresses incrementally and resumes through `Set_Kos_Bookmark` /
+  `Restore_Kos_Bookmark`, so an unfinished FIFO head at the `Wait_VSync` sample is exactly as
+  legitimate on a held tail as anywhere else. Recorded rows are now compared as sampled.
+- Fix: Angel Island's fire-curtain background chain no longer advances on a lag frame, and the
+  act-two half of it is now driven by the ROM's own gates instead of two frame budgets measured
+  off a recording. Every routine in that chain is reached only through the level main loop, so a
+  frame the main loop never finished must not step the fire rise or the delayed plane redraw; the
+  engine was stepping the act-two half on those frames and so ran the ramp one pass ahead. The
+  redraw's length now falls out of the delayed row counter the reload seeds and the two-rows-per
+  -call drain that consumes it, the wait releases when the background Y ramp actually crosses the
+  ROM's threshold after its own re-seat, and the reload no longer overwrites that Y with an
+  invented value the ROM never writes. The act-two enemy art batch now reaches the decompression
+  queue on the frame the ROM submits it.
+- Fix: a fade to white begins on the next vertical interrupt rather than inside the frame that
+  requested it, matching the ROM, whose fade routine waits for a vertical interrupt before its
+  first colour step. The engine started the fade mid-frame and then still advanced it later in
+  that same frame, so every fade ran one interrupt short.
+- Fix: Chemical/Carnival Night's act-two gradual level-size workers start on the dispatch after
+  the end-of-level flag is observed, not the same one. The ROM publishes that flag from an object
+  slot walked after the one that polls it, so the poll for the publishing pass has already taken
+  its exit.
+- Testing: two trace-harness tests built their derived fixtures incorrectly and were rejecting
+  themselves. One appended a synthetic per-frame art-state stream on top of a recording that
+  already carried a real one, so frame zero legitimately held two states; the other copied a
+  recording's metadata verbatim while filtering its event stream through an allowlist, so a
+  capability the metadata advertised had all its events removed. Both are fixed in the tests; no
+  validator was weakened and no fixture regenerated.
+- Fix: a deferred art-module producer no longer has its first submission suppressed. The
+  held-loop-tail signal is meant to delay when work becomes visible, but for a level-loop
+  producer it was also skipping the submission itself, so the Angel Island act 2 enemy art
+  arrived a loop late and the frame's queue snapshot showed an idle decompression queue. The two
+  producers that set the signal are now distinguished: the ordinary one defers only readiness,
+  and the title-card owner, whose load genuinely runs after that iteration's module step,
+  declares its late ordering explicitly.
+- Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
+  module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
+  drain measured from a capture. The structural part now comes from the module state machine and
+  the decompression latency from the recorded hardware-timing stream, which refuses to release
+  work whose submission fingerprint does not match.
+- Fix: a run chain's presentation bridge no longer suppresses two consecutive rows where the ROM
+  has one. The classifier treated a row as a lag closure whenever the recorded vertical-interrupt
+  counter had not advanced on both it and its predecessor, but that counter legitimately holds
+  across an interrupts-disabled window, so one pattern-load service was lost.
+- Fix: the Sonic 3 & Knuckles title screen advances its animation on the ROM's own four-iteration
+  counter rather than a table of per-frame durations measured from hardware. The ROM has no such
+  table; the varying durations a capture shows are the synchronous Kosinski decompression
+  overrunning a frame for the larger frames, which belongs to the decompression pipeline.
+- Fix: the special-stage results screen appears as the ROM presents it, by loading the results
+  palette directly, instead of fading in from white over 21 frames. Neither game fades in --
+  both white the screen out, rebuild it with interrupts disabled, and then copy the results
+  palette straight into the active palette -- and the engine's fade also held the score tally
+  frozen for its duration, where the ROM begins counting immediately.
+- Fix: S3K's MGZ screen shake is now owned by the ROM routine that computes it.
+  `ShakeScreen_Setup` (docs/skdisasm/sonic3k.asm:104188-104210) samples
+  `ScreenShakeArray2[Level_frame_counter & $3F]` once per frame at the tail of
+  the zone's background event (`MGZ1BGE_Normal`, sonic3k.asm:106308), while
+  `MGZ1_ScreenEvent`/`MGZ2_ScreenEvent` add the offset into `Camera_Y_pos_copy`
+  at the *start* of the same `ScreenEvents` pass (sonic3k.asm:102232-102253,
+  :106257-106260, :106390-106392) — so `Render_Sprites` consumes the offset the
+  routine produced on the previous frame. The Tunnelbot and the MGZ trigger
+  platform previously indexed that table themselves from the object clock
+  (`V_int_run_count`, plus a hand-tuned `-3`), which de-phased the shaken render
+  copy by the accumulated lag count and moved the sidekick's `render_flags`
+  on-screen bit by a pixel at the top edge. Objects now only raise the
+  continuous-shake flag, as the ROM does (sonic3k.asm:184784/:184886/:184907).
+- Fix: with the shaken render copy correct, `Tails_FlySwim_Unknown`'s off-screen
+  gate is back to the ROM's single `tst.b render_flags(a0)` / `bmi.s`
+  (sonic3k.asm:26534-26535); the shaken/airborne-leader re-admission predicate
+  that compensated the one-pixel discrepancy is removed, along with the
+  `Camera.isVisibleForCpuDispatch` window it used.
+- Fix/Test: post-camera sidekick-bound publication now remains owned by the
+  object/event path that moved the death plane. CNZ's cannon handoff explicitly
+  carries its `$0200` camera-target write through the DynamicLevelEvents tail,
+  while unrelated gradual-resize owners retain their native cadence. This
+  preserves all 42,253 standalone CNZ rows and restores all 25,393 ICZ
+  complete-run rows, including the ICZ boss-art queue sequence from direct
+  completion `#255`; the selected AIZ-through-LBZ, bonus, and special-stage
+  fleet passes 59 tests with ring comparison at error severity.
+- Fix/Test: spilled-ring lifetime and bottom-boundary checks now follow each
+  game's native branch topology: S1/S2 reach them on every object pass, while
+  S3K reaches them only through its movement-direction/cadence path. This
+  restores S1 LZ1's strict ring-loss row and LZ2's lost-ring SST occupancy while
+  retaining the completed standalone CNZ trace.
+- Fix/Test: S3K now republishes sidekick camera bounds after boundary easing,
+  matching Tails' live `Camera_max_Y_pos` death-plane read when an event shrinks
+  the arena. CNZ's post-boss cannon also uses the native lowest-free-slot
+  `AllocateObject` contract. Together these changes close all 42,253 frames of
+  the standalone CNZ trace; the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
+- Fix/Test: CNZ cannons now preserve the shared S3K `SolidObjectTop`
+  zero-distance rejection before setting the standing bit. This delays the
+  end-cannon capture by the one native overlap pixel and advances standalone
+  CNZ from frame `41949` to `41951`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
+- Testing: a run chain executes any special-stage observation that owns a completed object
+  pass, even where the recording marks that frame a lag frame. The stage's own main loop waits
+  on its vertical-interrupt routine immediately before running objects, so a frame that ran a
+  pass cannot have taken the lag branch; the standalone special-stage harness already applied
+  that rule and the chain driver did not, so the stage's final pass and the sidekick art it
+  submits fell outside the compared window.
+- Tests: ROM-backed source-data checks no longer read optional local disassembly
+  trees. MGZ quake chunks, AIZ KosM streams, save/data-select assets, the S3K
+  life icon, and GHZ mappings now execute from configured canonical ROMs; a
+  tooling guard rejects new executable test dependencies on `docs/*disasm`.
+- Fix: a recorded run only has to carry the dynamic-art capability for games that have one.
+  The run-manifest validator required it from every segment regardless of game, while the
+  transfer parser recognises Sonic 1 and Sonic 2 profiles only and rejects any other game, and
+  no Sonic 3 & Knuckles dynamic-art recorder exists -- so no Sonic 3 & Knuckles run could pass
+  chain validation however it was captured. The support matrix now lives in one place.
+- Fix: the Sonic 1 credits demos run their vertical-interrupt counter free, seeded from the
+  recording's own starting value like every other replay entry path, instead of from a
+  constant measured off an older capture. The counter also advances on lag frames, which the
+  ROM does because every V-blank routine falls through to the same exit that increments it;
+  the credits harness was the only path that skipped it. Labyrinth Zone's wind tunnels read
+  that counter to decide when to play their sound, and under the shipped ROM's unfixed code
+  path that read also decides when the player is pulled downward, so the counter's phase was
+  directly visible as a two-pixel bump.
+- Fix: a character hurt into a landing is still drawn on that frame, as the ROM does -- the
+  invulnerability blink only applies from the following frame's display routine. The engine
+  applied it a frame early, leaving a stale on-screen flag that stopped the sidekick's
+  despawn counter from starting.
+- Testing: a sidekick despawn test asserted a value measured from a capture probe rather than
+  read from the ROM, and outlived the production code it was calibrated against. It now
+  asserts what the ROM does: an on-screen render flag clears the respawn counter on the frame
+  it is seen.
+- Fix: the Chemical Plant spin tube reads the character's live position when deciding whether
+  to capture them, as the ROM does. Two tubes can hold the same character, and the engine's
+  frame-start fallback made a handoff between them land two frames late.
+- Fix: a run chain's special-stage interior applies the same dynamic-art normalisation the
+  standalone special-stage replay does. The ROM can service a V-blank part-way through its
+  object scan, so one player's art transfer is recorded a frame before another's from the same
+  pass; that is sub-frame timing with no frame-granularity equivalent, and it is reconciled in
+  comparison rather than imitated.
+- Testing: the special-stage recorder contract no longer asserts a provenance field or
+  absolute fixture frame numbers. Provenance selects no replay behaviour, and the frame
+  assertions now describe the shape they mean -- a non-lag observation row followed by a lag
+  row, with contiguous pass sequencing -- so they cannot go stale when a fixture is
+  regenerated.
+- Fix: Sonic 2 sidekick respawn no longer suppresses the on-screen render flag inside a
+  hand-measured window. The ROM clears the respawn counter purely on the render flag, with no
+  counter-value or camera-relative condition, and the engine already reads that flag; the
+  extra window was a second authority fitted to one recorded route and it held the counter
+  set where the ROM had cleared it.
+- Testing: special-stage comparison takes its pre-start expectations from the recorded
+  object-pass snapshot rather than the raw V-blank row, which can bisect the ROM's
+  Sonic-then-sidekick object scan and so carry one player's state from before the pass beside
+  the other's from after it. The comparator already applied this rule after the stage starts;
+  the pre-start half of the same loop did not.
+- Testing: a new guard asserts that every recorded object pass's input-sample frame lands on
+  a frame whose input was actually polled, across every committed fixture that records both.
+  A capture runner mislabelling its frames by one is now a build failure rather than
+  something discovered by inspection weeks later.
+- Fix: the standalone special-stage capture no longer labels every recorded object pass one
+  frame early. The capture runner wrote a row for the entry frame that the run-segment
+  runner correctly skips, so every pass's input-sample frame was off by one against its own
+  physics rows. The committed fixture is regenerated; it records the same execution with
+  correct frame labels.
+- Fix: a trace replay only runs the extra terminal art iteration for captures that recorded
+  one. Run-segment captures do not, so the engine was publishing that iteration's art
+  transfers onto the segment's final compared row.
+- Fix: the Chemical Plant spin tube advances to its next waypoint without an intervening
+  movement frame when the waypoints are less than eight pixels apart on the dominant axis,
+  as the ROM's byte-sized read of a word-sized counter does.
+- Fix: water entry and exit are handled per game while an object controls the player. The
+  object-controlled path is Sonic 3 & Knuckles behaviour and was being applied to all games,
+  so Sonic 2 skipped its water entry and exit speed changes during a spin-tube ride.
+- Fix: the Chemical Plant staircase keeps a standing bit per step, as the ROM does. The
+  engine draws the four steps from one instance, and without per-step standing bits a rider
+  stayed latched to the step they first landed on: their height kept being pulled back to
+  that step's surface, and the step they had walked into never produced the sideways push
+  the ROM applies when a rising step catches them. The shared multi-piece takeover test also
+  now uses the ROM's narrower landing width instead of the full collision width.
+- Fix: trace comparison no longer reports the untouched remainder of the player position
+  history ring when a replay starts mid-act. The ROM pre-fills that ring from the star post
+  the player last touched, which is play history a mid-act segment does not record; the
+  exclusion is gated on the start position differing from the level's own spawn point and on
+  the recorded remainder still carrying its pre-fill signature, so everything the ROM
+  actually wrote during the segment is still compared.
 - Tooling: add a reproducible Sonic 1 GHZ music-driver parity command that
   validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
   reference and OpenGGF captures deterministic, and emits first-divergence
@@ -3766,6 +4620,766 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
 - **S2 Crawl contact parity:** walking into an attacking Crawl now routes through the ROM hurt collision flags instead of silently ignoring non-rolling contact.
 - **S2 Casino Night slot machine:** restored the ROM packed-target reel order so the stopped slot faces line up with the reward paid out by linked Point Pokey cages.
 
+- Fix/Test: post-camera sidekick-bound publication now remains owned by the
+  object/event path that moved the death plane. CNZ's cannon handoff explicitly
+  carries its `$0200` camera-target write through the DynamicLevelEvents tail,
+  while unrelated gradual-resize owners retain their native cadence. This
+  preserves all 42,253 standalone CNZ rows and restores all 25,393 ICZ
+  complete-run rows, including the ICZ boss-art queue sequence from direct
+  completion `#255`; the selected AIZ-through-LBZ, bonus, and special-stage
+  fleet passes 59 tests with ring comparison at error severity.
+- Fix/Test: spilled-ring lifetime and bottom-boundary checks now follow each
+  game's native branch topology: S1/S2 reach them on every object pass, while
+  S3K reaches them only through its movement-direction/cadence path. This
+  restores S1 LZ1's strict ring-loss row and LZ2's lost-ring SST occupancy while
+  retaining the completed standalone CNZ trace.
+- Fix/Test: S3K now republishes sidekick camera bounds after boundary easing,
+  matching Tails' live `Camera_max_Y_pos` death-plane read when an event shrinks
+  the arena. CNZ's post-boss cannon also uses the native lowest-free-slot
+  `AllocateObject` contract. Together these changes close all 42,253 frames of
+  the standalone CNZ trace; the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
+- Fix/Test: CNZ cannons now preserve the shared S3K `SolidObjectTop`
+  zero-distance rejection before setting the standing bit. This delays the
+  end-cannon capture by the one native overlap pixel and advances standalone
+  CNZ from frame `41949` to `41951`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
+- Fix/Test: spilled-ring lifetime and bottom-boundary deletion now follow the
+  native movement-direction and floor-probe cadence branches instead of polling
+  every object update. This preserves an older CNZ boss-arena ring until a
+  later spill resets the shared animation counter, closing all standalone CNZ
+  physics comparisons; the next frontier is the terminal raw-`41262` hardware
+  completion check, and the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
+- Fix/Test: CNZ's Giant Wheel controller now runs its existing grounded-rider
+  attachment and speed clamp for both native player slots. This restores
+  Tails' `$0400` minimum wheel speed and advances standalone CNZ from raw frame
+  `33116` to the error-level ring frontier at `40031`; the green AIZ, HCZ, MGZ,
+  and complete-run CNZ traces remain unchanged.
+- Fix/Test: S3K Tails CPU panic pulses now read the ROM-visible
+  `Level_frame_counter` directly instead of projecting it through the retained
+  title/history-ring cadence. Standalone CNZ advances from raw frame `29384` to
+  `33116`; the green AIZ, HCZ, MGZ, and complete-run CNZ traces remain
+- Fix/Test: CNZ underwater balloons now preserve retail's clobbered-`a1`
+  behavior by overwriting the fourth spawned Bubbler's random offset with the
+  balloon position. S3K Bubbler pickups also retain the rolling status bit for
+  non-Sonic players while restoring standing radii. Standalone CNZ advances
+  from raw frame `29181` to `29384`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
+- Fix/Test: CNZ2's first rival-Knuckles camera gate now consumes the current
+  `Camera_X_pos` word instead of predicting the later `ScrollHoriz` result.
+  Standalone CNZ advances from raw frame `25743` to `29181`; complete CNZ and
+  the green AIZ, HCZ, and MGZ traces remain unchanged.
+- Fix/Test: floating S3K end capsules now compose their separate native child
+  dispatch rules instead of replacing MGZ's later-support-owner publication
+  boundary with AIZ's parent-motion boundary. This restores standalone MGZ's
+  direct-Kosinski queue trace while keeping AIZ, HCZ, and complete MGZ green.
+- Fix/Test: AIZ2's folded drawbridge now preserves the ROM's collapse-init
+  return boundary when the semantic lower button owner publishes the trigger
+  before the bridge dispatch. Its `$0E` countdown starts on the following SST
+  entry, closing standalone AIZ with complete-run AIZ and HCZ unchanged.
+- Fix/Test: AIZ2's cutscene button now preserves the native logical UP word
+  when its lower SST slot unlocks control before the later Player_1 dispatch,
+  then releases the engine-side representation on the following controller
+  entry. Standalone AIZ advances from raw frame `20699` to `20713` with
+  complete-run AIZ and HCZ unchanged.
+- Fix/Test: AIZ2's retained post-boss controller now derives its results-exit
+  control restore from the cutscene's native SST-ordering mode. This preserves
+  the complete-run VICTORY entry when the controller precedes the results owner
+  while restoring WAIT immediately when the results owner precedes it, advancing
+  standalone AIZ from raw frame `20297` to `20699` with complete-run AIZ and HCZ
+- Fix/Test: folded S3K route-8 egg capsules now preserve the native parent-to-button-child
+  dispatch boundary when the parent's horizontal movement first creates button-range
+  eligibility. Standalone AIZ advances from raw frame `19721` to the later
+  raw-`20297` ending-control cluster; all complete runs from AIZ through LBZ remain green.
+- Fix/Test: S3K queue comparison now recognizes a production-submitted direct
+  Kosinski child that the native frame-end heartbeat cannot observe because it
+  is published after one sample and retires before the next. The projection is
+  comparison-only and requires an exact next-row completion match by kind,
+  ordinal, fingerprint, source, and destination. Standalone AIZ advances from
+  raw frame `16067` to `19721`; all complete runs through LBZ remain green.
+- Test: standalone AIZ focused trace prefixes now use the same v5 recorded
+  hardware-readiness admission, production row boundaries, bootstrap, and
+  frame-counter alignment as the full replay. All 15 focused AIZ assertions
+  pass; the full standalone replay retains its independent raw-frame `16067`
+  queue frontier, and complete-run AIZ remains green.
+- Fix/Test: player collision now retains the ROM's shared
+  `Primary_Angle`/`Secondary_Angle` registers across player dispatches and
+  rewind. Empty airborne landing probes preserve those shared bytes while
+  grounded `AnglePos` still seeds the empty-floor sentinel. This closes LBZ's
+  complete-run balance-animation frontier at raw frame 30784 without
+  regressing the green AIZ, HCZ, MGZ, CNZ, or ICZ routes.
+- Fix/Test: fresh-level startup controllers can now declare that
+  `SpawnLevelMainSprites` replaces the carried title owner. LBZ's ground-launch
+  intro uses that ROM-owned contract to publish the destination KosM parent
+  when the title wait expires while retaining its first direct child for the
+  following loop. This closes the ICZ complete-run trace, including its LBZ
+  handoff and direct completion `#264`, without regressing AIZ, HCZ, MGZ, or
+  CNZ.
+- Fix/Test: ICZ's folded end-boss capsule now preserves the ROM's same-pass
+  `Obj_LevelResultsInit` dispatch when its engine allocation lands in an
+  already-visited SST. This submits the three results-art Kosinski jobs at the
+  native boundary and advances the ICZ complete-run frontier from raw frame
+  24575 to the fresh LBZ handoff at raw frame 25338, with AIZ, HCZ, MGZ, and
+  CNZ complete runs plus standalone MGZ unchanged.
+- Fix/Test: ICZ's post-miniboss title card now obtains its retained
+  `Obj_TitleCardWait2` camera-release cadence from the live transition event
+  owner when the results object is created after the seamless reload. This
+  removes the raw-frame 15401/15403 camera clusters and advances the ICZ
+  complete-run frontier to the end-boss Kosinski queue at raw frame 24575,
+  with complete AIZ, HCZ, MGZ, and CNZ traces unchanged.
+- Fix/Test: fresh-level title-card boundaries now expose the ROM-cleared
+  playable slot before publishing the destination's pre-dispatch player state,
+  including zero velocity, roll, jump, status, and animation while preserving
+  centre coordinates across radius changes. This closes the CNZ complete-run
+  trace through its ICZ handoff with 0 errors and 0 warnings.
+- Fix/Test: CNZ's end-boss cannon handoff now queues the ROM-backed badnik
+  explosion KosM art before allocating the cannon, matching `loc_6E778`.
+  This removes the final seven hardware-queue mismatches and advances the CNZ
+  complete-run frontier from raw frame 39487 to 39937 without regressing the
+  gameplay-order AIZ, HCZ, or MGZ canaries.
+- Fix/Test: CNZ's retained end-boss controller now consumes the results
+  owner's global completion publication directly in its own SST dispatch,
+  matching `loc_6E724` instead of waiting for an engine-only capsule relay.
+  This restores both players' control on the ROM frame and advances the CNZ
+  complete-run frontier from raw frame 39452 to 39487 with earlier-zone
+  canaries unchanged.
+- Fix/Test: upright S3K egg capsules now allocate their level-results owner
+  through the ROM's lowest-free-slot `AllocateObject` path. This preserves the
+  next-pass `Obj_LevelResultsInit` dispatch when the chosen SST has already run
+  and advances CNZ's complete-run frontier from raw frame 38793 to 39452 while
+  retaining the green complete-run AIZ, HCZ, and MGZ traces and standalone MGZ
+  trace.
+- Fix/Test: hooks-off S3K traces now recognize the existing sidekick-animation
+  hold phase from the ROM's structural position-history advance when the CPU
+  hook event is unavailable. This removes CNZ's two transient Tails mapping
+  mismatches and advances its complete-run frontier from raw frame 30486 to
+  the Kosinski queue boundary at raw frame 38793 without regressing the green
+  complete-run AIZ, HCZ, and MGZ traces or standalone MGZ trace.
+- Fix/Test: overlapping active CNZ hover fans now preserve the ROM's native
+  object execution order when dynamic object ownership reverses adjacent
+  slots. This retains each fan's write-before-next-test lift semantics and
+  advances the complete-run CNZ frontier from raw frame 16343 to 30486 while
+  the complete-run AIZ, HCZ, and MGZ traces and standalone MGZ trace remain
+  green.
+- Fix/Test: S3K queue comparison now reconciles a held-tail VBlank captured
+  between the ROM's module and direct Kosinski services with replay's atomic
+  post-service publication. The CNZ complete-run comparison advances from raw
+  frame 14662 through the end of the segment; AIZ, HCZ, and both MGZ canaries
+- Fix/Test: CNZ's event-owned replacement for the discarded
+  `Obj_EndSignControl` now consumes the carried results object's native
+  `_unkFAA8`-clear publication instead of a fixed elapsed-frame estimate, while
+  preserving earlier/later SST ordering. The complete-run frontier advances
+  from raw frame 14512 to 14665, and standalone CNZ advances from its raw-frame
+  25743 camera mismatch to the hardware edge at raw frame 33755; AIZ, HCZ, and
+  both MGZ canaries remain green.
+- Fix/Test: CNZ's post-object signpost now accounts for the native dispatch
+  already consumed before an unbumped landing countdown, while a real
+  `EndSign_CheckPlayerHit` bounce retains all `$40` countdown entries. This
+  advances the complete-run CNZ frontier from raw frame 13960 to the
+  post-transition animation boundary at raw frame 14512 without moving the
+  standalone CNZ camera frontier or regressing the green complete-run AIZ,
+  HCZ, and MGZ traces and standalone MGZ trace.
+- Fix/Test: CNZ's miniboss-top saved-position latch now expires after the
+  single folded `SolidObjectFull` checkpoint that owns it, rather than staying
+  active while Tails continues upward after a rebound. This advances the
+  complete-run CNZ frontier from raw frame 12488 to the act-transition queue
+  boundary at raw frame 13960 while retaining standalone CNZ and the green
+  AIZ, HCZ, and MGZ canaries.
+- Fix/Test: CNZ miniboss body hits blocked by `$38` bit 3 now leave the
+  Move/`Obj_Wait` dispatch to the boss's own later SST slot. Removing the
+  duplicate timer tick also removes the fitted `$90 + 2` wait compensation,
+  advancing the complete-run CNZ frontier from raw frame 12024 to 12488 while
+  retaining standalone CNZ and the green AIZ, HCZ, and MGZ canaries.
+- Fix/Test: CNZ's miniboss coil now exposes the live child coordinate refreshed
+  immediately before its collision-list publication, matching the SST pointer
+  consumed by the following player pass. The focused collision contract is now
+  guarded while the standalone CNZ camera frontier remains at raw frame 25743.
+- Fix/Test: MGZ's consolidated floating-capsule button now preserves the
+  native later-SST boundary when a later support object owns the triggering
+  player's current contact. This restores both MGZ trace variants to zero
+  errors while retaining the complete-run AIZ and HCZ canaries.
+- Fix/Test: Recorded trace playback now distinguishes ordinary lag rows from
+  paused `Pause_Loop` VBlanks when maintaining the controller-poll baseline.
+  Paused rows follow `VInt_10` and poll each movie row, preserving the later
+  Start edge that resumes gameplay. This closes the HCZ complete-run trace
+  with all 29,285 compared rows green while retaining the complete AIZ canary.
+- Fix/Test: S3K cutscene buttons now run their subtype action in the same
+  object pass that detects the triggering object, matching `loc_65C04`'s
+  immediate dispatch through `off_65C40`. This removes the synthetic
+  one-frame AIZ button delay and makes all 26,228 rows of the AIZ complete-run
+  trace green, including ring-count and hardware-timing verification.
+- Fix/Test: AIZ's subtype-0 cutscene button now clears Sonic's control lock in
+  its own object dispatch, matching `loc_65C56`, while retaining the logical
+  input already consumed by that player pass. The complete-run comparator is
+  now green through the next hardware boundary at raw frame `26109`. MGZ's
+  carried results owner also retains the allocation-time
+  `Flying_carrying_Sonic_flag` branch across its lower-slot delay, keeping the
+  complete MGZ route green after the shared capsule counter correction.
+- Fix/Test: AIZ's post-results `Child6_IncLevX` is now a real dynamic control
+  object with its own slot and `$4000` longword accumulator, instead of being
+  folded into the earlier boss-controller dispatch. This advances the
+  complete-run frontier from raw frame `25592` to `25951`.
+- Fix/Test: AIZ's post-results controller now retains the one owner dispatch
+  between the embedded-child retirement publication and
+  `Obj_LevelResultsWait2`, then restores both players without the former
+  riding-sidekick delay branch. This advances the complete-run frontier from
+  raw frame `25590` to a single camera mismatch at `25592`.
+- Fix/Test: AIZ's floating capsule now preserves the native ordering between
+  its later button child and the draw-bridge slot that owns Player 2's
+  standing update. Its shared results counter also stores the ROM's actual
+  `$40` value and waits for signed underflow. This advances the complete-run
+  frontier from raw frame `25037` to `25590` without regressing HCZ, MGZ, CNZ,
+  ICZ, or LBZ.
+- Fix/Test: S3K held-loop Kosinski timing now distinguishes a continuation
+  module from a newly shifted KosM parent. An active parent's next child is
+  published at the native module-queue tail while its direct-queue preparation
+  remains hidden until the held closure. This advances AIZ's complete-run
+  frontier from raw frame `22935` to `25037` without regressing the HCZ, MGZ,
+  CNZ, ICZ, or LBZ frontiers.
+- Fix/Test: S3K airborne landing-angle publication now preserves the prior
+  `Primary_Angle`/`Secondary_Angle` byte when `FindFloor` finds no collision
+  tile, instead of replacing it with the engine's synthetic empty-side angle
+  `3`. This restores the one-frame Wait before ledge Balance after asymmetric
+  landings, advancing AIZ's complete-run frontier from raw frame `16123` to
+  `22935` and LBZ's from `30588` to `30784` without moving the HCZ, MGZ, CNZ,
+  or ICZ frontiers backward.
+- Fix/Test: seamless S3K act reloads now advance `ChangeRingFrame` at their
+  actual loop-tail owner. In-frame AIZ reloads continue into the ordinary
+  level update instead of also advancing inside the shared reload executor;
+  boundary-owned reloads retain the explicit transition-only tick, and
+  transition-owned loop tails use their runtime semantic predicate. This
+  advances the complete AIZ frontier from raw frame `14301` to `16123`, with
+  errors falling from five to three. HCZ, MGZ, CNZ, ICZ, and LBZ complete-run
+  canaries retain their established frontiers; ring comparisons remain forced
+  errors and no trace payloads changed.
+- Fix/Test: AIZ's retained `Obj_EndSignControl` now carries the consolidated
+  results/title SST ownership into `Change_Act2Sizes`. Its first gradual resize
+  worker reuses that released owner slot when it lies after the control owner,
+  then allocates the second worker with native `FindNextFreeObj` ordering. This
+  keeps low placement slots available on the Act 2 route and closes the raw
+  frame `13740` ring mismatch: all `20376` complete-run comparison frames now
+  match, with hardware replay reaching the final unconsumed edge `#50` at run
+  completion. Standard AIZ remains green for all `20463` frames; ring
+  comparisons remain forced errors and no trace payloads changed.
+- Fix/Test: S3K in-level title completion now preserves the retained
+  `Obj_EndSignControl` object-pass boundary. A phase-2 title owner publishes
+  after the lower control slot has already run, so `Change_Act2Sizes` waits for
+  the following pass and its gradual X/Y workers begin with their native zero
+  accumulators. Complete AIZ advances from raw frame `11999` to a separate
+  ring-count mismatch at raw frame `13740` (next hardware edge `#49` at
+  `14171`), while standard AIZ remains green for all `20463` compared frames.
+  Ring comparisons stay forced errors; no trace payloads changed.
+- Fix/Test: S3K signpost results allocation now retains the defeated boss's
+  native `Obj_EndSignControl` SST boundary when the engine splits that owner
+  into separate flow and signpost objects. `AllocateObject` still selects the
+  first free ROM-side boundary: lower slots wait for the next object pass,
+  while forward slots initialize results art in the current pass. Complete
+  AIZ advances from raw frame `11350` to the raw `11999` camera handoff
+  (`12002` hardware edge), while standard AIZ remains green for all `20463`
+  compared frames. Ring comparisons stay forced errors; no trace payloads
+  changed.
+- Fix/Test: S3K now runs the fixed Dust/Dust_P2 skid-child allocator after
+  dynamic-object execution, matching the ROM's fixed level-object slot order.
+  This restores Tails' AIZ skid-dust child and the downstream native slot
+  cadence: the complete AIZ run falls from 11 errors (including player
+  animation) to 8 queue-only errors at raw frame `11350`, while the focused
+  AIZ replay remains green. Ring comparisons stay forced errors; no trace
+  payloads changed.
+- Diagnostic (reverted): S3K AIZ's defeat-flow owner was temporarily
+  re-homed through the native first-free dynamic-slot boundary. It advanced
+  the complete-run diagnostic to raw frame `11999`, but regressed the
+  standard AIZ replay at raw frame `8218`; the generic re-home was removed
+  pending a slot-owner fix. Ring comparisons remain forced errors; no trace
+  payloads changed.
+- Fix/Test: S3K grounded results owners now use the ROM `AllocateObject`
+  lower-slot contract for the semantic grounded-results boundary, leaving the
+  lower owner to begin `Obj_LevelResultsInit` on the following object pass.
+  The focused AIZ replay advances from the raw frame `8218` direct/module KOS
+  queue admission mismatch to all `20463` compared frames matching; HCZ's two
+  complete-run traces and both MGZ replays remain green. Ring comparisons stay
+  forced errors; no trace payloads changed.
+- Fix/Test: S3K in-level title-card gamestate reset now preserves the native
+  six-dispatch child-visibility handoff for phase-2 initialization as well as
+  phase 1. The AIZ complete-run diagnostic frontier advances from raw frame
+  `11891` rings to raw frame `11999` camera Y, while clean hardware admission
+  remains at direct queue `#50`; ring comparisons stay forced errors and no
+  trace payloads changed.
+- Fix/Test: S3K grounded results owners now preserve the native same-pass
+  `Obj_EndSignResults` handoff when their dynamically spawned signpost occupies
+  a later managed slot. The AIZ complete-run diagnostic frontier advances from
+  the raw frame `11350` results-queue mismatch to the raw frame `11891` ring
+  mismatch (`9` expected, `0` actual); the clean recorded authority still
+  reaches the established raw frame `20376` StarPost admission. Ring
+  comparisons stay forced errors; no trace payloads changed.
+- Fix/Test: S3K MGZ's retained signpost flow now leaves players' animation
+  state untouched when the live transition bridge has already restored their
+  control. This closes the complete MGZ run's established 31 animation-only
+  errors at raw frame `16513`; focused MGZ remains green for all `35861`
+  frames and HCZ's two complete-run traces remain green. Ring comparisons stay
+  forced errors; no trace payloads changed.
+- Fix/Test: S3K MGZ's floating results owner now selects its initial
+  results-art service boundary from the live carry CPU publication state. The
+  focused MGZ replay remains green for all `35861` frames, while the complete
+  run returns to its established `31` animation-only errors instead of adding
+  the raw frame `38519` queue cluster; HCZ's two complete-run traces remain
+  green. Ring comparisons stay forced errors; no trace payloads changed.
+- Fix/Test: S3K MGZ's floating results owner now defers its initial
+  results-art submissions for the native `Obj_LevelResultsInit` dispatch
+  boundary. The focused MGZ replay advances from the raw frame `35183` KOS
+  queue mismatch to all `35861` frames matching; HCZ's two complete-run
+  traces remain green. Ring comparisons stay forced errors; no trace payloads
+  changed.
+- Fix/Test: S3K Tails' flight-timer gate now preserves the ROM's prior
+  Render_Sprites visibility at a shaken top-edge boundary while the leader is
+  airborne. The focused MGZ replay advances from 9 to 8 release-blocking
+  errors, moving its first mismatch to the raw frame `35183` KOS queue
+  boundary; HCZ's two complete-run traces remain green. No trace payloads
+  changed.
+- Fix/Test: S3K MGZ's sinking-mud handoff now preserves the ROM's prior
+  adjacent-mud depth on the jump-off frame, when `Status_OnObj` is still set
+  at the mud routine entry. The focused MGZ replay advances past the raw
+  frame `20130` landing/camera/Tails cluster: release-blocking errors fall
+  from 12 to 9 and the first mismatch is now Tails' CPU respawn counter at
+  raw frame `23908`. No trace payloads changed.
+- Fix/Test: S3K MGZ now follows the native miniboss/results owner ordering:
+  Tails consumes its own landing collision angles, the retained title owner
+  keeps the ROM's single carried-results retirement dispatch, and the native
+  control restore is deferred until the following owner pass. The MGZ focused
+  replay falls from 16 to 12 release-blocking errors, moving its first
+  mismatch from the results animation handoff at raw frame `14384` to Sonic's
+  Y position at raw frame `20130`; HCZ remains fully green. No trace payloads
+  changed.
+- Fix/Test: S3K HCZ's retained results handoff now leaves the WAIT animation
+  cursor intact when the native signpost owner already restored that player
+  slot. This removes the one-cycle Tails mapping lag at raw frames `10470`,
+  `10478`, and `10486`; the complete HCZ replay now passes all physics,
+  animation, ring, and hardware checks. The gameplay-order canary remains
+  green for HCZ, MGZ, and LBZ, and no trace payloads changed.
+- Fix/Test: S3K HCZ2's geyser handoff now leaves the camera at the ROM's
+  pre-dispatch position when `StartNewLevel` suppresses that frame's camera
+  step, and fresh-level transitions publish the neutral player slot boundary
+  before releasing the prepared destination state. HCZ removes the physical
+  camera error at raw frame `31335` and the fresh-transition air/status errors
+  at raw frame `31436`, reaching direct `KOS_DECOMPRESSION_QUEUE#125` at raw
+  frame `31443` (`sha256:6f2aa2bed64f5c739a97dc41e94051a8852c470453a96bc831a746007f6c0a27`);
+  only the three established Tails mapping errors remain. AIZ, MGZ, CNZ, ICZ,
+  and LBZ route canaries remain green. Ring comparisons stay forced errors;
+  no trace payloads changed.
+- Fix/Test: S3K HCZ2's post-defeat geyser now preserves the ROM's
+  `loc_6B7BC`/`loc_6B7D2` owner-dispatch boundary before starting the shake.
+  The HCZ replay advances past the seven-error Tails handoff cluster to one
+  physical `camera_y` error at raw frame `31335`; AIZ, MGZ, CNZ, ICZ, and LBZ
+  route canaries remain green. No trace payloads changed.
+- Fix/Test: S3K HCZ2 now preserves the ROM's first-free results-owner
+  allocation and separates its initial results-art service boundary from the
+  nested child handoff. The capsule restores the ROM-visible player pose and
+  saved mapping at the geyser transition, and the geyser cutscene admits its
+  KosM art once. HCZ consumes direct queue edge `#119`; AIZ, MGZ, CNZ, ICZ, and
+  LBZ route canaries remain green. No trace payloads changed.
+- Fix/Test: S3K HCZ2's cutscene button now follows the ROM `Sprite_OnScreen_Test`
+  lifetime instead of remaining persistent after it leaves the camera window.
+  Releasing its slot before the HCZ2 boss child allocations realigns the turbine,
+  Robotnik head, water column, and lost-ring slots, removing the ring-count
+  mismatch at raw frame `29037` and advancing the HCZ physics frontier to the
+  queue-state mismatch at raw frame `30645`; the next recorded edge is
+  `KOS_DECOMPRESSION_QUEUE#116` at raw frame `30649`. Focused pause, recording,
+  HCZ-event, MGZ, and LBZ regressions pass. No trace payloads changed.
+- Fix/Test: S3K recorded replay now preserves the ROM `LevelLoop` boundary
+  around `Pause_Game` and `Demo_PlayRecord`: a Start edge on a full row remains
+  visible to that row's gameplay body, then enters the following pause loop.
+  HCZ advances past the Tails movement mismatch at raw frame `25526` to the
+  next physical discrepancy, a ring count at raw frame `29037`; its next
+  hardware boundary is `KOS_DECOMPRESSION_QUEUE#116` at raw frame `30649`.
+  Focused pause/recording/HCZ tests and MGZ/LBZ complete-run regressions remain
+  green. No trace payloads changed.
+- Fix/Test: S3K HCZ slide terrain now runs after the complete ROM
+  `Process_Sprites` pass, so PathSwap solid-plane publication is visible on
+  the same physics frame. Suppressed replay rows now consume ROM Start pause
+  edges, and StarPost bonus stars follow the disassembly's ring-only `>= 20`
+  threshold. HCZ Sonic physics advances past raw frame `16133` to raw
+  `25508`; the next physical discrepancy is Tails at raw `25526`, with the
+  next hardware boundary at raw `27686`. No trace payloads changed.
+- Fix/Test: S3K HCZ now lets the retained `Obj_LevelResults` owner publish
+  the act-2 carrier handoff at the ROM-backed title-owner art-admission
+  boundary, rather than waiting for the visual overlay to disappear. The
+  HCZ complete-run physics frontier reaches the next unconsumed direct
+  `KOS_DECOMPRESSION_QUEUE#113` edge at raw frame `20697`; AIZ, MGZ, and LBZ
+  regression traces remain green and no trace payloads changed.
+- Fix/Test: S3K HCZ results now retain the native first-free results-owner
+  allocation and immediate signpost ending-pose handoff where the ROM's owner
+  slot is already behind the current dispatch. The HCZ complete-run frontier
+  advances past raw frame `9761` to the next independent queue boundary at raw
+  frame `9900`; MGZ and LBZ remain green and no trace payloads changed.
+- Fix/Test: S3K AIZ held-admission KosM queue publication now preserves the
+  native next-child direct-tail boundary. The complete-run frontier advances
+  to direct `KOS_DECOMPRESSION_QUEUE#40` at raw frame `11354`; standard AIZ,
+  MGZ, and LBZ remain green. No trace payloads changed.
+- Fix/Test: S3K AIZ post-reload enemy-art admission now preserves the ROM's
+  held-tail publication provenance and native KosM child handoff. The complete
+  AIZ replay reaches direct `KOS_DECOMPRESSION_QUEUE#50` at raw frame `20376`
+  with no pending engine work; standard AIZ, MGZ, and LBZ remain green. No trace
+  payloads changed.
+- Fix/Test: S3K AIZ's allocated intro title-card owner now preserves the
+  native `Obj_TitleCardWait2` poll before publishing `LoadEnemyArt`, advancing
+  the AIZ replay handoff without changing trace data.
+- Fix/Test: S3K fresh-level title owners now publish the ROM-backed KosM
+  handoff at the retained owner boundary instead of the visual display-timer
+  expiry. LBZ consumes direct queue completion `#322` at raw frame `46196` and
+  reaches the trace end at raw frame `46243` with zero errors; the same
+  source-aligned handoff restores the MGZ complete-run queue window through raw
+  frame `39397`. No trace payloads changed.
+- Fix/Test: S3K camera rendering now models the ROM `Camera_*_pos_copy`
+  publication before event-owned camera motion. LBZ final fall preserves the
+  published Y copy while lowering the physical camera by 2 pixels, advancing
+  the complete-run first mismatch from raw frame `46066` to `46088`
+  (`tails_cpu_respawn_counter`); no trace payloads changed.
+- Fix/Test: S3K LBZ FinalBoss1 now publishes the results handoff on the native
+  parent pass after its last result child retires, removing two stale
+  retirement dispatches. The LBZ complete-run first mismatch advances from raw
+  frame `44451` to `46066` (`tails_cpu_respawn_counter`), consumes direct/module
+  queue edge `#317` at raw frame `44454`, and stops at the next direct edge
+  `#318` at raw frame `46113`; no trace payloads changed.
+- Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's pending initialization
+  dispatch after its lower-slot allocation, so the first `Obj_Wait` decrement
+  occurs on the correct pass. The LBZ complete-run earliest mismatch advances
+  from raw frame `43563` to raw frame `44451` (`tails_cpu_ctrl2_held`, with the
+  next direct/module queue edge `#317` at raw frame `44454`); no trace payloads
+  changed.
+- Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's allocation boundary and
+  native child ownership across the Death Egg launch: the ship releases its
+  exhaust slot before the boss graph is built, turret descendants are deferred
+  to their segment pass, and laser/explosion descendants use their current SST
+  owners. The LBZ complete-run replay reaches the recorded
+  `KOS_DECOMPRESSION_QUEUE#314` edge at raw frame `43942` with no comparator
+  errors before it; AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  frontiers. No trace payloads changed.
+- Fix/Test: S3K LBZ now models the ROM's shared-angle landing handoff for
+  Tails, grounded short-tail results-owner publication boundary, and immediate
+  LBZ2 Death Egg launch-art queue order. The LBZ complete-run prefix advances
+  from direct completion `#286` at raw frame `21696` through module completion
+  `#210` at raw frame `39416` with no comparator errors; AIZ, HCZ, MGZ, CNZ, and
+  ICZ retain their established frontiers. No trace payloads changed.
+- Fix/Test: S3K LBZ miniboss arm collision regions now publish each native
+  child's live X/Y through the folded provider, including the routine-$0A
+  one-pixel escape interleave. This removes the Tails hurt-transition mismatch
+  at raw frame `21229` and reaches the next recorded
+  `KOS_DECOMPRESSION_QUEUE#286` completion at raw frame `21696`. AIZ, HCZ, MGZ,
+  CNZ, and ICZ retain their established frontiers; no trace payloads changed.
+- Fix/Test: S3K LBZ Robotnik now preserves the ROM's low position words when
+  `loc_8CC3C` teleports him, and its post-collapse proximity check selects the
+  native nearest P1/P2 player. The LBZ complete-run frontier advances past the
+  Robotnik/miniboss queue mismatch at raw frame `19869`; the first remaining
+  comparison is Tails' transition at raw frame `20519` (`tails_x_speed`,
+  expected `0x0200`, actual `0x01F2`). AIZ, HCZ, MGZ, CNZ, and ICZ retain their
+  established frontiers; no trace payloads changed.
+- Fix/Test: S3K fresh-level title owners now publish the ROM-backed runtime-art
+  handoff when their native `#$16` wait reaches `LoadEnemyArt`/EXIT. The
+  recording driver restores the destination player and camera on that same
+  semantic boundary, while the S3K level loader defers the real KosM parent
+  batch through the following PRE_MAIN_LOOP service so its first child starts
+  on the next iteration. ICZ's complete-run report drops from 10 to 2 errors,
+  consumes direct completion `#264` at raw frame `25341`, and leaves only the
+  established camera mismatches at raw frames `15401`/`15403`; no trace
+  payloads changed.
+- Fix/Test: S3K ICZ's retained ICZ2 results owner now models the single
+  native child-slot retirement between the final embedded result child and
+  `Obj_ICZEndBoss.loc_71DE2`. The clean complete-run report drops from 70 to
+  10 errors, removing the raw frame `25093` WAIT/ending-pose and sidekick
+  cascade; the next actionable handoff comparison is raw frame `25338`.
+  AIZ, HCZ, MGZ, and CNZ retain their established frontiers; no trace
+  payloads changed.
+- Fix/Test: S3K ICZ's deferred Tails ending-pose handoff now preserves the
+  CPU-written `Ctrl_2_logical` word through the native `Set_PlayerEndingPose`
+  object-control write; the routine does not mirror raw controller input. The
+  ICZ complete-run report drops from 71 to 70 errors, removing the raw frame
+  `24576` control-latch mismatch and leaving the next actionable comparison at
+  raw frame `25093`; no trace payloads changed.
+- Fix/Test: S3K ICZ's damaged boss children now use the native indexed launch
+  velocities, first-pass detach timing, cull-based slot release, and top-body
+  `AllocateObjectAfterCurrent` anchor. Frost effects are processed by native SST
+  order, and a reused slot no longer retains the retired solid checkpoint. The
+  ICZ complete-run report drops from 74 to 71 errors: the ring-count mismatch at
+  raw frame `24179` is gone and the first remaining actionable comparison is
+  `tails_cpu_ctrl2_held` at raw frame `24576`; no trace payloads changed.
+- Fix/Test: S3K ICZ's bottom solid now uses the native `$18` landing width
+  initialized by `word_7231E`, rather than the `$10` width from a later effect
+  child. The ICZ complete-run replay now accepts the raw frame `23182` landing,
+  consumes direct completion `#257`, and reaches the next direct completion
+  `#264` at raw frame `25341`; the first actionable comparison is now the ring
+  count at raw frame `24179`. No trace payloads changed.
+- Fix/Test: S3K ICZ's retained title-owner handoff now admits the native enemy
+  KosM batch on the following runtime pass and releases the ICZ2 camera-size
+  workers three dispatches after title completion. The complete-run replay
+  consumes the recorded direct/module completions `#253`–`#254` and reaches the
+  next direct completion `#255` at raw frame `21185` with no comparator errors
+  before that boundary; AIZ, HCZ, MGZ, and CNZ retain their established
+  behavior and no trace payloads changed.
+- Fix/Test: S3K ICZ's miniboss defeat flow no longer adds an extra results wait
+  entry to a preloaded-act handoff. The native `Obj_LevelResultsWait2` publication
+  now mutates the retained owner to `Obj_TitleCard` at raw frame `15258`, while
+  the semantic EndSignControl publication restores the player and retires the
+  signpost's deferred pose tail. The ICZ complete-run replay is comparator-green
+  through raw frame `15384` and now stops at the next recorded direct completion
+  `#253`/raw frame `15400`; AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers and no trace payloads changed.
+- Fix/Test: S3K resource-owner act reloads now transfer only the prepared
+  handoff resources; they do not speculate a new `PLCKosM` enemy batch before
+  the target's ROM object owners execute. ICZ's target Starpost consequently
+  submits the recorded Stars 3 module/direct pair at raw frames `12381`/`12380`
+  instead of the ICZ Snowdust batch at raw frame `12352`. The ICZ complete-run
+  frontier advances to its first remaining comparator error at raw frame
+  `15258`; AIZ, HCZ, MGZ, and CNZ remain at their established frontiers and no
+  trace payloads changed.
+- Fix/Test: S3K ICZ's resource-owner KosM parent now keeps a ready child
+  pending across a held loop-tail row when the parent is explicitly exportable
+  across the in-loop level handoff. The ICZ complete-run replay advances from
+  direct completion `#241` at raw frame `12330` to the recorded direct
+  completion `#245` at raw frame `12380`; its first remaining comparator error
+  is raw frame `12352`, with AIZ, HCZ, MGZ, and CNZ unchanged and no trace
+  payloads changed.
+- Fix/Test: S3K CNZ's in-loop act-transition oscillator dispatch is now
+  consumed by the transition owner exactly once, so the shared loop tail no
+  longer double-advances CNZ1→CNZ2. The CNZ standard replay advances from
+  direct completion `#28`/raw `20105` to `#31`/raw `33755`, with its first
+  remaining comparator error at raw frame `25743`; AIZ, HCZ, and MGZ remain
+  at their recorded frontiers and no trace payloads changed.
+- Fix/Test: S3K MGZ's fresh-level title boundary now preserves the native
+  destination camera/player handoff, submits the ROM-backed KosM batch at the
+  first post-title loop boundary, and releases the retained transition owner
+  on the following loop pass. MGZ's complete-run replay is now zero-error
+  through the MGZ-to-CNZ handoff; AIZ and HCZ remain at their committed
+  frontiers and no trace payloads changed.
+- Fix/Test: S3K MGZ2 now clears a stale `End_of_level_flag` when it publishes
+  the new ROM capsule/results window, so the retained boss waiter cannot start
+  the MGZ-to-CNZ fade from the preceding act's completion flag. The MGZ
+  complete-run replay is now gameplay/physics green through the recorded end;
+  the first remaining comparison is the expected hardware queue window at raw
+  frame `38517` (`queue.s3k_kos_direct.busy`) before direct completion `#183`.
+  AIZ and carried-results ownership checks remain green; no trace payloads
+  changed.
+- Fix/Test: S3K MGZ Mantis now creates its visual child only after
+  `Obj_WaitOffscreen` restores normal operation, matching the ROM's
+  `Obj_Mantis` `loc_88E82`/`CreateChild1_Normal` allocation order. The MGZ
+  complete-run comparator frontier advances from 66 errors with its first
+  mismatch at raw frame `28398` (`rings`) to 65 errors with its first mismatch
+  at raw frame `38414` (`x`); no trace payloads changed.
+- Fix/Test: S3K MGZ's retained Act 2 boundary handoff now preserves the
+  native two-pixel max-Y carry before the first `Obj_IncLevEndYGradual` worker
+  dispatch. The MGZ complete-run comparator frontier advances from 67 errors
+  with a raw `16656` `camera_y` mismatch to 66 errors with the first error at
+  raw `28398` (`rings`); the full camera error group is gone and no trace
+  payloads changed.
+- Fix/Test: S3K MGZ's retained Act 2 `Change_Act2Sizes` workers now run in
+  the object-loop slot before `DeformBgLayer`, and the carried title owner
+  retains three ROM parent dispatches after visual-child retirement. The MGZ
+  complete-run comparator frontier remains at raw frame `16656` but advances
+  from 68 to 67 errors (`camera_y` actual `0x0810` to `0x0811`), removes the
+  cascading `camera_x` group, and shortens the first error through raw `16670`;
+  AIZ and HCZ remain at their committed frontiers and no trace payloads
+  changed.
+- Fix/Test: S3K MGZ's carried Act 2 title reset budget now counts only the
+  six child-SST create/render entries that remain after the carried owner
+  publication, matching the ROM's raw frame `16551` ring reset. The MGZ
+  complete-run comparator frontier advances from raw frame `16551`
+  (`rings`, 69 errors) to raw frame `16656` (`camera_y`, 68 errors); AIZ and
+  HCZ remain at their committed frontiers and no trace payloads changed.
+- Fix/Test: S3K MGZ's carried Act 2 title owner now submits the four
+  ROM-backed title-card parents on the same `Obj_LevelResultsWait2`
+  publication dispatch, while the retained results shell survives for its
+  following owner pass. The MGZ complete-run comparator frontier advances
+  from raw frame `16512` (`queue.s3k_kos_direct.busy`, 77 errors) to raw
+  frame `16551` (`rings`, 69 errors); AIZ and HCZ remain at their committed
+  frontiers and no trace payloads changed.
+- Fix/Test: S3K HCZ seamless Act 2 title-card ownership now honors the explicit
+  post-reload title-card request while the carried results flag remains active;
+  the carried results owner no longer attempts a second title initialization.
+  The HCZ complete-run hardware frontier advances from direct `#104` at raw
+  frame `10391` to direct `#113` at raw frame `20697`; AIZ remains green and no
+  trace payloads changed.
+- Fix/Test: S3K signpost results owners now preserve their ROM allocation
+  boundary: preserved-grounded and AIZ2 general-AllocateObject paths initialize
+  on the following pass, while the ordinary signpost path publishes
+  ResultsGeneral, the title-card number, and the character name in the same
+  higher-slot pass. The MGZ complete-run comparison advances from raw frame
+  `15974` to `16512` and hardware admission reaches direct `#182` at raw frame
+  `34932`; standard AIZ remains green and no trace payloads changed.
+- Fix/Test: S3K MGZ Act 2 drilling-Robotnik's flee tail now submits the
+  ROM-owned primary terrain, secondary terrain, Spiker, and Mantis KosM
+  modules in native order, with the runtime coordinator retaining the
+  ready-and-claim handoff after the object is deleted. The MGZ complete-run
+  hardware frontier advances from direct `#153` at raw frame `18276` to
+  direct `#162` at raw frame `18342`; no trace payloads changed.
+- Fix/Test: S3K MGZ Act 2 drilling-Robotnik now submits the ROM-owned
+  `ArtKosM_MGZEndBoss` and `ArtKosM_MGZEndBossDebris` modules to the shared
+  KosM FIFO in native order and retains rewind ordinals for both jobs. The
+  MGZ complete-run hardware frontier advances from direct `#149` at raw frame
+  `17952` to direct `#153` at raw frame `18276`; no trace payloads changed.
+- Fix/Test: S3K HCZ water-wall debris and spray now use the native
+  `0x18 x 0x18` `Sprite_OnScreen_Test` bounds, preventing vertical geyser
+  particles from exhausting the dynamic SST pool before the conveyor
+  Y-pass. The HCZ complete-run hardware frontier advances from Kosinski
+  `#90` to `#104`; the first comparator error moves from raw frame `3253` to
+  `9761` (103 errors at the current stop). Standard AIZ remains green; no
+  trace payloads changed.
+- Fix/Test: S3K held-row replay closure now carries a deferred KosM child
+  handoff through the following direct-FIFO tail and services event-owned
+  runtime art between the suppressed-row POST and PRE boundaries. The AIZ
+  complete-run hardware frontier advances from direct Kosinski `#35` at raw
+  frame `6346` to `#50` at raw frame `20376`; the standard AIZ replay remains
+  green with zero comparator errors. No trace payloads changed.
+- Fix/Test: S3K AIZ trace replay now preserves the native AIZ-to-HCZ fade and
+  title-card transition boundary, orders the AIZ results/cutscene handoff by
+  ROM object timing, and defers only held-tail KosM child publication. The
+  standard AIZ replay advances through the HCZ handoff with zero comparator
+  errors; no trace payloads changed.
+- Fix/Test: restore the merged S3K headless title-card condition and make
+  custom S3K replay helpers use the canonical phase, VBlank-starvation,
+  recorded-admission, and trace-row lifecycle. CNZ focused slot and miniboss
+  boundary tests now pass; no trace payloads changed.
+- Fix/Test: S3K fresh-level terrain handoff restores headless
+  transition-owned title-card admission and publishes each destination's
+  ROM-backed primary and secondary terrain parents through the native
+  KosM/direct queue owner at the title-card art-readiness boundary. Live,
+  rendered-headless, omitted-headless, and cached same-zone title paths now
+  retain the same owner, while two-parent capacity and archive validation are
+  failure-atomic. The LBZ
+  complete-run hardware-authority frontier now consumes direct `#322..#329`
+  (raw frames `46196..46220`) and module `#219..#220` (raw frames `46211` and
+  `46221`); its separate comparator report remains at 83 errors, first at the
+  pre-existing raw frame `19869`. No trace payloads changed.
+- Fix: shared playable-character movement now preserves the ROM's entry-time
+  `move_lock` decision through the ground-input and balance/lookup tail, so a
+  timer decremented later in the same dispatch cannot enable a balance state
+  early. This applies consistently to the games using the shared movement
+  path.
+- Fix: S3K Bubbler and Air Countdown objects now use their ROM-initialized
+  zero vertical render margin for off-screen lifetime checks, preventing stale
+  object slots from changing later allocation and execution order.
+- Fix/Test: S3K LBZ's final-boss owner now submits and rewind-owns the
+  ROM-backed `ArtKosM_LBZ2DeathEggSmall` parent, and the final-fall handoff
+  observes the LBZ2 `$-2` camera step at the object/event boundary. Suppressed
+  replay rows now route pending zone transitions and normal title-card art
+  through the same production path. The LBZ complete-run hardware frontier
+  advances from direct Kosinski `#317` at raw frame `44454` to direct `#322` at
+  raw frame `46196`; direct `#317..#321` and module `#214..#218` now match
+  without changing trace payloads.
+- Fix/Test: S3K LBZ final-boss laser children now refresh through their ROM
+  parent order, keeping the firing head and muzzle collision state aligned at
+  the first HP2 hit. The LBZ complete-run hardware frontier advances from
+  direct Kosinski `#314` at raw frame `43942` to direct `#317` at raw frame
+  `44454`; direct `#314..#316` and module `#211..#213` now match without
+  changing trace payloads.
+- Fix/Test: S3K LBZ now submits the ROM-owned Death Egg terrain Kos/KosM
+  batch through the shared hardware queues, then submits the one-module
+  launch PLC after that terrain batch retires. The LBZ complete-run hardware
+  frontier advances from direct Kosinski `#304` at raw frame `39353` to direct
+  `#314` at raw frame `43942`; direct `#304..#313` and module `#209..#210`
+  now match without changing trace payloads.
+- Fix/Test: S3K LBZ's end-boss owner now submits and rewind-owns the ROM-backed
+  `ArtKosM_LBZEndBoss` parent when the launcher object is created. The LBZ
+  complete-run hardware frontier advances from direct Kosinski `#303` at raw
+  frame `37405` to direct `#304` at raw frame `39353`; direct `#303` and module
+  `#208` now match without changing trace payloads.
+- Fix/Test: S3K LBZ now arms the retained Act 2 boundary workers at the
+  LBZ event provider's title-owner runtime-art admission boundary and keeps
+  the workers' creation-pass fixed-point carry. The LBZ complete-run hardware
+  frontier advances from direct Kosinski `#301` at raw frame `29371` to direct
+  `#303` at raw frame `37405`; direct `#301..#302` and module `#206..#207`
+  now match without changing trace payloads.
+- Fix/Test: S3K's in-level title owner now models `Obj_TitleCardWait2`'s
+  second owner poll for `LoadEnemyArt` independently of the retained camera
+  release tail. The LBZ complete-run hardware frontier advances from direct
+  Kosinski `#297` at raw frame `22332` to direct `#301` at raw frame `29371`;
+  direct `#297..#300` and module `#202..#205` now match without changing trace
+  payloads.
+- Fix/Test: LBZ1 Robotnik now submits and rewind-owns the ROM's
+  `ArtKosM_LBZMiniboss` parent at `loc_8CCF6`, instead of relying only on
+  preloaded standalone art. The LBZ complete-run hardware frontier advances
+  from direct Kosinski `#282` at raw frame `19871` to direct `#297` at raw
+  frame `22332`, without changing trace payloads.
+- Fix/Test: S3K AIZ disappearing-floor animation now uses the ROM's
+  `Level_frame_counter`, and its border child moves off-screen before still
+  running `SolidObjectFull` on the frame-3 reappear edge. The standard AIZ
+  replay frontier advances from raw frame `13986` (`tails_air`) to raw frame
+  `16067` (`queue.s3k_kos_direct.busy`) with `194` remaining errors.
+- Fix/Test: S3K AIZ spiked-log sidekick touch now preserves the ROM-owned
+  Tails animation byte and restarts the retained script cursor for the hurt
+  pass; the standard replay frontier advances from raw frame `10744`
+  (`tails_animation_id`) to raw frame `13986` (`tails_air`) with no trace
+  payload changes.
+- Fix/Test: S3K Tails' released-underwater push cleanup now preserves a live
+  SolidObject-owned push latch alongside terrain wall provenance. The standard
+  AIZ replay frontier advances from raw frame `10701` (`tails_mapping_frame`)
+  to raw frame `10744` (`tails_animation_id`) without changing trace payloads.
+- Fix/Test: S3K AIZ's defeated miniboss now releases the act-size camera
+  workers at the semantic in-level title owner's published `LoadEnemyArt`
+  handoff, before the later `End_of_level_flag` completion edge. The standard
+  AIZ replay frontier advances from raw frame `8941` (`camera_y`) to raw frame
+  `10701` (`tails_mapping_frame`) without changing trace payloads.
+- Fix/Test: S3K AIZ phase-one title ownership now admits the ROM-backed enemy
+  batch on the second native exit-owner poll, after child retirement and before
+  the remaining release delay. The standard AIZ replay frontier advances from
+  raw frame `8938` to the camera handoff at raw frame `8941` without changing
+  trace payloads.
+- Fix/Test: S3K results art now follows the ROM's first-dispatch submission
+  boundary, and the AIZ in-level title resets the level gamestate on its native
+  display row. The standard AIZ comparator's first error moves from raw frame
+  `8837` (`rings`) to raw frame `8938` (`queue.s3k_kos_direct.busy`), while the
+  separate hardware-authority frontier remains the next unsubmitted queue job.
+  No trace payloads changed.
+- Fix/Test: S3K AIZ's live act-2 reload now admits the ROM-observed
+  `PLCKosM_AIZ` enemy batch through the immediate runtime-art owner. Standard
+  AIZ advances past direct completion `#36` at raw frame `5543` to `#47` at
+  raw frame `8942`; the complete-run lane advances past `#35` at raw frame
+  `6346` to `#46` at raw frame `12002`, without changing trace payloads.
+- Fix/Test: S3K AIZ now applies the act-2 `Load_Level` and coordinate-offset
+  handoff inside the live background-event dispatch, matching the ROM's
+  same-row reload visibility. The AIZ replay frontier advances from raw frame
+  5496 to the post-reload Kosinski queue boundary at raw frame 5542.
+- Fix/Test: S3K AIZ's transition floor now enters the normal object pass
+  without a synthetic same-row solid checkpoint. This preserves the ROM's
+  allocation-row versus first-execution-row boundary and advances the AIZ
+  replay frontier from raw frame 5414 to the act-2 reload handoff at 5496.
+- Fix/Test: S3K AIZ fire-transition events now perform the first fire-rise
+  step on the same background-event tick that starts the ROM transition.
+  This removes the one-frame AIZ queue handoff drift without changing the
+  trace payload and advances the first comparison frontier to the Tails
+  vertical-state handoff.
+- Fix/Test: S3K CNZ Clamer now preserves the ROM's one-pass initialization
+  boundary after `Obj_WaitOffscreen` releases the object, so its idle gate and
+  auto-close projectile path begin on the native execution pass. CNZ's clean
+  replay frontier advances from raw frame 25,047 to 25,743 without changing
+  the trace payload.
+- Fix/Test: S3K retained-results CPU cadence now keeps playable-history
+  projection for the retained catch-up marker bridge while leaving the normal
+  Tails auto-jump gate on the native counter after the title overlay completes.
+  CNZ's clean replay frontier advances from raw frame 23,302 to 25,047.
+- Fix/Test: S3K off-screen SolidObject push release now publishes the native
+  Walk/Run animation word before the sidekick animation slot. CNZ's clean
+  replay frontier advances from raw frame 21,146 to 23,302 without changing
+  the trace payload.
+- Fix/Test: S3K CNZ overlapping hover fans now execute in managed SST order,
+  restoring the native two-fan lift handoff and advancing the clean replay
+  frontier from raw frame 20,457 to 21,146.
+- Fix/Test: the shared global oscillator now advances at the native level-loop
+  tail; an in-frame act transition consumes its provider-owned transition
+  dispatch without a duplicate tail tick. CNZ bumper orbit and carried-results
+  dispatch timing now reach the recorded direct Kosinski completion #30 (raw
+  frame `25,667`), beyond the previous #28 boundary.
+- Fix/Test: S3K carried title-card reset ownership now continues ticking while
+  ROM-backed title KosM work is still being serviced, while the title owner
+  keeps target enemy admission sealed until its completion dispatch. CNZ's
+  retained EndSignControl handoff carries an explicit zero preloaded-camera
+  tail and starts the Act 2 size workers after its two native handoff
+  dispatches; the CNZ report falls from 1,051 to 674 comparison errors without
+  changing the trace payload.
+- Fix/Test: S3K held-level-counter replay now services the production module
+  and direct Kosinski queue tails at their recorded ROM boundaries. Retained
+  CNZ results-title ownership consumes its admission once during the held
+  dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
+  post-transition control restoration now follow the ROM dispatch order. The
+  canonical CNZ timing frontier advances from direct completion #24 to #28.
 ## v0.5.20260411 (Released 2026-04-11)
 
 Analysis range: `v0.4.20260304..v0.5.20260411` on `develop` (`2479` commits, `2298` non-merge commits,

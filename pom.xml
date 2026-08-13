@@ -140,7 +140,82 @@
                mvn -Ptrace-replay test
         -->
         <profile>
+            <!--
+              Performance measurements, separated from the correctness suites because they
+              are wall-clock sensitive. TestVerifierCostBenchmark asserts fps() over 100
+              ("headless replay implausibly slow"), which is a real signal on a quiet box
+              and pure noise beside a parallel trace sweep. Together the two heavy classes
+              were about 16 minutes, 37 percent of the trace-replay profile, and neither
+              verifies a trace field: TestVerifierPoolBenchmark's own javadoc says per-frame
+              trace validation is excluded, being the trace suite's job and not a verifier's.
+              Selected by tag rather than filename, because most Benchmark-named classes in
+              this tree are fast unit tests about benchmark tooling.
+              Run with: mvn -Pbenchmarks test
+            -->
+            <id>benchmarks</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine}</argLine>
+                            <forkCount>1</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <groups>performance-measurement</groups>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>trace-replay</id>
+            <!--
+              The trace-replay suite needs more heap than the shared 1g default,
+              because a run-chain test holds every segment of its run at once:
+              TraceRunReplayWalker.plan() loads all segments eagerly into one
+              TraceData[] and returns a List<SegmentPlan> that retains them for
+              the whole walk. Measured live heap after plan(), per run fixture:
+
+                s3k-knuckles-complete-superemeralds   67 segments   1041 MB
+                s2-sonic-tails-complete-emeralds      35 segments    449 MB
+                s1-sonic-complete-withemeralds        34 segments    322 MB
+                s3k-multibonus / s3-knux-multibonus-ss 25 segments   286 MB
+
+              Only the Knuckles super-emerald run exceeded 1g, which is why it
+              alone died with "Java heap space" and wrote no report while every
+              other chain passed. Its measured peak live heap including the
+              engine was 1245 MB, which is what took this profile from 1g to 2g.
+
+              2g in turn stopped being enough once the 63-segment
+              s3k-sonic-tails-complete-emeralds run landed. Measured on this
+              worktree with -Xlog:gc* over the whole profile at -Xmx2500m
+              (forkCount=1, 834 tests, no OOM): four Full GCs, the largest
+              post-Full-GC live set 2069 MB, just above 2g's 2048 MB, so the
+              fork died mid-suite after 41 report files with every class
+              alphabetically after TestS3kMegaRunChain unexecuted, and reported
+              a truncated 401 tests that looked healthier than the real run.
+              The same profile completes all 834 tests at both 3g and 4g with
+              an identical red set, so 3g is the landed value: ~48% headroom
+              over the 2069 MB measured live set, and forkCount still defaults
+              to 4 here (4 x 3g = 12g worst case).
+
+              The cost is aux events, not physics rows: across the Knuckles run,
+              aux_state.jsonl is 1476 MB uncompressed against 56 MB of
+              physics.csv, and a heap histogram puts TraceFrame at 3% of the
+              retained bytes. Streaming the rows would not have helped; streaming
+              the aux events would, and is the durable fix if a future capture
+              pushes past this ceiling again.
+            -->
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -162,6 +237,7 @@
                                 <include>**/tests/trace/**/*ReplayBootstrap.java</include>
                                 <include>**/tests/trace/s2/*Regression.java</include>
                             </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
                             <excludes>
                                 <exclude>**/Debug*.java</exclude>
                                 <exclude>**/*Debug*.java</exclude>

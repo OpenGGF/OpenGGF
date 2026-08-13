@@ -1211,7 +1211,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
-				if (!playable.shouldRefreshRenderFlagThisFrame()) {
+				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
+				// The hurt routine's unconditional DisplaySprite only covers the
+				// frame it ran on (docs/s2disasm/s2.asm:38193, :41076).
+				playable.clearHurtRoutineOwnedDisplayLatch();
+				if (!refresh) {
 					continue;
 				}
 				playable.setRenderFlagOnScreen(camera.isVisibleForRenderFlag(playable));

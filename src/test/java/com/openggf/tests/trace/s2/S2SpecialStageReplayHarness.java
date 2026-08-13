@@ -158,7 +158,7 @@ final class S2SpecialStageReplayHarness {
                 if (pass.sequence() == terminalPreStartPassSequence) {
                     // The pre-start loop's terminal pass is already pending
                     // engine-side, and the ROM copies Ctrl_1/Ctrl_2 *before*
-                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6684-6685),
+                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6675-6676),
                     // so it owns no post-V-int controller sample for the
                     // recurring loop's binding path to consume. Publish it
                     // through the startup boundary instead.

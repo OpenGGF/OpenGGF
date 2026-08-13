@@ -1,8 +1,11 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
+import com.openggf.trace.timing.HardwareCompletionEdge;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,7 +37,13 @@ public class TraceData {
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
+    private final Map<Integer, HardwareCompletionEdge> unobservedDirectChildrenByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
+    // Memoised pure derivations of the immutable event map. Both are queried
+    // once per replayed frame, and each full computation is O(total events),
+    // so recomputing them made replay quadratic in trace length.
+    private List<TraceEvent.DynamicArtTransferState> cachedDynamicArtTransferStates;
+    private Boolean cachedHasRecordedPreLevelPrefix;
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -50,6 +59,7 @@ public class TraceData {
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
         this.observedEventTypes = buildLatestEventIndexes();
+        this.unobservedDirectChildrenByFrame = buildUnobservedDirectChildren();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -238,6 +248,127 @@ public class TraceData {
         return List.copyOf(states);
     }
 
+    /**
+     * Returns the queue heartbeat this row is compared against.
+     *
+     * <p>Recorded queue rows are compared as sampled. A child published by
+     * {@code Process_Kos_Module_Queue} in LevelLoop's tail
+     * (docs/skdisasm/sonic3k.asm:7908) is decompressed by the next pass's
+     * {@code Process_Kos_Queue} (7887), which V-int can interrupt and bookmark
+     * mid-stream (2840-2843, {@code Restore_Kos_Bookmark} at 2957). Its
+     * {@code Kos_decomp_queue_count} entry is therefore still an unfinished
+     * FIFO head at the {@code Wait_VSync} sample that follows (7888), on a held
+     * loop tail as much as on any other row, and replay reproduces that head.
+     */
+    public List<TraceEvent.LoadQueueState> loadQueueStatesForComparisonFrame(
+            int frame) {
+        return loadQueueStatesForFrame(frame);
+    }
+
+    public HardwareCompletionEdge unobservedDirectChildForComparisonFrame(
+            int frame) {
+        return unobservedDirectChildrenByFrame.get(frame);
+    }
+
+    private Map<Integer, HardwareCompletionEdge> buildUnobservedDirectChildren() {
+        // Selection below is by queue-kind wire name (s3k_kos_module /
+        // s3k_kos_direct) and by KOS_DECOMPRESSION_QUEUE completion edges, which
+        // no other game emits; a trace without those rows normalizes to an empty
+        // map on its own, so no game-name gate belongs here.
+        if (frames.size() < 2 || hardwareTimingSchedule == null) {
+            return Map.of();
+        }
+        Map<Integer, HardwareCompletionEdge> unobservedDirectChildren =
+                new HashMap<>();
+        boolean moduleBatchActive = false;
+        boolean moduleBatchAdmittedOnHeldTail = false;
+        for (int index = 0; index < frames.size() - 1; index++) {
+            TraceFrame currentFrame = frames.get(index);
+            TraceFrame nextFrame = frames.get(index + 1);
+            List<TraceEvent.LoadQueueState> currentStates =
+                    loadQueueStatesForFrame(currentFrame.frame());
+            List<TraceEvent.LoadQueueState> nextStates =
+                    loadQueueStatesForFrame(nextFrame.frame());
+            TraceEvent.LoadQueueState currentModule = queueState(
+                    currentStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState currentDirect = queueState(
+                    currentStates, "s3k_kos_direct");
+            TraceEvent.LoadQueueState nextModule = queueState(
+                    nextStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState nextDirect = queueState(
+                    nextStates, "s3k_kos_direct");
+
+            boolean heldTail = isHeldTail(currentFrame, nextFrame);
+            if (currentModule != null && currentModule.busy()
+                    && !moduleBatchActive) {
+                moduleBatchActive = true;
+                moduleBatchAdmittedOnHeldTail = heldTail;
+            } else if (currentModule == null || !currentModule.busy()) {
+                moduleBatchActive = false;
+                moduleBatchAdmittedOnHeldTail = false;
+            }
+
+            List<HardwareCompletionEdge> nextDirectCompletions =
+                    directCompletionEdges(nextFrame.frame());
+            if (heldTail && moduleBatchActive
+                    && !moduleBatchAdmittedOnHeldTail
+                    && isIdle(currentDirect)
+                    && isIdle(nextDirect)
+                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
+                    && nextDirectCompletions.size() == 1) {
+                unobservedDirectChildren.put(
+                        currentFrame.frame(), nextDirectCompletions.getFirst());
+            }
+        }
+        return Map.copyOf(unobservedDirectChildren);
+    }
+
+    private List<HardwareCompletionEdge> directCompletionEdges(int rawFrame) {
+        return hardwareTimingSchedule.edgesAt(
+                        rawFrame, HardwareServiceBoundary.PRE_MAIN_LOOP)
+                .stream()
+                .filter(edge -> edge.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+    }
+
+    private static boolean isHeldTail(TraceFrame current, TraceFrame next) {
+        return current.gameplayFrameCounter() >= 0
+                && current.gameplayFrameCounter()
+                        == next.gameplayFrameCounter()
+                && current.lagCounter() >= 0
+                && next.lagCounter() > current.lagCounter()
+                && current.vblankCounter() >= 0
+                && next.vblankCounter() > current.vblankCounter();
+    }
+
+    private static boolean isIdle(TraceEvent.LoadQueueState state) {
+        return state != null && !state.busy() && !state.prepared();
+    }
+
+    private static TraceEvent.LoadQueueState queueState(
+            List<TraceEvent.LoadQueueState> states, String kind) {
+        return states.stream()
+                .filter(state -> kind.equals(state.kind()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static boolean sameQueueStateIgnoringFrame(
+            TraceEvent.LoadQueueState left,
+            TraceEvent.LoadQueueState right) {
+        return left != null && right != null
+                && left.kind().equals(right.kind())
+                && left.busy() == right.busy()
+                && left.prepared() == right.prepared()
+                && left.activeSource() == right.activeSource()
+                && left.activeDestination() == right.activeDestination()
+                && left.totalWork() == right.totalWork()
+                && left.remainingWork() == right.remainingWork()
+                && left.queuedFingerprints().equals(right.queuedFingerprints())
+                && left.serviceObservations().equals(right.serviceObservations());
+    }
+
     public List<TraceEvent.DynamicArtTransferState>
             dynamicArtTransferStatesForFrame(int frame) {
         List<TraceEvent.DynamicArtTransferState> states = new ArrayList<>();
@@ -355,6 +486,21 @@ public class TraceData {
     }
 
     public List<TraceEvent.DynamicArtTransferState> dynamicArtTransferStates() {
+        if (cachedDynamicArtTransferStates == null) {
+            cachedDynamicArtTransferStates = computeDynamicArtTransferStates();
+        }
+        return cachedDynamicArtTransferStates;
+    }
+
+    Boolean cachedPreLevelPrefix() {
+        return cachedHasRecordedPreLevelPrefix;
+    }
+
+    void cachePreLevelPrefix(boolean value) {
+        cachedHasRecordedPreLevelPrefix = value;
+    }
+
+    private List<TraceEvent.DynamicArtTransferState> computeDynamicArtTransferStates() {
         return eventsByFrame.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .flatMap(entry -> entry.getValue().stream())

@@ -1385,19 +1385,116 @@ public class TraceBinder {
                     "ROM and engine ring-buffer positions disagree"));
         }
 
+        // Slots the ROM has actually written since Obj01_Init; anything from
+        // here up is still the untouched pre-fill remnant. See
+        // untouchedPreFillRemnantStart for why it is sometimes uncomparable.
+        int remnantStart = untouchedPreFillRemnantStart(trace, snapshot, recorded);
+
         compareShortArray("player_history.x", recorded.xHistory(),
-                snapshot.playerXHistory(), out);
+                snapshot.playerXHistory(), remnantStart, out);
         compareShortArray("player_history.y", recorded.yHistory(),
-                snapshot.playerYHistory(), out);
+                snapshot.playerYHistory(), remnantStart, out);
         compareShortArray("player_history.input", recorded.inputHistory(),
                 snapshot.playerInputHistory(), out);
         compareByteArray("player_history.status", recorded.statusHistory(),
                 snapshot.playerStatusHistory(), out);
     }
 
+    /**
+     * Index of the first {@code Sonic_Pos_Record_Buf} slot that this replay
+     * cannot legitimately compare, or {@link Integer#MAX_VALUE} when every
+     * slot is comparable (the normal case).
+     *
+     * <p>{@code Obj01_Init_Continued} pre-fills all 64 ring slots with
+     * {@code (x_pos-$20, y_pos+4)} and zeroes their input/status records, then
+     * resets {@code Sonic_Pos_Record_Index} to 0
+     * (docs/s2disasm/s2.asm:36202-36218). {@code Sonic_RecordPos} then
+     * overwrites one slot per frame from {@code Obj01_Control}, so the slots
+     * below the next-free index hold genuine recorded motion and the slots at
+     * and above it still hold the pre-fill anchor.
+     *
+     * <p>That anchor is {@code x_pos}/{@code y_pos} <em>as they stand when
+     * Obj01_Init runs</em>. {@code LevelSizeLoad} has already placed the leader
+     * by one of two branches: the zone's {@code StartLocations} entry, or --
+     * when {@code Last_star_pole_hit} is non-zero -- {@code Obj79_LoadData}'s
+     * restore of {@code Saved_x_pos}/{@code Saved_y_pos}, which are a star
+     * post's own coordinates saved when the player touched it
+     * (docs/s2disasm/s2.asm:14773-14778, :36190, :44737-44738, :44776-44778).
+     *
+     * <p>A run segment replayed in isolation begins after that star post was
+     * touched, so it has no {@code Last_star_pole_hit} and no
+     * {@code Saved_x_pos}/{@code Saved_y_pos} — the same missing datum already
+     * documented for the segment star-post dongle artifact. Its cold boot
+     * therefore takes the {@code StartLocations}-equivalent path and anchors
+     * the pre-fill at the segment's own first recorded position, which is one
+     * physics tick later than the ROM's anchor. The difference is unrecoverable
+     * from the segment, and trace data is comparison-only, so those slots are
+     * excluded rather than hydrated. Everything the ROM wrote during the
+     * segment — every slot below the next-free index, and the input/status
+     * rings in full — stays compared.
+     *
+     * <p>The exclusion is gated on two independent facts, never on a zone,
+     * route, frame or game name:
+     * <ol>
+     *   <li>the replay's start X differs from the loaded zone/act's ROM
+     *       {@code StartLocations} X, which is what identifies the checkpoint
+     *       branch (a star post's X is never the level's spawn X); and</li>
+     *   <li>the recorded remnant still carries the pre-fill signature — one
+     *       identical coordinate pair across every remnant slot with zero
+     *       input and status — proving the ring has not wrapped past it.</li>
+     * </ol>
+     */
+    private static int untouchedPreFillRemnantStart(TraceData trace,
+                                                    EngineSnapshot snapshot,
+                                                    TraceEvent.PlayerHistorySnapshot recorded) {
+        int levelStartX = snapshot.levelStartX();
+        if (levelStartX == EngineSnapshot.LEVEL_START_X_UNKNOWN
+                || trace.metadata() == null) {
+            return Integer.MAX_VALUE;
+        }
+        if ((trace.metadata().startX() & 0xFFFF) == (levelStartX & 0xFFFF)) {
+            // Level load ran the StartLocations branch: the engine's pre-fill
+            // anchor is the ROM's, so the whole ring is comparable.
+            return Integer.MAX_VALUE;
+        }
+
+        int nextFree = romHistoryByteOffsetToSlot(recorded.historyPos());
+        short[] x = recorded.xHistory();
+        short[] y = recorded.yHistory();
+        short[] input = recorded.inputHistory();
+        byte[] status = recorded.statusHistory();
+        if (x == null || y == null || input == null || status == null
+                || x.length < HISTORY_RING_SLOTS || y.length < HISTORY_RING_SLOTS
+                || input.length < HISTORY_RING_SLOTS
+                || status.length < HISTORY_RING_SLOTS
+                || nextFree >= HISTORY_RING_SLOTS) {
+            return Integer.MAX_VALUE;
+        }
+        for (int i = nextFree; i < HISTORY_RING_SLOTS; i++) {
+            if (x[i] != x[nextFree] || y[i] != y[nextFree]
+                    || input[i] != 0 || status[i] != 0) {
+                // Not the pre-fill signature: the ring wrapped and these slots
+                // are genuine recorded motion. Compare them.
+                return Integer.MAX_VALUE;
+            }
+        }
+        return nextFree;
+    }
+
+    /** {@code Sonic_Pos_Record_Buf} holds 64 four-byte records (s2.asm:36211). */
+    private static final int HISTORY_RING_SLOTS = 64;
+
     private static void compareShortArray(String fieldBase,
                                           short[] expected,
                                           short[] actual,
+                                          List<BootstrapDivergence> out) {
+        compareShortArray(fieldBase, expected, actual, Integer.MAX_VALUE, out);
+    }
+
+    private static void compareShortArray(String fieldBase,
+                                          short[] expected,
+                                          short[] actual,
+                                          int uncomparableFrom,
                                           List<BootstrapDivergence> out) {
         if (expected == null) {
             out.add(new BootstrapDivergence(
@@ -1407,6 +1504,7 @@ public class TraceBinder {
             return;
         }
         int len = Math.min(expected.length, actual == null ? 0 : actual.length);
+        len = Math.min(len, uncomparableFrom);
         for (int i = 0; i < len; i++) {
             short e = expected[i];
             short a = actual[i];

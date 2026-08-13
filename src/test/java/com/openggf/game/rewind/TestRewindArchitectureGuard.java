@@ -114,8 +114,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzKnuxPillarInstance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzLoweringGrappleObjectInstance.java#@RewindTransient", 4),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 10),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 10),
+            // Runtime-art queue handles are transient facades rebound from their
+            // captured production-submission ordinals after hardware-ledger restore.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz1RobotnikEventController.java#@RewindTransient", 3),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 12),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 12),
             // S2 trace-parity slot models keep parent/child graph links and
             // constructor-derived child roles outside scalar rewind capture.
             // Focused graph tests cover recreation and relinking.

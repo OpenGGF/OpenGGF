@@ -25,6 +25,8 @@ import com.openggf.trace.replay.TraceSuppressedRowClosure;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.DynamicArtSegmentWindow;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
+import java.io.IOException;
+
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
  * headless trace-capture tool. Delegates frame-level ordering to
@@ -54,6 +56,9 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private LevelFrameResult lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
+    private boolean normalTitleCardActive;
+    private boolean freshLevelLoadedThisIteration;
+    private boolean freshLevelTransitionLoopObserved;
     private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
 
     /**
@@ -181,24 +186,81 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
 
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay) {
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
-                gameplayMode.getFadeManager()::update,
-                frame -> stepFrame(snapshot, beforeGameplay, frame));
+        return stepFrame(snapshot, beforeGameplay, false);
     }
 
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay,
-            PlcLifecycleFrame lifecycleFrame) {
+            boolean deferRecordedPauseEntry) {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                gameplayMode.getFadeManager()::update,
+                frame -> stepFrame(snapshot, beforeGameplay, frame, deferRecordedPauseEntry));
+    }
+
+    private LevelFrameResult stepFrame(
+            LogicalInputSnapshot snapshot, Runnable beforeGameplay,
+            PlcLifecycleFrame lifecycleFrame, boolean deferRecordedPauseEntry) {
         updateActiveTitleCardOverlay();
         if (applyPendingSeamlessTransition()) {
             pendingSeamlessBoundaryCompletion = true;
         }
+        boolean loadedZoneActTransition = applyPendingZoneActTransition();
+        if (loadedZoneActTransition) {
+            // The native Level routine's cleared/playerless boundary is a
+            // represented row of its own. Its title-card owner starts on the
+            // following row, so do not admit normal gameplay or a VBlank
+            // service for this boundary.
+            lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
+        // A normal game-loop transition loads the destination from the fade
+        // callback, then consumes its title-card request at the next level
+        // iteration. Keep those boundaries separate in the recording driver:
+        // the destination row is still the load boundary, while the title
+        // owner first runs on the following iteration.
+        if (!loadedZoneActTransition) {
+            startPendingNormalTitleCardIfRequested();
+        }
+        if (normalTitleCardActive) {
+            return stepNormalTitleCard(snapshot, lifecycleFrame);
+        }
+        // The native title owner publishes the fresh-level art at the first
+        // ordinary LevelLoop boundary, but its loaded player slots remain
+        // transition-held for that iteration. Release them on the following
+        // ordinary iteration, after the native loop has crossed the boundary.
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            if (freshLevelTransitionLoopObserved) {
+                levelManager.completeFreshLevelTransitionBoundary();
+            } else {
+                freshLevelTransitionLoopObserved = true;
+                TitleCardProvider provider = GameServices.module().getTitleCardProvider();
+                if (provider != null) {
+                    provider.completeFreshLevelRuntimeArtHandoff();
+                }
+                levelManager.publishFreshLevelTransitionInitialBoundary();
+                lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+                lastFrameRanGameplay = false;
+                inputHandler.update();
+                previousDriverSnapshot = snapshot;
+                return lastFrameResult;
+            }
+        } else {
+            freshLevelTransitionLoopObserved = false;
+        }
         startPendingInLevelTitleCardIfRequested();
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        boolean deferPauseEntry = deferRecordedPauseEntry
+                && snapshot.player1().startPressed()
+                && context.gameStateManager() != null
+                && !context.gameStateManager().isGamePaused();
         FrameAdmission admission = LevelFrameStep.admit(
-                context, levelManager, snapshot.player1().startPressed());
+                context, levelManager,
+                snapshot.player1().startPressed() && !deferPauseEntry);
         lastFrameResult = admission.result();
         lastFrameRanGameplay = false;
         if (lastFrameResult == LevelFrameResult.SETUP_ONLY) {
@@ -241,6 +303,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 // exit during this pass starts the in-level title card in the
                 // same frame rather than the next frame's top.
                 startPendingInLevelTitleCardIfRequested();
+                if (deferPauseEntry && lastFrameRanGameplay) {
+                    // ROM LevelLoop calls Pause_Game before Demo_PlayRecord. A
+                    // recorded Start edge therefore supplies the current row's
+                    // input and enters Pause_Loop on the following iteration;
+                    // keep the edge out of admission but publish the resulting
+                    // Game_paused state after this row's body has completed.
+                    context.gameStateManager().applyPauseToggle(true);
+                }
             }
         } finally {
             inputHandler.clearLogicalOverride();
@@ -287,6 +357,100 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         levelManager.applySeamlessTransition(seamlessRequest);
         startPendingInLevelTitleCardIfRequested();
         return true;
+    }
+
+    /**
+     * Completes a fade-coordinated destination request in the headless
+     * production driver. The live loop performs this in its fade callback;
+     * the recording driver owns the same level-load boundary directly.
+     */
+    private boolean applyPendingZoneActTransition() {
+        if (freshLevelLoadedThisIteration) {
+            freshLevelLoadedThisIteration = false;
+            return true;
+        }
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode.getFadeManager().isActive()) {
+            return false;
+        }
+        if (!levelManager.consumeZoneActRequest()) {
+            return false;
+        }
+        int zone = levelManager.getRequestedZone();
+        int act = levelManager.getRequestedAct();
+        var blockingFade = gameplayMode.plcFrameLifecycle().beginNativeBlockingFade();
+        gameplayMode.getFadeManager().startFadeToBlack(
+                blockingFade.wrapCompletion(() -> {
+                    try {
+                        levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        freshLevelLoadedThisIteration = true;
+                    } catch (IOException exception) {
+                        throw new IllegalStateException(
+                                "Failed to load requested zone " + zone + " act " + act,
+                                exception);
+                    }
+                }));
+        return true;
+    }
+
+    private void startPendingNormalTitleCardIfRequested() {
+        if (normalTitleCardActive
+                || !levelManager.consumeTitleCardRequest()) {
+            return;
+        }
+        TitleCardProvider provider = GameServices.module().getTitleCardProvider();
+        if (provider == null) {
+            return;
+        }
+        int titleCardZone = levelManager.getTitleCardZone();
+        int titleCardAct = levelManager.getTitleCardAct();
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            provider.initializeFreshLevelTransition(titleCardZone, titleCardAct);
+        } else {
+            provider.initialize(titleCardZone, titleCardAct);
+        }
+        normalTitleCardActive = true;
+        applyInLevelTitleCardControlLock(true);
+    }
+
+    private LevelFrameResult stepNormalTitleCard(
+            LogicalInputSnapshot snapshot, PlcLifecycleFrame lifecycleFrame) {
+        lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+        lastFrameRanGameplay = false;
+        frameCounter++;
+        LevelFrameContext context =
+                LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        TitleCardProvider provider = GameServices.module().getTitleCardProvider();
+        if (provider == null) {
+            normalTitleCardActive = false;
+            applyInLevelTitleCardControlLock(false);
+            lastFrameRanGameplay = true;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return LevelFrameResult.GAMEPLAY_FRAME;
+        }
+
+        if (provider.shouldAdvanceVblankClockDuringLockedPhase()) {
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    context,
+                    lifecycleFrame,
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                    provider::update);
+            levelManager.advanceTitleCardVblankOnly();
+        } else {
+            provider.update();
+            LevelFrameStep.serviceVBlankOnly(
+                    context, lifecycleFrame, PlcLifecyclePhase.LAG);
+        }
+
+        if (provider.shouldCompleteFreshLevelTransitionBoundary()) {
+            levelManager.publishFreshLevelTransitionInitialBoundary();
+            normalTitleCardActive = false;
+            applyInLevelTitleCardControlLock(false);
+        }
+        inputHandler.update();
+        previousDriverSnapshot = snapshot;
+        return LevelFrameResult.GAMEPLAY_FRAME;
     }
 
     private void startPendingInLevelTitleCardIfRequested() {
@@ -348,7 +512,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 stepFrame(RecordedInputSnapshots.fromBk2(frameInput, previousInput), () -> {
                     applyP1ActionPressEdge(currentBk2Index);
                     beforeGameplay.run();
-                });
+                }, true);
         if (result != LevelFrameResult.SETUP_ONLY) {
             // SETUP_ONLY re-drives this same row next call, so the poll baseline
             // advances only once the row is actually consumed.
@@ -384,7 +548,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                         driveInput, pollBaseline), () -> {
                     applyP1ActionPressEdge(currentBk2Index - 1);
                     beforeGameplay.run();
-                });
+                }, true);
         if (result != LevelFrameResult.SETUP_ONLY) {
             markBk2RowPolled(currentBk2Index - 1);
             currentBk2Index++;
@@ -435,12 +599,52 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
 
-        // Lag row: the ROM did not reach Joypad_Read, so the press-edge baseline is
-        // deliberately left where it was. The row is still consumed 1:1.
-        previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
+        // An ordinary lag row did not reach Joypad_Read, so its press-edge
+        // baseline stays at the last polled movie row. Pause_Loop is different:
+        // VInt_10 polls controllers on every Wait_VSync before checking Start
+        // again (sonic3k.asm:1572-1607,719-725). While already paused, compare
+        // against the immediately preceding movie row and retain this row as
+        // the next poll baseline so a held Start is not repeatedly re-read as
+        // an edge and the later unpause press remains visible.
+        var gameState = GameServices.gameStateOrNull();
+        boolean pauseLoopPolled = gameState != null && gameState.isGamePaused();
+        Bk2FrameInput previousInput = pauseLoopPolled && currentBk2Index > 0
+                ? bk2Movie.getFrame(currentBk2Index - 1)
+                : lastPolledBk2Input();
+        LogicalInputSnapshot snapshot =
+                RecordedInputSnapshots.fromBk2(frameInput, previousInput);
+        previousDriverSnapshot = snapshot;
+        if (pauseLoopPolled) {
+            markBk2RowPolled(currentBk2Index);
+        }
         currentBk2Index++;
+        applyPauseToggleForSuppressedRow(snapshot);
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        TraceSuppressedRowClosure.executeUnownedTitleCardWork(
+                true,
+                GameServices.module().getTitleCardProvider(),
+                this::startPendingInLevelTitleCardIfRequested,
+                this::applyInLevelTitleCardControlLock);
+        applyPendingSeamlessTransition();
+        boolean loadedZoneActTransition = applyPendingZoneActTransition();
+        // A normal title card is still a ROM-owned object during a suppressed
+        // trace row. Start its art queue before the row's hardware closure so
+        // the next VBlank can admit the same production work as the visible
+        // path.
+        if (!loadedZoneActTransition) {
+            boolean titleCardWasActive = normalTitleCardActive;
+            startPendingNormalTitleCardIfRequested();
+            if (normalTitleCardActive && titleCardWasActive) {
+                // Suppressed trace rows still represent a VBlank while the
+                // fresh-level title owner is locked. Run its hardware-timed
+                // object dispatch here; the row that installed the owner is
+                // left to the generic closure above so its first dispatch
+                // starts on the following VBlank, matching Obj_TitleCardInit.
+                stepNormalTitleCard(previousDriverSnapshot, lifecycleFrame);
+                return mask;
+            }
+        }
         TraceSuppressedRowClosure.execute(
                 context,
                 lifecycleFrame,
@@ -484,10 +688,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         Bk2FrameInput frameInput = bk2Movie.getFrame(currentBk2Index);
         int mask = inputMask(frameInput);
         applyP1ActionPressEdge(currentBk2Index);
-        previousDriverSnapshot =
+        LogicalInputSnapshot snapshot =
                 RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
+        previousDriverSnapshot = snapshot;
         markBk2RowPolled(currentBk2Index);
         currentBk2Index++;
+        applyPauseToggleForSuppressedRow(snapshot);
         return mask;
     }
 
@@ -531,6 +737,21 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private void requireMovie() {
         if (bk2Movie == null) {
             throw new IllegalStateException("No BK2 movie loaded. Call setBk2Movie() first.");
+        }
+    }
+
+    /**
+     * Pause_Game still consumes Start edges on rows whose main level body is
+     * suppressed. In particular, the ROM's unpause press is a VBlank/advance
+     * row and must clear Game_paused before the following full LevelLoop row.
+     */
+    private static void applyPauseToggleForSuppressedRow(LogicalInputSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        var gameState = GameServices.gameStateOrNull();
+        if (gameState != null) {
+            gameState.applyPauseToggle(snapshot.player1().startPressed());
         }
     }
 

@@ -78,9 +78,11 @@ public class TestSonic1CreditsManager {
     }
 
     @Test
-    public void testTextPacingTableMatchesCreditsCount() {
-        assertEquals(Sonic1CreditsDemoData.TOTAL_CREDITS, Sonic1CreditsDemoData.TEXT_PACING_DELAY_FRAMES.length);
-        assertEquals(0, Sonic1CreditsDemoData.TEXT_PACING_DELAY_FRAMES[Sonic1CreditsDemoData.TOTAL_CREDITS - 1]);
+    public void testCreditsPageTimingComesFromTheRomGates() {
+        // Cred_WaitLoop's first gate is the only credits-page duration the ROM
+        // states as a number (move.w #120,(v_generictimer).w, sonic.asm:3874);
+        // the second gate is the live PLC buffer, not a per-credit table.
+        assertEquals(120, Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES);
         assertEquals(4, Sonic1CreditsDemoData.DEMO_LOAD_DELAY_FRAMES);
     }
 

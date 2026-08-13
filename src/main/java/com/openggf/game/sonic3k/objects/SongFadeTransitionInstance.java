@@ -55,9 +55,9 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         this(delayFrames, musicId, deferCountdownOnFadeStart, false);
     }
 
-    SongFadeTransitionInstance(int delayFrames, int musicId,
-                               boolean deferCountdownOnFadeStart,
-                               boolean deferSameFrameUpdateAfterSpawn) {
+    public SongFadeTransitionInstance(int delayFrames, int musicId,
+                                      boolean deferCountdownOnFadeStart,
+                                      boolean deferSameFrameUpdateAfterSpawn) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "SongFadeTransition");
         this.delayFrames = delayFrames;
         this.musicId = musicId;

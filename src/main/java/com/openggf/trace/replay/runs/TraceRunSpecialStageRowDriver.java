@@ -40,8 +40,11 @@ public final class TraceRunSpecialStageRowDriver {
             TraceRunSpecialStageRows rows, TraceData trace) {
         this.rows = Objects.requireNonNull(rows, "rows");
         Objects.requireNonNull(trace, "trace");
+        // Recorder spill normalization is a property of the segment's own
+        // pass stream, so the rows view owns it; an empty map compares the raw
+        // recorded rows. See TraceRunSpecialStageRows#normalizedDynamicArtRows.
         comparison = new TraceRunReplayWalker.DynamicArtSegmentComparison(
-                trace, rows.rowCount());
+                trace, rows.rowCount(), rows.normalizedDynamicArtRows());
     }
 
     public static void requireFreshAdmission(int rowsConsumed) {

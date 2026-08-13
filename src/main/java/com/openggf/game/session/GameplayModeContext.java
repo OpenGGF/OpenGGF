@@ -94,6 +94,12 @@ public final class GameplayModeContext implements ModeContext {
     private final DynamicArtLifecycleService dynamicArtLifecycle;
     private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
     private TraceRunFrameDriver traceRunFrameDriver;
+    /**
+     * Latched once the source level's main loop has stopped owning the current
+     * run-chain transition gap's rows. Session-scoped so no earlier gap, test
+     * class, or replay run can decide it for a later one.
+     */
+    private boolean runGapSourceLevelMainLoopEnded;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -344,6 +350,7 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
             rewindRegistry.deregister("water");
+            rewindRegistry.deregister("collision");
             rewindRegistry.deregister("sprites");
             rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
@@ -352,6 +359,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregisterPostRestoreCallback("sprite-carry-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
+            rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
@@ -534,6 +542,25 @@ public final class GameplayModeContext implements ModeContext {
         return Optional.ofNullable(traceRunFrameDriver);
     }
 
+    /**
+     * Re-arms the one-row latch that decides which rows of a run-chain
+     * transition gap are still owned by the source level's own main loop (see
+     * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}).
+     */
+    public void beginRunTransitionGap() {
+        runGapSourceLevelMainLoopEnded = false;
+    }
+
+    /**
+     * Consumes that latch: true exactly once per armed gap, on the first row
+     * that asks.
+     */
+    public boolean consumeRunGapFirstRow() {
+        boolean first = !runGapSourceLevelMainLoopEnded;
+        runGapSourceLevelMainLoopEnded = true;
+        return first;
+    }
+
     public void installTraceRunFrameDriver(TraceRunFrameDriver driver) {
         traceRunFrameDriver = Objects.requireNonNull(driver, "driver");
     }
@@ -548,6 +575,16 @@ public final class GameplayModeContext implements ModeContext {
      * Closes an open dynamic-art comparison window at a structural replay
      * boundary. Expected trace values never cross this production-owned seam.
      */
+    /**
+     * Ends the level's comparison window on the ROM iteration whose object pass
+     * wrote the next game mode.
+     *
+     * @see com.openggf.game.resources.DynamicArtLifecycleService#endComparisonSegmentAtRomModeChange()
+     */
+    public void endDynamicArtComparisonSegmentAtRomModeChange() {
+        dynamicArtLifecycle.endComparisonSegmentAtRomModeChange();
+    }
+
     public void endDynamicArtComparisonSegment() {
         if (dynamicArtLifecycle.isComparisonSegmentOpen()) {
             dynamicArtLifecycle.closeComparisonSegment();

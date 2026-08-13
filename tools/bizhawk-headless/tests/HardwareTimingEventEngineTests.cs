@@ -90,6 +90,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine direct busy count retires despite stale slot zero",
                 DirectBusyCountRetiresDespiteStaleSlotZero));
             tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct sample inside the retirement write retires the head",
+                DirectRetirementWriteWindowRetiresHead));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct sample inside the retirement write keeps a tail entry",
+                DirectRetirementWriteWindowKeepsUnshiftedTail));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine direct shift and append preserve FIFO ordinals",
                 DirectShiftAndAppendPreserveFifoOrdinals));
             tests.Add(new TestMain.TestCase(
@@ -905,6 +911,102 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "\"raw_frame\":11,\"boundary\":\"pre_main_loop\","
                     + "\"kind\":\"kos_decompression_queue\","
                     + "\"ordinal\":0"));
+        }
+
+        /// <summary>
+        /// Process_Kos_Queue_EndReached writes the finished stream's read
+        /// cursors over slot zero before it clears the busy bit, decrements
+        /// the count and shifts the queue up. A frame-end sample can land on
+        /// any instruction boundary in that sequence; PC 0x001CE0, between
+        /// the andi.w #$7FFF and the subq.w #1, is observed in the retail
+        /// s3k-sonic-tails-complete-emeralds movie. The count then still
+        /// claims one occupied entry while slot zero holds a mid-archive ROM
+        /// address that is the start of nothing.
+        /// </summary>
+        private static void DirectRetirementWriteWindowRetiresHead()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFFD000);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, writer);
+            AssertEx.Equal("", writer.ToString());
+
+            // The three-literal stream is eight compressed bytes long and
+            // decompresses to three, so those are the cursors the ROM has
+            // just stored.
+            SetLevelFrame(host, 0x1235);
+            StageDirect(host, 0, source + 8, destination + 3);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(1, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"raw_frame\":1"));
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+
+            // The ROM completes the decrement; nothing further is owed.
+            SetLevelFrame(host, 0x1236);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+            AssertEx.Equal(1, writer.ToString().Split(
+                new[] {'\n'},
+                StringSplitOptions.RemoveEmptyEntries).Length);
+        }
+
+        /// <summary>
+        /// The same window with a queued successor: the shift-up has not run
+        /// either, so the surviving entry is still in physical slot one.
+        /// </summary>
+        private static void DirectRetirementWriteWindowKeepsUnshiftedTail()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int firstDestination = unchecked((int)0xFFFFD000);
+            const int secondDestination = unchecked((int)0xFFFFE000);
+            byte[] rom = RomWithStandardStreams(first, second);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, first, firstDestination);
+            StageDirect(host, 1, second, secondDestination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(0, host, writer);
+            AssertEx.Equal("", writer.ToString());
+
+            SetLevelFrame(host, 0x1235);
+            StageDirect(host, 0, first + 8, firstDestination + 3);
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(1, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+
+            // The ROM finishes the shift; the survivor keeps its ordinal
+            // rather than being re-admitted as a new submission.
+            SetLevelFrame(host, 0x1236);
+            StageDirect(host, 0, second, secondDestination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(2, host, writer);
+            SetLevelFrame(host, 0x1237);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(3, host, writer);
+
+            lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
         }
 
         private static void DirectShiftAndAppendPreserveFifoOrdinals()

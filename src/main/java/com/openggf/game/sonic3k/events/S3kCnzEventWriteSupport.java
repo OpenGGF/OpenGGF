@@ -117,6 +117,14 @@ public final class S3kCnzEventWriteSupport {
         }
     }
 
+    public static void requestSidekickBoundsPublishAfterCameraEasing(
+            ObjectServices services) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) {
+            bridge.requestSidekickBoundsPublishAfterCameraEasing();
+        }
+    }
+
     public static void beginKnucklesTeleporterRoute(ObjectServices services) {
         CnzObjectEventBridge bridge = bridgeOrNull(services);
         if (bridge != null) {

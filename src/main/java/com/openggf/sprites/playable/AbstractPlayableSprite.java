@@ -396,6 +396,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int invulnerableFrames = 0;
         private boolean suppressNextInvulnerabilityDecrement = false;
         private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
+        /**
+         * Set for the frame on which the hurt routine ran, including the frame it
+         * hands control back on landing. ROM {@code Obj01_Hurt} / {@code Obj02_Hurt}
+         * end in an UNCONDITIONAL {@code jmp (DisplaySprite)}
+         * (docs/s2disasm/s2.asm:38193 and :41076) — the invulnerability blink test
+         * lives only in {@code Sonic_Display} / {@code Tails_Display}
+         * (s2.asm:36280-36285, 39015-39020), which the hurt routine never reaches.
+         * {@code Sonic_HurtStop} / {@code Tails_HurtStop} write
+         * {@code invulnerable_time = $78} and restore routine 2 (s2.asm:38225,
+         * :41112) from inside that same hurt frame, so the landing frame is still
+         * drawn unconditionally and BuildSprites still refreshes
+         * {@code render_flags.on_screen} for it. Without this latch the engine
+         * applies the blink gate one frame too early and leaves a stale on-screen
+         * bit, which the sidekick CPU then reads (TailsCPU_CheckDespawn,
+         * s2.asm:39408-39440). S1 has the identical shape
+         * (docs/s1disasm/_incObj/"01 Sonic.asm":1912 Sonic_Hurt tail).
+         */
+        private boolean hurtRoutineOwnedDisplayThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -1655,8 +1673,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return false;
                 }
                 return isHurt()
+                        || hurtRoutineOwnedDisplayThisFrame
                         || invulnerableFrames <= 0
                         || ((invulnerableFrames + 1) & 0x04) != 0;
+        }
+
+        /**
+         * Consumed by the BuildSprites-equivalent render-flag refresh at the end of
+         * the frame, after which the hurt routine no longer owns the display.
+         */
+        public void clearHurtRoutineOwnedDisplayLatch() {
+                hurtRoutineOwnedDisplayThisFrame = false;
         }
         public boolean hasRenderFlagOnScreenState() {
                 return renderFlagOnScreenValid;
@@ -1813,10 +1840,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
+                        forcedAnimationId = -1;
                         setHighPriority(false);
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
                         suppressNextInvulnerabilityDecrement = true;
+                        // ...and that same direct draw is unconditional, so this
+                        // frame's BuildSprites still refreshes render_flags.on_screen
+                        // even though the blink counter was just reloaded
+                        // (docs/s2disasm/s2.asm:41076, :41112).
+                        hurtRoutineOwnedDisplayThisFrame = true;
                 }
                 // Reset rolling jump flag when landing
                 if (!air && this.air) {
@@ -1894,6 +1927,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void completeHurtLandingRecovery() {
                 hurt = false;
+                forcedAnimationId = -1;
                 controller.markHurtRecoveryCompleted();
                 setHighPriority(false);
                 invulnerableFrames = 0x78;
@@ -2497,6 +2531,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setHurt(boolean hurt) {
+                if (!hurt && this.hurt) {
+                        forcedAnimationId = -1;
+                }
                 this.hurt = hurt;
         }
 
@@ -4728,6 +4765,43 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * spawn-anchored ring even when the controller first ticks after the
          * leader has already moved.
          */
+        /**
+         * Mirrors ROM {@code Obj01_Init_Continued} (S2, s2.asm:36201-36217) and
+         * its S3K twin {@code Sonic_Init_Continued} -> {@code Reset_Player_Position_Array}
+         * (sonic3k.asm:21931-21941, 22166-22178): with the leader's position
+         * temporarily offset by {@code (-$20, +4)}, {@code Sonic_Pos_Record_Index}
+         * is zeroed and {@code Sonic_RecordPos} is called 64 times, each iteration
+         * immediately re-zeroing the {@code Sonic_Stat_Record_Buf} entry it just
+         * wrote ({@code subq.w #4,a1 / move.l #0,(a1)}). The result is a Pos_table
+         * entirely filled with the offset spawn coordinate and a completely zeroed
+         * Stat_table, with the record index wrapped back to 0.
+         *
+         * <p>This runs on EVERY level (re)init, including a star-post restart and
+         * a return from a special stage: the {@code tst.b (Last_star_pole_hit).w /
+         * bne.s Obj01_Init_Continued} branch above it skips only the art / saved-position
+         * block, never the refill itself.
+         *
+         * <p>Distinct from {@link #prefillPositionHistoryWithCentre}, which fills the
+         * Pos_table only; the ROM sequence also clears the Stat_table, so a delayed
+         * {@code Tails_CPU_Control} read cannot see the previous level's recorded
+         * leader input or status bits.
+         */
+        public void resetPositionAndStatTableHistoryAtCentre(short prefillX, short prefillY) {
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                        inputHistory[i] = 0;
+                        jumpPressHistory[i] = 0;
+                        statusHistory[i] = 0;
+                }
+                // ROM leaves Sonic_Pos_Record_Index at 0 after the 64-iteration wrap,
+                // so the next live Sonic_RecordPos writes slot 0. The engine's
+                // recordFollowerHistoryForTick() increments before writing, so park
+                // the cursor one slot earlier.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
         public void prefillPositionHistoryWithCentre(short prefillX, short prefillY) {
                 for (int i = 0; i < xHistory.length; i++) {
                         xHistory[i] = prefillX;
@@ -5059,6 +5133,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * and CPU routine is not 4, it returns before the velocity quarter/double
          * paths (sonic3k.asm:27416-27470).
          */
+        /**
+         * Whether this game's water routine suppresses the entry/exit velocity
+         * change while {@code object_control} holds the character. True for S3K
+         * only; S1 and S2 apply it unconditionally.
+         *
+         * @see PlayerMovementRules#waterVelocityChangeGatedByObjectControl()
+         */
+        public boolean waterVelocityChangeGatedByObjectControl() {
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                return movementRules != null
+                                && movementRules.waterVelocityChangeGatedByObjectControl();
+        }
+
         public void updateWaterStateObjectControlled(int waterLevelY) {
                 wasInWater = inWater;
 
@@ -5275,15 +5362,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * </ul>
          */
         public void replenishAir() {
+                replenishAir(false);
+        }
+
+        /**
+         * S3K {@code Obj_Bubbler} preserves the rolling status bit for every
+         * playable object other than {@code Obj_Sonic}, even though it restores
+         * that character's standing radii.
+         */
+        public void replenishAirPreservingRollingStatus() {
+                replenishAir(true);
+        }
+
+        private void replenishAir(boolean preserveRollingStatus) {
                 // ROM: clr.w x_vel(a1) / clr.w y_vel(a1) / clr.w inertia(a1)
                 xSpeed = 0;
                 ySpeed = 0;
                 gSpeed = 0;
-
-                // ROM: move.b #AniIDSonAni_Bubble,anim(a1)
-                if (bubbleAnimId >= 0) {
-                        setAnimationId(bubbleAnimId);
-                }
 
                 // ROM: move.w #$23,move_lock(a1) (35 frames)
                 moveLockTimer = 0x23;
@@ -5302,6 +5397,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // ROM restores standing radii, then subtracts the radius delta from y_pos.
                         setRolling(false);
                         setY((short) (getY() - getRollHeightAdjustment()));
+                        if (preserveRollingStatus) {
+                                setRollingFlagPreserveRadii(true);
+                        }
+                }
+
+                // ROM: move.b #AniIDSonAni_Bubble,anim(a1). Apply this after the
+                // rolling-status branch because restoring that bit selects the
+                // roll animation as a normal engine side effect.
+                if (bubbleAnimId >= 0) {
+                        setAnimationId(bubbleAnimId);
                 }
 
                 // Delegate to drowning manager for air timer reset and music handling

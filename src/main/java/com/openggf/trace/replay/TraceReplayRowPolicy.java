@@ -78,6 +78,32 @@ public record TraceReplayRowPolicy(
     }
 
     /**
+     * True when the row's sample consumed two or more V-blank counter ticks.
+     *
+     * <p>Comparison-only hardware-timing classification of the recorded row
+     * shape, in the same family as
+     * {@link com.openggf.trace.TraceExecutionModel#isVblankStarvedRow}. A row
+     * with two ticks follows a starved row: the previous iteration overran its
+     * V-blank, so that V-blank's counter store lands in this row's interval
+     * alongside this row's own. One of the two is the lag V-blank {@code V_Int}
+     * takes with {@code v_vblank_routine} still 0
+     * (docs/s1disasm/sonic.asm:709), which runs no mode handler and therefore
+     * no {@code ProcessPLC_9Tiles} (sonic.asm:1430-1440).
+     */
+    public static boolean carriesDeferredVblank(TraceData trace, int traceIndex) {
+        Objects.requireNonNull(trace, "trace");
+        if (traceIndex <= 0 || traceIndex >= trace.frameCount()) {
+            return false;
+        }
+        TraceFrame previous = trace.getFrame(traceIndex - 1);
+        TraceFrame current = trace.getFrame(traceIndex);
+        if (previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
+            return false;
+        }
+        return ((current.vblankCounter() - previous.vblankCounter()) & 0xFFFF) >= 2;
+    }
+
+    /**
      * Projects an already-resolved execution phase into row and input ownership.
      * Package visibility keeps phase derivation centralized in
      * {@link TraceReplayBootstrap} while allowing focused contract tests.

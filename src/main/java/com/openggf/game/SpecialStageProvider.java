@@ -3,6 +3,7 @@ package com.openggf.game;
 import static org.lwjgl.opengl.GL11.glClearColor;
 
 import com.openggf.audio.GameMusic;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
@@ -42,6 +43,21 @@ public interface SpecialStageProvider extends MiniGameProvider {
      */
     default int consumeStageIndexForEntry(GameStateManager gameState) {
         return gameState.consumeCurrentSpecialStageIndexAndAdvance();
+    }
+
+    /**
+     * The PLC/V-int lifecycle phase the special stage's current represented
+     * row belongs to.
+     *
+     * <p>A special stage is not one V-int handler for its whole duration: the
+     * ROM's entry sequence runs other handlers before it installs its own. The
+     * phase decides which owner services the row -- including whether the row
+     * is a DMA-queue service boundary -- so a provider whose entry sequence
+     * runs a different handler reports that handler's phase here. The default
+     * is the stage's own handler.</p>
+     */
+    default PlcLifecyclePhase specialStagePlcLifecyclePhase() {
+        return PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     /**

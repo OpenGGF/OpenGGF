@@ -894,7 +894,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
         // owner, so carry those already-elapsed entries into its first dispatch.
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
                 state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
-                DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 1, 0, true));
+                DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 0, 0, true));
         setDestroyed(true);
     }
 

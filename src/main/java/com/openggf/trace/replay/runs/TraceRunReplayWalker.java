@@ -8,6 +8,7 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
@@ -572,6 +573,8 @@ public final class TraceRunReplayWalker {
      */
     public static final class DynamicArtSegmentComparison {
         private final TraceData trace;
+        private final java.util.Map<Integer, TraceEvent.DynamicArtTransferState>
+                expectedOverride;
         private final int expectedRows;
         private final List<FrameComparison> comparisons = new ArrayList<>();
         // One accumulator represents one run segment, so it owns that
@@ -582,7 +585,23 @@ public final class TraceRunReplayWalker {
 
         public DynamicArtSegmentComparison(
                 TraceData trace, int expectedRows) {
+            this(trace, expectedRows, java.util.Map.of());
+        }
+
+        /**
+         * As above, but comparing against a caller-supplied per-row expectation
+         * that replaces the raw recorded rows (an empty map keeps them). The
+         * only supported source is the recorder-artifact normalization in
+         * {@link com.openggf.trace.DynamicArtSpillNormalization}, which rebinds
+         * submission edges the ROM's object pass spilled past a V-blank back to
+         * that pass -- a rewrite of the expectation, never of engine state.
+         */
+        public DynamicArtSegmentComparison(
+                TraceData trace, int expectedRows,
+                java.util.Map<Integer, TraceEvent.DynamicArtTransferState> expectedOverride) {
             this.trace = Objects.requireNonNull(trace, "trace");
+            this.expectedOverride = java.util.Map.copyOf(
+                    Objects.requireNonNull(expectedOverride, "expectedOverride"));
             if (expectedRows < 0) {
                 throw new IllegalArgumentException(
                         "expectedRows must be non-negative");
@@ -609,9 +628,10 @@ public final class TraceRunReplayWalker {
             if (!isAdvertised()) {
                 return null;
             }
-            FrameComparison comparison =
-                    TraceRunReplayWalker.compareDynamicArtRow(
-                            trace, row, actual, comparator);
+            FrameComparison comparison = expectedOverride.isEmpty()
+                    ? TraceRunReplayWalker.compareDynamicArtRow(
+                            trace, row, actual, comparator)
+                    : comparator.compare(expectedOverride.get(row), actual);
             comparisons.add(comparison);
             return comparison;
         }
@@ -664,6 +684,13 @@ public final class TraceRunReplayWalker {
             throw new IllegalArgumentException("frame counts must be non-negative");
         }
         return Math.max(0, totalFrames - consumedFrames);
+    }
+
+    /**
+     * @see com.openggf.trace.TraceReplayBootstrap#levelLoopRowCount(TraceData)
+     */
+    public static int levelLoopRowCount(TraceData trace) {
+        return com.openggf.trace.TraceReplayBootstrap.levelLoopRowCount(trace);
     }
 
     /**

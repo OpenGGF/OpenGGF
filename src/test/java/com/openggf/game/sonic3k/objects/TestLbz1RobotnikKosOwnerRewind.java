@@ -29,6 +29,76 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestLbz1RobotnikKosOwnerRewind {
 
     @Test
+    void pendingRestoreRebindsMinibossParentWithoutNewOrdinal() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueAllThreeParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        HardwareWorkHandle expected = minibossHandle(controller, timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+
+        restored.update(1, fixture.sprite());
+
+        assertEquals(expected, field(restored, "minibossArtHandle"));
+        assertEquals(expected, minibossHandle(restored, timing));
+        assertEquals(nextOrdinal, nextKosOrdinal(timing),
+                "pending miniboss-art restore must not submit replacement work");
+    }
+
+    @Test
+    void readyRestoreClaimsMinibossParentWithoutReplacementWork() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueAllThreeParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        HardwareWorkHandle expected = minibossHandle(controller, timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        drain(timing);
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+
+        restored.update(1, fixture.sprite());
+
+        assertTrue(!timing.isPending(expected),
+                "ready miniboss-art restore must claim the original KosM parent");
+        assertEquals(nextOrdinal, nextKosOrdinal(timing),
+                "ready miniboss-art restore must not submit replacement work");
+    }
+
+    @Test
+    void restoredMinibossOrdinalWithoutPendingParentFailsClosed() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueAllThreeParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        drain(timing);
+        for (HardwareWorkHandle handle : ownerHandlesWithMiniboss(controller, timing)) {
+            S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator())
+                    .moduleQueue().claim(handle);
+        }
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+        setField(restored, "initialBoxArtOrdinal", -1L);
+        setField(restored, "collapseBoxArtOrdinal", -1L);
+        setField(restored, "minibossArtHandle", null);
+        long nextOrdinal = nextKosOrdinal(timing);
+
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> restored.update(1, fixture.sprite()));
+
+        assertTrue(thrown.getMessage().contains("Missing restored LBZ miniboss"));
+        assertEquals(nextOrdinal, nextKosOrdinal(timing));
+    }
+
+    @Test
     void pendingRestoreRebindsBothMinibossBoxParentsWithoutNewOrdinals() throws Exception {
         HeadlessTestFixture fixture = lbzFixture();
         Lbz1RobotnikEventController controller = queueBothParentSites(fixture);
@@ -156,6 +226,14 @@ class TestLbz1RobotnikKosOwnerRewind {
         return controller;
     }
 
+    private static Lbz1RobotnikEventController queueAllThreeParentSites(
+            HeadlessTestFixture fixture) throws Exception {
+        Lbz1RobotnikEventController controller = queueBothParentSites(fixture);
+        controller.forceInitializedForTest(0x3EC0, 0x012C, 0x0C, 0, -0x0400, false);
+        controller.update(611, fixture.sprite());
+        return controller;
+    }
+
     private static Lbz1RobotnikEventController activeController() {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(Lbz1RobotnikEventController.class::isInstance)
@@ -173,11 +251,24 @@ class TestLbz1RobotnikKosOwnerRewind {
                         (long) field(controller, "collapseBoxArtOrdinal")).orElseThrow());
     }
 
+    private static HardwareWorkHandle minibossHandle(
+            Lbz1RobotnikEventController controller, HardwareTimingService timing) throws Exception {
+        return timing.pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE,
+                (long) field(controller, "minibossArtOrdinal")).orElseThrow();
+    }
+
+    private static List<HardwareWorkHandle> ownerHandlesWithMiniboss(
+            Lbz1RobotnikEventController controller, HardwareTimingService timing) throws Exception {
+        List<HardwareWorkHandle> boxHandles = ownerHandles(controller, timing);
+        return List.of(boxHandles.get(0), boxHandles.get(1), minibossHandle(controller, timing));
+    }
+
     private static CompositeSnapshot captureWithTransientOwnerStateCleared(
             HeadlessTestFixture fixture, Lbz1RobotnikEventController controller) throws Exception {
         setField(controller, "boxRig", null);
         setField(controller, "initialBoxArtHandle", null);
         setField(controller, "collapseBoxArtHandle", null);
+        setField(controller, "minibossArtHandle", null);
         return fixture.gameplayMode().getRewindRegistry().capture();
     }
 

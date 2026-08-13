@@ -15,6 +15,8 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
     private final PlayerCharacter playerCharacter;
     private final Sonic3kMGZEvents events;
     private int pendingScreenShakeOffset;
+    /** ROM {@code Screen_shake_flag} = -1 (continuous). */
+    private boolean continuousScreenShakeRequested;
     private int currentScreenShakeOffset;
     private boolean bossBgScrollOffsetPublished;
 
@@ -91,6 +93,24 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
         bossBgScrollOffsetPublished = false;
     }
 
+    /**
+     * ROM {@code st (Screen_shake_flag).w} — objects only raise the continuous
+     * shake flag (Tunnelbot: docs/skdisasm/sonic3k.asm:184784, :184886,
+     * :184907). The offset itself belongs to {@code ShakeScreen_Setup}
+     * (sonic3k.asm:104188-104210), which the zone's background event runs once
+     * per frame; see {@link com.openggf.game.sonic3k.scroll.SwScrlMgz}.
+     */
+    public void requestContinuousScreenShake() {
+        continuousScreenShakeRequested = true;
+    }
+
+    /** Consumed once per frame by the zone scroll handler's ShakeScreen_Setup model. */
+    public boolean consumeContinuousScreenShakeRequest() {
+        boolean requested = continuousScreenShakeRequested;
+        continuousScreenShakeRequested = false;
+        return requested;
+    }
+
     public void requestScreenShakeOffset(int offset) {
         if (offset > pendingScreenShakeOffset) {
             pendingScreenShakeOffset = offset;
@@ -110,5 +130,6 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
     public void clearScreenShakeOffset() {
         pendingScreenShakeOffset = 0;
         currentScreenShakeOffset = 0;
+        continuousScreenShakeRequested = false;
     }
 }

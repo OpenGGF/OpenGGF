@@ -62,7 +62,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     // Post-open delay before results (ROM: 64-frame timer)
     private static final int POST_OPEN_DELAY = 64;
-    private static final int HCZ_RESULTS_CHILD_RETIRE_DISPATCHES = 6;
 
     // Animal spawn count (ROM: 14 animals)
     private static final int ANIMAL_COUNT = 14;
@@ -76,6 +75,9 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private boolean opened;
     private boolean resultsStarted;
     private boolean geyserSpawned;
+    private boolean geyserHandoffMappingCaptured;
+    private int mainGeyserHandoffMappingFrame;
+    private int sidekickGeyserHandoffMappingFrame;
     private int postOpenTimer;
     private boolean buttonSpawned;
     private boolean buttonPressed;
@@ -143,7 +145,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
         if (!opened) {
             // The button child publishes its ROM standing-bit result after this
-            // parent slot has run. Consume that signal on the next parent entry.
+            // parent slot has run. Consume that signal on the next parent entry,
+            // matching loc_865D0/sub_865DE (sonic3k.asm:181590-181630).
             if (buttonPressed) {
                 openCapsule();
             }
@@ -154,7 +157,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 spawnPendingExplosions();
             }
 
-            // Wait for post-open delay then start results when player is on ground
+            // Wait for post-open delay then start results when player is on ground.
             if (postOpenTimer > 0) {
                 postOpenTimer--;
             }
@@ -164,6 +167,9 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 startResults(player);
             }
         } else if (!geyserSpawned) {
+            if (resultsStarted && services().gameState().isEndOfLevelActive()) {
+                captureGeyserHandoffMappings();
+            }
             if (mainEndingPosePending
                     && playerEntity instanceof AbstractPlayableSprite player) {
                 mainEndingPosePending = false;
@@ -274,8 +280,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // write and restarts its script (sonic3k.asm:181586-181590,
         // 181900-181918).
         mainEndingPosePending = true;
-        spawnChild(() -> new HczEndBossResultsScreenObjectInstance(
-                getPlayerCharacter(), services().currentAct()));
+        // sub_868F8 calls AllocateObject, which scans from the beginning of
+        // Dynamic_object_RAM rather than allocating after the capsule. The
+        // result owner therefore takes the lowest available SST and reaches
+        // Obj_LevelResultsInit on the following Process_Sprites pass.
+        spawnFreeChild(
+                () -> new HczEndBossResultsScreenObjectInstance(
+                        getPlayerCharacter(), services().currentAct()));
     }
 
     private void advanceTailsEndingPoseCheck() {
@@ -330,6 +341,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private void spawnGeyserCutscene() {
         geyserSpawned = true;
 
+        // loc_6B154 restores both players after Obj_LevelResults has deleted
+        // itself. The next capsule dispatch is the first owner pass after that
+        // deletion, so publish the Wait pose and signed locks here; doing it
+        // from the result owner's exit would make the trace one player pass
+        // early (sonic3k.asm:141054-141072).
+        restorePlayersForGeyserHandoff();
+
         // Reset camera Y min to allow full vertical scrolling
         services().camera().setMinY((short) 0);
 
@@ -341,10 +359,49 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         int geyserY = camera.getY() + 0x130;
 
         // Spawn geyser cutscene as a dynamic object (ROM: loc_6B7BC)
-        spawnChild(() -> HczEndBossGeyserCutscene.createWithQueuedArt(
-                geyserX, geyserY));
+        spawnChild(() -> HczEndBossGeyserCutscene.createWithQueuedArt(geyserX, geyserY));
         LOG.info("HCZ Egg Capsule: results complete, geyser cutscene spawned at X="
                 + geyserX + " Y=" + geyserY);
+    }
+
+    private void restorePlayersForGeyserHandoff() {
+        if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
+            int mappingFrame = geyserHandoffMappingCaptured
+                    ? mainGeyserHandoffMappingFrame : main.getMappingFrame();
+            restoreForGeyserHandoff(main, mappingFrame);
+            main.setControlLocked(true);
+        }
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
+            int mappingFrame = geyserHandoffMappingCaptured
+                    ? sidekickGeyserHandoffMappingFrame : sidekick.getMappingFrame();
+            restoreForGeyserHandoff(sidekick, mappingFrame);
+            if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setController2SignedLocked(true);
+                sidekick.getCpuController().clearController2LogicalLatch();
+            }
+        }
+    }
+
+    private void captureGeyserHandoffMappings() {
+        if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
+            mainGeyserHandoffMappingFrame = main.getMappingFrame();
+        }
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
+            sidekickGeyserHandoffMappingFrame = sidekick.getMappingFrame();
+        }
+        geyserHandoffMappingCaptured = true;
+    }
+
+    private static void restoreForGeyserHandoff(
+            AbstractPlayableSprite player, int mappingFrame) {
+        ObjectControlState.none().applyTo(player);
+        player.setAir(false);
+        player.setForcedAnimationId(-1);
+        player.setAnimationId(Sonic3kAnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
+        player.setAnimationFrameIndex(0);
+        player.setAnimationTick(0);
+        player.setMappingFrame(mappingFrame);
     }
 
     // ===== Rendering =====
@@ -376,12 +433,31 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
 
         @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // sub_868F8 uses AllocateObject for Obj_LevelResults. Keep its
+            // first Obj_LevelResultsInit dispatch on the following
+            // Process_Sprites pass (sonic3k.asm:181900-181918,
+            // 182027-182046).
+            return true;
+        }
+
+        @Override
+        protected boolean shouldDeferInitialResultsArtLoadDispatch() {
+            // Obj_LevelResultsInit follows the capsule's AllocateObject path
+            // across the next hardware service boundary in HCZ2, so the
+            // three Queue_Kos_Module calls begin on the following dispatch
+            // (sonic3k.asm:182027-182046, 62542-62598).
+            return true;
+        }
+
+        @Override
         protected void onExitReady() {
             super.onExitReady();
 
-            // loc_6B154 clears the logical words and signs both controller-lock
-            // bytes before creating the geyser. The preceding retained-owner
-            // dispatch publishes Restore_PlayerControl/2 separately below.
+            // The signed controller locks are visible before the capsule's
+            // following dispatch. Keep them in the results-owner pass so the
+            // player slots cannot take an extra CPU step; the pose itself is
+            // published by the capsule on the next pass.
             if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
                 main.setControlLocked(true);
             }
@@ -390,43 +466,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 sidekick.getCpuController().setController2SignedLocked(true);
                 sidekick.getCpuController().clearController2LogicalLatch();
             }
-        }
-
-        @Override
-        protected void onAdditionalChildRetireDispatch(int dispatchesRemaining) {
-            if (dispatchesRemaining != 1) {
-                return;
-            }
-            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
-                restoreForGeyserHandoff(main);
-                main.setControlLocked(true);
-            }
-            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
-                restoreForGeyserHandoff(sidekick);
-                if (sidekick.getCpuController() != null) {
-                    sidekick.getCpuController().setController2SignedLocked(true);
-                    sidekick.getCpuController().clearController2LogicalLatch();
-                }
-            }
-        }
-
-        private static void restoreForGeyserHandoff(AbstractPlayableSprite player) {
-            ObjectControlState.none().applyTo(player);
-            player.setAir(false);
-            player.setForcedAnimationId(-1);
-            player.setAnimationId(Sonic3kAnimationIds.WAIT);
-            player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
-            player.setAnimationFrameIndex(0);
-            player.setAnimationTick(0);
-        }
-
-        @Override
-        protected int additionalChildRetireDispatches() {
-            // Obj_LevelResultsWait2 polls its live child-SST count at $30
-            // before loc_2DCE2 may clear _unkFAA8 (sonic3k.asm:62679-62693).
-            // HCZ's event-owned results retain six owner dispatches after the
-            // engine's embedded result elements have left the screen.
-            return HCZ_RESULTS_CHILD_RETIRE_DISPATCHES;
         }
 
         @Override

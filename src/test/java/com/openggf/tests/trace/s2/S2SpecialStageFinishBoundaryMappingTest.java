@@ -30,7 +30,9 @@ class S2SpecialStageFinishBoundaryMappingTest {
                 AbstractS2SpecialStageTraceReplayTest.compareReplay(trace, harness);
 
         assertFalse(report.hasErrors(), report.toAssertionSummary());
-        assertTrue(report.getContextWindow(5181, 0).contains("rings_togo_bcd"),
+        assertTrue(report.getContextWindow(
+                        trace.stageFinishedObservedFrame().getAsInt(), 0)
+                        .contains("rings_togo_bcd"),
                 "the raw finish observation must retain its final rings-to-go comparison");
         assertEquals(1, java.util.Collections.frequency(
                 harness.steppedPassSequencesForTest(), terminalPassSequence(trace)));
@@ -51,7 +53,8 @@ class S2SpecialStageFinishBoundaryMappingTest {
                 AbstractS2SpecialStageTraceReplayTest.compareReplay(trace, harness);
 
         assertTrue(report.hasErrors(), "finishing before terminal pass must not compare green");
-        assertTrue(report.toAssertionSummary().contains("before-terminal-pass@5180"),
+        assertTrue(report.toAssertionSummary().contains(
+                        "before-terminal-pass@" + trace.stageFinishedFrame().getAsInt()),
                 report.toAssertionSummary());
         assertEquals(1, java.util.Collections.frequency(
                 harness.steppedPassSequencesForTest(), terminalPassSequence(trace)),

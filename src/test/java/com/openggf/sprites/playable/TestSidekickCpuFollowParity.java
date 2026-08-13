@@ -15,12 +15,15 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -78,6 +81,28 @@ class TestSidekickCpuFollowParity {
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // No rendering needed for this test sentinel.
+        }
+    }
+
+    private static final class PushingSolidObject extends AbstractObjectInstance
+            implements SolidObjectProvider {
+        private PushingSolidObject() {
+            super(new ObjectSpawn(100, 100, 0x58, 0, 0, false, 0), "PushingSolidObject");
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            // Test sentinel only.
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // No rendering needed for this test sentinel.
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            return SolidObjectParams.of(16, 8, 8);
         }
     }
 
@@ -2358,6 +2383,70 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kLiveSolidPushSurvivesReleasedUnderwaterPreClear() throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            installStandaloneGameModule(new Sonic3kGameModule());
+            ObjectManager objectManager = new ObjectManager(List.of(), null, 0, null, null);
+            objectManager.reset(0);
+            PushingSolidObject pushingObject = new PushingSolidObject();
+            objectManager.addDynamicObject(pushingObject);
+            installObjectManager(objectManager);
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setInWater(true);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setWidth(20);
+            tails.setHeight(20);
+            tails.setCentreX((short) 85);
+            tails.setCentreY((short) 81);
+            tails.setXSpeed((short) 0x0100);
+            tails.setGSpeed((short) 0);
+            tails.setPushing(true);
+
+            objectManager.update(0, tails, List.of(), 0, false, true, false);
+            assertTrue(objectManager.hasObjectPushingBit(tails));
+
+            LiveRideObject releasedObject = new LiveRideObject(0x07);
+            releasedObject.setSlotIndex(34);
+            releasedObject.setDestroyed(true);
+            tails.setLatchedSolidObject(0x07, releasedObject);
+            tails.setPushing(true);
+            tails.setGSpeed((short) 0);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x316D);
+            Arrays.fill(yHistory, (short) 0x025C);
+            Arrays.fill(inputHistory, (short) AbstractPlayableSprite.INPUT_RIGHT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 16);
+            setReleasedUnderwaterPushConsumed(controller, true);
+
+            controller.update(0x37DE);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics =
+                    controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("current_push_bypass", diagnostics.followBranch()),
+                    () -> assertTrue(diagnostics.skipFollowSteering()),
+                    () -> assertTrue(tails.getPushing(),
+                            "A live SolidObject-owned push must survive the released-slot cleanup "
+                                    + "before loc_13DD0 reads Status_Push."));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kCurrentPushFarBelowTargetBypassesFollowRightAfterAizIntro() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -4323,6 +4412,38 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kPanicRevPulseReadsLevelCounterWithoutRetainedHistoryProjection() throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            Sonic3kGameModule module = new Sonic3kGameModule();
+            installStandaloneGameModule(module);
+            Sonic3kTitleCardManager titleCard =
+                    (Sonic3kTitleCardManager) module.getTitleCardProvider();
+            setBooleanField(titleCard, "inLevelMode", true);
+            setBooleanField(titleCard, "retainedResultsHeldLevelCounterOwned", true);
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.prefillPositionHistoryWithCentre((short) 0, (short) 0);
+            assertEquals(0x3F, sonic.getHistorySlotIndex(0));
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setPinballMode(true);
+            tails.setGSpeed((short) 0);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+            controller.update(0x72C0);
+
+            assertTrue(controller.getInputJumpPress(),
+                    "TailsCPU_Panic reads Level_frame_counter=$72C0 directly; the retained "
+                            + "Sonic_RecordPos slot $3F must not shift its $20-phase pulse");
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kCatchUpFlightOnlyBlocksOnLeaderObjectControlSignBit() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -4432,16 +4553,35 @@ class TestSidekickCpuFollowParity {
         TestEnvironment.activeGameplayMode();
     }
 
+    private static void setBooleanField(Object target, String name, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
+
     private static void installEmptyObjectManager() throws Exception {
         Field field = GameServices.level().getClass().getDeclaredField("objectManager");
         field.setAccessible(true);
         field.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
     }
 
+    private static void installObjectManager(ObjectManager objectManager) throws Exception {
+        Field field = GameServices.level().getClass().getDeclaredField("objectManager");
+        field.setAccessible(true);
+        field.set(GameServices.level(), objectManager);
+    }
+
     private static void setNormalPushingGraceFrames(SidekickCpuController controller, int frames) throws Exception {
         Field field = SidekickCpuController.class.getDeclaredField("normalPushingGraceFrames");
         field.setAccessible(true);
         field.setInt(controller, frames);
+    }
+
+    private static void setReleasedUnderwaterPushConsumed(
+            SidekickCpuController controller, boolean consumed) throws Exception {
+        Field field = SidekickCpuController.class.getDeclaredField("releasedUnderwaterPushConsumed");
+        field.setAccessible(true);
+        field.setBoolean(controller, consumed);
     }
 
     private static void setControllerState(SidekickCpuController controller,

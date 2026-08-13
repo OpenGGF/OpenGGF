@@ -166,6 +166,43 @@ public class GameLoop {
 
         /** Applies pass {@code index}'s controller sample to {@code provider}. */
         void applyPassInput(int index, SpecialStageProvider provider);
+
+        /**
+         * Executes pass {@code index}.
+         *
+         * <p>{@code SpecialStage_MainLoop} is two loops, not one
+         * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
+         * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
+         * <em>before</em> its {@code WaitForVint} (s2.asm:6675-6676), so its
+         * terminal pass owns no post-V-int controller sample for the recurring
+         * loop's binding path to consume. A driver that can tell the two apart
+         * overrides this to publish such a pass through the startup boundary
+         * instead, exactly as {@code S2SpecialStageReplayHarness.stepPasses}
+         * already does. The default treats every pass as a recurring-loop pass.
+         */
+        default void runPass(int index, SpecialStageProvider provider) {
+            applyPassInput(index, provider);
+            provider.update();
+        }
+
+        /**
+         * Runs after pass {@code index}'s object scan, for a pass the ROM
+         * finished BEFORE this observation's V-int.
+         *
+         * <p>{@code SS_MainLoop} waits for the V-int and only then runs
+         * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
+         * returned during the preceding frame had its queued work carried
+         * through the V-blank that opened this observation, and that V-blank
+         * already ran {@code ProcessDMAQueue} (s2.asm:1769) over it. Work
+         * queued by a later pass in the same observation stays pending. The
+         * standalone harness models the same boundary
+         * ({@code S2SpecialStageReplayHarness.stepPasses}).
+         *
+         * <p>Default no-op: a driver that cannot distinguish the two cases
+         * leaves every pass's work pending until the next observation.
+         */
+        default void afterPass(int index) {
+        }
     }
 
     private SpecialStageObservationPacing specialStageObservationPacing;
@@ -907,6 +944,13 @@ public class GameLoop {
     }
 
     /**
+     * Set when {@link #exitTitleCard()} releases into {@link GameMode#LEVEL}
+     * during the current iteration, and cleared at the top of every iteration.
+     * Read only by {@link #runGapRowContinuesSourceLevelMainLoop()}.
+     */
+    private boolean titleCardReleasedIntoLevelThisIteration;
+
+    /**
      * True while a run's shared transition-gap row is still the source level's
      * own main-loop iteration, so the ordinary level body must run on it.
      *
@@ -917,10 +961,36 @@ public class GameLoop {
      * or an in-flight blocking transition ({@link #isRewindBlocked()}, which
      * covers a native blocking fade's pending completion and the
      * bonus/ending/zone-act flags); either means the loop has already ended.
+     *
+     * <p>A title-card release into LEVEL on THIS iteration is a third such
+     * write, and it is the one a level-to-level gap actually lands on. Once the
+     * destination level has loaded and its card has been released, the source
+     * level's main loop is provably over: the release IS
+     * {@code Level_StartGame}, which the ROM reaches only after the title-card
+     * leave loop's last iteration (docs/s2disasm/s2.asm:5060-5066, :5081-5082).
+     * The destination's first object pass then comes from
+     * {@code Level_MainLoop}, which runs {@code PauseGame} and
+     * {@code WaitForVint} BEFORE its {@code jsr (RunObjects).l}
+     * (docs/s2disasm/s2.asm:5088-5095) -- so the release row itself dispatches
+     * no object pass at all, and the first one belongs to the destination's
+     * next V-blank, i.e. its recorded row 0. S1 orders the same two routines the
+     * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
+     * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
+     * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
+     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7882, then
+     * {@code Wait_VSync} at :7888 ahead of {@code Process_Sprites} at :7894).
+     *
+     * <p>Without this term the latch survived every locked title-card row (a
+     * title-card iteration never reaches the gap-body test) and was consumed by
+     * the release row instead, handing the freshly loaded destination one extra
+     * pre-row-0 object pass. That put its CPU sidekick exactly one
+     * {@code Tails_acceleration} step ahead for the rest of the segment
+     * (docs/s2disasm/s2.asm:38907).
      */
     private boolean runGapRowContinuesSourceLevelMainLoop() {
         boolean levelExitWritten = levelManager == null
                 || levelManager.hasPendingLevelExit()
+                || titleCardReleasedIntoLevelThisIteration
                 || isRewindBlocked();
         return TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(
                 currentGameMode, levelExitWritten);
@@ -1139,6 +1209,7 @@ public class GameLoop {
             return;
         }
 
+        titleCardReleasedIntoLevelThisIteration = false;
         if (!prepareAdmittedIteration(doFrameStep)) {
             return;
         }
@@ -1381,7 +1452,7 @@ public class GameLoop {
             SpecialStageObservationPacing pacing = specialStageObservationPacing;
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    PlcLifecyclePhase.SPECIAL_STAGE, () -> {
+                    ssProvider.specialStagePlcLifecyclePhase(), () -> {
                         if (pacing == null) {
                             updateSpecialStageInput();
                             ssProvider.update();
@@ -1394,8 +1465,8 @@ public class GameLoop {
                         // inside its single lifecycle iteration.
                         int passes = pacing.passCount();
                         for (int pass = 0; pass < passes; pass++) {
-                            pacing.applyPassInput(pass, ssProvider);
-                            ssProvider.update();
+                            pacing.runPass(pass, ssProvider);
+                            pacing.afterPass(pass);
                         }
                     });
         } else if (ssSession.skippedSpecialStagePlcPhase().isPresent()) {
@@ -2333,7 +2404,7 @@ public class GameLoop {
         try {
             // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
             levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the default title card request — we'll show the bonus card instead
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
@@ -2513,7 +2584,7 @@ public class GameLoop {
         if (savedState == null) {
             LOGGER.warning("No saved state for bonus stage exit — returning to zone 0,0");
             try {
-                levelManager.loadZoneAndAct(0, 0);
+                levelManager.loadZoneAndActForFreshRuntime(0, 0);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load fallback level", e);
             }
@@ -2532,7 +2603,7 @@ public class GameLoop {
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
             bonusStageTransitionCoordinator.prepareReturnLoad(levelManager);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
@@ -2707,13 +2778,58 @@ public class GameLoop {
             // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
             doEnterResultsScreen();
         } else {
-            // Normal path (S2): start fade-to-white, then callback to results
-            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-                doEnterResultsScreen();
-            });
+            // Normal path (S2): start fade-to-white, then callback to results.
+            // This boundary is raised from updateSpecialStageMode's tail, after
+            // specialStageEntryPresentation.update has already spent this
+            // iteration's FadeManager tick, so the ROM's first
+            // Pal_FadeToWhite WaitForVint is already the NEXT iteration's --
+            // deferring again would give the routine 23 V-ints instead of the
+            // 22 its dbf loop runs (docs/s2disasm/s2.asm:3571-3582) and push
+            // the results loop's first VintID_Level, with the ProcessDMAQueue
+            // that retires the stage's last player DPLC pair (s2.asm:6797-6803,
+            // 781, 1770), one row late.
+            GameLoopPlcLifecycle.startToWhiteAfterFrameFadeTick(
+                    resolveGameplayModeContext(), fadeManager, () -> {
+                        doEnterResultsScreen();
+                    });
         }
 
         LOGGER.info("Starting fade-to-white to exit Special Stage");
+    }
+
+    /**
+     * The special-stage identity a recorded run segment is cut on: the value
+     * {@code Current_Special_Stage} held when the ROM entered
+     * {@code GameModeID_SpecialStage}, held constant for the whole recorded
+     * segment.
+     *
+     * <p>The ROM's byte is not constant across that segment. A won stage
+     * increments it inside the stage itself, in the same block that raises
+     * {@code SS_Check_Rings_flag} ({@code addi_.b #1,(Current_Special_Stage).w},
+     * docs/s2disasm/s2.asm:72467-72477), and it is zeroed only on a later entry
+     * once it reaches 7 (s2.asm:6538-6540). The run recorder samples it once, at
+     * the first {@code GameModeID_SpecialStage} frame
+     * ({@code S2RunCaptureRunner.StartSsSegment}), so a segment's recorded
+     * {@code special_stage_index} is that pre-increment number for the whole
+     * segment, results tail included.
+     *
+     * <p>The engine splits that one ROM mode into {@code SPECIAL_STAGE} plus
+     * {@code SPECIAL_STAGE_RESULTS}, and entering results deinitialises the
+     * stage manager ({@code SpecialStageProvider#resetForResults}), dropping its
+     * scratch stage index back to 0. Reading the live provider during the
+     * results tail therefore reports 0 for every stage -- which only happened to
+     * match the recorded identity for stage 0. The results phase belongs to the
+     * stage captured at the exit boundary, so report that instead.
+     */
+    public Integer recordedSpecialStageIdentity(GameMode observedMode) {
+        if (observedMode == GameMode.SPECIAL_STAGE_RESULTS) {
+            return ssStageIndex;
+        }
+        if (observedMode != GameMode.SPECIAL_STAGE) {
+            return null;
+        }
+        SpecialStageProvider provider = getActiveSpecialStageProvider();
+        return provider != null ? provider.getCurrentStage() : null;
     }
 
     /**
@@ -2744,8 +2860,18 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
 
-        // Start fade-from-white to reveal the results screen
-        GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
+        // Neither game fades back in here. After the stage's whiteout both ROMs
+        // rebuild the screen and then write the results palette straight to the
+        // active palette in one go -- S2 `moveq #PalID_Result,d0 / bsr.w
+        // PalLoad_Now` (docs/s2disasm/s2.asm:6762-6763) and S1
+        // `moveq #palid_SSResult,d0 / bsr.w PalLoad` (docs/s1disasm/sonic.asm:3382-3383)
+        // -- so the results screen appears at full intensity on the very first
+        // V-blank of its tally loop (S2 `VintID_Level` at s2.asm:6797-6800, S1
+        // `SS_NormalExit` at sonic.asm:3403-3406). A fade-from-white here would
+        // instead hold PALETTE_FADE for its whole duration and push the first
+        // results-owned V-blank -- and the ProcessDMAQueue that retires the
+        // stage's last player DPLC pair -- that many rows late.
+        fadeManager.clearOverlayForImmediatePaletteLoad();
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
                 ", emerald=" + ssEmeraldCollected + ")");
@@ -2797,7 +2923,7 @@ public class GameLoop {
             // Load the starting level; loadCurrentLevel() will request its own title card.
             GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             try {
-                levelManager.loadZoneAndAct(0, 0);
+                levelManager.loadZoneAndActForFreshRuntime(0, 0);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load starting level after special stage", e);
             }
@@ -2923,6 +3049,17 @@ public class GameLoop {
                 sidekick.setDirection(playable.getDirection());
                 if (sidekick.getCpuController() != null) {
                     sidekick.getCpuController().reset();
+                    // ROM LevelSizeLoad re-writes Tails_Min/Max_X_pos and
+                    // Tails_Min/Max_Y_pos from the LevelSize table on every
+                    // entry to the Level: routine, and the special-stage return
+                    // re-runs that routine in full
+                    // (docs/s2disasm/s2.asm:14695-14706). reset() clears the
+                    // controller's copies of those words, so restore them
+                    // exactly as the level-load path does; without this
+                    // Tails_Max_Y_pos stays unset and Obj02_CheckGameOver's
+                    // kill plane (s2.asm:41146-41155) can never fire after a
+                    // special-stage return.
+                    levelManager.applySidekickLevelBounds(sidekick);
                 }
             }
         }
@@ -3106,6 +3243,10 @@ public class GameLoop {
             TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(
                     currentGameMode);
             syncPlaybackInputBridge();
+        }
+
+        if (currentGameMode == GameMode.LEVEL) {
+            titleCardReleasedIntoLevelThisIteration = true;
         }
 
         if (gameModeChangeListener != null) {
@@ -3322,7 +3463,7 @@ public class GameLoop {
                     module, spriteManager, configService);
             camera.setFocusedSprite(bootstrappedTeam.mainSprite());
             camera.updatePosition(true);
-            levelManager.loadZoneAndAct(context.zone(), context.act());
+            levelManager.loadZoneAndActForFreshRuntime(context.zone(), context.act());
 
             GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             if (gameModeChangeListener != null) {
@@ -3494,7 +3635,7 @@ public class GameLoop {
     private void startLevelFromTitleScreenImmediate() {
         setGameMode(GameMode.LEVEL);
         try {
-            levelManager.loadZoneAndAct(0, 0);
+            levelManager.loadZoneAndActForFreshRuntime(0, 0);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
@@ -3852,7 +3993,7 @@ public class GameLoop {
 
         // Load the selected zone/act
         try {
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
         } catch (IOException e) {
             LOGGER.severe("Failed to load zone " + zone + " act " + act + ": " + e.getMessage());
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
@@ -4001,7 +4142,7 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
@@ -4375,7 +4516,7 @@ public class GameLoop {
         try {
             // Suppress zone music — credits music should continue playing
             levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the title card request since we don't want a title card
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {

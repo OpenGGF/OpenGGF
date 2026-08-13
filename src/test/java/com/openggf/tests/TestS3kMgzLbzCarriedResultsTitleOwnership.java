@@ -67,14 +67,15 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                                 Sonic3kConstants.ARTTILE_MGZ_SPIKER),
                         new KosParent(Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
                                 Sonic3kConstants.ARTTILE_MGZ_MANTIS)),
-                38,
-                10);
+                30,
+                5,
+                true);
 
         verifyCarriedResultsLifecycle(route);
     }
 
     @Test
-    void lbzCarriedResultsHoldsEnemyAdmissionUntilItsTitleCompletes()
+    void lbzCarriedResultsHoldsEnemyAdmissionUntilItsTitleOwnerPoll()
             throws Exception {
         Route route = new Route(
                 Sonic3kZoneIds.ZONE_LBZ,
@@ -88,7 +89,8 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                         new KosParent(Sonic3kConstants.ART_KOSM_CORKEY_ADDR,
                                 Sonic3kConstants.ARTTILE_CORKEY)),
                 38,
-                11);
+                11,
+                false);
 
         verifyCarriedResultsLifecycle(route);
     }
@@ -165,8 +167,11 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                 "child retirement publishes apparent Act 2 on its native dispatch");
         assertTrue(targetObjects.getActiveObjects().contains(reacquireResultsOwner()),
                 "the results SST remains for the following title-init dispatch");
-        assertExactParentOccurrences(timing, titleParents(route.zone()), 0,
-                "the child-retirement publication dispatch queues no title parent");
+        assertExactParentOccurrences(timing, titleParents(route.zone()),
+                route.titleCardInitializesOnPublication() ? 1 : 0,
+                route.titleCardInitializesOnPublication()
+                        ? "the carried title owner submits its parents on the native publication dispatch"
+                        : "the child-retirement publication dispatch queues no title parent");
         assertTrue(beforePublication != null);
 
         fixture.stepFrame(false, false, false, false, false);
@@ -190,8 +195,11 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, titleParents(route.zone()), 0,
                 "pre-title restore removes the first publication");
         fixture.stepFrame(false, false, false, false, false);
-        assertExactParentOccurrences(timing, titleParents(route.zone()), 0,
-                "replayed child retirement still publishes no title parent");
+        assertExactParentOccurrences(timing, titleParents(route.zone()),
+                route.titleCardInitializesOnPublication() ? 1 : 0,
+                route.titleCardInitializesOnPublication()
+                        ? "replayed publication submits the carried title parents once"
+                        : "replayed child retirement still publishes no title parent");
         fixture.stepFrame(false, false, false, false, false);
         assertExactParentOccurrences(timing, titleParents(route.zone()), 1,
                 "replayed following dispatch publishes the four title parents once");
@@ -217,9 +225,10 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                 previousLevelGamestate = currentLevelGamestate;
             }
             previousTitleState = currentTitleState;
-            if (!title.isComplete()) {
+            if (!title.isComplete()
+                    && !title.hasPublishedInLevelRuntimeArtAdmission()) {
                 assertExactParentOccurrences(timing, route.enemyParents(), 0,
-                        "target enemies remain held throughout title ownership");
+                        "target enemies remain held before the title owner's LoadEnemyArt poll");
             }
         }
         assertTrue(title.isComplete());
@@ -451,7 +460,8 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
             int zone,
             List<KosParent> enemyParents,
             int expectedResetDispatches,
-            int expectedExitDispatches) {
+            int expectedExitDispatches,
+            boolean titleCardInitializesOnPublication) {
     }
 
     private record KosParent(int sourceAddress, int destinationTile) {

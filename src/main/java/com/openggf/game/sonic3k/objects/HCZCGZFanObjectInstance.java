@@ -441,7 +441,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         // ROM: jsr (AllocateObject).l
         try {
             int bubbleX = x + services().rng().nextInt(16) - 8;  // ROM: random X offset -8..+7
-            spawnChild(() -> new FanBubbleChild(
+            // ROM: Obj_HCZCGZFan uses AllocateObject here, not
+            // AllocateObjectAfterCurrent. Bubbles therefore take the lowest
+            // free dynamic SST slot, which can be below their fan parent.
+            spawnFreeChild(() -> new FanBubbleChild(
                     new ObjectSpawn(bubbleX, y, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0)));
         } catch (Exception e) {
             // Object allocation failed
@@ -764,9 +767,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                 return;
             }
 
-            // ROM: jsr (MoveSprite2).l — apply velocity AFTER water check
-            // $800 = 8.00 in 8.8 fixed point = 8 pixels per frame upward
-            y += (yVelocity >> 8);
+            // ROM: Obj_HCZCGZFan's bubble routine calls MoveSprite2 twice
+            // after the water check. $800 is 8 pixels per call, so the native
+            // bubble advances 16 pixels upward per frame.
+            y += 2 * (yVelocity >> 8);
         }
 
         @Override

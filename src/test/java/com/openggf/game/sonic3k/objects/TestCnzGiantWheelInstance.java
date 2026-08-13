@@ -1,12 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -90,6 +95,30 @@ class TestCnzGiantWheelInstance {
         wheel.update(1, player);
 
         assertFalse(player.isStickToConvex());
+    }
+
+    @Test
+    void nativeP2LandingInsideWheelReceivesRomMinimumGroundSpeed() {
+        CnzGiantWheelInstance wheel = createWheel(0, 0x2980, 0x0538);
+        TestablePlayableSprite sonic = createGroundedPlayer(0x2800, 0x0400, 0);
+        TestablePlayableSprite tails = createGroundedPlayer(0x298B, 0x04F0, -0x015C);
+        wheel.setServices(new TestObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> sonic, () -> List.of(tails));
+            }
+
+            @Override
+            public List<PlayableEntity> sidekicks() {
+                return List.of(tails);
+            }
+        });
+
+        wheel.update(0, sonic);
+
+        assertEquals((short) 0x0400, tails.getGSpeed(),
+                "Obj_CNZGiantWheel runs sub_328E8 for Player_2 after Player_1");
+        assertTrue(tails.isStickToConvex());
     }
 
     private static CnzGiantWheelInstance createWheel(int renderFlags, int x, int y) {

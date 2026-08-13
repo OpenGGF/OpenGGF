@@ -28,15 +28,12 @@ import java.nio.file.Path;
  * ordinary red test with a frame and a field. Modelled on
  * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
- * <p><b>Status at b961eae47 (landed red, deliberately).</b> 4 errors, 0
- * bootstrap errors, over all 3710 rows. Every physics/animation field matches
- * until the final row: the first error is frame 3709,
- * {@code dynamic_art.edges} expected {@code [6556]} actual
- * {@code [6556, 6557, 6558]}. That is the same closing-edge submission skew
- * documented on {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay} — the
- * recorder attributes the trailing submission to the following
- * {@code run_gap}, so the recorded last row shows fewer outstanding edges.
- * Left failing rather than masked with a tolerance.
+ * <p>This class used to land red with 4 closing-edge {@code dynamic_art}
+ * errors on the final row 3709. That was the same trailing-iteration
+ * attribution documented on
+ * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}: the run recorder puts
+ * the iteration after a segment's last row into the following {@code run_gap},
+ * so the replay must not forward it onto that row.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

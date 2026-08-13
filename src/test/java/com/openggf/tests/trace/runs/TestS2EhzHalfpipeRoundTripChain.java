@@ -113,6 +113,68 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the results tail where the ROM has none (it {@code clearRAM Object_RAM} before
  * loading {@code Obj6F}).
  *
+ * <p><b>SUPERSEDED (2026-08-09). The paragraph below was accurate when written and
+ * is no longer true: it states that this fixture's {@code ss} / {@code ss_2} carry
+ * zero {@code run_objects_end} records. They carry 3172 and 3472 -- the recorder's
+ * pre-start {@code SpecialStage_MainLoop} hook was added and both segments were
+ * republished, so the "republish is the only correct closure" conclusion is spent.
+ * The interior is now pass-paced and rows 0..5190 of 5733 compare clean.</b>
+ *
+ * <p><b>SUPERSEDED (2026-08-10). The "runs one RunObjects pass early" paragraph
+ * below was wrong on both halves.</b> The row-5191 divergence was purely a row
+ * driver defect: the binder deliberately binds the terminal stage-finished pass
+ * to the raw finish observation even though the recorder marked that row a lag
+ * row, and {@code uncomparedInteriorStep} then refused to execute the row because
+ * {@code admission.executeGameplay()} was false -- so the stage's last
+ * {@code RunObjects} pass, and the ss-tails / ss-tails-tails pair it submits,
+ * never ran inside the compared window. Executing an observation that owns a
+ * completed pass (the rule {@code S2SpecialStageReplayHarness.stepPasses} already
+ * states from docs/s2disasm/s2.asm:6694-6706 and 483-484) closes rows 5191..5229
+ * exactly, with the recorded mapping frames 0 / 4 published bit-identically:
+ * 45 errors -> 26, no engine change involved.
+ * Removing {@code executeStreamedObjectInitFallthrough} was separately tried and
+ * REJECTED: it turns all eight standalone {@code TestS2SpecialStage*TraceReplay}
+ * classes red on {@code combined_rings} from around frame 700, so whatever the
+ * duplicate routine-0 execution is compensating for, it is load-bearing for ring
+ * depth cadence and must be understood before it is removed.
+ *
+ * <p><b>Remaining RED (26 errors, rows 5230..5250): the exit fade is 43 engine
+ * V-blanks where {@code Pal_FadeToWhite} is 22.</b> {@code Pal_FadeToWhite} loads
+ * {@code move.w #$15,d4} and {@code dbf}s, i.e. exactly 22 {@code VintID_Fade}
+ * rows (docs/s2disasm/s2.asm:3570-3582) -- recorded rows 5192..5213. Rows
+ * 5214..5229 are the recorder's 16 lag rows for the straight-line
+ * {@code ClearScreen} / {@code PalLoad_Now} / {@code LoadPLC2} / {@code NemDec}
+ * block (s2.asm:6749-6795), which runs no V-int at all, and row 5230 is the first
+ * {@code VintID_Level WaitForVint} of the {@code Obj6F} tally loop
+ * (s2.asm:6797-6800) -- the {@code ProcessDMAQueue} that retires the pair. The
+ * engine instead claims {@code PALETTE_FADE} for 22 rows (5192..5213) and then a
+ * further 21 (5230..5250), so its first {@code SPECIAL_STAGE_RESULTS} claim, and
+ * with it {@code DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE}, lands at
+ * 5251 instead of 5230. The owner is the special-stage exit fade duration, not
+ * the emerald sequence.
+ *
+ * <p><i>Historical, retained for provenance (2026-08-09):</i>
+ * <p><b>the engine runs the Obj59 emerald
+ * sequence exactly one {@code RunObjects} pass early.</b> Recorded pass 3171 raises
+ * {@code SS_Check_Rings_flag} at row 5191 and submits the ordinary special-stage
+ * player DPLC pair -- ss-tails (mapping frame 0, {@code LoadSSTailsDynPLC}) and
+ * ss-tails-tails (mapping frame 4, {@code LoadSSTailsTailsDynPLC}) -- which then
+ * retire 39 frames later at 5230 only because no V-int services the DMA queue while
+ * {@code Pal_FadeToWhite} / {@code ClearScreen} / {@code NemDec} run; it flushes on
+ * the first {@code VintID_Level} {@code WaitForVint} of the {@code Obj6F} tally loop
+ * (docs/s2disasm/s2.asm:6797-6800). Nothing in the results tail submits them, so
+ * this is not a results/fade-duration item either.
+ * The engine's routine-0 init occupies passes 2949..3008 -- the correct count of 60,
+ * starting one pass early -- so {@code loc_36172}'s 100-decrement countdown raises the
+ * flag on engine pass 3172 (row 5190) instead of recorded pass 3171 (row 5191).
+ * Origin: {@code Sonic2SpecialStageManager.streamSpecialStageObjects()} calls
+ * {@code executeStreamedObjectInitFallthrough()} at the streaming observation, and
+ * that observation's own pass is then deferred to the next observation, so a streamed
+ * object's routine 0 runs twice. Closing it needs that duplicate removed AND the last
+ * scheduled SS pass given an observation inside the compared window; either alone
+ * leaves the count at 45.
+ *
+ * <p><i>Historical, retained for provenance:</i>
  * <p><b>Root cause (measured 2026-08-08): this is the missing {@code run_objects_end}
  * pass log, not an engine defect and not a publication-phase offset.</b> The
  * interior here is FRAME-paced -- {@link AbstractRunChainTest#uncomparedInteriorStep}
@@ -224,6 +286,126 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ({@link AbstractRunChainTest#assertRecordedEmeraldProgression}: emeralds_after ==
  * emeralds_before + 1). The always-safe carry-overs (position restore + ring zero-out)
  * remain asserted.
+ *
+ * <h2>Segment 3 (ss_2) ownership: FIXED 2026-08-11</h2>
+ *
+ * <p>The chain used to fail with {@code "segment 3 lost production ownership before
+ * source closure (mode=SPECIAL_STAGE_RESULTS, ...)"}. The mode was a red herring --
+ * {@code ownsCurrentSegment} already accepts {@code SPECIAL_STAGE_RESULTS} via
+ * {@code RunPlaybackObservation.insideRecordedSpecialStageMode}. Instrumenting the
+ * ownership predicate showed the observation's {@code specialStageIndex} dropping from
+ * 1 to 0 on the exact step the engine entered {@code SPECIAL_STAGE_RESULTS}, against a
+ * segment identity of 1. Segment 1 (the first {@code ss}) survived only because its
+ * recorded identity is 0, so the zeroed reading matched by coincidence -- 504 of its
+ * results-phase steps were compared against an accidentally-correct identity.
+ *
+ * <p>Cause: the observation read the LIVE
+ * {@code SpecialStageProvider#getCurrentStage()}, and entering results calls
+ * {@code resetForResults()} -> {@code reset()}, which drops the manager's scratch stage
+ * index to 0. The recorded identity is not live: {@code S2RunCaptureRunner.StartSsSegment}
+ * samples {@code Current_Special_Stage} once, on the first
+ * {@code GameModeID_SpecialStage} frame. The ROM byte is not constant over that segment
+ * either -- a won stage increments it inside the stage, alongside
+ * {@code SS_Check_Rings_flag} (docs/s2disasm/s2.asm:72467-72477) -- so the segment's
+ * identity is the pre-increment number for the whole segment, results tail included.
+ * Both observation builders (this test's adapter and the production
+ * {@code TraceSessionLauncher}) now read {@code GameLoop#recordedSpecialStageIdentity},
+ * which reports the stage captured at the exit boundary while results are showing.
+ *
+ * <h2>Segment 4 (seg3_ehz1) ownership: FIXED 2026-08-11</h2>
+ *
+ * <p>The chain used to fail with {@code "segment 4 lost production ownership before
+ * source closure (mode=TITLE_CARD, ..., BK2 cursor=22420)"}. That was a downstream
+ * symptom, not a segment-close model error, and the three candidate explanations
+ * (engine runs too few rows / comparator closes too early / the declared row count
+ * omits ROM rows) were all wrong in their structural form. {@code seg3_ehz1} is
+ * recorded entirely in {@code Game_Mode == 12} with {@code apparent_act} never leaving
+ * 0, so the ROM never starts act 2 within its 3452 rows; the engine ended the act at
+ * row 3261 because its player had reached the signpost ~400 rows early.
+ *
+ * <p>The first divergence is row 381. Both sides land on row 380 with
+ * {@code inertia == 0x180}; the ROM then adds {@code +$C} for four frames while the
+ * engine holds {@code 0x180} for two. The cause was the engine's {@code springing}
+ * timer, set to 15 frames by the down-spring that launched the arc, participating in
+ * the grounded control lock. {@code move_lock} is the ROM's only grounded-input lock
+ * and only the HORIZONTAL spring writes it (s2.asm:34031, S1
+ * {@code _incObj/41 Springs.asm}:144, sonic3k.asm:47907); the up, down and diagonal
+ * launches write none. Fixed in {@code PlayableSpriteMovement} by gating grounded
+ * input on {@code move_lock} alone.
+ *
+ * <h2>The run's terminal dynamic-art comparison: FIXED 2026-08-12 (harness)</h2>
+ *
+ * <p>With segment 4 replaying all 3452 rows, the terminal assertion became reachable
+ * and failed: {@code shared terminal dynamic-art comparison failed for seg3_ehz1} with
+ * {@code run_tail.edge_count} expected 1 / actual 0, {@code run_tail.edge[0].present}
+ * expected true / actual false, and one missing {@code final_ledger_fingerprint}.
+ *
+ * <p><b>The engine was never asked to produce that edge.</b> Measured with a probe on
+ * {@code replayTerminalMovieTail}: it emits no output at all, because
+ * {@code HeadlessRunCoordinatorAdapter.terminalPlan()} is null. This run's
+ * {@code run_manifest.json} carries no {@code expected_movie_end_mode}, so
+ * {@code TraceRunReplayWalker.planTerminalMovieTail} returns a zero-row plan and the
+ * coordinator emits {@code CompleteRun} instead of {@code BeginTerminalTail}. Zero tail
+ * rows are stepped, so no production submission can occur over
+ * {@code [22611, movieFrameCount)} -- the exact window the comparator draws its single
+ * expected edge from (a {@code sonic} mapping-frame-15 {@code run_gap} submission
+ * stamped at movie frame 22611, i.e. {@code sourceEnd} itself).
+ *
+ * <p>That combination is the walker's documented contract -- "an unspecified endpoint
+ * deliberately leaves both tail replay AND terminal assertion disabled" -- and the
+ * production launcher honours it: {@code
+ * TraceSessionLauncher.compareRunTerminalDynamicArtTail} is reachable only from the
+ * {@code BeginTerminalTail} action. Only {@link AbstractRunChainTest}'s probe called
+ * {@code verifyTerminal} unconditionally, so the two paths disagreed and the test
+ * asserted over rows it had declined to drive. The probe now gates on the same
+ * manifest-declared opt-in. {@code TestS1GhzMazeRoundTripChain} (whose manifest does
+ * declare {@code expected_movie_end_mode: level}) is unaffected and still asserts its
+ * two tail edges.
+ *
+ * <p><b>What this stops checking.</b> The terminal tail of every run whose manifest
+ * omits {@code expected_movie_end_mode} -- both S2 runs and all three S3K runs -- is no
+ * longer compared, matching production. Restoring the comparison for this run means
+ * republishing its manifest with the field so the coordinator actually drives the tail
+ * rows; that is a fixture-publication decision, not an engine change.
+ *
+ * <h2>Current RED (2026-08-12): seg2_ehz1's returned-level physics, now ASSERTED</h2>
+ *
+ * <p>{@link AbstractRunChainTest} now asserts the returned-level segment's physics
+ * comparator error count -- the number it already computed and wrote into
+ * {@code target/trace-reports/s2-ehz-halfpipe-roundtrip_seg2_report.json}. It was never
+ * asserted, so this chain walked past {@code seg2_ehz1} carrying 39645 errors while
+ * reporting the segment {@code complete}, and every candidate fix for the downstream
+ * symptoms was being judged by which route a broken-but-unasserted segment happened to
+ * take. {@code TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay} is the oracle: it
+ * replays the identical rows standalone to ZERO errors, so the rows can replay clean and
+ * the divergence is owned by this chain's special-stage return path.
+ *
+ * <p>Closed in that count: the {@code camera_x} column. The engine restored
+ * {@code Camera_X_pos} from its banked {@code Saved_Camera_X_pos}, but every ROM
+ * overwrites that value immediately -- {@code Obj79_LoadData} (s2.asm:44793-44794)
+ * returns into {@code LevelSizeLoad}'s {@code subi.w #$A0,d1} clamped tail
+ * (s2.asm:14775-14814), which recomputes the camera from the RESTORED player position.
+ * 39645 -&gt; 39612.
+ *
+ * <p>The residual's first non-camera mismatch is {@code sidekick_x} at frame 1
+ * (rom 0x0DDE / engine 0x0DF1) -- the CPU-Tails title-card-duration divergence already
+ * documented above, which is now a hard failure rather than a diagnostic note.
+ *
+ * <h2>Superseded RED: the seg1_ehz1 -&gt; ss structural gap</h2>
+ *
+ * <p>With the terminal assertion correctly skipped, the chain now reaches its epilogue
+ * {@code dynamicArtGapJournal.verify(run)} for the first time, which fails on the very
+ * FIRST structural gap: {@code shared dynamic-art gap comparison failed for seg1_ehz1
+ * -> ss} with {@code run_gap.edge_count} expected 1 / actual 0 and
+ * {@code run_gap.edge[0].present} expected true / actual false. This was always
+ * present; it was masked because {@code verifyTerminal} threw inside the walk's
+ * {@code try} block before the epilogue ran. That is the next thing to chase, and it
+ * sits far earlier in the run than the tail did.
+ *
+ * <p>Segment 4's own physics report closes at 45814 errors whose first mismatch is
+ * {@code sidekick_x} at frame 1 -- the same CPU-Tails title-card-duration diagnostic
+ * documented above for {@code seg2_ehz1} (36879, identical before and after the fix),
+ * not a player-trajectory divergence.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {

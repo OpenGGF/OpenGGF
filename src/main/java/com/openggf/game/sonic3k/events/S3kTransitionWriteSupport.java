@@ -48,15 +48,31 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
+    public static void preparePreloadedActTitleCardRuntimeArtAdmission(
+            LevelEventProvider provider) {
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.preparePreloadedActTitleCardRuntimeArtAdmission();
+        }
+    }
+
+    public static int preloadedActCameraReleaseAdditionalDispatches(
+            ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            return bridge.preloadedActCameraReleaseAdditionalDispatches();
+        }
+        return -1;
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();
         }
     }
 
-    public static void requestCnzPostTransitionRelease(LevelEventProvider provider, int framesUntilRelease) {
+    public static void requestCnzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
-            bridge.requestCnzPostTransitionRelease(framesUntilRelease);
+            bridge.requestCnzPostTransitionRelease();
         }
     }
 }

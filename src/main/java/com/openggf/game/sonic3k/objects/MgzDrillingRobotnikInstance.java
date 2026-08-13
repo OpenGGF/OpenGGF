@@ -13,8 +13,13 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kMgzEventWriteSupport;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -30,6 +35,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -135,6 +141,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int END_DEFEAT_WAIT_FADE_TO_LEVEL_MUSIC = 0;
     private static final int END_DEFEAT_WAIT_CAPSULE_CALLBACK = 1;
     private static final int END_DEFEAT_WAIT_RESULTS_FLAG = 2;
+    /** ROM Wait_FadeToLevelMusic enters this handoff with $2E=$3F. */
+    private static final int END_DEFEAT_FADE_WAIT_FRAMES = 0x3F;
 
     /** ROM: move.w #-$800,y_vel — initial upward velocity into ceiling. */
     private static final int INITIAL_Y_VEL = -0x800;
@@ -326,6 +334,17 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private boolean miniInitialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
+    @RewindTransient(reason = "queue facade is rebound from the captured MGZ KosM ordinals")
+    private S3kKosModuleQueue bossArtQueue;
+    @RewindTransient(reason = "hardware handle is rebound from the captured MGZ KosM ordinal")
+    private HardwareWorkHandle bossArtHandle;
+    @RewindTransient(reason = "hardware handle is rebound from the captured MGZ KosM ordinal")
+    private HardwareWorkHandle bossDebrisArtHandle;
+    private long bossArtOrdinal;
+    private long bossDebrisArtOrdinal;
+    private boolean bossArtLoaded;
+    /** True after loc_6C200 publishes the four post-flee KosM parents. */
+    private boolean postFleeLevelArtQueued;
     private boolean palettesLoaded;
     private boolean bossMusicPlayed;
     private boolean hit;
@@ -404,6 +423,13 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         waitTimer = INIT_WAIT_FRAMES;
         miniInitialExecutionPending = !endBossMode;
         artQueued = false;
+        bossArtQueue = null;
+        bossArtHandle = null;
+        bossDebrisArtHandle = null;
+        bossArtOrdinal = -1;
+        bossDebrisArtOrdinal = -1;
+        bossArtLoaded = false;
+        postFleeLevelArtQueued = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
@@ -807,6 +833,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
 
         clearEndBossRuntimeState();
+        // ROM loc_694AA arms a new _unkFAA8 capsule/results window before
+        // the capsule is published.  End_of_level_flag is the completion
+        // signal for that window; clear a flag retained from the preceding
+        // act before the boss waiter starts polling it.
+        services().gameState().setEndOfLevelFlag(false);
         // ROM loc_694AA loads PLC_EggCapsule and animals/explosion art here.
         // The engine's S3K object-art provider keeps the egg capsule as a
         // standalone sheet, so the observable handoff is the same object spawn.
@@ -1113,6 +1144,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (escapeTimer >= 0) {
             return;
         }
+        if (!endBossMode && !queuePostFleeLevelArtIfNeeded()) {
+            return;
+        }
         restoreMgzPalette();
         services().playMusic(Sonic3kMusic.MGZ2.id);
         // ROM loc_6C200 allocates the gradual boundary worker from the start
@@ -1127,6 +1161,50 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
+    }
+
+    /**
+     * Mirrors {@code loc_6C200}: the fleeing drilling Robotnik publishes the
+     * Act 2 primary/secondary terrain modules followed by the Spiker and
+     * Mantis modules. The object is deleted immediately after these calls, so
+     * the coordinator owns the ready-and-claim handoff for the four parents.
+     */
+    private boolean queuePostFleeLevelArtIfNeeded() {
+        if (postFleeLevelArtQueued) {
+            return true;
+        }
+        try {
+            S3kKosModuleQueue queue =
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            if (!queue.hasCapacityFor(4)) {
+                return false;
+            }
+            List<HardwareWorkHandle> handles = List.of(
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_PRIMARY_ADDR,
+                            0x000),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.KOSM_MGZ2_SECONDARY_ART_ADDR,
+                            0x252),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_SPIKER_ADDR,
+                            Sonic3kConstants.ARTTILE_MGZ_SPIKER),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
+                            Sonic3kConstants.ARTTILE_MGZ_MANTIS));
+            for (HardwareWorkHandle handle : handles) {
+                queue.claimAfterFreshLevelHandoff(handle);
+            }
+            postFleeLevelArtQueued = true;
+            return true;
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to queue MGZ post-flee level art", exception);
+        }
     }
 
     private void applyYVelocity() {
@@ -1149,6 +1227,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      * load Pal_MGZEndBoss into palette line 1.
      */
     private void queueInitialAssetsIfNeeded() {
+        serviceBossArtQueue();
         if (artQueued) {
             return;
         }
@@ -1156,6 +1235,72 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         ensureArtLoaded();
         loadBossPalette();
         artQueued = true;
+    }
+
+    /**
+     * ROM {@code Obj_MGZ2DrillingRobotnik} queues the drill and debris KosM
+     * archives before loading PLC {@code $6D} (sonic3k.asm:142447-142454).
+     * The sheets are registered separately for rendering, but the global
+     * module FIFO still owns this hardware-visible work.
+     */
+    private void serviceBossArtQueue() {
+        try {
+            if (bossArtLoaded) {
+                return;
+            }
+            if (bossArtQueue == null && bossArtOrdinal >= 0) {
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+                bossArtHandle = services().hardwareTiming().pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, bossArtOrdinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored MGZ end-boss owner cannot find KosM ordinal "
+                                        + bossArtOrdinal));
+                bossDebrisArtHandle = services().hardwareTiming().pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, bossDebrisArtOrdinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored MGZ end-boss owner cannot find debris KosM ordinal "
+                                        + bossDebrisArtOrdinal));
+            }
+            if (bossArtQueue == null && bossArtOrdinal < 0) {
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+                bossArtHandle = bossArtQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_ADDR,
+                        Sonic3kConstants.ART_TILE_MGZ_END_BOSS);
+                bossArtOrdinal = bossArtHandle.ordinal();
+                bossDebrisArtHandle = bossArtQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR,
+                        Sonic3kConstants.ART_TILE_MGZ_END_BOSS_DEBRIS);
+                bossDebrisArtOrdinal = bossDebrisArtHandle.ordinal();
+                return;
+            }
+            if (bossArtHandle != null && bossArtQueue.isReady(bossArtHandle)) {
+                bossArtQueue.claim(bossArtHandle);
+                bossArtHandle = null;
+                bossArtOrdinal = -1;
+            }
+            if (bossDebrisArtHandle != null && bossArtQueue.isReady(bossDebrisArtHandle)) {
+                bossArtQueue.claim(bossDebrisArtHandle);
+                bossDebrisArtHandle = null;
+                bossDebrisArtOrdinal = -1;
+            }
+            if (bossArtHandle == null && bossDebrisArtHandle == null) {
+                bossArtQueue = null;
+                bossArtLoaded = true;
+            }
+        } catch (Exception unavailable) {
+            if (bossArtOrdinal >= 0 || bossDebrisArtOrdinal >= 0) {
+                throw new IllegalStateException(
+                        "MGZ end-boss KosM owner lost its submitted job", unavailable);
+            }
+            // Lightweight object tests can exercise the native wait without a
+            // session timing/ROM service. Production has already submitted both
+            // ordinals before this fallback could be taken.
+            bossArtQueue = null;
+            bossArtHandle = null;
+            bossDebrisArtHandle = null;
+        }
     }
 
     /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142404) — Play_Music(mus_EndBoss). */
@@ -1276,6 +1421,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         state.invulnerabilityTimer = 0;
         endBossDefeatHandoffComplete = false;
         endBossDefeatPhase = END_DEFEAT_WAIT_FADE_TO_LEVEL_MUSIC;
+        // ROM loc_6D60A jumps to Wait_FadeToLevelMusic, whose initial $2E
+        // value yields the 64-frame wait before loc_6C2BE publishes Obj_Wait.
+        waitTimer = END_DEFEAT_FADE_WAIT_FRAMES;
         endBossBodyHiddenAfterFadeHandoff = false;
         endBossDefeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
         services().playSfx(Sonic3kSfx.EXPLODE.id);

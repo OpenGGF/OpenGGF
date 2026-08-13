@@ -440,7 +440,33 @@ gated on a slot-derived phase (`(v_vblank_byte + 127 - slot) & 3` on S1,
 `(Vint_runcount+3) + d7` on S2). **A ring divergence is therefore usually an occupancy
 divergence wearing a disguise.** Chase the first occupancy divergence, not the ring.
 
-### A fitted fix leaves fingerprints in its own commit message
+### Finding a fitted model: measure your detector, do not trust it
+
+**A ROM citation does not mean the value came from the ROM, and can actively hide that it
+did not.** Three detectors were built and their recall measured against git-reconstructed
+pre-fix blobs of five known fitted models:
+
+| Detector | Recall | Notes |
+|---|---|---|
+| Uncited numeric literal in gameplay code | ~0 useful | 2,629 hits; top results are `0xFFFF` masks and array bounds |
+| Uncited `static final` + uncited multi-comparison predicate | **1 of 5** | 8,520 false positives for the one hit |
+| **Observation-authority vocabulary in the attached comment** | **4 of 5** | 189 tree-wide, ~40 after dropping trace/tool/debug infrastructure |
+
+The winning signal is a comment that grounds a value in an **observation** rather than in ROM
+code: *BizHawk*, *"trace shows"*, *"recorded … trace"*, *observed*, *measured*,
+*hand-measured*, *empirical*, *tuned*, *probe*, *"the &lt;ZONE&gt; route"*, `Test*TraceReplay`.
+
+The case that kills the intuitive detector: `TailsRespawnStrategy`'s fitted window
+(`offscreenFlightFrames >= 0x3E && <= 0x3F && relY <= -31`) was classified **CITED**, because
+its comment opens *"ROM TailsCPU_Flying tests render_flags.on_screen…"* and only then derives
+the window from *"At HTZ1 gfc $193F, BizHawk shows y=$04AD, camY=$04CC"*. A correct ROM
+citation sat directly above a fitted constant and camouflaged it.
+
+So when reviewing a citation, read what it actually licenses. *"ROM does X"* followed by
+*"so at frame N we measured Y"* is a fitted model wearing a citation. The citation must
+license **the value**, not merely the surrounding mechanism.
+
+### A fitted fix also leaves fingerprints in its own commit message
 
 `ca939d50d` shipped a route carve-out that passed review and stayed on `develop` for
 weeks. Its message said the change kept a child "in lower slots that are free only
@@ -453,6 +479,52 @@ cannot detect a fitted fix; only reading the ROM can. When such a fix is removed
 whether the test *that commit itself shipped* still passes: for `ca939d50d` it did,
 meaning later work had made the compensation redundant and nothing would ever have said
 so.
+
+### Removing a provably-wrong behaviour can make things worse
+
+Some engine defects are **load-bearing**: a second defect has grown to depend on them, and
+deleting one alone exposes the other. Measure removal, do not assume it.
+
+`Sonic2SpecialStageManager.executeStreamedObjectInitFallthrough` runs a streamed object's
+routine 0 inline, and that observation's own pass then runs it again in the deferred pass.
+The ROM plainly disagrees — `SSObjectsManager` only allocates, and the same iteration's
+`RunObjects` runs routine 0 — so the duplicate execution is wrong on paper. Removing it:
+
+- alone, left the EHZ chain at exactly 45 errors with an identical mismatch set;
+- combined with the correct harness fix, made it **worse** (27 vs 26);
+- turned **all eight** standalone `TestS2SpecialStage*TraceReplay` classes red on
+  `combined_rings` from about frame 700, at 5,287–35,203 errors each, all green beforehand.
+
+The rule: **when removing a behaviour you can prove wrong from the ROM makes the numbers
+worse, stop and find what it was propping up.** That is a second defect, not a reason to keep
+the first — but the pair has to come out together, and the write-up should name the pair so
+the next agent does not retry the removal in isolation.
+
+**Update, 2026-08-11 — and the update is the more useful lesson.** What it was propping up
+was measured, and it turned out **not to be a second defect at all**. Per-object probes on
+the depth decrement showed the removal gives every object exactly one decrement per pass and
+shifts each ring's collection one pass later with the *same* decrement count (one ring: pass
+428 with 79 decrements becomes pass 429 with 79). The surviving divergence localised to a
+single ring, where by the pass at which the correctly-one-per-pass engine has consumed 76
+decrements, the ROM has consumed 77. So the streamed object joins the engine's object pass
+**one observation later** than the ROM's allocation iteration, and the duplicate execution was
+supplying the missing *early* decrement while leaving the late one in place.
+
+Two wrongs, one cause. The fix is a single coherent change — make the freshly streamed object
+join the pass belonging to the observation in which `SSObjectsManager` ran, keeping exactly one
+execution — not "remove the duplicate, then separately fix the cadence".
+
+So extend the rule: **when a removal exposes a second symptom, first ask whether it is a second
+defect or the same defect seen from the other side.** A compensator often pairs with a phase or
+ordering error rather than an independent bug, and framing it as two fixes sends the next round
+looking for a bug that does not exist. Note also that the direction of the exposed symptom is
+worth measuring rather than assuming: this one was reported as the engine collecting *fewer*
+rings and was in fact collecting *more* — 1626 of 1714 mismatches had the engine higher, and
+total collections went 183 to 185.
+
+This is the mirror image of the fitted-constant case. There, two wrongs cancelled and both
+came out cleanly (the MZ2 geyser guard and its fitted launch). Here they do not cancel, and
+order matters.
 
 ## Name the clock, or your "N frames late" is fiction
 
@@ -497,6 +569,98 @@ than like a constant offset.
 The corollary for reviewers and orchestrators: when an agent hands you "N frames
 late", the first question is *which clock*, not *why*. Neither of the two retractions
 above would have survived that question.
+
+## Two paths that should agree, but don't
+
+Three separate multi-round investigations this session ended at the same shape: **two
+implementations of one contract, where only one got a fix.** Nothing in the suite notices,
+because each path is individually plausible and only their disagreement is wrong.
+
+| Contract | The two paths | What was missing |
+|---|---|---|
+| ROM `ExecuteObjects` slot lifecycle | `updateCounterBasedExecThenLoad` (S1) vs `runExecLoop` (S2/S3K) | `pendingChildSlotRelease` drained on one lane only -- every deferred child-slot release on the other leaked its slot permanently |
+| Special-stage art comparison | `AbstractS2SpecialStageTraceReplayTest` vs the run chain's `DynamicArtSegmentComparison` | `DynamicArtSpillNormalization` applied by one comparator and not the other |
+| Capture entry-frame handling | `S2RunCaptureRunner` vs `S2SpecialStageCaptureRunner` | one skipped the entry frame, the other wrote a row for it -- a whole committed fixture was labelled a frame early |
+
+**When a defect resists explanation, ask whether a second implementation of the same
+contract exists, and diff them.** That is a five-minute check that has repeatedly beaten
+hours of tracing. `TestExecLoopSlotLifecycleParityGuard` now enforces the first case; the
+other two are still enforced only by attention.
+
+Corollary for fixes: after landing anything in a shared contract, ask *where else does this
+contract live*. A fix applied to one of two paths is half a fix and will surface later as an
+unexplained divergence in the other.
+
+## Do not imitate sub-frame timing -- reconcile it
+
+A recorded V-blank row can bisect the ROM's `RunObjects` object scan (Obj09 Sonic, then
+Obj10 sidekick), so one player's state comes from before the pass and the other's from
+after. It is tempting to make the engine reproduce *when* the 68K ran out of time.
+
+**Don't.** Where inside the scan the interrupt landed is sub-frame execution timing with no
+frame-granularity ROM predicate. Deriving it means fitting to one recording, which hard
+rule 3 forbids however well you cite the surrounding routine. It belongs in **comparison
+normalisation** -- take the expectation from the atomic `run_objects_end` snapshot rather
+than the raw row, exactly as `DynamicArtSpillNormalization` and the special-stage pre-start
+comparison now do.
+
+The test for which side of the line you are on: *does the change alter what the engine
+does, or what the comparator expects?* Reproducing real ROM control flow is engine work.
+Reproducing where an interrupt happened to fall is not.
+
+## The first reported error is usually not the cause
+
+The comparator reports the lowest failing frame. That is frequently a self-healing blip
+several thousand frames before the real cascade origin, and chasing it wastes a round.
+
+**Parse the report, do not read the headline.** `target/trace-reports/*.json` carries every
+error's `start_frame`, `end_frame` and `cascading` flag. The question to answer first is
+*how many errors start before frame N*, for each candidate N.
+
+Worked example: CPZ2 seg9 reported "first error frame 415, `tails_cpu_respawn_counter`".
+Parsing showed that entry is a 2-frame, `cascading: false`, self-healing blip and that
+**exactly one of 12927 errors started before frame 1579**. Closing 415 would have removed
+one error. The real origin was 1579, then 1584, then -- after those were fixed -- 5052. At
+each stage the headline still said 415.
+
+Related: a `frame_span == 1` error that re-converges on the next frame is a *phase* or
+*sampling* symptom, not physics drift. Physics drift accumulates; blips do not.
+
+## Green can be coincidental
+
+A passing trace test is evidence about the fields it asserts on, over the rows it compares.
+It is not evidence that the engine is right.
+
+- `TestS2SpecialStage6TraceReplay` was green for sixteen rounds while its uncompared
+  predecessor segment carried **12927 errors** cascading from frame 415. It passed because
+  the divergence never reached the two fields its assertion checks.
+- `TestS1Slz3CompleteRunTraceReplay` was green with a **grossly wrong prison-animal
+  population** (engine Obj28 in slots 51-63 where ROM has 33-50). `Pri_EndAct` fires the
+  frame after the last animal leaves the scan range, so a wrong animal set happened to land
+  on the right end-of-act frame. Any *correct* change to animal lifetime moved it.
+
+So: before treating a green test as a constraint, establish what it actually compares. And
+when a correct fix turns a green test red, the question is not "what did I break" but
+"**was that test green for the right reason**" -- twice this session it was not, and the
+evidence was a probe at the parent commit showing the divergence already present.
+
+## Disprove by implementing
+
+When two models of a mechanism are plausible, implementing the wrong one and measuring is
+often faster than reasoning about which is right -- and the failure output localises the
+real mechanism.
+
+The ss_1 pre-start model was specified as three interdependent pieces and insisted upon.
+Implementing exactly that turned **all eight** special-stage traces red, 510-648 errors
+each, first error frame 180 -- and that failure was the evidence: the recorder's own aux row
+for 180 carried the pass's DPLC submission with `logical_frame == publication_frame == 180`,
+proving an overrunning pass's art *is* visible on its sample row. Measuring all 51
+overrunning passes then showed 44 of 51 carried their own result, refuting the model
+outright and pointing at the torn-row explanation instead.
+
+Budget a measurement rather than an argument. Record rejected experiments in the write-up
+with their error counts, so the next agent does not retry them -- several briefs this
+session carried a "do not retry" list that saved a lane.
 
 ## Pipeline Overview
 
@@ -1446,6 +1610,12 @@ S1 `segment_start - 26` load-pair invariant, live in the `plc-system` skill's
   any level reaches its main loop can never measure the tail back from it and
   takes the earliest legal row instead
   (`releaseUnclaimedPreMainLoopPlayerTransfer`, :680-693).
+- **Fresh-level title-card boundaries expose player RAM before object
+  dispatch.** Do not publish the fully assembled destination intro state on
+  that row: clear velocity, roll/jump/status, and animation first, then restore
+  the assembled state for the following loop. When clearing roll changes sprite
+  radii, preserve the ROM centre coordinate explicitly; otherwise a correct
+  status fix can create a 5-pixel Y mismatch.
 
 ### Prefer derivation over "it needs recorded timing"
 
@@ -1458,6 +1628,315 @@ zone-invariant. Before concluding a divergence needs hardware timing: count the
 ROM's actual wait loops in the listing, and check whether the fixture already
 pins the quantity as an invariant across zones with very different workloads. An
 elapsed hardware cost varies with payload; a counted loop does not.
+
+### A green test that leaves state behind blames the next class
+
+A test can pass its own assertions and still be broken. Two S3K fixtures drove
+trace rows with hand-rolled loops that never called `fixture.beginTraceRow(...)`,
+the per-row announcement `AbstractTraceReplayTest` makes. The timing port never
+latched a raw frame, so `apply()` returned early at every service boundary and no
+recorded completion edge was ever admitted. Both tests went green. The unconsumed
+edge then detonated in `verifyRunComplete` during the *next* class's teardown, and
+surefire attributed it to whichever class happened to start next in that fork.
+
+Two tells, both cheap:
+
+- **A failing class with an absurd elapsed time.** `Time elapsed: 0.003 s` on a
+  replay that takes 13 s alone means it never ran; you are looking at the previous
+  class's teardown. Run the suspect alone before believing the accusation.
+- **A red set that changes shape while the count stays the same.** Going "9 red
+  classes -> 9 red classes" reads as no change, and hides one class fixed and a
+  different one newly broken. Diff the *names*, not the count — the same discipline
+  as diffing failing fields rather than failing-class counts.
+
+When you fix one, verify with the classes run TOGETHER in one fork in alphabetical
+order. Individual passes are exactly what hid the defect.
+
+### Mutation-test any comparison excusal you add
+
+If you make the comparator excuse a divergence, the test that pins the excusal's
+boundary is the entire safety property — and an assertion nobody has watched fail
+proves nothing. Break the guard on purpose and confirm the test goes red.
+
+For the S3K direct-queue in-progress bit, dropping the future-completion
+requirement (so a stray `true` would also be excused) must fail
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion`. It does. Restore the
+file afterwards.
+
+**Mutate the thing you actually claim, not a neighbouring guard.** On that same
+excusal, widening the *polarity gate* to accept both directions leaves every test
+green — so "both polarities are pinned by tests" would have been false. The
+asymmetry there is structural: the rewrite only ever raises the *expected* value
+to true, which by construction cannot conceal an actual false. The dangerous
+mutation is changing the rewrite to mirror the actual value, and a different test
+catches that one. Two guards sitting next to each other are not interchangeable
+evidence; name the property, then break precisely it.
+
+Make excusals **asymmetric** wherever the engine's model is a known
+over-approximation in one direction only: excuse the polarity the model can
+produce spuriously, and keep the opposite polarity a hard error forever. A blanket
+"stop comparing this field" throws away the half of the signal that still catches
+real defects.
+
+### A mechanism that would explain the symptom is not evidence that it fires
+
+Twice in one session a confident diagnosis named real code, cited the ROM correctly,
+and was still wrong -- because nobody checked whether the code executes.
+
+The EHZ checkpoint case: `shouldSpawnStars` refuses to spawn while a
+`usedForSpecialStage` flag is set; the flag is level-global and the special-stage
+return path cannot clear it. That explains the symptom exactly -- first entry
+works, later ones cannot. It is also an invention with no ROM counterpart, so
+deleting it was doubly attractive. One `System.err` line settled it: the branch
+**never prints**, and `activate()` fires exactly once in the whole run. The star
+post never activates, so the suppression is never reached. Deleting it would have
+been a no-op shipped as a fix.
+
+Both ROM readings underpinning that diagnosis were correct. The causal step was
+not. Sound ROM work does not transfer its soundness to the conclusion built on it.
+
+Before believing any "X causes Y" where a print can settle it: **print it.** If a
+branch is load-bearing, prove it executes; if a flag matters, log its value at the
+moment you claim it matters. Instrument, then theorise.
+
+Corollaries earned the same day:
+
+- **The first ASSERT to fire is not the first DIVERGENCE.** EHZ's boundary
+  assertion looked like a clean single failure; the segment underneath it had
+  82,176 errors in `target/trace-reports/*_seg2_report.json`. Read the segment
+  report before characterising a failure, and never repeat a "passed green" claim
+  you have not read.
+- **A residual can be several errors that nearly cancel.** GHZ's 35-row tail
+  deficit decomposed into +47, -5, -44 and -34. Landing any single correct fix
+  makes the reported number worse while making the engine more accurate. When a
+  number is small, check it is small because everything is right, not because
+  large errors are cancelling.
+
+### Read the routine before proposing a contract change
+
+A title-card loop that waits on `tst.l (v_plc_buffer).w` looked like un-modelable
+decompression rate, and the proposal was to route S1 PLC through the recorded
+hardware-timing port. That was wrong, and nobody had opened `ProcessPLC` first.
+
+S1 quantises PLC work in explicit ROM code. `RunPLC` (`sonic.asm:1379-1420`) only
+*starts* an entry; the decompression happens in V-int with a fixed per-frame tile
+budget -- `ProcessPLC_9Tiles` sets `move.w #9,(v_plc_framepatternsleft).w`
+(`:1431-1438`) and `ProcessPLC_3Tiles` sets 3 (`:1443-1450`). The disassembly says
+why: *"called from VBlank, probably done to smooth out level loading because of how
+slow Nemesis is"*. `Level_TtlCardLoop` sets `id_VBlank_TitleCards` and waits for
+V-int each iteration (`:2814`), and `VBlank_TitleCards` calls the 9-tile variant
+(`:946`), so one loop row is one V-int is up to 9 tiles. Gameplay's
+`VBlank_UpdateScreen` uses 3 (`:867`).
+
+Two semantics the model must carry: when `patternsleft` hits zero mid-budget,
+`ProcessPLC_ShiftCue` shifts the list and RETURNS, so **the rest of that frame's
+budget is lost** and the next entry starts at the next `RunPLC` -- the total is
+per-entry `ceil(patterns/9)` summed, not `ceil(total/9)`. And `RunPLC` stores the
+section counter before building the code table under `FixBugs=0` (`:1396-1399`).
+
+**The general rule: "the ROM's rate is not frame-derivable" is a claim about a
+routine you must have read.** Contrast S3K's `Process_Kos_Queue`, which genuinely
+has no quantum -- one uninterruptible call, so its in-progress bit is a sub-frame
+cycle position. Same-sounding symptom, opposite answers, and only the listing
+distinguishes them.
+
+**Corollary on the timing port.** Giving the sidecar authority over something the
+engine can compute is fidelity-NEGATIVE: it converts comparison surface into a
+round-trip through recorded data, so the field stops testing the engine. Reach for
+the port only where the information provably does not exist at frame granularity.
+`TestS1S2PlcComparisonOnlyGuard` encodes exactly this line -- "PLC readiness is
+native deterministic service, not timing-stream authority" -- and it is correct.
+If a change requires deleting a guard assertion whose message states the opposite
+architectural intent, that is a decision to escalate, never collateral.
+
+### Before matching a number, ask whether the engine produces it at all
+
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and while the coordinator sits
+in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()` stops the level body
+running. So a **load-window frame count is harness choreography, not engine
+behaviour** — the roadmap says it outright: *"The engine's real load duration is
+never observed, in either direction."*
+
+That changes what a load-window divergence means. The GHZ terminal tail is 34 rows
+early, but neither side of that comparison is the engine: it is the recorder's
+stamping convention against the harness's drive schedule. Closing the gap by
+inserting harness delays, or by importing a recorded span duration, would be
+**fitting the measurement instrument to its own reference** — worse than a fitted
+constant, because a fitted constant at least models something.
+
+Two consequences worth carrying:
+
+- **Leaving such a test red does not preserve a measurement; it preserves an
+  ambiguity.** The red is not evidence about the engine either. The honest close is
+  to compare what the engine *does* produce — work identity, order, ledger — and
+  excuse only the quantity the harness controls, in spans the fixture itself
+  declares unrepresented (no recorded rows). Then write down, in the
+  known-discrepancies entry, that the test now verifies work and order but **not**
+  timing.
+- **A green that does not say what it stopped checking is worse than the red it
+  replaced.** State the limit in the same commit that takes the limit on.
+
+Before proposing any fix for a span-length divergence, find out which component
+actually determines the number. If it is the harness, no amount of ROM derivation
+will help, and the ROM work you do will look convincing while measuring nothing.
+
+### When two of your own measurements disagree, stop and settle it
+
+One round reported four pending production submissions matching the dropped edges;
+a later round reported `pendingSubmissions()` empty and zero submissions in the same
+window. Both cannot be true. That contradiction sat unnoticed across two rounds and
+one design proposal built on the first figure — a mechanism that could not have
+fired, because its precondition was the very thing the second measurement denied.
+
+Contradictions between your own measurements are the cheapest bugs you will ever
+find and the most expensive to leave. Re-run the specific measurement before
+building on either number.
+
+### The fixture is ground truth about the RECORDER, not about the ROM
+
+A compared field can be fiction. Not stale, not mis-scaled — describing something
+that never happened on hardware.
+
+Sonic 2's special-stage entry is the clean example. `clearRAM
+SS_Shared_RAM,SS_Shared_RAM_End+4` overshoots by four bytes
+(`s2.asm:6597-6600`, and the disassembly annotates its own bug), and
+`VDP_Command_Buffer` sits immediately after `SS_Shared_RAM_End`
+(`s2.constants.asm:1183-1186`), so the overshoot zeroes the queue's first word.
+Under `fixBugs = 0` the real queue reset never runs, so the buffer word is cleared
+but `VDP_Command_Buffer_Slot` is not. `ProcessDMAQueue` then reads zero, takes
+`beq .done`, and **issues no VDP command at all** (`s2.asm:1770-1790`). The queued
+DPLC is discarded; that VRAM is never written.
+
+But the recorder's `OnProcessDmaQueue` hook drains its **own ledger**
+unconditionally and never reads `VDP_Command_Buffer`. So the trace records a
+complete transfer lifecycle — outstanding for 126 rows, retired on the frame the
+first `ProcessDMAQueue` happened to run — for a transfer the hardware never
+performed.
+
+Three parties, three behaviours: **the ROM discards, the recorder invents a
+lifecycle, the engine performs the write.** Nobody is right, and no amount of
+engine timing work can reconcile the engine to a lifecycle that never existed.
+
+**Ask what a compared field MEANS before modelling it.** Two of this codebase's
+hardest frontiers dissolved on exactly that question and nothing else: the S3K
+`s3k_kos_direct.prepared` bit turned out to be the ROM's sub-frame
+decompression-in-progress sign, and this one turned out to be recorder
+bookkeeping. In both cases months of plausible engine theories were aimed at a
+field whose semantics nobody had checked.
+
+Signals that you are looking at recorder fiction rather than an engine defect:
+
+- The recorded lifecycle depends on a RAM location the observer never reads.
+- The ROM path that *would* produce the recorded behaviour is behind
+  `fixBugs`/`FixBugs = 1` and therefore not in the shipped build.
+- The engine, the ROM and the fixture disagree three ways rather than two.
+
+The fix is then a **comparison-side projection keyed on the engine's own modelled
+ROM behaviour**, plus a recorder-defect note so the next approved regeneration
+fixes the stream at source and the projection can be retired. Write that
+retirement condition into the projection's javadoc — a bridge over a known
+recorder defect is legitimate; an open-ended excusal is not.
+
+### A flag set inside the object loop but read before it has one pass of latency
+
+Sonic 2's special-stage loop tests `SS_Pause_Only_flag` and builds
+`Ctrl_1_Logical` / `Ctrl_2_Logical` **before** `jsr (RunObjects)`
+(`s2.asm:6699-6721`), while `Obj59_Init` **sets** that flag from inside
+`RunObjects` (`:72319-72321`). `SSObjectsManager` allocates the emerald earlier in
+the same pass, so the object exists and its Init runs — but the inputs for that
+pass were already built unmasked. **The mask first bites the following pass.**
+
+An engine that reads such a flag as live object state, or that computes inputs
+after running objects, engages it one pass early. Here that cost a
+`SSPlayer_MoveRight` branch, which left the slowing bit set, skipped an
+`ss_slide_timer` re-arm, and let traction resume ~24 passes early — surfacing much
+later as an animation-band crossing in a DPLC comparison, three subsystems away
+from the cause.
+
+**The fix is a latch, never a delay.** Consume the value latched at pass start, and
+cite the two sites — the read and the write — with a comment naming the one-pass
+visibility. A "wait one pass" counter reproduces the recording and desyncs the next
+one; it is the single most tempting fitted model when the symptom is literally
+"one pass early".
+
+Generalise the lens rather than the instance:
+
+- Audit **every** setter of a flag that is consumed before the loop that sets it.
+  Any of them carries the same latency.
+- Check **all** consumers. This mask covers `Ctrl_2_Logical` too, so latching only
+  player 1 desyncs the sidekick a pass later in Sonic-and-Tails runs.
+- The same shape exists wherever a per-pass input, camera or scroll value is
+  sampled outside the object loop but written inside it.
+
+### Name the lever, or you will pull it four times
+
+Four consecutive rounds on the same S2 special-stage defect changed exactly one
+thing under four different names: "remove the duplicate streamed-object
+execution", "fix the streamed-object cadence", "make the object join its
+allocating observation", and "resolve the object/player clock skew". Each was
+briefed as new work. Each altered the number of first-pass depth decrements a
+streamed object receives.
+
+**The tell was in the numbers.** Every attempt produced `combined_rings` error
+counts of 5287 (`TestS2SpecialStage1TraceReplay`) through 35203 (`Stage7`). Those
+counts are a *fingerprint of a lever*, not of a fix. When a change reproduces an
+error profile you have seen before, you are pulling the same lever again however
+different your description of it sounds.
+
+Write the fingerprint down the first time. A round that reports "5287 on stage 1"
+should be recognisable in one line by the next agent.
+
+**Why that lever could never win**, and the shape worth generalising: one object
+couples two clocks. Its depth step is slaved to the track — `loc_3512A`
+(`s2.asm:70914-70926`) branches on `cmpi.b #4,(SSTrack_drawing_index).w` and
+subtracts `$CCCC` on index 4 but `$CCCD` otherwise, so **both branches decrement,
+by different amounts, and the magnitude depends on track phase**. Its collision
+reads the player (`Obj61_TestCollision`, `:70840-70844`). In the ROM those are one
+clock; in the engine they were one pass apart.
+
+So deleting a decrement is *not* a one-pass shift of the object clock — it
+permanently desynchronises depth from the gate cadence for the object's whole
+life. That is why it cost 1448 of 1449 rows of ring collections, a permanent count
+loss rather than a phase slip. And the lever only ever chose **which** coupling
+broke: keep the extra step and object-vs-player events land early; remove it and
+object-vs-track accumulation is wrong forever.
+
+**When one component couples two clocks that disagree, no adjustment to that
+component is correct.** Fix the clocks. Frequency also disguises the cause:
+hundreds of ring collections per stage fail immediately on any phase error, while
+the first bomb contact waits thousands of frames — so different first-symptom
+times can be one defect seen at two rates, not two defects.
+
+### Check whether the engine already implements it before prescribing a port
+
+Two consecutive rounds on the same defect were briefed to "port this ROM gate",
+and both times the engine already had it, faithfully, with the ROM citation
+already in the comment. Both prescriptions would have been no-ops on correct code.
+
+- `SSPlayer_SetAnimation`'s two-level `ss_last_angle_index` dedup: present at
+  `Sonic2SpecialStagePlayer.java:828-836`, matching `s2.asm:69599-69613`, with its
+  `byte_33E90` table matching entry-for-entry.
+- `LoadSSTailsDynPLC`'s `ss_dplc_timer` parity gate: present, armed at the ROM's
+  own site, one decrement per pass, odd suppressing post-decrement, and all four
+  of the ROM's `ss_dplc_timer` writers mirrored.
+
+**One grep costs seconds; a round costs hours.** Before writing "port X", search
+for X's ROM symbol name in `src/main` — the citation is usually in a comment
+already.
+
+**And read your own citation before calling a number decisive.** The second brief
+argued the gate "suppresses exactly half the passes during hurt", from an arm site
+it had quoted in the same paragraph — `ss_dplc_timer` is armed at the hurt-timer
+*wrap*, inside the `bne.s` that clears `routine_secondary`, so it is armed when
+hurt ENDS and is zero for the whole hurt animation. The quoted listing refuted the
+claim built on it.
+
+**Method trap that cost a wrong intermediate conclusion in the same round:** trace
+report and aux frame numbers are ROW INDICES into `physics.csv`, not values of its
+`frame` column. `ss_2`'s `frame` column runs 0..0x25472 across 6381 rows, so
+filtering on `frame` lands in a completely different part of the movie. Index the
+rows.
 
 ## Why This Matters
 

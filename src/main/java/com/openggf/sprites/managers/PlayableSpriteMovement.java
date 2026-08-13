@@ -528,9 +528,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = right;
 
 		// ROM-accurate control lock behavior:
-		// - move_lock and springing only block input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
+		// - move_lock only blocks input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
 		// - obj_control and hurt block input in ALL states
-		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
+		//
+		// move_lock is the ROM's ONLY grounded-input lock, and among the spring
+		// family only the HORIZONTAL spring writes it: S2 loc_18B1C
+		// `move.w #$F,move_lock(a1)` (docs/s2disasm/s2.asm:34031), S1
+		// `move.w #15,locktime(a1)` (docs/s1disasm/_incObj/41 Springs.asm:144),
+		// S3K loc_231BE `move.w #$F,$32(a1)` (docs/skdisasm/sonic3k.asm:47907).
+		// The up, down and diagonal launches (S2 loc_189CA :33924-33966,
+		// loc_18CC6 :34177-34196; S1 Spring_Up .bounceUp :88-101,
+		// Spring_Down .bounceDown :193-200; S3K sub_22F98 :47700-47772) write no
+		// lock of any kind, and neither do the S2 springboard Obj40 (:52262) or
+		// the CPZ pipe-exit spring Obj7B (:56341). The engine's `springing`
+		// timer is a marker those objects set for their own re-contact and carry
+		// tests; making it also gate horizontal input invented a 15-frame
+		// grounded control lock the ROM has nowhere. Each engine spring that
+		// models a real move_lock already calls setMoveLockTimer alongside it,
+		// so the horizontal case is unaffected.
+		boolean groundedControlLock = !sprite.getAir() && moveLocked;
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
 			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
 				left = false;
@@ -751,6 +767,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
+		// Sonic_Move/Tails_Move test move_lock before the ground-input and
+		// balance/lookup tail. SlopeRepel decrements the live timer later in
+		// this dispatch, so retain the entry decision for updateCrouchState.
+		boolean moveLockActiveAtDispatch = sprite.getMoveLockTimer() > 0;
 
 		if (doCheckSpindash()) return;
 		if (inputJumpPress && doJump()) {
@@ -781,7 +801,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
-		updateCrouchState();
+		updateCrouchState(moveLockActiveAtDispatch);
 	}
 
 	static boolean controlLockBlocksScriptedMovement(AbstractPlayableSprite sprite) {
@@ -1935,6 +1955,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setObjectMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
+
+		// ROM: bsr.w Knux_TouchFloor (sonic3k.asm:30984). The slide itself runs
+		// with Status_InAir still set — loc_1693E deliberately leaves it set when
+		// the glide first touches ground — so .getUp is where Knuckles actually
+		// becomes grounded. Knux_TouchFloor's loc_17B6A tail
+		// (sonic3k.asm:32854-32864) clears Status_InAir, Status_Push and
+		// Status_RollJump, and zeroes jumping, Chain_bonus_counter, flip_angle,
+		// flip_type, flips_remaining, scroll_delay_counter and double_jump_flag.
+		// Without the InAir clear the get-up frame stays airborne and the
+		// following frames run the airborne control path, which move_lock does
+		// not gate: a held direction then accelerates x_vel away from the ROM's
+		// zero.
+		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
+		// double_jump_flag / double_jump_property are already zeroed above.
+		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
+		// modelled engine state at this site; flip_type and flips_remaining do.
+		sprite.setAir(false);
+		sprite.setPushing(false);
+		sprite.setJumping(false);
+		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
+		sprite.setFlipsRemaining(0);
 
 		// ROM: move.w #$F,move_lock — 15-frame input lock
 		sprite.setMoveLockTimer(0x0F);
@@ -3450,11 +3492,31 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				: null;
 	}
 
+	/**
+	 * Copies the angle bytes that the native player tail reads from the shared
+	 * Primary_Angle/Secondary_Angle registers. Tails_DoLevelCollision reaches
+	 * Sonic_CheckFloor during a landing, so that landing's own pair is the
+	 * shared-register value copied by Tails_Control (S3K sonic3k.asm:
+	 * 26243-26244, 28901-29147). Unlike grounded Player_AnglePos, the airborne
+	 * Sonic_CheckFloor path does not preload those registers with {@code 3}.
+	 * A completely empty current/extension tile search therefore preserves the
+	 * register's prior byte (FindFloor sub_F264/sub_F30C, sonic3k.asm:19213-19331).
+	 * That prior value belongs to the shared collision registers, not to either
+	 * player's private next_tilt/tilt cache.
+	 */
 	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
 		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
 		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
-		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
-		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
+		latchedNextTilt = landingAngleRegisterValue(
+				right, collisionSystem().getPrimaryAngleRegister());
+		latchedTilt = landingAngleRegisterValue(
+				left, collisionSystem().getSecondaryAngleRegister());
+	}
+
+	private static int landingAngleRegisterValue(SensorResult result, int sharedRegisterValue) {
+		return result == null || result.tileId() == 0
+				? sharedRegisterValue
+				: result.angle() & 0xFF;
 	}
 
 	private static boolean usesDirectHitFloorLanding(int quadrant) {
@@ -4231,7 +4293,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setSkidDustTimer(dustTimer);
 	}
 
-	private void updateCrouchState() {
+	private void updateCrouchState(boolean moveLockActiveAtDispatch) {
 		// S3K: allow ducking while moving at speeds below the roll threshold.
 		// ROM: sonic3k.asm:23223-23240 (SonicKnux_Roll) — down pressed + |gSpeed| < $100
 		// + not left/right + not on object → enter duck animation.
@@ -4295,7 +4357,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (standingStill
+		if (!moveLockActiveAtDispatch && standingStill
 				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos
@@ -4711,6 +4773,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		SensorResult right = groundSensors[1].scan();
 		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
 		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
+		collisionSystem().publishGroundAngleRegisters(left, right);
 	}
 
 	// ========================================
@@ -5049,8 +5112,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S1: ObjFloorDist probes at CENTER X, not at the ±9 side sensors.
 			// ROM s1.asm:354-356: jsr (ObjFloorDist).l / cmpi.w #$C,d1
 			// ObjFloorDist uses obX(a0) = sprite center X.
-			// Left sensor is at center - 9; scanning with dx=+9 probes at center.
-			SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+			// Derive the centre probe from the active collision radius instead of
+			// assuming Sonic's nine-pixel standing radius. Tails can use a
+			// seven-pixel radius after a native shape transition.
+			short centerOffset = (short) -groundSensors[0].getX();
+			SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 			int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 
 			if (centerDist < EDGE_THRESHOLD) {
@@ -5088,7 +5154,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// !isBalancing), so a held Down+B fired a normal jump instead of charging a
 		// spin-dash (s2.asm:37549-37571 Sonic_CheckSpindash requires anim==Duck).
 		// The S1 (!extended) branch above already applies this center gate.
-		SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+		short centerOffset = (short) -groundSensors[0].getX();
+		SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 		int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
@@ -5097,8 +5164,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Primary_Angle/Secondary_Angle, not from a fresh pair of side probes
 		// inside Tails_InputAcceleration_Path (sonic3k.asm:27840-27849).
 		if (latchedNextTilt == 3) {
-			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
-			SensorResult precariousResult = groundSensors[0].scan((short) 3, (short) 0);
+			// S2/S3K: precarious check - scan at center - 6, derived from the
+			// active left sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (-6 - groundSensors[0].getX());
+			SensorResult precariousResult = groundSensors[0].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(false, facingRight, precarious ? 0 : 6);
@@ -5106,8 +5175,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (latchedTilt == 3) {
-			// S2/S3K: precarious check - scan at center + 6 (dx = -3 from right sensor)
-			SensorResult precariousResult = groundSensors[1].scan((short) -3, (short) 0);
+			// S2/S3K: precarious check - scan at center + 6, derived from the
+			// active right sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (6 - groundSensors[1].getX());
+			SensorResult precariousResult = groundSensors[1].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(true, facingRight, precarious ? 0 : 6);

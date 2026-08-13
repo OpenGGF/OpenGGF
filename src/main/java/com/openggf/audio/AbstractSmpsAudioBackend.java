@@ -446,9 +446,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void playSfxSmps(
             AbstractSmpsData data,
             DacData dacData,
-             float pitch,
-             SmpsSequencerConfig config,
-             SmpsSfxPlaybackPolicy playbackPolicy) {
+            float pitch,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy playbackPolicy) {
         Objects.requireNonNull(playbackPolicy, "playbackPolicy");
         int sfxPriority = playbackPolicy.priority();
         boolean specialSfx = playbackPolicy.special();
@@ -483,7 +483,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                             admission.resolvedSoundId())));
             return;
         }
-
         SmpsSequencerConfig effectiveConfig = legacySequencerConfig(
                 (config != null) ? config : requireSmpsConfig());
 

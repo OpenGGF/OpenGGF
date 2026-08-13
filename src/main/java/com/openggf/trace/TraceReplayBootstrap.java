@@ -139,6 +139,16 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return false;
         }
+        Boolean cached = trace.cachedPreLevelPrefix();
+        if (cached != null) {
+            return cached;
+        }
+        boolean computed = computeHasRecordedPreLevelPrefix(trace);
+        trace.cachePreLevelPrefix(computed);
+        return computed;
+    }
+
+    private static boolean computeHasRecordedPreLevelPrefix(TraceData trace) {
         Integer firstRecordedMode = null;
         for (int frame = 0; frame < trace.frameCount(); frame++) {
             for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -709,19 +719,22 @@ public final class TraceReplayBootstrap {
      * Detects a VBlank sample that lands after CPU-sidekick movement selected a
      * new raw animation but before the following {@code Animate_Tails} call.
      *
-     * <p>The normal-step hook proves the CPU path executed, the changed
-     * sidekick physics proves this is still a full playable tick, and the
-     * three-row animation transition proves the first mapping remained visible
-     * for the interrupted dispatch. This is native execution scheduling; no
-     * recorded value is copied into engine state.
+     * <p>The normal-step hook or one {@code Pos_table_index} entry proves the
+     * playable prefix executed: {@code Tails_Control} runs CPU control and
+     * movement, then {@code Sonic_RecordPos}, then {@code Animate_Tails}
+     * (sonic3k.asm:26238-26284). The changed sidekick physics and three-row
+     * animation transition prove the first mapping remained visible when the
+     * sample interrupted that final animation dispatch. This is native
+     * execution scheduling; no recorded value is copied into engine state.
      */
     private static boolean isSidekickAnimationHeldAfterRawTransition(
             TraceData trace, TraceFrame previous, TraceFrame current) {
         if (trace == null || previous == null || current == null
                 || !"s3k".equals(trace.metadata().game())
                 || current.input() != previous.input()
-                || !executionCountersEqual(previous, current)
-                || !hasTailsCpuNormalStep(trace, current)
+                || !(hasTailsCpuNormalStep(trace, current)
+                        || hasPlayableSlotHistoryAdvanceWithoutInputEdge(
+                                trace, previous, current))
                 || current.sidekick() == null || previous.sidekick() == null
                 || current.sidekick().physicsStateEquals(previous.sidekick())) {
             return false;
@@ -935,6 +948,64 @@ public final class TraceReplayBootstrap {
         }
         int gameMode = zoneActState.gameMode();
         return (gameMode & 0x80) != 0 && (gameMode & 0x0C) == 0x0C;
+    }
+
+    /**
+     * Returns how many of a segment's recorded rows the ROM produced from inside
+     * its {@code LevelLoop} -- that is, the rows a live LEVEL comparator can ever
+     * represent.
+     *
+     * <p>The recorder cuts a run's segments at the DESTINATION's first gameplay
+     * row, so a segment that ends in a level reload carries the whole ROM
+     * transition in its own tail. {@code Level:} opens with
+     * {@code bset #7,(Game_mode).w} (sonic3k.asm:7505) and only clears that bit
+     * again at the destination's first gameplay frame, which the recorder files
+     * in the NEXT segment. Everything the ROM records between those two points
+     * is inside {@code Level:}:
+     *
+     * <ul>
+     *   <li>{@code Pal_FadeToBlack}'s {@code move.w #$15,d4} + {@code dbf} loop
+     *       (sonic3k.asm:5042-5052, entered at :7522) -- one recorded row per
+     *       {@code Wait_VSync} iteration, with the camera, the player and
+     *       {@code Level_frame_counter} all frozen while VBlank keeps ticking;</li>
+     *   <li>the {@code Clear_DisplayData} / {@code move.w d0,(Level_frame_counter).w}
+     *       RAM wipe (sonic3k.asm:7532-7536);</li>
+     *   <li>the destination level's own load.</li>
+     * </ul>
+     *
+     * <p>None of that is a LevelLoop iteration of the SOURCE level, so no source
+     * comparator can consume it: the engine has left LEVEL by then and performs
+     * the reload synchronously. This is the ENTRY-side statement of the same fact
+     * the bonus-exit handling already relies on.
+     *
+     * <p>The classification is read out of recorded ROM state -- the terminal
+     * {@code zone_act_state} {@code game_mode} reload bit -- not out of a row
+     * count, a fade length, a zone id, or a segment name, so it holds for a
+     * recording with a different fade or load duration. The row that CARRIES the
+     * transition is still counted: {@code LevelLoop} increments
+     * {@code Level_frame_counter} (sonic3k.asm:7889) before it tests
+     * {@code Restart_level_flag} and branches to {@code Level:} (:7893-7894), so
+     * that row is a complete LevelLoop iteration and must still be compared.
+     *
+     * @return the number of leading in-level rows, which is the full row count
+     *         for any segment that does not end inside a reload
+     */
+    public static int levelLoopRowCount(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return 0;
+        }
+        int lastRowFrame = trace.getFrame(trace.frameCount() - 1).frame();
+        TraceEvent.ZoneActState terminalState =
+                trace.latestZoneActStateAtOrBefore(lastRowFrame);
+        if (terminalState == null || terminalState.gameMode() == null
+                || (terminalState.gameMode() & 0x80) == 0) {
+            return trace.frameCount();
+        }
+        int rows = trace.frameCount();
+        while (rows > 0 && trace.getFrame(rows - 1).frame() > terminalState.frame()) {
+            rows--;
+        }
+        return rows;
     }
 
     public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {

@@ -1215,3 +1215,128 @@ rather than a mutable VRAM window, the P1/P2 `Map_Bubbler`/`Map_Bubbler2` split
 collapses to a single shared sheet with no visible difference. Emulating the DMA
 would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
 dust, which buys nothing the tile rebase doesn't already give us.
+
+## AIZ2 mid-level enemy-art admission (RESOLVED 2026-08-10)
+
+**Status:** RESOLVED. This entry is retained because its original text stated a ROM claim
+that was WRONG, and the correction matters more than the entry did.
+
+### What this entry originally claimed, and why it was wrong
+
+It said the recorded ROM had the direct decompression queue already working on a module
+inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame, implying an older
+parent owned that iteration's module step and that the engine failed to model parent
+ownership across a mid-level admission.
+
+**None of that is in the fixtures.** Decoding the recorded `load_queue_state` rows
+directly gives `active_source = 0x36800E` on both admission frames (5542 in
+`aiz1_to_hcz_fullrun`, 6345 in `aiz_completerun`). That is `ArtKosM_AIZ_MonkeyDude + 2`
+— module 0 of the FIRST `PLCKosM_AIZ` entry, in plain PLC order
+(`skdisasm/sonic3k.asm:64349-64351`). The module FIFO was **empty** when `LoadEnemyArt`
+ran; there was no older parent. Bloominator's module 0 is 0x367DCC and it is published
+four rows LATER (5546 / 6349), after MonkeyDude retires. The value 0x367DCE appears
+nowhere in either fixture.
+
+### The actual defect, now fixed
+
+The module queue's held-loop-tail deferral was suppressing the **submission** of a head
+archive's first module, not merely its readiness. Instrumented at the admission row: the
+AIZ2 `LoadEnemyArt` batch is submitted correctly during the event pass (3 parents,
+capacity available), then the same row's POST_OBJECTS step ran with the held-tail flag
+set, took the `activeChild == null && deferFirstChild` early return, and published
+nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. So the child
+arrived one loop late and the row's snapshot showed an idle direct FIFO.
+
+That deferral has no ROM basis for a level-loop producer. The two producers that set the
+flag are now split: the generic held-loop-tail arm defers only readiness and visibility,
+as its own documentation always said it should, while the locked title-card owner — whose
+`LoadEnemyArt` genuinely runs after that iteration's module step — declares its late
+ordering explicitly. The fix removes a suppression rather than adding a compensator, so
+it holds for any recording.
+
+### Residual, still open
+
+`AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and `AIZ2_FIRE_REDRAW_FRAMES = 8` remain documented
+in-code as coming from a fixture regen, i.e. fixture-measured rather than ROM-derived.
+That is a hard rule 3 exposure inherited with the branch and is what makes the admission
+frame fixture-relative in the first place.
+
+## `s3k_kos_direct.prepared`: a sub-frame ROM bit compared against a boundary-granular model
+
+**Status:** OPEN, bounded. One asymmetric comparison-side excusal, added 2026-08-10 in
+`LoadQueueComparisonProjection`. It fires exactly once across the current fixture set
+(AIZ complete run, frame 6349, direct job ordinal 36) and nowhere in CNZ or MHZ.
+
+### The compared field is not "prepared"
+
+The recorder projects this field from bit 15 of `Kos_decomp_queue_count`
+(`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
+`bool prepared = (rawCount & 0x8000) != 0;`). In the ROM that bit means
+**decompression is in progress right now**, not "prepared":
+
+- `Process_Kos_Queue_Main` (`docs/skdisasm/sonic3k.asm:2845-2846`) sets it with
+  `ori.w #$8000,(Kos_decomp_queue_count).w` — commented in the disassembly as
+  "set sign bit to signify decompression in progress" — immediately before entering
+  `Process_Kos_Queue_Loop`.
+- `Process_Kos_Queue_EndReached` (`docs/skdisasm/sonic3k.asm:2938-2941`) clears it with
+  `andi.w #$7FFF,(Kos_decomp_queue_count).w` when the stream ends.
+- `Set_Kos_Bookmark` (`docs/skdisasm/sonic3k.asm:2819`) only **reads** the bit, to decide
+  whether to redirect a preempting V-int's `rte` to `Backup_Kos_Registers`. It is not a
+  work quantum and it neither sets nor clears the bit.
+
+A recorded row therefore reads the bit set only when that frame's V-int happened to land
+**inside** `Process_Kos_Queue_Loop` — a sub-frame 68000 cycle position. Frame-granularity
+state cannot reconstruct it, in this engine or in principle.
+
+### The engine's model, and why it can only err in one direction
+
+`S3kKosDecompressionQueue.afterTimingService` arms the serviced FIFO head at each
+`PRE_MAIN_LOOP` boundary and disarms it only when the recorded completion edge fires. The
+engine's flag therefore means "the head survived a service boundary before its recorded
+completion", which is a **boundary-granular over-approximation** of the ROM bit: it can
+read true one or more boundaries before the ROM's V-int first landed in the loop, but it
+cannot read false while the ROM is mid-loop. (The flag is comparison-only: `preparedEntries`
+is read solely by `QueueDiagnosticSnapshot` capture and by rewind `capture()`/`restore()`;
+no gameplay, art, or scheduling path consumes it.)
+
+The excusal mirrors that asymmetry exactly. Only `actual=true / expected=false` is excused,
+and only while the head's own recorded completion edge (matched by kind, ordinal and
+submission fingerprint) still lies strictly in the future. `actual=false / expected=true`
+stays a hard error forever — the engine claiming decompression was not in progress while
+the ROM was mid-loop means a completion landed early, which is a real timing defect.
+`busy`, `active_source`, `active_destination`, the waiting fingerprints, and the module
+queue's `prepared` are all still fully compared.
+
+The asymmetry is structural, not merely gated. The excusal's only effect is to raise the
+*expected* row's `prepared` to true, which by construction cannot conceal an actual value
+of false. Widening the polarity gate alone is therefore a semantic no-op — verified by
+mutation: forcing the branch to accept both polarities left all of
+`TestLoadQueueTraceComparison` green. The mutation that *would* be dangerous is changing
+the rewrite to mirror the actual value instead of forcing true, and
+`keepsReverseInProgressPolarityAsError` fails on exactly that.
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion` likewise fails when the
+`rawFrame > frame` guard is removed. Both were confirmed by running the mutations.
+
+### Refuted alternatives — do not rerun these
+
+Measured against the 1-error baseline at `b5975c195` (frame 6349,
+`queue.s3k_kos_direct.prepared` expected=false actual=true):
+
+1. **Reordering the module and direct service passes** — breaks direct job ordinal 38 with
+   a hard `IllegalStateException`, not a comparison error.
+2. **Never setting the engine bit** — 37 errors, first at frame 64. 36 rows genuinely
+   require it TRUE.
+3. **A provenance rule** (distinguishing the false row by where the entry came from) — 29
+   errors, first at frame 64. The TRUE rows and the FALSE row share routine, size class
+   (`$800` words) and provenance, so no provenance predicate separates them.
+
+### Rejected: a recorded decompression-start edge
+
+Extending the v5 `hardware_timing.jsonl` stream with a decompression-**start** edge would
+reproduce the bit exactly, and was rejected as a hard-rule-4 violation. A start edge
+releases no engine work: nothing waits on it, no prepared ROM-backed job becomes ready
+because of it. Its only observable effect would be to set the value of a compared field,
+which makes the comparison a checksum of the sidecar against itself. Rule 4's test is
+whether a recorded input only changes *when* real engine work becomes ready; a start edge
+decides *what* a compared row says, so it is outside the exception however well the ROM
+behaviour is cited.

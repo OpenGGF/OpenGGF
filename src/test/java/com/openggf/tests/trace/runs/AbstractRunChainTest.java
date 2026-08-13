@@ -14,11 +14,15 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.resources.DynamicArtGapDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.TraceSessionLauncher;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
@@ -43,6 +47,7 @@ import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
+import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
@@ -104,8 +109,70 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 abstract class AbstractRunChainTest {
 
     private static final Path REPORT_OUTPUT_DIR = Path.of("target", "trace-reports");
+
+    /**
+     * Failing axes accumulated during one {@link #assertChainReplay} walk.
+     *
+     * <p><b>Why this exists.</b> Every chain assertion used to throw at its own
+     * site, which serialized the run's failure axes: the FIRST one to fire
+     * aborted the walk, and everything downstream of it -- including
+     * {@code DynamicArtGapJournalProbe#verify}, which only runs after the walk
+     * completes -- was never evaluated at all. With the returned-level physics
+     * assertion live, that meant the transition-gap ledger comparison had never
+     * been reached on either S2 chain, so a comparison that is computed and
+     * recorded was grading nothing. A run now enumerates every failing axis it
+     * can observe, each attributed, and fails once at the end.
+     *
+     * <p>This defers WHEN a failure is reported, never WHETHER: each axis keeps
+     * exactly the predicate it had, and a run with any recorded axis failure
+     * still fails.
+     */
+    private final List<String> chainAxisFailures = new ArrayList<>();
     private LiveTraceComparator productionComparator;
     private HeadlessRunCoordinatorAdapter activeRunCoordinator;
+    /**
+     * Segment indices whose comparator was attached by
+     * {@link #attachReturnedLevelSegment} -- i.e. the level a run RETURNS to
+     * after an interior (special stage / bonus). Their physics comparator error
+     * count is asserted in {@link #maybeWriteReport}.
+     *
+     * <p><b>Why this exists.</b> Both S2 run chains carried a returned-level
+     * segment with tens of thousands of physics errors (58184 on
+     * {@code s2-sonic-tails-complete-emeralds} seg2, 39645 on
+     * {@code s2-ehz-halfpipe-roundtrip} seg2) while the chain reported the
+     * segment {@code complete} and walked straight past it: the only things
+     * asserted at that seam were the boundary observation and dynamic art, never
+     * the comparator's own {@code errorCount()} -- which the chain had already
+     * computed and written into
+     * {@code target/trace-reports/<run>_seg<N>_report.json}. Thirteen rounds of
+     * candidate fixes were consequently judged by which route a broken-but-
+     * unasserted segment happened to take downstream, which measured noise.
+     *
+     * <p>{@code TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay} is the oracle:
+     * it replays the IDENTICAL 3377 rows of that same fixture standalone to ZERO
+     * errors. So the rows can replay clean, and the divergence is owned by the
+     * chain's return path, not by the recording.
+     *
+     * <p>Turning this assertion on makes both S2 chains fail at seg2. That is
+     * not a regression -- it is the true state of the return path becoming
+     * visible, and it replaces symptom-chasing with one measurable target.
+     *
+     * <p><b>2026-08-12 -- extended to level_advance entries.</b> The same hole
+     * existed one boundary kind over. Segment 7 (seg5_ehz2) of
+     * {@code TestS2CompleteEmeraldRunChain} is entered by a {@code level_advance}
+     * (LEVEL_LOAD) boundary rather than a special-stage return, so it was never
+     * registered here -- and its own comparator report
+     * ({@code s2-sonic-tails-complete-emeralds_seg7_report.json}) carried
+     * errorCount = 149522 over 6046 rows with {@code complete: true} while the
+     * chain walked past it and reported only the missed exit boundary. Every
+     * level-boundary attach now registers the segment it attaches, so the chain
+     * reports the segment truthfully. THE CHAIN GOES REDDER AS A RESULT: that is
+     * the deliverable, not a regression. Segments 0/2/4/6 (the EHZ1 levels) are
+     * at 0 errors and are unaffected; {@code TestS2EhzHalfpipeRoundTripChain} has
+     * no {@code level_advance} boundary at all and is untouched.
+     */
+    private final java.util.Set<Integer> assertedPhysicsSegmentIndices =
+            new java.util.HashSet<>();
 
     protected record DynamicArtGapJournalEvidence(
             int transitionCountAfterFirstArm,
@@ -158,6 +225,12 @@ abstract class AbstractRunChainTest {
         private final long lastEdgeOrdinalAfterFirstArm;
         private final List<DynamicArtStructuralGapEvidence> structuralGaps =
                 new ArrayList<>();
+        /**
+         * Terminal-tail divergences, recorded rather than thrown so this axis
+         * is additive with the segment-physics and structural-gap axes (see
+         * {@link AbstractRunChainTest#chainAxisFailures}).
+         */
+        private final List<String> terminalFailures = new ArrayList<>();
 
         private String representedSegmentDir;
         private Integer gapStartMovieLogicalFrame;
@@ -167,6 +240,33 @@ abstract class AbstractRunChainTest {
         private Long sourceClosedOrdinal;
         private Long gapOpenedOrdinal;
         private List<DynamicArtTransfer.Descriptor> openingLedger = List.of();
+        /**
+         * Gap-ledger length, movie row and outstanding ledger observed the
+         * instant the source segment closed, before the lifecycle entered the
+         * gap.
+         *
+         * <p>Closing a comparison segment flushes work the segment submitted
+         * whose completion falls after its last compared row, and the close
+         * itself appends those edges to the gap ledger. Snapshotting after the
+         * close starts counting past them, so each is dropped from the gap's
+         * compared slice and its transfer is already absent from the opening
+         * ledger that resolves an edge's submission origin. A gap begins where
+         * its source ended, so the opening state is taken there.
+         *
+         * <p>Mirrors {@link TraceRunDynamicArtGapJournal}, which implements the
+         * same contract for the production visual run path.
+         */
+        /**
+         * Unannounced rows counted when the gap opened, on the same clock the
+         * gap's edges carry. A frozen cursor stamps the gap's start with the
+         * same stale row it stamps every edge with, so the gap's own start row
+         * is recovered the same way at admission.
+         */
+        private Integer gapOpenedUnannouncedRows;
+        private Integer sourceClosedTransitionCount;
+        private Integer sourceClosedMovieLogicalFrame;
+        private Long sourceClosedLastEdgeOrdinal;
+        private List<DynamicArtTransfer.Descriptor> sourceClosedLedger;
 
         private DynamicArtGapJournalProbe(DynamicArtLifecycleService lifecycle) {
             this.lifecycle = lifecycle;
@@ -184,6 +284,14 @@ abstract class AbstractRunChainTest {
             }
             representedSegmentDir = segmentDir;
             sourceClosedOrdinal = ++structuralOrdinal;
+            DynamicArtGapDiagnosticsSnapshot atSourceClose =
+                    lifecycle.gapOpeningSnapshot();
+            sourceClosedTransitionCount = atSourceClose.transitions().size();
+            sourceClosedLastEdgeOrdinal = lastEdgeOrdinal(atSourceClose.transitions());
+            sourceClosedMovieLogicalFrame = atSourceClose.movieLogicalFrame();
+            sourceClosedLedger = atSourceClose.ledger().stream()
+                    .map(DynamicArtGapJournalProbe::toGapDescriptor)
+                    .toList();
         }
 
         private void gapOpened(String segmentDir) {
@@ -200,17 +308,25 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "dynamic-art gap opened before source close for " + segmentDir);
             }
-            List<DynamicArtGapTransition> atGapStart =
-                    lifecycle.gapTransitions();
             gapOpenedOrdinal = ++structuralOrdinal;
-            gapStartMovieLogicalFrame =
-                    lifecycle.capture().movieLogicalFrame();
-            openingLedger = lifecycle.capture().ledger().stream()
-                    .map(DynamicArtGapJournalProbe::toTraceDescriptor)
-                    .toList();
-            transitionCountAtGapStart = atGapStart.size();
-            lastEdgeOrdinalAtGapStart =
-                    lastEdgeOrdinal(atGapStart);
+            gapOpenedUnannouncedRows =
+                    lifecycle.capture().unannouncedRows();
+            if (sourceClosedTransitionCount != null) {
+                gapStartMovieLogicalFrame = sourceClosedMovieLogicalFrame;
+                openingLedger = sourceClosedLedger;
+                transitionCountAtGapStart = sourceClosedTransitionCount;
+                lastEdgeOrdinalAtGapStart = sourceClosedLastEdgeOrdinal;
+            } else {
+                List<DynamicArtGapTransition> atGapStart =
+                        lifecycle.gapTransitions();
+                gapStartMovieLogicalFrame =
+                        lifecycle.capture().movieLogicalFrame();
+                openingLedger = lifecycle.capture().ledger().stream()
+                        .map(DynamicArtGapJournalProbe::toTraceDescriptor)
+                        .toList();
+                transitionCountAtGapStart = atGapStart.size();
+                lastEdgeOrdinalAtGapStart = lastEdgeOrdinal(atGapStart);
+            }
         }
 
         private void nextSegmentArmed(String nextSegmentDir) {
@@ -220,6 +336,8 @@ abstract class AbstractRunChainTest {
             }
             int nextSegmentArmMovieLogicalFrame =
                     lifecycle.capture().movieLogicalFrame();
+            int nextSegmentArmUnannouncedRows =
+                    lifecycle.capture().unannouncedRows();
             long destinationOpenedOrdinal = ++structuralOrdinal;
             List<DynamicArtGapTransition> afterNextArm =
                     lifecycle.gapTransitions();
@@ -229,10 +347,20 @@ abstract class AbstractRunChainTest {
                                     transitionCountAtGapStart,
                                     afterNextArm.size())
                             : List.of();
+            added = TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
+                    added, nextSegmentArmMovieLogicalFrame,
+                    nextSegmentArmUnannouncedRows);
+            // The same recovery for the gap's own first row: a frozen cursor
+            // reports the gap's END row at both ends of the span.
+            int recoveredGapStartMovieLogicalFrame =
+                    TraceRunDynamicArtGapJournal.rowCountedBackFromAdmission(
+                            gapStartMovieLogicalFrame,
+                            nextSegmentArmUnannouncedRows,
+                            gapOpenedUnannouncedRows);
             structuralGaps.add(new DynamicArtStructuralGapEvidence(
                     representedSegmentDir,
                     nextSegmentDir,
-                    gapStartMovieLogicalFrame,
+                    recoveredGapStartMovieLogicalFrame,
                     nextSegmentArmMovieLogicalFrame,
                     transitionCountAtGapStart,
                     lastEdgeOrdinalAtGapStart,
@@ -246,12 +374,27 @@ abstract class AbstractRunChainTest {
                     added));
             representedSegmentDir = null;
             gapStartMovieLogicalFrame = null;
+            gapOpenedUnannouncedRows = null;
             sourceClosedOrdinal = null;
             gapOpenedOrdinal = null;
             openingLedger = List.of();
+            sourceClosedTransitionCount = null;
+            sourceClosedMovieLogicalFrame = null;
+            sourceClosedLastEdgeOrdinal = null;
+            sourceClosedLedger = null;
         }
 
-        private void verify(TraceRunManifest run) {
+        /**
+         * Compares every recorded structural gap and returns one attributed
+         * failure line per divergent gap.
+         *
+         * <p>Returns rather than throws so a run enumerates ALL divergent gaps
+         * in one pass instead of one per run, and so the caller can report this
+         * axis alongside the segment-physics axis. The comparison itself is
+         * unchanged and every divergent gap still fails the build.
+         */
+        private List<String> collectVerificationFailures(TraceRunManifest run) {
+            List<String> failures = new ArrayList<>();
             for (int sourceIndex = 0;
                     sourceIndex < structuralGaps.size(); sourceIndex++) {
                 DynamicArtStructuralGapEvidence evidence =
@@ -268,15 +411,37 @@ abstract class AbstractRunChainTest {
                                         evidence.openingLedger(),
                                         evidence.transitionsAddedAcrossBoundary()));
                 if (comparison.hasError()) {
-                    throw new AssertionError(
-                            "shared dynamic-art gap comparison failed for "
-                                    + evidence.representedSegmentDir() + " -> "
-                                    + evidence.nextSegmentDir() + ": "
-                                    + comparison.divergentFields());
+                    failures.add("[dynamic-art-gap] shared dynamic-art gap"
+                            + " comparison failed for "
+                            + evidence.representedSegmentDir() + " -> "
+                            + evidence.nextSegmentDir() + ": "
+                            + comparison.divergentFields());
                 }
             }
+            return failures;
         }
 
+        /**
+         * Compares the run's terminal dynamic-art tail.
+         *
+         * <p><b>Callers must gate this on the coordinator having actually
+         * begun a terminal tail</b> ({@code terminalPlan() != null}), which is
+         * the same manifest-declared opt-in the walker and the production
+         * launcher use. {@code TraceRunReplayWalker.planTerminalMovieTail}
+         * states the contract outright -- "an unspecified endpoint
+         * deliberately leaves both tail replay and terminal assertion
+         * disabled" -- and {@code
+         * TraceSessionLauncher.compareRunTerminalDynamicArtTail} is reachable
+         * only from the {@code BeginTerminalTail} action, so a manifest with
+         * no {@code expected_movie_end_mode} never compares a tail in
+         * production. This probe used to compare unconditionally, which asked
+         * the engine for art from movie rows the harness had declined to drive
+         * at all: with an unspecified endpoint the coordinator emits {@code
+         * CompleteRun} straight after the final segment closes, zero tail rows
+         * are stepped, and no production submission can occur. Runs whose
+         * manifest does declare an endpoint (currently the two S1 runs) are
+         * unaffected and still assert their tail.
+         */
         private void verifyTerminal(
                 TraceRunManifest run, int movieFrameCount) {
             if (gapStartMovieLogicalFrame == null
@@ -308,16 +473,20 @@ abstract class AbstractRunChainTest {
                                     openingLedger,
                                     added));
             if (comparison.hasError()) {
-                throw new AssertionError(
-                        "shared terminal dynamic-art comparison failed for "
-                                + representedSegmentDir + ": "
-                                + comparison.divergentFields());
+                terminalFailures.add("[dynamic-art-terminal-tail] shared"
+                        + " terminal dynamic-art comparison failed for "
+                        + representedSegmentDir + ": "
+                        + comparison.divergentFields());
             }
             representedSegmentDir = null;
             gapStartMovieLogicalFrame = null;
             sourceClosedOrdinal = null;
             gapOpenedOrdinal = null;
             openingLedger = List.of();
+            sourceClosedTransitionCount = null;
+            sourceClosedMovieLogicalFrame = null;
+            sourceClosedLastEdgeOrdinal = null;
+            sourceClosedLedger = null;
         }
 
         private DynamicArtGapJournalEvidence evidence(
@@ -338,6 +507,29 @@ abstract class AbstractRunChainTest {
             return transitions.isEmpty()
                     ? -1
                     : transitions.getLast().edge().edgeOrdinal();
+        }
+
+        /**
+         * Mirrors {@code TraceRunDynamicArtGapJournal#toTraceDescriptor}: the
+         * descriptor keeps the submission origin the lifecycle recorded, which
+         * is what resolves a completion edge's origin during the gap.
+         */
+        private static DynamicArtTransfer.Descriptor toGapDescriptor(
+                DynamicArtGapDiagnosticsSnapshot.Descriptor descriptor) {
+            return new DynamicArtTransfer.Descriptor(
+                    descriptor.transferId(),
+                    descriptor.owner(),
+                    descriptor.mappingFrame(),
+                    descriptor.submissionOrigin(),
+                    descriptor.requests().stream()
+                            .map(request -> new DynamicArtTransfer.Request(
+                                    request.romSourceAddress(),
+                                    request.sourceTileIndex(),
+                                    request.ramSourceAddress(),
+                                    request.vramDestination(),
+                                    request.byteLength()))
+                            .toList(),
+                    null);
         }
 
         private static DynamicArtTransfer.Descriptor toTraceDescriptor(
@@ -371,14 +563,16 @@ abstract class AbstractRunChainTest {
         private final List<TraceRunPlaybackCoordinator.Action> actions =
                 new ArrayList<>();
         private final RunLevelLoadTracker levelLoads;
+        private final GameLoop loop;
         private long admittedStepOrdinal;
         private RunPlaybackObservation productionOwnerObservation;
         private int productionOwnerSegmentIndex = -1;
 
         private HeadlessRunCoordinatorAdapter(
                 TraceRunManifest run, Bk2Movie movie,
-                List<SegmentPlan> plans) {
+                List<SegmentPlan> plans, GameLoop loop) {
             this.run = run;
+            this.loop = loop;
             this.coordinator = new TraceRunPlaybackCoordinator(
                     run,
                     GameServices.module().getTracePlaybackProfile(),
@@ -527,6 +721,40 @@ abstract class AbstractRunChainTest {
                     emitted, destinationIndex, rowsConsumed);
         }
 
+        /**
+         * Offers a level destination for admission without demanding one, so a
+         * caller can keep stepping while the coordinator legitimately denies.
+         * Returns true only when the coordinator actually admitted.
+         */
+        private boolean tryAdmitLevel(
+                TraceRunManifest.Transition boundary,
+                int observedBk2Frame,
+                GameMode mode,
+                int rowsConsumed,
+                RunLevelLoadTracker.Receipt observedLoad) {
+            int destinationIndex = coordinator.currentSegmentIndex() + 1;
+            if (boundary != null && "stage_exit".equals(boundary.entryKind())) {
+                coordinator.observeBoundary(
+                        new RunBoundarySignal.StageExit(observedBk2Frame));
+            }
+            RunPlaybackObservation observed =
+                    observation(mode, false, rowsConsumed, false);
+            RunBoundarySignal.LevelLoaded loaded =
+                    new RunBoundarySignal.LevelLoaded(
+                            observedBk2Frame, observedLoad.cause(),
+                            observedLoad.identity());
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.beforeLoadedLevelActivation(loaded, observed);
+            if (emitted.isEmpty()) {
+                emitted = coordinator.beforeAdmission(observed);
+            }
+            if (emitted.isEmpty()) {
+                return false;
+            }
+            requireAdmission(emitted, destinationIndex, rowsConsumed);
+            return true;
+        }
+
         private DestinationAdmissionReceipt admitPresentationBridge(
                 TraceRunManifest.Transition boundary,
                 int observedBk2Frame,
@@ -628,10 +856,14 @@ abstract class AbstractRunChainTest {
                         levelManager.getCurrentAct(),
                         bonus.getActiveType());
             }
+            // The stage identity the recorded segment is cut on, which the
+            // live provider stops reporting once the engine's results phase
+            // deinitialises it -- see GameLoop#recordedSpecialStageIdentity.
+            // Production reads exactly the same accessor through
+            // TraceSessionLauncher#getActiveSpecialStageIndex.
             Integer specialStageIndex =
                     RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
-                            ? GameServices.module().getSpecialStageProvider()
-                                    .getCurrentStage()
+                            ? loop.recordedSpecialStageIdentity(mode)
                             : null;
             DynamicArtLifecycleService lifecycle =
                     SessionManager.getCurrentGameplayMode()
@@ -685,6 +917,7 @@ abstract class AbstractRunChainTest {
 
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
+        chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
         try {
@@ -791,8 +1024,13 @@ abstract class AbstractRunChainTest {
 
                             @Override
                             public void close() {
-                                gameplayMode.dynamicArtLifecycle()
-                                        .closeComparisonSegment();
+                                // The window may already have closed itself on
+                                // the ROM iteration that wrote the
+                                // special-stage game mode (LevelManager's
+                                // Obj79_Star seam, docs/s2disasm/s2.asm:44877);
+                                // that iteration still runs to completion, so
+                                // the structural close arrives afterwards.
+                                gameplayMode.endDynamicArtComparisonSegment();
                             }
                         });
         // The run's movie spans the first level's load, so the transfer that
@@ -817,7 +1055,7 @@ abstract class AbstractRunChainTest {
                 new DynamicArtGapJournalProbe(
                         gameplayMode.dynamicArtLifecycle());
         HeadlessRunCoordinatorAdapter runCoordinator =
-                new HeadlessRunCoordinatorAdapter(run, movie, plans);
+                new HeadlessRunCoordinatorAdapter(run, movie, plans, loop);
         activeRunCoordinator = runCoordinator;
         Throwable primaryFailure = null;
         boolean prefixReached = false;
@@ -853,12 +1091,20 @@ abstract class AbstractRunChainTest {
                 stepFrames(loop, remainingFrames);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
+                // Observed after the window actually closes: the close is what
+                // records the state the gap opens on, so reading the snapshot
+                // first leaves the source's own final edges out of it.
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                // Re-arm the production one-row latch that decides which gap
+                // rows still belong to the source level's own main loop; the
+                // launcher does this from its EnterTransitionGap action.
+                TraceSessionLauncher.beginDriverOnlyRunTransitionGap();
                 if (last) {
                     productionComparator = null;
                     TraceRunFrameDriver terminalRows =
@@ -869,8 +1115,10 @@ abstract class AbstractRunChainTest {
                                 runCoordinator.terminalPlan(), loop,
                                 inputHandler, movie, playback, fixture,
                                 terminalRows, runCoordinator);
-                        dynamicArtGapJournal.verifyTerminal(
-                                run, movie.getFrameCount());
+                        if (runCoordinator.terminalPlan() != null) {
+                            dynamicArtGapJournal.verifyTerminal(
+                                    run, movie.getFrameCount());
+                        }
                     } finally {
                         gameplayMode.clearTraceRunFrameDriver(terminalRows);
                     }
@@ -892,7 +1140,7 @@ abstract class AbstractRunChainTest {
                             null, playback.getCursorFrame(),
                             loop.getCurrentGameMode(), 0, true, null);
                     activeComparator = attachLevelSegment(
-                            playback, probe, movie, next, fixture);
+                            playback, probe, movie, next, fixture, i + 1);
                     dynamicArtSegments.beginSegment();
                     dynamicArtGapJournal.nextSegmentArmed(
                             next.segment().dir());
@@ -909,7 +1157,8 @@ abstract class AbstractRunChainTest {
                         loop.getCurrentGameMode(), rowsConsumed, false,
                         runCoordinator.latestLoadReceipt());
                 activeComparator = attachPreparedLevelSegment(
-                        playback, probe, movie, next, fixture, rowsConsumed);
+                        playback, probe, movie, next, fixture, rowsConsumed,
+                        i + 1);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -1034,9 +1283,12 @@ abstract class AbstractRunChainTest {
                             }
                             if (rowDriver.isComplete()) {
                                 rowDriver.verifyComplete();
+                                dynamicArtSegments.enterGap();
+                                // Observed after the window actually closes: the close is what
+                                // records the state the gap opens on, so reading the snapshot
+                                // first leaves the source's own final edges out of it.
                                 dynamicArtGapJournal.sourceClosed(
                                         seg.segment().dir());
-                                dynamicArtSegments.enterGap();
                                 dynamicArtGapJournal.gapOpened(
                                         seg.segment().dir());
                                 dynamicArtGapOpened[0] = true;
@@ -1101,8 +1353,8 @@ abstract class AbstractRunChainTest {
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
                 if (activeComparator != null) {
-                    completePinnedSourceTailAfterBoundary(
-                            loop, activeComparator, seg, stepCap,
+                    completeSourceTailReportingOnFailure(
+                            run.runId(), i, loop, activeComparator, seg, stepCap,
                             activeComparator.cursor(), levelAtSegmentStart);
                 }
                 // Write the interior's comparator report BEFORE asserting the
@@ -1124,15 +1376,19 @@ abstract class AbstractRunChainTest {
                     }
                 }
                 if (!dynamicArtGapOpened[0]) {
-                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                     dynamicArtSegments.enterGap();
+                    // Observed after the window actually closes: the close is what
+                    // records the state the gap opens on, so reading the snapshot
+                    // first leaves the source's own final edges out of it.
+                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 }
                 if (!interiorCoordinatorSourceClosed[0]) {
                     runCoordinator.closeCurrent(
                             loop.getCurrentGameMode(), uncomparedInterior
                                     ? dynamicArtGapOpened[0]
                                     : activeComparator != null
-                                            && activeComparator.isComplete());
+                                            && sourceComparatorExhausted(
+                                                    seg, activeComparator));
                 }
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
@@ -1141,6 +1397,14 @@ abstract class AbstractRunChainTest {
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 // Attach the return comparator, keying on interior kind.
                 int returnRowsConsumed;
+                // True only when the playback cursor ARRIVED at the consumed
+                // row by running it, which is the sole footing on which an
+                // opening row can be adopted. Production's
+                // destinationRowsConsumedForAdmission() is cursor-derived and
+                // therefore always organic; OPTION B below re-anchors the
+                // cursor past rows the engine never ran, so its "1" names no
+                // executed row zero.
+                boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
@@ -1162,8 +1426,9 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), framesConsumed, false,
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
-                            probe, plans.get(i + 1), fixture, framesConsumed);
+                            probe, plans.get(i + 1), fixture, framesConsumed, i + 1);
                     returnRowsConsumed = framesConsumed;
+                    returnCursorArrivedOrganically = true;
                 } else {
                     // OPTION B (bonus interior): the engine's bonus-exit sequence is
                     // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
@@ -1180,21 +1445,61 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), 1, false,
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
-                            probe, plans.get(i + 1), fixture, 1);
+                            probe, plans.get(i + 1), fixture, 1, i + 1);
                     returnRowsConsumed = 1;
+                    returnCursorArrivedOrganically = false;
                 }
                 dynamicArtSegments.beginSegment();
-                gameplayMode.dynamicArtLifecycle()
-                        .advanceComparisonCursor(returnRowsConsumed);
+                if (returnRowsConsumed == 1 && returnCursorArrivedOrganically) {
+                    // The interior's fall-through iteration already ran the
+                    // return segment's row zero; adopt it rather than skipping
+                    // past it, so its art is stamped and compared as segment
+                    // work instead of staying gap-resident.
+                    gameplayMode.dynamicArtLifecycle()
+                            .adoptGapResidentOpeningRow();
+                    activeComparator.compareAdoptedOpeningRow(0,
+                            gameplayMode.dynamicArtLifecycle()
+                                    .latestSnapshot());
+                } else {
+                    gameplayMode.dynamicArtLifecycle()
+                            .advanceComparisonCursor(returnRowsConsumed);
+                }
                 dynamicArtGapJournal.nextSegmentArmed(
                         plans.get(i + 1).segment().dir());
                 i++;
             } else if (entryMode == BoundaryEntryMode.LEVEL_LOAD) {
                 SegmentPlan next = plans.get(i + 1);
                 RunLevelLoadTracker.Receipt[] observedLoad = {null};
+                // The source comparison segment closes when the run movie clock
+                // LEAVES the source segment's manifest-declared recorded coverage
+                // (bk2_frame_offset + trace_frame_count) -- exactly the predicate
+                // TraceRunDynamicArtGapComparator.gapSlice partitions the EXPECTED
+                // slice on, and exactly what the special-stage interior branch
+                // above already does at rowDriver.isComplete(). Closing on the
+                // observed level-load boundary instead left every production
+                // iteration between coverage exhaustion and that boundary inside
+                // the comparison window, so transfers submitted there were
+                // buffered as segment edges rather than gap edges. Manifest
+                // structure only: no frame index, zone, route or measured value.
+                boolean[] sourceArtWindowClosed = {false};
+                LiveTraceComparator sourceComparator = activeComparator;
+                Runnable closeSourceArtWindow = () -> {
+                    if (sourceArtWindowClosed[0]
+                            || !sourceComparatorExhausted(seg, sourceComparator)) {
+                        return;
+                    }
+                    dynamicArtSegments.enterGap();
+                    // Observed after the window actually closes: the close is what
+                    // records the state the gap opens on, so reading the snapshot
+                    // first leaves the source's own final edges out of it.
+                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                    sourceArtWindowClosed[0] = true;
+                };
+                closeSourceArtWindow.run();
                 BoundaryObservation obs = TraceRunReplayWalker.awaitBoundary(
                         probe, exit, stepCap, () -> {
                             stepEngineFrame(loop);
+                            closeSourceArtWindow.run();
                             if (isNewActiveLevelSegment(
                                     next, levelAtSegmentStart)) {
                                 RunLevelLoadTracker.Receipt receipt =
@@ -1207,15 +1512,18 @@ abstract class AbstractRunChainTest {
                                                 receipt.identity()));
                             }
                         });
-                completePinnedSourceTailAfterBoundary(
-                        loop, activeComparator, seg, stepCap,
+                completeSourceTailReportingOnFailure(
+                        run.runId(), i, loop, activeComparator, seg, stepCap,
                         activeComparator.cursor(), levelAtSegmentStart);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
-                dynamicArtSegments.enterGap();
+                // Normally already closed inside the boundary wait, the moment
+                // recorded coverage was exhausted; this covers a source whose
+                // comparator only exhausts in the pinned tail above.
+                closeSourceArtWindow.run();
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(),
                         "Segment " + i + " (" + seg.segment().dir()
@@ -1224,17 +1532,18 @@ abstract class AbstractRunChainTest {
                                 + ") was never observed within the boundary window for "
                                 + runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
-                int rowsConsumed = prepareAcrossLevelBoundary(
+                int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                runCoordinator.admitLevel(
-                        exit, obs.observedBk2Frame(),
-                        loop.getCurrentGameMode(),
-                        rowsConsumed, false,
+                int rowsConsumed = admitLevelWhenReady(
+                        gameplayMode, loop, playback, runCoordinator, exit, obs, next,
+                        prepared, stepCap,
                         Objects.requireNonNull(observedLoad[0],
-                                "production level-load receipt was not observed"));
+                                "production level-load receipt was not observed"),
+                        i, runDir);
                 activeComparator = attachPreparedLevelSegment(
-                        playback, probe, movie, next, fixture, rowsConsumed);
+                        playback, probe, movie, next, fixture, rowsConsumed,
+                        i + 1);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -1252,8 +1561,8 @@ abstract class AbstractRunChainTest {
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(
                                 probe, exit, stepCap, () -> stepEngineFrame(loop));
-                completePinnedSourceTailAfterBoundary(
-                        loop, activeComparator, seg, stepCap,
+                completeSourceTailReportingOnFailure(
+                        run.runId(), i, loop, activeComparator, seg, stepCap,
                         initialComparisonCursor, levelAtSegmentStart);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
@@ -1261,10 +1570,14 @@ abstract class AbstractRunChainTest {
                 // this segment's comparator will ever get if the assert throws.
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
+                // Observed after the window actually closes: the close is what
+                // records the state the gap opens on, so reading the snapshot
+                // first leaves the source's own final edges out of it.
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(), "Segment " + i + " (" + seg.segment().dir()
                         + ") exit boundary (" + exit.entryKind()
@@ -1298,8 +1611,11 @@ abstract class AbstractRunChainTest {
             prefixReached = true;
             hardwareTiming.abort();
         } catch (Exception | Error failure) {
+            // Recorded, not rethrown here, so the gap-ledger axis below is
+            // still evaluated and reported alongside the walk failure. The
+            // failure is rethrown (or attached to the combined report) at the
+            // end of this method; nothing is swallowed.
             primaryFailure = failure;
-            throw failure;
         } finally {
             activeRunCoordinator = null;
             productionComparator = null;
@@ -1322,8 +1638,51 @@ abstract class AbstractRunChainTest {
                 }
             }
         }
+        // --- Step 4: evaluate EVERY axis, then fail once ------------------------
+        // The gap-ledger comparison is reached whatever happened above: a
+        // segment physics divergence or a walk failure no longer aborts before
+        // it. A prefix-target run stops deliberately mid-chain, so its
+        // structural gaps are incomplete and are not compared -- unchanged
+        // behaviour.
+        List<String> gapFailures = new ArrayList<>();
         if (!prefixReached) {
-            dynamicArtGapJournal.verify(run);
+            gapFailures.addAll(
+                    dynamicArtGapJournal.collectVerificationFailures(run));
+        }
+        gapFailures.addAll(dynamicArtGapJournal.terminalFailures);
+        List<String> axisFailures = new ArrayList<>(chainAxisFailures);
+        axisFailures.addAll(gapFailures);
+        try {
+            writeChainGapReport(run.runId(), dynamicArtGapJournal, gapFailures);
+        } catch (IOException reportFailure) {
+            axisFailures.add("[gap-report-io] failed to write the dynamic-art"
+                    + " gap report: " + reportFailure);
+        }
+        if (!axisFailures.isEmpty() || primaryFailure != null) {
+            if (axisFailures.isEmpty()) {
+                if (primaryFailure instanceof Error error) {
+                    throw error;
+                }
+                throw (Exception) primaryFailure;
+            }
+            StringBuilder message = new StringBuilder("chain replay of ")
+                    .append(run.runId())
+                    .append(" failed on ")
+                    .append(axisFailures.size()
+                            + (primaryFailure == null ? 0 : 1))
+                    .append(" axis/axes:");
+            if (primaryFailure != null) {
+                message.append("\n  - [walk-failure] ")
+                        .append(primaryFailure);
+            }
+            for (String failure : axisFailures) {
+                message.append("\n  - ").append(failure);
+            }
+            AssertionError combined = new AssertionError(message.toString());
+            if (primaryFailure != null) {
+                combined.addSuppressed(primaryFailure);
+            }
+            throw combined;
         }
         return dynamicArtGapJournal.evidence(runCoordinator.actions());
     }
@@ -1488,8 +1847,11 @@ abstract class AbstractRunChainTest {
                         specialDriver.comparisons());
             }
 
-            dynamicArtGapJournal.sourceClosed(special.segment().dir());
             dynamicArtSegments.enterGap();
+            // Observed after the window actually closes: the close is what
+            // records the state the gap opens on, so reading the snapshot
+            // first leaves the source's own final edges out of it.
+            dynamicArtGapJournal.sourceClosed(special.segment().dir());
             runCoordinator.closeCurrent(
                     loop.getCurrentGameMode(), true);
             dynamicArtGapJournal.gapOpened(special.segment().dir());
@@ -1539,7 +1901,12 @@ abstract class AbstractRunChainTest {
                                 bridge.executionPolicy(), rowPolicy.phase(),
                                 rowPolicy.observedVblankCounterAdvance(),
                                 previousObservedVblank,
-                                loop.getCurrentGameMode() == GameMode.LEVEL);
+                                loop.getCurrentGameMode() == GameMode.LEVEL,
+                                localRow + 1 < bridge.trace().frameCount()
+                                        && TraceReplayRowPolicy
+                                                .carriesDeferredVblank(
+                                                        bridge.trace(),
+                                                        localRow + 1));
                 boolean deferBoundaryCommit = false;
                 if (localRow + 1 < bridge.trace().frameCount()) {
                     TraceReplayRowPolicy nextRowPolicy =
@@ -1676,8 +2043,11 @@ abstract class AbstractRunChainTest {
                         });
             }
 
-            dynamicArtGapJournal.sourceClosed(bridge.segment().dir());
             dynamicArtSegments.enterGap();
+            // Observed after the window actually closes: the close is what
+            // records the state the gap opens on, so reading the snapshot
+            // first leaves the source's own final edges out of it.
+            dynamicArtGapJournal.sourceClosed(bridge.segment().dir());
             FrameComparison terminal = structural.finalizeSegment(
                     GameServices.captureDynamicArtDiagnostics());
             if (terminal != null) {
@@ -1719,8 +2089,10 @@ abstract class AbstractRunChainTest {
                             "Complete movie must finish in the manifest-declared mode");
                 }
                 assertReturnBoundary(plans, specialIndex, runDir);
-                dynamicArtGapJournal.verifyTerminal(
-                        run, movie.getFrameCount());
+                if (tail != null) {
+                    dynamicArtGapJournal.verifyTerminal(
+                            run, movie.getFrameCount());
+                }
                 dynamicArtSegments.close();
                 hardwareTiming.close();
                 runCoordinator.finishTerminal(
@@ -1754,7 +2126,7 @@ abstract class AbstractRunChainTest {
                     gameplay.segment().dir());
             LiveTraceComparator comparator =
                     attachReturnedLevelSegment(
-                            probe, gameplay, fixture, 0);
+                            probe, gameplay, fixture, 0, gameplayIndex);
             return new PresentationBridgeResult(
                     false, gameplayIndex, comparator);
         } finally {
@@ -1779,6 +2151,29 @@ abstract class AbstractRunChainTest {
         SessionManager.getCurrentGameplayMode()
                 .dynamicArtLifecycle()
                 .setMovieLogicalFrame(step.movieRow());
+    }
+
+    /**
+     * States the physical row for every other engine step the chain drives.
+     *
+     * <p>{@link #stateMovieLogicalRow(TraceRunFrameDriver.Step)} only covers
+     * the rows a {@code TraceRunFrameDriver} owns; ordinary segment rows,
+     * mode waits and boundary crossings run through {@link #stepEngineFrame}
+     * and stated nothing, so the service fell back to counting production
+     * iterations for them. A chain runs a different number of iterations than
+     * the movie has rows — the pre-segment prefix runs none, a special-stage
+     * segment runs more than one per row — so the counter is not the movie
+     * clock and never converges on it. The shared playback cursor is that
+     * clock, and it is the same value the production visual path announces
+     * per physical row (TraceSessionLauncher.driveRunPhysicalRow).
+     */
+    private static void stateMovieLogicalRow() {
+        var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        lifecycle.setMovieLogicalFrame(
+                GameServices.playbackDebug().getCursorFrame());
     }
 
     private void driveHeadlessTransitionRow(
@@ -1875,6 +2270,62 @@ abstract class AbstractRunChainTest {
     // Handoffs
     // -------------------------------------------------------------------------
 
+    /**
+     * ENTRY-side twin of the bonus-exit OPTION B fact (see the {@code stage_exit}
+     * branch): a source segment that ends in a level reload records the ROM's
+     * whole {@code Level:} prologue -- {@code Pal_FadeToBlack}, the
+     * {@code Clear_DisplayData} RAM wipe and the DESTINATION's load -- inside the
+     * SOURCE segment, because the recorder cuts at the destination's first
+     * gameplay row. Those rows are not LevelLoop iterations of the source level,
+     * the engine has left LEVEL by then, and it performs the reload synchronously
+     * (loadZoneAndAct is one frame), so demanding the source comparator consume
+     * them is unsatisfiable by construction.
+     *
+     * <p>The row split comes from recorded ROM state (the terminal
+     * {@code zone_act_state} {@code game_mode} reload bit of
+     * {@code bset #7,(Game_mode).w}) -- see
+     * {@link TraceRunReplayWalker#levelLoopRowCount}. Segments that do not end in
+     * a reload are unaffected: their in-level row count is the whole trace.
+     */
+    private static boolean sourceComparatorExhausted(
+            SegmentPlan segment, LiveTraceComparator comparator) {
+        return comparator.isComplete()
+                || comparator.cursor()
+                        >= TraceRunReplayWalker.levelLoopRowCount(segment.trace());
+    }
+
+    /**
+     * Runs {@link #completePinnedSourceTailAfterBoundary} and, if the pinned
+     * tail cannot complete, emits this segment's comparator evidence before
+     * rethrowing.
+     *
+     * <p>The tail assertion aborts the whole walk, so a segment that fails it
+     * never reaches its own {@link #maybeWriteReport} call further down the
+     * branch: its report is never written and its already-computed physics
+     * error count is never asserted, leaving the segment-physics axis silently
+     * absent from the failure. That is the same reporting-before-asserting
+     * order the interior and entry branches already use ("Write the interior's
+     * comparator report BEFORE asserting the boundary was observed"), applied
+     * to the one assertion that still preceded it.
+     *
+     * <p>Nothing is weakened: the tail failure is rethrown unchanged and still
+     * fails the run. {@link #assertSegmentPhysics} only records into
+     * {@code chainAxisFailures}, so both axes are reported together, additively.
+     */
+    private void completeSourceTailReportingOnFailure(
+            String runId, int segmentIndex, GameLoop loop,
+            LiveTraceComparator comparator, SegmentPlan segment, int stepCap,
+            int initialCursor, Object sourceLevel) throws IOException {
+        try {
+            completePinnedSourceTailAfterBoundary(
+                    loop, comparator, segment, stepCap, initialCursor,
+                    sourceLevel);
+        } catch (AssertionError tailFailure) {
+            maybeWriteReport(runId, segmentIndex, comparator);
+            throw tailFailure;
+        }
+    }
+
     private void completePinnedSourceTailAfterBoundary(
             GameLoop loop, LiveTraceComparator comparator,
             SegmentPlan segment, int stepCap, int initialCursor,
@@ -1882,7 +2333,7 @@ abstract class AbstractRunChainTest {
         int steps = 0;
         int startCursor = comparator.cursor();
         List<GameMode> modePath = new ArrayList<>();
-        while (!comparator.isComplete() && steps < stepCap) {
+        while (!sourceComparatorExhausted(segment, comparator) && steps < stepCap) {
             GameMode mode = loop.getCurrentGameMode();
             if (modePath.isEmpty() || modePath.getLast() != mode) {
                 modePath.add(mode);
@@ -1920,7 +2371,7 @@ abstract class AbstractRunChainTest {
             }
             steps++;
         }
-        if (!comparator.isComplete()) {
+        if (!sourceComparatorExhausted(segment, comparator)) {
             throw new AssertionError(
                     "source comparator did not exhaust after boundary for "
                             + segment.segment().dir()
@@ -1936,7 +2387,7 @@ abstract class AbstractRunChainTest {
 
     private static void requireComparatorComplete(
             SegmentPlan segment, LiveTraceComparator comparator) {
-        if (!comparator.isComplete()) {
+        if (!sourceComparatorExhausted(segment, comparator)) {
             throw new AssertionError(
                     "source comparator is not complete for "
                             + segment.segment().dir() + ": cursor "
@@ -2086,7 +2537,9 @@ abstract class AbstractRunChainTest {
      */
     private LiveTraceComparator attachLevelSegment(
             PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan level, LiveEngineFixture fixture) {
+            Bk2Movie movie, SegmentPlan level, LiveEngineFixture fixture,
+            int segmentIndex) {
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         playback.startSession(movie, level.segment().bk2FrameOffset());
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
@@ -2145,7 +2598,9 @@ abstract class AbstractRunChainTest {
      * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(
-            BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed) {
+            BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed,
+            int segmentIndex) {
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
@@ -2215,9 +2670,83 @@ abstract class AbstractRunChainTest {
         return 0;
     }
 
+    /**
+     * Offers the destination for admission every frame, stepping the engine
+     * until the coordinator accepts -- exactly what production does, where
+     * {@code TraceSessionLauncher#runCoordinatorTick} polls
+     * {@link TraceRunPlaybackCoordinator#beforeAdmission} on every tick and
+     * simply keeps stepping while it is denied.
+     *
+     * <p>The chain previously admitted one-shot. That is correct only when the
+     * destination happens to be admissible the instant its level became active;
+     * at a level-advance boundary whose act title card is still running, and
+     * whose shared movie cursor has not yet reached the destination's first
+     * recorded row, the coordinator legitimately denies and the one-shot call
+     * failed the run. This is additive: a boundary that admits immediately
+     * exits on iteration zero with the prepared row count unchanged.
+     *
+     * <p>Nothing here weakens the admission rule -- the engine must genuinely
+     * become admissible. The loop is bounded by the same manifest-derived
+     * {@code stepCap} every other await uses, and each step runs the coordinator's
+     * own {@code afterStep} transition timeout.
+     */
+    private int admitLevelWhenReady(
+            GameplayModeContext gameplayMode,
+            GameLoop loop,
+            PlaybackDebugManager playback,
+            HeadlessRunCoordinatorAdapter runCoordinator,
+            TraceRunManifest.Transition exit,
+            BoundaryObservation obs,
+            SegmentPlan next,
+            int preparedRowsConsumed,
+            int stepCap,
+            RunLevelLoadTracker.Receipt observedLoad,
+            int segmentIndex,
+            Path runDir) {
+        int destinationOffset = next.segment().bk2FrameOffset();
+        // Arm the production one-row gap latch HERE: this loop is the only
+        // place the chain steps rows under SHARED_GAP, so arming anywhere else
+        // leaves the answer to whatever the previous gap (or the previous test
+        // class in this fork) happened to leave behind.
+        gameplayMode.beginRunTransitionGap();
+        for (int step = 0; step <= stepCap; step++) {
+            int cursor = playback.getCursorFrame();
+            int rowsConsumed = step == 0
+                    ? preparedRowsConsumed
+                    : cursor - destinationOffset;
+            if (rowsConsumed >= 0 && rowsConsumed <= 1
+                    && runCoordinator.tryAdmitLevel(
+                            exit, obs.observedBk2Frame(),
+                            loop.getCurrentGameMode(),
+                            rowsConsumed, observedLoad)) {
+                return rowsConsumed;
+            }
+            if (rowsConsumed > 1) {
+                throw new AssertionError(
+                        "Segment " + segmentIndex + " destination "
+                                + next.segment().dir()
+                                + " cursor advanced past its first recorded row"
+                                + " without admission (cursor " + cursor
+                                + ", offset " + destinationOffset + ") for "
+                                + runDir);
+            }
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame());
+        }
+        throw new AssertionError(
+                "Segment " + segmentIndex + " destination "
+                        + next.segment().dir()
+                        + " never became admissible within " + stepCap
+                        + " steps (cursor " + playback.getCursorFrame()
+                        + ", offset " + destinationOffset + ", mode "
+                        + loop.getCurrentGameMode() + ") for " + runDir);
+    }
+
     private LiveTraceComparator attachPreparedLevelSegment(
             PlaybackDebugManager playback, BoundaryProbe probe, Bk2Movie movie,
-            SegmentPlan nextLevel, LiveEngineFixture fixture, int rowsConsumed) {
+            SegmentPlan nextLevel, LiveEngineFixture fixture, int rowsConsumed,
+            int segmentIndex) {
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         int expectedCursor = nextLevel.segment().bk2FrameOffset() + rowsConsumed;
         if (playback.getCursorFrame() != expectedCursor) {
             if (rowsConsumed != 0) {
@@ -2697,11 +3226,28 @@ abstract class AbstractRunChainTest {
                             ? List.of() : passBinder.passesForObservation(localRow);
             TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
                     rows.admission(localRow);
+            // An observation that executes a RunObjects pass is never a lag
+            // V-blank, whatever the recorder's lag heuristic reports:
+            // SS_MainLoop sets VintID_S2SS and waits on it immediately before
+            // the pass (docs/s2disasm/s2.asm:6694-6706), so V_Int cannot have
+            // taken the Vint_Lag branch -- that branch runs only while
+            // Vint_routine is still 0 (docs/s2disasm/s2.asm:483-484). The
+            // binder already relies on this to place the terminal
+            // stage-finished pass on its raw-lag observation
+            // (TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder), so
+            // the row driver must execute that observation rather than skip
+            // it -- otherwise the stage's last pass, and the player DPLC pair
+            // it submits, land outside the compared window entirely. Same rule
+            // as S2SpecialStageReplayHarness.stepPasses / observationPhase.
+            boolean ownsCompletedPass = !observationPasses.isEmpty();
+            boolean executeGameplay = admission.executeGameplay() || ownsCompletedPass;
             var beforeManager = GameServices.level().getObjectManager();
             int beforeVblank = beforeManager.getVblaCounter();
-            admission.syntheticPlcPhase().ifPresent(
-                    AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
-            if (admission.executeGameplay()
+            if (!ownsCompletedPass) {
+                admission.syntheticPlcPhase().ifPresent(
+                        AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
+            }
+            if (executeGameplay
                     && loop.getCurrentGameMode()
                             == GameMode.SPECIAL_STAGE_RESULTS) {
                 // Still inside the recorded segment (ROM Game_Mode is still
@@ -2712,7 +3258,7 @@ abstract class AbstractRunChainTest {
                 // control at all (docs/s2disasm/s2.asm:6795-6800), so drive a
                 // bare engine frame with no recorded-input override.
                 stepEngineFrame(loop);
-            } else if (admission.executeGameplay()
+            } else if (executeGameplay
                     && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
                 int absoluteRow = bk2FrameOffset + localRow;
                 Bk2FrameInput current = movie.getFrame(absoluteRow);
@@ -2729,7 +3275,7 @@ abstract class AbstractRunChainTest {
                     // the runtime's own lag compensation").
                     loop.getActiveSpecialStageProvider().setLagCompensation(0);
                     loop.setSpecialStageObservationPacing(
-                            recordedPassPacing(movie, observationPasses));
+                            recordedPassPacing(movie, observationPasses, localRow));
                 }
                 try {
                     stepEngineFrame(loop);
@@ -2754,11 +3300,38 @@ abstract class AbstractRunChainTest {
      * {@code S2SpecialStageReplayHarness.stepPassBody}.
      */
     private static GameLoop.SpecialStageObservationPacing recordedPassPacing(
-            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes) {
+            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes,
+            int observationFrame) {
         return new GameLoop.SpecialStageObservationPacing() {
             @Override
             public int passCount() {
                 return passes.size();
+            }
+
+            @Override
+            public void runPass(int index, SpecialStageProvider provider) {
+                if (isPreStartPass(passes.get(index))) {
+                    // The pre-start loop's terminal pass. Its own
+                    // started_at_input_sample is still clear, because the
+                    // pre-start loop tests SpecialStage_Started only after the
+                    // pass returns (docs/s2disasm/s2.asm:6689-6692) -- the same
+                    // predicate TraceRunSpecialStageRows.passPacedFromRow uses
+                    // to find the recurring loop's first pass, so the last pass
+                    // still reading zero is by construction the pre-start one.
+                    // The ROM copies Ctrl_1/Ctrl_2 BEFORE that loop's
+                    // WaitForVint (s2.asm:6675-6676), so it owns no post-V-int
+                    // controller sample for the recurring loop's binding path;
+                    // publish it through the startup boundary instead. Without
+                    // this the chain bound it as a recurring pass and every
+                    // later special-stage pass ran one V-int behind the track
+                    // clock. Mirrors S2SpecialStageReplayHarness.stepPasses.
+                    Sonic2SpecialStageReplayTestBridge
+                            .completeTerminalPreStartPassWithoutVint(
+                                    ((Sonic2SpecialStageProvider) provider).getManager());
+                    return;
+                }
+                applyPassInput(index, provider);
+                provider.update();
             }
 
             @Override
@@ -2774,7 +3347,48 @@ abstract class AbstractRunChainTest {
                         mapped.p1Held(), mapped.p1Pressed(),
                         mapped.p2Held(), mapped.p2Logical());
             }
+
+            @Override
+            public void afterPass(int index) {
+                if (passes.get(index).completionCursorFrame() >= observationFrame) {
+                    return;
+                }
+                // The pass returned before this observation's V-int on
+                // hardware, so that V-blank already ran ProcessDMAQueue
+                // (docs/s2disasm/s2.asm:1769) over its queued work:
+                // submissions and completions surface together on the bound
+                // row, while a later pass's work in this same observation
+                // stays pending. Identical to the standalone harness's rule in
+                // S2SpecialStageReplayHarness.stepPasses.
+                var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+                if (lifecycle != null && lifecycle.isRunActive()) {
+                    lifecycle.serviceVblankBeforeBoundObservation();
+                }
+            }
         };
+    }
+
+    /**
+     * True while a recorded pass's own {@code Vint_S2SS ReadJoypads} sample had
+     * not yet seen {@code SpecialStage_Started} (docs/s2disasm/s2.asm:9745), so
+     * the pass belongs to {@code SpecialStage_MainLoop}'s pre-start loop rather
+     * than its recurring loop (s2.asm:6674-6721).
+     */
+    private static boolean isPreStartPass(
+            SpecialStageRunObjectsPassBinder.CompletedPass pass) {
+        Object raw = pass.snapshot().fields().get("started_at_input_sample");
+        if (raw == null) {
+            throw new IllegalStateException(
+                    "run_objects_end is missing started_at_input_sample at frame "
+                            + pass.snapshot().frame());
+        }
+        if (raw instanceof Number number) {
+            return number.intValue() == 0;
+        }
+        String text = String.valueOf(raw);
+        return (text.startsWith("0x") || text.startsWith("0X")
+                ? Integer.parseUnsignedInt(text.substring(2), 16)
+                : Integer.parseInt(text)) == 0;
     }
 
     /** Replays and asserts only the terminal behavior declared by the run manifest. */
@@ -2976,8 +3590,89 @@ abstract class AbstractRunChainTest {
         }
     }
 
+    /**
+     * Drives one shared-transition-gap row.
+     *
+     * <p>The visual launcher runs every gap row under
+     * {@link TraceRunFrameDriver.Disposition#SHARED_GAP}, which is what makes
+     * {@code GameLoop.suppressesRunNativeLevelBody} stop the source level's
+     * body once its own main loop has ended -- the ROM spends a level-advance
+     * gap inside the blocking {@code Level:} load path
+     * (docs/s2disasm/s2.asm:4757-4926), not in {@code Level_MainLoop}, and the
+     * players do not even exist there until {@code InitPlayers}
+     * (docs/s2disasm/s2.asm:4945). This adapter used to step the gap with a
+     * bare {@code loop.step()}, so the level body kept running and kept
+     * animating the players for the whole gap. Same contract, two drivers; the
+     * disposition is the only thing that differed.
+     *
+     * <p>Exactly which rows the body still owns is decided by production, in
+     * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}: the
+     * first gap row, and no other.
+     */
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow) {
+        TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
+        gameplayMode.installTraceRunFrameDriver(gapRows);
+        try {
+            gapRows.execute(
+                    new TraceRunFrameDriver.Step(
+                            TraceRunFrameDriver.Disposition.SHARED_GAP,
+                            movieRow, false),
+                    new TraceRunFrameDriver.Hooks<Void>() {
+                        @Override
+                        public void preparePhysicalRow(TraceRunFrameDriver.Step step) {
+                        }
+
+                        @Override
+                        public void prepareHardwareTiming(TraceRunFrameDriver.Step step) {
+                        }
+
+                        @Override
+                        public Void captureBefore(TraceRunFrameDriver.Step step) {
+                            return null;
+                        }
+
+                        @Override
+                        public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
+                            stepEngineFrame(loop);
+                        }
+
+                        @Override
+                        public boolean shouldAdvancePhysicalRow(TraceRunFrameDriver.Step step) {
+                            // The shared clock advances once per gap row
+                            // whoever moved it: the source level's own body on
+                            // the one row it still owns, and this adapter on
+                            // every suppressed row after it.
+                            return playback.getCursorFrame() == movieRow;
+                        }
+
+                        @Override
+                        public void advancePhysicalRow(TraceRunFrameDriver.Step step) {
+                            playback.onLevelFrameAdvanced();
+                        }
+
+                        @Override
+                        public Void captureAfter(TraceRunFrameDriver.Step step) {
+                            return null;
+                        }
+
+                        @Override
+                        public void compare(TraceRunFrameDriver.Step step, Void before, Void after) {
+                        }
+
+                        @Override
+                        public void afterStep(TraceRunFrameDriver.Step step) {
+                        }
+                    });
+        } finally {
+            gameplayMode.clearTraceRunFrameDriver(gapRows);
+        }
+    }
+
     /** Advances one engine frame through the same outer PLC/fade lifecycle as live play. */
     void stepEngineFrame(GameLoop loop) {
+        stateMovieLogicalRow();
         DynamicArtDiagnosticsSnapshot before =
                 GameServices.captureDynamicArtDiagnostics();
         HeadlessRunCoordinatorAdapter coordinator = activeRunCoordinator;
@@ -3017,6 +3712,45 @@ abstract class AbstractRunChainTest {
         }
         assertCompletedSegmentComparison(segmentIndex, comparator);
         writeChainSegmentReport(runId, segmentIndex, comparator);
+        assertSegmentPhysics(runId, segmentIndex, comparator);
+    }
+
+    /**
+     * Asserts the physics comparator error count of any segment whose comparator
+     * the chain attached over a level boundary: a level re-entered after an
+     * interior ({@link #attachReturnedLevelSegment}), and -- since 2026-08-12 --
+     * a level entered by a {@code level_advance} boundary
+     * ({@link #attachPreparedLevelSegment} / {@link #attachLevelSegment}).
+     * No new comparison logic: this asserts
+     * exactly the {@code errorCount()} the chain already computed and just wrote
+     * into {@code <runId>_seg<N>_report.json}.
+     *
+     * <p>See {@link #assertedPhysicsSegmentIndices} for why the count was going
+     * unasserted, and why turning it on is the true state becoming visible
+     * rather than a regression.
+     */
+    private void assertSegmentPhysics(
+            String runId, int segmentIndex, LiveTraceComparator comparator) {
+        if (!assertedPhysicsSegmentIndices.contains(segmentIndex)) {
+            return;
+        }
+        if (comparator.errorCount() == 0) {
+            return;
+        }
+        MismatchEntry first = comparator.firstNonCameraPhysicsMismatch();
+        // Recorded, not thrown: see chainAxisFailures. The predicate is
+        // unchanged (errorCount() must be 0); only the throw site moved to the
+        // end of the walk so the gap-ledger axis is also evaluated.
+        chainAxisFailures.add("[segment-physics] segment "
+                + segmentIndex + " of " + runId
+                + " diverged: " + comparator.errorCount()
+                + " physics comparator errors"
+                + (first == null ? "" : ", first non-camera mismatch at frame "
+                        + first.frame() + " field " + first.field()
+                        + " rom=" + first.romValue()
+                        + " engine=" + first.engineValue())
+                + "; report=" + REPORT_OUTPUT_DIR.resolve(
+                        runId + "_seg" + segmentIndex + "_report.json"));
     }
 
     /** Adapter-neutral assertions a committed route can add at a completed source segment. */
@@ -3030,6 +3764,50 @@ abstract class AbstractRunChainTest {
         Path jsonPath = REPORT_OUTPUT_DIR.resolve(runId + "_seg" + segmentIndex + "_report.json");
         Files.writeString(jsonPath, buildComparatorSummaryJson(comparator));
         assertTrue(Files.exists(jsonPath), "Chain segment report must be written: " + jsonPath);
+    }
+
+    /**
+     * Writes the transition-gap axis's report artifact, whichever axis failed.
+     *
+     * <p>The gap ledger was previously only ever consumed by an assertion the
+     * walk never reached, so this axis had no artifact at all; a run that fails
+     * on segment physics now still leaves the gap evidence on disk.
+     */
+    private void writeChainGapReport(
+            String runId,
+            DynamicArtGapJournalProbe journal,
+            List<String> gapFailures) throws IOException {
+        Files.createDirectories(REPORT_OUTPUT_DIR);
+        List<Map<String, Object>> gaps = new ArrayList<>();
+        for (DynamicArtStructuralGapEvidence gap : journal.structuralGaps) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("representedSegmentDir", gap.representedSegmentDir());
+            row.put("nextSegmentDir", gap.nextSegmentDir());
+            row.put("gapStartMovieLogicalFrame",
+                    gap.gapStartMovieLogicalFrame());
+            row.put("nextSegmentArmMovieLogicalFrame",
+                    gap.nextSegmentArmMovieLogicalFrame());
+            row.put("transitionCountAtGapStart",
+                    gap.transitionCountAtGapStart());
+            row.put("transitionCountAfterNextArm",
+                    gap.transitionCountAfterNextArm());
+            row.put("transitionsAddedAcrossBoundary",
+                    gap.transitionsAddedAcrossBoundary().stream()
+                            .map(String::valueOf)
+                            .toList());
+            gaps.add(row);
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("runId", runId);
+        summary.put("gapCount", gaps.size());
+        summary.put("failureCount", gapFailures.size());
+        summary.put("failures", List.copyOf(gapFailures));
+        summary.put("gaps", gaps);
+        Path jsonPath = REPORT_OUTPUT_DIR.resolve(
+                runId + "_dynamic_art_gap_report.json");
+        Files.writeString(jsonPath, new ObjectMapper()
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .writeValueAsString(summary));
     }
 
     private void writeDynamicArtInteriorReport(

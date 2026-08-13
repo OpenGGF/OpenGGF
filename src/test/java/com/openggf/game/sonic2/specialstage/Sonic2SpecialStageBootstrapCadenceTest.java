@@ -340,7 +340,14 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.update(); // publishes the RunObjects pass scheduled above
 
         assertEquals(-0x60, manager.getSonicPlayer().getInertia());
-        assertEquals(0x08, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
+        // loc_33908 records the whole Ctrl_1_Logical WORD into SS_Ctrl_Record_Buf
+        // (`move.w (Ctrl_1_Logical).w,-(a1)`, docs/s2disasm/s2.asm:69070), and
+        // Ctrl_1_Logical is Ctrl_1_Held_Logical followed by Ctrl_1_Press_Logical
+        // (s2.constants.asm:1384-1386), so the recorded word is held<<8|press. This
+        // assertion previously expected the held byte alone (0x08), which was never a
+        // valid word for a held-and-pressed RIGHT; the buffer became word-shaped when
+        // the engine was corrected to match the ROM.
+        assertEquals(0x0808, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
     }
 
     @Test

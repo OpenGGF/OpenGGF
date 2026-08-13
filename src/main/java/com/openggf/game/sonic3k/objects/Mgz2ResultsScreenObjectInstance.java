@@ -15,8 +15,16 @@ import com.openggf.level.objects.RewindRecreateContext;
  */
 public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInstance {
 
+    private boolean allocatedFromFlyingCarry;
+
     public Mgz2ResultsScreenObjectInstance(PlayerCharacter character, int act) {
+        this(character, act, false);
+    }
+
+    Mgz2ResultsScreenObjectInstance(PlayerCharacter character, int act,
+                                    boolean allocatedFromFlyingCarry) {
         super(character, act);
+        this.allocatedFromFlyingCarry = allocatedFromFlyingCarry;
     }
 
     // Probe-only constructor used by RewindRecreatable generic recreate.
@@ -33,6 +41,23 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
     @Override
     protected boolean shouldRestorePlayerControlsOnExit() {
         return false;
+    }
+
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // MGZ's sub_86984 uses AllocateObject for Obj_LevelResults. The native
+        // allocation lands in a lower free SST slot than the capsule, so its
+        // Obj_LevelResultsInit entry cannot run until the next ExecuteObjects
+        // pass (sonic3k.asm:182027-182046).
+        return true;
+    }
+
+    @Override
+    protected boolean shouldDeferInitialResultsArtLoadDispatch() {
+        // sub_86984 allocates Obj_LevelResults through the
+        // Flying_carrying_Sonic_flag branch. Preserve that allocation-time
+        // ROM state across the lower-slot delay before Obj_LevelResultsInit.
+        return allocatedFromFlyingCarry;
     }
 
     @Override

@@ -214,6 +214,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Sonic 3 & Knuckles trace parity (`bugfix/s3k-traces`, merged 2026-08-10):** brings 15 of 16 previously-failing S3K trace-replay classes to green — AIZ, CNZ, HCZ, ICZ, LBZ and MGZ (standalone and complete-run), the gumball, pachinko and slots bonus stages, the special stage, and the hardware-timing replay — with no previously-green class regressing. Merged after a three-lane review (`docs/architecture/audits/2026-08-10-s3k-traces-branch-review.md`) whose two blocking findings were fixed first: a sidekick on-screen predicate that added three conditions the ROM does not have, and an art submission that only ran when a trace was driving the replay.
+
 ### v0.6.prerelease (Current development snapshot)
 
 - **Sonic 1 complete-run audio observer terminal freeze (2026-08-13):** the
@@ -239,6 +241,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
   ring requests retain raw `$B5` and admit resolved `$CE`. The hardened runner
   pins the installed BizHawk core assembly and GPGX binary, proves both music/SFX
   and SFX/SFX contention, and discards failed producer staging without publication.
+- **Shared movement and S3K trace-parity corrections (2026-08-06):** the
+  shared movement path now keeps ROM `move_lock` semantics through a full
+  dispatch, and the shared oscillator no longer gains a duplicate transition
+  tick. S3K replay work also corrects Bubbler/Air Countdown off-screen
+  lifetimes, results/title-card queue ownership, and fresh-level destination
+  terrain admission without changing trace fixtures.
 - **Sonic 1 GHZ music-driver parity harness (2026-08-09):** a pinned BizHawk
   sound-test movie and read-only driver observer now produce deterministic
   logical-state and ordered YM2612/PSG captures for comparison with OpenGGF.
@@ -298,6 +306,546 @@ straightforward to add new objects, zones, and game-specific behaviour.
   instead of replaying inputs behind a stuck white screen.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
+
+- **The Egg Prison button stayed pressed forever (2026-08-13):** ROM `loc_3F354`
+  restores the button's stored base `y_pos` on *every* frame and re-applies its
+  8-pixel depression only while something is actually standing on it — the sole
+  latched value is `objoff_32`, the flag the capsule body polls to know it has been
+  opened (`s2.asm:84937-84950`, `:84884-84886`). The engine latched the depression
+  as well, so once either player had pressed the button its solid surface stayed
+  8px low for the rest of the act. The recording shows the real button oscillating
+  between `$03FA` and `$0402` throughout. The consequence appeared 3,383 frames
+  later and looked like nothing to do with a button: Tails fell through the sunken
+  surface where the ROM's raised one caught him, reported as a one-pixel
+  `sidekick_y` difference. It was neither a pixel drift nor — as the two previous
+  one-pixel reports had been — a hurt divergence; it was a **landing**, with the
+  ROM going air-to-grounded and the engine simply never landing. Segment 11 falls
+  from 4,192 errors to **287**, every sidekick, player and dynamic-art error in the
+  segment eliminated, and the entire residual is now one subsystem: the Nemesis PLC
+  queue. An invented `y_speed >= 0` trigger gate was removed at the same time; the
+  ROM tests the standing mask alone.
+- **The Egg Prison's button cleared the push bit its own body had set
+  (2026-08-13):** ROM `Obj3E` allocates the capsule body, button, lock and broken
+  half into four separate object slots (`s2.asm:84832-84865`), and
+  `SolidObject_TestClearPush` releases the player's push status only when the
+  *calling* object's own pushing bit is set, otherwise leaving `status(a1)`
+  untouched (`:35462-35466`, `:35483-35490`). The engine keyed its push latch on
+  the shared spawn rather than the slot, so within a single object pass the body
+  set the bit and the button cleared it — measured directly, both objects using the
+  same latch key. Sonic's animation handler then ran with pushing false and
+  published walk frame `$0F` where the ROM publishes push frame `$48`. Opting the
+  three Egg Prison classes into the existing per-slot latch hook, alongside 26
+  prior users of it, takes segment 11 from 4,215 errors to 4,192 and advances its
+  frontier 244 frames. Worth recording as a pattern: this is the second defect in
+  as many days where the ROM allocates several real object slots and the engine
+  models them as one — the bridge subsprites were the first, and both surfaced as
+  something entirely unrelated (a sidekick despawn, and a player animation frame).
+  It also disproved the hypothesis it was sent to test: the divergence is not
+  inherited from the preceding transition gap, whose errors are Tails' DPLC and
+  which are byte-identical either side of this fix.
+- **A fifth hidden comparison, and the V-int phase behind it (2026-08-13):**
+  segment 11 of the emerald run carried 4,215 physics errors that nothing asserted
+  — the tail-exhaust walk-failure was rethrown before the segment report was
+  written, so no report existed and no axis was reported. Writing the report first
+  takes the chain from 4 axes to 5, which is a failing comparison becoming visible
+  rather than a regression. That is the fifth computed-but-never-reached comparison
+  in this work. The walk-failure itself is a real engine defect and is now traced
+  end to end: the engine leaves `LEVEL` 28 rows before the recording does; all 27
+  remaining rows are genuine level rows; `Load_EndOfAct` fires 28 frames early
+  because `Obj3E` triggers it on the first frame no animal remains
+  (`s2.asm:85004-85012`) and the engine's last animal dies at row 3517 against the
+  ROM's 3545; the animal spawn gate is `Vint_runcount & 7`
+  (`s2.asm:84969-84974`), the recording's 22 spawns land exactly on rows where the
+  counter is 0 mod 8, and the engine produces 23 — because **its object-visible
+  V-int counter runs a constant 33,555 behind the recorded ROM counter, and
+  33555 mod 8 = 3**, so every such gate in the segment fires three phases out. The
+  owning knob is per-game: S2 uses a disabled trace-playback profile where S1
+  declares measured V-blank alignment values. Deriving S2's from the ROM's
+  interrupt-disabled blocks is the follow-up; inventing them from this fixture
+  would be exactly the fitted model this project forbids, so nothing was changed
+  here.
+- **The sidekick stayed clamped to a dead boss arena (2026-08-13):**
+  `LevEvents_EHZ2_Routine4` is a terminal routine that does nothing until the boss
+  dies and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and
+  `Camera_X_pos` into `Tails_Min_X_pos` on every subsequent frame. The engine
+  stopped updating those bounds at defeat, so the sidekick remained clamped against
+  the frozen arena maximum while the camera moved on — measured precisely, the
+  right-boundary clamp zeroed its x-speed at `0x2940 + screen_width − 24 + $40`,
+  exactly the value the comparator reported. Segment 11 of the emerald run falls
+  from 11,849 errors to 4,215. Recorded because the headline number misleads on its
+  own: the chain's `[segment-physics]` axis disappears from the failure list not
+  because those errors are resolved but because the walk now aborts earlier, before
+  the segment report is written. They are unasserted, not fixed — the same
+  computed-but-unreached shape this work has already found four times — and
+  restoring that comparison is the next target rather than a completed one.
+- **A boss defeat that ran a frame early, a camera bound it was masking, and a
+  contract built on a distinction the ROM does not make (2026-08-13):** three
+  connected findings. `Obj56` dispatches read-once-at-head (`s2.asm:63420-63424`)
+  and its defeat write sits downstream of that read (`:63665`), so the ROM runs
+  the defeat routine on the *following* frame; the engine ran it immediately and
+  submitted the animal/explosion art a frame early. Landing that alone was a **net
+  regression**, because it stopped masking a second defect: `loc_2F460` does
+  `addq.w #2,(Camera_Max_X_pos).w` straight to the boundary word
+  (`:63584-63599`), while the engine went through a target with easing that runs
+  ahead of the object pass — deferring every step by a frame. The pair had to land
+  together, and the 171-error `camera_x` span that appeared with the first fix
+  alone does not appear with both. Third, the `defeatDeferralAppliesToThisBoss()`
+  contract claimed the discriminator was primary routine versus `routine_secondary`
+  "dispatched fresh every frame," and forbade the deferral for Wing Fortress on
+  that basis. All four bosses — `Obj56`, `ObjC5`, `ObjAF`, `Obj5D` — use the
+  identical read-once-at-head idiom, and ObjC5's defeat write is downstream of its
+  own head read too, so the distinction does not exist in the ROM. The javadoc now
+  states read-once-at-head versus re-read-per-dispatch, and three drifted
+  `loc_39CF0` citations are corrected from `:78003-78004` (which is
+  `mapping_frame`/`x_pos`) to `:78091-78095`. That citation predated the change and
+  had propagated into the restatement by copy — plausibly how the rule came to be
+  written around the wrong distinction in the first place. Wing Fortress is
+  recorded as an open question rather than changed on inference, and ARZ/MTZ
+  dispatch on `boss_subtype`, which the corrected criterion does not settle.
+- **Player physics is now byte-accurate across the whole emerald run
+  (2026-08-13):** the last player-physics divergence came from the EHZ2 boss
+  skipping the frame the ROM spends inside `Obj56_Init` (`s2.asm:63256-63325`,
+  routine advanced at `:63278` and `rts` at `:63325`). The engine applied init at
+  construction, so the boss ran one frame ahead, its spike landed a frame early,
+  and the hurt arrived on the wrong row. Three things this corrected about the
+  diagnosis it started from. The reported first mismatch — `x_speed` sign-flipped
+  at frame 1259 — was **not a reflection**: ROM and engine agreed exactly on `x`,
+  `y` and `g_speed` there, only the derived speed components disagreed, and they
+  reconverged two rows later. It was a `CalcSine` decomposition artefact of the
+  lead, and the substantive divergence began 470 rows later. The lead was **one**
+  frame, not the two that had been inferred — `engine[N] == ROM[N+1]` on every
+  compared row of the boss's slot. And the fix was the object-local half, **not**
+  the shared zone-event spawn cadence: because the engine already initialises at
+  allocation, also adopting the ROM's "an event-spawned object does not execute on
+  its allocation frame" ordering would have overshot by a frame. That cadence
+  change had been deliberately left unlanded as too broad to verify; it turns out
+  it would also have been wrong here. Across the entire eleven-segment run, **zero
+  rows now mismatch on x, y, x_speed, y_speed, g_speed, angle, air or rolling**,
+  down from 1,451. Segment 11 falls from 30,707 errors to 11,893 and its frontier
+  moves off player physics entirely, onto a PLC-queue field.
+- **The EHZ2 boss moved before it checked where it was, and the camera took the
+  blame (2026-08-13):** the emerald run died in its last level, and the visible
+  symptom was a camera 61–80px right of the recording — which turned out to be a
+  *downstream* effect measured 30 rows after the real divergence. The engine
+  matches the ROM exactly through row 1267; the player diverges at 1268 and the
+  camera only at 1298. The ROM's camera is simply pinned to the EHZ2 boss arena
+  bounds (`LevEvents_EHZ2_Routine2` writes `$28F0`/`$2940`, `s2.asm:20428-20441`),
+  which the engine already had right — it sat elsewhere in that band because its
+  player was elsewhere. The cause was the boss vehicle running four frames ahead.
+  `loc_2F27C` and `loc_2F2BA` both compare the arrival position *before* stepping,
+  so the ROM spends each arrival frame in the follow-on routine without moving; the
+  engine moved first and tested after, and clamped a y the ROM never clamps. Since
+  the damaging spike sits at vehicle x − `$36`, it was 6–8px left of the ROM's, a
+  leftward-rolling player reached it a frame late, and the hurt tail's
+  `subq.w #5,y_pos` radius restore landed late. The knock-on was severe and
+  entirely invisible: the shifted hit cost the player a spilled ring whose
+  on-screen latch never set, so its floor probe was skipped, it fell through the
+  floor, and the engine met the next hit with no rings and **died** — restarting
+  the level and breaking segment ownership. With the ordering corrected the run
+  survives, and **segment 11 produces a comparator report for the first time**
+  (30,707 errors). Two further frames of the boss's lead are measured and cited but
+  not landed: the ROM does not execute the boss on its allocation frame, and
+  `Obj56_Init` consumes another — both touch shared zone-event spawn cadence.
+- **Bridges never let a player balance, and they allocate real child objects
+  (2026-08-13):** two ROM facts about `Obj11` that the engine had modelled by
+  approximation. First, the ROM writes a **fixed** `move.b #$80,width_pixels(a0)`
+  in `Obj11_Init` (`s2.asm:21951`) regardless of how many logs a bridge has, and
+  `Tails_Move` reads that field for its balance window (`:39712`) — since a
+  bridge's standable span is at most ±96, a `$80`-derived window is unreachable,
+  so **the ROM never lets Sonic or Tails balance on a bridge at all**. The engine
+  derived the width from real log geometry (96) and let Tails balance, which
+  pinned his tails object on Blank and suppressed a dynamic-art transfer. Second,
+  `Obj11_Init` allocates one or two **real object slots** per bridge via
+  `Obj11_MakeBdgSegment` (`:21966-22009`), each inheriting the parent id `0x11`;
+  the engine drew those subsprites as overlays and allocated nothing. That left
+  the slot the sidekick had landed on empty, so `TailsCPU_CheckDespawn`'s
+  `cmp.b id(a3),d0` (`:39423-39425`) mismatched and despawned Tails where the ROM
+  keeps him — the engine landing on slot 21 where the ROM lands on 23, exactly the
+  two-slot deficit. Segment 7 of the emerald run falls from 22,458 physics errors
+  to **zero**, and every one of its eleven segment reports is now clean. The first
+  attempt at the child allocation also broke rewind outside the trace profile
+  (`RewindIdentityTable is required for player-reference rewind fields`), caught
+  only because the classes live in `com.openggf.game.rewind.**` which
+  `**/tests/trace/**` cannot see; the links are now relinked by parent lookup as
+  the ARZ platform, Egg Prison and checkpoint-dongle children already do, with no
+  baseline exemption.
+- **A third unasserted comparison, and the one-frame sidekick behind it
+  (2026-08-12):** the emerald chain looked two axes from done. It was not: segment
+  7 carried **149,522 physics errors** with `complete: true` and nothing asserted
+  them, because the assertion covered only special-stage returns and that segment
+  is entered by `level_advance`. That is the third comparison in these chains found
+  computed-but-unasserted, after the returned-level segment (58,184) and the
+  transition-gap journal, which had never been evaluated once. Registering every
+  segment attached over a level boundary surfaced it — one axis added to a class
+  already red, with the profile numerically identical and the red-class list
+  unchanged. What it exposed was precise: the **sidekick was exactly one frame
+  ahead at the destination's row 0** while the player matched exactly, with the
+  engine's value at row N equalling the ROM's at row N+1. `GameLoop` carries a
+  one-row latch meaning "this gap row still belongs to the source level's main
+  loop"; a locked title-card iteration returns `SETUP_ONLY` and never reaches the
+  gap-body suppression test, so across a level advance the latch survived all 26
+  title-card rows and was consumed by the release row — a 27th pre-row-0 object
+  pass where the ROM gives 26, and the only such row in the whole 35-segment run.
+  The ROM cannot dispatch there: the release is `Level_StartGame`
+  (`s2.asm:5081-5082`) and `Level_MainLoop` runs `PauseGame` and `WaitForVint`
+  before its `jsr (RunObjects).l` (`:5088-5095`), an ordering that holds in S1 and
+  S3K too. Segment 7 falls to 23,128 errors, the player stops dying short of the
+  star post, its `starpost_special` boundary is observed for the first time,
+  segments 8–10 report zero, and the walk advances four segments. It also clears a
+  pre-existing `TestS1CompleteEmeraldVisualRun` error.
+- **The engine ran a level body across a run-chain transition gap, and a static
+  latch decided gap behaviour from whatever ran before (2026-08-12):** the
+  emerald run's `seg4_ehz1 → seg5_ehz2` gap emitted 72 art edges against a
+  recorded 12. A stack-trace probe put every surplus edge on
+  `SpriteManager.tickPlayablePhysics` — the ordinary level body, running for all
+  163 gap rows with the mode never leaving `LEVEL`. The production suppression
+  gate was already correct: `suppressesRunNativeLevelBody` requires an installed
+  `TraceRunFrameDriver`, and the chain harness installed one for special-stage
+  interiors and terminal tails but not for level→level gaps, so the gate was inert
+  and the adapter stepped the whole gap with a bare `loop.step()`. Driving those
+  steps through an installed driver removes all 60 surplus edges using only
+  pre-existing production rules — no count, window, offset or position was
+  introduced. The same work left a static latch armed at one of eight `gapOpened`
+  sites and consumed on a different path, so the value any gap saw came from an
+  earlier gap or an earlier test class in a reused surefire fork — this project's
+  documented flaky-test shape. It is now a per-session field on
+  `GameplayModeContext` and the static is deleted, with behaviour identical across
+  isolated, paired and full-profile runs.
+- **The Sonic-and-Tails all-emeralds S3K run is captured, and the trace profile
+  has the heap it measures (2026-08-12):** the run lost in an earlier revert is
+  re-captured and landed — 63 segments, 514,619 rows, 40 transitions, with 64 new
+  replay classes. The revert is vindicated by measurement rather than argument:
+  the recorder's Kosinski "backreference precedes output" check was kept fully
+  intact and **never fired**, confirming that its removal was never necessary and
+  that the sampling-race fix was the real cause. Three special-stage classes pass
+  outright; the rest are frontier harnesses reporting precise first divergences,
+  and they surface genuinely unimplemented territory — `HPZ22`, `DEZ23` and `DDZ`
+  act 2 have no engine level-list entries at all, this being the first committed
+  route to reach them. The capture also made the profile die with an
+  `OutOfMemoryError` that presented as a *better* result — 401 tests, 1 failure, 2
+  errors — because every class after `TestS3kMegaRunChain` alphabetically, including
+  the 64 new ones, never ran. Measured with GC logging, the profile's peak live set
+  is 2,069 MB, 21 MB above the 2 GB it had; it now runs at 3 GB and completes all
+  834 tests. The trace-replay profile therefore grows from 770 to 834 tests, with
+  the new run's payloads committed compressed (133 MB, largest single file 11 MB)
+  under `src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/`.
+- **The S2 title card holds for its PLC drain, not a fitted 60 frames
+  (2026-08-12):** `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60` under a
+  comment openly rationalising it as a stand-in for hardware decompression time —
+  the sixth invented duration found in this line of work. It needed no recorded
+  data to remove, because the ROM computes it: `Level_TtlCard` loops while the
+  zone-name piece is off-target **or** `tst.l (Plc_Buffer).w` is nonzero
+  (`s2.asm:4914-4924`), and `ProcessDPLC` decompresses exactly six patterns per
+  VBlank (`:2202-2213`, the ROM's own comment noting S1 processed nine). The hold
+  is therefore outstanding patterns ÷ 6, and S2 now matches the S1 implementation
+  that already modelled it. Recorded plainly: this has **zero** measured effect on
+  any trace axis, because the replay path routes headless loads through the
+  skipped-presentation lifecycle and never executes this code — it is an accuracy
+  fix for the visual path, and nothing in the suite yet compares visual
+  title-card length against a recording. The investigation that produced it also
+  retired a live design question: the surplus gap edges were thought to need the
+  recorded hardware-timing sidecar, but with the drain rate a ROM constant the
+  duration is fully derivable, so no contract amendment is warranted. The 60
+  surplus edges and the 144 un-vsynced level-load rows behind them remain
+  unexplained.
+- **The post-act fade is a frozen fade, and the chain admits a level the way
+  production does (2026-08-12):** two more divergences behind the emerald run.
+  ROM `Level_MainLoop` tests `Level_Inactive_flag` in the instruction immediately
+  after `RunObjects` and branches straight back to `Level` (`s2.asm:5095-5097`),
+  which runs `ClearPLC` then `Pal_FadeToBlack` — a `move.w #$15,d4` plus `dbf`
+  loop of 22 iterations doing `WaitForVint`, palette work and `RunPLC_RAM`, with
+  **no `RunObjects` at all** (`:3370-3382`). The engine ran those same 22 frames as
+  live gameplay, submitting a fresh player DPLC on nearly every one. The span
+  length already matched; only its content was wrong. An earlier attempt at this
+  was correctly rejected as a net wash because it introduced a `camera_y`
+  mismatch — that turned out to be a missing one-object-pass split rather than the
+  freeze itself, and with the split landed as its precondition the regression does
+  not appear. Separately, the chain harness admitted a level destination one-shot
+  where production polls `beforeAdmission` every tick and steps while denied; the
+  coordinator's refusal was correct, since the destination act's title card was
+  still running and the cursor sat 150 rows short. Stepping until admissible is
+  additive — a boundary already admissible exits on iteration zero. Surplus gap
+  edges fall 84 to 60 and the run now reaches past segment 7's last recorded row.
+  Recorded honestly: neither closes its axis. The remaining 60 surplus edges are
+  **not** the fade, no segment-7 report is emitted yet so nothing establishes that
+  EHZ2 compares clean, and segment 6 still carries 5 errors on its terminal row.
+- **Four S2 gameplay divergences behind the emerald run's last segment
+  (2026-08-12):** with the halfpipe chain green, the emerald chain's remaining
+  failures decomposed into four real engine defects, each found by a comparison
+  that had only just become capable of failing. The special-stage return never
+  re-established the sidekick's level boundaries — ROM `LevelSizeLoad` writes
+  `Tails_Min/Max_X/Y_pos` from the same `LevelSize` longs as the camera bounds on
+  every entry (`s2.asm:14695-14706`) — so `Tails_Max_Y_pos` stayed unset and
+  **Tails' kill plane was disabled for the whole rest of the run**; the dead-fall
+  threshold resolver returned `Integer.MIN_VALUE` on all 864 calls. End of act
+  fired on the bug-*fixed* branch of `Obj0D_Main_State3`, a `fixBugs` site
+  (`:34815-34838`) whose shipped `fixBugs = 0` path lets an airborne player skip
+  only the control lock and still trigger — the engine instead burned 29 extra
+  airborne frames before queueing the results art. `CheckpointState` mirrored the
+  ROM's `Saved_*` set but omitted `Saved_Timer` (`:44783-44785`), so the act timer
+  restarted at every return and the time bonus tallied from 12 seconds instead of
+  188. And the results screen carried yet another invented duration — a 60-frame
+  slide where the ROM derives 16 — the fourth fitted "N seconds" constant found in
+  a results sequence this session. Segment 6 falls from 13,836 errors to 5, every
+  ROM phase length now matches exactly (16/180/27/180), and the level-load
+  boundary the run had never reached is now reached.
+- **`TestS2EhzHalfpipeRoundTripChain` is green, and the S2 special stage runs the
+  ROM's results length (2026-08-12):** three fixes closed the last of the run
+  chains' transition-gap divergences. The gap journal was opening on a ledger its
+  own boundary batch had already mutated, and the harness read the snapshot before
+  the close that records it — two opposite-signed instances of the same
+  wrong-moment fault, one leaving an outstanding transfer missing from the opening
+  ledger and the other leaving a retired one present. Separately, the engine's
+  special-stage results screen carried two invented durations — a 60-frame "1
+  second slide-in" where `Obj6F` slides 288px at 16px/frame and arrives on frame
+  19, and a 180-frame "3 seconds after tally" where the ROM holds `$78` = 120
+  (`s2.asm:28537`, `:27494`, `:28399-28400`, `:28428-28430`) — a combined 101
+  frames, with the ROM's real length being ring-count dependent, which is why the
+  overrun varied per run. Finally, gap art edges were stamped from a playback
+  cursor pre-seeked to the destination and frozen there (measured: 3,908 calls
+  announcing the same row). The engine's cadence was already exactly right,
+  anchored at the *end* of the gap — its edge iterations counting back from
+  admission are −26, −26, −25, −25, −10, −9, −2, −1 in all five gaps, matching the
+  recorded offsets identically — so edges are now stamped by counting rows that
+  passed with nothing announced. That is an identity where the cursor is live and
+  the only available answer where it is frozen; counting *iterations* instead
+  regressed the S1 visual run, whose gap genuinely advances its cursor, because
+  iterations and movie rows are different clocks and only S2's freezes. The
+  halfpipe chain now passes in full, every `run_gap` axis of the emerald chain is
+  green, and the profile improves to 770 tests / 1 failure / 3 errors.
+- **The run chains adopt the destination row that already ran in the gap
+  (2026-08-12):** the last segment-physics error on both S2 chains was a row the
+  harness could not compare at all. The destination segment's row 0 — the
+  recorder's row 0, at `bk2_frame_offset` — is executed while the run is still
+  structurally in the transition gap, because admission is polled between steps and
+  the destination cannot report `LEVEL` mode until the row has already run. Art
+  submitted on it was therefore stamped `run_gap` and never compared as a segment
+  row, which the lifecycle's own javadoc described as a deliberate skip. Rather
+  than move the transition mid-frame — a new coordination point across four
+  components — the gap-resident opening row is now adopted when admission fires:
+  the last iteration's ledger tail moves into the opening segment as row 0, with
+  only submissions re-stamped (completions whose submission genuinely stayed in the
+  gap keep `run_gap`), re-buffered at logical frame 0 and published through the
+  ordinary comparator inside the existing first-publication window. The clock
+  compensation it replaces survives intact for gaps with real gap-side production.
+  The row is *compared*, not relabelled — a new test fails if any adopting site
+  stops comparing, verified by mutation in both directions. Production compares it
+  too, closing a two-paths-should-agree gap where the launcher had published it
+  uncompared. The bonus-stage interior is explicitly excluded: its consumed row is
+  not row 0's analogue, since it re-anchors past rows the engine never ran, and
+  that path skips locally so it must not silently take a new branch. Both chains
+  lose their returned-level segment-4 physics axis and the surplus edge on the
+  later gaps; the emerald chain drops to 8 failing axes and the halfpipe chain to
+  3, all now dynamic-art gap row-placement rather than engine behaviour.
+- **A throwaway fixture load was priming the art ledger before the replay
+  started (2026-08-12):** with the run chains' gap comparison finally reachable and
+  the surplus-work defects closed, the gap axes failed only on identity and clock.
+  Both had mundane causes and neither was in the engine's art pipeline. The
+  engine's transfer ids ran a constant +2 and edge ordinals +4 ahead of the
+  recording because a throwaway `HeadlessTestFixture` level load ran before the
+  replay's own load and primed both playables' DPLCs — transfers 0 and 1, ordinals
+  0 to 3 — with nothing resetting the dynamic-art run, since the gameplay context
+  only begins a run when none is active. It is the same class of pre-boot leakage
+  the replay bootstrap already zeroes for the RNG seed, and it is now zeroed there
+  too. Separately, the chain announced the real movie row only for rows owned by a
+  frame driver; ordinary segment rows, mode waits and boundary crossings announced
+  nothing, so the ledger fell back to counting production iterations from zero.
+  It now states the row from the shared playback cursor, the same source the
+  production visual path uses. Every transfer-id and edge-ordinal error is gone
+  from both chains, one gap is fully green, and gap field errors fall 107 → 68 on
+  the halfpipe chain and 190 → 138 on the emerald one. Two residuals are named
+  rather than absorbed: a gap's edges all carry the destination segment's own
+  `bk2_frame_offset` where the recorder spreads them over the preceding 26 rows,
+  which is harness choreography and was deliberately not closed with an offset; and
+  the engine runs more production iterations during a special-stage segment than
+  the movie has rows (83 and 66 on the halfpipe run), which is plausibly by design
+  but is now stated rather than counted, so it no longer distorts this axis.
+- **`RunObjects` never reaches the level-only slots while the title card holds
+  (2026-08-12):** the engine was making two dynamic-art transfers at every
+  special-stage return that the ROM never makes — the whole of the transition
+  gap's edge-count divergence. A BizHawk PC-execute capture on `Obj05_Main` showed
+  the real ROM executing it first at `Level_frame_counter == 1` on *both* a fresh
+  entry and a return, with hooks armed 326 and 302 frames earlier recording none.
+  The reason is structural rather than anything to do with Tails: `RunObjects`
+  picks its slot count from the game mode, walking only the first `$80` slots
+  unless `Game_Mode` equals `GameModeID_Level` exactly
+  (`s2.asm:29805-29819`), and `Level` sets `GameModeFlag_TitleCard` on entry
+  (`:4758`) which only `Level_StartGame` clears just before `Level_MainLoop`
+  (`:5087`). So every pre-main-loop pass runs with the flag set and never reaches
+  `LevelOnly_Object_RAM`, which begins at `Tails_Tails`. The engine ran those slots
+  anyway, and Tails' tails object took 16 spurious passes while the parked,
+  control-locked Tails had animated into Wait. Being a slot-range rule it also
+  covers spindash dust, shields, bubbles and invincibility stars. S3K's
+  `Process_Sprites` has no such gate and S1 has no level-only fixed-slot family, so
+  it is a `TitleCardProvider` predicate rather than a game-name branch. Four
+  surplus edges leave each return gap in both chains; `ss → seg2_ehz1` now matches
+  exactly, and the single edge still surplus on the later gaps is the separately
+  tracked row-0-executed-in-gap defect.
+- **The gap journal sampled its opening ledger one batch too late (2026-08-12):**
+  with the gap comparison finally reachable, the level→special-stage gaps reported
+  `run_gap.edge_count` expected 1, actual 0 — the engine appearing to emit nothing.
+  It emits exactly the right edge; the journal sampled the ledger *after*
+  `endComparisonSegmentAtRomModeChange()` had appended the boundary batch, so the
+  edge fell outside the compared slice and its transfer had already left the
+  opening ledger. Recording gap-opening state at the segment boundary itself, in
+  both implementations of the contract, restores the recorded edge on every such
+  gap with phase, owner, mapping frame and requests all matching. The comparison
+  got *stricter*, not looser — more edges are now present and compared, so field
+  comparison counts rise (halfpipe 135 → 162, emerald 206 → 271). No axis closed
+  yet, but three residual defects are now cleanly separable: a wrong
+  `movie_logical_frame` clock base (the chain never calls `setMovieLogicalFrame`,
+  so it counts production iterations from zero while the production visual path
+  announces the real movie row — the error is exactly the first segment's
+  `bk2_frame_offset`), an identity skew where the engine's transfer ids and edge
+  ordinals run ahead of the recording, and an extra player-art owner at every
+  return, where the engine submits three DPLC transfers against the recording's
+  two.
+- **The run chains' transition-gap comparison had never once been evaluated
+  (2026-08-12):** `DynamicArtGapJournalProbe.verify(run)` sat after
+  `assertChainReplay`'s try/catch, and the catch rethrew — so any earlier assertion
+  aborted the run before the gap ledger was ever compared. Both S2 chains died in
+  `assertReturnedLevelSegmentPhysics`, meaning the transition-gap comparison graded
+  nothing for the entire life of those tests. This is the same defect shape as the
+  unasserted returned-level segment above, one layer down, and it is why that
+  segment's fixes could look complete while the gap ledger stayed wrong. Every
+  chain axis is now recorded rather than thrown — segment physics, every structural
+  gap, the terminal tail, and any walk failure — and a run fails once at the end
+  enumerating all failing axes, each tagged, with a gap report artifact written
+  whichever axis failed. Only the throw *site* moved: no predicate relaxed, no
+  comparison made advisory, no field excluded. The newly visible truth is larger
+  than expected. The halfpipe chain fails on 5 axes and the emerald chain on 9,
+  including a previously invisible segment-6 physics divergence of 13,837 errors
+  and a segment-6 boundary that is never observed. The level→special-stage gaps are
+  missing their recorded edges entirely (expected 1–2, actual 0), and the return
+  gaps carry 12–13 against 8 expected while diverging on ordinal, transfer id,
+  owner, mapping frame and `movie_logical_frame` (8,933 against a recorded 9,675).
+  Recorded honestly, and corrected after a later round measured it properly: **no
+  chain outside S2 actually exercises this axis.** The S3K chains report zero gaps
+  because their walks error before any gap forms. The S1 chains' two mid-run gaps
+  contain no recorded edges at all — `s1-ghz-maze-roundtrip`'s four gap transitions
+  sit at movie frames 748 and 9071, outside both gaps — so they compare
+  expected-0 against actual-0 and pass trivially. Both are **unmeasured**, not
+  green, and S1 is not the working reference it first appeared to be.
+- **The special stage and the level share Sonic 2's three last-loaded-DPLC
+  registers (2026-08-12):** dumping the run chains' transition-gap art ledger
+  against the fixture showed the engine never submitting Tails' body art at a
+  level reload — it submitted Tails' *tail* art instead. The ROM has exactly three
+  such registers, one per player art bank (`Sonic_LastLoadedDPLC`,
+  `Tails_LastLoadedDPLC`, `TailsTails_LastLoadedDPLC` at
+  `s2.constants.asm:1556,1625-1626`), and the special stage *shares* them with the
+  level: `Obj09`/`Obj10`/`Obj88` initialise them to `#1` and the stage's own DPLC
+  loaders keep deduplicating against those same bytes. `Level_ClrRam` then zeroes
+  all three on every level load, since they lie inside `Misc_Variables`
+  (`:1484-1629`) — the same clear behind two earlier fixes today. The engine had
+  given the special-stage submitters a private dedup namespace and never cleared
+  the level's, so the returned level suppressed a player's first mapping-frame
+  transfer against a value stale since before the stage. Dedup now keys on the ROM
+  register rather than the comparison owner, and the registers are cleared where
+  `Level_ClrRam` clears them. Both gaps then carried both recorded owners at the
+  recorded row in the recorded order **as measured by a bespoke probe** — but read
+  through the real gap comparator, once that was made reachable (see the entry
+  above), the gaps still diverge substantially on count, ordinal, owner and frame.
+  So this is a genuine ROM correction, not a closure of the gap ledger; the
+  narrower claim is what the evidence supports. S1 has the same shape (`v_sonframenum`
+  inside `clearRAM v_levelvariables`, `sonic.asm:2742`). Measured en route and
+  worth recording: placing the clear in the mid-gameplay art-refresh path instead
+  wipes an established dedup mid-segment and turns both standalone oracles red at
+  3,051 and 2,232 errors — the oracles caught it before it landed.
+- **One title-card tail for displayed and omitted cards, and both S2 run chains
+  clear the returned level (2026-08-12):** `TitleCardManager` held two
+  implementations of ROM `Obj34_WaitAndGoAway` (`s2.asm:27605-27637`), the routine
+  whose slide-off fires the two `LoadPLC` calls for standard-water and animal art.
+  The omitted-presentation tail modelled it exactly; the displayed-presentation
+  overlay re-derived the same event from a state-transition pass that consumed a
+  frame without moving the piece, and from the overlay's viewport-relative
+  `hasExited()` rather than the ROM's `x_pixel > $200` test. `Level` writes routine
+  `$16` and `anim_frame_duration = $2D` to the surviving pieces at `:5066-5080`,
+  after the leave loop and before `Level_MainLoop`, whether or not the card was
+  displayed — so the 45-wait plus 8-slide count always starts on the first
+  main-loop iteration. The standalone segment class takes the omitted path and the
+  run chains take the displayed one, which is exactly why identical rows produced
+  identical queue-event sequences with the art loads landing two compared rows
+  late. Both paths now share one owner armed at the ROM's own arming point, with
+  no constant introduced. Both chains take returned-level segment 2 from 65 errors
+  to zero, clear segment 3 as well, and advance to a new segment-4 frontier — a
+  single error where the engine attributes the first art edge to the run gap and
+  the recorder attributes it to the segment.
+- **The title card was not treated as a DMA service boundary, and four player
+  DPLC transfers rode across the gap (2026-08-12):** with the returned-level
+  segment asserting its physics and the frame counter fixed, both S2 chains
+  converged on one shared first mismatch — `dynamic_art.edges` at frame 1 — which
+  turned out to be a single wrong rule. `DynamicArtDmaServiceModel` classified
+  `LEVEL_TITLE_CARD` as *not* a dynamic-art DMA service boundary, while the enum's
+  own doc comment already listed `Vint_TitleCard` among the `ProcessDMAQueue`
+  callers. The ROM sides with the comment: the `Level_TtlCard` wait loop
+  (`s2.asm:4914-4925`) and the 25 leave-loop iterations after `InitPlayers`
+  (`:5060-5066`) both set `Vint_routine = VintID_TitleCard`, and that V-int
+  (`:1005`) calls `ProcessDMAQueue` at `:1046`. So the four player DPLC transfers
+  queued by the returned level's pre-`Level_MainLoop` passes were never drained
+  during the transition gap; the engine carried all four across it and retired
+  them together on the first serviced V-blank, publishing spurious `completed`
+  edges on the segment's first row and skewing every later edge ordinal for the
+  rest of the segment. Moving one enum constant between switch arms took the
+  emerald chain's returned segment 8,633 → 65 errors and the halfpipe chain's
+  7,662 → 65, with both now diverging first at the same deeper frontier
+  (`queue.s2_nemesis_plc.busy` at frame 52) — a PLC-queue question rather than a
+  dynamic-art one.
+- **The special-stage return inherited the previous segment's level frame
+  counter, and Tails stopped jumping (2026-08-12):** with the returned-level
+  segment finally asserting its own physics, the S2 emerald chain surfaced an
+  engine-only player death mid-segment — a divergence the extra title-card ticks
+  had been masking, and one the segment's production-ownership assertion caught
+  rather than hid. The kill was spikes, 906px off-route and 1,678 rows
+  downstream of anything real. The actual onset was Tails failing to make a jump
+  the recording makes: her CPU auto-jump is gated on `andi.b #$3F` over
+  `Level_frame_counter` (`s2.asm:39368-39376`), and the engine reset that counter
+  only when a load requested a sprite-lifecycle change, which a returned-level
+  load does not — so the level inherited `0xE9B` where the ROM had `0x0002` and
+  the gate never lined up. `GM_Level` clears the counter on every non-demo entry
+  (`:4771-4773`), the only increment before `Level_MainLoop` is that loop's own
+  `addq` (`:5092`), and the counter lives in `CrossResetRAM`
+  (`s2.constants.asm:1661-1665`) so `Level_ClrRam` never touches it. Resetting at
+  the title-card release boundary rather than at load also drops the 26
+  pre-main-loop passes' worth of drift the ROM's passes do not produce. The
+  emerald chain stops dying and reaches its physics assert at 8,633 errors;
+  halfpipe segment 2 falls 22,426 → 7,662. Both chains now share one first
+  mismatch, `dynamic_art.edges` at frame 1.
+- **S2 run chains: the returned-level segment now asserts its own physics, and
+  the title card stops ticking players (2026-08-12):** both S2 run chains were
+  computing a full physics comparison for the segment they return into after a
+  special stage — 58,184 and 39,645 errors — writing it to the segment report
+  with `complete: true`, and then asserting only the boundary observation and
+  dynamic art. The chains sailed past it and failed downstream, so thirteen
+  rounds of candidate fixes were graded by which wrong route a
+  broken-but-unasserted segment happened to take, while the standalone segment
+  class replayed the identical rows to zero. Asserting the error count the chain
+  already computed made both chains fail at the real defect and turned that into
+  one measurable target. Two ROM divergences fell out of it. The engine ran the
+  player objects for the whole returned-level title card, where `Level_ClrRam`
+  has just cleared `Object_RAM` (`s2.asm:4808`) so they do not exist for the
+  `Level_TtlCard` loop at all — `InitPlayers` only runs afterwards, giving the
+  ROM one `RunObjects` pass plus 25 leave-loop iterations. Those ~103 extra
+  playable ticks let the sidekick finish her catch-up ramp and settle, so she was
+  compared at rest instead of mid-ramp; the same clear is why her sub-pixel is
+  zero at `InitPlayers` on every entry including a re-entry. Separately, the
+  checkpoint restore wrote a banked left-scroll camera position over the level
+  re-init's snap, where the ROM discards its saved camera and falls into the same
+  `x-$A0` clamp tail as a fresh start (`s2.asm:14775-14814`, matching shapes in
+  S1 and S3K). Halfpipe segment 2 fell 39,612 → 22,426 and the sidekick stopped
+  being its frontier field. Removing the title-card ticks also exposed a
+  load-bearing compensator: they had been masking a genuine engine-only player
+  death mid-segment on the emerald route, which the ownership assertion caught
+  rather than hid, and which is the next frontier.
+- **Repeated SMPS playback no longer recopies whole audio assets (2026-08-11):**
+  music, base/donor SFX, and named SFX now reuse one immutable,
+  generation-aware program/DAC/configuration catalog entry while retaining
+  independent live sequencers, tracks, and rewind cursors. Prepared SFX
+  admission replaces the ordinary whole-music-driver rollback snapshot with
+  hardware-bounded conflict state. In the authenticated public-API comparison,
+  repeated SFX allocation fell from 27,328–8,415,808 bytes per trigger to a
+  flat 1,344 bytes, with zero program-, DAC-, or unrelated-music-size slope;
+  repeated music allocation also fell by 5.1%. See the
+  [performance audit](docs/architecture/audits/2026-08-10-smps-repeated-playback-performance.md).
 
 - **Strict trace-v5 recorder fleet (2026-08-04):** the native BizHawk recorder,
   contract tests, and published S1/S2/S3K fixtures now share one strict v5

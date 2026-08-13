@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Mirrors the LEVEL-mode playback skip gate for SPECIAL_STAGE mode: when the
@@ -83,6 +85,8 @@ class TestGameLoopSpecialStageSkipGate {
         loop = new GameLoop(new InputHandler());
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
         provider = mock(SpecialStageProvider.class);
+        when(provider.specialStagePlcLifecyclePhase())
+                .thenReturn(PlcLifecyclePhase.SPECIAL_STAGE);
         setField(loop, "activeSpecialStageProvider", provider);
         hardwareBoundaries = new ArrayList<>();
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();

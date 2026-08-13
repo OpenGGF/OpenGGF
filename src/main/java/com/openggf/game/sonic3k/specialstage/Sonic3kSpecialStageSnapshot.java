@@ -23,7 +23,7 @@ record Sonic3kSpecialStageSnapshot(
         int clearTimer,
         int emeraldTimer,
         int emeraldInteractIndex,
-        int emeraldArtFramesRemaining,
+        long emeraldArtWorkOrdinal,
         boolean exitSpinStarted,
         int palFadeDelay,
         boolean musicSpedUp,

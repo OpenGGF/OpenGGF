@@ -389,7 +389,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             }
             return;
         }
-        if (dynamicArtLifecycle != null) {
+        if (dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            // The window can already have closed itself on the ROM iteration
+            // that wrote the special-stage game mode (Obj79_Star,
+            // docs/s2disasm/s2.asm:44877); that iteration still completes, so
+            // this structural close arrives after it.
             dynamicArtLifecycle.closeComparisonSegment();
         }
     }
@@ -399,6 +404,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private PlcLifecyclePhase owner;
         private boolean prepared;
         private boolean finished;
+        private boolean consumedHeldLoopTailPreparation;
 
         private PlcLifecycleFrame(PlcLifecycleService service) {
             this.service = service;
@@ -422,6 +428,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     && !representedIterationDefersLoopTailPreparation) {
                 PlcLifecyclePhase held = heldLoopTailPreparation;
                 heldLoopTailPreparation = null;
+                consumedHeldLoopTailPreparation = true;
                 if (service != null) {
                     service.prepareAfterLoop(held);
                 }
@@ -463,14 +470,14 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (prepared) {
                 throw new IllegalStateException("PLC lifecycle frame was already prepared");
             }
+            if (representedIterationDefersLoopTailPreparation) {
+                // The ROM had not reached this iteration's loop tail when the
+                // row was sampled. A runtime-art coordinator without a PLC
+                // service still owns that same held tail.
+                heldLoopTailPreparation = phase;
+            }
             if (service != null && service.hasPreparationBoundary(phase)) {
-                if (representedIterationDefersLoopTailPreparation) {
-                    // The ROM had not reached this iteration's RunPLC when the
-                    // row was sampled; a later closure of the same iteration
-                    // owns it. The boundary is still accounted for here so
-                    // finish() keeps its one-preparation-per-closure invariant.
-                    heldLoopTailPreparation = phase;
-                } else {
+                if (!representedIterationDefersLoopTailPreparation) {
                     service.prepareAfterLoop(phase);
                 }
                 prepared = true;
@@ -479,6 +486,16 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
 
         public boolean isOwnedBy(PlcLifecyclePhase phase) {
             return owner == phase;
+        }
+
+        /** Whether this represented iteration's loop-tail work belongs to a later closure. */
+        public boolean defersLoopTailPreparation() {
+            return representedIterationDefersLoopTailPreparation;
+        }
+
+        /** Whether this closure consumed a loop tail held by the preceding row. */
+        public boolean consumedHeldLoopTailPreparation() {
+            return consumedHeldLoopTailPreparation;
         }
 
         public void finish() {

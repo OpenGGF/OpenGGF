@@ -668,7 +668,8 @@ public final class TraceSessionLauncher {
                             GameServices.module(),
                             GameServices.sprites(),
                             GameServices.configuration());
-                    GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
+                    GameServices.level().loadZoneAndActForFreshRuntime(
+                            entry.zone(), entry.act());
                     loop.setGameMode(GameMode.LEVEL);
                     GameServices.level().consumeTitleCardRequest();
                     GameServices.level().consumeInLevelTitleCardRequest();
@@ -900,7 +901,7 @@ public final class TraceSessionLauncher {
         }
         Integer specialStageIndex =
                 RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
-                        ? getActiveSpecialStageIndex() : null;
+                        ? getActiveSpecialStageIndex(mode) : null;
         long dynamicGeneration = GameServices.captureDynamicArtDiagnostics()
                 .segmentGeneration();
         return new RunPlaybackObservation(
@@ -919,11 +920,12 @@ public final class TraceSessionLauncher {
                 dynamicGeneration);
     }
 
-    private Integer getActiveSpecialStageIndex() {
+    private Integer getActiveSpecialStageIndex(GameMode mode) {
+        // The stage identity a recorded segment is cut on, which the live
+        // provider stops reporting once the engine's results phase
+        // deinitialises it -- see GameLoop#recordedSpecialStageIdentity.
         GameLoop loop = Engine.currentGameLoop();
-        SpecialStageProvider provider = loop != null
-                ? loop.getActiveSpecialStageProvider() : null;
-        return provider != null ? provider.getCurrentStage() : null;
+        return loop != null ? loop.recordedSpecialStageIdentity(mode) : null;
     }
 
     private int currentRunSegmentIndex() {
@@ -1381,9 +1383,9 @@ public final class TraceSessionLauncher {
             // boundary's own physical row, so waiting costs the signal nothing.
             case "giant_ring", "starpost_special" ->
                     mode == GameMode.SPECIAL_STAGE
-                    && getActiveSpecialStageIndex() != null
+                    && getActiveSpecialStageIndex(mode) != null
                     ? new RunBoundarySignal.SpecialStageRequest(
-                            frame, getActiveSpecialStageIndex()) : null;
+                            frame, getActiveSpecialStageIndex(mode)) : null;
             case "stage_exit" -> null; // emitted by the semantic results-entry seam
             default -> null; // level-load signals are forwarded at their load seam
         };
@@ -1506,10 +1508,31 @@ public final class TraceSessionLauncher {
         if (runCoordinator == null) {
             armRunSpecialDynamicArtComparison(receipt.segmentIndex());
         }
+        boolean adoptedOpeningRow = false;
         if (runDynamicArtSegments != null) {
             runDynamicArtSegments.beginSegment();
-            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
-                    .advanceComparisonCursor(receipt.rowsConsumed());
+            if (receipt.rowsConsumed() == 1) {
+                // Admission is polled between host steps, so a destination
+                // whose readiness only became observable once its first row
+                // had run reports that row consumed. Adopt it as the opening
+                // segment's row zero instead of skipping past it, so the art
+                // it produced is stamped and published as segment work rather
+                // than left gap-resident.
+                //
+                // The count is organic here by construction:
+                // destinationRowsConsumedForAdmission() derives it from the
+                // playback cursor's own position relative to the destination's
+                // bk2FrameOffset, so a non-zero count means the engine really
+                // executed that row. Adoption is only correct on that footing;
+                // a cursor re-anchored past rows the engine never ran has no
+                // row zero to adopt.
+                dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                        .adoptGapResidentOpeningRow();
+                adoptedOpeningRow = true;
+            } else {
+                dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(receipt.rowsConsumed());
+            }
             bindRunSpecialDynamicArtTargetGeneration();
             if (runDynamicArtGapJournal != null
                     && receipt.segmentIndex() > 0) {
@@ -1540,6 +1563,15 @@ public final class TraceSessionLauncher {
         } else if (receipt.inputClock()
                 == DestinationAdmissionReceipt.InputClock.SHARED) {
             installRunComparator(segment, receipt.rowsConsumed(), receipt.absoluteBk2Row());
+            if (adoptedOpeningRow) {
+                // The live comparator starts at row one, so the adopted row
+                // zero would be published but never checked. Compare it here,
+                // through the ordinary binder and counters, so production and
+                // AbstractRunChainTest agree that row zero is compared.
+                comparator.compareAdoptedOpeningRow(0,
+                        dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                                .latestSnapshot());
+            }
             GameLoop destinationLoop = Engine.currentGameLoop();
             if (destinationLoop != null) {
                 // A direct level-load admission may continue into gameplay in
@@ -2396,16 +2428,55 @@ public final class TraceSessionLauncher {
     static boolean runGapRowContinuesSourceLevelMainLoop(
             GameMode mode, boolean levelExitWritten) {
         TraceSessionLauncher session = active();
-        if (session == null
-                || session.activeRunDisposition
-                        != TraceRunFrameDriver.Disposition.SHARED_GAP) {
+        if (session != null) {
+            if (session.activeRunDisposition
+                    != TraceRunFrameDriver.Disposition.SHARED_GAP) {
+                return false;
+            }
+            boolean firstGapRow = !session.runGapSourceLevelMainLoopEnded;
+            session.runGapSourceLevelMainLoopEnded = true;
+            return firstGapRow
+                    && !levelExitWritten
+                    && suppressesRunNativeLevelBody(mode);
+        }
+        // Driver-only run replay (no launcher session): the same rule, read
+        // from the installed run frame driver. Both drivers implement one
+        // contract and must not disagree about which gap rows belong to the
+        // source level's own main loop.
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        TraceRunFrameDriver.Disposition disposition = context == null
+                ? null
+                : context.traceRunFrameDriver()
+                        .map(TraceRunFrameDriver::currentDisposition)
+                        .orElse(null);
+        if (disposition != TraceRunFrameDriver.Disposition.SHARED_GAP) {
             return false;
         }
-        boolean firstGapRow = !session.runGapSourceLevelMainLoopEnded;
-        session.runGapSourceLevelMainLoopEnded = true;
+        boolean firstGapRow = context.consumeRunGapFirstRow();
         return firstGapRow
                 && !levelExitWritten
                 && suppressesRunNativeLevelBody(mode);
+    }
+
+    /**
+     * Announces the start of a shared transition gap for a driver-only run
+     * replay, the counterpart of the launcher's
+     * {@code EnterTransitionGap} coordinator action
+     * ({@link #runGapSourceLevelMainLoopEnded} reset above). It carries no
+     * trace data and decides nothing about the gap's content: it only re-arms
+     * the one-row latch that
+     * {@link #runGapRowContinuesSourceLevelMainLoop} consumes.
+     *
+     * <p>The latch lives on the current session's {@link GameplayModeContext},
+     * not in a static: a static one is armed at some gaps and consumed at
+     * others, so the answer a gap gets depends on what ran before it -- across
+     * gaps within a run, and across test classes sharing a surefire fork.
+     */
+    public static void beginDriverOnlyRunTransitionGap() {
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        if (context != null) {
+            context.beginRunTransitionGap();
+        }
     }
 
     static boolean shouldSkipRunGameplayTick(
@@ -2719,6 +2790,7 @@ public final class TraceSessionLauncher {
         TraceExecutionPhase rowPhase = TraceExecutionPhase.VBLANK_ONLY;
         boolean observedVblankCounterAdvance = true;
         boolean previousObservedVblankCounterAdvance = true;
+        boolean nextRowCarriesDeferredVblank = false;
         boolean terminalRow = false;
         boolean deferBoundaryCommit = false;
         if (phase == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
@@ -2757,6 +2829,10 @@ public final class TraceSessionLauncher {
                                     nextRowPolicy
                                             .observedVblankCounterAdvance());
                 }
+                nextRowCarriesDeferredVblank =
+                        localRow + 1 < plan.trace().frameCount()
+                                && TraceReplayRowPolicy.carriesDeferredVblank(
+                                        plan.trace(), localRow + 1);
             }
             terminalRow = localRow == plan.segment().traceFrameCount() - 1;
         } else if (phase
@@ -2769,7 +2845,8 @@ public final class TraceSessionLauncher {
                         observedVblankCounterAdvance,
                         previousObservedVblankCounterAdvance,
                         loop != null
-                                && loop.getCurrentGameMode() == GameMode.LEVEL);
+                                && loop.getCurrentGameMode() == GameMode.LEVEL,
+                        nextRowCarriesDeferredVblank);
         boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
                 .shouldCommitDeferredBoundaryAfterClosure(
                         previousObservedVblankCounterAdvance,

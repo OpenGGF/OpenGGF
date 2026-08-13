@@ -38,6 +38,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
+27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 
 ---
 
@@ -1073,6 +1074,61 @@ expanded with its own guarded schema.
 
 ---
 
+## Dynamic-Art Row Stamps Are Not Compared In Unrepresented, Unclosed Spans
+
+**Location:** `TraceRunDynamicArtGapComparator` —
+`recordedCoverageLeavesSpanUnrepresentedAndUnclosed` and `putRowStamp`.
+**Scope:** the `movie_logical_frame` field of `run_gap.edge[N]` /
+`run_tail.edge[N]`, and nothing else.
+
+A run fixture's recorded coverage is the union of its segments'
+`[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` ranges. Where a
+comparison span contains no recorded row **and** no recorded coverage follows
+it, the fixture itself declares that span unrepresented and leaves the movie
+clock unanchored at its far end. In such a span a dynamic-art edge's movie row
+stamp is downgraded from `ERROR` to `WARNING`; it is still reported, and every
+other property of the edge — presence, count, ordinal, transfer id, phase,
+owner, submission origin, mapping frame, gap edge index, requests, forwarded
+completion, and the before/after ledger fingerprints — remains a hard error.
+Outside such a span, including every ordinary segment-to-segment gap, the row
+stamp is a hard error exactly as before.
+
+**Why the row stamp is not engine evidence there.** Finding 1 of
+`docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`
+("Why the current green is not yet proof") establishes that
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and that while the
+coordinator sits in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()`
+stops the level body running at all: *"The engine's real load duration is never
+observed, in either direction."* How many movie rows the engine spends inside
+such a span is therefore harness choreography, not engine behaviour. Closing a
+row-stamp divergence by inserting harness delays, or by importing a recorded
+span duration, would fit the measurement instrument to its own reference —
+worse than a fitted constant, because a fitted constant at least models
+something.
+
+**What this costs, stated plainly.** After this change the S1 GHZ round-trip
+chain verifies load-window **work** and **order** — which transfers exist, for
+which owner and mapping frame, in which order, with which requests and which
+resulting ledger — but **not** load-window **timing**. Load-window timing
+remains unobserved, and cannot be observed, until `destinationReady` /
+`suppressesRunNativeLevelBody()` are reworked by the roadmap's level-load-span
+strand (section 4 of the same document).
+
+**Guards.** `TestTraceRunDynamicArtGapComparator` pins both halves of the
+asymmetry:
+`excusesOnlyTheRowStampInsideAnUnrepresentedUnclosedSpan`,
+`stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan`, and
+`comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan`. Both mutations
+were run and observed red: widening the coverage predicate to accept any span
+fails the third; extending the excusal to an identity field fails the second.
+
+**Removal condition.** When the level-load-span strand makes the engine's own
+load duration observable, delete the excusal and restore the row stamp to a
+hard error in every span.
+
+---
+
 ## Hardware-Timing Replay Input Exception
 
 **Location:** Dedicated hardware-timing fixture stream and the bounded
@@ -1573,3 +1629,317 @@ shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
 bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
 stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
 determinism measurement of its own.
+
+---
+
+## S2 Whole-Run V-int Clock Cannot Be Made Exact
+
+`TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven
+rounds of investigation. Recording it so the next attempt starts from the evidence
+rather than repeating the sequence.
+
+### Original Implementation
+
+`Vint_runcount` is free-running and absolute: `VintRet: addq.l #1,(Vint_runcount).w`
+(docs/s2disasm/s2.asm:508) is unconditional and every mode path reaches it. ROM objects
+gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:60989-60998,
+period 2, "target Sidekick on uneven frames"), `Obj2C_Leaf` `& $1F`
+(s2.asm:52200-52208, period 32), and `Obj28_Main` `btst #4` for animal bounce
+direction (s2.asm:24660-24665, verified against the recording on all 31 floor-contact
+events).
+
+A tick is lost only inside an interrupts-off window, and only when that window spans
+**two or more** V-blanks: `disable_ints` masks the CPU but not the VDP, which holds its
+interrupt asserted until acknowledged, so a single V-int raised inside a window is
+still taken the moment `enable_ints` runs.
+
+### Our Implementation
+
+**S2 applies no clock alignment at all.** `TracePlaybackProfile` defines exactly two
+constants (`TracePlaybackProfile.java:18-21`): `DISABLED` and `SONIC_1`. There is no
+`SONIC_2`, `Sonic2GameModule` does not override `getTracePlaybackProfile()`
+(`Sonic2GameModule.java:81`), and the `GameModule` default returns `DISABLED`
+(`GameModule.java:334-335`). The whole S2 package contains zero references to the type.
+S3K is in the same position.
+
+Every alignment path is gated on that profile and therefore never runs for S2:
+`alignsInterLevelVblank()` is `interLevelNonAdvancingMovieRows >= 0` → false, so
+`TraceRunVblankClock.levelDestinationTarget` returns empty and
+`AbstractRunChainTest.completeInterLevelVblankBudget` returns immediately;
+`alignsStageResultsPresentationVblank()` and `alignUncomparedInteriorReturnVblank` are
+likewise false; every `ifPresent(objects::initVblaCounter)` in `TraceSessionLauncher`
+receives an empty Optional. The S2 object clock is seeded once at bootstrap and
+free-runs — **no seam mask, no 9, no 11, no interior alignment.**
+
+The chain never drives uncompared special-stage interiors, so the engine advances its
+object-visible counter by a uniform **78 ticks** (measured live, all five interiors
+reached before the walk stops: `ss`, `ss_2`, `ss_3`, `ss_4`, `ss_5` — each exactly 78)
+across an interior the ROM spends 5,800–8,500 V-blanks in. S2 special-stage rows never
+tick the clock: `TraceRunSpecialStageRows.S2Rows.admission` hardcodes
+`advancePreservedVblankIfUnchanged = false` (`TraceRunSpecialStageRows.java:205-211`) and
+no level loop runs on those rows, so `advanceVblaCounter()` is never called. The 78 is
+entirely boundary choreography, and it is uniform because the choreography is. The deficit
+accumulates to roughly 33,500 by the run's final segment.
+
+### Rationale
+
+Two of the three inputs are derivable and were derived. The S2 special-stage return
+masks 11 rows (10 for the level-entry block at s2.asm:4766-4770, whose two Nemesis
+streams are 94 and 92 tiles by their 0x805E/0x805C headers; 1 for the results block at
+s2.asm:6751-6761, which carries no Nemesis stream). S1's interior return masks **0** —
+`GM_Special` has one interrupts-off block (s1disasm/sonic.asm:3231-3239) that runs
+`disable_display` before `ClearScreen`, about a quarter of a frame.
+
+Two are not.
+
+- **The ordinary level seam is not derivable, and the obvious alternative is refuted.**
+  Measured across the **19** `level_advance` boundaries of the complete-emerald run, it
+  masks 9 rows at 18 of them and 8 at **OOZ1→OOZ2**. (The halfpipe chain contributes no
+  `level_advance` boundaries at all — its four transitions are starpost_special and
+  stage_exit — so an earlier "21 of 22" in this entry was wrong.)
+
+  The tempting hypothesis was that an act advance within a zone takes a structurally
+  different ROM path from a full zone load, making "act-advance masks 8, full-load masks
+  9" a derivable code-path predicate rather than phase variance. **Measured and refuted:**
+  the run has 9 act advances and 10 full loads, and 8 of the 9 act advances mask 9 exactly
+  like every full load. The classes do not separate; the single deviation is *inside* the
+  act-advance class. Do not re-run this hypothesis.
+
+  Positive evidence for the phase reading: the recorded `vblank_counter` is not
+  one-per-row even *inside* segments — seg15_cnz2 and seg27_wfz1 both contain internal
+  row-to-row deltas of 0 and 2. The OOZ outlier is the counter gaining one extra tick
+  across a gap, the same shape as those mid-segment slips. A fixed ROM window whose
+  whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
+  frame granularity.
+- **A 32-tick loss was recorded here against `ss_3`. It is not in the recording.**
+  Re-measured directly from the fixture, **all seven special-stage crossings reconcile at
+  exactly 11** — the derived value (10 for the level-entry block at `s2.asm:4766-4770`
+  plus 1 for the results block at `s2.asm:6751-6761`). There is no `ss_3` outlier and no
+  unattributed internal loss:
+
+  | interior | crossing | ss rows | movie rows | vbl delta | deficit |
+  |---|---|---|---|---|---|
+  | `ss`   | seg1_ehz1 → seg2_ehz1   | 5681 | 5856 | 5845 | 11 |
+  | `ss_2` | seg2_ehz1 → seg3_ehz1   | 6361 | 6536 | 6525 | 11 |
+  | `ss_3` | seg3_ehz1 → seg4_ehz1   | 7092 | 7267 | 7256 | 11 |
+  | `ss_4` | seg5_ehz2 → seg6_ehz2   | 7224 | 7398 | 7387 | 11 |
+  | `ss_5` | seg6_ehz2 → seg7_ehz2   | 6690 | 6864 | 6853 | 11 |
+  | `ss_6` | seg9_cpz2 → seg10_cpz2  | 8310 | 8510 | 8499 | 11 |
+  | `ss_7` | seg11_arz1 → seg12_arz1 | 8498 | 8672 | 8661 | 11 |
+
+  The interiors differ wildly on every event axis available — 5681 to 8498 rows, 41 to 60
+  segment changes, 55 to 140 rings-to-go transitions, 6 to 14 orientation changes — while
+  the deficit stays pinned at 11. The deficit is therefore **independent of every
+  measurable event axis**, which also disposes of the "does 32 factor as a per-event
+  constant times an event delta" hypothesis: there is no per-interior variation for an
+  event count to be proportional to. Do not re-run that test either.
+
+  If a 32-tick discrepancy is real it is **engine-side**, not a property of the ROM or the
+  recording, and this entry previously mis-attributed it. No prior note recording how the
+  32 was measured exists anywhere in `docs/` or `src/`. Whoever picks this up should start
+  by re-deriving it against the engine rather than trusting the number.
+
+### Retracted: there is no cancellation mechanism
+
+Earlier revisions of this entry described the baseline as surviving by "cancellation, not
+correctness" — an odd deficit at one special-stage crossing cancelling an odd deficit at
+an act seam, leaving whole-run parity correct by luck. **That mechanism is wrong and is
+retracted.** Three independent reasons, any one sufficient:
+
+1. It reasons about deficits relative to a uniform-9 *engine* seam model. S2 has no such
+   model — the profile is `DISABLED` and no seam-alignment code runs. The 9/8 split is a
+   property of the **recording only**; nothing in the S2 engine path consumes it.
+2. Its per-interior constant was 79. Measured, it is **78** — and the parity of that
+   constant was the entire argument. 78 is even, which inverts the odd/even split the
+   section described.
+3. Its prediction is empirically false. Engine clock at segment start against that
+   segment's recorded first-row `vblank_counter`:
+
+   | segment | engine | recorded | delta | parity |
+   |---|---|---|---|---|
+   | seg1_ehz1 | 553 | 554 | −1 | in phase |
+   | seg2_ehz1 | 4342 | 10108 | −5766 | **inverted** |
+   | seg3_ehz1 | 7797 | 20009 | −12212 | **inverted** |
+   | seg4_ehz1 | 11835 | 31224 | −19389 | in phase |
+   | seg5_ehz2 | 13200 | 32673 | −19473 | in phase |
+   | seg6_ehz2 | 19325 | 46105 | −26780 | **inverted** |
+   | seg7_ehz2 | 23197 | 56751 | −33554 | **inverted** |
+
+   Parity is inverted in **four of the seven** level segments reached, and it flips back
+   and forth rather than inverting once and cancelling once. Segments 2 and 3 are
+   parity-inverted **and compare clean**.
+
+**Parity inversion does not by itself produce compared divergence.** `Obj4B` is
+implemented and genuinely parity-gated — `BuzzerBadnikInstance.selectTargetPlayer`
+(`BuzzerBadnikInstance.java:166-172`) is a faithful port of the ROM's
+`btst #0,(Vint_runcount+3).w` (`s2.asm:60989-60998`; `+3` is the low byte of the
+longword, so this is the parity of the full counter). But `Obj4B` is the Buzzer, an EHZ
+badnik (`s2.asm:29991`, body at `:60850`), and its parity branch sits behind
+`Obj4B_shooting_flag` and a subsequent narrow x-window test. The gate is reached rarely
+and usually picks a player on the same side, so it is not a sensitive detector of clock
+phase.
+
+### Decision: `DISABLED` is retained deliberately
+
+Nobody chose `DISABLED` for S2 — it is an inherited default. It is retained, but the
+justification below is **narrower than an earlier revision of this entry claimed**:
+
+- **Parity (mod 2) phase is invisible.** Engine-vs-recorded parity inverts four times
+  across the seven level segments reached, and those segments compare clean. The only
+  implemented parity-gated object, `Obj4B`, is ported faithfully but is a poor detector
+  (shooting flag plus a narrow x-window).
+- **Mod-8 phase is NOT invisible — the tripwire below has fired.** An earlier revision
+  said "the comparison set does not consume clock phase." That is **wrong**. The Egg
+  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:84935-84942`,
+  `move.b (Vint_runcount+3).w,d0 / andi.b #7,d0 / bne`) consumes mod-8 phase directly.
+  The engine's counter is 6 rows (−2 mod 8) early at segment entry, which fires one extra
+  random spawn, consumes an extra RNG draw pair, and shifts every later animal's position,
+  type and travel direction. That is the entire 287-error segment-11 divergence.
+
+**The fix is not a `SONIC_2` profile.** The mis-phase is *inherited at segment entry* from
+an under-replayed transition gap, with no drift within the segment. The engine is faithful
+everywhere it was checked — the deletion predicate already models the ROM BuildSprites box
+(commit `f9da6563e`), and per-animal lifetimes match the recording (engine 96–144 rows mean
+~119; ROM 95–144 mean ~119). What is wrong is how many movie rows the harness consumes
+crossing the gap; see the gap-accounting note below.
+
+Building a `SONIC_2` profile now would be speculative machinery validated against nothing
+— the shape of work the fitted-constant rule exists to prevent. S1's profile is
+legitimate because its alignment is derived from the ROM's own frame accounting.
+
+**Tripwire status: FIRED, and it resolved to gap accounting, not to a clock model.** The
+end-of-act PLC divergence turned out to be exactly the modulo-gated case this tripwire was
+written for — but the owner is the harness, not the engine. The engine's object clock is
+correct *given* the rows it was advanced; it was advanced too few.
+
+### Gap accounting — the actual defect
+
+The harness under-replays uncompared transition gaps, and this is now the dominant
+remaining cause across multiple independent axes:
+
+| boundary | recorded rows | engine rows |
+|---|---|---|
+| EHZ1→EHZ2 act seam | 172 | **78** |
+| special-stage interior | 5,845–8,661 | **78** |
+
+At the act seam every transfer id, edge ordinal, owner, submission origin, request set,
+`gap_edge_index` and **both** ledger fingerprints match the recording — only
+`movie_logical_frame` diverges. The art pipeline is faithful and emits correct edges
+stamped from a short cursor.
+
+**Seam length is data-driven and cannot be a constant.** Recorded `level_advance` seam
+lengths range 158–200 rows, with within-zone spread ≤3 across acts but between-zone spread
+up to 42, correlating with the destination zone's PLC1 entry count at Spearman 0.886. The
+ROM predicts exactly that act-independence: `LevelArtPointers` gives both acts of a zone
+the same PLC1 (`s2.asm:89135-89151`) and `Level:` selects it by `Current_Zone`, not by act
+(`s2.asm:4783-4795`). A single global constant would be off by up to 42 rows.
+
+Note the engine's *decompression* is correct — a live probe shows `remain` decrementing by
+exactly 6 per frame, matching `move.w #6,(Plc_FramePatternsLeft).w` (`s2.asm:2203`), and it
+processes the ROM's own `PlrList_Ehz1`+`PlrList_Std2` payload in 52 rows. `Level_TtlCard`
+(`s2.asm:4914-4924`) exits only when the slide has finished **and** `tst.l (Plc_Buffer).w`
+is empty, so seam length is `max(slide, backlog)`; for EHZ the backlog is 52 and the slide
+dominates. The missing rows are in slide/leave choreography, not the queue.
+
+**The defect is seam ORDER, not gap length.** Measured directly: the gap length is already
+correct — for the level→level `level_advance` gap the recording spans 171 rows and the
+engine drives 170, because `destinationReady`
+(`TraceRunPlaybackCoordinator.java:396-399`) refuses admission until the shared cursor
+reaches the destination's `bk2_frame_offset`. What differs is the composition:
+
+| | order inside the gap |
+|---|---|
+| **engine** | `TITLE_CARD` for 78 rows, then 92 rows idling in `LEVEL` |
+| **ROM** | fade → interrupts-off `ClearScreen`/`LoadTitleCard` → `Level_ClrRam` → level art decompression (**~93 rows of pre-card work**) → *then* `Level_TtlCard` |
+
+So the engine's title-card art edges land **93 rows early** — exactly the `delta=93` seen on
+every failing `run_gap.edge[N].movie_logical_frame`.
+
+**The 78 is not invented and must not be "fixed".** Both halves are already ROM-derived and
+cited in place: 52 rows of genuine PLC drain at `move.w #6,(Plc_FramePatternsLeft).w`
+(`s2.asm:2202-2213`) over `PlrList_Ehz1` + `PlrList_Std2` with the ROM's per-entry
+`ceil(patterns/6)` quantisation, and 26 rows of `LEAVE_*_PASSES` in
+`TitleCardManager.java:78-84`, each cited to the leave loop at `s2.asm:5060-5066`.
+
+**A retracted theory, recorded so it is not retried.** An earlier revision claimed the
+169–199 variance came from the results bonus tally counting down at a fixed rate. It cannot:
+the tally runs inside `Level_MainLoop` while `Game_Mode` is still `$0C`, and the capture
+finalises a segment at the first `$8C` frame (set by `Level:`'s first instruction) and
+re-arms at the first `$0C` (cleared at `Level_StartGame`, `s2.asm:5084`). The variance is
+payload-dependent **un-timed load cost** — the same class already documented for S1 at
+`TraceRunPlaybackCoordinator.java:382-395` (34–40 rows there).
+
+**Fixing it needs a frame-costed level load, which does not exist.** The engine runs all 20
+level-init steps synchronously in one loop (`LevelManager.java:385-394`) and `InitStep` is
+`record(String, String, Runnable)` with no frame-cost concept, so the title card necessarily
+begins at gap row 0. ROM ordering requires a suspendable cross-frame level load shared by all
+three games, every test, the editor and level select.
+
+That is deliberately **not built**. Full diagnosis, the ruled-out shortcuts, a smaller
+sidecar-based variant worth one feasibility pass, and the priority argument are in
+[docs/architecture/designs/2026-08-13-level-entry-seam-frame-costing.md](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+Do not attempt a 22-row pre-card hold: the remaining ~70 rows are payload-dependent, so any
+fixed boundary offset is a fitted constant, and it would disturb S1's currently-green gap
+edges, which absorb 34–40 un-timed rows as padding
+(`TraceRunPlaybackCoordinator.java:382-395`).
+
+### The fingerprint is real; its explanation was not
+
+> **122,139 errors at segment 7, frame 524, field `sidekick_y` (rom=0x0271
+> engine=0x0272).**
+
+This has been produced **five times under four different descriptions** — boolean-only
+alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. The "fix
+both seams or neither" advice attached to it in earlier revisions followed from the
+retracted mechanism and should be ignored.
+
+**Explained: it is the signature of a correct number applied by the wrong mechanism.**
+Every one of the five attempts ultimately bumped the V-int counter by the gap's true
+movie-row count. That makes the counter say ~190 frames passed while every other piece of
+engine state says 78 — ring timers, animation phases, and critically the sidekick's
+position-record buffer. The Tails CPU has counter-gated logic sitting immediately next to
+that buffer, so the object runs on **two different clocks at once**, which is a
+deterministic wreck rather than a random one. Same number, same mechanism, same failure —
+which is exactly why five differently-described attempts produced an identical error count
+and first-error location. The fingerprint was never mysterious; it is the machinery's
+signature.
+
+This also dissolves the apparent contradiction with the parity finding above. The counter
+value is inert **to what the clean segments happen to contain** — it was never a general
+claim. Segment 7's sidekick is counter-sensitive.
+
+**Do not "fix" this by enabling the budget machinery.**
+`TraceRunReplayWalker.interLevelVblankBudget` (`:731-746`) already computes the correct
+movie-row count, and every call site is gated on the profile that returns `DISABLED` for
+S2. Enabling it is a one-line change whose arithmetic is right and whose mechanism is the
+one described above. Being one already-tested line makes it more dangerous, not less.
+
+Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
+against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
+rows early because a differently-chosen animal survives last.
+
+**What the next agent should actually know:** S2 has no clock model, not a delicate one.
+Before treating any of this as a constraint, decide whether S2 *should* carry a
+`TracePlaybackProfile` at all — the S1 machinery exists and is inert here, which is a
+very different starting position from "the model is fitted and fragile".
+
+### Routes considered and rejected, so the wall is not re-derived
+
+- **Write down the measured deficit.** Excluded: a fitted model. It would go green here
+  and desync the first differently-timed recording — the failure this project's rule 3
+  exists to prevent.
+- **Model the level-entry window at 68000 cycle level** to predict the 9-or-8 split.
+  Rule-compliant and would also predict the art-volume spread seen elsewhere, but
+  frame-exactness needs plane draws, VDP wait states and V-blank interleaving — a
+  partial cycle emulator. Impractical, not forbidden.
+- **The rule-4 hardware-timing sidecar.** Does not apply: it may only delay readiness of
+  engine-submitted art jobs, and nothing here polls a queue.
+
+What would actually close it: per-row lag data for the undriven interiors, which is a
+recorder and fixture change rather than a trace fix.
+
+### Verification
+
+`TestS2EhzHalfpipeRoundTripChain` is fully green and unaffected. Emerald segments 0–10
+report zero errors and player physics matches the recording on every row of the run.
+Segment 11 carries 287 errors, all of them the Nemesis PLC queue, downstream of this.

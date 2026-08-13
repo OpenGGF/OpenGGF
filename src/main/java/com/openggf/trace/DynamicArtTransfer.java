@@ -563,6 +563,25 @@ public final class DynamicArtTransfer {
         validateRequests(requests, "submitted".equals(phase));
     }
 
+    /**
+     * Games for which a dynamic-art capability profile exists.
+     *
+     * <p>{@link #validateCallback} pins a ROM-callback PC set per game and
+     * rejects any other game outright, so a trace can only legitimately carry
+     * the capability for a game listed here. There is no S3K dynamic-art
+     * observer on the recording side either -- {@code tools/bizhawk-headless}
+     * ships {@code S1DynamicArtObserver} and {@code S2DynamicArtObserver} and no
+     * S3K equivalent -- so an S3K trace can neither be produced with the
+     * capability nor parsed with it.
+     *
+     * <p>This is the single source of truth for that support matrix. Anything
+     * that REQUIRES the capability must consult it, or it demands something the
+     * parser refuses.
+     */
+    public static boolean supportsCapability(String game) {
+        return "s1".equals(game) || "s2".equals(game);
+    }
+
     private static void validateCallback(String game, String phase, int pc) {
         Set<Integer> allowed = switch (game) {
             case "s1" -> "submitted".equals(phase)

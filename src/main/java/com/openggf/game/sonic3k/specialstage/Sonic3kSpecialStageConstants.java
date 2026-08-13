@@ -190,15 +190,6 @@ public final class Sonic3kSpecialStageConstants {
     public static final int CLEAR_TIMER_ACCEL_2 = 0x80;
     /** Emerald countdown timer initial value. */
     public static final int EMERALD_TIMER_INIT = 120;
-    /**
-     * Frames the queued Chaos/Super Emerald Kosinski art module takes to
-     * finish background-decompressing (ROM {@code Kos_modules_left} gate at
-     * loc_9C5C, sonic3k.asm:12613-12620) before {@code clear_timer} resets to
-     * 0 and the emerald-approach countdown starts. See
-     * {@code Sonic3kSpecialStageManager.emeraldArtFramesRemaining} javadoc
-     * for the BizHawk trace measurement this constant is pinned to.
-     */
-    public static final int EMERALD_ART_QUEUE_DRAIN_FRAMES = 4;
     /** Speed applied during clear sequence. */
     public static final int CLEAR_VELOCITY = 0x800;
     /** Banner display duration in frames (3 seconds). */

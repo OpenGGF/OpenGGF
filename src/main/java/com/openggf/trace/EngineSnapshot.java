@@ -29,7 +29,28 @@ public record EngineSnapshot(
         byte[] playerStatusHistory,
         int playerHistoryPos,
         SidekickCpuView tailsCpu,
-        Map<Integer, ObjectSnapshot> slotStates) {
+        Map<Integer, ObjectSnapshot> slotStates,
+        int levelStartX) {
+
+    /**
+     * Sentinel for {@link #levelStartX()} when the zone's ROM
+     * {@code StartLocations} entry could not be resolved (no live level, or a
+     * synthetic snapshot built by a comparator unit test). Comparators fall
+     * back to their unconditional behaviour when they see it.
+     */
+    public static final int LEVEL_START_X_UNKNOWN = Integer.MIN_VALUE;
+
+    /**
+     * Convenience constructor for callers with no live level behind them.
+     * Leaves {@link #levelStartX()} unknown.
+     */
+    public EngineSnapshot(short[] playerXHistory, short[] playerYHistory,
+                          short[] playerInputHistory, byte[] playerStatusHistory,
+                          int playerHistoryPos, SidekickCpuView tailsCpu,
+                          Map<Integer, ObjectSnapshot> slotStates) {
+        this(playerXHistory, playerYHistory, playerInputHistory, playerStatusHistory,
+                playerHistoryPos, tailsCpu, slotStates, LEVEL_START_X_UNKNOWN);
+    }
 
     /**
      * Compact constructor enforces defensive copies for the array members and
@@ -88,7 +109,23 @@ public record EngineSnapshot(
                                          SidekickCpuView tailsCpu,
                                          Map<Integer, ObjectSnapshot> slotStates) {
         return new EngineSnapshot(xHistory, yHistory, inputHistory, statusHistory,
-                historyPos, tailsCpu, slotStates);
+                historyPos, tailsCpu, slotStates, LEVEL_START_X_UNKNOWN);
+    }
+
+    /**
+     * As {@link #capture(short[], short[], short[], byte[], int, SidekickCpuView, Map)}
+     * but carrying the loaded zone/act's ROM {@code StartLocations} X, which
+     * lets the bootstrap comparator tell which {@code LevelSizeLoad} branch a
+     * replay's level load corresponds to.
+     */
+    public static EngineSnapshot capture(short[] xHistory, short[] yHistory,
+                                         short[] inputHistory, byte[] statusHistory,
+                                         int historyPos,
+                                         SidekickCpuView tailsCpu,
+                                         Map<Integer, ObjectSnapshot> slotStates,
+                                         int levelStartX) {
+        return new EngineSnapshot(xHistory, yHistory, inputHistory, statusHistory,
+                historyPos, tailsCpu, slotStates, levelStartX);
     }
 
     private static short[] copyOrEmpty(short[] src) {

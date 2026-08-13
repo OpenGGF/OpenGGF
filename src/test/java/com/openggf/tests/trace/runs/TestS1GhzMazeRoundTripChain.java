@@ -2,6 +2,8 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.DynamicArtTransfer;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.AdmitDestination;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.BeginTerminalTail;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CloseSegment;
@@ -23,7 +25,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * return-boundary shape: a NEXT-ACT advance (no positional restore) plus the
  * emerald-count increment.
  *
- * <h2>Current RED: the {@code run_tail} dynamic-art edge — one residual left</h2>
+ * <h2>History: the {@code run_tail} dynamic-art edge</h2>
+ *
+ * <p>This test is GREEN. The terminal-tail residual described below was closed
+ * by excusing {@code movie_logical_frame} — and only that field — inside spans
+ * the manifest itself declares unrepresented and unclosed; the tail's work
+ * identity, order and ledger are still compared.
  *
  * <p>{@code dynamicArtGapJournal.verifyTerminal} compares the run's LAST
  * dynamic-art gap edge against {@code run_manifest.json}'s
@@ -71,6 +78,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * control flow — the span's length is cycle cost — and any constant fitted to
  * this fixture's 36 would desync the first different recording.
  *
+ * <h2>Why the inter-segment gaps carry no dynamic-art edge</h2>
+ *
+ * <p>Measured from the committed fixture, the run's dynamic-art edge ordinals
+ * are exactly contiguous with nothing missing: {@code run_manifest.json}
+ * ordinals 0-1 (movie row 748, the pre-first-segment load), {@code ghz1}
+ * 2-3041, {@code ss} 3042-4665, {@code ghz2} 4666-4697, then manifest ordinals
+ * 4698-4699 (movie row 9071, the terminal tail). Neither inter-segment slice
+ * contains an edge, and none is missing from the recording.
+ *
+ * <p>That is structural, not accidental. The segments tile the movie almost
+ * exhaustively -- {@code ghz1} covers rows 774-4955, {@code ss} 4957-8047,
+ * {@code ghz2} 8049-8860 -- so each inter-segment gap slice, which
+ * {@code TraceRunDynamicArtGapComparator.gapSlice} defines as
+ * {@code [sourceOffset + traceFrameCount, destinationOffset)}, is exactly ONE
+ * movie row wide. A dynamic-art transfer spans a submitted edge and a completed
+ * edge on separate rows, so a one-row slice cannot hold a transfer at all. The
+ * returning level's first player DPLC is consequently published on the
+ * destination segment's own row 0 (recorded {@code ghz2} frame 0, ordinal 4666,
+ * {@code submission_origin: segment}), not in the gap.
+ *
+ * <p>The boundary assertions below therefore take their expectation from the
+ * manifest slice rather than asserting that the journal must GROW. The former
+ * growth assertions were unsatisfiable by this recording -- and would have been
+ * contradicted by the shared gap comparator, which compares the same slice for
+ * equality -- so they were corrected, not removed.
+ *
  * <p>Note the level segments' {@code LiveTraceComparator} does not compare
  * {@code dynamic_art.edges} (only {@code DynamicArtSpecialStageComparator}
  * does), which is why a transfer-stream divergence surfaces only here.
@@ -110,27 +143,83 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                 "the real headless chain must follow the shared coordinator transcript");
         DynamicArtStructuralGapEvidence returnGap =
                 evidence.structuralGap("ss", "ghz2");
-        assertTrue(returnGap.transitionCountAfterNextArm()
-                        > evidence.transitionCountAfterFirstArm(),
-                "the real S1 represented-segment -> named-run gap -> next-segment "
-                        + "boundary must grow the journal beyond first-arm bootstrap");
-        assertTrue(returnGap.transitionCountAfterNextArm()
-                        > returnGap.transitionCountAtGapStart(),
-                "the real S1 ss -> ghz2 structural gap must append production art");
-        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
-                        > evidence.lastEdgeOrdinalAfterFirstArm(),
-                "the real S1 named-run gap must append a later production edge ordinal");
-        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
-                        > returnGap.lastEdgeOrdinalAtGapStart(),
-                "the real S1 ss -> ghz2 structural gap must advance the edge ordinal");
+        TraceRunManifest manifest = TraceRunManifest.load(
+                activeRunDir.resolve("run_manifest.json"));
+        // The boundary's expectation is whatever the RECORDING carries for that
+        // movie-row slice -- never a hardcoded direction of growth. In this run
+        // the slice is empty (see the class comment), so this pins "the engine
+        // must not invent a gap edge here"; in a run whose inter-segment slice
+        // does carry edges it pins their ordinals and their containment.
+        List<Long> recordedOrdinals = recordedGapEdgeOrdinals(manifest, 1);
+        assertEquals(recordedOrdinals,
+                returnGap.transitionsAddedAcrossBoundary().stream()
+                        .map(transition -> transition.edge().edgeOrdinal())
+                        .toList(),
+                "the real S1 ss -> ghz2 structural gap must append exactly the "
+                        + "dynamic-art edges run_manifest.json records for that "
+                        + "movie-row slice");
         assertTrue(returnGap.transitionsAddedAcrossBoundary().stream()
                         .map(transition -> transition.edge())
-                        .anyMatch(edge -> edge.movieLogicalFrame()
+                        .allMatch(edge -> edge.movieLogicalFrame()
                                 >= returnGap.gapStartMovieLogicalFrame()
                                 && edge.movieLogicalFrame()
                                 <= returnGap.nextSegmentArmMovieLogicalFrame()),
-                "the real S1 named-run boundary must add a production art edge "
-                        + "inside its structural gap");
+                "every production art edge the real S1 named-run boundary adds "
+                        + "must be stamped inside its structural gap");
+        // The journal is append-only, so a boundary may leave it unchanged but
+        // must never drop an edge or rewind the ordinal.
+        assertTrue(returnGap.transitionCountAfterNextArm()
+                        >= returnGap.transitionCountAtGapStart()
+                        && returnGap.transitionCountAfterNextArm()
+                        >= evidence.transitionCountAfterFirstArm(),
+                "the real S1 ss -> ghz2 boundary must not shrink the gap journal");
+        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
+                        >= returnGap.lastEdgeOrdinalAtGapStart()
+                        && returnGap.lastEdgeOrdinalAfterNextArm()
+                        >= evidence.lastEdgeOrdinalAfterFirstArm(),
+                "the real S1 ss -> ghz2 boundary must not rewind the edge ordinal");
+        // First-arm bootstrap is the run's pre-first-segment load, which this
+        // recording carries as the manifest's transfer-0 submitted/completed
+        // pair at movie row 748.
+        List<Long> headOrdinals = recordedHeadEdgeOrdinals(manifest);
+        assertEquals(headOrdinals.size(),
+                evidence.transitionCountAfterFirstArm(),
+                "first-arm bootstrap must reproduce the manifest's "
+                        + "pre-first-segment gap edges");
+        assertEquals(headOrdinals.isEmpty() ? -1L : headOrdinals.getLast(),
+                evidence.lastEdgeOrdinalAfterFirstArm(),
+                "first-arm bootstrap must end on the manifest's last "
+                        + "pre-first-segment edge ordinal");
+    }
+
+    /**
+     * Edge ordinals {@code run_manifest.json} records between the end of
+     * segment {@code sourceIndex} and the start of the next segment -- the same
+     * slice {@code TraceRunDynamicArtGapComparator} compares against.
+     */
+    private static List<Long> recordedGapEdgeOrdinals(
+            TraceRunManifest manifest, int sourceIndex) {
+        TraceRunManifest.Segment source = manifest.segments().get(sourceIndex);
+        TraceRunManifest.Segment destination =
+                manifest.segments().get(sourceIndex + 1);
+        int sourceEnd = source.bk2FrameOffset() + source.traceFrameCount();
+        return manifest.dynamicArtGapTransitions().stream()
+                .map(DynamicArtTransfer.GapTransition::dynamicArtGapEdge)
+                .filter(edge -> edge.movieLogicalFrame() >= sourceEnd
+                        && edge.movieLogicalFrame()
+                        < destination.bk2FrameOffset())
+                .map(DynamicArtTransfer.GapEdge::edgeOrdinal)
+                .toList();
+    }
+
+    private static List<Long> recordedHeadEdgeOrdinals(
+            TraceRunManifest manifest) {
+        int firstSegmentStart = manifest.segments().getFirst().bk2FrameOffset();
+        return manifest.dynamicArtGapTransitions().stream()
+                .map(DynamicArtTransfer.GapTransition::dynamicArtGapEdge)
+                .filter(edge -> edge.movieLogicalFrame() < firstSegmentStart)
+                .map(DynamicArtTransfer.GapEdge::edgeOrdinal)
+                .toList();
     }
 
 }

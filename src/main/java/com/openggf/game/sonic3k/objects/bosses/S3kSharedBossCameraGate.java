@@ -74,19 +74,6 @@ public final class S3kSharedBossCameraGate
         return complete;
     }
 
-    /** Refreshes the native {@code Check_CameraInRange} approach bits before dispatch. */
-    public void refreshApproachFlags(Camera camera) {
-        if (lockBounds == null || camera == null) {
-            return;
-        }
-        if (!yLocked) {
-            approachFromBelow = unsigned(camera.getY()) > lockBounds.minY();
-        }
-        if (!xLocked) {
-            approachFromRight = unsigned(camera.getX()) > lockBounds.minX();
-        }
-    }
-
     public boolean isComplete() {
         return complete;
     }

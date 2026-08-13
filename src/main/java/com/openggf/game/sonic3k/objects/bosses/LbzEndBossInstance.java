@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.palette.PaletteWriteSupport;
@@ -11,10 +13,15 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -101,6 +108,12 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private int defeatStoredMaxX;
     private boolean localGradualMaxXExtenderActive;
     private int sharedExplosionEmissionCount;
+    @RewindTransient(reason = "queue facade is rebound from the captured KosM ordinal")
+    private S3kKosModuleQueue bossArtQueue;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
+    private HardwareWorkHandle bossArtHandle;
+    private long bossArtOrdinal;
+    private boolean bossArtLoaded;
     // transient: these identity collections are structural rewind state, skipped from
     // capture and rebuilt by the child reconstruction path (see recreate* below), matching
     // the base childComponents list. Without transient they would classify UNSUPPORTED
@@ -133,6 +146,13 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     @Override
+    public LbzEndBossInstance recreateForRewind(RewindRecreateContext ctx) {
+        return ObjectConstructionContext.with(
+                ctx.objectServices(), -1,
+                () -> new LbzEndBossInstance(ctx.spawn()));
+    }
+
+    @Override
     protected void initializeBossState() {
         state.x = spawn.x();
         state.y = spawn.y();
@@ -161,6 +181,10 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         defeatStoredMaxX = -1;
         localGradualMaxXExtenderActive = false;
         sharedExplosionEmissionCount = 0;
+        bossArtQueue = null;
+        bossArtHandle = null;
+        bossArtOrdinal = -1;
+        bossArtLoaded = false;
         ownedChildren = new ArrayList<>();
         platformChildren = new ArrayList<>();
         launchedSpikeBallRomSubtypes = new ArrayList<>();
@@ -170,11 +194,13 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         platformRecreateIndex = 0;
         tubeRecreateIndex = 0;
         requestStartupAssets();
+        queueBossArtDuringConstruction();
         spawnInitialVisuals();
     }
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        serviceBossArtQueue();
         if (paletteRuntimeIntegrationPending) {
             requestStartupAssets();
         }
@@ -431,6 +457,102 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             paletteRuntimeIntegrationPending = false;
         } catch (IOException e) {
             paletteRuntimeIntegrationPending = true;
+        }
+    }
+
+    /** ROM {@code Obj_LBZEndBoss} loads PLC $77 when the launcher object is created. */
+    private void queueBossArtDuringConstruction() {
+        // This override runs from the superclass constructor, before subclass
+        // field initializers. Establish the absent-owner sentinel here so an
+        // object-only construction cannot be mistaken for restored ordinal 0.
+        bossArtOrdinal = -1;
+        if (ObjectConstructionContext.isRewindActiveRestore()
+                || ObjectConstructionContext.isProbeConstruction()) {
+            return;
+        }
+        var services = tryServices();
+        if (services == null) {
+            return;
+        }
+        try {
+            var rom = services.rom();
+            if (rom == null) {
+                return;
+            }
+            bossArtQueue = moduleQueueIfAvailable(services);
+            if (bossArtQueue == null) {
+                return;
+            }
+            bossArtHandle = bossArtQueue.queue(
+                    rom,
+                    Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_END_BOSS);
+            bossArtOrdinal = bossArtHandle.ordinal();
+        } catch (IOException | RuntimeException failure) {
+            throw new IllegalStateException(
+                    "Unable to queue LBZ end-boss KosM art during construction", failure);
+        }
+    }
+
+    private void serviceBossArtQueue() {
+        if (bossArtLoaded) {
+            return;
+        }
+        if (bossArtQueue == null && bossArtOrdinal >= 0) {
+            bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            bossArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, bossArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "restored LBZ end-boss owner cannot find KosM ordinal "
+                                    + bossArtOrdinal));
+        }
+        if (bossArtHandle == null && bossArtQueue == null) {
+            try {
+                var rom = services().rom();
+                if (rom == null) {
+                    // Isolated object tests deliberately omit ROM and hardware services.
+                    return;
+                }
+                bossArtQueue = moduleQueueIfAvailable(services());
+                if (bossArtQueue == null) {
+                    return;
+                }
+                bossArtHandle = bossArtQueue.queue(
+                        rom,
+                        Sonic3kConstants.ART_KOSM_LBZ_END_BOSS_ADDR,
+                        Sonic3kConstants.ART_TILE_LBZ_END_BOSS);
+                bossArtOrdinal = bossArtHandle.ordinal();
+            } catch (IOException | RuntimeException failure) {
+                throw new IllegalStateException(
+                        "Unable to queue LBZ end-boss KosM art during update", failure);
+            }
+            return;
+        }
+        if (bossArtHandle != null && bossArtQueue == null) {
+            throw new IllegalStateException(
+                    "LBZ end-boss KosM owner has a live handle without its rebound queue");
+        }
+        if (bossArtHandle != null && bossArtQueue.isReady(bossArtHandle)) {
+            bossArtQueue.claim(bossArtHandle);
+            bossArtLoaded = true;
+            bossArtQueue = null;
+            bossArtHandle = null;
+            bossArtOrdinal = -1;
+        }
+    }
+
+    private static S3kKosModuleQueue moduleQueueIfAvailable(ObjectServices services) {
+        try {
+            return S3kRuntimeArtCoordinator.from(services).moduleQueue();
+        } catch (IllegalStateException unavailable) {
+            if ("runtime-art coordination is unavailable in these object services"
+                    .equals(unavailable.getMessage())) {
+                // Object-only fixtures intentionally use ObjectServices' explicit
+                // no-runtime-art default. Any installed-but-invalid coordinator
+                // still propagates and fails production closed.
+                return null;
+            }
+            throw unavailable;
         }
     }
 

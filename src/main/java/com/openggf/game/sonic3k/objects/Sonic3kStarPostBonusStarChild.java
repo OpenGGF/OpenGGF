@@ -60,6 +60,12 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
 
     // S3K ring threshold for bonus stars
     private static final int RING_THRESHOLD = 20;
+
+    // ROM Touch_Sizes entry $18 (collision_flags $D8 & $3F), sonic3k.asm:20713+24
+    private static final int TOUCH_HALF_WIDTH = 4;
+    private static final int TOUCH_HALF_HEIGHT = 4;
+    // ROM Touch_NoInstaShield player width $10 -> half-width 8, sonic3k.asm:20650
+    private static final int PLAYER_TOUCH_HALF_WIDTH = 8;
     @RewindTransient(reason = "Structural parent link; relinked to the nearest live "
             + "S3K starpost on rewind recreate. Scalar bonus-star state, including "
             + "variant, is reapplied by the generic field capturer.")
@@ -125,6 +131,31 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
             return;
         }
 
+        // ROM ORDER (loc_2D47E, sonic3k.asm:61891-61932): the object tests
+        // collision_property FIRST and only then falls through to loc_2D50A's
+        // motion. collision_property is written by the player's TouchResponse
+        // (sonic3k.asm:20610, called from Obj_Sonic at :22022), which runs
+        // earlier in the same Process_Sprites pass and therefore reads this
+        // object's x_pos/y_pos as they stood at the END of the previous frame --
+        // before this frame's loc_2D50A repositioning. Testing the overlap here,
+        // ahead of updatePosition(), is what reproduces that one-frame ordering;
+        // testing it after the move (as this object used to) fires the bonus
+        // entry one LevelLoop iteration early.
+        if (collisionEnabled && player != null && touchesPlayer(player)) {
+            // ROM: loc_2D47E — S3K lampposts enter bonus stages via Restart_level_flag.
+            // Engine: request bonus stage entry through LevelTransitionCoordinator.
+            if (player.getRingCount() >= RING_THRESHOLD) {
+                LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
+                        + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
+                services().requestBonusStageEntry(variant.bonusStageType);
+                if (parentStarPost != null) {
+                    parentStarPost.markUsedForSpecialStage();
+                }
+                setDestroyed(true);
+                return;
+            }
+        }
+
         // loc_2D50A: addi.w #$A,$34(a0)
         angle = (angle + ANGLE_INCREMENT) & 0xFFFF;
 
@@ -152,23 +183,6 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
 
         // Update animation
         updateAnimation();
-
-        // Check player collision for special stage entry
-        if (collisionEnabled && player != null && isPlayerInRange(player)) {
-            // ROM: collision_property check at loc_2D47E
-            if (player.getRingCount() < RING_THRESHOLD) {
-                return;
-            }
-            // ROM: loc_2D47E — S3K lampposts enter bonus stages via Restart_level_flag.
-            // Engine: request bonus stage entry through LevelTransitionCoordinator.
-            LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
-                    + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
-            services().requestBonusStageEntry(variant.bonusStageType);
-            if (parentStarPost != null) {
-                parentStarPost.markUsedForSpecialStage();
-            }
-            setDestroyed(true);
-        }
     }
 
     /**
@@ -271,10 +285,30 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
         mappingFrame = frame;
     }
 
-    private boolean isPlayerInRange(AbstractPlayableSprite player) {
+    /**
+     * ROM {@code Touch_Process} overlap test (sonic3k.asm:20654-20711) for this
+     * object's {@code collision_flags} of {@code $D8} (loc_2D574,
+     * sonic3k.asm:61979).
+     *
+     * <p>{@code $D8 & $3F} is {@code $18}, which indexes {@code Touch_Sizes}
+     * (sonic3k.asm:20713) entry 24 = {@code dc.b 4,4} -- the object's half-width
+     * and half-height. The player box is {@code Touch_NoInstaShield}
+     * (sonic3k.asm:20641-20652): left edge {@code x_pos - 8} with width
+     * {@code $10}, bottom edge {@code y_pos - (y_radius - 3)} with height
+     * {@code (y_radius - 3) * 2}. {@code Touch_Width} / {@code Touch_Height}
+     * then accept when the boxes overlap on both axes inclusively, which for
+     * these symmetric boxes reduces to the two comparisons below.
+     *
+     * <p>The previous {@code dx < 16 && dy < 16} test was not from the ROM: it
+     * was 4px too generous on each side in X, so the star could claim the player
+     * before the ROM's box did.
+     */
+    private boolean touchesPlayer(AbstractPlayableSprite player) {
+        int playerHalfHeight = player.getYRadius() - 3;
         int dx = Math.abs(player.getCentreX() - currentX);
         int dy = Math.abs(player.getCentreY() - currentY);
-        return dx < 16 && dy < 16;
+        return dx <= TOUCH_HALF_WIDTH + PLAYER_TOUCH_HALF_WIDTH
+                && dy <= TOUCH_HALF_HEIGHT + playerHalfHeight;
     }
 
     @Override

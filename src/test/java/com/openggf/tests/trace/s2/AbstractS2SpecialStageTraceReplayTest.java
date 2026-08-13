@@ -329,6 +329,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                         trace.metadata().bk2FrameOffset(),
                         harness.movieFrames());
         int passPacingStart = passPacingStart(trace, Integer.MAX_VALUE);
+        Map<Integer, TraceEvent.StateSnapshot> preStartPassesBySampleFrame =
+                preStartPassesBySampleFrame(trace, passPacingStart);
         int terminalPreStartSequence = terminalPreStartPassSequence(trace);
         int entryFrame = specialStageEntryFrame(trace);
         int stageStateVisibleFrame = stageStateVisibleFrame(trace, entryFrame);
@@ -384,7 +386,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                             .map(CompletedPass::snapshot)
                             .<List<TraceEvent>>map(List::of)
                             .orElseGet(List::of)
-                    : List.of();
+                    : preStartPassStartedOn(preStartPassesBySampleFrame, f);
             SpecialStageExpectedState expected =
                     SpecialStageExpectedState.from(tf, passEnd);
             addManagerFields(fields, expected, state, false,
@@ -496,40 +498,64 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         return new DivergenceReport(comparisons);
     }
 
-    static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
-            SpecialStageTraceData trace) {
-        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
-            return Map.of();
-        }
-        Map<Integer, TraceEvent.DynamicArtTransferState> states = new LinkedHashMap<>();
-        for (int f = 0; f < trace.frameCount(); f++) {
-            TraceEvent.DynamicArtTransferState state =
-                    trace.dynamicArtTransferStateForFrame(f);
-            if (state != null) {
-                states.put(f, state);
-            }
-        }
-        int pacingStart = passPacingStart(trace, trace.frameCount());
-        java.util.Set<Integer> cursorPrecededRows = new java.util.HashSet<>();
-        List<DynamicArtSpillNormalization.PassBinding> passBindings = new ArrayList<>();
+    /**
+     * Pre-start {@code RunObjects} passes indexed by the observation whose
+     * {@code Vint_S2SS} sampled their input.
+     *
+     * <p>The pre-start wait loop runs one {@code WaitForVint} and one
+     * {@code jsr (RunObjects).l} per iteration (docs/s2disasm/s2.asm:6674-6691),
+     * and the engine publishes that pass inside the same displayed frame. The
+     * observation's own atomic {@code run_objects_end} snapshot is therefore the
+     * expectation for its player/ring/Tails-control fields — the raw VBlank row
+     * is not, because it can bisect the pass's Obj09→Obj10 scan and hold one
+     * player's post-pass state beside the other's pre-pass state. That is the
+     * rule this comparator already applies once the recurring loop takes over;
+     * the pre-start half of the same loop gets it for the same reason.
+     */
+    private static Map<Integer, TraceEvent.StateSnapshot> preStartPassesBySampleFrame(
+            SpecialStageTraceData trace, int passPacingStart) {
+        Map<Integer, TraceEvent.StateSnapshot> bySample = new LinkedHashMap<>();
         for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
-            int boundRow = snapshot.frame();
-            Object cursor = snapshot.fields().get("completion_cursor_frame");
-            if (cursor == null) {
+            if (snapshot.frame() >= passPacingStart) {
                 continue;
             }
-            int cursorFrame = Integer.parseInt(String.valueOf(cursor));
-            passBindings.add(new DynamicArtSpillNormalization.PassBinding(
-                    cursorFrame, boundRow));
-            if (cursorFrame < boundRow) {
-                cursorPrecededRows.add(boundRow);
+            if (numericTraceValue(requireField(snapshot, "pass_sequence")) == 0) {
+                // Sequence 0 is not a wait-loop iteration. The special-stage
+                // entry runs exactly one RunObjects before the fade
+                // (docs/s2disasm/s2.asm:6660-6672): after the SSObjectsManager
+                // duration loop's last WaitForVint it does
+                // Obj5A_CreateRingsToGoText, SS_ScrollBG, RunObjects,
+                // BuildSprites and RunPLC_RAM before Pal_FadeFromWhite. That
+                // whole span overruns its displayed frame, so the row that
+                // sampled its input still holds clean pre-pass state -- it is
+                // not a bisected row, and the engine's own startup pass
+                // publishes at the same boundary. Its results belong to the
+                // observation the binder already gives it.
+                continue;
             }
+            Object sample = snapshot.fields().get("input_sample_frame");
+            if (sample == null) {
+                continue;
+            }
+            bySample.put(numericTraceValue(sample), snapshot);
         }
-        return DynamicArtSpillNormalization.rebindSubmissionSpills(
-                states, trace.frameCount(), pacingStart,
-                f -> trace.getFrame(f).lag(),
-                cursorPrecededRows::contains,
-                passBindings);
+        return bySample;
+    }
+
+    private static List<TraceEvent> preStartPassStartedOn(
+            Map<Integer, TraceEvent.StateSnapshot> bySampleFrame, int frame) {
+        TraceEvent.StateSnapshot snapshot = bySampleFrame.get(frame);
+        return snapshot == null ? List.of() : List.of(snapshot);
+    }
+
+    /**
+     * Delegates to the shared owner so this lane and the complete-run chain's
+     * special-stage interior compare a segment identically however it was
+     * reached.
+     */
+    static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
+            SpecialStageTraceData trace) {
+        return DynamicArtSpillNormalization.forSpecialStage(trace);
     }
 
     private static void addDynamicArtComparison(

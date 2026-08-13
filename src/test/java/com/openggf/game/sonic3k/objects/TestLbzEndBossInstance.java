@@ -64,6 +64,16 @@ class TestLbzEndBossInstance {
     }
 
     @Test
+    void objectOnlyConstructionKeepsBossArtOrdinalAbsent() throws Exception {
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices());
+        var ordinal = LbzEndBossInstance.class.getDeclaredField("bossArtOrdinal");
+        ordinal.setAccessible(true);
+
+        assertEquals(-1L, ordinal.getLong(boss),
+                "missing runtime-art services must not look like restored ordinal zero");
+    }
+
+    @Test
     void pendingPaletteLoadRetriesAfterServicesAttachForMovingPlatformBridge() throws Exception {
         LbzEndBossInstance boss = constructBoss(new TestObjectServices());
         PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();

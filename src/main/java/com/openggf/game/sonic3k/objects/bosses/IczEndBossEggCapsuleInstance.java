@@ -19,7 +19,7 @@ import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
  */
 public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance
         implements SpawnCoordinateRewindRecreatable {
-    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 13;
+    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 1;
     private static final int FINAL_CAMERA_MAX_X = 0x47C0;
 
     public IczEndBossEggCapsuleInstance(int x, int y) {
@@ -41,6 +41,13 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
     @Override
     protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
         return new IczEndBossResultsScreenObjectInstance(character, act);
+    }
+
+    @Override
+    protected boolean nativeResultsRunsInAllocationPass() {
+        // ICZ's capsule is slot 10 and AllocateObject selects slot 11, so
+        // Obj_LevelResultsInit runs later in the same Process_Sprites pass.
+        return true;
     }
 
     /** Retained {@code loc_71DE2} owner folded into ICZ's results object. */

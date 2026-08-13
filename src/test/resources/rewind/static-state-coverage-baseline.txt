@@ -43,4 +43,3 @@ com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager#missingRewindAd
 # Scoped to the title-card display transition, not the ordinary
 # GameMode.LEVEL rewind window -- plausibly lower risk, but unconfirmed;
 # needs verification before this can be closed as exempt rather than fixed.
-com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager#missingRewindAdapter

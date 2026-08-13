@@ -89,9 +89,11 @@ public interface ObjectArtProvider {
      *
      * <p>The results owner can create an in-level title after an earlier
      * runtime-art batch has already been admitted. Providers with exact
-     * admission leases may issue the presentation's lease here; the title-card
-     * owner still binds and consumes that lease through the typed APIs below.
-     * Providers without lease-backed queues retain their existing behavior.
+     * admission leases may issue the presentation's lease here and, when the
+     * earlier batch has retired, admit the next ROM-owned runtime-art batch;
+     * the title-card owner still binds and consumes that lease through the
+     * typed APIs below. Providers without lease-backed queues retain their
+     * existing behavior.
      */
     default void prepareRuntimeArtForInLevelTitleCard() {
     }

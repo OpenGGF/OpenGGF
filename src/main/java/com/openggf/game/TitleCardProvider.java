@@ -23,6 +23,16 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Initializes a title card after the game's level routine has loaded a
+     * destination and entered its native title-card boundary. Games whose
+     * level routine rewrites the title owner's wait value can override this
+     * entry point; ordinary host-level initialization keeps its normal timing.
+     */
+    default void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
+        initialize(zoneIndex, actIndex);
+    }
+
+    /**
      * Defers a fresh level-gamestate install to the native in-level title-card
      * display boundary. Games without that handoff can ignore the request.
      */
@@ -39,6 +49,16 @@ public interface TitleCardProvider {
         requestLevelGamestateResetAtInLevelDisplay(additionalDispatches);
     }
 
+    /**
+     * Arms a fresh-level runtime-art producer for the title-card handoff.
+     * Games whose level assembly owns a later hardware queue can retain the
+     * level index here and publish that work when the title-card owner reaches
+     * its native completion boundary.
+     */
+    default void requestFreshLevelRuntimeArtHandoff(int levelIndex) {
+        // No-op for games without a post-title-card runtime-art handoff.
+    }
+
     default void requestInLevelPlayerControlLock() {
         // No-op unless an in-level title card owns the native controller lock.
     }
@@ -49,6 +69,16 @@ public interface TitleCardProvider {
 
     default boolean shouldLockPlayerControlForInLevelOverlay() {
         return false;
+    }
+
+    /**
+     * Returns whether a fresh level-transition boundary may release its
+     * destination state. Games whose native title owner keeps the loaded
+     * player slots held through the visible exit can defer this beyond the
+     * ordinary control-release point.
+     */
+    default boolean shouldCompleteFreshLevelTransitionBoundary() {
+        return shouldReleaseControl();
     }
 
     /** Releases an in-level lock after its ROM object owner takes over. */
@@ -114,6 +144,21 @@ public interface TitleCardProvider {
      */
     default void beginOmittedPresentationExitTail(int zoneIndex, int actIndex) {
         // No-op unless the game models a gameplay-phase title-card exit tail.
+    }
+
+    /** Publishes an armed fresh-level handoff when an omitted native owner reaches its exit. */
+    default void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
+        // No-op for games without a title-owned fresh-level hardware handoff.
+    }
+
+    /**
+     * Publishes a fresh-level handoff when the destination title owner reaches
+     * its native runtime-art boundary. The recording/live drivers use this
+     * when a game keeps the loaded player slots held through that boundary;
+     * games without such a split can leave it as a no-op.
+     */
+    default void completeFreshLevelRuntimeArtHandoff() {
+        // No-op for games without a split fresh-level title boundary.
     }
 
     /**
@@ -203,6 +248,34 @@ public interface TitleCardProvider {
      */
     default boolean shouldAdvanceVblankClockDuringLockedPhase() {
         return false;
+    }
+
+    /**
+     * Whether the level-only fixed object slots (Tails' tails, spindash dust,
+     * shields, bubbles, invincibility stars) execute while the title card is up.
+     *
+     * <p>Sonic 2's {@code RunObjects} chooses its slot count from the game mode:
+     * it runs the first {@code $80} slots ({@code Object_RAM..Object_RAM_End})
+     * unless {@code Game_Mode} equals {@code GameModeID_Level} exactly, in which
+     * case it extends to {@code LevelOnly_Object_RAM_End}
+     * (docs/s2disasm/s2.asm:29805-29824). {@code Level} sets
+     * {@code GameModeFlag_TitleCard} on entry (s2.asm:4758) and only
+     * {@code Level_StartGame} clears it, immediately before {@code Level_MainLoop}
+     * (s2.asm:5087). Every pre-main-loop {@code RunObjects} call — the one at
+     * s2.asm:5006 and each title-card wait-loop iteration at s2.asm:5060-5066 —
+     * therefore runs with the flag set and never reaches
+     * {@code LevelOnly_Object_RAM}, which begins at {@code Tails_Tails}
+     * (docs/s2disasm/s2.constants.asm:1145-1176). Obj05's first execution is
+     * consequently the first {@code Level_MainLoop} pass,
+     * {@code Level_frame_counter == 1}.
+     *
+     * <p>Sonic 3 &amp; Knuckles has no such gate: {@code Process_Sprites} always
+     * walks the whole {@code Object_RAM}, including {@code Level_object_RAM}
+     * (docs/skdisasm/sonic3k.asm:35963-35976, sonic3k.constants.asm:309).
+     * Sonic 1 has no level-only fixed slot family at all.
+     */
+    default boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {
+        return true;
     }
 
     /**

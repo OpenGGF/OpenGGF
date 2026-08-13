@@ -117,6 +117,23 @@ class TestBubblerObjectInstance {
         assertEquals(1, services.sfxCalls);
     }
 
+    @Test
+    void largeBubblePreservesNonSonicRollingStatusLikeRetailObjectBranch() {
+        TrackingPlayer tails = submergedPlayer("tails", 0x100, 0x100);
+        tails.setRolling(true);
+        BubblerObjectInstance bubble = largeBubbleAt(0x100, 0x100);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(null, List.of(tails));
+        bubble.setServices(services);
+
+        updateUntilBubbleCollected(bubble, tails, tails);
+
+        assertEquals(1, tails.replenishAirCalls);
+        assertEquals(true, tails.getRolling(),
+                "Obj_Bubbler's non-Obj_Sonic branch restores radii without clearing Status_Roll");
+        assertEquals(tails.getStandXRadius(), tails.getXRadius());
+        assertEquals(tails.getStandYRadius(), tails.getYRadius());
+    }
+
     private static BubblerObjectInstance largeBubbleAt(int x, int y) {
         return new BubblerObjectInstance(new ObjectSpawn(x, y, 0x54, 2, 0, false, 0));
     }
@@ -160,6 +177,12 @@ class TestBubblerObjectInstance {
         public void replenishAir() {
             replenishAirCalls++;
             super.replenishAir();
+        }
+
+        @Override
+        public void replenishAirPreservingRollingStatus() {
+            replenishAirCalls++;
+            super.replenishAirPreservingRollingStatus();
         }
     }
 

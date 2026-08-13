@@ -28,14 +28,17 @@ import java.nio.file.Path;
  * ordinary red test with a frame and a field. Modelled on
  * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
- * <p><b>Status at b961eae47 (landed red, deliberately).</b> 41 errors of which
- * 38 are frame-0 bootstrap entries in the {@code player_history} ring buffer
- * (entries 26..63, a uniform y offset). Those 38 are a structural cold-boot
- * artifact, not a divergence: this segment resumes mid-act after a special
- * stage, so the ROM's position-record ring still holds rows recorded before
- * the star post, which a cold boot at row 0 cannot have produced. The
- * remaining 3 are the closing-edge {@code dynamic_art} skew on the last row.
- * No gameplay row diverges.
+ * <p>The three closing-edge {@code dynamic_art} errors this class used to
+ * report on row 3376 were the segment's trailing main-loop iteration being
+ * forwarded onto its last row; see
+ * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
+ *
+ * <p>The 38 frame-0 {@code player_history} bootstrap entries this class
+ * reported at b961eae47 were the untouched {@code Obj01_Init_Continued}
+ * pre-fill remnant (slots 26..63) of a mid-act re-entry, whose anchor is a
+ * star post's {@code Saved_y_pos} the segment never recorded. The bootstrap
+ * comparator now excludes exactly that remnant — see
+ * {@code TraceBinder.untouchedPreFillRemnantStart}.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

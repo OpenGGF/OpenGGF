@@ -14,6 +14,7 @@ import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceBinder;
@@ -284,9 +285,15 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 null, animationDiagnostics,
                 "sidekick", actualSidekick);
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            expected.frame(),
+                            trace.loadQueueStatesForComparisonFrame(expected.frame()),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    expected.frame(), projection.expected(), projection.actual());
             result = binder.comparisonForFrame(expected.frame());
         }
         result = appendInputAlignment(expected, frame, result);
@@ -519,6 +526,32 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                     1));
         }
         return bootstrapDivergences;
+    }
+
+    /**
+     * Compares an opening row this comparator will never reach live.
+     *
+     * <p>A destination admitted after its first row already ran attaches with
+     * that row consumed, so live comparison starts at row one and the adopted
+     * row zero would otherwise be published but never checked. The engine's
+     * state at attach time IS that row's end state, so comparing the row-zero
+     * publication against the fixture's row zero here is an ordinary
+     * comparison-only check, not a reconstruction.
+     */
+    public void compareAdoptedOpeningRow(
+            int row, DynamicArtDiagnosticsSnapshot published) {
+        Objects.requireNonNull(published, "published");
+        if (row < 0 || row >= trace.frameCount()) {
+            throw new IllegalArgumentException(
+                    "opening row out of range: " + row);
+        }
+        FrameComparison comparison = binder.compareDynamicArt(
+                trace.dynamicArtTransferStateForFrame(
+                        trace.getFrame(row).frame()),
+                published);
+        if (comparison != null) {
+            ingestExternalComparison(comparison);
+        }
     }
 
     /**

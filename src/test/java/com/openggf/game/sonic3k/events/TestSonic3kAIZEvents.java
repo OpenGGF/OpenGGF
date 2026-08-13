@@ -34,7 +34,6 @@ import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
-import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -65,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -752,7 +752,7 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void eventsFg5StartsFireTransitionAndRequestsSeamlessFlow() {
+    public void eventsFg5StartsFireTransitionAndAppliesSeamlessFlow() {
         Camera camera = GameServices.camera();
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
@@ -771,16 +771,27 @@ public class TestSonic3kAIZEvents {
         }
 
         assertTrue(events.isAct2TransitionRequested());
-        SeamlessLevelTransitionRequest request = GameServices.level().consumeSeamlessTransitionRequest();
-        assertNotNull(request);
-        assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL, request.type());
-        assertEquals(0, request.targetZone());
-        assertEquals(1, request.targetAct());
-        assertFalse(request.preserveMusic());
-        assertTrue(request.preserveLevelGamestate());
-        assertFalse(request.showInLevelTitleCard());
-        assertEquals(S3kSeamlessMutationExecutor.MUTATION_AIZ1_POST_RELOAD_ACT2, request.mutationKey());
-        assertTrue(request.musicOverrideId() >= 0);
+        assertEquals(0, GameServices.level().getCurrentZone());
+        assertEquals(1, GameServices.level().getCurrentAct());
+        assertTrue(GameServices.level().getCurrentLevel() instanceof Sonic3kLevel);
+        assertNull(GameServices.level().consumeSeamlessTransitionRequest());
+    }
+
+    @Test
+    public void eventsFg5RunsFireRiseOnTheTriggeringBackgroundEventTick() {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F10);
+        camera.setY((short) 0x0200);
+
+        var events = newFireTransitionEvents();
+        events.init(0);
+        events.setEventsFg5(true);
+
+        updateWithHardware(events, 0, 0);
+
+        assertTrue(events.isFireTransitionActive());
+        assertEquals(1, events.getFireTransitionFrames());
+        assertEquals(0x0022_4000, events.getFireBgCopyFixed());
     }
 
     @Test
@@ -1005,8 +1016,12 @@ public class TestSonic3kAIZEvents {
         assertTrue(afterReload.active());
         assertEquals(224, afterReload.coverHeightPx());
         assertEquals(beforeReload.wavePhase(), afterReload.wavePhase());
-        // requestAct2Transition() intentionally resets BG Y to 0x140 for scroll-off start.
-        assertEquals(0x0140, afterReload.sourceWorldY());
+        // ROM AIZ1BGE_Finish performs the whole act reload without ever writing
+        // Camera_Y_pos_BG_copy (sonic3k.asm:104727-104802), so the AIZ1_FireRise
+        // ramp carries across the reload untouched; AIZ2BGE_WaitFire's
+        // $180 + (bgY & $7F) re-seat (sonic3k.asm:105070-105076) is the only
+        // thing that ever brings it back into the fire zone.
+        assertEquals(beforeReload.sourceWorldY(), afterReload.sourceWorldY());
         assertEquals(FireCurtainStage.AIZ2_REDRAW, afterReload.stage());
     }
 

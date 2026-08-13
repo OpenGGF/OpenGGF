@@ -2,7 +2,11 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
+import com.openggf.data.Rom;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
@@ -28,15 +32,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests the MGZ Act 2 chunk-event terrain swaps.
@@ -45,10 +46,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * (sonic3k.asm:106791-106926) and the replacement data tables in
  * {@code Lockon S3/Screen Events.asm}.
  */
+@RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kMgz2ChunkEvents {
 
-    private static final Path QUAKE_CHUNK_DATA =
-            Path.of("docs/skdisasm/Levels/MGZ/Misc/Act 2 Quake Chunks.bin");
+    private static final int QUAKE_CHUNK_DATA_ADDR = 0x3CBBB4;
+    private static final int QUAKE_CHUNK_DATA_SIZE = 0x1080;
     private static final int MUTATED_LEFT_BLOCK_INDEX = 0xB1;
     private static final int MUTATED_RIGHT_BLOCK_INDEX = 0xEA;
 
@@ -67,7 +69,6 @@ class TestSonic3kMgz2ChunkEvents {
 
     @Test
     void firstChunkTrigger_armsOnlyAfterQuakeStartsContinuousShake() throws IOException {
-        assumeTrue(Files.exists(QUAKE_CHUNK_DATA), "S3K disassembly quake chunk fixture is not available");
         AbstractPlayableSprite player = placePlayer(0x790, 0x590);
         Sonic3kMGZEvents events = eventsWithQuakeChunkData();
         events.init(1);
@@ -90,7 +91,6 @@ class TestSonic3kMgz2ChunkEvents {
 
     @Test
     void firstChunkEvent_appliesRealBlockStates_onRomCadence() throws IOException {
-        assumeTrue(Files.exists(QUAKE_CHUNK_DATA), "S3K disassembly quake chunk fixture is not available");
         AbstractPlayableSprite player = placePlayer(0x790, 0x590);
         Sonic3kMGZEvents events = eventsWithQuakeChunkData();
         events.init(1);
@@ -162,7 +162,7 @@ class TestSonic3kMgz2ChunkEvents {
     }
 
     private static int[] expectedBlockState(int offset) throws IOException {
-        byte[] data = Files.readAllBytes(QUAKE_CHUNK_DATA);
+        byte[] data = quakeChunkDataFromRom();
         int[] state = new int[64];
         for (int i = 0; i < state.length; i++) {
             int byteIndex = offset + i * 2;
@@ -172,7 +172,17 @@ class TestSonic3kMgz2ChunkEvents {
     }
 
     private static Sonic3kMGZEvents eventsWithQuakeChunkData() throws IOException {
-        return new FixtureQuakeChunkDataEvents(Files.readAllBytes(QUAKE_CHUNK_DATA));
+        return new FixtureQuakeChunkDataEvents(quakeChunkDataFromRom());
+    }
+
+    private static byte[] quakeChunkDataFromRom() throws IOException {
+        java.io.File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        try (Rom rom = new Rom()) {
+            if (!rom.open(romFile.getAbsolutePath())) {
+                throw new IOException("Failed to open configured S3K ROM");
+            }
+            return rom.readBytes(QUAKE_CHUNK_DATA_ADDR, QUAKE_CHUNK_DATA_SIZE);
+        }
     }
 
     private static final class FixtureQuakeChunkDataEvents extends Sonic3kMGZEvents {

@@ -14,6 +14,7 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Run with {@code mvn "-Dtest=TestVerifierCostBenchmark" test}.
  */
 @RequiresRom(SonicGame.SONIC_1)
+@Tag("performance-measurement")
 public class TestVerifierCostBenchmark {
 
     /** Complete-run S1 traces of full-act length — the closest analog to a time-attack run. */

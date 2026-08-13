@@ -692,8 +692,14 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
      * slot.
      */
     private void routine14TitleCardInstallDispatch() {
-        if (services().titleCardProvider() != null) {
-            services().titleCardProvider().initializeInLevel(0, 0);
+        var titleCardProvider = services().titleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider.initializeInLevel(0, 0);
+            // Obj_TitleCardWait2 (sonic3k.asm:62274-62309) remains in the
+            // allocated title owner's slot for the poll after its child
+            // objects retire. Keep the slotless owner alive for that same
+            // native dispatch before it reaches LoadEnemyArt.
+            titleCardProvider.requestInLevelExitAdditionalDispatches(1);
         }
         setDestroyed(true);
     }

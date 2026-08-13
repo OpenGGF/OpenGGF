@@ -7,7 +7,10 @@ import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceRunManifest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -25,6 +28,19 @@ public final class TraceRunDynamicArtGapJournal {
     private int transitionCountAtGapStart;
     private int gapStartMovieLogicalFrame;
     private List<DynamicArtTransfer.Descriptor> openingLedger = List.of();
+    /**
+     * Lifecycle state observed the instant the source segment closed, before
+     * the lifecycle entered the gap.
+     *
+     * <p>Closing a comparison segment flushes work the segment submitted whose
+     * completion falls after the segment's last compared row, and the close
+     * itself appends those edges to the gap ledger. A snapshot taken after the
+     * close starts counting past them, so each one is dropped from the gap's
+     * compared slice and its transfer is already gone from the opening ledger
+     * that resolves an edge's submission origin. A gap begins where its source
+     * ended, so the opening state is taken there.
+     */
+    private DynamicArtGapDiagnosticsSnapshot sourceClosedSnapshot;
 
     public TraceRunDynamicArtGapJournal(
             TraceRunManifest manifest,
@@ -43,6 +59,7 @@ public final class TraceRunDynamicArtGapJournal {
         }
         sourceSegmentIndex = segmentIndex;
         sourceClosedOrdinal = ++structuralOrdinal;
+        sourceClosedSnapshot = diagnostics.gapOpeningSnapshot();
     }
 
     public void gapOpened(int segmentIndex) {
@@ -53,7 +70,8 @@ public final class TraceRunDynamicArtGapJournal {
         if (gapOpenedOrdinal > sourceClosedOrdinal) {
             return;
         }
-        DynamicArtGapDiagnosticsSnapshot state = diagnostics.gapSnapshot();
+        DynamicArtGapDiagnosticsSnapshot state = sourceClosedSnapshot != null
+                ? sourceClosedSnapshot : diagnostics.gapSnapshot();
         gapOpenedOrdinal = ++structuralOrdinal;
         gapStartMovieLogicalFrame = state.movieLogicalFrame();
         transitionCountAtGapStart = state.transitions().size();
@@ -68,13 +86,17 @@ public final class TraceRunDynamicArtGapJournal {
             throw new IllegalStateException(
                     "dynamic-art destination opened without its adjacent gap");
         }
-        List<DynamicArtGapTransition> transitions =
-                diagnostics.gapSnapshot().transitions();
+        DynamicArtGapDiagnosticsSnapshot admission = diagnostics.gapSnapshot();
+        List<DynamicArtGapTransition> transitions = admission.transitions();
         List<DynamicArtGapTransition> added =
                 transitions.size() >= transitionCountAtGapStart
                         ? transitions.subList(transitionCountAtGapStart,
                                 transitions.size())
                         : List.of();
+        added = rowsCountedBackFromAdmission(
+                added, admission.movieLogicalFrame(),
+                admission.unannouncedRows());
+
         TraceRunManifest.Segment source = manifest.segments().get(sourceSegmentIndex);
         TraceRunManifest.Segment destination =
                 manifest.segments().get(destinationSegmentIndex);
@@ -90,6 +112,7 @@ public final class TraceRunDynamicArtGapJournal {
         sourceClosedOrdinal = 0;
         gapOpenedOrdinal = 0;
         openingLedger = List.of();
+        sourceClosedSnapshot = null;
         return comparison;
     }
 
@@ -122,7 +145,87 @@ public final class TraceRunDynamicArtGapJournal {
         sourceClosedOrdinal = 0;
         gapOpenedOrdinal = 0;
         openingLedger = List.of();
+        sourceClosedSnapshot = null;
         return comparison;
+    }
+
+    /**
+     * Recovers each gap edge's movie row by subtracting the rows that passed
+     * unannounced after it.
+     *
+     * <p>An edge is stamped with the row the shared cursor was announcing when
+     * it was emitted. That stamp is right whenever rows are being announced,
+     * and stale for the whole of a span that is driven with none — a harness
+     * that pre-seeks the cursor for an uncompared interior re-announces one
+     * frozen row until the destination is admitted, so every edge in the
+     * transition gap after it carries that same row. The engine counts those
+     * unannounced rows as it passes them (see
+     * {@code DynamicArtLifecycleService#unannouncedRows}), so an edge followed
+     * by {@code n} of them before admission sits {@code n} rows before its own
+     * stamp.
+     *
+     * <p>This is an identity where the raw stamp was already right, and the
+     * only available answer where it was not. The count is taken at admission
+     * because that is where the gap ends; running it forward from the gap's
+     * start instead would place every edge by the difference between the
+     * engine's gap length and the recorded one, which no ROM rule predicts.
+     *
+     * <p>Both inputs are engine-produced — the counts are the engine's own and
+     * the stamp is the shared cursor's own position. No recorded edge row is
+     * read and no engine state is written; the re-stamped edges are comparison
+     * copies.
+     *
+     * <p>Recovery only applies to a stamp that is actually stale. Staleness is
+     * visible without any recorded row: a frozen cursor re-announces the row
+     * the admission itself reports, so a stale edge carries
+     * {@code admissionMovieLogicalFrame} exactly, and an edge carrying any
+     * other row was stamped while the cursor was still announcing — it is
+     * already the row it happened on and has nothing to count back. Not every
+     * gap freezes the cursor; where the harness keeps announcing across the
+     * span, the unannounced counter still advances for the frames the engine
+     * spends off-cursor, and counting those back off a live stamp would move a
+     * correct row backwards.
+     *
+     * <p>{@code gapEdgeIndex} is renumbered against the recovered rows for the
+     * same reason the recorder numbers it per frame: two edges sharing a row
+     * are 0 and 1, and a later row restarts at 0.
+     */
+    public static List<DynamicArtGapTransition> rowsCountedBackFromAdmission(
+            List<DynamicArtGapTransition> added,
+            int admissionMovieLogicalFrame,
+            int admissionUnannouncedRows) {
+        Map<Integer, Integer> nextIndexByRow = new HashMap<>();
+        List<DynamicArtGapTransition> rowed = new ArrayList<>(added.size());
+        for (DynamicArtGapTransition transition : added) {
+            DynamicArtGapTransition.GapEdge edge = transition.edge();
+            int row = edge.movieLogicalFrame() == admissionMovieLogicalFrame
+                    ? rowCountedBackFromAdmission(edge.movieLogicalFrame(),
+                            admissionUnannouncedRows,
+                            edge.unannouncedRowsAtEmit())
+                    : edge.movieLogicalFrame();
+            int index = nextIndexByRow.merge(row, 1, Integer::sum) - 1;
+            rowed.add(new DynamicArtGapTransition(
+                    new DynamicArtGapTransition.GapEdge(
+                            edge.edgeOrdinal(), edge.transferId(), edge.phase(),
+                            edge.owner(), edge.mappingFrame(), row, index,
+                            edge.unannouncedRowsAtEmit(), edge.requests()),
+                    transition.beforeOutstandingTransferIds(),
+                    transition.afterOutstandingTransferIds()));
+        }
+        return List.copyOf(rowed);
+    }
+
+    /**
+     * Row a stamp actually belongs to, given the unannounced-row counts at the
+     * stamp and at the gap's end. A stamp taken in the same row as the end has
+     * nothing to subtract.
+     */
+    public static int rowCountedBackFromAdmission(
+            int stampedRow,
+            int admissionUnannouncedRows,
+            int unannouncedRowsAtStamp) {
+        return Math.toIntExact(Math.subtractExact((long) stampedRow,
+                Math.max(0, admissionUnannouncedRows - unannouncedRowsAtStamp)));
     }
 
     private static DynamicArtTransfer.Descriptor toTraceDescriptor(

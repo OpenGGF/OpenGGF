@@ -760,6 +760,69 @@ test).
 
 ---
 
+## P19 -- AllocateObject ported as FindNextFreeObj changes same-pass dispatch
+
+**Symptom.** A newly created child runs one frame too early, often exposing a
+queue submission, state transition, or collision side effect on the parent's
+trigger frame instead of the following frame.
+
+**Root cause.** ROM `AllocateObject`/`FindFreeObj` scans from the lowest dynamic
+SST, while `FindNextFreeObj` scans forward from the running owner. Replacing an
+`AllocateObject` call with engine `spawnChild()` can place the child after the
+parent, where `Process_Sprites` reaches it in the same pass. The ROM may have
+chosen an already-visited lower slot and deferred the child's first dispatch.
+
+**What to check.** Match the allocation primitive literally:
+
+1. ROM `AllocateObject` or `FindFreeObj` uses `spawnFreeChild()`.
+2. ROM `FindNextFreeObj` uses `spawnChild()` (or `spawnChildAfterSlot()` when
+   the ROM temporarily changes the owner pointer before searching).
+3. Do not replace the distinction with an unconditional one-frame delay. Slot
+   occupancy decides whether a lowest-free child runs now or next pass.
+4. When timing matters, guard both the selected slot and whether it has already
+   been visited in the current object pass.
+
+**ROM citation.** Upright egg-capsule `sub_868F8` calls `AllocateObject` before
+publishing `Obj_LevelResults` (`docs/skdisasm/sonic3k.asm:181978-181990`).
+`Obj_LevelResultsInit` immediately queues three KosM archives on its first
+dispatch (`sonic3k.asm:62542-62575`). Engine equivalents are
+`spawnFreeChild()` and `spawnChild()` in `AbstractObjectInstance`.
+
+**Originating commit.** `fix(s3k): preserve results-owner lowest-free slot`.
+
+---
+
+## P20 -- ROM global publication relayed through an engine-only proxy owner
+
+**Symptom.** A control restore, camera change, or follow-up spawn happens one
+or more frames late even though the producer publishes its global flag on the
+correct frame. Each extra engine object in the notification chain commonly
+adds one object-pass delay.
+
+**Root cause.** ROM consumers read a shared RAM flag directly in their own SST
+dispatch. An engine port instead asks an intermediate object to observe the
+flag, latch it, and notify the real consumer. Slot ordering then turns a
+same-pass producer-to-consumer edge into one or more deferred callbacks.
+
+**What to check.** When a ROM object reads a global (`_unkFAA8`,
+`End_of_level_flag`, `Boss_flag`, event bytes, or equivalent):
+
+1. Let the owning engine object consume the semantic shared state directly.
+2. Preserve producer/consumer SST ordering; a lower-slot write must be visible
+   to a later-slot reader in the same object pass.
+3. Keep proxy callbacks only for lifecycle retirement, and make them immediate
+   and idempotent. Do not make gameplay timing depend on them.
+4. Do not replace the shared predicate with a zone/frame timer or trace value.
+
+**ROM citation.** CNZ end-boss `loc_6E724` reads `_unkFAA8` directly after
+`Obj_LevelResultsWait2` clears it, then restores both players in that dispatch
+(`docs/skdisasm/sonic3k.asm:146087-146103`). The egg capsule is not part of
+that publication edge.
+
+**Originating commit.** `fix(s3k): consume CNZ results publication in boss slot`.
+
+---
+
 ## P19 -- HurtCharacter spill may be a next-object-tick effect
 
 **Symptom.** A trace enters hurt on the correct frame but the engine spends
@@ -1654,3 +1717,32 @@ ROM addresses, and (c) S3K's larger animated-state and PLC system. When
 adding an entry that's specifically S3K-flavoured (e.g. zone-set
 mis-resolution, S&K-vs-S3 address confusion), tag it with a leading
 "**S3K-specific:**" marker so it doesn't get duplicated to the S2 file.
+
+## P48 -- Only the horizontal spring locks the player's grounded controls
+
+**Symptom.** After a vertical or diagonal launcher, the player's first grounded
+frames ignore held left/right. The trace shows both sides landing with the same
+`inertia`, then the ROM applying acceleration on the very next frame while the
+engine holds the landing value for several frames before catching up. The drift
+is small at first and compounds for the rest of the act.
+
+**Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
+spring family only the horizontal spring `sub_23190` (`loc_231BE`, `move.w #$F,$32(a1)`) writes it. The vertical/diagonal launch `sub_22F98` (sonic3k.asm:47700-47772)
+write no lock of any kind. An engine "springing"/"recently launched" marker used
+by objects for their own re-contact and carry tests must not also gate
+horizontal input -- doing so invents a control lock the ROM has nowhere. It is
+easy to miss because `move_lock` is decremented only in the grounded
+slope-repel step, so an invented timer that ticks every frame looks harmless in
+the air and then bites on the landing frame, several hundred rows from the
+object that set it.
+
+**Correct pattern.** Gate grounded input on the modelled `move_lock` timer
+alone. A spring that really does set `move_lock` should call the engine's
+move-lock setter; keep any launch marker free of input semantics.
+
+**ROM citation.** docs/skdisasm/sonic3k.asm:47907. Cross-game: S2 `loc_18B1C` at
+`docs/s2disasm/s2.asm:34031`, S3K `loc_231BE` at
+`docs/skdisasm/sonic3k.asm:47907`, S1 `.doBounce` at
+`docs/s1disasm/_incObj/41 Springs.asm:144`.
+
+**Originating commit.** `<pending: spring grounded control lock milestone>`.
