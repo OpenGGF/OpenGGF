@@ -1781,25 +1781,70 @@ phase.
 
 ### Decision: `DISABLED` is retained deliberately
 
-Nobody chose `DISABLED` for S2 — it is an inherited default. It is nonetheless **correct
-for what is currently compared**, and is retained as a decision rather than left as an
-accident:
+Nobody chose `DISABLED` for S2 — it is an inherited default. It is retained, but the
+justification below is **narrower than an earlier revision of this entry claimed**:
 
-- Engine-vs-recorded parity inverts four times across the seven level segments reached,
-  and those segments compare clean. The comparison set does not consume clock phase.
-- The only implemented parity-gated object, `Obj4B`, is ported faithfully but is a poor
-  detector (shooting flag plus a narrow x-window).
+- **Parity (mod 2) phase is invisible.** Engine-vs-recorded parity inverts four times
+  across the seven level segments reached, and those segments compare clean. The only
+  implemented parity-gated object, `Obj4B`, is ported faithfully but is a poor detector
+  (shooting flag plus a narrow x-window).
+- **Mod-8 phase is NOT invisible — the tripwire below has fired.** An earlier revision
+  said "the comparison set does not consume clock phase." That is **wrong**. The Egg
+  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:84935-84942`,
+  `move.b (Vint_runcount+3).w,d0 / andi.b #7,d0 / bne`) consumes mod-8 phase directly.
+  The engine's counter is 6 rows (−2 mod 8) early at segment entry, which fires one extra
+  random spawn, consumes an extra RNG draw pair, and shifts every later animal's position,
+  type and travel direction. That is the entire 287-error segment-11 divergence.
+
+**The fix is not a `SONIC_2` profile.** The mis-phase is *inherited at segment entry* from
+an under-replayed transition gap, with no drift within the segment. The engine is faithful
+everywhere it was checked — the deletion predicate already models the ROM BuildSprites box
+(commit `f9da6563e`), and per-animal lifetimes match the recording (engine 96–144 rows mean
+~119; ROM 95–144 mean ~119). What is wrong is how many movie rows the harness consumes
+crossing the gap; see the gap-accounting note below.
 
 Building a `SONIC_2` profile now would be speculative machinery validated against nothing
 — the shape of work the fitted-constant rule exists to prevent. S1's profile is
 legitimate because its alignment is derived from the ROM's own frame accounting.
 
-**Tripwire that reopens this.** Build a profile when, and only when, a *compared* field
-demonstrably keys on the clock and desyncs because of it — a parity- or modulo-gated
-object whose compared behaviour diverges. The two known drift consequences below are the
-candidates to watch. Note the PLC one may not be a clock problem at all: "a differently
-chosen animal survives last" sounds like object-lifetime or RNG-consumption, which would
-be addressable at the animal-selection level.
+**Tripwire status: FIRED, and it resolved to gap accounting, not to a clock model.** The
+end-of-act PLC divergence turned out to be exactly the modulo-gated case this tripwire was
+written for — but the owner is the harness, not the engine. The engine's object clock is
+correct *given* the rows it was advanced; it was advanced too few.
+
+### Gap accounting — the actual defect
+
+The harness under-replays uncompared transition gaps, and this is now the dominant
+remaining cause across multiple independent axes:
+
+| boundary | recorded rows | engine rows |
+|---|---|---|
+| EHZ1→EHZ2 act seam | 172 | **78** |
+| special-stage interior | 5,845–8,661 | **78** |
+
+At the act seam every transfer id, edge ordinal, owner, submission origin, request set,
+`gap_edge_index` and **both** ledger fingerprints match the recording — only
+`movie_logical_frame` diverges. The art pipeline is faithful and emits correct edges
+stamped from a short cursor.
+
+**Seam length is data-driven and cannot be a constant.** Recorded `level_advance` seam
+lengths range 158–200 rows, with within-zone spread ≤3 across acts but between-zone spread
+up to 42, correlating with the destination zone's PLC1 entry count at Spearman 0.886. The
+ROM predicts exactly that act-independence: `LevelArtPointers` gives both acts of a zone
+the same PLC1 (`s2.asm:89135-89151`) and `Level:` selects it by `Current_Zone`, not by act
+(`s2.asm:4783-4795`). A single global constant would be off by up to 42 rows.
+
+Note the engine's *decompression* is correct — a live probe shows `remain` decrementing by
+exactly 6 per frame, matching `move.w #6,(Plc_FramePatternsLeft).w` (`s2.asm:2203`), and it
+processes the ROM's own `PlrList_Ehz1`+`PlrList_Std2` payload in 52 rows. `Level_TtlCard`
+(`s2.asm:4914-4924`) exits only when the slide has finished **and** `tst.l (Plc_Buffer).w`
+is empty, so seam length is `max(slide, backlog)`; for EHZ the backlog is 52 and the slide
+dominates. The missing rows are in slide/leave choreography, not the queue.
+
+The rule-3-compliant fix is to advance uncompared gaps by the **movie's own frame count**
+with recorded inputs — which needs no derived constant. Feeding recorded controller inputs
+through the normal input path is replay, not trace hydration; copying positions or speeds
+out of the trace would be hydration and stays forbidden.
 
 ### The fingerprint is real; its explanation was not
 
