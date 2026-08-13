@@ -218,6 +218,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 spends its pre-level fade on the special-stage return (2026-08-13):** the
+  ROM runs `Pal_FadeToBlack` -- 22 counted V-blank passes -- inside `Level:` before the
+  title card object exists. Returning from a special stage the engine overlapped that
+  fade with the title card instead of preceding it, so the return spent 87 frames where
+  the ROM spends 109. Sonic 1 already declared the identical 22-frame span; Sonic 2's
+  level-init profile now declares it too.
+
 - **Sonic 2 special-stage bonus tally drains two countdowns (2026-08-13):** the ROM
   seeds a separate bonus countdown from each player's own ring word and decrements
   both, plus the emerald's 1000-point total, in the same pass -- so the tally lasts as

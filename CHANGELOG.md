@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sonic 2: spend `Pal_FadeToBlack`'s counted V-blanks before the returning level's
+  title card. `Level:` runs `ClearPLC` then `Pal_FadeToBlack` (s2.asm:4764-4765)
+  before it clears the screen, decompresses the card art and creates Obj34
+  (:4912); `Pal_FadeToBlack` is a `move.w #$15,d4` + `dbf` loop with one
+  `bsr.w WaitForVint` per pass (s2.asm:3370-3383), so it is 22 counted V-blank
+  rows in which the card does not yet exist. The engine ran its fade concurrently
+  with the card instead, so every special-stage return started the card 22 rows
+  early. `Sonic2LevelInitProfile.preLevelFadeOutFrames` now reports 22, the same
+  shape S1 already carries for `PaletteFadeOut`.
 - Sonic 2: drain the special-stage results tally the way `Obj6F_TallyScore` does.
   The stage exit copies each player's rings into its own bonus countdown --
   `move.w (Ring_count).w,(Bonus_Countdown_1).w` /
