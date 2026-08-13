@@ -284,6 +284,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Player physics is now byte-accurate across the whole emerald run
+  (2026-08-13):** the last player-physics divergence came from the EHZ2 boss
+  skipping the frame the ROM spends inside `Obj56_Init` (`s2.asm:63256-63325`,
+  routine advanced at `:63278` and `rts` at `:63325`). The engine applied init at
+  construction, so the boss ran one frame ahead, its spike landed a frame early,
+  and the hurt arrived on the wrong row. Three things this corrected about the
+  diagnosis it started from. The reported first mismatch — `x_speed` sign-flipped
+  at frame 1259 — was **not a reflection**: ROM and engine agreed exactly on `x`,
+  `y` and `g_speed` there, only the derived speed components disagreed, and they
+  reconverged two rows later. It was a `CalcSine` decomposition artefact of the
+  lead, and the substantive divergence began 470 rows later. The lead was **one**
+  frame, not the two that had been inferred — `engine[N] == ROM[N+1]` on every
+  compared row of the boss's slot. And the fix was the object-local half, **not**
+  the shared zone-event spawn cadence: because the engine already initialises at
+  allocation, also adopting the ROM's "an event-spawned object does not execute on
+  its allocation frame" ordering would have overshot by a frame. That cadence
+  change had been deliberately left unlanded as too broad to verify; it turns out
+  it would also have been wrong here. Across the entire eleven-segment run, **zero
+  rows now mismatch on x, y, x_speed, y_speed, g_speed, angle, air or rolling**,
+  down from 1,451. Segment 11 falls from 30,707 errors to 11,893 and its frontier
+  moves off player physics entirely, onto a PLC-queue field.
 - **The EHZ2 boss moved before it checked where it was, and the camera took the
   blame (2026-08-13):** the emerald run died in its last level, and the visible
   symptom was a camera 61–80px right of the recording — which turned out to be a
