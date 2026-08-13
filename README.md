@@ -218,6 +218,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 level-entry seam admission census (2026-08-13):** the run recorder now
+  records the main-loop admission outcome for every physical frame of a level-entry
+  transition, and replay spends those rows as lag rows under the existing
+  main-loop-admission contract. The seam's untimed synchronous load work -- Kosinski
+  and Nemesis decode, map construction, collision conversion -- is `Vint_Lag` in the
+  ROM's own terms, and the regenerated capture reproduces the hand-measured run
+  decomposition independently, including per-zone `LoadZoneTiles` costs derived from
+  the disassembly with no recording involved. Total art-edge error across the
+  complete-emerald level seam halves, with two edge pairs landing within one row.
+  Alongside it, two ROM-derived seam fixes: `Pal_FadeToBlack`'s 22 counted V-blanks
+  are no longer stepped through with the movie clock frozen, and `LoadZoneTiles` now
+  spends one V-blank per `$1000`-byte DMA chunk as the ROM does.
+
 - **Sonic 1 complete-run audio observer terminal freeze (2026-08-13):** the
   source-authentic deferred tail transfer and contemporaneous M68K A7 binding
   now carry the pinned 225,101-row movie through the configured terminal gate
