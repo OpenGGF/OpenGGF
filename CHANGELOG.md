@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sonic 2: spend `LoadZoneTiles`' per-chunk VBlanks at the level-entry seam. The
+  ROM uploads decompressed zone 8x8 art in `$1000`-byte DMA chunks and waits one
+  VBlank per chunk; the engine performed the upload instantly. The cost is now
+  `floor(size / $1000) + 1` frames computed from the engine's own decompressed art
+  size, so the per-zone counts are derived rather than tabulated, and overlay zones
+  correctly use the last decode's write pointer rather than the composed buffer's
+  extent.
 - Tooling: preserve Sonic 1 service identity when the driver retries a root
   DAC service beneath a typed asynchronous PCM child. The ABI-v3 observer now
   emits a parent-token retry marker for the exact `$71B4C` topology without

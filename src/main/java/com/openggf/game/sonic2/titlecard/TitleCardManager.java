@@ -252,6 +252,16 @@ public class TitleCardManager implements TitleCardProvider {
     private int frameCounter = 0;
 
     /**
+     * LoadZoneTiles DMA chunk size: the {@code $1000}-byte granule its
+     * {@code rol.w #4,d7 / andi.w #$F,d7} chunk-count extraction is defined against
+     * (docs/s2disasm/s2.asm:6485-6486).
+     */
+    private static final int ZONE_TILE_DMA_CHUNK_BYTES = 0x1000;
+
+    /** Remaining LoadZoneTiles {@code dbf} iterations, one VBlank each (s2.asm:6519). */
+    private int zoneTileUploadFramesLeft = 0;
+
+    /**
      * Flag to delay TEXT_EXIT -> COMPLETE transition by one frame.
      * This ensures elements are drawn at their final positions before
      * the state transitions, matching the original game's behavior where
@@ -327,6 +337,7 @@ public class TitleCardManager implements TitleCardProvider {
         this.state = TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.frameCounter = 0;
+        this.zoneTileUploadFramesLeft = 0;
         this.textExitTransitionPending = false;
 
         // Load base art if needed
@@ -572,6 +583,7 @@ public class TitleCardManager implements TitleCardProvider {
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
+            case ZONE_TILE_UPLOAD -> updateZoneTileUpload();
             case EXIT_LEFT_SWOOSH -> updateExitLeftSwoosh();
             case EXIT_BOTTOM_BAR -> updateExitBottomBar();
             case EXIT_BACKGROUND -> updateExitBackground();
@@ -632,19 +644,74 @@ public class TitleCardManager implements TitleCardProvider {
      */
     private void updateDisplay() {
         if (!plcQueueBusy()) {
-            state = TitleCardState.EXIT_LEFT_SWOOSH;
+            // Level: falls out of the card loop into bsr.w LoadZoneTiles
+            // (docs/s2disasm/s2.asm:4938) before any of the leave sequence.
+            state = TitleCardState.ZONE_TILE_UPLOAD;
             stateTimer = 0;
-            // This frame is the s2.asm:5003-5006 pass: InitPlayers has run and
-            // RunObjects dispatches the players once, but the leave flags at
-            // :5056-5058 are only armed after it, so no leave piece moves yet.
-            leavePass = LEAVE_PRELOOP_PASSES;
-            // Initialize left swoosh exit - from disassembly line 5054:
-            // move.w #$A,(TitleCard_Left+titlecard_location).w
-            if (leftSwooshElement != null) {
-                leftSwooshElement.startExit();
+            zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
+            LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
+                    + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
+            if (zoneTileUploadFramesLeft <= 0) {
+                enterLeftSwooshExit();
             }
-            LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
         }
+    }
+
+    /**
+     * VBlanks LoadZoneTiles spends uploading the zone's 8x8 art
+     * (docs/s2disasm/s2.asm:6471-6524).
+     *
+     * <p>The routine Kosinski-decodes the {@code LevelArtPointers} 8x8 stream into
+     * Chunk_Table and takes the resulting write pointer as the byte size
+     * ({@code move.w a1,d3}, :6483). It then extracts the DMA chunk count with
+     * {@code rol.w #4,d7 / andi.w #$F,d7} (:6485-6486) -- bits 15-12 of that size, which
+     * is {@code size / $1000} -- and runs a {@code dbf d7,-} loop (:6506-6523) whose body
+     * contains {@code bsr.w WaitForVint} (:6519). {@code dbf} executes the body
+     * {@code d7 + 1} times, so the cost is {@code size / $1000 + 1} VBlanks: one per
+     * {@code $1000}-byte DMA chunk plus one for the leading partial chunk.
+     *
+     * <p>Every term here is the ROM's. The size is the engine's own decompressed art
+     * length ({@link Sonic2Level#getZoneTileArtByteSize()}), decoded from the same stream
+     * at the same address, so the resulting per-zone frame counts are a consequence of the
+     * zone's art rather than a table.
+     */
+    private int zoneTileUploadVBlanks() {
+        if (!(GameServices.levelOrNull() instanceof com.openggf.level.LevelManager lm)) {
+            return 0;
+        }
+        if (!(lm.getCurrentLevel() instanceof com.openggf.game.sonic2.Sonic2Level level)) {
+            return 0;
+        }
+        int byteSize = level.getZoneTileArtByteSize();
+        if (byteSize <= 0) {
+            return 0;
+        }
+        return (byteSize / ZONE_TILE_DMA_CHUNK_BYTES) + 1;
+    }
+
+    /** LoadZoneTiles' zone-art upload hold, one VBlank per DMA chunk. */
+    private void updateZoneTileUpload() {
+        if (zoneTileUploadFramesLeft > 0) {
+            zoneTileUploadFramesLeft--;
+        }
+        if (zoneTileUploadFramesLeft <= 0) {
+            enterLeftSwooshExit();
+        }
+    }
+
+    private void enterLeftSwooshExit() {
+        state = TitleCardState.EXIT_LEFT_SWOOSH;
+        stateTimer = 0;
+        // This frame is the s2.asm:5003-5006 pass: InitPlayers has run and
+        // RunObjects dispatches the players once, but the leave flags at
+        // :5056-5058 are only armed after it, so no leave piece moves yet.
+        leavePass = LEAVE_PRELOOP_PASSES;
+        // Initialize left swoosh exit - from disassembly line 5054:
+        // move.w #$A,(TitleCard_Left+titlecard_location).w
+        if (leftSwooshElement != null) {
+            leftSwooshElement.startExit();
+        }
+        LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
     }
 
     /** Models {@code tst.l (Plc_Buffer).w} (docs/s2disasm/s2.asm:4923). */
