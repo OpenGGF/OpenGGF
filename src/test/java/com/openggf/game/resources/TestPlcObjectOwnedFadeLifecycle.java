@@ -22,19 +22,32 @@ class TestPlcObjectOwnedFadeLifecycle {
     void sonic1ResultsCompletionStartsRevealOnTheNextToken() throws Exception {
         Sonic1ResultsScreenObjectInstance results =
                 new Sonic1ResultsScreenObjectInstance(30, 0, 1);
-        assertResultsLifecycle(results, "triggerFadeToBlack");
+        assertResultsLifecycle(results, "triggerFadeToBlack", true);
     }
 
+    /**
+     * Sonic 2 does NOT reveal with a fade here, so the token after the level
+     * transition belongs to the incoming title card rather than to a fade.
+     *
+     * <p>{@code Level:} runs {@code ClearPLC} + {@code Pal_FadeToBlack}
+     * (docs/s2disasm/s2.asm:4764-4765) and then writes the level palette
+     * straight to the active palette with {@code bsr.w PalLoad_Now} (:4881);
+     * there is no {@code Pal_FadeFromBlack} anywhere between {@code Level:}
+     * (:4757) and {@code Level_MainLoop} (:5087). The assertion is inverted
+     * rather than dropped: the coordinator must claim no {@code PALETTE_FADE}
+     * on the following token at all.
+     */
     @Test
-    void sonic2ResultsCompletionStartsRevealOnTheNextToken() throws Exception {
+    void sonic2ResultsCompletionRevealsWithoutAFadeToken() throws Exception {
         ResultsScreenObjectInstance results =
                 new ResultsScreenObjectInstance(30, 0, 1, false);
-        assertResultsLifecycle(results, "triggerFadeToBlack");
+        assertResultsLifecycle(results, "triggerFadeToBlack", false);
     }
 
     private static void assertResultsLifecycle(
             com.openggf.level.objects.AbstractObjectInstance results,
-            String triggerMethod) throws Exception {
+            String triggerMethod,
+            boolean revealFadeFollows) throws Exception {
         List<String> events = new ArrayList<>();
         AtomicInteger transitions = new AtomicInteger();
         PlcFrameLifecycleCoordinator coordinator =
@@ -76,8 +89,13 @@ class TestPlcObjectOwnedFadeLifecycle {
                 events.get(completionEventCount - 1));
 
         coordinator.runLogicalIteration(fade::update, frame -> null);
-        assertEquals("service:PALETTE_FADE",
-                events.get(completionEventCount));
+        if (revealFadeFollows) {
+            assertEquals("service:PALETTE_FADE",
+                    events.get(completionEventCount));
+        } else {
+            assertEquals(completionEventCount, events.size(),
+                    "no fade owns the token after the S2 level transition");
+        }
     }
 
     private static PlcLifecycleService recording(List<String> events) {

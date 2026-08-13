@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Sonic 2: do not fade back in when an act ends. `Level:` runs `ClearPLC` +
+  `Pal_FadeToBlack` (s2.asm:4764-4765) and then writes the level palette straight
+  to the active palette with `PalLoad_Now` (:4881); there is no
+  `Pal_FadeFromBlack` between `Level:` (:4757) and `Level_MainLoop` (:5087), so
+  the title card appears at full intensity on the first V-blank of
+  `Level_TtlCard`. The engine's reveal fade held `PALETTE_FADE` for 21 rows and
+  pushed the first title-card-owned V-blank -- and the `ProcessDMAQueue` that
+  retires the outgoing act's last player DPLC pair -- that many rows late.
 - Sonic 2: spend `LoadZoneTiles`' per-chunk VBlanks at the level-entry seam. The
   ROM uploads decompressed zone 8x8 art in `$1000`-byte DMA chunks and waits one
   VBlank per chunk; the engine performed the upload instantly. The cost is now
