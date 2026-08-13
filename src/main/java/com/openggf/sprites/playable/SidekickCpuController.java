@@ -1189,24 +1189,27 @@ public class SidekickCpuController {
 
         state = State.NORMAL;
 
-        if (!establishedFollowerEntry && freshS3kSpawnUsesInitOnlyFrame()) {
-            // S3K SpawnLevelMainSprites creates a fresh Obj_Tails with
-            // routine=0; Tails_Init advances the routine and returns before
-            // TailsCPU_Normal runs on the following object tick
-            // (sonic3k.asm:8359-8369,26101-26156). Established mid-run
-            // followers are already past routine 0 and continue immediately.
+        if (!establishedFollowerEntry) {
+            // A fresh CPU-sidekick spawn enters the steering dispatcher at
+            // routine 0, and in every ROM that has a CPU sidekick the routine-0
+            // handler sets up and RETURNS rather than falling through to the
+            // normal steering routine, so the init pass never steers:
+            //   S2  TailsCPU_Init ends in rts (s2disasm/s2.asm:39093-39103); the
+            //       dispatcher jumps via TailsCPU_States (:39070-39087), so
+            //       TailsCPU_Normal is only reached on the NEXT pass.
+            //   S3K routine 0 (loc_13A10, reached via Tails_CPU_Control_Index,
+            //       sonic3k.asm:26363-26369) ends every path in rts
+            //       (:26397, :26415, :26424, :26449, :26468-26471).
+            //   S1  has no CPU sidekick at all, so this path is unreachable
+            //       there and no per-game rule is needed.
+            // Established mid-run followers are already past routine 0 (S2/S3K
+            // Tails_CPU_routine == 6): the ROM dispatcher sends them straight to
+            // the normal steering routine on the very same pass, so they
+            // continue immediately.
             return;
         }
 
-        // S2 trace/bootstrap paths have historically compared after Obj02/Tails
-        // init has already completed, while established S3K followers are not a
-        // fresh routine-0 spawn. Continue those paths into normal CPU follow.
         updateNormal();
-    }
-
-    private boolean freshS3kSpawnUsesInitOnlyFrame() {
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        return rules != null && rules.sidekickRespawnEntersCatchUpFlight();
     }
 
     private void initializeLevelStartSidekickPlacement() {
