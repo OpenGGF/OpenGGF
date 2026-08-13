@@ -284,6 +284,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The sidekick stayed clamped to a dead boss arena (2026-08-13):**
+  `LevEvents_EHZ2_Routine4` is a terminal routine that does nothing until the boss
+  dies and then re-copies `Camera_Max_X_pos` into `Tails_Max_X_pos` and
+  `Camera_X_pos` into `Tails_Min_X_pos` on every subsequent frame. The engine
+  stopped updating those bounds at defeat, so the sidekick remained clamped against
+  the frozen arena maximum while the camera moved on — measured precisely, the
+  right-boundary clamp zeroed its x-speed at `0x2940 + screen_width − 24 + $40`,
+  exactly the value the comparator reported. Segment 11 of the emerald run falls
+  from 11,849 errors to 4,215. Recorded because the headline number misleads on its
+  own: the chain's `[segment-physics]` axis disappears from the failure list not
+  because those errors are resolved but because the walk now aborts earlier, before
+  the segment report is written. They are unasserted, not fixed — the same
+  computed-but-unreached shape this work has already found four times — and
+  restoring that comparison is the next target rather than a completed one.
 - **A boss defeat that ran a frame early, a camera bound it was masking, and a
   contract built on a distinction the ROM does not make (2026-08-13):** three
   connected findings. `Obj56` dispatches read-once-at-head (`s2.asm:63420-63424`)
