@@ -75149,3 +75149,70 @@ run, Maven runs serialised.
   `TestPlcVBlankOrdering.ordinaryLevelServicesPlcBeforeEventsAndObjects` fails
   identically on both trees when run in isolation (`objects` missing from the
   service order), so it is pre-existing at this base and unrelated.
+
+## 2026-08-14 - S3K mid-route segment classes are structurally unanswerable from a cold start
+
+Verdict on the largest cluster on the red-class map (~25 classes failing at frame 0 with
+unseeded segment-entry state): **this is fixture design, not an engine defect.** No code
+changed; no legal contained engine fix exists.
+
+**The decisive contrast pair** (MEASURED at `741e6b299`, each class run alone with the
+report directory cleared):
+
+| class | bk2 offset | first error |
+|---|---|---|
+| `TestS3kSonicTailsAizSegmentTraceReplay` | 577 (**route start**) | frame 2247 `camera_x`, 3 errors over 2290 rows |
+| `TestS3kSonicTailsAiz2SegmentTraceReplay` | 8817 (resumed after special stage 0) | **frame 0** `tails_y` 0x04C4 vs 0x0000, 1034 errors |
+
+Same zone, same route, same harness. The only difference is whether the slice begins at the
+route start. Further frame-0 witnesses: Hpz2 `rings` 150 vs 0 (1207 errors), Icz2 `rings` 156
+vs 0 (965), Soz2 `rings` 201 vs 0 (5271), Mhz2 `tails_y_speed`, Soz `tails_y_speed`.
+
+**Mechanism.** `run_manifest.json` defines every segment as a contiguous slice of one BK2 at a
+nonzero `bk2_frame_offset`; only `aiz` (577) is the route start. Each segment class is a
+~6-line `AbstractTraceReplayTest` subclass that boots a fresh headless fixture, performs a
+fresh level load of that zone/act, and replays the slice's inputs. The chain enters the same
+segments through `AbstractRunChainTest.assertChainReplay`, which constructs exactly **one**
+`GameLoop` (`:994`) and drives every segment through it in order, asserting boundary carry-over
+(ring/emerald `:3163-3181`, stage-exit `:2893`). **The chain earns the state; the standalone
+class starts cold.** That difference alone accounts for every frame-0 failure, and accuses
+nothing in the engine.
+
+Zone-entry segments partly escape it because the ROM does a fresh level load there — `icz`
+fails first at frame 470, `mhz` at 75. But `soz` still fails at frame 0, because the sidekick
+carries `y_speed` across the FBZ→SOZ transition: **zone entry does not imply seed-matched**, and
+any classification must measure frame-0 field agreement rather than infer it from segment kind
+or name.
+
+**No legal lever exists.** Seeding rings/position/camera/sidekick from the row is rule-4
+hydration — and is deliberately, guard-enforced off:
+`TraceReplayBootstrap.shouldUseTraceStartBootstrapForTraceReplay` /
+`shouldSeedFrameZeroForTraceReplay` / `shouldSeedReplayStartStateForTraceReplay` all hard-return
+`false` (`:447-458`), with `TestTraceReplayStartPositionPolicy:494` asserting the literal
+`return false;` body by source regex. A constant start value is a fitted constant; starting the
+comparison at frame 1 weakens an assertion; deleting or `@Disable`-ing the classes deletes
+assertions.
+
+**These classes are not badly posed — they are deliberately red.** All 63 carry the javadoc
+*"New frontier harness: expected RED. It was added deliberately, to say WHERE this third S3K
+route diverges, not as a regression."* They did exactly that job: the red-class cluster map
+exists because they exist. Nothing here should be deleted or retired on the strength of this
+entry.
+
+**What is genuinely improvable**, for the fixture owner rather than a trace round: a marker
+whose first error is always frame-0 bootstrap reports the same non-information for every
+mid-route segment. Two candidate improvements, neither applied:
+
+1. **Self-classifying markers.** At frame 0 a marker either matches its seed — in which case
+   its frontier means something — or does not, in which case its truthful output is
+   "cold-start incompatible; mismatched seed fields are X, Y, Z" and *no frontier claim*. This
+   falls out of the comparison the class already performs: no taxonomy, no zone or route
+   predicate. Note a "first post-bootstrap divergence" figure would be **invalid** — computed
+   downstream of a wrong seed it has the units of a frontier and the information content of
+   noise, and would read as a finding.
+2. **Chain per-segment verdicts.** `AbstractRunChainTest.assertChainReplayThroughSegmentRow`
+   (`:908`) already provides a prefix pin that stops the chain on an interior segment's row, so
+   the machinery for "reach the segment by playing there" partly exists. One execution, many
+   verdicts: attribution preserved, no cold-start fiction, wall-clock unchanged from today's
+   chain cost. The trade is isolation — an early divergence contaminates later segments — which
+   the chains already accept.
