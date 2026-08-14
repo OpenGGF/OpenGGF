@@ -1463,12 +1463,18 @@ PowerShell `Start-Process` argument array:
 ```bat
 set OGGF_START=16300
 set OGGF_STOP=16320
-set OGGF_OUT=C:\tmp\htz2_diag.txt
+for /f "usebackq delims=" %%I in (`python tools\agent-scratch new htz2-diag`) do set "OGGF_TASK_DIR=%%I"
+set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 tools\bizhawk\run_bizhawk_lua.bat ^
   tools\bizhawk\diag_s2_htz2_obj30.lua ^
   src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
   s2.gen
 ```
+
+`tools/agent-scratch new` prints the disk-backed managed root followed by the absolute,
+fresh task directory; the `for /f` assignment retains that final task-directory line. Do not
+replace it with `C:\tmp`, `%TEMP%`, or `%TMP%`: those paths are only suitable for the
+launcher's short-lived wrapper/config files, never durable diagnostic output.
 
 The launcher resolves all three input paths to absolute paths, writes a per-launch
 temporary no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps

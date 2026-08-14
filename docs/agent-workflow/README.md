@@ -105,10 +105,12 @@ sessions after the relevant client restarts.
 
 ### `/tmp` output audit
 
-The scoped audit command is:
+The scoped audit must include POSIX and Windows temporary-root forms, ignored files, and
+the ignored scratch-location rules:
 
 ```bash
-rg -n '/tmp' .agents/skills .claude/skills docs/agent-workflow tools
+rg --no-ignore -n -i '/tmp|c:\\tmp|%temp%|%tmp%' .agents/skills .claude/skills docs/agent-workflow tools .gitignore
+rg -n -i 'trace_output|tmp' .gitignore
 ```
 
 Classify each match before accepting it. Agent-workflow and headless-tool documentation are
@@ -118,9 +120,10 @@ intentionally reject or exercise `/tmp`/tmpfs roots; and the BizHawk headless te
 recipes use a private `/tmp` only as an OS-level sandbox mount. The `.gitignore`
 `/tmp_*.asm` entry is an ignored assembler-artifact glob, not an output destination. The
 ignored `tools/bizhawk/trace_output*` location is a legacy Lua-recorder fallback, also not
-a `/tmp` destination; new regeneration and probe recipes use a helper-created task
-directory (or an explicit managed output environment variable). No copyable durable-output
-command may target `/tmp`.
+a `/tmp` destination. `%TEMP%`/`%TMP%` matches are acceptable only for launcher-created,
+short-lived wrapper/config files. New regeneration and probe recipes use a helper-created
+task directory (or an explicit managed output environment variable); no copyable
+durable-output command may target `/tmp`, `C:\tmp`, `%TEMP%`, or `%TMP%`.
 
 ## Start here
 

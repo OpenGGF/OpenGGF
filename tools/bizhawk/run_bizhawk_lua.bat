@@ -7,7 +7,8 @@ REM
 REM Example:
 REM   set OGGF_START=16300
 REM   set OGGF_STOP=16320
-REM   set OGGF_OUT=C:\tmp\htz2_diag.txt
+REM   for /f "usebackq delims=" %%I in (`python tools\agent-scratch new htz2-diag`) do set "OGGF_TASK_DIR=%%I"
+REM   set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 REM   tools\bizhawk\run_bizhawk_lua.bat ^
 REM     tools\bizhawk\diag_s2_htz2_obj30.lua ^
 REM     src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
