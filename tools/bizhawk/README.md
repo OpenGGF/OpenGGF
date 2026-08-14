@@ -1464,7 +1464,20 @@ PowerShell `Start-Process` argument array:
 set OGGF_START=16300
 set OGGF_STOP=16320
 set "OGGF_WSL_CHECKOUT=/home/<user>/code/projects/OpenGGF"
+set "OGGF_TASK_DIR="
 for /f "usebackq delims=" %%I in (`wsl.exe bash -lc "cd ^"%OGGF_WSL_CHECKOUT%^" ^&^& task_dir=$^(tools/agent-scratch new htz2-diag ^| tail -n 1^) ^&^& wslpath -w ^"$task_dir^""`) do set "OGGF_TASK_DIR=%%I"
+if not defined OGGF_TASK_DIR (
+  >&2 echo ERROR: WSL did not provision OGGF_TASK_DIR
+  exit /b 2
+)
+if /i not "%OGGF_TASK_DIR:~1,2%"==":\" (
+  >&2 echo ERROR: OGGF_TASK_DIR is not a Windows drive path
+  exit /b 2
+)
+if not exist "%OGGF_TASK_DIR%\NUL" (
+  >&2 echo ERROR: OGGF_TASK_DIR is not an accessible directory
+  exit /b 2
+)
 set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 tools\bizhawk\run_bizhawk_lua.bat ^
   tools\bizhawk\diag_s2_htz2_obj30.lua ^
@@ -1476,7 +1489,9 @@ tools\bizhawk\run_bizhawk_lua.bat ^
 through WSL rather than invoking the helper with Windows Python. Set `OGGF_WSL_CHECKOUT` to
 the WSL path of this checkout. The WSL command changes into that checkout, captures the
 final task-directory line printed by `tools/agent-scratch new`, and uses `wslpath -w` before
-the `for /f` assignment sets the Windows-form `OGGF_TASK_DIR`.
+the `for /f` assignment sets the Windows-form `OGGF_TASK_DIR`. The recipe clears any stale
+value and aborts before setting `OGGF_OUT` if the handoff produced no value, a non-drive
+path, or a path that is not an accessible directory.
 
 The WSL `OGGF_SCRATCH_ROOT` must already be configured as a disk-backed location shared with
 and accessible from Windows (typically under `/mnt/<drive>/...`); do not use a WSL-only
