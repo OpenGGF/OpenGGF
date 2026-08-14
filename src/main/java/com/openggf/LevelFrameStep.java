@@ -124,15 +124,28 @@ public final class LevelFrameStep {
         }
         // A V-blank-only row has no body of its own, so this phase IS the row.
         // claim() can still lose the token to an active native blocking fade
-        // that pre-claimed it, which silently discards this row's publication
-        // semantics -- above all a LAG row's deferral of its dynamic-art edges
-        // to the following boundary. Making that fatal here was measured on the
-        // full trace profile and errors 8 previously green S3K classes on
-        // genuine lag-during-fade rows, so the disagreement is recorded in
-        // PlcLifecycleFrame#claim's contract rather than enforced here; closing
-        // it is a separate frontier. The one case that governs publication
-        // today -- a Vint_CtrlDMA V-blank -- is resolved structurally in
-        // PlcFrameLifecycleCoordinator#latchBeforeFadeUpdate.
+        // that pre-claimed it. Making that fatal here was measured on the full
+        // trace profile and errors 8 previously green S3K classes, all with the
+        // same owner=PALETTE_FADE shape.
+        //
+        // For S3K that loss is ROM-correct, not an open defect. Both blocking
+        // fades rewrite V_int_routine = $12 on every loop iteration before
+        // Wait_VSync (Pal_FadeToBlack sonic3k.asm:5045-5050, Pal_FadeFromBlack
+        // :4906-4911), so a V-blank inside an S3K fade always dispatches VInt_12
+        // (:849-852) and can never reach VInt_0_Main -- the lag path, taken only
+        // when V_int_routine is 0 (:519-520) and the sole bump of Lag_frame_count
+        // (:570). VInt_12 does the frame's art work (bra.w Process_Nem_Queue,
+        // :852) while deliberately omitting Set_Kos_Bookmark, which VInt_14
+        // (:672) and VInt_16 (:888) do perform: the fade genuinely owns the
+        // frame and leaves mode-specific PLC work paused. The LAG label the
+        // replay closure passes here is the structural "this row has no gameplay
+        // body" classification, not a claim that the ROM ran its lag handler --
+        // the two predicates coincide nearly everywhere and diverge exactly
+        // inside a blocking fade.
+        //
+        // The S2 Vint_CtrlDMA case is the genuinely different one: a real lag
+        // V-blank that still reaches ProcessDMAQueue. It is resolved
+        // structurally in PlcFrameLifecycleCoordinator#latchBeforeFadeUpdate.
         frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
