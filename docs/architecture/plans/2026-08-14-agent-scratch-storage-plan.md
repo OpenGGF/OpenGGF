@@ -54,12 +54,12 @@ hook/test workflow.
 - `tools/agent-scratch`
 - `tools/test_agent_scratch.py`
 
-- [ ] Add an executable Python helper with a `main(argv)` dispatcher and these
+- [x] Add an executable Python helper with a `main(argv)` dispatcher and these
   public operations: `new LABEL`, `path KIND`, `status`,
   `keep PATH --until YYYY-MM-DD`, `prune [--dry-run]`, `install`, and
   `verify`. Keep the script runnable from any working directory by resolving
   its repository root independently of the current directory.
-- [ ] Implement root/layout validation and creation: resolve the environment
+- [x] Implement root/layout validation and creation: resolve the environment
   value or `$HOME/scratch/agent-tmp`, reject relative/control-character/
   `/tmp`/unsafe-symlink roots, check owner/mode and filesystem type by parsing
   Linux `/proc/self/mountinfo` (longest decoded mount-point match; reject
@@ -67,29 +67,29 @@ hook/test workflow.
   `quarantine` as `0700`, and expose the selected absolute root in command
   output. Include a parser fixture for accepted ext4/btrfs and rejected
   tmpfs/ramfs mounts.
-- [ ] Implement safe directory primitives using `os.open(..., O_DIRECTORY |
+- [x] Implement safe directory primitives using `os.open(..., O_DIRECTORY |
   O_NOFOLLOW)`, `dir_fd` operations, `os.scandir(fd)`, and `lstat`-style
   metadata. Do not use path-based recursive deletion or follow directory
   symlinks. Put the shared `fcntl.flock` lock under the validated root and
   hold it while selecting/creating/removing entries.
-- [ ] Implement `new` label validation (single bounded component, no slash,
+- [x] Implement `new` label validation (single bounded component, no slash,
   traversal, or control characters), unique UTC timestamp/PID/random naming,
   and creation under `tasks` with mode `0700`.
-- [ ] Implement `path` for the named `claude`, `codex`, `codex-tmp`,
+- [x] Implement `path` for the named `claude`, `codex`, `codex-tmp`,
   `tasks`, and `quarantine` children, rejecting unknown kinds and creating
   only the documented child when needed.
-- [ ] Implement `keep` with an exact marker format, ISO-date validation, no
+- [x] Implement `keep` with an exact marker format, ISO-date validation, no
   expired/far-future (over 30 days) dates, descriptor-relative marker writes,
   and a clear error for paths outside the managed root or non-directories.
-- [ ] Implement `status` with free bytes, free inodes, per-area byte counts,
+- [x] Implement `status` with free bytes, free inodes, per-area byte counts,
   active-process protection state, keep-marker count, nearest expiry, and any
   last failed cleanup-unit error available from `systemctl --user`.
-- [ ] Implement `prune` age policies (tasks 7 days, quarantine 14 days,
+- [x] Implement `prune` age policies (tasks 7 days, quarantine 14 days,
   Codex 30 days, Claude 30 days), dry-run reporting, unexpired keep-marker
   protection, live Claude/Codex process protection, malformed/far-future marker
   rejection, and safe descriptor-relative recursive removal. The command must
   never scan or delete arbitrary `/tmp` entries.
-- [ ] Implement `install` as an idempotent host setup: resolve/validate the
+- [x] Implement `install` as an idempotent host setup: resolve/validate the
   root, atomically copy the source helper to the stable user-wide
   `$HOME/.local/bin/agent-scratch`, update `~/.claude/settings.json` env
   values (`AGENT_SCRATCH_ROOT` and `CLAUDE_CODE_TMPDIR`) while preserving its
@@ -109,7 +109,7 @@ hook/test workflow.
   without modifying the file unless they are explicitly supported. Test
   comments, existing roots, unrelated keys, dotted/inline unsupported forms,
   and conflicting managed values.
-- [ ] Have `install` materialize an absolute `EnvironmentFile` at
+- [x] Have `install` materialize an absolute `EnvironmentFile` at
   `~/.config/agent-scratch/environment` (`0600`), generate the user files
   `~/.config/systemd/user/agent-scratch-prune.service` and
   `~/.config/systemd/user/agent-scratch-prune.timer`, and quote the installed
@@ -123,14 +123,14 @@ hook/test workflow.
   the exact activation command rather than claiming cleanup is active. Reject
   unexpected non-regular config/unit/environment targets before replacing them,
   and write all generated files atomically.
-- [ ] Add `verify` checks for config parsing, absolute child temp variables,
+- [x] Add `verify` checks for config parsing, absolute child temp variables,
   root confinement, systemd unit syntax, and a fresh sandboxed Claude command.
   If Claude is installed and the command runs, return nonzero when observed
   `$TMPDIR` escapes the configured root; if it is unavailable or cannot run
   because authentication/session state is missing, report `unverified` and do
   not claim the Claude portion passed. Explicitly report that Codex
   `danger-full-access` cannot be constrained by workspace sandbox settings.
-- [ ] Add a standard-library test script that creates a unique
+- [x] Add a standard-library test script that creates a unique
   `TemporaryDirectory(dir=$HOME/.cache/agent-scratch-tests)` (creating
   that `0700` parent first, asserting the mount is accepted, and removing the
   child in `finally`; never use `tempfile`'s `/tmp` default) and covers syntax,
@@ -163,25 +163,25 @@ agent-scratch status
 - `docs/agent-workflow/README.md`
 - `docs/agent-workflow/runbooks/runbook-multi-agent-trace-orchestration.md`
 
-- [ ] Add the machine-neutral scratch policy to both agent instruction files:
+- [x] Add the machine-neutral scratch policy to both agent instruction files:
   use `tools/agent-scratch install` only as source bootstrap/update and the
   installed `agent-scratch new/path` for routine work, keep output under
   `$AGENT_SCRATCH_ROOT/tasks`, reserve `/tmp` for short-lived OS files, run
   `status` before large captures, and use bounded `keep` or a normal archive
   for material that outlives retention. Keep the files byte-identical.
-- [ ] Replace every live trace regeneration/probe output example that points
+- [x] Replace every live trace regeneration/probe output example that points
   at `/tmp` with the helper-managed task path, including shell snippets and
   Windows guidance. Keep explanatory warnings about why `/tmp` is unsafe, but
   do not leave a copyable command that creates durable output there.
-- [ ] Replace the multi-agent benchmark runbook's `mktemp -d /tmp/...` retention
+- [x] Replace the multi-agent benchmark runbook's `mktemp -d /tmp/...` retention
   directory with a helper-created task directory and document the required
   `AGENT_SCRATCH_ROOT` preflight.
-- [ ] Add an Agent Workflow README section documenting source bootstrap
+- [x] Add an Agent Workflow README section documenting source bootstrap
   (`tools/agent-scratch install`), the installed `agent-scratch` verification
   command, daily cleanup semantics, active-process/keep protections, legacy
   unit retirement, and the fact that existing sessions are audited rather than
   migrated in place.
-- [ ] Run a repository-wide audit of `.agents/skills`, `.claude/skills`,
+- [x] Run a repository-wide audit of `.agents/skills`, `.claude/skills`,
   runbooks, ignored scratch locations, and executable tooling; classify every
   remaining `/tmp` reference as policy text, OS-level short-lived use, or an
   intentional test/guard rather than an output destination.
