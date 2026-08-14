@@ -51,29 +51,42 @@ $OGGF_SCRATCH_ROOT/
 
 The root and its children are mode `0700`. Every task directory is unique and
 named with a human label plus a timestamp/random suffix. The helper refuses to
-operate on a path outside the resolved root when pruning or quarantining.
+operate on a path outside the resolved root when pruning. Moving an explicitly
+audited source into `quarantine` remains a separate, operator-approved move;
+the helper never scans arbitrary `/tmp` paths.
 
 ### Claude
 
-Set the user-level Claude Code `env.CLAUDE_CODE_TMPDIR` value to the resolved
-`$OGGF_SCRATCH_ROOT/claude` path. Claude Code creates its own UID-specific
-child below that path. Existing sessions are not migrated in place; they are
-left alone until their normal retention window expires, and new sessions use
-the disk-backed root after Claude is restarted.
+Set the user-level Claude Code `env.OGGF_SCRATCH_ROOT` value to the resolved
+absolute root and `env.CLAUDE_CODE_TMPDIR` to its `claude` child. Claude Code
+creates its own UID-specific child below that path. The installer uses the
+deliberately short default root and requires the actual `$TMPDIR` observed by
+a sandboxed Claude Bash command to be inside that root; if Claude selects the
+system-default fallback, setup fails and asks for a shorter root. Existing
+sessions are not migrated in place; they are left for explicit
+audit/quarantine, with no promise that they will expire automatically, and
+new sessions use the disk-backed root after Claude is restarted.
 
 ### Codex
 
-Set the user-level Codex shell environment policy for `TMPDIR`, `TMP`, and
-`TEMP` to `$OGGF_SCRATCH_ROOT/codex/tmp`, add the Codex scratch directory as a
-writable root, and set `sandbox_workspace_write.exclude_slash_tmp = true`.
+Resolve the root once during setup and write the resulting absolute path to
+the user-level Codex shell environment policy for `OGGF_SCRATCH_ROOT`,
+`TMPDIR`, `TMP`, and `TEMP`, using `$OGGF_SCRATCH_ROOT/codex/tmp`. Add the
+resolved Codex scratch directory as a writable root and set
+`sandbox_workspace_write.exclude_slash_tmp = true`.
 The `$TMPDIR` exclusion remains disabled so commands can use the configured
-disk-backed path. This is scoped to the local Codex configuration, not checked
-into the repository.
+disk-backed path. No unresolved `$OGGF_SCRATCH_ROOT` reference is written into
+TOML: Codex does not interpolate shell variables in these literal values.
 
-The setting prevents ordinary agent shell commands from silently recreating
-large task trees in `/tmp`. Small host-created sandbox bookkeeping entries may
-still briefly appear there; those are not task storage and are expected to be
-ephemeral.
+These sandbox settings constrain Codex commands only when the session uses
+`sandbox_mode = "workspace-write"`. They cannot prevent `/tmp` writes in
+`danger-full-access`/unrestricted sessions, so the repository rule and helper
+remain the cross-mode control. Verification covers both modes explicitly.
+
+In workspace-write sessions this prevents ordinary agent shell commands from
+silently recreating large task trees in `/tmp`. Small host-created sandbox
+bookkeeping entries may still briefly appear there; those are not task storage
+and are expected to be ephemeral.
 
 ### Repository workflow
 
@@ -83,8 +96,15 @@ Add a small `tools/agent-scratch` helper with these operations:
   `$OGGF_SCRATCH_ROOT/openggf/tasks`;
 - `path KIND`: print a well-known child path for scripts;
 - `status`: show filesystem free space and per-child usage;
+- `keep PATH --until YYYY-MM-DD`: mark a task directory as retained until a
+  bounded expiry (at most 30 days from the command date);
 - `prune [--dry-run]`: remove only old entries beneath the managed root,
-  honoring the retention policy below.
+  honoring the retention policy below and skipping unexpired keep markers.
+
+Indefinite preservation is intentionally not supported inside the managed
+root: material needed longer than the keep maximum must be moved to a normal
+disk-backed archive outside this root. `status` reports kept bytes and the
+nearest marker expiry.
 
 The root `AGENTS.md` and `CLAUDE.md` will state that `/tmp` is for short-lived
 OS-level files only. Agent tasks must use the helper or
@@ -93,9 +113,24 @@ or probe output to `/tmp` will be changed to use the same environment variable.
 
 ### Retention and cleanup
 
-Install a user-level `systemd-tmpfiles` policy and daily cleanup timer for the
-managed root. The policy is age-based and only applies below
-`$OGGF_SCRATCH_ROOT`:
+Install a dedicated user-level systemd service and daily timer that invokes
+the helper's `prune` operation. Setup resolves `OGGF_SCRATCH_ROOT` once and
+writes that absolute value to a user `EnvironmentFile`; the service therefore
+does not depend on shell expansion. Setup also materializes the absolute path
+to the canonical checkout's executable `tools/agent-scratch` in the unit,
+quotes it using systemd command-line escaping, runs `systemd-analyze verify`,
+validates that it remains executable, and documents re-running setup if the
+checkout moves. The service acquires the helper lock, skips the `claude`
+subtree while a Claude process is running, skips the
+`codex` subtree while a Codex process is running, and skips any task directory
+containing an unexpired keep marker. `status` surfaces a failed cleanup unit
+and its last error. The service is enabled and its next trigger is verified
+during installation. The timer uses `Persistent=true`, so a missed run is
+performed when the user manager starts again; cleanup otherwise requires the
+user manager to be active. Enabling `loginctl enable-linger` is an explicit,
+optional choice for cleanup while logged out, not a setup default.
+
+The helper applies these age limits only below the managed root:
 
 | Area | Retention | Rationale |
 | --- | ---: | --- |
@@ -105,9 +140,13 @@ managed root. The policy is age-based and only applies below
 | `claude` | 30 days | Avoids deleting resumable sessions too aggressively. |
 
 Cleanup never scans or deletes arbitrary `/tmp` entries. Before the first
-cleanup, the helper reports candidates in a dry-run mode. An active task is
-protected by recent modification time; the conservative retention windows are
-deliberately much longer than a normal command.
+cleanup, the helper reports candidates in a dry-run mode. A task is protected
+by an unexpired keep marker, and tool-internal trees are protected while their
+own process is running; mtime is used only to decide whether a candidate is
+old enough after those protections. Long-running work must use a bounded
+`keep` expiry rather than relying on a heartbeat that a quiet process may not
+produce. Prune rejects malformed markers and markers expiring more than 30
+days in the future instead of trusting hand-edited metadata.
 
 ## Data flow
 
@@ -119,17 +158,27 @@ deliberately much longer than a normal command.
    paths.
 4. `status` provides a quick capacity check before large captures or builds.
 5. The daily user cleanup removes only entries older than their area-specific
-   retention period. Material intentionally preserved is moved outside the
-   managed root before cleanup.
+   retention period. Material intentionally preserved is keep-marked or moved
+   outside the managed root before cleanup.
 
 ## Failure handling and safety
 
 - If `$OGGF_SCRATCH_ROOT` is unset, the helper uses a disk-backed `$HOME`
-  fallback and prints the chosen path.
-- If the root cannot be created or has insufficient free space, `new` fails
-  clearly rather than falling back to `/tmp`.
+  fallback and prints the chosen path. Setup materializes the resolved path in
+  the user service environment file.
+- Setup rejects relative roots, roots containing control/newline characters,
+  roots that resolve through unsafe symlinks, and roots under `/tmp`. It
+  verifies that the resolved filesystem is not `tmpfs`/`ramfs`, and that the
+  root is owned by the current user with mode `0700`, before writing any local
+  configuration.
+- If the root cannot be created or written, `new` fails clearly rather than
+  falling back to `/tmp`. `status` reports free bytes and inodes; callers may
+  require a minimum free-byte reserve before large captures.
 - Prune validates that every candidate is below the managed root and never
-  follows symlinks outside it.
+  follows symlinks outside it. `new` and `prune` acquire the same lock while
+  selecting or removing candidates. Traversal is descriptor-relative and
+  no-follow; symlinked task roots and path-traversal labels are rejected even
+  if another same-user process attempts a symlink swap during pruning.
 - Quarantine is a move, not an irreversible delete. The dated quarantine is
   itself subject to the 14-day policy.
 - Configuration changes are idempotent and preserve unrelated Claude/Codex
@@ -139,13 +188,23 @@ deliberately much longer than a normal command.
 
 Implementation verification will cover:
 
-1. shell syntax and helper dry-run tests, including path traversal rejection;
-2. configuration parsing for the Claude JSON and Codex TOML updates;
-3. a synthetic task directory proving creation, status accounting, and age
-   pruning without touching `/tmp`;
-4. an audit of the mirrored `AGENTS.md`/`CLAUDE.md` and targeted skill
-   examples;
-5. the repository's required baseline and post-change test comparisons.
+1. helper syntax and dry-run tests, including relative/control-character
+   roots, path traversal, static symlinks, an actual symlink-swap/TOCTOU race,
+   and concurrent `new`/`prune` locking;
+2. configuration parsing for the Claude JSON and Codex TOML updates, with
+   absolute `OGGF_SCRATCH_ROOT` and temp paths verified in Claude/Codex child
+   processes;
+3. a synthetic task directory proving creation, status accounting, bounded
+   keep-marker expiry, and age pruning without touching `/tmp`;
+4. a user-timer installation check proving the service is enabled and has a
+   next trigger;
+5. a sandboxed Claude command check that fails setup if the actual `$TMPDIR`
+   escapes the configured root, plus Codex workspace-write and
+   unrestricted-mode checks documenting the latter's deliberate limitation;
+6. an audit of all live `/tmp` output instructions across the mirrored
+   `.agents`/`.claude` skills, relevant runbooks, and existing ignored scratch
+   locations, while keeping `AGENTS.md` and `CLAUDE.md` byte-identical;
+7. the repository's required baseline and post-change test comparisons.
 
 ## Alternatives considered
 
