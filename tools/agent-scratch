@@ -1,0 +1,705 @@
+#!/usr/bin/env python3
+"""Safely manage the disk-backed scratch space used by OpenGGF agents.
+
+This intentionally has no third-party dependencies.  Its destructive operations
+are descriptor-relative and never inspect arbitrary temporary directories.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import fcntl
+import json
+import os
+import pathlib
+import random
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from contextlib import contextmanager
+
+KEEP_FILE = ".oggf-agent-scratch-keep"
+KEEP_PREFIX = "OGGF_AGENT_SCRATCH_KEEP_UNTIL="
+MODE = 0o700
+AREAS = {"claude": ("claude", 30), "codex": ("codex", "tmp", 30),
+         "tasks": ("openggf", "tasks", 7), "quarantine": ("quarantine", 14)}
+CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+class ScratchError(RuntimeError):
+    pass
+
+
+def repo_root() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parent.parent
+
+
+def _unescape_mount(value: str) -> str:
+    return re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), value)
+
+
+def parse_mountinfo(text: str) -> list[tuple[str, str]]:
+    """Return (decoded mount point, filesystem type) tuples from mountinfo."""
+    answer = []
+    for line in text.splitlines():
+        fields = line.split()
+        try:
+            dash = fields.index("-")
+            answer.append((_unescape_mount(fields[4]), fields[dash + 1]))
+        except (ValueError, IndexError):
+            continue
+    return answer
+
+
+def filesystem_type(path: pathlib.Path, mountinfo: str | None = None) -> str:
+    records = parse_mountinfo(mountinfo if mountinfo is not None else pathlib.Path("/proc/self/mountinfo").read_text())
+    text = os.path.realpath(path)
+    matches = [(point, fstype) for point, fstype in records
+               if text == point or text.startswith(point.rstrip("/") + "/")]
+    if not matches:
+        raise ScratchError(f"cannot determine filesystem type for {path}")
+    return max(matches, key=lambda item: len(item[0]))[1]
+
+
+def _root_text(env: dict[str, str] | None = None) -> str:
+    env = os.environ if env is None else env
+    value = env.get("OGGF_SCRATCH_ROOT") or str(pathlib.Path.home() / "scratch" / "agent-tmp")
+    if not value or CONTROL.search(value) or not os.path.isabs(value):
+        raise ScratchError("OGGF_SCRATCH_ROOT must be an absolute path without control characters")
+    return os.path.normpath(value)
+
+
+def _safe_root_path(env: dict[str, str] | None = None) -> pathlib.Path:
+    raw = _root_text(env)
+    if raw == "/tmp" or raw.startswith("/tmp/"):
+        raise ScratchError("refusing a managed root below /tmp")
+    # realpath is deliberately checked before creation: a symlink anywhere in
+    # a configured root makes its ownership and confinement ambiguous.
+    if os.path.realpath(raw) != raw:
+        raise ScratchError("managed root must not resolve through a symlink")
+    return pathlib.Path(raw)
+
+
+def _mkdir_component(parent_fd: int, name: str) -> int:
+    created = False
+    try:
+        os.mkdir(name, MODE, dir_fd=parent_fd)
+        created = True
+    except FileExistsError:
+        pass
+    info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        raise ScratchError(f"unsafe non-directory component: {name}")
+    if created:
+        os.chmod(name, MODE, dir_fd=parent_fd, follow_symlinks=False)
+    return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+
+
+def ensure_root(env: dict[str, str] | None = None) -> pathlib.Path:
+    root = _safe_root_path(env)
+    # Creating with pathlib would allow a race through an untrusted component.
+    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in root.parts[1:]:
+            next_fd = _mkdir_component(fd, part)
+            os.close(fd)
+            fd = next_fd
+        info = os.fstat(fd)
+        if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != MODE:
+            raise ScratchError("managed root must be owned by this user and mode 0700")
+    finally:
+        os.close(fd)
+    if filesystem_type(root) in {"tmpfs", "ramfs"}:
+        raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
+    with open_root(root) as fd:
+        for parts in (("claude",), ("codex",), ("codex", "tmp"), ("openggf",), ("openggf", "tasks"), ("quarantine",)):
+            current = os.dup(fd)
+            try:
+                for part in parts:
+                    next_fd = _mkdir_component(current, part)
+                    os.close(current)
+                    current = next_fd
+                info = os.fstat(current)
+                if info.st_uid != os.getuid():
+                    raise ScratchError("managed child is not owned by this user")
+                if stat.S_IMODE(info.st_mode) != MODE:
+                    os.fchmod(current, MODE)
+            finally:
+                os.close(current)
+    return root
+
+
+@contextmanager
+def open_root(root: pathlib.Path):
+    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(fd)
+        if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != MODE:
+            raise ScratchError("managed root ownership or mode changed")
+        yield fd
+    finally:
+        os.close(fd)
+
+
+@contextmanager
+def child_fd(root_fd: int, parts: tuple[str, ...], create: bool = False):
+    current = os.dup(root_fd)
+    try:
+        for part in parts:
+            if part in {"", ".", ".."} or "/" in part:
+                raise ScratchError("unsafe managed child name")
+            try:
+                next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=current)
+            except FileNotFoundError:
+                if not create:
+                    raise
+                next_fd = _mkdir_component(current, part)
+            os.close(current)
+            current = next_fd
+        yield current
+    finally:
+        os.close(current)
+
+
+@contextmanager
+def root_lock(root_fd: int):
+    fd = os.open(".agent-scratch.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, MODE, dir_fd=root_fd)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def validate_label(label: str) -> str:
+    if not label or len(label) > 64 or label in {".", ".."} or "/" in label or "\\" in label or CONTROL.search(label):
+        raise ScratchError("label must be one non-control path component no longer than 64 characters")
+    return label
+
+
+def area_path(root: pathlib.Path, kind: str) -> pathlib.Path:
+    if kind not in AREAS:
+        raise ScratchError(f"unknown path kind: {kind}")
+    return root.joinpath(*AREAS[kind][:-1])
+
+
+def cmd_new(args: argparse.Namespace) -> int:
+    label = validate_label(args.label)
+    root = ensure_root()
+    with open_root(root) as fd, root_lock(fd), child_fd(fd, ("openggf", "tasks"), True) as tasks:
+        while True:
+            stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            name = f"{label}-{stamp}-{os.getpid()}-{random.SystemRandom().randrange(1 << 32):08x}"
+            try:
+                os.mkdir(name, MODE, dir_fd=tasks)
+                break
+            except FileExistsError:
+                continue
+    print(root)
+    print(root / "openggf" / "tasks" / name)
+    return 0
+
+
+def cmd_path(args: argparse.Namespace) -> int:
+    aliases = {"claude": "claude", "codex": "codex", "codex-tmp": "codex", "tasks": "tasks", "quarantine": "quarantine"}
+    if args.kind not in aliases:
+        raise ScratchError(f"unknown path kind: {args.kind}")
+    root = ensure_root()
+    paths = {"claude": root / "claude", "codex": root / "codex", "codex-tmp": root / "codex" / "tmp",
+             "tasks": root / "openggf" / "tasks", "quarantine": root / "quarantine"}
+    print(paths[args.kind])
+    return 0
+
+
+def _parse_until(value: str, *, allow_expired: bool = False) -> dt.date:
+    try:
+        value_date = dt.date.fromisoformat(value)
+    except ValueError as exc:
+        raise ScratchError("keep expiry must be an ISO YYYY-MM-DD date") from exc
+    today = dt.datetime.now().date()
+    if (not allow_expired and value_date < today) or value_date > today + dt.timedelta(days=30):
+        raise ScratchError("keep expiry must be today through 30 days from today")
+    return value_date
+
+
+def _marker_expiry(dir_fd: int) -> dt.date | None:
+    try:
+        fd = os.open(KEEP_FILE, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=dir_fd)
+    except FileNotFoundError:
+        return None
+    try:
+        data = os.read(fd, 256).decode("ascii")
+    finally:
+        os.close(fd)
+    if not re.fullmatch(re.escape(KEEP_PREFIX) + r"\d{4}-\d{2}-\d{2}\n", data):
+        raise ScratchError("malformed keep marker")
+    return _parse_until(data[len(KEEP_PREFIX):-1], allow_expired=True)
+
+
+def _open_relative_directory(root_fd: int, root: pathlib.Path, value: str) -> int:
+    target = pathlib.Path(value)
+    if not target.is_absolute():
+        target = target.absolute()
+    try:
+        resolved = target.resolve(strict=True)
+    except OSError as exc:
+        raise ScratchError(f"cannot resolve keep path: {value}") from exc
+    if os.path.commonpath((str(root), str(resolved))) != str(root) or resolved == root:
+        raise ScratchError("keep path must be a directory below the managed root")
+    rel = resolved.relative_to(root)
+    fd = os.dup(root_fd)
+    try:
+        for part in rel.parts:
+            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = nxt
+        return fd
+    except Exception:
+        os.close(fd)
+        raise
+
+
+def cmd_keep(args: argparse.Namespace) -> int:
+    expiry = _parse_until(args.until)
+    root = ensure_root()
+    with open_root(root) as root_fd, root_lock(root_fd):
+        directory = _open_relative_directory(root_fd, root, args.path)
+        try:
+            tmp = f".{KEEP_FILE}.{os.getpid()}.{random.randrange(1 << 20):x}"
+            marker = (KEEP_PREFIX + expiry.isoformat() + "\n").encode("ascii")
+            out = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, MODE, dir_fd=directory)
+            try:
+                os.write(out, marker)
+                os.fsync(out)
+            finally:
+                os.close(out)
+            os.replace(tmp, KEEP_FILE, src_dir_fd=directory, dst_dir_fd=directory)
+        finally:
+            os.close(directory)
+    print(root)
+    print(f"kept until {expiry.isoformat()}: {pathlib.Path(args.path).resolve()}")
+    return 0
+
+
+def _walk_bytes(dir_fd: int) -> int:
+    total = 0
+    with os.scandir(dir_fd) as scan:
+        names = [entry.name for entry in scan]
+    for name in names:
+        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        if stat.S_ISLNK(info.st_mode):
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=dir_fd)
+            try:
+                total += _walk_bytes(child)
+            finally:
+                os.close(child)
+        elif stat.S_ISREG(info.st_mode):
+            total += info.st_size
+    return total
+
+
+def _active(name: str) -> bool:
+    try:
+        output = subprocess.run(["ps", "-u", str(os.getuid()), "-o", "comm=,args="], text=True, capture_output=True, check=False).stdout.lower()
+    except OSError:
+        return False
+    return any(name in line for line in output.splitlines() if "agent-scratch" not in line)
+
+
+def _unit_error() -> str | None:
+    try:
+        run = subprocess.run(["systemctl", "--user", "show", "openggf-agent-scratch-prune.service", "-p", "Result", "-p", "ExecMainStatus"], text=True, capture_output=True, check=False)
+    except OSError:
+        return None
+    values = dict(line.split("=", 1) for line in run.stdout.splitlines() if "=" in line)
+    if values.get("Result") and values["Result"] not in {"success", ""}:
+        return f"{values['Result']} (exit {values.get('ExecMainStatus', '?')})"
+    return None
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    root = ensure_root()
+    usage = shutil.disk_usage(root)
+    stats = os.statvfs(root)
+    counts: dict[str, int] = {}
+    markers: list[dt.date] = []
+    with open_root(root) as fd:
+        for key, definition in AREAS.items():
+            with child_fd(fd, definition[:-1]) as area:
+                counts[key] = _walk_bytes(area)
+                with os.scandir(area) as scan:
+                    for entry in scan:
+                        if entry.is_dir(follow_symlinks=False):
+                            child = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=area)
+                            try:
+                                found = _marker_expiry(child)
+                                if found:
+                                    markers.append(found)
+                            finally:
+                                os.close(child)
+    print(f"root={root}")
+    print(f"free_bytes={usage.free}")
+    print(f"free_inodes={stats.f_favail}")
+    for key in AREAS:
+        print(f"{key}_bytes={counts[key]}")
+    print(f"claude_active={_active('claude')}")
+    print(f"codex_active={_active('codex')}")
+    print(f"keep_markers={len(markers)}")
+    print("nearest_expiry=" + (min(markers).isoformat() if markers else "none"))
+    error = _unit_error()
+    if error:
+        print(f"last_cleanup_error={error}")
+    return 0
+
+
+def _remove_tree(parent_fd: int, name: str) -> None:
+    info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        raise ScratchError(f"refusing unsafe prune entry: {name}")
+    fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+    try:
+        with os.scandir(fd) as scan:
+            names = [entry.name for entry in scan]
+        for child in names:
+            child_info = os.stat(child, dir_fd=fd, follow_symlinks=False)
+            if stat.S_ISDIR(child_info.st_mode) and not stat.S_ISLNK(child_info.st_mode):
+                _remove_tree(fd, child)
+            else:
+                os.unlink(child, dir_fd=fd)
+    finally:
+        os.close(fd)
+    os.rmdir(name, dir_fd=parent_fd)
+
+
+def cmd_prune(args: argparse.Namespace) -> int:
+    root = ensure_root()
+    today = time.time()
+    with open_root(root) as fd, root_lock(fd):
+        for key, definition in AREAS.items():
+            if key == "claude" and _active("claude") or key == "codex" and _active("codex"):
+                print(f"protected-active {key}")
+                continue
+            with child_fd(fd, definition[:-1]) as area:
+                with os.scandir(area) as scan:
+                    entries = [entry.name for entry in scan]
+                for name in entries:
+                    try:
+                        info = os.stat(name, dir_fd=area, follow_symlinks=False)
+                    except FileNotFoundError:
+                        print(f"skipped-raced {key}/{name}")
+                        continue
+                    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+                        if stat.S_ISLNK(info.st_mode):
+                            print(f"skipped-unsafe {key}/{name}")
+                        continue
+                    try:
+                        entry_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=area)
+                    except (FileNotFoundError, NotADirectoryError, OSError) as exc:
+                        print(f"skipped-raced {key}/{name}: {exc.strerror or 'unsafe replacement'}")
+                        continue
+                    try:
+                        expiry = _marker_expiry(entry_fd)
+                    finally:
+                        os.close(entry_fd)
+                    if expiry and expiry >= dt.date.today():
+                        print(f"protected-keep {key}/{name} until {expiry.isoformat()}")
+                        continue
+                    if today - info.st_mtime < definition[-1] * 86400:
+                        continue
+                    line = f"{'would-remove' if args.dry_run else 'removed'} {key}/{name}"
+                    print(line)
+                    if not args.dry_run:
+                        try:
+                            _remove_tree(area, name)
+                        except (FileNotFoundError, NotADirectoryError, ScratchError) as exc:
+                            print(f"skipped-raced {key}/{name}: {exc}")
+    print(f"root={root}")
+    return 0
+
+
+def _require_regular(path: pathlib.Path, *, missing_ok: bool = True) -> None:
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        if missing_ok:
+            return
+        raise
+    if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        raise ScratchError(f"refusing unexpected non-regular target: {path}")
+
+
+def _atomic_write(path: pathlib.Path, data: str, mode: int, preserve_mode: bool = False) -> None:
+    path.parent.mkdir(mode=MODE, parents=True, exist_ok=True)
+    for parent in (path.parent,):
+        info = parent.lstat()
+        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise ScratchError(f"unsafe configuration parent: {parent}")
+    _require_regular(path)
+    old_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else mode
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        os.fchmod(fd, old_mode if preserve_mode else mode)
+        os.write(fd, data.encode())
+        os.fsync(fd)
+        os.close(fd)
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _update_claude(path: pathlib.Path, root: pathlib.Path) -> None:
+    _atomic_write(path, _render_claude(path, root), MODE, preserve_mode=True)
+
+
+def _render_claude(path: pathlib.Path, root: pathlib.Path) -> str:
+    _require_regular(path)
+    original = path.read_text() if path.exists() else "{}\n"
+    try:
+        data = json.loads(original)
+    except json.JSONDecodeError as exc:
+        raise ScratchError(f"invalid Claude JSON: {path}") from exc
+    if not isinstance(data, dict):
+        raise ScratchError("Claude settings must be an object")
+    env = data.setdefault("env", {})
+    if not isinstance(env, dict):
+        raise ScratchError("Claude env setting must be an object")
+    values = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    for key, value in values.items():
+        if key in env and env[key] != value:
+            raise ScratchError(f"conflicting Claude managed setting {key}")
+        env[key] = value
+    return json.dumps(data, indent=2, sort_keys=True) + "\n"
+
+
+def _table_spans(text: str, table: str) -> tuple[int, int] | None:
+    lines = text.splitlines(keepends=True)
+    start = None
+    offset = 0
+    exact = f"[{table}]"
+    for line in lines:
+        stripped = line.strip()
+        if stripped == exact:
+            start = offset + len(line)
+            offset += len(line)
+            continue
+        if start is not None and stripped.startswith("[") and stripped.endswith("]"):
+            return start, offset
+        offset += len(line)
+    return (start, len(text)) if start is not None else None
+
+
+def _assert_supported_toml(text: str) -> None:
+    # These equivalent forms cannot be updated without reformatting unrelated
+    # values, so fail closed before the atomic replacement.
+    if re.search(r"(?m)^\s*shell_environment_policy\.set\s*=", text) or re.search(r"(?m)^\s*sandbox_workspace_write\s*=\s*\{", text):
+        raise ScratchError("dotted-key or inline-table managed TOML forms are unsupported")
+
+
+def _toml_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_value(v) for v in value) + "]"
+    return json.dumps(value)
+
+
+def _edit_table(text: str, table: str, updates: dict[str, object]) -> str:
+    span = _table_spans(text, table)
+    if span is None:
+        if text and not text.endswith("\n"):
+            text += "\n"
+        return text + ("\n" if text else "") + f"[{table}]\n" + "".join(f"{key} = {_toml_value(value)}\n" for key, value in updates.items())
+    begin, end = span
+    body = text[begin:end]
+    for key, value in updates.items():
+        # Do not let ``\s`` consume a preceding blank line: TOML comments and
+        # spacing are intentionally preserved by this narrow editor.
+        pattern = re.compile(rf"(?m)^([ \t]*{re.escape(key)}[ \t]*=)[^\n]*(\n|$)")
+        def replacement(match: re.Match[str]) -> str:
+            old_line = match.group(0)
+            comment_at = old_line.find("#")
+            suffix = old_line[comment_at:] if comment_at >= 0 else "\n"
+            return f"{match.group(1)} {_toml_value(value)}" + (" " if comment_at >= 0 else "") + suffix
+        if pattern.search(body):
+            body = pattern.sub(replacement, body, count=1)
+        else:
+            body += f"{key} = {_toml_value(value)}\n"
+    return text[:begin] + body + text[end:]
+
+
+def _update_codex(path: pathlib.Path, root: pathlib.Path) -> None:
+    _atomic_write(path, _render_codex(path, root), 0o600)
+
+
+def _render_codex(path: pathlib.Path, root: pathlib.Path) -> str:
+    _require_regular(path)
+    original = path.read_text() if path.exists() else ""
+    _assert_supported_toml(original)
+    try:
+        parsed = tomllib.loads(original) if original.strip() else {}
+    except tomllib.TOMLDecodeError as exc:
+        raise ScratchError(f"invalid Codex TOML: {path}") from exc
+    set_values = {"OGGF_SCRATCH_ROOT": str(root), "TMPDIR": str(root / "codex" / "tmp"),
+                  "TMP": str(root / "codex" / "tmp"), "TEMP": str(root / "codex" / "tmp")}
+    existing_set = parsed.get("shell_environment_policy", {}).get("set", {})
+    if existing_set and _table_spans(original, "shell_environment_policy.set") is None:
+        raise ScratchError("inline or parent-table shell_environment_policy.set is unsupported")
+    if existing_set and not isinstance(existing_set, dict):
+        raise ScratchError("unsupported shell_environment_policy.set")
+    for key, value in set_values.items():
+        if key in existing_set and existing_set[key] != value:
+            raise ScratchError(f"conflicting Codex managed setting {key}")
+    workspace = parsed.get("sandbox_workspace_write", {})
+    if workspace and _table_spans(original, "sandbox_workspace_write") is None:
+        raise ScratchError("inline or dotted sandbox_workspace_write is unsupported")
+    if workspace and not isinstance(workspace, dict):
+        raise ScratchError("unsupported sandbox_workspace_write")
+    values = {"exclude_slash_tmp": True, "exclude_tmpdir_env_var": False}
+    for key, value in values.items():
+        if key in workspace and workspace[key] != value:
+            raise ScratchError(f"conflicting Codex managed setting {key}")
+    roots = workspace.get("writable_roots", [])
+    if not isinstance(roots, list) or not all(isinstance(item, str) for item in roots):
+        raise ScratchError("sandbox writable_roots must be a string array")
+    roots = list(dict.fromkeys([*roots, str(root / "codex")]))
+    result = _edit_table(original, "shell_environment_policy.set", set_values)
+    result = _edit_table(result, "sandbox_workspace_write", {**values, "writable_roots": roots})
+    # Parse the exact output before replacing the old file.
+    tomllib.loads(result)
+    return result
+
+
+def systemd_exec_quote(value: str) -> str:
+    pieces = []
+    for char in value:
+        number = ord(char)
+        if char == "\\": pieces.append("\\\\")
+        elif char == '"': pieces.append('\\"')
+        elif char == "\n": pieces.append("\\n")
+        elif char == "\r": pieces.append("\\r")
+        elif char == "\t": pieces.append("\\t")
+        elif char.isspace() or number < 32 or number == 127: pieces.append(f"\\x{number:02x}")
+        else: pieces.append(char)
+    return '"' + "".join(pieces) + '"'
+
+
+def _unit_files(root: pathlib.Path) -> tuple[str, str, str]:
+    helper = repo_root() / "tools" / "agent-scratch"
+    environment = pathlib.Path.home() / ".config" / "oggf-agent-scratch" / "environment"
+    service = f"""[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={environment}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
+    timer = """[Unit]\nDescription=Daily OpenGGF agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit=openggf-agent-scratch-prune.service\n\n[Install]\nWantedBy=timers.target\n"""
+    return f"OGGF_SCRATCH_ROOT={root}\n", service, timer
+
+
+def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
+    verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], text=True, capture_output=True, check=False)
+    if verify.returncode:
+        raise ScratchError("systemd unit verification failed: " + (verify.stderr or verify.stdout).strip())
+    commands = [["systemctl", "--user", "daemon-reload"], ["systemctl", "--user", "enable", "--now", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "is-enabled", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "list-timers", "openggf-agent-scratch-prune.timer", "--no-legend"]]
+    for command in commands:
+        run = subprocess.run(command, text=True, capture_output=True, check=False)
+        if run.returncode:
+            return "user manager unavailable; run: systemctl --user daemon-reload && systemctl --user enable --now openggf-agent-scratch-prune.timer"
+    return "timer active"
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    root = ensure_root()
+    home = pathlib.Path.home()
+    claude_path = home / ".claude" / "settings.json"
+    codex_path = home / ".codex" / "config.toml"
+    # Render/validate both files before changing either one.  This matters for
+    # unsupported TOML representations: setup must fail without a partial host
+    # configuration update.
+    claude_text = _render_claude(claude_path, root)
+    codex_text = _render_codex(codex_path, root)
+    _atomic_write(claude_path, claude_text, MODE, preserve_mode=True)
+    _atomic_write(codex_path, codex_text, 0o600)
+    env_text, service, timer = _unit_files(root)
+    env_path = home / ".config" / "oggf-agent-scratch" / "environment"
+    unit_dir = home / ".config" / "systemd" / "user"
+    service_path = unit_dir / "openggf-agent-scratch-prune.service"
+    timer_path = unit_dir / "openggf-agent-scratch-prune.timer"
+    _atomic_write(env_path, env_text, 0o600)
+    _atomic_write(service_path, service, 0o600)
+    _atomic_write(timer_path, timer, 0o600)
+    print(f"root={root}")
+    print(_run_systemd_install(service_path, timer_path))
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    root = ensure_root()
+    home = pathlib.Path.home()
+    try:
+        claude = json.loads((home / ".claude" / "settings.json").read_text())
+        codex = tomllib.loads((home / ".codex" / "config.toml").read_text())
+    except (OSError, json.JSONDecodeError, tomllib.TOMLDecodeError) as exc:
+        raise ScratchError(f"configuration parse failed: {exc}") from exc
+    if claude.get("env", {}).get("CLAUDE_CODE_TMPDIR") != str(root / "claude"):
+        raise ScratchError("Claude temporary directory is not the configured child")
+    values = codex.get("shell_environment_policy", {}).get("set", {})
+    if any(values.get(key) != str(root / "codex" / "tmp") for key in ("TMPDIR", "TMP", "TEMP")):
+        raise ScratchError("Codex temporary variables are not absolute configured children")
+    if values.get("OGGF_SCRATCH_ROOT") != str(root):
+        raise ScratchError("Codex root is not configured")
+    print(f"root={root}")
+    print("config=verified")
+    print("codex_danger_full_access=unconstrained by workspace sandbox settings")
+    executable = shutil.which("claude")
+    if not executable:
+        print("claude=unverified (not installed)")
+        return 0
+    run = subprocess.run([executable, "-p", "echo -n \"$TMPDIR\""], text=True, capture_output=True, timeout=45, check=False)
+    if run.returncode:
+        print("claude=unverified (authentication or session unavailable)")
+        return 0
+    observed = run.stdout.strip()
+    if os.path.commonpath((str(root), observed)) != str(root):
+        raise ScratchError(f"Claude TMPDIR escapes configured root: {observed}")
+    print("claude=verified")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    actions = parser.add_subparsers(dest="operation", required=True)
+    item = actions.add_parser("new"); item.add_argument("label"); item.set_defaults(func=cmd_new)
+    item = actions.add_parser("path"); item.add_argument("kind"); item.set_defaults(func=cmd_path)
+    item = actions.add_parser("status"); item.set_defaults(func=cmd_status)
+    item = actions.add_parser("keep"); item.add_argument("path"); item.add_argument("--until", required=True); item.set_defaults(func=cmd_keep)
+    item = actions.add_parser("prune"); item.add_argument("--dry-run", action="store_true"); item.set_defaults(func=cmd_prune)
+    actions.add_parser("install").set_defaults(func=cmd_install)
+    actions.add_parser("verify").set_defaults(func=cmd_verify)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    try:
+        args = build_parser().parse_args(argv)
+        return args.func(args)
+    except ScratchError as exc:
+        print(f"agent-scratch: {exc}", file=sys.stderr)
+        return 2
+    except BrokenPipeError:
+        return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
