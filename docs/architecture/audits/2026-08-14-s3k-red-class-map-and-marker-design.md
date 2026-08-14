@@ -151,6 +151,35 @@ classification is downstream of it — `hpz`'s bin assignment cannot be settled 
 loads. Cluster E unblocks its own eleven *and* de-provisionalises entries elsewhere, which
 plausibly makes it the highest-leverage cluster on the map despite appearances.
 
+### A concrete starting point (MEASURED at `f4eae0871`, source read only)
+
+`src/main/java/com/openggf/game/sonic3k/constants/Sonic3kZoneIds.java` contains:
+
+```java
+public static final int ZONE_HPZ = 0x16;  // Hidden Palace
+...
+public static final int TOTAL_ZONE_COUNT = 22; // AIZ(0) through Slots(21), including gaps
+```
+
+**`0x16` is 22 decimal, and `TOTAL_ZONE_COUNT = 22` spans indices 0–21.** So HPZ's own declared
+zone id is one past the end of any array sized by that constant — which is exactly the reported
+`Index 22 out of bounds for length 22` for the two HPZ act-2 classes. The constant's comment
+("AIZ(0) through Slots(21)") is self-consistent; it simply does not account for the HPZ id
+declared eleven lines above it.
+
+**Zone id 23 (`0x17`) has no constant in that file at all**, which is consistent with the
+`Index 23 out of bounds for length 22` reported by the eight DEZ act-2 classes.
+
+Two cautions for whoever takes this:
+
+- **Do not simply widen the constant to 23 or 24.** The right size follows from what the ROM's
+  own level-list actually contains; a number chosen to stop an exception is a fitted constant
+  under rule 3 even though it looks like plumbing. Derive it from the disassembly's level table
+  and cite the routine.
+- **Confirm what zone `0x17` is in the ROM before adding it.** The trace directory names it
+  `dez23`, but this document's author has twice been misled by inferring semantics from
+  directory naming — the answer must come from the ROM's level table, not the fixture layout.
+
 ## Uncovered route, for a future capture ask
 
 Only segments no trace exercises at all, red or green — the recorded corpus already covers act
