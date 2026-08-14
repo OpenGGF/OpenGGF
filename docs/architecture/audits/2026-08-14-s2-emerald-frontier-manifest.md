@@ -242,10 +242,13 @@ at 10097 — and `Tails_Balance`'s ledge test (`ChkFloorEdge` / `cmpi.w #$C,d1`,
 | 4 | 2 | one row late; not closable at frame granularity |
 | 5 | ~20 | sidekick init window spent inside a discarded `stage_exit` gap → one surplus transfer, cascading |
 
-Axes 1 and 2 are one defect. **Axes 2 and 5 share a mechanism**: both are state arriving
-at a `stage_exit` segment entry out of phase — the V-blank counter in axis 2, the
-sidekick's position within its init window in axis 5 — and both entries go through the
-interior-return branch that discards its gap rows instead of walking them.
+Axes 1 and 2 are one defect. **Axes 2 and 5 share a mechanism** — INFERRED, not
+demonstrated: each axis's own root-cause measurement traces to state arriving at a
+`stage_exit` segment entry out of phase — the V-blank counter in axis 2, the sidekick's
+position within its init window in axis 5 — and both entries go through the
+interior-return branch that discards its gap rows instead of walking them. No single
+change has yet been shown to move both, and the one candidate that would have (below)
+aborted before comparing either axis, so it neither confirms nor refutes the grouping.
 
 **The obvious fix for that shared mechanism has been built and measured, and it is a net
 regression. Do not propose it.** Extending the **census walk** to interior returns is
@@ -271,11 +274,13 @@ currently-clean gap (`ss → seg2_ehz1`, `edge[0].movie_logical_frame` expected 
 
 **Consequence for anyone attacking axes 2 and 5:** the one-pass sidekick deficit is a
 *prerequisite* for the walk, not a consequence of it. It must be closed with the walk
-unapplied.
+unapplied. And note what the per-field probe implies: the divergence under the walk is not
+confined to the state the two axes name, so the discarded gap is currently protecting
+*more* engine state than the two known phases — spending those rows correctly requires
+more than fixing the counter and the init window.
 
-Axis 3 is a
-different family: a pass-count defect inside the title-card span. Axis 4 is the only axis
-with no rule-compliant route at all.
+Axis 3 is a different family: a pass-count defect inside the title-card span. Axis 4 is
+the only axis with no rule-compliant route at all.
 
 ---
 
@@ -333,6 +338,13 @@ earned by violating them this session.
   suspect the probe first.
 - **Approximations that agree often enough to look like models.** The census release
   anchor is right on 20 of 27 seams by coincidence (axis 4, point 3).
+- **A reviewer inherits the write-up's errors at full strength.** This document's own
+  "player clean to frame 52" summary line was a misreading — frame 52 is a
+  `queue.s2_nemesis_plc` field, not player physics — and a reviewer applying the
+  MEASURED/DERIVED/INFERRED discipline rigorously to their *own* reasoning cited it without
+  questioning the label, and built a recommendation on it. **A cited number is as fallible
+  as a probe column.** Re-measure at the source before reasoning from a claim you inherited,
+  including from this file.
 - **Unreached ≠ passing.** `ss_6`/`ss_7` report no failures only because the chain aborts
   before comparing them.
 
@@ -386,6 +398,18 @@ For the V-blank clock (axis 2's phase):
 - **bumping the counter by the gap's row count arithmetically** — produces the 122,139
   fingerprint above: the counter then disagrees with the sidekick position buffer, one
   object on two clocks. Rows must be *spent*, not added.
+
+For axes 2 and 5 jointly:
+
+- **extending the census walk to `stage_exit` interior returns** — the most
+  attractive-looking idea in this file, and a measured net regression. It is budget-exact
+  and rule-compliant, and it still aborts the chain at `seg3`, hides both axes by
+  comparator starvation, opens segment 2 at 58,355 errors across 106 fields (player and
+  global physics included, not just the sidekick), and adds a new gap axis. Pairing it
+  with the title-card pass placement changes nothing and breaks a currently-clean gap.
+  Full measurements in [Grouping](#grouping). Do not re-propose it as-is; the one-pass
+  sidekick deficit (and whatever else the per-field probe shows the discarded gap is
+  protecting) must be closed first, with the walk unapplied.
 
 For axis 4: a pre-card hold constant; retuning fade duration; end-anchoring the leave
 phase to the recorded segment offset (works perfectly — and breaks rule 4 three ways;
