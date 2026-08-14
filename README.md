@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A held jump button no longer fires a press when control unlocks
+  (`bugfix/ai-jump-press-edge-from-raw-pad`, merged 2026-08-14):** the ROM's pressed byte is
+  produced once per frame by `Poll_Controller` straight from the hardware pad, independently
+  of any control lock, and `Sonic_Control` copies the *whole word* — held byte and pressed
+  byte together — into `Ctrl_1_logical`, skipping the copy entirely while `Ctrl_1_locked` is
+  set. So a button already held when the lock lifts contributes no press on the unlock frame;
+  its edge was consumed several frames earlier. The engine derived the edge from its own
+  filtered held bit, which is forced false for the whole lock, and so manufactured a press on
+  every control-unlock frame with jump held. In the AIZ1 intro that turned the ROM's spin dash
+  into a jump, diverging 5px low at frame 1097. Affects all three games; no zone, route or
+  frame is involved. The AIZ segment frontier moves 1097 → 2247 and the
+  `KOS_DECOMPRESSION_QUEUE` aborts clear on both affected classes, confirming those were a
+  tripwire downstream of the physics divergence rather than a queue defect.
+
 - **Sonic 2 special-stage results tail stays inside its own segment (2026-08-14):** the
   ROM leaves its special-stage object loop when `SS_Check_Rings_flag` rises, but the
   emerald check, both fades and the whole bonus tally still run under
