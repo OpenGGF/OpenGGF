@@ -604,14 +604,13 @@ def _table_spans(text: str, table: str) -> tuple[int, int] | None:
     lines = text.splitlines(keepends=True)
     start = None
     offset = 0
-    exact = f"[{table}]"
     for line in lines:
-        stripped = line.strip()
-        if stripped == exact:
+        header = re.fullmatch(r"[ \t]*\[([^\]]+)\][ \t]*(?:#.*)?(?:\n)?", line)
+        if header and header.group(1) == table:
             start = offset + len(line)
             offset += len(line)
             continue
-        if start is not None and stripped.startswith("[") and stripped.endswith("]"):
+        if start is not None and header:
             return start, offset
         offset += len(line)
     return (start, len(text)) if start is not None else None

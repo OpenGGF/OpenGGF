@@ -176,13 +176,15 @@ class AgentScratchTests(unittest.TestCase):
         expected = candidate.stat()
         replacement = tasks / "replacement"
         replacement.mkdir()
+        replacement_identity = replacement.stat()
         os.replace(replacement, candidate)
         tasks_fd = os.open(tasks, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             self.assertFalse(self.helper._finalize_directory(tasks_fd, "candidate", expected))
         finally:
             os.close(tasks_fd)
-        self.assertTrue(any(entry.is_dir() for entry in tasks.iterdir()))
+        self.assertTrue(candidate.is_dir())
+        self.assertEqual((replacement_identity.st_dev, replacement_identity.st_ino), (candidate.stat().st_dev, candidate.stat().st_ino))
 
     def test_concurrent_new_and_prune_share_lock(self):
         self.helper.ensure_root(self.env)
@@ -264,6 +266,17 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(first, config.read_text())
         self.assertIn(str(tmpdir), first)
         self.assertIn("# retained comment", first)
+
+    def test_toml_editor_preserves_managed_table_header_comments(self):
+        root = self.helper.ensure_root(self.env)
+        config = pathlib.Path(self.temp.name) / "header-comments.toml"
+        config.write_text("[shell_environment_policy.set] # shell comment\nOTHER = \"yes\"\n\n[sandbox_workspace_write] # sandbox comment\ncustom = 1\n")
+        self.helper._update_codex(config, root)
+        first = config.read_text()
+        self.helper._update_codex(config, root)
+        self.assertEqual(first, config.read_text())
+        self.assertIn("[shell_environment_policy.set] # shell comment", first)
+        self.assertIn("[sandbox_workspace_write] # sandbox comment", first)
 
     def test_toml_editor_appends_to_multiline_writable_roots(self):
         root = self.helper.ensure_root(self.env)
