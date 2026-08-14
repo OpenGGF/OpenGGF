@@ -311,7 +311,7 @@ skill edit; `Skills: n/a` is a fresh-control conclusion, not an omission.
 - Independent whole-implementation review verdict: **READY / NO BLOCKING
   ISSUES**; no Critical or Important findings. The first review's stale-Javadoc
   Minor was corrected in `e3783a6b8`; final whole-range review found only an
-  adjacent stale ownership comment, corrected alongside this relay entry, and
+  adjacent stale ownership comment, corrected in the review follow-up, and
   optional direct S3K prepared-visual coverage.
 
 Integration and post-merge comparison remain required; Task 5 does not claim

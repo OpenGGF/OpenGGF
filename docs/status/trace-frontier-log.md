@@ -74441,5 +74441,5 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
 - Independent whole-implementation review verdict: **READY / NO BLOCKING
   ISSUES**. There were no Critical or Important findings. The first stale
   Javadoc was corrected in `e3783a6b8`; final whole-range review found only an
-  adjacent stale ownership comment, corrected alongside this entry, and
+  adjacent stale ownership comment, corrected in the review follow-up, and
   optional direct S3K prepared-visual coverage.
