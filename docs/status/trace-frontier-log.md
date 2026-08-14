@@ -74873,3 +74873,177 @@ flake flipped.
   `TestS3kSonicTailsAiz2SegmentTraceReplay`, `KOS_DECOMPRESSION_QUEUE#43`).
   That assertion has the same two-events-one-message problem and is the obvious
   next candidate, but it was deliberately left alone in this round.
+
+## 2026-08-14 - S3K red-class map: 64 classes attributed and clustered into eight causes
+
+Map-making round. No engine, comparator, recorder or fixture file was touched;
+the only edit is this entry. Isolated worktree outside the repository, worktree-
+owned `java.io.tmpdir` through `JAVA_TOOL_OPTIONS`, JDK 21 (`mvn -v` -> 21.0.11),
+`target/surefire-reports` and `target/trace-reports` cleared before every run.
+
+- **Commit measured at: `ce65000f2`** (`develop`, the merge that demotes the
+  unmatched-recorded-completion tripwire). Every number below is from that base.
+- Full-profile command (ROM paths from the project root):
+
+  ```bash
+  rm -rf target/surefire-reports
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 \
+    -Dsurefire.runOrder=alphabetical -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=<S1 REV01 ROM> -Dsonic2.rom.path=<S2 REV01 ROM> \
+    -Ds3k.rom.path=<S3K locked-on ROM>
+  ```
+
+- **MEASURED result: Tests run 843, Failures 29, Errors 36, Skipped 4; 65 red
+  classes.** Exactly reproduces the stated baseline; 843 means neither truncated
+  nor stale. **64 of the 65 are S3K**; the only non-S3K red is
+  `TestS2CompleteEmeraldRunChain` (source comparator cannot exhaust after the
+  `seg7_ehz2` boundary), pre-existing and out of scope here.
+- `TestS3kBonusRoundTripChain` **never runs** - confirmed: both methods
+  `assumeTrue` on `traces/s3k/runs/s3k-aiz-gumball-roundtrip` and
+  `.../s3k-aiz-pachinko-roundtrip`, neither of which exists on disk. Those are 2
+  of the 4 skips. No fixtures were created.
+
+### Attribution method (and why it beats the filename collision)
+
+Trace-report filenames collide between the standalone `s3k_<zone>` classes and
+the `TestS3kSonicTails*` segment classes, so a per-class `error_count` read out of
+`target/trace-reports` after a full sweep is not attributable. **The surefire
+failure message is**: each `*TraceReplay` assertion message carries that class's
+own first-error frame, field, expected/actual and total error count, produced from
+the in-memory report before any file is written. All first-error rows below are
+MEASURED from the per-class surefire testcase message of the single full sweep.
+`framesCompared` is *not* in that message and is reported only for the four
+classes re-run alone with a cleared `target/trace-reports`.
+
+### Clusters, by shared cause (64 S3K classes, 8 clusters, no class in two)
+
+| # | Cluster | Size | Cleanest witness |
+|---|---|---|---|
+| A | Close-time `unexpected pending hardware submissions at final run` | 14 | `TestS3kSonicTailsAiz2SegmentTraceReplay` |
+| B | Close-time `unmatched recorded hardware completions were never reported` (special stages) | 9 | `TestS3kSonicTailsSs3SpecialStageTraceReplay` |
+| C | Frame-0 `rings` = expected N, actual 0 | 6 | `TestS3kSonicTailsMhz4SegmentTraceReplay` (200 errors, smallest) |
+| D | Other frame-0 segment-entry state not seeded | 9 | `TestS3kSonicTailsPachinko3BonusTraceReplay` (187 errors) |
+| E | Structural: segment cannot load (`IndexOutOfBoundsException`) | 11 | `TestS3kSonicTailsHpz22SegmentTraceReplay` |
+| F | Mid-run physics divergence from a clean start | 9 | `TestS3kSonicTailsAizSegmentTraceReplay` (3 errors) |
+| G | Special-stage sphere accounting one ahead | 2 | `TestS3kSonicTailsSs4SpecialStageTraceReplay` (2 errors) |
+| H | Chains and complete-runs | 4 | - |
+
+**Cluster A - close-time pending-submission assertion (14).** `Aiz2`, `Aiz3`,
+`Aiz4`, `Aiz5`, `Cnz`, `Hcz2`, `Hcz3`, `Hcz4`, `Icz`, `Lbz`, `Mhz3`, `Mhz5`,
+`Mhz7`, `Mhz8` segment classes. Every one runs to close and then aborts on the
+leftover `KOS_MODULE_QUEUE` / `KOS_DECOMPRESSION_QUEUE` submission list.
+
+**Cluster B - close-time drain assertion, special stages (9).** `Ss3`, `Ss7`,
+`Ss8`, `Ss9`, `Ss10`, `Ss11`, `Ss12`, `Ss13`, `Ss14`. Each names two dropped
+completions (a `KOS_DECOMPRESSION_QUEUE` at `PRE_MAIN_LOOP` and a
+`KOS_MODULE_QUEUE` at `POST_OBJECTS` on the next raw frame), with `engine pending:
+<none>` for both. These are the demoted edges now being reported at close.
+Re-running `Ss3` alone writes **no trace report at all**, so unlike cluster A
+there is no physics evidence hiding behind this one.
+
+**Cluster C - frame-0 `rings` is zero (6).** `Hpz2` (exp 150), `Hpz3` (177),
+`Icz2` (156), `Mhz4` (85), `Mhz6` (126), `Soz2` (201). Mid-route segments start
+with the ring count the run had carried in; the engine starts them at 0. One
+mechanism: segment bootstrap does not seed carried player state.
+
+**Cluster D - other frame-0 entry state (9).** `Hpz` (`y` 0x0FA6 vs 0x0FAE),
+`Mhz2` (`tails_y_speed` 0 vs 0x0038), `Mhz9` (`camera_y` 0x0260 vs 0x0620),
+`Soz` (`tails_y_speed` 0x0038 vs 0), `Ssz` (`camera_x` 0x0040 vs 0), `Zone0c`
+(`x` -0x1A vs 0x0010), `Pachinko`/`Pachinko2`/`Pachinko3` (`tails_y_speed`
+0x01B2 vs 0). Same phase as C, different field families (position, camera,
+sidekick velocity) - plausibly the same bootstrap-seeding cause, kept separate
+because the field families differ and that has not been proven.
+
+**Cluster E - structural, cannot load (11).** `Dez23`, `Dez232`..`Dez238` (8
+classes, `Index 23 out of bounds for length 22`), `Hpz22`, `Hpz222` (2,
+`Index 22 out of bounds for length 22`), `Ddz` (1, `Index: 1 Size: 1`). Confirmed
+count **11**, not 9. Not fixed this round.
+
+**Cluster F - mid-run divergence from a clean start (9).** `Aiz` frame 2247
+`camera_x` 0x1B10 vs 0x1B0E, **3 errors total**; `Fbz` frame 64 `y` 0x0769 vs
+0x076C, 7759 errors; `Hcz` frame 561 `x_speed` 0 vs 0x03F0, 1526; `Lrz` frame 100
+`tails_y_speed` 0 vs 0x0FEF, 11029; `Mgz` frame 321 `camera_y` 0x0665 vs 0x0662,
+5840; `Mhz` frame 75 `player_mapping_frame` 0x0024 vs 0x0007, 211; `Slots` frame
+5 `player_mapping_frame` 0x0097 vs 0x0096, 900; `Gumball` frame 33 `tails_x`
+0x00CF vs 0x00D1, 119; `Gumball2` frame 33 `tails_x_speed` -0x01B0 vs 0, 144.
+
+**Cluster G (2).** `Ss4` frame 1689 `spheres_left` 80 vs 79 (2 errors); `Ss5`
+frame 3906 `spheres_left` 3 vs 2 (7 errors). Engine one sphere ahead.
+
+**Cluster H (4).** `TestS3kKnucklesSuperEmeraldRunChain` - segment 0 (aiz)
+`giant_ring` exit boundary never observed. `TestS3kMegaRunChain` - unconsumed
+completion edge at segment end, raw_frame 4570 `KOS_DECOMPRESSION_QUEUE#15`.
+`TestS3kSonicTailsCompleteEmeraldRunChain` - source comparator cannot exhaust
+after the aiz boundary, cursor 2288 of 2290, mode path `[SPECIAL_STAGE]`.
+`TestS3kMhzCompleteRunTraceReplay` - invalid rewind reference closure at trace
+index 12271.
+
+### Leads that did NOT reproduce (re-measured, reported as findings)
+
+- **`TestS3kSonicTailsFbzSegmentTraceReplay` does not compare 36 frames at
+  error_count 0 and does not fail at a segment-bootstrap level entry.** It fails
+  at frame 64 on `y` with **7759** errors - ordinary cluster-F physics.
+- The AIZ segment's 3 errors are all one `camera_x` span (frames 2247-2289,
+  expected 0x1B10 / actual 0x1B0E). The reported `player_animation_id` 0x1C vs
+  0x02 and `player_mapping_frame` 0 vs 0x0096 rows are **not** in its report at
+  this base. AIZ is otherwise clean for 2247 frames and never hit the tripwire -
+  that part of the lead holds.
+- Every other named lead (HCZ 561 `x_speed`, MGZ 321 `camera_y`, MHZ 75
+  `player_mapping_frame`, pachinko frame 0, gumball frame 33, slots frame 5,
+  ss_4/ss_5 `spheres_left`) reproduced exactly.
+
+### The sibling assertion IS masking first errors (cluster A)
+
+MEASURED by re-running single classes alone with `target/trace-reports` cleared:
+
+| Class | Close-time abort | Its own report, same run |
+|---|---|---|
+| `TestS3kSonicTailsAiz2SegmentTraceReplay` | `KOS_DECOMPRESSION_QUEUE#43` pending at final run | **error_count 1033**, total_frames 4015, first error frame **0** `tails_y` 0x04C4 vs 0x0000 |
+| `TestS3kSonicTailsIczSegmentTraceReplay` | `KOS_MODULE_QUEUE#277` pending at final run | **error_count 5196**, total_frames 17947, first error frame **470** `x_sub` 0xAB00 vs 0x2B00 |
+| `TestS3kSonicTailsAizSegmentTraceReplay` (control) | none | error list = 3 `camera_x` rows from 2247 |
+
+So the reported symptom is confirmed for both named classes, and both are hiding
+a real physics divergence in the *same* report - `Aiz2` a frame-0 sidekick
+seeding failure that belongs to cluster D, `Icz` a mid-run sub-pixel divergence
+that belongs to cluster F. **The assertion gates 14 classes and masks the first
+error in at least the two inspected.** It has the same two-events-one-message
+shape as the tripwire just demoted. Left unchanged this round, as instructed.
+
+### Route segments no trace exercises at all
+
+DERIVED from the two run manifests' `zone_id`/`act` sets (43 level segments
+each). Union coverage, and what is missing from it:
+
+- **CNZ act 2** - both routes carry CNZ act 1 only.
+- **MGZ act 2** - both routes carry MGZ act 1 only.
+- **SOZ act 2** - both routes carry SOZ act 1 only.
+- **DDZ act 1** - both routes carry act 2 only.
+- **SSZ on the Knuckles route** - zone 11 is absent from that manifest entirely.
+- **Character sets:** no Sonic-alone, no Tails-alone, no Knuckles-with-Sonic, no
+  Super/Hyper-state route, no S3-half (non-locked-on) route.
+
+Two adjacent gaps that are *harness*, not capture, and must not be turned into a
+capture ask: the Knuckles route's 67 segments have no per-segment classes (only
+the chain, which stops in segment 0), and `s3k-multibonus` /
+`s3-knux-multibonus-ss` are validated for timing but never replayed.
+
+### Next target
+
+**Cluster A's close-time assertion, with `TestS3kSonicTailsAiz2SegmentTraceReplay`
+as the witness.** Reasons, in order: it is the largest cluster after the
+structural one; it is *provably* a masker rather than a defect, by the same
+argument that carried the tripwire demotion, and the release side is untouched;
+and unmasking it converts 14 aborts into 14 attributable physics reports, which
+almost certainly redistributes most of those classes into clusters C/D/F and
+therefore shrinks the true defect count well below 14. `Aiz2` is the cleanest
+witness: shortest run of the 14, and its masked first error is at frame 0.
+
+Second choice, as the cheapest structural win: cluster E's 11 classes are one
+missing level-list entry each for zone_id 22 and 23 plus a size-1 DDZ list - no
+physics involved, and it would put nine to eleven segments of already-recorded
+route into comparison for the first time.
+
+Explicitly *not* the next target: cluster F's individual physics defects. They
+are real, but until cluster A is unmasked we do not know how many of them there
+actually are.
