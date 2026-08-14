@@ -221,7 +221,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   and a daily user timer keep the scratch area controlled. The helper rejects
   unsafe roots and symlink races, while
   the documented Windows path provisions durable output through WSL instead of
-  `/tmp` or a Windows temp directory.
+  `/tmp` or a Windows temp directory. The user-unit verifier retains the
+  session runtime directory it needs, so canonical installs can activate the
+  timer without depending on a checkout or worktree.
 - **Sonic 3 & Knuckles trace parity (`bugfix/s3k-traces`, merged 2026-08-10):** brings 15 of 16 previously-failing S3K trace-replay classes to green — AIZ, CNZ, HCZ, ICZ, LBZ and MGZ (standalone and complete-run), the gumball, pachinko and slots bonus stages, the special stage, and the hardware-timing replay — with no previously-green class regressing. Merged after a three-lane review (`docs/architecture/audits/2026-08-10-s3k-traces-branch-review.md`) whose two blocking findings were fixed first: a sidekick on-screen predicate that added three conditions the ROM does not have, and an art submission that only ran when a trace was driving the replay.
 
 ### v0.6.prerelease (Current development snapshot)
