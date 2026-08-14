@@ -539,6 +539,51 @@ is live shipped behaviour**, so it is something the engine should reproduce, not
   regeneration is separately authorised and has not been requested; the recorder defect,
   the six-site guard sweep, and the regeneration request should go up as one package.
 
+### 2026-08-14, later still — the discard is not a ledger problem at all
+
+Three semantics options for modelling the ROM's discard were prototyped and measured
+(one build, arm-selected at runtime, so the scaffolding is identical across arms). The
+measurement invalidated the question.
+
+**The engine applies dynamic art at SUBMISSION, not at queue drain.** MEASURED:
+`DynamicArtDecisionOwner.observe()` calls `lifecycle.observePlayerDplc(...)` and then,
+*synchronously in the same call*, `renderer.applyRuntimeArtUpdate(...)` →
+`patternBank.consumeRuntimeArtState(...)`. The tiles are written there and then. The ROM
+writes nothing at submission — `LoadSonicDynPLC` only calls `QueueDMATransfer`
+(`s2.asm:38858`); the VRAM write happens later, inside `ProcessDMAQueue`
+(`s2.asm:1770-1791`).
+
+So **no ledger-side option can stop the engine performing a transfer the ROM discards.**
+All three options change only what is *recorded*; the visible accuracy defect — art
+appearing that the hardware never transferred — survives every one of them untouched.
+The real fix is to defer art application to the drain, which is a materially larger change
+than any edge-kind decision. Any future round must start there, not at the ledger.
+
+**Measured blast radius, for the record** (baseline 843 / 9F / 56E / 4S, 65 red):
+
+- **Option 3** (stop performing, keep the stamp) run as a **control**: byte-identical to
+  baseline in every respect, red set identical by name, all 5 chain axes verbatim. That is
+  what proves the scaffolding inert and options 1/2's deltas attributable to the discard.
+  It is also, independently, the option rejected as illegal — an engine stamping
+  `completed` on work it did not do is a lie in its own telemetry.
+- **Options 1 and 2** (silent removal; distinct `discarded` kind): both **843 / 10F / 56E /
+  4S, 66 red**, red-set diff `+ TestS2EhzHalfpipeRoundTripChain` and nothing else. None of
+  the other 29 blast-radius classes moved.
+- **Both cause comparator starvation on the chain.** `TestS2CompleteEmeraldRunChain` stops
+  reporting 5 axes and aborts earlier on a DPLC divergence in special-stage segment 1.
+  Segment 11's 236, the cursor walk failure, and all three gap axes stop being measured —
+  the same failure shape the DO-NOT-RE-RUN list records for the census walk. **Fewer axes
+  is not better.**
+
+**Correction to this document's own frontier claim.** Earlier revisions state that
+`TestS2CompleteEmeraldVisualRun` "stalls at segment 0/1 row 5200". **That is stale.** The
+class is pinned to `VisualRunReplayHarness.stopAfterSegmentBody(0)` and asserts
+`sharedCursor == 4479`, `currentSegmentIndex == 0`. It is **GREEN**, at baseline and under
+all three options. The row-5200 stall was a state of an earlier commit; the visual path is
+not currently a live frontier, and no round should be briefed as though it were.
+
+Minor citation fix: `ProcessDMAQueue` is `s2.asm:1770-1791`, not `:1772-1790`.
+
 `known-discrepancies` entry 28 remains accurate as written for axis 4; nothing landed.
 
 ## Open decision
