@@ -71,6 +71,8 @@ import com.openggf.trace.replay.runs.TraceRunPresentationClosure;
 import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
+import com.openggf.trace.replay.runs.SpecialStageRecordedPassPacing;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows.SpecialStageRowAdmission;
@@ -168,6 +170,21 @@ public final class TraceSessionLauncher {
     private int runSpecialLocalRow;
     private int runSpecialVblankBefore;
     private boolean runSpecialInputApplied;
+    /**
+     * Recorded {@code RunObjects} pass stream for the active special-stage
+     * segment. {@code SS_MainLoop} sets {@code VintID_S2SS}, waits on it, and
+     * only then runs {@code RunObjects} (docs/s2disasm/s2.asm:6697-6698, 6721),
+     * so the loop is paced by 68K pass duration: one V-blank observation owns
+     * 0..n completed passes. Without this the production replay path ran
+     * exactly one pass per admitted row and simply dropped the passes a slow
+     * observation owned.
+     */
+    private SpecialStageRunObjectsPassBinder runSpecialPassBinder;
+    private int runSpecialPassPacedFromRow = Integer.MAX_VALUE;
+    private List<SpecialStageRunObjectsPassBinder.CompletedPass>
+            runSpecialObservationPasses = List.of();
+    private boolean runSpecialObservationPassesBound;
+    private int runSpecialObservationRow = -1;
     private TraceRunReplayWalker.TerminalMovieTailPlan runTerminalTail;
     private boolean runTerminalRowAdvanced;
     private boolean runTerminalMovieEndReached;
@@ -1002,7 +1019,8 @@ public final class TraceSessionLauncher {
                     && !ssTrace.admission(ssCursor).executeGameplay();
         }
         return currentRunSpecialAdmission()
-                .map(admission -> !admission.executeGameplay())
+                .map(admission -> !admission.executeGameplay()
+                        && !currentRunSpecialRowOwnsCompletedPass())
                 .orElse(false);
     }
 
@@ -1036,6 +1054,7 @@ public final class TraceSessionLauncher {
             var objects = GameServices.level().getObjectManager();
             runSpecialVblankBefore = objects != null ? objects.getVblaCounter() : 0;
             runSpecialInputApplied = true;
+            bindRunSpecialObservationPasses();
         } else {
             return;
         }
@@ -1061,6 +1080,8 @@ public final class TraceSessionLauncher {
         if (runSpecialInputApplied) {
             applyRunSpecialPreservedVblankPolicy();
             runSpecialInputApplied = false;
+            runSpecialObservationPasses = List.of();
+            runSpecialObservationPassesBound = false;
             return;
         }
         if (ssTrace == null) {
@@ -1103,6 +1124,80 @@ public final class TraceSessionLauncher {
     private int currentRunSpecialRow() {
         return runSpecialRowDriver != null
                 ? runSpecialRowDriver.cursor() : runSpecialLocalRow;
+    }
+
+    /**
+     * Opens the recorded object-pass stream for the special-stage segment just
+     * admitted. Rows already consumed before the driver existed are advanced
+     * over rather than skipped, because the binder rejects a skipped
+     * observation.
+     */
+    private void armRunSpecialPassPacing(int rowsAlreadyConsumed) {
+        runSpecialPassBinder = runSpecialRows.newRunObjectsPassBinder().orElse(null);
+        runSpecialPassPacedFromRow = runSpecialPassBinder == null
+                ? Integer.MAX_VALUE : runSpecialRows.passPacedFromRow();
+        runSpecialObservationPasses = List.of();
+        runSpecialObservationPassesBound = false;
+        if (runSpecialPassBinder != null) {
+            for (int row = 0; row < rowsAlreadyConsumed; row++) {
+                runSpecialPassBinder.passesForObservation(row);
+            }
+        }
+    }
+
+    private void clearRunSpecialPassPacing() {
+        runSpecialPassBinder = null;
+        runSpecialPassPacedFromRow = Integer.MAX_VALUE;
+        runSpecialObservationPasses = List.of();
+        runSpecialObservationPassesBound = false;
+    }
+
+    /**
+     * Binds the current observation's completed passes, exactly once per local
+     * row and in row order (the binder rejects a skipped observation). Called
+     * from the per-frame input hook, which GameLoop runs for every
+     * special-stage frame, lag row or not.
+     */
+    private void bindRunSpecialObservationPasses() {
+        if (runSpecialPassBinder == null || runSpecialObservationPassesBound) {
+            return;
+        }
+        runSpecialObservationRow = currentRunSpecialRow();
+        runSpecialObservationPasses =
+                runSpecialPassBinder.passesForObservation(runSpecialObservationRow);
+        runSpecialObservationPassesBound = true;
+    }
+
+    /**
+     * Pass pacing for the special-stage observation about to run, or empty when
+     * this session/row is still frame-paced.
+     *
+     * <p>Comparison-only: {@link SpecialStageRecordedPassPacing} documents which
+     * side of the rule-4 line every consumed field sits on. This method decides
+     * only <em>when</em> engine-owned object passes run.
+     */
+    public Optional<GameLoop.SpecialStageObservationPacing>
+            currentSpecialStagePassPacing() {
+        if (runSpecialPassBinder == null || !runSpecialObservationPassesBound
+                || currentRunSpecialAdmission().isEmpty()
+                || runSpecialObservationRow < runSpecialPassPacedFromRow) {
+            return Optional.empty();
+        }
+        return Optional.of(SpecialStageRecordedPassPacing.forObservation(
+                movie, runSpecialObservationPasses, runSpecialObservationRow));
+    }
+
+    /**
+     * True when the recorded stream gives this observation a completed object
+     * pass, so it cannot have been a lag V-blank whatever the recorder's lag
+     * heuristic reports: {@code SS_MainLoop} sets {@code VintID_S2SS} and waits
+     * on it immediately before the pass (docs/s2disasm/s2.asm:6697-6698, 6721),
+     * and {@code V_Int} takes {@code Vint_Lag} only while {@code Vint_routine}
+     * is still 0 (docs/s2disasm/s2.asm:483-484). Same rule the chain harness
+     * and {@code S2SpecialStageReplayHarness.stepPasses} apply.
+     */
+    private boolean currentRunSpecialRowOwnsCompletedPass() {
+        return !runSpecialObservationPasses.isEmpty();
     }
 
     /** Resolves the active run source's physical row in its declared input clock. */
@@ -1432,12 +1527,14 @@ public final class TraceSessionLauncher {
             runSpecialLocalRow = runSpecialRowDriver.cursor();
             runSpecialRowDriver = null;
             runSpecialRows = null;
+            clearRunSpecialPassPacing();
         } else if (runSpecialRows != null) {
             requireNoPendingRunSpecialDynamicArtRow();
             if (runSpecialDynamicArtComparison != null) {
                 runSpecialDynamicArtComparison.verifyComplete();
             }
             runSpecialRows = null;
+            clearRunSpecialPassPacing();
         }
         if (runDynamicArtSegments != null) {
             closeRunDynamicArtWindowForSegment(segmentIndex);
@@ -1496,6 +1593,7 @@ public final class TraceSessionLauncher {
             runSpecialLocalRow = receipt.rowsConsumed();
             runSpecialRowDriver = new TraceRunSpecialStageRowDriver(
                     runSpecialRows, segment.trace());
+            armRunSpecialPassPacing(receipt.rowsConsumed());
             runBoundaryProbe.setDelegate(null);
             TraceRunSpecialStageRows hudRows = runSpecialRows;
             overlay = new SpecialStageTraceHudOverlay(

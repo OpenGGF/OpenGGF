@@ -228,6 +228,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 special-stage object passes are paced on the production replay path
+  (2026-08-14):** the ROM's special-stage loop waits on its own V-int before each
+  `RunObjects`, so it is paced by 68K pass duration rather than one pass per V-blank,
+  and a single recorded row can own two completed object passes. That pacing existed
+  but was installed only by the run-chain test harness; the production path skipped
+  lag rows outright and lost the passes they carried. Ownership now lives in a shared
+  owner both paths install, and the production visual replay reaches 5,200 of the
+  first special stage's 5,681 rows instead of stopping at its first comparison error.
+
 - **Sonic 2 DMA-queue-only VBlank owns its own lag row (2026-08-14):** the ROM waits
   on `Vint_CtrlDMA` before entering the special-stage fade, and that handler drains
   the DMA queue without ever polling the joypad -- so the row is a lag row for

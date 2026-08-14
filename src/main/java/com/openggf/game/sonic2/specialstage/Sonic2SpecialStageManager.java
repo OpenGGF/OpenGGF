@@ -1381,7 +1381,7 @@ public class Sonic2SpecialStageManager {
      * 9734-9746). Deterministic replay uses this semantic boundary; all state is
      * evolved natively from the pending pass and no trace state is copied in.
      */
-    void completeTerminalPreStartPassWithoutVint() {
+    public void completeTerminalPreStartPassWithoutVint() {
         if (!recurringMainPassPending
                 || intro == null
                 || !intro.isTerminalPreStartPassPending()) {

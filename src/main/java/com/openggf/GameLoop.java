@@ -1449,7 +1449,22 @@ public class GameLoop {
         boolean skipSsTick = ssSession != null
                 && ssSession.shouldSkipCurrentSpecialStageTick();
         if (!skipSsTick) {
-            SpecialStageObservationPacing pacing = specialStageObservationPacing;
+            SpecialStageObservationPacing installed = specialStageObservationPacing;
+            if (installed == null && ssSession != null) {
+                // The production replay path owns the same recorded object-pass
+                // stream the chain harness installs by hand; SS_MainLoop is
+                // paced by 68K pass duration, not one pass per V-blank
+                // (docs/s2disasm/s2.asm:6697-6698, 6721).
+                installed = ssSession.currentSpecialStagePassPacing().orElse(null);
+            }
+            final SpecialStageObservationPacing pacing = installed;
+            if (pacing != null) {
+                // The recorded pass stream IS the pacing authority, so the
+                // runtime's own lag model must not also pace it -- the
+                // standalone S2 special-stage harness and the chain harness
+                // both turn it off for exactly this reason.
+                ssProvider.setLagCompensation(0);
+            }
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
                     ssProvider.specialStagePlcLifecyclePhase(), () -> {
