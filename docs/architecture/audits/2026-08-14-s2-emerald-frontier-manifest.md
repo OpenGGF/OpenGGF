@@ -479,8 +479,26 @@ will misdirect a fix:**
   branch**, which the hard rules forbid; the accurate model is the overrunning clear, and
   whatever else that clear tramples.
 
-The pair appears at six sites in `s2.asm`. **Each needs its own guard check before that
-count does any work** — one of the first two examined turned out to differ.
+The pair appears at six sites in `s2.asm`. Guard-checked, all six (MEASURED — each
+`clr.w (VDP_Command_Buffer).w` line located, then its nearest preceding
+`if`/`else`/`endif` read):
+
+| `s2.asm` line | guard | shipped ROM (`fixBugs = 0`) executes it? |
+|---|---|---|
+| 4857 | none (preceding `endif` at 4817) | **yes** |
+| **6609** | **`if fixBugs` at 6604** | **NO** |
+| 6759 (results tail) | none | **yes** |
+| **10342** | **`if fixBugs` at 10332** | **NO** |
+| 10766 | none (preceding `endif` at 10765) | **yes** |
+| 11737 | none | **yes** |
+
+**Two of six are `fixBugs`-guarded**, so "six sites" overstates the shipped ROM's discards
+by a third. Only 4857, 6759, 10766 and 11737 are real.
+
+Site 10342 is worth reading for its own sake: the disassembly documents the bug the fix
+*would* have prevented — after a Game Over in HTZ, `Dynamic_HTZ`'s queued cloud art
+transfers late over Tails' Continue art and corrupts it. **At `fixBugs = 0` that corruption
+is live shipped behaviour**, so it is something the engine should reproduce, not avoid.
 
 **Consequences, and they are the useful part of this finding:**
 
