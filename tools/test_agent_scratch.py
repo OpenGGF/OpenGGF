@@ -411,7 +411,8 @@ class AgentScratchTests(unittest.TestCase):
         self.assertIn("--allowedTools", command)
         self.assertEqual("Bash(printf *)", command[command.index("--allowedTools") + 1])
         self.assertIn("--permission-mode", command)
-        self.assertEqual("bypassPermissions", command[command.index("--permission-mode") + 1])
+        self.assertEqual("auto", command[command.index("--permission-mode") + 1])
+        self.assertNotIn("bypassPermissions", command)
         self.assertIn("--no-session-persistence", command)
         prompt = command[-1]
         self.assertIn("printf '%s' \"${TMPDIR-UNSET}\"", prompt)

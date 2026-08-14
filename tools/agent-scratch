@@ -938,7 +938,7 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
     command = [
         executable,
         "--allowedTools", "Bash(printf *)",
-        "--permission-mode", "bypassPermissions",
+        "--permission-mode", "auto",
         "--no-session-persistence",
         "-p", prompt,
     ]
