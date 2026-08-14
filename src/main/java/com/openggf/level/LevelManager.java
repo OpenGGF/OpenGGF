@@ -2951,19 +2951,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setDirection(Direction.RIGHT);
             if (sidekick.getCpuController() != null) {
                 applySidekickLevelBounds(sidekick);
-                // Capture the leader's spawn centre as the level-start anchor for
-                // the deferred sidekick placement / Pos_table prefill. ROM
-                // SpawnLevelMainSprites_SpawnPlayers places the CPU sidekick and
-                // fills Sonic_Pos_Record_Buf while the leader is at its spawn
-                // position, before the first LevelLoop physics tick
-                // (sonic3k.asm:8359-8369). The engine's controller placement is
-                // deferred to its first updateInit tick, which can land after the
-                // leader has moved on a mid-run zone entry, so anchor to this
-                // captured spawn centre rather than the live (moved) one.
+                // Capture the spawn centre for the deferred CPU placement. ROM
+                // SpawnLevelMainSprites_SpawnPlayers places the sidekick and fills
+                // Sonic_Pos_Record_Buf before the first LevelLoop physics tick
+                // (sonic3k.asm:8359-8369), while the leader is still at this centre.
                 if (player instanceof AbstractPlayableSprite leaderSprite) {
-                    sidekick.getCpuController().captureLevelStartLeaderAnchor(
+                    SidekickCpuController controller = sidekick.getCpuController();
+                    controller.captureLevelStartLeaderAnchor(
                             leaderSprite.getCentreX(),
                             leaderSprite.getCentreY());
+                    if (controller.getLeader() == leaderSprite) {
+                        controller.adoptLevelStartLeaderHistoryPrefill();
+                    }
                 }
             }
         }
