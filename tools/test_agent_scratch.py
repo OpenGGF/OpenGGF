@@ -575,6 +575,8 @@ class AgentScratchTests(unittest.TestCase):
         self.assertIn("env", captured)
         self.assertNotEqual(os.environ.get("HOME"), captured["env"]["HOME"])
         self.assertNotEqual(os.environ.get("XDG_CONFIG_HOME"), captured["env"]["XDG_CONFIG_HOME"])
+        if os.environ.get("XDG_RUNTIME_DIR"):
+            self.assertEqual(os.environ["XDG_RUNTIME_DIR"], captured["env"].get("XDG_RUNTIME_DIR"))
 
     def test_verify_timer_requires_enabled_state_and_next_trigger(self):
         enabled = type("Run", (), {"returncode": 0, "stdout": "enabled\n", "stderr": ""})()

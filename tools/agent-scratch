@@ -1096,7 +1096,9 @@ def _verify_unit_syntax(service_path: pathlib.Path, timer_path: pathlib.Path) ->
             analyzer_env = dict(os.environ)
             analyzer_env["HOME"] = str(isolated_home)
             analyzer_env["XDG_CONFIG_HOME"] = str(isolated_config)
-            analyzer_env.pop("XDG_RUNTIME_DIR", None)
+            # Keep the user's runtime directory: ``systemd-analyze --user``
+            # needs it to locate the user manager.  HOME/XDG_CONFIG_HOME are
+            # still isolated so unrelated user units are not discovered.
             verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], env=analyzer_env, text=True, capture_output=True, check=False)
     except OSError:
         return "unverified"
