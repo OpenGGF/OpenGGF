@@ -1041,16 +1041,19 @@ No display, no EmuHawk process to babysit, and it fails loudly instead of silent
 writing nothing:
 
 ```bash
+TRACE_DIR="$(tools/agent-scratch new "regen-<zone>" | tail -n 1)"
 tools/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
     --movie src/test/resources/traces/<game>/<zone>/<movie>.bk2 \
-    --output /tmp/regen-<zone> \
+    --output "$TRACE_DIR" \
     --mode trace \
     --trace-profile <profile>
 ```
 
-`--output` must not already exist. Use `--run-id <id>` instead of `--trace-profile` for
-run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
+`tools/agent-scratch new` creates the required fresh output directory beneath
+`$OGGF_SCRATCH_ROOT/openggf/tasks`; its second output line is the task path captured
+above. `--output` must not already exist. Use `--run-id <id>` instead of `--trace-profile`
+for run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
 ROM paths come from `S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH`, following the
 SKIP-when-absent convention.
 
@@ -1075,20 +1078,20 @@ native S3K ports defer (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`). No longer neede
 three versions behind and could not be reproduced by any current recorder, so it was
 regenerated at 6.32 and the native gate now asserts it byte-for-byte. Lua captures do work
 on Linux; the old "Windows only" README note
-is stale. Clear the scratch dir first, since the recorder appends into it (swap in
+is stale. Allocate a fresh scratch directory because the recorder appends into it (swap in
 `s3k_complete_run_recorder.lua` for complete-run captures):
 
 ```bash
-rm -rf tools/bizhawk/trace_output
-OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
+LUA_TRACE_DIR="$(tools/agent-scratch new "s3k-lua-<zone>" | tail -n 1)"
+OGGF_TRACE_OUTPUT_DIR="$LUA_TRACE_DIR" OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh \
         tools/bizhawk/s3k_trace_recorder.lua \
         src/test/resources/traces/s3k/<zone>/<movie>.bk2 \
         "$S3K_ROM_PATH"
 ```
 
-Output lands in `tools/bizhawk/trace_output/` and stays there (or in another scratch
-directory) as diagnostic/corroborative evidence. Never copy Lua output into
+Output lands in the helper-managed task directory and stays scratch-only diagnostic/
+corroborative evidence. Never copy Lua output into
 `src/test/resources/traces/`. If a canonical fixture needs a hook-driven or legacy
 capability the native harness lacks, implement and independently review that native
 capability first, or obtain an explicit policy redesign before publication. Do not
@@ -1155,12 +1158,15 @@ The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk
   375 MB output). Use Lua + EmuHawk only for scratch-only hook diagnostics or optional
   legacy/non-Linux corroboration. Lua output cannot become a canonical fixture. If native
   lacks a capability required by a canonical fixture, implement/review it natively or
-  explicitly redesign the policy before publication. The Windows diagnostic equivalent is:
+  explicitly redesign the policy before publication. On Windows, set
+  `OGGF_TRACE_OUTPUT_DIR` to an absolute helper-created task directory before launching
+  the equivalent recorder:
   ```
-  EmuHawk.exe --chromeless --lua=tools/bizhawk/<game>_complete_run_recorder.lua \
+  set "OGGF_TRACE_OUTPUT_DIR=<absolute-helper-created-task-directory>"
+  EmuHawk.exe --chromeless --lua=tools/bizhawk/<game>_complete_run_recorder.lua ^
       --movie=<the complete-run bk2> "Sonic The Hedgehog (W) (REV01) [!].gen"
   ```
-  Output lands per-zone in `tools/bizhawk/trace_output/<zone>/` (uncompressed) and remains
+  Output lands per-zone below that task directory (uncompressed) and remains
   scratch-only. The full ROM name (spaces/parens/`[!]`) works as the trailing positional
   ROM arg to the recorder — the "spaces break it" trap is specific to the ad-hoc
   diag-capture path below, not the recorder. **Check which recorder made the target trace**
@@ -1170,7 +1176,7 @@ The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk
   ```
   python -c "import lupa; lupa.LuaRuntime().compile(open('tools/bizhawk/<recorder>.lua',encoding='utf-8',errors='replace').read())"
   ```
-  Brace/paren/quote balance MISSES real errors — notably Lua's **200-locals-per-main-chunk limit** (top-level `local`s past 200 fail to load; EmuHawk runs, writes no `trace_output`, and looks like a silent core-init failure). Fix by making new constants global or keeping the main chunk ≤200 locals. Always lupa-compile before launching a regen.
+  Brace/paren/quote balance MISSES real errors — notably Lua's **200-locals-per-main-chunk limit** (top-level `local`s past 200 fail to load; EmuHawk runs, writes no recorder output, and looks like a silent core-init failure). Fix by making new constants global or keeping the main chunk ≤200 locals. Always lupa-compile before launching a regen.
 - **Map scratch output by `bk2_frame_offset`, NOT by directory name.** Recorder output dirs
   use RAM-detected zone/act names that can differ from repo fixture names (for example,
   `sbz3` offset 189578 maps to `fz_completerun`; `lz4` offset 181004 maps to
@@ -1211,7 +1217,8 @@ observes a write and never authorizes emulated-memory, input, register, or
 savestate mutation.
 
 ```bash
-OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT=/tmp/<name>.txt DISPLAY=:0 \
+PROBE_DIR="$(tools/agent-scratch new "probe-<name>" | tail -n 1)"
+OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT="$PROBE_DIR/<name>.txt" DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh tools/bizhawk/<your_copy>.lua <bk2> "$ROM_PATH"
 ```
 
@@ -1506,10 +1513,10 @@ If a fix is genuinely game-divergent (different games' ROMs really do behave dif
 - **sub-pixel** → hook `SpeedToPos` / the position-update instruction; capture `x_sub`/`y_sub` mid-frame.
 - **counter-phase** → hook the counter's update instruction.
 
-**Probe output path:** `tools/bizhawk/` is per-worktree (not shared), so write probe
-output via an env var (`OGGF_DIAG_OUT` for `diag_template_fast.lua`, or
-`OGGF_OUT`) to a stable absolute path rather than a relative one — EmuHawk's CWD
-becomes the lua dir, so relative paths land unpredictably. All probe paths
+**Probe output path:** create a helper-managed task directory and write probe output via
+an env var (`OGGF_DIAG_OUT` for `diag_template_fast.lua`, or `OGGF_OUT`) to an absolute
+path inside it rather than a relative one — EmuHawk's CWD becomes the lua dir, so relative
+paths land unpredictably. All probe paths
 (`--lua`, `--movie`, the ROM) must be ABSOLUTE.
 
 **A legitimate bounce category the probe sometimes reveals: chaotic feedback
