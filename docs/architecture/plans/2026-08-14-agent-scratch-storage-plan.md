@@ -43,7 +43,7 @@ hook/test workflow.
 
 ---
 
-## 1. Implement the managed helper and its tests
+## Task 1 — Implement the managed helper and its tests
 
 **Files:**
 
@@ -143,7 +143,7 @@ tools/agent-scratch path tasks
 tools/agent-scratch status
 ```
 
-## 2. Document the storage contract and remove live `/tmp` output recipes
+## Task 2 — Document the storage contract and remove live `/tmp` output recipes
 
 **Files:**
 
@@ -185,7 +185,7 @@ rg -n '/tmp' .agents/skills .claude/skills docs/agent-workflow tools
 git diff --check
 ```
 
-## 3. Exercise host configuration and cleanup on the real machine
+## Task 3 — Exercise host configuration and cleanup on the real machine
 
 - [ ] After the helper is present on the integration branch, run
   `tools/agent-scratch install` from the canonical main checkout so the user
@@ -204,7 +204,7 @@ git diff --check
   contents; preserve active `/tmp/claude-1000` or current task state until a
   fresh session has been verified.
 
-## 4. Required repository integration verification
+## Task 4 — Required repository integration verification
 
 - [ ] Before integration, fetch and fast-forward `develop` without discarding
   user changes, run the full Maven baseline on JDK 21, and record exact output
