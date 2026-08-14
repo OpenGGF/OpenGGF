@@ -161,3 +161,46 @@ that is not the stated priority.
 Land it if its scoping proves contained, under the opportunistic-uplift clause. If it
 sprawls, park it as a documented defect with this scoping attached: a well-scoped unlanded
 fix is an asset; a half-landed cross-cutting one is a liability.
+
+## Decisions needing your authority
+
+Both concern the same authority — what gets recorded — so they are put together rather than
+piecemeal.
+
+### 1. Fixture regeneration for the recorder discard defect
+
+As above: `OnProcessDmaQueue` manufactures completed lifecycles for work the ROM discarded.
+Fixing it means a recorder change plus regenerated S2 fixtures. **Not requested, not
+started.** Note the sequencing trap: regenerating *before* the engine's apply-at-drain fix
+lands would make the engine and the corrected stream disagree in the other direction.
+
+### 2. Whether to pull the S3K captures forward in the recorder-migration order
+
+This one is a genuine scheduling question and it is not ours to settle.
+
+The current recorder-migration order puts the two S3K captures last, behind the S2 workflow
+and the S1 complete-run. Meanwhile:
+
+- S3K playable parity is the **stated top priority** (`CLAUDE.md`, "Current priority").
+- The S3K complete-run trace replays are, as far as we know, **green** — which is a
+  statement about *coverage*, not about parity. A green suite over thin coverage proves the
+  coverage, in the same way a green fixture proves the fixture.
+- The priority list itself directs that zones beyond AIZ→HCZ advance "by current route
+  blockers and **complete-run trace frontiers**". With no measured S3K frontier, there is
+  nothing for that clause to act on.
+- The S1 complete-run capture, ahead of the S3K ones in the queue, serves a game that is not
+  the priority.
+
+So the priority game currently has **no measured frontier at all**, and closing that gap is
+a recording task before it is a fixing task. Pulling the S3K captures forward — new BK2
+coverage through the route segments existing traces do not exercise, CNZ onward — would
+convert "no known open S3K regression" from a statement about ignorance into one about
+evidence.
+
+Recommended, pending your call: (a) fresh full S3K `*TraceReplay` sweep under the
+measurement protocol first, since it is cheap and decides everything downstream — a stale
+surefire report counts as passes and a truncated run reports *fewer* red, so the existing
+"green" claim needs re-measuring before it is relied on; (b) if genuinely green, reorder the
+captures; (c) meanwhile, audit the S3K Kosinski-queue path for the *same* apply-at-submission
+defect documented above, which is a bounded carry-over of this investigation and bears on the
+standing `maxChunkPatternIndex > patternCount` limitation.
