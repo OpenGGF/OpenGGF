@@ -2800,9 +2800,17 @@ public class GameLoop {
             // Pal_FadeToWhite WaitForVint is already the NEXT iteration's --
             // deferring again would give the routine 23 V-ints instead of the
             // 22 its dbf loop runs (docs/s2disasm/s2.asm:3571-3582) and push
-            // the results loop's first VintID_Level, with the ProcessDMAQueue
-            // that retires the stage's last player DPLC pair (s2.asm:6797-6803,
-            // 781, 1770), one row late.
+            // the results loop's first VintID_Level (s2.asm:6797-6803, 781,
+            // 1770) one row late.
+            //
+            // Note that V-int does NOT retire the stage's last player DPLC
+            // pair, as an earlier version of this comment claimed. The results
+            // setup block zeroes the queue head first -- unguarded, so the
+            // shipped ROM runs it -- at s2.asm:6759-6760, and ProcessDMAQueue
+            // stops on a zero first word (s2.asm:1772-1790). The ROM DISCARDS
+            // that pair; it never transfers. Vint_Fade (s2.asm:1068-1070) does
+            // not call ProcessDMAQueue either, so nothing drains between the
+            // mode change and the clear.
             GameLoopPlcLifecycle.startToWhiteAfterFrameFadeTick(
                     resolveGameplayModeContext(), fadeManager, () -> {
                         doEnterResultsScreen();
@@ -2884,8 +2892,10 @@ public class GameLoop {
         // V-blank of its tally loop (S2 `VintID_Level` at s2.asm:6797-6800, S1
         // `SS_NormalExit` at sonic.asm:3403-3406). A fade-from-white here would
         // instead hold PALETTE_FADE for its whole duration and push the first
-        // results-owned V-blank -- and the ProcessDMAQueue that retires the
-        // stage's last player DPLC pair -- that many rows late.
+        // results-owned V-blank that many rows late. (That V-blank's
+        // ProcessDMAQueue retires nothing: s2.asm:6759-6760 zeroes the queue
+        // head first, unguarded, so the ROM discards the stage's last player
+        // DPLC pair rather than transferring it.)
         fadeManager.clearOverlayForImmediatePaletteLoad();
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
