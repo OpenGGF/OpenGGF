@@ -166,6 +166,22 @@ class AgentScratchTests(unittest.TestCase):
             os.close(tasks_fd)
         self.assertTrue(any(entry.is_dir() for entry in tasks.iterdir()))
 
+    def test_final_directory_replacement_is_not_removed(self):
+        root = self.helper.ensure_root(self.env)
+        tasks = root / "openggf/tasks"
+        candidate = tasks / "candidate"
+        candidate.mkdir()
+        expected = candidate.stat()
+        replacement = tasks / "replacement"
+        replacement.mkdir()
+        os.replace(replacement, candidate)
+        tasks_fd = os.open(tasks, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            self.assertFalse(self.helper._finalize_directory(tasks_fd, "candidate", expected))
+        finally:
+            os.close(tasks_fd)
+        self.assertTrue(any(entry.is_dir() for entry in tasks.iterdir()))
+
     def test_concurrent_new_and_prune_share_lock(self):
         self.helper.ensure_root(self.env)
         child_env = {**os.environ, **self.env}
@@ -196,6 +212,30 @@ class AgentScratchTests(unittest.TestCase):
         self.assertIn("would-remove", self.run_helper(["prune", "--dry-run"])[1])
         self.assertEqual(0, self.run_helper(["prune"])[0])
         self.assertFalse(task.exists())
+
+    def test_keep_accepts_only_direct_prune_candidates(self):
+        root = self.helper.ensure_root(self.env)
+        task = root / "openggf/tasks/direct"
+        task.mkdir()
+        nested = task / "nested"
+        nested.mkdir()
+        until = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+        self.assertEqual(2, self.run_helper(["keep", str(root / "openggf/tasks"), "--until", until])[0])
+        self.assertEqual(2, self.run_helper(["keep", str(nested), "--until", until])[0])
+        self.assertEqual(0, self.run_helper(["keep", str(task), "--until", until])[0])
+
+    def test_marker_rejects_non_regular_files_without_blocking(self):
+        root = self.helper.ensure_root(self.env)
+        task = root / "openggf/tasks/marker"
+        task.mkdir()
+        marker = task / self.helper.KEEP_FILE
+        os.mkfifo(marker)
+        task_fd = os.open(task, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._marker_expiry(task_fd)
+        finally:
+            os.close(task_fd)
 
     def test_toml_editor_preserves_comments_unrelated_keys_and_is_idempotent(self):
         root = self.helper.ensure_root(self.env)
@@ -235,6 +275,13 @@ class AgentScratchTests(unittest.TestCase):
         quoted = self.helper.systemd_exec_quote('/checkout with space/a"b\\c\n')
         self.assertEqual('"/checkout\\x20with\\x20space/a\\"b\\\\c\\n"', quoted)
 
+    def test_systemd_quotes_environment_path_and_preserves_unicode_whitespace(self):
+        home = pathlib.Path(self.temp.name) / "home with space"
+        with mock.patch.object(self.helper.pathlib.Path, "home", return_value=home):
+            _, service, _ = self.helper._unit_files(self.root)
+        self.assertIn('EnvironmentFile="' + str(home).replace(" ", "\\x20") + '/.config/oggf-agent-scratch/environment"', service)
+        self.assertIn("\u00a0", self.helper.systemd_exec_quote("a\u00a0b"))
+
     def test_process_inspection_failure_is_unknown_and_protects_prune(self):
         with mock.patch.object(self.helper.subprocess, "run", side_effect=FileNotFoundError):
             self.assertEqual("unknown", self.helper._active("claude"))
@@ -271,6 +318,15 @@ class AgentScratchTests(unittest.TestCase):
         with mock.patch.object(self.helper.subprocess, "run", return_value=type("Run", (), {"returncode": 1, "stderr": "bad unit", "stdout": ""})()):
             with self.assertRaises(self.helper.ScratchError):
                 self.helper._verify_unit_syntax(service, timer)
+
+    def test_verify_timer_requires_enabled_state_and_next_trigger(self):
+        enabled = type("Run", (), {"returncode": 0, "stdout": "enabled\n", "stderr": ""})()
+        trigger = type("Run", (), {"returncode": 0, "stdout": "Fri 2026-08-14 14:00:00 BST\n", "stderr": ""})()
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=[enabled, trigger]):
+            self.assertEqual("verified", self.helper._verify_timer())
+        unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "Failed to connect to bus"})()
+        with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
+            self.assertEqual("unverified", self.helper._verify_timer())
 
     def test_path_does_not_touch_unrelated_sentinel(self):
         sentinel = pathlib.Path(self.temp.name) / "sentinel"

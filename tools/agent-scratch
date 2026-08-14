@@ -7,11 +7,14 @@ are descriptor-relative and never inspect arbitrary temporary directories.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import datetime as dt
+import errno
 import fcntl
 import json
 import os
 import pathlib
+import platform
 import random
 import re
 import shutil
@@ -230,11 +233,22 @@ def _parse_until(value: str, *, allow_expired: bool = False) -> dt.date:
 
 def _marker_expiry(dir_fd: int) -> dt.date | None:
     try:
-        fd = os.open(KEEP_FILE, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=dir_fd)
+        before = os.stat(KEEP_FILE, dir_fd=dir_fd, follow_symlinks=False)
     except FileNotFoundError:
         return None
+    if not stat.S_ISREG(before.st_mode) or before.st_size > 128:
+        raise ScratchError("keep marker must be a bounded regular file")
     try:
+        fd = os.open(KEEP_FILE, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=dir_fd)
+    except OSError as exc:
+        raise ScratchError(f"cannot safely open keep marker: {exc.strerror}") from exc
+    try:
+        after = os.fstat(fd)
+        if not stat.S_ISREG(after.st_mode) or not _same_identity(after, before):
+            raise ScratchError("keep marker changed while opening")
         data = os.read(fd, 256).decode("ascii")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ScratchError("cannot read keep marker safely") from exc
     finally:
         os.close(fd)
     if not re.fullmatch(re.escape(KEEP_PREFIX) + r"\d{4}-\d{2}-\d{2}\n", data):
@@ -253,6 +267,8 @@ def _open_relative_directory(root_fd: int, root: pathlib.Path, value: str) -> in
     if os.path.commonpath((str(root), str(resolved))) != str(root) or resolved == root:
         raise ScratchError("keep path must be a directory below the managed root")
     rel = resolved.relative_to(root)
+    if not any(rel.parts[:-1] == definition[:-1] for definition in AREAS.values()):
+        raise ScratchError("keep path must be one direct managed prune candidate")
     fd = os.dup(root_fd)
     try:
         for part in rel.parts:
@@ -260,9 +276,9 @@ def _open_relative_directory(root_fd: int, root: pathlib.Path, value: str) -> in
             os.close(fd)
             fd = nxt
         return fd
-    except Exception:
+    except OSError as exc:
         os.close(fd)
-        raise
+        raise ScratchError("keep path must be an existing non-symlink directory") from exc
 
 
 def cmd_keep(args: argparse.Namespace) -> int:
@@ -370,17 +386,42 @@ def _staging_name() -> str:
     return f".agent-scratch-pruning-{os.getpid()}-{random.SystemRandom().getrandbits(128):032x}"
 
 
+def _rename_noreplace(parent_fd: int, old: str, new: str) -> bool:
+    """renameat2(RENAME_NOREPLACE), failing closed when the kernel lacks it."""
+    syscall_numbers = {"x86_64": 316, "amd64": 316, "aarch64": 276, "arm64": 276}
+    number = syscall_numbers.get(platform.machine().lower())
+    if number is None:
+        raise ScratchError("renameat2 RENAME_NOREPLACE is unavailable on this architecture")
+    libc = ctypes.CDLL(None, use_errno=True)
+    result = libc.syscall(number, parent_fd, os.fsencode(old), parent_fd, os.fsencode(new), 1)
+    if result == 0:
+        return True
+    error = ctypes.get_errno()
+    if error == errno.EEXIST:
+        return False
+    if error in {errno.ENOSYS, errno.EINVAL}:
+        raise ScratchError("renameat2 RENAME_NOREPLACE is unavailable; refusing prune")
+    if error in {errno.ENOENT, errno.ENOTDIR}:
+        return False
+    raise ScratchError(f"cannot atomically stage prune entry: {os.strerror(error)}")
+
+
 def _stage_entry(parent_fd: int, name: str, expected: os.stat_result) -> str | None:
     """Atomically move a vetted entry before deletion, or fail closed."""
     staged = _staging_name()
     try:
-        os.rename(name, staged, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        if not _rename_noreplace(parent_fd, name, staged):
+            return None
         info = os.stat(staged, dir_fd=parent_fd, follow_symlinks=False)
     except (FileNotFoundError, NotADirectoryError, OSError):
         return None
     if not _same_identity(info, expected):
-        # Keep the staged replacement for manual inspection.  Re-resolving the
-        # original name to restore it would introduce the very race we avoid.
+        # Restore only without replacing anything which appeared meanwhile.
+        # If that cannot succeed, preserve the staged replacement for review.
+        try:
+            _rename_noreplace(parent_fd, staged, name)
+        except ScratchError:
+            pass
         return None
     return staged
 
@@ -423,10 +464,23 @@ def _remove_tree(parent_fd: int, name: str, expected: os.stat_result) -> None:
                 os.unlink(staged, dir_fd=fd)
     finally:
         os.close(fd)
-    current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
-    if not _same_identity(current, expected):
-        raise ScratchError(f"prune entry identity changed before rmdir: {name}")
-    os.rmdir(name, dir_fd=parent_fd)
+    if not _finalize_directory(parent_fd, name, expected):
+        raise ScratchError(f"prune entry raced before rmdir: {name}")
+
+
+def _finalize_directory(parent_fd: int, name: str, expected: os.stat_result) -> bool:
+    """Take a second no-replace identity-checked lease immediately before rmdir."""
+    staged = _stage_directory(parent_fd, name, expected)
+    if staged is None:
+        return False
+    try:
+        current = os.stat(staged, dir_fd=parent_fd, follow_symlinks=False)
+        if not stat.S_ISDIR(current.st_mode) or not _same_identity(current, expected):
+            return False
+        os.rmdir(staged, dir_fd=parent_fd)
+        return True
+    except OSError:
+        return False
 
 
 def cmd_prune(args: argparse.Namespace) -> int:
@@ -692,7 +746,7 @@ def _render_codex(path: pathlib.Path, root: pathlib.Path) -> str:
     return result
 
 
-def systemd_exec_quote(value: str) -> str:
+def systemd_unit_quote(value: str) -> str:
     pieces = []
     for char in value:
         number = ord(char)
@@ -701,15 +755,19 @@ def systemd_exec_quote(value: str) -> str:
         elif char == "\n": pieces.append("\\n")
         elif char == "\r": pieces.append("\\r")
         elif char == "\t": pieces.append("\\t")
-        elif char.isspace() or number < 32 or number == 127: pieces.append(f"\\x{number:02x}")
+        elif char in {" ", "\v", "\f"} or number < 32 or number == 127: pieces.append(f"\\x{number:02x}")
         else: pieces.append(char)
     return '"' + "".join(pieces) + '"'
+
+
+def systemd_exec_quote(value: str) -> str:
+    return systemd_unit_quote(value)
 
 
 def _unit_files(root: pathlib.Path) -> tuple[str, str, str]:
     helper = repo_root() / "tools" / "agent-scratch"
     environment = pathlib.Path.home() / ".config" / "oggf-agent-scratch" / "environment"
-    service = f"""[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={environment}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
+    service = f"""[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={systemd_unit_quote(str(environment))}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
     timer = """[Unit]\nDescription=Daily OpenGGF agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit=openggf-agent-scratch-prune.service\n\n[Install]\nWantedBy=timers.target\n"""
     return f"OGGF_SCRATCH_ROOT={root}\n", service, timer
 
@@ -728,6 +786,29 @@ def _verify_unit_syntax(service_path: pathlib.Path, timer_path: pathlib.Path) ->
     return "verified"
 
 
+def _verify_timer() -> str:
+    """Return verified/unverified; a reachable disabled timer is invalid."""
+    try:
+        enabled = subprocess.run(["systemctl", "--user", "is-enabled", "openggf-agent-scratch-prune.timer"], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if enabled.returncode:
+        if "failed to connect to bus" in enabled.stderr.lower() or "xdg_runtime_dir" in enabled.stderr.lower():
+            return "unverified"
+        raise ScratchError("managed cleanup timer is not enabled: " + (enabled.stderr or enabled.stdout).strip())
+    try:
+        listed = subprocess.run(["systemctl", "--user", "list-timers", "openggf-agent-scratch-prune.timer", "--no-legend", "--no-pager"], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if listed.returncode:
+        if "failed to connect to bus" in listed.stderr.lower() or "xdg_runtime_dir" in listed.stderr.lower():
+            return "unverified"
+        raise ScratchError("cannot inspect managed cleanup timer: " + (listed.stderr or listed.stdout).strip())
+    if not listed.stdout.strip() or listed.stdout.lstrip().lower().startswith("n/a"):
+        raise ScratchError("managed cleanup timer has no next trigger")
+    return "verified"
+
+
 def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
     if _verify_unit_syntax(service_path, timer_path) == "unverified":
         return "systemd tooling unavailable; run: " + _activation_command()
@@ -739,7 +820,8 @@ def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -
             return "user manager unavailable; run: " + _activation_command()
         if run.returncode:
             return "user manager unavailable; run: " + _activation_command()
-    return "timer active"
+    state = _verify_timer()
+    return "timer active" if state == "verified" else "user manager unavailable; run: " + _activation_command()
 
 
 def cmd_install(args: argparse.Namespace) -> int:
@@ -810,9 +892,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
     if service_path.read_text() != expected_service or timer_path.read_text() != expected_timer:
         raise ScratchError("managed systemd units do not match this checkout and root")
     unit_syntax = _verify_unit_syntax(service_path, timer_path)
+    timer_state = _verify_timer()
     print(f"root={root}")
     print("config=verified")
     print(f"systemd_units={unit_syntax}")
+    print(f"systemd_timer={timer_state}")
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
     executable = shutil.which("claude")
     if not executable:
