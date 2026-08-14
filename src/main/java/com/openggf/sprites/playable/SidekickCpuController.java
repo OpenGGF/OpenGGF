@@ -1222,13 +1222,14 @@ public class SidekickCpuController {
     }
 
     /**
-     * Native-prelude-aware variant of
-     * {@link #initializeLevelStartSidekickPlacement()}: when level startup has
-     * already established the ROM-accurate Pos_table pre-fill (S2 only today,
-     * via {@link #applyLevelStartSidekickPlacementForBootstrap()}),
-     * {@code updateInit} must NOT re-pre-fill the ring or it would obliterate
-     * the rows that the native leader-record path has already written. Falls
-     * back to the legacy reset for non-bootstrap paths.
+     * Level-start-ownership-aware variant of
+     * {@link #initializeLevelStartSidekickPlacement()}. Production level
+     * assembly can adopt an already-established ROM Pos_table prefill through
+     * {@link #adoptLevelStartLeaderHistoryPrefill()}, while trace bootstrap can
+     * establish its own prefill through
+     * {@link #applyLevelStartSidekickPlacementForBootstrap()}. The next INIT
+     * must not overwrite either owner's ring; ordinary paths retain the legacy
+     * reset.
      */
     private void initializeLevelStartSidekickPlacementIfNeeded() {
         if (levelStartLeaderHistoryPrefillPending) {
