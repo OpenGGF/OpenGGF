@@ -245,11 +245,35 @@ at 10097 — and `Tails_Balance`'s ledge test (`ChkFloorEdge` / `cmpi.w #$C,d1`,
 Axes 1 and 2 are one defect. **Axes 2 and 5 share a mechanism**: both are state arriving
 at a `stage_exit` segment entry out of phase — the V-blank counter in axis 2, the
 sidekick's position within its init window in axis 5 — and both entries go through the
-interior-return branch that discards its gap rows instead of walking them. The one
-mechanism that would set both phases from recorded ROM scheduling — extending the
-**census walk** to interior returns — has been built and proven budget-exact, but exposes
-an unresolved one-pass sidekick deficit (fingerprint: segment 2 = 58,355, frame 1,
-`sidekick_x` 0x0DDE vs 0x0DDD, player clean to frame 52) and was shelved. Axis 3 is a
+interior-return branch that discards its gap rows instead of walking them.
+
+**The obvious fix for that shared mechanism has been built and measured, and it is a net
+regression. Do not propose it.** Extending the **census walk** to interior returns is
+budget-exact (census 173, `framesConsumed` 1, no overrun, both path contracts preserved) and
+would in principle set both phases from recorded ROM scheduling. Measured, it does **not**
+close axes 2 or 5 — **it makes them unobservable**: the chain aborts on a `seg3`
+special-stage DPLC walk-failure and produces trace reports for `seg0`–`seg3` only, so
+segments 4–11 and three gap transitions are never compared. Both axes vanish from the report
+by comparator starvation, with no field proven fixed.
+
+What it opens instead: segment 2 at **58,355** errors (frame 1, `sidekick_x` 0x0DDE vs
+0x0DDD) plus a new gap axis at `seg2_ehz1 → ss_2`. A per-field probe shows the divergence is
+**not** sidekick-confined — of 106 distinct failing fields, the sidekick carries 28,229
+errors and the dynamic-art ledger ~29,000, but genuine player and global physics diverge too:
+`y` (141 errors, first frame 1159), `rings` (618, f2759), `camera_y` (169, f1159). An earlier
+claim that the player stayed "clean to frame 52" was a misreading — frame 52 is a
+`queue.s2_nemesis_plc` field, not player physics.
+
+Pairing the walk with the title-card pass-placement change does not rescue it: segment 2
+stays at exactly 58,355, the `seg3` abort persists, and it additionally breaks a
+currently-clean gap (`ss → seg2_ehz1`, `edge[0].movie_logical_frame` expected 10308 actual
+10269), taking the run from 3 axes to 4.
+
+**Consequence for anyone attacking axes 2 and 5:** the one-pass sidekick deficit is a
+*prerequisite* for the walk, not a consequence of it. It must be closed with the walk
+unapplied.
+
+Axis 3 is a
 different family: a pass-count defect inside the title-card span. Axis 4 is the only axis
 with no rule-compliant route at all.
 
@@ -324,7 +348,8 @@ repeat is recognised immediately:
 | engine-side art release pass | 4 axes; segment 2 = 50,679/50,811; frame 0; `dynamic_art.edges rom=[] engine=[0]` |
 | leave-loop fall-through alone | 12 axes; segment 11 = 7,104 |
 | production ownership released early | "lost production ownership before source closure"; cursor 38806; 2 axes |
-| interior census walk alone | 3 axes; segment 2 = 58,355; frame 1; `sidekick_x` 0x0DDE vs 0x0DDD |
+| interior census walk alone | 3 axes (2 hidden by a `seg3` abort); segment 2 = 58,355; frame 1; `sidekick_x` 0x0DDE vs 0x0DDD; reports `seg0`–`seg3` only |
+| interior census walk + pass placement | 4 axes; segment 2 = 58,355 unchanged; additionally breaks `ss → seg2_ehz1` at −39 rows |
 | walk + fall-through | segment 2 = 47,802; frame 0; `sidekick_x` 0x0DDD vs 0x0DDB |
 | walk budget wrong | `IllegalArgument rowsConsumed must be 0 or 1` |
 | comparison shifted one row | segment 2 = 99,105; player breaks at frame 15 |
