@@ -74501,3 +74501,103 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
   both rewind guards, `TestCollisionLogic`, `TestTraceRunManifest` and the S3K
   keep-green set are green; `Sonic2SpecialStageBootstrapCadenceTest` holds its
   stale-model 7 failures + 1 error exactly.
+
+## 2026-08-14 — S3K trace state re-measured from scratch (the "S3K is green" belief is false)
+
+Measurement-only round. No engine, comparator, recorder or fixture file was
+touched; the only edit is this entry.
+
+- Commit measured: **`17fd2596a`** (`develop`), isolated worktree
+  an isolated worktree outside the repo, `git status --porcelain` clean at
+  measurement time. JDK 21 (`mvn -v` → 21.0.11). `target/surefire-reports` and
+  `target/trace-reports` removed immediately before each run; `java.io.tmpdir`
+  supplied through `JAVA_TOOL_OPTIONS`, not as a Maven property.
+- Full-profile command:
+
+```
+rm -rf target/surefire-reports
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=<task tmpdir>" mvn -Ptrace-replay -Dmse=off \
+    -Dsurefire.runOrder=alphabetical -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
+```
+
+**Result: Tests run 843, Failures 9, Errors 56, Skipped 4; 222 surefire report
+files; 65 red classes.** Identical totals to the 2026-08-14 S2 entry's
+verification figure, so the run is neither truncated (<843) nor stale (>843).
+
+**64 of the 65 red classes are S3K.** The only non-S3K red is
+`TestS2CompleteEmeraldRunChain` (1 failure, pre-existing). There is therefore a
+large, open S3K frontier; any claim that the S3K complete-run replays are green
+is contradicted at this commit.
+
+Red S3K classes by first error (from the surefire report, not the headline):
+
+| Group | Classes | First error |
+|---|---|---|
+| Run chains: `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain` | 3 ERROR | `KOS_DECOMPRESSION_QUEUE` completion expected, `engine pending: <none>` (`#14 3c96d8b9…`, `#15 fbfc78d4…` at raw_frame 4570 PRE_MAIN_LOOP, `#16 dae421a2…`) |
+| `TestS3kMhzCompleteRunTraceReplay` | 1 ERROR | `KOS_DECOMPRESSION_QUEUE#335 3c96d8b9…`, `engine pending: <none>`; its own report `s3k_mhz1_report.json` carries **errorCount 210**, first `player_mapping_frame` at frame 5240 |
+| `TestS3kSonicTails*` level/SS segments on the Kosinski queue | 41 ERROR | `engine pending: <none>` (31) or an ordinal-matched fingerprint mismatch (10, engine side almost always `3c96d8b9…`) |
+| `TestS3kSonicTailsDez23*` (zone_id 23) | 8 ERROR | `IndexOutOfBoundsException: Index 23 out of bounds for length 22` |
+| `TestS3kSonicTailsHpz22*` (zone_id 22) | 2 ERROR | `IndexOutOfBoundsException: Index 22 out of bounds for length 22` |
+| `TestS3kSonicTailsDdzSegmentTraceReplay` (DDZ act 2) | 1 ERROR | `IndexOutOfBoundsException: Index: 1 Size: 1` |
+| Bonus `pachinko`×3 | 3 FAIL | `tails_y_speed` frame **0**, expected `0x01B2` actual `0x0000` (2401 / 2234 / 187 errors) |
+| Bonus `gumball`×2 | 2 FAIL | frame **33**: `tails_x` `0x00CF` vs `0x00D1` (119 errors) and `tails_x_speed` `-01B0` vs `0x0000` (144 errors) |
+| Bonus `slots` | 1 FAIL | `player_mapping_frame` frame 5, `0x0097` vs `0x0096` (900 errors) |
+| `ss_4`, `ss_5` | 2 FAIL | `spheres_left` frame 1689 (80 vs 79) and frame 3906 (3 vs 2) — engine one sphere ahead |
+
+This reproduces the 2026-08-12 capture entry's shape exactly (8 FAIL + 53 ERROR
+across `TestS3kSonicTails*`; here 8 FAIL + 52 ERROR, plus the three chains).
+
+Genuinely green, re-verified in a second isolated invocation with a fresh
+`target/trace-reports` and with the `sonictails` classes excluded so no report
+filename collides (`-Dtest=TestS3kAizCompleteRunTraceReplay,…` 17 classes,
+**111 run / 0 failures / 1 error / 2 skipped**): `TestS3kAizCompleteRunTraceReplay`,
+`TestS3kCnzCompleteRunTraceReplay`, `TestS3kHczCompleteRunTraceReplay`,
+`TestS3kIczCompleteRunTraceReplay`, `TestS3kLbzCompleteRunTraceReplay`,
+`TestS3kMgzCompleteRunTraceReplay` — each with **errorCount 0** in its own
+`s3k_<zone>_report.json`. `TestS3kAizTraceReplay` (16), `TestS3kCnzTraceReplay`
+(27), `TestS3kMgzTraceReplay`, `TestS3kSpecialStageTraceReplay`,
+`TestS3kReplayReferenceClosureIntegration`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils` are green. The single error in that run is
+`TestS3kMhzCompleteRunTraceReplay`, as above.
+
+**`TestS3kBonusRoundTripChain` is not green — it never runs.** Both methods
+`assumeTrue` on run directories `s3k-aiz-gumball-roundtrip` /
+`s3k-aiz-pachinko-roundtrip` that do not exist; they are 2 of the suite's 4
+skips.
+
+### What the S3K trace corpus does and does not exercise
+
+Coverage measured from fixture metadata and from which fixtures a test class
+actually references.
+
+- **Two replayed routes.** `s3k-sonic-tails-complete-emeralds` (63 segments;
+  Sonic+Tails) has a per-segment class for every segment.
+  `s3k-knuckles-complete-superemeralds` (67 segments; Knuckles) has **no
+  per-segment classes at all** — only the chain, which stops in segment 0.
+  Everything Knuckles-specific past AIZ1 is therefore unmeasured at row
+  granularity.
+- **`s3k-multibonus` is never replayed.** It is referenced only by
+  `TestCommittedHardwareTimingFixtures`, which validates its recorded timing
+  streams without replaying a frame.
+- **Committed standalone fixtures with no test class:** `ddz_completerun`,
+  `dez_completerun`, `fbz_completerun`, `hpz_completerun`,
+  `hpz22_completerun`, `lrz_completerun`, `ssz_completerun`. Recorded ROM
+  behaviour already on disk that nothing compares against.
+- **Acts covered by no route, in either character set: CNZ act 2 and MGZ act
+  2.** Both routes' CNZ and MGZ segments are act 1 only. LBZ act 2, LRZ act 2,
+  HPZ act 2 and FBZ act 2 exist only in the unharnessed Knuckles route; SSZ,
+  DDZ and zone0c only in the Sonic+Tails route; ICZ act 2 only in the
+  Sonic+Tails route.
+- **Character sets:** Sonic+Tails and Knuckles only. No Sonic-alone,
+  Tails-alone, or Super/Hyper-state route; no S3-half (non-locked-on) route.
+- **Structural gaps the reds already name:** the engine has no level-list entry
+  for zone_id 22 (HPZ act 2 hub) or 23 (DEZ act 2 sub-zone), and DDZ act 2
+  indexes past a size-1 list. Nine segments of real recorded route cannot even
+  be loaded, let alone compared.
+
+**Highest-value target, unchanged and now witnessed by three independent
+routes:** the shared `KOS_DECOMPRESSION_QUEUE` frontier where the recording
+expects a completion the engine never submitted (`engine pending: <none>`), plus
+the ordinal-matched fingerprint mismatches where it submits a different job.
