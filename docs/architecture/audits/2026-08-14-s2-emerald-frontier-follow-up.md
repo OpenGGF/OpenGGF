@@ -4,9 +4,9 @@
 **Base:** `develop` at `3f0dde97b`  
 **Related manifest:**
 [`2026-08-14-s2-emerald-frontier-manifest.md`](2026-08-14-s2-emerald-frontier-manifest.md)  
-**Status:** implementation complete on `bugfix/ai-s2-visual-bootstrap-ownership`
-at `fc917a43e`; pending Task 5 final comparisons, integration, and post-merge
-verification.
+**Status:** Task 5 verified on `bugfix/ai-s2-visual-bootstrap-ownership` at
+pre-documentation head `03e868042`; integration and post-merge verification
+remain pending.
 
 ## Purpose
 
@@ -173,9 +173,9 @@ anchor and preserving the main leader's prefilled ring.
 ## Implemented evidence relay
 
 This section distinguishes the committed implementation evidence from temporary
-diagnostics. It is the handoff record for Task 5 and integration; it does not
-claim that the full suite, trace profile, integration, or post-merge comparison
-has completed.
+diagnostics. Task 5's clean-worktree focused, default-profile, and trace-profile
+comparisons are now recorded below; integration and post-merge comparison remain
+pending.
 
 ### Causes and bounded fix
 
@@ -263,18 +263,57 @@ EHZ1 and first paused at special-stage frame **136**, `dynamic_art.edges`:
 ROM `[]` with outstanding transfers `[1, 2, 3]`; engine `[4, 5, 6]` with no
 outstanding transfers. It remains a separate frontier.
 
-### Skills control and pending verification
+### Skills control and Task 5 verification
 
 Two fresh-context controls using the unchanged S2 and S3K reference skill
 packages independently derived the complete safe ownership design. The reusable
 pitfall checklist therefore found no failing baseline to justify a speculative
 skill edit; `Skills: n/a` is a fresh-control conclusion, not an omission.
 
-**PENDING TASK 5:** rerun the focused cross-game/keep-green set and the exact
-five-axis chain, then compare the full default suite and authoritative
-`*TraceReplay` profile against the Task 1 baselines above. Replace this pending
-entry with the exact development-worktree results and independent review before
-integration; after integration, repeat the required merged-branch comparisons.
+**TASK 5 VERIFIED — pre-integration head `03e868042`:**
+
+- The task-owned-JVM-temp focused cross-game command ran **76 tests, 1 failure,
+  1 error, 0 skipped**. The new S2 visual canary, S1 visual canary, direct and
+  chained sidekick coverage, S3K anchor/air coverage, AIZ keep-green, level
+  loading, bootstrap resolution, and decoding checks are green. The only
+  failure is the unchanged `TestS2PostLoadAssemblyHeadless` fractional-word
+  baseline red (`23040` expected, `0` actual); the only error is the exact
+  recaptured S3K AIZ timing baseline, expected
+  `KOS_DECOMPRESSION_QUEUE#16`
+  `sha256:dae421a276e9d9f1749981d2790390efbf66af448fcf9420e0008e99cc8a9a58`
+  while the engine has no pending job. The S1 pins remain green against the
+  Task 1 exact cursors **9741** and **46806**.
+- `TestS2CompleteEmeraldRunChain` remains exactly its five Task 1 axes:
+  `seg7_ehz2` cursor **3977 / 3997**; segment **11**, **236** errors, first
+  frame **3525** `queue.s2_nemesis_plc.busy` (ROM `false`, engine `true`);
+  the four **-1** `seg4_ehz1 -> seg5_ehz2` rows; the two **+1**
+  `ss_4 -> seg6_ehz2` rows; and **16 expected / 18 actual** for
+  `ss_5 -> seg7_ehz2`.
+- The first default-suite run with task-owned `JAVA_TOOL_OPTIONS` was
+  **non-authoritative**: it reported **15108 / 65 failures / 21 errors / 18
+  skipped** because its audio-shell guard correctly rejected the inherited
+  environment variable. The authoritative default-profile rerun explicitly
+  unset that variable and used Surefire's worktree-local `target/test-tmp`:
+  **15108 / 63 failures / 21 errors / 18 skipped**, versus Task 1's
+  **15105 / 64 failures / 21 errors / 18 skipped**. The three extra tests are
+  the intended new non-trace tests; all **48** shared red classes retain exact
+  failure/error counts, and baseline
+  `TestCompleteRunAudioCli` is additionally green. XML records neither
+  `/tmp/junit` nor `No space left on device`.
+- The authoritative task-owned-JVM-temp `*TraceReplay` sweep is exact at
+  **190 tests / 8 failures / 53 errors / 0 skipped**, with the unchanged
+  **61-class** red/error set and no `/tmp/junit` or disk-exhaustion text. Its
+  first independent error remains MHZ expected
+  `KOS_DECOMPRESSION_QUEUE#335`
+  `sha256:3c96d8b9573e86f26814cb8a605459c8fef23cc1ca5425db2fd1cc250d408d91`
+  versus engine pending `<none>`; Pachinko Sonic+Tails remains frame 0
+  `tails_y_speed`, expected `0x01B2`, actual `0x0000`.
+- Independent whole-implementation review verdict: **READY / NO BLOCKING
+  ISSUES**; no Critical or Important findings. One Minor stale Javadoc is
+  deliberately handled separately.
+
+Integration and post-merge comparison remain required; Task 5 does not claim
+the development worktree is already merged.
 
 ## Expected verification
 
@@ -316,14 +355,17 @@ merge. Any newly exposed visual frontier will also be recorded in
   was a separate root cause.
 - **2026-08-14 — IMPLEMENTED:** `fc917a43e` made the prepared-session adoption
   and one-shot rewind-captured direct-leader ownership changes. The clean focused
-  result is 96 tests with only the two recorded baseline reds; the permanent
-  EHZ1 canary reaches cursor 4479. The original five chain axes are unchanged.
+  result is 96 tests with only the two recorded baseline reds. The original five
+  chain axes are unchanged.
 - **2026-08-14 — FRONTIER:** A temporary reverted wider probe reaches
   special-stage frame 136 and pauses on `dynamic_art.edges`; it is deliberately
   outside the permanent EHZ1 canary.
 - **2026-08-14 — SKILLS CONTROL:** Fresh-context S2 and S3K skill-package
   controls already supplied the safe design, so no speculative skill edit was
   warranted and `Skills: n/a` remains valid.
-- **2026-08-14 — PENDING TASK 5:** Full default-suite, authoritative trace-profile,
-  focused cross-game, chain, integration, and post-merge comparisons are not yet
-  complete.
+- **2026-08-14 — TASK 5 VERIFIED:** Focused cross-game evidence is 76 tests
+  with only the known fractional-word failure and exact S3K AIZ KOS#16 error;
+  the five chain axes and authoritative 190/8F/53E trace set are unchanged.
+  The authoritative default-profile comparison is 15108/63F/21E/18S with no
+  new or worsened red. Independent review is READY / NO BLOCKING ISSUES;
+  integration and post-merge comparison remain pending.
