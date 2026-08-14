@@ -108,11 +108,24 @@ The stale code remains cleanup debt, but it is not a cause of this frontier.
    ground snap, sidekick reposition, or position-ring prefill on that path.
    Standalone replay keeps the existing setup unchanged.
 2. `LevelManager.spawnSidekicks` already performs the ROM's accurate position-
-   and stat-history prefill. It will explicitly tell `SidekickCpuController`
-   that this prefill is authoritative, so the controller's first INIT tick uses
-   the existing skip-prefill path instead of replacing the ring with Sonic's
-   live position.
-3. The existing bootstrap helper remains valid for standalone trace setup. The
+   and stat-history prefill. This is shared shipped-ROM behaviour, not an S2
+   exception: S2 `Obj01_Init_Continued` offsets Player 1 by `(-$20,+4)` and
+   fills/clears the rings (`s2.asm:36201-36217`), while S3K
+   `Sonic_Init_Continued` calls `Reset_Player_Position_Array` under the same
+   offset (`sonic3k.asm:21931-21940,22166-22178`). No typed per-game rule is
+   therefore appropriate.
+3. The ownership signal will be granted only to a controller whose
+   `getLeader()` is the exact main-player instance whose ring `LevelManager`
+   populated. Multi-sidekick teams chain later controllers to the preceding
+   sidekick, whose ring was not populated by this operation; those controllers
+   must retain their existing initialization path. A production-level
+   multi-sidekick test will pin that distinction.
+4. For the directly-following controller, `LevelManager` will explicitly say
+   that the already-established prefill is authoritative. Its first INIT tick
+   then uses the existing skip-prefill path instead of replacing the ring with
+   the leader's live position. The production API will carry that semantic
+   ownership statement; the internal state remains rewind-captured.
+5. The existing bootstrap helper remains valid for standalone trace setup. The
    production API will describe ownership of an already-populated prefill rather
    than call a method named `ForBootstrap` from ordinary level loading.
 
@@ -131,6 +144,13 @@ will replay through the end of segment 0 via `VisualRunReplayHarness`, proving:
 The test must be observed red on the current implementation and green only after
 both ownership corrections.
 
+Add a focused production-level test that calls `LevelManager.spawnSidekicks`,
+runs the directly-following controller's first INIT tick, and proves the
+main-player ring retains the hand-derived `(-$20,+4)` values. Extend the
+multi-sidekick integration coverage to prove only the controller whose leader is
+that main player preserves this prefill; chained followers continue to initialize
+their own leader history through the existing path.
+
 ### Non-goals
 
 - Do not alter the five axes in the original chain manifest.
@@ -142,9 +162,16 @@ both ownership corrections.
 ## Expected verification
 
 Focused verification will include the new visual canary, the S2 complete-emerald
-chain, S2 frame-0/bootstrap tests, sidekick level-start tests, and the existing S1
-production visual canary. The complete Maven suite will be compared against an
-updated `develop` baseline before integration and again after merge.
+chain, S2 frame-0/bootstrap tests, direct- and multi-sidekick level-start tests,
+and the existing S1 production visual canary. Because the changed owners are
+shared with S3K, verification will also include affected S3K sidekick tests, the
+mandatory keep-green set (`TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, and
+`TestSonic3kDecodingUtils`), plus a trace-profile `*TraceReplay` sweep with all
+three ROMs. The default complete Maven suite and the trace-profile sweep will be
+compared against updated `develop` baselines before integration and again after
+merge. Any newly exposed visual frontier will also be recorded in
+`docs/status/trace-frontier-log.md` with its exact command and first error.
 
 ## Progress log
 
@@ -155,4 +182,7 @@ updated `develop` baseline before integration and again after merge.
   moved the production visual frontier to special-stage frame 136.
 - **2026-08-14 — DESIGN:** Scope bounded to the visual-session adoption and
   level-start prefill ownership fixes plus one permanent visual canary.
-
+- **2026-08-14 — DESIGN REVIEW:** Independent review identified shared S3K
+  coverage and chained-leader ownership as blockers. The design now cites the
+  equivalent S3K reset, scopes authority to the actually populated main-player
+  ring, and requires explicit S3K, multi-sidekick, and trace-profile coverage.
