@@ -51,10 +51,45 @@ Plus a **fifth, different mechanism** at special-stage entry: the shipped `else`
 Modelling the entry discard must model the overrun (and whatever else that clear tramples),
 **not** the guarded explicit pair — that would be taking the FixBugs branch.
 
+**The entry discard is structurally different from the other four, and this is easy to get
+wrong.** The `+4` overrun zeroes only the **first word** of `VDP_Command_Buffer`. The paired
+`move.l #VDP_Command_Buffer,(VDP_Command_Buffer_Slot).w` that would reset the *write pointer*
+sits inside the `if fixBugs` block at `:6604-6611` and **does not run**. So entry is "head
+zeroed, slot pointer left where it was" — not a full queue reset. The four unguarded sites do
+both. Modelling entry as a full reset would be taking the FixBugs branch by the back door.
+
 Site `:10342` documents the bug its fix would have prevented: after a Game Over in HTZ,
 `Dynamic_HTZ`'s queued cloud art transfers late over Tails' Continue art and corrupts it. At
 `fixBugs = 0` **that corruption is live shipped behaviour** and something the engine should
 reproduce, not avoid.
+
+### The submission-time path exists ONLY during a trace run
+
+**MEASURED at `5c80dcedc`, and it reframes the whole fix.** `DynamicArtDecisionOwner.observe()`
+early-returns on `!lifecycle.isRunActive()` (`:32-34`), and every lifecycle entry point calls
+`requireRunActive()`. So the submission-time application described above **happens only under
+the comparator**.
+
+In ordinary windowed play the art lands somewhere else entirely: `PlayerSpriteRenderer.drawFrame`
+→ `applyDplc` (`:60-76`, `:168-181`), lazily, on first draw of a changed mapping frame, called
+from `Sonic.java:38`, `Tails.java:38`, `Knuckles.java:35`.
+
+Two consequences:
+
+- **A deferral built only on the `observe()` seam would change engine behaviour only under the
+  comparator** — precisely the shape the project forbids.
+- There are **five** S2-reachable art-application sites, only one of which passes through the
+  queue-aware object: `applyRuntimeArtUpdate` (run-only); `drawFrame`→`applyDplc` (production);
+  `forceInitialDplc` (`:184-196`); `Sonic2SpecialStageManager.publishSpecialStageOwner`
+  (`:2087-2096`, which submits to the same S2 pending list but applies no art — its art comes
+  from `drawFrame`); and `Sonic2EndingCutsceneManager:1764,:1773`, calling
+  `consumeRuntimeArtState` directly with no ledger at all.
+
+There are also **two independent dedup registers for one ROM contract** — the renderer's
+`lastFrame` and the lifecycle's `lastMappingFrames`. Today `applyRuntimeArtUpdate` sets
+`lastFrame`, which is what stops `drawFrame` re-applying. **Defer the write without unifying
+these and `drawFrame` simply applies the art anyway at render time, so the accuracy defect
+survives the fix.** This is the "two paths that should agree, but don't" pattern.
 
 ### Scope: the fix has two halves that must land together
 
@@ -72,6 +107,35 @@ comparator treats it — is deferrable.
 only the discarded ones: every submission-to-drain interval where the engine showed new art
 while the ROM still showed old art becomes different. That implies broad S2 trace
 re-measurement, not just the emerald chain.
+
+### Verdict: larger than one round. Recommended decomposition
+
+Scoped and **not attempted** — the engine has no drain-time art application anywhere, and
+introducing a queue-backed VRAM model that exists outside a trace run is not a call-site move.
+Four rounds, strictly ordered:
+
+- **A. A production-owned S2 DMA queue that exists outside a run.** Entries carry
+  `{target DynamicPatternBank, source Pattern[], TileLoadRequest list}`; submitted at the
+  `QueueDMATransfer` counterparts, drained at the V-int counterpart. Reuse
+  `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE.services(phase)` **unchanged** — it
+  already computes exactly "does this V-blank run `ProcessDMAQueue`" and is verified correct.
+  The existing lifecycle ledger becomes an *observer* of this queue rather than the owner of
+  the concept.
+- **B. Make submission the sole art entry point** for queue-backed S2 owners: stop
+  `drawFrame`/`forceInitialDplc` writing the bank for them, and unify the two dedup registers
+  against `SPLC_ReadEntry`'s per-frame compare. This is the round that makes the accuracy
+  effect real, and the one most likely to move rendered output in ordinary play — it needs its
+  own before/after visual check. **Not optional polish.**
+- **C. Model the discards**: full reset at `:4857`, `:6759`, `:10766`, `:11737`; head-only zero
+  with slot pointer retained at `:6599`. Two sites (continue screen, level select) may have no
+  exercised engine counterpart yet — budget discovery. **C is not landable without A.**
+- **D. Rewind coverage** (a pending-unapplied queue is cross-frame mutable state →
+  `RewindSnapshottable`, both rewind guards) plus full blast-radius re-measurement.
+
+**Comparator prediction to brief forward:** B changes when `lastFrame` advances, which changes
+which mapping frame the ledger's dedup sees, which moves `dynamic_art.edge[N].mapping_frame` —
+the same field that produced the ledger-only options' comparator starvation. Any round
+attempting A or B must **diff the chain's axis list by name, not the failure count.**
 
 ### Why no ledger-only fix works — measured, do not re-run
 
