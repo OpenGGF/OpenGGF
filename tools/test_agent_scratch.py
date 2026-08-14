@@ -158,13 +158,15 @@ class AgentScratchTests(unittest.TestCase):
         expected = original.stat()
         replacement = tasks / "replacement"
         replacement.mkdir()
+        replacement_identity = replacement.stat()
         os.replace(replacement, original)
         tasks_fd = os.open(tasks, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             self.assertIsNone(self.helper._stage_directory(tasks_fd, "candidate", expected))
         finally:
             os.close(tasks_fd)
-        self.assertTrue(any(entry.is_dir() for entry in tasks.iterdir()))
+        self.assertTrue(original.is_dir())
+        self.assertEqual((replacement_identity.st_dev, replacement_identity.st_ino), (original.stat().st_dev, original.stat().st_ino))
 
     def test_final_directory_replacement_is_not_removed(self):
         root = self.helper.ensure_root(self.env)
@@ -251,6 +253,18 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual("yes", parsed["shell_environment_policy"]["set"]["OTHER"])
         self.assertEqual(["/existing", str(root / "codex")], parsed["sandbox_workspace_write"]["writable_roots"])
 
+    def test_toml_editor_preserves_hash_inside_quoted_managed_path(self):
+        root = pathlib.Path(self.temp.name) / "managed#root"
+        config = pathlib.Path(self.temp.name) / "hash.toml"
+        tmpdir = root / "codex" / "tmp"
+        config.write_text(f"[shell_environment_policy.set]\nTMPDIR = {str(tmpdir)!r} # retained comment\n")
+        self.helper._update_codex(config, root)
+        first = config.read_text()
+        self.helper._update_codex(config, root)
+        self.assertEqual(first, config.read_text())
+        self.assertIn(str(tmpdir), first)
+        self.assertIn("# retained comment", first)
+
     def test_toml_editor_appends_to_multiline_writable_roots(self):
         root = self.helper.ensure_root(self.env)
         config = pathlib.Path(self.temp.name) / "multiline.toml"
@@ -281,6 +295,14 @@ class AgentScratchTests(unittest.TestCase):
             _, service, _ = self.helper._unit_files(self.root)
         self.assertIn('EnvironmentFile="' + str(home).replace(" ", "\\x20") + '/.config/oggf-agent-scratch/environment"', service)
         self.assertIn("\u00a0", self.helper.systemd_exec_quote("a\u00a0b"))
+
+    def test_environment_file_encoder_round_trips_significant_root_characters(self):
+        raw = str(pathlib.Path(self.temp.name) / 'root # "quoted" \\ trailing ')
+        self.assertEqual(pathlib.Path(raw), self.helper.ensure_root({"OGGF_SCRATCH_ROOT": raw}))
+        encoded = self.helper.systemd_environment_value_encode(raw)
+        self.assertEqual(raw, self.helper.systemd_environment_value_decode(encoded))
+        text = self.helper._environment_file_text(pathlib.Path(raw))
+        self.assertEqual(raw, self.helper._environment_file_root(text))
 
     def test_process_inspection_failure_is_unknown_and_protects_prune(self):
         with mock.patch.object(self.helper.subprocess, "run", side_effect=FileNotFoundError):
@@ -327,6 +349,23 @@ class AgentScratchTests(unittest.TestCase):
         unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "Failed to connect to bus"})()
         with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
             self.assertEqual("unverified", self.helper._verify_timer())
+
+    def test_claude_timeout_and_launch_failure_are_unverified(self):
+        root = self.helper.ensure_root(self.env)
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=subprocess.TimeoutExpired("claude", 45)):
+            self.assertEqual("unverified", self.helper._verify_claude_tmpdir(root))
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=OSError):
+            self.assertEqual("unverified", self.helper._verify_claude_tmpdir(root))
+
+    def test_claude_success_requires_absolute_confined_tmpdir(self):
+        root = self.helper.ensure_root(self.env)
+        run = type("Run", (), {"returncode": 0, "stdout": "relative/path\n", "stderr": ""})()
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", return_value=run):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_claude_tmpdir(root)
 
     def test_path_does_not_touch_unrelated_sentinel(self):
         sentinel = pathlib.Path(self.temp.name) / "sentinel"

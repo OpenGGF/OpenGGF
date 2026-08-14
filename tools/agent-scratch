@@ -645,9 +645,25 @@ def _assignment_value_span(body: str, key: str) -> tuple[int, int] | None:
     start = match.end()
     while start < len(body) and body[start] in " \t":
         start += 1
-    if start >= len(body) or body[start] != "[":
-        end = body.find("\n", start)
-        return start, len(body) if end < 0 else end
+    if start >= len(body):
+        raise ScratchError(f"missing TOML value for {key}")
+    if body[start] in "\"'":
+        quote = body[start]
+        index = start + 1
+        while index < len(body):
+            char = body[index]
+            if char == "\\" and quote == '"':
+                index += 2
+                continue
+            if char == quote:
+                return start, index + 1
+            index += 1
+        raise ScratchError(f"unterminated TOML string for {key}")
+    if body[start] != "[":
+        index = start
+        while index < len(body) and body[index] not in "#\n":
+            index += 1
+        return start, index
     index, depth, quote = start, 0, None
     while index < len(body):
         char = body[index]
@@ -685,22 +701,11 @@ def _edit_table(text: str, table: str, updates: dict[str, object]) -> str:
     body = text[begin:end]
     for key, value in updates.items():
         value_span = _assignment_value_span(body, key)
-        if isinstance(value, list) and value_span is not None:
+        if value_span is not None:
             value_start, value_end = value_span
             body = body[:value_start] + _toml_value(value) + body[value_end:]
             continue
-        # Do not let ``\s`` consume a preceding blank line: TOML comments and
-        # spacing are intentionally preserved by this narrow editor.
-        pattern = re.compile(rf"(?m)^([ \t]*{re.escape(key)}[ \t]*=)[^\n]*(\n|$)")
-        def replacement(match: re.Match[str]) -> str:
-            old_line = match.group(0)
-            comment_at = old_line.find("#")
-            suffix = old_line[comment_at:] if comment_at >= 0 else "\n"
-            return f"{match.group(1)} {_toml_value(value)}" + (" " if comment_at >= 0 else "") + suffix
-        if pattern.search(body):
-            body = pattern.sub(replacement, body, count=1)
-        else:
-            body += f"{key} = {_toml_value(value)}\n"
+        body += f"{key} = {_toml_value(value)}\n"
     return text[:begin] + body + text[end:]
 
 
@@ -764,12 +769,78 @@ def systemd_exec_quote(value: str) -> str:
     return systemd_unit_quote(value)
 
 
+def systemd_environment_value_encode(value: str) -> str:
+    """Encode one EnvironmentFile value; this is not unit-command quoting."""
+    pieces = []
+    for char in value:
+        number = ord(char)
+        if char == "\\":
+            pieces.append("\\\\")
+        elif char == '"':
+            pieces.append('\\"')
+        elif char == "\n":
+            pieces.append("\\n")
+        elif char == "\r":
+            pieces.append("\\r")
+        elif char == "\t":
+            pieces.append("\\t")
+        elif number < 32 or number == 127:
+            pieces.append(f"\\x{number:02x}")
+        else:
+            pieces.append(char)
+    return '"' + "".join(pieces) + '"'
+
+
+def systemd_environment_value_decode(value: str) -> str:
+    if len(value) < 2 or value[0] != '"' or value[-1] != '"':
+        raise ScratchError("EnvironmentFile value must be double-quoted")
+    pieces, index = [], 1
+    while index < len(value) - 1:
+        char = value[index]
+        if char == '"':
+            raise ScratchError("unescaped quote in EnvironmentFile value")
+        if char != "\\":
+            pieces.append(char)
+            index += 1
+            continue
+        if index + 1 >= len(value) - 1:
+            raise ScratchError("truncated EnvironmentFile escape")
+        escaped = value[index + 1]
+        escapes = {"\\": "\\", '"': '"', "n": "\n", "r": "\r", "t": "\t"}
+        if escaped in escapes:
+            pieces.append(escapes[escaped])
+            index += 2
+        elif escaped == "x" and index + 3 < len(value) - 1:
+            try:
+                pieces.append(chr(int(value[index + 2:index + 4], 16)))
+            except ValueError as exc:
+                raise ScratchError("invalid EnvironmentFile hex escape") from exc
+            index += 4
+        else:
+            raise ScratchError("unsupported EnvironmentFile escape")
+    return "".join(pieces)
+
+
+def _environment_file_text(root: pathlib.Path) -> str:
+    return "OGGF_SCRATCH_ROOT=" + systemd_environment_value_encode(str(root)) + "\n"
+
+
+def _environment_file_root(text: str) -> str:
+    prefix = "OGGF_SCRATCH_ROOT="
+    if not text.startswith(prefix) or not text.endswith("\n") or "\n" in text[:-1]:
+        raise ScratchError("managed EnvironmentFile has an invalid shape")
+    root = systemd_environment_value_decode(text[len(prefix):-1])
+    if CONTROL.search(root) or not os.path.isabs(root):
+        raise ScratchError("managed EnvironmentFile root is not absolute and safe")
+    return root
+
+
 def _unit_files(root: pathlib.Path) -> tuple[str, str, str]:
     helper = repo_root() / "tools" / "agent-scratch"
     environment = pathlib.Path.home() / ".config" / "oggf-agent-scratch" / "environment"
     service = f"""[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={systemd_unit_quote(str(environment))}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
     timer = """[Unit]\nDescription=Daily OpenGGF agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit=openggf-agent-scratch-prune.service\n\n[Install]\nWantedBy=timers.target\n"""
-    return f"OGGF_SCRATCH_ROOT={root}\n", service, timer
+    return _environment_file_text(root), service, timer
 
 
 def _activation_command() -> str:
@@ -849,6 +920,28 @@ def cmd_install(args: argparse.Namespace) -> int:
     return 0
 
 
+def _verify_claude_tmpdir(root: pathlib.Path) -> str:
+    executable = shutil.which("claude")
+    if not executable:
+        return "unverified"
+    try:
+        run = subprocess.run([executable, "-p", "echo -n \"$TMPDIR\""], text=True, capture_output=True, timeout=45, check=False)
+    except (subprocess.TimeoutExpired, OSError):
+        return "unverified"
+    if run.returncode:
+        return "unverified"
+    observed = run.stdout.strip()
+    if not os.path.isabs(observed):
+        raise ScratchError(f"Claude returned a non-absolute TMPDIR: {observed!r}")
+    try:
+        confined = os.path.commonpath((str(root), observed)) == str(root)
+    except ValueError as exc:
+        raise ScratchError(f"Claude returned a malformed TMPDIR: {observed!r}") from exc
+    if not confined:
+        raise ScratchError(f"Claude TMPDIR escapes configured root: {observed}")
+    return "verified"
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     root = ensure_root()
     home = pathlib.Path.home()
@@ -881,7 +974,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _require_regular(env_path, missing_ok=False)
     if stat.S_IMODE(env_path.stat().st_mode) != 0o600:
         raise ScratchError("managed systemd environment file must be mode 0600")
-    if env_path.read_text() != f"OGGF_SCRATCH_ROOT={root}\n":
+    if _environment_file_root(env_path.read_text()) != str(root):
         raise ScratchError("managed systemd environment file is invalid")
     unit_dir = home / ".config" / "systemd" / "user"
     service_path = unit_dir / "openggf-agent-scratch-prune.service"
@@ -898,18 +991,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
     print(f"systemd_units={unit_syntax}")
     print(f"systemd_timer={timer_state}")
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
-    executable = shutil.which("claude")
-    if not executable:
-        print("claude=unverified (not installed)")
-        return 0
-    run = subprocess.run([executable, "-p", "echo -n \"$TMPDIR\""], text=True, capture_output=True, timeout=45, check=False)
-    if run.returncode:
-        print("claude=unverified (authentication or session unavailable)")
-        return 0
-    observed = run.stdout.strip()
-    if os.path.commonpath((str(root), observed)) != str(root):
-        raise ScratchError(f"Claude TMPDIR escapes configured root: {observed}")
-    print("claude=verified")
+    claude_state = _verify_claude_tmpdir(root)
+    print(f"claude={claude_state}")
     return 0
 
 
