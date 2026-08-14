@@ -1959,11 +1959,40 @@ matching *completed* pair at 46349 matches.
 ### Original Implementation
 
 The ROM submits the returning level's player art at the leading `jsr (RunObjects)`
-(`s2.asm:5003`), where Obj01/Obj02 display runs the DPLC. Between that call and the leave
+(`s2.asm:5007`), where Obj01/Obj02 display runs the DPLC. Between that call and the leave
 loop's first `bsr.w WaitForVint` (`:5060-5061`) it executes **only straight-line 68000 code**
-— `BuildSprites` (`:5004`), `AniArt_Load` (`:5005`), `SetLevelEndType` (`:5006`), demo-script
-setup (`:5007-5044`), `PalLoad_Water_ForFade` (`:5045-5056`), the leave-flag writes
-(`:5057-5059`) — with no `WaitForVint` and no polled readiness gate.
+— `BuildSprites` (`:5008`), `AniArt_Load` (`:5009`), `SetLevelEndType` (`:5010`), demo-script
+setup (`:5011-5048`), `PalLoad_Water_ForFade` (`:5049-5054`), the leave-flag writes
+(`:5056-5058`) — with no `WaitForVint` and no polled readiness gate.
+
+**Re-verified 2026-08-14 against the recorder-fiction hypothesis, and it holds.** After a
+sibling frontier turned out to be recorder fiction — the ROM discarding queued work via an
+unguarded `clr.w (VDP_Command_Buffer).w` while the recorder's ledger reported it completed
+— this span was re-examined for the same pattern, since it was the model that framing came
+from. It is not the same:
+
+- **No ledger-invalidating write lies inside the span.** Every write that can zero
+  `VDP_Command_Buffer` is upstream of the submission: `:4857-4858` sits in Level init's VDP
+  setup ~150 lines *before* `:5007`; the annotated `SS_Shared_RAM` overshoot (`:6599`) and
+  the results-tail pair (`:6759-6760`) are both thousands of rows earlier; `:10766` and
+  `:11737` are not on this path. (`:6609` and `:10342` are inside `if fixBugs` and so never
+  execute at all — see the manifest's guard table.)
+- **The transfer is performed, not discarded.** In the fixture's own ledger, transfers
+  28084/28085 submit at row 46347 and complete at 46349, and the *next* two transfers
+  (28086, 28087) submit and complete on consecutive rows. A queue that drains next-row on
+  the following transfers is live, not stranded — the opposite of the results-tail
+  signature, where one transfer stayed outstanding across all 22 fade rows and was then
+  discarded. The recorded completion at `ProcessDMAQueue` is explained by the ROM's own
+  control flow: `Vint_TitleCard` calls it at `:1046`, raised by the very `WaitForVint` at
+  `:5061` that terminates this span.
+
+So the ±1 row is genuine elapsed 68000 time — how far before the span's end the submission
+falls is a pure cycle count with no frame-granularity observable. This entry stands as
+written. **Caveat recorded for whoever regenerates fixtures:** the recorder's
+`OnProcessDmaQueue` drains its ledger unconditionally and never reads `VDP_Command_Buffer`,
+so it *is* capable of manufacturing lifecycles at the four live reset sites. It simply is
+not doing so here, because the precondition — a zeroing write between submission and drain
+— is absent.
 
 The number of masked V-int frames between the DPLC write and the leave loop's first V-int is
 therefore a **pure 68000 cycle count**, dominated by `BuildSprites`/`AniArt_Load`, whose cost
