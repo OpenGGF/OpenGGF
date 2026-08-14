@@ -74302,3 +74302,69 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
   player is aligned row-for-row, and one comparator cursor serves every field.
 - Full analysis and regression fingerprints in
   [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+
+## 2026-08-14 — S2 production visual bootstrap ownership reaches EHZ1 cleanly
+
+- Worktree: `bugfix/ai-s2-visual-bootstrap-ownership`, clean committed
+  implementation state at `fc917a43e` (`fix: preserve production visual level
+  bootstrap`). The Maven runs below used a task-owned Java temporary directory
+  through `JAVA_TOOL_OPTIONS`, rather than the exhausted shared `/tmp`.
+- Permanent EHZ1 canary command and result (clean committed state):
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldVisualRun \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  **PASS:** 1 test, 0 failures, 0 errors; the strict real-title-card path
+  completes EHZ1 through shared cursor **4479**.
+- Root causes fixed without a trace, zone, route, or frame predicate: prepared
+  visual playback was repeating standalone metadata position/ground-snap setup;
+  then the first direct sidekick CPU INIT was rewriting the main leader's
+  ROM-prefilled history ring. Prepared sessions now adopt their title-card state,
+  while the rewind-captured one-shot ownership token applies only to the
+  reference-identical direct leader. Chained followers retain ordinary history
+  initialization.
+- Wider-frontier diagnostic (local **uncommitted probe**, removed before the
+  permanent canary was rerun):
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldVisualRun#probeFirstSpecialStageFrontier \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  EHZ1 completed; the first error is special-stage frame **136**,
+  `dynamic_art.edges`: ROM `[]` with outstanding transfers `[1, 2, 3]`, engine
+  `[4, 5, 6]` with no outstanding transfers. This is an independent, deliberately
+  uncommitted frontier.
+- The original five synthetic-chain axes are unchanged by design and retain the
+  following Task 1 clean-baseline command/result; Task 5 must rerun it against
+  `fc917a43e` before integration:
+
+  ```bash
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldRunChain \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  ```text
+  walk-failure: seg7_ehz2 cursor 3977 / 3997
+  segment-physics: seg11, 236 errors, first at f3525 queue.s2_nemesis_plc.busy
+  dynamic-art-gap: seg4_ehz1 -> seg5_ehz2, four movie rows at -1
+  dynamic-art-gap: ss_4 -> seg6_ehz2, two submission rows at +1
+  dynamic-art-gap: ss_5 -> seg7_ehz2, 16 expected edges / 18 actual
+  ```
+
+- Broad-profile context: the direct shared-`/tmp` run and the Maven-user-property
+  redirect were contaminated, each recording 190 tests / 8 failures / 59 errors.
+  The authoritative baseline used a task-owned JVM-startup `JAVA_TOOL_OPTIONS`
+  directory and is **190 / 8 failures / 53 errors**. Task 5 owns the final
+  clean-commit profile comparison and must not treat either contaminated run as
+  baseline evidence.

@@ -544,8 +544,8 @@ Expected: EHZ1 completes and the first pause is special-stage frame 136 on `dyna
 
 Stage the Task 3 production changes, rewind-constructor updates, `CHANGELOG.md`,
 and this plan update, then commit them with `Changelog: updated`. Task 4 owns
-only the README, audit, and frontier documentation; it does not amend this
-implementation commit.
+the README, audit, frontier documentation, and its own staging/commit-plan
+update; it does not amend this implementation commit.
 
 ---
 
@@ -556,6 +556,7 @@ implementation commit.
 - Modify: `README.md`
 - Modify: `docs/status/trace-frontier-log.md`
 - Modify: `docs/architecture/audits/2026-08-14-s2-emerald-frontier-follow-up.md`
+- Modify: `docs/architecture/plans/2026-08-14-s2-production-visual-bootstrap-ownership.md`
 
 **Interfaces:**
 
@@ -594,7 +595,8 @@ Change its status to implementation complete pending integration, and add dated 
 ```bash
 git add README.md \
   docs/status/trace-frontier-log.md \
-  docs/architecture/audits/2026-08-14-s2-emerald-frontier-follow-up.md
+  docs/architecture/audits/2026-08-14-s2-emerald-frontier-follow-up.md \
+  docs/architecture/plans/2026-08-14-s2-production-visual-bootstrap-ownership.md
 git diff --cached --check
 git diff --cached --stat
 ```
@@ -604,8 +606,8 @@ Expected: no fixture bytes, generated reports, temporary probes, or unrelated us
 - [ ] **Step 5: Commit with the required trailers**
 
 ```bash
-git commit -m "fix: preserve production visual level bootstrap" \
-  -m "Changelog: updated
+git commit -m "docs: record S2 production visual bootstrap frontier" \
+  -m "Changelog: n/a
 Guide: n/a
 Known-Discrepancies: n/a
 S3K-Known-Discrepancies: n/a
