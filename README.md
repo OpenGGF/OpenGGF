@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 production visual trace bootstrap ownership (2026-08-14):** prepared
+  production visual replay now adopts the state produced by the real title card,
+  and the direct level-start sidekick keeps the ROM-owned leader-history prefill
+  through its first CPU init. A strict EHZ1 visual canary now passes through
+  cursor 4479; the original five synthetic complete-emerald chain axes are
+  unchanged. The next independent frontier is special-stage frame 136 dynamic-art
+  readiness, recorded separately rather than folded into this ownership change.
+
 - **Sonic 2 spends its pre-level fade on the special-stage return (2026-08-13):** the
   ROM runs `Pal_FadeToBlack` -- 22 counted V-blank passes -- inside `Level:` before the
   title card object exists. Returning from a special stage the engine overlapped that

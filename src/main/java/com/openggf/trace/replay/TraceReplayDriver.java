@@ -176,7 +176,7 @@ public final class TraceReplayDriver {
                 .recordingStartFrameForTraceReplay(trace);
         playback.startSession(movie, startIndex);
 
-        // HeadlessTestFixture.Builder.build() always performs an unconditional
+        // For standalone replay, HeadlessTestFixture.Builder.build() always performs an unconditional
         // ground/angle/sensor snap (step 12: GameServices.collision()
         // .resolveGroundAttachment(sprite, 14, ...)) and does it BEFORE any
         // trace-data bootstrap runs -- crucially, BEFORE
@@ -193,38 +193,25 @@ public final class TraceReplayDriver {
         // the metadata start centre -- true for every fixture-backed
         // standalone trace test via build()'s step 12.
         //
-        // This driver has no build() step, so it must reproduce the same
-        // "set metadata centre, then snap" pair BEFORE calling
-        // applyStartPositionAndGroundSnap, not after -- a snap that runs
-        // after the post-title-card player-state calls reruns the terrain
-        // probe a tick later than every fixture-backed standalone trace
-        // test does for these segments (see TraceReplayBootstrap
-        // .shouldGroundSnapMetadataStartForTraceReplay's bonus-stage
-        // javadoc for the mirror-image one-tick-early/late hazard). Guarded
-        // by the same predicate the metadata-centre write itself is gated
-        // on, so traces that skip metadata seeding (e.g. pre-level-intro-
-        // prefix) don't get a spurious teleport+snap. Note: this ordering
-        // fix alone does not resolve every S3K complete-run first-frame
-        // divergence observed via this driver (e.g. TestS3kMegaRunChain's
-        // segment-0 boot still diverges at trace frame 0 from a cause
-        // upstream of this snap -- confirmed by instrumenting
-        // SpriteManager.tickPlayablePhysics, the corruption originates
-        // inside PlayableSpriteMovement.handleMovement on the very first
-        // driven frame despite byte-identical pre-frame state to the trace;
-        // not yet root-caused). It is kept because it is independently
-        // correct regardless of that open issue.
-        if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)
-                && !TraceReplaySessionBootstrap
-                        .shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
-            AbstractPlayableSprite preSnapSprite = fixture.sprite();
-            if (preSnapSprite != null) {
-                TraceMetadata meta = trace.metadata();
-                preSnapSprite.setCentreX(meta.startX());
-                preSnapSprite.setCentreY(meta.startY());
-                GameServices.collision().resolveGroundAttachment(preSnapSprite, 14, () -> false);
+        // This driver has no build() step, so standalone replay must reproduce
+        // the same "set metadata centre, then snap" pair BEFORE calling
+        // applyStartPositionAndGroundSnap, not after. A prepared visual
+        // session instead adopts the production title-card state that already
+        // owns its position and ground attachment.
+        if (!preparedLevel) {
+            if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)
+                    && !TraceReplaySessionBootstrap
+                            .shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
+                AbstractPlayableSprite preSnapSprite = fixture.sprite();
+                if (preSnapSprite != null) {
+                    TraceMetadata meta = trace.metadata();
+                    preSnapSprite.setCentreX(meta.startX());
+                    preSnapSprite.setCentreY(meta.startY());
+                    GameServices.collision().resolveGroundAttachment(preSnapSprite, 14, () -> false);
+                }
             }
+            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
         }
-        TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
         TraceReplaySessionBootstrap.BootstrapResult boot = preparedLevel
                 ? TraceReplaySessionBootstrap.applyPreparedLevelBootstrap(
                         trace, fixture, forceHardwareTimingReplay)

@@ -109,6 +109,7 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("catchUpUsesRomVisibleLevelFrameCounter", true);
         values.put("skipPhysicsThisFrame", true);
         values.put("deferredDespawnDeadFallContinuingThisFrame", true);
+        values.put("levelStartLeaderHistoryPrefillPending", true);
         values.put("bootstrapPreludePlacementApplied", true);
         values.put("cpuFrameCounterFromStoredLevelFrame", true);
         values.put("nextCpuFrameCounterOverride", 0x4567);

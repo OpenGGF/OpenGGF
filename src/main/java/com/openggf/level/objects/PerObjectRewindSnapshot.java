@@ -304,6 +304,7 @@ public record PerObjectRewindSnapshot(
             boolean skipPhysicsThisFrame,
             boolean deadOnObjectReenteredVisibleWindow,
             boolean deferredDespawnDeadFallContinuingThisFrame,
+            boolean levelStartLeaderHistoryPrefillPending,
             boolean bootstrapPreludePlacementApplied,
             boolean cpuFrameCounterFromStoredLevelFrame,
             int nextCpuFrameCounterOverride,

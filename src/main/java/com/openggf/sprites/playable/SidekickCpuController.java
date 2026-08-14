@@ -228,6 +228,7 @@ public class SidekickCpuController {
     // skips its post-kill collision pass when this flag is set. Cleared at the start of
     // every CPU update tick.
     private boolean deferredDespawnDeadFallContinuingThisFrame;
+    private boolean levelStartLeaderHistoryPrefillPending;
     private boolean bootstrapPreludePlacementApplied;
     /**
      * Leader centre coordinates captured at level-load time
@@ -1217,23 +1218,27 @@ public class SidekickCpuController {
         // centre" behaviour. Native title-card prelude paths that have already
         // reproduced the ROM Pos_table pre-fill go through
         // applyLevelStartSidekickPlacementForBootstrap() first.
-        applyLevelStartSidekickPlacement(false);
+        applyLevelStartSidekickPlacement(false, false);
     }
 
     /**
-     * Native-prelude-aware variant of
-     * {@link #initializeLevelStartSidekickPlacement()}: when level startup has
-     * already established the ROM-accurate Pos_table pre-fill (S2 only today,
-     * via {@link #applyLevelStartSidekickPlacementForBootstrap()}),
-     * {@code updateInit} must NOT re-pre-fill the ring or it would obliterate
-     * the rows that the native leader-record path has already written. Falls
-     * back to the legacy reset for non-bootstrap paths.
+     * Level-start-ownership-aware variant of
+     * {@link #initializeLevelStartSidekickPlacement()}. Production level
+     * assembly can adopt an already-established ROM Pos_table prefill through
+     * {@link #adoptLevelStartLeaderHistoryPrefill()}, while trace bootstrap can
+     * establish its own prefill through
+     * {@link #applyLevelStartSidekickPlacementForBootstrap()}. The next INIT
+     * must not overwrite either owner's ring; ordinary paths retain the legacy
+     * reset.
      */
     private void initializeLevelStartSidekickPlacementIfNeeded() {
-        if (bootstrapPreludePlacementApplied) {
+        if (levelStartLeaderHistoryPrefillPending) {
+            levelStartLeaderHistoryPrefillPending = false;
+            applyLevelStartSidekickPlacement(false, true);
+        } else if (bootstrapPreludePlacementApplied) {
             applyLevelStartSidekickPlacementSkipPrefill();
         } else {
-            applyLevelStartSidekickPlacement(false);
+            applyLevelStartSidekickPlacement(false, false);
         }
     }
 
@@ -1246,10 +1251,11 @@ public class SidekickCpuController {
      * than overwriting the pre-fill from the inside of {@code updateInit}.
      */
     public void applyLevelStartSidekickPlacementForBootstrap() {
-        applyLevelStartSidekickPlacement(true);
+        applyLevelStartSidekickPlacement(true, false);
     }
 
-    private void applyLevelStartSidekickPlacement(boolean useRomAccuratePrefill) {
+    private void applyLevelStartSidekickPlacement(
+            boolean useRomAccuratePrefill, boolean preserveExistingLeaderPrefill) {
         // S2 InitPlayers (s2.asm:5192-5195) and S3K SpawnLevelMainSprites
         // (s3.asm:6334-6337, sonic3k.asm:8364-8367) place Player_2 with centre
         // coordinates at Player_1 - $20 X, +4 Y. The engine's level-load
@@ -1293,7 +1299,7 @@ public class SidekickCpuController {
         // first gravity tick. Leave the air state as set by level load.
 
         if (useRomAccuratePrefill) {
-            // ROM Obj01_Init (s2.asm:35907-35918, sonic3k.asm:21936-21940)
+            // ROM Obj01_Init (s2.asm:36201-36217, sonic3k.asm:21936-21940)
             // temporarily applies the same Tails-spawn offset to Sonic's centre,
             // fills Sonic_Pos_Record_Buf 64 times via Sonic_RecordPos, then
             // restores Sonic's centre. The result is a pre-fill ring containing
@@ -1304,14 +1310,15 @@ public class SidekickCpuController {
             // 16 leader-record writes layer on top of the sidekick-offset
             // pre-fill rather than the live Sonic centre.
             //
-            // Note: only the bootstrap path requests the ROM-accurate pre-fill
-            // today. Trace replay setups without a recorded title-card prelude
-            // (S1, S3K) keep the legacy "fill with current Sonic centre"
-            // behaviour to avoid altering already-tuned sidekick CPU traces.
+            // This branch synthesizes the ROM-accurate prefill when trace
+            // bootstrap explicitly requests it. Ordinary production assembly
+            // and standalone metadata repositioning create the equivalent
+            // prefill through LevelManager; their exact-leader ownership token
+            // instead selects preserveExistingLeaderPrefill=true.
             leader.prefillPositionHistoryWithCentre(
                     (short) (anchorX + LEVEL_START_X_OFFSET),
                     (short) (anchorY + LEVEL_START_Y_OFFSET));
-        } else {
+        } else if (!preserveExistingLeaderPrefill) {
             // The ROM CPU routine reads Sonic's delayed position buffer
             // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).
             // Trace/bootstrap level placement can move the leader after sprite
@@ -5584,6 +5591,15 @@ public class SidekickCpuController {
     }
 
     /**
+     * Adopts the ROM-owned Pos_table/Stat_table prefill already written for this
+     * controller's direct leader during level assembly. Consumed by the next INIT
+     * placement; it does not authorize trace data or bootstrap placement.
+     */
+    public void adoptLevelStartLeaderHistoryPrefill() {
+        levelStartLeaderHistoryPrefillPending = true;
+    }
+
+    /**
      * Re-captures the spawn anchor from the leader's own current position.
      *
      * <p>ROM {@code InitPlayers} copies the sidekick's spawn coordinates from
@@ -5748,6 +5764,7 @@ public class SidekickCpuController {
                 skipPhysicsThisFrame,
                 deadOnObjectReenteredVisibleWindow,
                 deferredDespawnDeadFallContinuingThisFrame,
+                levelStartLeaderHistoryPrefillPending,
                 bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
                 nextCpuFrameCounterOverride,
@@ -5805,6 +5822,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
         deadOnObjectReenteredVisibleWindow = snapshot.deadOnObjectReenteredVisibleWindow();
         deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
+        levelStartLeaderHistoryPrefillPending = snapshot.levelStartLeaderHistoryPrefillPending();
         bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
         nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();

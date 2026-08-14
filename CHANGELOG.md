@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: prepared visual replay now adopts the production title-card state instead
+  of rerunning standalone metadata positioning/bootstrap, while S2/S3K level
+  assembly retains the ROM `(-$20,+4)` Pos_table prefill through CPU INIT
+  (`s2.asm:36201-36217`; `sonic3k.asm:21931-21941`). Ownership is exact-leader
+  and one-shot, without trace hydration or timing changes; the S2 production
+  visual frontier now reaches special-stage 1 frame 136 after EHZ1.
 - Sonic 2: spend `Pal_FadeToBlack`'s counted V-blanks before the returning level's
   title card. `Level:` runs `ClearPLC` then `Pal_FadeToBlack` (s2.asm:4764-4765)
   before it clears the screen, decompresses the card art and creates Obj34

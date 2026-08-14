@@ -1023,6 +1023,7 @@ class TestSidekickCpuControllerCarry {
                 source.skipPhysicsThisFrame(),
                 source.deadOnObjectReenteredVisibleWindow(),
                 source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.levelStartLeaderHistoryPrefillPending(),
                 source.bootstrapPreludePlacementApplied(),
                 source.cpuFrameCounterFromStoredLevelFrame(),
                 source.nextCpuFrameCounterOverride(),

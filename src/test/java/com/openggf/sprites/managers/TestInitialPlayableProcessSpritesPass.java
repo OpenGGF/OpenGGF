@@ -388,6 +388,7 @@ class TestInitialPlayableProcessSpritesPass {
                 source.skipPhysicsThisFrame(),
                 source.deadOnObjectReenteredVisibleWindow(),
                 source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.levelStartLeaderHistoryPrefillPending(),
                 source.bootstrapPreludePlacementApplied(),
                 source.cpuFrameCounterFromStoredLevelFrame(),
                 0x78,

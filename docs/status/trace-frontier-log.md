@@ -74302,3 +74302,144 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
   player is aligned row-for-row, and one comparator cursor serves every field.
 - Full analysis and regression fingerprints in
   [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+
+## 2026-08-14 — S2 production visual bootstrap ownership reaches EHZ1 cleanly
+
+- Worktree: `bugfix/ai-s2-visual-bootstrap-ownership`, clean committed
+  implementation state at `fc917a43e` (`fix: preserve production visual level
+  bootstrap`). The Maven runs below used a task-owned Java temporary directory
+  through `JAVA_TOOL_OPTIONS`, rather than the exhausted shared `/tmp`.
+- Permanent EHZ1 canary command and result (clean committed state):
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldVisualRun \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  **PASS:** 1 test, 0 failures, 0 errors; the strict real-title-card path
+  completes EHZ1 through shared cursor **4479**.
+- Root causes fixed without a trace, zone, route, or frame predicate: prepared
+  visual playback was repeating standalone metadata position/ground-snap setup;
+  then the first direct sidekick CPU INIT was rewriting the main leader's
+  ROM-prefilled history ring. Prepared sessions now adopt their title-card state,
+  while the rewind-captured one-shot ownership token applies only to the
+  reference-identical direct leader. Chained followers retain ordinary history
+  initialization.
+- Wider-frontier diagnostic (local **uncommitted probe**, removed before the
+  permanent canary was rerun):
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldVisualRun#probeFirstSpecialStageFrontier \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  EHZ1 completed; the first error is special-stage frame **136**,
+  `dynamic_art.edges`: ROM `[]` with outstanding transfers `[1, 2, 3]`, engine
+  `[4, 5, 6]` with no outstanding transfers. This is an independent, deliberately
+  uncommitted frontier.
+- The original five synthetic-chain axes are unchanged by design and retain the
+  following Task 1 clean-baseline command/result; Task 5 must rerun it against
+  `fc917a43e` before integration:
+
+  ```bash
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldRunChain \
+    -Dsonic2.rom.path=s2.gen
+  ```
+
+  ```text
+  walk-failure: seg7_ehz2 cursor 3977 / 3997
+  segment-physics: seg11, 236 errors, first at f3525 queue.s2_nemesis_plc.busy
+  dynamic-art-gap: seg4_ehz1 -> seg5_ehz2, four movie rows at -1
+  dynamic-art-gap: ss_4 -> seg6_ehz2, two submission rows at +1
+  dynamic-art-gap: ss_5 -> seg7_ehz2, 16 expected edges / 18 actual
+  ```
+
+- Broad-profile context: the direct shared-`/tmp` run and the Maven-user-property
+  redirect were contaminated, each recording 190 tests / 8 failures / 59 errors.
+  The authoritative baseline used a task-owned JVM-startup `JAVA_TOOL_OPTIONS`
+  directory and is **190 / 8 failures / 53 errors**. Task 5 owns the final
+  clean-commit profile comparison and must not treat either contaminated run as
+  baseline evidence.
+
+## 2026-08-14 — S2 production visual bootstrap ownership Task 5 clean-commit verification
+
+- Worktree: `bugfix/ai-s2-visual-bootstrap-ownership`, clean pre-documentation
+  head `03e868042`. Integration and post-merge verification remain pending.
+- Focused cross-game verification used task-owned JVM-startup temporary space:
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldVisualRun,TestS1CompleteEmeraldVisualRun,TestS2PostLoadAssemblyHeadless,TestMultiSidekickSpawn,TestS3kMgzSidekickAirCollisionOrdering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kSonicTailsAizSegmentTraceReplay \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  ```
+
+  Result: **76 tests, 1 failure, 1 error, 0 skipped**. The visual canaries and
+  all new ownership coverage are green. The only failure is the unchanged S2
+  fractional-word baseline red; the only error exactly matches the separately
+  recaptured S3K AIZ timing frontier, expected `KOS_DECOMPRESSION_QUEUE#16`
+  `sha256:dae421a276e9d9f1749981d2790390efbf66af448fcf9420e0008e99cc8a9a58`
+  versus engine pending `<none>`. S1 remains green at its Task 1 exact pins
+  (shared cursors 9741 and 46806).
+- The complete-emerald chain command, also with task-owned JVM-startup temporary
+  space, remained exactly at all five recorded axes:
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=s2.gen
+  ```
+
+  Result: **1 test, 1 failure, 0 errors, 0 skipped**: `seg7_ehz2` cursor
+  3977/3997; segment 11, 236 errors, first frame 3525
+  `queue.s2_nemesis_plc.busy`; four -1 rows at `seg4_ehz1 -> seg5_ehz2`; two
+  +1 rows at `ss_4 -> seg6_ehz2`; and 16 expected/18 actual edges at
+  `ss_5 -> seg7_ehz2`.
+- Default-suite temporary-directory distinction:
+
+  ```bash
+  env -u JAVA_TOOL_OPTIONS mvn clean test -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  ```
+
+  Surefire's default profile supplies worktree-local `target/test-tmp`; this is
+  the authoritative result: **15108 tests, 63 failures, 21 errors, 18 skipped**
+  versus the Task 1 baseline **15105/64F/21E/18S**. The three added tests are
+  intended non-trace coverage; all 48 shared red classes have identical counts,
+  and baseline `TestCompleteRunAudioCli` is green. XML contains neither
+  `/tmp/junit` nor `No space left on device`. The earlier 15108/65F/21E/18S
+  default run with a task-owned `JAVA_TOOL_OPTIONS` property is
+  non-authoritative because the audio-shell safety test correctly rejects the
+  inherited variable.
+- Authoritative broad trace command and result:
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn clean test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest='*TraceReplay' \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  ```
+
+  **190 tests, 8 failures, 53 errors, 0 skipped**; the exact 61-class red/error
+  set is unchanged, with no `/tmp/junit` or disk-exhaustion text. MHZ still
+  first errors on expected `KOS_DECOMPRESSION_QUEUE#335`
+  `sha256:3c96d8b9573e86f26814cb8a605459c8fef23cc1ca5425db2fd1cc250d408d91`
+  versus `<none>`; Pachinko Sonic+Tails remains first at frame 0,
+  `tails_y_speed` expected `0x01B2`, actual `0x0000`.
+- Independent whole-implementation review verdict: **READY / NO BLOCKING
+  ISSUES**. There were no Critical or Important findings. The first stale
+  Javadoc was corrected in `e3783a6b8`; final whole-range review found only an
+  adjacent stale ownership comment, corrected in the review follow-up, and
+  optional direct S3K prepared-visual coverage.

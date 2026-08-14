@@ -4,7 +4,9 @@
 **Base:** `develop` at `3f0dde97b`  
 **Related manifest:**
 [`2026-08-14-s2-emerald-frontier-manifest.md`](2026-08-14-s2-emerald-frontier-manifest.md)  
-**Status:** design approved in conversation; implementation not started
+**Status:** Task 5 verified on `bugfix/ai-s2-visual-bootstrap-ownership` at
+pre-documentation head `03e868042`; integration and post-merge verification
+remain pending.
 
 ## Purpose
 
@@ -168,6 +170,153 @@ anchor and preserving the main leader's prefilled ring.
 - Do not relax dynamic-art or history comparison.
 - Do not change the hardware-timing trace contract.
 
+## Implemented evidence relay
+
+This section distinguishes the committed implementation evidence from temporary
+diagnostics. Task 5's clean-worktree focused, default-profile, and trace-profile
+comparisons are now recorded below; integration and post-merge comparison remain
+pending.
+
+### Causes and bounded fix
+
+The two independent owners established by the red/green cycle were:
+
+1. Prepared production-visual sessions re-applied standalone metadata position
+   setup and ground snap after the real title card had already produced the
+   level-start state.
+2. The first direct sidekick CPU INIT rewrote the main leader's position-history
+   ring after `LevelManager` had performed the ROM-owned level-start prefill.
+
+The committed implementation (`fc917a43e`) therefore adopts prepared title-card
+state only on prepared sessions, and gives only the controller whose leader is
+the exact prefilled main player a one-shot, rewind-captured ownership token. Its
+first INIT retains the captured anchor and event-authored air state while
+skipping only that destructive leader-ring rewrite. Chained followers retain
+their ordinary initialization path.
+
+### Task 1 authoritative and environmental baseline
+
+The default-suite baseline was **15,105 tests, 64 failures, 21 errors, 18
+skipped**. The first two broad `*TraceReplay` attempts were contaminated by the
+shared full `/tmp` filesystem: both reported **190 tests, 8 failures, 59
+errors, 0 skipped**, including six CNZ metadata-variant copy errors. Supplying
+`-Djava.io.tmpdir` as a Maven user property did not help because JUnit had
+already selected `/tmp`.
+
+The authoritative trace-profile baseline instead set a task-owned temporary
+directory at JVM startup through `JAVA_TOOL_OPTIONS`; a focused CNZ proof was
+green and the broad run reported **190 tests, 8 failures, 53 errors, 0 skipped**.
+That is the valid Task 5 comparison baseline. The temporary directories and
+their generated LWJGL caches were removed; no shared `/tmp` content was
+modified.
+
+The explicit S1 prepared-visual baseline was green (2 tests) with exact shared
+cursors **9,741** at the return-bridge pin and **46,806** at the second
+giant-ring/MZ2 pin. The S2 chain baseline is the five axes reproduced exactly
+above; none of its values is an intended change in this work.
+
+### Task 2 red evidence (task-owned JVM temporary directory)
+
+The authoritative red batch ran 20 tests and produced 4 failures and 1 error:
+
+- `TestS2CompleteEmeraldVisualRun` stopped at EHZ1 segment 0, frame 0 (outer
+  step 81, cursor 769) with **91** errors; the first was
+  `player_history.y[63]`, ROM `0x0293`, engine `0x0294`.
+- The direct S2 ownership test proved the ring rewrite: slot-0 X was expected
+  `168` and actual `200`.
+- The S3K falling-intro test first proved its captured anchor and `air=true`,
+  then failed only its full history ring: slot-0 X was expected `160` and
+  actual `292`.
+- The rewind sentinel failed with `NoSuchFieldException` for the absent
+  `levelStartLeaderHistoryPrefillPending` scalar.
+- The chained-leader control was green (all 6 `TestMultiSidekickSpawn` tests),
+  including its own-leader-history assertion.
+
+The same batch also retained the unrelated baseline fractional-word red in
+`TestS2PostLoadAssemblyHeadless` (`23040` expected, `0` actual); it is not
+attributed to this implementation.
+
+### Task 3 intermediate, committed green, and later frontier
+
+After only prepared-session adoption, the visual canary remained red but fell
+from 91 to **76** frame-0/cursor-769 history errors; the first remaining value
+was ROM `0x0293`, engine `0x0290`. This isolated the second owner before the
+token was added.
+
+On clean committed state at `fc917a43e`, the focused batch ran **96 tests, 2
+failures, 0 errors**. The two failures are unchanged baseline reds only:
+
+- `TestInitialPlayableProcessSpritesPass` line 320, `37` expected and `36`
+  actual.
+- `TestS2PostLoadAssemblyHeadless#sidekickSpawnPositionWritesPreserveFractionalWords`,
+  fractional X word `23040` expected and `0` actual.
+
+The permanent EHZ1 visual canary, direct ownership test, chained-leader
+isolation, S3K falling-intro anchor/air/history test, rewind token round-trip,
+carry constructor, S2 replay bootstrap, hardware authority guard, and rewind
+coverage guard are green in that focused evidence. The clean committed EHZ1
+canary itself ran **1 test, 0 failures, 0 errors** and reached cursor **4479**.
+
+The wider special-stage result is a deliberately **uncommitted, reverted
+probe**, not part of the permanent canary or a clean-commit result. It completed
+EHZ1 and first paused at special-stage frame **136**, `dynamic_art.edges`:
+ROM `[]` with outstanding transfers `[1, 2, 3]`; engine `[4, 5, 6]` with no
+outstanding transfers. It remains a separate frontier.
+
+### Skills control and Task 5 verification
+
+Two fresh-context controls using the unchanged S2 and S3K reference skill
+packages independently derived the complete safe ownership design. The reusable
+pitfall checklist therefore found no failing baseline to justify a speculative
+skill edit; `Skills: n/a` is a fresh-control conclusion, not an omission.
+
+**TASK 5 VERIFIED — pre-integration head `03e868042`:**
+
+- The task-owned-JVM-temp focused cross-game command ran **76 tests, 1 failure,
+  1 error, 0 skipped**. The new S2 visual canary, S1 visual canary, direct and
+  chained sidekick coverage, S3K anchor/air coverage, AIZ keep-green, level
+  loading, bootstrap resolution, and decoding checks are green. The only
+  failure is the unchanged `TestS2PostLoadAssemblyHeadless` fractional-word
+  baseline red (`23040` expected, `0` actual); the only error is the exact
+  recaptured S3K AIZ timing baseline, expected
+  `KOS_DECOMPRESSION_QUEUE#16`
+  `sha256:dae421a276e9d9f1749981d2790390efbf66af448fcf9420e0008e99cc8a9a58`
+  while the engine has no pending job. The S1 pins remain green against the
+  Task 1 exact cursors **9741** and **46806**.
+- `TestS2CompleteEmeraldRunChain` remains exactly its five Task 1 axes:
+  `seg7_ehz2` cursor **3977 / 3997**; segment **11**, **236** errors, first
+  frame **3525** `queue.s2_nemesis_plc.busy` (ROM `false`, engine `true`);
+  the four **-1** `seg4_ehz1 -> seg5_ehz2` rows; the two **+1**
+  `ss_4 -> seg6_ehz2` rows; and **16 expected / 18 actual** for
+  `ss_5 -> seg7_ehz2`.
+- The first default-suite run with task-owned `JAVA_TOOL_OPTIONS` was
+  **non-authoritative**: it reported **15108 / 65 failures / 21 errors / 18
+  skipped** because its audio-shell guard correctly rejected the inherited
+  environment variable. The authoritative default-profile rerun explicitly
+  unset that variable and used Surefire's worktree-local `target/test-tmp`:
+  **15108 / 63 failures / 21 errors / 18 skipped**, versus Task 1's
+  **15105 / 64 failures / 21 errors / 18 skipped**. The three extra tests are
+  the intended new non-trace tests; all **48** shared red classes retain exact
+  failure/error counts, and baseline
+  `TestCompleteRunAudioCli` is additionally green. XML records neither
+  `/tmp/junit` nor `No space left on device`.
+- The authoritative task-owned-JVM-temp `*TraceReplay` sweep is exact at
+  **190 tests / 8 failures / 53 errors / 0 skipped**, with the unchanged
+  **61-class** red/error set and no `/tmp/junit` or disk-exhaustion text. Its
+  first independent error remains MHZ expected
+  `KOS_DECOMPRESSION_QUEUE#335`
+  `sha256:3c96d8b9573e86f26814cb8a605459c8fef23cc1ca5425db2fd1cc250d408d91`
+  versus engine pending `<none>`; Pachinko Sonic+Tails remains frame 0
+  `tails_y_speed`, expected `0x01B2`, actual `0x0000`.
+- Independent whole-implementation review verdict: **READY / NO BLOCKING
+  ISSUES**; no Critical or Important findings. The first review's stale-Javadoc
+  Minor was corrected in `e3783a6b8`; final whole-range review found only an
+  adjacent stale ownership comment, corrected in the review follow-up, and
+  optional direct S3K prepared-visual coverage.
+
+Integration and post-merge comparison remain required; Task 5 does not claim
+the development worktree is already merged.
+
 ## Expected verification
 
 Focused verification will include the new visual canary, the S2 complete-emerald
@@ -199,3 +348,31 @@ merge. Any newly exposed visual frontier will also be recorded in
   skip helper also reanchors from the live leader and clears S3K intro air state.
   Production ownership is now a separate rewind-captured predicate that skips
   only the ring rewrite and retains the ordinary captured-anchor/air semantics.
+- **2026-08-14 — TDD RED:** The task-owned-JVM-temp red batch exposed both
+  production owners: the 91-error EHZ1 visual failure and direct main-leader
+  ring overwrite; S3K anchor/air passed before its ring assertion failed, the
+  rewind scalar was absent, and the chained-leader control was green.
+- **2026-08-14 — TDD ISOLATION:** Prepared-session adoption alone reduced the
+  visual failure from 91 to 76 errors, proving the remaining live-leader rewrite
+  was a separate root cause.
+- **2026-08-14 — IMPLEMENTED:** `fc917a43e` made the prepared-session adoption
+  and one-shot rewind-captured direct-leader ownership changes. The clean focused
+  result is 96 tests with only the two recorded baseline reds. The original five
+  chain axes are unchanged.
+- **2026-08-14 — FRONTIER:** A temporary reverted wider probe reaches
+  special-stage frame 136 and pauses on `dynamic_art.edges`; it is deliberately
+  outside the permanent EHZ1 canary.
+- **2026-08-14 — SKILLS CONTROL:** Fresh-context S2 and S3K skill-package
+  controls already supplied the safe design, so no speculative skill edit was
+  warranted and `Skills: n/a` remains valid.
+- **2026-08-14 — TASK 5 VERIFIED:** Focused cross-game evidence is 76 tests
+  with only the known fractional-word failure and exact S3K AIZ KOS#16 error;
+  the five chain axes and authoritative 190/8F/53E trace set are unchanged.
+  The authoritative default-profile comparison is 15108/63F/21E/18S with no
+  new or worsened red. Independent review is READY / NO BLOCKING ISSUES;
+  integration and post-merge comparison remain pending.
+- **2026-08-14 — FINAL REVIEW:** Whole-range review found no Critical or
+  Important issue. Both stale ownership comments are corrected. A direct S3K
+  prepared-visual characterization remains optional coverage polish; existing
+  S1/S2 prepared, S3K standalone, S3K falling-intro, and broad trace controls
+  remain the integration gate.

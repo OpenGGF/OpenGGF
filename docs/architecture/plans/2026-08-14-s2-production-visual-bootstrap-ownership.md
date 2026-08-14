@@ -229,13 +229,31 @@ void firstCpuInitPreservesTheLevelLoadLeaderHistoryPrefill() {
     assertHistoryFilled(sprite, 168, 404);
     assertEquals(63, sprite.historyPos(),
             "the first live Sonic_RecordPos write must still target slot 0");
-    assertFalse(tails.getCpuController().captureRewindState()
-                    .levelStartLeaderHistoryPrefillPending(),
+    assertFalse(capturedLevelStartLeaderHistoryPrefillPending(tails.getCpuController()),
             "the level-start prefill ownership token is one-shot");
 }
 ```
 
 `168,404` is the hand-derived ROM prefill `(200-$20,400+4)`. The current implementation rewrites all entries to `200,400`, so this is a behavioral failure rather than a source-text assertion.
+
+Use this test-local helper until Task 3 adds the rewind record component:
+
+```java
+private static boolean capturedLevelStartLeaderHistoryPrefillPending(
+        SidekickCpuController controller) {
+    try {
+        Object rewindState = controller.captureRewindState();
+        return (boolean) rewindState.getClass()
+                .getMethod("levelStartLeaderHistoryPrefillPending")
+                .invoke(rewindState);
+    } catch (ReflectiveOperationException e) {
+        throw new AssertionError(
+                "Sidekick CPU rewind state must expose levelStartLeaderHistoryPrefillPending", e);
+    }
+}
+```
+
+The literal history assertion remains before the reflection assertion, so Task 2 still records the behavioral history failure against the old implementation. Reflection keeps this red test compilable before Task 3 adds the named record accessor; after the history behavior is fixed, it catches a token that was not consumed.
 
 - [ ] **Step 3: Add the chained-leader isolation guard**
 
@@ -313,13 +331,13 @@ void firstCpuInitPreservesPostSpawnFallingIntroAirState() {
             "INIT placement must use the level-start leader anchor");
     assertEquals(capturedY + 4, fallingTails.getCentreY(),
             "INIT placement must use the level-start leader anchor");
-    assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
     assertTrue(fallingTails.getAir(),
             "MGZ1/HCZ1/LRZ1 apply zone-event air state after sidekick spawn");
+    assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
 }
 ```
 
-Add the same literal-entry `assertHistoryFilled` helper shown in Step 3 to this class. Before the fix, captured-anchor placement and the air assertion pass but the leader-history assertion fails after INIT resets the ring from the moved live leader. After the fix, all three pass. Together they catch accidental reuse of the bootstrap skip helper, which uses the live leader and calls `setAir(false)`.
+Add the same literal-entry `assertHistoryFilled` helper shown in Step 3 to this class. Keep the captured-anchor and air assertions before the intentionally red history assertion: before the fix they prove correct placement and post-spawn air-state preservation before the leader-history assertion fails after INIT resets the ring from the moved live leader. After the fix, all three pass. Together they catch accidental reuse of the bootstrap skip helper, which uses the live leader and calls `setAir(false)`.
 
 - [ ] **Step 5: Add a rewind sentinel for the proposed one-shot token**
 
@@ -362,6 +380,8 @@ Do not write production code until this exact failure shape is observed.
 - Modify: `src/main/java/com/openggf/level/objects/PerObjectRewindSnapshot.java`
 - Modify: `src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerCarry.java`
 - Modify: `src/test/java/com/openggf/sprites/managers/TestInitialPlayableProcessSpritesPass.java`
+- Modify: `CHANGELOG.md`
+- Modify: `docs/architecture/plans/2026-08-14-s2-production-visual-bootstrap-ownership.md`
 
 **Interfaces:**
 
@@ -520,9 +540,12 @@ mvn test -Ptrace-replay -Dmse=off \
 
 Expected: EHZ1 completes and the first pause is special-stage frame 136 on `dynamic_art.edges`, with ROM `[]`/outstanding `[1,2,3]` and engine completions `[4,5,6]`. Remove exactly `probeFirstSpecialStageFrontier` through `apply_patch`, then rerun the committed EHZ1 canary green before proceeding.
 
-- [ ] **Step 9: Commit the runtime/test slice after documentation in Task 4 is staged**
+- [ ] **Step 9: Commit the runtime/test slice and changelog**
 
-Do not commit yet; the project requires `CHANGELOG.md` for this `fix` and `README.md` on merge to `develop`. Stage and commit Task 3 together with Task 4.
+Stage the Task 3 production changes, rewind-constructor updates, `CHANGELOG.md`,
+and this plan update, then commit them with `Changelog: updated`. Task 4 owns
+the README, audit, frontier documentation, and its own staging/commit-plan
+update; it does not amend this implementation commit.
 
 ---
 
@@ -530,32 +553,21 @@ Do not commit yet; the project requires `CHANGELOG.md` for this `fix` and `READM
 
 **Files:**
 
-- Modify: `CHANGELOG.md`
 - Modify: `README.md`
 - Modify: `docs/status/trace-frontier-log.md`
 - Modify: `docs/architecture/audits/2026-08-14-s2-emerald-frontier-follow-up.md`
+- Modify: `docs/architecture/plans/2026-08-14-s2-production-visual-bootstrap-ownership.md`
 
 **Interfaces:**
 
 - Consumes: actual red/green measurements from Tasks 1-3.
 - Produces: release note, merge-policy README summary, canonical trace-frontier entry, and the adjacent relay log requested by the user.
 
-- [ ] **Step 1: Add the changelog entry**
-
-At the top of `## Unreleased`, add a concise `Fix:` entry stating:
-
-- prepared visual replay adopts real title-card state instead of rerunning standalone metadata position/bootstrap;
-- S2/S3K level assembly preserves the ROM `(-$20,+4)` direct-leader history prefill through CPU INIT;
-- ownership is exact-leader and one-shot, with no trace hydration or timing change;
-- the S2 production visual frontier moves from EHZ1 frame 0 to special-stage 1 frame 136.
-
-Include the S2 and S3K disassembly citations from Global Constraints.
-
-- [ ] **Step 2: Add the README release summary**
+- [ ] **Step 1: Add the README release summary**
 
 Under `### v0.6.prerelease`, add a short bullet titled `Sonic 2 production visual trace bootstrap ownership (2026-08-14)`. Summarize the real-title-card adoption and the new EHZ1 visual canary; state that the original five synthetic-chain axes are unchanged.
 
-- [ ] **Step 3: Append the trace frontier entry**
+- [ ] **Step 2: Append the trace frontier entry**
 
 Use the current format in `docs/status/trace-frontier-log.md`. Record:
 
@@ -566,7 +578,7 @@ Use the current format in `docs/status/trace-frontier-log.md`. Record:
 - the exact chain command and its unchanged five axes;
 - whether the measurement was clean committed state or local uncommitted probe state.
 
-- [ ] **Step 4: Finish the adjacent audit relay**
+- [ ] **Step 3: Finish the adjacent audit relay**
 
 Change its status to implementation complete pending integration, and add dated progress entries for:
 
@@ -578,34 +590,24 @@ Change its status to implementation complete pending integration, and add dated 
 - a clearly marked pending-final-verification entry; Task 5 replaces it with the exact full-suite and trace-profile comparisons.
 - the reusable-pitfall checklist ruling: two fresh-context controls using the unchanged S2/S3K skill packages already produced the complete safe design, so no speculative skill edit was made and `Skills: n/a` remains valid.
 
-- [ ] **Step 5: Stage and inspect every deliverable**
+- [ ] **Step 4: Stage and inspect every deliverable**
 
 ```bash
-git add CHANGELOG.md README.md \
+git add README.md \
   docs/status/trace-frontier-log.md \
   docs/architecture/audits/2026-08-14-s2-emerald-frontier-follow-up.md \
-  src/main/java/com/openggf/trace/replay/TraceReplayDriver.java \
-  src/main/java/com/openggf/level/LevelManager.java \
-  src/main/java/com/openggf/sprites/playable/SidekickCpuController.java \
-  src/main/java/com/openggf/level/objects/PerObjectRewindSnapshot.java \
-  src/test/java/com/openggf/tests/trace/runs/TestS2CompleteEmeraldVisualRun.java \
-  src/test/java/com/openggf/tests/TestS2PostLoadAssemblyHeadless.java \
-  src/test/java/com/openggf/tests/TestMultiSidekickSpawn.java \
-  src/test/java/com/openggf/tests/TestS3kMgzSidekickAirCollisionOrdering.java \
-  src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java \
-  src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerCarry.java \
-  src/test/java/com/openggf/sprites/managers/TestInitialPlayableProcessSpritesPass.java
+  docs/architecture/plans/2026-08-14-s2-production-visual-bootstrap-ownership.md
 git diff --cached --check
 git diff --cached --stat
 ```
 
 Expected: no fixture bytes, generated reports, temporary probes, or unrelated user changes are staged.
 
-- [ ] **Step 6: Commit with the required trailers**
+- [ ] **Step 5: Commit with the required trailers**
 
 ```bash
-git commit -m "fix: preserve production visual level bootstrap" \
-  -m "Changelog: updated
+git commit -m "docs: record S2 production visual bootstrap frontier" \
+  -m "Changelog: n/a
 Guide: n/a
 Known-Discrepancies: n/a
 S3K-Known-Discrepancies: n/a
