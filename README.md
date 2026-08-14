@@ -216,7 +216,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 - **Managed agent scratch storage (2026-08-14):** Codex, Claude Code, trace
   diagnostics and benchmark retention now use a validated disk-backed
-  `$OGGF_SCRATCH_ROOT`; Claude Code also receives `TMPDIR`, `TMP`, and `TEMP`
+  `$AGENT_SCRATCH_ROOT`; Claude Code also receives `TMPDIR`, `TMP`, and `TEMP`
   under its managed `claude` child. Bounded cleanup, mirrored agent guidance,
   and a daily user timer keep the scratch area controlled. The helper rejects
   unsafe roots and symlink races, while
