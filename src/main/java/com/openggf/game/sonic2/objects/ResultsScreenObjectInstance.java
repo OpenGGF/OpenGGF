@@ -258,11 +258,19 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
             // So the title card appears at full intensity on the first V-blank
             // of `Level_TtlCard`'s loop (:4914-4915). Running a reveal fade
             // here instead holds PALETTE_FADE for its whole duration and
-            // pushes the first title-card-owned V-blank -- and the
-            // ProcessDMAQueue that retires the outgoing act's last player DPLC
-            // pair -- that many rows late. This is the same correction, and
-            // the same mechanism, as the special-stage results screen's
-            // clearOverlayForImmediatePaletteLoad (GameLoop#enterResultsScreen).
+            // pushes the first title-card-owned V-blank that many rows late.
+            // This is the same correction, and the same mechanism, as the
+            // special-stage results screen's clearOverlayForImmediatePaletteLoad
+            // (GameLoop#enterResultsScreen).
+            //
+            // That V-blank's ProcessDMAQueue does NOT retire the outgoing act's
+            // last player DPLC pair, as an earlier version of this comment
+            // claimed. `Level:`'s own VDP setup zeroes the queue head first --
+            // unguarded, so the shipped ROM runs it -- at s2.asm:4857-4858,
+            // which lies between `Level:` (:4757) and the title-card loop
+            // (:4914-4915). ProcessDMAQueue stops on a zero first word
+            // (s2.asm:1772-1790), so the ROM DISCARDS that pair; it never
+            // transfers. The timing argument above is unaffected.
             fadeManager.clearOverlayForImmediatePaletteLoad();
         }));
     }
