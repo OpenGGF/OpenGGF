@@ -228,6 +228,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 special-stage results tail stays inside its own segment (2026-08-14):** the
+  ROM leaves its special-stage object loop when `SS_Check_Rings_flag` rises, but the
+  emerald check, both fades and the whole bonus tally still run under
+  `GameModeID_SpecialStage` -- `Game_Mode` is not rewritten until the level reload. The
+  production replay path tested the engine's own `SPECIAL_STAGE` mode directly, so it
+  read the engine's internal results split as leaving the recorded segment and aborted
+  481 rows early. Both launcher sites now use the shared predicate that already carried
+  this ROM rule.
+
 - **Sonic 2 special-stage object passes are paced on the production replay path
   (2026-08-14):** the ROM's special-stage loop waits on its own V-int before each
   `RunObjects`, so it is paced by 68K pass duration rather than one pass per V-blank,

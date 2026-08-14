@@ -1356,7 +1356,22 @@ public final class TraceSessionLauncher {
             finishRunTerminalTailStep(mode);
             return;
         }
-        if (runSpecialRowDriver != null && mode != GameMode.SPECIAL_STAGE
+        // A recorded special-stage segment is cut on the raw ROM Game_Mode
+        // byte, and the ROM keeps GameModeID_SpecialStage well past the stage
+        // proper: SS_MainLoop leaves its object loop when SS_Check_Rings_flag
+        // rises, and the emerald/perfect accounting, Pal_FadeToWhite, the
+        // results-screen build and the whole Obj6F tally loop below it all
+        // still run under that mode; Game_Mode is only rewritten by the
+        // move.b #GameModeID_Level,(Game_Mode).w at the very end
+        // (docs/s2disasm/s2.asm:6721-6800; S1 GM_Special has the same shape at
+        // docs/s1disasm/sonic.asm:3419-3421). The engine splits that one ROM
+        // mode into SPECIAL_STAGE plus SPECIAL_STAGE_RESULTS, so a bare
+        // == SPECIAL_STAGE test here read the engine's own internal results
+        // boundary as a premature exit from the recorded segment -- the same
+        // shared predicate the run coordinator and the chain adapter already
+        // use for segment ownership.
+        if (runSpecialRowDriver != null
+                && !RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
                 && !runSpecialRowDriver.isComplete()) {
             applyRunCoordinatorActions(runCoordinator.abort(
                     "special-stage segment " + currentRunSegmentIndex()
@@ -3145,7 +3160,14 @@ public final class TraceSessionLauncher {
                     || mode == GameMode.BONUS_STAGE) {
                 runHardwareTiming.beginPlaybackFrame(
                         GameServices.playbackDebug().currentFrameOrThrow());
-            } else if (mode == GameMode.SPECIAL_STAGE) {
+            } else if (RunPlaybackObservation
+                    .insideRecordedSpecialStageMode(mode)) {
+                // The recorded segment owns the ROM's whole
+                // GameModeID_SpecialStage span, results tail included
+                // (s2.asm:6721-6800) -- so its rows keep being driven by the
+                // segment's own row driver across the engine's internal
+                // SPECIAL_STAGE -> SPECIAL_STAGE_RESULTS boundary. The driver
+                // falls back to a hardware-timing gap once it is complete.
                 prepareRunSpecialStageHardwareTimingRow();
             } else {
                 fixture.enterHardwareTimingGap();

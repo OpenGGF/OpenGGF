@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a recorded special-stage segment now keeps its row driver across the
+  engine's internal results boundary on the production visual run path. The ROM
+  holds `GameModeID_SpecialStage` for the whole results tail -- `SS_MainLoop`
+  leaves its object loop when `SS_Check_Rings_flag` rises, and the
+  emerald/perfect accounting, `Pal_FadeToWhite`, the results-screen build and
+  the `Obj6F` tally loop all run under that mode, with `Game_Mode` rewritten
+  only by the closing `move.b #GameModeID_Level,(Game_Mode).w`
+  (`s2.asm:6721-6800`; S1 `GM_Special` matches at `sonic.asm:3419-3421`).
+  `TraceSessionLauncher` tested `== SPECIAL_STAGE` at its special-row exit and
+  hardware-timing dispatch, reading the engine's own `SPECIAL_STAGE` ->
+  `SPECIAL_STAGE_RESULTS` split as a premature exit and aborting the S2
+  complete-emerald visual run 481 rows into special stage 1's recorded results
+  tail. Both sites now consume the shared, already ROM-cited
+  `RunPlaybackObservation.insideRecordedSpecialStageMode` predicate that the run
+  coordinator and the chain adapter use. The run now compares the results-tail
+  rows and reaches a genuine dynamic-art divergence there; chain behaviour is
+  unchanged.
 - Fix: the production trace-replay path now paces special-stage object passes
   from the recorded `RunObjects` stream, as the run-chain harness already did.
   `SS_MainLoop` sets `VintID_S2SS`, waits on it, and only then runs `RunObjects`
