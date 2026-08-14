@@ -121,10 +121,16 @@ The stale code remains cleanup debt, but it is not a cause of this frontier.
    must retain their existing initialization path. A production-level
    multi-sidekick test will pin that distinction.
 4. For the directly-following controller, `LevelManager` will explicitly say
-   that the already-established prefill is authoritative. Its first INIT tick
-   then uses the existing skip-prefill path instead of replacing the ring with
-   the leader's live position. The production API will carry that semantic
-   ownership statement; the internal state remains rewind-captured.
+   that the already-established prefill is authoritative. This is a distinct
+   production ownership state, not an alias for the existing
+   `bootstrapPreludePlacementApplied` state. On the first INIT tick it changes
+   only the history operation: the controller still performs the ordinary
+   captured-level-start-anchor placement and transient CPU reset, still
+   preserves the air state applied after spawn by S3K's MGZ1/HCZ1/LRZ1 intro
+   owner, and skips only the destructive leader-ring rewrite. The existing
+   bootstrap skip helper is not reused because it reanchors from the live
+   leader and forces `air=false`. The new internal state remains
+   rewind-captured.
 5. The existing bootstrap helper remains valid for standalone trace setup. The
    production API will describe ownership of an already-populated prefill rather
    than call a method named `ForBootstrap` from ordinary level loading.
@@ -149,7 +155,10 @@ runs the directly-following controller's first INIT tick, and proves the
 main-player ring retains the hand-derived `(-$20,+4)` values. Extend the
 multi-sidekick integration coverage to prove only the controller whose leader is
 that main player preserves this prefill; chained followers continue to initialize
-their own leader history through the existing path.
+their own leader history through the existing path. Add a characterization for
+an S3K falling-intro sidekick whose zone-event owner sets `air=true` after spawn:
+the first CPU INIT tick must retain that state while using the captured spawn
+anchor and preserving the main leader's prefilled ring.
 
 ### Non-goals
 
@@ -186,3 +195,7 @@ merge. Any newly exposed visual frontier will also be recorded in
   coverage and chained-leader ownership as blockers. The design now cites the
   equivalent S3K reset, scopes authority to the actually populated main-player
   ring, and requires explicit S3K, multi-sidekick, and trace-profile coverage.
+- **2026-08-14 — DESIGN RE-REVIEW:** Review found that the existing bootstrap
+  skip helper also reanchors from the live leader and clears S3K intro air state.
+  Production ownership is now a separate rewind-captured predicate that skips
+  only the ring rewrite and retains the ordinary captured-anchor/air semantics.
