@@ -1463,7 +1463,8 @@ PowerShell `Start-Process` argument array:
 ```bat
 set OGGF_START=16300
 set OGGF_STOP=16320
-for /f "usebackq delims=" %%I in (`python tools\agent-scratch new htz2-diag`) do set "OGGF_TASK_DIR=%%I"
+set "OGGF_WSL_CHECKOUT=/home/<user>/code/projects/OpenGGF"
+for /f "usebackq delims=" %%I in (`wsl.exe bash -lc "cd ^"%OGGF_WSL_CHECKOUT%^" ^&^& task_dir=$^(tools/agent-scratch new htz2-diag ^| tail -n 1^) ^&^& wslpath -w ^"$task_dir^""`) do set "OGGF_TASK_DIR=%%I"
 set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 tools\bizhawk\run_bizhawk_lua.bat ^
   tools\bizhawk\diag_s2_htz2_obj30.lua ^
@@ -1471,10 +1472,17 @@ tools\bizhawk\run_bizhawk_lua.bat ^
   s2.gen
 ```
 
-`tools/agent-scratch new` prints the disk-backed managed root followed by the absolute,
-fresh task directory; the `for /f` assignment retains that final task-directory line. Do not
-replace it with `C:\tmp`, `%TEMP%`, or `%TMP%`: those paths are only suitable for the
-launcher's short-lived wrapper/config files, never durable diagnostic output.
+`tools/agent-scratch` is POSIX-only, so native Windows must provision `OGGF_TASK_DIR`
+through WSL rather than invoking the helper with Windows Python. Set `OGGF_WSL_CHECKOUT` to
+the WSL path of this checkout. The WSL command changes into that checkout, captures the
+final task-directory line printed by `tools/agent-scratch new`, and uses `wslpath -w` before
+the `for /f` assignment sets the Windows-form `OGGF_TASK_DIR`.
+
+The WSL `OGGF_SCRATCH_ROOT` must already be configured as a disk-backed location shared with
+and accessible from Windows (typically under `/mnt/<drive>/...`); do not use a WSL-only
+tmpfs root. Do not replace the resulting task path with `C:\tmp`, `%TEMP%`, or `%TMP%`:
+those paths are only suitable for the launcher's short-lived wrapper/config files, never
+durable diagnostic output.
 
 The launcher resolves all three input paths to absolute paths, writes a per-launch
 temporary no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps

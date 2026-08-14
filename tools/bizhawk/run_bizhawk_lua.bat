@@ -7,13 +7,18 @@ REM
 REM Example:
 REM   set OGGF_START=16300
 REM   set OGGF_STOP=16320
-REM   for /f "usebackq delims=" %%I in (`python tools\agent-scratch new htz2-diag`) do set "OGGF_TASK_DIR=%%I"
+REM   set "OGGF_WSL_CHECKOUT=/home/<user>/code/projects/OpenGGF"
+REM   for /f "usebackq delims=" %%I in (`wsl.exe bash -lc "cd ^"%OGGF_WSL_CHECKOUT%^" ^&^& task_dir=$^(tools/agent-scratch new htz2-diag ^| tail -n 1^) ^&^& wslpath -w ^"$task_dir^""`) do set "OGGF_TASK_DIR=%%I"
 REM   set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 REM   tools\bizhawk\run_bizhawk_lua.bat ^
 REM     tools\bizhawk\diag_s2_htz2_obj30.lua ^
 REM     src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
 REM     s2.gen
 REM
+REM OGGF_WSL_CHECKOUT must name the WSL checkout whose disk-backed
+REM OGGF_SCRATCH_ROOT is accessible from Windows. The handoff converts the task path
+REM to a Windows path before assigning OGGF_TASK_DIR; do not use C:\tmp, %%TEMP%%, or %%TMP%%
+REM for durable output.
 REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
 REM to use BizHawk's remembered config instead. It also wraps the Lua with the
