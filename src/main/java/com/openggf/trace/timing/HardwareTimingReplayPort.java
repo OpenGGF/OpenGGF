@@ -5,6 +5,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
+import com.openggf.game.timing.PendingRecordedSubmissionsException;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.timing.UnmatchedRecordedCompletionException;
 
@@ -38,6 +39,14 @@ public final class HardwareTimingReplayPort
      * still fails the run at {@link #verifyRunComplete()}.
      */
     private final List<String> unmatchedCompletions = new ArrayList<>();
+    /**
+     * Production submissions the engine still held when the recorded run
+     * closed. Recorded admission has already ended, so such a submission is
+     * never admitted, prepared, released or retired: the list exists only so
+     * an opted-in driver can record it as a comparison error, and so a driver
+     * that never drains it cannot open another run.
+     */
+    private final List<String> pendingSubmissionsAtClose = new ArrayList<>();
 
     private HardwareTimingSchedule schedule = HardwareTimingSchedule.empty();
     private int edgeCursor;
@@ -45,6 +54,7 @@ public final class HardwareTimingReplayPort
     private HardwareServiceBoundary lastAppliedBoundary;
     private boolean installed;
     private boolean runComplete;
+    private boolean reportsPendingSubmissions;
 
     public HardwareTimingReplayPort(RecordedCompletionAuthority authority) {
         this.authority = Objects.requireNonNull(authority, "authority");
@@ -70,6 +80,7 @@ public final class HardwareTimingReplayPort
             throw new IllegalStateException(
                     "hardware timing replay is already installed");
         }
+        requireNoUndrainedPendingSubmissions();
         this.schedule = checked;
         edgeCursor = 0;
         consumedIdentities.clear();
@@ -294,14 +305,57 @@ public final class HardwareTimingReplayPort
         return drained;
     }
 
+    /**
+     * Declares that this driver drains {@link #drainPendingRecordedSubmissions()}
+     * after the run closes and records the result as a comparison error.
+     *
+     * <p>Without this the close-time leftover-submission complaint keeps its
+     * original hard-failure behaviour, so a driver with nowhere to record it
+     * still fails the run. Enabling it changes severity and ordering only: a
+     * leftover submission is still never admitted, released or retired.
+     */
+    public void reportPendingRecordedSubmissionsAtClose() {
+        reportsPendingSubmissions = true;
+    }
+
+    /**
+     * Removes and returns the leftover production submissions the recorded
+     * stream never completed, so the caller can record them as a comparison
+     * error on the closing row. Draining reports them; it never admits them.
+     */
+    public List<String> drainPendingRecordedSubmissions() {
+        if (pendingSubmissionsAtClose.isEmpty()) {
+            return List.of();
+        }
+        List<String> drained = List.copyOf(pendingSubmissionsAtClose);
+        pendingSubmissionsAtClose.clear();
+        return drained;
+    }
+
     public void verifyRunComplete() {
         if (runComplete) {
             return;
         }
         requireActive();
         requireNoUndrainedUnmatchedCompletions();
+        requireNoUndrainedPendingSubmissions();
         verifySegmentEdges();
-        authority.endRecordedAdmission();
+        try {
+            authority.endRecordedAdmission();
+        } catch (PendingRecordedSubmissionsException failure) {
+            if (!reportsPendingSubmissions) {
+                throw failure;
+            }
+            // Severity demotion only, and for the same reason as the unmatched
+            // completion above: a leftover submission is a contract concern in
+            // a converged run and a downstream symptom in a diverged one, and
+            // this message cannot tell them apart. Recorded admission has
+            // already ended inside the authority, nothing was admitted or
+            // released, and the driver that opted in must still report it.
+            for (PendingRecordedSubmission submission : failure.pending()) {
+                pendingSubmissionsAtClose.add(describe(submission.handle()));
+            }
+        }
         runComplete = true;
     }
 
@@ -313,6 +367,7 @@ public final class HardwareTimingReplayPort
     public void verifyPrefixComplete(int inclusiveRawFrame) {
         requireActive();
         requireNoUndrainedUnmatchedCompletions();
+        requireNoUndrainedPendingSubmissions();
         HardwareCompletionEdge next = nextEdge();
         if (next != null && next.rawFrame() <= inclusiveRawFrame) {
             throw new IllegalStateException(
@@ -347,7 +402,8 @@ public final class HardwareTimingReplayPort
                 lastAppliedBoundary,
                 installed,
                 runComplete,
-                unmatchedCompletions);
+                unmatchedCompletions,
+                pendingSubmissionsAtClose);
     }
 
     @Override
@@ -363,6 +419,8 @@ public final class HardwareTimingReplayPort
         runComplete = snapshot.runComplete();
         unmatchedCompletions.clear();
         unmatchedCompletions.addAll(snapshot.unmatchedCompletions());
+        pendingSubmissionsAtClose.clear();
+        pendingSubmissionsAtClose.addAll(snapshot.pendingSubmissionsAtClose());
     }
 
     @Override
@@ -375,6 +433,7 @@ public final class HardwareTimingReplayPort
         installed = false;
         runComplete = false;
         unmatchedCompletions.clear();
+        pendingSubmissionsAtClose.clear();
     }
 
     private HardwareCompletionEdge nextEdge() {
@@ -401,6 +460,19 @@ public final class HardwareTimingReplayPort
             throw new IllegalStateException(
                     "unmatched recorded hardware completions were never reported: "
                             + unmatchedCompletions);
+        }
+    }
+
+    /**
+     * A driver that closed one run with leftover submissions and never
+     * reported them cannot open another one, so an opted-in driver that
+     * forgets to report cannot quietly carry on.
+     */
+    private void requireNoUndrainedPendingSubmissions() {
+        if (!pendingSubmissionsAtClose.isEmpty()) {
+            throw new IllegalStateException(
+                    "pending recorded hardware submissions were never reported: "
+                            + pendingSubmissionsAtClose);
         }
     }
 

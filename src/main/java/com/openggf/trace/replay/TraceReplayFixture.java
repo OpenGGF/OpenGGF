@@ -30,6 +30,25 @@ public interface TraceReplayFixture {
         return List.of();
     }
 
+    /**
+     * Declares that this driver drains
+     * {@link #drainPendingRecordedHardwareSubmissions()} after the run closes
+     * and records the result as a comparison error. A driver that does not
+     * declare it keeps the original hard failure at close, so the demotion can
+     * never become silence.
+     */
+    default void reportPendingRecordedHardwareSubmissionsAtClose() {
+    }
+
+    /**
+     * Removes and returns the production submissions the recorded stream never
+     * completed, so the driving comparison can record them as an error on the
+     * closing row. The submissions were neither admitted nor released.
+     */
+    default List<String> drainPendingRecordedHardwareSubmissions() {
+        return List.of();
+    }
+
     /** Latches the trace row's physical raw frame before any row work or retry. */
     void beginTraceRow(int traceIndex, int rawFrame);
 

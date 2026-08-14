@@ -14,7 +14,8 @@ public record HardwareTimingReplaySnapshot(
         HardwareServiceBoundary lastAppliedBoundary,
         boolean installed,
         boolean runComplete,
-        List<String> unmatchedCompletions) {
+        List<String> unmatchedCompletions,
+        List<String> pendingSubmissionsAtClose) {
 
     public HardwareTimingReplaySnapshot {
         Objects.requireNonNull(schedule, "schedule");
@@ -24,7 +25,10 @@ public record HardwareTimingReplaySnapshot(
                     "edgeCursor is outside the installed schedule: " + edgeCursor);
         }
         Objects.requireNonNull(unmatchedCompletions, "unmatchedCompletions");
+        Objects.requireNonNull(
+                pendingSubmissionsAtClose, "pendingSubmissionsAtClose");
         consumedIdentities = Set.copyOf(consumedIdentities);
         unmatchedCompletions = List.copyOf(unmatchedCompletions);
+        pendingSubmissionsAtClose = List.copyOf(pendingSubmissionsAtClose);
     }
 }
