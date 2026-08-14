@@ -228,6 +228,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 DMA-queue-only VBlank owns its own lag row (2026-08-14):** the ROM waits
+  on `Vint_CtrlDMA` before entering the special-stage fade, and that handler drains
+  the DMA queue without ever polling the joypad -- so the row is a lag row for
+  publication purposes even though a fade is active around it. The engine let the
+  fade pre-claim the frame, silently dropping the row's own lag claim and publishing
+  three player art transfers a frame early. The production visual replay now matches
+  the recording 289 rows further into the first special stage.
+
 - **Sonic 2 production visual trace bootstrap ownership (2026-08-14):** prepared
   production visual replay now adopts the state produced by the real title card,
   and the direct level-start sidekick keeps the ROM-owned leader-history prefill

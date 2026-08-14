@@ -312,6 +312,62 @@ class TestPlcFrameLifecycleCoordinator {
                 "prepare:PALETTE_FADE"), events);
     }
 
+    /**
+     * ROM {@code Vint_CtrlDMA} (docs/s2disasm/s2.asm:998-1002) is armed at
+     * s2.asm:6665, before {@code Pal_FadeFromWhite} (s2.asm:3460) is entered at
+     * s2.asm:6672. That V-blank is therefore not an iteration of the fade, and
+     * because it never reaches {@code ReadJoypads} it is a lag row. The fade
+     * must not pre-claim it, so the lag row's own claim survives and defers its
+     * dynamic-art publication to the following boundary -- while the same claim
+     * still services the DMA queue the handler exists to drain.
+     */
+    @Test
+    void declaredDmaQueueOnlyVblankKeepsAnActiveFadeFromClaimingTheLagRow() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+        coordinator.beginNativeBlockingFade();
+
+        coordinator.markNextVblankServicesDmaQueue();
+        var ctrlDma = coordinator.latchBeforeFadeUpdate();
+        assertFalse(ctrlDma.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE),
+                "Vint_CtrlDMA is not a Pal_FadeFromWhite iteration");
+        assertTrue(ctrlDma.claim(PlcLifecyclePhase.LAG));
+        ctrlDma.finish();
+
+        // The one-shot is consumed by that claim, so the next V-blank is an
+        // ordinary fade iteration again.
+        var next = coordinator.latchBeforeFadeUpdate();
+        assertTrue(next.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE));
+        next.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
+        next.finish();
+
+        assertEquals(List.of(
+                "service:LAG", "service:PALETTE_FADE",
+                "prepare:PALETTE_FADE"), events);
+    }
+
+    /**
+     * The declaration is a one-shot even when no run comparison is active, so
+     * it can never leak into a later represented V-blank.
+     */
+    @Test
+    void declaredDmaQueueOnlyVblankIsConsumedWithoutAnActiveRun() {
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+        coordinator.beginNativeBlockingFade();
+
+        coordinator.markNextVblankServicesDmaQueue();
+        var ctrlDma = coordinator.latchBeforeFadeUpdate();
+        assertTrue(ctrlDma.claim(PlcLifecyclePhase.LAG));
+        ctrlDma.finish();
+
+        var second = coordinator.latchBeforeFadeUpdate();
+        assertTrue(second.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE));
+        second.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
+        second.finish();
+    }
+
     @Test
     void tokenRejectsReuseDuplicatePreparationAndMissingPreparation() {
         PlcFrameLifecycleCoordinator coordinator =

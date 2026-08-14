@@ -122,6 +122,17 @@ public final class LevelFrameStep {
                 && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
             throw new IllegalArgumentException("not a VBlank-only PLC phase: " + phase);
         }
+        // A V-blank-only row has no body of its own, so this phase IS the row.
+        // claim() can still lose the token to an active native blocking fade
+        // that pre-claimed it, which silently discards this row's publication
+        // semantics -- above all a LAG row's deferral of its dynamic-art edges
+        // to the following boundary. Making that fatal here was measured on the
+        // full trace profile and errors 8 previously green S3K classes on
+        // genuine lag-during-fade rows, so the disagreement is recorded in
+        // PlcLifecycleFrame#claim's contract rather than enforced here; closing
+        // it is a separate frontier. The one case that governs publication
+        // today -- a Vint_CtrlDMA V-blank -- is resolved structurally in
+        // PlcFrameLifecycleCoordinator#latchBeforeFadeUpdate.
         frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
