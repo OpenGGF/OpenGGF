@@ -4053,7 +4053,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// byte, so consume the forced press signal directly.
 			inputJumpPress = sprite.isForcedJumpPress() && !suppressJumpPress;
 		} else {
-			inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+			// The ROM never derives the press bit from the logical held bit. The
+			// pressed byte is produced once per frame by Poll_Controller, straight
+			// from the hardware pad and independently of any control lock:
+			//   move.b (a0),d1 / eor.b d0,d1 / move.b d0,(a0)+ / and.b d0,d1
+			//   / move.b d1,(a0)+            (docs/skdisasm/sonic3k.asm:1288-1305,
+			// mirrored by S1 ReadJoypads and S2 s2.asm ReadJoypads).
+			// Sonic_Control then copies the WHOLE word - held byte and already
+			// computed pressed byte together - into Ctrl_1_logical, and skips the
+			// copy entirely while Ctrl_1_locked is set
+			// (docs/skdisasm/sonic3k.asm:21968-21971 loc_10BF0, :21541-21545
+			// loc_10760). So a button that was already held when the lock lifted
+			// contributes NO press on the unlock frame: its edge was consumed by
+			// Poll_Controller several frames earlier, while control was locked.
+			// Deriving the edge from the engine's filtered `jump` bit instead
+			// manufactured exactly that press, because the filtered bit is forced
+			// false for the whole lock (AIZ1 intro: A held from the recording's
+			// frame 1095, control returns at 1097, the ROM ducks via SonicKnux_Roll
+			// :23240 while the engine fired Sonic_Jump :23288 and went airborne
+			// rolling 5px low).
+			inputJumpPress = ((jump && sprite.isJumpJustPressed()) && !suppressJumpPress)
+					|| sprite.isForcedJumpPress();
 		}
 		sprite.setForcedJumpPress(false); // consume one-shot signal
 		jumpPrevious = jump;

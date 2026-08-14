@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the player's jump press bit now comes from the raw controller poll edge
+  rather than from the post-control-lock filtered held bit. `Poll_Controller`
+  computes the pressed byte from the hardware pad every frame regardless of
+  `Ctrl_1_locked` (`docs/skdisasm/sonic3k.asm:1288-1305`), and `Sonic_Control`
+  copies the whole word -- held byte plus already-computed pressed byte -- into
+  `Ctrl_1_logical`, skipping the copy entirely while control is locked
+  (`docs/skdisasm/sonic3k.asm:21541-21545`, `:21968-21971`). A button already
+  held when a lock lifted therefore contributes no press on the unlock frame.
+  `PlayableSpriteMovement.storeInputState` derived the edge from its own
+  `jump && !jumpPrevious` history over the filtered bit, which is forced false
+  for the whole lock, so it manufactured a press on every unlock frame with a
+  jump button held. In the AIZ1 intro (`s3k-sonic-tails-complete-emeralds`
+  segment `aiz`) A is held from frame 1095 and control returns at 1097: the ROM
+  ducks through `SonicKnux_Roll` (`sonic3k.asm:23240`) and spin dashes, while
+  the engine fired `Sonic_Jump` (`sonic3k.asm:23288`) and went airborne rolling
+  5px low. The segment now compares all 2290 rows with 3 errors instead of
+  aborting at frame 1188 with 28.
 - Fix: a recorded special-stage segment now keeps its row driver across the
   engine's internal results boundary on the production visual run path. The ROM
   holds `GameModeID_SpecialStage` for the whole results tail -- `SS_MainLoop`

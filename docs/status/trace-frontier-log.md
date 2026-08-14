@@ -74724,3 +74724,95 @@ cause. The correct reading at `d9205dce5`:
 
 No code changed, so no baseline moved: the six standalone S3K complete-runs and
 the other listed green classes are untouched.
+
+## 2026-08-14 — S3K AIZ1 intro: the jump press edge was manufactured on the control-unlock frame
+
+Fix round measured at base commit **`6775e81cf`** (`develop`), two isolated
+worktrees outside the repository (fix tree and a control tree at the same
+commit), JDK 21 (`mvn -v` →
+21.0.11), `target/surefire-reports` and `target/trace-reports` cleared before
+every run, `java.io.tmpdir` supplied through `JAVA_TOOL_OPTIONS`. No recorder,
+fixture, comparator or assertion was changed; the engine diff is one file.
+
+### Root cause
+
+`TestS3kSonicTailsAizSegmentTraceReplay` diverged at frame **1097**, `y`
+`0x041B` expected vs `0x0420`, with `air`/`rolling`/`status_byte 0x06` — a
+**plain jump** (`Status_InAir|Status_Roll`, `y_pos` adjusted by
+`19 - 14 = 5`, `y_vel = -$680`, `Sonic_Jump` `sonic3k.asm:23288-23345`).
+
+The event is **not a plane-drop landing**: it is the **spin dash** at the end of
+the AIZ1 intro. The recording holds Down from row 1078 and A from row 1095 while
+control is still locked; control returns at row 1097, where the ROM enters the
+ducking animation through `SonicKnux_Roll`
+(`docs/skdisasm/sonic3k.asm:23223-23240`), starts the spin dash on the *next*
+fresh press at row 1106 (`SonicKnux_Spindash`, `:23641-23652`) and releases at
+row 1146 with `ground_vel = $B00` and `addq.w #5,y_pos` (`:23678-23686`).
+
+The ROM cannot jump on row 1097 because the pressed byte is produced once per
+frame by `Poll_Controller` straight from the hardware pad, independently of any
+control lock (`docs/skdisasm/sonic3k.asm:1288-1305`), and `Sonic_Control` copies
+the **whole word** — held byte plus that already-computed pressed byte — into
+`Ctrl_1_logical`, skipping the copy entirely while `Ctrl_1_locked` is set
+(`:21541-21545` `loc_10760`, `:21968-21971` `loc_10BF0`). A button already held
+when the lock lifts contributes no press: its edge was consumed several frames
+earlier, during the lock.
+
+`PlayableSpriteMovement.storeInputState` instead computed
+`inputJumpPress = jump && !jumpPrevious` over the *filtered* jump bit, which is
+forced false for the whole lock. Probe (temporary, reverted) at the `modeNormal`
+entry, on the unlock frame: `jp=true jh=true down=true lock=false logical=12`
+after 300 consecutive locked frames of `logical=0`. The edge was manufactured by
+the engine's own filtering, in every game, on every control-lock release with a
+jump button held.
+
+Fix: `inputJumpPress = jump && sprite.isJumpJustPressed()` (the ungated raw-pad
+edge already published by `SpriteManager.publishInputState`), forced/demo press
+handling unchanged. No constant, tolerance, zone, act, route or frame index is
+involved.
+
+### Frontier movement (MEASURED, one class per Maven invocation, cleared reports)
+
+| Class | Before | After |
+|---|---|---|
+| `TestS3kSonicTailsAizSegmentTraceReplay` | ERROR `KOS_DECOMPRESSION_QUEUE#16 dae421a2…`, `engine pending: <none>`; report 28 errors, first frame **1097** `y`, 1188 frames compared | FAIL; report **3 errors**, first frame **2247** `camera_x` `0x1B10` vs `0x1B0E`, **2290 of 2290** frames compared |
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | ERROR, same Kosinski abort | FAIL at the `aiz` segment boundary, comparator cursor **2288 of 2290** |
+
+The Kosinski-queue abort is gone from both, confirming the previous round's
+finding that it was a tripwire downstream of physics divergence: with the engine
+tracking the recording it reaches the camera-gated `Queue_Kos` submission point
+(`sonic3k.asm:38914-38926`) and the recorded completion matches.
+
+Residual on the segment: all three remaining errors start at frame 2247 and run
+to the segment end — `camera_x` two pixels short and
+`player_animation_id 0x1C` (blank) vs `0x02` with `player_mapping_frame`. That
+is the act-end transition, the next target.
+
+### Blast radius (full profile, both trees, same command)
+
+```
+rm -rf target/surefire-reports
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=…" mvn -Ptrace-replay -Dmse=off \
+    -Dsurefire.runOrder=alphabetical -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
+```
+
+- Control `6775e81cf`: **843 run, 9 failures, 56 errors, 4 skipped**, 222 report
+  files, **65 red classes**.
+- With the fix: **843 run, 11 failures, 54 errors, 4 skipped**, 222 report
+  files, **65 red classes — the identical set by name** (`comm` on both
+  directions of the red sets is empty).
+
+A per-class diff of all 222 reports (times stripped) differs in exactly two
+lines: `TestS3kSonicTailsAizSegmentTraceReplay` and
+`TestS3kSonicTailsCompleteEmeraldRunChain`, each `Errors: 1 → Failures: 1`.
+Every must-stay-green class — the six S3K complete-run replays,
+`TestS3kAizTraceReplay`, `TestS3kCnzTraceReplay`, `TestS3kMgzTraceReplay`,
+`TestS3kSpecialStageTraceReplay`, `TestS3kReplayReferenceClosureIntegration`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, all S1 chains,
+`TestS2CompleteEmeraldVisualRun`, `TestS2EhzHalfpipeRoundTripChain`,
+`TestCollisionLogic`, both rewind guards and
+`TestHardwareTimingAuthorityGuard` — is byte-identical between the two runs, as
+is the pre-existing single `TestS2CompleteEmeraldRunChain` failure. No ambient
+flake flipped.

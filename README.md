@@ -240,7 +240,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   into a jump, diverging 5px low at frame 1097. Affects all three games; no zone, route or
   frame is involved. The AIZ segment frontier moves 1097 → 2247 and the
   `KOS_DECOMPRESSION_QUEUE` aborts clear on both affected classes, confirming those were a
-  tripwire downstream of the physics divergence rather than a queue defect.
+  tripwire downstream of the physics divergence rather than a queue defect. Verified across
+  the full trace profile with the red-class set identical by name in both directions, so no
+  comparator starvation.
 
 - **Sonic 2 special-stage results tail stays inside its own segment (2026-08-14):** the
   ROM leaves its special-stage object loop when `SS_Check_Rings_flag` rises, but the
