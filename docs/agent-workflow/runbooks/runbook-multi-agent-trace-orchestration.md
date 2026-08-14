@@ -148,12 +148,22 @@ switch the lead checkout. It snapshots both tracked and untracked baseline
 state before the worker starts. Hook-created disassembly links and foreign files
 are baseline state, never benchmark-owned files.
 
+Before starting, the host owner must have run `tools/agent-scratch install` and exported
+the resulting absolute `OGGF_SCRATCH_ROOT` into this shell. This is a required preflight:
+benchmark retention is durable task evidence and must not fall back to `/tmp`. Run
+`tools/agent-scratch status` before allocating a benchmark, particularly when the selected
+case captures large artifacts. The recipe marks its retention directory for the helper's
+maximum bounded keep period; archive material outside the managed root before that marker
+expires if it must remain available longer.
+
 ```bash
 set -euo pipefail
 
 BENCH_ROOT=$(git rev-parse --show-toplevel)
 BENCH_POLICY=<policy>
 BENCH_CASE=<case>
+: "${OGGF_SCRATCH_ROOT:?run tools/agent-scratch install and export its disk-backed root first}"
+tools/agent-scratch status
 BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
 # Fail closed before allocating retention, a branch, or a worktree. An enabled
 # policy may contain only routes supported by this runbook.
@@ -171,7 +181,8 @@ BENCH_RESULT="$BENCH_WORKTREE/target/trace-model-routing/${BENCH_POLICY}/${BENCH
 BENCH_PATCH="${BENCH_RESULT%.json}.patch"
 BENCH_RESULT_REL="target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
 BENCH_PATCH_REL="${BENCH_RESULT_REL%.json}.patch"
-BENCH_RETAIN=$(mktemp -d "/tmp/trace-model-routing-retained-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}-XXXXXX")
+BENCH_RETAIN="$(tools/agent-scratch new "benchmark-${BENCH_POLICY}-${BENCH_CASE}" | tail -n 1)"
+tools/agent-scratch keep "$BENCH_RETAIN" --until "$(date -d '+30 days' +%F)"
 BENCH_OWNED="$BENCH_RETAIN/owned-files"
 BENCH_BASELINE_TRACKED="$BENCH_RETAIN/baseline-tracked"
 BENCH_BASELINE_UNTRACKED="$BENCH_RETAIN/baseline-untracked"
@@ -184,7 +195,6 @@ BENCH_TEMP_INDEX="$BENCH_RETAIN/result-tree.index"
 
 git cat-file -e "${BENCH_BASE}^{commit}"
 test ! -e "$BENCH_WORKTREE"
-mkdir -p "$BENCH_RETAIN"
 git worktree add -b "$BENCH_BRANCH" "$BENCH_WORKTREE" "$BENCH_BASE"
 git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_BASELINE_TRACKED"
 git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort > "$BENCH_BASELINE_UNTRACKED"

@@ -7,12 +7,31 @@ REM
 REM Example:
 REM   set OGGF_START=16300
 REM   set OGGF_STOP=16320
-REM   set OGGF_OUT=C:\tmp\htz2_diag.txt
+REM   set "OGGF_WSL_CHECKOUT=/home/<user>/code/projects/OpenGGF"
+REM   set "OGGF_TASK_DIR="
+REM   for /f "usebackq delims=" %%I in (`wsl.exe bash -lc "cd ^"%OGGF_WSL_CHECKOUT%^" ^&^& task_dir=$^(tools/agent-scratch new htz2-diag ^| tail -n 1^) ^&^& wslpath -w ^"$task_dir^""`) do set "OGGF_TASK_DIR=%%I"
+REM   if not defined OGGF_TASK_DIR (
+REM     >&2 echo ERROR: WSL did not provision OGGF_TASK_DIR
+REM     exit /b 2
+REM   )
+REM   if /i not "%OGGF_TASK_DIR:~1,2%"==":\" (
+REM     >&2 echo ERROR: OGGF_TASK_DIR is not a Windows drive path
+REM     exit /b 2
+REM   )
+REM   if not exist "%OGGF_TASK_DIR%\NUL" (
+REM     >&2 echo ERROR: OGGF_TASK_DIR is not an accessible directory
+REM     exit /b 2
+REM   )
+REM   set OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt
 REM   tools\bizhawk\run_bizhawk_lua.bat ^
 REM     tools\bizhawk\diag_s2_htz2_obj30.lua ^
 REM     src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
 REM     s2.gen
 REM
+REM OGGF_WSL_CHECKOUT must name the WSL checkout whose disk-backed
+REM OGGF_SCRATCH_ROOT is accessible from Windows. The handoff converts the task path
+REM to a Windows path before assigning OGGF_TASK_DIR; do not use C:\tmp, %%TEMP%%, or %%TMP%%
+REM for durable output.
 REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
 REM to use BizHawk's remembered config instead. It also wraps the Lua with the

@@ -31,15 +31,18 @@ $ARGUMENTS: Optional zone name or action. Examples:
 under Mono with no display, so prefer it over the Lua recorder:
 
 ```bash
+TRACE_DIR="$(tools/agent-scratch new "regen-<zone>" | tail -n 1)"
 tools/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
     --movie src/test/resources/traces/s1/<zone>/<movie>.bk2 \
-    --output /tmp/regen-<zone> \
+    --output "$TRACE_DIR" \
     --mode trace \
     --trace-profile <profile>
 ```
 
-`--output` must not already exist. Use `--run-id <id>` for complete-run / run-mode
+`tools/agent-scratch new` creates the required fresh output directory beneath
+`$OGGF_SCRATCH_ROOT/openggf/tasks`; its second output line is the task path captured
+above. `--output` must not already exist. Use `--run-id <id>` for complete-run / run-mode
 captures instead of `--trace-profile`. Validate changes with
 `tools/bizhawk-headless/test.sh --filter S1` — the differential gates compare against the
 committed fixtures byte-for-byte.
@@ -73,7 +76,7 @@ repo-relative; `$SRC` is your `--output` dir for a native capture, or
 `tools/bizhawk/trace_output` for a Lua one). The `.bk2` is unchanged:
 
 ```bash
-SRC=/tmp/regen-<zone>
+SRC="$TRACE_DIR"
 DST=src/test/resources/traces/s1/<zone>_fullrun
 cp "$SRC"/metadata.json "$DST/"
 # Payloads are committed GZIPPED. A native capture already produced .gz for

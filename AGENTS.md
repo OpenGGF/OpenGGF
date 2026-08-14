@@ -80,6 +80,19 @@ ROM is missing.
 Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
 available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
 
+## Managed agent scratch storage
+
+Agent-owned captures, diagnostic output, downloads, reports, and other durable task
+artifacts belong in a helper-created directory under
+`$OGGF_SCRATCH_ROOT/openggf/tasks`, never in `/tmp`. Create one with
+`tools/agent-scratch new <label>` (or discover the parent with
+`tools/agent-scratch path tasks`) and pass the printed task path to the producing tool.
+`/tmp` remains for short-lived operating-system files only. Before a large capture, run
+`tools/agent-scratch status` to check capacity. Task output is retained for a limited
+time: use `tools/agent-scratch keep <task-path> --until YYYY-MM-DD` for a bounded
+extension, or move material that must outlive retention into a normal archive outside the
+managed root.
+
 ## Hard rules
 
 These are non-negotiable and enforced by guards, CI, or review. Everything else in this
