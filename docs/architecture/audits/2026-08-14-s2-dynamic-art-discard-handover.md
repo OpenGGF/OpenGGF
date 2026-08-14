@@ -240,22 +240,43 @@ lands would make the engine and the corrected stream disagree in the other direc
 
 ### 2. Whether to pull the S3K captures forward in the recorder-migration order
 
+> **CORRECTED 2026-08-14, after re-measurement at `17fd2596a`.** The premise below — that the
+> S3K replays are green and the priority game therefore has no measured frontier — is
+> **FALSE**. A fresh full sweep with the report directory cleared gives 843 / 9F / 56E / 4S,
+> 65 red, and **64 of those 65 red classes are S3K**; the only non-S3K red is
+> `TestS2CompleteEmeraldRunChain`. That 65-red figure had been quoted all session as a
+> stable S2-flavoured baseline.
+>
+> S3K has a large, well-witnessed engine frontier: the shared `KOS_DECOMPRESSION_QUEUE`,
+> where the recording expects a completion the engine never submitted (`engine pending:
+> <none>` across 31 segments, all three run chains and the MHZ complete-run), plus 10
+> segments submitting at the right ordinal under the wrong fingerprint. Unchanged in shape
+> since 2026-08-12, so no S3K frontier has moved since. Separately, 11 segments cannot load
+> at all (DEZ act 2, HPZ act 2, DDZ act 2 have no engine level-list entries).
+>
+> **So the capture-reordering question is real but SECOND.** Fix the frontier that exists
+> before recording more of what is not yet compared. The coverage analysis below stands and
+> is still worth acting on — it is the reason the green part is worth less than it looks —
+> but it is no longer the primary ask.
+
 This one is a genuine scheduling question and it is not ours to settle.
 
 The current recorder-migration order puts the two S3K captures last, behind the S2 workflow
 and the S1 complete-run. Meanwhile:
 
 - S3K playable parity is the **stated top priority** (`CLAUDE.md`, "Current priority").
-- The S3K complete-run trace replays are, as far as we know, **green** — which is a
-  statement about *coverage*, not about parity. A green suite over thin coverage proves the
-  coverage, in the same way a green fixture proves the fixture.
+- ~~The S3K complete-run trace replays are, as far as we know, **green**~~ — **false, see the
+  correction above.** Only six standalone act-1 single-zone complete-runs are green; 64 red
+  S3K classes were being counted as part of a baseline nobody had decomposed. Even the green
+  six cover no act transition, no special or bonus detour, and no second act of any zone — so
+  the coverage point still holds, it just is not the top of the list.
 - The priority list itself directs that zones beyond AIZ→HCZ advance "by current route
-  blockers and **complete-run trace frontiers**". With no measured S3K frontier, there is
-  nothing for that clause to act on.
+  blockers and **complete-run trace frontiers**". There *is* such a frontier — the
+  `KOS_DECOMPRESSION_QUEUE` one above — and it should be worked before more is recorded.
 - The S1 complete-run capture, ahead of the S3K ones in the queue, serves a game that is not
   the priority.
 
-So the priority game currently has **no measured frontier at all**, and closing that gap is
+So the priority game has thin coverage beyond act 1, and closing that gap is
 a recording task before it is a fixing task. Pulling the S3K captures forward — new BK2
 coverage through the route segments existing traces do not exercise, CNZ onward — would
 convert "no known open S3K regression" from a statement about ignorance into one about
