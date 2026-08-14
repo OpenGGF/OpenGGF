@@ -331,13 +331,13 @@ void firstCpuInitPreservesPostSpawnFallingIntroAirState() {
             "INIT placement must use the level-start leader anchor");
     assertEquals(capturedY + 4, fallingTails.getCentreY(),
             "INIT placement must use the level-start leader anchor");
-    assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
     assertTrue(fallingTails.getAir(),
             "MGZ1/HCZ1/LRZ1 apply zone-event air state after sidekick spawn");
+    assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
 }
 ```
 
-Add the same literal-entry `assertHistoryFilled` helper shown in Step 3 to this class. Before the fix, captured-anchor placement and the air assertion pass but the leader-history assertion fails after INIT resets the ring from the moved live leader. After the fix, all three pass. Together they catch accidental reuse of the bootstrap skip helper, which uses the live leader and calls `setAir(false)`.
+Add the same literal-entry `assertHistoryFilled` helper shown in Step 3 to this class. Keep the captured-anchor and air assertions before the intentionally red history assertion: before the fix they prove correct placement and post-spawn air-state preservation before the leader-history assertion fails after INIT resets the ring from the moved live leader. After the fix, all three pass. Together they catch accidental reuse of the bootstrap skip helper, which uses the live leader and calls `setAir(false)`.
 
 - [ ] **Step 5: Add a rewind sentinel for the proposed one-shot token**
 

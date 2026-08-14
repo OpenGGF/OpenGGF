@@ -103,9 +103,9 @@ public class TestS3kMgzSidekickAirCollisionOrdering {
                 "INIT placement must use the level-start leader anchor");
         assertEquals(capturedY + 4, fallingTails.getCentreY(),
                 "INIT placement must use the level-start leader anchor");
-        assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
         assertTrue(fallingTails.getAir(),
                 "MGZ1/HCZ1/LRZ1 apply zone-event air state after sidekick spawn");
+        assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
     }
 
     private static void assertHistoryFilled(
