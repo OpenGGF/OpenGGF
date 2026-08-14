@@ -592,7 +592,14 @@ def _render_claude(path: pathlib.Path, root: pathlib.Path) -> str:
     env = data.setdefault("env", {})
     if not isinstance(env, dict):
         raise ScratchError("Claude env setting must be an object")
-    values = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    claude_tmp = str(root / "claude")
+    values = {
+        "OGGF_SCRATCH_ROOT": str(root),
+        "CLAUDE_CODE_TMPDIR": claude_tmp,
+        "TMPDIR": claude_tmp,
+        "TMP": claude_tmp,
+        "TEMP": claude_tmp,
+    }
     for key, value in values.items():
         if key in env and env[key] != value:
             raise ScratchError(f"conflicting Claude managed setting {key}")
@@ -951,7 +958,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         raise ScratchError(f"configuration parse failed: {exc}") from exc
     if not isinstance(claude, dict) or not isinstance(codex, dict):
         raise ScratchError("configuration roots must be tables/objects")
-    expected_claude = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    claude_tmp = str(root / "claude")
+    expected_claude = {
+        "OGGF_SCRATCH_ROOT": str(root),
+        "CLAUDE_CODE_TMPDIR": claude_tmp,
+        "TMPDIR": claude_tmp,
+        "TMP": claude_tmp,
+        "TEMP": claude_tmp,
+    }
     env = claude.get("env", {})
     if not isinstance(env, dict) or any(env.get(key) != value for key, value in expected_claude.items()):
         raise ScratchError("Claude managed environment settings are invalid")

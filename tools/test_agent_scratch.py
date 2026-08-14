@@ -10,6 +10,7 @@ import datetime as dt
 import importlib.machinery
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import shutil
@@ -254,6 +255,26 @@ class AgentScratchTests(unittest.TestCase):
         parsed = tomllib.loads(first)
         self.assertEqual("yes", parsed["shell_environment_policy"]["set"]["OTHER"])
         self.assertEqual(["/existing", str(root / "codex")], parsed["sandbox_workspace_write"]["writable_roots"])
+
+    def test_claude_editor_sets_shell_temp_vars_idempotently_and_rejects_conflicts(self):
+        root = self.helper.ensure_root(self.env)
+        settings = pathlib.Path(self.temp.name) / "settings.json"
+        settings.write_text('{"env": {"OTHER": "kept"}}\n')
+        self.helper._update_claude(settings, root)
+        first = settings.read_text()
+        self.helper._update_claude(settings, root)
+        self.assertEqual(first, settings.read_text())
+        values = json.loads(first)["env"]
+        self.assertEqual("kept", values["OTHER"])
+        self.assertEqual(str(root), values["OGGF_SCRATCH_ROOT"])
+        for key in ("CLAUDE_CODE_TMPDIR", "TMPDIR", "TMP", "TEMP"):
+            self.assertEqual(str(root / "claude"), values[key])
+        conflict = pathlib.Path(self.temp.name) / "conflict-settings.json"
+        original = '{"env": {"TMP": "/wrong"}}\n'
+        conflict.write_text(original)
+        with self.assertRaises(self.helper.ScratchError):
+            self.helper._update_claude(conflict, root)
+        self.assertEqual(original, conflict.read_text())
 
     def test_toml_editor_preserves_hash_inside_quoted_managed_path(self):
         root = pathlib.Path(self.temp.name) / "managed#root"
