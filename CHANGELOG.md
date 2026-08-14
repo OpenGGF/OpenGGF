@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: an unmatched recorded hardware-completion edge is now recorded as a
+  comparison error on its own row instead of aborting the whole trace-replay
+  run. In a converged run an unmatched edge is a genuine contract violation; in
+  a diverged run the engine never reached the ROM's submission point, so the
+  edge is a downstream symptom that outranked and hid the physics divergence
+  that caused it. `HardwareTimingService` now signals only that case with
+  `UnmatchedRecordedCompletionException`; `HardwareTimingReplayPort` drops and
+  reports such an edge, and every other admission failure (unserviced boundary,
+  unrecorded kind, admission outside a recorded run) still aborts. The release
+  side is unchanged: a dropped edge never reaches `admitReadiness()`, releases
+  nothing and creates no work, and a driver that never drains the reports still
+  fails the run at replay close.
 - Fix: the player's jump press bit now comes from the raw controller poll edge
   rather than from the post-control-lock filtered held bit. `Poll_Controller`
   computes the pressed byte from the hardware pad every frame regardless of

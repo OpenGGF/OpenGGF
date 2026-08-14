@@ -78,15 +78,19 @@ class TestTraceRunHardwareTimingCoordinator {
 
         assertEquals(0, production.ordinal(),
                 "handoff must not reconstruct omitted run-start submissions");
-        IllegalStateException mismatch = assertThrows(
-                IllegalStateException.class,
-                () -> fixture.observer.onBoundary(POST_OBJECTS));
-        assertTrue(mismatch.getMessage().contains(
-                "expected completion: KOS_MODULE_QUEUE#4"),
-                mismatch::getMessage);
-        assertTrue(mismatch.getMessage().contains(
-                "engine pending: KOS_MODULE_QUEUE#0"),
-                mismatch::getMessage);
+        fixture.observer.onBoundary(POST_OBJECTS);
+
+        // The unmatched edge is dropped and reported, never admitted: the
+        // handoff still cannot reconstruct the omitted run-start ordinal.
+        java.util.List<String> reported =
+                port.drainUnmatchedRecordedCompletions();
+        assertEquals(1, reported.size(), reported::toString);
+        String mismatch = reported.get(0);
+        assertFalse(service.isReady(production), "a dropped edge releases nothing");
+        assertTrue(mismatch.contains(
+                "expected completion: KOS_MODULE_QUEUE#4"), () -> mismatch);
+        assertTrue(mismatch.contains(
+                "engine pending: KOS_MODULE_QUEUE#0"), () -> mismatch);
     }
 
     @Test

@@ -6,7 +6,9 @@ import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
 import com.openggf.game.timing.RecordedCompletionAuthority;
+import com.openggf.game.timing.UnmatchedRecordedCompletionException;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,6 +30,14 @@ public final class HardwareTimingReplayPort
 
     private final RecordedCompletionAuthority authority;
     private final Set<String> consumedIdentities = new LinkedHashSet<>();
+    /**
+     * Recorded edges that had no engine-pending counterpart. Such an edge is
+     * DROPPED, never admitted: nothing is released and no production work is
+     * created. It is retained here only so the driving comparison can record
+     * it as an error on its own row, and so a driver that never drains it
+     * still fails the run at {@link #verifyRunComplete()}.
+     */
+    private final List<String> unmatchedCompletions = new ArrayList<>();
 
     private HardwareTimingSchedule schedule = HardwareTimingSchedule.empty();
     private int edgeCursor;
@@ -192,6 +202,17 @@ public final class HardwareTimingReplayPort
                             next.ordinal(),
                             next.submissionFingerprint());
                 }
+            } catch (UnmatchedRecordedCompletionException failure) {
+                // Severity demotion only. An unmatched recorded completion is
+                // ambiguous: in a converged run it is a contract violation, in
+                // a diverged run it is a downstream symptom of the engine
+                // never reaching the ROM's submission point. It therefore
+                // cannot carry verdict authority, so the edge is dropped and
+                // reported instead of aborting the whole comparison. The
+                // release side is unchanged: admitReadiness() was not reached,
+                // so this edge releases nothing.
+                unmatchedCompletions.add(
+                        describe(next) + ": " + failure.getMessage());
             } catch (RuntimeException failure) {
                 consumedIdentities.remove(identity);
                 throw failure;
@@ -258,11 +279,27 @@ public final class HardwareTimingReplayPort
         }
     }
 
+    /**
+     * Removes and returns the unmatched recorded completions observed since
+     * the last drain, so the caller can record them as comparison errors on
+     * the row that produced them. Draining reports them; it never admits
+     * them.
+     */
+    public List<String> drainUnmatchedRecordedCompletions() {
+        if (unmatchedCompletions.isEmpty()) {
+            return List.of();
+        }
+        List<String> drained = List.copyOf(unmatchedCompletions);
+        unmatchedCompletions.clear();
+        return drained;
+    }
+
     public void verifyRunComplete() {
         if (runComplete) {
             return;
         }
         requireActive();
+        requireNoUndrainedUnmatchedCompletions();
         verifySegmentEdges();
         authority.endRecordedAdmission();
         runComplete = true;
@@ -275,6 +312,7 @@ public final class HardwareTimingReplayPort
      */
     public void verifyPrefixComplete(int inclusiveRawFrame) {
         requireActive();
+        requireNoUndrainedUnmatchedCompletions();
         HardwareCompletionEdge next = nextEdge();
         if (next != null && next.rawFrame() <= inclusiveRawFrame) {
             throw new IllegalStateException(
@@ -308,7 +346,8 @@ public final class HardwareTimingReplayPort
                 rawFrameLatch,
                 lastAppliedBoundary,
                 installed,
-                runComplete);
+                runComplete,
+                unmatchedCompletions);
     }
 
     @Override
@@ -322,6 +361,8 @@ public final class HardwareTimingReplayPort
         lastAppliedBoundary = snapshot.lastAppliedBoundary();
         installed = snapshot.installed();
         runComplete = snapshot.runComplete();
+        unmatchedCompletions.clear();
+        unmatchedCompletions.addAll(snapshot.unmatchedCompletions());
     }
 
     @Override
@@ -333,6 +374,7 @@ public final class HardwareTimingReplayPort
         lastAppliedBoundary = null;
         installed = false;
         runComplete = false;
+        unmatchedCompletions.clear();
     }
 
     private HardwareCompletionEdge nextEdge() {
@@ -347,6 +389,18 @@ public final class HardwareTimingReplayPort
             throw new IllegalStateException(
                     "unconsumed hardware completion edge before raw_frame="
                             + rawFrame + ": " + describe(next));
+        }
+    }
+
+    /**
+     * A driver that never drains the dropped edges has no comparison row
+     * carrying them, so the run still fails rather than passing silently.
+     */
+    private void requireNoUndrainedUnmatchedCompletions() {
+        if (!unmatchedCompletions.isEmpty()) {
+            throw new IllegalStateException(
+                    "unmatched recorded hardware completions were never reported: "
+                            + unmatchedCompletions);
         }
     }
 

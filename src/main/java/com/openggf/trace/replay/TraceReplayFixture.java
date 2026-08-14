@@ -5,6 +5,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 
+import java.util.List;
+
 /**
  * Narrow view of a fixture capable of driving trace replay. Implemented
  * by {@code HeadlessTestFixture} in tests and by the live launcher's
@@ -17,6 +19,16 @@ public interface TraceReplayFixture {
 
     /** Registers the replay port and its stateless production-boundary observer. */
     void installHardwareTimingReplay(HardwareTimingReplayPort replayPort);
+
+    /**
+     * Removes and returns recorded completion edges that had no engine-pending
+     * counterpart, so the driving comparison can record them as errors on the
+     * row that produced them. A driver that does not override this still fails
+     * the run when the replay port is closed.
+     */
+    default List<String> drainUnmatchedRecordedHardwareCompletions() {
+        return List.of();
+    }
 
     /** Latches the trace row's physical raw frame before any row work or retry. */
     void beginTraceRow(int traceIndex, int rawFrame);

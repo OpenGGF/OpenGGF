@@ -543,6 +543,8 @@ public abstract class AbstractTraceReplayTest {
                             trace, binder, comparisonExpected.frame());
                     compareDynamicArtIfAdvertised(
                             trace, binder, expected.frame());
+                    recordUnmatchedHardwareCompletions(
+                            fixture, binder, expected.frame());
                     if (compareObjectNearEvents()) {
                         binder.compareObjectNear(
                                 comparisonExpected.frame(),
@@ -717,6 +719,8 @@ public abstract class AbstractTraceReplayTest {
                     expectedSidekickNormalStep);
             compareDynamicArtIfAdvertised(
                     trace, binder, seededFrame.frame());
+            recordUnmatchedHardwareCompletions(
+                    fixture, binder, seededFrame.frame());
             observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
@@ -831,6 +835,9 @@ public abstract class AbstractTraceReplayTest {
 
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
+            // Unconditional: a dropped recorded completion belongs to the row
+            // that produced it whether or not that row compares gameplay.
+            recordUnmatchedHardwareCompletions(fixture, binder, driveFrame.frame());
 
             if (slotOccupancyProbe != null && GameServices.level() != null) {
                 slotOccupancyProbe.observe(
@@ -923,6 +930,21 @@ public abstract class AbstractTraceReplayTest {
                             + ", last_prefix_raw_frame=" + lastPrefixRawFrame);
         }
         return true;
+    }
+
+    /**
+     * Records recorded hardware-completion edges the engine never submitted as
+     * an error on the row that produced them. The edge itself released
+     * nothing; only its severity and ordering change, so an earlier physics
+     * divergence stays the first reported error.
+     */
+    private static void recordUnmatchedHardwareCompletions(
+            HeadlessTestFixture fixture, TraceBinder binder, int frame) {
+        if (fixture == null) {
+            return;
+        }
+        binder.compareRecordedHardwareCompletions(
+                frame, fixture.drainUnmatchedRecordedHardwareCompletions());
     }
 
     private static void compareLoadQueuesIfAdvertised(

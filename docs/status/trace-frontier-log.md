@@ -74816,3 +74816,60 @@ Every must-stay-green class — the six S3K complete-run replays,
 `TestHardwareTimingAuthorityGuard` — is byte-identical between the two runs, as
 is the pre-existing single `TestS2CompleteEmeraldRunChain` failure. No ambient
 flake flipped.
+
+## 2026-08-14 - The unmatched-recorded-completion tripwire is demoted to a row error
+
+- Isolated worktree on `bugfix/ai-demote-unmatched-recorded-completion`, based
+  at `880414b8f`. Both suite runs used a worktree-owned Java temporary
+  directory through `JAVA_TOOL_OPTIONS`.
+- Baseline and verification command (identical on both trees, ROM paths passed
+  from the project root):
+
+  ```bash
+  rm -rf target/surefire-reports
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=<S1 REV01 ROM> -Dsonic2.rom.path=<S2 REV01 ROM> \
+    -Ds3k.rom.path=<S3K locked-on ROM>
+  ```
+
+- **Baseline at `880414b8f`: 843 run, 11 failures, 54 errors, 4 skipped, 65 red
+  classes.** After the change: **843 run, 29 failures, 36 errors, 4 skipped, 65
+  red classes.** The sorted red-class lists are identical by name in both
+  directions (`comm -23` and `comm -13` both empty). Only the failure/error
+  split moved: 18 classes turned an abort into a counted comparison failure.
+- Shape of the change. `HardwareTimingService.admitRecordedCompletion` threw one
+  `IllegalStateException` for two different events. In a converged run an
+  unmatched recorded completion is a contract violation and must abort; in a
+  diverged run it only says the engine never reached the ROM's camera-gated
+  submission point, so it is a symptom that outranks the divergence that caused
+  it. Only the three unmatched paths (no engine head, ordinal/fingerprint
+  mismatch, unprepared head) now raise
+  `UnmatchedRecordedCompletionException`; the replay port drops that edge,
+  records it, and continues. Every other admission failure still aborts.
+- The release side is unchanged and is the acceptance test: a dropped edge never
+  reaches `admitReadiness()`, so it releases nothing and manufactures no work.
+  Severity and ordering moved; authority did not. A driver that never drains the
+  reports still fails the run, so a demoted edge can never become silence.
+  `TestHardwareTimingAuthorityGuard` (24 tests) is unchanged and green.
+- First error before and after, for the classes where the tripwire fired:
+
+  | Class | Before | After |
+  |---|---|---|
+  | `TestS3kSonicTailsAizSegmentTraceReplay` | frame 2247 `camera_x` (3 errors) | unchanged - the tripwire never fired here |
+  | `TestS3kSonicTailsHczSegmentTraceReplay` | abort: `KOS_DECOMPRESSION_QUEUE#161`, engine pending `<none>` | frame 561 `x_speed` (1526 errors) |
+  | `TestS3kSonicTailsMgzSegmentTraceReplay` | abort: unmatched completion | frame 321 `camera_y` (5840 errors) |
+  | `TestS3kSonicTailsMhzSegmentTraceReplay` | abort: unmatched completion | frame 75 `player_mapping_frame` (211 errors) |
+  | `TestS3kMhzCompleteRunTraceReplay` | abort: `KOS_DECOMPRESSION_QUEUE#335`, engine pending `<none>` | invalid rewind reference closure, trace index 12271 |
+  | `TestS3kKnucklesSuperEmeraldRunChain` | abort: `KOS_DECOMPRESSION_QUEUE#14`, engine pending `<none>` | segment 0 (aiz) `giant_ring` exit boundary never observed |
+  | `TestS3kSonicTailsCompleteEmeraldRunChain` | source comparator cannot exhaust after the aiz boundary | unchanged |
+  | `TestS3kMegaRunChain` | unconsumed edge at segment end, raw_frame 4570 | unchanged |
+- Next frontier this exposes. Several previously aborted classes now run to
+  their close and stop at the sibling close-time strictness instead:
+  `unexpected pending hardware submissions at final run` (for example
+  `TestS3kSonicTailsIczSegmentTraceReplay`, `KOS_MODULE_QUEUE#277`, and
+  `TestS3kSonicTailsAiz2SegmentTraceReplay`, `KOS_DECOMPRESSION_QUEUE#43`).
+  That assertion has the same two-events-one-message problem and is the obvious
+  next candidate, but it was deliberately left alone in this round.
