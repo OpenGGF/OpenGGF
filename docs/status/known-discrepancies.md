@@ -1943,3 +1943,68 @@ recorder and fixture change rather than a trace fix.
 `TestS2EhzHalfpipeRoundTripChain` is fully green and unaffected. Emerald segments 0–10
 report zero errors and player physics matches the recording on every row of the run.
 Segment 11 carries 287 errors, all of them the Nemesis PLC queue, downstream of this.
+
+## 28. S2 Run-Gap Art Submission Rows Are Sub-Frame CPU Position
+
+**Status:** intentional limitation. Not closable at frame granularity by any rule-compliant
+route, including fixture regeneration.
+
+### Symptom
+
+`TestS2CompleteEmeraldRunChain` axis 4: `ss_4 -> seg6_ehz2` reports
+`run_gap.edge[0]`/`[1]`.`movie_logical_frame` expected 46347, actual 46348 — the engine one
+row late. Aligned by transfer id these are tids 28084/28085, the *submitted* pair; the
+matching *completed* pair at 46349 matches.
+
+### Original Implementation
+
+The ROM submits the returning level's player art at the leading `jsr (RunObjects)`
+(`s2.asm:5003`), where Obj01/Obj02 display runs the DPLC. Between that call and the leave
+loop's first `bsr.w WaitForVint` (`:5060-5061`) it executes **only straight-line 68000 code**
+— `BuildSprites` (`:5004`), `AniArt_Load` (`:5005`), `SetLevelEndType` (`:5006`), demo-script
+setup (`:5007-5044`), `PalLoad_Water_ForFade` (`:5045-5056`), the leave-flag writes
+(`:5057-5059`) — with no `WaitForVint` and no polled readiness gate.
+
+The number of masked V-int frames between the DPLC write and the leave loop's first V-int is
+therefore a **pure 68000 cycle count**, dominated by `BuildSprites`/`AniArt_Load`, whose cost
+depends on the object set `ObjectsManager` loaded at the entry position (`:5000`).
+
+### Our Implementation
+
+The harness releases held player art on `lastNonAdmittedRow(census)` — the end of the masked
+load-span run. Measured across **all 27 censused transitions** of the complete-emerald run,
+that anchor coincides with the ROM on 20, is one row late on 4 (`ss_4`, `ss_5`,
+`seg15_cnz2→seg16_htz1`, `seg27_wfz1→seg28_dez1`), and is 8–47 rows out on 6 more.
+
+**Nothing zone-, act-, route- or path-dependent distinguishes them.**
+`seg4_ehz1 → seg5_ehz2` and `ss_4 → seg6_ehz2` share a destination act and have opposite
+tails; so do `seg15_cnz2 → seg16_htz1` and `seg16_htz1 → seg17_htz2`.
+
+### Why it cannot be closed
+
+- **A tuned offset** is a fitted constant, forbidden by rule 3, and would be wrong on the
+  20 seams the anchor currently gets right.
+- **Recording the submission row** and consuming it round-trips the answer: the recorded
+  quantity would determine the very field the comparison checks, so the test would prove
+  nothing. This is why the authorised fixture regeneration cannot close it.
+- **Cycle-level modelling** of `BuildSprites`/`AniArt_Load` would close it and is
+  rule-compliant, but needs a partial 68000 cycle emulator — assessed as impractical.
+
+### Verification
+
+Axis 4 is left reported rather than excused. Excusing `movie_logical_frame` here would
+suppress the evidence that located the cause, and would mirror the S1 precedent
+(`TestS1GhzMazeRoundTripChain`:29-70) that this session found is probably papering over the
+same class of defect.
+
+### Related, and latent
+
+`ss_6` and `ss_7` are **not passing — they are unreached**: the chain aborts around segment 11
+and never compares them, hiding anchor errors of 8–47 rows.
+
+A ROM-derived anchor improvement exists and is **not landed**: the leave loop performs exactly
+one `WaitForVint` per pass (`:5060-5061`), so a lag run of length ≥ 2 cannot be inside it,
+making *"the last lag run of length ≥ 2"* a derived anchor rather than a fitted threshold. It
+would correct the 8–47-row cases but changes nothing at `ss_4` and nothing on any seam the
+test currently reaches, so it is unverifiable today. See
+[the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
