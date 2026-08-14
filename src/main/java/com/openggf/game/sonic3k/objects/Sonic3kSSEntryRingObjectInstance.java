@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
@@ -11,6 +12,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -46,8 +49,8 @@ import java.util.logging.Logger;
  *       <li>Hidden Palace routes are disabled until HPZ is registered as a loadable level</li>
  *     </ul>
  *   </li>
- *   <li>For Special Stage path: lock player (hidden + object controlled),
- *       freeze camera, spawn {@link Sonic3kSSEntryFlashObjectInstance} which
+ *   <li>For Special Stage path: lock player (hidden + object controlled +
+ *       anim $1C), spawn {@link Sonic3kSSEntryFlashObjectInstance} which
  *       handles the flash animation, wait, sfx_EnterSS, and transition</li>
  * </ol>
  * <p>
@@ -462,19 +465,63 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 camera.getMaxY(), resizeRoutine, meanWaterLevel));
 
         // Lock player: hidden + object controlled
-        // ROM: move.b #$53,object_control(a2) — disables input
-        // ROM: move.b #-1,(Player_prev_frame).w — makes player invisible
+        // ROM loc_6173A (sonic3k.asm:128292-128304) writes, in order:
+        //   move.b #-1,(Player_prev_frame).w   ; make the player disappear
+        //   move.b #0,mapping_frame(a1)
+        //   move.b #$1C,anim(a1)               ; AniSonic1C: dc.b $77,0,$FF
+        //   move.b #$53,object_control(a1)
+        // and repeats the mapping_frame/anim/object_control triple on Player_2
+        // only when (Flying_carrying_Sonic_flag) is set.
         player.setHidden(true);
+        lockCapturedPlayerAnimation(player);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick
+                    && sidekick.getCpuController() != null
+                    && sidekick.getCpuController().isFlyingCarrying()) {
+                lockCapturedPlayerAnimation(sidekick);
+                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sidekick);
+            }
+        }
 
-        // Freeze camera at player's last position
-        camera.setFrozen(true);
+        // ROM loc_6173A does NOT touch the camera. Camera_X_pos keeps being
+        // driven by ScrollHoriz from DeformLayers for the rest of the entry
+        // sequence; it simply stops advancing because object_control $53 bit 0
+        // stops the player moving (sonic3k.asm:21973-21977), so the camera
+        // settles on its own once the follow offset is satisfied. Freezing it
+        // here dropped the final ScrollHoriz step of the capture frame itself.
 
         // Spawn flash child object
         // ROM: direction bit is set on the ring (not flash) based on player approach,
         // but has no visual effect since flash uses internal h-flip toggle.
         spawnDynamicObject(new Sonic3kSSEntryFlashObjectInstance(
                 this, spawn.x(), spawn.y()));
+    }
+
+    /**
+     * ROM {@code loc_6173A} (sonic3k.asm:128295-128297): {@code mapping_frame}
+     * is zeroed and {@code anim} set to {@code $1C} before the object-control
+     * byte is written. {@code AniSonic1C} is {@code dc.b $77,0,$FF} — a single
+     * frame 0 held for $78 frames — so the mapping frame stays 0 for the whole
+     * entry sequence whether or not object_control bit 1 suppresses
+     * {@code Animate_Sonic} (sonic3k.asm:22008-22010).
+     */
+    private List<PlayableEntity> sidekickParticipants(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        return query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .filter(candidate -> candidate != player)
+                .toList();
+    }
+
+    private void lockCapturedPlayerAnimation(AbstractPlayableSprite captured) {
+        captured.setForcedAnimationId(-1);
+        // ROM writes mapping_frame(a1) = 0 itself rather than waiting for the
+        // animation script, because Animate_Sonic has already run for this
+        // frame by the time the ring's routine executes.
+        captured.setMappingFrame(0);
+        captured.setAnimationId(Sonic3kAnimationIds.BLANK);
     }
 
     /**
