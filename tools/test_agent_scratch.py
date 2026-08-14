@@ -14,11 +14,14 @@ import os
 import pathlib
 import shutil
 import stat
+import subprocess
+import sys
 import tempfile
 import threading
 import time
 import tomllib
 import unittest
+from unittest import mock
 
 
 HELPER = pathlib.Path(__file__).with_name("agent-scratch")
@@ -147,15 +150,32 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(0, status, error)
         self.assertEqual("do not touch", sentinel.read_text())
 
+    def test_same_parent_inode_replacement_is_not_staged_for_removal(self):
+        root = self.helper.ensure_root(self.env)
+        tasks = root / "openggf/tasks"
+        original = tasks / "candidate"
+        original.mkdir()
+        expected = original.stat()
+        replacement = tasks / "replacement"
+        replacement.mkdir()
+        os.replace(replacement, original)
+        tasks_fd = os.open(tasks, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            self.assertIsNone(self.helper._stage_directory(tasks_fd, "candidate", expected))
+        finally:
+            os.close(tasks_fd)
+        self.assertTrue(any(entry.is_dir() for entry in tasks.iterdir()))
+
     def test_concurrent_new_and_prune_share_lock(self):
         self.helper.ensure_root(self.env)
-        results = []
-        def create(): results.append(self.run_helper(["new", "parallel"])[0])
-        def prune(): results.append(self.run_helper(["prune", "--dry-run"])[0])
-        threads = [threading.Thread(target=create) for _ in range(4)] + [threading.Thread(target=prune) for _ in range(4)]
-        for thread in threads: thread.start()
-        for thread in threads: thread.join()
-        self.assertEqual([0] * 8, sorted(results))
+        child_env = {**os.environ, **self.env}
+        commands = [[sys.executable, str(HELPER), "new", "parallel"] for _ in range(4)]
+        commands += [[sys.executable, str(HELPER), "prune", "--dry-run"] for _ in range(4)]
+        children = [subprocess.Popen(command, env=child_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    for command in commands]
+        completed = [child.communicate() for child in children]
+        self.assertEqual([0] * 8, [child.returncode for child in children])
+        self.assertTrue(all(not error for _, error in completed))
 
     def test_status_keep_and_prune_are_bounded_and_safe(self):
         root = self.helper.ensure_root(self.env)
@@ -191,6 +211,17 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual("yes", parsed["shell_environment_policy"]["set"]["OTHER"])
         self.assertEqual(["/existing", str(root / "codex")], parsed["sandbox_workspace_write"]["writable_roots"])
 
+    def test_toml_editor_appends_to_multiline_writable_roots(self):
+        root = self.helper.ensure_root(self.env)
+        config = pathlib.Path(self.temp.name) / "multiline.toml"
+        config.write_text("# head comment\n[sandbox_workspace_write]\nwritable_roots = [\n  \"/one\",\n  \"/two\",\n]\nother = \"preserved\"\n")
+        self.helper._update_codex(config, root)
+        updated = config.read_text()
+        parsed = tomllib.loads(updated)
+        self.assertEqual(["/one", "/two", str(root / "codex")], parsed["sandbox_workspace_write"]["writable_roots"])
+        self.assertIn("# head comment", updated)
+        self.assertIn('other = "preserved"', updated)
+
     def test_toml_editor_rejects_unsupported_and_conflicting_forms_without_writing(self):
         root = self.helper.ensure_root(self.env)
         for source in ("shell_environment_policy.set = { TMPDIR = \"/wrong\" }\n", "sandbox_workspace_write = { writable_roots = [] }\n", "[shell_environment_policy.set]\nTMPDIR = \"/wrong\"\n"):
@@ -203,6 +234,43 @@ class AgentScratchTests(unittest.TestCase):
     def test_systemd_execstart_quote_handles_space_quotes_backslash_and_controls(self):
         quoted = self.helper.systemd_exec_quote('/checkout with space/a"b\\c\n')
         self.assertEqual('"/checkout\\x20with\\x20space/a\\"b\\\\c\\n"', quoted)
+
+    def test_process_inspection_failure_is_unknown_and_protects_prune(self):
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=FileNotFoundError):
+            self.assertEqual("unknown", self.helper._active("claude"))
+            self.assertEqual("unknown", self.helper._active("codex"))
+        root = self.helper.ensure_root(self.env)
+        old = root / "claude/old"
+        old.mkdir()
+        then = time.time() - 9 * 86400
+        os.utime(old, (then, then))
+        with mock.patch.object(self.helper, "_active", return_value="unknown"):
+            status, output, error = self.run_helper(["prune"])
+        self.assertEqual(0, status, error)
+        self.assertIn("protected-unknown", output)
+        self.assertTrue(old.exists())
+
+    def test_missing_systemd_tools_leaves_units_and_reports_activation_command(self):
+        service = pathlib.Path(self.temp.name) / "service"
+        timer = pathlib.Path(self.temp.name) / "timer"
+        service.write_text("[Service]\nExecStart=/bin/true\n")
+        timer.write_text("[Timer]\nOnCalendar=daily\n")
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=FileNotFoundError):
+            result = self.helper._run_systemd_install(service, timer)
+        self.assertIn("systemctl --user daemon-reload", result)
+        self.assertTrue(service.exists())
+
+    def test_verify_checks_unit_syntax_and_marks_missing_analyzer_unverified(self):
+        root = self.helper.ensure_root(self.env)
+        service = pathlib.Path(self.temp.name) / "service"
+        timer = pathlib.Path(self.temp.name) / "timer"
+        service.write_text("[Service]\nExecStart=/bin/true\n")
+        timer.write_text("[Timer]\nOnCalendar=daily\n")
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=FileNotFoundError):
+            self.assertEqual("unverified", self.helper._verify_unit_syntax(service, timer))
+        with mock.patch.object(self.helper.subprocess, "run", return_value=type("Run", (), {"returncode": 1, "stderr": "bad unit", "stdout": ""})()):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_unit_syntax(service, timer)
 
     def test_path_does_not_touch_unrelated_sentinel(self):
         sentinel = pathlib.Path(self.temp.name) / "sentinel"

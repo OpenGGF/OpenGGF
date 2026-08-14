@@ -306,12 +306,14 @@ def _walk_bytes(dir_fd: int) -> int:
     return total
 
 
-def _active(name: str) -> bool:
+def _active(name: str) -> str:
     try:
-        output = subprocess.run(["ps", "-u", str(os.getuid()), "-o", "comm=,args="], text=True, capture_output=True, check=False).stdout.lower()
+        run = subprocess.run(["ps", "-u", str(os.getuid()), "-o", "comm=,args="], text=True, capture_output=True, check=False)
     except OSError:
-        return False
-    return any(name in line for line in output.splitlines() if "agent-scratch" not in line)
+        return "unknown"
+    if run.returncode:
+        return "unknown"
+    return "active" if any(name in line for line in run.stdout.lower().splitlines() if "agent-scratch" not in line) else "inactive"
 
 
 def _unit_error() -> str | None:
@@ -350,8 +352,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"free_inodes={stats.f_favail}")
     for key in AREAS:
         print(f"{key}_bytes={counts[key]}")
-    print(f"claude_active={_active('claude')}")
-    print(f"codex_active={_active('codex')}")
+    print(f"claude_process={_active('claude')}")
+    print(f"codex_process={_active('codex')}")
     print(f"keep_markers={len(markers)}")
     print("nearest_expiry=" + (min(markers).isoformat() if markers else "none"))
     error = _unit_error()
@@ -360,22 +362,70 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
-def _remove_tree(parent_fd: int, name: str) -> None:
+def _same_identity(info: os.stat_result, expected: os.stat_result) -> bool:
+    return info.st_dev == expected.st_dev and info.st_ino == expected.st_ino
+
+
+def _staging_name() -> str:
+    return f".agent-scratch-pruning-{os.getpid()}-{random.SystemRandom().getrandbits(128):032x}"
+
+
+def _stage_entry(parent_fd: int, name: str, expected: os.stat_result) -> str | None:
+    """Atomically move a vetted entry before deletion, or fail closed."""
+    staged = _staging_name()
+    try:
+        os.rename(name, staged, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        info = os.stat(staged, dir_fd=parent_fd, follow_symlinks=False)
+    except (FileNotFoundError, NotADirectoryError, OSError):
+        return None
+    if not _same_identity(info, expected):
+        # Keep the staged replacement for manual inspection.  Re-resolving the
+        # original name to restore it would introduce the very race we avoid.
+        return None
+    return staged
+
+
+def _stage_directory(parent_fd: int, name: str, expected: os.stat_result) -> str | None:
+    staged = _stage_entry(parent_fd, name, expected)
+    if staged is None:
+        return None
+    info = os.stat(staged, dir_fd=parent_fd, follow_symlinks=False)
+    if stat.S_ISDIR(info.st_mode):
+        return staged
+    # This should only be reachable after a same-user race; do not delete it.
+    return None
+
+
+def _remove_tree(parent_fd: int, name: str, expected: os.stat_result) -> None:
     info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
-    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode) or not _same_identity(info, expected):
         raise ScratchError(f"refusing unsafe prune entry: {name}")
     fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
     try:
+        if not _same_identity(os.fstat(fd), expected):
+            raise ScratchError(f"prune entry identity changed: {name}")
         with os.scandir(fd) as scan:
             names = [entry.name for entry in scan]
         for child in names:
             child_info = os.stat(child, dir_fd=fd, follow_symlinks=False)
             if stat.S_ISDIR(child_info.st_mode) and not stat.S_ISLNK(child_info.st_mode):
-                _remove_tree(fd, child)
+                staged = _stage_directory(fd, child, child_info)
+                if staged is None:
+                    raise ScratchError(f"child entry raced: {child}")
+                _remove_tree(fd, staged, child_info)
             else:
-                os.unlink(child, dir_fd=fd)
+                staged = _stage_entry(fd, child, child_info)
+                if staged is None:
+                    raise ScratchError(f"child entry raced: {child}")
+                current = os.stat(staged, dir_fd=fd, follow_symlinks=False)
+                if not _same_identity(current, child_info):
+                    raise ScratchError(f"child entry identity changed: {child}")
+                os.unlink(staged, dir_fd=fd)
     finally:
         os.close(fd)
+    current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    if not _same_identity(current, expected):
+        raise ScratchError(f"prune entry identity changed before rmdir: {name}")
     os.rmdir(name, dir_fd=parent_fd)
 
 
@@ -384,8 +434,9 @@ def cmd_prune(args: argparse.Namespace) -> int:
     today = time.time()
     with open_root(root) as fd, root_lock(fd):
         for key, definition in AREAS.items():
-            if key == "claude" and _active("claude") or key == "codex" and _active("codex"):
-                print(f"protected-active {key}")
+            process_state = _active(key) if key in {"claude", "codex"} else "inactive"
+            if process_state != "inactive":
+                print(f"protected-{process_state} {key}")
                 continue
             with child_fd(fd, definition[:-1]) as area:
                 with os.scandir(area) as scan:
@@ -406,6 +457,9 @@ def cmd_prune(args: argparse.Namespace) -> int:
                         print(f"skipped-raced {key}/{name}: {exc.strerror or 'unsafe replacement'}")
                         continue
                     try:
+                        if not _same_identity(os.fstat(entry_fd), info):
+                            print(f"skipped-raced {key}/{name}: candidate identity changed before protection check")
+                            continue
                         expiry = _marker_expiry(entry_fd)
                     finally:
                         os.close(entry_fd)
@@ -414,11 +468,16 @@ def cmd_prune(args: argparse.Namespace) -> int:
                         continue
                     if today - info.st_mtime < definition[-1] * 86400:
                         continue
-                    line = f"{'would-remove' if args.dry_run else 'removed'} {key}/{name}"
-                    print(line)
-                    if not args.dry_run:
+                    if args.dry_run:
+                        print(f"would-remove {key}/{name}")
+                    else:
                         try:
-                            _remove_tree(area, name)
+                            staged = _stage_directory(area, name, info)
+                            if staged is None:
+                                print(f"skipped-raced {key}/{name}: candidate identity changed")
+                                continue
+                            _remove_tree(area, staged, info)
+                            print(f"removed {key}/{name}")
                         except (FileNotFoundError, NotADirectoryError, ScratchError) as exc:
                             print(f"skipped-raced {key}/{name}: {exc}")
     print(f"root={root}")
@@ -519,6 +578,49 @@ def _toml_value(value: object) -> str:
     return json.dumps(value)
 
 
+def _assignment_value_span(body: str, key: str) -> tuple[int, int] | None:
+    """Find a complete scalar/array TOML value without confusing comments.
+
+    The narrow editor only needs standard strings and arrays, but this scanner
+    deliberately consumes a multiline array as one value instead of replacing
+    just its opening line and corrupting the remaining elements.
+    """
+    match = re.search(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=", body)
+    if not match:
+        return None
+    start = match.end()
+    while start < len(body) and body[start] in " \t":
+        start += 1
+    if start >= len(body) or body[start] != "[":
+        end = body.find("\n", start)
+        return start, len(body) if end < 0 else end
+    index, depth, quote = start, 0, None
+    while index < len(body):
+        char = body[index]
+        if quote:
+            if char == "\\" and quote == '"':
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+        elif char == "#":
+            newline = body.find("\n", index)
+            if newline < 0:
+                raise ScratchError(f"unterminated TOML value for {key}")
+            index = newline
+            continue
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                return start, index + 1
+        index += 1
+    raise ScratchError(f"unterminated TOML array for {key}")
+
+
 def _edit_table(text: str, table: str, updates: dict[str, object]) -> str:
     span = _table_spans(text, table)
     if span is None:
@@ -528,6 +630,11 @@ def _edit_table(text: str, table: str, updates: dict[str, object]) -> str:
     begin, end = span
     body = text[begin:end]
     for key, value in updates.items():
+        value_span = _assignment_value_span(body, key)
+        if isinstance(value, list) and value_span is not None:
+            value_start, value_end = value_span
+            body = body[:value_start] + _toml_value(value) + body[value_end:]
+            continue
         # Do not let ``\s`` consume a preceding blank line: TOML comments and
         # spacing are intentionally preserved by this narrow editor.
         pattern = re.compile(rf"(?m)^([ \t]*{re.escape(key)}[ \t]*=)[^\n]*(\n|$)")
@@ -607,15 +714,31 @@ def _unit_files(root: pathlib.Path) -> tuple[str, str, str]:
     return f"OGGF_SCRATCH_ROOT={root}\n", service, timer
 
 
-def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
-    verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], text=True, capture_output=True, check=False)
+def _activation_command() -> str:
+    return "systemctl --user daemon-reload && systemctl --user enable --now openggf-agent-scratch-prune.timer"
+
+
+def _verify_unit_syntax(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
+    try:
+        verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
     if verify.returncode:
         raise ScratchError("systemd unit verification failed: " + (verify.stderr or verify.stdout).strip())
+    return "verified"
+
+
+def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
+    if _verify_unit_syntax(service_path, timer_path) == "unverified":
+        return "systemd tooling unavailable; run: " + _activation_command()
     commands = [["systemctl", "--user", "daemon-reload"], ["systemctl", "--user", "enable", "--now", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "is-enabled", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "list-timers", "openggf-agent-scratch-prune.timer", "--no-legend"]]
     for command in commands:
-        run = subprocess.run(command, text=True, capture_output=True, check=False)
+        try:
+            run = subprocess.run(command, text=True, capture_output=True, check=False)
+        except OSError:
+            return "user manager unavailable; run: " + _activation_command()
         if run.returncode:
-            return "user manager unavailable; run: systemctl --user daemon-reload && systemctl --user enable --now openggf-agent-scratch-prune.timer"
+            return "user manager unavailable; run: " + _activation_command()
     return "timer active"
 
 
@@ -652,15 +775,44 @@ def cmd_verify(args: argparse.Namespace) -> int:
         codex = tomllib.loads((home / ".codex" / "config.toml").read_text())
     except (OSError, json.JSONDecodeError, tomllib.TOMLDecodeError) as exc:
         raise ScratchError(f"configuration parse failed: {exc}") from exc
-    if claude.get("env", {}).get("CLAUDE_CODE_TMPDIR") != str(root / "claude"):
-        raise ScratchError("Claude temporary directory is not the configured child")
-    values = codex.get("shell_environment_policy", {}).get("set", {})
+    if not isinstance(claude, dict) or not isinstance(codex, dict):
+        raise ScratchError("configuration roots must be tables/objects")
+    expected_claude = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    env = claude.get("env", {})
+    if not isinstance(env, dict) or any(env.get(key) != value for key, value in expected_claude.items()):
+        raise ScratchError("Claude managed environment settings are invalid")
+    policy = codex.get("shell_environment_policy", {})
+    if not isinstance(policy, dict) or not isinstance(policy.get("set", {}), dict):
+        raise ScratchError("Codex shell environment policy is invalid")
+    values = policy["set"]
     if any(values.get(key) != str(root / "codex" / "tmp") for key in ("TMPDIR", "TMP", "TEMP")):
         raise ScratchError("Codex temporary variables are not absolute configured children")
     if values.get("OGGF_SCRATCH_ROOT") != str(root):
         raise ScratchError("Codex root is not configured")
+    workspace = codex.get("sandbox_workspace_write", {})
+    if not isinstance(workspace, dict) or workspace.get("exclude_slash_tmp") is not True or workspace.get("exclude_tmpdir_env_var") is not False:
+        raise ScratchError("Codex workspace-write policy flags are invalid")
+    roots = workspace.get("writable_roots")
+    if not isinstance(roots, list) or str(root / "codex") not in roots:
+        raise ScratchError("Codex writable root is not configured")
+    env_path = home / ".config" / "oggf-agent-scratch" / "environment"
+    _require_regular(env_path, missing_ok=False)
+    if stat.S_IMODE(env_path.stat().st_mode) != 0o600:
+        raise ScratchError("managed systemd environment file must be mode 0600")
+    if env_path.read_text() != f"OGGF_SCRATCH_ROOT={root}\n":
+        raise ScratchError("managed systemd environment file is invalid")
+    unit_dir = home / ".config" / "systemd" / "user"
+    service_path = unit_dir / "openggf-agent-scratch-prune.service"
+    timer_path = unit_dir / "openggf-agent-scratch-prune.timer"
+    _require_regular(service_path, missing_ok=False)
+    _require_regular(timer_path, missing_ok=False)
+    _, expected_service, expected_timer = _unit_files(root)
+    if service_path.read_text() != expected_service or timer_path.read_text() != expected_timer:
+        raise ScratchError("managed systemd units do not match this checkout and root")
+    unit_syntax = _verify_unit_syntax(service_path, timer_path)
     print(f"root={root}")
     print("config=verified")
+    print(f"systemd_units={unit_syntax}")
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
     executable = shutil.which("claude")
     if not executable:
