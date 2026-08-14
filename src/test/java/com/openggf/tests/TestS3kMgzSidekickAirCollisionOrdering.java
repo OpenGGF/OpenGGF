@@ -8,6 +8,8 @@ import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kMgzSidekickAirCollisionOrdering {
@@ -73,5 +76,47 @@ public class TestS3kMgzSidekickAirCollisionOrdering {
         assertEquals(GroundMode.LEFTWALL, tails.getGroundMode());
         assertEquals(0, tails.getYSpeed());
         assertEquals(0, tails.getGSpeed());
+    }
+
+    @Test
+    void firstCpuInitPreservesPostSpawnFallingIntroAirState() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withSharedLevel(sharedLevel)
+                .build();
+        AbstractPlayableSprite leader = fixture.sprite();
+        Tails fallingTails = new Tails("tails_intro_guard", (short) 0, (short) 0);
+        fallingTails.setCpuControlled(true);
+        SidekickCpuController controller =
+                new SidekickCpuController(fallingTails, leader);
+        fallingTails.setCpuController(controller);
+        GameServices.sprites().addSprite(fallingTails, "tails");
+
+        short capturedX = leader.getCentreX();
+        short capturedY = leader.getCentreY();
+        GameServices.level().spawnSidekicks(-32, 4);
+        leader.setCentreX((short) (capturedX + 100));
+        leader.setCentreY((short) (capturedY + 100));
+        fallingTails.setAir(true);
+        controller.update(0);
+
+        assertEquals(capturedX - 32, fallingTails.getCentreX(),
+                "INIT placement must use the level-start leader anchor");
+        assertEquals(capturedY + 4, fallingTails.getCentreY(),
+                "INIT placement must use the level-start leader anchor");
+        assertHistoryFilled(leader, capturedX - 32, capturedY + 4);
+        assertTrue(fallingTails.getAir(),
+                "MGZ1/HCZ1/LRZ1 apply zone-event air state after sidekick spawn");
+    }
+
+    private static void assertHistoryFilled(
+            AbstractPlayableSprite leader, int expectedX, int expectedY) {
+        short[] xHistory = leader.copyXHistory();
+        short[] yHistory = leader.copyYHistory();
+        assertEquals(64, xHistory.length);
+        assertEquals(64, yHistory.length);
+        for (int slot = 0; slot < 64; slot++) {
+            assertEquals(expectedX, xHistory[slot], "history X slot " + slot);
+            assertEquals(expectedY, yHistory[slot], "history Y slot " + slot);
+        }
     }
 }

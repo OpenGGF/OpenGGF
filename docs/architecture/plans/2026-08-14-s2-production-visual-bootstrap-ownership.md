@@ -229,13 +229,31 @@ void firstCpuInitPreservesTheLevelLoadLeaderHistoryPrefill() {
     assertHistoryFilled(sprite, 168, 404);
     assertEquals(63, sprite.historyPos(),
             "the first live Sonic_RecordPos write must still target slot 0");
-    assertFalse(tails.getCpuController().captureRewindState()
-                    .levelStartLeaderHistoryPrefillPending(),
+    assertFalse(capturedLevelStartLeaderHistoryPrefillPending(tails.getCpuController()),
             "the level-start prefill ownership token is one-shot");
 }
 ```
 
 `168,404` is the hand-derived ROM prefill `(200-$20,400+4)`. The current implementation rewrites all entries to `200,400`, so this is a behavioral failure rather than a source-text assertion.
+
+Use this test-local helper until Task 3 adds the rewind record component:
+
+```java
+private static boolean capturedLevelStartLeaderHistoryPrefillPending(
+        SidekickCpuController controller) {
+    try {
+        Object rewindState = controller.captureRewindState();
+        return (boolean) rewindState.getClass()
+                .getMethod("levelStartLeaderHistoryPrefillPending")
+                .invoke(rewindState);
+    } catch (ReflectiveOperationException e) {
+        throw new AssertionError(
+                "Sidekick CPU rewind state must expose levelStartLeaderHistoryPrefillPending", e);
+    }
+}
+```
+
+The literal history assertion remains before the reflection assertion, so Task 2 still records the behavioral history failure against the old implementation. Reflection keeps this red test compilable before Task 3 adds the named record accessor; after the history behavior is fixed, it catches a token that was not consumed.
 
 - [ ] **Step 3: Add the chained-leader isolation guard**
 
