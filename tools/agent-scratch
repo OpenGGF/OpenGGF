@@ -1105,13 +1105,17 @@ def _verify_unit_syntax(service_path: pathlib.Path, timer_path: pathlib.Path) ->
     return "verified"
 
 
+def _systemd_details(run: subprocess.CompletedProcess[str]) -> str:
+    return ((run.stderr or "") + "\n" + (run.stdout or "")).lower()
+
+
 def _user_manager_unavailable(run: subprocess.CompletedProcess[str]) -> bool:
-    details = (run.stderr + "\n" + run.stdout).lower()
+    details = _systemd_details(run)
     return "failed to connect to bus" in details or "xdg_runtime_dir" in details
 
 
 def _legacy_timer_state() -> str:
-    """Return active/inactive/unverified for the pre-generic cleanup timer."""
+    """Return active/inactive/absent/unverified for the pre-generic timer."""
     try:
         enabled = subprocess.run(["systemctl", "--user", "is-enabled", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
         active = subprocess.run(["systemctl", "--user", "is-active", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
@@ -1121,6 +1125,8 @@ def _legacy_timer_state() -> str:
         return "unverified"
     if enabled.returncode == 0 or active.returncode == 0:
         return "active"
+    if "not-found" in _systemd_details(enabled) or "not loaded" in _systemd_details(enabled):
+        return "absent"
     return "inactive"
 
 
@@ -1131,6 +1137,27 @@ def _verify_legacy_timer() -> str:
     return state
 
 
+def _legacy_migration_preflight(home: pathlib.Path, root: pathlib.Path) -> str:
+    """Fail before any write or systemctl mutation for unowned legacy state."""
+    _, service_path, timer_path = _legacy_unit_paths(home)
+    files_present = any(path.exists() or path.is_symlink() for path in (service_path, timer_path))
+    owned = _owned_legacy_units(root, home) if files_present else False
+    state = _legacy_timer_state()
+    if files_present and not owned:
+        raise ScratchError(
+            "legacy scratch unit files are not the exact former generated template; "
+            "manual review is required before installation"
+        )
+    if state in {"active", "inactive"} and not owned:
+        raise ScratchError(
+            f"legacy cleanup timer state is not backed by an owned template: {LEGACY_TIMER_UNIT}; "
+            "manual review is required before installation"
+        )
+    if state == "unverified":
+        return "unverified"
+    return "owned" if owned else "absent"
+
+
 def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
     """Stop the legacy timer, then remove only our old generated unit pair.
 
@@ -1138,11 +1165,10 @@ def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
     it is user configuration and no longer referenced by a retained unit.
     """
     environment_path, service_path, timer_path = _legacy_unit_paths(home)
-    files_present = any(path.exists() or path.is_symlink() for path in (service_path, timer_path))
-    state = _legacy_timer_state()
-    if state == "unverified":
+    preflight = _legacy_migration_preflight(home, root)
+    if preflight == "unverified":
         return "unverified"
-    if not files_present and state == "inactive":
+    if preflight == "absent":
         return "absent"
     try:
         disabled = subprocess.run(["systemctl", "--user", "disable", "--now", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
@@ -1165,7 +1191,10 @@ def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
     if _verify_legacy_timer() == "unverified":
         return "unverified"
     if not _owned_legacy_units(root, home):
-        return "disabled" if files_present else "absent"
+        raise ScratchError(
+            "legacy scratch unit files changed during retirement; "
+            "manual review is required before installation"
+        )
     os.unlink(service_path)
     os.unlink(timer_path)
     try:
@@ -1222,6 +1251,9 @@ def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -
 def cmd_install(args: argparse.Namespace) -> int:
     root = ensure_root()
     home = pathlib.Path.home()
+    # Refuse a custom/unknown legacy unit before creating the stable helper or
+    # writing any new configuration.  A user must review that unit manually.
+    _legacy_migration_preflight(home, root)
     claude_path = home / ".claude" / "settings.json"
     codex_path = home / ".codex" / "config.toml"
     # Render/validate both files before changing either one.  This matters for
@@ -1289,6 +1321,7 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
 def cmd_verify(args: argparse.Namespace) -> int:
     root = ensure_root()
     home = pathlib.Path.home()
+    _legacy_migration_preflight(home, root)
     try:
         claude = json.loads((home / ".claude" / "settings.json").read_text())
         codex = tomllib.loads((home / ".codex" / "config.toml").read_text())

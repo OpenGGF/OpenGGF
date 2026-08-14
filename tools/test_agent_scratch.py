@@ -341,11 +341,11 @@ class AgentScratchTests(unittest.TestCase):
         legacy_helper = home / "checkout" / "tools" / "agent-scratch"
         legacy_helper.parent.mkdir(parents=True)
         legacy_helper.write_text("#!/bin/sh\n")
-        environment, service, timer = self.helper._legacy_unit_files(root, legacy_helper, home)
+        environment_text, service, timer = self.helper._legacy_unit_files(root, legacy_helper, home)
         environment_path, service_path, timer_path = self.helper._legacy_unit_paths(home)
         environment_path.parent.mkdir(parents=True)
         service_path.parent.mkdir(parents=True, exist_ok=True)
-        environment_path.write_text(environment)
+        environment_path.write_text(environment_text)
         service_path.write_text(service)
         timer_path.write_text(timer)
         calls = []
@@ -370,6 +370,38 @@ class AgentScratchTests(unittest.TestCase):
         with mock.patch.object(self.helper.subprocess, "run", return_value=active):
             with self.assertRaises(self.helper.ScratchError):
                 self.helper._verify_legacy_timer()
+
+    def test_unowned_legacy_units_fail_install_without_disabling_or_writing(self):
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        home.mkdir()
+        legacy_helper = home / "checkout" / "tools" / "agent-scratch"
+        legacy_helper.parent.mkdir(parents=True)
+        legacy_helper.write_text("#!/bin/sh\n")
+        environment_text, service, timer = self.helper._legacy_unit_files(root, legacy_helper, home)
+        environment_path, service_path, timer_path = self.helper._legacy_unit_paths(home)
+        environment_path.parent.mkdir(parents=True)
+        service_path.parent.mkdir(parents=True, exist_ok=True)
+        environment_path.write_text(environment_text)
+        altered_service = service + "# user-managed alteration\n"
+        service_path.write_text(altered_service)
+        timer_path.write_text(timer)
+        calls = []
+
+        def unexpected_systemd(command, **kwargs):
+            calls.append(command)
+            raise AssertionError(f"unexpected systemctl mutation: {command}")
+
+        with environment(**self.env), mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_timer_state", return_value="active"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=unexpected_systemd), \
+             self.assertRaisesRegex(self.helper.ScratchError, "manual review"):
+            self.helper.cmd_install(argparse.Namespace())
+        self.assertEqual([], calls)
+        self.assertEqual(altered_service, service_path.read_text())
+        self.assertEqual(timer, timer_path.read_text())
+        self.assertFalse((home / ".local" / "bin" / "agent-scratch").exists())
+        self.assertFalse((home / ".config" / "agent-scratch" / "environment").exists())
 
     def test_systemd_analyzer_accepts_escaped_absolute_environment_file_path(self):
         if not shutil.which("systemd-analyze"):
