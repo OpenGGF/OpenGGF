@@ -1,0 +1,163 @@
+# S2 dynamic-art discard — findings and handover
+
+**Date:** 2026-08-14
+**Status:** Investigation complete. One engine defect identified and **not** landed, with
+its scoping attached. One recorder defect identified, requiring a fixture regeneration that
+has **not** been requested or authorised.
+
+All numbers here are stamped with the commit they were measured at. A measured fact that is
+load-bearing and older than current `HEAD` must be re-measured before it is relied on.
+
+## The engine defect: art is applied at submission, not at drain
+
+**MEASURED at `fb01e231b`..`5c80dcedc`.** `DynamicArtDecisionOwner.observe()` calls
+`lifecycle.observePlayerDplc(...)` and then, *synchronously in the same call*,
+`renderer.applyRuntimeArtUpdate(...)` → `patternBank.consumeRuntimeArtState(...)`. The tiles
+are written there and then.
+
+The ROM writes nothing at submission. `LoadSonicDynPLC` only calls `QueueDMATransfer`
+(`s2.asm:38858`); the VRAM write happens later, inside `ProcessDMAQueue`
+(`s2.asm:1770-1791`), which reads `move.w (a1)+,d0 / beq.s .done` and issues nothing on a
+zero first word.
+
+**Consequence:** the ROM *discards* queued work at several points by zeroing the queue head.
+Because the engine already applied the art at submission, it displays art the hardware never
+transferred. Two instances measured under instrumentation in
+`TestS2EhzHalfpipeRoundTripChain`:
+
+| transfer | owner | submitted | retired across | ROM discards at |
+|---|---|---|---|---|
+| 8078 | tails-tails, mf 13 | movie row 12604 (`LEVEL`) | `LEVEL → SPECIAL_STAGE` | `s2.asm:6599` overrun |
+| 5495, 5496 | ss-tails | movie row 9701 | `SPECIAL_STAGE → SPECIAL_STAGE_RESULTS` | `s2.asm:6759-6760` |
+
+### The discard sites, guard-checked
+
+The instruction pair `clr.w (VDP_Command_Buffer).w` / `move.l #VDP_Command_Buffer,
+(VDP_Command_Buffer_Slot).w` appears at six sites. **Two never execute.**
+
+| `s2.asm` | guard | shipped ROM (`fixBugs = 0`) runs it? |
+|---|---|---|
+| 4857 | none (preceding `endif` at 4817) | **yes** |
+| **6609** | **`if fixBugs` at 6604** | **NO — do not model** |
+| 6759 | none | **yes** |
+| **10342** | **`if fixBugs` at 10332** | **NO — do not model** |
+| 10766 | none | **yes** |
+| 11737 | none | **yes** |
+
+Plus a **fifth, different mechanism** at special-stage entry: the shipped `else` branch runs
+`clearRAM SS_Shared_RAM,SS_Shared_RAM_End+4` (`s2.asm:6599`), which **overruns into**
+`VDP_Command_Buffer` — declared immediately after `SS_Shared_RAM_End`
+(`s2.constants.asm:1183-1186`). The disassembly annotates this itself at `:6604-6608`.
+Modelling the entry discard must model the overrun (and whatever else that clear tramples),
+**not** the guarded explicit pair — that would be taking the FixBugs branch.
+
+Site `:10342` documents the bug its fix would have prevented: after a Game Over in HTZ,
+`Dynamic_HTZ`'s queued cloud art transfers late over Tails' Continue art and corrupts it. At
+`fixBugs = 0` **that corruption is live shipped behaviour** and something the engine should
+reproduce, not avoid.
+
+### Scope: the fix has two halves that must land together
+
+1. Application moves from submission to drain.
+2. The cited reset sites **remove entries from the drainable queue**.
+
+Landing only (1) does not fix the defect — it relocates it. The entry would survive the mode
+boundary and apply at the *next* drain, so art the hardware never transferred appears in the
+following mode instead of the current one.
+
+Only the third piece — what edge the ledger emits for a removed entry, and how the
+comparator treats it — is deferrable.
+
+**Anticipated cost.** Apply-at-drain changes *when every* S2 dynamic-art write lands, not
+only the discarded ones: every submission-to-drain interval where the engine showed new art
+while the ROM still showed old art becomes different. That implies broad S2 trace
+re-measurement, not just the emerald chain.
+
+### Why no ledger-only fix works — measured, do not re-run
+
+Three edge-semantics options were prototyped from one build, arm-selected at runtime
+(baseline at `fb4ce0b53`: **843 run / 9F / 56E / 4S, 65 red**):
+
+- **Option 3** (stop performing, keep the `completed` stamp) — run as a **control**:
+  byte-identical to baseline, red set identical by name, all 5 chain axes verbatim. This is
+  what proves the scaffolding inert. It is *separately* rejected as illegal: an engine
+  stamping `completed` on work it did not do is a lie in its own telemetry, placed there
+  only to match a recorder we know is wrong, and after regeneration the engine would become
+  the one manufacturing lifecycles.
+- **Option 1** (silent removal) and **Option 2** (distinct `discarded` edge kind) — both
+  **843 / 10F / 56E / 4S, 66 red**, red-set diff `+ TestS2EhzHalfpipeRoundTripChain` only;
+  none of the other 29 blast-radius classes moved.
+- **Both starve the comparator.** `TestS2CompleteEmeraldRunChain` stops reporting its 5 axes
+  and aborts earlier on a DPLC divergence in special-stage segment 1, so segment 11 = 236,
+  the cursor walk failure and all three gap axes go **unmeasured**. Same failure shape the
+  DO-NOT-RE-RUN list records for the interior-return census walk. **Fewer axes is not
+  better.**
+
+All three leave the accuracy defect untouched, because they change only what is *recorded*.
+
+## The recorder defect — needs an authorised regeneration
+
+`S2DynamicArtObserver.OnProcessDmaQueue`
+(`tools/bizhawk-headless/src/Recording/S2DynamicArtObserver.cs:599-623`) does
+`while (ledger.Count != 0) { ... AddRawEdge(..., Completed, ...) }` with **no read of
+`VDP_Command_Buffer`**. `profile.Ram.DmaCommandBuffer` (`0xDC00`) is declared in
+`DynamicArtRomProfile.cs:106` and never read anywhere; only `DmaCommandBufferSlot`
+(`0xDCFC`) is read.
+
+So at the four live reset sites the recorder **manufactures a completed lifecycle for work
+the hardware discarded**. It should read `$FFDC00` at entry and, on a zero first word, record
+the pending ledger as *discarded* rather than *completed*.
+
+**This is a recorder change requiring fixture regeneration, which is separately authorised
+and has not been requested.** It is recorded here so the request can be made as one package
+rather than piecemeal.
+
+## What was confirmed, and is not a defect
+
+- **KD 28 / chain axis 4 stands, now on positive evidence** rather than the pattern-match it
+  was written on. Re-examined against the recorder-fiction pattern: no ledger-invalidating
+  write lies inside the span (every queue-zeroing write is upstream of the submission at
+  `s2.asm:5007`), and the transfer is genuinely *performed* — transfers 28084/28085 submit
+  at row 46347 and complete at 46349, with the next two submitting and completing on
+  consecutive rows. A queue draining next-row is live, not stranded. Its span citations were
+  four lines low and are corrected in `known-discrepancies.md`.
+- **The S3K `PALETTE_FADE`-wins-the-token behaviour is ROM-correct**, not a silent
+  regression. Both S3K blocking fades rewrite `V_int_routine = $12` every loop iteration
+  before `Wait_VSync` (`sonic3k.asm:5045-5050`, `:4906-4911`), so a V-blank inside an S3K
+  fade always dispatches `VInt_12` (`:849-852`) and can never reach `VInt_0_Main` — the lag
+  path (`:519-520`) and sole bump of `Lag_frame_count` (`:570`). Recorded on
+  `LevelFrameStep.serviceVBlankOnly`.
+- **The v5 hardware-timing port cannot cover any of this**, and must not: it would model
+  recorder bookkeeping rather than hardware. It also fails its own eligibility gate — no
+  polled readiness value, no loop in the span, VDP transfer fences named explicitly
+  non-authoritative, and rule 4 permits **DPLC** for S2, which never calls
+  `QueueDMATransfer`.
+
+## Corrections landed to existing documentation
+
+Four committed comments stated the ROM backwards, all the same species — claims about what a
+V-int "retires" written from the call graph without checking whether the queue still held
+anything:
+
+- `GameLoop.java` ×2 (special-stage results tail; `s2.asm:6759` zeroes first)
+- `ResultsScreenObjectInstance.java` (level entry; `s2.asm:4857` zeroes first)
+
+Checked and found **correct**, so deliberately untouched: `Sonic2SpecialStageManager`
+:1285-1288 — `Vint_CtrlDMA` really does call `ProcessDMAQueue` (`s2.asm:998-1001`), and that
+pass queues fresh art after the entry clear, so there is genuinely something to retire.
+
+The manifest's own frontier claim was also stale and is corrected:
+`TestS2CompleteEmeraldVisualRun` does **not** stall at row 5200. It is pinned to
+`stopAfterSegmentBody(0)`, asserts `sharedCursor == 4479`, and is **green**.
+
+## Recommendation
+
+The emerald chain's only honest blocker (KD 28) is now confirmed unclosable at frame
+granularity. The apply-at-drain fix is genuine accuracy work that stands without any trace —
+the test being *"would you land it if the trace did not exist?"*, and for modelling the ROM's
+discard the answer is yes — but it is a cross-cutting change to the S2 art pipeline on a game
+that is not the stated priority.
+
+Land it if its scoping proves contained, under the opportunistic-uplift clause. If it
+sprawls, park it as a documented defect with this scoping attached: a well-scoped unlanded
+fix is an asset; a half-landed cross-cutting one is a liability.
