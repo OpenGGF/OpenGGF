@@ -74443,3 +74443,61 @@ Two throwaway worktrees, candidate and control, both branched at `4d51aa04f`.
   Javadoc was corrected in `e3783a6b8`; final whole-range review found only an
   adjacent stale ownership comment, corrected in the review follow-up, and
   optional direct S3K prepared-visual coverage.
+
+## 2026-08-14 - S2 complete-emerald visual run: recorded special-stage segment owns the ROM's results tail
+
+- Isolated worktree on branch `bugfix/ai-ss-results-tail-segment-ownership`,
+  based at `f71de6b54`.
+- Symptom, reproduced first: `VisualRunReplayHarness` on
+  `s2-sonic-tails-complete-emeralds` aborted with `visual run aborted at
+  segment 1, BK2 cursor 9680: special-stage segment 1 exited after 5200 of
+  5681 rows`. Probe command (temporary, reverted): `mvn -Ptrace-replay
+  -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest.cds.argLine="-Xshare:off"
+  -Dsonic2.rom.path=<S2 REV01 ROM> -Dtest=<stopAfterSegmentBody(1) probe> test`
+  with a task-owned `java.io.tmpdir` supplied through `JAVA_TOOL_OPTIONS`.
+- Shape: an early ENGINE MODE change, not a row/pass/admission shortfall. The
+  step trace shows `mode=SPECIAL_STAGE` through step 8991 and
+  `mode=SPECIAL_STAGE_RESULTS` at step 8992, and the abort fires from the
+  launcher's `mode != GameMode.SPECIAL_STAGE` test.
+- Fixture: `ss/physics.csv` row 5177 is where `check_rings_flag` rises to
+  `0xff` and every player column zeroes (matching the ROM's
+  `clearRAM Object_RAM`). Rows 5177-5680 are the recorded, still-special-stage
+  results tail: 504 rows.
+- ROM: `SS_MainLoop` leaves its object loop on `SS_Check_Rings_flag`, and the
+  emerald/perfect accounting, `Pal_FadeToWhite`, the results-screen build and
+  the `Obj6F` tally loop all run under `GameModeID_SpecialStage`; `Game_Mode`
+  is only rewritten by `move.b #GameModeID_Level,(Game_Mode).w` at the end
+  (docs/s2disasm/s2.asm:6721-6800). S1 `GM_Special` matches
+  (docs/s1disasm/sonic.asm:3419-3421).
+- Cause: two implementations of one contract. `RunPlaybackObservation
+  .insideRecordedSpecialStageMode` already carries that ROM citation and is
+  used by `TraceRunPlaybackCoordinator` and `AbstractRunChainTest`;
+  `TraceSessionLauncher` used a bare `== SPECIAL_STAGE` at its special-row
+  exit test and its hardware-timing row dispatch. Fixed by consuming the
+  shared predicate at both sites. No constant, offset, tolerance or
+  per-stage/segment/zone predicate was introduced.
+- Frontier moved, not closed: the run now compares recorded rows 5199 and
+  5200 in the results phase and self-pauses at row 5200 with 3 dynamic-art
+  errors -- `dynamic_art.edges` ROM `[]` engine `[5772]`,
+  `dynamic_art.outstanding_transfer_ids` ROM `[2886]` engine `[]`,
+  `dynamic_art.edge[0].present` ROM false engine true. The engine retires the
+  stage's last player DPLC pair and submits a fresh edge across its results
+  entry, where the ROM still holds the pair outstanding and (its player
+  objects cleared) submits nothing. That art-lifecycle boundary is the next
+  frontier for the remaining 481 rows.
+- Verification: trace profile `843 run / 9 failures / 56 errors / 4 skipped`,
+  65 red classes, red set identical by name and per-class count to a control
+  run at `f71de6b54`. Default profile `15133 / 64F / 18E / 18S` vs control
+  `15133 / 64F / 21E / 18S`; the only class-level difference is
+  `TestGameLoopSpecialStageEntryPresentation` (`E3` on control, absent after),
+  green in isolation on both trees -- a known ambient flake, no regression.
+  `TestS2CompleteEmeraldRunChain` keeps exactly its five axes:
+  `seg7_ehz2` cursor 3977/3997; segment 11, 236 errors, first frame 3525
+  `queue.s2_nemesis_plc.busy`; the four -1 `seg4_ehz1 -> seg5_ehz2` rows; the
+  two +1 `ss_4 -> seg6_ehz2` rows; 16 expected / 18 actual for
+  `ss_5 -> seg7_ehz2`. `TestS2CompleteEmeraldVisualRun`,
+  `TestS1CompleteEmeraldVisualRun`, `TestS2EhzHalfpipeRoundTripChain`, all
+  eight S2 standalone special-stage classes, `TestHardwareTimingAuthorityGuard`,
+  both rewind guards, `TestCollisionLogic`, `TestTraceRunManifest` and the S3K
+  keep-green set are green; `Sonic2SpecialStageBootstrapCadenceTest` holds its
+  stale-model 7 failures + 1 error exactly.
