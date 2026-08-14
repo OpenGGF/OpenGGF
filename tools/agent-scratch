@@ -930,13 +930,29 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
     executable = shutil.which("claude")
     if not executable:
         return "unverified"
+    prompt = (
+        "Use the Bash tool exactly once to run: printf '%s' \"${TMPDIR-UNSET}\". "
+        "Respond with exactly the command's stdout, with no Markdown, quoting, "
+        "commentary, or extra text."
+    )
+    command = [
+        executable,
+        "--allowedTools", "Bash(printf *)",
+        "--permission-mode", "bypassPermissions",
+        "--no-session-persistence",
+        "-p", prompt,
+    ]
     try:
-        run = subprocess.run([executable, "-p", "echo -n \"$TMPDIR\""], text=True, capture_output=True, timeout=45, check=False)
+        run = subprocess.run(command, text=True, capture_output=True, timeout=45, check=False)
     except (subprocess.TimeoutExpired, OSError):
         return "unverified"
     if run.returncode:
         return "unverified"
-    observed = run.stdout.strip()
+    # Claude's print mode adds one terminal newline.  Do not trim arbitrary
+    # whitespace: it could be significant in a configured scratch root.
+    observed = run.stdout[:-1] if run.stdout.endswith("\n") else run.stdout
+    if "\n" in observed or "\r" in observed:
+        raise ScratchError(f"Claude returned non-contract TMPDIR output: {run.stdout!r}")
     if not os.path.isabs(observed):
         raise ScratchError(f"Claude returned a non-absolute TMPDIR: {observed!r}")
     try:

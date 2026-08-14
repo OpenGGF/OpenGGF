@@ -401,6 +401,27 @@ class AgentScratchTests(unittest.TestCase):
             with self.assertRaises(self.helper.ScratchError):
                 self.helper._verify_claude_tmpdir(root)
 
+    def test_claude_probe_uses_fresh_allowed_bash_and_exact_stdout(self):
+        root = self.helper.ensure_root(self.env)
+        run = type("Run", (), {"returncode": 0, "stdout": str(root / "claude") + "\n", "stderr": ""})()
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", return_value=run) as invoke:
+            self.assertEqual("verified", self.helper._verify_claude_tmpdir(root))
+        command = invoke.call_args.args[0]
+        self.assertIn("--allowedTools", command)
+        self.assertEqual("Bash(printf *)", command[command.index("--allowedTools") + 1])
+        self.assertIn("--permission-mode", command)
+        self.assertEqual("bypassPermissions", command[command.index("--permission-mode") + 1])
+        self.assertIn("--no-session-persistence", command)
+        prompt = command[-1]
+        self.assertIn("printf '%s' \"${TMPDIR-UNSET}\"", prompt)
+        self.assertIn("exactly the command's stdout", prompt)
+        prose = type("Run", (), {"returncode": 0, "stdout": f"`{root / 'claude'}`\n", "stderr": ""})()
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", return_value=prose):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_claude_tmpdir(root)
+
     def test_path_does_not_touch_unrelated_sentinel(self):
         sentinel = pathlib.Path(self.temp.name) / "sentinel"
         sentinel.write_text("safe")
