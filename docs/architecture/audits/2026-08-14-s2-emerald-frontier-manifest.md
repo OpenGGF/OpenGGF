@@ -464,10 +464,23 @@ nothing at all.
 **So the ROM never completes that transfer.** The recorded "ROM still outstanding at row
 5200" is the *recorder's own ledger* holding a transfer the hardware never performed. This
 is the recorder-fiction pattern the `trace-replay-bug-fixing` skill already documents for
-the special-stage **entry**, where the identical instruction pair appears — and where the
-disassembly annotates itself ("the excessive `SS_Shared_RAM` clear sets
-`VDP_Command_Buffer` to 0, just like the below code"). The results site is the same defect
-at the other end of the special stage. The pair recurs at five sites in `s2.asm`.
+the special-stage **entry**. The results site is the same defect at the other end of the
+special stage — but **the two sites reach it by different mechanisms, and conflating them
+will misdirect a fix:**
+
+- **Results tail: the pair is unguarded.** No `if`/`else`/`endif` appears anywhere in the
+  surrounding block; the shipped ROM executes it. Safe to model directly.
+- **Entry: the explicit pair is inside `if fixBugs`.** Since all three disassemblies build
+  at `fixBugs = 0`, **the shipped ROM never executes those two instructions at entry.** The
+  queue still ends up zeroed, but by the *excessive `SS_Shared_RAM` clearRAM overrunning
+  into* `VDP_Command_Buffer` — exactly what the disassembly's own annotation says ("the
+  excessive `SS_Shared_RAM` clear sets `VDP_Command_Buffer` to 0, just like the below
+  code"). Modelling the explicit clear at the entry site would be **taking the FixBugs
+  branch**, which the hard rules forbid; the accurate model is the overrunning clear, and
+  whatever else that clear tramples.
+
+The pair appears at six sites in `s2.asm`. **Each needs its own guard check before that
+count does any work** — one of the first two examined turned out to differ.
 
 **Consequences, and they are the useful part of this finding:**
 
@@ -484,7 +497,29 @@ at the other end of the special stage. The pair recurs at five sites in `s2.asm`
 - **Cycle-level span costing is not justified by this frontier.** The second instance that
   was supposed to move it from "defer" to "do" is not an instance.
 - **Axis 4 should be re-examined against this pattern before any span-costing work.** Its
-  "masked span" framing was the model this one was built from.
+  "masked span" framing was the model this one was built from, and KD 28 rests on a
+  pattern-match that may now fall. Whichever way it goes, the finding must be a *positive*
+  disassembly citation — either the masked span is real elapsed work (cite the path and the
+  **absence** of a discard) or the submission is discarded (cite the discard site **and its
+  guard status**). "Looks like the same pattern" is not a finding.
+- **There is a legal engine-side fix here, and it is not comparator work.** If the ROM
+  discards queued work at these sites and the engine *performs* it, the engine is wrong on
+  its own terms — it transfers something the hardware never did. Modelling the ROM's queue
+  reset, cited to those lines, is an ordinary accuracy fix.
+  **The test for legality: would you land it if the trace did not exist?** For the discard,
+  yes. For anything whose only justification is reconciling with a known-bad stream, no.
+- **"Leave it red" has an unpriced cost.** The stall at row 5200 means rows 5201–5681 are
+  never compared at all: a documented red carries one known defect *and silences 481 rows
+  of real signal*, behind which any genuine regression hides. If a suppression is used
+  instead, it must have teeth — scoped to the mechanism (the specific ledger entry for a
+  transfer the engine can prove is discarded per the cited ROM reset, not a row range and
+  not a field blanket), documented as a **recorder** defect with the regeneration
+  obligation, and **asserting that the defect is present** so a regenerated fixture fails
+  loudly and forces the suppression's removal rather than silently eating a corrected
+  stream. Green-by-projection is dishonest only when it is silent and unbounded.
+- **The durable fix is recorder-side:** its ledger must model queue discard. Fixture
+  regeneration is separately authorised and has not been requested; the recorder defect,
+  the six-site guard sweep, and the regeneration request should go up as one package.
 
 `known-discrepancies` entry 28 remains accurate as written for axis 4; nothing landed.
 
