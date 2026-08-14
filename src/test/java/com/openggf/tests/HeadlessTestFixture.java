@@ -144,6 +144,13 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
+    public java.util.List<String> drainUnmatchedRecordedHardwareCompletions() {
+        return hardwareTimingReplayPort != null
+                ? hardwareTimingReplayPort.drainUnmatchedRecordedCompletions()
+                : java.util.List.of();
+    }
+
+    @Override
     public void beginTraceRow(int traceIndex, int rawFrame) {
         runner.beginTraceRow(traceIndex, rawFrame);
     }

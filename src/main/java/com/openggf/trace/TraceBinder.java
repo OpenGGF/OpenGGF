@@ -466,6 +466,29 @@ public class TraceBinder {
     }
 
     /**
+     * Merges dropped recorded hardware-completion edges into a row as an
+     * exact comparison error. The recorded stream expected a completion the
+     * engine never submitted; the edge released nothing, and this records
+     * that fact at its own row instead of aborting the comparison.
+     */
+    public void compareRecordedHardwareCompletions(
+            int frame, List<String> unmatched) {
+        if (unmatched == null || unmatched.isEmpty()) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        String name = "hardware_timing.unmatched_completions";
+        fields.put(name, compareObjectField(name, "", String.join(" | ", unmatched)));
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields,
+                existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
      * Merges exact player dynamic-art lifecycle fields into this row.
      *
      * <p>A DPLC heartbeat may be the only compared surface on lag and

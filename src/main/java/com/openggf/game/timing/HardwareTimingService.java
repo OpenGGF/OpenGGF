@@ -513,21 +513,21 @@ public final class HardwareTimingService
             HardwareTimingJob engineHead = firstAwaitingAdmission(kind);
             String expected = kind + "#" + ordinal + " " + submissionFingerprint;
             if (engineHead == null) {
-                throw new IllegalStateException(
+                throw new UnmatchedRecordedCompletionException(
                         "expected completion: " + expected
                                 + "; engine pending: " + pendingDescription());
             }
             if (engineHead.handle().ordinal() != ordinal
                     || !engineHead.handle().submissionFingerprint()
                     .equals(submissionFingerprint)) {
-                throw new IllegalStateException(
+                throw new UnmatchedRecordedCompletionException(
                         "expected completion: " + expected
                                 + "; engine pending: "
                                 + HardwareTimingJob.describe(engineHead.handle()));
             }
             if (!engineHead.hasPreparedPayload()
                     || !engineHead.preparation().isPrepared()) {
-                throw new IllegalStateException(
+                throw new UnmatchedRecordedCompletionException(
                         "expected completion: " + expected
                                 + "; engine job is not prepared");
             }

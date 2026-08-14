@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **An unmatched recorded hardware completion is reported, not fatal
+  (`bugfix/ai-demote-unmatched-recorded-completion`, merged 2026-08-14):** the replay port
+  aborted the whole comparison the first time a recorded completion had no engine-pending
+  counterpart, which **masked and outranked the physics divergence that caused it** — across
+  ~45 S3K classes the real first error was hundreds of frames earlier. The assertion conflated
+  two events: in a converged run an unmatched completion is a genuine contract violation, but
+  in a diverged run it is a downstream symptom of the engine never reaching the ROM's
+  submission point, so it cannot carry verdict authority. The three unmatched paths (no engine
+  head, ordinal/fingerprint mismatch, unprepared head) now drop the edge and record it as an
+  exact `hardware_timing.unmatched_completions` comparison error; boundary, kind and
+  outside-a-run violations still abort. **The release side is unchanged** — a dropped edge
+  never reaches `admitReadiness()`, so it releases nothing and creates no work — and an
+  undrained dropped edge fails the run, so the demotion cannot become silence. 18 classes move
+  from abort to a counted failure with their true first error exposed (HCZ frame 561
+  `x_speed`, MGZ 321 `camera_y`, MHZ 75 `player_mapping_frame`); the red-class set is identical
+  by name in both directions.
+
 - **A held jump button no longer fires a press when control unlocks
   (`bugfix/ai-jump-press-edge-from-raw-pad`, merged 2026-08-14):** the ROM's pressed byte is
   produced once per frame by `Poll_Controller` straight from the hardware pad, independently
