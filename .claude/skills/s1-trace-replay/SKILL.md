@@ -31,7 +31,8 @@ $ARGUMENTS: Optional zone name or action. Examples:
 under Mono with no display, so prefer it over the Lua recorder:
 
 ```bash
-TRACE_DIR="$(tools/agent-scratch new "regen-<zone>" | tail -n 1)"
+TASK_DIR="$(agent-scratch new "regen-<zone>" | tail -n 1)"
+TRACE_DIR="$TASK_DIR/capture"
 tools/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
     --movie src/test/resources/traces/s1/<zone>/<movie>.bk2 \
@@ -40,9 +41,10 @@ tools/bizhawk-headless/run.sh \
     --trace-profile <profile>
 ```
 
-`tools/agent-scratch new` creates the required fresh output directory beneath
-`$OGGF_SCRATCH_ROOT/openggf/tasks`; its second output line is the task path captured
-above. `--output` must not already exist. Use `--run-id <id>` for complete-run / run-mode
+`agent-scratch new` creates the fresh task parent beneath
+`$AGENT_SCRATCH_ROOT/tasks`; its second output line is the task path captured
+above. `capture` is a new child beneath that parent, so the native harness receives the
+required non-existent `--output` path. Use `--run-id <id>` for complete-run / run-mode
 captures instead of `--trace-profile`. Validate changes with
 `tools/bizhawk-headless/test.sh --filter S1` — the differential gates compare against the
 committed fixtures byte-for-byte.

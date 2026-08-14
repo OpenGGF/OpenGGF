@@ -1041,7 +1041,8 @@ No display, no EmuHawk process to babysit, and it fails loudly instead of silent
 writing nothing:
 
 ```bash
-TRACE_DIR="$(tools/agent-scratch new "regen-<zone>" | tail -n 1)"
+TASK_DIR="$(agent-scratch new "regen-<zone>" | tail -n 1)"
+TRACE_DIR="$TASK_DIR/capture"
 tools/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
     --movie src/test/resources/traces/<game>/<zone>/<movie>.bk2 \
@@ -1050,10 +1051,11 @@ tools/bizhawk-headless/run.sh \
     --trace-profile <profile>
 ```
 
-`tools/agent-scratch new` creates the required fresh output directory beneath
-`$OGGF_SCRATCH_ROOT/openggf/tasks`; its second output line is the task path captured
-above. `--output` must not already exist. Use `--run-id <id>` instead of `--trace-profile`
-for run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
+`agent-scratch new` creates the fresh task parent beneath
+`$AGENT_SCRATCH_ROOT/tasks`; its second output line is the task path captured
+above. `capture` is a new child beneath that parent, so the native harness receives the
+required non-existent `--output` path. Use `--run-id <id>` instead of `--trace-profile` for
+run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
 ROM paths come from `S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH`, following the
 SKIP-when-absent convention.
 
@@ -1082,7 +1084,8 @@ is stale. Allocate a fresh scratch directory because the recorder appends into i
 `s3k_complete_run_recorder.lua` for complete-run captures):
 
 ```bash
-LUA_TRACE_DIR="$(tools/agent-scratch new "s3k-lua-<zone>" | tail -n 1)"
+TASK_DIR="$(agent-scratch new "s3k-lua-<zone>" | tail -n 1)"
+LUA_TRACE_DIR="$TASK_DIR/lua"
 OGGF_TRACE_OUTPUT_DIR="$LUA_TRACE_DIR" OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh \
         tools/bizhawk/s3k_trace_recorder.lua \
@@ -1090,8 +1093,8 @@ OGGF_TRACE_OUTPUT_DIR="$LUA_TRACE_DIR" OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=
         "$S3K_ROM_PATH"
 ```
 
-Output lands in the helper-managed task directory and stays scratch-only diagnostic/
-corroborative evidence. Never copy Lua output into
+The helper creates the task parent and the recorder creates/appends inside its new `lua`
+child. Output stays scratch-only diagnostic/corroborative evidence. Never copy Lua output into
 `src/test/resources/traces/`. If a canonical fixture needs a hook-driven or legacy
 capability the native harness lacks, implement and independently review that native
 capability first, or obtain an explicit policy redesign before publication. Do not
@@ -1217,7 +1220,7 @@ observes a write and never authorizes emulated-memory, input, register, or
 savestate mutation.
 
 ```bash
-PROBE_DIR="$(tools/agent-scratch new "probe-<name>" | tail -n 1)"
+PROBE_DIR="$(agent-scratch new "probe-<name>" | tail -n 1)"
 OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT="$PROBE_DIR/<name>.txt" DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh tools/bizhawk/<your_copy>.lua <bk2> "$ROM_PATH"
 ```

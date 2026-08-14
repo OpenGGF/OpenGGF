@@ -84,14 +84,16 @@ available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
 
 Agent-owned captures, diagnostic output, downloads, reports, and other durable task
 artifacts belong in a helper-created directory under
-`$OGGF_SCRATCH_ROOT/openggf/tasks`, never in `/tmp`. Create one with
-`tools/agent-scratch new <label>` (or discover the parent with
-`tools/agent-scratch path tasks`) and pass the printed task path to the producing tool.
-`/tmp` remains for short-lived operating-system files only. Before a large capture, run
-`tools/agent-scratch status` to check capacity. Task output is retained for a limited
-time: use `tools/agent-scratch keep <task-path> --until YYYY-MM-DD` for a bounded
-extension, or move material that must outlive retention into a normal archive outside the
-managed root.
+`$AGENT_SCRATCH_ROOT/tasks`, never in `/tmp`. `tools/agent-scratch` is the tracked
+bootstrap/source helper: run `tools/agent-scratch install` after source updates to install
+the stable user-wide `$HOME/.local/bin/agent-scratch`. Routine work in this and any other
+project uses `agent-scratch new <label>` (or `agent-scratch path tasks`) and passes the
+printed task path to the producing tool. The installed helper shares
+`$AGENT_SCRATCH_ROOT` across projects; labels and timestamped task directories isolate their
+artifacts. `/tmp` remains for short-lived operating-system files only. Before a large
+capture, run `agent-scratch status` to check capacity. Task output is retained for a limited
+time: use `agent-scratch keep <task-path> --until YYYY-MM-DD` for a bounded extension, or
+move material that must outlive retention into a normal archive outside the managed root.
 
 ## Hard rules
 

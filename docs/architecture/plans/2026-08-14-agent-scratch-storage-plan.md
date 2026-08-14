@@ -2,17 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Keep Codex, Claude Code, and OpenGGF diagnostic work off the 16 GiB
+**Goal:** Keep Codex, Claude Code, and agent diagnostic work off the 16 GiB
 `/tmp` tmpfs, while providing bounded, recoverable cleanup on the user's
 disk-backed home filesystem.
 
-**Architecture:** Add one dependency-free Python helper at
-`tools/agent-scratch` that resolves and validates `$OGGF_SCRATCH_ROOT`, creates
-task directories, reports capacity, writes bounded keep markers, prunes only
-managed children using descriptor-relative no-follow traversal, and installs
-the per-user Claude/Codex configuration plus a daily systemd user timer. The
-repository documents the helper as the sole location for durable agent output;
-the actual root remains machine-local and is never committed.
+**Architecture:** The dependency-free Python helper at `tools/agent-scratch`
+is tracked bootstrap/source. Its `install` operation resolves and validates
+`$AGENT_SCRATCH_ROOT`, atomically installs the stable user-wide
+`$HOME/.local/bin/agent-scratch`, configures Claude/Codex, and generates a
+daily user systemd timer that invokes the installed copy. Every project uses
+`agent-scratch` for routine output, capacity, retention, and cleanup; task
+labels/timestamps isolate projects below the shared generic `tasks` child. The
+actual root remains machine-local and is never committed.
 
 **Tech Stack:** Python 3.11+ standard library (`argparse`, `fcntl`, `json`,
 `tomllib`, `os` descriptor APIs, and `/proc/self/mountinfo` parsing on Linux),
@@ -32,10 +33,13 @@ hook/test workflow.
   traversal labels, malformed keep markers, and unsafe roots fail closed.
 - Claude and Codex configuration edits are idempotent, preserve unrelated
   settings, write absolute materialized paths, and never contain a literal
-  `$OGGF_SCRATCH_ROOT` TOML interpolation.
+  `$AGENT_SCRATCH_ROOT` TOML interpolation. `OGGF_SCRATCH_ROOT` is a legacy
+  compatibility alias only when it matches the generic value.
 - User-level service files are generated at install time and are not committed
-  to the repository. Installation must use the canonical checkout path and be
-  rerun if that checkout moves.
+  to the repository. `tools/agent-scratch install` must be rerun after helper
+  source updates; the generated service executes the stable user-wide copy and
+  has no checkout/worktree dependency. It retires legacy generated
+  OpenGGF-named units during the migration.
 - Keep the mirrored `AGENTS.md`/`CLAUDE.md` files byte-identical and update
   mirrored `.agents/skills`/`.claude/skills` content together.
 - Do not stage ROMs, generated links, machine-local configuration, quarantine
@@ -59,7 +63,7 @@ hook/test workflow.
   value or `$HOME/scratch/agent-tmp`, reject relative/control-character/
   `/tmp`/unsafe-symlink roots, check owner/mode and filesystem type by parsing
   Linux `/proc/self/mountinfo` (longest decoded mount-point match; reject
-  `tmpfs` and `ramfs`), create `claude`, `codex/tmp`, `openggf/tasks`, and
+  `tmpfs` and `ramfs`), create `claude`, `codex/tmp`, `tasks`, and
   `quarantine` as `0700`, and expose the selected absolute root in command
   output. Include a parser fixture for accepted ext4/btrfs and rejected
   tmpfs/ramfs mounts.
@@ -70,7 +74,7 @@ hook/test workflow.
   hold it while selecting/creating/removing entries.
 - [ ] Implement `new` label validation (single bounded component, no slash,
   traversal, or control characters), unique UTC timestamp/PID/random naming,
-  and creation under `openggf/tasks` with mode `0700`.
+  and creation under `tasks` with mode `0700`.
 - [ ] Implement `path` for the named `claude`, `codex`, `codex-tmp`,
   `tasks`, and `quarantine` children, rejecting unknown kinds and creating
   only the documented child when needed.
@@ -86,10 +90,12 @@ hook/test workflow.
   rejection, and safe descriptor-relative recursive removal. The command must
   never scan or delete arbitrary `/tmp` entries.
 - [ ] Implement `install` as an idempotent host setup: resolve/validate the
-  root, update `~/.claude/settings.json` env values (`OGGF_SCRATCH_ROOT` and
-  `CLAUDE_CODE_TMPDIR`) while preserving its existing mode, update
+  root, atomically copy the source helper to the stable user-wide
+  `$HOME/.local/bin/agent-scratch`, update `~/.claude/settings.json` env
+  values (`AGENT_SCRATCH_ROOT` and `CLAUDE_CODE_TMPDIR`) while preserving its
+  existing mode, update
   `~/.codex/config.toml` `shell_environment_policy.set`
-  values (`OGGF_SCRATCH_ROOT`, `TMPDIR`, `TMP`, `TEMP`) plus
+  values (`AGENT_SCRATCH_ROOT`, `TMPDIR`, `TMP`, `TEMP`) plus
   `sandbox_workspace_write` (`exclude_slash_tmp = true`,
   `exclude_tmpdir_env_var = false`, and the absolute Codex writable root),
   preserving unrelated keys and rejecting conflicting existing managed values.
@@ -104,18 +110,19 @@ hook/test workflow.
   comments, existing roots, unrelated keys, dotted/inline unsupported forms,
   and conflicting managed values.
 - [ ] Have `install` materialize an absolute `EnvironmentFile` at
-  `~/.config/oggf-agent-scratch/environment` (`0600`), generate the user files
-  `~/.config/systemd/user/openggf-agent-scratch-prune.service` and
-  `~/.config/systemd/user/openggf-agent-scratch-prune.timer`, and quote the
-  canonical checkout helper path with a dedicated systemd `ExecStart` C-style
-  quoting routine (escaping whitespace, quotes, backslashes, and control
-  characters; do not rely on `systemd-escape --shell`). Run
-  `systemd-analyze --user verify` on both generated files, daemon-reload,
-  enable/start the timer, and verify enabled state plus a next trigger. If the
-  user manager is unavailable, leave files intact and report the exact
-  activation command rather than claiming cleanup is active. Reject unexpected
-  non-regular config/unit/environment targets before replacing them, and write
-  all generated files atomically.
+  `~/.config/agent-scratch/environment` (`0600`), generate the user files
+  `~/.config/systemd/user/agent-scratch-prune.service` and
+  `~/.config/systemd/user/agent-scratch-prune.timer`, and quote the installed
+  `$HOME/.local/bin/agent-scratch` path with a dedicated systemd `ExecStart`
+  C-style quoting routine (escaping whitespace, quotes, backslashes, and
+  control characters; do not rely on `systemd-escape --shell`). Retire any
+  legacy OpenGGF-named generated unit only after the generic replacement is
+  materialized. Run `systemd-analyze --user verify` on both generated files,
+  daemon-reload, enable/start the timer, and verify enabled state plus a next
+  trigger. If the user manager is unavailable, leave files intact and report
+  the exact activation command rather than claiming cleanup is active. Reject
+  unexpected non-regular config/unit/environment targets before replacing them,
+  and write all generated files atomically.
 - [ ] Add `verify` checks for config parsing, absolute child temp variables,
   root confinement, systemd unit syntax, and a fresh sandboxed Claude command.
   If Claude is installed and the command runs, return nonzero when observed
@@ -124,14 +131,14 @@ hook/test workflow.
   not claim the Claude portion passed. Explicitly report that Codex
   `danger-full-access` cannot be constrained by workspace sandbox settings.
 - [ ] Add a standard-library test script that creates a unique
-  `TemporaryDirectory(dir=$HOME/.cache/oggf-agent-scratch-tests)` (creating
+  `TemporaryDirectory(dir=$HOME/.cache/agent-scratch-tests)` (creating
   that `0700` parent first, asserting the mount is accepted, and removing the
   child in `finally`; never use `tempfile`'s `/tmp` default) and covers syntax,
   root rejection, labels/traversal,
   static symlink rejection, an actual symlink-swap race, concurrent
   `new`/`prune` locking, status accounting, bounded keep markers, dry-run and
   real pruning, config idempotence/parsing, systemd `ExecStart` quoting with a
-  space-containing checkout path, and the no-touch guarantee for an unrelated
+  space-containing installed user-home path, and the no-touch guarantee for an unrelated
   sentinel outside the managed root.
 
 **Verification:**
@@ -139,8 +146,8 @@ hook/test workflow.
 ```bash
 python3 -m py_compile tools/agent-scratch tools/test_agent_scratch.py
 python3 tools/test_agent_scratch.py
-tools/agent-scratch path tasks
-tools/agent-scratch status
+agent-scratch path tasks
+agent-scratch status
 ```
 
 ## Task 2 — Document the storage contract and remove live `/tmp` output recipes
@@ -157,21 +164,23 @@ tools/agent-scratch status
 - `docs/agent-workflow/runbooks/runbook-multi-agent-trace-orchestration.md`
 
 - [ ] Add the machine-neutral scratch policy to both agent instruction files:
-  use `tools/agent-scratch new/path`, keep output under
-  `$OGGF_SCRATCH_ROOT/openggf/tasks`, reserve `/tmp` for short-lived OS files,
-  run `status` before large captures, and use bounded `keep` or a normal
-  archive for material that outlives retention. Keep the files byte-identical.
+  use `tools/agent-scratch install` only as source bootstrap/update and the
+  installed `agent-scratch new/path` for routine work, keep output under
+  `$AGENT_SCRATCH_ROOT/tasks`, reserve `/tmp` for short-lived OS files, run
+  `status` before large captures, and use bounded `keep` or a normal archive
+  for material that outlives retention. Keep the files byte-identical.
 - [ ] Replace every live trace regeneration/probe output example that points
   at `/tmp` with the helper-managed task path, including shell snippets and
   Windows guidance. Keep explanatory warnings about why `/tmp` is unsafe, but
   do not leave a copyable command that creates durable output there.
 - [ ] Replace the multi-agent benchmark runbook's `mktemp -d /tmp/...` retention
   directory with a helper-created task directory and document the required
-  `OGGF_SCRATCH_ROOT` preflight.
-- [ ] Add an Agent Workflow README section documenting host setup
-  (`tools/agent-scratch install`), verification, daily cleanup semantics,
-  active-process/keep protections, and the fact that existing sessions are
-  audited rather than migrated in place.
+  `AGENT_SCRATCH_ROOT` preflight.
+- [ ] Add an Agent Workflow README section documenting source bootstrap
+  (`tools/agent-scratch install`), the installed `agent-scratch` verification
+  command, daily cleanup semantics, active-process/keep protections, legacy
+  unit retirement, and the fact that existing sessions are audited rather than
+  migrated in place.
 - [ ] Run a repository-wide audit of `.agents/skills`, `.claude/skills`,
   runbooks, ignored scratch locations, and executable tooling; classify every
   remaining `/tmp` reference as policy text, OS-level short-lived use, or an
@@ -188,19 +197,21 @@ git diff --check
 ## Task 3 — Exercise host configuration and cleanup on the real machine
 
 - [ ] After the helper is present on the integration branch, run
-  `tools/agent-scratch install` from the canonical main checkout so the user
-  service does not point at a temporary worktree. Preserve and inspect the
-  existing Claude/Codex settings before and after the idempotent update.
-- [ ] Restart Claude Code and start a fresh Codex process, then run the helper's
-  verification path. Confirm child processes receive absolute
-  `OGGF_SCRATCH_ROOT`, `TMPDIR`, `TMP`, and `TEMP`; confirm Claude's actual
+  `tools/agent-scratch install` from a source checkout to refresh the stable
+  user-wide installed command and generated service. Preserve and inspect the
+  existing Claude/Codex settings before and after the idempotent update; verify
+  that the resulting service does not point at a checkout or temporary
+  worktree.
+- [ ] Restart Claude Code and start a fresh Codex process, then run
+  `agent-scratch verify`. Confirm child processes receive
+  absolute `AGENT_SCRATCH_ROOT`, `TMPDIR`, `TMP`, and `TEMP`; confirm Claude's actual
   sandbox `$TMPDIR` is within the configured root. An installed Claude that
   runs but reports an outside path is a failed setup; an unavailable or
   unauthenticated Claude is explicitly `unverified`, not a success claim. Also
   record any unavailable user-manager limitation rather than weakening the
   guard.
-- [ ] Run `tools/agent-scratch prune --dry-run`, inspect all candidates, then
-  rely on the enabled timer for cleanup. Do not delete arbitrary `/tmp`
+- [ ] Run `agent-scratch prune --dry-run`, inspect all candidates, then rely
+  on the enabled timer for cleanup. Do not delete arbitrary `/tmp`
   contents; preserve active `/tmp/claude-1000` or current task state until a
   fresh session has been verified.
 
