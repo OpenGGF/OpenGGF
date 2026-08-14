@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K special-stage entry ring no longer freezes the camera
+  (`bugfix/ai-s3k-ssentry-ring-capture`, merged 2026-08-15):** `Obj_SSEntryRing`'s capture tail
+  (`sonic3k.asm:128292-128304`) writes `mapping_frame = 0`, `anim = $1C` and
+  `object_control = $53` on Player 1 — repeating the triple on Player 2 only under
+  `Flying_carrying_Sonic_flag` — and **never touches the camera**. `Camera_X_pos` settles on its
+  own because `object_control` bit 0 skips `Sonic_Modes`, so `ScrollHoriz` still runs its last
+  step on the capture frame. The engine instead called `camera.setFrozen(true)`, an invention
+  with no ROM counterpart, which dropped that step, and it never wrote the animation state. Both
+  are now ported and cited. **`TestS3kSonicTailsAizSegmentTraceReplay` goes green at
+  `error_count 0` over the same 2290 rows as before** — the first S3K segment class to go green
+  from this frontier — and LBZ and CNZ improve by 2659 and 397 errors, with their residual
+  honestly re-labelled as the separate defect it is.
+
 - **Leftover pending hardware submissions at close are reported, not fatal
   (`bugfix/ai-demote-pending-submissions`, merged 2026-08-14):** the sibling of the tripwire
   below, and the same two-events-one-message shape — leftover submissions at close are a

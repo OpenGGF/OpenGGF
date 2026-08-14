@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K giant ring's special-stage capture no longer freezes the camera
+  and now writes the player's `mapping_frame`/`anim` the way `loc_6173A` does.
+  ROM `Obj_SSEntryRing`'s capture tail (`docs/skdisasm/sonic3k.asm:128292-128304`)
+  sets `mapping_frame(a1) = 0`, `anim(a1) = $1C` and `object_control(a1) = $53`
+  on Player_1 - and repeats the triple on Player_2 only when
+  `Flying_carrying_Sonic_flag` is set - but it never touches `Camera_X_pos`.
+  The camera stops on its own because object_control bit 0 stops the player
+  moving (`sonic3k.asm:21973-21977`), so `ScrollHoriz` still runs on the capture
+  frame itself. The engine froze the camera instead, dropping that last scroll
+  step, and left the player on its running animation. On
+  `TestS3kSonicTailsAizSegmentTraceReplay` this closed all three remaining
+  errors (`camera_x` 0x1B10 vs 0x1B0E, `player_animation_id` 0x1C vs 0x02 and
+  `player_mapping_frame` 0 vs 0x96, frames 2247-2289): the class is now green
+  over all 2290 compared rows. No constant, tolerance, zone, act, route or
+  frame index is involved.
 - Fix: a production hardware submission still pending when a recorded run
   closes is now recorded as a comparison error on the closing row instead of
   aborting the whole trace-replay run. This is the mirror of the unmatched

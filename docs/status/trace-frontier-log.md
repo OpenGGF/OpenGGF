@@ -75216,3 +75216,123 @@ mid-route segment. Two candidate improvements, neither applied:
    verdicts: attribution preserved, no cold-start fiction, wall-clock unchanged from today's
    chain cost. The trade is isolation — an early divergence contaminates later segments — which
    the chains already accept.
+
+## 2026-08-15 - S3K giant-ring capture: AIZ segment green; LBZ/CNZ share the object, not the cause
+
+Base commit `e68177332` on `develop`; isolated worktrees, one Maven invocation
+per measurement, `target/surefire-reports` cleared before each.
+
+### Target and reproduction (MEASURED)
+
+```bash
+rm -rf target/surefire-reports target/trace-reports
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=<task-owned-java-tmpdir>" \
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest.cds.argLine="-Xshare:off" -Ds3k.rom.path=s3k.gen \
+    -Dtest=<class> test
+```
+
+| Class | Control `e68177332` | After the fix |
+|---|---|---|
+| `TestS3kSonicTailsAizSegmentTraceReplay` | FAIL, **3 errors**, first frame 2247 `camera_x` 0x1B10 vs 0x1B0E; 2290 of 2290 rows | **PASS**, error_count **0**, 2290 of 2290 rows |
+| `TestS3kSonicTailsLbzSegmentTraceReplay` | FAIL, **9833** errors, first frame 958 `camera_x` 0x0247 vs 0x024A | FAIL, **7174** errors, first frame 958 `player_animation_id` 0x0002 vs 0x001C |
+| `TestS3kSonicTailsCnzSegmentTraceReplay` | FAIL, **6697** errors, first frame 5754 `camera_x` 0x0C34 vs 0x0C37 | FAIL, **6300** errors, first frame 5754 `player_animation_id` 0x0000 vs 0x001C |
+
+### Root cause (AIZ) - ROM-cited
+
+The AIZ span is the giant ring, not the act end. At frame 2247 the recording
+shows `anim` 0x1C, `mapping_frame` 0, `stand_on_obj` 0x1A and the player frozen
+at x 0x1BB0 for the rest of the segment: `Obj_SSEntryRing`'s special-stage
+capture, `loc_6173A` (`docs/skdisasm/sonic3k.asm:128292-128304`).
+
+That tail writes `mapping_frame(a1) = 0`, `anim(a1) = $1C` and
+`object_control(a1) = $53` on Player_1, repeating the triple on Player_2 only
+when `Flying_carrying_Sonic_flag` is set, and **never touches the camera**.
+`Camera_X_pos` stops advancing on its own because object_control bit 0 skips
+`Sonic_Modes` (`sonic3k.asm:21973-21977`) so the player stops moving, which means
+`ScrollHoriz` still performs its last step **on the capture frame itself**
+(recorded: 0x1B0A, 0x1B0C, 0x1B0E, 0x1B10 hold, follow offset a constant 0xA0).
+
+`Sonic3kSSEntryRingObjectInstance.enterSpecialStageSequence` instead called
+`camera.setFrozen(true)`, which has no counterpart at `loc_6173A` and dropped
+that last step - the whole of the 2 px `camera_x` deficit - and it never wrote
+`anim`/`mapping_frame`, leaving the player on 0x02/0x96. `AniSonic1C` is
+`dc.b $77,0,$FF`, a single frame 0 held for $78 frames, so mapping frame 0 holds
+for the whole 43-row span with or without object_control bit 1's
+`Animate_Sonic` suppression (`sonic3k.asm:22008-22010`). The explicit
+`mapping_frame` write is still required: the engine's animation step has already
+run for the frame by the time the ring's routine executes, exactly as in ROM.
+
+No constant, tolerance, zone, act, route or frame index was introduced.
+
+### Shared-cause verdict: same object, two different defects (MEASURED)
+
+LBZ and CNZ are **not** the AIZ cause. Both first-diverge on the ring's
+*emerald branch*, not on its capture tail:
+
+- LBZ trace rings go 0x0010 -> 0x0042 at frame 959, CNZ 0x005E -> 0x0090 at 5755:
+  in both, the ROM took `loc_61794` (`sonic3k.asm:128320-128333`), the
+  all-emeralds path that awards **50 rings** and leaves the player running.
+- The branch is `cmpi.b #7,(Chaos_emerald_count).w` plus
+  `SSEntry_CheckLevel` (`sonic3k.asm:128273-128290`, `128454-128462`). The engine
+  has no emeralds at those frames, so it took `loc_6173A` and captured the player.
+- The chaos/super emerald counts are route-carried state and appear nowhere in
+  these fixtures: `grep emerald` over `lbz/aux_state.jsonl.gz` and
+  `metadata.json` returns nothing, and LBZ is `segment_index: 21` of the
+  complete-emeralds run. So this is the closed mid-route cold-start cluster, not
+  a camera defect and not seedable without rule-4 hydration.
+
+The AIZ fix still helps both (LBZ -2659 errors, CNZ -397) because the wrong
+branch's camera freeze was compounding the branch error; the first-error frame
+is unchanged in both, and the first-error *field* moves from `camera_x` to
+`player_animation_id`, which is the honest description of the remaining defect.
+
+Note for future briefs: the brief's premise that LBZ and CNZ are "zone entries
+with a legitimate cold start" is refuted for this field. Emerald count is route
+state; a zone entry does not reset it.
+
+### Blast radius (MEASURED, both trees, same command)
+
+Trace profile:
+
+```bash
+rm -rf target/surefire-reports
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=<task-owned-java-tmpdir>" \
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
+```
+
+- Control `e68177332`: **843 run, 43 failures, 22 errors, 4 skipped**, 65 red classes.
+- With the fix: **843 run, 42 failures, 22 errors, 4 skipped**, **64** red classes.
+- Red-class name diff both ways: exactly one class went green
+  (`TestS3kSonicTailsAizSegmentTraceReplay`), **zero newly red**. Its report is
+  `total_frames 2290, error_count 0` - the same row count as the control, so the
+  green is not comparison starvation.
+- `TestS3kAizCompleteRunTraceReplay` - the same-zone different-route cross-check
+  - is green on both trees, as are the other five standalone complete-runs,
+  `TestS3kAiz/Cnz/MgzTraceReplay`, `TestS3kSpecialStageTraceReplay`,
+  `TestS3kReplayReferenceClosureIntegration`, `TestTraceRunManifest`,
+  `TestS1/S2CompleteEmeraldVisualRun` and `TestS2EhzHalfpipeRoundTripChain`.
+- `TestS2CompleteEmeraldRunChain` is byte-identical to the control on all five
+  axes: `seg7_ehz2` cursor 3977 of 3997, segment 11 at 236 errors first frame
+  3525 `queue.s2_nemesis_plc.busy`, segment 2 absent.
+
+Default (non-trace) suite, same flags without `-Ptrace-replay`: control
+**15136 run, 65 failures, 22 errors, 18 skipped**, 51 red classes; with the fix
+**15136 run, 65 failures, 19 errors, 18 skipped**, 50 red classes. Name diff both
+ways: **zero newly red**, one class differing
+(`TestGameLoopSpecialStageEntryPresentation`, on the known ambient-flake list -
+re-run in isolation it is green on **both** trees). The S3K keep-green set
+(`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`),
+`TestHardwareTimingAuthorityGuard`, `TestCollisionLogic` and both rewind
+coverage guards were also run as a focused batch: 81 tests, 0 failures.
+
+### Next target
+
+`TestS3kSonicTailsLbzSegmentTraceReplay` / `...CnzSegment...` are **not** it:
+their first divergence is route-carried emerald state, which belongs to the
+closed cold-start cluster. The ring's capture tail is now modelled, so any
+future segment whose route reaches a giant ring with fewer than seven chaos
+emeralds should compare cleanly through the capture.
