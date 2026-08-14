@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the production trace-replay path now paces special-stage object passes
+  from the recorded `RunObjects` stream, as the run-chain harness already did.
+  `SS_MainLoop` sets `VintID_S2SS`, waits on it, and only then runs `RunObjects`
+  (`s2.asm:6697-6698, 6721`), so the special-stage loop is paced by 68K pass
+  duration, not one pass per V-blank -- a pass that completes cannot have taken
+  `Vint_Lag`, which runs only while `Vint_routine` is 0 (`s2.asm:483-484`).
+  `TraceSessionLauncher` ran exactly one pass per admitted row and dropped every
+  further pass a slow observation owned, so its queued DMA never reached
+  `ProcessDMAQueue` (`s2.asm:1769`) and the dynamic-art edges for those passes
+  were never published. The pacing construction moves to a shared
+  `SpecialStageRecordedPassPacing` owner both paths call; chain behaviour is
+  unchanged. The S2 production visual run no longer stalls on its first
+  special-stage comparison error and now replays 5200 of special-stage 1's
+  5681 rows.
 - Fix: prepared visual replay now adopts the production title-card state instead
   of rerunning standalone metadata positioning/bootstrap, while S2/S3K level
   assembly retains the ROM `(-$20,+4)` Pos_table prefill through CPU INIT
