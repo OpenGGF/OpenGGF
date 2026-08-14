@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a production hardware submission still pending when a recorded run
+  closes is now recorded as a comparison error on the closing row instead of
+  aborting the whole trace-replay run. This is the mirror of the unmatched
+  recorded-completion case below and is ambiguous for the same reason: in a
+  converged run a leftover submission is a real contract concern, in a diverged
+  run it only says the engine never reached the drain point the ROM reached, so
+  it is a downstream symptom that outranked and hid the physics divergence that
+  caused it. `HardwareTimingService.endRecordedAdmission` now signals that case
+  with `PendingRecordedSubmissionsException` after recorded admission has ended,
+  and `HardwareTimingReplayPort` reports it only for a driver that has opted in
+  by declaring it will record the result; every other driver, and every other
+  recorded-admission failure, still aborts. The release side is unchanged: a
+  reported leftover submission is never admitted, prepared, released or retired,
+  and a driver that opted in but never drained the report cannot install another
+  run.
 - Fix: an unmatched recorded hardware-completion edge is now recorded as a
   comparison error on its own row instead of aborting the whole trace-replay
   run. In a converged run an unmatched edge is a genuine contract violation; in

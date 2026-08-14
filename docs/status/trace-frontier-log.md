@@ -75047,3 +75047,105 @@ route into comparison for the first time.
 Explicitly *not* the next target: cluster F's individual physics defects. They
 are real, but until cluster A is unmasked we do not know how many of them there
 actually are.
+
+## 2026-08-14 - The close-time pending-submission tripwire is demoted to a row error
+
+Isolated worktree outside the repository on `bugfix/ai-demote-pending-submissions`,
+worktree-owned `java.io.tmpdir` through `JAVA_TOOL_OPTIONS`, JDK 21 (`mvn -v` ->
+21.0.11), `target/surefire-reports` and `target/trace-reports` cleared before every
+run, Maven runs serialised.
+
+- **Commit measured at: `c383419c9`.** Both suite runs used the same command
+  (ROM paths passed from the project root):
+
+  ```bash
+  rm -rf target/surefire-reports target/trace-reports
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 \
+    -Dsurefire.runOrder=alphabetical -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=<S1 REV01 ROM> -Dsonic2.rom.path=<S2 REV01 ROM> \
+    -Ds3k.rom.path=<S3K locked-on ROM>
+  ```
+
+- **MEASURED baseline at `c383419c9`: 843 run, 29 failures, 36 errors, 4 skipped,
+  65 red classes** - reproduces the stated baseline exactly. **After the change:
+  843 run, 43 failures, 22 errors, 4 skipped, 65 red classes.** The sorted red-class
+  lists are identical by name in both directions (`comm -23` and `comm -13` both
+  empty), so nothing was starved. Only the failure/error split moved: the 14
+  cluster-A classes turned an abort into a counted comparison failure.
+- Cluster-A membership was re-confirmed from the baseline surefire messages rather
+  than assumed: exactly 14 classes carry
+  `unexpected pending hardware submissions at final run`, and they are the 14
+  named in the cluster map. After the change that message appears in zero classes.
+- Shape of the change, reusing the sibling demotion's shape.
+  `HardwareTimingService.endRecordedAdmission` threw one `IllegalStateException`
+  for two different events. In a converged run a leftover production submission
+  is a real contract concern; in a diverged run it only says the engine never
+  reached the drain point the ROM reached, so it is a downstream symptom that
+  outranks the divergence that caused it. That single path now raises
+  `PendingRecordedSubmissionsException`, thrown **after** recorded admission has
+  already ended, and `HardwareTimingReplayPort.verifyRunComplete` catches it only
+  when the driver has opted in with `reportPendingRecordedSubmissionsAtClose()`.
+  `AbstractTraceReplayTest` opts in because it owns a comparison report, drains at
+  close and records the leftovers as an exact
+  `hardware_timing.pending_submissions` error on the last row it reached.
+- **Left aborting, deliberately.** Everything else in recorded admission: the
+  unserviced-boundary mismatch, the unrecorded-kind rejection, admission outside a
+  recorded run, the suppressed-row boundary rule, the unconsumed-edge checks at
+  segment/prefix end, and `verifyPrefixComplete`'s own separate pending-submission
+  check at a semantic prefix close. Those are structural contract violations or a
+  different close contract, not symptoms of physics divergence. Every driver that
+  does not opt in - the live launcher, `TraceReplayDrive`, the run-chain fixture,
+  the special-stage harness - keeps the original hard failure.
+- Release-side invariant, which is the acceptance test: a reported leftover
+  submission is never admitted, prepared, released or retired. `verifyRunComplete`
+  does not reach `admitReadiness()` on this path at all; the port only copies the
+  handle descriptions. Severity and ordering moved, authority did not. An opted-in
+  driver that never drains the report cannot `install()` another run, so the
+  demotion cannot decay into silence. `TestHardwareTimingAuthorityGuard` (24 tests)
+  is untouched and green.
+- The counts prove nothing was silenced: `Aiz2` reported 1033 hidden errors and now
+  reports 1034 (the 1033 plus the one counted leftover-submission error); `Icz`
+  5196 and now 5197.
+- First error before and after, all 14 gated classes:
+
+  | Class | Before | After |
+  |---|---|---|
+  | `TestS3kSonicTailsAiz2SegmentTraceReplay` | abort: `KOS_DECOMPRESSION_QUEUE#43` pending at close | frame 0 `tails_y` 0x04C4 vs 0x0000 (1034 errors) |
+  | `TestS3kSonicTailsAiz3SegmentTraceReplay` | abort: pending at close | frame 0 `tails_x` 0x0220 vs 0x7F00 (1567) |
+  | `TestS3kSonicTailsAiz4SegmentTraceReplay` | abort: pending at close | frame 0 `tails_x` 0x1998 vs 0x7F00 (1029) |
+  | `TestS3kSonicTailsAiz5SegmentTraceReplay` | abort: pending at close | frame 0 `x_speed` -0x000C vs -0x0006 (2138) |
+  | `TestS3kSonicTailsCnzSegmentTraceReplay` | abort: `KOS_MODULE_QUEUE#245` pending at close | frame 5754 `camera_x` 0x0C34 vs 0x0C37 (6697) |
+  | `TestS3kSonicTailsHcz2SegmentTraceReplay` | abort: pending at close | frame 0 `y_speed` 0x0000 vs 0x000E (3437) |
+  | `TestS3kSonicTailsHcz3SegmentTraceReplay` | abort: pending at close | frame 0 `rings` 117 vs 0 (640) |
+  | `TestS3kSonicTailsHcz4SegmentTraceReplay` | abort: pending at close | frame 0 `rings` 180 vs 0 (447) |
+  | `TestS3kSonicTailsIczSegmentTraceReplay` | abort: `KOS_MODULE_QUEUE#277` pending at close | frame 470 `x_sub` 0xAB00 vs 0x2B00 (5197) |
+  | `TestS3kSonicTailsLbzSegmentTraceReplay` | abort: `KOS_MODULE_QUEUE#320` pending at close | frame 958 `camera_x` 0x0247 vs 0x024A (9833) |
+  | `TestS3kSonicTailsMhz3SegmentTraceReplay` | abort: pending at close | frame 0 `rings` 77 vs 0 (429) |
+  | `TestS3kSonicTailsMhz5SegmentTraceReplay` | abort: pending at close | frame 0 `rings` 96 vs 0 (37) |
+  | `TestS3kSonicTailsMhz7SegmentTraceReplay` | abort: pending at close | frame 0 `camera_y` 0x0360 vs 0x0620 (511) |
+  | `TestS3kSonicTailsMhz8SegmentTraceReplay` | abort: pending at close | frame 0 `camera_y` 0x05E0 vs 0x0620 (434) |
+
+- **Cluster B is unaffected**, as intended: the 9 special-stage classes failing at
+  close with `unmatched recorded hardware completions were never reported` number 9
+  before and 9 after, with unchanged messages. They are a different assertion with
+  no physics evidence behind them and were not touched.
+- What the exposure reveals about the remaining work: 10 of the 14 first-error rows
+  are at frame 0 and are segment-entry state that was never seeded (`rings`,
+  `camera_y`, `tails_x`/`tails_y`, `y_speed`, `x_speed`) - the same phase as the
+  existing clusters C and D, which those 10 now join. The other four (`Cnz` 5754,
+  `Icz` 470, `Lbz` 958, and `Aiz5`'s speed row) are mid-run divergences.
+- `TestS2CompleteEmeraldRunChain` is byte-identical before and after (whole failure
+  message compared, not a prefix): 5 axes, segment 11 = 236 physics comparator
+  errors, no segment 2 axis, comparator cursor 3977 of 3997. The six S3K standalone
+  complete-runs, `TestS3kAiz/Cnz/MgzTraceReplay`, `TestS3kSpecialStageTraceReplay`,
+  `TestS3kReplayReferenceClosureIntegration`, `TestTraceRunManifest`,
+  `TestS2CompleteEmeraldVisualRun`, `TestS1CompleteEmeraldVisualRun`,
+  `TestS2EhzHalfpipeRoundTripChain` and all three S1 chains stay green.
+- Outside the profile: `TestS3kAiz1SkipHeadless`, both `TestSonic3kLevelLoading`
+  classes, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+  `TestPlcFrameLifecycleCoordinator`, `TestCollisionLogic`, both rewind coverage
+  guards and `TestTraceFixtureCompressionGuard` are green.
+  `TestPlcVBlankOrdering.ordinaryLevelServicesPlcBeforeEventsAndObjects` fails
+  identically on both trees when run in isolation (`objects` missing from the
+  service order), so it is pre-existing at this base and unrelated.

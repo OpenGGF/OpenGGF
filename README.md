@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Leftover pending hardware submissions at close are reported, not fatal
+  (`bugfix/ai-demote-pending-submissions`, merged 2026-08-14):** the sibling of the tripwire
+  below, and the same two-events-one-message shape — leftover submissions at close are a
+  genuine contract concern in a converged run, but in a diverged run they are a downstream
+  symptom of the engine never reaching the ROM's submission or drain points. The assertion
+  gated 14 S3K segment classes and hid large physics reports inside each one (Aiz2 concealed
+  1033 errors with its first at frame 0; Icz concealed 5196, first at frame 470). The single
+  final-run path now raises a dedicated exception that the replay port catches **only when the
+  driver has opted in** by owning a comparison report, recording an exact
+  `hardware_timing.pending_submissions` error on the last row the comparison reached — so it
+  can never displace an earlier divergence as the first error. Everything else still aborts,
+  including the prefix-end check, which belongs to a different close contract. Nothing is
+  released, and the demotion cannot become silence: a driver with nowhere to record still gets
+  the original abort, and an opted-in driver that never drains cannot install another run.
+  Error counts confirm nothing was silenced (1033 hidden → 1034 reported; 5196 → 5197). The
+  red-class set is identical by name in both directions.
+
+  **This reshaped the S3K map.** Ten of the fourteen unmasked first errors are at frame 0 and
+  are unseeded segment-entry state, joining the existing frame-0 clusters — which makes
+  segment-bootstrap seeding the largest single S3K cause by a wide margin rather than a
+  nine-class cluster.
+
 - **An unmatched recorded hardware completion is reported, not fatal
   (`bugfix/ai-demote-unmatched-recorded-completion`, merged 2026-08-14):** the replay port
   aborted the whole comparison the first time a recorded completion had no engine-pending

@@ -407,6 +407,11 @@ public abstract class AbstractTraceReplayTest {
             TraceReplaySessionBootstrap.BootstrapResult boot =
                     TraceReplaySessionBootstrap.applyBootstrap(trace, fixture,
                             overridePreTraceOscFrames());
+            // This driver owns a comparison report, so it takes reporting
+            // responsibility for close-time leftover hardware submissions
+            // instead of letting them abort ahead of the divergence that
+            // caused them. Drivers that do not opt in still fail hard.
+            fixture.reportPendingRecordedHardwareSubmissionsAtClose();
             TraceReplayBootstrap.SnapshotReport snapshotReport = boot.snapshotReport();
             TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
             ObjectManager om = GameServices.level().getObjectManager();
@@ -574,6 +579,7 @@ public abstract class AbstractTraceReplayTest {
                 }
                 hardwareTimingReplayClosed = true;
             }
+            recordPendingHardwareSubmissions(fixture, binder);
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
@@ -938,6 +944,21 @@ public abstract class AbstractTraceReplayTest {
      * nothing; only its severity and ordering change, so an earlier physics
      * divergence stays the first reported error.
      */
+    /**
+     * Records production submissions the recorded stream never completed as an
+     * error on the closing row. Nothing was admitted or released; only the
+     * severity and ordering of the complaint change, so an earlier physics
+     * divergence stays the first reported error.
+     */
+    private static void recordPendingHardwareSubmissions(
+            HeadlessTestFixture fixture, TraceBinder binder) {
+        if (fixture == null) {
+            return;
+        }
+        binder.comparePendingRecordedHardwareSubmissions(
+                fixture.drainPendingRecordedHardwareSubmissions());
+    }
+
     private static void recordUnmatchedHardwareCompletions(
             HeadlessTestFixture fixture, TraceBinder binder, int frame) {
         if (fixture == null) {

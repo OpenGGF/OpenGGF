@@ -544,14 +544,19 @@ public final class HardwareTimingService
         public void endRecordedAdmission() {
             requireRecordedAdmission();
             List<PendingRecordedSubmission> pending = recordedPendingSubmissions();
-            if (!pending.isEmpty()) {
-                throw new IllegalStateException(
-                        "unexpected pending hardware submissions at final run: " + pending);
-            }
+            // Recorded admission ends either way. A leftover submission is
+            // described, never admitted, prepared, released or retired, so the
+            // run is genuinely over whether or not the caller demotes the
+            // complaint into a comparison error.
             admissionPolicies.clear();
             admissionPolicies.putAll(liveAdmissionPolicies());
             recordedAdmissionActive = false;
             lastServicedBoundary = null;
+            if (!pending.isEmpty()) {
+                throw new PendingRecordedSubmissionsException(
+                        "unexpected pending hardware submissions at final run: " + pending,
+                        pending);
+            }
         }
     }
 

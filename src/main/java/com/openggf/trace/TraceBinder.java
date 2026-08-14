@@ -489,6 +489,33 @@ public class TraceBinder {
     }
 
     /**
+     * Merges production submissions the recorded stream never completed into a
+     * row as an exact comparison error. The submissions were never admitted or
+     * released; this records that the run closed holding them instead of
+     * aborting the comparison.
+     */
+    public void comparePendingRecordedHardwareSubmissions(List<String> pending) {
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+        // The complaint belongs to the closing row, which is the last row this
+        // comparison actually reached, so it can never displace an earlier
+        // divergence as the first reported error.
+        int frame = comparisonsByFrame.keySet().stream()
+                .mapToInt(Integer::intValue).max().orElse(0);
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        String name = "hardware_timing.pending_submissions";
+        fields.put(name, compareObjectField(name, "", String.join(" | ", pending)));
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields,
+                existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
      * Merges exact player dynamic-art lifecycle fields into this row.
      *
      * <p>A DPLC heartbeat may be the only compared surface on lag and

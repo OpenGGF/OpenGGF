@@ -84,6 +84,58 @@ class TestHardwareTimingReplayPort {
     }
 
     @Test
+    void leftoverSubmissionAtCloseStillAbortsWithoutAnOptedInReporter() {
+        ReplayHarness harness = harness(false, 0, 40);
+        HardwareTimingReplayPort port = port(
+                harness.authority, HardwareTimingSchedule.empty());
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class, port::verifyRunComplete);
+
+        assertTrue(error.getMessage().contains(
+                        "unexpected pending hardware submissions at final run"),
+                error::getMessage);
+        assertFalse(harness.service.isReady(harness.handle),
+                "an aborted close releases nothing");
+    }
+
+    @Test
+    void leftoverSubmissionAtCloseIsReportedExactlyOnceAndReleasesNothing() {
+        ReplayHarness harness = harness(false, 0, 41);
+        HardwareTimingReplayPort port = port(
+                harness.authority, HardwareTimingSchedule.empty());
+        port.reportPendingRecordedSubmissionsAtClose();
+
+        port.verifyRunComplete();
+
+        assertFalse(harness.service.isReady(harness.handle),
+                "a reported leftover submission is never admitted or released");
+        List<String> reported = port.drainPendingRecordedSubmissions();
+        assertEquals(1, reported.size(), reported::toString);
+        assertTrue(reported.get(0).contains(describe(harness.handle)),
+                () -> reported.get(0));
+        assertTrue(port.drainPendingRecordedSubmissions().isEmpty(),
+                "draining reports a leftover submission exactly once");
+    }
+
+    @Test
+    void undrainedLeftoverSubmissionStillFailsTheNextInstall() {
+        ReplayHarness harness = harness(false, 0, 42);
+        HardwareTimingReplayPort port = port(
+                harness.authority, HardwareTimingSchedule.empty());
+        port.reportPendingRecordedSubmissionsAtClose();
+        port.verifyRunComplete();
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> port.install(HardwareTimingSchedule.empty()));
+
+        assertTrue(error.getMessage().contains(
+                        "pending recorded hardware submissions were never reported"),
+                error::getMessage);
+    }
+
+    @Test
     void v5ScheduleRejectsDirectEdgesOutsidePreMainLoop() {
         for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
             HardwareCompletionEdge edge = new HardwareCompletionEdge(
