@@ -61,27 +61,34 @@ delivered-tree checks on every branch push.
 
 ## Managed agent scratch storage
 
-Set up durable agent scratch storage once from the canonical checkout, then verify the
-host configuration:
+Bootstrap durable agent scratch storage from a source checkout, then verify the
+user-wide installed command:
 
 ```bash
 tools/agent-scratch install
-tools/agent-scratch verify
+agent-scratch verify
 ```
 
-Installation selects the disk-backed `$OGGF_SCRATCH_ROOT`, configures Claude and Codex
-to use its managed children, and installs a daily user cleanup timer. Re-run `install` if
-the canonical checkout moves. `verify` checks the managed configuration and systemd units;
-it reports the Claude runtime check as `unverified` when Claude is unavailable or cannot
-run in the current session, which is not a successful Claude verification.
+The tracked `tools/agent-scratch` is bootstrap/source only. `install` copies it to the stable
+user-wide `$HOME/.local/bin/agent-scratch`, selects the disk-backed
+`$AGENT_SCRATCH_ROOT`, configures Claude and Codex to use managed children, and installs a
+daily user cleanup timer whose `ExecStart` invokes that installed copy. Ensure
+`$HOME/.local/bin` is on `PATH`, and re-run `tools/agent-scratch install` after helper-source
+updates. Neither routine commands nor the cleanup service may depend on a checkout or
+worktree; installation also retires legacy OpenGGF-named generated units. New configuration
+uses `AGENT_SCRATCH_ROOT`; a matching legacy `OGGF_SCRATCH_ROOT` is accepted only as a
+compatibility alias. `verify` checks the managed
+configuration and systemd units; it reports the Claude runtime check as `unverified` when
+Claude is unavailable or cannot run in the current session, which is not a successful Claude
+verification.
 
 Create durable task output with the helper, rather than a repository-local scratch folder
 or `/tmp`. The final output line from `new` is the unique task directory under
-`$OGGF_SCRATCH_ROOT/openggf/tasks`:
+`$AGENT_SCRATCH_ROOT/tasks`:
 
 ```bash
-tools/agent-scratch status
-TASK_DIR="$(tools/agent-scratch new trace-investigation | tail -n 1)"
+agent-scratch status
+TASK_DIR="$(agent-scratch new trace-investigation | tail -n 1)"
 ```
 
 Run `status` before large captures or downloads: it reports free bytes, inodes, current
@@ -96,7 +103,7 @@ tree and any task with an unexpired keep marker. Keep a task only for a bounded 
 window outside the managed root:
 
 ```bash
-tools/agent-scratch keep "$TASK_DIR" --until YYYY-MM-DD
+agent-scratch keep "$TASK_DIR" --until YYYY-MM-DD
 ```
 
 Existing Claude/Codex sessions and old output are audited rather than migrated in place.
@@ -109,21 +116,22 @@ The scoped audit must include POSIX and Windows temporary-root forms, ignored fi
 the ignored scratch-location rules:
 
 ```bash
-rg --no-ignore -n -i '/tmp|c:\\tmp|%temp%|%tmp%' .agents/skills .claude/skills docs/agent-workflow tools .gitignore
+rg --no-ignore -n -i '/tmp|c:\\tmp|%temp%|%tmp%' AGENTS.md CLAUDE.md .agents/skills .claude/skills docs/agent-workflow docs/architecture/designs/2026-08-14-agent-scratch-storage-design.md docs/architecture/plans/2026-08-14-agent-scratch-storage-plan.md tools .gitignore
 rg -n -i 'trace_output|tmp' .gitignore
 ```
 
 Classify each match before accepting it. Agent-workflow and headless-tool documentation are
 policy/safety text; the mirrored trace skills and multi-agent runbook retain only
-Windows-JVM warnings that `/tmp` is unsafe; `tools/agent-scratch` and its tests
-intentionally reject or exercise `/tmp`/tmpfs roots; and the BizHawk headless test/build
-recipes use a private `/tmp` only as an OS-level sandbox mount. The `.gitignore`
-`/tmp_*.asm` entry is an ignored assembler-artifact glob, not an output destination. The
-ignored `tools/bizhawk/trace_output*` location is a legacy Lua-recorder fallback, also not
-a `/tmp` destination. `%TEMP%`/`%TMP%` matches are acceptable only for launcher-created,
-short-lived wrapper/config files. New regeneration and probe recipes use a helper-created
-task directory (or an explicit managed output environment variable); no copyable
-durable-output command may target `/tmp`, `C:\tmp`, `%TEMP%`, or `%TMP%`.
+Windows-JVM warnings that `/tmp` is unsafe; the bootstrap/source helper
+`tools/agent-scratch` and its tests intentionally reject or exercise `/tmp`/tmpfs roots; and
+the BizHawk headless test/build recipes use a private `/tmp` only as an OS-level sandbox
+mount. The `.gitignore` `/tmp_*.asm` entry is an ignored assembler-artifact glob, not an
+output destination. The ignored `tools/bizhawk/trace_output*` location is a legacy
+Lua-recorder fallback, also not a `/tmp` destination. `%TEMP%`/`%TMP%` matches are
+acceptable only for launcher-created, short-lived wrapper/config files. New regeneration and
+probe recipes use an installed `agent-scratch` task directory (or an explicit managed output
+environment variable); no copyable durable-output command may target `/tmp`, `C:\tmp`,
+`%TEMP%`, or `%TMP%`.
 
 ## Start here
 

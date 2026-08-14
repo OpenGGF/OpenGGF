@@ -5,11 +5,13 @@ The suite never asks tempfile to choose its default directory: a forgotten
 default would itself defeat this helper's purpose on hosts with a tmpfs /tmp.
 """
 
+import argparse
 import contextlib
 import datetime as dt
 import importlib.machinery
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import shutil
@@ -66,7 +68,7 @@ class AgentScratchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(dir=CACHE)
         self.root = pathlib.Path(self.temp.name) / "managed"
-        self.env = {"OGGF_SCRATCH_ROOT": str(self.root)}
+        self.env = {"AGENT_SCRATCH_ROOT": str(self.root)}
 
     def tearDown(self):
         self.temp.cleanup()
@@ -89,11 +91,14 @@ class AgentScratchTests(unittest.TestCase):
     def test_root_rejections_and_layout(self):
         for value in ("relative", "/tmp/nope", "/ok\nno"):
             with self.assertRaises(self.helper.ScratchError):
-                self.helper._safe_root_path({"OGGF_SCRATCH_ROOT": value})
+                self.helper._safe_root_path({"AGENT_SCRATCH_ROOT": value})
+        with self.assertRaises(self.helper.ScratchError):
+            self.helper._safe_root_path({"AGENT_SCRATCH_ROOT": "/generic", "OGGF_SCRATCH_ROOT": "/legacy"})
+        self.assertEqual(pathlib.Path("/legacy"), self.helper._safe_root_path({"OGGF_SCRATCH_ROOT": "/legacy"}))
         root = self.helper.ensure_root(self.env)
         self.assertEqual(self.root, root)
         self.assertEqual(0o700, stat.S_IMODE(root.stat().st_mode))
-        for child in ("claude", "codex/tmp", "openggf/tasks", "quarantine"):
+        for child in ("claude", "codex/tmp", "tasks", "quarantine"):
             self.assertTrue((root / child).is_dir())
 
     def test_static_symlink_root_is_rejected(self):
@@ -102,7 +107,7 @@ class AgentScratchTests(unittest.TestCase):
         link = pathlib.Path(self.temp.name) / "link"
         link.symlink_to(outside, target_is_directory=True)
         with self.assertRaises(self.helper.ScratchError):
-            self.helper.ensure_root({"OGGF_SCRATCH_ROOT": str(link)})
+            self.helper.ensure_root({"AGENT_SCRATCH_ROOT": str(link)})
 
     def test_new_rejects_traversal_and_creates_private_unique_directories(self):
         for label in ("../escape", "a/b", ".", "bad\x00name"):
@@ -116,7 +121,7 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_symlink_swap_race_does_not_remove_outside_sentinel(self):
         root = self.helper.ensure_root(self.env)
-        tasks = root / "openggf/tasks"
+        tasks = root / "tasks"
         old = tasks / "old"
         old.mkdir()
         (old / "inside").write_text("managed")
@@ -152,7 +157,7 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_same_parent_inode_replacement_is_not_staged_for_removal(self):
         root = self.helper.ensure_root(self.env)
-        tasks = root / "openggf/tasks"
+        tasks = root / "tasks"
         original = tasks / "candidate"
         original.mkdir()
         expected = original.stat()
@@ -170,7 +175,7 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_final_directory_replacement_is_not_removed(self):
         root = self.helper.ensure_root(self.env)
-        tasks = root / "openggf/tasks"
+        tasks = root / "tasks"
         candidate = tasks / "candidate"
         candidate.mkdir()
         expected = candidate.stat()
@@ -199,7 +204,7 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_status_keep_and_prune_are_bounded_and_safe(self):
         root = self.helper.ensure_root(self.env)
-        task = root / "openggf/tasks/old-task"
+        task = root / "tasks/old-task"
         task.mkdir()
         (task / "payload").write_bytes(b"x" * 13)
         old = time.time() - 9 * 86400
@@ -219,18 +224,18 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_keep_accepts_only_direct_prune_candidates(self):
         root = self.helper.ensure_root(self.env)
-        task = root / "openggf/tasks/direct"
+        task = root / "tasks/direct"
         task.mkdir()
         nested = task / "nested"
         nested.mkdir()
         until = (dt.date.today() + dt.timedelta(days=1)).isoformat()
-        self.assertEqual(2, self.run_helper(["keep", str(root / "openggf/tasks"), "--until", until])[0])
+        self.assertEqual(2, self.run_helper(["keep", str(root / "tasks"), "--until", until])[0])
         self.assertEqual(2, self.run_helper(["keep", str(nested), "--until", until])[0])
         self.assertEqual(0, self.run_helper(["keep", str(task), "--until", until])[0])
 
     def test_marker_rejects_non_regular_files_without_blocking(self):
         root = self.helper.ensure_root(self.env)
-        task = root / "openggf/tasks/marker"
+        task = root / "tasks/marker"
         task.mkdir()
         marker = task / self.helper.KEEP_FILE
         os.mkfifo(marker)
@@ -254,6 +259,26 @@ class AgentScratchTests(unittest.TestCase):
         parsed = tomllib.loads(first)
         self.assertEqual("yes", parsed["shell_environment_policy"]["set"]["OTHER"])
         self.assertEqual(["/existing", str(root / "codex")], parsed["sandbox_workspace_write"]["writable_roots"])
+
+    def test_claude_editor_sets_shell_temp_vars_idempotently_and_rejects_conflicts(self):
+        root = self.helper.ensure_root(self.env)
+        settings = pathlib.Path(self.temp.name) / "settings.json"
+        settings.write_text('{"env": {"OTHER": "kept"}}\n')
+        self.helper._update_claude(settings, root)
+        first = settings.read_text()
+        self.helper._update_claude(settings, root)
+        self.assertEqual(first, settings.read_text())
+        values = json.loads(first)["env"]
+        self.assertEqual("kept", values["OTHER"])
+        self.assertEqual(str(root), values["AGENT_SCRATCH_ROOT"])
+        for key in ("CLAUDE_CODE_TMPDIR", "TMPDIR", "TMP", "TEMP"):
+            self.assertEqual(str(root / "claude"), values[key])
+        conflict = pathlib.Path(self.temp.name) / "conflict-settings.json"
+        original = '{"env": {"TMP": "/wrong"}}\n'
+        conflict.write_text(original)
+        with self.assertRaises(self.helper.ScratchError):
+            self.helper._update_claude(conflict, root)
+        self.assertEqual(original, conflict.read_text())
 
     def test_toml_editor_preserves_hash_inside_quoted_managed_path(self):
         root = pathlib.Path(self.temp.name) / "managed#root"
@@ -306,12 +331,187 @@ class AgentScratchTests(unittest.TestCase):
         home = pathlib.Path(self.temp.name) / "home with space"
         with mock.patch.object(self.helper.pathlib.Path, "home", return_value=home):
             _, service, _ = self.helper._unit_files(self.root)
-        self.assertIn('EnvironmentFile="' + str(home).replace(" ", "\\x20") + '/.config/oggf-agent-scratch/environment"', service)
+        self.assertIn('EnvironmentFile=' + str(home).replace(" ", "\\x20") + '/.config/agent-scratch/environment', service)
+        self.assertNotIn('EnvironmentFile="', service)
         self.assertIn("\u00a0", self.helper.systemd_exec_quote("a\u00a0b"))
+
+    def test_owned_legacy_units_are_disabled_and_removed_but_legacy_environment_is_inert(self):
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        legacy_helper = home / "checkout" / "tools" / "agent-scratch"
+        legacy_helper.parent.mkdir(parents=True)
+        legacy_helper.write_text("#!/bin/sh\n")
+        environment_text, service, timer = self.helper._legacy_unit_files(root, legacy_helper, home)
+        environment_path, service_path, timer_path = self.helper._legacy_unit_paths(home)
+        environment_path.parent.mkdir(parents=True)
+        service_path.parent.mkdir(parents=True, exist_ok=True)
+        environment_path.write_text(environment_text)
+        service_path.write_text(service)
+        timer_path.write_text(timer)
+        calls = []
+
+        def systemctl(command, **kwargs):
+            calls.append(command)
+            if command[-2:] == ["is-enabled", self.helper.LEGACY_TIMER_UNIT]:
+                return type("Run", (), {"returncode": 1, "stdout": "disabled\n", "stderr": ""})()
+            if command[-2:] == ["is-active", self.helper.LEGACY_TIMER_UNIT]:
+                return type("Run", (), {"returncode": 3, "stdout": "inactive\n", "stderr": ""})()
+            return type("Run", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=systemctl):
+            self.assertEqual("retired", self.helper._retire_legacy_units(home, root))
+        self.assertIn(["systemctl", "--user", "disable", "--now", self.helper.LEGACY_TIMER_UNIT], calls)
+        self.assertFalse(service_path.exists())
+        self.assertFalse(timer_path.exists())
+        self.assertTrue(environment_path.exists())
+
+    def test_legacy_timer_verification_rejects_an_active_or_enabled_timer(self):
+        active = type("Run", (), {"returncode": 0, "stdout": "enabled\n", "stderr": ""})()
+        with mock.patch.object(self.helper.subprocess, "run", return_value=active):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_legacy_timer()
+
+    def test_unowned_legacy_units_fail_install_without_disabling_or_writing(self):
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        home.mkdir()
+        legacy_helper = home / "checkout" / "tools" / "agent-scratch"
+        legacy_helper.parent.mkdir(parents=True)
+        legacy_helper.write_text("#!/bin/sh\n")
+        environment_text, service, timer = self.helper._legacy_unit_files(root, legacy_helper, home)
+        environment_path, service_path, timer_path = self.helper._legacy_unit_paths(home)
+        environment_path.parent.mkdir(parents=True)
+        service_path.parent.mkdir(parents=True, exist_ok=True)
+        environment_path.write_text(environment_text)
+        altered_service = service + "# user-managed alteration\n"
+        service_path.write_text(altered_service)
+        timer_path.write_text(timer)
+        calls = []
+
+        def unexpected_systemd(command, **kwargs):
+            calls.append(command)
+            raise AssertionError(f"unexpected systemctl mutation: {command}")
+
+        with environment(**self.env), mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_timer_state", return_value="active"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=unexpected_systemd), \
+             self.assertRaisesRegex(self.helper.ScratchError, "manual review"):
+            self.helper.cmd_install(argparse.Namespace())
+        self.assertEqual([], calls)
+        self.assertEqual(altered_service, service_path.read_text())
+        self.assertEqual(timer, timer_path.read_text())
+        self.assertFalse((home / ".local" / "bin" / "agent-scratch").exists())
+        self.assertFalse((home / ".config" / "agent-scratch" / "environment").exists())
+
+    def test_systemd_analyzer_accepts_escaped_absolute_environment_file_path(self):
+        if not shutil.which("systemd-analyze"):
+            self.skipTest("systemd-analyze is unavailable")
+        home = pathlib.Path(self.temp.name) / "home with space"
+        unit_dir = pathlib.Path(self.temp.name) / "units"
+        unit_dir.mkdir()
+        with mock.patch.object(self.helper.pathlib.Path, "home", return_value=home):
+            environment, service, timer = self.helper._unit_files(self.root)
+        helper = self.helper._installed_helper_path(home)
+        helper.parent.mkdir(parents=True)
+        helper.write_text("#!/bin/sh\nexit 0\n")
+        helper.chmod(0o755)
+        environment_path = home / ".config" / "agent-scratch" / "environment"
+        environment_path.parent.mkdir(parents=True)
+        environment_path.write_text(environment)
+        timer = timer.replace("agent-scratch-prune.service", "test.service")
+        service_path = unit_dir / "test.service"
+        timer_path = unit_dir / "test.timer"
+        service_path.write_text(service)
+        timer_path.write_text(timer)
+        analyzer_env = {**os.environ, "HOME": str(self.temp.name), "XDG_CONFIG_HOME": str(pathlib.Path(self.temp.name) / "empty-config")}
+        result = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], env=analyzer_env, text=True, capture_output=True, check=False)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertNotIn("EnvironmentFile= path is not absolute", result.stderr)
+
+    def test_install_stable_helper_is_atomic_executable_and_used_by_service(self):
+        home = pathlib.Path(self.temp.name) / "user home"
+        source = pathlib.Path(self.temp.name) / "source-helper"
+        source.write_text("#!/usr/bin/env python3\nprint('new helper')\n")
+        source.chmod(0o755)
+        target = self.helper._installed_helper_path(home)
+        target.parent.mkdir(parents=True)
+        target.write_text("old helper\n")
+        target.chmod(0o755)
+        installed = self.helper._install_stable_helper(source, home)
+        self.assertEqual(target, installed)
+        self.assertFalse(installed.is_symlink())
+        self.assertEqual(source.read_bytes(), installed.read_bytes())
+        self.assertEqual(0o755, stat.S_IMODE(installed.stat().st_mode))
+        # A pre-existing shared user bin directory stays at its safe mode;
+        # installation must not tighten permissions on unrelated tools.
+        self.assertEqual(0o755, stat.S_IMODE(installed.parent.stat().st_mode))
+        _, service, _ = self.helper._unit_files(self.root, installed)
+        self.assertIn("ExecStart=" + self.helper.systemd_exec_quote(str(installed)) + " prune", service)
+        self.assertNotIn(str(self.helper.repo_root()), service)
+        self.assertEqual([], list(installed.parent.glob(".agent-scratch.*")))
+
+    def test_install_stable_helper_retries_short_writes_and_preserves_existing_safe_bin_mode(self):
+        home = pathlib.Path(self.temp.name) / "home"
+        source = pathlib.Path(self.temp.name) / "source-helper"
+        payload = b"#!/bin/sh\n" + b"x" * 65536
+        source.write_bytes(payload)
+        user_bin = home / ".local" / "bin"
+        user_bin.mkdir(parents=True)
+        user_bin.chmod(0o755)
+        write = os.write
+
+        def short_write(fd, data):
+            return write(fd, data[:7]) if len(data) > 7 else write(fd, data)
+
+        with mock.patch.object(self.helper.os, "write", side_effect=short_write):
+            installed = self.helper._install_stable_helper(source, home)
+        self.assertEqual(payload, installed.read_bytes())
+        self.assertEqual(0o755, stat.S_IMODE(user_bin.stat().st_mode))
+
+    def test_install_stable_helper_rejects_in_place_source_mutation_without_replacing_target(self):
+        home = pathlib.Path(self.temp.name) / "home"
+        source = pathlib.Path(self.temp.name) / "source-helper"
+        source.write_bytes(b"a" * 65536)
+        target = self.helper._installed_helper_path(home)
+        target.parent.mkdir(parents=True)
+        target.write_text("old helper\n")
+        read = os.read
+        changed = False
+
+        def mutate_after_read(fd, size):
+            nonlocal changed
+            data = read(fd, size)
+            if data and not changed:
+                changed = True
+                with source.open("r+b") as mutate:
+                    mutate.seek(0)
+                    mutate.write(b"b")
+                    mutate.flush()
+                    os.fsync(mutate.fileno())
+            return data
+
+        with mock.patch.object(self.helper.os, "read", side_effect=mutate_after_read):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._install_stable_helper(source, home)
+        self.assertEqual(b"old helper\n", target.read_bytes())
+
+    def test_install_rejected_config_leaves_existing_stable_helper_unchanged(self):
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        target = self.helper._installed_helper_path(home)
+        target.parent.mkdir(parents=True)
+        target.write_text("old helper\n")
+        codex = home / ".codex" / "config.toml"
+        codex.parent.mkdir(parents=True)
+        codex.write_text("shell_environment_policy.set = { TMPDIR = \"/wrong\" }\n")
+        with environment(**self.env), mock.patch.object(self.helper.pathlib.Path, "home", return_value=home):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper.cmd_install(argparse.Namespace())
+        self.assertEqual(b"old helper\n", target.read_bytes())
 
     def test_environment_file_encoder_round_trips_significant_root_characters(self):
         raw = str(pathlib.Path(self.temp.name) / 'root # "quoted" \\ trailing ')
-        self.assertEqual(pathlib.Path(raw), self.helper.ensure_root({"OGGF_SCRATCH_ROOT": raw}))
+        self.assertEqual(pathlib.Path(raw), self.helper.ensure_root({"AGENT_SCRATCH_ROOT": raw}))
         encoded = self.helper.systemd_environment_value_encode(raw)
         self.assertEqual(raw, self.helper.systemd_environment_value_decode(encoded))
         text = self.helper._environment_file_text(pathlib.Path(raw))
@@ -353,6 +553,28 @@ class AgentScratchTests(unittest.TestCase):
         with mock.patch.object(self.helper.subprocess, "run", return_value=type("Run", (), {"returncode": 1, "stderr": "bad unit", "stdout": ""})()):
             with self.assertRaises(self.helper.ScratchError):
                 self.helper._verify_unit_syntax(service, timer)
+        with mock.patch.object(self.helper.subprocess, "run", return_value=type("Run", (), {"returncode": 0, "stderr": "warning: ignored directive", "stdout": ""})()):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_unit_syntax(service, timer)
+
+    def test_unit_syntax_verification_isolated_from_unrelated_user_units(self):
+        unit_dir = pathlib.Path(self.temp.name) / "units"
+        unit_dir.mkdir()
+        service = unit_dir / "service"
+        timer = unit_dir / "timer"
+        service.write_text("[Service]\nExecStart=/bin/true\n")
+        timer.write_text("[Timer]\nOnCalendar=daily\n")
+        captured = {}
+
+        def analyzer(command, **kwargs):
+            captured.update(kwargs)
+            return type("Run", (), {"returncode": 0, "stderr": "", "stdout": ""})()
+
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=analyzer):
+            self.assertEqual("verified", self.helper._verify_unit_syntax(service, timer))
+        self.assertIn("env", captured)
+        self.assertNotEqual(os.environ.get("HOME"), captured["env"]["HOME"])
+        self.assertNotEqual(os.environ.get("XDG_CONFIG_HOME"), captured["env"]["XDG_CONFIG_HOME"])
 
     def test_verify_timer_requires_enabled_state_and_next_trigger(self):
         enabled = type("Run", (), {"returncode": 0, "stdout": "enabled\n", "stderr": ""})()
@@ -380,12 +602,34 @@ class AgentScratchTests(unittest.TestCase):
             with self.assertRaises(self.helper.ScratchError):
                 self.helper._verify_claude_tmpdir(root)
 
+    def test_claude_probe_uses_fresh_allowed_bash_and_exact_stdout(self):
+        root = self.helper.ensure_root(self.env)
+        run = type("Run", (), {"returncode": 0, "stdout": str(root / "claude") + "\n", "stderr": ""})()
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", return_value=run) as invoke:
+            self.assertEqual("verified", self.helper._verify_claude_tmpdir(root))
+        command = invoke.call_args.args[0]
+        self.assertIn("--allowedTools", command)
+        self.assertEqual("Bash(printf *)", command[command.index("--allowedTools") + 1])
+        self.assertIn("--permission-mode", command)
+        self.assertEqual("auto", command[command.index("--permission-mode") + 1])
+        self.assertNotIn("bypassPermissions", command)
+        self.assertIn("--no-session-persistence", command)
+        prompt = command[-1]
+        self.assertIn("printf '%s' \"${TMPDIR-UNSET}\"", prompt)
+        self.assertIn("exactly the command's stdout", prompt)
+        prose = type("Run", (), {"returncode": 0, "stdout": f"`{root / 'claude'}`\n", "stderr": ""})()
+        with mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", return_value=prose):
+            with self.assertRaises(self.helper.ScratchError):
+                self.helper._verify_claude_tmpdir(root)
+
     def test_path_does_not_touch_unrelated_sentinel(self):
         sentinel = pathlib.Path(self.temp.name) / "sentinel"
         sentinel.write_text("safe")
         status, output, error = self.run_helper(["path", "tasks"])
         self.assertEqual(0, status, error)
-        self.assertTrue(output.strip().endswith("/openggf/tasks"))
+        self.assertTrue(output.strip().endswith("/tasks"))
         self.assertEqual("safe", sentinel.read_text())
 
 

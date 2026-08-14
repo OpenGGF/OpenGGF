@@ -11,6 +11,7 @@ import ctypes
 import datetime as dt
 import errno
 import fcntl
+import hashlib
 import json
 import os
 import pathlib
@@ -30,8 +31,12 @@ KEEP_FILE = ".oggf-agent-scratch-keep"
 KEEP_PREFIX = "OGGF_AGENT_SCRATCH_KEEP_UNTIL="
 MODE = 0o700
 AREAS = {"claude": ("claude", 30), "codex": ("codex", "tmp", 30),
-         "tasks": ("openggf", "tasks", 7), "quarantine": ("quarantine", 14)}
+         "tasks": ("tasks", 7), "quarantine": ("quarantine", 14)}
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+SERVICE_UNIT = "agent-scratch-prune.service"
+TIMER_UNIT = "agent-scratch-prune.timer"
+LEGACY_SERVICE_UNIT = "openggf-agent-scratch-prune.service"
+LEGACY_TIMER_UNIT = "openggf-agent-scratch-prune.timer"
 
 
 class ScratchError(RuntimeError):
@@ -71,9 +76,13 @@ def filesystem_type(path: pathlib.Path, mountinfo: str | None = None) -> str:
 
 def _root_text(env: dict[str, str] | None = None) -> str:
     env = os.environ if env is None else env
-    value = env.get("OGGF_SCRATCH_ROOT") or str(pathlib.Path.home() / "scratch" / "agent-tmp")
+    generic = env.get("AGENT_SCRATCH_ROOT")
+    legacy = env.get("OGGF_SCRATCH_ROOT")
+    if generic and legacy and generic != legacy:
+        raise ScratchError("AGENT_SCRATCH_ROOT conflicts with legacy OGGF_SCRATCH_ROOT")
+    value = generic or legacy or str(pathlib.Path.home() / "scratch" / "agent-tmp")
     if not value or CONTROL.search(value) or not os.path.isabs(value):
-        raise ScratchError("OGGF_SCRATCH_ROOT must be an absolute path without control characters")
+        raise ScratchError("AGENT_SCRATCH_ROOT must be an absolute path without control characters")
     return os.path.normpath(value)
 
 
@@ -103,6 +112,16 @@ def _mkdir_component(parent_fd: int, name: str) -> int:
     return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
 
 
+def _write_all(fd: int, data: bytes) -> None:
+    """Handle short POSIX writes instead of silently truncating managed data."""
+    offset = 0
+    while offset < len(data):
+        written = os.write(fd, data[offset:])
+        if written <= 0:
+            raise ScratchError("short write while updating managed data")
+        offset += written
+
+
 def ensure_root(env: dict[str, str] | None = None) -> pathlib.Path:
     root = _safe_root_path(env)
     # Creating with pathlib would allow a race through an untrusted component.
@@ -120,7 +139,7 @@ def ensure_root(env: dict[str, str] | None = None) -> pathlib.Path:
     if filesystem_type(root) in {"tmpfs", "ramfs"}:
         raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
     with open_root(root) as fd:
-        for parts in (("claude",), ("codex",), ("codex", "tmp"), ("openggf",), ("openggf", "tasks"), ("quarantine",)):
+        for parts in (("claude",), ("codex",), ("codex", "tmp"), ("tasks",), ("quarantine",)):
             current = os.dup(fd)
             try:
                 for part in parts:
@@ -195,7 +214,7 @@ def area_path(root: pathlib.Path, kind: str) -> pathlib.Path:
 def cmd_new(args: argparse.Namespace) -> int:
     label = validate_label(args.label)
     root = ensure_root()
-    with open_root(root) as fd, root_lock(fd), child_fd(fd, ("openggf", "tasks"), True) as tasks:
+    with open_root(root) as fd, root_lock(fd), child_fd(fd, ("tasks",), True) as tasks:
         while True:
             stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             name = f"{label}-{stamp}-{os.getpid()}-{random.SystemRandom().randrange(1 << 32):08x}"
@@ -205,7 +224,7 @@ def cmd_new(args: argparse.Namespace) -> int:
             except FileExistsError:
                 continue
     print(root)
-    print(root / "openggf" / "tasks" / name)
+    print(root / "tasks" / name)
     return 0
 
 
@@ -215,7 +234,7 @@ def cmd_path(args: argparse.Namespace) -> int:
         raise ScratchError(f"unknown path kind: {args.kind}")
     root = ensure_root()
     paths = {"claude": root / "claude", "codex": root / "codex", "codex-tmp": root / "codex" / "tmp",
-             "tasks": root / "openggf" / "tasks", "quarantine": root / "quarantine"}
+             "tasks": root / "tasks", "quarantine": root / "quarantine"}
     print(paths[args.kind])
     return 0
 
@@ -291,7 +310,7 @@ def cmd_keep(args: argparse.Namespace) -> int:
             marker = (KEEP_PREFIX + expiry.isoformat() + "\n").encode("ascii")
             out = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, MODE, dir_fd=directory)
             try:
-                os.write(out, marker)
+                _write_all(out, marker)
                 os.fsync(out)
             finally:
                 os.close(out)
@@ -334,7 +353,7 @@ def _active(name: str) -> str:
 
 def _unit_error() -> str | None:
     try:
-        run = subprocess.run(["systemctl", "--user", "show", "openggf-agent-scratch-prune.service", "-p", "Result", "-p", "ExecMainStatus"], text=True, capture_output=True, check=False)
+        run = subprocess.run(["systemctl", "--user", "show", SERVICE_UNIT, "-p", "Result", "-p", "ExecMainStatus"], text=True, capture_output=True, check=False)
     except OSError:
         return None
     values = dict(line.split("=", 1) for line in run.stdout.splitlines() if "=" in line)
@@ -549,6 +568,98 @@ def _require_regular(path: pathlib.Path, *, missing_ok: bool = True) -> None:
         raise ScratchError(f"refusing unexpected non-regular target: {path}")
 
 
+def _installed_helper_path(home: pathlib.Path | None = None) -> pathlib.Path:
+    return (pathlib.Path.home() if home is None else home) / ".local" / "bin" / "agent-scratch"
+
+
+def _ensure_private_user_bin(home: pathlib.Path) -> pathlib.Path:
+    local = home / ".local"
+    if not home.is_dir():
+        raise ScratchError(f"user home directory does not exist: {home}")
+    try:
+        os.mkdir(local, MODE)
+        local_created = True
+    except FileExistsError:
+        local_created = False
+    local_info = local.lstat()
+    if (not stat.S_ISDIR(local_info.st_mode) or stat.S_ISLNK(local_info.st_mode)
+            or local_info.st_uid != os.getuid() or (stat.S_IMODE(local_info.st_mode) & 0o022)):
+        raise ScratchError(f"unsafe user local directory: {local}")
+    if local_created:
+        os.chmod(local, MODE)
+    user_bin = local / "bin"
+    try:
+        os.mkdir(user_bin, MODE)
+        bin_created = True
+    except FileExistsError:
+        bin_created = False
+    info = user_bin.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode)
+            or info.st_uid != os.getuid() or (stat.S_IMODE(info.st_mode) & 0o022)):
+        raise ScratchError(f"unsafe user executable directory: {user_bin}")
+    if bin_created:
+        os.chmod(user_bin, MODE)
+    return user_bin
+
+
+def _source_fingerprint(info: os.stat_result) -> tuple[int, int, int, int, int]:
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+
+
+def _install_stable_helper(source: pathlib.Path, home: pathlib.Path | None = None) -> pathlib.Path:
+    """Atomically copy this bootstrap helper into a user-wide executable path."""
+    home = pathlib.Path.home() if home is None else home
+    source_info = source.lstat()
+    if not stat.S_ISREG(source_info.st_mode) or stat.S_ISLNK(source_info.st_mode):
+        raise ScratchError(f"unsafe helper source: {source}")
+    target_dir = _ensure_private_user_bin(home)
+    target = target_dir / "agent-scratch"
+    _require_regular(target)
+    source_fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+    temporary_fd = -1
+    temporary = None
+    try:
+        opened_source = os.fstat(source_fd)
+        if not stat.S_ISREG(opened_source.st_mode) or not _same_identity(opened_source, source_info):
+            raise ScratchError("helper source changed while opening")
+        temporary_fd, temporary = tempfile.mkstemp(prefix=".agent-scratch.", dir=target_dir)
+        os.fchmod(temporary_fd, 0o755)
+        digest = hashlib.sha256()
+        while data := os.read(source_fd, 1024 * 1024):
+            digest.update(data)
+            _write_all(temporary_fd, data)
+        if _source_fingerprint(os.fstat(source_fd)) != _source_fingerprint(opened_source):
+            raise ScratchError("helper source changed during copy")
+        verify_fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+        try:
+            verified_source = os.fstat(verify_fd)
+            if _source_fingerprint(verified_source) != _source_fingerprint(opened_source):
+                raise ScratchError("helper source changed during copy")
+            verified_digest = hashlib.sha256()
+            while data := os.read(verify_fd, 1024 * 1024):
+                verified_digest.update(data)
+            if verified_digest.digest() != digest.digest():
+                raise ScratchError("helper source changed during copy")
+        finally:
+            os.close(verify_fd)
+        os.fsync(temporary_fd)
+        os.close(temporary_fd)
+        temporary_fd = -1
+        os.replace(temporary, target)
+    except Exception:
+        if temporary_fd >= 0:
+            os.close(temporary_fd)
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+        raise
+    finally:
+        os.close(source_fd)
+    return target
+
+
 def _atomic_write(path: pathlib.Path, data: str, mode: int, preserve_mode: bool = False) -> None:
     path.parent.mkdir(mode=MODE, parents=True, exist_ok=True)
     for parent in (path.parent,):
@@ -560,7 +671,7 @@ def _atomic_write(path: pathlib.Path, data: str, mode: int, preserve_mode: bool 
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         os.fchmod(fd, old_mode if preserve_mode else mode)
-        os.write(fd, data.encode())
+        _write_all(fd, data.encode())
         os.fsync(fd)
         os.close(fd)
         os.replace(temporary, path)
@@ -592,7 +703,16 @@ def _render_claude(path: pathlib.Path, root: pathlib.Path) -> str:
     env = data.setdefault("env", {})
     if not isinstance(env, dict):
         raise ScratchError("Claude env setting must be an object")
-    values = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    claude_tmp = str(root / "claude")
+    values = {
+        "AGENT_SCRATCH_ROOT": str(root),
+        "CLAUDE_CODE_TMPDIR": claude_tmp,
+        "TMPDIR": claude_tmp,
+        "TMP": claude_tmp,
+        "TEMP": claude_tmp,
+    }
+    if "OGGF_SCRATCH_ROOT" in env:
+        values["OGGF_SCRATCH_ROOT"] = str(root)
     for key, value in values.items():
         if key in env and env[key] != value:
             raise ScratchError(f"conflicting Claude managed setting {key}")
@@ -720,13 +840,15 @@ def _render_codex(path: pathlib.Path, root: pathlib.Path) -> str:
         parsed = tomllib.loads(original) if original.strip() else {}
     except tomllib.TOMLDecodeError as exc:
         raise ScratchError(f"invalid Codex TOML: {path}") from exc
-    set_values = {"OGGF_SCRATCH_ROOT": str(root), "TMPDIR": str(root / "codex" / "tmp"),
+    set_values = {"AGENT_SCRATCH_ROOT": str(root), "TMPDIR": str(root / "codex" / "tmp"),
                   "TMP": str(root / "codex" / "tmp"), "TEMP": str(root / "codex" / "tmp")}
     existing_set = parsed.get("shell_environment_policy", {}).get("set", {})
     if existing_set and _table_spans(original, "shell_environment_policy.set") is None:
         raise ScratchError("inline or parent-table shell_environment_policy.set is unsupported")
     if existing_set and not isinstance(existing_set, dict):
         raise ScratchError("unsupported shell_environment_policy.set")
+    if "OGGF_SCRATCH_ROOT" in existing_set and existing_set["OGGF_SCRATCH_ROOT"] != str(root):
+        raise ScratchError("conflicting legacy Codex managed setting OGGF_SCRATCH_ROOT")
     for key, value in set_values.items():
         if key in existing_set and existing_set[key] != value:
             raise ScratchError(f"conflicting Codex managed setting {key}")
@@ -766,6 +888,23 @@ def systemd_unit_quote(value: str) -> str:
 
 def systemd_exec_quote(value: str) -> str:
     return systemd_unit_quote(value)
+
+
+def systemd_environment_file_path(value: str) -> str:
+    """Encode an absolute EnvironmentFile path without shell-style quotes."""
+    pieces = []
+    for char in value:
+        number = ord(char)
+        if char == "\\":
+            pieces.append("\\\\")
+        elif char in {" ", '"', "#", ";", "\t", "\n", "\r", "\v", "\f"} or number < 32 or number == 127:
+            pieces.append(f"\\x{number:02x}")
+        else:
+            pieces.append(char)
+    encoded = "".join(pieces)
+    if not encoded.startswith("/"):
+        raise ScratchError("EnvironmentFile path must be absolute")
+    return encoded
 
 
 def systemd_environment_value_encode(value: str) -> str:
@@ -820,12 +959,16 @@ def systemd_environment_value_decode(value: str) -> str:
     return "".join(pieces)
 
 
+def _environment_file_text_for(variable: str, root: pathlib.Path) -> str:
+    return variable + "=" + systemd_environment_value_encode(str(root)) + "\n"
+
+
 def _environment_file_text(root: pathlib.Path) -> str:
-    return "OGGF_SCRATCH_ROOT=" + systemd_environment_value_encode(str(root)) + "\n"
+    return _environment_file_text_for("AGENT_SCRATCH_ROOT", root)
 
 
-def _environment_file_root(text: str) -> str:
-    prefix = "OGGF_SCRATCH_ROOT="
+def _environment_file_root_for(text: str, variable: str) -> str:
+    prefix = variable + "="
     if not text.startswith(prefix) or not text.endswith("\n") or "\n" in text[:-1]:
         raise ScratchError("managed EnvironmentFile has an invalid shape")
     root = systemd_environment_value_decode(text[len(prefix):-1])
@@ -834,32 +977,243 @@ def _environment_file_root(text: str) -> str:
     return root
 
 
-def _unit_files(root: pathlib.Path) -> tuple[str, str, str]:
-    helper = repo_root() / "tools" / "agent-scratch"
-    environment = pathlib.Path.home() / ".config" / "oggf-agent-scratch" / "environment"
+def _environment_file_root(text: str) -> str:
+    return _environment_file_root_for(text, "AGENT_SCRATCH_ROOT")
+
+
+def _legacy_environment_file_text(root: pathlib.Path) -> str:
+    return _environment_file_text_for("OGGF_SCRATCH_ROOT", root)
+
+
+def _legacy_environment_file_root(text: str) -> str:
+    return _environment_file_root_for(text, "OGGF_SCRATCH_ROOT")
+
+
+def systemd_unit_unquote(value: str) -> str:
+    """Decode the C-style quoting emitted by ``systemd_unit_quote``."""
+    if len(value) < 2 or value[0] != '"' or value[-1] != '"':
+        raise ScratchError("systemd unit argument must be double-quoted")
+    pieces, index = [], 1
+    while index < len(value) - 1:
+        char = value[index]
+        if char != "\\":
+            pieces.append(char)
+            index += 1
+            continue
+        if index + 1 >= len(value) - 1:
+            raise ScratchError("truncated systemd unit escape")
+        escaped = value[index + 1]
+        escapes = {"\\": "\\", '"': '"', "n": "\n", "r": "\r", "t": "\t"}
+        if escaped in escapes:
+            pieces.append(escapes[escaped])
+            index += 2
+        elif escaped == "x" and index + 3 < len(value) - 1:
+            try:
+                pieces.append(chr(int(value[index + 2:index + 4], 16)))
+            except ValueError as exc:
+                raise ScratchError("invalid systemd unit hex escape") from exc
+            index += 4
+        else:
+            raise ScratchError("unsupported systemd unit escape")
+    return "".join(pieces)
+
+
+def _legacy_unit_paths(home: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
+    return (
+        home / ".config" / "oggf-agent-scratch" / "environment",
+        home / ".config" / "systemd" / "user" / LEGACY_SERVICE_UNIT,
+        home / ".config" / "systemd" / "user" / LEGACY_TIMER_UNIT,
+    )
+
+
+def _legacy_unit_files(root: pathlib.Path, helper: pathlib.Path, home: pathlib.Path | None = None) -> tuple[str, str, str]:
+    """The precise former generated template, used only for safe retirement."""
+    home = pathlib.Path.home() if home is None else home
+    environment, _, _ = _legacy_unit_paths(home)
     service = f"""[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={systemd_unit_quote(str(environment))}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
-    timer = """[Unit]\nDescription=Daily OpenGGF agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit=openggf-agent-scratch-prune.service\n\n[Install]\nWantedBy=timers.target\n"""
+    timer = f"""[Unit]\nDescription=Daily OpenGGF agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit={LEGACY_SERVICE_UNIT}\n\n[Install]\nWantedBy=timers.target\n"""
+    return _legacy_environment_file_text(root), service, timer
+
+
+def _owned_legacy_units(root: pathlib.Path, home: pathlib.Path) -> bool:
+    """Recognize only the former complete generated template before unlinking."""
+    environment_path, service_path, timer_path = _legacy_unit_paths(home)
+    try:
+        _require_regular(environment_path, missing_ok=False)
+        _require_regular(service_path, missing_ok=False)
+        _require_regular(timer_path, missing_ok=False)
+        if _legacy_environment_file_root(environment_path.read_text()) != str(root):
+            return False
+        service = service_path.read_text()
+        timer = timer_path.read_text()
+    except (OSError, ScratchError):
+        return False
+    environment_prefix = (
+        "[Unit]\nDescription=Prune OpenGGF managed agent scratch storage\n\n"
+        "[Service]\nType=oneshot\n"
+        f"EnvironmentFile={systemd_unit_quote(str(environment_path))}\nExecStart="
+    )
+    suffix = " prune\n"
+    if not service.startswith(environment_prefix) or not service.endswith(suffix):
+        return False
+    quoted_helper = service[len(environment_prefix):-len(suffix)]
+    try:
+        helper = pathlib.Path(systemd_unit_unquote(quoted_helper))
+    except ScratchError:
+        return False
+    # The prior helper only emitted its own checkout bootstrap path.
+    if not helper.is_absolute() or helper.name != "agent-scratch" or helper.parent.name != "tools":
+        return False
+    _, expected_service, expected_timer = _legacy_unit_files(root, helper, home)
+    return service == expected_service and timer == expected_timer
+
+
+def _unit_files(root: pathlib.Path, helper: pathlib.Path | None = None) -> tuple[str, str, str]:
+    home = pathlib.Path.home()
+    helper = _installed_helper_path(home) if helper is None else helper
+    environment = home / ".config" / "agent-scratch" / "environment"
+    service = f"""[Unit]\nDescription=Prune managed agent scratch storage\n\n[Service]\nType=oneshot\nEnvironmentFile={systemd_environment_file_path(str(environment))}\nExecStart={systemd_exec_quote(str(helper))} prune\n"""
+    timer = f"""[Unit]\nDescription=Daily managed agent scratch cleanup\n\n[Timer]\nOnCalendar=daily\nPersistent=true\nUnit={SERVICE_UNIT}\n\n[Install]\nWantedBy=timers.target\n"""
     return _environment_file_text(root), service, timer
 
 
 def _activation_command() -> str:
-    return "systemctl --user daemon-reload && systemctl --user enable --now openggf-agent-scratch-prune.timer"
+    return f"systemctl --user daemon-reload && systemctl --user enable --now {TIMER_UNIT}"
 
 
 def _verify_unit_syntax(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
     try:
-        verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], text=True, capture_output=True, check=False)
+        # ``systemd-analyze --user verify`` otherwise loads every unit below
+        # the caller's XDG config and can surface an unrelated warning.  Keep
+        # its discovery root private while still passing the exact generated
+        # files by absolute path.  This temporary directory is never /tmp.
+        with tempfile.TemporaryDirectory(prefix=".agent-scratch-verify-", dir=service_path.parent) as temporary:
+            isolated = pathlib.Path(temporary)
+            isolated_home = isolated / "home"
+            isolated_config = isolated / "config"
+            isolated_home.mkdir(mode=MODE)
+            isolated_config.mkdir(mode=MODE)
+            analyzer_env = dict(os.environ)
+            analyzer_env["HOME"] = str(isolated_home)
+            analyzer_env["XDG_CONFIG_HOME"] = str(isolated_config)
+            analyzer_env.pop("XDG_RUNTIME_DIR", None)
+            verify = subprocess.run(["systemd-analyze", "--user", "verify", str(service_path), str(timer_path)], env=analyzer_env, text=True, capture_output=True, check=False)
     except OSError:
         return "unverified"
-    if verify.returncode:
+    if verify.returncode or verify.stderr.strip():
         raise ScratchError("systemd unit verification failed: " + (verify.stderr or verify.stdout).strip())
     return "verified"
+
+
+def _systemd_details(run: subprocess.CompletedProcess[str]) -> str:
+    return ((run.stderr or "") + "\n" + (run.stdout or "")).lower()
+
+
+def _user_manager_unavailable(run: subprocess.CompletedProcess[str]) -> bool:
+    details = _systemd_details(run)
+    return "failed to connect to bus" in details or "xdg_runtime_dir" in details
+
+
+def _legacy_timer_state() -> str:
+    """Return active/inactive/absent/unverified for the pre-generic timer."""
+    try:
+        enabled = subprocess.run(["systemctl", "--user", "is-enabled", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
+        active = subprocess.run(["systemctl", "--user", "is-active", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if _user_manager_unavailable(enabled) or _user_manager_unavailable(active):
+        return "unverified"
+    if enabled.returncode == 0 or active.returncode == 0:
+        return "active"
+    if "not-found" in _systemd_details(enabled) or "not loaded" in _systemd_details(enabled):
+        return "absent"
+    return "inactive"
+
+
+def _verify_legacy_timer() -> str:
+    state = _legacy_timer_state()
+    if state == "active":
+        raise ScratchError(f"legacy cleanup timer remains enabled or active: {LEGACY_TIMER_UNIT}")
+    return state
+
+
+def _legacy_migration_preflight(home: pathlib.Path, root: pathlib.Path) -> str:
+    """Fail before any write or systemctl mutation for unowned legacy state."""
+    _, service_path, timer_path = _legacy_unit_paths(home)
+    files_present = any(path.exists() or path.is_symlink() for path in (service_path, timer_path))
+    owned = _owned_legacy_units(root, home) if files_present else False
+    state = _legacy_timer_state()
+    if files_present and not owned:
+        raise ScratchError(
+            "legacy scratch unit files are not the exact former generated template; "
+            "manual review is required before installation"
+        )
+    if state in {"active", "inactive"} and not owned:
+        raise ScratchError(
+            f"legacy cleanup timer state is not backed by an owned template: {LEGACY_TIMER_UNIT}; "
+            "manual review is required before installation"
+        )
+    if state == "unverified":
+        return "unverified"
+    return "owned" if owned else "absent"
+
+
+def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
+    """Stop the legacy timer, then remove only our old generated unit pair.
+
+    Its old environment file remains inert.  It is intentionally not removed:
+    it is user configuration and no longer referenced by a retained unit.
+    """
+    environment_path, service_path, timer_path = _legacy_unit_paths(home)
+    preflight = _legacy_migration_preflight(home, root)
+    if preflight == "unverified":
+        return "unverified"
+    if preflight == "absent":
+        return "absent"
+    try:
+        disabled = subprocess.run(["systemctl", "--user", "disable", "--now", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if disabled.returncode and not _user_manager_unavailable(disabled):
+        details = (disabled.stderr or disabled.stdout).strip().lower()
+        if "not loaded" not in details and "not found" not in details:
+            raise ScratchError("cannot disable legacy cleanup timer: " + (disabled.stderr or disabled.stdout).strip())
+    if _user_manager_unavailable(disabled):
+        return "unverified"
+    try:
+        reloaded = subprocess.run(["systemctl", "--user", "daemon-reload"], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if _user_manager_unavailable(reloaded):
+        return "unverified"
+    if reloaded.returncode:
+        raise ScratchError("cannot reload user units while retiring legacy timer: " + (reloaded.stderr or reloaded.stdout).strip())
+    if _verify_legacy_timer() == "unverified":
+        return "unverified"
+    if not _owned_legacy_units(root, home):
+        raise ScratchError(
+            "legacy scratch unit files changed during retirement; "
+            "manual review is required before installation"
+        )
+    os.unlink(service_path)
+    os.unlink(timer_path)
+    try:
+        reloaded = subprocess.run(["systemctl", "--user", "daemon-reload"], text=True, capture_output=True, check=False)
+    except OSError:
+        return "unverified"
+    if _user_manager_unavailable(reloaded):
+        return "unverified"
+    if reloaded.returncode:
+        raise ScratchError("cannot reload user units after retiring legacy timer: " + (reloaded.stderr or reloaded.stdout).strip())
+    # ``environment_path`` is deliberately retained as inert compatibility data.
+    _ = environment_path
+    return "retired"
 
 
 def _verify_timer() -> str:
     """Return verified/unverified; a reachable disabled timer is invalid."""
     try:
-        enabled = subprocess.run(["systemctl", "--user", "is-enabled", "openggf-agent-scratch-prune.timer"], text=True, capture_output=True, check=False)
+        enabled = subprocess.run(["systemctl", "--user", "is-enabled", TIMER_UNIT], text=True, capture_output=True, check=False)
     except OSError:
         return "unverified"
     if enabled.returncode:
@@ -867,7 +1221,7 @@ def _verify_timer() -> str:
             return "unverified"
         raise ScratchError("managed cleanup timer is not enabled: " + (enabled.stderr or enabled.stdout).strip())
     try:
-        listed = subprocess.run(["systemctl", "--user", "list-timers", "openggf-agent-scratch-prune.timer", "--no-legend", "--no-pager"], text=True, capture_output=True, check=False)
+        listed = subprocess.run(["systemctl", "--user", "list-timers", TIMER_UNIT, "--no-legend", "--no-pager"], text=True, capture_output=True, check=False)
     except OSError:
         return "unverified"
     if listed.returncode:
@@ -882,7 +1236,7 @@ def _verify_timer() -> str:
 def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -> str:
     if _verify_unit_syntax(service_path, timer_path) == "unverified":
         return "systemd tooling unavailable; run: " + _activation_command()
-    commands = [["systemctl", "--user", "daemon-reload"], ["systemctl", "--user", "enable", "--now", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "is-enabled", "openggf-agent-scratch-prune.timer"], ["systemctl", "--user", "list-timers", "openggf-agent-scratch-prune.timer", "--no-legend"]]
+    commands = [["systemctl", "--user", "daemon-reload"], ["systemctl", "--user", "enable", "--now", TIMER_UNIT], ["systemctl", "--user", "is-enabled", TIMER_UNIT], ["systemctl", "--user", "list-timers", TIMER_UNIT, "--no-legend"]]
     for command in commands:
         try:
             run = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -897,6 +1251,9 @@ def _run_systemd_install(service_path: pathlib.Path, timer_path: pathlib.Path) -
 def cmd_install(args: argparse.Namespace) -> int:
     root = ensure_root()
     home = pathlib.Path.home()
+    # Refuse a custom/unknown legacy unit before creating the stable helper or
+    # writing any new configuration.  A user must review that unit manually.
+    _legacy_migration_preflight(home, root)
     claude_path = home / ".claude" / "settings.json"
     codex_path = home / ".codex" / "config.toml"
     # Render/validate both files before changing either one.  This matters for
@@ -904,17 +1261,21 @@ def cmd_install(args: argparse.Namespace) -> int:
     # configuration update.
     claude_text = _render_claude(claude_path, root)
     codex_text = _render_codex(codex_path, root)
+    # Validation has completed before replacing the user-wide executable: a
+    # rejected existing config must leave a previously installed helper alone.
+    installed_helper = _install_stable_helper(pathlib.Path(__file__).resolve(), home)
     _atomic_write(claude_path, claude_text, MODE, preserve_mode=True)
     _atomic_write(codex_path, codex_text, 0o600)
-    env_text, service, timer = _unit_files(root)
-    env_path = home / ".config" / "oggf-agent-scratch" / "environment"
+    env_text, service, timer = _unit_files(root, installed_helper)
+    env_path = home / ".config" / "agent-scratch" / "environment"
     unit_dir = home / ".config" / "systemd" / "user"
-    service_path = unit_dir / "openggf-agent-scratch-prune.service"
-    timer_path = unit_dir / "openggf-agent-scratch-prune.timer"
+    service_path = unit_dir / SERVICE_UNIT
+    timer_path = unit_dir / TIMER_UNIT
     _atomic_write(env_path, env_text, 0o600)
     _atomic_write(service_path, service, 0o600)
     _atomic_write(timer_path, timer, 0o600)
     print(f"root={root}")
+    print(f"legacy_timer={_retire_legacy_units(home, root)}")
     print(_run_systemd_install(service_path, timer_path))
     return 0
 
@@ -923,13 +1284,29 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
     executable = shutil.which("claude")
     if not executable:
         return "unverified"
+    prompt = (
+        "Use the Bash tool exactly once to run: printf '%s' \"${TMPDIR-UNSET}\". "
+        "Respond with exactly the command's stdout, with no Markdown, quoting, "
+        "commentary, or extra text."
+    )
+    command = [
+        executable,
+        "--allowedTools", "Bash(printf *)",
+        "--permission-mode", "auto",
+        "--no-session-persistence",
+        "-p", prompt,
+    ]
     try:
-        run = subprocess.run([executable, "-p", "echo -n \"$TMPDIR\""], text=True, capture_output=True, timeout=45, check=False)
+        run = subprocess.run(command, text=True, capture_output=True, timeout=45, check=False)
     except (subprocess.TimeoutExpired, OSError):
         return "unverified"
     if run.returncode:
         return "unverified"
-    observed = run.stdout.strip()
+    # Claude's print mode adds one terminal newline.  Do not trim arbitrary
+    # whitespace: it could be significant in a configured scratch root.
+    observed = run.stdout[:-1] if run.stdout.endswith("\n") else run.stdout
+    if "\n" in observed or "\r" in observed:
+        raise ScratchError(f"Claude returned non-contract TMPDIR output: {run.stdout!r}")
     if not os.path.isabs(observed):
         raise ScratchError(f"Claude returned a non-absolute TMPDIR: {observed!r}")
     try:
@@ -944,6 +1321,7 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
 def cmd_verify(args: argparse.Namespace) -> int:
     root = ensure_root()
     home = pathlib.Path.home()
+    _legacy_migration_preflight(home, root)
     try:
         claude = json.loads((home / ".claude" / "settings.json").read_text())
         codex = tomllib.loads((home / ".codex" / "config.toml").read_text())
@@ -951,44 +1329,61 @@ def cmd_verify(args: argparse.Namespace) -> int:
         raise ScratchError(f"configuration parse failed: {exc}") from exc
     if not isinstance(claude, dict) or not isinstance(codex, dict):
         raise ScratchError("configuration roots must be tables/objects")
-    expected_claude = {"OGGF_SCRATCH_ROOT": str(root), "CLAUDE_CODE_TMPDIR": str(root / "claude")}
+    claude_tmp = str(root / "claude")
+    expected_claude = {
+        "AGENT_SCRATCH_ROOT": str(root),
+        "CLAUDE_CODE_TMPDIR": claude_tmp,
+        "TMPDIR": claude_tmp,
+        "TMP": claude_tmp,
+        "TEMP": claude_tmp,
+    }
     env = claude.get("env", {})
     if not isinstance(env, dict) or any(env.get(key) != value for key, value in expected_claude.items()):
         raise ScratchError("Claude managed environment settings are invalid")
+    if "OGGF_SCRATCH_ROOT" in env and env["OGGF_SCRATCH_ROOT"] != str(root):
+        raise ScratchError("legacy Claude OGGF_SCRATCH_ROOT conflicts with generic root")
     policy = codex.get("shell_environment_policy", {})
     if not isinstance(policy, dict) or not isinstance(policy.get("set", {}), dict):
         raise ScratchError("Codex shell environment policy is invalid")
     values = policy["set"]
     if any(values.get(key) != str(root / "codex" / "tmp") for key in ("TMPDIR", "TMP", "TEMP")):
         raise ScratchError("Codex temporary variables are not absolute configured children")
-    if values.get("OGGF_SCRATCH_ROOT") != str(root):
-        raise ScratchError("Codex root is not configured")
+    if values.get("AGENT_SCRATCH_ROOT") != str(root):
+        raise ScratchError("Codex generic root is not configured")
+    if "OGGF_SCRATCH_ROOT" in values and values["OGGF_SCRATCH_ROOT"] != str(root):
+        raise ScratchError("legacy Codex OGGF_SCRATCH_ROOT conflicts with generic root")
     workspace = codex.get("sandbox_workspace_write", {})
     if not isinstance(workspace, dict) or workspace.get("exclude_slash_tmp") is not True or workspace.get("exclude_tmpdir_env_var") is not False:
         raise ScratchError("Codex workspace-write policy flags are invalid")
     roots = workspace.get("writable_roots")
     if not isinstance(roots, list) or str(root / "codex") not in roots:
         raise ScratchError("Codex writable root is not configured")
-    env_path = home / ".config" / "oggf-agent-scratch" / "environment"
+    installed_helper = _installed_helper_path(home)
+    _require_regular(installed_helper, missing_ok=False)
+    if not (installed_helper.stat().st_mode & 0o111):
+        raise ScratchError("installed agent-scratch helper is not executable")
+    env_path = home / ".config" / "agent-scratch" / "environment"
     _require_regular(env_path, missing_ok=False)
     if stat.S_IMODE(env_path.stat().st_mode) != 0o600:
         raise ScratchError("managed systemd environment file must be mode 0600")
     if _environment_file_root(env_path.read_text()) != str(root):
         raise ScratchError("managed systemd environment file is invalid")
     unit_dir = home / ".config" / "systemd" / "user"
-    service_path = unit_dir / "openggf-agent-scratch-prune.service"
-    timer_path = unit_dir / "openggf-agent-scratch-prune.timer"
+    service_path = unit_dir / SERVICE_UNIT
+    timer_path = unit_dir / TIMER_UNIT
     _require_regular(service_path, missing_ok=False)
     _require_regular(timer_path, missing_ok=False)
-    _, expected_service, expected_timer = _unit_files(root)
+    _, expected_service, expected_timer = _unit_files(root, installed_helper)
     if service_path.read_text() != expected_service or timer_path.read_text() != expected_timer:
         raise ScratchError("managed systemd units do not match this checkout and root")
     unit_syntax = _verify_unit_syntax(service_path, timer_path)
     timer_state = _verify_timer()
+    legacy_timer_state = _verify_legacy_timer()
     print(f"root={root}")
     print("config=verified")
     print(f"systemd_units={unit_syntax}")
     print(f"systemd_timer={timer_state}")
+    print(f"legacy_timer={legacy_timer_state}")
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
     claude_state = _verify_claude_tmpdir(root)
     print(f"claude={claude_state}")
