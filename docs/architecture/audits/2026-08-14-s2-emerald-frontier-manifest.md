@@ -439,6 +439,55 @@ Segment 11: 287 → 236 errors.
 
 ---
 
+## 2026-08-14, later — the "untimed span" framing is REFUTED for the visual path
+
+An earlier revision of this document, and a consult built on it, framed the production
+visual path's row-5200 stall as a second instance of the same *untimed straight-line span*
+class as axis 4: the ROM spending real 68000 time in code with no `WaitForVint` while the
+engine does it instantly, therefore the engine retiring a queued art transfer ~17 rows
+early. **That is wrong, and external readers should not spend a round on it.**
+
+The results-tail setup block **resets the DMA queue**, unconditionally, with no `fixBugs`
+guard (`s2.asm`, inside the block, immediately after `Hud_Base`):
+
+```
+    clr.w   (VDP_Command_Buffer).w
+    move.l  #VDP_Command_Buffer,(VDP_Command_Buffer_Slot).w
+```
+
+`Vint_Fade` (`s2.asm:1068-1071` — `Do_ControllerPal` / `Hint_counter` / `ProcessDPLC`) does
+**not** call `ProcessDMAQueue`, so a transfer queued before `Pal_FadeToWhite` survives all
+22 fade rows untouched and is then **discarded** by that clear. `ProcessDMAQueue`
+(`s2.asm:1770+`) reads `move.w (a1)+,d0 / beq.s .done` — on a zero first word it issues
+nothing at all.
+
+**So the ROM never completes that transfer.** The recorded "ROM still outstanding at row
+5200" is the *recorder's own ledger* holding a transfer the hardware never performed. This
+is the recorder-fiction pattern the `trace-replay-bug-fixing` skill already documents for
+the special-stage **entry**, where the identical instruction pair appears — and where the
+disassembly annotates itself ("the excessive `SS_Shared_RAM` clear sets
+`VDP_Command_Buffer` to 0, just like the below code"). The results site is the same defect
+at the other end of the special stage. The pair recurs at five sites in `s2.asm`.
+
+**Consequences, and they are the useful part of this finding:**
+
+- **The v5 hardware-timing port cannot and must not cover this.** Delaying engine readiness
+  by ~17 rows would model recorder bookkeeping, not hardware, and would go green against a
+  lifecycle that never happened. Independently, the port's eligibility gate fails on its own
+  terms: the design note requires "a readiness value polled by ordinary main-loop code" and
+  a main loop that "can continue while that value remains pending" — the setup block
+  contains no loop, and nothing in S2 polls `VDP_Command_Buffer`. The design note further
+  names VDP transfer fences as explicitly **non-authoritative** inventory candidates, and
+  rule 4 names S2's permitted pipeline as **DPLC** — `ProcessDPLC` writes patterns straight
+  to `VDP_control_port` and never calls `QueueDMATransfer`, so this is not even the same
+  mechanism.
+- **Cycle-level span costing is not justified by this frontier.** The second instance that
+  was supposed to move it from "defer" to "do" is not an instance.
+- **Axis 4 should be re-examined against this pattern before any span-costing work.** Its
+  "masked span" framing was the model this one was built from.
+
+`known-discrepancies` entry 28 remains accurate as written for axis 4; nothing landed.
+
 ## Open decision
 
 The chain cannot go green while axis 4 is honestly reported. Options on the table, each
