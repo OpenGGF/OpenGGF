@@ -1310,10 +1310,12 @@ public class SidekickCpuController {
             // 16 leader-record writes layer on top of the sidekick-offset
             // pre-fill rather than the live Sonic centre.
             //
-            // Note: only the bootstrap path requests the ROM-accurate pre-fill
-            // today. Trace replay setups without a recorded title-card prelude
-            // (S1, S3K) keep the legacy "fill with current Sonic centre"
-            // behaviour to avoid altering already-tuned sidekick CPU traces.
+            // This branch creates the ROM-accurate prefill only when trace
+            // bootstrap explicitly requests it. Ordinary production assembly
+            // creates the equivalent prefill in LevelManager and reaches this
+            // method with preserveExistingLeaderPrefill=true. Standalone trace
+            // setups without a recorded title-card prelude retain the legacy
+            // "fill with current leader centre" behavior.
             leader.prefillPositionHistoryWithCentre(
                     (short) (anchorX + LEVEL_START_X_OFFSET),
                     (short) (anchorY + LEVEL_START_Y_OFFSET));
