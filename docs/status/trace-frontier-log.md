@@ -74601,3 +74601,126 @@ actually references.
 routes:** the shared `KOS_DECOMPRESSION_QUEUE` frontier where the recording
 expects a completion the engine never submitted (`engine pending: <none>`), plus
 the ordinal-matched fingerprint mismatches where it submits a different job.
+
+## 2026-08-14 — S3K `KOS_DECOMPRESSION_QUEUE` frontier is a *symptom*, not a queue defect
+
+Diagnosis-only round measured at **`d9205dce5`** (`develop`), isolated worktree
+outside the repo, JDK 21 (`mvn -v` → 21.0.11), `target/surefire-reports` and
+`target/trace-reports` cleared before every run, `java.io.tmpdir` supplied via
+`JAVA_TOOL_OPTIONS`. No engine, comparator, recorder or fixture file changed;
+the only edit is this entry.
+
+Command shape (one class at a time so no trace-report filename collides):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=<task tmpdir>" mvn -Ptrace-replay -Dmse=off \
+    -Dtest.cds.argLine="-Xshare:off" -Dtest=<one class> -DfailIfNoTests=false \
+    -Ds3k.rom.path=s3k.gen test
+```
+
+### What the abort actually is
+
+`HardwareTimingService$RecordedAuthority.admitRecordedCompletion` throws the
+first time a recorded completion has no matching engine-pending job. It is a
+hard, whole-test abort, so it *masks* whatever physics divergence preceded it
+and it is reported as the class's "first error" even when the trace report
+already holds hundreds of physics errors from earlier frames.
+
+Measured per class, in isolation (report `error_count` / frames compared before
+the abort / abort message):
+
+| Class | errors before abort | frames | abort |
+|---|---|---|---|
+| `TestS3kSonicTailsAizSegmentTraceReplay` | 28 (first frame **1097**, `y`) | 1188 | `#16 dae421a2…`, engine pending `<none>` |
+| `TestS3kSonicTailsMgzSegmentTraceReplay` | 2043 (frame 321, `camera_y`) | — | `#288`, `<none>` |
+| `TestS3kSonicTailsIczSegmentTraceReplay` | 646 (frame 470, `x_sub`) | — | `#395 3c96d8b9…`, `<none>` |
+| `TestS3kSonicTailsHczSegmentTraceReplay` | 72 (frame 561, `x_speed`) | — | `#161`, `<none>` |
+| `TestS3kSonicTailsCnzSegmentTraceReplay` | 7 (frame 5754, `camera_x`) | — | `#358 3c96d8b9…`, `<none>` |
+| `TestS3kSonicTailsLbzSegmentTraceReplay` | 8 (frame 958, `camera_x`) | — | `#459 3c96d8b9…`, `<none>` |
+| `TestS3kSonicTailsMhzSegmentTraceReplay` | 203 (frame 75, `player_mapping_frame`) | 1255 | `#521`, `<none>` |
+| `TestS3kSonicTailsAiz2SegmentTraceReplay` | 15 (frame 0, `camera_y`) | 35 | `#43 c3e8ddd3…` vs engine `#43 dae421a2…` |
+| `TestS3kSonicTailsSozSegmentTraceReplay` | 13 (frame 0, `y_speed`) | 36 | `#927`, `<none>` |
+| `TestS3kSonicTailsFbzSegmentTraceReplay` | **0** | 36 | `#882`, `<none>` |
+
+### What the recorded jobs are (ROM-identified, not inferred)
+
+The submission fingerprint is `sha256(kind, romSource, compressedLength,
+destination, destinationLength, variant, moduleCount)`
+(`HardwareSubmissionFingerprint`), so a recorded fingerprint can be reversed by
+scanning the ROM. Scanning every even offset of `s3k.gen` for
+`KOS_DECOMPRESSION_QUEUE`, destination `0xFFFFD000`, `moduleCount = 1`:
+
+- **`3c96d8b9…` = `0x0DB408`**, clen 1025, dlen 2176 — the child stream of
+  `ArtKosM_BadnikExplosion` (`sonic3k.asm:201012`; queued from
+  `sonic3k.asm:128485`, `146060`, `171443`, and `Sonic3kConstants:1019` records
+  the same `0xDB406` KosM header). Its recurrence across CNZ, ICZ, LBZ, MHZ and
+  the run chains is **not** a shared or defaulted job — it is the badnik
+  explosion art, re-queued on every badnik kill in every zone. The "one wrongly
+  shared job" hypothesis is refuted.
+- **`ae73908a…`/`77708e82…`/`78b85320…`/`4c509876…`/`7b1b550d…` =
+  `0x3A9450`, `0x3A9E30`, `0x3AA740`, `0x3AB020`, `0x3AB8B0`** — the
+  consecutive modules of `AIZ1_8x8_MainLevel_KosM`.
+- **`dae421a2…`** is the immediately preceding direct `Queue_Kos` of
+  `AIZ1_16x16_MainLevel_Kos` (it is absent from the `0xFFFFD000` scan precisely
+  because a direct queue entry carries its real destination, `Block_table+$268`).
+- **`c3e8ddd3…`/`2bed3f7b…`/`055a7ca7…` = `0x36800E`, `0x367DCC`, `0x368200`** —
+  three modules, matching the three `plreq` entries of `PLCKosM_AIZ`
+  (`sonic3k.asm:64316` `Offs_LoadEnemyArt` → `PLCKosM_AIZ`).
+
+Both AIZ1 groups are **camera-gated**, not frame-gated:
+
+- `sonic3k.asm:38914-38926` (`loc_1C4D0`): `cmpi.w #$1400,(Camera_X_pos).w` /
+  `blo` → `Queue_Kos AIZ1_16x16_MainLevel_Kos` then
+  `Queue_Kos_Module AIZ1_8x8_MainLevel_KosM`.
+- `sonic3k.asm:38986-38998` (`loc_1C5C6`): `cmpi.w #$2E00,(Camera_X_pos).w`,
+  and `tst.b (Kos_modules_left).w` must be zero, → `AIZ1_8x8_Flames_KosM` plus
+  `Load_PLC #$C`.
+
+### Root cause
+
+For the mid-segment population the frontier is **downstream of ordinary physics
+divergence**. `TestS3kSonicTailsAizSegmentTraceReplay` is the clean witness: the
+intro cutscene matches for 1096 frames, diverges at frame **1097** (`y`
+`0x041B` expected vs `0x0420`, with `air`/`rolling`/`status_byte` a few frames
+out of phase at the plane-drop landing), the player is 10px behind by frame 1147
+and `camera_x` is behind from frame 1160 — so the engine reaches
+`Camera_X_pos = $1400` *later* than raw_frame 1188 and has submitted nothing when
+the recording's completion arrives. Same shape for the `3c96d8b9…` aborts: the
+recorded run kills a badnik at frame N, the diverged engine has not, so no
+explosion art is queued. Nothing is wrong with the queue, the fingerprint, the
+ordinal base or the admission port.
+
+The ordinal-matched-wrong-fingerprint mode is the **same** defect seen from the
+other side, not a second one: in `TestS3kSonicTailsAiz2SegmentTraceReplay` the
+engine's `#43` is `dae421a2…` (MainLevel `Queue_Kos`) where the recording's
+`#43` is `c3e8ddd3…` (the `PLCKosM_AIZ` enemy art) — the two camera-gated groups
+in the opposite order. The green `aiz_completerun` fixture records enemy art at
+raw_frame 1239-1246 then MainLevel at 1467-1501; the sonic+tails fixture records
+MainLevel at 1188-1225 then enemy art at 1239-1246. Both orders are legitimate
+recorded ROM behaviour for different routes.
+
+There is a **genuinely separate, smaller population**: segments that bootstrap
+straight into a level load abort at ~frame 35 with the physics report still
+clean. `TestS3kSonicTailsFbzSegmentTraceReplay` compares 36 frames with
+`error_count 0`, submits **no hardware work at all** (verified with a temporary
+`submit()` probe), and aborts on the recording's `#882/#883/#884` +
+`KOS_MODULE_QUEUE#583/584/585` at raw_frames 36-42 — the zone's
+`Offs_LoadEnemyArt` PLC group. AIZ2 and SOZ abort at the same ~35-frame mark but
+already carry frame-0 physics errors, so FBZ is the only clean instance found.
+
+### Consequence for prioritisation
+
+Counting these 45+ classes as one "Kosinski queue frontier" overstates a single
+cause. The correct reading at `d9205dce5`:
+
+- The abort is a *tripwire*. Re-triage every `engine pending: <none>` class by
+  the **first physics error in its own trace report**, not by the abort message.
+- The real S3K frontier for the sonic+tails route is the per-segment physics
+  divergence — starting with AIZ1 frame 1097 (intro plane-drop landing phase),
+  MHZ frame 75, MGZ frame 321, ICZ frame 470, HCZ frame 561.
+- Only the segment-bootstrap enemy-art group (FBZ frame 36) is plausibly a real
+  hardware-work gap, and it needs its own round.
+
+No code changed, so no baseline moved: the six standalone S3K complete-runs and
+the other listed green classes are untouched.
