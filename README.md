@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The MGZ dash trigger re-arms every frame (`bugfix/ai-mgz-dash-trigger-rearm`, merged
+  2026-08-15).** The fixture's aux named the object in one step — slot 4's `object_code` is
+  `Obj_MGZDashTrigger`'s main routine. Its launch maths was **already correct**: the ROM's helper
+  reproduces both recorded velocities from ROM data alone (`GetArcTan` → `$1A`, `GetSineCosine` →
+  sin `$98` / cos `$CD`, giving `-$59B` and `-$428`, both matching the recording exactly). The
+  trigger simply wasn't armed. `loc_25D9C` runs the contact probe and **both** `move.w #$3C,$30(a0)`
+  arm stores **above** the countdown (`sonic3k.asm:51493-51545`), so the store is a per-frame
+  *reload* and the 60-frame window runs from the **last** qualifying frame. The engine wrapped its
+  arm loop in `if (armTimer == 0)` and `break`ed after the first player, so its window started
+  ~60 frames earlier and had lapsed — and the `break` also suppressed P2's independent arm, which
+  the ROM evaluates separately (`andi.b #$11` vs `#$22`). Nine lines. Frontier **4603 → 4716**,
+  errors 6493 → 4953. Catalogued as **P59**.
+
 - **A Tunnelbot on the wrong ceiling probe, and the `V_int_run_count+3` address trap
   (`bugfix/ai-mgz-tunnelbot-ceiling-probe`, merged 2026-08-15).** MGZ's "sign inversion" at 1909
   was not a direction defect — **the ROM performs the same inversion, one frame later**. It is the

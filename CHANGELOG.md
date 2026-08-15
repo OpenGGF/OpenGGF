@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K MGZ dash trigger re-arms on every frame a player is spindashing
+  against it, instead of only when its timer has run out.
+  `Obj_MGZDashTrigger`'s main routine `loc_25D9C`
+  (`docs/skdisasm/sonic3k.asm:51493-51545`) runs the `sub_1DD0E` contact probe
+  and both `move.w #$3C,$30(a0)` arm stores unconditionally, ahead of the
+  `tst.w $30(a0)` countdown at `loc_25E22` (`:51545`), and tests P1
+  (`andi.b #$11,d6`) and P2 (`andi.b #$22,d6`) independently. The engine wrapped
+  the arm loop in `if (armTimer == 0)` and broke out after the first player that
+  armed, so the 60-frame window expired mid-spindash and was never refreshed.
+  In the MGZ Sonic+Tails segment the ROM's last refresh is the final frame of
+  Sonic's spindash, which keeps the trigger armed long enough to fling Tails
+  when he lands on it; the engine's window had already lapsed, so `sub_25EA6`
+  (`:51580-51608`) never ran and Tails kept falling.
 - Fix: the S3K MGZ Tunnelbot stops rising at the ROM's ceiling frame, so its
   rumble ladder sits at the ROM's Y and Sonic bounces off it on the ROM's frame.
   `TunnelbotMiniboss_CeilingRise` (`docs/skdisasm/sonic3k.asm:184769-184778`)
