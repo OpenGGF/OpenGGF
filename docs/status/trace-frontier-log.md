@@ -75664,3 +75664,57 @@ Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -Ds3k
   `TestS3kMhzCompleteRunTraceReplay` red on both trees with the same
   1 error; `TestS2CompleteEmeraldRunChain` byte-identical to control
   (cursor 3977 of 3997).
+
+### Round 158 — MHZ segment: the `$1701` arena restart has no title card (base `c3d633d48`)
+
+- Command (both trees): `JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=…" mvn -Ptrace-replay
+  -Ds1.rom.path=… -Ds2.rom.path=… -Ds3k.rom.path=… -Dtest.cds.argLine="-Xshare:off" test`.
+  Two worktrees: control at `c3d633d48` and
+  a fix worktree.
+- **ROM answer to the round's question: the fresh-title-card hold is WRONG for
+  this entry.** `Level:` installs `Obj_TitleCard` only at `loc_62B6`
+  (`docs/skdisasm/sonic3k.asm:7730-7736`), which first compares
+  `Current_zone_and_act` against `$1701` and branches to `loc_62FE`; the arena
+  requested by `loc_618AC` (`sonic3k.asm:128415-128421`) therefore never
+  creates the title owner and never enters the `loc_62CC` wait loop. The
+  recording agrees: frame `0x4FB` is the last MHZ row and `0x4FC` (1276) is
+  already the fully assembled arena — zero held rows.
+- **The brief's proximate mechanism was refuted by probe.** The held row is not
+  emitted by `LevelManager.loadZoneAndActAtFreshTitleCardBoundary`'s hold
+  awaiting `RecordingFrameDriver:236`; a stderr probe showed exactly one
+  `normalTitleCardRow zone=23 act=1`, i.e. the row is produced by
+  `RecordingFrameDriver.stepNormalTitleCard` after
+  `LevelManager.requestTitleCardIfNeeded` requested a card for the arena. The
+  fix is therefore a one-branch addition to the existing
+  `ZoneFeatureProvider.shouldSuppressInitialTitleCard` hook (which already
+  carries the AIZ1-intro arm of the same ROM branch), not a change to the
+  shared transition-boundary machinery.
+- `TestS3kSonicTailsMhzSegmentTraceReplay`: **13 errors → 9**, over 1265
+  compared rows. `x`, `y` and `camera_x` at frame 1276 now match
+  (`0x1640`, `0x03AC`, `0x15A0`). First error is still frame 1276 but is now
+  `camera_y` (expected `0x0326`, actual `0x0320`); the remaining 8 are the
+  `hardware_timing.unmatched_completions` / `pending_submissions` rows at
+  1280-1321, out of scope this round.
+- **Next frontier for this class:** `camera_y` `0x0326` vs `0x0320`.
+  `Get_LevelSizeStart` (`sonic3k.asm:38068-38273`) reads the "Special Stage
+  Arena (HPZ)" `LevelSizes` entry `$1500,$1640,$320,$320`
+  (`sonic3k.asm:38136`), so `Camera_min_Y_pos == Camera_max_Y_pos == $320` and
+  its own clamp yields `$320` — which is what the engine produces. The
+  recorded `$326` is +6 outside that clamp and is held constant for all 60
+  remaining rows, so something after `Get_LevelSizeStart` moves it; that owner
+  is unidentified.
+- Full `-Ptrace-replay` profile: control **843 / 53 F / 11 E / 4 S, 64 red**;
+  fix **843 / 53 F / 11 E / 4 S, 64 red**. Python set difference both ways:
+  **no new red, no new green**; the only difference anywhere is the MHZ
+  segment's first-error field.
+- Default profile: control **15136 / 64 F / 28 E / 22 S, 51 red**; fix
+  **15136 / 64 F / 28 E / 22 S, 51 red**. Set difference both ways empty, and
+  no per-class failure/error count changed.
+- Protected classes on the fix tree: `TestS3kSonicTailsAizSegmentTraceReplay`
+  **green**; `TestS3kSonicTailsIczSegmentTraceReplay` frame **1818**, 3031
+  errors; `TestS3kSonicTailsHczSegmentTraceReplay` frame **1434**;
+  `TestS3kHczCompleteRunTraceReplay`, `TestS3kIczCompleteRunTraceReplay`,
+  `TestS3kMgzCompleteRunTraceReplay` **green**;
+  `TestS3kMhzCompleteRunTraceReplay` red on both trees with the same 1 error
+  (it did not move — the segment did not green);
+  `TestS2CompleteEmeraldRunChain` green on both trees.
