@@ -662,29 +662,18 @@ public final class S3kSlotBonusStageRuntime {
         if (bootstrapGameplayMode == null || slotPlayer == null) {
             return;
         }
-        // Tick already-active rewards BEFORE draining newly queued ones so a
-        // reward object spawned this call is not also ticked this same call.
-        // ROM's AllocateObject (sonic3k.asm:37911-37914, jsr'd from the cage's
-        // reward-spawn routine at sonic3k.asm:99474) scans Dynamic_object_RAM
-        // forward from its very first slot for a free entry -- not "after
-        // current" like AllocateObjectAfterCurrent (sonic3k.asm:37917-37921,
-        // used elsewhere) -- so a newly spawned Obj_SlotRing/Obj_SlotSpike
-        // typically lands in a slot at or before the cage's own position in
-        // the object table. The single ascending-index main object dispatch
-        // pass has already visited that slot earlier this frame, so the new
-        // object's first Obj_SlotRing routine-0 tick (sonic3k.asm:35850-35887,
-        // the $40(a0) 0x1A-frame countdown seeded at sonic3k.asm:99482) does
-        // not run until the NEXT frame. Ticking it inline on the spawn frame
-        // let the engine's $40 countdown reach zero (and grant the ring via
-        // GiveRing) one frame before ROM: TestS3kSlotsBonusTraceReplay frame
-        // 307 expected rings=75 (ROM grants at 308) vs engine's already-76.
+        // Tick already-active rewards BEFORE draining newly queued ones, so an
+        // object spawned by this call is not ticked twice in one pass. Whether
+        // it is ticked ONCE on its spawn frame is then decided by slot order in
+        // drainPending*Rewards below, which is what the ROM's single
+        // ascending-index object dispatch does.
         updateActiveRewards(slotRingRewards, frameCounter);
         updateActiveRewards(slotSpikeRewards, frameCounter);
-        drainPendingRingRewards();
-        drainPendingSpikeRewards();
+        drainPendingRingRewards(frameCounter);
+        drainPendingSpikeRewards(frameCounter);
     }
 
-    private void drainPendingRingRewards() {
+    private void drainPendingRingRewards(int frameCounter) {
         int[] ringPos;
         while ((ringPos = slotStageController.consumePendingRingReward()) != null) {
             S3kSlotRingRewardObjectInstance reward = new S3kSlotRingRewardObjectInstance(
@@ -701,10 +690,11 @@ public final class S3kSlotBonusStageRuntime {
             registerDynamicSlotObject(reward);
             slotStageController.onRewardSpawned();
             slotRingRewards.add(reward);
+            runSpawnFrameDispatchIfSlotNotYetExecuted(reward, frameCounter);
         }
     }
 
-    private void drainPendingSpikeRewards() {
+    private void drainPendingSpikeRewards(int frameCounter) {
         int[] spikePos;
         while ((spikePos = slotStageController.consumePendingSpikeReward()) != null) {
             S3kSlotSpikeRewardObjectInstance reward = new S3kSlotSpikeRewardObjectInstance(
@@ -721,6 +711,47 @@ public final class S3kSlotBonusStageRuntime {
             registerDynamicSlotObject(reward);
             slotStageController.onRewardSpawned();
             slotSpikeRewards.add(reward);
+            runSpawnFrameDispatchIfSlotNotYetExecuted(reward, frameCounter);
+        }
+    }
+
+    /**
+     * Runs a just-spawned reward's own routine on its spawn frame when the ROM's
+     * object dispatch would still reach it this pass.
+     *
+     * <p>The cage spawns its rewards with {@code jsr (AllocateObject).l}
+     * ({@code sonic3k.asm:99474} for {@code Obj_SlotRing},
+     * {@code :99429} for {@code Obj_SlotSpike}), which scans
+     * {@code Dynamic_object_RAM} forward from its first slot
+     * ({@code sonic3k.asm:37911-37914}) -- so the child can land either below or
+     * above the cage's own slot. The main object pass walks slots in ascending
+     * index order, so a child allocated ABOVE the cage's slot is still ahead of
+     * the walk and runs its routine 0 in the very same frame it was created;
+     * one allocated BELOW it has already been passed and does not run until the
+     * next frame. That single tick is what makes {@code Obj_SlotRing}'s
+     * {@code $40} countdown -- seeded to {@code $1A} at {@code sonic3k.asm:99482}
+     * and decremented once per routine-0 tick with
+     * {@code subq.w #1,$40(a0) / bne.w Draw_Sprite}
+     * ({@code sonic3k.asm:35883-35884}) -- reach zero on spawn frame + 25 rather
+     * than + 26.
+     *
+     * <p>The slot indices compared here are the engine's own ROM-modelled
+     * allocation, not an assumption about which side the child lands on.
+     */
+    private void runSpawnFrameDispatchIfSlotNotYetExecuted(
+            com.openggf.level.objects.AbstractObjectInstance reward, int frameCounter) {
+        if (slotCage == null || slotPlayer == null) {
+            return;
+        }
+        int cageSlot = slotCage.getSlotIndex();
+        int rewardSlot = reward.getSlotIndex();
+        if (cageSlot < 0 || rewardSlot < 0 || rewardSlot <= cageSlot) {
+            return;
+        }
+        if (reward instanceof S3kSlotRingRewardObjectInstance ringReward) {
+            ringReward.tickSlotRuntime(frameCounter, slotPlayer);
+        } else if (reward instanceof S3kSlotSpikeRewardObjectInstance spikeReward) {
+            spikeReward.tickSlotRuntime(frameCounter, slotPlayer);
         }
     }
 

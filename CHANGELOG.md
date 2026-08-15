@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K slot-machine bonus stage's reward cadence now reads the ROM's
+  object-visible `Level_frame_counter`, and a reward allocated above the cage's
+  slot runs its own routine on its spawn frame. The bonus coordinator drove the
+  slots runtime from a counter seeded once at stage setup and then
+  self-incremented; it read one below the ROM's object-visible value, because
+  every main loop increments `Level_frame_counter` between `Wait_VSync` and
+  `Process_Sprites` (`docs/skdisasm/sonic3k.asm:10742-10744`, `:63207-63209`)
+  while the engine advances its counter after object execution -- the reason the
+  engine's other ported gates read `getFrameCounter() + 1`
+  (`LevelManager`:922, `CnzBumperObjectInstance`, `PointPokeyObjectInstance`).
+  So the cage's `btst #0,(Level_frame_counter+1).w` spawn gate
+  (`sonic3k.asm:99435`) fired on the ROM's even frames instead of its odd ones.
+  Separately, `Obj_SlotRing`'s `$40` countdown (seeded `$1A` at `:99482`,
+  decremented at `:35883-35884`) expires at spawn+25 rather than spawn+26
+  because `AllocateObject` (`:37911-37914`) places the ring above the cage's
+  slot, so the ascending object pass still reaches it the frame it was created;
+  the engine deferred every child's first tick by a frame. The two errors
+  cancelled in `TestS3kSlotsBonusTraceReplay` and added in the Sonic+Tails
+  payout. `TestS3kSonicTailsSlotsBonusTraceReplay` frontier frame 2322
+  (`rings`) -> 2587 (`y_speed`), 544 -> 541 errors at an unchanged 5259 compared
+  frames, with all seven `rings` error spans eliminated. No constant added.
 - Fix: the S3K slot-machine bonus cage now uses the ROM's half-open capture
   window instead of a symmetric `abs()`. `loc_4C026`
   (`docs/skdisasm/sonic3k.asm:99385-99394`) tests each axis with

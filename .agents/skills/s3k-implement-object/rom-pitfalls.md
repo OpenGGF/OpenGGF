@@ -2625,3 +2625,78 @@ reconstruction of it.
 **Originating commit.** S3K Sonic+Tails Slots bonus segment, frontier
 `5 -> 913`, 900 -> 829 errors; see `docs/status/trace-frontier-log.md`,
 2026-08-15.
+
+---
+
+## P66 -- Whether a spawned child runs on its spawn frame is decided by its SLOT, and it is worth exactly one frame of every countdown it owns
+
+**Symptom.** An object's timed effect -- a ring award, a drop, a detonation --
+lands consistently one frame later (or earlier) than the ROM, with every position,
+velocity and animation field byte-identical. In a trace it prints as a lone
+counter/score field with nothing else diverging, and the delta stays constant
+because the parent re-spawns on a fixed cadence.
+
+**Mechanism.** The main object pass walks slots in ascending index order.
+`AllocateObject` (`docs/skdisasm/sonic3k.asm:37911-37914`) scans
+`Dynamic_object_RAM` forward from its first slot, so a child can land **either
+side** of its parent. Above the parent's slot, the walk has not reached it yet and
+the child runs its routine 0 **in the same frame it was created**; below, it has
+already been passed and does not run until the next frame. A child whose routine 0
+is a countdown therefore expires at `spawn + N - 1` or `spawn + N` purely by slot
+position -- `Obj_SlotRing` seeds `$40` to `$1A` (`:99482`) and decrements once per
+tick (`subq.w #1,$40(a0) / bne.w Draw_Sprite`, `:35883-35884`), and lands on
+spawn+25 because the cage occupies slot 4 while every ring allocates into 5+.
+
+**What to check.** Do not hardcode either answer, and do not infer it from one
+fixture: compare the child's allocated slot index against the parent's, using the
+engine's own ROM-modelled allocation. `ObjectManager.isSlotAlreadyExecutedThisFrame`
+already exists for objects on the normal dispatch; runtimes that tick their objects
+themselves must make the same comparison explicitly. The fixture's `slot_dump` aux
+gives you the ROM's answer directly -- read it before theorising.
+
+**The trap that makes this expensive.** Getting it wrong is worth one frame, and
+one frame is also what a mis-phased frame-counter gate costs. Two such errors of
+opposite sign cancel completely in whichever recording happens to start on the
+right parity, so the class goes green over both defects and a second fixture on
+the other parity shows them **added**. If a spawn-frame-dispatch change moves a
+green class by one frame, look for the phase error it was cancelling rather than
+reverting.
+
+**Originating commit.** `<pending: S3K slots bonus ring-award cadence>`; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.
+
+**Cross-game.** S1's `FindFreeObj` and S2's `FindFreeObj`/`FindNextFreeObj` have
+the same lowest-free semantics and the same ascending pass, so the rule is
+universal; only the allocator names differ.
+
+---
+
+## P67 -- `Level_frame_counter` is incremented BEFORE the object pass, so a ported gate needs the object-visible value
+
+**Symptom.** An object gated on `btst #n,(Level_frame_counter+1).w` does the right
+thing at the right rate but on the wrong parity/phase, so everything it drives is
+consistently one frame out.
+
+**Mechanism.** Every ROM main loop does `Wait_VSync` then
+`addq.w #1,(Level_frame_counter).w` then `Process_Sprites`
+(`docs/skdisasm/sonic3k.asm:10742-10744`, `:63207-63209`; the level and
+competition loops have the same shape). Objects running this frame therefore read
+the **already-incremented** value, which is also what a recorder sampling per frame
+writes into `gameplay_frame_counter`. The engine advances its counter in
+`LevelManager.update()`, *after* object execution, so `getFrameCounter()` during an
+object update is one below the ROM's. This is why the engine's ported gates read
+`getFrameCounter() + 1` -- `LevelManager`:922 passes exactly that into
+`ObjectManager.update`, and `CnzBumperObjectInstance`,
+`AizFallingLogObjectInstance`, `PointPokeyObjectInstance`,
+`Sonic1SpinPlatformObjectInstance` and others follow it.
+
+**What to check.** Any new `Level_frame_counter` gate must read the object-visible
+value, and any *local* counter standing in for it is suspect on two counts: it is
+seeded at some arbitrary phase, and it does not stall on lag frames the way the ROM
+counter does (a lag row repeats the counter while the V-blank count advances).
+A free-running `counter++` passed down from a coordinator is the shape to grep for.
+
+**Cross-game.** Identical in S1 and S2 (`Level_frame_counter` / `v_framecount`),
+same loop ordering.
+
+**Originating commit.** `<pending: S3K slots bonus ring-award cadence>`.
