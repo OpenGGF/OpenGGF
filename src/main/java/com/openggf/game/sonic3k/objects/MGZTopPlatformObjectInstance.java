@@ -2183,4 +2183,24 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             NativePositionOps.writeYPosPreserveSubpixel(player, clampedY);
         }
     }
+
+    /**
+     * ROM {@code Obj_MGZTopPlatform} init stores
+     * {@code move.b #$18,width_pixels(a0)} / {@code move.b #$C,height_pixels(a0)}
+     * (docs/skdisasm/sonic3k.asm:71485-71486). Render_Sprites builds the
+     * render_flags bit-7 box from those bytes, and that bit is the gate
+     * SolidObjectTop tests before doing any solid work
+     * (sonic3k.asm:41390-41392). The AbstractObjectInstance default of 16 is
+     * narrower than $18 and taller than $C, so the top platform stopped being
+     * solid before the ROM's box left the screen. See pitfall P60.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 0x18;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x0C;
+    }
 }
