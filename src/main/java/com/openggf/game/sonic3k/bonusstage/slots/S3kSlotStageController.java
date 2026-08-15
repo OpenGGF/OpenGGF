@@ -107,7 +107,14 @@ public class S3kSlotStageController {
         }
     }
 
-    /** Returns the low byte of Stat_table — ROM uses move.b (Stat_table).w,d0 for angle reads. */
+    /**
+     * Returns the angle byte of Stat_table. The ROM reads it with
+     * {@code move.b (Stat_table).w,d0} (e.g. sonic3k.asm:99325), which on a big-endian 68k
+     * takes the <em>high</em> byte of the 16-bit accumulator; the low byte is the sub-angle
+     * fraction that the per-frame {@code Stat_table += SStage_scalar_index_1}
+     * (sonic3k.asm:98781-98783) advances. (This javadoc previously said "low byte" —
+     * {@link S3kSlotStageState#angle()} was and remains correct.)
+     */
     public int angle() {
         return stageState.angle();
     }

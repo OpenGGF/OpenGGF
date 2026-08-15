@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The slot-bonus cage captures on the ROM's biased-unsigned window, not a symmetric radius
+  (`bugfix/ai-r254-slots-cage`, merged 2026-08-15).** The Slots replay's frame-913 divergence was not
+  physics: position snapped to a constant, all three velocities zeroed and sub-pixels untouched is
+  `loc_4C026`'s capture verbatim (sonic3k.asm:99395-99400), whose `move.w #$460,x_pos` /
+  `move.w #$430,y_pos` literals *are* the trace's expected values. The ROM tests each axis with
+  `sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0 / bhs` (:99385-99394) — a biased **unsigned**
+  compare giving the half-open window `[-$18, +$18)`, where the engine used `Math.abs(delta) < 0x18`.
+  The two differ on exactly one value, `delta == -$18`, which the ROM captures and `abs()` rejects;
+  this fixture lands on it, so the engine captured a frame late. Errors 829 -> 544, frontier 913 ->
+  2322, `total_frames` unchanged at 5259. This also answered an open question: the 532
+  `player_mapping_frame` errors **cascade** from this one defect rather than forming a second cause —
+  they fall to 385 and their first occurrence moves from frame 1193 to 2701, downstream of the new
+  frontier.
+
 - **The slot-bonus player runs its spawn-frame `Animate` tail, not just its physics
   (`bugfix/ai-s3k-slots-spawn-animate`, merged 2026-08-15).** The Sonic+Tails Slots replay diverged
   at frame 5 on `player_mapping_frame` (0x97 vs 0x96) and stayed one step out for the whole stage —

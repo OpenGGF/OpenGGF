@@ -78128,3 +78128,117 @@ No fitted constant, tolerance, offset or nudge. No assertion weakened, widened,
 deleted, disabled or made advisory. No zone/act/route/frame/game-name predicate.
 No trace hydration -- the added call reads no trace field. `docs/skdisasm` used
 for labels and citations only.
+
+## 2026-08-15 -- S3K Slots bonus: the cage capture window is half-open, and abs() is not
+
+Target: `TestS3kSonicTailsSlotsBonusTraceReplay`, base `58ae4da91`.
+Control re-measured at the start of the round on the unmodified tree and it
+matched the brief exactly: **829 errors, first error frame 913, `x`
+expected=0x0460 actual=0x0479**.
+
+### Every field that diverges on frame 913
+
+The reported `x` is alphabetical, not causal. The full set on the first failing
+frame is:
+
+| field | expected | actual |
+|---|---|---|
+| `x` | 0x0460 | 0x0479 |
+| `y` | 0x0430 | 0x0436 |
+| `x_speed` | 0x0000 | 0x010C |
+| `y_speed` | 0x0000 | -0x02B3 |
+| `g_speed` | 0x0000 | 0x0294 |
+
+`x_sub`/`y_sub` **agree** at 913 (both 0x9E00/0x5B00) and only diverge from 914.
+That shape -- position snapped to a constant, all three velocities zeroed, sub-pixels
+untouched -- is `loc_4C026`'s capture verbatim (`docs/skdisasm/sonic3k.asm:99395-99400`).
+So frame 913 is not a physics divergence at all: **the ROM captured the player and
+the engine did not.** The engine captures on 914, one executed frame late.
+
+### The cage's own state was correct -- measured, not assumed
+
+The fixture's aux names the object: `object_state slot 4 object_code 0x0004BF9A`,
+i.e. `loc_4BF9A` (`sonic3k.asm:99324`), the slot-bonus cage. Its orbit
+(`GetSineCosine` on `(Stat_table)`, rotate the centre about the player, write back)
+was instrumented in the engine and compared against the aux for frames 880-913:
+**every cage position matches the ROM byte-for-byte**, and the engine's angle at
+frame 913 is 0x6A, which is exactly the angle the ROM's cage position implies.
+The `Stat_table` high-byte read (`move.b (Stat_table).w`, big-endian) is already
+modelled correctly in `S3kSlotStageState.angle()`.
+
+**Trap for the next round:** the aux line `eng-near s4 0x00 S3kSlotBonusCage
+@0460,0430` reports the cage's *spawn* position, because the engine keeps the
+orbit in `currentX`/`currentY` and never writes it to the `ObjectInstance`
+position the diagnostics dump reads. It looked like a stationary cage and it is
+not one. The ROM does `move.w d2,x_pos(a0)` (`:99345-99346`); the engine's
+diagnostics gap is real but is *not* this bug.
+
+### Root cause
+
+At the capture check the engine's player is at `(0x0479, 0x0436)` and the cage at
+`(0x0491, 0x042D)` -- identical to the ROM on both counts. The x delta is
+`0x0479 - 0x0491 = -0x18` **exactly on the boundary**.
+
+`loc_4C026` (`sonic3k.asm:99385-99394`) tests each axis as
+
+```
+move.w  x_pos(a1),d0
+sub.w   x_pos(a0),d0
+addi.w  #$18,d0
+cmpi.w  #$30,d0
+bhs.s   locret_4C0A8
+```
+
+-- a biased *unsigned* comparison, so the accepted range is the half-open
+`[-$18, +$18)`. `S3kSlotBonusCageObjectInstance.isWithinCaptureRange` used
+`Math.abs(delta) < 0x18`, the symmetric window. The two differ on exactly one
+value, `delta == -$18`, which the ROM captures and `abs()` rejects -- and this
+fixture lands on it.
+
+The fix replaces the `abs()` pair with the ROM's own `(delta + $18) unsigned< $30`
+on each axis. **No constant was introduced**: `$18` and `$30` are the ROM's
+operands, already present in the file. The `0x19 = 25` delta named in the brief is
+the player-to-centre distance, not an offset anyone needs to add; nothing of that
+value appears in the diff.
+
+### The 532 `player_mapping_frame` errors were a cascade, not a second cause
+
+This was the round's open question and it is now answered by measurement. On the
+base tree they numbered 532 with the first group at frame **1193**. With the
+capture fix and nothing else, they number 385 and the first group is at frame
+**2701** -- entirely downstream of the new frontier at 2322. The 1193 block was
+downstream of the missed capture. One bug, not two.
+
+### Result
+
+`TestS3kSonicTailsSlotsBonusTraceReplay`: **829 -> 544 errors**, frontier
+**frame 913 (`x`) -> frame 2322 (`rings`, expected=131 actual=130)**, at an
+unchanged `total_frames` of **5259** (no comparator starvation).
+
+### Verification
+
+Full `-Ptrace-replay` on both trees, `-Dsurefire.runOrder=alphabetical`,
+**843 tests each** (not truncated, not stale; `target/surefire-reports` and
+`target/trace-reports` removed before each run, separate `java.io.tmpdir` per tree
+via `JAVA_TOOL_OPTIONS`). Red-class sets extracted from the surefire XML and
+diffed by name with an explicit Python set difference in both directions:
+**64 red on both trees, zero newly red, zero newly green.** Every shared red
+class's assertion message compared: the **only** delta anywhere in the sweep is
+the target class. Protected classes: `TestS3kSonicTailsAizSegmentTraceReplay`
+and `TestS3kSonicTailsHczSegmentTraceReplay` green; `TestS3kSlotsBonusTraceReplay`,
+`TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTraceReplay` green at
+unchanged 1024/1277/2900 frames -- they share this cage runtime and are the best
+cross-check available; `TestS3kHczCompleteRunTraceReplay` message byte-identical
+(its documented 2 errors at frame 29095 `rings`). Full default-profile run on both
+trees as well.
+
+### Discipline
+
+No fitted constant, tolerance, offset or nudge -- the diff adds `$18`/`$30` in the
+ROM's own comparison form and removes an `abs()`. No assertion weakened, widened,
+deleted, disabled or made advisory. No zone/act/route/frame/game-name predicate.
+No trace hydration. No landed fix undone -- `primeSpawnFrameAnimation` was examined
+and is not a fitted constant; it is untouched and still required (it is what put the
+player on the frame-913 boundary in the first place). `docs/skdisasm` used for
+labels and citations only. One stale javadoc corrected in `S3kSlotStageController`
+("low byte" -> high byte); the code it documents was already correct and is unchanged.

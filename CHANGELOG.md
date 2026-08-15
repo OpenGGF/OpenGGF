@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K slot-machine bonus cage now uses the ROM's half-open capture
+  window instead of a symmetric `abs()`. `loc_4C026`
+  (`docs/skdisasm/sonic3k.asm:99385-99394`) tests each axis with
+  `sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0 / bhs` -- a biased
+  *unsigned* comparison whose accepted range is `[-$18, +$18)`. The engine used
+  `Math.abs(delta) < $18`, which differs on exactly one value, `delta == -$18`:
+  the ROM captures there and `abs()` does not. Measured on
+  `TestS3kSonicTailsSlotsBonusTraceReplay`, whose player sits exactly on that
+  boundary: the ROM captures on frame 913 and the engine captured on 914,
+  costing an extra physics step that permanently skewed `x_sub`/`y_sub`.
+  Frontier frame 913 (`x`) -> 2322 (`rings`), 829 -> 544 errors at an unchanged
+  5259 compared frames, with the previously unattributed 532
+  `player_mapping_frame` errors confirmed as a cascade of this one (first group
+  1193 -> 2701). No constant added -- `$18`/`$30` are the ROM's own operands.
 - Fix: the S3K slot-machine bonus player's spawn-frame fallthrough now runs the
   object's animation tail as well as its physics.
   `Obj_Sonic_RotatingSlotBonus` (`docs/skdisasm/sonic3k.asm:98655`) dispatches
