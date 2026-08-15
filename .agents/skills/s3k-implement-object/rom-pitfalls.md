@@ -1905,5 +1905,58 @@ that is the hardware-timing exception leaking outside its port. Find the unimple
 **Cross-game.** S1 PLC and S2 DPLC queues use the same ordinal-keyed port, so the same
 one-missing-producer-deadlocks-the-rest failure applies to all three games.
 
-**Originating investigation.** `<pending: HCZ Sonic+Tails segment frame 2478>`;
-see `docs/status/trace-frontier-log.md`, 2026-08-15.
+**Originating investigation.** HCZ Sonic+Tails segment frame 2478 (1135 errors). RESOLVED
+2026-08-15: the missing producer was `HCZGeyser_ReloadEnemyArtAndDelete`'s
+`jsr (LoadEnemyArt).l` (`docs/skdisasm/sonic3k.asm:65002-65005`), lost because the
+engine camera-unloaded the geyser 29 frames into its 150-frame countdown. See P53 and
+`docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P53 -- An object with NO `out_of_range` may be holding a global timer whose expiry is an art submission
+
+**S3K origin, cross-game shape.** This is the well-known "ROM object never unloads"
+family (P23 cross-game note / S1 P10 / S2 P52) with a much more expensive failure mode
+than a missing sprite.
+
+**Symptom.** A player physics field diverges more than a thousand frames after anything
+visible happens, and the KosM/PLC ordinal ledger is N behind the recording from some
+earlier point onward (see P52). Chasing the ordinal skew leads to a "missing producer"
+that turns out to be *implemented* -- it simply died before it could run.
+
+**Mechanism.** Several S3K objects that overwrite shared VRAM restore it on the way out,
+and the restore is the *last* thing a long countdown does. `Obj_HCZWaterWall`'s
+horizontal geyser is the measured case: `HCZWaterWall_Horizontal_UpdateChildSprites`
+arms `move.w #150,$30(a0)` and installs `HCZGeyser_CleanupDelay`
+(`docs/skdisasm/sonic3k.asm:64992-65000`), which is a bare `subq.w #1,$30(a0)` with
+**no range test at all**, and whose expiry runs
+`HCZGeyser_ReloadEnemyArtAndDelete` -> `jsr (LoadEnemyArt).l`
+(`:65002-65005`), re-queueing all four `PLCKosM_HCZ1` archives (`:64354-64359`).
+The geyser scrolls off screen long before 150 frames elapse. An engine that applies its
+shared camera unload therefore deletes the object mid-countdown, the four
+`Queue_Kos_Module` submissions never happen, and **every later KosM job in the run is
+four ordinals behind** -- the P52 deadlock, with the "missing producer" being an object
+that was fully implemented and simply killed early.
+
+**What to check / fix.**
+1. Audit the object's ENTIRE body for `out_of_range`, `MarkObjGone`,
+   `Delete_Sprite_If_Not_In_Range` and `Go_Delete_SpriteSlotted`. Count the deletes and
+   name each one. `Sprite_OnScreen_Test` is a DRAW, not an unload -- do not read it as one.
+2. If none of the deletes is the shared camera macro, set
+   `usesCustomOutOfRangeCheck() = true` and have `isCustomOutOfRange()` return the ROM's
+   answer (often just `false`; the object already owns its own delete tests).
+3. Range behaviour can be ROUTINE-dependent within one object. `Obj_HCZWaterWall`'s
+   vertical branch DOES call `Delete_Sprite_If_Not_In_Range`, but only from
+   `HCZWaterWall_Vertical_WaitPlayer` (`:65135-65136`); the horizontal branch never does.
+   Model per phase, not per object, when the routines disagree.
+4. Sibling audit: any object whose tail restores shared art
+   (`Restore the overwritten badnik explosion art`, `sonic3k.asm:128487`, is another
+   instance of the same shape) is a candidate for the same defect.
+
+**Diagnostic that settles it in one run.** Probe the object's phase machine each
+dispatch AND probe `ObjectManager.unloadCounterBasedOutOfRange` for that class. If the
+phase log simply stops with a countdown still running, and the unload probe's last line
+is `outOfRange=true custom=false`, you have it.
+
+**Originating commit.** HCZ Sonic+Tails segment frame 2478, 1135 errors -> 0; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.

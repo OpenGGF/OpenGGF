@@ -76734,3 +76734,67 @@ detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md
   assertion was touched.
 - Correction to the round brief: HCZ is `zone() == 1` in this harness (S3K zone
   order AIZ=0, HCZ=1), not zone 2. The zone set is still `S3KL`.
+
+## 2026-08-15 -- HCZ Sonic+Tails segment frame 2478 CLOSED: the geyser's
+## `LoadEnemyArt` restore was cut short by a shared camera unload
+
+- Branch `bugfix/ai-hcz-geyser-enemy-art-reload`, base `7836e9e40`.
+- Command (both trees, serialised):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest.cds.argLine=-Xshare:off -Ds1.rom.path=... -Ds2.rom.path=...
+  -Ds3k.rom.path=... test`
+- **Producer of recorded KosM ordinals 108-111 identified.** Their submission
+  fingerprints are byte-identical to recorded ordinals 103-106
+  (`f7d726c9`, `a0cfa4e1`, `03987fe5`, `0956edb5`), i.e. the four
+  `PLCKosM_HCZ1` badnik archives (`docs/skdisasm/sonic3k.asm:64354-64359`)
+  submitted a *second* time. The producer is
+  `HCZGeyser_ReloadEnemyArtAndDelete` (`sonic3k.asm:65002-65005`), whose
+  `jsr (LoadEnemyArt).l` (`sonic3k.asm:64281-64313`) re-queues the enemy art the
+  horizontal geyser sheet overwrote. It is reached from
+  `HCZGeyser_CleanupDelay` (`sonic3k.asm:64996-65000`), a bare
+  `subq.w #1,$30(a0)` on a 150-frame timer armed at
+  `HCZWaterWall_Horizontal_UpdateChildSprites` (`sonic3k.asm:64992-64993`).
+- **The 2957-2967 burst is the same producer.** Recorded ordinals 114-117 carry
+  the identical four fingerprints, following the second geyser's own art load at
+  ordinal 113 / raw_frame 2768. Recorded direct-queue children repeat too
+  (`82c973d7`, `16e9b3cc`, `7ec834f8`, `fd6e1983` at 35/41/.., 1022/1027/1030/
+  1034 and 2957/2961/2963/2966).
+- **Why the engine did not submit it (measured, temporary probe, reverted).**
+  The engine's geyser reproduced the recorded schedule exactly -- its own art
+  submission took ordinal 107 with the recorded fingerprint, and the engine's
+  `V_int_run_count` at each phase change matched the fixture's
+  `vblank_counter` (fixture row 0 = 53110; engine `Y_GUARD` at 53854 = row 744,
+  `ART_LOAD` 53855-53862, recorded ordinal 107 completes row 751 = 53861).
+  It then entered `CLEANUP` and ticked 122 of the 150 frames before
+  `ObjectManager.unloadCounterBasedOutOfRange` deleted it at camera X 3076
+  (`persistent=false outOfRange=true custom=false`). 29 ticks short, so
+  `LoadEnemyArt` never ran.
+- **Fix.** `HCZWaterWallObjectInstance` now declares
+  `usesCustomOutOfRangeCheck() = true` with `isCustomOutOfRange() = false`. The
+  ROM object has no `out_of_range` macro at all; its three deletes are the
+  routine-0 player-Y guard (`sonic3k.asm:64845-64850`), the vertical branch's
+  `Delete_Sprite_If_Not_In_Range` (`sonic3k.asm:65135-65136`, already modelled in
+  the engine's vertical proximity phase) and the cleanup expiry. The three
+  `Sprite_OnScreen_Test` tails (`:64837`, `:64919`, `:64994`) are draws.
+- **Result.** `TestS3kSonicTailsHczSegmentTraceReplay`: 1135 errors / first error
+  frame 2478 (`x_speed` expected `0x0400` actual `0x0300`) -> **PASS, 0 errors,
+  3519 frames compared**. The fan's submission now takes ordinal 112, matching
+  the recording, so `_unkF7C7` clears and `HCZ_WaterTunnels` engages at 2478.
+- **Blast radius, measured on both trees at the same commit.** Trace profile:
+  222 classes, control 65 red / fix 64 red; explicit set difference both
+  directions gives zero newly red and exactly one newly green (the target).
+  Default profile: 1915 classes, 50 red on both trees, set difference empty in
+  both directions. Every other class's failure message is byte-identical between
+  the trees.
+- Unmoved and re-confirmed by name: `TestS3kSonicTailsAizSegmentTraceReplay`
+  green; `TestS3kSonicTailsMhzSegmentTraceReplay` 9 errors / frame 1276;
+  `TestS3kSonicTailsIczSegmentTraceReplay` 2862 errors;
+  `TestS3kHczCompleteRunTraceReplay` still deliberately red at exactly 2 errors
+  (frames 29095, 29262) -- the slot phase did not shift;
+  `TestS2CompleteEmeraldRunChain` 5 axes with comparator cursor 3977 of 3997,
+  segment 11 at 236 errors and segment 2 absent; the eleven DEZ23/HPZ22/DDZ
+  classes all load with unchanged counts.
+- No constant, offset, tolerance or comparison shift was introduced, and no
+  assertion was weakened, excluded, disabled or otherwise touched. No test setup
+  changed either. The hardware-timing port's release conditions were not
+  modified.

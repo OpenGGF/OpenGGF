@@ -174,6 +174,48 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         return y;
     }
 
+    /**
+     * {@code Obj_HCZWaterWall} owns every delete test it has; none of them is
+     * the shared {@code out_of_range} / {@code MarkObjGone} camera unload, so
+     * the manager must not apply one on the object's behalf.
+     *
+     * <p>Auditing the whole object body
+     * ({@code docs/skdisasm/sonic3k.asm:64836-65080}) there are exactly three
+     * deletes and no range macro at all:
+     * <ul>
+     *   <li>{@code HCZWaterWall_Horizontal_CheckPlayerY} (:64845-64850)
+     *       {@code Delete_Current_Sprite} when Player 1 {@code y_pos < $500} —
+     *       a player-Y test on the first dispatch, not a camera test;</li>
+     *   <li>{@code HCZWaterWall_Vertical_DeleteIfFar} (:65135-65136)
+     *       {@code Delete_Sprite_If_Not_In_Range}, reached only from
+     *       {@code HCZWaterWall_Vertical_WaitPlayer} — modelled in
+     *       {@link #updateVertProximityCheck};</li>
+     *   <li>{@code HCZGeyser_ReloadEnemyArtAndDelete} (:65002-65005), the end
+     *       of the 150-frame {@code HCZGeyser_CleanupDelay} countdown.</li>
+     * </ul>
+     * The three {@code Sprite_OnScreen_Test} tails (:64837, :64919, :64994) are
+     * draw calls, not unloads.
+     *
+     * <p>This matters beyond the object itself:
+     * {@code HCZGeyser_CleanupDelay} (:64996-65000) is a bare
+     * {@code subq.w #1,$30(a0)} with no range test, and its expiry runs
+     * {@code jsr (LoadEnemyArt).l} — re-queueing all four {@code PLCKosM_HCZ1}
+     * archives (:64354-64359) whose VRAM the geyser sheet overwrote. The
+     * horizontal geyser scrolls off screen long before that countdown ends, so
+     * a shared camera unload kills the object mid-countdown and the ROM's
+     * {@code Queue_Kos_Module} submissions never happen.
+     */
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    /** @see #usesCustomOutOfRangeCheck() — the ROM object has no range unload. */
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;

@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the HCZ geyser survives scrolling off screen so its `LoadEnemyArt`
+  restore actually runs. `Obj_HCZWaterWall` has **no** `out_of_range` /
+  `MarkObjGone` test anywhere in its body
+  (`docs/skdisasm/sonic3k.asm:64836-65080`): its only deletes are the routine-0
+  player-Y guard (`:64845-64850`), the vertical branch's
+  `Delete_Sprite_If_Not_In_Range` (`:65135-65136`), and
+  `HCZGeyser_ReloadEnemyArtAndDelete` (`:65002-65005`). The engine applied its
+  shared camera unload anyway, killing the horizontal geyser about 29 frames
+  into the bare 150-frame `HCZGeyser_CleanupDelay` countdown (`:64996-65000`)
+  once it scrolled off screen. That countdown's expiry is the ROM's mid-level
+  `jsr (LoadEnemyArt).l`, which re-queues all four `PLCKosM_HCZ1` archives
+  (`:64354-64359`) whose VRAM the geyser sheet overwrote. Losing those four
+  `Queue_Kos_Module` submissions left every later S3K KosM job four ordinals
+  behind the recording, so no later submission's fingerprint could ever match
+  its recorded ordinal and nothing became ready again for the rest of the run --
+  including `Obj_HCZLargeFan`, which therefore never cleared `(_unkF7C7).w`
+  (`:65588-65634`) and never let `HCZ_WaterTunnels` (`:8848-8899`) engage.
+  Modelled with `usesCustomOutOfRangeCheck()` / `isCustomOutOfRange()` returning
+  the ROM's answer (the object owns every delete test it has).
+  `TestS3kSonicTailsHczSegmentTraceReplay` 1135 errors (first frame 2478,
+  `x_speed`) -> **0 errors over 3519 compared frames**.
 - Fix: HCZ MegaChoppers wait offscreen before doing anything, and deal the
   `EnemyDefeated` rebound themselves. Two stacked defects, only landable
   together. (1) `Obj_MegaChopper`'s first instruction is

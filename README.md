@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The HCZ segment class goes GREEN: the geyser must survive to re-queue enemy art
+  (`bugfix/ai-hcz-geyser-enemy-art-reload`, merged 2026-08-15).**
+  `TestS3kSonicTailsHczSegmentTraceReplay` **1135 errors → 0 over 3519 compared frames** — the
+  second S3K segment class closed this session. The missing KosM ordinals 108–111 were **not new
+  art**: their fingerprints are byte-identical to 103–106, i.e. `PLCKosM_HCZ1`'s four badnik
+  archives submitted a *second* time by `HCZGeyser_ReloadEnemyArtAndDelete`
+  (`sonic3k.asm:65002-65005`), which re-queues the VRAM the horizontal geyser sheet overwrote. It
+  is reached from `HCZGeyser_CleanupDelay`'s 150-frame countdown (`:64996-64999`). **The producer
+  was already implemented** — the engine's geyser reproduced the recorded schedule exactly, then
+  was camera-unloaded **29 ticks short** of that countdown. `Obj_HCZWaterWall` has **no
+  `out_of_range` or `MarkObjGone` anywhere in its body**; its only deletes are the routine-0
+  player-Y guard, the vertical branch's range check (already modelled) and the cleanup expiry. One
+  method declaring a custom out-of-range check that never fires. Catalogued as **P53**. The
+  second unproduced burst at frames 2957–2967 is confirmed as the same producer.
+
 - **HCZ 2478 traced through five links to a missing KosM producer
   (`bugfix/ai-hcz-2478-kosm-ordinal-skew`, docs merged 2026-08-15).** A player `x_speed` value
   turns out to be four objects deep. All five fields diverging at 2478 are the signature of
