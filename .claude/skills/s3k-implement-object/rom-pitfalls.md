@@ -1796,3 +1796,41 @@ universal.
 **Originating commit.** `<pending: ICZ Star Pointer orphaned orbit points>`;
 `OrbinautBadnikInstance.OrbinautOrbInstance` is the pre-existing correct example
 in the same file family.
+
+---
+
+## P50 -- Some object branches read persistent *run* state, not level state
+
+**Symptom.** An object behaves consistently and plausibly in the engine, matches
+its disassembly line for line, and still takes the wrong branch in a mid-run
+trace segment. Nothing about the object, the zone, the player or the frame
+explains it.
+
+**Why.** A handful of S3K objects branch on save/run-scoped globals that no
+level-local state implies: `Chaos_emerald_count`, `Super_emerald_count`,
+`Collected_special_ring_array`, `SK_alone_flag`. Those hold whatever the *whole
+playthrough* has accumulated. A standalone segment replay arms one zone in
+isolation, so every such global reads as its power-on default and the object
+takes the "nothing collected yet" branch forever.
+
+**Worked example.** `SSEntryRing_Main`'s collision handler `loc_6170A`
+(`docs/skdisasm/sonic3k.asm:128276-128293`) awards 50 rings at `loc_61794`
+(`:128325-128333`) when `Chaos_emerald_count` is 7 and `SSEntry_CheckLevel`
+(`:128433-128443`) reports an S3-half level; otherwise it runs the special-stage
+capture at `loc_6173A` (`:128295-128298`). Same ring, same zone, same player --
+the only discriminator is a counter set by earlier special stages.
+
+**What to check.** When porting a branch, classify each tested global as
+*level-scoped* (reset on level load) or *run-scoped* (survives level loads).
+Note the run-scoped ones in the port's Javadoc. If a trace frontier lands on one
+of them, the object is probably right and the harness is missing progression:
+verify against the run manifest's `emeralds_before` / `rings_before` before
+touching the object. **Do not** seed the counter from trace data to make a
+segment green -- that is hard rule 4 hydration; the ordered run chain is where
+those branches are legitimately reachable.
+
+**Cross-game.** S1 and S2 have the same shape with `Emerald_count` /
+`Got_emerald` gating their special-stage and ending branches, so the
+classification habit is universal; only the specific globals are S3K's.
+
+**Originating commit.** `<pending: ICZ frame 2336 giant-ring diagnosis>`.

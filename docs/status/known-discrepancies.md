@@ -1235,6 +1235,25 @@ position for the segment. That is accepted frame-zero bootstrap debt, not
 per-frame trace hydration, and it must not expand into copying recorded trace
 rows or sidekick/camera state back into the engine.
 
+### Known Consequence: Run-Level Progression Is Absent
+
+Position is not the only run-level state a mid-run segment lacks. Chaos and
+Super Emerald counts also start at zero, because the segment did not replay the
+special stages that earned them. This is deliberate -- seeding them from the run
+manifest's `emeralds_before` would be trace hydration under hard rule 4 -- but it
+makes some ROM branches unreachable in a standalone segment replay.
+
+The measured instance is `TestS3kSonicTailsIczSegmentTraceReplay` frame 2336.
+`loc_6170A` (skdisasm/sonic3k.asm:128276-128293) sends a special-stage entry ring
+to the 50-ring award at `loc_61794` (:128325-128333) only when
+`Chaos_emerald_count` is 7; otherwise it runs the capture sequence at `loc_6173A`
+(:128295-128298). The recorded run held all seven emeralds through ICZ
+(`run_manifest.json`, transition out of segment 18, `"emeralds_before": 7`), so the
+ROM awards 50 rings while the replay, holding none, enters capture -- `rings`
+80 vs 30, `player_animation_id` `0x0D` vs `0x1C`. The engine's own branch is
+ROM-correct; only the emerald count differs. Such frontiers are closed by the
+ordered run chain, not by the standalone segment harness.
+
 ### Verification
 
 `TestTraceReplayStartPositionPolicy.s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState`

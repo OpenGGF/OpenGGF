@@ -76318,3 +76318,68 @@ cause and is untouched by this fix.
 `player_animation_id` 0x0D vs 0x1C at the same frame). The 1983 two-error
 `tails_animation_id` blip remains open and is independent -- it is a single-frame
 Tails animation sample, not a cascade.
+
+## 2026-08-15 - ICZ 2336 root-caused: giant-ring 50-ring award needs 7 Chaos Emeralds
+
+Base `d65860292`; all numbers measured at that commit on worktree `wt/r155ctl`
+(control only -- **no `src/main/` change was landed this round**).
+**Control re-established, not inherited:**
+`TestS3kSonicTailsIczSegmentTraceReplay` **2862** errors, reported first error frame
+**1983**, over 18,043 rows.
+
+**The briefed 50-ring resemblance is NOT a coincidence. It is the award itself.**
+
+**MEASURED, fixture side.** Walking `rings` in
+`.../s3k-sonic-tails-complete-emeralds/icz/physics.csv.gz`, the value changes
+`0x1E -> 0x50` in **one row**, at row **2337** (`0x0921`), player at
+x `0x42C1` y `0x066C` with `player_animation_id` `0x0D`. Every other ring change in
+the whole segment is +1. So the divergence is a single-step +50, not accumulated
+ring loss, and `rings` never differs before 2336.
+
+**MEASURED, report side.** Sorting `s3k_icz1_report.json` by `start_frame`: only
+**2** of 2862 errors start before 2336 (the known frame-1983 `tails_animation_id`
+/`tails_mapping_frame` blip, `frame_span 1`, `cascading false`). The cascade opens at
+frame **2336** with two `cascading: true` spans running to 8523:
+`player_animation_id` expected `0x0D` actual **`0x1C`**, and `player_mapping_frame`
+expected `0xA0` actual **`0x00`**. Those two actuals are literally
+`move.b #0,mapping_frame(a1)` / `move.b #$1C,anim(a1)` at `loc_6173A`
+(`sonic3k.asm:128295-128298`) -- the special-stage **capture** branch of
+`SSEntryRing_Main`. `rings` then diverges at 2337 (80 vs 30) because the ROM took
+`loc_61794` (`sonic3k.asm:128325-128333`, `moveq #50,d0 / jmp (AddRings).l`) instead.
+
+**The ROM branch, cited.** `loc_6170A` (`sonic3k.asm:128276-128293`):
+`cmpi.b #7,(Chaos_emerald_count).w / bne loc_6173A` -- fewer than 7 Chaos Emeralds
+goes to capture. With 7: `SK_alone_flag` is 0 (Sonic+Tails), `SSEntry_CheckLevel`
+(`sonic3k.asm:128433-128443`) returns 0 for ICZ (zone 5 is neither `>= 7` nor `== 4`,
+i.e. an S3-half level), so `beq loc_61794` awards 50 rings. The run manifest's own
+transition out of segment 18 records `"emeralds_before": 7` -- the movie had all
+seven Chaos Emeralds throughout ICZ.
+
+**The engine site, MEASURED not inferred.** A probe on
+`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` printed exactly
+once in the 18,043-row segment:
+`PROBE ssEntryRing zone=5 emeralds=0 target=7 hasAll=false hasAllSuper=false s3half=true`.
+Both ROM-derived terms the engine *can* evaluate are correct -- zone 5 is classified
+as an S3-half level, and the S&K-half/Super-Emerald predicate landed earlier this
+session is not implicated. The single false term is `hasAllEmeralds()`: the replay
+holds **0** Chaos Emeralds where the recorded run held **7**.
+
+**Therefore this frontier is not an engine physics or object defect.** It is the
+standalone-segment bootstrap boundary: `TestS3kSonicTailsIczSegmentTraceReplay`
+arms segment 18 of a 40-transition run with `ReplayStartState.DEFAULT`, and
+run-level progression (Chaos/Super Emerald counts) is not carried in, exactly as
+start-position state is not. Seeding it from `run_manifest.json`'s
+`emeralds_before` would be hydrating gameplay state from trace data (hard rule 4),
+so **nothing was landed**. The ROM-accurate route to a green here is the ordered
+chain (`TestS3kSonicTailsCompleteEmeraldRunChain`), where the emeralds are earned by
+replaying the preceding special-stage segments, or a native run-state handoff -- the
+removal condition already written against the segment start-position debt.
+
+**Verification.** Docs-only change; no `src/main/` or `src/test/` file was modified,
+so no protected class can move. Control full trace profile at `d65860292`:
+843 run / 53 F / 11 E / 4 S, 64 red -- matching the briefed base exactly.
+
+**Next ICZ frontier once run-level progression is modelled: unknown** -- frame 2336
+is expected to clear wholesale with the emeralds present. Until then the two
+independent open items are the frame-1983 two-error `tails_animation_id` blip and
+the segment-isolation progression gap recorded above.
