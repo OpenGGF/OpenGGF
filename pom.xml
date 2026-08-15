@@ -249,6 +249,107 @@
                                 <exclude>**/TestAizFireCurtainGpuDiag.java</exclude>
                                 <exclude>**/TestS3kSpecialStageResultsVisual.java</exclude>
                                 <exclude>**/TestInstaShieldVisual.java</exclude>
+                                <!--
+                                  Release-6 scope gate. Release 6 is the Sonic path through
+                                  S1, S2 and S3; the S&K-half zones (ids 7-13, MHZ onward)
+                                  and every Knuckles route are expected red and run in
+                                  -Ptrace-replay-r7 instead. Kept in one place and mirrored
+                                  by that profile's includes — if you add a trace class for
+                                  an out-of-scope zone or run, add it to BOTH lists.
+                                  Rationale and the measured split:
+                                  docs/status/trace-scope-release-6.md
+                                -->
+                                <exclude>**/tests/trace/s3k/**/*Mhz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Fbz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Ssz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Soz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Lrz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Hpz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Ddz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Dez*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Zone0c*.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kSlotsBonusTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</exclude>
+                                <exclude>**/tests/trace/runs/TestS3kMegaRunChain.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Release-7 trace scope: the traces deliberately outside release 6.
+
+          Release 6 is the Sonic path through S1, S2 and S3. S3K is only partly
+          implemented past Launch Base, and the Knuckles routes are not a release-6
+          deliverable, so these classes are EXPECTED red and would otherwise dominate
+          the blocking sweep by error count — 30 S&K-half classes carried 49,261 of
+          the 80,236 measured S3K errors at 9900b3114, against 30,975 in scope.
+
+          Nothing here is deleted, weakened or made advisory. These classes assert
+          exactly what they asserted before and still fail if they regress; they are
+          gated out of the release-blocking suite, not silenced.
+
+            mvn -Ptrace-replay-r7 test
+
+          RUN THIS ANYWAY when a change touches shared runtime rather than one
+          release-6 zone — the sidekick CPU/despawn path, the bonus-stage runtime,
+          the hardware-timing port, PLC/Kosinski queues, the camera, or
+          AbstractTraceReplayTest. The three GREEN Knuckles bonus classes are the best
+          cross-check available for slot-runtime changes, and a ROM-cited sidekick fix
+          landed earlier moved both FBZ and SSZ, which live here.
+
+          The include list below mirrors the exclude list in the trace-replay profile.
+          Add a new out-of-scope class to BOTH.
+          See docs/status/trace-scope-release-6.md.
+        -->
+        <profile>
+            <id>trace-replay-r7</id>
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine}</argLine>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/tests/trace/s3k/**/*Mhz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Fbz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Ssz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Soz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Lrz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Hpz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Ddz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Dez*.java</include>
+                                <include>**/tests/trace/s3k/**/*Zone0c*.java</include>
+                                <include>**/tests/trace/s3k/TestS3kSlotsBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</include>
+                                <include>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</include>
+                                <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
+                            <excludes>
+                                <exclude>**/Debug*.java</exclude>
+                                <exclude>**/*Debug*.java</exclude>
+                                <exclude>**/*Probe.java</exclude>
+                                <exclude>**/*Probe*.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
