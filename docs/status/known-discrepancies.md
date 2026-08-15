@@ -1243,16 +1243,48 @@ special stages that earned them. This is deliberate -- seeding them from the run
 manifest's `emeralds_before` would be trace hydration under hard rule 4 -- but it
 makes some ROM branches unreachable in a standalone segment replay.
 
-The measured instance is `TestS3kSonicTailsIczSegmentTraceReplay` frame 2336.
 `loc_6170A` (skdisasm/sonic3k.asm:128276-128293) sends a special-stage entry ring
-to the 50-ring award at `loc_61794` (:128325-128333) only when
-`Chaos_emerald_count` is 7; otherwise it runs the capture sequence at `loc_6173A`
-(:128295-128298). The recorded run held all seven emeralds through ICZ
-(`run_manifest.json`, transition out of segment 18, `"emeralds_before": 7`), so the
-ROM awards 50 rings while the replay, holding none, enters capture -- `rings`
-80 vs 30, `player_animation_id` `0x0D` vs `0x1C`. The engine's own branch is
-ROM-correct; only the emerald count differs. Such frontiers are closed by the
-ordered run chain, not by the standalone segment harness.
+to the 50-ring award at `loc_61794` (:128325-128333) when `Chaos_emerald_count`
+is 7 **and** either `SK_alone_flag` is set, or `SSEntry_CheckLevel` says the
+level is an S3-half one (:128433-128443), or the Super Emeralds are also
+complete. Otherwise it runs the capture sequence at `loc_6173A` (:128295-128301),
+which writes `move.b #$1C,anim(a1)`, `move.b #0,mapping_frame(a1)` and
+`move.b #$53,object_control(a1)` -- the player is locked and frozen. The engine's
+own branch (`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture`)
+is ROM-correct; only the emerald count differs.
+
+**Measured instances, re-stamped at `2bab075aa`** (the previously cited ICZ frame
+2336 was stale -- ICZ is now masked by an earlier, unrelated Tails-animation
+frontier at 1983, `tails_animation_id` `0x0005` vs `0x0006`):
+
+| class | errors | first error |
+|---|---:|---|
+| `TestS3kSonicTailsLbzSegmentTraceReplay` | 7174 | 958, `player_animation_id` `0x0002` vs `0x001C` |
+| `TestS3kSonicTailsCnzSegmentTraceReplay` | 6300 | 5754, `player_animation_id` `0x0000` vs `0x001C` |
+
+These are the two largest release-6 S3K reds and they are **one cause**, not two.
+At each frontier exactly two fields differ -- `player_animation_id` and
+`player_mapping_frame` -- with position, speed, sub-pixels, rings and camera all
+matching, and no error group starts before it. On the *next* frame the ROM's
+`rings` steps by exactly +50 (16 -> 66 in LBZ, 94 -> 144 in CNZ). The recorded run
+held 7 emeralds from segment 15 onward, and CNZ (zone 3) and LBZ (zone 6) are both
+S3-half, so the ROM awards while the replay captures.
+
+A temporary probe seeding 7 emeralds at bootstrap -- **not landed, and not
+landable: seeding from the manifest is trace hydration under hard rule 4** --
+moved LBZ to 5028 errors with every field at frame 958 matching except `rings`,
+confirming the diagnosis positively rather than by elimination.
+
+Behind this sits a **second, independent and still-open defect**: with emeralds
+present, the 50-ring award publishes exactly one frame early (one-frame,
+self-correcting `rings` spans at LBZ 958 and CNZ 5754). Whether that is an engine
+phase error or the recorder sampling `rings` before the object pass is not
+established; ordinary ring pickups show no such skew, which argues it is real. It
+is only observable with emeralds seeded, so no committed test can pin it today.
+Nothing was fitted to close it.
+
+Such frontiers are closed by the ordered run chain, not by the standalone segment
+harness.
 
 ### Verification
 
