@@ -196,6 +196,51 @@ the multibonus runs are validated for recorded timing but never replayed.
 `TestS3kBonusRoundTripChain` **never runs** — both methods `assumeTrue` on run directories that
 do not exist. Recorded as a finding; no fixtures were created to satisfy it.
 
+
+> **Updated 2026-08-15 after a day of S3K rounds.** Two further asks have been measured into
+> existence since this list was written, and one of them is a *capture-format* change rather than
+> an engine one.
+
+### 5. A stable object identity at record time — a capture-format ask
+
+**Object-slot occupancy parity cannot be measured from the current recording, and this is not a
+comparator feature waiting to be built.** S3K's SST has **no `id` field at any offset** — its
+conventions begin `code = 0 ; longword` — and objects overwrite their own dispatch pointer with
+internal sub-routine addresses to advance state (1,758 `move.l #<label>,(a0)` sites in
+`sonic3k.asm`). So the value the recorder captures as the object "type" is a **live program
+counter**, not a type at any width.
+
+Measured against both object tables read from the ROM at the addresses the loader itself uses:
+only **4.26%** of `slot_dump` entries are table entries, and those are exactly the objects that
+dispatch via a `routine` byte instead. A containment rule (nearest preceding table entry) was
+tested and **rejected as fitted** — it reproduces several plausible labels and then places others
+in unrelated gaps.
+
+**The ask:** a stable object identity emitted at record time — engine-side or Lua-side — so that
+`object_near` / `slot_dump` carry something invertible. Without it, `compareObjectNearEvents()`
+must stay off for S3K permanently, and the suite cannot see object-layout drift at all. This joins
+the capture section rather than the engine backlog.
+
+### 6. Slot-occupancy parity as a named open frontier
+
+`CLAUDE.md`'s priority 3 already lists **"sidekick/object-lifetime mismatches"**. This is its
+cleanest specimen *and* its measurement gap, produced together:
+
+- Engine-vs-ROM occupancy diverges on **2387 of 2387** sampled frames, on a clean tree.
+- Genuine presence/absence divergence is **19,519 entries across 2025 frames** (the larger figure
+  first published was 67.6% truncation artefact and has been corrected).
+- Mean occupancy **19.9 engine vs 23.9 ROM**; engine short on 1,423 frames, over on 225.
+- Missing clusters in **high** slots, excess in **low** — the signature of an under-populated pool
+  whose linear allocator never climbs.
+- The ROM allocator itself is **refuted as the cause** and already modelled faithfully, including
+  the pre-increment that makes the first dynamic slot unreachable and the `.lookup` division the
+  disassembly flags as a mistake (verified to evaluate correctly at all 90 parent positions).
+
+It is already producing user-visible consequences: a ROM-correct badnik fix shifted slot phase and
+changed when a scattered ring is collected, because `Obj_Bouncing_Ring` gates its floor probe on
+its own slot index. That is now a documented deliberate red on
+`TestS3kHczCompleteRunTraceReplay`, with the removal condition being exactly this frontier.
+
 ## Decisions needing your authority
 
 1. **Build the three-bin markers?** Small, honest reporting change; bin 3 empty by design.
