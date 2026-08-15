@@ -138,15 +138,27 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
         S3kSpecialStageReplayHarness harness = bootHarness(trace, dir, romFile);
         DivergenceReport report = compareReplay(trace, harness);
+
+        // Write the divergence report BEFORE closing hardware timing. The close
+        // below throws on an unconsumed edge, and it used to run first, so a
+        // timing failure discarded the comparison that had already completed:
+        // target/trace-reports/ held nothing, and nine classes read as though
+        // they never reached frame comparison at all. They had -- each has a
+        // real physics divergence, and the unconsumed edge is its downstream
+        // symptom (the stage never reaches clearRoutine 2, so the emerald art
+        // module is never queued and the recorded completion has nothing to
+        // match). Writing first costs nothing and keeps the actual first error
+        // visible. Neither assertion is weakened: the close still throws and
+        // the test still fails.
+        int ssIndex = specialStageIndex(trace);
+        writeReport(report, ssIndex);
+
         // Every recorded hardware-timing edge must have been consumed by a
         // matching production submission (kind, ordinal and submission
         // fingerprint). An emerald art module the engine never queued -- or
         // queued from the wrong ROM address, size or VRAM destination -- leaves
         // its edge unconsumed and fails here rather than silently drifting.
         harness.closeHardwareTiming();
-
-        int ssIndex = specialStageIndex(trace);
-        writeReport(report, ssIndex);
 
         // Pipeline assertion: the report file was written where consumers expect.
         Path jsonPath = reportDir().resolve("s3k_special_stage_" + ssIndex + "_report.json");

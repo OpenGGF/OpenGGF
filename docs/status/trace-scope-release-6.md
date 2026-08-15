@@ -66,8 +66,18 @@ Green and protected: `TestS3kSonicTailsAizSegmentTraceReplay`,
 `TestS3kSonicTailsHczSegmentTraceReplay`.
 
 Also in scope: `SlotsBonus`, `Pachinko`/`Pachinko2`/`Pachinko3`, `Gumball`/`Gumball2`, and
-the `Ss*SpecialStage` classes — all from the Sonic+Tails run. `Ss4` (2 errors) and `Ss5`
-(7 errors) are the closest classes in the suite to green.
+the `Ss*SpecialStage` classes — all from the Sonic+Tails run. `Ss`, `Ss2`, `Ss4`, `Ss5`
+and `Ss6` are **green**.
+
+**Correction: the nine remaining `Ss*` classes are not "structurally blocked".** They were
+recorded that way here and in the frontier table on the strength of an
+`unmatched recorded hardware completions` message, but they do reach frame comparison and
+complete it — `Ss8` compares 5284 rows and `Ss9` 3807. The harness wrote its divergence
+report *after* `closeHardwareTiming()`, which throws, so the report was discarded and the
+real first error was invisible. The ordering is fixed. Each of the nine has a genuine
+physics divergence first, and the unconsumed timing edge is its downstream symptom: the
+stage never reaches `clearRoutine == 2`, so the emerald art module is never queued and the
+recorded completion has nothing to match. **No rule-4 change is needed for any of them.**
 
 The S1 and S2 suites are in scope in full.
 
