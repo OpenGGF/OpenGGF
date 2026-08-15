@@ -77046,3 +77046,103 @@ assertions must be re-derived from `loc_1E45A` at the same time.
 - **No constant, offset, nudge, tolerance or comparison shift was introduced
   anywhere.** No trace hydration, no `docs/` asset reads, no zone/act/route/frame
   predicate, no recorder or fixture change.
+
+## 2026-08-15 -- S3K top-solid zero boundary, round 2: the two compensations are refuted but do not own the residual reds (found, not landed)
+
+Base `f8ef81334` (develop). Candidate worktree = base + three changes; control
+worktree = base unchanged. Both trees on JDK 21, own empty `java.io.tmpdir`,
+`target/surefire-reports` cleared before every run, `-Dtest.cds.argLine=-Xshare:off`.
+
+Candidate change (all three together, as the previous round's target asked):
+
+1. `GameRules.SONIC_3K` `CollisionRules.topSolidLandingAllowsZeroDist` `true` -> `false`.
+2. Deleted `CnzTrapDoorInstance.getTopSolidPlayerPositionHistoryFrames()` (returned `1`).
+3. Deleted `AizTransitionFloorObjectInstance.rejectsZeroDistanceTopSolidLanding` /
+   `onRejectedZeroDistanceTopSolidLanding` and its
+   `FIRE_REFRESH_ZERO_REJECTS_LOW_SUBPIXEL = 21` /
+   `FIRE_REFRESH_ZERO_REJECTS_HIGH_SUBPIXEL = 20` reject counter.
+
+### Both compensations have no ROM basis -- and neither owns the reds
+
+`Obj_CNZTrapDoor` (`sonic3k.asm:67211-67229`) and `Obj_AIZTransitionFloor`
+(`sonic3k.asm:104781-104790`) are both plain `SolidObjectTop` callers. Neither
+has a landing gate, a phase quirk or a repeated-pass structure of its own: they
+set the mapping/size, load `d1`/`d2`/`d3` and jump. `SolidObjectTop` (41784) ->
+`SolidObjectTop_1P` (41798) -> `loc_1E42E` -> `loc_1E44C` -> `loc_1E45A`.
+The one-frame history sample and the 21/20 reject counter are therefore
+**pure compensation** for the shared profile accepting `d0 == 0`.
+
+The CNZ fixture proves the history sample is the wrong model. At the landing
+frame `0x11FC` (4604) `src/test/resources/traces/s3k/cnz/physics.csv.gz` shows
+`y=0742 y_sub=AA00 y_speed=02B0 air=1 rolling=1` on the previous row and
+`y=0742 y_sub=5A00 y_speed=0000 air=0 rolling=0 status_byte=08` on the landing
+row. The recorded fraction advances by exactly `y_speed`, so the ROM's
+`loc_1E45A` ran against the **moved** `y_pos` `0x745`; with the rolling
+`y_radius` `$E` and the `Player_TouchFloor` unroll (`-5`), `0x745 + d0 + 3 - 5
+= 0x742` gives **`d0 = -1`** -- inside the `[-$10,-1]` window. Against the
+*previous* frame's position (`0x742`) the same computation gives `d0 = +2`,
+which `bhi` rejects outright. **MEASURED/DERIVED: the ROM lands this trap door
+from the current player position with `d0 = -1`, so
+`getTopSolidPlayerPositionHistoryFrames() = 1` is contradicted by the fixture
+as well as by the ROM.**
+
+But removing both compensations alongside the flag produced **exactly the same
+five reds, at exactly the same frames and counts, as the flag-only round**:
+
+| class | profile | result |
+|---|---|---|
+| `TestS3kAizTraceReplay` | `-Ptrace-replay` | 2 errors, frame 5435, `y` 0x037C vs 0x0379 |
+| `TestS3kAizCompleteRunTraceReplay` | `-Ptrace-replay` | 12 errors, frame 6238, same field |
+| `TestS3kReplayReferenceClosureIntegration` | `-Ptrace-replay` | 12 errors, frame 6238, same field |
+| `TestS3kCnzTraceReplay` | `-Ptrace-replay` | 7536 errors, frame 4604, `y_speed` 0x0000 vs 0x02E8 |
+| `TestCollisionLogic` | `-Ptrace-replay` | green |
+
+So the compensations are **not** the propagation chain. Removing them is
+necessary but not sufficient, and they cannot land alone (with the flag left
+`true` they would regress the same classes in the other direction).
+
+### What actually owns the AIZ residual
+
+`s3k/aiz1_to_hcz_fullrun/physics.csv.gz` shows the player **stationary and
+grounded** at `y=0379 y_sub=F700 y_speed=0000 air=0` for many frames, then a
+single row where `y` becomes `037C` with `y_sub` **unchanged** and
+`status_byte` gaining `08` (`Status_OnObj = 3`,
+`sonic3k.constants.asm:177`) -- i.e. `RideObject_SetRide` ran. The seat
+`0x37C = objY($3A0) - d3($10) - y_radius($13) - 1` is the standard
+`loc_1E45A` seat and is identical for every accepted `d0`; only the *frame*
+differs. An unchanged `y_sub` is equally consistent with `d0 == 0` and with a
+whole-pixel approach move followed by `d0 == -1`, so **the fixture does not
+discriminate and does not refute the unsigned window.**
+
+What it does show is that the engine, with the boundary correctly rejected,
+parks the player at exactly `y=0379` (`d0 == 0`) for 16 frames
+(`status_byte` error span 6238-6252) and never penetrates. The residual is an
+**approach-phase defect**: the ROM gets the rider at least one pixel inside on
+the landing frame and the engine does not. Probe: forcing
+`AizTransitionFloorObjectInstance.providesPreMovementGroundAttachmentSupport()`
+to `false` changed nothing (still 2 errors, frame 5435), so the pre-movement
+ground-attachment window is **not** the mechanism holding him there. Owner
+still unlocated.
+
+Per the merge-versus-hold discriminator: red with an unlocated owner is a hold.
+Nothing under `src/` is modified by this commit; the candidate was reverted.
+No full 843-test sweep was run, because nothing landed.
+
+### Target for the next round
+
+Instrument the AIZ1->AIZ2 handoff frame directly (engine-side, both trees):
+print the player's pre-move and post-move `y_pos`/`y_sub`/`y_vel`/`air` and the
+computed `d0` for `AizTransitionFloorObjectInstance` across frames 5425-5440 of
+`TestS3kAizTraceReplay`. The question to answer is why the engine's player is
+motionless at the surface where the ROM's reaches `d0 <= -1`; the two
+compensations and the pre-movement grounding window are all now excluded.
+The CNZ owner is likewise still open: the history sample is refuted, but what
+places the engine's rider at the boundary instead of one pixel inside is not.
+
+- **No constant, offset, nudge, tolerance or comparison shift was introduced
+  anywhere.** No per-object zero-distance allowance was added. No assertion was
+  weakened, widened, excluded, made advisory, deleted or disabled; the two
+  `TestSolidObjectManager` assertions were left exactly as they are, because
+  inverting them is only justified alongside a landed flip. No trace hydration,
+  no `docs/` asset reads, no zone/act/route/frame predicate, no recorder or
+  fixture change.
