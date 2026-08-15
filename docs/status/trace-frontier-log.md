@@ -76441,3 +76441,56 @@ gate.
 
 **Next round lands defects 1 and 2 TOGETHER**, plus a gate release in the three MegaChopper unit
 tests — `ClamerObjectInstance:931` already establishes a test-only release hook for exactly this.
+
+## 2026-08-15 - MegaChopper pair implemented and HELD on branch (reds the HCZ complete-run)
+
+Branch `bugfix/ai-megachopper-waitoffscreen-enemydefeated` (`b31069c3f`, base `f0a22505c`).
+**Committed but deliberately NOT merged.**
+
+**Both diagnosed defects are implemented and ROM-cited.**
+
+- **Defect 1** — `Obj_WaitOffscreen` modelled with the established
+  `waitingForOnscreen`/`placeholderRenderedOnscreen` + `refreshPostCameraRenderState` pattern
+  (`RibotBadnikInstance` shape), plus `getCollisionFlags() == 0` while the gate holds (because
+  `SetUp_ObjAttributes` runs only in `MegaChopper_Init`, `sonic3k.asm:184253`) and `loc_85AD2`'s
+  coarse-X `$280` deletion arm.
+- **Defect 2** — `ObjDat_MegaChopper` flags `$D7` select the ROM's `Touch_Special` route, so the
+  controller's ENEMY-category bounce never ran. `MegaChopper_Defeated` calls `EnemyDefeated`
+  itself (`:184242-184244` → `loc_85758`'s `subi.w #$100,y_vel(a1)`). Extracted verbatim into a
+  shared `EnemyDefeatBounce` helper and invoked from the badnik's own defeat path.
+
+**Measured effect.** HCZ segment frontier **1434 → 2478**, errors **1445 → 1135**.
+`TestMegaChopperBadnikInstance` 4/4 green after adding a `testReleaseOffscreenWait()` hook to
+three cases — **setup only**, on the `ClamerObjectInstance:931` precedent; no assertion weakened,
+widened, disabled or removed.
+
+**Why it is held.** `TestS3kHczCompleteRunTraceReplay` regresses green → **2 errors**
+(`rings` 1 vs 2 at frame 29095 span 57; `rings` 0 vs 1 at 29262).
+
+**It is NOT the predicted ring-drain offset.** Verified against the fixture: the recorded ring
+count goes `0xB5 → 0` at 28905 (boss hurt), `1` at 29086, `2` at **29099**, `0` at 29152, `1` at
+29263. The engine reaches 2 at **29095** — a scattered ring collected **four frames early** in the
+HCZ boss arena at player x≈`0x40C8`, with **no MegaChopper alive anywhere in frames 28900-29160**.
+
+**Unresolved, and the reason for holding rather than merging.** Everything before 29095 still
+matches, so the pair introduces no visible drift across ~29,000 frames — yet a scattered-ring
+collection moves by four frames roughly 27,600 frames after the MegaChopper the pair affects. The
+round's reading is that this is a *third, independent* defect the pair exposes. **That reading is
+plausible but not established**: nothing yet explains how the pair changes anything at 29095 if
+nothing differs before it. Until that is explained, the change does not go onto `develop`.
+
+**Two hypotheses killed by measurement, recorded so they are not retried:**
+
+1. Adding `MegaChopper_Init` as its own dispatch made the complete-run **2 → 5738** errors at
+   frame 1802. Reverted.
+2. The `$280` deletion arm is exactly measurement-neutral. Kept in the branch because it is the
+   rest of the same cited ROM routine, not because it helps.
+
+**Corrections to the previous round's report:** its expectation that landing both defects would
+clear the complete-run is **refuted**, and its "gate released 174 engine frames vs the ROM's 173"
+accounting could not be reconciled with the ROM dispatch structure — adding the missing `Init`
+dispatch made things far worse, not better.
+
+**Next:** explain the 29095 ring timing. Either it is genuinely independent — in which case fix it
+and land all three together — or the pair does perturb something upstream that no compared field
+reveals, which would itself be worth knowing.
