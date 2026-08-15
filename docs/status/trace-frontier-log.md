@@ -77253,3 +77253,67 @@ is the next step and was **not authorised for this round**.
   `TestSolidObjectManager` assertions are untouched. No trace hydration, no
   `docs/` asset reads, no zone/act/route/frame predicate, no recorder or fixture
   change. Nothing under `src/` changed, so no sweep was run.
+
+## 2026-08-15 -- MGZ Sonic+Tails segment: monitor ride survives roll entry (frame 321 -> 1909)
+
+- **Command.** `mvn -Ptrace-replay -Ds3k.rom.path=<s3k.gen> -Dtest.cds.argLine="-Xshare:off"
+  -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay test`, isolated worktree at base
+  `170ac03bd` (branch `bugfix/ai-s3k-mgz-camera-321`).
+- **Before.** RED, 5840 errors, first error frame **321** -- `camera_y`
+  expected `0x0665`, actual `0x0662`. Reproduced exactly at `170ac03bd`.
+- **After.** RED, 8269 errors, first error frame **1909** -- `g_speed`
+  expected `0x00EC`, actual `-00EC`. 30831 frames compared in both runs.
+
+### The briefed field was a symptom, not the cause
+
+Dumping every field that diverges at 321 gave three non-cascading spans, not
+one: `camera_y` (`0x0665`/`0x0662`), `air` (0/1) and `status_byte`
+(`0x000C`/`0x0006`). `status_byte 0x0C` is rolling **plus** on-object; the
+engine's `0x06` is rolling plus in-air. Player `x`/`y` still agreed at 321 and
+only diverged at 323, so `camera_y` was derived state: `MoveCameraY` selects its
+grounded arm from the air bit. **The camera subsystem was not involved.**
+
+### The object
+
+Fixture aux `object_near` slot 9 is `type 0x0001D566` = `Obj_Monitor`
+(`docs/skdisasm/sonic3k.lst:48840`) at `(0x0840, 0x06E9)`. Its `status` carries
+`0x08` -- the p1 standing bit -- for frames **320-328** inclusive, and the
+player's `player_stand_on_obj` reads `09` across that window. Frame 320 is the
+landing; frame 321 is the roll entry (`input 0x0002`, `y` `0x06C5` -> `0x06CA`,
+the `+5` radius adjust), and the ROM keeps `air = 0` and the on-object bit the
+whole time.
+
+### ROM contract (two halves, both required)
+
+1. `SolidObject_Monitor_SonicKnux` (`sonic3k.asm:40559-40576`) and
+   `SolidObject_Monitor_Tails` (`:40583-40590`) both begin
+   `btst d6,status(a0) / bne Monitor_ChkOverEdge`. The roll-anim, Knuckles
+   glide/slide and competition-mode exemptions are therefore **acquire-time
+   only**. `Monitor_ChkOverEdge` (`:40594-40612`) releases the rider on
+   `Status_InAir` or on leaving `[-d1, +2*d1]`, and on nothing else.
+   `Sonic3kMonitorObjectInstance.isSolidFor` tested the exemptions every frame.
+2. `Monitor_ChkOverEdge`'s `.notonmonitor` arm does `bclr d6,status(a0)`
+   (`:40613-40617`). The engine cleared its `P2_STANDING` bookkeeping on
+   contact-cleared but deliberately skipped P1, so `P1_STANDING` stayed latched
+   after the ride ended.
+
+Fixing (1) alone moved the frontier only to **frame 384 / 6127 errors**, a new
+`air` 0-vs-1: at 384 the player rolls leftward into the same monitor at
+`g_speed -0x7E8` and breaks it (aux slot 9 goes `routine 0x02 -> 0x04`,
+`type -> 0x0001D61E`, on the same frame in engine and ROM), and
+`Obj_MonitorBreak` (`:40628-40634`) forces `Status_InAir` on P1 whenever
+`standing_mask|pushing_mask` is set. The ROM's monitor `status` was `0x00` at
+383; the engine's latched `P1_STANDING` made the break throw a grounded player
+into the air. A probe on `isSolidFor` confirmed the ride guard itself did not
+fire at 384 (`onObj=false ride=false`), which is what identified the stale bit.
+Adding (2) -- clearing only `P1_STANDING` on contact-cleared, leaving
+`P1_PUSHING` to `setPlayerPushing` as the ROM's independent `pushing_mask`
+requires -- moved the frontier to **1909**.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift. No assertion
+weakened, widened, excluded, made advisory, deleted or disabled. No trace
+hydration, no `docs/` asset reads, no zone/act/route/frame/game predicate, no
+recorder or fixture change. `clampBottomBoundary` untouched;
+`topSolidLandingAllowsZeroDist` untouched.

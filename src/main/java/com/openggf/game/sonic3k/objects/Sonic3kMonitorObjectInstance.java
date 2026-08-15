@@ -551,6 +551,25 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (player == null) {
             return true;
         }
+        // ROM: SolidObject_Monitor_SonicKnux and SolidObject_Monitor_Tails both
+        // open with `btst d6,status(a0) / bne Monitor_ChkOverEdge`
+        // (docs/skdisasm/sonic3k.asm:40559-40562,40583-40585). When the monitor's
+        // own p1/p2 standing bit is already set, the ROM jumps straight to the
+        // continued-ride edge test and NEVER evaluates the roll-anim, Knuckles
+        // glide or competition-mode exemptions below. A rider who starts rolling
+        // while standing on a monitor therefore keeps the ride: Monitor_ChkOverEdge
+        // (sonic3k.asm:40594-40612) releases them only on Status_InAir or on
+        // leaving the horizontal span. Re-testing the acquire-time exemptions on
+        // every frame unseats the rider on the roll-entry frame, which the ROM
+        // does not do.
+        // The object-side bit is mirrored by the rider's own Status_OnObj: both are
+        // set together in RideObject_SetRide (sonic3k.asm:42027-42041) and cleared
+        // together in Monitor_ChkOverEdge (:40613-40617), so require both.
+        ObjectManager solidObjectManager = services().objectManager();
+        if (player.isOnObject() && solidObjectManager != null
+                && solidObjectManager.getRidingObject(player) == this) {
+            return true;
+        }
         if (player.isCpuControlled()) {
             // ROM: SolidObject_Monitor_Tails branches directly to SolidObject_cont
             // outside competition mode before testing the roll anim
@@ -669,6 +688,15 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
         if (!playerEntity.isCpuControlled()) {
+            // ROM: Monitor_ChkOverEdge's .notonmonitor arm does
+            // `bclr d6,status(a0)` (docs/skdisasm/sonic3k.asm:40613-40617), so a
+            // rider who leaves the monitor clears the object's OWN p1_standing
+            // bit immediately. Leaving it latched makes a later Obj_MonitorBreak
+            // (:40628-40634) force Status_InAir on a player who is nowhere near
+            // the monitor. Only the standing bit is cleared here; p1_pushing is
+            // maintained separately by setPlayerPushing, matching the ROM's
+            // independent pushing_mask.
+            solidStatusBits &= ~P1_STANDING;
             return;
         }
 
