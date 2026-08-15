@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K spikes report their ROM `width_pixels` to the on-screen render test,
+  so a wide spike strip stays solid while its centre is just off the camera's
+  left edge. `Render_Sprites` sets the `render_flags` bit 7 that `SolidObject`
+  requires at its entry (`docs/skdisasm/sonic3k.asm:41390-41392`
+  `tst.b render_flags(a0) / bpl.w loc_1E0A2`) from `width_pixels(a0)`, which
+  `Obj_Spikes` loads from `Spikes_Dimensions` (`:48926-48934` table,
+  `:48937-48939` store) -- `$40` for the MGZ1 layout's subtype `$30` strip.
+  `Sonic3kSpikeObjectInstance` overrode `getOnScreenHalfHeight()` but not
+  `getOnScreenHalfWidth()`, so the engine used `AbstractObjectInstance`'s flat
+  16-pixel default, judged the strip offscreen four frames early, and ran no
+  solid processing at all. In the MGZ Sonic+Tails segment Tails -- released back
+  into P2 solid processing by `SolidObjectFull`'s own
+  `tst.b render_flags(a1) / bpl.w locret_1DCB4` gate (`:41011-41012`) -- ran
+  through the strip instead of being crushed by `loc_1E126`'s
+  `cmpi.w #$10,d4` / `Kill_Character` (`:41595-41602`).
 - Fix: the S3K MGZ dash trigger re-arms on every frame a player is spindashing
   against it, instead of only when its timer has run out.
   `Obj_MGZDashTrigger`'s main routine `loc_25D9C`

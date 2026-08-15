@@ -129,6 +129,19 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        // S3K Render_Sprites reads width_pixels(a0) for the on-screen X test,
+        // and Obj_Spikes initializes that byte from Spikes_Dimensions --
+        // $10/$20/$30/$40 for the upright sizes, $10 for the sideways ones
+        // (docs/skdisasm/sonic3k.asm:48926-48934 table, :48937-48939 store).
+        // The AbstractObjectInstance default of 16 is only correct for the
+        // narrowest entry, so a wide spike strip whose centre sits just left of
+        // the camera reads as offscreen, skips SolidObjectFull entirely, and
+        // lets a character walk through it.
+        return getEntryValue(WIDTH_PIXELS);
+    }
+
+    @Override
     public int getOnScreenHalfHeight() {
         // S3K Render_Sprites reads height_pixels(a0) directly. Obj_Spikes
         // initializes that from byte_23F74, which matches the shared y-radius

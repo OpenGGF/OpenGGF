@@ -2292,3 +2292,61 @@ the timer is already non-zero* -- applies everywhere.
 
 **Originating commit.** MGZ Sonic+Tails segment frame 4603 -> 4716; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P60 -- `getOnScreenHalfWidth()` defaults to 16, and the offscreen gate makes a wide object non-solid
+
+**Symptom.** A character walks straight *through* a solid object that is
+correctly implemented, correctly sized for collision, and visible on screen.
+Nothing about the object is wrong -- its `getSolidParams()` half-width is right,
+its routine is right, it is loaded in the right slot. The trace prints this
+some frames later as a lone sidekick field (here `tails_x_speed` expected
+`0x0000` / actual `0x04E6`), because the ROM's consequence was a death the
+engine never performed.
+
+**Root cause.** Two different ROM widths are in play and the engine only
+overrides one of them.
+
+* `SolidObject`'s X extent comes from the `d1` the caller loads --
+  `width_pixels(a0) + $B` for the `Obj_Spikes` family
+  (`docs/skdisasm/sonic3k.asm:49017-49019`). The engine models this in
+  `getSolidParams()`.
+* Whether the solid helper runs **at all** comes from `render_flags(a0)` bit 7,
+  which `Render_Sprites` sets from `width_pixels(a0)` -- `SolidObject`'s own
+  entry is `tst.b render_flags(a0) / bpl.w loc_1E0A2`
+  (`sonic3k.asm:41390-41392`). The engine models this in
+  `isWithinSolidContactBounds()` via `getOnScreenHalfWidth()` /
+  `getOnScreenHalfHeight()`.
+
+`AbstractObjectInstance.getOnScreenHalfWidth()` returns a flat **16**. Any
+object whose ROM `width_pixels` exceeds `$10` and does not override it is
+judged offscreen too early: its assumed footprint clears the camera edge while
+its real one still straddles it, `isWithinSolidContactBounds()` returns false,
+and the object performs **no solid processing whatsoever** on the frames where
+the ROM is still solid.
+
+**Measured case.** MGZ1's floor-spike strip at `(0x1050, 0x0220)` is layout
+subtype `$30`, so `Obj_Spikes` stores `Spikes_Dimensions[6]` = `$40, $10`
+(`sonic3k.asm:48926-48934` table, `:48937-48939` store): half-width `$40`,
+footprint `0x1010-0x1090`. `Sonic3kSpikeObjectInstance` overrode
+`getOnScreenHalfHeight()` but not `getOnScreenHalfWidth()`, so the engine used
+`0x1040-0x1060`, entirely left of a camera at `0x106E`. Tails, whose own
+`SolidObjectFull` P2 gate (`sonic3k.asm:41011-41012`
+`tst.b render_flags(a1) / bpl.w locret_1DCB4`) had just released him back
+on-screen, ran through the strip instead of being crushed by
+`loc_1E126`'s `cmpi.w #$10,d4 / Kill_Character` (`sonic3k.asm:41595-41602`).
+
+**What to check.** For every object with a ROM `width_pixels` (or
+`height_pixels`) other than `$10`, override **both** `getOnScreenHalfWidth()`
+and `getOnScreenHalfHeight()` from the same ROM table the object's init reads.
+A `getOnScreenHalfHeight()` override with no width sibling is a strong tell.
+The failure is silent: the object still renders, still reports the right solid
+params, and simply stops being solid a few pixels early.
+
+**Cross-game.** Universal. S1/S2 `Render_Sprites` equivalents read the same
+width byte, and the same default lives in the shared
+`AbstractObjectInstance`.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 4716 -> 10709; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.

@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A 128px spike strip was reading as offscreen (`bugfix/ai-mgz-4716-tails-death`, merged
+  2026-08-15).** The largest single frontier advance of the session: MGZ **4716 → 10709**
+  (+5993), errors 4953 → 3950. The field dump gave a Tails-only cluster — routine `0x02→0x06`,
+  `y_speed → -0x0700`, anim `0x18`, x frozen — the exact signature of `Kill_Character`. Shared
+  rings held steady, which rules out `HurtCharacter` (for Player 2 outside competition mode it
+  skips the ring test entirely and writes different values). **So the ROM killed Tails and the
+  engine didn't** — "should have stopped" was right in outcome, wrong in mechanism. The killer is
+  a floor-spike strip whose `Spikes_Dimensions` entry gives `width_pixels = $40`
+  (`sonic3k.asm:48926-48940`), spanning 128px. **`Sonic3kSpikeObjectInstance` overrode
+  `getOnScreenHalfHeight()` but not the width sibling**, so `AbstractObjectInstance`'s flat
+  default of 16 made the engine judge the strip offscreen and skip `SolidObjectFull` entirely.
+  Thirteen lines. **P60 records the general contract**: every solid object has *two* ROM widths —
+  the collision `d1` and the `Render_Sprites` footprint — and a `getOnScreenHalfHeight()` override
+  with no width sibling is the tell. Cross-game.
+
 - **The MGZ dash trigger re-arms every frame (`bugfix/ai-mgz-dash-trigger-rearm`, merged
   2026-08-15).** The fixture's aux named the object in one step — slot 4's `object_code` is
   `Obj_MGZDashTrigger`'s main routine. Its launch maths was **already correct**: the ROM's helper

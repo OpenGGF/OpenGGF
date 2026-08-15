@@ -77487,3 +77487,106 @@ asset reads, no zone/act/route/frame/game predicate, no recorder or fixture
 change. The hardware-timing port, the two demotions, the camera clamp and
 `topSolidLandingAllowsZeroDist` untouched; the two known `vIntRunCount + 3`
 misreadings left alone; no landed fix undone.
+
+## 2026-08-15 -- MGZ Sonic+Tails segment frame 4716 -> 10709 (spike on-screen half-width)
+
+### Frontier
+
+`TestS3kSonicTailsMgzSegmentTraceReplay`, base `199a617e1`.
+
+- Before: 4953 errors, first error frame 4716, `tails_x_speed` expected
+  `0x0000` actual `0x04E6`, 30831 frames compared.
+- After: 3950 errors, first error frame 10709, `x` expected `0x23DB` actual
+  `0x23DC`.
+
+Command (both trees, own empty tmpdir each, `target/surefire-reports` cleared
+first):
+
+```
+JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=<tree-tmp>" mvn -Ptrace-replay \
+  -Dsurefire.forkCount=2 -Ds1.rom.path=... -Ds2.rom.path=... -Ds3k.rom.path=... \
+  -Dtest.cds.argLine="-Xshare:off" test
+```
+
+### Diagnosis
+
+The reported field was a symptom of a **death the engine never performed**.
+At ROM frame 4716 Tails' `routine` becomes `$06`, `y_vel` `-$700`, `x_vel` and
+`ground_vel` `0`, `anim` `$18`, `status` `$02` -- the exact signature of
+`Kill_Character` (`docs/skdisasm/sonic3k.asm:21136-21155`). Shared rings stay
+at `$8C` across the frame, so it is not `HurtCharacter`: that routine skips the
+ring test entirely for Player_2 outside competition mode
+(`:21065-21071` -> `loc_102E0`) and would have written `routine` `4` /
+`y_vel` `-$400` / `anim` `$1A`.
+
+The killer is the MGZ1 floor-spike strip, aux slot 22, layout entry
+`x $1050, y $0220, id $08, subtype $30` (MGZ `Object Pos/1.bin`). `Obj_Spikes`
+maps that subtype through `Spikes_Dimensions` index 6 (`:48926-48934`) to
+`width_pixels = $40`, `height_pixels = $10`, and installs `loc_24090`
+(`:48937-48948`). With Tails grounded at `($105D, $0222)`, `y_vel` 0,
+`SolidObjectFull`'s `d5` (horizontal overlap `$3E`) exceeds `d1` (vertical
+overlap `$1D`), so `loc_1E034`'s `bhi` routes to `loc_1E0D4`; `d3` is negative,
+`loc_1E0E0` sees no `Status_InAir` and `y_vel == 0`, and `loc_1E126`'s
+`cmpi.w #$10,d4` passes -- `Kill_Character` (`:41564-41602`).
+
+Why frame 4716 and not 4713, when Tails was already inside the strip:
+`SolidObjectFull` gates the whole Player_2 pass on Tails' own render flag
+(`:41011-41012` `tst.b render_flags(a1) / bpl.w locret_1DCB4`). The fixture's
+`sidekick_interact_object` rows record `tails_render_flags` `0x04` through
+frame 4714 and `0x84` from 4715, so the spike first processes Tails on 4716 --
+by which point he has walked deep inside it.
+
+The engine already models both the P2 render gate
+(`shouldSkipOffscreenSidekickFullSolid`) and the crush
+(`ObjectSolidContactController` `applyCrushDeath`), and instrumentation
+confirmed the gate flips at exactly `x=$105D`, the ROM's frame. The defect was
+one step earlier: `AbstractObjectInstance.getOnScreenHalfWidth()` returns a
+flat 16, `Sonic3kSpikeObjectInstance` overrode only
+`getOnScreenHalfHeight()`, and `isWithinSolidContactBounds()` therefore judged
+a `$40`-wide strip centred at `$1050` offscreen against a camera at `$106E`.
+The object performed no solid processing at all.
+
+### Fix
+
+`Sonic3kSpikeObjectInstance.getOnScreenHalfWidth()` returns the same
+`Spikes_Dimensions` width byte the object's init stores, mirroring the existing
+`getOnScreenHalfHeight()` override. No constant was invented; both values come
+from the ROM table.
+
+### Verification
+
+- trace-replay: 222 classes both trees; 65 red base, 64 red fix. Explicit set
+  difference both directions: **0 newly red**, 1 newly green. The newly green
+  class is `TestTraceStructuralRowComparator`, a listed ambient reused-fork
+  flake.
+- Protected classes byte-identical across trees:
+  `TestS3kSonicTailsAizSegmentTraceReplay` green,
+  `TestS3kSonicTailsHczSegmentTraceReplay` green, `TestS3kMgzTraceReplay` green,
+  `TestS3kMgzCompleteRunTraceReplay` green, `TestS3kMgzF498AirRollPhysics`
+  green, `TestS3kSonicTailsMhzSegmentTraceReplay` 9 errors / frame 1276,
+  `TestS3kSonicTailsIczSegmentTraceReplay` 2862 / 1983,
+  `TestS3kSonicTailsFbzSegmentTraceReplay` 8599 / 116,
+  `TestS3kSonicTailsLrzSegmentTraceReplay` 11942 / 208,
+  `TestS3kHczCompleteRunTraceReplay` deliberately red at exactly 2 errors
+  (29095, 29262), `TestS2CompleteEmeraldRunChain` 5 axes with cursor 3977 of
+  3997, segment 11 at 236 and segment 2 absent. The eleven DEZ23/HPZ22/DDZ
+  classes load on both trees.
+- default profile: 1915 classes / 15116 tests both trees; 52 red base, 52 red
+  fix. Two differ each way -- `TestGameLoopSpecialStageEntryPresentation` and
+  `TestS3kLbzFlameThrowerObject` newly red,
+  `TestGameLoopRewindBoundaryPolicy` and `TestPlaybackAdvanceOnlyInputBridge`
+  newly green -- and all four pass in isolation on **both** trees; ambient
+  reused-fork flakes. `TestCollisionLogic` green on both, S1/S2 chains and both
+  visual runs unmoved.
+- Nothing greened, so there is no `framesCompared` starvation to report.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift; the `$40` half-width
+is read from `Spikes_Dimensions`, not measured from the fixture. No assertion
+weakened, widened, excluded, made advisory, deleted or disabled. No trace
+hydration; `docs/skdisasm` was read only for labels, offsets and the MGZ object
+layout during analysis -- no runtime asset bytes. No zone/act/route/frame/game
+predicate, no recorder or fixture change. The hardware-timing port, the two
+demotions, the camera clamp and `topSolidLandingAllowsZeroDist` untouched; the
+two known `vIntRunCount + 3` misreadings left alone; no landed fix undone.
