@@ -237,7 +237,18 @@
                                 <include>**/tests/trace/**/*ReplayBootstrap.java</include>
                                 <include>**/tests/trace/s2/*Regression.java</include>
                             </includes>
-                            <excludedGroups>performance-measurement</excludedGroups>
+                            <!--
+                              Release scope is carried by a JUnit tag as well as by the
+                              file-name lists below. A zone-per-file trace class holds
+                              several character sets, and the release-6 split cuts
+                              between characters, not between files: the Sonic+Tails
+                              Slots replay is in scope while the Knuckles one is not,
+                              and both now live in TestS3kSlotsBonusTraceReplay. Nested
+                              classes tagged trace-scope-r7 are dropped here and picked
+                              up by -Ptrace-replay-r7; the file-name lists still gate the
+                              trace classes that have not been converted yet.
+                            -->
+                            <excludedGroups>performance-measurement,trace-scope-r7</excludedGroups>
                             <excludes>
                                 <exclude>**/Debug*.java</exclude>
                                 <exclude>**/*Debug*.java</exclude>
@@ -268,7 +279,6 @@
                                 <exclude>**/tests/trace/s3k/**/*Ddz*.java</exclude>
                                 <exclude>**/tests/trace/s3k/**/*Dez*.java</exclude>
                                 <exclude>**/tests/trace/s3k/**/*Zone0c*.java</exclude>
-                                <exclude>**/tests/trace/s3k/TestS3kSlotsBonusTraceReplay.java</exclude>
                                 <exclude>**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java</exclude>
                                 <exclude>**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java</exclude>
                                 <exclude>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</exclude>
@@ -344,7 +354,13 @@
                                 <include>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</include>
                                 <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
                             </includes>
-                            <excludedGroups>performance-measurement</excludedGroups>
+                            <!--
+                              Mirror of the tag gate in -Ptrace-replay: a converted
+                              zone-per-file class is included by name below, and its
+                              in-scope character sets (tagged trace-scope-r6) are
+                              dropped here so only the out-of-scope ones run.
+                            -->
+                            <excludedGroups>performance-measurement,trace-scope-r6</excludedGroups>
                             <excludes>
                                 <exclude>**/Debug*.java</exclude>
                                 <exclude>**/*Debug*.java</exclude>

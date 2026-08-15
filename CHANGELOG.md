@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Chore(tests): S3K trace replay classes gain a naming/structure pattern that makes the
+  zone and the **character set** unambiguous from the reported test name. One file per
+  zone or stage, a `@Nested` class per character set, a `@Nested` class per segment of
+  the recording — so a surefire report shows
+  `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` rather than two flat class names that
+  read as siblings while being different characters from different movies. Release scope
+  moves off the file-name patterns in `-Ptrace-replay` / `-Ptrace-replay-r7` and onto
+  JUnit tags (`trace-scope-r6` / `trace-scope-r7`) for converted classes, because the
+  release-6 split cuts between characters inside one file; the file-name lists stay in
+  place for the classes not yet converted, so the migration composes stage by stage.
+  Stage 1 converts the Slots bonus stage, the case that breaks file-name selection.
+  Nothing is weakened, widened or made advisory: both replays assert exactly what they
+  asserted before, `-Ptrace-replay` still selects only the Sonic+Tails one (541 errors,
+  first error frame 2587 `y_speed` expected `0x01D4` actual `0x0383`, identical before
+  and after) and `-Ptrace-replay-r7` still selects only the green Knuckles one. Plan for
+  the remaining stages:
+  `docs/architecture/plans/2026-08-15-s3k-trace-class-naming-restructure.md`.
 - Fix: the S3K slot-machine bonus stage's reward cadence now reads the ROM's
   object-visible `Level_frame_counter`, and a reward allocated above the cage's
   slot runs its own routine on its spawn frame. The bonus coordinator drove the

@@ -77,9 +77,28 @@ Two groups, moved out of `-Ptrace-replay` and into `-Ptrace-replay-r7`:
 
 - **S&K-half zones, Sonic+Tails** (30 classes, 49,261 errors): `Mhz*`, `Fbz*`, `Ssz*`,
   `Soz*`, `Lrz*`, `Hpz*`, `Ddz*`, `Dez*`, `Zone0c*`, and `TestS3kMhzCompleteRunTraceReplay`.
-- **Knuckles routes**: `TestS3kSlotsBonusTraceReplay`, `TestS3kGumballBonusTraceReplay`,
+- **Knuckles routes**: `TestS3kSlotsBonusTraceReplay` (now the `Knuckles` nested class of
+  the merged stage file, gated by tag rather than by file name — see below),
+  `TestS3kGumballBonusTraceReplay`,
   `TestS3kPachinkoBonusTraceReplay`, `TestS3kSpecialStageTraceReplay`,
   `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`.
+
+### How the split is expressed
+
+Two mechanisms, both live:
+
+1. **File name.** The include/exclude lists in the two profiles in `pom.xml`, mirrored
+   one-for-one. This gates every trace class that still has one flat class per route.
+2. **JUnit tag.** A trace class restructured to one file per zone holds several
+   character sets, and the release-6 split cuts *between characters inside one file* —
+   a file name cannot express that. Each character-set class carries exactly one of
+   `trace-scope-r6` / `trace-scope-r7`; `-Ptrace-replay` excludes the r7 tag and
+   `-Ptrace-replay-r7` excludes the r6 tag. The Slots bonus stage is converted;
+   `docs/architecture/plans/2026-08-15-s3k-trace-class-naming-restructure.md` has the
+   pattern and the remaining stages.
+
+Adding an out-of-scope trace class means adding it to BOTH file-name lists, or tagging
+it `trace-scope-r7` if its zone has been converted.
 
 Run them with:
 
