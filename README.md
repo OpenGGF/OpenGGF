@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Trace classes name their zone, character set and segment
+  (`feature/ai-trace-nested-naming`, stage 1 merged 2026-08-15).** A trace's character set is the
+  most important fact about it and was not derivable from the class name: `TestS3kSlotsBonusTraceReplay`
+  and `TestS3kSonicTailsSlotsBonusTraceReplay` read as siblings but are different characters from
+  different movies, and a debugging round built a wrong discriminator on exactly that assumption.
+  Trace classes now take the shape one file per stage/zone, a nested class per character set, and a
+  nested class per segment — so surefire reports
+  `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` and the classification is visible without opening
+  a file. Release scope moves onto a JUnit `@Tag` (`trace-scope-r6` / `trace-scope-r7`) because one
+  file can hold both in-scope and out-of-scope routes, while the filename lists continue to gate the
+  classes not yet converted — so the remaining stages land incrementally. Stage 1 converts the Slots
+  stage, chosen because it is the case that breaks filename selection. Proven a pure rename: both
+  profiles unchanged at 806/32 and 37/32, the default profile unchanged at 15116 distinct tests, the
+  old->new name mapping a bijection, and every shared failure message byte-identical — the surviving
+  red keeps `541 errors, frame 2587 y_speed expected=0x01D4 actual=0x0383` exactly.
+
 - **Release-6 trace scope split, and the slot-bonus ring cadence
   (`bugfix/ai-slots-ring-cadence` + scope gate, merged 2026-08-15).** Release 6 targets the Sonic
   path through S1, S2 and S3, so the 30 S&K-half trace classes and six Knuckles classes — which
