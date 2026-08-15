@@ -75470,3 +75470,62 @@ emeralds should compare cleanly through the capture.
   The one-in/one-out (`TestGameLoopAudioPresentationModes`,
   `TestMGZSwingingPlatformObjectInstance`) is ambient fork flake: both pass in
   isolation on both trees.
+
+## Round 151 -- ICZ snowboard scripted-slope trigger fired while airborne
+
+Base `c5d4a5b2e`; isolated fix and control worktrees.
+Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -Ds3k.rom.path=... test`.
+
+- **The previous round's framing was wrong.** The reported first error is `x_sub`
+  only because `x_sub` sorts ahead of the other fields in the same frame: at
+  frame **470** `x`, `y`, `y_sub`, `y_speed`, `camera_x` and `camera_y` all
+  diverge together. It is not a half-pixel loss and it is not sub-pixel phase.
+  Instrumenting `TraceBinder.compareFrame` over frames 440-480 (probe removed
+  before commit) shows every field byte-identical through frame **469** and a
+  discontinuity at 470: engine `x` `1316.2B00` → `1340.2B00`, `y` `01A7.CD00` →
+  `0210.CD00`, and thereafter `x_sub`/`y_sub` frozen at `2B00`/`CD00` and
+  `y_speed` frozen at `0291` while `y` advances exactly `$10` per frame.
+  Frozen sub-pixels with word-granular position steps is the signature of the
+  ICZ snowboard slope table, which writes only the position words.
+- **Root cause.** `IczSnowboardIntroInstance.updateSnowboarding` tested the
+  scripted-slope x windows (`$1310..$132F`, `$2210..$222F`) unconditionally.
+  The ROM reaches those tests only through `loc_39502`
+  (`docs/skdisasm/sonic3k.asm:76816`), which `loc_394A0` enters only when the
+  player is **on the ground**: `btst #Status_InAir,status(a2) / beq.s loc_39502`
+  at `sonic3k.asm:76797-76798`. The airborne branch instead caps `x_vel` to
+  `$1000` and `y_vel` to `-$200` and jumps past the windows to `loc_39554`
+  (`sonic3k.asm:76799-76811`). The recorded ROM player is airborne from frame
+  457 (the snowboard jump, where `Sonic_Jump`'s `addq.l #4,sp` at
+  `sonic3k.asm:23330` discards the rest of `Sonic_MdNormal` so no `MoveSprite`
+  runs -- this is the one-frame hold the previous round noticed, and it is
+  reproduced correctly by the engine) and crosses `$1310` mid-jump at frame 469.
+  The ROM ignores it; the engine handed the player to the slope table.
+- **Fix.** The two window tests now sit under the ROM's grounded branch and the
+  airborne branch performs the ROM's two velocity caps. No constant is fitted;
+  no zone, act, route or frame index is referenced.
+- **Frontier moves** frame **470** → frame **1818** (`tails_x` `0x3EE5` vs
+  `0x3EE4`), errors **5197 → 3031**, over an unchanged **17947** compared
+  frames (no starvation).
+- Full `-Ptrace-replay` profile, both measured this round:
+  control `c5d4a5b2e` **843 / 53 F / 11 E / 4 S, 64 red**; fix
+  **843 / 53 F / 12 E / 4 S, 65 red**. Python set difference both ways: nothing
+  greened, one new red `TestS1CompleteEmeraldVisualRun`, which passes in
+  isolation on the fix tree (`hardware timing run is already closed` -- a
+  reused-fork static leak, and an S1 class the change cannot reach).
+- Default profile: control **15113 / 64 F / 25 E / 22 S, 50 red**; fix
+  **15113 / 65 F / 29 E / 22 S, 53 red**. Set difference both ways: nothing
+  greened; three new red -- `TestGameLoopAudioPresentationModes`,
+  `TestGameLoopSpecialStageEntryPresentation`, `TestS3kIczCrushingColumnObject`
+  -- all on the known ambient-flake list and all green in isolation on the fix
+  tree (44 passed, 0 failed).
+- Protected classes re-measured on the fix tree: `TestS3kIczCompleteRunTraceReplay`
+  **green** (the critical same-zone cross-check), the six standalone S3K
+  complete-runs green, `TestS3kSonicTailsAizSegmentTraceReplay` green at
+  `error_count 0` over **2290** rows, `TestS3kSonicTailsMhzSegmentTraceReplay`
+  unchanged at frame **315** over **1265** rows, `TestS2CompleteEmeraldRunChain`
+  byte-identical (5 axes, segment 11 = 236, segment 2 absent, cursor 3977 of
+  3997).
+- **Still open in the same object**: the ROM's `cmp.b $36(a0),d0 / beq.s`
+  ramp-id latch at `sonic3k.asm:76835-76838` has no engine counterpart, so a
+  slope that ends back inside its own x window would re-trigger. Not exercised
+  by this route; flagged, not fixed.

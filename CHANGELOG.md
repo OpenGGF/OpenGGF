@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the ICZ snowboard's scripted-slope hand-off no longer fires while the
+  player is airborne. The ROM reaches the `$1310..$132F` / `$2210..$222F` x
+  window tests only through `loc_39502` (`docs/skdisasm/sonic3k.asm:76816`),
+  and `loc_394A0` enters that block only when the air bit is clear --
+  `btst #Status_InAir,status(a2) / beq.s loc_39502`
+  (`sonic3k.asm:76797-76798`); the airborne branch instead caps `x_vel` to
+  `$1000` and `y_vel` to `-$200` and jumps past the windows
+  (`sonic3k.asm:76799-76811`). `IczSnowboardIntroInstance` tested those windows
+  unconditionally, so a player crossing `$1310` mid-jump was handed to the
+  slope table, which writes only the position words and therefore froze
+  `x_sub`/`y_sub` and stalled `y_vel`.
+  `TestS3kSonicTailsIczSegmentTraceReplay`'s first error moves from frame 470
+  `x_sub` to frame 1818 `tails_x` and its error count from 5197 to 3031 over
+  the same 17947 compared frames; `TestS3kIczCompleteRunTraceReplay` -- the
+  same zone on a different route -- stays green, and the trace-profile red set
+  is unchanged by name in both directions.
 - Fix: an `anim_frame` left behind by a longer animation table no longer
   restarts the walk/run script; it reads on into the following script's ROM
   bytes the way the 68000 handler does. `Animate_Sonic`'s walk/run path fetches
