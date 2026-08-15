@@ -75778,3 +75778,57 @@ frame count** — the rule-3 trap this round was briefed to avoid, and it declin
 - Modelling `loc_1C202` is a genuine **zone-agnostic** S3K accuracy gap with a wide blast radius
   (it removes the downward `max_Y` clamp for every non-wrapping S3K level). It deserves its own
   round measured on the full profile, not smuggling alongside an arena implementation.
+
+## 2026-08-15 - S3K bottom camera clamp: disassembly verified, behaviour REFUTED, do not land
+
+**DO NOT RE-ATTEMPT without first identifying the max_Y pin mechanism.** Measured at
+`93e076041`; nothing landed, zero diff.
+
+**The disassembly reading is VERIFIED IN FULL**, including the parts previously unchecked:
+
+- `loc_1C202` (`sonic3k.asm:38561-38569`) reads as quoted; the hard clamp `move.w 6(a2),d1`
+  exists **only** at `loc_1C216`, reached solely via `bcs` after `sub.w d3,d1`.
+- `Get_LevelSizeStart` writes `move.w #-1,(Screen_Y_wrap_value)` (`:38093`). `d3` held
+  `Distance_from_top` (`$60`); a `move.w` sets only the low word → `$0000FFFF`; `addq.w #1,d3`
+  → `$00000000` **with no carry into the high word**. `sub.w #0,d1` cannot borrow.
+  `loc_1C216` is unreachable and `sub.w d3,(a1)` is a no-op.
+- RAM layout confirmed (`sonic3k.constants.asm:359-362`): `a2 = Camera_min_X_pos`, so
+  `6(a2)` is `Camera_max_Y_pos`.
+- **The six-site list is correct** — `:102205` (`$FFF`, HPZ), `:110069` (`$7FF`, ICZ2, commented
+  *"We're in a looping level!"*), `:110320` (`$FFF`), `:114222`/`:114251` (`$7FF`, SOZ2),
+  `:119055` (`$7FF`, Slots) — **plus a seventh `-1` writer at `:10708`** (special stage init)
+  that was not in the original list. No other writers exist.
+- Nothing downstream restores it: `Do_ResizeEvents` only eases `Camera_max_Y_pos` and never
+  writes `Camera_Y_pos`.
+
+**And the recordings contradict the behavioural conclusion.** Real hardware pins `camera_y` at
+exactly `Camera_max_Y_pos`:
+
+- `TestS3kSonicTailsAizSegmentTraceReplay` frame 0 expects `0x0390` — precisely AIZ1's
+  `LevelSizes` yend — against `0x0396` produced with the clamp gated.
+- `TestS3kHczCompleteRunTraceReplay` frame 7839 expects `0x0638` against `0x0642`.
+
+**Measured blast radius of modelling it: 12 newly red, ZERO greened**, including the protected
+`TestS3kSonicTailsAizSegmentTraceReplay` (was `error_count 0` over 2290 rows → 6 errors at frame
+0) and five named camera-sensitive cross-checks (`TestS3kAizTraceReplay`,
+`TestS3kCnzTraceReplay`, `TestS3kMgzTraceReplay`, and the HCZ/ICZ/MGZ/AIZ/CNZ/LBZ complete-runs).
+No S1 or S2 class moved in either diff direction, so the change did not leak across games — the
+design was clean; the measurement killed it.
+
+**So either** a mechanism not yet located pins the camera at `max_Y`, **or** the engine's
+unconditional bottom clamp is masking a separate camera-**tracking** divergence that happens to
+coincide with `max_Y`. Both readings kill the justification: this is not accuracy that stands
+without the trace, because the traces actively contradict it. It is CLAUDE.md's *"a constant
+absorbing an error elsewhere"* pattern **at whole-mechanism scale** — the engine may be right in
+outcome and wrong in mechanism, and removing the mechanism exposes the other defect.
+
+**The open question, and the prerequisite for revisiting this:** where does hardware's `max_Y`
+pin actually come from, given that `loc_1C202` provably does not provide it?
+
+The discarded implementation (recorded so it need not be rebuilt) added a typed
+`bottomBoundaryClampGatedByVerticalWrap` to `CameraRules` (false/false/true for S1/S2/S3K) and
+gated the two `clampBottomBoundary` calls on `rule && !verticalWrapEnabled`, which already models
+`Screen_Y_wrap_value != -1`. No zone branch, no fitted constant, no hardcoded wrap value.
+
+Corroboration of earlier work: `TestS3kSonicTailsMhzSegmentTraceReplay` did **not** move, exactly
+as predicted from the probe showing zero scroll-path camera calls across all 61 arena frames.
