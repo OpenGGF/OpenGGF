@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the S3K special stage collected a blue sphere one frame early when the
+  player landed on it from a jump. The ROM's per-frame player routine calls its
+  movement routine `sub_9580` first (sonic3k.asm:11467), and the grid-cell check
+  `sub_972E` sits at that routine's tail behind its own
+  `tst.b (Special_stage_jumping).w` / `bmi` gate (sonic3k.asm:12074-12078). The jump
+  physics that lands the player and clears `Special_stage_jumping` only runs
+  afterwards, at `loc_911E` (sonic3k.asm:11520-11527) — so on the landing frame the
+  cell check has already been skipped, and the ROM consumes the sphere on the next
+  frame. The engine ran its collision gate after `updateJump()`, collecting on the
+  landing frame itself, and symmetrically skipped the check on the jump-*launch*
+  frame where the ROM still performs it. The gate moves to the `sub_9580` position;
+  its condition, the collision routine and the response-queue ordering are unchanged,
+  and no constant, offset or tolerance was introduced.
+  `TestS3kSonicTailsSs4SpecialStageTraceReplay` and
+  `TestS3kSonicTailsSs5SpecialStageTraceReplay` go **green** (2 and 7 errors to 0) at
+  unchanged `total_frames` of 4967 and 4286.
 - Chore(tests): S3K trace replay classes gain a naming/structure pattern that makes the
   zone and the **character set** unambiguous from the reported test name. One file per
   zone or stage, a `@Nested` class per character set, a `@Nested` class per segment of
