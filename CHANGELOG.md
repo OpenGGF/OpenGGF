@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: an `anim_frame` left behind by a longer animation table no longer
+  restarts the walk/run script; it reads on into the following script's ROM
+  bytes the way the 68000 handler does. `Animate_Sonic`'s walk/run path fetches
+  its frame with an unchecked `move.b 1(a1,d1.w),d0` and tests only
+  `cmpi.b #-1,d0` (`docs/skdisasm/sonic3k.asm:24859-24864`), so nothing bounds
+  it to the selected script. That matters when Tails puts the player down:
+  `sub_1459E` attaches with `move.w #$22<<8,anim(a1)`, which zeroes `prev_anim`
+  alongside the carried anim byte (`sonic3k.asm:27391`), `Sonic_Control` skips
+  `Animate_Sonic` entirely while `object_control` bit 1 is set
+  (`sonic3k.asm:22022-22026`), and `Tails_Carry_Sonic` meanwhile advances that
+  same `anim_frame` across `AniRaw_Tails_Carry`'s 17 entries
+  (`sonic3k.asm:27324-27340,27417-27419`). On release the `anim`/`prev_anim`
+  test at `sonic3k.asm:24743` matches, `anim_frame` is not reset, and index 13
+  reads into `AniSonic01` for mapping frame `$24`. `SpriteAnimationScript` now
+  carries the raw ROM bytes past its own terminator so that flat read is
+  modelled from ROM data rather than clamped. `TestS3kSonicTailsMhzSegment`'s
+  first error moves from frame 75 `player_mapping_frame` to frame 315
+  `y_speed` over the same 1265 compared frames; the trace-profile red set is
+  unchanged by name in both directions.
 - Fix: the S3K zone list now has the ROM's own shape -- 24 zones with two act
   slots each -- so the eleven recorded segments in zones $0D, $16 and $17 load
   instead of throwing out of bounds. `LevelPtrs` is 48 longwords

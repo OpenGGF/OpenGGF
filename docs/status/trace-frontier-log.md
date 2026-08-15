@@ -75418,3 +75418,55 @@ emeralds should compare cleanly through the capture.
   (segment 2 absent). The six S3K standalone complete-runs, the S3K keep-green
   set, `TestS2CompleteEmeraldVisualRun`, `TestS2EhzHalfpipeRoundTripChain` and
   `TestTraceRunManifest` are green.
+
+## 2026-08-15 — S3K MHZ segment frontier: walk/run script overflow after a Tails carry
+
+- Worktree at `480d0d3bd` (`develop`). ROM `s3k.gen`, CRC32 `63522553`.
+- **Frontier moved:** `TestS3kSonicTailsMhzSegmentTraceReplay` first error
+  **frame 75 `player_mapping_frame` 0x0024 vs 0x0007 (211 errors)** →
+  **frame 315 `y_speed` 0x0000 vs 0x00E0 (210 errors)**. `total_frames`
+  compared is 1265 before and after, so the moved frontier is not starvation.
+
+  ```bash
+  JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<task-owned-java-tmpdir> \
+  mvn test -Ptrace-replay -Dtest=TestS3kSonicTailsMhzSegmentTraceReplay \
+    -Ds3k.rom.path=s3k.gen -Dtest.cds.argLine=-Xshare:off
+  ```
+
+- Root cause, cited to `docs/skdisasm/sonic3k.asm`. The MHZ segment opens with
+  Tails carrying the player. `sub_1459E` (27382-27414) attaches with
+  `move.w #$22<<8,anim(a1)`, which writes `anim = $22` **and zeroes
+  `prev_anim`**, and `Sonic_Control` skips `Animate_Sonic` entirely while
+  `object_control` bit 1 is set (22022-22026). `Tails_Carry_Sonic` then advances
+  the player's own `anim_frame` across `AniRaw_Tails_Carry`'s 17 entries
+  (27324-27340, table at 27417-27419). On release the player's `anim` is 0, so
+  the `anim`/`prev_anim` test at 24743 does **not** reset `anim_frame`, and the
+  walk/run handler reads its byte with an unchecked `move.b 1(a1,d1.w),d0`
+  testing only `cmpi.b #-1,d0` (24859-24864). With `anim_frame` at 13 that read
+  lands 14 bytes past `AniSonic00`'s start — inside `AniSonic01` — and returns
+  `$24`. The next expiry reads `AniSonic01`'s `$FF` and restarts `AniSonic00` at
+  `$07`, which is exactly the recorded `$24` (11 frames) → `$07` → `$08` → `$01`
+  sequence.
+- Fix: `SpriteAnimationScript` now carries the raw ROM bytes that follow a
+  parsed script (`trailingBytes`, captured in
+  `CommonSpriteDataLoader.parseAnimationScript`), and the walk/run handler
+  resolves an out-of-range `anim_frame` through that flat window instead of
+  clamping to frame 0. No constant is fitted and no zone, act, route or frame
+  index is referenced.
+- **`TestS3kSonicTailsIczSegmentTraceReplay` does not share this cause**:
+  unchanged at frame **470** `x_sub` `0xAB00` vs `0x2B00`, **5197** errors,
+  17947 frames compared, before and after. Its divergence is a half-pixel
+  sub-pixel phase during snowboard object control (`object_control = $02`, so
+  `Animate_Sonic` is skipped and the mapping frame is object-written), first
+  observable 13 frames after the frame-457 jump where the ROM holds `x_pos` and
+  `x_sub` for one frame. Independent defect.
+- Full `-Ptrace-replay` profile, both measured in this worktree:
+  **843 / 53 failures / 11 errors / 4 skipped, 64 red classes** at `480d0d3bd`
+  and **identical totals and an identical red-class set by name** with the fix
+  (`comm -13` and `comm -23` both empty). Across all 843 tests exactly one
+  class's first error changed — the MHZ segment above.
+- Default profile: **15136 / 65 F / 22 E / 18 S, 51 red classes** at
+  `480d0d3bd`; **15136 / 64 F / 23 E / 18 S, 51 red classes** with the fix.
+  The one-in/one-out (`TestGameLoopAudioPresentationModes`,
+  `TestMGZSwingingPlatformObjectInstance`) is ambient fork flake: both pass in
+  isolation on both trees.
