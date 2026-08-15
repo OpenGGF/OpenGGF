@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K `sub_13EFC`'s off-screen `Tails_CPU_interact` compare no longer
+  requires a previously-armed latch, and `Obj_FBZDEZPlayerLauncher` now
+  publishes its ROM object-code high word. ROM performs `cmp.w (a3),d0`
+  unconditionally once the off-screen + `Status_OnObj` branch is taken
+  (`docs/skdisasm/sonic3k.asm:26816-26843`), and `Tails_CPU_interact` is zeroed
+  with the rest of the CPU block at level init (`clearRAM Tails_CPU_interact,$100`,
+  `:5415,7621`); the refresh at `loc_13F2E` only runs on a frame Tails is
+  *already* on an object, so the FIRST off-screen on-object CPU frame always
+  compares 0 against a live code-pointer high word and mismatches into
+  `sub_13ECA` (`x_pos = $7F00`, `y_pos = 0`, routine 2, `:26800-26809`). The
+  engine carried an invented "latch != 0 is unarmed" precondition that
+  suppressed exactly that first landing, and the FBZ/DEZ player launcher did not
+  implement `RomObjectCodePointerProvider` at all, so the compare could not run
+  even once the precondition was lifted. Measured on
+  `TestS3kSonicTailsFbzSegmentTraceReplay`: frontier 116 -> 180 (the new first
+  error is a pre-existing player `y` divergence that was already present as a
+  cascading error at 180); errors 8599 -> 8616.
 - Fix: the S3K hidden monitor's signpost range test now reproduces the ROM's
   *cumulative* offset table. `Obj_HiddenMonitorMain` loads the monitor
   coordinate into `d0` once and then adds the two `word_8379E` words to that

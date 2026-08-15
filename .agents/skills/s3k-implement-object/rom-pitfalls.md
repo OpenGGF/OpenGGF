@@ -2521,3 +2521,52 @@ segment fixtures have the same bootstrap shape.
 
 **Originating investigation.** MGZ Sonic+Tails segment, frame 17383 (3410 of
 3446 errors); see `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+## P64 -- S3K Tails' off-screen "landed on something" respawn compares against a *zero* latch
+
+`sub_13EFC` (`docs/skdisasm/sonic3k.asm:26816-26843`) is Tails' off-screen
+watchdog. Its usually-quoted arm is the 5-second timer (`cmpi.w #5*60`), but the
+arm that actually fires in practice is the other one:
+
+```
+        tst.b   render_flags(a0)
+        bmi.s   loc_13F28              ; ON-screen: flight_timer = 0, then latch refresh
+        btst    #Status_OnObj,status(a0)
+        beq.s   loc_13F18              ; not on an object: just tick the timer
+        movea.w interact(a0),a3
+        move.w  (Tails_CPU_interact).w,d0
+        cmp.w   (a3),d0                ; word 0 of the stood-on object SST = its CODE POINTER high word
+        bne.s   loc_13F24              ; ANY difference -> sub_13ECA, immediately
+```
+
+Three things trip engine ports here:
+
+1. **There is no "latch is armed" precondition.** `Tails_CPU_interact` is zeroed
+   with the whole CPU block at level init (`clearRAM Tails_CPU_interact,$100`,
+   `:5415,7621`), and the refresh at `loc_13F2E` only runs on a frame where
+   Tails is *already* on an object. So the **first** off-screen on-object CPU
+   frame always compares `0` against a live code word (>= `$0003`) and
+   mismatches. Tails landing on anything at all while off-screen sends him
+   straight to `sub_13ECA`. Suppressing that as "unarmed" is an engine
+   invention, and it silently defers the respawn by however long the trace runs.
+2. **`sub_13ECA` is a sentinel, not a physics event** -- `x_pos = $7F00`,
+   `y_pos = 0`, `Tails_CPU_routine = 2`, `object_control = $81`,
+   `status = 1<<Status_InAir` (`:26800-26809`). In a trace this reads as a wild
+   `x`/`y` jump with the sub-pixels **unchanged** (`move.w` touches only the
+   integer word), which is why it can first surface as a `tails_x_sub`
+   mismatch. If a sidekick divergence reports `x` expected `0x7F00` and `y`
+   expected `0x0000`, stop looking at physics: that is this respawn.
+3. **The compared value is the code pointer high word, not the object id.** S2's
+   equivalent compares `id(a3)`; S3K compares a *pointer*. An engine object must
+   publish it (`RomObjectCodePointerProvider`), and an object that does not is
+   invisible to the compare -- the branch cannot fire however correct the
+   surrounding logic is. Check the provider before concluding the branch model
+   is wrong; a probe at the decision site distinguishes the two in one run.
+
+The high word is stable across an object's own code-pointer rewrites as long as
+they stay in one bank: `Obj_FBZDEZPlayerLauncher` cycles `loc_3B97A` ->
+`loc_3BA4A` (`sonic3k.asm:79408,79416`), both `$0003xxxx`, so its published word
+is `$0003`.
+
+**Originating investigation.** FBZ1 Sonic+Tails segment, frame 116 (frontier
+`116 -> 180`); see `docs/status/trace-frontier-log.md`, 2026-08-15.
