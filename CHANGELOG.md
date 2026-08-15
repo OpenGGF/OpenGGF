@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a Star Pointer's orbiting points are deleted when the parent badnik is
+  destroyed. ROM `Obj_StarPointer`'s orbit routine `loc_8BEE6` ends in
+  `jmp Child_DrawTouch_Sprite` (`docs/skdisasm/sonic3k.asm:190853-190858`),
+  which runs `movea.w parent3(a0),a1 / btst #7,status(a1) / bne.w
+  Go_Delete_Sprite` *before* `Add_SpriteToCollisionResponseList`
+  (`sonic3k.asm:178053-178058`); `Touch_EnemyNormal` sets that bit on the badnik
+  it destroys (`sonic3k.asm:20952-20953`). The engine's `OrbitingPointInstance`
+  never tested the parent, so all four points kept orbiting and hurting after
+  Sonic rolled through the parent. The check is confined to the orbit branch,
+  because the launched (`loc_8BF4C`) and breaking (`loc_8BF74`) routines tail into
+  `Sprite_CheckDeleteTouchXY`, which does not test the parent
+  (`sonic3k.asm:190860-190866,190873-190876`). This is the same ROM contract
+  `OrbinautBadnikInstance.OrbinautOrbInstance` already implemented. Measured on
+  `TestS3kSonicTailsIczSegmentTraceReplay`: the engine's sole hurt event in the
+  whole segment (trace frame 2152, 30 rings lost) is gone, the real cascade
+  origin moves 2152 -> 2336 and errors fall 2970 -> 2862, with
+  `TestS3kIczCompleteRunTraceReplay` still green and no red-set movement on
+  either the trace or default profile.
 - Fix: the roll-stop movement path no longer clears `Status_Push`, and the ICZ
   swinging platform no longer shifts TailsCPU_Normal's `d4` status read off the
   delayed `Ctrl_1_logical` slot. These are one masked pair. The ROM roll-stop

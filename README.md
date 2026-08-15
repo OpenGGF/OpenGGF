@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Star Pointer orbit points die with their parent, as the ROM's child tail-call does
+  (`bugfix/ai-icz-1983-anim`, merged 2026-08-15).** ROM child objects delegate their own lifetime
+  to their tail call: `Child_DrawTouch_Sprite` (`sonic3k.asm:178053-178058`) reads `parent3`,
+  tests `btst #7,status(a1)` and jumps to `Go_Delete_Sprite` **before**
+  `Add_SpriteToCollisionResponseList` — and `Touch_EnemyNormal` sets exactly that bit on the
+  badnik it destroys (`:20953`). `StarPointerBadnikInstance`'s orbit point never tested its
+  parent, so after the engine bounced the parent identically to the ROM at ICZ frame 2141, a
+  surviving orbit point hurt Sonic eleven frames later. `OrbinautBadnikInstance`'s orb — the
+  sibling implementation of the same ROM contract — already had the check: two paths that should
+  agree, and didn't. The fix is confined to the orbit branch, because the launched and breaking
+  routines tail into a different helper that does *not* test the parent, where deleting would be
+  the mirror-image bug. **The briefed suspect and the briefed frame were both wrong**: frame 1983
+  is a 2-error self-healing blip, and the real cascade began at 2152 with the leader in the hurt
+  routine. Errors 2970 → 2862, real frontier 2152 → 2336. Catalogued as S3K pitfall P49.
+
 - **A compensating pair removed together: the roll-stop push clear and the delay-17 status bridge
   (`bugfix/ai-icz-rollstop-push-pair`, merged 2026-08-15).** Two defects, one masking the other,
   landed as one change because either alone makes things worse. **(A)** The engine cleared
