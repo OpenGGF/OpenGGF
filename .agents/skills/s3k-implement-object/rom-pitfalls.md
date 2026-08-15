@@ -1960,3 +1960,54 @@ is `outOfRange=true custom=false`, you have it.
 
 **Originating commit.** HCZ Sonic+Tails segment frame 2478, 1135 errors -> 0; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P54 -- `SolidObjectTop`'s d4 decides whether the rider is dragged, and it is per routine
+
+**Symptom.** A moving top-solid platform is ported correctly -- the right speed
+ramp, the right timers, the right release -- and the rider ends up exactly one
+pixel further along the direction of travel than the ROM, every frame the
+platform moves. A probe on the object itself shows the platform's own `x_pos`
+and the value it writes to the rider are both correct; something after the
+object's update adds the platform's per-frame delta a second time.
+
+**Root cause.** `MvSonicOnPtfm` (`docs/skdisasm/sonic3k.asm:41647-41684`) ends
+with `sub.w x_pos(a0),d2 / sub.w d2,x_pos(a1)`, where `d2` is the `d4` the
+caller passed to `SolidObjectTop`. `d4` is a *carry reference*, not the
+platform's position: the rider is dragged by `d4 - x_pos(a0)`. A caller that
+loads `d4` **after** moving the platform produces a zero carry and does not drag
+the rider; a caller that stacks `x_pos` **before** moving and pops it into `d4`
+produces the full delta and does.
+
+**Both forms appear in one object.** `Obj_FBZDEZPlayerLauncher`'s launch routine
+`loc_3B9AC` does `move.w x_pos(a0),d4` after `MoveSprite2`
+(`sonic3k.asm:79428`) -- no carry, because `sub_3B9D8` has already written the
+rider's `x_pos` explicitly. Its return-to-home routine `loc_3BA4A` instead does
+`move.w x_pos(a0),-(sp)` before stepping and `move.w (sp)+,d4` after
+(`:79475`, `:79486`) -- full carry. `Obj_FBZRotatingPlatform`'s `loc_3B86A`
+(`:79328`) is another pre-move stacker.
+
+**What to check.** For every top-solid port, find the instruction that loads
+`d4` and ask whether the platform has already moved at that point. Then set
+`SolidObjectProvider.carriesRiderOnHorizontalMove` accordingly -- and make it
+routine-dependent (a field latched by whichever routine ran this frame) when the
+object's routines disagree, exactly as with `usesCustomOutOfRangeCheck` in P53.
+The engine default is `true`, so a post-move-`d4` object silently gets a carry
+it should not have.
+
+**Second trap in the same family.** `SolidObjectTop` takes one vertical
+parameter, `d3`, and both the landing test and `MvSonicOnPtfm`'s per-frame
+re-seat use that same value. When the ROM caller passes a bare `d3`, the engine
+params are `SolidObjectParams.of(d1, d3, d3)` -- not `of(d1, d3, d3 + 1)`. The
+`+1` shape copied from other platforms costs exactly one pixel on the ride
+frames while the landing frame still matches, which reads as a landing bug and
+is not one.
+
+**Cross-game.** S1 `MvSonicOnPtfm` / S2 `SolidObject`'s `objoff_2E` carry
+reference are the same mechanism; `carriesRiderOnHorizontalMove`'s own javadoc
+documents the S2 `Obj65` subtypes that differ. The habit -- *find the
+instruction that loads the carry reference* -- is universal.
+
+**Originating commit.** FBZ Sonic+Tails segment frame 64: `Obj_FBZDEZPlayerLauncher`
+implemented; see `docs/status/trace-frontier-log.md`, 2026-08-15.

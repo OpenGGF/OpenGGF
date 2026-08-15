@@ -102,6 +102,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String CORK_FLOOR_AIZ2 = "cork_floor_aiz2";
     public static final String CORK_FLOOR_CNZ = "cork_floor_cnz";
     public static final String CORK_FLOOR_FBZ = "cork_floor_fbz";
+    public static final String FBZ_DEZ_PLAYER_LAUNCHER = "fbz_dez_player_launcher";
     public static final String CORK_FLOOR_ICZ = "cork_floor_icz";
     public static final String CORK_FLOOR_LBZ = "cork_floor_lbz";
 

@@ -82,6 +82,8 @@ public final class Sonic3kObjectIds {
     public static final int HCZ_BREAKABLE_BAR = 0x36;
     public static final int HCZ_WATER_RUSH = 0x37;
     public static final int HCZ_CGZ_FAN = 0x38;
+    /** Obj_FBZDEZPlayerLauncher -- id $78 in both SK object pointer sets. */
+    public static final int FBZ_DEZ_PLAYER_LAUNCHER = 0x78;
     public static final int HCZ_LARGE_FAN = 0x39;
     public static final int HCZ_SPINNING_COLUMN = 0x68;
     public static final int HCZ_WATER_WALL = 0x3B;

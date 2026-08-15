@@ -179,6 +179,8 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new BreakableWallObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.TWISTED_RAMP,
                 (spawn, registry) -> new Sonic3kTwistedRampObjectInstance(spawn));
+        factories.put(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
+                (spawn, registry) -> new FbzDezPlayerLauncherInstance(spawn));
         factories.put(Sonic3kObjectIds.COLLAPSING_BRIDGE,
                 (spawn, registry) -> new CollapsingBridgeObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.MHZ_MUSHROOM_PLATFORM,
