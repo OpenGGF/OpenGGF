@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A comparison blind spot: S3K object-slot occupancy is never compared, and diverges from ROM
+  everywhere (`bugfix/ai-hcz-29095-ring-slot-phase`, docs merged 2026-08-15).** Chasing why a held
+  MegaChopper fix moved a ring collection 27,600 frames later produced a finding worth more than
+  the fix. `TestS3kHczCompleteRunTraceReplay` compares **no object identity, slot or position** —
+  `compareObjectNearEvents()` defaults false and is not overridden — while its fixture carries
+  394,205 `object_state`, 342,381 `object_near` and 2,388 `slot_dump` events. With the probe
+  armed, engine-vs-ROM occupancy diverges on **2387 of 2387 sampled frames on both trees**. The
+  test has been green for its entire life while its object graph disagreed with the ROM
+  everywhere; its green is evidence about **player physics only**. This is not cosmetic:
+  `Obj_Bouncing_Ring` gates its floor probe on its own SST slot
+  (`sonic3k.asm:35629-35632`, where `d7` is `Process_Sprites`' live slot countdown), so a ring in
+  a different slot bounces on different frames — which is exactly the four-frame-early collection
+  that held the MegaChopper pair off `develop`. **Neither the pair nor the ring code is wrong;
+  both are ROM-faithful.** The residual is accumulated occupancy drift that both trees carry.
+
 - **ICZ 2336 traced to the cold-start boundary, not an engine defect
   (`bugfix/ai-icz-2336-giant-ring-emeralds`, docs merged 2026-08-15).** The `rings` 80-vs-30
   divergence is a **single +50 award in one row** — every other ring change in the 18,043-row

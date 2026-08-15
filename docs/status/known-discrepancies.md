@@ -2056,3 +2056,30 @@ making *"the last lag run of length ≥ 2"* a derived anchor rather than a fitte
 would correct the 8–47-row cases but changes nothing at `ss_4` and nothing on any seam the
 test currently reaches, so it is unverifiable today. See
 [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+
+## S3K object-slot occupancy is not compared, and diverges from ROM everywhere
+
+**Measured 2026-08-15.** `AbstractTraceReplayTest.compareObjectNearEvents()` defaults to `false`
+and `TestS3kHczCompleteRunTraceReplay` does not override it; `SlotOccupancyProbe` is
+`OGGF_SLOT_PROBE`-gated off. **So that test compares no object identity, slot or position at
+all** — despite its fixture carrying 394,205 `object_state`, 342,381 `object_near` and 2,388
+`slot_dump` events.
+
+With the probe armed, engine-vs-ROM occupancy diverges on **2387 of 2387 sampled frames**, on
+both a clean tree and a modified one (60,274 and 60,441 divergent slot-entries respectively).
+**The complete-run has been green for its entire life while its object graph disagreed with the
+ROM everywhere.** Its green is evidence about player physics, not about object layout.
+
+**Why this is not cosmetic.** Several ROM behaviours are keyed on an object's own SST slot index.
+`Obj_Bouncing_Ring` gates its floor probe on it —
+`move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 / bne`
+(`docs/skdisasm/sonic3k.asm:35629-35632`), where `d7` is `Process_Sprites`' live slot countdown.
+A ring occupying a different slot therefore bounces on different frames. A measured instance:
+after the HCZ boss hurt both trees scatter 32 rings at pixel-identical positions, but ring 0 lands
+in slot 38 on one tree and slot 4 on the other (34 apart, two apart in the `&7` cycle), so it is
+collected four frames early and prints as a `rings` mismatch 27,600 frames after the change that
+moved the layout.
+
+**Consequence for reading results.** A green S3K complete-run does not imply the object graph
+matches. It implies the compared fields match. Occupancy should be brought into the compared
+surface before slot-sensitive behaviour is judged by these tests.
