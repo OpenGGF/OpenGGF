@@ -77630,3 +77630,62 @@ advisory, deleted or disabled. No trace hydration; `docs/skdisasm` read for
 labels and offsets only, and `Levels/Misc/sine.bin` was read offline to check the
 derived carry condition, never at runtime. No zone/act/route/frame/game
 predicate, no recorder or fixture change, no landed fix undone.
+
+## 2026-08-15 -- MGZ Sonic+Tails segment: frame 12932 root cause found and fixed
+
+- Command: `mvn -Ptrace-replay -Ds3k.rom.path=<s3k rom> -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay test`
+  (JDK 21, `-Dtest.cds.argLine=-Xshare:off`, own empty `java.io.tmpdir`,
+  `target/surefire-reports` cleared before every run).
+- Context: two worktrees off `233da3f6a` (`develop`), control vs
+  `bugfix/ai-mgz-hidden-monitor-range`.
+- Before: FAIL, 3950 errors, first error frame 10709 (`x`, expected `0x23DB`,
+  actual `0x23DC`) -- the documented `hasLaterSlotRiderCosineResidue` transient,
+  29 errors, self-correcting by 10840.
+- Substantive stop at 12932: `player_animation_id` expected `0x0013` actual
+  `0x0002`, with `x_speed` `0x0000`/`0x07EA`, `g_speed` `0x0000`/`0x07FA` and
+  `y_speed` `0x0000`/`-0x00C8`. The ROM had run `Set_PlayerEndingPose`
+  (`sonic3k.asm:181977-181988`); the engine had not.
+- Aux named the owner: `object_state` slot 9 is `Obj_EndSign` (`$000837B2`),
+  routine `04` from frame 12866, `06` at 12931, `08` at 12932 -- exactly
+  `$40 + 1` countdown frames, matching `Obj_EndSignLanded`. Engine-side
+  instrumentation showed the signpost landing at 12868 and then taking the
+  `LANDED -> FALLING` hidden-monitor bounce at 12869, relanding at 12954 and
+  reaching results at 13020.
+- Root cause: `S3kHiddenMonitorInstance` read `word_8379E`
+  (`sonic3k.asm:176098`) as four independent offsets. `Obj_HiddenMonitorMain`
+  adds the two words per axis to one running `d0`
+  (`sonic3k.asm:176052-176069`), so the windows are `[monX - $E, monX + $E)`
+  and `[monY - $80, monY + $40)`. The MGZ1 monitor at `$2F00` is `$10` from the
+  sign at `$2F10` -- out of range in the ROM (the fixture shows it as
+  `Sprite_OnScreen_Test`, `$0001B588`), in range for the engine.
+- After: FAIL, 3446 errors (-504), first error still 10709; frames 12850-13300
+  are now completely clean and the seamless MGZ1 -> MGZ2 transition matches.
+  Next substantive divergence is **frame 13848**, `camera_y` expected `0x0813`
+  actual `0x0810` (16 frames), then 15532 (`tails_animation_id`).
+- Regression: `-Ptrace-replay` full sweep on both trees, 222 report files /
+  843 tests, 64 red on each; set difference computed both directions with
+  Python sets -- **empty both ways**. Every red class's assertion message is
+  byte-identical between trees except the target. Default-profile full sweep on
+  both trees, 1915 report files; newly red **none**, newly green
+  `TestPlaybackAdvanceOnlyInputBridge` (known ambient flake).
+- Protected classes on the fix tree: `TestS3kSonicTailsAizSegmentTraceReplay`
+  GREEN, `TestS3kSonicTailsHczSegmentTraceReplay` GREEN,
+  `TestS3kSonicTailsMhzSegmentTraceReplay` 9 / 1276,
+  `TestS3kSonicTailsIczSegmentTraceReplay` 2862 / 1983,
+  `TestS3kSonicTailsFbzSegmentTraceReplay` 8599 / 116,
+  `TestS3kSonicTailsLrzSegmentTraceReplay` 11942 / 208,
+  `TestS3kHczCompleteRunTraceReplay` 2 / 29095 (deliberate red),
+  `TestS3kMgzTraceReplay`, `TestS3kMgzCompleteRunTraceReplay`,
+  `TestS3kMgzF498AirRollPhysics` all GREEN, `TestCollisionLogic` GREEN,
+  `TestS2CompleteEmeraldRunChain` byte-identical to control.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift added -- the landed
+change replaces two literal table words with the ROM's own cumulative-add
+semantics, cited at `sonic3k.asm:176052-176069` and `:176098`. No assertion
+weakened, widened, excluded, made advisory, deleted or disabled; no test file
+changed at all. No trace hydration; `docs/skdisasm` read for labels and offsets
+only. No zone/act/route/frame/game predicate, no recorder or fixture change, no
+landed fix undone, and the `hasLaterSlotRiderCosineResidue` table was left
+untouched.

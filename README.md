@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A range table read as offsets instead of cumulative adds delayed the end of the act
+  (`bugfix/ai-mgz-hidden-monitor-range`, merged 2026-08-15).** MGZ 12932 showed four player fields
+  diverging at once — the signature of `Set_PlayerEndingPose` (`sonic3k.asm:181977-181988`), which
+  the ROM had run and the engine had not. The `y_speed` I briefed was just correct rolling physics
+  continuing. Instrumentation showed the engine's signpost landing on time, then taking a "hidden
+  monitor bounce" the ROM never takes, refalling, and reaching results **~88 frames late**.
+  `Obj_HiddenMonitorMain` loads the coordinate into `d0` **once** and then does `add.w (a2)+,d0`
+  repeatedly against the same running register, so its table `dc.w -$E, $1C, -$80, $C0` is
+  **`low, span`** — windows `[monX−$E, monX+$E)` and `[monY−$80, monY+$40)`. The engine read it as
+  four independent offsets, widening the box, and accepted a monitor `$10` from the sign that the
+  ROM rejects. Errors **3950 → 3446**, the 12932 cluster gone, and the seamless MGZ1→MGZ2 act
+  transition now matches. **P62** records the trap plus a readout trick: the out-of-range branch
+  rewrites the object's code pointer to `Sprite_OnScreen_Test`, so the fixture's aux tells you
+  directly which branch the recording took.
+
 - **A fitted constant already in the tree, and the ROM mechanism it was approximating
   (`bugfix/ai-mgz-swing-cosine-residue`, docs merged 2026-08-15).** MGZ 10709 is not a player
   position bug: the player is riding a swinging platform whose endpoint the engine places one pixel

@@ -2392,3 +2392,50 @@ and wrong on the next one. See
 
 **Originating commit.** MGZ Sonic+Tails segment frame 10709; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+## P62 -- a range table read with `(a2)+` is often *cumulative*, not four offsets
+
+**Shape.** A routine loads a coordinate into `dN`, then walks a `dc.w` table
+with `add.w (a2)+,dN` **twice per axis without reloading the coordinate**. The
+second word is the window *span*, not a second offset from the object.
+
+`Obj_HiddenMonitorMain` (`sonic3k.asm:176046-176080`) is the canonical case:
+
+```
+        move.w  x_pos(a0),d0      ; d0 = monitor x
+        move.w  x_pos(a1),d1      ; d1 = signpost x
+        add.w   (a2)+,d0          ; d0 = monX - $E
+        cmp.w   d0,d1
+        blo.s   loc_8374C         ; out
+        add.w   (a2)+,d0          ; d0 = monX - $E + $1C = monX + $E
+        cmp.w   d0,d1
+        bhs.s   loc_8374C         ; out
+```
+
+with `word_8379E: dc.w -$E, $1C, -$80, $C0` (`:176098`). The real windows are
+`x ∈ [monX - $E, monX + $E)` and `y ∈ [monY - $80, monY + $40)` -- **half** the
+X width and a third of the downward Y reach that the literal table words
+suggest. Comparisons are unsigned word compares (`blo` / `bhs`).
+
+**Why it bites.** A too-wide accept box silently takes the *other* ROM branch.
+Here `loc_83760` reveals the monitor and does `bclr #0,$38(a1)`, clearing the
+signpost's landed bit; `Obj_EndSignLanded` then re-launches the sign
+(`:176203-176228`), so the whole end-of-act -- `Set_PlayerEndingPose`, the
+results owner, the seamless act transition -- slips by tens of frames. The
+symptom is far from the cause: zeroed player velocities and animation `$13`
+arriving late, with no object field compared anywhere near it. In MGZ1 the
+monitor at `$2F00` is `$10` from the sign at `$2F10` -- rejected by the ROM,
+accepted by the naive box.
+
+**How to spot it in the fixture.** The out-of-range branch rewrites the object's
+code pointer to `Sprite_OnScreen_Test`, so a monitor that resolved out of range
+shows up in `object_near` / `object_state` as `Sprite_OnScreen_Test`
+(`$0001B588`) rather than `Obj_Monitor`. That is a direct ROM readout of which
+branch the recording took -- check it before porting the box.
+
+**What to check.** Any `(a2)+` bounds walk. If the base register is not
+reloaded between the two adds, the table is `low, span`. Ports that read it as
+`low, high` are wrong on every object that uses the shape.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 12932; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.
