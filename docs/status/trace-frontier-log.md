@@ -78353,3 +78353,85 @@ labels and citations only. One stale comment removed: the claim that
 `AllocateObject` "typically lands in a slot at or before the cage's own position"
 is refuted by the fixture's own `slot_dump` (cage 4, rings 5..27) and by the
 engine's own allocator, which agrees.
+
+## 2026-08-15 -- S3K Pachinko trio: sidekick slot runs after the object exec loop (diagnosis only)
+
+Base `f0aa175b2`. Three classes, measured on a clean tree (JDK 21, all three ROMs,
+cleared reports):
+
+| class | errors | rows | first error |
+|---|---:|---:|---|
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 2401 | 3067 | 0, `tails_y_speed` exp=0x01B2 act=0x0000 |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 2234 | 3774 | 0, `tails_y_speed` exp=0x01B2 act=0x0000 |
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | 187 | 356 | 0, `tails_y_speed` exp=0x01B2 act=0x0000 |
+
+**Nothing landed.** The fix is in shared frame-ordering machinery and needs its own
+round with a measured blast radius.
+
+### One cause, and the asymmetry is trace length
+
+The 2401 / 2234 / 187 spread looked like it might be several defects. It is not: the
+three fixtures are **byte-identical at row 0** in every sidekick field
+(`0x0120/0x0DC4`, vel `06C8/01B2`, anim `05`, map `AD`, status `02`, routine `02`),
+differing only in `rings`, `vblank_counter` and `bk2_frame_offset`. Error density is
+0.78 / 0.59 / 0.53 per row against row counts 3067 / 3774 / 356.
+
+`tails_y_speed` is alphabetical, not causal: six sidekick fields diverge as one group,
+and from frame 2 onward **engine row N equals ROM row N-1 exactly** -- a one-executed-frame
+phase lag on the sidekick only. Sonic matches throughout.
+
+### Root cause, derived from the ROM rather than measured
+
+`SpawnLevelMainSprites` places Player_2 at leader `-$20`, `+4`
+(`docs/skdisasm/sonic3k.asm`: `subi.w #$20,(Player_2+x_pos).w` /
+`addi.w #4,(Player_2+y_pos).w`), i.e. `(0x0120, 0x0DC4)` -- **overlapping the round
+bumper at `(0x0110, 0x0DC0)`** (aux `object_state` slot 15, `object_code 0x00032EF0`).
+`Obj_Bumper`'s pachinko branch `loc_32EF0` -> `loc_32EAA` calls `sub_32F34`, which
+handles Player_2 via `collision_property` bit 1, and `sub_32F56` (:68952-68972) does
+`GetArcTan(bumper - player)`, adds `(Level_frame_counter).w & 3` -- a `move.b` from a
+word address, so the HIGH byte, which is 0 here -- then `GetSineCosine`,
+`muls.w #-$700` and `asr.l #8` into `x_vel`/`y_vel`. With `d1 = -$10`, `d2 = -4` that
+yields exactly `x_vel = +0x06C8`, `y_vel = +0x01B2`. `x_sub`/`y_sub` are 0 at row 0
+because the bounce sets velocity *after* the sidekick's move that frame.
+
+**No constant is involved and none was added** -- the expected values are a derivation,
+not a measurement of the fixture.
+
+Row 0's `gameplay_frame_counter` is 1, so this is the first `LevelLoop` pass, **not** the
+pre-row-0 `loc_6468` pass. The Slots precedent (P65) does not transfer; it was the
+round's starting hypothesis and is refuted.
+
+### The engine defect: intra-frame slot ordering
+
+Instrumented at the decision site (temporary, reverted): at the bumper's first exec
+(`fc=1`, row 0) Sonic already carries row 0's velocity while Tails still has none, and
+Tails' inline touch -- the ROM-correct `applyTouchResponses` player-slot path -- fires
+*after* that exec in the same frame. The **leader's** slot runs before the dynamic-object
+exec loop; the **sidekick's** whole slot, physics and `Touch_Response` together, runs
+after it. In the ROM, Player_2 is slot 1 and the bumper a later dynamic slot, so both
+resolve in the same pass.
+
+### The obvious fix is not the fix -- decisive control
+
+Patching `PachinkoBumperObjectInstance.processPendingTouches` to bounce immediately
+instead of deferring to the next `update()` moved the bounce to `fc=1` and changed the
+result by **nothing**: 187 errors, identical first error. **That deferral is not the
+cause and must not be "fixed"** -- no bumper-side change can recover row 0.
+
+### Why the green Knuckles cross-check proves nothing here
+
+`s3k-multibonus/pachinko` is `characters:[knuckles]`, `sidekicks:[]`. It never exercises
+the sidekick slot, so its green is not evidence against this defect. The discriminator is
+"has a sidekick", which is also why exactly the three Sonic+Tails classes are red.
+
+### Scope for the next round
+
+The fix is "the S3K sidekick's `Process_Sprites` slot must execute before the
+dynamic-object exec loop, as Player_2 does in the ROM" -- `LevelManager.stepFrame` stage
+order versus `ObjectManager.updateObjectPositionsPostPhysicsWithoutTouches`. That is
+shared machinery touching every S2/S3K sidekick-object interaction, and the **protected
+AIZ and HCZ Sonic+Tails greens sit directly in the blast radius**. Measure before writing.
+
+Not established: why the leader's slot runs before the exec loop and the sidekick's after
+(effect measured, producing code path not read); the blast radius of a reorder; whether
+S1/S2 sidekick slots share the inversion.
