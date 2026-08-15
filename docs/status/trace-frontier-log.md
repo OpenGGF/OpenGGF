@@ -76244,3 +76244,77 @@ defect removed together.
 `0x06`. Note `PlayableSpriteMovement` still performs the same early animation-driver push
 clear on roll *entry* (`sonic3k.asm:23259-23264,28494-28500` write `anim=#2` and nothing
 else); that sibling was left alone this round and is the obvious first suspect.
+
+## 2026-08-15 - ICZ 1983 refuted; real frontier was 2152 (Star Pointer orphaned children)
+
+Base `9049be3e9`; all numbers measured at that commit on two worktrees
+(`wt/r154fix` = fix, `wt/r154ctl` = control). **Control re-established, not inherited:**
+`TestS3kSonicTailsIczSegmentTraceReplay` first error frame **1983**, **2970** errors;
+trace profile **843 run / 53 F / 11 E / 4 S**, **64** red classes.
+
+**The briefed suspect was wrong, and so was the frame.** The round was briefed to
+examine `PlayableSpriteMovement:2752`'s roll-**entry** push clear as the cause of
+frame 1983. It is not involved. Parsing the report instead of the headline shows
+frame 1983 is a **2-error, `frame_span: 1`, `cascading: false` self-healing blip**
+(`tails_animation_id` 0x05/0x06 and `tails_mapping_frame` 0xAD/0x9A) and that
+**exactly 2 of 2970 errors start before frame 2500**. The real cascade origin is
+**frame 2152**, where the leader diverges on eight fields at once:
+`routine` 0x02 vs 0x04 (hurt), `rings` 30 vs 0, `rolling` 1 vs 0,
+`y_speed` 0x00F0 vs -0x0400, `status_byte` 0x06 vs 0x02. **The engine takes damage
+where the ROM does not.**
+
+**The writer, MEASURED.** A probe on `ObjectTouchResponseController.applyHurt`
+printed exactly **one** hurt in the entire 18,043-row segment:
+`PROBE hurt fc=2153 cls=OrbitingPointInstance id=0xae objXY=4067,635 plXY=4067,622`
+-- a Star Pointer (Obj $AE) orbiting point.
+
+**What the ROM does.** The fixture's own aux stream settles it: at frame **2141**
+slots 17/18 appear (explosion + animal) on the Star Pointer parent in slot 5, and at
+frame **2142** the four orbit points in slots 10/11/13/14 are `object_removed`. The
+engine bounces identically at 2141 (no error starts between 1984 and 2151) but keeps
+the points alive. `Obj_StarPointer`'s orbit routine `loc_8BEE6` tails into
+`jmp Child_DrawTouch_Sprite` (`sonic3k.asm:190853-190858`), which runs
+`movea.w parent3(a0),a1 / btst #7,status(a1) / bne.w Go_Delete_Sprite` **before**
+`Add_SpriteToCollisionResponseList` (`sonic3k.asm:178053-178058`);
+`Touch_EnemyNormal` sets that bit on the badnik it destroys
+(`sonic3k.asm:20952-20953`). The launched (`loc_8BF4C`) and breaking (`loc_8BF74`)
+routines tail into `Sprite_CheckDeleteTouchXY` instead and do **not** test the
+parent, so the check is confined to the orbit branch.
+
+This is the "two paths that should agree, but don't" shape:
+`OrbinautBadnikInstance.OrbinautOrbInstance` -- the sibling implementation of the
+identical ROM contract -- already had `parent.isDestroyed() -> setDestroyed(true)`.
+The Star Pointer point did not. **No constant was introduced.**
+
+**Result.** `TestS3kSonicTailsIczSegmentTraceReplay` **2970 -> 2862** errors; the
+hurt cascade is gone and the real frontier moves **2152 -> 2336**
+(`rings` expected 80, actual 30 -- the ROM collects a ring set the engine misses).
+The reported headline is unchanged at frame 1983, because that blip was never the
+cause and is untouched by this fix.
+
+**Measured, both profiles, both trees, red sets diffed by name in both directions
+(Python set difference).**
+
+- Trace profile: base **843 / 53 F / 11 E / 4 S**, 64 red; fix **843 / 53 F / 11 E /
+  4 S**, 64 red. New-red **empty**, new-green **empty**.
+- Default profile: base **15136 / 64 F / 25 E / 22 S**, 50 red; fix
+  **15136 / 65 F / 25 E / 22 S**, 51 red. Sole new-red
+  `TestModeTracePickerLaunchStatus`, **green in isolation on both trees** and on the
+  known-flake list.
+- `TestS3kIczCompleteRunTraceReplay` **GREEN** (the zone cross-check).
+  `...AizSegment...` green; `...MhzSegment...` 9 errors / frame 1276;
+  `...HczSegment...` 1445 errors / frame 1434 -- all unmoved.
+- Shared-physics protected set unmoved and byte-identical:
+  `TestS2CompleteEmeraldRunChain` (red on both trees, failure text diffs clean apart
+  from elapsed time; cursor **3977 of 3997**, segment 11 = **236**, segment 2
+  absent), `TestS1CompleteEmeraldVisualRun`, `TestS2CompleteEmeraldVisualRun`,
+  `TestS2EhzHalfpipeRoundTripChain`, all three S1 chains, `TestS3kAizTraceReplay`
+  (16), `TestS3kCnzTraceReplay` (27), `TestS3kMgzTraceReplay`,
+  `TestS3kSpecialStageTraceReplay`, `TestS3kGumballBonusTraceReplay`,
+  `TestS3kReplayReferenceClosureIntegration`, `TestCollisionLogic`, both rewind
+  guards, and the four S3K keep-green headless classes.
+
+**Next ICZ frontier: segment frame 2336**, `rings` expected 80 actual 30 (with
+`player_animation_id` 0x0D vs 0x1C at the same frame). The 1983 two-error
+`tails_animation_id` blip remains open and is independent -- it is a single-frame
+Tails animation sample, not a cascade.

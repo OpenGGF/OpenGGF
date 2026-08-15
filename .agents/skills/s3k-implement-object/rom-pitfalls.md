@@ -1746,3 +1746,53 @@ move-lock setter; keep any launch marker free of input semantics.
 `docs/s1disasm/_incObj/41 Springs.asm:144`.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.
+
+## P49 -- Child object omits the `Child_*_Sprite` parent-destroyed delete
+
+**Symptom.** A parent badnik is destroyed correctly -- the player bounces, the
+explosion spawns, the score is awarded -- but its attached children (orbiting
+spikes, spinning arms, held projectiles) keep running and keep hurting. The
+divergence shows up nowhere near the kill: the trace stays byte-identical for
+several seconds and then the player is suddenly in the hurt routine with the
+rings lost, while the ROM sails on. A `slot_dump`/`object_removed` diff shows
+the ROM removing the child slots exactly **one frame after** the parent's
+destruction.
+
+**Root cause.** ROM child objects do not check their own lifetime. Their tail
+call does it for them: `Child_Draw_Sprite`, `Child_DrawTouch_Sprite`,
+`Child_CheckParent` and `Child_AddToTouchList` all begin
+`movea.w parent3(a0),a1 / btst #7,status(a1) / bne.w Go_Delete_Sprite`
+(`docs/skdisasm/sonic3k.asm:178046-178072`), and `Touch_EnemyNormal` sets that
+bit on the badnik it destroys (`sonic3k.asm:20952-20953`). In
+`Child_DrawTouch_Sprite` the test runs **before**
+`Add_SpriteToCollisionResponseList`, so a child deleted on that pass never
+publishes a touch entry. An engine child that models only the parent's
+*position* inherits none of this and outlives its parent forever.
+
+**What to check.** For every child object, read which tail call its routine
+`jmp`s to, **per routine**. The delete is not a property of the object; it is a
+property of the routine. A child commonly starts on `Child_DrawTouch_Sprite`
+while attached and switches to `Sprite_CheckDeleteTouchXY` once launched or
+breaking -- at which point it is genuinely independent and must **not** be
+deleted with the parent. Porting the check to the whole class instead of the
+attached branch is the mirror-image bug.
+
+**Correct pattern.** In the branch whose ROM routine ends in a `Child_*` tail
+call, after the movement step, test the parent's destroyed state, suppress this
+frame's touch-list publication, and destroy the child.
+
+**ROM citation.** `docs/skdisasm/sonic3k.asm:178046-178072`
+(`Child_Draw_Sprite` family), `:20952-20953` (`Touch_EnemyNormal` setting status
+bit 7). Worked example: `Obj_StarPointer`'s orbit routine `loc_8BEE6` tails into
+`Child_DrawTouch_Sprite` (`:190853-190858`) while its launched `loc_8BF4C`
+(`:190860-190866`) and breaking `loc_8BF74` (`:190873-190876`) routines tail into
+`Sprite_CheckDeleteTouchXY` and do not.
+
+**Cross-game.** S1/S2 have no `Child_*_Sprite` helper family; their children use
+per-object parent checks, so this exact idiom is **S3K-specific**, but the
+underlying question -- *what deletes this child, and in which routine?* -- is
+universal.
+
+**Originating commit.** `<pending: ICZ Star Pointer orphaned orbit points>`;
+`OrbinautBadnikInstance.OrbinautOrbInstance` is the pre-existing correct example
+in the same file family.
