@@ -1181,8 +1181,23 @@ class TestSidekickCpuDespawnParity {
                 "The on-screen branch refreshes the latch to the current 0x0003 vine word");
     }
 
+    /**
+     * <b>Assertion deliberately inverted.</b> This case previously asserted that a
+     * cleared {@code Tails_CPU_interact} latch is "unarmed" and must NOT despawn on
+     * the first stood-on object. ROM has no such precondition: once the off-screen +
+     * {@code Status_OnObj} branch of {@code sub_13EFC} is taken it performs
+     * {@code cmp.w (a3),d0} unconditionally (docs/skdisasm/sonic3k.asm:26816-26843),
+     * and {@code Tails_CPU_interact} is zeroed with the rest of the CPU block at
+     * level init ({@code clearRAM Tails_CPU_interact,$100}, sonic3k.asm:5415,7621).
+     * The refresh at {@code loc_13F2E} only runs on a frame where Tails is already
+     * on an object, so the FIRST off-screen on-object CPU frame always compares 0
+     * against a live code-pointer high word and mismatches into {@code sub_13ECA}.
+     * Witnessed by the FBZ1 sonic+tails trace at frame 116: Tails lands off-screen
+     * on {@code Obj_FBZDEZPlayerLauncher} (slot 5, code $0003BA4A) with the latch
+     * still 0 and ROM parks him at ($7F00, 0) in CATCH_UP_FLIGHT.
+     */
     @Test
-    void s3kOffscreenWordChangeDoesNotDespawnWhenLatchUnarmed() {
+    void s3kOffscreenFirstStoodOnObjectDespawnsAgainstClearedLatch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.useGameRules(GameRules.SONIC_3K);
@@ -1196,8 +1211,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        // Latch is the cleared 0x0000 default: no prior word captured, so the
-        // watchdog must not fire against the first stood-on object.
+        // Latch is the cleared 0x0000 level-init default; ROM still compares it.
         controller.hydrateFromRomCpuState(6, 0, 40, 0x0000, false, 0, 0);
         tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
                 new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
@@ -1206,10 +1220,11 @@ class TestSidekickCpuDespawnParity {
 
         controller.update(2159);
 
-        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
-                "A cleared (0x0000) interact latch is unarmed and must not despawn on the first "
-                        + "stood-on object's word");
-        assertNotEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "sub_13EFC compares the cleared (0x0000) latch against the stood-on object's "
+                        + "code word unconditionally, so the first off-screen landing despawns");
+        assertEquals((short) 0x7F00, tails.getCentreX(),
+                "sub_13ECA writes x_pos = $7F00 (sonic3k.asm:26800-26809)");
     }
 
     @Test

@@ -77881,3 +77881,86 @@ No constant, tolerance, offset or comparison shift added. No assertion weakened,
 widened, excluded, made advisory, deleted or disabled; no test or fixture file
 changed. No trace hydration, including experimentally. No zone/act/route/frame/
 game predicate. `docs/skdisasm` read for labels and line citations only.
+
+## 2026-08-15 -- S3K FBZ frame 116: the off-screen `Tails_CPU_interact` compare
+
+Branch `bugfix/ai-s3k-fbz-frame116`, base `b525b6af3` (develop). Worktree +
+control tree, JDK 21, `target/surefire-reports` cleared before every run.
+
+### Target and measured symptom
+
+`TestS3kSonicTailsFbzSegmentTraceReplay` -- baseline 8599 errors, first error
+frame 116 `tails_x_sub` (expected `0xD000`, actual `0xB800`). Dumping every
+field that differs at 116 first (not the alphabetically-first one) showed
+`tails_x` expected `0x7F00` with `tails_y` expected `0x0000`: not a sub-pixel
+drift at all, but the ROM teleporting Tails to the `sub_13ECA` off-screen
+respawn sentinel while the engine kept him following on the ground.
+
+### Root cause
+
+`sub_13EFC` (`docs/skdisasm/sonic3k.asm:26816-26843`), off-screen +
+`Status_OnObj` branch, does `cmp.w (a3),d0` -- the stood-on object's code
+pointer high word against `Tails_CPU_interact` -- **unconditionally**. That RAM
+word is zeroed with the whole CPU block at level init (`clearRAM
+Tails_CPU_interact,$100`, `:5415,7621`) and the refresh at `loc_13F2E` only
+runs on a frame where Tails is *already* on an object. So the first off-screen
+on-object CPU frame always compares 0 against a live code word (>= 3) and
+mismatches into `sub_13ECA`: `x_pos = $7F00`, `y_pos = 0`,
+`Tails_CPU_routine = 2`, `object_control = $81` (`:26800-26809`).
+
+Fixture aux is unambiguous: at frame 115 `cpu_state.interact = 0x0000`,
+`flight_timer = 35`, Tails newly `interact_slot = 5`; at 116 `cpu_routine = 2`,
+`flight_timer = 0`, `object_control = 0x81`. Slot 5's `object_code` is
+`0x0003BA4A` = `Obj_FBZDEZPlayerLauncher`'s `loc_3BA4A`
+(`sonic3k.lst:93903,93967`; entry `sonic3k.asm:79394`).
+
+Two engine defects stacked:
+
+1. `SidekickCpuController.checkDespawn` gated the compare behind
+   `diagnosticS3kInteractWord != 0` -- an invented "latch unarmed" precondition
+   with no ROM counterpart, which suppresses precisely the first landing.
+2. `FbzDezPlayerLauncherInstance` did not implement
+   `RomObjectCodePointerProvider`, so `currentS3kInteractWord()` returned
+   `null` and the compare could not run even with (1) lifted. A probe at the
+   decision site measured `onObj=true, word=null, latch=0` on the frame-116
+   call -- mechanism fit alone would have stopped at (1) and landed nothing.
+
+### Result
+
+Frontier `116 -> 180`; errors `8599 -> 8616`. The new first error, `y`
+expected `0x056C` actual `0x0571`, is byte-identical to a cascading entry
+already present at frame 180 in the baseline report, i.e. a pre-existing player
+divergence now exposed rather than a new one. `framesCompared`/`total_frames`
+33712 on both trees.
+
+### Regression
+
+Full `-Ptrace-replay` and full default profile, both trees, red sets diffed by
+name in both directions from the surefire XML (not `comm`), plus a diff of every
+red class's assertion message. Trace profile: 64 red control / 65 red fix; the
+only message deltas were FBZ (above) and `TestS3kSonicTailsSszSegmentTraceReplay`
+6998 -> 7005 with its frontier unchanged at frame 0 `camera_x` -- the same
+first-off-screen-landing branch now firing in Sky Sanctuary. Protected classes
+byte-identical: AIZ and HCZ segments green; MHZ 9/1276, ICZ 2862/1983, LRZ
+11942/208, MGZ 3446/10709, CNZ 6300/5754, LBZ 7174/958;
+`TestS3kHczCompleteRunTraceReplay` deliberately red at exactly 2 errors, frame
+29095; `TestS2CompleteEmeraldRunChain` message unchanged.
+`TestS2CompleteEmeraldVisualRun`, `TestCnzHoverFanObjectInstance`,
+`TestGameLoopSpecialStageEntryPresentation` and
+`TestCutsceneKnucklesAiz1Instance` each surfaced red in one sweep and green in
+another and green in isolation -- ambient reused-fork churn, and the churn set
+differed between two consecutive default sweeps of the same tree.
+
+### Discipline
+
+No constant, tolerance, offset, nudge or comparison shift added; no sub-pixel
+accumulator or rounding rule touched. No zone/act/route/frame/game predicate.
+No trace hydration. `docs/skdisasm` read for labels and line citations only;
+runtime bytes from the ROM.
+
+**One assertion deliberately inverted, and it is the finding rather than a
+weakening**: `TestSidekickCpuDespawnParity` pinned the invented precondition
+(`s3kOffscreenWordChangeDoesNotDespawnWhenLatchUnarmed` asserted `NORMAL`). It
+is renamed `s3kOffscreenFirstStoodOnObjectDespawnsAgainstClearedLatch` and now
+asserts `CATCH_UP_FLIGHT` and `x_pos == $7F00`, with the ROM citation in its
+javadoc. Nothing was relaxed, widened, excluded, made advisory or disabled.

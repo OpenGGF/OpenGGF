@@ -4545,18 +4545,29 @@ public class SidekickCpuController {
             // switched to a different-code object while off-screen) despawns through
             // sub_13ECA. This is the general word-change trigger; the riding-instance
             // loss above is the special case where the slot's word was zeroed by
-            // Delete_Referenced_Sprite. The armed check is diagnosticS3kInteractWord
-            // != 0: a real object code high word is always non-zero (ROM object code
-            // lives at >= 0x0003xxxx), and the reset paths zero the latch, so a
-            // non-zero latch means a real word was captured on a prior on-object
-            // frame. sub_13ECA preserves the latch, but sets object_control/off-object
-            // so no compare runs post-despawn until the next on-object landing
-            // re-latches through refreshInteractIdSnapshot below. Compared BEFORE the
-            // fall-through refreshInteractIdSnapshot so the latch still holds the
-            // previous on-object frame's word (ROM compare-then-latch).
+            // Delete_Referenced_Sprite. sub_13ECA preserves the latch, but sets
+            // object_control/off-object so no compare runs post-despawn until the
+            // next on-object landing re-latches through refreshInteractIdSnapshot
+            // below. Compared BEFORE the fall-through refreshInteractIdSnapshot so
+            // the latch still holds the previous on-object frame's word (ROM
+            // compare-then-latch).
+            //
+            // ROM performs `cmp.w (a3),d0` UNCONDITIONALLY once the off-screen +
+            // Status_OnObj branch is taken -- there is no "latch already armed"
+            // precondition. Tails_CPU_interact is zeroed with the rest of the CPU
+            // block at level init (clearRAM Tails_CPU_interact,$100,
+            // sonic3k.asm:5415,7621) and the refresh at loc_13F2E only runs on a
+            // frame where Tails is ALREADY on an object, so the FIRST off-screen
+            // on-object CPU frame always compares 0 against a live object code high
+            // word (>= 3) and mismatches. That is the ROM's real behaviour: landing
+            // on anything while off-screen hands Tails straight to sub_13ECA. An
+            // earlier engine-side `!= 0` arming guard suppressed exactly this first
+            // landing and left Tails following on the ground where ROM had already
+            // parked him at ($7F00,0) (FBZ1 sonic+tails trace, frame 116: slot 5
+            // code $0003BA4A vs latch 0).
             boolean useInteractWordChangeDespawn = rules != null
                     && rules.sidekickDespawnUsesInteractCodeWordChange();
-            if (useInteractWordChangeDespawn && (diagnosticS3kInteractWord & 0xFFFF) != 0) {
+            if (useInteractWordChangeDespawn) {
                 Integer currentWord = currentS3kInteractWord();
                 if (currentWord != null
                         && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {

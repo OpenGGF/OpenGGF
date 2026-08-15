@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Tails' off-screen respawn compares a cleared latch, and the FBZ launcher publishes its code
+  word (`bugfix/ai-s3k-fbz-frame116`, merged 2026-08-15).** The FBZ Sonic+Tails segment diverged at
+  frame 116 on `tails_x_sub` — alphabetical, not causal: the fields that mattered were `tails_x`
+  expected `0x7F00` and `tails_y` expected `0x0000`, the `sub_13ECA` off-screen respawn sentinel.
+  `sub_13EFC` performs `cmp.w (a3),d0` unconditionally once the off-screen + `Status_OnObj` branch
+  is taken (sonic3k.asm:26816-26843), and `Tails_CPU_interact` is zeroed with the whole CPU block at
+  level init (`clearRAM Tails_CPU_interact,$100`, :5415,:7621) while the refresh at `loc_13F2E` runs
+  only on a frame Tails is *already* on an object — so the first off-screen on-object frame always
+  compares 0 against a live code-pointer high word and respawns. Two defects stacked: an engine-side
+  `!= 0` "latch armed" precondition with no ROM counterpart, and `FbzDezPlayerLauncherInstance` not
+  publishing its ROM code word, leaving the branch unable to fire even once the guard was lifted —
+  removing the guard alone changed the result by exactly zero. Frontier 116 -> 180, onto a
+  pre-existing player divergence already recorded in the baseline report. A parity test that pinned
+  the invented precondition was corrected to the ROM, not weakened.
+
 - **Census: the inventory boundary owns 22.9% of S3K's error mass, not most of it
   (`bugfix/ai-s3k-inventory-gate-census`, docs merged 2026-08-15).** After two zones terminated at
   the same save-game-inventory boundary, all 63 red S3K classes were classified by their **first

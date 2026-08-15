@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -44,7 +45,20 @@ import java.util.List;
  * in this class.
  */
 public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
+                   RomObjectCodePointerProvider {
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Word 0 of this object's SST holds its live code pointer, which
+        // Obj_FBZDEZPlayerLauncher rewrites between loc_3B97A ($0003B97A) and
+        // loc_3BA4A ($0003BA4A) as it arms and returns home
+        // (docs/skdisasm/sonic3k.asm:79408,79416,79474). All of those pointers
+        // live in the same S&K-half bank, so the HIGH word that
+        // Tails_CPU_interact samples is $0003 throughout
+        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        return 0x0003;
+    }
 
     /** ROM {@code move.w #$10,d1} at {@code sonic3k.asm:79426}. */
     private static final int SOLID_HALF_WIDTH = 0x10;
