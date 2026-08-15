@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the roll-stop movement path no longer clears `Status_Push`, and the ICZ
+  swinging platform no longer shifts TailsCPU_Normal's `d4` status read off the
+  delayed `Ctrl_1_logical` slot. These are one masked pair. The ROM roll-stop
+  block writes only the roll bit, the radii, `anim` and `y_pos`
+  (`docs/skdisasm/sonic3k.asm:22979-22990` `Sonic_RollSpeed`,
+  `sonic3k.asm:28216-28231` `Tails_RollSpeed`, `docs/s2disasm/s2.asm:37051-37061`
+  `Sonic_CheckRollStop`); `Status_Push` is cleared by
+  `Animate_Sonic`/`Animate_Tails` on `anim != prev_anim`
+  (`sonic3k.asm:29359-29364,29681-29686`), which run *after* `Sonic_RecordPos`
+  in `Obj01_Control` (`sonic3k.asm:21995-22022`).
+  `PlayableSpriteMovement.applyRollStopAnimationChange()` was performing that
+  animation-driver clear one routine early, so a push-free byte entered the
+  follower-history ring. `IczSwingingPlatformObjectInstance`'s
+  `usesSidekickCpuPushBypassObjectOrderStatusDelay` bridge was compensating for
+  exactly that missing bit by re-reading the leader status one frame later;
+  `TailsCPU_Normal` reads the status byte from the single slot it also loads
+  `d1` from (`sonic3k.asm:26696-26705`), with no second read. Removing the eager
+  clear alone regressed `TestS3kIczCompleteRunTraceReplay` (green -> 2372
+  errors); removing both together keeps it green and moves
+  `TestS3kSonicTailsIczSegmentTraceReplay` from frame 1818/3031 errors to frame
+  1983/2970 errors, with AIZ/MHZ/HCZ segment frontiers unchanged and no red-set
+  movement on either the trace or default profile.
 - Fix: the Super Emerald arena restart no longer runs a title-card transition
   hold. `Level:` only installs `Obj_TitleCard` at `loc_62B6`
   (`docs/skdisasm/sonic3k.asm:7730-7736`) when `Current_zone_and_act` is not

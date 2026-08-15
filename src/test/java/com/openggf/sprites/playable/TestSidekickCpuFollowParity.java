@@ -4533,18 +4533,28 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
-    void s3kIczSwingingPlatformDeclaresCpuSidekickObjectOrderStatusBridge() {
+    void s3kIczSwingingPlatformDeclaresNoCpuSidekickObjectOrderStatusBridge() {
         IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
                 new ObjectSpawn(0x0157, 0x00E1, 0xB4, 0, 0, false, 0));
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         TestableSprite sonic = new TestableSprite("sonic");
 
+        // TailsCPU_Normal reads the delayed status byte from exactly one
+        // Sonic_Pos_Record_Buf slot -- the same slot as the delayed
+        // Ctrl_1_logical word it loads for d1 (sonic3k.asm:26696-26705). There
+        // is no second, one-frame-later status read. The bridge that existed
+        // here compensated for the engine clearing Status_Push inside the
+        // roll-stop movement path, one routine before the ROM's
+        // Animate_Sonic/Animate_Tails clear (sonic3k.asm:29359-29364,
+        // 29681-29686, which run after Sonic_RecordPos at 21995-22022). With
+        // that eager clear removed, the delay-16 sample already carries the
+        // ROM byte and the object-order sample double-counts it.
         Assertions.assertAll(
-                () -> assertTrue(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
-                        "ObjB4's folded child SolidObjectFull slots require the object-order d4 sample."),
+                () -> assertFalse(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                        "ObjB4 must not shift TailsCPU_Normal's d4 status read off the delayed Ctrl_1 slot."),
                 () -> assertFalse(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(sonic),
-                        "The bridge only belongs to TailsCPU_Normal."));
+                        "The removed bridge must not return for the leader either."));
     }
 
     private static void installStandaloneGameModule(GameModule module) {

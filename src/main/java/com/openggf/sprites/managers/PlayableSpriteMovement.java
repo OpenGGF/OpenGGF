@@ -2957,15 +2957,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getAnimationId() == idleAnimId) {
 			return;
 		}
+		// No Status_Push write here. The ROM roll-stop block writes only the
+		// rolling bit, the radii, anim and y_pos -- S3K Sonic_RollSpeed
+		// (sonic3k.asm:22979-22990), Tails_RollSpeed (sonic3k.asm:28216-28231),
+		// S2 Sonic_CheckRollStop (s2.asm:37051-37061). Status_Push is cleared by
+		// Animate_Sonic/Animate_Tails on anim != prev_anim
+		// (sonic3k.asm:29359-29364,29681-29686; s2.asm:38033-38038,40879-40884),
+		// which run AFTER Sonic_RecordPos in Obj01_Control
+		// (sonic3k.asm:21995-22022). Clearing here would put a push-free byte
+		// into the follower history ring one routine early.
 		sprite.setAnimationId(idleAnimId);
-		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		if (animationRules != null && animationRules.animationChangeClearsPush()) {
-			// ROM Tails_RollSpeed/Sonic_RollSpeed writes anim=$05 on roll stop
-			// (sonic3k.asm:28198-28210) and the S2/S3K animation driver clears
-			// Status_Push when anim != prev_anim (sonic3k.asm:29359-29364,
-			// 29681-29686; s2.asm:38033-38038,40879-40884).
-			sprite.setPushing(false);
-		}
 	}
 
 	/**

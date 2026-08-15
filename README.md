@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A compensating pair removed together: the roll-stop push clear and the delay-17 status bridge
+  (`bugfix/ai-icz-rollstop-push-pair`, merged 2026-08-15).** Two defects, one masking the other,
+  landed as one change because either alone makes things worse. **(A)** The engine cleared
+  `Status_Push` inside the roll-stop movement path; the ROM's roll-stop block writes only the
+  roll bit, radii, `anim` and `y_pos` (`sonic3k.asm:22979-22990`, `:28216-28231`, and **S2's
+  `Sonic_CheckRollStop` `s2.asm:37051-37061` matches**), while `Animate_Sonic`/`Animate_Tails`
+  clear Push on `anim != prev_anim` — **after `Sonic_RecordPos`**. So the engine cleared one
+  routine early and a push-free byte entered the follower history. **(B)** To compensate, the ICZ
+  swinging platform opted into a **second, ROM-absent status read** at delay 17;
+  `TailsCPU_Normal` loads the delayed input and the delayed status byte from the *same* buffer
+  slot (`:26696-26705`) and performs no one-frame-later read. Removing (A) alone reds the ICZ
+  complete-run; removing both leaves it **green** and moves the ICZ segment frontier 1818 → 1983.
+  Two unit tests pinned the removed behaviour and were **inverted with equal strength and ROM
+  citations**, not relaxed.
+
 - **Diagnosed and withheld: the roll-stop push clear runs one routine too early
   (`bugfix/ai-icz-1818-rollstop-push-timing`, docs merged 2026-08-15).** The ROM's roll-stop
   block (`sonic3k.asm:22981-22986`) clears only the roll bit and sets radii and `anim`; it never

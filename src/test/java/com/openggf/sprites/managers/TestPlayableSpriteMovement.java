@@ -3655,7 +3655,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void testS3kRollStopAnimationChangeClearsPushing() throws Exception {
+        public void testS3kRollStopAnimationChangeRetainsPushing() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(5)
@@ -3674,8 +3674,14 @@ public class TestPlayableSpriteMovement {
                 assertFalse(mockSprite.getRolling(), "Tails_RollSpeed clears Status_Roll below the stop threshold");
                 assertEquals(5, mockSprite.getAnimationId(),
                                 "Tails_RollSpeed writes idle animation when rolling stops");
-                assertFalse(mockSprite.getPushing(),
-                                "S3K Animate_Tails clears Status_Push after the roll-stop anim change");
+                assertTrue(mockSprite.getPushing(),
+                                "Sonic_RollSpeed/Tails_RollSpeed's roll-stop block writes only the roll bit,"
+                                                + " the radii, anim and y_pos (sonic3k.asm:22979-22990,28216-28231;"
+                                                + " s2.asm:37051-37061). Animate_Sonic/Animate_Tails clears"
+                                                + " Status_Push on anim != prev_anim (sonic3k.asm:29359-29364,"
+                                                + " 29681-29686), and that runs AFTER Sonic_RecordPos"
+                                                + " (sonic3k.asm:21995-22022), so the movement path must leave"
+                                                + " Status_Push alone");
         }
 
         @Test
