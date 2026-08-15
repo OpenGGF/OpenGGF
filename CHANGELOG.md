@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the MGZ swinging platform and MGZ top platform report their ROM
+  `width_pixels` / `height_pixels` to the on-screen render test instead of
+  `AbstractObjectInstance`'s flat 16-pixel default. `Obj_MGZSwingingPlatform`
+  stores `#$18` / `#$C` (`docs/skdisasm/sonic3k.asm:70468-70469`) and
+  `Obj_MGZTopPlatform` stores `#$18` / `#$C` (`:71485-71486`); `Render_Sprites`
+  builds the `render_flags` bit-7 box from those bytes, and that bit is the gate
+  `SolidObject` tests before doing any solid work at all
+  (`:41390-41392` `tst.b render_flags(a0) / bpl.w loc_1E0A2`). Both platforms
+  therefore stopped being solid before the ROM's box left the screen. Found by
+  the pitfall-P60 sweep; no committed trace currently exercises either edge, so
+  this is a correctness fix with no measured frontier movement.
 - Fix: S3K spikes report their ROM `width_pixels` to the on-screen render test,
   so a wide spike strip stays solid while its centre is just off the camera's
   left edge. `Render_Sprites` sets the `render_flags` bit 7 that `SolidObject`

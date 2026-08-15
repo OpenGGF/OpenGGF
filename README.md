@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **P60 swept: a real defect class, but not a source of frontier movement
+  (`bugfix/ai-p60-width-sweep`, merged 2026-08-15).** The stated tell — a `getOnScreenHalfHeight()`
+  override with no width sibling — produced **zero true positives** beyond the original spike: all
+  seven asymmetric classes are legitimate, their ROM width genuinely being `$10`, and 73 of 80
+  classes already override both. The round discarded that heuristic after finding solid `d1` and
+  header `width_pixels` are fully independent, and instead **parsed every
+  `move.b #$XX,width_pixels(aN)` with `XX > $10` out of both disassemblies** (350 S3K sites, 80
+  S2), attributed each to its enclosing `Obj_` label, and intersected with the 162
+  `SolidObjectProvider` classes lacking a width override — yielding **28 genuine candidates**. Two
+  with unambiguous single-store inits were landed; **neither moves any trace**. The other 26 are
+  real but unmeasurable defects in currently-green traces, reported as a cited list rather than
+  landed speculatively. Two were excluded on principle: one whose store sits behind a
+  `Current_zone` branch (a rule-2 hazard) and one shared across five ROM labels with different
+  widths, needing subtype dispatch rather than a constant. **Verdict: the spike was very likely
+  the only measurable instance.**
+
 - **A 128px spike strip was reading as offscreen (`bugfix/ai-mgz-4716-tails-death`, merged
   2026-08-15).** The largest single frontier advance of the session: MGZ **4716 → 10709**
   (+5993), errors 4953 → 3950. The field dump gave a Tails-only cluster — routine `0x02→0x06`,
