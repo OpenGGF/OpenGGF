@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Super Emerald arena restart now places the player from
+  `Sonic_Start_Locations` instead of the `Saved2_` block. `loc_618AC`
+  (`docs/skdisasm/sonic3k.asm:128411-128417`) writes
+  `move.b #0,(Last_star_post_hit).w` at `sonic3k.asm:128414` when it requests
+  the zone `$17` act 1 restart, and `loc_1BE46` (`sonic3k.asm:38148-38151`)
+  restores a saved position only while that flag is non-zero -- otherwise it
+  falls through to `loc_1BE5E` (`sonic3k.asm:38157-38168`) and reads
+  `Sonic_Start_Locations`, whose "Special Stage Arena (HPZ)" entry
+  (`sonic3k.asm:38144`) is the arena start. `Load_Starpost_Settings`
+  (`sonic3k.asm:61763-61836`) is the only reader of `Saved2_X_pos`/`Saved2_Y_pos`
+  on a load, and it is reached only through that gate; the special-stage clear
+  re-sets the flag with `ori.b #$80,(Last_star_post_hit).w`
+  (`sonic3k.asm:12119-12120`, `12673-12674`) for the return leg.
+  `LevelManager.spawnPlayerAtStartPosition` took the big-ring-return branch on
+  any load with a live `Save_Level_Data2` block, so the arena loaded with the
+  MHZ capture position (measured `0x01D6,0x0678`); it now loads at the ROM's
+  `0x1640,0x03AC`.
 - Fix: the S3K giant ring no longer awards 50 rings in an S&K-half level when
   the Chaos Emeralds are complete but the Super Emeralds are not.
   `SSEntryRing_Main`'s collision branch (`docs/skdisasm/sonic3k.asm:128283-128291`)

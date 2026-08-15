@@ -223,6 +223,40 @@ public class LevelTransitionCoordinator {
         this.bigRingReturn = null;
     }
 
+    /**
+     * Models the ROM's {@code Last_star_post_hit} gate on the saved-position
+     * restore. A level load restores a saved position only while that flag is
+     * non-zero: {@code loc_1BE46} (skdisasm/sonic3k.asm:38148-38151) tests it
+     * and, when it is zero, falls through to {@code loc_1BE5E}
+     * (sonic3k.asm:38157-38168) which reads {@code Sonic_Start_Locations}
+     * instead. Only when it is non-zero does {@code Load_Starpost_Settings}
+     * (sonic3k.asm:61763-61836) restore {@code Saved_} or, for
+     * {@code Special_bonus_entry_flag}, {@code Saved2_}.
+     * <p>
+     * {@code Save_Level_Data2} (sonic3k.asm:61735) leaves the flag alone, so it
+     * stays set here; {@code loc_618AC} (sonic3k.asm:128411-128417) writes
+     * {@code move.b #0,(Last_star_post_hit).w} at sonic3k.asm:128414 when it
+     * requests the Super Emerald arena restart, and the special-stage clear
+     * re-sets bit 7 with {@code ori.b #$80,(Last_star_post_hit).w}
+     * (sonic3k.asm:12119-12120 and 12673-12674) for the return leg.
+     */
+    private boolean lastStarPostHitSet = true;
+
+    /** ROM {@code move.b #0,(Last_star_post_hit).w} (sonic3k.asm:128414). */
+    public void clearLastStarPostHit() {
+        this.lastStarPostHitSet = false;
+    }
+
+    /** ROM {@code ori.b #$80,(Last_star_post_hit).w} (sonic3k.asm:12673-12674). */
+    public void setLastStarPostHit() {
+        this.lastStarPostHitSet = true;
+    }
+
+    /** @see #clearLastStarPostHit() */
+    public boolean isLastStarPostHitSet() {
+        return lastStarPostHitSet;
+    }
+
     // ================================================================
     //  Bonus stage requests
     // ================================================================
@@ -757,6 +791,7 @@ public class LevelTransitionCoordinator {
         resultsReturnCardOwnedByCaller = false;
         levelRoutineReentry = false;
         bigRingReturn = null;
+        lastStarPostHitSet = true;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;
         titleCardRequested = false;

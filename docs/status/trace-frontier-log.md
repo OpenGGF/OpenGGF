@@ -75584,3 +75584,83 @@ Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -Ds3k
   `subtypeBitSevenStillEntersTheCaptureSequenceOnTouch`, asserting the ROM's
   capture path with the same count of assertions plus a `never()` guard on the
   ring award. Nothing was relaxed, excluded, tolerated or disabled.
+
+## Round 154 — S3K MHZ segment: the Super Emerald arena loaded from `Saved2_`
+
+- **Command** (base `73e2e2aed`, detached worktrees at that commit for fix and
+  control): `mvn -Ptrace-replay -Dmse=off -Ds3k.rom.path=<rom>
+  -Dtest=TestS3kSonicTailsMhzSegmentTraceReplay test`, with
+  `target/surefire-reports` and `target/trace-reports` cleared first. Numbers
+  are the class's own surefire assertion message and its own report JSON.
+- **Baseline reproduced (measured, not inherited).** FAIL, 13 errors,
+  `total_frames` 1265, first error frame **1276** `x` expected `0x1640` actual
+  `0x0000`; also `y` `0x03AC`/`0x0000`, `camera_x` `0x15A0`/`0x0146`,
+  `camera_y` `0x0326`/`0x060C`, eight `hardware_timing.unmatched_completions`
+  (`KOS_DECOMPRESSION_QUEUE#521-528`) and one `pending_submissions`.
+  Frame 1276 is the **last compared physics row**, not a mid-run frontier.
+- **The briefed framing was wrong in two places, both measured.**
+  1. The arena level **does** load, and the engine **does** have the right
+     start data: a probe in `LevelManager.spawnPlayerAtStartPosition` prints
+     `zone=23 act=1 levelData=S3K_SPECIAL_STAGE_ARENA levelDataStart=1640,3ac`
+     at raw frame **1274** — two frames *before* the first error. Neither the
+     level list nor `Sonic_Start_Locations` is missing.
+  2. The engine **does** submit `KOS_DECOMPRESSION_QUEUE#521`; the report says
+     `engine pending: KOS_DECOMPRESSION_QUEUE#521 sha256:fbfc78d4…` against an
+     expected `cc350504…`. It is decompressing different art, not no art.
+- **Root cause found and fixed (one of two).** The same probe printed
+  `bigRingReturn=true`, so the load took `spawnPlayerAtStartPosition`'s
+  `transitions.hasBigRingReturn()` branch and placed the player at the MHZ
+  capture position `0x01D6,0x0678` instead of the arena start. The ROM does not:
+  `loc_618AC` writes `move.b #0,(Last_star_post_hit).w`
+  (`docs/skdisasm/sonic3k.asm:128414`) as part of the restart request, and
+  `loc_1BE46` (`sonic3k.asm:38148-38151`) restores a saved position only while
+  that flag is non-zero — otherwise `loc_1BE5E` (`:38157-38168`) reads
+  `Sonic_Start_Locations`, whose last entry
+  (`dc.w $1500,$1640,$320,$320 ; Special Stage Arena (HPZ)`, `:38144`) is the
+  arena. `Load_Starpost_Settings` (`:61763-61836`) is the only load-time reader
+  of `Saved2_X_pos`/`Saved2_Y_pos` and sits behind that same gate; the
+  `Saved2_` block stays live for the return leg, which the special-stage clear
+  re-arms with `ori.b #$80,(Last_star_post_hit).w` (`:12119-12120`,
+  `:12673-12674`). The flag is now modelled on `LevelTransitionCoordinator`,
+  cleared by the flash object at the ROM's write site. After the fix the probe
+  prints `pos=1640,3ac`. No constant, zone, act, route or frame index is
+  referenced.
+- **The frontier does NOT move: still 13 errors at frame 1276 over 1265 rows.**
+  The residual is a second, independent cause, and it is now precisely located.
+  A `TraceBinder.compareFrame` probe shows the compared sprite is the *same*
+  instance that was placed (`identityHashCode` 698784309) but reads `0,0` at
+  1276, and a `setCentreX` stack probe shows why: after the load,
+  `LevelManager.loadZoneAndActAtFreshTitleCardBoundary`
+  (`LevelManager.java:3527-3549`) deliberately zeroes both player slots and
+  restores the *previous* camera, modelling `Level:` holding the loaded slots
+  in the native transition owner until the title-card tail. That boundary is
+  released only on the second ordinary iteration
+  (`RecordingFrameDriver.java:236-245`, gated by
+  `Sonic3kTitleCardManager.shouldCompleteFreshLevelTransitionBoundary`,
+  `:740-747`), which has not happened by 1276. The recording already shows the
+  arena's loaded position **and** camera at 1276, so the next round's question
+  is whether that fresh-title-card hold is correct for a `Restart_level_flag`
+  restart at all — not whether the arena loads. It does.
+- **Known gap, flagged not fixed.** The modelled `Last_star_post_hit` is
+  cleared by the arena entry and has no engine re-arm site, because the arena's
+  exit is not implemented. The ROM's `ori.b #$80` re-arm
+  (`sonic3k.asm:12673-12674`) belongs on that exit when it lands.
+- Full `-Ptrace-replay` profile, both measured this round: control `73e2e2aed`
+  **842 / 53 F / 11 E / 4 S, 64 red**; fix **843 / 53 F / 12 E / 4 S, 65 red**.
+  Python set difference both ways: nothing greened, one new red
+  `TestS1CompleteEmeraldVisualRun`, green in isolation on the fix tree (the
+  same reused-fork static leak recorded in round 151, and an S1 class this
+  change cannot reach).
+- Default profile: control **15124 / 65 F / 19 E / 18 S, 50 red**; fix
+  **15136 / 65 F / 19 E / 18 S, 50 red**. Set difference both ways: one in, one
+  out (`TestS3kCorkeyBadnik` in, `TestCutsceneKnucklesAiz1Instance` out), both
+  green in isolation on the fix tree — ambient fork flake.
+- Protected classes re-measured on the fix tree:
+  `TestS3kSonicTailsAizSegmentTraceReplay` **green**;
+  `TestS3kSonicTailsIczSegmentTraceReplay` frame **1818**, 3031 errors;
+  `TestS3kSonicTailsHczSegmentTraceReplay` frame **1434**;
+  `TestS3kHczCompleteRunTraceReplay`, `TestS3kIczCompleteRunTraceReplay`,
+  `TestS3kMgzCompleteRunTraceReplay` **green**;
+  `TestS3kMhzCompleteRunTraceReplay` red on both trees with the same
+  1 error; `TestS2CompleteEmeraldRunChain` byte-identical to control
+  (cursor 3977 of 3997).

@@ -79,6 +79,7 @@ class TestObjectServicesConstructionContext {
         @Override public int getCurrentLevelMusicId() { return 0; }
         @Override public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) { return null; }
         @Override public void saveBigRingReturn(com.openggf.level.BigRingReturnState state) {}
+        @Override public void clearLastStarPostHit() {}
     };
 
     @AfterEach

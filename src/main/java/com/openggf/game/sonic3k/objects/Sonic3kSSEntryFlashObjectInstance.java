@@ -169,6 +169,10 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 // Zone $17 act 1 is the Super Emerald special-stage arena
                 // (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA); it is reached by a
                 // level restart, not the Game_mode $34 special-stage entry.
+                // move.b #0,(Last_star_post_hit).w (sonic3k.asm:128414) — the
+                // arena load must place the player from Sonic_Start_Locations,
+                // not from the Saved2_ block Save_Level_Data2 just wrote.
+                services().clearLastStarPostHit();
                 LOGGER.fine("SSEntryFlash: restarting into the Super Emerald arena");
                 services().requestZoneAndAct(
                         Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1, true);

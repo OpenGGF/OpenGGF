@@ -494,6 +494,13 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public void clearLastStarPostHit() {
+        if (levelManager != null) {
+            levelManager.clearLastStarPostHit();
+        }
+    }
+
+    @Override
     public void requestSessionSave(SaveReason reason) {
     }
 }
