@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **REFUTED: the S3K bottom camera clamp is not dead code, and the engine was correct
+  (`bugfix/ai-s3k-camera-bottom-clamp-refutation`, merged 2026-08-15).** Three rounds concluded
+  `loc_1C202` was unreachable because `Get_LevelSizeStart` writes `Screen_Y_wrap_value = -1`
+  (`sonic3k.asm:38093`), making its subtraction unable to borrow. That write is real but
+  **survives exactly one `DeformBgLayer` call**: ten lines later `j_LevelSetup` runs
+  unconditionally for every level and writes `move.w #$FFF,(Screen_Y_wrap_value).w`
+  (`:102205`). With `$FFF` the subtraction borrows, `bcs` is taken, and `loc_1C216`'s
+  `move.w 6(a2),d1` performs the hard clamp — every gameplay frame. Instrumentation confirms
+  the engine does exactly this: it computes the full `$600` grounded step to `$396` and clamps
+  to `$390`, matching the ROM in **outcome and mechanism**. So the earlier
+  12-red/0-green measurement was hardware correctly reporting a wrong change, the "knowingly
+  wrong in mechanism" caveat is **withdrawn**, and the discarded `CameraRules` gate must never
+  land. Newly visible and unmeasured: the engine never enables vertical wrap for S3K, so the
+  ROM's *wrap* arm is unmodelled for levels whose `max_Y` reaches the wrap value.
+
 - **Investigated and deliberately not landed: the S3K per-frame bottom camera clamp
   (`bugfix/ai-s3k-perframe-bottom-clamp`, 2026-08-15).** S3K has three camera-Y limits and only
   one is dead: `loc_1BF9C` is a live load-time `max_Y` clamp, `loc_1C1F4` a live per-frame *top*
