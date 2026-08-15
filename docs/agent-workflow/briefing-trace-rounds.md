@@ -92,6 +92,23 @@ Put the marker in the **class's own javadoc**, so the explanation is one hop fro
 the frontier log carries the measured first error and count (its job, updated as things move), and
 `known-discrepancies` carries the mechanism and the removal condition.
 
+## A collision to avoid: "don't undo landed fixes" vs "don't fit constants"
+
+Standing briefs accumulate a *do not undo* list — the fixes already landed this session. They
+also forbid fitted constants. **Those two collide when a landed "fix" is itself a fitted
+constant**, and a round that obeys both literally is stuck.
+
+This happened: a per-slot table of 13 hardcoded byte angles, added by two earlier commits, turned
+out to be the proximate cause of the frontier under investigation. The round did the right thing —
+it did not undo the fix, and it **flagged the conflict explicitly** — but the brief should not
+have put it in that position.
+
+**Write the exception in:** *do not undo a landed fix, **unless it is itself a fitted constant or
+compensation**, in which case say so prominently and treat removing it as the finding rather than
+the fix.* And when a round reports that shape, the right response is usually to document the
+mechanism and a removal condition rather than to delete the table — because deleting it may red a
+class where the fitted value happens to be right.
+
 ## Fourth rule: make "found-not-fixed" a full success, in writing
 
 State it. Rounds will otherwise optimise for a landed diff.
