@@ -228,6 +228,18 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The ICZ snowboard ignores its scripted slopes while airborne, as the ROM does
+  (`bugfix/ai-s3k-icz-snowboard-airborne-slope-gate`, merged 2026-08-15):** the ROM reaches the
+  scripted-slope x-window tests only through `loc_39502`, entered solely when the air bit is
+  clear — `btst #Status_InAir,status(a2) / beq.s loc_39502` (`sonic3k.asm:76797-76798`). The
+  airborne branch instead caps `x_vel` to `$1000` and `y_vel` to `-$200` and jumps past the
+  windows (`:76799-76811`). `IczSnowboardIntroInstance` tested those windows unconditionally, so
+  a player crossing `$1310` mid-jump was handed to the slope table the ROM ignores. **The
+  "engine is exactly half a pixel behind" reading was an artefact of field ordering** — `x_sub`
+  merely sorts ahead of `x`, and at the failing frame `x`, `y`, `y_sub`, `y_speed`, `camera_x`
+  and `camera_y` all diverge together. The ICZ segment frontier moves 470 → 1818 and its errors
+  fall 5197 → 3031 over an unchanged 17947 compared rows.
+
 - **The walk/run animation handler reads past its script terminator, as the ROM does
   (`bugfix/ai-s3k-walkrun-script-overflow`, merged 2026-08-15):** the ROM's walk/run handler
   fetches its frame byte with an unchecked `move.b 1(a1,d1.w),d0` and tests only for the `-1`
