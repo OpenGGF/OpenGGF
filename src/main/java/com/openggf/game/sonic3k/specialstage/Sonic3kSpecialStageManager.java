@@ -592,6 +592,26 @@ public class Sonic3kSpecialStageManager {
 
         // Player movement (includes speed timer, input, velocity, position)
         player.update(heldButtons, pressedButtons);
+
+        // Grid collision is the TAIL of the movement routine, not a separate
+        // later pass: the ROM's per-frame player routine loc_903E calls
+        // sub_9580 (sonic3k.asm:11467) which moves the player and then falls
+        // into its own jump gate -- tst.b (Special_stage_jumping).w / bmi.s
+        // locret_972C (sonic3k.asm:12074-12075) -- before bsr.s sub_972E
+        // (sonic3k.asm:12078), the cell-collision routine. Only AFTERWARDS,
+        // at loc_911E (sonic3k.asm:11520-11527), does the jump physics land
+        // the player and write 0 to Special_stage_jumping.
+        //
+        // The ordering is load-bearing on the landing frame. When the jump
+        // height goes non-negative, sub_9580 has already run for that frame
+        // and still observed jumping = $80, so the ROM SKIPS the cell check
+        // and consumes the landed-on sphere one frame later. Running the
+        // check after updateJump() instead consumes it on the landing frame
+        // itself -- one frame early -- and symmetrically misses the check on
+        // the jump-launch frame, where the ROM still runs it because
+        // Special_stage_jumping is not set until loc_90EE/loc_911E.
+        processCollisionIfEligible();
+
         player.updateJump(pressedButtons);
 
         // Update Tails (P2)
@@ -661,11 +681,6 @@ public class Sonic3kSpecialStageManager {
             int tempo = player.calculateMusicTempo();
             GameServices.audio().setSpeedMultiplier(tempo);
             musicSpedUp = true;
-        }
-
-        // Collision detection (only when not jumping, not in clear sequence, not exiting)
-        if ((player.getJumping() & 0x80) == 0 && clearRoutine == 0 && !exitSpinStarted) {
-            processCollision();
         }
 
         // Collision response queue (ring/sphere animations)
@@ -769,6 +784,25 @@ public class Sonic3kSpecialStageManager {
     }
 
     // ==================== Collision Processing ====================
+
+    /**
+     * The tail of the ROM's movement routine sub_9580: skip the cell check
+     * while airborne or during the clear sequence, otherwise run it.
+     * ROM: sonic3k.asm:12074-12078 --
+     * {@code tst.b (Special_stage_jumping).w / bmi.s locret_972C /
+     * tst.b (Special_stage_clear_routine).w / bne.s locret_972C /
+     * bsr.s sub_972E}. {@code bmi} tests bit 7, so both the normal ($80) and
+     * spring ($81) jump states suppress it.
+     *
+     * <p>Must be called from the sub_9580 position in the frame -- before the
+     * jump physics at loc_911E clears {@code Special_stage_jumping} -- see the
+     * call site in {@link #update()}.
+     */
+    private void processCollisionIfEligible() {
+        if ((player.getJumping() & 0x80) == 0 && clearRoutine == 0 && !exitSpinStarted) {
+            processCollision();
+        }
+    }
 
     /**
      * Process collision at the player's current position.

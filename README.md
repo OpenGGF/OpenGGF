@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Two S3K special stages turn green: the sphere check runs before the jump lands
+  (`bugfix/ai-s3k-ss-jump-landing-collision-order`, merged 2026-08-15).** `Ss4` (2 errors) and
+  `Ss5` (7) were the only single-digit classes in the suite, both `spheres_left` off by exactly one.
+  Every error was a one-frame span — the engine decremented at N, the ROM at N+1 — so the cause was
+  ordering, not a miscount. Classifying all 136 single-sphere decrements across both fixtures split
+  them with nothing left over: 132 happen as the moving coordinate crosses sub-cell phase `$80` and
+  the engine matched all of them, while 4 happen at arbitrary phase on the frame after `jumping`
+  goes `$80 -> 0`, and those 4 were the errors. Of the 15 recorded landings exactly those 4 land on
+  a sphere, so the rule is universal rather than fitted. The ROM calls `sub_9580` first
+  (sonic3k.asm:11467) and its tail gates the cell check behind
+  `tst.b (Special_stage_jumping).w / bmi.s`; the jump physics that clears that byte runs afterwards
+  at `loc_911E` (:11520-11527), so on the landing frame the check is genuinely skipped.
+  `Sonic3kSpecialStageManager` ran its gate after `updateJump()`, and symmetrically suppressed the
+  check on the jump-*launch* frame where the ROM still runs it — both directions corrected, which is
+  why this is not a compensation. Errors 2 -> 0 and 7 -> 0 with `total_frames` unchanged at 4967 and
+  4286, so no comparator starvation.
+
 - **Trace classes name their zone, character set and segment
   (`feature/ai-trace-nested-naming`, stage 1 merged 2026-08-15).** A trace's character set is the
   most important fact about it and was not derivable from the class name: `TestS3kSlotsBonusTraceReplay`

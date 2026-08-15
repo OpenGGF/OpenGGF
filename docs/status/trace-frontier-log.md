@@ -78435,3 +78435,93 @@ AIZ and HCZ Sonic+Tails greens sit directly in the blast radius**. Measure befor
 Not established: why the leader's slot runs before the exec loop and the sidekick's after
 (effect measured, producing code path not read); the blast radius of a reorder; whether
 S1/S2 sidekick slots share the inversion.
+## S3K special stage -- jump-landing sphere collection ran one frame early
+
+**Command**
+
+```
+mvn -Ptrace-replay \
+  -Dtest=TestS3kSonicTailsSs4SpecialStageTraceReplay,TestS3kSonicTailsSs5SpecialStageTraceReplay \
+  -Ds3k.rom.path=<s3k.gen> -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> test
+```
+
+Base `f0aa175b2` (develop), detached verification worktree.
+
+### Control (re-measured, not inherited)
+
+| class | errors | first error | total_frames |
+|---|---:|---|---:|
+| `TestS3kSonicTailsSs4SpecialStageTraceReplay` | 2 | frame 1689 `spheres_left` expected=80 actual=79 | 4967 |
+| `TestS3kSonicTailsSs5SpecialStageTraceReplay` | 7 | frame 3906 `spheres_left` expected=3 actual=2 | 4286 |
+
+### Where the counts part
+
+Not a miscount. Every `spheres_left` error is a **one-frame span**: the engine
+decrements at frame N, the fixture at N+1, and the two agree again immediately.
+The off-by-one in the reported total is the sampling of a one-frame phase
+difference, not a lost or duplicated sphere.
+
+Classifying all 136 single-sphere decrements in the two fixtures against their
+own recorded columns splits them cleanly in two, with nothing left over:
+
+* **132 collections** occur on the frame the moving coordinate crosses sub-cell
+  phase `$80` -- the cell centre. The engine matches all 132.
+* **4 collections** (ss_4 rows 1690 and 1727, ss_5 rows 3907 and 4092) occur at
+  an arbitrary sub-cell phase (`$10`, `$60`, `$36`, `$b6`) on the frame
+  **after** `jumping` transitions `$80 -> 0`. These are the four errors. Of the
+  15 recorded landings across both fixtures, exactly these 4 land on a blue
+  sphere; the other 11 land on empty cells and produce no collection, so the
+  rule is universal rather than fitted to the failing rows.
+
+Lag was ruled out directly: all four rows and their neighbourhoods are non-lag.
+
+### Cause
+
+An intra-frame ordering inversion, not a value error.
+
+The ROM's per-frame player routine `loc_903E` calls `sub_9580`
+(sonic3k.asm:11467) **first**. `sub_9580` moves the player and ends with its own
+gate -- `tst.b (Special_stage_jumping).w` / `bmi.s locret_972C`
+(sonic3k.asm:12074-12075) -- before `bsr.s sub_972E` (sonic3k.asm:12078), the
+cell-collision routine. Only *afterwards*, at `loc_911E`
+(sonic3k.asm:11520-11527), does the jump physics land the player and write 0 to
+`Special_stage_jumping`.
+
+So on the landing frame `sub_9580` has already run and still observed
+`jumping = $80`: the ROM skips the cell check and consumes the landed-on sphere
+on the following frame. The trace records `jumping = 0` for that frame because
+the row is sampled after the whole frame, which is why the flag and the
+decrement appear one row apart.
+
+`Sonic3kSpecialStageManager.update()` ran `player.updateJump()` before its
+collision gate, clearing `jumping` first and collecting on the landing frame
+itself. The same inversion also suppressed the check on the jump-*launch* frame,
+where the ROM still runs it because `Special_stage_jumping` is not set until
+`loc_90EE`/`loc_911E`.
+
+### Fix
+
+The collision gate moved to the `sub_9580` position -- after `player.update()`,
+before `player.updateJump()` -- as `processCollisionIfEligible()`. The gate's own
+condition (`jumping & $80`, `clearRoutine`, exit-spin) is unchanged, the ROM
+citation is carried at both the call site and the method, and
+`collisionQueue.update()` keeps its existing position after the check, preserving
+the ROM's Process_Sprites-before-Touch_SSSprites order. No constant, offset,
+tolerance or nudge was introduced, and nothing adds or subtracts a sphere.
+
+### Result
+
+Both classes **GREEN** at **unchanged** `total_frames` -- ss_4 **4967**, ss_5
+**4286**, identical to the control, so no comparator starvation. All 7 ss_5
+errors clear from the one fix: the 4 downstream `clear_routine`, `clear_timer`,
+`velocity` and `player_y` cascades were consequences of the final sphere (1 -> 0)
+being consumed a frame early and starting the clear sequence a frame early.
+
+One defect, both classes -- established by classifying every collection in both
+fixtures, not inferred from the shared field name.
+
+### Discipline
+
+No fitted constant, tolerance, offset or nudge. No assertion weakened, widened,
+deleted, disabled or made advisory. No zone/act/route/frame/game-name predicate.
+No trace hydration. `docs/skdisasm` used for citations only. No landed fix undone.

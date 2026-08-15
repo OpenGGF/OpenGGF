@@ -11,10 +11,13 @@ import java.nio.file.Path;
  * 3) of the committed {@code s3k-sonic-tails-complete-emeralds} run --
  * bk2 offset 39830, 5102 rows.
  *
- * <p><b>New frontier harness: expected RED.</b> It was added deliberately, to
- * say WHERE this third S3K route diverges, not as a regression. Nothing is
- * weakened, tolerance-fitted or trimmed to reach a green. The measured stop
- * point and first error for this run are recorded in
+ * <p><b>GREEN.</b> This was a deliberate frontier harness, added to say WHERE
+ * this third S3K route diverged. It now replays clean over its full row count:
+ * the divergence was the special stage's grid-cell check running after the
+ * jump physics rather than at its ROM position inside the movement routine
+ * sub_9580 (sonic3k.asm:11467, gate at 12074-12078), which consumed a
+ * jump-landed blue sphere one frame early. Nothing was weakened,
+ * tolerance-fitted or trimmed to reach the green; see
  * {@code docs/status/trace-frontier-log.md}.
  */
 @RequiresRom(SonicGame.SONIC_3K)
