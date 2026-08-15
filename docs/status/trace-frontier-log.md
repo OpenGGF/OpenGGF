@@ -76178,3 +76178,69 @@ must land **together with** the fix for the leader push over-set at complete-run
 that is the next question: which engine site sets `Status_Push` on Sonic at that frame, and
 which ROM path (ground-wall response gate, or an earlier `Animate_*` clear) removes it. No
 full-profile sweep was run, because the decisive protected set already said stop.
+
+## 2026-08-15 - ICZ 1818 paired fix landed (roll-stop push clear + ICZ delay-17 d4 bridge)
+
+Base `14e0601b3`; all numbers measured at that commit on two worktrees
+(`wt/iczB` = fix, `wt/iczBase` = control). **Control re-established, not inherited:**
+`TestS3kIczCompleteRunTraceReplay` GREEN, `TestS3kSonicTailsIczSegmentTraceReplay`
+first error frame **1818**, **3031** errors.
+
+**Half B located by measurement, not inference.** Probes on the leader's `Status_Push`
+writes and on `SidekickCpuController.updateNormal`'s `d4` inputs, run on both trees over
+complete-run frames 6060-6130, isolate the whole regression to **two** slot samples:
+
+| engine frame | base `recSt`/`pbSt`/`pbLead` | with Half A only |
+|---|---|---|
+| 6116 | `08` / `2c` / `2c` (bypass=false) | `28` / `2c` / `2c` (bypass=false) |
+| 6117 | `08` / `08` / `08` (**bypass=true**) | `08` / `28` / `28` (**bypass=false**) |
+
+Half A changes exactly one recorded byte -- the leader's roll-stop frame -- from `08` to
+`28`. The delay-16 `recordedStatus` read is unaffected at 6117. The regression flows
+entirely through `pushBypassStatus`, the **delay-17** sample taken only when the riding
+object opts in via `SolidObjectProvider.usesSidekickCpuPushBypassObjectOrderStatusDelay`.
+The only S3K opt-in is `IczSwingingPlatformObjectInstance`, and Sonic is riding it here.
+So the "leader push over-set at ~6100" framing was wrong: the leader push at 6100 is
+**correct** and matches the ROM -- the fixture's own `player_status_byte` is `2C` at trace
+frame 6100 and `28` at 6101, i.e. `Status_Push` set right through the roll stop, which is
+Half A's prediction. What was wrong was a second, ROM-absent status read.
+
+`TailsCPU_Normal` loads the delayed `Ctrl_1_logical` word and the delayed status byte from
+the **same** `Sonic_Pos_Record_Buf` slot (`sonic3k.asm:26696-26705`); there is no
+one-frame-later status read. The bridge existed to re-import a `Status_Push` the engine's
+delay-16 sample was missing -- missing because of Half A's eager clear. Compensation and
+defect removed together.
+
+**Measured, both profiles, both trees, red sets diffed by name in both directions
+(Python set difference).**
+
+- Trace profile: base **843 run / 53 F / 11 E / 4 S**, 64 red classes; fix **843 / 53 F /
+  13 E / 4 S**, 65 red classes. Sole new-red: `TestTraceStructuralRowComparator`, which
+  fails **identically in isolation on both trees** (`GameServices.hardwareTiming()`
+  gameplay-mode leak) -- ambient, on the known-flake list.
+- Default profile: base **15113 run / 64 F / 19 E / 18 S**, 49 red classes; fix
+  **15113 / 66 F / 22 E / 18 S**. First fix run added
+  `TestPlayableSpriteMovement#testS3kRollStopAnimationChangeClearsPushing` and
+  `TestSidekickCpuFollowParity#s3kIczSwingingPlatformDeclaresCpuSidekickObjectOrderStatusBridge`
+  -- two unit tests that pinned the two removed non-ROM behaviours. Both were **inverted
+  with equal strength** and ROM citations rather than weakened, and renamed to state the
+  ROM position. After that, the only new-red classes were
+  `TestGameLoopSpecialStageEntryPresentation` and `TestS3kIczCrushingColumnObject`, both
+  green in isolation on both trees and both on the known-flake list.
+- `TestS3kIczCompleteRunTraceReplay` **GREEN**. `TestS3kSonicTailsIczSegmentTraceReplay`
+  **1818/3031 -> 1983/2970** (`tails_animation_id` 0x05 vs 0x06).
+  `...AizSegment...` green; `...MhzSegment...` 9 errors / frame 1276;
+  `...HczSegment...` 1445 errors / frame 1434 -- all unmoved.
+- Shared-physics protected set unmoved and byte-identical:
+  `TestS2CompleteEmeraldRunChain` (red on both trees, failure text diffs clean;
+  cursor **3977 of 3997**, segment 11 = **236**, segment 2 absent),
+  `TestS1CompleteEmeraldVisualRun`, `TestS2CompleteEmeraldVisualRun`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kAizTraceReplay` (16),
+  `TestS3kCnzTraceReplay` (27), `TestS3kMgzTraceReplay`,
+  `TestS3kSpecialStageTraceReplay`, `TestS3kGumballBonusTraceReplay`,
+  `TestCollisionLogic`, both rewind guards. The eleven DEZ23/HPZ22/DDZ classes all load.
+
+**Next ICZ frontier: segment frame 1983**, `tails_animation_id` expected `0x05` actual
+`0x06`. Note `PlayableSpriteMovement` still performs the same early animation-driver push
+clear on roll *entry* (`sonic3k.asm:23259-23264,28494-28500` write `anim=#2` and nothing
+else); that sibling was left alone this round and is the obvious first suspect.

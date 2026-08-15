@@ -332,20 +332,6 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity player) {
-        // ObjB4 is folded from a parent plus two independent SolidObjectFull
-        // child SST slots (sub_8B054/sub_8B06A, sonic3k.asm:188977-189000).
-        // Their standing/pushing bits are published after TailsCPU_Normal in
-        // the object pass. At the CPU slot, the delayed Stat_table sample can
-        // therefore still carry the child-side Status_Push even though the
-        // engine's ordinary follower-history sample captured the folded
-        // parent before that child contact. Use the controller's object-order
-        // status sample for the d4 test only; d1 remains the normal delayed
-        // Ctrl_1 word (sonic3k.asm:26696-26705).
-        return player != null && player.isCpuControlled();
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed() && phase != Phase.STOPPED;
     }
