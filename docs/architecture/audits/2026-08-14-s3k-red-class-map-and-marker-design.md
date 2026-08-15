@@ -241,6 +241,26 @@ changed when a scattered ring is collected, because `Obj_Bouncing_Ring` gates it
 its own slot index. That is now a documented deliberate red on
 `TestS3kHczCompleteRunTraceReplay`, with the removal condition being exactly this frontier.
 
+
+### 7. A hooks-on recorder regeneration of ~30 AIZ frames
+
+**A third capture ask, and the smallest.** The S3K top-solid zero-distance defect is fully
+diagnosed except for one link, and the recorder **already carries the exact probe needed** —
+`aiz_handoff_terrain_state` in the trace recorder (`V69_AIZ`: `sonic_floor_distance`,
+`sonic_floor_probe_x/y`, `solid_pre_y`, `solid_surface_y`, `solid_delta`). It is simply **hooks-off**
+in `aiz1_to_hcz_fullrun` (`sonic_floor_seen: false`, `solid_vertical_seen: false`).
+
+**What is known:** the ROM rejects `d0 == 0` landings (`sonic3k.asm:42005-42015`, `blo` is
+unsigned), the engine accepts them, and flipping that reds five classes. Instrumentation shows
+the engine's Sonic *does* descend and land inside the ROM's window — **16 frames late**, owned by
+the ground-sensor floor-distance snap, not by anything in the solid path. Every field the fixture
+records is **identical across those 16 frames** — position, sub-pixel, speed, radius, status,
+event routines, object slots — so the trigger is invisible at frame granularity.
+
+**The ask:** a hooks-on regeneration of roughly frames 5410–5440 of that run. That single
+measurement should close a defect that has now consumed three rounds and is blocking a fix worth
+LRZ 11942 → 6480 errors.
+
 ## Decisions needing your authority
 
 1. **Build the three-bin markers?** Small, honest reporting change; bin 3 empty by design.

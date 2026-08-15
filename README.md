@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K top-solid residual is a 16-frame ground-sensor lag, not a landing defect
+  (`bugfix/ai-s3k-aiz-topsolid-approach`, docs merged 2026-08-15).** Third round on this, and the
+  premise is refuted: **nothing stops the engine's player descending.** With the zero-distance flag
+  flipped, Sonic *does* descend 3px and *does* land inside the ROM's `[-16,-1]` window — **16
+  frames late**. A y-write stack probe names the owner precisely: the ground-sensor floor-distance
+  snap (`Sonic_AnglePos`/`Sonic_WalkVertical`'s `add.w d1,y_pos`), nothing in the solid path. The
+  arithmetic closes independently — the ride seat `objY − d3 − y_radius` gives `$381` for Tails and
+  `$37D` for Sonic, both matching the fixture — and **Tails is a clean control**: he arrives at a
+  different y, the probe reports `d0 = −2`, and engine and ROM agree field-for-field. Only Sonic's
+  *approach timing* differs. Confirming the diagnosis, the `21/20` reject counter is an exact fit
+  for this 16-frame lag, so it is compensation for the lag and should be deleted with the flip
+  rather than replaced. **Newly excluded:** the landing boundary, the seat arithmetic, `y_radius`,
+  object position and motion, and the sidekick path.
+
 - **The two top-solid compensations are confirmed fitted — and do not own the reds
   (`bugfix/ai-s3k-topsolid-zero-boundary`, docs merged 2026-08-15).** Both `Obj_CNZTrapDoor` and
   `Obj_AIZTransitionFloor` are plain `SolidObjectTop` callers with no landing gate or phase quirk,
