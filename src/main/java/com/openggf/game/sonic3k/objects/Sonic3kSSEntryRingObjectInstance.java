@@ -377,7 +377,9 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      * <ul>
      *   <li>Chaos emeralds &lt; 7 → enter Special Stage</li>
      *   <li>SK_alone + 7 chaos → award 50 rings</li>
-     *   <li>S3 level + 7 chaos → enter Special Stage (for super emeralds)</li>
+     *   <li>S3 level + 7 chaos → award 50 rings</li>
+     *   <li>SK level + 7 chaos, super &lt; 7 → enter the capture sequence
+     *       (Super Emerald stage)</li>
      *   <li>SK level + 7 chaos + 7 super → award 50 rings</li>
      *   <li>Subtype bit 7 set → Hidden Palace after the flash sequence, once HPZ is loadable</li>
      * </ul>
@@ -400,7 +402,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             return;
         }
 
-        if (gameState.hasAllEmeralds() || shouldRouteToHiddenPalace(gameState)) {
+        if (awardsFiftyRingsInsteadOfCapture(gameState)) {
             // Path B: ROM loc_61794 (sonic3k.asm:128325-128333) marks the ring
             // collected, sets the retirement bit and awards 50 rings. It does
             // not delete here — the following display pass sees
@@ -416,6 +418,67 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             LOGGER.fine("SSEntryRing #" + bitIndex + " — entering Special Stage sequence");
             enterSpecialStageSequence(player);
         }
+    }
+
+    /**
+     * ROM {@code SSEntryRing_Main}'s collision branch
+     * (skdisasm/sonic3k.asm:128283-128291):
+     * <pre>
+     *   cmpi.b  #7,(Chaos_emerald_count).w
+     *   bne.s   loc_6173A          ; fewer than 7 Chaos Emeralds -> capture sequence
+     *   tst.w   (SK_alone_flag).w
+     *   bne.s   loc_61794          ; S&amp;K alone -> award 50 rings
+     *   bsr.w   SSEntry_CheckLevel
+     *   beq.s   loc_61794          ; d1 = 0, an S3 level -> award 50 rings
+     *   cmpi.b  #7,(Super_emerald_count).w
+     *   beq.s   loc_61794          ; S&amp;K level with all Super Emeralds -> 50 rings
+     *   ; falls through to loc_6173A: capture sequence for the Super Emerald stage
+     * </pre>
+     * The previous engine predicate stopped at "all Chaos Emeralds collected",
+     * so an S&amp;K-half level ring was awarding 50 rings where the ROM starts the
+     * Super Emerald capture sequence.
+     * <p>
+     * {@code SK_alone_flag} is always zero here: the engine only models the
+     * locked-on Sonic 3 &amp; Knuckles ROM (see {@code Sonic3k.java:424-427}),
+     * so the S&amp;K-alone branch is unreachable and is not modelled.
+     * <p>
+     * The ROM's touch branch does not test {@code subtype} at all — the
+     * Hidden-Palace/arena decision belongs to {@code SSEntryFlash_GoSS}
+     * (sonic3k.asm:128388-128400), after the capture sequence. The engine's
+     * so a subtype-bit-7 ring is not a 50-ring award here either. MHZ's ring is
+     * one of those, which is why the fixture shows it entering the capture
+     * sequence with fewer than 7 Super Emeralds.
+     */
+    private boolean awardsFiftyRingsInsteadOfCapture(com.openggf.game.GameStateManager gameState) {
+        if (!gameState.hasAllEmeralds()) {
+            return false;
+        }
+        return isSonic3HalfLevel() || gameState.hasAllSuperEmeralds();
+    }
+
+    /**
+     * ROM {@code SSEntry_CheckLevel} (skdisasm/sonic3k.asm:128433-128443):
+     * {@code Current_zone} &gt;= 7, or exactly 4, returns 1 (an S&amp;K level);
+     * every other zone returns 0 (an S3 level).
+     */
+    private boolean isSonic3HalfLevel() {
+        int zone = services().currentZone();
+        return zone < 0x07 && zone != 0x04;
+    }
+
+    /**
+     * ROM {@code SSEntryFlash_GoSS} reads {@code subtype(a0)} of the flash,
+     * which {@code SSEntryFlash_Init} copies from its parent ring
+     * (skdisasm/sonic3k.asm:128357). Exposed so the flash can evaluate the
+     * ROM's destination branch.
+     */
+    boolean hasNegativeSubtype() {
+        return hiddenPalaceRoute;
+    }
+
+    /** @see #isSonic3HalfLevel() */
+    boolean isSonicAndKnucklesHalfLevel() {
+        return !isSonic3HalfLevel();
     }
 
     private boolean shouldRouteToHiddenPalace(com.openggf.game.GameStateManager gameState) {

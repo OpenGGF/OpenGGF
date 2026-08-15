@@ -75529,3 +75529,58 @@ Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -Ds3k
   ramp-id latch at `sonic3k.asm:76835-76838` has no engine counterpart, so a
   slope that ends back inside its own x window would re-trigger. Not exercised
   by this route; flagged, not fixed.
+
+## Round 153 — S3K MHZ segment: the giant ring's Super Emerald branch
+
+- **Command** (base `a64724469`, a detached worktree at that commit):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Ds3k.rom.path=<rom> -Dtest=TestS3kSonicTailsMhzSegmentTraceReplay test`,
+  with `target/surefire-reports` and `target/trace-reports` cleared first.
+  All numbers below are the class's own surefire assertion message, which is
+  immune to the `s3k_mhz1_report.json` filename collision between the
+  standalone `TestS3kMhz*` classes and the `TestS3kSonicTails*` ones.
+- **Baseline (measured).** FAIL, 36 errors, first error frame **1211**
+  `player_animation_id` expected `0x001C` actual `0x0000`.
+- **The named field was not the whole story.** Three non-cascading errors start
+  together on 1211: `player_animation_id`, `player_mapping_frame`, and `rings`
+  expected **3** actual **53**. The recorded `rings` column is 3 from well
+  before 1211, so the engine *gained* 50 rings on that frame — the
+  `moveq #50,d0 / jmp (AddRings)` at `loc_61794`
+  (`docs/skdisasm/sonic3k.asm:128325-128333`). That identified the branch
+  immediately, where `anim $1C` alone did not.
+- **Root cause.** `SSEntryRing_Main`'s collision branch
+  (`sonic3k.asm:128283-128291`) reaches `loc_61794` only when `SK_alone_flag`
+  is set, when `SSEntry_CheckLevel` (`sonic3k.asm:128433-128443`) returns 0 —
+  `Current_zone` below 7 and not 4, i.e. an S3-half level — or when
+  `Super_emerald_count` is 7. MHZ is zone 7, so with 7 Chaos Emeralds and
+  fewer than 7 Super Emeralds the ROM falls through to `loc_6173A` and starts
+  the capture sequence. The engine's predicate stopped at
+  `gameState.hasAllEmeralds()`.
+- **Second half.** `SSEntryFlash_GoSS` (`sonic3k.asm:128393-128401`) then
+  branches to `loc_618AC` (`:128411-128417`) — `Special_bonus_entry_flag = 2`,
+  `Current_zone_and_act = $1701`, `Restart_level_flag = 1` — for a negative
+  subtype or for an S&K level with 7 Chaos Emeralds, instead of the
+  `Game_mode $34` special-stage entry at `loc_61892`. The fixture agrees: its
+  `zone_act_state` at frame 1253 reads `actual_zone_id 23, act 1`.
+- **Frontier moves** frame **1211** → frame **1276**, errors **36 → 13**, over
+  an unchanged **1265** compared frames (no starvation). The intermediate
+  measurement with only the ring branch fixed was 22 errors, also at 1276.
+- **Still open, and it is one cause.** All 13 residual errors are the zone
+  `$17` act 1 arena level load: `x`/`y` `0x1640,0x03AC` vs `0x0000,0x0000` and
+  `camera` `0x15A0,0x0326` vs the stale MHZ camera on frame 1276, then eight
+  `hardware_timing.unmatched_completions` and one `pending_submissions` for
+  the arena's Kosinski art. The restart now happens; the arena's start
+  position, camera and art submissions do not. That is the next frontier for
+  this class.
+- No constant was introduced, and no zone, act, route or frame index is
+  referenced: `SSEntry_CheckLevel` is transcribed as the ROM writes it, reading
+  `services().currentZone()` at the object boundary.
+- **One test changed, and it was strengthened, not weakened.**
+  `TestSonic3kSSEntryRingFormation.subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace`
+  asserted that a subtype-bit-7 ring pays out 50 rings on touch. MHZ's ring is
+  exactly such a ring, and `SSEntryRing_Main` never reads `subtype` — the
+  negative-subtype test is `SSEntryFlash_GoSS`'s, at the far end of the flash
+  (`sonic3k.asm:128393`). It is now
+  `subtypeBitSevenStillEntersTheCaptureSequenceOnTouch`, asserting the ROM's
+  capture path with the same count of assertions plus a `never()` guard on the
+  ring award. Nothing was relaxed, excluded, tolerated or disabled.

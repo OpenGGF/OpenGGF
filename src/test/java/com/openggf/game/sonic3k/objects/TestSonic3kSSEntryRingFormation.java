@@ -258,19 +258,33 @@ public class TestSonic3kSSEntryRingFormation {
                 "the marked display tail reaches Go_Delete_SpriteSlotted and clears placement ownership");
     }
 
+    /**
+     * ROM {@code SSEntryRing_Main}'s collision branch
+     * (docs/skdisasm/sonic3k.asm:128283-128291) never reads {@code subtype}:
+     * with fewer than 7 Chaos Emeralds the {@code bne.s loc_6173A} takes the
+     * capture sequence regardless of the ring's subtype bit 7. The
+     * negative-subtype test belongs to {@code SSEntryFlash_GoSS}
+     * (sonic3k.asm:128393) at the far end of the flash, so a bit-7 ring must
+     * lock the player here, not pay out 50 rings, and must not request a zone
+     * change on the touch frame.
+     */
     @Test
-    public void subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace() {
+    public void subtypeBitSevenStillEntersTheCaptureSequenceOnTouch() {
+        Camera camera = mock(Camera.class);
+        services.withCamera(camera);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
         Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         advanceToIdleAndTouch(ring, player);
 
-        assertTrue(ring.isDestroyed(), "HPZ-routed ring should be removed after touch");
-        assertEquals(-1, services.requestedZone, "HPZ is not registered as a loadable runtime zone yet");
+        assertFalse(ring.isDestroyed(), "the capture sequence keeps the ring alive for the flash to retire");
+        assertEquals(-1, services.requestedZone, "the touch frame itself requests no zone change");
         assertEquals(-1, services.requestedAct);
-        assertFalse(services.deactivateLevelNow, "Unavailable HPZ route must not freeze level updates for a transition");
-        assertTrue(gameState.isSpecialRingCollected(3), "HPZ subtype flag must not pollute the collection bit index");
-        verify(player).addRings(50);
+        assertFalse(services.deactivateLevelNow, "the touch frame must not freeze level updates for a transition");
+        verify(player, never()).addRings(50);
+        verify(player).setHidden(true);
     }
 
     @Test
