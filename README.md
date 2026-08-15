@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **LRZ 208 root-caused to an unsigned compare, and held
+  (`bugfix/ai-lrz-208-topsolid-zero-boundary`, docs merged 2026-08-15).** The briefed
+  "sub-pixel accumulation" reading is **refuted**: `tails_y_sub` is *identical* at 208 and Tails'
+  free fall matches the ROM byte-for-byte through it. All eight differing fields flip together,
+  and the engine's frame-208 state is bit-for-bit the recording's frame-**209** state — a
+  one-frame-early landing. Every S3K top-solid landing path converges on `loc_1E45A`
+  (`sonic3k.asm:42005-42015`), where `cmpi.w #-$10,d0` / **`blo`** is an *unsigned* compare
+  against `$FFF0`: with `d0 == 0` it branches away **without landing**, so the accepted window is
+  `d0 ∈ [−16,−1]` and the rider must already be a pixel inside. A signed reading accepts zero —
+  which is what the engine does, via `CollisionRules.topSolidLandingAllowsZeroDist = true`.
+  **Held, not landed**: flipping it moves LRZ 11942 → 6480 errors and the frontier 208 → 361, but
+  reds five previously-green S3K classes with zero newly green. The owners are located —
+  `CnzTrapDoorInstance` sidesteps the same symptom by sampling the *previous* frame's player
+  position, a competing compensation layered on the wrong boundary — but the chain is not fully
+  traced, so the discriminator says hold. Catalogued as **P56**. Also found: a landed test asserts
+  the engine's behaviour while citing the exact ROM lines that say the opposite.
+
 - **The LRZ collapsing bridge, ported from the ROM
   (`bugfix/ai-lrz-collapsing-bridge`, merged 2026-08-15).** The sibling of the FBZ launcher:
   `Obj_LRZCollapsingBridge` (SKL id `$31`) was a name-only registry entry falling through to a
