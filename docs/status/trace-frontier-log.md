@@ -77413,3 +77413,77 @@ made advisory, deleted or disabled. No trace hydration, no `docs/` asset reads,
 no zone/act/route/frame/game predicate, no recorder or fixture change. The
 hardware-timing port, the two demotions, the camera clamp and
 `topSolidLandingAllowsZeroDist` untouched; no landed fix undone.
+
+## 2026-08-15 -- MGZ Sonic+Tails segment frame 4603 -> 4716 (Obj_MGZDashTrigger re-arm)
+
+Command: `mvn -Ptrace-replay -Dsonic3k... -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay test`
+(ROM path passed through `s3k.rom.path`). Base commit `644d25e11` on `develop`,
+fix on `bugfix/ai-mgz-dash-trigger-rearm`, isolated worktrees, both trees'
+`target/surefire-reports` cleared before every run.
+
+- Before: 6493 errors, first error frame 4603, `tails_y_speed`
+  expected `-0428`, actual `0x0000`, 30831 frames compared.
+- After: 4953 errors, first error frame 4716, `tails_x_speed`
+  expected `0x0000`, actual `0x04E6`.
+
+### Root cause
+
+The fixture's own aux named the object in one step. At frame 4603 slot 4's
+`object_state` flips status `0x01 -> 0x11` (`p2_standing`) and the
+`sidekick_interact_object` row reports `object_p2_standing: true`; the object
+code is `0x00025D9C` = `Obj_MGZDashTrigger`'s main routine `loc_25D9C`
+(`docs/skdisasm/sonic3k.asm:51493`). Its launch helper `sub_25EA6`
+(`:51580-51608`) reproduces both recorded values exactly:
+
+    d1 = (x_pos+$10) - tails_x = $0FC0 - $0FA0 = $20
+    d2 = (y_pos+$10) - tails_y = $0253 - $023B = $18
+    GetArcTan -> $1A ; GetSineCosine -> sin $98, cos $CD
+    x_vel = (-$700 * $CD) >> 8 = -$59B   (recorded -$59B)
+    y_vel = (-$700 * $98) >> 8 = -$428   (recorded -$428)
+
+so nothing about the launch maths was wrong -- the trigger simply was not armed.
+`loc_25D9C` runs the `sub_1DD0E` contact probe and both `move.w #$3C,$30(a0)`
+stores (P1 at `:51502-51521`, P2 at `:51527-51545`) **above** the
+`tst.w $30(a0)` / `subq.w #1,$30(a0)` countdown at `loc_25E22` (`:51545`), so
+the timer is re-loaded on every frame the condition holds and the 60-frame
+window runs from the *last* such frame. Sonic held `anim = 9` against the
+trigger for eight frames (segment frames 4541-4548), so the ROM's window ran to
+about 4608 and caught Tails' landing at 4603. `MGZDashTriggerObjectInstance`
+wrapped its arm loop in `if (armTimer == 0)` and `break`ed after the first
+player that armed, so its window ran from 4541 and had lapsed. Removing the
+guard and the short-circuit is the whole fix; no constant was added.
+
+### Verification
+
+Full `-Ptrace-replay` and default profiles on both trees.
+
+- trace-replay: 222 classes both trees; 64 red base, 65 red fix. Explicit set
+  difference both directions: 1 newly red, 0 newly green, 0 classes missing.
+  The newly red class is `TestS2CompleteEmeraldVisualRun`, a listed ambient
+  reused-fork flake -- it passes in isolation on **both** trees.
+- Protected classes byte-identical across trees:
+  `TestS3kSonicTailsAizSegmentTraceReplay` green,
+  `TestS3kSonicTailsHczSegmentTraceReplay` green, `TestS3kMgzTraceReplay` green,
+  `TestS3kMgzCompleteRunTraceReplay` green, `TestS3kMgzF498AirRollPhysics`
+  green, `TestS3kSonicTailsMhzSegmentTraceReplay` 9 errors / frame 1276,
+  `TestS3kSonicTailsIczSegmentTraceReplay` 2862 / 1983,
+  `TestS3kSonicTailsFbzSegmentTraceReplay` 8599 / 116,
+  `TestS3kSonicTailsLrzSegmentTraceReplay` 11942 / 208,
+  `TestS3kHczCompleteRunTraceReplay` deliberately red at exactly 2 errors
+  (29095, 29262), `TestS2CompleteEmeraldRunChain` 5 axes.
+- default profile: 1915 classes both trees; 50 red base, 53 red fix. The four
+  differing classes -- `TestS3kAizMinibossGraphRewind`,
+  `TestS3kNestedHurtboxGraphRewind`, `TestScalarOnlyCodecDeletion`,
+  `TestBubblerObjectInstance` -- plus `TestGameLoopSpecialStageRewindGate`
+  (green on fix, red on base) all pass in isolation on **both** trees; ambient
+  reused-fork flakes. `TestCollisionLogic` green on both.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift; the `-$428` was
+derived from `sub_25EA6`, never written. No assertion weakened, widened,
+excluded, made advisory, deleted or disabled. No trace hydration, no `docs/`
+asset reads, no zone/act/route/frame/game predicate, no recorder or fixture
+change. The hardware-timing port, the two demotions, the camera clamp and
+`topSolidLandingAllowsZeroDist` untouched; the two known `vIntRunCount + 3`
+misreadings left alone; no landed fix undone.

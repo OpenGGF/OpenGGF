@@ -125,14 +125,15 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         // bounding-box adjacency every frame regardless of movement, so that a
         // player charging a spindash while pressed against the side still arms
         // the trigger even though no SolidContact event fires.
-        if (armTimer == 0) {
-            for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
-                if (participant instanceof AbstractPlayableSprite sprite) {
-                    tryArmFromPlayer(sprite);
-                    if (armTimer != 0) {
-                        break;
-                    }
-                }
+        // ROM loc_25D9C runs the arm test EVERY frame, ahead of the loc_25E22
+        // countdown and regardless of the current value of $30(a0): a player
+        // still in the spindash animation against the trigger re-loads
+        // move.w #$3C,$30(a0) on each such frame (sonic3k.asm:51502-51545).
+        // It also evaluates P1 (andi.b #$11,d6) and P2 (andi.b #$22,d6)
+        // independently -- neither arm short-circuits the other.
+        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                tryArmFromPlayer(sprite);
             }
         }
 

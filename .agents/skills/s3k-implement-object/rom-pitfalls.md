@@ -2241,3 +2241,54 @@ outstanding.
 
 **Originating commit.** MGZ Sonic+Tails segment frame 1909 -> 4603; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P59 -- A one-shot "arm" guard on a ROM timer that is re-armed every frame
+
+**Symptom.** A timed object works: it arms on the right frame, does the right
+thing for the right number of frames, and its own unit tests pass. Then a
+*second* character interacts with it slightly later than the first and gets
+nothing. The trace prints this as a lone sidekick velocity field -- a large
+value expected, `0x0000` actual -- with no object field diverging at all,
+because the object's status and position were correct throughout.
+
+**Root cause.** ROM object routines are straight-line code executed top to
+bottom every frame. A `move.w #$3C,$30(a0)` sitting above the routine's
+`tst.w $30(a0)` countdown is therefore a **re-load**, not a one-shot arm: as
+long as the trigger condition holds, the timer is refreshed to its full value
+on every one of those frames, and the countdown only starts from the *last*
+frame the condition held. An engine port that guards the arm with
+`if (timer == 0)` -- an entirely natural-looking "don't re-trigger while
+active" -- shortens the window by exactly the duration of the triggering
+action.
+
+**Measured case.** `Obj_MGZDashTrigger`'s `loc_25D9C`
+(`docs/skdisasm/sonic3k.asm:51493-51545`) probes contact with `sub_1DD0E`, then
+stores `#$3C` into `$30(a0)` for P1 (`:51502-51521`) and again for P2
+(`:51527-51545`), and only *then* falls into `loc_25E22`'s
+`tst.w $30(a0)` / `subq.w #1,$30(a0)`. Sonic held the spindash animation
+against the trigger for eight frames, so the ROM's window ran 60 frames from
+the eighth; the engine's ran from the first. Tails landed on the trigger 62
+frames after the first spindash frame and was launched by `sub_25EA6`
+(`:51580-51608`) in the ROM and not in the engine -- printing as
+`tails_y_speed` expected `-0428`, actual `0x0000`, MGZ segment frame 4603.
+
+**Second half of the same shape.** The ROM tested P1 and P2 with two separate
+masks (`andi.b #$11,d6` then `andi.b #$22,d6`) and ran both arms; the engine
+`break`ed out of its player loop after the first player armed. Where the ROM
+falls through two independent blocks, do not short-circuit -- later blocks
+often overwrite shared per-arm state (here `$32(a0)`, the child-sprite step).
+
+**What to check.** For every ported timer, locate the store and the countdown
+in the ROM listing and note their **order within one execution of the
+routine**. A store *above* the countdown re-arms; a store reached only through
+a branch that the countdown's non-zero case skips is a genuine one-shot. Never
+add a `timer == 0` guard the ROM does not have.
+
+**Cross-game.** Universal. S1/S2 objects have the same straight-line structure;
+the habit -- *read the routine top to bottom and ask what runs on a frame where
+the timer is already non-zero* -- applies everywhere.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 4603 -> 4716; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.
