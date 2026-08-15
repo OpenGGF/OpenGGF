@@ -75336,3 +75336,85 @@ their first divergence is route-carried emerald state, which belongs to the
 closed cold-start cluster. The ring's capture tail is now modelled, so any
 future segment whose route reaches a giant ring with fewer than seven chaos
 emeralds should compare cleanly through the capture.
+
+## 2026-08-15 - S3K cluster E closed: the engine zone list now has the ROM's 24x2 shape
+
+- Base commit **`c9789570a`** (`develop`), isolated worktree, `git status
+  --porcelain` clean at measurement time; JDK 21 (`mvn -v` -> 21.0.11).
+  `target/surefire-reports` removed before every run; `java.io.tmpdir` supplied
+  through `JAVA_TOOL_OPTIONS`, never as a Maven property.
+- **Reproduced first, all eleven:** `TestS3kSonicTailsDez23*` (8) at `Index 23
+  out of bounds for length 22`, `Hpz22*` (2) at `Index 22 ...`, and
+  `TestS3kSonicTailsDdzSegmentTraceReplay` at `Index: 1 Size: 1`. All eleven
+  threw from `LevelManager.loadCurrentLevel:3307` /
+  `LevelManager.loadZoneAndAct`, i.e. from `levels.get(zone).get(act)` where
+  `levels` is `Sonic3kZoneRegistry`'s 22-zone list. **`TOTAL_ZONE_COUNT` is not
+  the throwing structure - it had no reader in `src/`.** The DDZ shape is the
+  same defect one level in: an act list of size 1 for a zone the ROM gives two
+  act slots.
+- **What the ROM's tables say.** Four independent 48-entry tables, all indexed
+  `zone*2 + act`, so the zone axis runs 0-23 and every zone has two acts:
+  `LevelPtrs` (`docs/skdisasm/sonic3k.asm:200438-200485`, indexed by
+  `Load_Level` at `sonic3k.asm:38746-38753`), `LevelSizes`
+  (`sonic3k.asm:38096-38143`), `LevelMusic_Playlist` (`sonic3k.asm:7476-7500`)
+  and `OffsAnPal` (`sonic3k.asm:3110-3165`). The last three label every slot:
+  zone $16 = "LRZ Boss" / "HPZ", zone $17 = "DEZ Boss" / "Special Stage Arena
+  (HPZ)", zone $0D = "AIZ Intro (?)" / "Ending scene". Cross-checks:
+  `cmpi.w #$1601` is Hidden Palace (`sonic3k.asm:62150`), `#$1600` is LRZ act 3
+  and `#$1700` the Death Egg boss (level select, `sonic3k.asm:10183-10185`), and
+  `#$1701` is named "the Super Emerald special stage arena"
+  (`sonic3k.asm:4994-4996`).
+- **Directory naming is not evidence, and was wrong here.** The fixture
+  directory `dez23` is *not* Death Egg act 2: its seven act-1 segments are the
+  special-stage arena of zone $17, each sitting between a Mushroom Hill segment
+  and a special stage, and only `dez23_8` (act 0) is the Death Egg boss. The
+  `dez23` row 0 is `player_x=0x1640, player_y=0x03A3`, against
+  `Sonic_Start_Locations` entry 47 (zone 23 act 1) `x=0x1640, y=0x03AC` -
+  independent confirmation of the zone/act identity from ROM data.
+- **Landed:** `Sonic3kZoneRegistry` now holds 24 zones x 2 acts with names and
+  music transcribed from the ROM tables above; `LevelData` gains the missing
+  S3K level indices (`0xC0 + zone*2 + act`, through `0xEF`) with start
+  positions read from `Sonic_Start_Locations`; `Sonic3kZoneIds` records
+  `TOTAL_ZONE_COUNT = 24` with the citation and moves the competition ids to
+  ALZ `$0E` .. EMZ `$12`; `Sonic3kPaletteCycler`'s BPZ/CGZ/EMZ cases follow
+  `OffsAnPal`. Three unit tests that hard-coded the old competition ids were
+  corrected to the ROM ids (inputs and one expected id; no assertion was
+  weakened, relaxed or removed).
+- **Frontier moved, as intended: eleven unloadable segments became eleven
+  attributable frame-0 comparisons** (11 ERROR -> 11 FAIL). First error per
+  class:
+
+  | class | first error | errors |
+  |---|---|---|
+  | `Dez23` | frame 0 `tails_x` 0x1640 vs 0x1620 | 182 |
+  | `Dez232` | frame 0 `tails_y` 0x03A3 vs 0x03A7 | 48 |
+  | `Dez233` | frame 0 `tails_y` 0x03A3 vs 0x03A7 | 54 |
+  | `Dez234` | frame 0 `tails_x` 0x1640 vs 0x1620 | 67 |
+  | `Dez235` | frame 0 `tails_x` 0x1640 vs 0x1620 | 62 |
+  | `Dez236` | frame 0 `tails_x` 0x1640 vs 0x1620 | 73 |
+  | `Dez237` | frame 0 `x_sub` 0x0000 vs 0xF400 | 64 |
+  | `Dez238` | frame 0 `x_sub` 0x0000 vs 0x0C00 | 621 |
+  | `Hpz22` | frame 0 `y_speed` 0x0038 vs 0x0000 | 661 |
+  | `Hpz222` | frame 0 `camera_y` 0x02F0 vs 0x030C | 1913 |
+  | `Ddz` | frame 0 `camera_y` 0x0200 vs 0x0080 | 32 |
+
+  Every one is now the cold-start shape the map already describes, so the
+  `hpz` frame-0 bin assignment can be revisited against a zone-22 comparison
+  that actually runs.
+- **Verification.** Trace profile, control at `c9789570a` **843 run / 42F /
+  22E / 4S, 64 red**; after **843 / 53F / 11E / 4S, 64 red**. The red class set
+  is identical by name in both directions (`comm -13` and `comm -23` both
+  empty), 222 surefire report files in each, and the only per-class deltas are
+  the eleven classes' ERROR -> FAIL. Default profile: control **15094 / 62F /
+  22E / 18S, 48 red**; after **15017 / 62F / 22E / 18S, 48 red**, red set
+  identical both ways (the run-count delta is one nested class whose surefire
+  attribution varies between runs; it reports 83 green in isolation on the
+  changed tree). `TestS3kSonicTailsAizSegmentTraceReplay` stays green with
+  `error_count 0` over **2290** compared rows - no starvation.
+  `TestS2CompleteEmeraldRunChain` keeps exactly its five axes: `seg7_ehz2`
+  cursor 3977/3997; segment 11, 236 errors, first frame 3525
+  `queue.s2_nemesis_plc.busy`; four -1 `seg4_ehz1 -> seg5_ehz2` rows; two +1
+  `ss_4 -> seg6_ehz2` rows; 16 expected / 18 actual for `ss_5 -> seg7_ehz2`
+  (segment 2 absent). The six S3K standalone complete-runs, the S3K keep-green
+  set, `TestS2CompleteEmeraldVisualRun`, `TestS2EhzHalfpipeRoundTripChain` and
+  `TestTraceRunManifest` are green.

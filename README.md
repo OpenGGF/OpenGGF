@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K's zone/level table covers all 24 ROM zones
+  (`bugfix/ai-s3k-zone-level-table`, merged 2026-08-15):** eleven segment classes could not load
+  at all, throwing `Index 23 out of bounds for length 22` and friends from
+  `LevelManager.loadCurrentLevel`'s `levels.get(zone).get(act)` against a 22-entry registry.
+  Four independent 48-entry ROM tables — `LevelPtrs`, `LevelSizes`, `LevelMusic_Playlist` and
+  `OffsAnPal` — are all indexed `zone*2 + act`, so the ROM's zone axis runs 0–23 with two acts
+  each, and three of them label every slot: zone `$16` is LRZ Boss / HPZ, zone `$17` is DEZ Boss
+  / the Super Emerald special-stage arena, and zone `$0D` is the AIZ intro / ending scene. The
+  registry is rebuilt to 24×2 with names, music and start positions transcribed from those
+  tables. **The trace directory names were misleading and are not evidence:** `dez23` is not
+  Death Egg act 2 — seven of its eight segments are the zone-`$17` special-stage arena, each
+  sitting between an MHZ segment and a special stage, confirmed independently by
+  `Sonic_Start_Locations` entry 47. All eleven now load and fail attributably at frame 0 on the
+  known cold-start shape, which was the goal: an unloadable segment became a comparable one.
+  Forced by the same tables, the competition-zone ids were found to be off by one — the ROM has
+  ALZ `$0E` … EMZ `$12`, not `$0D`…`$11`, because `$0D` is the intro/ending pair — and the
+  palette cycler and three tests that encoded the old ids were corrected to the ROM's.
+
 - **The S3K special-stage entry ring no longer freezes the camera
   (`bugfix/ai-s3k-ssentry-ring-capture`, merged 2026-08-15):** `Obj_SSEntryRing`'s capture tail
   (`sonic3k.asm:128292-128304`) writes `mapping_frame = 0`, `anim = $1C` and

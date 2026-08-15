@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Validates that the Sonic 3&K CGZ (Chrome Gadget Zone, zone 0x10) palette cycling
+ * Validates that the Sonic 3&K CGZ (Chrome Gadget Zone, zone 0x11) palette cycling
  * is active and modifies palette[2] colors 2-5 over time.
  *
  * <p>The ROM's {@code AnPal_CGZ} routine cycles light colors on palette line 3
@@ -40,7 +40,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kCgzPaletteCycling {
-    private static final int ZONE_CGZ = 0x10;
+    // Chrome Gadget is ROM zone $11: OffsAnPal entries 34/35
+    // (skdisasm/sonic3k.asm:3152-3153) and LevelSizes rows 34/35
+    // (sonic3k.asm:38114-38115), both indexed zone*2 + act.
+    private static final int ZONE_CGZ = 0x11;
     private static final int ACT_1 = 0;
 
     @Test

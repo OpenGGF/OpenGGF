@@ -137,15 +137,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 loadLrzCycles(reader, list, actIndex);
                 break;
 
-            case 0x0E: // BPZ (competition) — AnPal_BPZ balloons + background
+            // Competition-zone ids follow the ROM's OffsAnPal table, which is
+            // 48 entries indexed zone*2 + act (skdisasm/sonic3k.asm:3110-3165):
+            // BPZ occupies entries 30/31, CGZ 34/35 and EMZ 36/37.
+            case 0x0F: // BPZ (competition) — AnPal_BPZ balloons + background
                 loadBpzCycles(reader, list);
                 break;
 
-            case 0x10: // CGZ (competition) — AnPal_CGZ light animation
+            case 0x11: // CGZ (competition) — AnPal_CGZ light animation
                 loadCgzCycles(reader, list);
                 break;
 
-            case 0x11: // EMZ (competition) — AnPal_EMZ emerald glow + background
+            case 0x12: // EMZ (competition) — AnPal_EMZ emerald glow + background
                 loadEmzCycles(reader, list);
                 break;
 

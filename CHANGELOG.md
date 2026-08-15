@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K zone list now has the ROM's own shape -- 24 zones with two act
+  slots each -- so the eleven recorded segments in zones $0D, $16 and $17 load
+  instead of throwing out of bounds. `LevelPtrs` is 48 longwords
+  (`docs/skdisasm/sonic3k.asm:200438-200485`) and `Load_Level` indexes it as
+  zone*2 + act (`sonic3k.asm:38746-38753`); `LevelSizes`
+  (`sonic3k.asm:38096-38143`), `LevelMusic_Playlist` (`sonic3k.asm:7476-7500`)
+  and `OffsAnPal` (`sonic3k.asm:3110-3165`) are the same 48 entries with the
+  same index, and they name every slot. Zone $16 is the Lava Reef boss act
+  ($1600) plus Hidden Palace ($1601, `sonic3k.asm:62150`); zone $17 is the
+  Death Egg boss act ($1700, `sonic3k.asm:10185`) plus the Super Emerald
+  special-stage arena ($1701, `sonic3k.asm:4994-4996`); zone $0D is the AIZ
+  intro and ending scenes. That also moves the competition zones onto their ROM
+  ids ALZ $0E .. EMZ $12, one higher than the engine previously assumed, which
+  the `OffsAnPal` BPZ/CGZ/EMZ rows confirm. `TestS3kSonicTailsDez23*`,
+  `Hpz22*` and `Ddz` (11 classes) change from an `IndexOutOfBoundsException`
+  before frame 0 to an ordinary frame-0 comparison; the trace-profile red set
+  is unchanged by name. No constant is fitted, and no zone, act, route or frame
+  index is special-cased.
 - Fix: the S3K giant ring's special-stage capture no longer freezes the camera
   and now writes the player's `mapping_frame`/`anim` the way `loc_6173A` does.
   ROM `Obj_SSEntryRing`'s capture tail (`docs/skdisasm/sonic3k.asm:128292-128304`)
