@@ -77317,3 +77317,99 @@ weakened, widened, excluded, made advisory, deleted or disabled. No trace
 hydration, no `docs/` asset reads, no zone/act/route/frame/game predicate, no
 recorder or fixture change. `clampBottomBoundary` untouched;
 `topSolidLandingAllowsZeroDist` untouched.
+
+## 2026-08-15 -- S3K Sonic+Tails MGZ segment: frame 1909 -> 4603
+
+`TestS3kSonicTailsMgzSegmentTraceReplay`, base `cf4cc4912`, isolated worktree.
+
+```
+mvn -Ptrace-replay -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay \
+    -Ds3k.rom.path=<discovered s3k.gen> -Dtest.cds.argLine="-Xshare:off" test
+```
+
+| | before | after |
+|---|---|---|
+| first error | frame 1909, `g_speed` exp `0x00EC` act `-0x00EC` | frame 4603, `tails_y_speed` exp `-0x0428` act `0x0000` |
+| error count | 8269 | 6493 |
+| frames compared | 30831 | 30831 |
+
+### Diagnosis
+
+The briefed symptom was a sign inversion (`g_speed`, `x_speed` and `y_speed` all
+flipped with matching magnitudes on frame 1909, position still agreeing). It was
+not a facing, angle or wall-resolution defect: **the ROM performs the same
+inversion, one frame later.** Recorded rows show `x_speed 358 -> -347`,
+`y_speed -880 -> +824`, `g_speed 236 -> -236` at frame **1910** -- an air step
+(drag `358>>5 = 11`, gravity `56`) followed by a negation. A probe on
+`AbstractPlayableSprite.setXSpeed` put the engine's inversion in
+`ObjectTouchResponseController.applyBossBounce`, i.e. the boss-bounce arm of
+`Touch_...` (`docs/skdisasm/sonic3k.asm:20913-20915`,
+`neg.w x_vel / y_vel / ground_vel`, taken when `boss_hitcount2(a1)` is non-zero).
+Three such bounces occur in the run -- frames 1828, 1873, 1910 -- and the first
+two matched. The engine's third fired at 1909.
+
+The bouncing object is slot 4, `Obj_Tunnelbot` (`sonic3k.asm:184715-184730`,
+`collision_property = -2`), routine `0x08` = `TunnelbotMiniboss_RumbleWait`. The
+recorded per-slot aux dump gives its `y_pos` ladder as
+`61F 620 61E 61F 61D 61E 61C 61D`, i.e. the routine's `-2` on even
+`V_int_run_count` and `+1` on odd (`:184790-184796`). A per-frame probe on
+`TunnelbotBadnikInstance` keyed by `vbc` showed the engine's parity **correct**
+and its ladder uniformly **1px low**: engine `0x61E` at `vbc 8E4A` where the ROM
+has `0x61D`.
+
+The offset originates one phase earlier. During `TunnelbotMiniboss_CeilingRise`
+(`:184769-184778`) engine and ROM agree exactly, pixel for pixel, from
+`vbc 8E24` to `8E38`. The ROM stops at `vbc 8E39`/`y = 0x627`; the engine
+measured `ceilingDist == 0` there, took one further `subq.w #1,y_pos` and
+stopped at `8E3A`/`y = 0x626`, so it entered the rumble routine a frame late and
+a pixel low and never recovered.
+
+Root cause: `ObjCheckCeilingDist` (`:20351-20366`) reaches `FindFloor` after the
+caller's `eori.w #$F,d2`, which is what `checkNativeUpwardCeilingDist` models.
+`TunnelbotBadnikInstance` called `ObjectTerrainUtils.checkCeilingDist` -- the
+legacy S1/S2 object-ceiling entry -- which reports one pixel more clearance at
+this geometry. `MgzMinibossInstance`, which ports the *same* ROM routine, was
+already on the native probe.
+
+A second, independent defect was found and fixed in `MgzMinibossInstance` while
+reading the shared routine: `move.b (V_int_run_count+3).w,d1` was ported as
+`vIntRunCount + 3`. `V_int_run_count` is a longword (`addq.l #1,...`, `:543`),
+so `+3` is an address selecting its low byte. Adding 3 inverts bit 0 and so
+inverts the whole rumble step. It has no effect on any current fixture (the MGZ
+complete-run cross-checks are byte-identical either way) but it is wrong against
+the ROM. Two further sites carry the same misreading and are **not** touched
+here: `AizFlippingBridgeObjectInstance:304` and `CluckoidBadnikInstance:171`,
+both `((vIntRunCount + 3) & 7) == 0`; both gate SFX and debris spawning, so they
+need their own blast-radius measurement.
+
+### Verification
+
+Full `-Ptrace-replay` and default profiles, both trees (fix and a control
+worktree at `cf4cc4912`), `target/surefire-reports` cleared before every run.
+
+- trace-replay: 222 classes both trees, 64 red both trees. Explicit set
+  difference in both directions: **0 newly red, 0 newly green, 0 classes
+  missing**.
+- default: 1915 classes both trees, 51 red (fix) vs 50 red (base). The three
+  differing classes -- `TestGameLoopSpecialStageEntryPresentation`,
+  `TestOOZPlacedObjectGaps`, `TestGameLoopAudioPresentationModes` -- all pass in
+  isolation on **both** trees; ambient reused-fork flakes.
+- Unmoved, byte-identical across trees: `TestS3kSonicTailsAizSegmentTraceReplay`
+  green, `TestS3kSonicTailsHczSegmentTraceReplay` green,
+  `TestS3kMgzTraceReplay` green, `TestS3kMgzCompleteRunTraceReplay` green,
+  `TestS3kMgzF498AirRollPhysics` green, `TestS3kSonicTailsMhzSegmentTraceReplay`
+  9 errors / frame 1276, `TestS3kSonicTailsIczSegmentTraceReplay` 2862 / 1983,
+  `TestS3kSonicTailsFbzSegmentTraceReplay` 8599 / 116,
+  `TestS3kSonicTailsLrzSegmentTraceReplay` 11942 / 208,
+  `TestS3kHczCompleteRunTraceReplay` deliberately red at exactly 2 errors
+  (29095, 29262), `TestS2CompleteEmeraldRunChain` 5 axes / cursor 3977 of 3997,
+  `TestCollisionLogic` green.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift; no speed negated, no
+facing bit flipped, no angle inverted. No assertion weakened, widened, excluded,
+made advisory, deleted or disabled. No trace hydration, no `docs/` asset reads,
+no zone/act/route/frame/game predicate, no recorder or fixture change. The
+hardware-timing port, the two demotions, the camera clamp and
+`topSolidLandingAllowsZeroDist` untouched; no landed fix undone.
