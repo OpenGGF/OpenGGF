@@ -78054,3 +78054,77 @@ Next probe for whoever picks this up: instrument whatever zeroes the sidekick's
 whether the engine is using the leader's x-radius or a stage boundary instead of
 the machine's own solid edge. `0x00D1` is also the player's x at row 0x1F, so
 rule out the engine's Tails colliding with Sonic.
+
+## 2026-08-15 -- S3K Slots bonus: the missing pass is the spawn-frame Animate tail
+
+Base `2dc8f52c9`, isolated worktree, JDK 21, CRC-verified `s3k.gen`,
+`surefire-reports`/`trace-reports` cleared before every run.
+
+| | first error | errors |
+|---|---|---|
+| `TestS3kSonicTailsSlotsBonusTraceReplay` before | frame 5, `player_mapping_frame` exp `0x0097` act `0x0096` | 900 |
+| after | frame 913, `x` exp `0x0460` act `0x0479` | 829 |
+
+Report diff of that class's own `s3k_slots1_report.json` on both trees:
+**71 error groups removed, 0 added** (`player_mapping_frame` 603 -> 532; every
+other field's count byte-identical), and no remaining error starts before 913.
+
+### What the previous round had right, and what it had wrong
+
+The 2026-08-15 diagnosis above ("Slots -- root cause") correctly identified the
+phase shift, the script, `loc_12A2A`'s duration (which is correct and was not
+touched), and the fact that a ROM pass precedes trace row 0. Two of its claims
+were refuted by measurement:
+
+* **The pass is not "a gameplay frame before row 0" in the LevelLoop sense.** It
+  is the object's own **creation call**. `Obj_Sonic_RotatingSlotBonus`
+  (`sonic3k.asm:98655`) runs `move.b #2,anim(a0)` + `sub_4B99E` ->
+  `Animate_Sonic` at `loc_4B97C` (`:98669-98671, 98679-98695`) after every
+  routine dispatch, and routine 0 (`loc_4B9CE`, `:98710-98741`) falls through
+  into the movement dispatcher with no `rts`. That call is the one-shot
+  `Process_Sprites` at `loc_6468` (`:7849-7855`), which precedes `LevelLoop`'s
+  first `Level_frame_counter` increment (`:7885-7889`) -- consistent with row 0
+  of both Slots fixtures carrying `gameplay_frame_counter == 1`.
+* **`applyBonusStageEntry` was not the owner.** `S3kSlotPlayerRuntime`
+  `primeSpawnFrameFallthrough` already modelled that same call -- but only its
+  physics half (which is why row 0's `y_speed` is `0x0054 == 2 * 0x2A` and
+  matched all along). The animation half was simply absent. The fix adds
+  `primeSpawnFrameAnimation`, one `AnimationManager.update(0)` at the ROM's own
+  site; `Level_frame_counter` is genuinely 0 there (`Clear_DisplayData`,
+  `:7532-7536`). No constant, timer, mapping frame or frame index was added or
+  adjusted, and no trace value was read.
+
+Also refuted: **row 1 is a real ROM lag row** (`lag_counter` 0 -> 1,
+`gameplay_frame_counter` pinned at 1, `y_speed` unchanged), so the engine's
+`VBLANK_ONLY` classification there is correct and the correct period is counted
+in *executed* frames, not rows.
+
+### The predicted blast radius did not occur, and the reason is measurable
+
+The previous round expected a correct fix to red
+`TestS3kSlotsBonusTraceReplay` and possibly its two Knuckles siblings, on the
+grounds that their green absorbed the start skew via a timer of 3 instead of 4.
+The absorption is real, but the fix removes it symmetrically: with the spawn
+call modelled, the engine loads the timer at the ROM's own site with
+`ground_vel == 0` -> 4, and its first advance lands on the same executed frame
+the ROM's does. Measured: `TestS3kSlotsBonusTraceReplay` (1024 frames),
+`TestS3kGumballBonusTraceReplay` (1277) and `TestS3kPachinkoBonusTraceReplay`
+(2900) are **still green**, at unchanged frame counts.
+
+### Verification
+
+Full `-Ptrace-replay` on both trees, `-Dsurefire.runOrder=alphabetical`,
+843 tests each (not truncated, not stale). Red-class sets diffed by name in both
+directions from the surefire XML with an explicit Python set difference:
+**64 red on both trees, zero newly red, zero newly green**, and the *only*
+assertion-message delta anywhere in the sweep is the target class above.
+Protected classes: `TestS3kSonicTailsAizSegmentTraceReplay` and
+`TestS3kSonicTailsHczSegmentTraceReplay` green; `TestS3kHczCompleteRunTraceReplay`
+message byte-identical (its documented 2 errors at frame 29095 `rings`).
+
+### Discipline
+
+No fitted constant, tolerance, offset or nudge. No assertion weakened, widened,
+deleted, disabled or made advisory. No zone/act/route/frame/game-name predicate.
+No trace hydration -- the added call reads no trace field. `docs/skdisasm` used
+for labels and citations only.

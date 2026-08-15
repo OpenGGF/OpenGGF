@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The slot-bonus player runs its spawn-frame `Animate` tail, not just its physics
+  (`bugfix/ai-s3k-slots-spawn-animate`, merged 2026-08-15).** The Sonic+Tails Slots replay diverged
+  at frame 5 on `player_mapping_frame` (0x97 vs 0x96) and stayed one step out for the whole stage —
+  a phase error, not an off-by-one: the engine emitted the correct `AniSonic02` script one *executed*
+  frame late, so errors fell only on frames congruent to 0 mod 5. `Obj_Sonic_RotatingSlotBonus` never
+  returns after its routine dispatch; `loc_4B97C` (sonic3k.asm:98669-98671) stores `#2` into `anim`
+  and calls `sub_4B99E` -> `Animate_Sonic` on *every* invocation, including the one-shot
+  `Process_Sprites` pass at `loc_6468` (:7849-7855) that precedes `LevelLoop`'s first
+  `Level_frame_counter` increment (:7885-7889). `S3kSlotPlayerRuntime` already modelled that pass's
+  physics half — which is why row 0's `y_speed` matched all along — but not its animation half, so
+  the anim change and first publish slipped a frame. Frontier 5 -> 913, 900 -> 829 errors, 71 error
+  groups removed and none added.
+
 - **Tails' off-screen respawn compares a cleared latch, and the FBZ launcher publishes its code
   word (`bugfix/ai-s3k-fbz-frame116`, merged 2026-08-15).** The FBZ Sonic+Tails segment diverged at
   frame 116 on `tails_x_sub` — alphabetical, not causal: the fields that mattered were `tails_x`

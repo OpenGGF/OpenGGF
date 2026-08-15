@@ -116,6 +116,41 @@ public final class S3kSlotPlayerRuntime {
         applyAirMotionWithCollision(player);
         applyVelocityStep(player);
         advanceRotation(false);
+        primeSpawnFrameAnimation(player);
+    }
+
+    /**
+     * Runs the animation half of that same spawn-frame invocation.
+     *
+     * <p>{@code Obj_Sonic_RotatingSlotBonus} does not return after its routine
+     * dispatch: {@code loc_4B97C} (sonic3k.asm:98669-98671) unconditionally
+     * stores {@code #2} into {@code anim(a0)} and calls {@code sub_4B99E},
+     * which jumps to {@code Animate_Sonic}/{@code Animate_Tails}/
+     * {@code Animate_Knuckles} by {@code character_id}
+     * (sonic3k.asm:98679-98695). On the spawn invocation {@code anim} ($02)
+     * differs from the {@code prev_anim} left by {@code clearRAM Object_RAM}
+     * (sonic3k.asm:7619), so {@code Animate_Sonic}'s change branch
+     * (sonic3k.asm:24741) zeroes {@code anim_frame}/{@code anim_frame_timer}
+     * and falls through to {@code loc_12A2A}'s
+     * {@code subq.b #1,anim_frame_timer(a0)} (sonic3k.asm:25151), which
+     * underflows immediately: the first script frame is published and
+     * {@code anim_frame_timer} is reloaded with
+     * {@code ($400 - |ground_vel|) >> 8} on this very invocation.
+     *
+     * <p>That invocation is the one-shot {@code Process_Sprites} pass Level
+     * runs at {@code loc_6468} (sonic3k.asm:7849-7855) before {@code LevelLoop}
+     * increments {@code Level_frame_counter} for the first time
+     * (sonic3k.asm:7885-7889) -- the same pass whose physics half this method
+     * already models above. Modelling only the physics half left the animation
+     * change and first publish to happen on the first LevelLoop iteration
+     * instead, so every roll step ran one executed frame late for the whole
+     * stage.
+     *
+     * <p>{@code Level_frame_counter} is still 0 here ({@code Clear_DisplayData},
+     * sonic3k.asm:7532-7536), which is the clock this pass genuinely sees.
+     */
+    private void primeSpawnFrameAnimation(AbstractPlayableSprite player) {
+        player.getAnimationManager().update(0);
     }
 
     public void syncFromController(S3kSlotStageController controller) {
