@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K hidden monitor's signpost range test now reproduces the ROM's
+  *cumulative* offset table. `Obj_HiddenMonitorMain` loads the monitor
+  coordinate into `d0` once and then adds the two `word_8379E` words to that
+  same running register (`docs/skdisasm/sonic3k.asm:176052-176069`, table at
+  `:176098` = `-$E, $1C, -$80, $C0`), so the accept windows are
+  `[monX - $E, monX + $E)` and `[monY - $80, monY + $40)`. The engine treated
+  the second word of each pair as an independent offset, giving windows of
+  `[-$E, +$1C)` and `[-$80, +$C0)` and accepting monitors the ROM rejects. In
+  MGZ1 the monitor at `x=$2F00` sits `$10` from the signpost at `$2F10`: the
+  ROM sends it down the out-of-range `Sprite_OnScreen_Test` branch, while the
+  engine revealed it and cleared the signpost's landed bit, bouncing the sign
+  and delaying the end-of-act by ~88 frames. Measured on
+  `TestS3kSonicTailsMgzSegmentTraceReplay`: 3950 -> 3446 errors, frontier
+  10709 unchanged (a documented fitted-constant transient); the substantive
+  stop moves from 12932 to 13848.
 - Fix: the MGZ swinging platform and MGZ top platform report their ROM
   `width_pixels` / `height_pixels` to the on-screen render test instead of
   `AbstractObjectInstance`'s flat 16-pixel default. `Obj_MGZSwingingPlatform`
