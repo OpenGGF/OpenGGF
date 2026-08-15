@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The giant ring takes its Super Emerald branch in S&K-half levels
+  (`bugfix/ai-s3k-ssentryring-super-emerald-branch`, merged 2026-08-15):**
+  `SSEntryRing_Main`'s collision branch (`sonic3k.asm:128283-128291`) reaches the
+  `moveq #50,d0 / jmp (AddRings)` payout only when `SK_alone_flag` is set, when
+  `SSEntry_CheckLevel` reports an S3 level (`Current_zone` below 7 and not 4), or when
+  `Super_emerald_count` is also 7 — otherwise it falls through and locks the player into the
+  capture sequence. The engine's predicate stopped at "all Chaos Emeralds collected", so MHZ's
+  ring paid out 50 rings where the ROM starts a Super Emerald run. `SSEntryFlash_GoSS` then
+  restarts into zone `$17` act 1 rather than entering a special stage, which the engine also
+  lacked. **The discriminating evidence was not the reported field:** dumping every field at the
+  failing frame showed `rings` expected 3, actual 53 — the engine had *gained* 50 rings, naming
+  the branch in one step where the animation id alone would not have. MHZ segment errors fall
+  36 → 13 over an unchanged 1265 compared rows, and its residual is now a single clean cause:
+  the zone `$17` arena's start position, camera and Kosinski art.
+
 - **MHZ1's cutscene stops vertical speed, and the HCZ bar releases on a fresh press
   (`bugfix/ai-s3k-mhz-cutscene-stop-and-hcz-bar-release`, merged 2026-08-15):** two independent
   defects that shared a misleading appearance. `Obj_MHZ1CutsceneKnuckles` calls `Stop_Object`,

@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K giant ring no longer awards 50 rings in an S&K-half level when
+  the Chaos Emeralds are complete but the Super Emeralds are not.
+  `SSEntryRing_Main`'s collision branch (`docs/skdisasm/sonic3k.asm:128283-128291`)
+  only reaches `loc_61794`'s `moveq #50,d0 / jmp (AddRings)` when
+  `SK_alone_flag` is set, when `SSEntry_CheckLevel` (`sonic3k.asm:128433-128443`)
+  reports an S3 level (`Current_zone` below 7 and not 4), or when
+  `Super_emerald_count` is also 7; otherwise it falls through to `loc_6173A`
+  and starts the Super Emerald capture sequence. The engine stopped at "all
+  Chaos Emeralds collected", so MHZ's ring paid out rings where the ROM locks
+  the player (`anim $1C`, `object_control $53`). `SSEntryFlash_GoSS`
+  (`sonic3k.asm:128393-128417`) then takes `loc_618AC` under the same
+  S&K-level-with-7-Chaos condition (or a negative subtype), restarting into
+  zone `$17` act 1 rather than the `Game_mode $34` special stage; the flash
+  object now models that branch. `TestS3kSonicTailsMhzSegmentTraceReplay`'s
+  first error moves from frame 1211 `player_animation_id` to frame 1276 `x`,
+  errors 36 to 13, over the same 1265 compared frames.
 - Fix: the MHZ1 cutscene now stops the player's vertical speed as well.
   `Obj_MHZ1CutsceneKnuckles`'s `loc_62D04` (`docs/skdisasm/sonic3k.asm:129945`)
   calls `Stop_Object`, which clears `x_vel`, `y_vel` *and* `ground_vel`

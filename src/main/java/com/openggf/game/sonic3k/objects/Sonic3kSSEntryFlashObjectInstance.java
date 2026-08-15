@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -157,10 +158,60 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             // Sonic3kSpecialStageProvider.getTransitionSfxId() (sfx_EnterSS = $AF),
             // so we just trigger the request here.
             state = State.DONE;
-            services().requestSpecialStageEntry();
-            LOGGER.fine("SSEntryFlash: triggering special stage entry");
+            if (routesToSuperEmeraldArena()) {
+                // ROM loc_618AC (skdisasm/sonic3k.asm:128411-128417):
+                //   move.b #2,(Special_bonus_entry_flag).w
+                //   move.w #$1701,(Current_zone_and_act).w
+                //   move.w #$1701,(Apparent_zone_and_act).w
+                //   move.b #0,(Last_star_post_hit).w
+                //   move.b #1,(Restart_level_flag).w
+                //   move.b #1,(Respawn_table_keep).w
+                // Zone $17 act 1 is the Super Emerald special-stage arena
+                // (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA); it is reached by a
+                // level restart, not the Game_mode $34 special-stage entry.
+                LOGGER.fine("SSEntryFlash: restarting into the Super Emerald arena");
+                services().requestZoneAndAct(
+                        Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1, true);
+            } else {
+                // ROM loc_61892 (sonic3k.asm:128405-128410): Game_mode $34, the
+                // ordinary special-stage entry. sfx_EnterSS is played by
+                // GameLoop.enterSpecialStage() via
+                // Sonic3kSpecialStageProvider.getTransitionSfxId().
+                services().requestSpecialStageEntry();
+                LOGGER.fine("SSEntryFlash: triggering special stage entry");
+            }
             setDestroyed(true);
         }
+    }
+
+    /**
+     * ROM {@code SSEntryFlash_GoSS}'s destination branch
+     * (skdisasm/sonic3k.asm:128393-128401):
+     * <pre>
+     *   tst.b   subtype(a0)
+     *   bmi.s   loc_618AC          ; negative subtype always restarts into $1701
+     *   tst.w   (SK_alone_flag).w
+     *   bne.s   loc_61892          ; S&amp;K alone -> ordinary special stage
+     *   bsr.w   SSEntry_CheckLevel
+     *   beq.s   loc_61892          ; S3 level -> ordinary special stage
+     *   cmpi.b  #7,(Chaos_emerald_count).w
+     *   bne.s   loc_61892          ; not all Chaos Emeralds -> ordinary stage
+     *   bra.w   loc_618AC
+     * </pre>
+     * {@code SK_alone_flag} is always zero because the engine only models the
+     * locked-on ROM ({@code Sonic3k.java:424-427}). The flash's own subtype is
+     * copied from the parent ring by {@code SSEntryFlash_Init}
+     * (sonic3k.asm:128357), which is where this reads it from.
+     */
+    private boolean routesToSuperEmeraldArena() {
+        if (parentRing == null) {
+            return false;
+        }
+        if (parentRing.hasNegativeSubtype()) {
+            return true;
+        }
+        return parentRing.isSonicAndKnucklesHalfLevel()
+                && services().gameState().hasAllEmeralds();
     }
 
     @Override
