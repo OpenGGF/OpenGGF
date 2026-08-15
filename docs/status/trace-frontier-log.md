@@ -77146,3 +77146,110 @@ places the engine's rider at the boundary instead of one pixel inside is not.
   inverting them is only justified alongside a landed flip. No trace hydration,
   no `docs/` asset reads, no zone/act/route/frame predicate, no recorder or
   fixture change.
+
+## 2026-08-15 -- S3K top-solid zero boundary, round 3: the AIZ residual is a ground-sensor timing lag, not a landing-boundary defect (found, not landed)
+
+Base `8449c82a0` (develop). One worktree, JDK 21, own empty `java.io.tmpdir`,
+`target/surefire-reports` cleared before every run,
+`-Dtest.cds.argLine="-Xshare:off -Dopenggf.debug.aizprobe=1"`. Command in both
+states: `mvn -Ptrace-replay -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=<repo>/s3k.gen test`.
+Instrumentation was temporary (`ObjectSolidContactController` top-solid pass probe,
+`AbstractSprite` y-write stack probe) and is **not** part of this commit; nothing
+under `src/` is modified.
+
+### The premise handed to this round was wrong
+
+The brief asked "what stops the engine's player descending the last pixel?".
+**Nothing stops it.** MEASURED, with the boundary flag flipped to `false`
+(`GameRules.SONIC_3K` `CollisionRules.topSolidLandingAllowsZeroDist`), the
+engine's Sonic *does* descend, by **3 pixels**, and *does* land on
+`Obj_AIZTransitionFloor` inside the ROM window -- **16 frames late**.
+
+Per-solid-pass probe on `AIZTransitionFloor`, flag `false`:
+
+```
+36 x  topSolid=true distY=0 pY=379 pYprev=379 pYsub=f700 pYspd=0 air=false objY=3a0
+ 1 x  topSolid=true distY=3 pY=37c pYprev=379 pYsub=f700 pYspd=0 air=false objY=3a0
+```
+
+The object becomes solid on trace frame 5415 (`AIZ1BGE_FireTransition`
+allocates it at `sonic3k.asm:104689-104693` once `Camera_Y_pos_BG_copy >= $190`;
+the fixture's `aiz_fire_transition` aux row crosses `$190` at frame 5414), so the
+36 rejected passes run 5415-5450 and the descent lands on **frame 5451**. The ROM
+lands on **5435**. Lag = **16 frames**, which is exactly the previously recorded
+`status_byte` error span 6238-6252 on the complete run.
+
+### What performs the descent
+
+MEASURED (y-write stack probe, engine, flag `false`):
+
+```
+AbstractSprite.shiftY
+  CollisionSystem.moveForSensorResult:1492
+  CollisionSystem.resolveGroundAttachment:710
+  PlayableSpriteMovement.doAnglePos:3415
+  PlayableSpriteMovement.doAnglePosWithSensorUpdate:4766
+  PlayableSpriteMovement.modeNormal:798
+```
+
+That is the engine's `Sonic_AnglePos` / `Sonic_WalkVertical` floor-distance snap
+(`add.w d1,y_pos(a0)`). So the residual is **a ground-sensor result that arrives
+16 frames late**, not a top-solid landing-boundary defect and not an object
+compensation. The boundary flip is ROM-correct and this AIZ red is downstream of
+the terrain/ground-attachment schedule.
+
+### The ROM side agrees, and the arithmetic closes
+
+DERIVED from `sonic3k.asm` and MEASURED from
+`src/test/resources/traces/s3k/aiz1_to_hcz_fullrun`:
+
+- `Obj_AIZTransitionFloor` (104777-104790) passes `d1=$A0, d2=$10, d3=$10`;
+  aux slot 4 gives `objY = $3A0`, constant.
+- Ride seat = `objY - d3 - y_radius` (`MvSonicOnPtfm`, 41647-41681). Tails
+  (`y_radius = $F`) rides at `$381`; Sonic (`y_radius = $13`, aux `p1_y_radius`)
+  rides at `$37D`. Both match the fixture exactly.
+- `loc_1E45A` gives `d0 = (objY - d3) - (y_pos + y_radius + 4) = $379 - y_pos`.
+  Sonic parks on terrain at `y_pos = $379` from frame 5391, so `d0 == 0` every
+  frame -- the exact boundary the unsigned `blo` rejects.
+- The landing seat `y_pos + d0 + 3` is **identically `$37C`** for every `d0`, so
+  the fixture's `$379 -> $37C` row proves nothing about `d0`. What it does prove,
+  combined with the rejection of `d0 == 0`, is that the ROM's Sonic **must have
+  been at `y_pos >= $37A` at pass time on frame 5435** -- i.e. the ROM performed
+  the same floor-distance descent, on frame 5435 instead of 5451.
+- Tails is the control: he arrives at `y_pos = $37F` and the engine's probe
+  reports `distY=2` (`d0 = -2`) on his single pass, seat `$380`, ride `$381` --
+  engine and ROM agree field-for-field. **The shared landing model is correct;
+  only Sonic's approach timing differs.**
+
+### The `21/20` counter is a fit for exactly this lag
+
+`AizTransitionFloorObjectInstance`'s `FIRE_REFRESH_ZERO_REJECTS_*` counter (21/20
+by subpixel) exists solely to convert "the engine's ground sensor fires at 5451"
+into "land at 5435": with the flag `true` the engine's first `distY == 0` pass is
+5415, and 20 rejects lands it at 5435. It is a fitted frame count for a
+ground-sensor schedule and should be deleted with the flag flip, not replaced.
+
+### What is still open, and why it cannot be closed from the shipped fixture
+
+The remaining question is **why the engine's floor sensor under `x = $2FCD`
+reports `+3` sixteen frames after the ROM's**. Everything the fixture records is
+identical between 5415 and 5434 -- player position, subpixel, speed, radius,
+status, `events_routine_bg`, `dynamic_resize`, `object_load`, `kos_modules_left`,
+`current_zone_act`, and every object slot except the fire objects -- so the
+trigger is not visible at frame granularity in this recording.
+
+The recorder **already carries the exact probe needed**: the
+`aiz_handoff_terrain_state` event (`tools/bizhawk/s3k_trace_recorder.lua`,
+`V69_AIZ`) records `sonic_floor_distance`, `sonic_floor_probe_x/y`,
+`solid_pre_y`, `solid_surface_y` and `solid_delta`. In
+`aiz1_to_hcz_fullrun` it is present but **hooks-off**
+(`sonic_floor_seen: false`, `solid_vertical_seen: false`, all values zero), so
+the decisive ROM-side numbers are absent. A hooks-on regeneration of this window
+is the next step and was **not authorised for this round**.
+
+- **No constant, offset, nudge, tolerance or comparison shift was introduced
+  anywhere.** No per-object zero-distance allowance. No assertion weakened,
+  widened, excluded, made advisory, deleted or disabled; the two
+  `TestSolidObjectManager` assertions are untouched. No trace hydration, no
+  `docs/` asset reads, no zone/act/route/frame predicate, no recorder or fixture
+  change. Nothing under `src/` changed, so no sweep was run.
