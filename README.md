@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The walk/run animation handler reads past its script terminator, as the ROM does
+  (`bugfix/ai-s3k-walkrun-script-overflow`, merged 2026-08-15):** the ROM's walk/run handler
+  fetches its frame byte with an unchecked `move.b 1(a1,d1.w),d0` and tests only for the `-1`
+  terminator (`sonic3k.asm:24859-24864`) — there is **no bounds check on the index**. After a
+  Tails carry that is reachable: `Sonic_Control` skips `Animate_Sonic` entirely while
+  `object_control` bit 1 is set (`:22008-22010`), the carry attach writes
+  `move.w #$22<<8,anim(a1)` which zeroes `prev_anim` too (`:27390`) so the release compare
+  matches and `anim_frame` is never reset, and `Tails_Carry_Sonic` has meanwhile advanced that
+  shared `anim_frame` across a 17-entry table. `AniSonic00` is only 10 bytes, so index 13 reads
+  *into `AniSonic01`* and the hardware shows mapping frame `$24`. The engine clamped the
+  out-of-range index to 0 and showed `$07`. Animation scripts now carry the raw ROM bytes
+  following their own terminator, so an out-of-range index resolves through the real ROM window
+  instead of being clamped. Instrumented rather than inferred: a probe printed
+  `idx=13 remaining=9`, predicting an 11-frame hold of `$24` — which is exactly what the
+  recording holds, followed by `$07`, `$08`, `$01`. The MHZ segment frontier moves 75 → 315 over
+  an unchanged 1265 compared rows.
+
 - **S3K's zone/level table covers all 24 ROM zones
   (`bugfix/ai-s3k-zone-level-table`, merged 2026-08-15):** eleven segment classes could not load
   at all, throwing `Index 23 out of bounds for length 22` and friends from

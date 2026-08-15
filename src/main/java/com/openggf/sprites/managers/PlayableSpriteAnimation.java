@@ -439,6 +439,32 @@ public class PlayableSpriteAnimation {
             frameIndex = 0;
             sprite.setAnimationFrameIndex(0);
         }
+        if (frameIndex > script.frames().size()) {
+            // The walk/run special handler reads its frame byte with an
+            // unchecked `move.b 1(a1,d1.w),d0` and tests only `cmpi.b #-1,d0`
+            // (sonic3k.asm:24859-24864). An anim_frame stranded past this
+            // script's own frames by a longer table therefore reads on into the
+            // following script's bytes rather than restarting. That is exactly
+            // what happens when Tails puts the player down: sub_1459E writes
+            // `move.w #$22<<8,anim(a1)`, so prev_anim is zeroed alongside the
+            // carried anim byte (sonic3k.asm:27391) and the anim==prev_anim
+            // test at 24743 does not reset anim_frame, while
+            // Tails_Carry_Sonic has been advancing that same anim_frame across
+            // AniRaw_Tails_Carry's 17 entries (27417-27419).
+            int flatByte = script.flatByteAt(frameIndex);
+            if (flatByte >= 0 && flatByte != 0xFF) {
+                sprite.setMappingFrame(flatByte + frameOffset);
+                if (remaining >= 0) {
+                    sprite.setAnimationTick(remaining);
+                    return;
+                }
+                sprite.setAnimationTick(delay);
+                sprite.setAnimationFrameIndex(frameIndex + 1);
+                return;
+            }
+            frameIndex = 0;
+            sprite.setAnimationFrameIndex(0);
+        }
         if (frameIndex >= script.frames().size()) {
             if (!processEndAction(script)) {
                 return;
