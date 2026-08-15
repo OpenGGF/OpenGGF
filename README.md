@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The occupancy comparator compares the wrong number space
+  (`bugfix/ai-s3k-slot-occupancy-scoping`, docs merged 2026-08-15).** Scoping the blind spot below
+  corrected its own headline. S3K keeps a **32-bit ROM code pointer** in the first SST long, not an
+  id byte — `Process_Sprites` does `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
+  (`sonic3k.asm:35985-35988`) — and both the probe and the **committed** `TraceBinder.compareObjectNear`
+  truncate it to its low byte before comparing against the engine's *layout* object id. The tell:
+  every "ROM id" printed is even, because addresses are. **That is 67.6% of the reported
+  divergence**; the genuine presence/absence figure is 19,519 entries, not 60,274. So enabling
+  `compareObjectNearEvents()` for S3K today would measure nothing interpretable — fixing the
+  identity mapping is the prerequisite, which **inverts** the recommended first step. The residual
+  is a near-even mixture (41% correct slot, 23% permuted, 24% short, 12% excess), not a
+  permutation, and the ROM allocator is **already modelled faithfully** — including the
+  pre-increment that makes the first dynamic slot unreachable, and the `.lookup` division the
+  disassembly itself flags as a mistake, which was verified to evaluate correctly at all 90 parent
+  positions. Scoped `larger-than-one-round`.
+
 - **A comparison blind spot: S3K object-slot occupancy is never compared, and diverges from ROM
   everywhere (`bugfix/ai-hcz-29095-ring-slot-phase`, docs merged 2026-08-15).** Chasing why a held
   MegaChopper fix moved a ring collection 27,600 frames later produced a finding worth more than

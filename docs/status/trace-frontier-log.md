@@ -76573,3 +76573,64 @@ uncompared.
 permutation is closed, or (b) object occupancy is brought into the compared surface for
 S3K complete-runs, so the choice between the two layouts is made on ROM evidence rather than
 on which one happens to green a ring counter.
+
+## 2026-08-15 - S3K occupancy scoping: the probe's biggest class is an artefact, and the allocator is fine
+
+**Verdict: `larger-than-one-round`. Scoping only; nothing behavioural landed, no sweep owed.**
+Full write-up:
+[docs/architecture/audits/2026-08-15-s3k-object-slot-occupancy-scoping.md](../architecture/audits/2026-08-15-s3k-object-slot-occupancy-scoping.md).
+
+**Method.** Clean worktree at `05981829c`. Two `-Ptrace-replay` runs of
+`TestS3kHczCompleteRunTraceReplay` with the existing env-gated probe armed
+(`OGGF_SLOT_PROBE=1`, second run adding `OGGF_SLOT_PROBE_FULL=1`), `target/surefire-reports`
+removed before each. Both green, 2 tests / 0 failures / 0 errors, 2387 slot_dump frames compared.
+No file under `src/` was touched. Probe dumps 1.7 MB and 5.5 MB, uncommitted, under
+`$AGENT_SCRATCH_ROOT/tasks/s3k-slot-occupancy-scoping-20260815T081142Z-3601864-44037894/`.
+
+**Control reproduced exactly:** 2387/2387 divergent frames, 60,274 divergent slot-entries.
+
+**MEASURED — the previous entry's 60,274 overstates the divergence about threefold.** S3K keeps a
+32-bit code pointer in the first SST long, not an id byte — `Process_Sprites` does
+`move.l (a0),d0 / movea.l d0,a1 / jsr (a1)` (`docs/skdisasm/sonic3k.asm:35985-35988`) — so
+`slot_dump` reads `[[5,"0x000384B2"],[9,"0x0002D95C"],...]`. `SlotOccupancyProbe.parseId` masks
+that with `& 0xFF` and compares it to the engine's layout object id. **40,755 of the 60,274
+entries (67.6%) are that artefact.** The genuine presence/absence divergence is 19,519 entries on
+2025 frames. The same defect is in the *committed* comparator:
+`TraceBinder.compareObjectNear` calls `parseHexByte` on an S3K `type` of `"0x0001365C"`
+(`TraceBinder.java:352`, `598-610`). S1's `type` really is `"0x25"`, which is why the three S1
+classes can enable it. **So enabling `compareObjectNearEvents()` on an S3K class today would not
+measure occupancy at all** — it must not be the first step.
+
+**MEASURED — the divergence is a mixture, not a permutation.** Resolving identity through an
+inferred ROM-code → engine-class map (corroborated by the recorder's own `air_countdown_state`
+self-labelling of `0x00018164`), over 64,457 sampled instances: **26,614 correct object in the
+correct slot; 15,032 correct object in a different slot (permutation); 15,346 ROM objects with no
+engine counterpart; 7,465 engine objects with no ROM counterpart.** 96 of 2387 frames match
+completely, 186 are pure permutation, 2105 carry a population difference. Mean occupancy 19.9
+engine vs 23.9 ROM. Missing entries cluster in high slots (peak 470 at s37), excess in low slots
+(peak 259 at s11) — the signature of an under-populated pool whose linear allocator never climbs.
+
+**MEASURED — the allocator is not the cause; this candidate is refuted.** `AllocateObject` /
+`AllocateObjectAfterCurrent` (`docs/skdisasm/sonic3k.asm:37911-37944`) are a linear first-empty
+`tst.l` scan with a pre-increment that skips the first dynamic slot, and the engine carries all
+three properties — `SlotAllocator.java:28-60`, `47-50`, and `firstDynamicSlot = 4` cited at
+`ObjectSlotLayout.java:31-50`. The `.lookup` table's `lsr.w #6` division by `$40` against a `$4A`
+object size — the disassembly's own *"There's a mistake here"* — evaluates to exactly the correct
+remaining-slot count at all 90 parent positions, so it does not bite. A wrong search order would
+produce a permutation with matching population; we measure a population difference on 2105 frames.
+
+**Cause count, honestly: a long tail.** 2,235 missing-object episodes over 142 ROM routines, top 37
+covering 80%; 1,025 excess episodes over 85 engine classes. Tempered by three things: the largest
+contributor (`0x0001ABB6`, 453 episodes) is entirely one-frame lifetimes, i.e. spawn/death timing;
+the engine *has* the objects (inferred-map purity 1.00 for fixed-slot occupants, 0.84-0.97 for
+several high-volume dynamic ones); and shortfall/excess are coupled — `S3kAirCountdownObjectInstance`
+is simultaneously #4 excess and, as `0x00018164`, #4 missing, i.e. one object in the wrong slot
+counted twice.
+
+**Decomposition.** A: fix the S3K identity key (stop truncating a 32-bit code pointer, resolve it
+via each object's already-cited ROM routine address) — landable and measurable alone, changes no
+gameplay code and enables no comparison. B: re-measure the table above with real identity. C: close
+the population shortfall *before* the permutation, working routines by episode count. D: only then
+enable `compareObjectNearEvents()`, on a segment class first. **A blocks everything after it.**
+
+**`b31069c3f` untouched and should stay held at least through step C.**
