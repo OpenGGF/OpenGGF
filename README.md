@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The two top-solid compensations are confirmed fitted — and do not own the reds
+  (`bugfix/ai-s3k-topsolid-zero-boundary`, docs merged 2026-08-15).** Both `Obj_CNZTrapDoor` and
+  `Obj_AIZTransitionFloor` are plain `SolidObjectTop` callers with no landing gate or phase quirk,
+  so both engine compensations are pure compensation. The AIZ one — a per-player counter of
+  rejected zero-distance passes with thresholds **21/20** selected on the y sub-pixel — is a
+  fitted constant with no ROM owner at all. And the CNZ history sample is **contradicted by the
+  fixture**: at the landing frame the fraction advances by exactly `y_speed`, so the ROM landed
+  from the **current** position with `d0 = -1`; against the previous frame's position the same
+  computation gives `d0 = +2`, which `bhi` rejects outright. **But removing both alongside the
+  flag produces exactly the same five reds, same frames, same counts** as the flag alone — so they
+  are necessary but not sufficient, and the propagation chain is elsewhere. Held again under the
+  same discriminator. Two mechanisms now excluded, and the residual is narrowed to an
+  approach-phase defect: the ROM's rider is ≥1px inside on the landing frame while the engine sits
+  at exactly the surface for 16 frames.
+
 - **LRZ 208 root-caused to an unsigned compare, and held
   (`bugfix/ai-lrz-208-topsolid-zero-boundary`, docs merged 2026-08-15).** The briefed
   "sub-pixel accumulation" reading is **refuted**: `tails_y_sub` is *identical* at 208 and Tails'
