@@ -3,6 +3,52 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: implement `Obj_LRZCollapsingBridge` (object id `$31` in the **SKL** object
+  pointer set), Lava Reef's collapsing stone walkway. Only the *name* existed in
+  `Sonic3kObjectRegistry`; id `$31` resolved to `LbzRollingDrumInstance` for
+  `S3KL` and to `PlaceholderObjectInstance` for everything else, so in LRZ the
+  slab was not solid and both characters fell straight through it.
+  (`CollapsingBridgeObjectInstance` ports the unrelated `Obj_CollapsingBridge`,
+  id `$0F`.) Measured on the Sonic+Tails LRZ segment: the ROM has Tails land on
+  slot 5 at frame 100 (`interact` 0xB172, `object_code` 0x00039CA8 = `loc_39CA8`,
+  `y_radius` 28, `status` bit 4), while the engine had `tails_y_speed` 0x0FEF
+  against an expected 0x0000.
+  The port models the ROM routines directly: Init's `$30` countdown
+  `((subtype & $F) << 4) + 8` and the `byte_39CA4` parameter table read at
+  `(subtype & $F0) >> 2` (`docs/skdisasm/sonic3k.asm:77383-77409`, ROM `$39CA4`
+  = `40 20 08 00`); `loc_39CA8`'s arm-on-standing (`$32`) and top-solid call with
+  `d1` = `width_pixels` and a bare `d3` = `y_radius` = `$1C`
+  (`:77411-77437`); `loc_39D84`'s break -- 22 debris children built from
+  `word_39E20` (ROM `$39E20`, header `0015`), the respawn-flag clear at
+  `loc_39E08` and `sfx_Collapse` (`:77496-77547`); `loc_39CE8`'s `$2A`-frame
+  window in which the broken slab is *still solid and invisible* before deleting
+  itself (`:77439-77453`); `sub_39D1A`'s rider release (`:77458-77466`); and
+  `loc_39D3E`'s per-piece hold, 4-frame animation cycle keyed on `$34` and
+  `MoveSprite` fall (`:77470-77494`). Per **P54**, `SolidObjectTop` is handed one
+  vertical parameter, so the engine params are `of(d1, d3, d3)` and not
+  `of(d1, d3, d3 + 1)`; `d4` is loaded from the slab's own unchanged `x_pos`
+  (`:77432`), so there is no `MvSonicOnPtfm` carry. Per **P53**, the object
+  contains **no** `out_of_range`, `MarkObjGone`, `Delete_Sprite_If_Not_In_Range`
+  or `Go_Delete_SpriteSlotted` in any routine -- `Sprite_OnScreen_Test`
+  (`:77436`) is a draw test -- so it opts out of the shared camera unload. The
+  debris children keep `height_pixels` = 0 because `FixBugs = 0`
+  (`skdisasm/sonic3k.asm:38`) makes `:77527-77534` write `#$20` to
+  `width_pixels(a1)` twice instead of setting the height; the shipped ROM, and
+  therefore the traces, take that path.
+  `TestS3kSonicTailsLrzSegmentTraceReplay` first error moves from frame 100
+  (`tails_y_speed`) to frame 208 (`tails_y_speed` again, but now on the *fall
+  between* the first and second bridges -- `tails_y` 0x044A vs 0x044C, a
+  sub-pixel accumulation unrelated to this object). The whole first bridge --
+  the 10-frame ride, the frame-110 break, the 22-child spawn and the
+  post-break solid window -- now matches. The class stays red at that later,
+  unrelated frontier; the total rises from 11029 to 11942 because the run now
+  proceeds along the ROM's path instead of stopping dead at frame 100.
+  The `byte_39CA4` read is deferred out of the constructor (object constructors
+  run before `ObjectServices` is injected), the debris children are allocated
+  through `spawnChild(...)` -- which is `AllocateObjectAfterCurrent`'s
+  forward-from-own-slot contract -- and both `recreateForRewind` paths construct
+  inside `ObjectConstructionContext`, so `TestNoServicesInObjectConstructors`
+  reports exactly the two pre-existing violations it reported before.
 - Fix: implement `Obj_FBZDEZPlayerLauncher` (object id `$78` in both SK object
   pointer sets), the FBZ/DEZ floor launcher. It was a name-only registry entry
   and fell through to `PlaceholderObjectInstance`, so it was not solid at all:

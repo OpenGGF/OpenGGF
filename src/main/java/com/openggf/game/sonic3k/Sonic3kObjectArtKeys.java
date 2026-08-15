@@ -30,6 +30,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String COLLAPSING_BRIDGE_SOZ = "collapsing_bridge_soz";
     public static final String AIZ1_ROCK = "aiz1_rock";
     public static final String AIZ2_ROCK = "aiz2_rock";
+    public static final String LRZ_COLLAPSING_BRIDGE = "lrz_collapsing_bridge";
     public static final String LRZ1_ROCK = "lrz1_rock";
     public static final String LRZ2_ROCK = "lrz2_rock";
     public static final String BLOOMINATOR = "aiz_bloominator";
