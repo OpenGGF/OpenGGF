@@ -76916,3 +76916,133 @@ detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md
   value is read from the ROM at run time (`byte_39CA4` at `$39CA4`,
   `word_39E20` at `$39E20`) or cited to a single instruction. No assertion was
   weakened, excluded, disabled or otherwise touched, and no test setup changed.
+
+## 2026-08-15 -- LRZ Sonic+Tails segment frame 208: S3K `SolidObjectTop` rejects the zero-distance boundary (found, not landed)
+
+- **Command.** `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<discovered s3k .gen> -Dtest.cds.argLine="-Xshare:off" test`
+- **Context.** Base `d6f10cdd4` on `develop`, branch
+  `bugfix/ai-lrz-208-topsolid-zero-boundary`, two detached worktrees (control and
+  candidate) at the same commit.
+- **Baseline (measured, control tree).** `TestS3kSonicTailsLrzSegmentTraceReplay`
+  RED, 11942 errors, first error frame 208, `tails_y_speed` expected `0x07BD`
+  actual `0x0000`, `bootstrap_error_count 0`.
+
+### The previously briefed reading is refuted
+
+The round that landed the bridge port recorded frame 208 as *"sub-pixel
+accumulation on the sidekick's fall between the two bridges"*. It is not.
+Dumping every field that differs at 208 shows all of them flip together, and
+`tails_y_sub` is **identical** to the recording at 208 (`0xBD00` on both sides);
+it first differs at 209. The engine's entire frame-208 state --
+`y 0x044C`, `air 0`, `rolling 0`, `status_byte 0x0008` -- is exactly the
+recording's frame-**209** state. Tails' free fall matches the ROM byte for byte
+through 208 (`0x0443.3800 + 0x07.85 = 0x044A.BD00`, and `y_speed 0x0785 + 0x38
+= 0x07BD`). The engine simply performs the landing one frame early.
+
+### Root cause, cited to a single instruction pair
+
+Every S3K top-solid new-landing entry point -- `sub_1E410`, `loc_1E42E`,
+`SolidObjCheckSloped` and `SolidObjCheckSloped2` -- converges on `loc_1E45A`
+(`docs/skdisasm/sonic3k.asm:42005-42015`):
+
+```
+        move.w  y_pos(a1),d2
+        move.b  y_radius(a1),d1
+        ext.w   d1
+        add.w   d2,d1
+        addq.w  #4,d1
+        sub.w   d1,d0          ; d0 = objTop - (y_pos + y_radius + 4)
+        bhi.w   locret_1E4D4   ; C=0 and Z=0 -> reject; d0 == 0 falls through
+        cmpi.w  #-$10,d0
+        blo.w   locret_1E4D4   ; UNSIGNED: d0 <u $FFF0 -> reject
+```
+
+`cmpi.w #-$10,d0` is an unsigned compare against `$FFF0`, so `d0 == 0` borrows,
+sets C, takes `blo` and **returns without landing**. The accepted window is
+`d0` in `[-$10,-1]`: the player must already have penetrated the surface by at
+least one pixel. In engine terms `distY = -d0`, so `distY == 0` is not a
+landing.
+
+**Measured at LRZ frame 208** (probe at `ObjectSolidContactController`'s
+`resolveContact`): the landing object is the second `LrzCollapsingBridgeInstance`,
+anchor `(0x140, 0x478)`, `halfWidth 64`, `halfHeight 28`; Tails is at
+`y 0x044A` with `y_radius 14` (rolling). Object top = `0x478 - 28 = 0x45C`
+(1116); `y_pos + y_radius + 4 = 1098 + 14 + 4 = 1116`. **`d0 == 0` exactly.**
+The ROM rejects it and lands on the next frame from `y 0x0452` with `d0 == -8`,
+snapping to `y_pos + d0 + 3 = 1101` and then `-1` for Tails' rolling-to-standing
+radius change, giving the recorded `0x044C`. The engine accepts `d0 == 0` and
+lands a frame early.
+
+`GameRules.SONIC_3K`'s `CollisionRules.topSolidLandingAllowsZeroDist` is `true`;
+per the ROM above it should be `false` (S2 already sets `false`; only S1's
+`UNIFIED` `PlatformObject` path legitimately accepts the boundary).
+
+### Measured effect of the candidate change, and why it was NOT landed
+
+One-line flip of that flag, both profiles, both trees, `target/surefire-reports`
+cleared before every run:
+
+| run | control (`d6f10cdd4`) | candidate |
+|---|---|---|
+| default profile | 1915 classes, 15116 tests, 54 red | 54 red |
+| `-Ptrace-replay` | 843 tests, 53 failed / 11 errors, 64 red classes | 843 tests, 66 failed / 11 errors, 69 red classes |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` | 11942 errors, frame 208 | **6480 errors, frame 361** (`player_animation_id`) |
+
+Red-set difference by name, both directions (explicit set difference, not
+`comm`). Trace profile: **five newly red, zero newly green.**
+
+- `TestS3kAizTraceReplay` green -> 2 errors, frame 5435, `y` `0x037C` vs `0x0379`
+- `TestS3kAizCompleteRunTraceReplay` green -> 12 errors, frame 6238, same field
+- `TestS3kReplayReferenceClosureIntegration` green -> 12 errors, frame 6238, same field
+- `TestS3kCnzTraceReplay` green -> 7536 errors, frame 4604, `y_speed` `0x0000` vs `0x02E8`
+- `TestS3kCnzCompleteRunTraceReplay` green -> 7557 errors, frame 8328, same field
+
+Default profile differences were ambient: `TestGameLoopSpecialStageRewindBoundary`,
+`TestGameLoopSpecialStageRewindDebugBoundary`, `TestGameLoopAudioPresentationModes`,
+`TestEditorToggleIntegration`, `TestLevelEditorController` all pass in isolation
+on both trees. `TestSolidObjectManager` is not ambient: it fails deterministically
+on the candidate tree with
+`cnzTrapDoorSolidObjectTopAcceptsExactSurfaceBoundaryAndLandsOnePixelInside` and
+`aizTransitionFloorDelaysSonicExactBoundaryWhileAllowingInsideLanding`, and passes
+89/89 on the control tree.
+
+Those two assertions state *"S3K SolidObjectTop accepts the ROM d0 == 0
+boundary (sonic3k.asm:41996-42015)"* -- citing the very lines quoted above,
+which say the opposite. **No assertion was weakened, widened, excluded, made
+advisory, deleted or disabled, and no test setup was changed.** The candidate
+change was reverted; nothing under `src/` is modified by this commit.
+
+### Why hold, and the target for the next round
+
+The owners of the five reds are located: `CnzTrapDoorInstance` and
+`AizTransitionFloorObjectInstance`. `Obj_CNZTrapDoor` is ported faithfully
+(`sonic3k.asm:67221-67225` passes `d1 = $20`, `d3 = 9`; the engine's
+`SolidObjectParams.of(0x20, 9, 9)` matches), so its dependence on the zero
+boundary is not an object-geometry error. `CnzTrapDoorInstance
+.getTopSolidPlayerPositionHistoryFrames()` returns `1` -- the engine samples the
+**previous** frame's player position for that object's top-solid geometry, and
+its own javadoc explains this as a fix for *"using the just-moved player
+position accepts the exact top boundary one frame early"*: the same symptom
+measured here at LRZ 208, solved by a second, competing mechanism layered on top
+of the incorrect boundary.
+
+Per the discriminator in `docs/agent-workflow/briefing-trace-rounds.md`: the
+propagation chain from the cited fix to the five reds is **located but not
+fully traced** -- what the correct phase model is for those two objects once the
+boundary is right has not been established. Five newly red, zero newly green, and
+two of them on the protected green list. That is a hold, not a merge. Adding
+`providerAllowsZeroDistanceTopSolidLanding` to the two objects would be
+re-adding compensation for the defect being removed and was declined.
+
+**Next round's target:** the boundary flip above is ROM-correct and worth
++5462 errors and 153 frames on LRZ on its own. Land it *together with* a
+resolution of the top-solid player-position phase model -- specifically whether
+`getTopSolidPlayerPositionHistoryFrames` remains necessary for
+`Obj_CNZTrapDoor` and the AIZ transition floor once `distY == 0` no longer
+lands, and what the AIZ floor's `+3` seat should be. The two `TestSolidObjectManager`
+assertions must be re-derived from `loc_1E45A` at the same time.
+
+- **No constant, offset, nudge, tolerance or comparison shift was introduced
+  anywhere.** No trace hydration, no `docs/` asset reads, no zone/act/route/frame
+  predicate, no recorder or fixture change.

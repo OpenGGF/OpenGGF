@@ -2058,3 +2058,69 @@ it?* -- is universal.
 
 **Originating commit.** `<pending: LRZ collapsing bridge, segment frame 100 -> 208>`;
 see `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P56 -- S3K `SolidObjectTop` rejects the zero-distance boundary: the player must already have penetrated by 1px
+
+**Symptom.** A top-solid object is ported correctly -- right `d1`, right `d3`,
+right routine -- and a rider lands **exactly one frame early**. The trace prints
+this as a whole cluster of fields flipping together on one frame (`y_speed`
+expected non-zero actual `0`, `air` 1 vs 0, `rolling` 1 vs 0, `status_byte`
+`0x0006` vs `0x0008`, `y` off by a couple of pixels), and the engine's state on
+frame *N* is bit-for-bit the recording's state on frame *N+1*. The sub-pixel
+column matches on the failing frame and only diverges on the next one, so it
+reads like sub-pixel accumulation and is not.
+
+**Root cause.** Every S3K top-solid new-landing entry point -- `sub_1E410`,
+`loc_1E42E`, `SolidObjCheckSloped` and `SolidObjCheckSloped2` -- converges on
+`loc_1E45A` (`docs/skdisasm/sonic3k.asm:42005-42015`):
+
+```
+        sub.w   d1,d0          ; d0 = objTop - (y_pos(a1) + y_radius(a1) + 4)
+        bhi.w   locret_1E4D4   ; C=0 and Z=0 -> reject.  d0 == 0 has Z=1, falls through
+        cmpi.w  #-$10,d0
+        blo.w   locret_1E4D4   ; UNSIGNED compare against $FFF0
+```
+
+The `cmpi.w #-$10,d0` is an **unsigned** compare. For `d0 == 0` it computes
+`0 - $FFF0`, which borrows, sets C, takes `blo` and returns. The `bhi` above it
+lets `d0 == 0` through precisely *because* `Z` is set, so the zero case is
+filtered by the second test, not the first. The accepted window is therefore
+`d0` in `[-$10,-1]` -- **the player must already be at least one pixel inside
+the surface**. Touching it exactly is not a landing; the ROM waits one more
+frame and lands from further in.
+
+The landing then writes `y_pos(a1) = y_pos(a1) + d0 + 3`, so a `d0 == 0`
+landing would seat the rider `+3` px -- a distinctive 3-pixel `y` error if an
+engine accepts the boundary where the ROM does not.
+
+**What to check.** Compute `d0` yourself at the failing frame:
+`d0 = (object y_pos - d3) - (player y_pos + player y_radius + 4)`. If it is
+exactly `0`, this is the defect. Remember the rolling `y_radius` (Sonic `$E`,
+Tails `$E`) and that unrolling on landing adjusts `y_pos` by the radius delta
+(`1` for Tails, `5` for Sonic) *after* the `+3`.
+
+**Engine mapping.** `ObjectSolidContactController`'s `distY` is `-d0`, and the
+boundary lives in `GameRules`' `CollisionRules.topSolidLandingAllowsZeroDist`.
+S2 already sets it `false`; **S3K currently sets it `true`, which contradicts
+the ROM above.** Flipping it is correct in isolation but reds
+`TestS3kAizTraceReplay`, `TestS3kCnzTraceReplay` and their complete-run
+siblings, because `CnzTrapDoorInstance` and `AizTransitionFloorObjectInstance`
+model the same one-frame-early symptom with a *second* mechanism
+(`getTopSolidPlayerPositionHistoryFrames() == 1`, sampling the previous frame's
+player position) layered on top of the wrong boundary. The two must be resolved
+together -- do not "fix" it per object with
+`providerAllowsZeroDistanceTopSolidLanding`, which just re-adds the
+compensation.
+
+**Cross-game.** S1's `UNIFIED` `PlatformObject` path genuinely does accept the
+boundary, so this is an S3K/S2 contract, not a universal one. The habit --
+*read the condition codes, not the mnemonic's name* -- is universal: `blo`
+after `cmpi.w #-$10` is unsigned and excludes zero, which is invisible if you
+read the pair as "d0 >= -16".
+
+**Originating investigation.** LRZ Sonic+Tails segment frame 208 (11942
+errors). Flipping the flag alone moves it to frame 361 / 6480 errors; see
+`docs/status/trace-frontier-log.md`, 2026-08-15. NOT landed -- held pending the
+phase-model resolution above.
