@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **ICZ 2336 traced to the cold-start boundary, not an engine defect
+  (`bugfix/ai-icz-2336-giant-ring-emeralds`, docs merged 2026-08-15).** The `rings` 80-vs-30
+  divergence is a **single +50 award in one row** — every other ring change in the 18,043-row
+  segment is +1 — and it is the giant ring's `moveq #50,d0 / jmp (AddRings).l` at `loc_61794`.
+  The cascade actually opens one frame earlier with `player_animation_id` `0x1C` and
+  `player_mapping_frame` `0x00`, which are literally the capture branch's writes at `loc_6173A`.
+  A probe shows both ROM-derived terms the engine can evaluate are **correct** — the zone-half
+  classification is right and the earlier Super Emerald fix is not implicated. The single false
+  term is the emerald count: the replay holds **0** where the recorded run held **7**, which the
+  run manifest records. So this is the **standalone-segment bootstrap boundary** — run-level
+  progression is not carried in, exactly as start position is not — and seeding it would be
+  rule-4 hydration. Nothing landed; recorded as a known consequence of the existing bootstrap
+  debt, with pitfall **P50** ("some object branches read persistent run state, not level state")
+  added to both skill trees.
+
 - **Star Pointer orbit points die with their parent, as the ROM's child tail-call does
   (`bugfix/ai-icz-1983-anim`, merged 2026-08-15).** ROM child objects delegate their own lifetime
   to their tail call: `Child_DrawTouch_Sprite` (`sonic3k.asm:178053-178058`) reads `parent3`,
