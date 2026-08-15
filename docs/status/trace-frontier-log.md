@@ -75718,3 +75718,63 @@ Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -Ds3k
   `TestS3kMhzCompleteRunTraceReplay` red on both trees with the same 1 error
   (it did not move — the segment did not green);
   `TestS2CompleteEmeraldRunChain` green on both trees.
+
+## 2026-08-15 - MHZ arena camera_y: mechanism found, deliberately not fixed
+
+`TestS3kSonicTailsMhzSegmentTraceReplay` at `7f3dc3331`: 9 errors, 1265 compared rows, first
+error frame 1276, `camera_y` expected `0x0326` actual `0x0320`. **Zero diff this round — the
+honest fix is larger than the symptom.**
+
+**The inherited clamp reading was verified and is correct.** `$1701` indexes `LevelSizes`
+entry 47 (`ror.b #1` then `lsr.w #4` gives `$178` = 8*47), the arena entry
+`$1500,$1640,$320,$320`. `Camera_min_Y_pos` and `Camera_max_Y_pos` are adjacent words, so
+`move.l d0,(Camera_min_Y_pos).w` sets **both** to `$320`. The load clamp yields
+`$3AC - $60 = $34C`, clamped to `$320`. The engine's `$0320` is a faithful port.
+
+**Ruled out, not assumed:** `Do_ResizeEvents` is the only per-frame `max_Y` mover, and for
+`$1701` the `fixBugs = 0` `andi.w #$3E,d0` mis-index (which the disassembly itself comments as
+a bug) selects `No_Resize`, while the tail easing is a no-op because the same `move.l` set
+`Camera_target_max_Y_pos` equal to `Camera_max_Y_pos`. So `max_Y` stays `$320`.
+
+**The +6 is a mechanism, not a constant.** It is exactly one `MoveCameraY` grounded slow-scroll
+step — `move.w #$600,d1` (`sonic3k.asm:38487`), applied as `ext.l / asl.l #8 / add.l` = +6.0px
+in 16.16.
+
+**And it survives because S3K's bottom clamp is dead code here.** At `loc_1C202`
+(`sonic3k.asm:38561-38569`) the ROM reads `Screen_Y_wrap_value`, adds 1, subtracts, and reaches
+the hard clamp at `loc_1C216` **only if that subtraction borrows**. `Get_LevelSizeStart` sets
+`Screen_Y_wrap_value = -1` (`:38093`), so `d3 = 0`, the subtraction never carries, the clamp is
+skipped, and `sub.w d3,(a1)` is a no-op. This is S3K's generalisation of S1's hardcoded
+`subi.w #$7FF+1,d1`, and with the `-1` sentinel **it disables the bottom clamp for every
+non-wrapping S3K level** (only six sites write a non-`-1` value).
+
+So the ROM runs exactly **one** ordinary camera frame in the arena (`$320` → `$326`) and then
+stops. The engine runs **zero**.
+
+**Three probes, all reverted, one of which refuted the round's own hypothesis:**
+
+1. Disabling the engine's bottom clamp: **byte-identical null result** — refuting "the engine is
+   clamping a scroll step", and the reason the round kept digging.
+2. Skipping the load-time Y clamp: `camera_y` becomes `0x034C`, proving the engine's value comes
+   **entirely** from the load formula and never scrolls.
+3. Tracing every `Camera.updatePosition` exit: **zero scroll-path calls across all 61 arena
+   frames.** Decisive execution evidence — a missing sequence, not a clamp defect.
+
+**Why nothing landed.** The engine has no HPZ special-stage-entry arena at all: ROM object `$B5`
+exists only as a name in `Sonic3kObjectRegistry.java:1729` with no instance class. Making the
+camera scroll for exactly one frame, with no ported ROM owner for the stop, would be a **fitted
+frame count** — the rule-3 trap this round was briefed to avoid, and it declined it.
+
+**Handover, with confidence labels:**
+
+- **INFERRED:** the `camera_y` residual and the eight `hardware_timing` residuals are probably
+  ONE cause — the unimplemented arena sequence. The recording's `gameplay_frame_counter` is
+  frozen at 0 for all 61 arena rows, the one-frame camera step and the `KOS #521-528` window sit
+  in exactly those rows.
+- **MEASURED:** do **not** attack the camera clamp in isolation — probe 1 proves it is not on the
+  executed path today. It matters only once the arena runs camera frames, at which point
+  `loc_1C202`'s dead-clamp semantics must be modelled or the legitimate 6px step will be clamped
+  straight back and the fix will silently do nothing.
+- Modelling `loc_1C202` is a genuine **zone-agnostic** S3K accuracy gap with a wide blast radius
+  (it removes the downward `max_Y` clamp for every non-wrapping S3K level). It deserves its own
+  round measured on the full profile, not smuggling alongside an arena implementation.
