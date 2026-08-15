@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A Tunnelbot on the wrong ceiling probe, and the `V_int_run_count+3` address trap
+  (`bugfix/ai-mgz-tunnelbot-ceiling-probe`, merged 2026-08-15).** MGZ's "sign inversion" at 1909
+  was not a direction defect — **the ROM performs the same inversion, one frame later**. It is the
+  boss-bounce triple `neg.w` (`sonic3k.asm:20913-20915`) firing early because `Obj_Tunnelbot`
+  entered its rumble phase a frame late and a pixel low: through the ceiling-rise phase engine and
+  ROM agree pixel-for-pixel, then the engine measures one extra pixel of clearance and takes one
+  more `subq.w #1,y_pos`. Cause: `TunnelbotBadnikInstance` called the legacy S1/S2 object-ceiling
+  entry instead of the native probe modelling `ObjCheckCeilingDist`'s `eori.w #$F` low-nibble
+  transform — and **`MgzMinibossInstance` ports the same ROM routine and was already on the native
+  probe**, so two ports of one routine disagreeing was the tell. Frontier **1909 → 4603**
+  (+2694), errors 8269 → 6493. **Second defect found and fixed:** `V_int_run_count` is a
+  **longword** (`addq.l #1`, `:543`), so `move.b (V_int_run_count+3).w,d1` selects its *low byte* —
+  `+3` is an **address**, not arithmetic. Read as arithmetic it inverts bit 0 and flips the whole
+  rumble step. Two further sites carry the identical misreading and were **deliberately left**,
+  each needing its own blast radius. Catalogued as **P58**.
+
 - **Monitor solid exemptions are acquire-time only (`bugfix/ai-s3k-mgz-camera-321`, merged
   2026-08-15).** MGZ's frame-321 `camera_y` was **derived**: the air bit selects `MoveCameraY`'s
   arm, and player x/y still agreed at 321. **The camera subsystem was not involved.** The cause is

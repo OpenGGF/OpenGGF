@@ -2177,3 +2177,67 @@ skips to still clears the bit on exit* -- is universal.
 
 **Originating commit.** MGZ Sonic+Tails segment frame 321 -> 1909; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P58 -- S3K `ObjCheckCeilingDist` is the `eori.w #$F` / `FindFloor` probe, not the legacy object-ceiling entry
+
+**Symptom.** An object that rises into the ceiling and then does something
+periodic there ends up **one frame late and one pixel low, forever**. Nothing
+about the object looks wrong: its phase parity is right, its step values are
+right, its routine transitions happen. The trace prints this nowhere near the
+object -- as a *player* velocity divergence on the frame the player's path first
+grazes the object's hitbox, typically a whole-vector sign inversion if the
+object is a boss (`neg.w x_vel / y_vel / ground_vel`,
+`docs/skdisasm/sonic3k.asm:20913-20915`).
+
+**Root cause.** `ObjCheckCeilingDist` (`docs/skdisasm/sonic3k.asm:20351-20366`)
+is not a generic "distance to ceiling":
+
+```
+        move.w  y_pos(a0),d2
+        sub.w   d0,d2            ; d0 = y_radius
+        eori.w  #$F,d2           ; <-- low-nibble inversion
+        movea.w #-$10,a3
+        move.w  #$800,d6
+        moveq   #$D,d5
+        bsr.w   FindFloor
+```
+
+The `eori.w #$F,d2` changes the low-nibble arithmetic inside `FindFloor`, and
+collision data still comes from the height map indexed by X. In the engine that
+is `ObjectTerrainUtils.checkNativeUpwardCeilingDist`.
+`ObjectTerrainUtils.checkCeilingDist` is a **different contract** -- the legacy
+S1/S2 object-ceiling path -- and at the same geometry it can report one pixel
+more clearance. A `bpl`-style "keep going while `d1 >= 0`" loop therefore takes
+one extra step.
+
+**What to check.** Any S3K object porting `jsr (ObjCheckCeilingDist).l` must use
+`checkNativeUpwardCeilingDist` (or `checkCeilingDistWithFlipAwareAngle` when the
+ROM consumes `Primary_Angle` afterwards). Grep for `checkCeilingDist(` in the
+`sonic3k` packages: any hit is a candidate defect.
+
+**Measured case.** `Obj_Tunnelbot`'s `TunnelbotMiniboss_CeilingRise`
+(`:184769-184778`) rises `subq.w #1,y_pos` per frame and hands off when `d1`
+goes negative. `TunnelbotBadnikInstance` used the legacy entry and stopped one
+frame late, so every frame of the following `TunnelbotMiniboss_RumbleWait`
+(`:184790-184796`) `-2/+1` ladder sat 1px low and the player's boss bounce fired
+one frame early. `MgzMinibossInstance` ports the *same* ROM routine and was
+already on the native probe -- **two ports of one routine disagreeing is itself
+the tell**; when you find a duplicated routine, diff the two ports first.
+
+**Cross-game.** S1/S2 object ceiling checks legitimately use the legacy entry,
+so this is an S3K contract. The habit -- *a helper's name is not its contract;
+read which ROM entry point it models* -- is universal.
+
+**Bonus trap in the same file family.** `move.b (V_int_run_count+3).w,d1` is an
+**address**: `V_int_run_count` is a longword (`addq.l #1,(V_int_run_count).w`,
+`:543`), so `+3` selects its low byte. Porting it as `vIntRunCount + 3` inverts
+bit 0 -- and therefore inverts any `btst #0,d1` two-way step -- and rotates any
+`andi.b #7,d1` gate by three frames. Four engine sites carried this misreading;
+`MgzMinibossInstance` (both rumble routines) was fixed with the above,
+`AizFlippingBridgeObjectInstance:304` and `CluckoidBadnikInstance:171` are still
+outstanding.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 1909 -> 4603; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.

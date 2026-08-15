@@ -3,6 +3,30 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K MGZ Tunnelbot stops rising at the ROM's ceiling frame, so its
+  rumble ladder sits at the ROM's Y and Sonic bounces off it on the ROM's frame.
+  `TunnelbotMiniboss_CeilingRise` (`docs/skdisasm/sonic3k.asm:184769-184778`)
+  probes with `ObjCheckCeilingDist` (`:20351-20366`), which reaches `FindFloor`
+  through the caller's `eori.w #$F,d2` low-nibble transform. The engine called
+  the legacy `ObjectTerrainUtils.checkCeilingDist` entry -- the S1/S2
+  object-ceiling contract -- which reported one pixel more clearance at the stop
+  point, so the Tunnelbot took one extra `subq.w #1,y_pos` frame and entered
+  `TunnelbotMiniboss_RumbleWait` a frame late and a pixel low. Every subsequent
+  frame of the `-2/+1` rumble ladder was then 1px below the ROM's, which brought
+  the boss hitbox into the rising rolling player one frame early and ran
+  `Touch_...`'s boss bounce (`:20913-20915`, `neg x_vel / y_vel / ground_vel`)
+  at MGZ segment frame 1909 instead of 1910.
+  `MgzMinibossInstance`, which ports the same ROM routine, already used the
+  native probe.
+- Fix: the S3K MGZ miniboss's rumble step reads the low byte of
+  `V_int_run_count` rather than the counter plus three.
+  `TunnelbotMiniboss_RumbleWait` (`docs/skdisasm/sonic3k.asm:184790-184796`) and
+  `MGZMiniboss_DropRumbleWait` (`:184932-184940`) do
+  `move.b (V_int_run_count+3).w,d1`; `V_int_run_count` is a longword
+  (`addq.l #1,(V_int_run_count).w`, `:543`), so `+3` selects its low byte and is
+  an address, not arithmetic. `MgzMinibossInstance` computed `vIntRunCount + 3`,
+  which inverts bit 0 and therefore inverts the entire `-2/+1` (and `+2/-1`)
+  vertical rumble step and shifts the `& 7` debris/SFX phase by three.
 - Fix: S3K monitors no longer unseat a rider who changes state on top of them,
   and no longer force `Status_InAir` on a player who left the monitor long ago.
   `SolidObject_Monitor_SonicKnux` and `SolidObject_Monitor_Tails` both open with

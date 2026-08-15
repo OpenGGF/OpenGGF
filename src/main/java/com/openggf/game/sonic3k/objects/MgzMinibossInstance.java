@@ -249,7 +249,14 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateCeilingShake(int vIntRunCount) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = vIntRunCount + 3;
+        // ROM TunnelbotMiniboss_RumbleWait (docs/skdisasm/sonic3k.asm:184790-184796):
+        //   moveq #-2,d0 / move.b (V_int_run_count+3).w,d1 / btst #0,d1 / beq.s + / moveq #1,d0
+        // (V_int_run_count+3) is an ADDRESS: V_int_run_count is a longword
+        // (addq.l #1,(V_int_run_count).w, sonic3k.asm:543), so +3 selects its LOW
+        // BYTE. It is not "counter plus three" -- adding 3 inverts bit 0 and so
+        // inverts the -2/+1 rumble step, putting the boss's hitbox one frame out
+        // of phase with the ROM.
+        int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? -2 : 1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
@@ -287,7 +294,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateDropShake(int vIntRunCount, PlayableEntity playerEntity) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = vIntRunCount + 3;
+        // ROM MGZMiniboss_DropRumbleWait (docs/skdisasm/sonic3k.asm:184932-184940):
+        // same (V_int_run_count+3) low-byte read as updateCeilingShake above,
+        // with the step signs mirrored (+2 / -1).
+        int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? 2 : -1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
