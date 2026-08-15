@@ -76634,3 +76634,35 @@ the population shortfall *before* the permutation, working routines by episode c
 enable `compareObjectNearEvents()`, on a segment class first. **A blocks everything after it.**
 
 **`b31069c3f` untouched and should stay held at least through step C.**
+
+## 2026-08-15 - S3K object identity: PREMISE REFUTED. The pointer tables are not invertible
+
+**Base `572960f8d`. Nothing under `src/` changed; no Maven run, no sweep owed.** Follow-up to the
+object-slot occupancy scoping audit, whose Step A assumed the S3K object pointer tables could be
+inverted to give `code address -> object id`.
+
+**They cannot.** Both tables were read from the ROM at the addresses the object loader itself uses
+(`203C` immediates at ROM `0x01B6A8` / `0x01B6C4`, `sonic3k.asm:37411-37430`):
+`Sprite_Listing3 = 0x00094EA2` (256 entries, 219 distinct) and `Sprite_ListingK = 0x000952A2`
+(185 entries, 171 distinct). They read cleanly. **Only 7 of the 189 distinct code pointers in the
+HCZ complete-run `slot_dump` stream appear in them — 2,428 of 56,993 entries, 4.26%** (2.6% over
+the full 399,374-entry event stream). None of the twelve codes the previous audit named appears in
+either table.
+
+**Cause:** the S3K SST has no id field at any offset (`sonic3k.constants.asm:9,20`), and objects
+overwrite their own dispatch pointer with internal sub-routine addresses to advance state — 1,758
+`move.l #<label>,(a0)` sites in `sonic3k.asm`. The recorded value is a live program counter. The
+7 invertible codes are exactly the objects that dispatch through a `routine` byte instead
+(`Obj_Monitor`, `Obj_Bubbler`, `Obj_StarPost`, `Obj_EggCapsule`, `Obj_HCZLargeFan`,
+`Obj_HCZEndBoss`, `Obj_HCZWaterSplash`).
+
+**Containment rejected.** Mapping an address to the nearest preceding table entry reproduces
+several of the previous audit's inferred labels, but it puts `0x00085AD2` inside
+`Obj_HiddenMonitor`'s `0x2BCE` gap where the inferred map said `Obj_Poindexter`
+(`$98 -> 0x0008827C`), and yields `+0x2520`-and-larger offsets. It is a fitted rule wearing a ROM
+citation.
+
+**Effect on the frontier numbers.** The 19,519 presence/absence divergence and 2387/2387 frames
+stand unchanged (they never read `type`). The 41.3/23.3/23.8/11.6 mixture is **withdrawn**, not
+corrected — it is not currently measurable. `compareObjectNearEvents()` stays off for S3K. Full
+detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md](../architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md).
