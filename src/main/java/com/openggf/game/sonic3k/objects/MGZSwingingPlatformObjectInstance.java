@@ -154,11 +154,36 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         platformX = accumX >> 16;
         platformY = accumY >> 16;
 
-        // GetSineCosine writes only d1.w before sub_34074 swaps the full d1
-        // register, so its fractional fixed-point residue depends on the live
-        // SST execution position. Slots 6 and 7 inherit different d1 high-word
-        // sequences from the preceding native object slots, producing distinct
-        // endpoint-rounding angle sets while a rider is carried.
+        // KNOWN FITTED MODEL -- see docs/S3K_KNOWN_DISCREPANCIES.md.
+        //
+        // GetSineCosine writes only d1.w (`move.w SineTable(pc,d0.w),d1`,
+        // sonic3k.asm:3025), so the high word of d1 entering sub_34074 survives
+        // `swap d1 / asr.l #4` (sonic3k.asm:70487-70490) as the low twelve bits
+        // of the X step. Writing H for that inherited high word and C for the
+        // cosine word, the exact ROM endpoint is
+        //
+        //     platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
+        //
+        // and the engine computes the H == 0 case. The extra term is at most
+        // 5*$FFF = $4FFB, so it can only ever carry one pixel, and only when
+        //
+        //   k = (5 * (C & $F)) & $F >= 11  and  (H >> 4) >= ($10000 - k*$1000)/5
+        //
+        // The first half is ROM-derived and holds for every angle in the table
+        // below (measured: k is 12..15 for all thirteen). The second half needs
+        // H, which is whatever the previously executed SST slot left in d1; the
+        // engine does not model inter-object register carry, so the angle/slot
+        // table is a stand-in for it and is NOT reliable for an unseen
+        // recording. It is measured wrong for slot 6 / angle $62 in the
+        // s3k-sonic-tails MGZ segment (frame 10709: the +1 is taken, the ROM
+        // does not take it); removing the table fixes that frame but loses the
+        // slot 7 carry TestS3kMgzTraceReplay needs at frame 25770. Replacing it
+        // correctly requires modelling d1's inherited high word.
+        //
+        // The sine side needs no term: Process_Sprites does `move.l (a0),d0`
+        // before `jsr (a1)` (sonic3k.asm:35983-35988), so d0's high word is the
+        // high word of loc_3403A's own address, $0003, and `asr.l #4` of $0003
+        // is zero.
         if (hasLaterSlotRiderCosineResidue(angleByte, getSlotIndex())
                 && hasMainPlayerStandingBit(playerEntity)) {
             platformX++;

@@ -2350,3 +2350,45 @@ width byte, and the same default lives in the shared
 
 **Originating commit.** MGZ Sonic+Tails segment frame 4716 -> 10709; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+## P61 -- `swap` on a register `GetSineCosine` only word-wrote carries an inherited residue
+
+**Shape.** A ROM routine calls `GetSineCosine`, then does `swap dN` and a long
+shift or add on the result. `GetSineCosine` writes only `d0.w` and `d1.w`
+(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3025`), so after `swap` the *low*
+word of the register is whatever the caller -- or, for `d1`, whatever the
+**previously executed object slot** -- happened to leave in the high word. A
+straight `sin << 12` port silently models that residue as zero.
+
+**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70487`)
+does `swap d0 / swap d1 / asr.l #4` and then accumulates five steps, so the
+residue reaches the integer part:
+
+```
+platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
+```
+
+with `C` the cosine word and `H` the inherited high word. The carry is at most
+one pixel and is only *possible* when `k = (5 * (C & $F)) & $F >= 11`; whether
+it actually happens needs `H`. A rider standing on the object inherits the whole
+error, so it surfaces as a one-pixel player `x` with a byte-identical `x_sub` --
+never as an object field.
+
+**What to check.** Whenever you port a `swap`/`asr.l`/`add.l` sequence applied
+to a `GetSineCosine`, `Random_Number` or similar word-writing helper's output,
+work out where the register's high word came from before deciding it is zero.
+`move.l (a0),d0` in `Process_Sprites`' `sub_1AAFC` (`sonic3k.asm:35983-35988`)
+makes `d0`'s high word the high word of the object's own routine pointer --
+deterministic and usually small. `d1` is *not* set by the dispatcher and carries
+across object slots.
+
+**Do not fit an angle table for it.** The residue is not a function of the angle
+alone, so any per-angle table is right on the recording it was measured against
+and wrong on the next one. See
+`docs/S3K_KNOWN_DISCREPANCIES.md`, "MGZ swinging platform endpoint".
+
+**Cross-game.** S1/S2 `CalcSine` has the same word-write shape; check any
+`swap` that follows one.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 10709; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.

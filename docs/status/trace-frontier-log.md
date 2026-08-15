@@ -77590,3 +77590,43 @@ layout during analysis -- no runtime asset bytes. No zone/act/route/frame/game
 predicate, no recorder or fixture change. The hardware-timing port, the two
 demotions, the camera clamp and `topSolidLandingAllowsZeroDist` untouched; the
 two known `vIntRunCount + 3` misreadings left alone; no landed fix undone.
+
+## 2026-08-15 -- MGZ segment frame 10709: the swing-platform cosine residue table
+
+Base `e9d5eb610`, branch `bugfix/ai-mgz-swing-cosine-residue`. Outcome:
+**found-not-fixed, held.** No behaviour change landed; documentation only.
+
+- Command (both trees):
+  `rm -rf target/surefire-reports && JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=<own empty tmpdir> mvn -Ptrace-replay -Dtest=... -Dtest.cds.argLine=-Xshare:off test`
+- Control, `-Ptrace-replay`, base tree, class in isolation:
+  `TestS3kSonicTailsMgzSegmentTraceReplay` FAIL, 3950 errors, first error frame
+  10709, `x` expected `0x23DB` actual `0x23DC`. Reproduces the briefed frontier
+  exactly.
+- Field dump at 10709: the whole first cluster (frames 10709-10839) is isolated
+  one-frame `x` errors on the player plus their `camera_x` / `tails_x` /
+  `tails_cpu_target_x` cascades. `x_sub` matches the ROM byte for byte, and no
+  speed, angle or status field diverges. Frames 10840-12931 are clean. The first
+  non-cascading divergence of substance is at 12932.
+- Cause: the player is riding SST slot 6, object `0x53` MGZSwingingPlatform, at
+  byte angle `$62`. `MGZSwingingPlatformObjectInstance` adds `+1` to the platform
+  endpoint from a fitted angle/slot table, putting it at `$23D5` where the ROM
+  has `$23D4`; the rider is carried with it.
+- Experiment (`-Ptrace-replay`, fix tree, five MGZ classes): deleting the table
+  moves the segment to **3921 errors, first frame 12932** -- the entire 10709
+  cluster is gone -- but reds the protected cross-check
+  `TestS3kMgzTraceReplay` at **14 errors, first frame 25770**, `x` expected
+  `0x2A78` actual `0x2A77` (slot 7, different pivot group, where the ROM *does*
+  take the carry). Discarded under the unlocated-owner rule: the mechanism is
+  known but its input, `d1`'s inherited high word, is not modelled.
+- Frontier for this class is unchanged at 3950 / 10709. The mechanism, the exact
+  ROM formula and the removal condition are in `docs/S3K_KNOWN_DISCREPANCIES.md`.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift was added -- the round
+identified an existing fitted constant and declined to replace it with a
+differently incomplete one. No assertion weakened, widened, excluded, made
+advisory, deleted or disabled. No trace hydration; `docs/skdisasm` read for
+labels and offsets only, and `Levels/Misc/sine.bin` was read offline to check the
+derived carry condition, never at runtime. No zone/act/route/frame/game
+predicate, no recorder or fixture change, no landed fix undone.
