@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A fitted constant already in the tree, and the ROM mechanism it was approximating
+  (`bugfix/ai-mgz-swing-cosine-residue`, docs merged 2026-08-15).** MGZ 10709 is not a player
+  position bug: the player is riding a swinging platform whose endpoint the engine places one pixel
+  right. The `+1` comes from **`hasLaterSlotRiderCosineResidue` — a hardcoded list of 13 byte
+  angles added by two earlier commits**. The round derived what it approximates: `GetSineCosine`
+  writes **only `d1.w`** (`sonic3k.asm:3025`), so the swing step's `swap d1 / asr.l #4` carries the
+  **inherited high word** — whatever the previously-executed SST slot left in `d1` — into the low
+  bits of the X step. The carry is possible only when `k = (5*(C & $F)) & $F >= 11`, and
+  **all thirteen fitted angles satisfy that**, which is strong evidence the table is approximating
+  exactly this. The Y side needs no term, provably: `Process_Sprites` loads `d0` with the routine
+  address before the jump, whose high word shifts to zero. **The table cannot be right**, because
+  the carry depends on `H`, not on the angle alone. **Held**: deleting it advances the segment
+  10709 → 12932 but reds the protected `TestS3kMgzTraceReplay`, where the ROM *does* take the
+  carry. Now documented with the formula, the removal condition (*model `d1`'s inherited high word;
+  do **not** extend the table*), and pitfall **P61**. Also measured: the 10709–10839 cluster is a
+  self-correcting transient worth 29 errors, not 3950.
+
 - **P60 swept: a real defect class, but not a source of frontier movement
   (`bugfix/ai-p60-width-sweep`, merged 2026-08-15).** The stated tell — a `getOnScreenHalfHeight()`
   override with no width sibling — produced **zero true positives** beyond the original spike: all

@@ -1340,3 +1340,54 @@ which makes the comparison a checksum of the sidecar against itself. Rule 4's te
 whether a recorded input only changes *when* real engine work becomes ready; a start edge
 decides *what* a compared row says, so it is outside the exception however well the ROM
 behaviour is cited.
+
+## MGZ swinging platform endpoint: the inherited `d1` high word is not modelled
+
+`MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` is a fitted
+angle/slot table and is knowingly incorrect. It is recorded here rather than removed
+because removing it trades one measured red for another.
+
+**Mechanism (ROM-derived).** `GetSineCosine` returns the cosine with
+`move.w SineTable(pc,d0.w),d1` (`sonic3k.asm:3025`), a word write, so the high word of
+`d1` on entry to `sub_34074` is inherited from whatever ran before. `sub_34074` then does
+`swap d1 / asr.l #4` (`sonic3k.asm:70487-70490`), which pushes that inherited word `H`
+into the low twelve bits of the per-link X step, and accumulates five steps. With `C` the
+cosine word:
+
+```
+platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
+```
+
+The engine computes the `H == 0` case. The extra term is at most `5*$FFF = $4FFB`, so it
+can carry at most one pixel, and only when both of
+
+```
+k = (5 * (C & $F)) & $F >= 11        (H >> 4) >= ($10000 - k*$1000) / 5
+```
+
+hold. The first condition is fully ROM-derived; measured against `Levels/Misc/sine.bin`,
+all thirteen angles in the fitted table satisfy it with `k` in 12..15, which is
+independent confirmation that the table is approximating this mechanism and not something
+else. The second condition needs `H`, and the engine has no model of inter-object register
+carry through `Process_Sprites`, so the table stands in for it.
+
+The sine (Y) side needs no term: `Process_Sprites`' `sub_1AAFC` does `move.l (a0),d0`
+before `jsr (a1)` (`sonic3k.asm:35983-35988`), so `d0`'s high word is the high word of
+`loc_3403A`'s own address, `$0003`, and `asr.l #4` of `$0003` is zero.
+
+**Measured consequence.** At `e9d5eb610`:
+
+| change | `TestS3kSonicTailsMgzSegmentTraceReplay` | `TestS3kMgzTraceReplay` |
+|---|---|---|
+| table kept (current) | 3950 errors, first frame 10709 (`x` $23DB/$23DC) | green |
+| table removed | 3921 errors, first frame 12932 | 14 errors, first frame 25770 (`x` $2A78/$2A77) |
+
+At MGZ segment frame 10709 the player is riding slot 6 at byte angle `$62`; the table adds
+the carry and the ROM does not, so the platform sits at `$23D5` instead of `$23D4` and the
+rider is carried one pixel too far right. At `TestS3kMgzTraceReplay` frame 25770 the ridden
+platform is slot 7 of a different pivot group and the ROM *does* take the carry.
+
+**Removal condition.** Model `d1`'s inherited high word across the object execution order
+(the value left by the previously executed SST slot), then compute the carry from the
+formula above and delete both the table and this entry. Do not extend the table with more
+angles: it cannot be right, because the carry is not a function of the angle alone.
