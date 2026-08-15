@@ -2124,3 +2124,56 @@ read the pair as "d0 >= -16".
 errors). Flipping the flag alone moves it to frame 361 / 6480 errors; see
 `docs/status/trace-frontier-log.md`, 2026-08-15. NOT landed -- held pending the
 phase-model resolution above.
+
+---
+
+## P57 -- A solid object's acquire-time exemptions are tested only when its standing bit is CLEAR
+
+**Symptom.** A player lands correctly on a solid object, then is unseated the
+moment they change state on top of it -- most visibly on the roll-entry frame,
+where the trace prints `air` expected 0 / actual 1 and `status_byte` expected
+`0x000C` / actual `0x0006` on the same frame. `camera_y` diverges by ~3px on
+that frame too, *before* any player position field does, because `MoveCameraY`
+picks its grounded arm from the air bit: the camera is the symptom, the ride is
+the cause.
+
+**Root cause.** S3K's per-object solid wrappers open with the object's OWN
+standing bit and branch away before any exemption test:
+
+```
+SolidObject_Monitor_SonicKnux:
+        btst    d6,status(a0)        ; already standing on the monitor?
+        bne.s   Monitor_ChkOverEdge  ; -> continued ride; NOTHING below runs
+        cmpi.b  #2,anim(a1)          ; rolling animation? -> rts (not solid)
+        ...                          ; Knuckles glide / slide exemptions
+```
+(`docs/skdisasm/sonic3k.asm:40559-40576`; `SolidObject_Monitor_Tails` has the
+identical shape at `:40583-40590` with the competition-mode test.)
+
+So the roll/glide/competition exemptions are **acquire-time gates only**.
+`Monitor_ChkOverEdge` (`:40594-40612`) releases the rider on exactly two
+conditions: `Status_InAir` set, or the rider leaving the `[-d1, +d1*2]`
+horizontal span. An engine `isSolidFor()` that evaluates the exemptions
+unconditionally, every frame, unseats a rider who merely starts rolling.
+
+**What to check.** For every ported per-object solid wrapper, find the first
+instruction. If it is `btst d6,status(a0)`, everything after the `bne` belongs
+in the *acquire* path only, and `isSolidFor()` must short-circuit to `true`
+while that object is the player's ride.
+
+**The second half of the same contract.** The standing bit must then be
+*cleared* when the rider leaves -- `Monitor_ChkOverEdge`'s `.notonmonitor` arm
+does `bclr d6,status(a0)` (`:40613-40617`). If the engine latches its
+equivalent bookkeeping and never clears it, `Obj_MonitorBreak`
+(`:40628-40634`) later forces `Status_InAir` on a player who is nowhere near
+the object: it releases P1/P2 purely on `standing_mask|pushing_mask`. The
+measured case surfaced ~60 frames after the ride, as the player rolled into the
+same monitor at speed and was thrown airborne by their own break. **Fixing the
+acquire gate without the clear just relocates the divergence.**
+
+**Cross-game.** Not yet verified against S1/S2 wrappers, but the habit --
+*read what the first `btst`/`bne` skips over, and ask whether the routine it
+skips to still clears the bit on exit* -- is universal.
+
+**Originating commit.** MGZ Sonic+Tails segment frame 321 -> 1909; see
+`docs/status/trace-frontier-log.md`, 2026-08-15.

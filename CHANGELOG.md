@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K monitors no longer unseat a rider who changes state on top of them,
+  and no longer force `Status_InAir` on a player who left the monitor long ago.
+  `SolidObject_Monitor_SonicKnux` and `SolidObject_Monitor_Tails` both open with
+  `btst d6,status(a0) / bne Monitor_ChkOverEdge`
+  (`docs/skdisasm/sonic3k.asm:40559-40562,40583-40585`), so the roll-animation,
+  Knuckles glide/slide and competition-mode exemptions below that branch are
+  **acquire-time gates only**; once the monitor's own p1/p2 standing bit is set,
+  the ROM runs `Monitor_ChkOverEdge` (`:40594-40612`), which releases the rider
+  only on `Status_InAir` or on leaving the horizontal span.
+  `Sonic3kMonitorObjectInstance.isSolidFor` evaluated the exemptions on every
+  frame, so Sonic pressing down on top of a monitor started rolling and was
+  immediately thrown into the air. Second half of the same contract:
+  `Monitor_ChkOverEdge`'s `.notonmonitor` arm does `bclr d6,status(a0)`
+  (`:40613-40617`), which the engine never mirrored for P1 -- the latched
+  `P1_STANDING` bookkeeping later made `Obj_MonitorBreak` (`:40628-40634`) force
+  `Status_InAir` on a grounded player who was merely rolling into that monitor to
+  break it. Measured on the Sonic+Tails MGZ segment: at frame 321 the ROM has
+  `air` 0 / `status_byte` `0x000C` (rolling **and** on-object) where the engine
+  had 1 / `0x0006`, and the reported first error was `camera_y` `0x0665` vs
+  `0x0662` because `MoveCameraY` selects its grounded arm from the air bit. First
+  divergence moves from frame 321 to frame 1909. No constant, offset, tolerance
+  or comparison shift was introduced.
 - Fix: implement `Obj_LRZCollapsingBridge` (object id `$31` in the **SKL** object
   pointer set), Lava Reef's collapsing stone walkway. Only the *name* existed in
   `Sonic3kObjectRegistry`; id `$31` resolved to `LbzRollingDrumInstance` for

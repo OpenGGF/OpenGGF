@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Monitor solid exemptions are acquire-time only (`bugfix/ai-s3k-mgz-camera-321`, merged
+  2026-08-15).** MGZ's frame-321 `camera_y` was **derived**: the air bit selects `MoveCameraY`'s
+  arm, and player x/y still agreed at 321. **The camera subsystem was not involved.** The cause is
+  a monitor, in two halves. `SolidObject_Monitor_SonicKnux` opens
+  `btst d6,status(a0) / bne Monitor_ChkOverEdge` (`sonic3k.asm:40564-40566`), so the roll-anim,
+  Knuckles-glide and competition exemptions are **acquire-time only** — once riding, release comes
+  solely from `Monitor_ChkOverEdge` on `Status_InAir` or leaving the span. The engine re-tested the
+  exemptions every frame, so pressing down atop a monitor started the roll and instantly unseated
+  the rider. Fixing that alone reached only frame 384: `.notonmonitor` also does
+  `bclr d6,status(a0)` (`:40617`), and the engine skipped clearing `P1_STANDING` on
+  contact-cleared, so a latched bit made `Obj_MonitorBreak` force `Status_InAir` on a grounded
+  player rolling into that same monitor to break it. Clearing only `P1_STANDING` — pushing stays
+  independent, matching the ROM's separate mask — moves the frontier **321 → 1909** (+1588) over
+  an unchanged 30831 compared rows. Catalogued as **P57**.
+
 - **The S3K top-solid residual is a 16-frame ground-sensor lag, not a landing defect
   (`bugfix/ai-s3k-aiz-topsolid-approach`, docs merged 2026-08-15).** Third round on this, and the
   premise is refuted: **nothing stops the engine's player descending.** With the zero-distance flag
