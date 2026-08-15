@@ -27,7 +27,8 @@ import static com.openggf.physics.TrigLookupTable.sinHex;
  */
 public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    private static final int CAPTURE_RADIUS = 0x18;
+    private static final int CAPTURE_HALF_SPAN = 0x18;
+    private static final int CAPTURE_SPAN = 0x30;
     private static final int MAX_ACTIVE_REWARDS = 0x10;
     private static final int SPIKE_PENALTY_BUDGET = 0x64;
     private static final int RING_ANGLE_INCREMENT = 0x89;
@@ -151,9 +152,20 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isWithinCaptureRange(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = Math.abs(player.getCentreY() - currentY);
-        return dx < CAPTURE_RADIUS && dy < CAPTURE_RADIUS;
+        return isWithinCaptureSpan(player.getCentreX() - currentX)
+                && isWithinCaptureSpan(player.getCentreY() - currentY);
+    }
+
+    /**
+     * ROM {@code loc_4C026} (sonic3k.asm:99385-99394) tests each axis with
+     * {@code sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0 / bhs skip} --
+     * a biased *unsigned* window, so the accepted range is the half-open
+     * {@code [-$18, +$18)}, not the symmetric {@code |d| < $18} an abs()
+     * comparison gives. The two differ on exactly one value, {@code d == -$18},
+     * which the ROM captures and abs() rejects.
+     */
+    private static boolean isWithinCaptureSpan(int delta) {
+        return Integer.compareUnsigned((delta + CAPTURE_HALF_SPAN) & 0xFFFF, CAPTURE_SPAN) < 0;
     }
 
     private void updateSpawnRewards(AbstractPlayableSprite player, int frameCounter) {
