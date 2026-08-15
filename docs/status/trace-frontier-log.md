@@ -78242,3 +78242,114 @@ and is not a fitted constant; it is untouched and still required (it is what put
 player on the frame-913 boundary in the first place). `docs/skdisasm` used for
 labels and citations only. One stale javadoc corrected in `S3kSlotStageController`
 ("low byte" -> high byte); the code it documents was already correct and is unchanged.
+
+## 2026-08-15 -- S3K Slots bonus: the reward cadence read the wrong clock, and the ROM's ring runs on its spawn frame
+
+Target: `TestS3kSonicTailsSlotsBonusTraceReplay`, base `9900b3114`.
+Control re-measured on the unmodified tree as the round's first act and it
+matched the brief exactly: **544 errors, first error frame 2322, `rings`
+expected=131 actual=130**, `total_frames` 5259.
+
+### Frame 2322 -- every field that differs
+
+`rings` is the **only** field that differs at 2322, and the first three errors in
+the report are all `rings`:
+
+| start | end | field | expected | actual | cascading |
+|---|---|---|---|---|---|
+| 2322 | 2339 | `rings` | 131 | 130 | false |
+| 2341 | 2370 | `rings` | 140 | 139 | false |
+| 2372 | 2423 | `rings` | 155 | 154 | false |
+
+No position, velocity, animation, status or camera field diverges anywhere before
+2587. So this is not a physics divergence with a ring symptom: the award schedule
+itself is off. Rows 2340 and 2371 -- the gaps between those spans -- **match**.
+
+### Where the counts part, and what the fixture's own aux says
+
+Between rows 2297 and 2422 the ROM pays out 50 rings, one per two frames. The
+fixture's `slot_dump`/`object_appeared` stream names the mechanism exactly: the
+cage (`0x0004BF9A` = `loc_4BF9A`) sits in **slot 4**, and each `Obj_SlotRing`
+(`0x0001A9EE`) is allocated into slots **5, 6, 7, ... 27** -- every child lands
+*above* the cage. Spawns occur on odd `gameplay_frame_counter`, matching
+`loc_4C172`'s `btst #0,(Level_frame_counter+1).w` (`sonic3k.asm:99435`).
+
+Rows 2340 and 2371 are **lag frames** (`lag_counter=1`): `gameplay_frame_counter`
+repeats (0x923, 0x941) while `vblank_counter` advances. In `Level_frame_counter`
+space the ROM's cadence has no gap at all -- every award lands on an even counter
+value, 2322 through 2422 with no exception. The "3-row gaps" and the apparent
+parity flips are the lag rows, not ROM behaviour.
+
+Measured spawn-to-award delay, both fixtures: **25** `Level_frame_counter` ticks
+(standalone Knuckles: spawn 0x11B, award 0x134; Sonic+Tails: spawn 0x8F9, award
+0x912).
+
+### Two defects, which cancelled in the protected fixture
+
+Engine-side probes (temporary, reverted) logged spawn and award events against the
+trace row and both clocks:
+
+1. **The cadence gate read a free-running local counter.**
+   `Sonic3kBonusStageCoordinator` seeded `slotFrameCounter` from
+   `LevelManager.getFrameCounter()` once at stage setup and then post-incremented
+   it per update. Measured, that value equals `getFrameCounter()` exactly -- and
+   the engine's counter is advanced in `LevelManager.update()` *after* object
+   execution, so it reads **one below** the ROM's object-visible
+   `Level_frame_counter`. Every ROM main loop increments the counter between
+   `Wait_VSync` and `Process_Sprites` (`sonic3k.asm:10742-10744`,
+   `:63207-63209`), so an object running this frame sees the incremented value.
+   The engine's own convention already encodes this: `LevelManager`:922 passes
+   `frameCounter + 1` into `ObjectManager.update`, and `CnzBumperObjectInstance`,
+   `AizFallingLogObjectInstance`, `PointPokeyObjectInstance` and ten others read
+   `getFrameCounter() + 1` for exactly this reason. The slot cage did not, so
+   `btst #0` fired on the ROM's **even** frames instead of its odd ones.
+2. **The spawned ring never ran its routine on its spawn frame.**
+   `Obj_SlotRing`'s `$40` countdown is seeded to `$1A` (`sonic3k.asm:99482`) and
+   decremented once per routine-0 tick (`subq.w #1,$40(a0) / bne.w Draw_Sprite`,
+   `:35883-35884`). 26 ticks reaching zero at spawn+25 requires the first tick to
+   be on the spawn frame -- which is what the ascending object pass does when
+   `AllocateObject` (`:37911-37914`) returns a slot **above** the cage's, as the
+   aux shows it does here. The engine deferred every child's first tick to the
+   next frame, awarding at spawn+26.
+
+Each is worth one frame. In the standalone `TestS3kSlotsBonusTraceReplay` they
+cancel (spawn one row early, award one row late -> correct award row), which is
+why that class was green over both defects. In the Sonic+Tails payout the parity
+error lands the other way and they **add**, putting the whole schedule two rows
+late -- a persistent one-ring deficit at a two-row cadence.
+
+### Fix
+
+`Sonic3kBonusStageCoordinator` now supplies the ROM's object-visible
+`Level_frame_counter` (`getFrameCounter() + 1`, the established engine
+convention) instead of a free-running copy, and the slots runtime runs a
+just-spawned reward's routine once on its spawn frame **iff its allocated slot
+index is above the cage's** -- compared against the engine's own ROM-modelled
+slot allocation, not assumed. No constant was introduced: `$1A`, `$18`, `$30` and
+the `btst #0` gate are unchanged, and nothing adds a ring anywhere.
+
+### Result
+
+`TestS3kSonicTailsSlotsBonusTraceReplay`: **544 -> 541 errors**, frontier
+**frame 2322 (`rings`) -> frame 2587 (`y_speed`, expected=0x01D4 actual=0x0383)**,
+at an unchanged `total_frames` of **5259** (no comparator starvation). **All seven
+`rings` error spans are gone** -- including the later 2743 and the 5208 span where
+the deficit had grown to 21 -- so the whole ring-count divergence in this trace
+had this one origin. `player_mapping_frame` (385) is unchanged and remains the
+bulk of the residual, first group at 2701, downstream of the new frontier.
+
+Protected classes: `TestS3kSlotsBonusTraceReplay` green at unchanged **1024**
+frames, `TestS3kGumballBonusTraceReplay` green at **1277**,
+`TestS3kPachinkoBonusTraceReplay` green at **2900**.
+
+### Discipline
+
+No fitted constant, tolerance, offset or nudge -- the `+ 1` is the engine's
+existing ROM-semantics convention for `Level_frame_counter`, with fourteen
+precedents including `LevelManager` itself, and the slot comparison is structural.
+No assertion weakened, widened, deleted, disabled or made advisory. No zone/act/
+route/frame/game-name predicate. No trace hydration. `docs/skdisasm` used for
+labels and citations only. One stale comment removed: the claim that
+`AllocateObject` "typically lands in a slot at or before the cage's own position"
+is refuted by the fixture's own `slot_dump` (cage 4, rings 5..27) and by the
+engine's own allocator, which agrees.

@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Release-6 trace scope split, and the slot-bonus ring cadence
+  (`bugfix/ai-slots-ring-cadence` + scope gate, merged 2026-08-15).** Release 6 targets the Sonic
+  path through S1, S2 and S3, so the 30 S&K-half trace classes and six Knuckles classes — which
+  carried 49,261 of the 80,236 measured S3K trace errors — now run in a separate
+  `-Ptrace-replay-r7` profile rather than the release-blocking sweep. Nothing is weakened: they
+  assert exactly what they did before and still fail if they regress. See
+  [docs/status/trace-scope-release-6.md](docs/status/trace-scope-release-6.md).
+  Alongside it, the Slots ring award was two one-frame defects of opposite sign that cancelled in
+  the Knuckles fixture: the bonus coordinator drove the runtime from a self-incrementing counter
+  one below the ROM's object-visible `Level_frame_counter` (which `addq.w #1` raises between
+  `Wait_VSync` and `Process_Sprites`, sonic3k.asm:10742-10744), so `btst #0,(Level_frame_counter+1).w`
+  (:99470) sampled the wrong parity; and a just-spawned `Obj_SlotRing` never ran its `$1A` countdown
+  on its own spawn frame although the ascending object pass reaches a higher slot than the cage's.
+  All seven `rings` spans in the trace had this single origin. Errors 544 -> 541, frontier 2322 ->
+  2587, `total_frames` unchanged at 5259.
+
 - **The slot-bonus cage captures on the ROM's biased-unsigned window, not a symmetric radius
   (`bugfix/ai-r254-slots-cage`, merged 2026-08-15).** The Slots replay's frame-913 divergence was not
   physics: position snapped to a constant, all three velocities zeroed and sub-pixels untouched is
