@@ -228,6 +228,17 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **MHZ1's cutscene stops vertical speed, and the HCZ bar releases on a fresh press
+  (`bugfix/ai-s3k-mhz-cutscene-stop-and-hcz-bar-release`, merged 2026-08-15):** two independent
+  defects that shared a misleading appearance. `Obj_MHZ1CutsceneKnuckles` calls `Stop_Object`,
+  which clears `x_vel`, `y_vel` **and** `ground_vel` (`sonic3k.asm:177552-177556`); the engine
+  cleared only two of the three, so accumulated gravity carried into the cutscene clamp. And the
+  HCZ breakable bar's release test masks the **pressed** byte of `(Ctrl_1).w` only —
+  `andi.w #button_A_mask|…,d1` with low-byte masks (`:42820`), the held byte living at `+8` as
+  the neighbouring `btst #button_up+8,d1` shows — while the engine also accepted a *held* jump,
+  releasing the grab after one frame instead of the ROM's fifteen. Frontiers move 315 → 1211
+  (errors 210 → 36) and 561 → 1434.
+
 - **The ICZ snowboard ignores its scripted slopes while airborne, as the ROM does
   (`bugfix/ai-s3k-icz-snowboard-airborne-slope-gate`, merged 2026-08-15):** the ROM reaches the
   scripted-slope x-window tests only through `loc_39502`, entered solely when the air bit is
