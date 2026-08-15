@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Super Emerald arena restart no longer runs a title-card transition
+  hold. `Level:` only installs `Obj_TitleCard` at `loc_62B6`
+  (`docs/skdisasm/sonic3k.asm:7730-7736`) when `Current_zone_and_act` is not
+  `$1701` and `Act3_flag` is clear; for the arena requested by `loc_618AC`
+  (`sonic3k.asm:128415-128421`) it branches straight to `loc_62FE`, never
+  creating the title owner and never entering the `loc_62CC` wait loop, so the
+  destination is assembled and presented inside the same iteration. The engine
+  was requesting a title card for that load, which held both player slots
+  cleared and retained the previous camera for the load row.
+  `Sonic3kZoneFeatureProvider.shouldSuppressInitialTitleCard` now reports the
+  `$1701` arm of that branch, so the arena load row publishes the assembled
+  destination (measured: `TestS3kSonicTailsMhzSegmentTraceReplay` 13 -> 9
+  errors, `x`/`y`/`camera_x` at frame 1276 now match). `Act3_flag`'s arm of the
+  same ROM branch is not modelled -- the engine has no equivalent yet.
 - Fix: the Super Emerald arena restart now places the player from
   `Sonic_Start_Locations` instead of the `Saved2_` block. `loc_618AC`
   (`docs/skdisasm/sonic3k.asm:128411-128417`) writes

@@ -228,6 +228,17 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Super Emerald arena gets no title card, as the ROM branches around it
+  (`bugfix/ai-s3k-arena-restart-no-title-card`, merged 2026-08-15):** `Level:` installs
+  `Obj_TitleCard` only at `loc_62B6`, which first compares `Current_zone_and_act` against
+  `$1701` and branches away (`sonic3k.asm:7730-7736`) — so the arena requested by `loc_618AC`
+  never creates the title owner and never enters the `loc_62CC` wait loop; its load assembles
+  and presents inside one iteration. The recording agrees: the frame after the last MHZ row is
+  already the fully assembled arena, with zero held rows. The ROM's own literal comparison is
+  ported into the existing per-game zone-feature hook that already carries the AIZ1-intro arm of
+  the same branch, so **no shared transition machinery changed** — one method, one game module.
+  MHZ segment errors fall 13 → 9, with `x`, `y` and `camera_x` now matching exactly.
+
 - **A Super Emerald restart no longer places the player at the big-ring return position
   (`bugfix/ai-s3k-arena-restart-start-position`, merged 2026-08-15):** `loc_618AC` writes
   `move.b #0,(Last_star_post_hit).w` as part of the restart request (`sonic3k.asm:128419`), and

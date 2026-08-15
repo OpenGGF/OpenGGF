@@ -668,6 +668,20 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
+        // sonic3k.asm loc_62B6 (docs/skdisasm/sonic3k.asm:7730-7736): Level:
+        // compares Current_zone_and_act against $1701 before installing
+        // Obj_TitleCard, branching straight to loc_62FE when it matches. The
+        // Super Emerald arena entered through loc_618AC's
+        // Restart_level_flag/Special_bonus_entry_flag restart
+        // (sonic3k.asm:128415-128421) therefore never creates the title-card
+        // owner and never runs the loc_62CC wait loop: its load assembles and
+        // presents the destination inside the same iteration.
+        // The same branch also skips the card when Act3_flag is set; the
+        // engine has no Act3_flag equivalent yet, so only the
+        // Current_zone_and_act arm the ROM tests first is modelled here.
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
+            return true;
+        }
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }
