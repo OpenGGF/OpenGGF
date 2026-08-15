@@ -2570,3 +2570,58 @@ is `$0003`.
 
 **Originating investigation.** FBZ1 Sonic+Tails segment, frame 116 (frontier
 `116 -> 180`); see `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P65 -- A spawn-frame fallthrough runs the object's Animate tail too, not just its physics
+
+**Symptom.** A player-substitute object's position, velocity and sub-pixels match
+the recording from row 0, but its `mapping_frame` runs exactly one *executed*
+frame behind for the whole stage. The errors land on a fixed period (every N-th
+row, `frame_span: 1`) and never drift, and the emitted script is the correct one
+-- a phase offset, not a wrong animation.
+
+**Mechanism.** S3K's bonus-stage player `Obj_Sonic_RotatingSlotBonus`
+(`docs/skdisasm/sonic3k.asm:98655`) dispatches its routine and then, at
+`loc_4B97C` (`:98669-98671`), **unconditionally** does `move.b #2,anim(a0)` and
+`bsr.s sub_4B99E` -> `Animate_Sonic`/`_Tails`/`_Knuckles` (`:98679-98695`). Its
+routine-0 handler `loc_4B9CE` (`:98710-98741`) has no `rts` and falls straight
+through into the movement dispatcher, so the object's **creation call** performs
+a whole physics tick *and* the animation tail. On that call `anim` ($02) differs
+from the `prev_anim` left by `clearRAM Object_RAM` (`:7619`), so
+`Animate_Sonic`'s change branch (`:24741`) clears `anim_frame`/
+`anim_frame_timer` and falls through to `loc_12A2A`'s
+`subq.b #1,anim_frame_timer(a0)` (`:25151`), which underflows at once: the first
+script frame is published and the timer is loaded with
+`($400 - |ground_vel|) >> 8` on that same call.
+
+That creation call is the one-shot `Process_Sprites` pass `Level:` runs at
+`loc_6468` (`:7849-7855`) **before** `LevelLoop` first increments
+`Level_frame_counter` (`:7885-7889`), so it precedes the first recorded row of a
+bonus segment (whose row 0 already carries `gameplay_frame_counter == 1`).
+
+**The trap.** An engine bootstrap that reconstructs this represented pass will
+naturally model the *physics* half -- it is the visible one, since without it
+`y_speed` is half the recorded value on row 0. The animation half is invisible
+at row 0 (the published frame is script index 0 either way) and only shows up as
+a one-frame phase error on the *next* script step, hundreds of rows of identical
+values later.
+
+**What to check.** For any object whose routine-0 handler falls through, port
+the **whole** invocation, including whatever the object's shared tail
+(`Animate_*`, `Perform_Player_DPLC`, `Draw_Sprite`) does after the routine
+dispatch. Read past the `jsr ...Index(pc,d1.w)` to the end of the object's entry
+point before deciding what a spawn frame does.
+
+**Why a "+1 frame" fix would have been wrong.** The delay is not a constant: it
+is `($400 - |ground_vel|) >> 8` evaluated at the spawn call, where `ground_vel`
+is still 0. Modelling the pass reproduces both the value and the phase for any
+recording; adding one to a duration reproduces neither.
+
+**Cross-game.** S1/S2 have the same "one `Process_Sprites`/`ObjectsLoad` pass
+before the level loop" shape, and the same rule applies to any engine
+reconstruction of it.
+
+**Originating commit.** S3K Sonic+Tails Slots bonus segment, frontier
+`5 -> 913`, 900 -> 829 errors; see `docs/status/trace-frontier-log.md`,
+2026-08-15.

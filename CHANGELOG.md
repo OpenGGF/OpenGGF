@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K slot-machine bonus player's spawn-frame fallthrough now runs the
+  object's animation tail as well as its physics.
+  `Obj_Sonic_RotatingSlotBonus` (`docs/skdisasm/sonic3k.asm:98655`) dispatches
+  its routine and then unconditionally writes `anim = 2` and calls
+  `Animate_Sonic`/`_Tails`/`_Knuckles` at `loc_4B97C` (`:98669-98671,
+  98679-98695`), and its routine-0 handler `loc_4B9CE` (`:98710-98741`) falls
+  through into the movement dispatcher with no `rts`. So the object's creation
+  call -- the one-shot `Process_Sprites` pass `Level:` runs at `loc_6468`
+  (`:7849-7855`) before `LevelLoop` first increments `Level_frame_counter`
+  (`:7885-7889`) -- performs a full physics tick *and* the animation change:
+  `anim` ($02) differs from the `prev_anim` left by `clearRAM Object_RAM`
+  (`:7619`), so `Animate_Sonic`'s change branch (`:24741`) clears
+  `anim_frame`/`anim_frame_timer` and falls through into `loc_12A2A`'s
+  `subq.b #1` (`:25151`), publishing the first roll frame and loading
+  `($400 - |ground_vel|) >> 8`. The engine modelled only the physics half of
+  that pass, so the animation change happened on the first `LevelLoop`
+  iteration instead and every roll step ran one executed frame late for the
+  whole stage. Measured on `TestS3kSonicTailsSlotsBonusTraceReplay`: frontier
+  frame 5 (`player_mapping_frame`) -> 913 (`x`), 900 -> 829 errors, with zero
+  newly introduced errors (71 removed, none added) and all three standalone
+  Knuckles bonus classes still green.
 - Fix: S3K `sub_13EFC`'s off-screen `Tails_CPU_interact` compare no longer
   requires a previously-armed latch, and `Obj_FBZDEZPlayerLauncher` now
   publishes its ROM object-code high word. ROM performs `cmp.w (a3),d0`
