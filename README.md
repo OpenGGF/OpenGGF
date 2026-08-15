@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **HCZ 2478 traced through five links to a missing KosM producer
+  (`bugfix/ai-hcz-2478-kosm-ordinal-skew`, docs merged 2026-08-15).** A player `x_speed` value
+  turns out to be four objects deep. All five fields diverging at 2478 are the signature of
+  `HCZ_WaterTunnels` engaging (`sonic3k.asm:8848-8899`) — confirmed by the fixture advancing x by
+  exactly 8/frame with `x_sub` frozen, which is 4px of normal movement plus the routine's own
+  `add.l d0,x_pos` (`:8875-8879`). The engine cannot engage because the tunnel's gate
+  `btst d5,(_unkF7C7).w` (`:8870`) is stuck: the byte is cleared by `HCZLargeFan_Main` after its
+  8-frame drop (`:65634`), the engine's fan **activates on exactly the right frame**, and then
+  sits in art-loading forever. **Root cause: a four-deep KosM ordinal skew.** The fan's submission
+  takes ordinal 108 while the fixture records its completion as ordinal **112** — and recorded
+  ordinals 108–111 have *no engine producer at all*. Since release requires kind + ordinal +
+  fingerprint, an ordinal four behind can never be released by any row: permanent deadlock. The
+  fan, the gate byte and the tunnel are all correct downstream consumers. Catalogued as **P52**;
+  the unidentified producer is the next target.
+
 - **MegaChopper's offscreen gate and kill bounce, with one deliberate red
   (`bugfix/ai-megachopper-waitoffscreen-enemydefeated`, merged 2026-08-15).** `Obj_MegaChopper`'s
   first instruction is `jsr (Obj_WaitOffscreen).l`, which suppresses **every** routine including
