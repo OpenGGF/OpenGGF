@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the MHZ1 cutscene now stops the player's vertical speed as well.
+  `Obj_MHZ1CutsceneKnuckles`'s `loc_62D04` (`docs/skdisasm/sonic3k.asm:129945`)
+  calls `Stop_Object`, which clears `x_vel`, `y_vel` *and* `ground_vel`
+  (`sonic3k.asm:177552-177556`). `Mhz1CutsceneKnucklesInstance.routineWaitPlayer`
+  cleared only the horizontal and ground speeds, so accumulated gravity carried
+  into the cutscene clamp. `TestS3kSonicTailsMhzSegmentTraceReplay`'s first
+  error moves from frame 315 `y_speed` to frame 1211 `player_animation_id`,
+  errors 210 to 36, over the same 1265 compared frames.
+- Fix: the HCZ breakable bar releases on a fresh button press, not a held one.
+  The ROM's release test is
+  `andi.w #button_A_mask|button_B_mask|button_C_mask,d1`
+  (`docs/skdisasm/sonic3k.asm:42820`), and those masks are low-byte values
+  (`button_A_mask EQU 1<<button_A ; $40`, `sonic3k.constants.asm:169`), so it
+  reads the *pressed* byte of `(Ctrl_1).w` only -- the held byte lives at `+8`,
+  as the neighbouring `btst #button_up+8,d1` (`sonic3k.asm:42803`) shows.
+  `HCZBreakableBarObjectInstance` also accepted a held jump, so a button
+  already down released the grab after one frame instead of the ROM's fifteen.
+  `TestS3kSonicTailsHczSegmentTraceReplay`'s first error moves from frame 561
+  `x_speed` to frame 1434 `y_speed`, errors 1526 to 1445.
 - Fix: the ICZ snowboard's scripted-slope hand-off no longer fires while the
   player is airborne. The ROM reaches the `$1310..$132F` / `$2210..$222F` x
   window tests only through `loc_39502` (`docs/skdisasm/sonic3k.asm:76816`),

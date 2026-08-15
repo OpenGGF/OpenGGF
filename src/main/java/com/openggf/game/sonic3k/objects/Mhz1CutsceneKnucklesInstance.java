@@ -128,7 +128,11 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         } else {
             playerEntity.setCentreX((short) SONIC_CLAMP_X);
         }
+        // loc_62D04 calls Stop_Object (sonic3k.asm:177552-177556), which clears
+        // x_vel, y_vel AND ground_vel. Clearing only the horizontal pair leaves the
+        // player falling into the clamp with the gravity it had accumulated.
         playerEntity.setXSpeed((short) 0);
+        playerEntity.setYSpeed((short) 0);
         playerEntity.setGSpeed((short) 0);
         if (playerEntity instanceof AbstractPlayableSprite playable) {
             playable.setDirection(Direction.RIGHT);

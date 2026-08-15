@@ -310,8 +310,11 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setYSpeed((short) 0);
 
             // ROM: andi.w #button_A|B|C,d1 / beq locret — ABC to release
-            if (RawControllerInput.isHeld(player, AbstractPlayableSprite.INPUT_JUMP)
-                    || player.isRawControllerJumpJustPressed()) {
+            // ROM masks the LOW byte of (Ctrl_1).w, which is the *pressed* byte
+            // (the high byte is held, as the btst #button_up+8 tests above show).
+            // Release is therefore edge-triggered on a fresh A/B/C press; a jump
+            // button still held from before the grab must not release the player.
+            if (player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, pi);
                 // ROM: btst #6,subtype / bne locret — if non-destructive, don't break
                 if (!nonDestructiveRelease) {
@@ -359,8 +362,11 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
 
-            if (RawControllerInput.isHeld(player, AbstractPlayableSprite.INPUT_JUMP)
-                    || player.isRawControllerJumpJustPressed()) {
+            // ROM masks the LOW byte of (Ctrl_1).w, which is the *pressed* byte
+            // (the high byte is held, as the btst #button_up+8 tests above show).
+            // Release is therefore edge-triggered on a fresh A/B/C press; a jump
+            // button still held from before the grab must not release the player.
+            if (player.isRawControllerJumpJustPressed()) {
                 releasePlayer(player, pi);
                 if (!nonDestructiveRelease) {
                     triggerBreak = true;
