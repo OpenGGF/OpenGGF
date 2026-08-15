@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Diagnosed and withheld: the roll-stop push clear runs one routine too early
+  (`bugfix/ai-icz-1818-rollstop-push-timing`, docs merged 2026-08-15).** The ROM's roll-stop
+  block (`sonic3k.asm:22981-22986`) clears only the roll bit and sets radii and `anim`; it never
+  touches `Status_Push`. Push is cleared by `Animate_Sonic`/`Animate_Tails` on
+  `anim != prev_anim` (`:29364`, `:29686`) — **which runs after `Sonic_RecordPos`**. The engine
+  clears it inside the roll-stop movement path instead, so a push-free byte enters the follower
+  history ring and Tails' CPU routine 6 reads the wrong bit sixteen frames later. Removing the
+  eager clear moves the ICZ segment frontier 1818 → 1983 — **and reds
+  `TestS3kIczCompleteRunTraceReplay`, the named stop condition, so it was not landed.** Root
+  cause of that regression identified: the eager clear was **masking a separate leader push
+  over-set** around complete-run frame 6100. The ordering correction is right and must land
+  together with the second fix; both are recorded with probe evidence.
+
 - **REFUTED: the S3K bottom camera clamp is not dead code, and the engine was correct
   (`bugfix/ai-s3k-camera-bottom-clamp-refutation`, merged 2026-08-15).** Three rounds concluded
   `loc_1C202` was unreachable because `Get_LevelSizeStart` writes `Screen_Y_wrap_value = -1`
