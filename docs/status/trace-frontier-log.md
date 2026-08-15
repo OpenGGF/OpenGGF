@@ -75832,3 +75832,60 @@ gated the two `clampBottomBoundary` calls on `rule && !verticalWrapEnabled`, whi
 
 Corroboration of earlier work: `TestS3kSonicTailsMhzSegmentTraceReplay` did **not** move, exactly
 as predicted from the probe showing zero scroll-path camera calls across all 61 arena frames.
+
+## 2026-08-15 (round 2) - S3K camera clamp: paths ARE separable; the defect is scroll-step, not clamp
+
+Measured at **`8cddc4a0a`**. Nothing landed in `src/`; zero source diff.
+
+**The premise that the previous round gated the load-time clamp is REFUTED.** The two clamps
+live in different engine functions and always did:
+
+- **Load-time**: `Camera.updatePosition(true)` → `clampAxisWithWrap(y, minY, maxY)`
+  (`Camera.java:186`). Models `loc_1BF9C` (`sonic3k.asm:38265-38268`). **LIVE, correct.**
+- **Per-frame**: `clampBottomBoundary` (`Camera.java:593`), called from two sites in the
+  scroll path (`:402`, `:406`). Models S1 `SV_BottomBoundary`; the S3K equivalent
+  `loc_1C202` is dead.
+
+This round gated **only** the per-frame sites, via the previously-designed typed
+`CameraRules.bottomBoundaryClampGatedByVerticalWrap` (false/false/true), leaving the
+load-time `clampAxisWithWrap` untouched. **The same 12 classes went red, with identical
+first-error frames and expected/actual values**, including
+`TestS3kSonicTailsAizSegmentTraceReplay` frame 0 `expected=0x0390 actual=0x0396`.
+Separability was never the obstacle.
+
+**Disassembly re-verified in full, and it is worse than "the clamp is dead":**
+
+- `MoveCameraY` (`:38438`) grounded path, AIZ1 frame 0: `d0 = y_pos - Camera_Y_pos = $90`,
+  `d1 = d3 = Distance_from_top = $60`, `sub.w d1,d0` → `$30` ≠ 0 → `loc_1C172`; `d3 == $60`
+  and `ground_vel = 0 < $800` → scroll magnitude `$600` (6px); `$30 > 6` → `loc_1C1FA` →
+  `d1 = Camera_Y_pos + 6 = $396` → `loc_1C202`, whose clamp is unreachable.
+  **So the ROM listing predicts `$396` at frame 0 — the exact value the engine produces
+  with the clamp gated — while the hardware recording says `$390`.**
+- `Do_ResizeEvents` (`:38779-38812`) re-read line by line: it snaps `Camera_max_Y_pos` down
+  to `Camera_Y_pos & $FFFE` when shrinking and eases by 2 (or 8, airborne). It **never**
+  writes `Camera_Y_pos`. Not the pin.
+- `LevelSizes` AIZ1 (`:38097`) `yend = $390`; `Get_LevelSizeStart` computes
+  `$420 - $60 = $3C0`, `loc_1BF9C` clamps to `$390`, and `camera_x` computes to `0` via the
+  `bcc` underflow guard at `:38186` — **both axes of recorded frame 0 are exactly the
+  load-time formula**, and both hold static for 350+ frames while `player_x/player_y` never
+  change.
+
+**Therefore the residue is a scroll-step divergence, not a clamp divergence.** Over that
+static stretch the ROM executes **zero** net camera-Y steps; the engine executes **one**
+(+6, one full grounded `$600` step) and the bottom clamp erases it. The AIZ segment shows
+only **6** errors over 2290 rows with the clamp gated — a transient, not drift, which is the
+signature of an extra/mistimed step rather than a missing bound.
+
+**The open question is now narrower and better posed than last round's.** Not *"what pins the
+camera at max_Y"* — nothing does — but: **why does the engine take a camera-Y scroll step at
+AIZ1 frame 0 when the ROM takes none?** Candidates in priority order: (1) `Deform_lock` /
+`Scroll_lock`, which `Get_LevelSizeStart` clears at `:38069-38072` and the AIZ1 intro
+presumably re-sets, and which `DeformBgLayer` (`:38279`) honours by returning immediately;
+(2) `Camera_max_Y_pos_changing` forcing `d0 = 0` via `loc_1C1C2`; (3) subpixel accumulator
+`(a1)` phase. **Probe (1) first** — it is a single flag with a single guard and would explain
+a whole-cutscene divergence in one step.
+
+Until that is resolved the engine's unconditional per-frame bottom clamp stays, and it stays
+**knowingly wrong in mechanism**: it has no live ROM site behind it for non-wrapping S3K
+levels, and it is compensating for the scroll-step defect above. Do not re-attempt the gate
+in isolation; land it together with whatever fixes the extra step.

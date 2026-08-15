@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Investigated and deliberately not landed: the S3K per-frame bottom camera clamp
+  (`bugfix/ai-s3k-perframe-bottom-clamp`, 2026-08-15).** S3K has three camera-Y limits and only
+  one is dead: `loc_1BF9C` is a live load-time `max_Y` clamp, `loc_1C1F4` a live per-frame *top*
+  clamp, and `loc_1C202` a per-frame *bottom* clamp made unreachable by `Screen_Y_wrap_value = -1`.
+  Gating the engine's per-frame clamp to match reds twelve classes for zero greens, and
+  hand-tracing `MoveCameraY` explains why: for AIZ1 frame 0 **the ROM listing itself predicts
+  `$396`** — exactly what the engine produces ungated — **while hardware records `$390`**. The
+  recordings contradict not just the dead-clamp reading but the ROM's own scroll arithmetic,
+  which means the ROM is not executing `MoveCameraY` there at all; the fixture confirms the
+  camera and player never move for 350+ frames, both axes frozen at the load-time formula. So the
+  engine's clamp stays, knowingly wrong in mechanism, compensating for a scroll step the ROM
+  never takes. The correctly-posed question — why the engine takes a camera step where the ROM
+  takes none — is recorded with a probe order for whoever picks it up.
+
 - **The Super Emerald arena gets no title card, as the ROM branches around it
   (`bugfix/ai-s3k-arena-restart-no-title-card`, merged 2026-08-15):** `Level:` installs
   `Obj_TitleCard` only at `loc_62B6`, which first compares `Current_zone_and_act` against
