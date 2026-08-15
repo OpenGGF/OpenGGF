@@ -602,8 +602,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * (sonic3k.constants.asm:434 documents the field as "either $7FF or $FFF").
 	 * So every gameplay frame borrows and clamps. The non-borrowing arm
 	 * ({@code sub.w d3,(a1)}) is the vertical WRAP, reached only where
-	 * Camera_max_Y_pos >= the wrap value; the engine does not yet enable vertical
-	 * wrap for S3K. See docs/status/trace-frontier-log.md, 2026-08-15 round 3.
+	 * Camera_max_Y_pos >= the wrap value + 1 — which the ROM's looping levels do
+	 * arrange, by writing {@code #$7FF} over the {@code $FFF} default in their
+	 * screen-init routines (ICZ1 {@code loc_53648}, sonic3k.asm:110069, commented
+	 * "We're in a looping level!"; SOZ2 :114222/:114251; Slots :119055) or by
+	 * carrying a LevelSizes yend of {@code $1000}. The engine does model that arm:
+	 * {@code LevelManager.initCameraForLevel} calls
+	 * {@link #setVerticalWrapEnabled(boolean, int)} with the layout height for
+	 * every level whose LevelSizes ystart is negative — exactly the S3K looping
+	 * levels — and the recorded ICZ1/SOZ2/MGZ1 wraps replay correctly.
+	 * See docs/status/trace-frontier-log.md, 2026-08-15 rounds 3 and 4.
 	 */
 	private short clampBottomBoundary(short value) {
 		return value > maxY ? maxY : value;

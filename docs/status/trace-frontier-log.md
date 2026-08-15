@@ -75970,3 +75970,75 @@ conclusion, because the search was scoped to level-size and zone code. The gener
 `LevelSetup` write was found this round only by asking *which routine runs between
 `Get_LevelSizeStart` and the first `LevelLoop` iteration*. When a verified reading contradicts
 a recording, the recording wins and the missing write is upstream of where you are looking.
+
+## 2026-08-15 (round 4) - S3K vertical wrap: the gap does NOT exist as briefed; the engine wraps
+
+Measured at **`0c23c57e5`**. **The premise handed to this round -- *"`Camera.verticalWrapEnabled`
+defaults false with range `0x800`, and no S3K caller of `setVerticalWrapEnabled` exists, so the
+engine never takes the wrap arm for S3K at all"* -- is REFUTED on both clauses.** Only a stale
+javadoc sentence changed; no behavioural diff.
+
+**MEASURED (execution evidence at the decision site).** A temporary `System.out.println` in
+`Camera.setVerticalWrapEnabled` during `TestS3kSonicTailsIczSegmentTraceReplay`
+(`-Ptrace-replay`, 1 run / 1 F) printed, five times and never with any other value:
+
+```
+PROBE setVerticalWrapEnabled enabled=true range=0x800
+```
+
+`0x800` is exactly ICZ1's ROM `Screen_Y_wrap_value` (`$7FF`) `+ 1`. Probe reverted.
+
+**MEASURED (the callers the previous round could not find).**
+`LevelManager.initCameraForLevel:2833-2839` and `restoreCameraBoundsForCurrentLevel:3735-3741`
+both call `camera.setVerticalWrapEnabled(true, cachedFgHeightPx)` whenever
+`currentLevel.getMinY() < 0`, and `Camera.java:322-343` implements **both** ROM arms: the
+upward `and.w (Screen_Y_wrap_value).w,d1` of `loc_1C1E2` and the downward `sub.w d3,(a1)` of
+`loc_1C202`. The grep that found "no S3K caller" was looking for a game-specific one; the
+caller is generic, which is the *same* scoping mistake that cost rounds 1-3 the `LevelSetup`
+write.
+
+**MEASURED (reachability -- the wrap arm is heavily EXERCISED, not unexercised).** Scanning
+`camera_y` across all 202 committed `physics.csv.gz` fixtures for single-row drops of the wrap
+magnitude:
+
+| fixture segment | wrap events | evidence |
+|---|---|---|
+| `s3k-sonic-tails-complete-emeralds/icz` (ICZ1) | 10 bottom wraps | rows 230 `0x7f1`->`0x3`, 431, 685, 931, 1028, 2614, 2930, 6802, 8017, 18026 |
+| `s3k-knuckles-complete-superemeralds/icz` | 3 bottom wraps | rows 1481, 2091, 4022 |
+| `.../soz_2` (SOZ2) | 3 bottom + 1 top wrap | rows 10587 `0x7f6`->`0x5`, 22402, 24744; row 15702 `0xff04`->`0x700` (the `and.w` arm) |
+| `.../mgz` (MGZ1) | 2 bottom wraps | rows 58 `0xff6`->`0x3`, 1217 -- magnitude `$1000`, i.e. the `$FFF` default |
+
+**And they replay correctly today.** The ICZ segment's first error is frame **1818**,
+`tails_x` (3031 errors) -- *after* five recorded ICZ1 bottom wraps at rows 230/431/685/931/1028,
+none of which produce a `camera_y` divergence. Control reproduced exactly as briefed.
+
+**Why the engine's proxy works, and where it is still not ROM state (DERIVED).** The enable
+predicate is `LevelSizes ystart < 0`, not `Screen_Y_wrap_value`. The two coincide because the
+only S3K levels with a negative ystart -- MGZ1, ICZ1, SOZ2, SSZ1, CGZ (`sonic3k.asm:38096-38143`)
+-- are exactly the levels whose `Camera_max_Y_pos` equals wrap+1. Two residual divergences:
+
+1. **Non-looping levels whose yend is `$1000`** (HCZ1, HCZ2, MGZ2, CNZ2, LBZ1, DDZ, Slots, AIZ
+   intro, Ending): with the `$FFF` default the ROM *would* wrap at the bottom, the engine clamps.
+   **Not reachable in any committed fixture** -- measured maxima are HCZ `0xea0`, MGZ2 `0xee0`,
+   CNZ `0xb4c`, LBZ `0xa8c`, Slots `0x928`, all below `$1000`. DDZ/HPZ do exceed `$1000`
+   (`0x1ca0`), which requires a resize-raised `Camera_max_Y_pos` and therefore keeps
+   `cmp.w 6(a2),d1` from ever reaching either arm; no wrap-shaped jump appears in those rows.
+   A real but **unexercised** accuracy gap.
+2. **The wrap value changes mid-act, and a per-level latch cannot follow it.** `ICZ1_ScreenInit`
+   writes `$7FF`/`$7F0`/`$3C` at `:110069`, and the ICZ1 act transition restores
+   `$FFF`/`$FF0`/`$7C` alongside `Camera_min_Y_pos = $B20` at `:110320`. The single `icz`
+   fixture segment contains **both** regimes: bottom wraps through row 8017, then from row
+   **15465** `camera_y` climbs through `0x800` to `0x9cc` with no wrap at all (`icz_2` likewise
+   sits at `0x9d0`). The engine latches wrap at level init, so it cannot switch. **Reachable and
+   recorded, but 13,000 rows beyond the current ICZ frontier (frame 1818), hence unmeasurable
+   today** -- this is a target for whoever moves that frontier, not a fix that can be verified now.
+
+**Corrections to the record.** The `$7FF` writer at `:110069` is **ICZ1** (`ICZ1_ScreenInit` /
+`loc_53648`), not ICZ2 as rounds 3 and the round-4 brief both stated; ICZ2 has ystart `0` and
+does not loop. LevelSizes confirms it: ICZ1 is `0, $7000, -$100, $800`.
+
+**Nothing behavioural landed, deliberately.** Replacing the `ystart < 0` proxy with modelled
+`Screen_Y_wrap_value` state is a real improvement, but it is behaviour-neutral on every row any
+committed fixture compares, and it is camera code that produced 12-newly-red/0-green once this
+session. The one change made is to the `clampBottomBoundary` javadoc, whose closing sentence
+("the engine does not yet enable vertical wrap for S3K") is the false claim this round refuted.

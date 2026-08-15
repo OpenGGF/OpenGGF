@@ -240,8 +240,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
   to `$390`, matching the ROM in **outcome and mechanism**. So the earlier
   12-red/0-green measurement was hardware correctly reporting a wrong change, the "knowingly
   wrong in mechanism" caveat is **withdrawn**, and the discarded `CameraRules` gate must never
-  land. Newly visible and unmeasured: the engine never enables vertical wrap for S3K, so the
-  ROM's *wrap* arm is unmodelled for levels whose `max_Y` reaches the wrap value.
+  land. *(A follow-up claim that the engine never enables S3K vertical wrap was itself refuted —
+  see the next entry.)*
+
+- **Also refuted: S3K vertical camera wrap is implemented and heavily exercised
+  (`bugfix/ai-s3k-vertical-wrap-reachability`, merged 2026-08-15).** The suggestion that the
+  engine never takes the ROM's *wrap* arm is false on both clauses. `LevelManager` calls
+  `setVerticalWrapEnabled` for every level whose `LevelSizes` ystart is negative, and the engine
+  implements both arms of `loc_1C202`. Execution evidence: a probe during the ICZ segment replay
+  printed `enabled=true range=0x800` five times — exactly ICZ1's ROM `Screen_Y_wrap_value`
+  (`$7FF`) + 1. Scanning all 202 committed S3K fixtures for wrap-magnitude single-row drops
+  found the arm **heavily exercised and replaying correctly**: ICZ1 ten bottom wraps on the
+  Sonic+Tails route and three on Knuckles', SOZ2 three bottom plus one *top* wrap, MGZ1 two at
+  `$1000` magnitude. Correction to the record: the `$7FF` writer at `:110069` is **ICZ1**
+  (`loc_53648`), not ICZ2 — ICZ2 has ystart 0 and does not loop. Two residual gaps are recorded
+  but unmeasurable on current fixtures: non-looping levels with yend `$1000` would wrap on ROM
+  where the engine clamps, and ICZ1 changes its wrap value mid-act in a way a per-level latch
+  cannot follow.
 
 - **Investigated and deliberately not landed: the S3K per-frame bottom camera clamp
   (`bugfix/ai-s3k-perframe-bottom-clamp`, 2026-08-15).** S3K has three camera-Y limits and only
