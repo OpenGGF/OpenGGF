@@ -1868,3 +1868,42 @@ already does.
 own touch path, so the engine's ENEMY-category `applyEnemyBounce` never runs. In the ROM the
 player's ±`$100` bounce comes from `EnemyDefeated` (`sonic3k.asm:179752-179771`), which the badnik
 calls itself. Fixing the offscreen gate alone can leave the bounce still missing.
+
+---
+
+## P52 — A missing KosM producer deadlocks every *later* art consumer, and prints as player physics
+
+**Symptom.** A single player field diverges mid-run — `x_speed`, or a status bit — with no
+object anywhere near the reported frame. The real cause is an object several hundred frames
+earlier that queued Kosinski art and is still waiting for it, holding a global byte that gates
+something else entirely.
+
+**Mechanism.** S3K art readiness is released through the recorded hardware-timing port, and a
+release requires **kind + ordinal + submission fingerprint** to match. Ordinals are assigned in
+submission order. So if the engine fails to submit *any* `Queue_Kos_Module` job the ROM issued,
+every subsequent submission is assigned an ordinal that is N too low, its fingerprint will never
+match the recorded row for that ordinal, and **it never becomes ready — for the rest of the
+run**. One missing producer bricks every art consumer after it.
+
+**Why it hides.** An object stuck in its art-wait routine is not visibly broken: it simply does
+not act. If its post-art work writes a cross-object global, the divergence surfaces in whatever
+consumes that global. The measured case: `Obj_HCZLargeFan` (sonic3k.asm:65588-65634) clears
+`(_unkF7C7).w` after its eight-frame drop; `HCZ_WaterTunnels` (sonic3k.asm:8848-8899) is gated on
+that byte at `:8870`. A KosM ordinal four behind left the fan waiting forever, so the water tunnel
+never engaged, so the trace reported `x_speed 0x0400 vs 0x0300` — a player physics field, 1000+
+frames after the actual defect.
+
+**What to check, in this order.**
+1. Dump the fixture's `hardware_timing.jsonl` ordinals for the segment.
+2. Probe every engine `submitPrepared` with its ordinal, source and stack.
+3. Diff the two sequences. The first ordinal where they part is the missing producer; everything
+   after it is collateral.
+
+**Do not** "fix" the consumer, and do not release the handle by relaxing the fingerprint match —
+that is the hardware-timing exception leaking outside its port. Find the unimplemented producer.
+
+**Cross-game.** S1 PLC and S2 DPLC queues use the same ordinal-keyed port, so the same
+one-missing-producer-deadlocks-the-rest failure applies to all three games.
+
+**Originating investigation.** `<pending: HCZ Sonic+Tails segment frame 2478>`;
+see `docs/status/trace-frontier-log.md`, 2026-08-15.

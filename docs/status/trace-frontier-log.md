@@ -76666,3 +76666,71 @@ citation.
 stand unchanged (they never read `type`). The 41.3/23.3/23.8/11.6 mixture is **withdrawn**, not
 corrected — it is not currently measurable. `compareObjectNearEvents()` stays off for S3K. Full
 detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md](../architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md).
+
+## 2026-08-15 - S3K HCZ Sonic+Tails segment frame 2478: KosM ordinal skew starves the HCZ large fan
+
+- Worktree `<agent worktree>`, branch
+  `bugfix/ai-hcz-2478-kosm-ordinal-skew`, over base `61a939c43`. Diagnosis only;
+  no `src/main/` change landed.
+- Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsHczSegmentTraceReplay
+  -Ds3k.rom.path=s3k.gen -Dtest.cds.argLine="-Xshare:off" test`.
+  Result (reproduced twice, identical): **1135 errors**, first error frame
+  **2478**, `x_speed` expected `0x0400` actual `0x0300`.
+- Every field diverging on frame 2478, not just the alphabetically first:
+  `x_speed` `0x0400`/`0x0300`, `x` `0x1494`/`0x1490`, `air` `1`/`0`,
+  `status_byte` `0x0042`/`0x0040`, `player_animation_id` `0x000F`/`0x0000`.
+  Together those are the signature of `HCZ_WaterTunnels` engaging, not of a
+  physics constant.
+- **Owning ROM routine.** `HCZ_WaterTunnels` (sonic3k.asm:8848-8899) with
+  `HCZ1_WaterTunLocs` entry 3, `dc.w $1400,$A80,$15A0,$AC0,$400,0,0`
+  (sonic3k.asm:8936). It sets `x_vel=$400`, adds `x_vel<<8` straight into
+  `x_pos` (`:8875-8879`), sets `anim=$F` (`:8885`) and
+  `bset #1,status` (`:8886`). The fixture confirms it: from frame 2478 the ROM
+  advances `x` by exactly 8 per frame with `x_sub` frozen at `0xD500` -- 4px of
+  ordinary `x_speed=$400` movement plus 4px of the direct `x_pos` add.
+- **Why the engine does not engage.** `HCZ_WaterTunnels` is gated by
+  `btst d5,(_unkF7C7).w` (sonic3k.asm:8870). Measured with a temporary probe on
+  `HCZWaterRushObjectInstance.HCZBreakableBarState`: the engine holds that byte
+  at `3` for the whole of frames 2400-2500 and never clears it. The last writer
+  is `HCZLargeFanObjectInstance.update` line 82 (`PHASE_WAITING`), which mirrors
+  the ROM's `move.b #3,(_unkF7C7).w` in `HCZLargeFan_DeleteIfNotInRange`
+  (sonic3k.asm:65599-65601). The ROM's clear lives in `HCZLargeFan_Main`
+  (sonic3k.asm:65628-65634), after the object's eight-frame drop.
+- **The fan activates on the correct frame.** Probe: the engine's fan sits at
+  `(0x1450, 0x0A60)` and `shouldActivate` first returns true when the player
+  reaches `x=0x1472`, which is fixture frame 2468 -- exactly the ROM's
+  `playerX - $20 >= fanX` window (sonic3k.asm:65588-65597). Activation is right.
+- **The fan then starves on art.** It stays in `PHASE_LOADING_ART` for the
+  remaining 835+ probed frames: `S3kKosModuleQueue.isReady(handle)` is never
+  true, so `move.b #0,(_unkF7C7).w` is never reached, so the water tunnel is
+  gated off forever.
+- **Root cause: a four-deep KosM ordinal skew.** The fan's submission takes
+  hardware-timing ordinal **108** (`sha256:90ab34bd...`). The fixture's
+  `hardware_timing.jsonl` places the fan's `kos_module_queue` completion at
+  ordinal **112**, `raw_frame 2470` -- eight frames before 2478, matching the
+  ROM drop length exactly. Recorded module ordinals run 103..118; the engine
+  emits only 103,104,105,106 (`LoadEnemyArt`, `PLCKosM_HCZ1`'s four badniks,
+  sonic3k.asm:64354-64359), 107 (`Obj_HCZWaterWall` horizontal, recorded at
+  `raw_frame 751` -- still in sync), then jumps straight to the fan.
+  Recorded ordinals **108-111** -- completions at raw_frames 1023, 1028, 1031,
+  1035, each preceded by a `kos_decompression_queue` at 1022/1027/1030/1034 --
+  have **no engine producer at all**. A further unproduced burst of four sits at
+  raw_frames 2957-2967.
+- Because release requires kind + ordinal + submission fingerprint to match, an
+  ordinal that is four behind can never be released by any later row: the fan
+  asks for 108, whose recorded row passed at frame 1023 carrying a different
+  fingerprint.
+- **Not identified: the producer of recorded ordinals 108-111.** At the
+  submission frame (~1019-1020) the player is at `x=0x0DA8, y=0x0735`, camera
+  `(0x0D08, 0x06F0)`. `LoadEnemyArt` has one call site (sonic3k.asm:62298) and
+  cannot be it. That is the next step and the actual landable defect; the fan,
+  the bar byte and the water tunnel are all correct downstream consumers.
+- Secondary divergence noted, not landed because it does not move this frontier:
+  the engine's fan returns from `PHASE_WAITING` before its own off-screen
+  self-destroy, so a waiting fan writes `3` from anywhere in the level, where the
+  ROM's `HCZLargeFan_DeleteIfNotInRange` unloads it (sonic3k.asm:65599-65601).
+  The ROM writes `3` before deleting, so the resulting byte value is the same.
+- No constant, offset, tolerance or comparison shift was introduced, and no
+  assertion was touched.
+- Correction to the round brief: HCZ is `zone() == 1` in this harness (S3K zone
+  order AIZ=0, HCZ=1), not zone 2. The zone set is still `S3KL`.
