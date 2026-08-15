@@ -77964,3 +77964,93 @@ weakening**: `TestSidekickCpuDespawnParity` pinned the invented precondition
 is renamed `s3kOffscreenFirstStoodOnObjectDespawnsAgainstClearedLatch` and now
 asserts `CATCH_UP_FLIGHT` and `x_pos == $7F00`, with the ROM citation in its
 javadoc. Nothing was relaxed, widened, excluded, made advisory or disabled.
+
+## 2026-08-15 -- S3K Sonic+Tails bonus-stage frontiers: diagnosis only, nothing landed
+
+Base `e30fca635`. Three classes measured on a clean tree (JDK 21, CRC-verified
+`s3k.gen`, cleared `surefire-reports`/`trace-reports`):
+
+| class | errors | first error |
+|---|---|---|
+| `TestS3kSonicTailsSlotsBonusTraceReplay` | 900 | frame 5, `player_mapping_frame` expected=0x0097 actual=0x0096 |
+| `TestS3kSonicTailsGumballBonusTraceReplay` | 119 | frame 33, `tails_x` expected=0x00CF actual=0x00D1 |
+| `TestS3kSonicTailsGumball2BonusTraceReplay` | 144 | frame 33, `tails_x_speed` expected=-0x01B0 actual=0x0000 |
+
+**Nothing landed. Both causes are recorded here so the diagnosis is not lost.**
+
+### A briefing error worth recording
+
+The round was briefed on the discriminator "the standalone bonus classes are
+green, the Sonic+Tails ones are red, so the difference is Tails". **That was
+wrong twice**, and the round refuted it with measurement rather than working
+around it. `bonus_slots`, `bonus_gumball` and `bonus_pachinko`
+`metadata.json` all carry `"main_character": "knuckles"` and
+`"source_bk2": "s3-knux-multibonus-ss.bk2"` -- the green siblings are
+**Knuckles** traces from a different movie, so the discriminator is
+Sonic-vs-Knuckles. And `sidekick_present` is `0` on all 5400 compared rows of
+the Slots run (the lone `1` is the final departure row), with all 900 Slots
+errors on `player_*`/`camera_*`/`rings` and none on `tails_*`: **Tails is not in
+the Slots stage at all.** Slots and the Gumball pair are two unrelated causes.
+
+### Slots -- root cause, ROM-cited, not an off-by-one
+
+Expected/actual at frames 5,10,15,20,25 run `97/96, 96/97, 98/96, 96/98, 99/96`:
+the engine emits the *correct* script one gameplay frame late. Errors fall only
+on frames congruent to 0 mod 5 with `frame_span: 1` -- a phase shift, not drift.
+
+`AniSonic02` (`docs/skdisasm/General/Sprites/Sonic/Anim - Sonic S3.asm:40`) is
+`dc.b $FE, $96, $97, $96, $98, $96, $99, $96, $9A, $FF`, and its `$FE` dispatches
+to `loc_12A2A` (`docs/skdisasm/sonic3k.asm:25151`), which after `subq.b #1,
+anim_frame_timer(a0)` computes `timer = ($400 - |ground_vel|) >> 8` -- so
+`ground_vel = 0` gives timer 4, i.e. 5 executed frames per animation frame. The
+engine already models this exactly in `PlayableSpriteAnimation.updateRoll`;
+**the duration is correct and must not be adjusted.**
+
+Measured engine-advance rows vs ROM mapping-change rows:
+
+| | engine advances at rows | ROM changes at rows |
+|---|---|---|
+| Sonic+Tails Slots | 0, 6, 11, 16, 21, 26, 31, 36 | 5, 10, 15, 20, 25, 30, 35 |
+| Knuckles Slots (green) | 0, 5, 9, 13, 17, 21, 25, 29 | 5, 9, 13, 17, 21, 25, 29 |
+
+The ROM ran a gameplay frame *before* trace row 0 in which `Animate_Sonic`'s
+`anim != prev_anim` path (`sonic3k.asm:24741`) zeroed `anim_frame`/
+`anim_frame_timer`, `loc_12A2A`'s `subq.b #1` underflowed immediately, published
+`mapping_frame = $96` and loaded `anim_frame_timer = 4`.
+`TraceReplaySessionBootstrap.applyBonusStageEntry` reconstructs ROM state as of
+the start of row 0 but leaves those two fields at their post-`Object_RAM`-clear
+zeroes, so the engine performs that pass one gameplay frame later and every roll
+step stays one frame late -- 603 of the 900 errors. The remaining ~297
+(`x_speed` 56, `y_speed` 53, `air` 51, `g_speed` 38, `status_byte` 32) begin much
+later and were not chased.
+
+**The Knuckles green is accidental, and this is the demonstration.** Knuckles'
+`ground_vel` has already reached `-0x0C` at row 0, giving
+`($400-$C)>>8 = 3` where the ROM loaded 4 -- one frame of start skew absorbed by
+exactly one unit of timer. Sonic's `ground_vel` is `0000` on every row, so
+nothing absorbs it there. **A correct fix will therefore probably red
+`TestS3kSlotsBonusTraceReplay` and possibly its two siblings, and that red would
+be legitimate** -- it is shared bonus-entry machinery with three green classes in
+the blast radius, which is why this was left for a round of its own.
+
+The wrong fixes, named so they are declined next time: seeding
+`anim_frame_timer` from the fixture (trace hydration, rule 4), or adding 1 to a
+duration. The right fix is executing the ROM operation at `sonic3k.asm:24741`/
+`:25151` on the frame the ROM executes it.
+
+### Gumball pair -- mechanism found, owner not yet
+
+Both fixtures are byte-identical in the failure window, so these two are a
+genuine cross-check pair; the differing reported field is alphabetical noise.
+The ROM's Tails is airborne holding left: `sidekick_x_speed` steps by `-0x18`
+per frame (S3K's doubled airborne acceleration) while `sidekick_y_speed` rises
+by `+0x38`. He reaches `sidekick_x = 0x00CA` at row 0x24 and his `x_speed`
+zeroes at row 0x25 -- he hits the gumball machine's left wall at `x = 0x00CA`.
+The engine zeroes `x_speed` at row 0x21 with `x = 0x00D1`: **it stops 7px early**,
+and every later divergence in the class is flagged `cascading` off that.
+
+Next probe for whoever picks this up: instrument whatever zeroes the sidekick's
+`x_speed` on row 33 and compare its wall X against the ROM's `0x00CA`; check
+whether the engine is using the leader's x-radius or a stage boundary instead of
+the machine's own solid edge. `0x00D1` is also the player's x at row 0x1F, so
+rule out the engine's Tails colliding with Sonic.
