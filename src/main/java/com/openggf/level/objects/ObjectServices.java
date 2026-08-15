@@ -386,6 +386,13 @@ public interface ObjectServices {
      */
     void saveBigRingReturn(BigRingReturnState state);
 
+    /**
+     * ROM {@code move.b #0,(Last_star_post_hit).w} (skdisasm/sonic3k.asm:128414):
+     * clears the flag that gates the saved-position restore on the next level
+     * load ({@code loc_1BE46}, sonic3k.asm:38148-38151).
+     */
+    void clearLastStarPostHit();
+
     /** Requests a save at an exact gameplay write point. */
     void requestSessionSave(SaveReason reason);
 

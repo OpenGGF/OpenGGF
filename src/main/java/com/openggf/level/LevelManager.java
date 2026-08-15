@@ -2718,7 +2718,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
         int spawnY = -1;
         // ROM: Level_FromSavedGame sets Saved2_* position before level init.
-        if (transitions.hasBigRingReturn()) {
+        // Gated by Last_star_post_hit exactly as loc_1BE46 gates the restore
+        // (skdisasm/sonic3k.asm:38148-38151): the Super Emerald arena restart
+        // clears that flag (loc_618AC, sonic3k.asm:128414), so the arena load
+        // must place the player from Sonic_Start_Locations even though the
+        // Saved2_ block written by Save_Level_Data2 is still live for the
+        // return leg.
+        if (transitions.hasBigRingReturn() && transitions.isLastStarPostHitSet()) {
             BigRingReturnState br = transitions.getBigRingReturn();
             player.setCentreX((short) br.playerX());
             player.setCentreY((short) br.playerY());
@@ -4042,6 +4048,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#saveBigRingReturn(BigRingReturnState) */
     public void saveBigRingReturn(BigRingReturnState state) { transitions.saveBigRingReturn(state); }
+
+    /** @see LevelTransitionCoordinator#clearLastStarPostHit() */
+    public void clearLastStarPostHit() { transitions.clearLastStarPostHit(); }
 
     /** @see LevelTransitionCoordinator#hasBigRingReturn() */
     public boolean hasBigRingReturn() { return transitions.hasBigRingReturn(); }

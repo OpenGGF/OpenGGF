@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A Super Emerald restart no longer places the player at the big-ring return position
+  (`bugfix/ai-s3k-arena-restart-start-position`, merged 2026-08-15):** `loc_618AC` writes
+  `move.b #0,(Last_star_post_hit).w` as part of the restart request (`sonic3k.asm:128419`), and
+  `loc_1BE46` restores a saved position **only while that flag is non-zero**
+  (`:38148-38151`) — otherwise the load reads `Sonic_Start_Locations`, whose last entry is the
+  arena itself (`:38144`). The engine had no model of that flag, so its big-ring-return branch
+  placed the player at the MHZ capture position instead of the arena start. Probe-verified:
+  placement moves from `0x01D6,0x0678` to `0x1640,0x03AC`. **This lands as accuracy work that
+  stands without any trace — the assertion does not move**, because a separate fresh-title-card
+  transition boundary re-zeroes both player slots after the load and is not released until an
+  iteration that has not happened by the compared row. That boundary is now precisely located
+  and is the next target. Flagged and not fixed: the modelled flag has no engine re-arm site
+  because the arena exit is not implemented.
+
 - **The giant ring takes its Super Emerald branch in S&K-half levels
   (`bugfix/ai-s3k-ssentryring-super-emerald-branch`, merged 2026-08-15):**
   `SSEntryRing_Main`'s collision branch (`sonic3k.asm:128283-128291`) reaches the
