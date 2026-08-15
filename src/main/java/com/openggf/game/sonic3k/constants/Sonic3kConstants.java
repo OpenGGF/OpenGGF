@@ -1362,6 +1362,10 @@ public class Sonic3kConstants {
 
     // Map_LRZBreakableRock - LRZ Act 1 breakable rock mappings (11 frames)
     // Referenced at sonic3k.asm:43871: move.l #Map_LRZBreakableRock,mappings(a0)
+    // Map_LRZCollapsingBridge (9 frames, sonic3k.asm:77581); the label sits
+    // immediately after word_39E20 ($39E20 + 2 + 22*4 = $39E7A), confirmed by the
+    // frame pointer table read from the ROM at that address (0012 001A 0022 ...).
+    public static final int MAP_LRZ_COLLAPSING_BRIDGE_ADDR = 0x039E7A;
     public static final int MAP_LRZ_BREAKABLE_ROCK_ADDR = 0x0203D8;
 
     // Map_LRZBreakableRock2 - LRZ Act 2 breakable rock mappings (12 frames)

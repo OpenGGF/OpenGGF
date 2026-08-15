@@ -76868,3 +76868,51 @@ detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md
 - No constant, offset, tolerance or comparison shift was introduced, and no
   assertion was weakened, excluded, disabled or otherwise touched. No test setup
   changed. The hardware-timing port was not modified.
+
+## 2026-08-15 -- LRZ Sonic+Tails segment: `Obj_LRZCollapsingBridge` ported (frame 100 -> 208)
+
+- **Command.** `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<s3k.gen> -Dtest.cds.argLine="-Xshare:off" test`, JDK 21,
+  isolated worktree on branch `bugfix/ai-lrz-collapsing-bridge`, base
+  `c7e15e55b` (`develop`).
+- **Before (control, measured on this base).** RED, 11029 errors, 0 warnings,
+  `bootstrap_error_count` 0. First error frame **100**, `tails_y_speed`
+  expected `0x0000` actual `0x0FEF`.
+- **After.** RED, 11942 errors, 0 warnings. First error frame **208**,
+  `tails_y_speed` expected `0x07BD` actual `0x0000`. Frontier +108 frames.
+  The total rose because the run now continues along the ROM's path instead of
+  Tails falling through the level geometry at frame 100.
+- **Cause.** Id `$31` in the **SKL** pointer set is `Obj_LRZCollapsingBridge`
+  (`docs/skdisasm/sonic3k.asm:77383`). `Sonic3kObjectRegistry` carried only the
+  *name*; the factory for `$31` returned `LbzRollingDrumInstance` for `S3KL` and
+  `PlaceholderObjectInstance` otherwise, so LRZ's walkway was not solid.
+  Confirmed from the fixture's own aux, not inferred: at frame 100 Tails'
+  `interact` becomes slot 5 with `object_code` `0x00039CA8` (= `loc_39CA8`,
+  the routine the entry installs at `:77385`), `y_radius` 28 (`:77403`),
+  `status` bit 4 (p2 standing). The recorded solid seat also confirms the
+  parameters: `y_pos` `0x03A0` - `d3` `$1C` - Tails' `y_radius` 15 =
+  `0x0375`, which is exactly Tails' recorded `y` at frame 101.
+- **New frontier at 208 is a different defect.** The ROM has Tails still
+  airborne and rolling at frame 208 (`y` `0x044A`, `y_speed` `0x07BD`) and
+  landing on the *second* bridge (slot 6, `y` `0x0478`) at frame 209; the engine
+  has already landed, 2px lower (`y` `0x044C`), with `tails_y_sub` `0xBD00`
+  against `0x7A00`. That is sub-pixel accumulation on the CPU sidekick's fall
+  *between* the two bridges, not the bridge object. The first bridge -- the
+  10-frame ride, the frame-110 break, the 22-child debris spawn (recorded slots
+  7-28, matching `word_39E20`'s `dbf` count of 22) and the post-break solid
+  window -- now matches the recording.
+- **Intermediate measurement worth recording.** A first attempt reported the
+  object as *not solid* on its single break frame, because `loc_39D84` is
+  reached by a `bra.w` that skips `loc_39CCC`'s `SolidObjectTop` call. That is
+  literally true of the ROM but wrong in the engine: the generic platform path
+  reads "not solid" as a ride exit and kicked both players into the air at
+  frame 110 (frontier 110, `air` 0 vs 1, `status_byte` `0x0008` vs `0x0002`).
+  The ROM's break frame leaves the standing bits and the riders' `Status_OnObj`
+  untouched and `loc_39CE8` re-seats them the very next frame; only `sub_39D1A`
+  releases a rider. Routing that through
+  `preservesObjectManagedRideWhileNotSolidFor` was worse still (frontier fell to
+  101). Staying solid throughout is the accurate model for a stationary slab.
+- **No constant, offset, tolerance or comparison shift was introduced.** Every
+  value is read from the ROM at run time (`byte_39CA4` at `$39CA4`,
+  `word_39E20` at `$39E20`) or cited to a single instruction. No assertion was
+  weakened, excluded, disabled or otherwise touched, and no test setup changed.

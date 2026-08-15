@@ -2011,3 +2011,50 @@ instruction that loads the carry reference* -- is universal.
 
 **Originating commit.** FBZ Sonic+Tails segment frame 64: `Obj_FBZDEZPlayerLauncher`
 implemented; see `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P55 -- "The ROM skipped `SolidObjectTop` this frame" is NOT "the object is not solid"
+
+**Symptom.** A top-solid object is ported correctly and its own frontier clears,
+then a *new* divergence appears on exactly the frame the object changes routine:
+both characters report `air` 1 against an expected 0 and `status_byte` `0x0002`
+against `0x0008`, and the camera follows them a couple of pixels the wrong way.
+The object itself is in the right state; its riders have been thrown off it.
+
+**Root cause.** Many S3K objects change phase with a `bra.w` that jumps *over*
+their `SolidObjectTop` call, so the ROM performs no solid processing at all on
+that one frame. In 68k that is a no-op for the rider: `status(a0)`'s standing
+bits and the player's `Status_OnObj` are simply left alone, and the next
+frame's routine picks the rider straight back up. In the engine, a
+`SolidObjectProvider` that reports `isSolidFor() == false` is telling the
+*generic platform path* the ride has ended, and it unseats the player.
+"No solid call this frame" and "not solid this frame" are opposite statements.
+
+**Measured case.** `Obj_LRZCollapsingBridge`'s break routine `loc_39D84`
+(`docs/skdisasm/sonic3k.asm:77496`) is entered by `bra.w loc_39D84` at `:77416`,
+skipping `loc_39CCC`'s `SolidObjectTop` (`:77429-77435`); `loc_39CE8` calls it
+again on the following frame (`:77440-77445`), and only `sub_39D1A` (`:77458`)
+ever clears a rider's bits. Modelling the skip as `isSolidFor() == false` moved
+the LRZ segment frontier only from 100 to 110 instead of to 208.
+
+**What to check.** Read what the skipping routine *does to rider state*. If it
+neither writes the standing bits nor moves the object, the accurate engine model
+for a stationary platform is to stay solid: a skipped re-seat and a performed
+re-seat are indistinguishable in position, and staying solid preserves the
+"rider untouched" semantics the ROM actually has. Only report not-solid when the
+ROM routine genuinely releases the rider.
+
+**The tempting wrong fix.** `preservesObjectManagedRideWhileNotSolidFor` looks
+like it is for this, and it is not -- it is the object-control capture contract
+(S2 CNZ `Obj85`, `obj_control=$81`). Setting it on a plain top-solid platform
+changed the *landing seat* and drove the same frontier backwards, from 110 to
+101. Measure before adopting a flag whose javadoc describes a different object
+family.
+
+**Cross-game.** S1/S2 `SolidObject` callers have the same skip-the-call idiom;
+the question -- *does this ROM routine release the rider, or merely not touch
+it?* -- is universal.
+
+**Originating commit.** `<pending: LRZ collapsing bridge, segment frame 100 -> 208>`;
+see `docs/status/trace-frontier-log.md`, 2026-08-15.

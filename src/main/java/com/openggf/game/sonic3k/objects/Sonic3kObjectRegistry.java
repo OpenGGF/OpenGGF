@@ -301,6 +301,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.LBZ_ROLLING_DRUM,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // Id $31 in the SKL pointer set is Obj_LRZCollapsingBridge
+                        // (sonic3k.asm:77383), an unrelated object.
+                        return new LrzCollapsingBridgeInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

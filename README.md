@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The LRZ collapsing bridge, ported from the ROM
+  (`bugfix/ai-lrz-collapsing-bridge`, merged 2026-08-15).** The sibling of the FBZ launcher:
+  `Obj_LRZCollapsingBridge` (SKL id `$31`) was a name-only registry entry falling through to a
+  placeholder, so the bridge was not solid and Tails fell through the level at frame 100. Verified
+  from the **ROM binary**, not the listing — `0x39C50` is `20bc 00039ca8` (`move.l #$39CA8,(a0)`,
+  literally the recorded `object_code`) and `0x39E20` is `0015`, a `dbf` count giving the 22 debris
+  children the recorder shows spawning. LRZ frontier **100 → 208**. Two things worth recording:
+  the port's first draft modelled the ROM's break frame as *not solid* — literally true of the
+  ROM, but the engine's generic platform path reads that as a ride exit and launched both
+  characters, so **staying solid throughout is the accurate model** for a slab whose riders the
+  ROM never touches (**P55**). And `TestNoServicesInObjectConstructors` correctly flagged three
+  construction violations, all fixed properly rather than allow-listed. The new frontier at 208 is
+  a different defect: sidekick sub-pixel accumulation on the fall between the two bridges.
+
 - **The FBZ/DEZ player launcher, ported from the ROM
   (`bugfix/ai-fbz-dez-player-launcher`, merged 2026-08-15).** FBZ's frame-64 3px `y` was not a
   physics or coordinate issue at all. The fixture's own aux shows Sonic's `interact` becoming a

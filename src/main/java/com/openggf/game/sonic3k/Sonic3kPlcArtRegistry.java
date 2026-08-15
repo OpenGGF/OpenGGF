@@ -2142,6 +2142,16 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_STILL_SPRITES_ADDR, 0x0D3, 2,
                 null, new int[]{34}));
 
+        // LRZ Collapsing Bridge (SKL object $31): make_art_tile($0D3,2,1)
+        // (sonic3k.asm:77389).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_COLLAPSING_BRIDGE,
+                Sonic3kConstants.MAP_LRZ_COLLAPSING_BRIDGE_ADDR,
+                0x00D3,
+                2,
+                null
+        ));
+
         // AnimatedStillSprite: LRZ act 1 (base 0xD3) and act 2 (base 0x40D)
         if (actIndex == 0) {
             levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.ANIM_STILL_LRZ_D3,
