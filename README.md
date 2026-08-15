@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Census: the inventory boundary owns 22.9% of S3K's error mass, not most of it
+  (`bugfix/ai-s3k-inventory-gate-census`, docs merged 2026-08-15).** After two zones terminated at
+  the same save-game-inventory boundary, all 63 red S3K classes were classified by their **first
+  *substantive*** divergence — clustered from per-error start frames, because reported first errors
+  are repeatedly self-correcting transients (MGZ reported 10709 while 99% of its errors began at
+  17383). Result: **(a) inventory-gated 4 classes / 19,782 errors / 22.9%** — LBZ and CNZ are new
+  alongside ICZ and MGZ, all four showing the identical no-probe fingerprint of `loc_6173A`'s
+  capture writes against a ROM `rings` step of exactly `+0x32`; **(b) other frame-0 cold start 37
+  classes / 51.9%**; **(c) genuine engine defects reachable now, 9 classes / 25.2%**; **(d)
+  structural, no physics compared, 13 classes.** The census **explicitly declines to inflate**: a
+  further 14 classes merely *contain* a giant-ring award or Super transformation in their span, so
+  the decision **blocks** 18 of 63 classes holding 75.6% of errors — *"gap between 22.9% caused and
+  75.6% blocked is kept explicit and must not be quoted as one number."* **Correction to the
+  earlier map:** the eleven "cannot load" classes now all load, so `hpz`'s bin is no longer pending
+  zone-22 loadability. Next targets needing no decision: LRZ (11,942) and FBZ (8,599) — 24% of the
+  mass, both diverging thousands of frames before their inventory events.
+
 - **MGZ reaches the same cold-start boundary as ICZ (`bugfix/ai-mgz-13848`, docs merged
   2026-08-15).** Both briefed targets were refuted: 13848 is a **single** `camera_y` error that
   re-converges on the next frame, and 15532 is six self-correcting animation errors. The real

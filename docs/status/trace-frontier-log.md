@@ -77799,3 +77799,85 @@ for labels and offsets only. No zone/act/route/frame/game predicate, no
 recorder or fixture change, and no landed fix undone -- the
 `hasLaterSlotRiderCosineResidue` residue table was left untouched and not
 re-litigated.
+
+## 2026-08-15 -- S3K red-class census: the inventory-gated fraction, quantified
+
+Census round, no `src/` change. Full write-up:
+[docs/architecture/audits/2026-08-15-s3k-red-class-inventory-gate-census.md](../architecture/audits/2026-08-15-s3k-red-class-inventory-gate-census.md).
+
+### Command and control (MEASURED at `21bfdf082`, isolated worktree)
+
+```
+rm -rf target/surefire-reports
+mvn -Ptrace-replay -Dmse=off test -Dsurefire.runOrder=alphabetical \
+    -Dtest.cds.argLine="-Xshare:off" \
+    -Dsonic1.rom.path=<s1> -Dsonic2.rom.path=<s2> -Ds3k.rom.path=<s3k>
+```
+
+843 tests, 53 failures + 11 errors, **64 red classes** -- 63 S3K plus
+`TestS2CompleteEmeraldRunChain`. Total reported physics errors across the 51 S3K
+classes that report a count: **86,206**. Test total has grown from the 834
+recorded on 2026-08-14.
+
+### Red-set composition correction
+
+The eleven "segment cannot load" classes from the 2026-08-14 map are gone: every
+HPZ-act-2 / DEZ-act-2 / DDZ class now loads and reports an ordinary frame-0
+divergence. `TestS3kSonicTailsAizSegmentTraceReplay`, `Ss2`, `Ss6` and `Ss` are
+green at this commit; `TestS3kHczCompleteRunTraceReplay` (2 errors, first error
+frame 29095 `rings` exp 1 act 2) and `TestS3kMhzCompleteRunTraceReplay` (invalid
+rewind reference closure, traceIndex 12271) are red.
+
+### Classification
+
+| bucket | classes | errors |
+|---|---|---|
+| (a) inventory/progression-gated at first substantive divergence | 4 | 19,782 (22.9%) |
+| (b) other cold start, first error frame 0 | 37 | 44,700 (51.9%) |
+| (c) genuine engine defect | 9 | 21,724 (25.2%) |
+| (d) structural / harness, no physics comparison reached | 13 | -- |
+
+Bucket (a), each with first substantive frame and the fraction of its error
+groups starting at or after its giant-ring award:
+
+- `TestS3kSonicTailsLbzSegmentTraceReplay` 7,174 errors, frame 958, ring+50 at
+  959, 7,172/7,174 = 100.0%
+- `TestS3kSonicTailsCnzSegmentTraceReplay` 6,300 errors, frame 5754, ring+50 at
+  5755, 6,298/6,300 = 100.0%
+- `TestS3kSonicTailsMgzSegmentTraceReplay` 3,446 errors, frame 10709 reported /
+  17383 substantive, 3,410/3,446 = 99.0%
+- `TestS3kSonicTailsIczSegmentTraceReplay` 2,862 errors, frame 1983 reported /
+  2336 substantive, 2,858/2,862 = 99.9%
+
+**CNZ and LBZ are new** to the inventory-gated set; ICZ and MGZ were known. All
+four show the same fixture-visible pair -- engine `player_animation_id 0x1C` with
+`player_mapping_frame 0x0000` (`loc_6173A`, `sonic3k.asm:128290-128295`) against
+a ROM `rings` step of exactly +0x32 (`loc_61794`, `:128327-128328`).
+
+A further 14 classes contain a giant-ring award or a Super transformation
+(`anim = $1F`, `sonic3k.asm:23492`) inside their compared span, so the same
+decision gates them even after their own first divergence is fixed. Classes
+gated at some point: 18 of 63, holding 65,157 of 86,206 errors (75.6%) -- a
+blocking share, **not** an attributed one. Only 22.9% is attributed.
+
+### New frontier targets, workable without any fixture decision
+
+`TestS3kSonicTailsLrzSegmentTraceReplay` (11,942 errors, frame 208
+`tails_y_speed`) and `TestS3kSonicTailsFbzSegmentTraceReplay` (8,599, frame 116
+`tails_x_sub`) hold 24% of the S3K error mass between them and diverge long
+before their inventory events.
+
+### Regression
+
+No file under `src/` changed, so no engine behaviour moved and no verification
+sweep is owed. Numbers above are the baseline sweep itself plus 13 single-class
+re-runs, each with `target/surefire-reports` and `target/trace-reports` cleared
+first, because report filenames collide even within one run (`aiz` and `aiz_2`
+both write `s3k_aiz1_report.json`).
+
+### Discipline
+
+No constant, tolerance, offset or comparison shift added. No assertion weakened,
+widened, excluded, made advisory, deleted or disabled; no test or fixture file
+changed. No trace hydration, including experimentally. No zone/act/route/frame/
+game predicate. `docs/skdisasm` read for labels and line citations only.
