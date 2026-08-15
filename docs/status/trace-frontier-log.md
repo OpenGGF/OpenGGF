@@ -76383,3 +76383,61 @@ so no protected class can move. Control full trace profile at `d65860292`:
 is expected to clear wholesale with the emeralds present. Until then the two
 independent open items are the frame-1983 two-error `tails_animation_id` blip and
 the segment-isolation progression gap recorded above.
+
+## 2026-08-15 - HCZ 1434 root-caused: two stacked MegaChopper defects; not landed
+
+`TestS3kSonicTailsHczSegmentTraceReplay` at `0f4f4f112`: 1445 errors, first error frame **1434**,
+`y_speed` expected `-0x00C0` actual `0x0040`. **Root-caused with exact ROM arithmetic. Nothing
+landed** — the first half of the fix alone regresses the protected complete-run.
+
+**The briefed characterisation was accurate; its interpretation was wrong.** Frame 1434 really
+does have exactly one diverging field, and the 1435 cascade is exactly as described — but this is
+**not** a ramp launch or a solid-object bounce. **It is a badnik kill.**
+
+**What happens (MEASURED from the fixture's aux stream).** At 1434, slot 39's `object_code`
+changes `0x00087F5C → 0x0001E5E0` with an animal and a score object appearing at `0x1121,0x07DE`
+— a badnik exploding. Slot 39 traces to `object_appeared` at frame 1216, `x=0x1140 y=0x07E0`,
+which is HCZ1's Object Pos entry `0x1140 0x47E0 id=0x97`. `0x00087F5C` is literally
+`Obj_MegaChopper` (`sonic3k.asm:184232`).
+
+**The arithmetic is exact, with nothing fitted.** `MegaChopper_CheckCapture` stores the touching
+player in `$44(a0)` and, on a successful `Check_PlayerAttack`, sets `bset #7,status(a0)`, so
+`Obj_MegaChopper` takes `MegaChopper_Defeated` → `jsr EnemyDefeated`. In `EnemyDefeated`
+(`:179752-179771`) the player's `y_vel` is `+$40` (not negative), so it falls through to the
+position compare; the player's `y_pos 0x07EC` is at or below the badnik's `0x07DD`, so
+`loc_85758` runs `subi.w #$100,y_vel(a1)`. **`0x0040 - 0x0100 = -0x00C0`** — the expected value,
+bit for bit. The engine's `0x0040` is gravity-only (`$10`/frame underwater): the `-$100` was
+simply never applied.
+
+**Defect 1 — the engine does not model `Obj_WaitOffscreen`.** `Obj_MegaChopper`'s **first
+instruction** is `jsr (Obj_WaitOffscreen).l` (`:184233`). That routine (`:180271-180302`) pops the
+return address into `$34(a0)` and overwrites `(a0)` with a placeholder that only draws a `$20x$20`
+`Map_Offscreen` and deletes itself past coarse-X `$280`; once `render_flags` bit 7 is set it
+restores `$34(a0)` and `rts`. **So no MegaChopper routine — not even Init — runs until the badnik
+has actually been drawn.** The fixture shows slot 39 motionless at `0x1140` as code `0x00085AD2`
+for **173 frames** (1216→1388), becoming `0x00087F5C` only at 1389. The engine constructs the
+instance on the right frame but starts chasing immediately, swims to `x≈0x1016`, and is nowhere
+near the player at 1434.
+
+**Defect 2 — exposed only once defect 1 is fixed.** MegaChopper's ObjDat flags are `$D7`, so the
+engine classifies it SPECIAL and routes the touch to the object;
+`ObjectTouchResponseController.applyEnemyBounce` — the correct ±`$100` port — is reachable only
+from the ENEMY category. In the ROM the ±`$100` comes from `EnemyDefeated`, which the badnik calls
+itself.
+
+**Prototype evidence for defect 1 (built, measured, discarded).** Adding the established
+`waitingForOnscreen` / `placeholderRenderedOnscreen` pattern — already used by `RibotBadnikInstance`,
+`CorkeyBadnikInstance`, `MantisBadnikInstance` — reproduced the ROM trajectory almost exactly:
+gate released **174** engine frames after spawn (ROM 173) at player `x=0x1095` (ROM `0x1092`),
+then `0x113F` (ROM `0x113F`), then down to `0x1121` at the divergence frame with `y=0x07DD` —
+**per-pixel identical to the fixture's slot 39**, for an object previously `0x100+` px out of
+place. Derived entirely from the disassembly, with no measured constant.
+
+**Why it was not landed.** With the gate alone: the HCZ segment is **unchanged** (defect 2 still
+swallows the bounce), `TestS3kHczCompleteRunTraceReplay` **regresses** green → 2 errors (frame
+29095, `rings` 1 vs 2 — consistent with MegaChopper's ring-drain capture starting later), and 3 of
+4 `TestMegaChopperBadnikInstance` cases fail because they drive capture without ever releasing the
+gate.
+
+**Next round lands defects 1 and 2 TOGETHER**, plus a gate release in the three MegaChopper unit
+tests — `ClamerObjectInstance:931` already establishes a test-only release hook for exactly this.

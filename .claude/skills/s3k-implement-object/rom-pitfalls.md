@@ -1834,3 +1834,37 @@ those branches are legitimately reachable.
 classification habit is universal; only the specific globals are S3K's.
 
 **Originating commit.** `<pending: ICZ frame 2336 giant-ring diagnosis>`.
+
+## P51 — `Obj_WaitOffscreen` suppresses every routine, including Init
+
+**Contract.** Any S3K object whose entry point begins with `jsr (Obj_WaitOffscreen).l` runs **no
+routine at all** — not even Init — until `Render_Sprites` has set `render_flags` bit 7, and the
+release frame itself still runs no routine.
+
+`Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180271-180302`) pops its return address into
+`$34(a0)` and overwrites `(a0)` with a placeholder that only draws a `$20x$20` `Map_Offscreen`
+and deletes itself past coarse-X `$280`. Once bit 7 is set it takes the restore path, puts
+`$34(a0)` back and `rts`.
+
+**There are 52 call sites in `sonic3k.asm`.** Check the object's first instruction before porting.
+
+**Symptom when missed.** The engine starts the object's behaviour on its spawn frame, so it
+travels tens to hundreds of pixels away from where the ROM has it. This does **not** look like an
+object bug in a trace: it surfaces as an unrelated-looking **single-field player divergence**
+much later, when the object the ROM was about to interact with simply is not there. A measured
+case sat motionless for 173 frames in the ROM while the engine swam `0x100+` px away, and printed
+as a lone `y_speed` sign flip 218 frames later.
+
+**Engine pattern.** Use the established `waitingForOnscreen` / `placeholderRenderedOnscreen` +
+`refreshPostCameraRenderState` shape — see `RibotBadnikInstance`, `CorkeyBadnikInstance`,
+`MantisBadnikInstance`.
+
+**Unit-test consequence.** Existing tests that drive the object's behaviour directly will fail
+once the gate is added, because they never release it. That is the tests pinning pre-gate
+behaviour, not the gate being wrong — add a test-only release hook, as `ClamerObjectInstance:931`
+already does.
+
+**Beware the second defect.** A badnik whose ObjDat flags classify it SPECIAL takes the object's
+own touch path, so the engine's ENEMY-category `applyEnemyBounce` never runs. In the ROM the
+player's ±`$100` bounce comes from `EnemyDefeated` (`sonic3k.asm:179752-179771`), which the badnik
+calls itself. Fixing the offscreen gate alone can leave the bounce still missing.
