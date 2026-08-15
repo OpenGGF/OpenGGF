@@ -1129,22 +1129,9 @@ final class ObjectTouchResponseController {
         // ROM-accurate: React_Enemy (s1.asm) only modifies obVelY, it does NOT
         // set the air flag. Letting the collision system handle air state naturally
         // preserves rolling through enemy bounces (ground roll into badnik).
-        short ySpeed = player.getYSpeed();
-        if (ySpeed < 0) {
-            player.setYSpeed((short) (ySpeed + 0x100));
-            return;
-        }
-        // Use center coordinates to match ROM y_pos behavior
-        int playerY = player.getCentreY();
-        // The overlap and bounce both dereference the same object slot in all three
-        // ROMs; keep the already-resolved touch Y instead of re-reading a later
-        // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
-        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
-        if (playerY < enemyY) {
-            player.setYSpeed((short) -ySpeed);
-        } else {
-            player.setYSpeed((short) (ySpeed - 0x100));
-        }
+        // Shared with the objects that call EnemyDefeated themselves off the
+        // Touch_Special route — see EnemyDefeatBounce for the ROM listing.
+        EnemyDefeatBounce.apply(player, enemyY);
     }
 
     /**
