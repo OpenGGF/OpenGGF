@@ -1328,6 +1328,15 @@ public final class Sonic3kPlcArtRegistry {
                 -1
         ));
 
+        // FBZ/DEZ Player Launcher: ArtTile_FBZMisc + $3C (sonic3k.asm:79396).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER,
+                Sonic3kConstants.MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_FBZ_MISC + 0x3C,
+                1,
+                null
+        ));
+
         // Cork Floor: ArtTile_FBZMisc + $C1
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.CORK_FLOOR_FBZ,

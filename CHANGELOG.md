@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: implement `Obj_FBZDEZPlayerLauncher` (object id `$78` in both SK object
+  pointer sets), the FBZ/DEZ floor launcher. It was a name-only registry entry
+  and fell through to `PlaceholderObjectInstance`, so it was not solid at all:
+  in the Sonic+Tails FBZ segment the ROM has Sonic step onto the pad at frame 64
+  (`status` bit 3, `interact` slot 5, `y` 0x0769) and be run rightward at
+  0x100 -> 0x200 -> 0x400 -> 0x800 -> 0x1000, while the engine simply ran past.
+  The port models the ROM routines directly: top-solid pad with
+  `SolidObjectTop` d1 = `$10` / d3 = 3 (`docs/skdisasm/sonic3k.asm:79426-79429`),
+  `loc_3B97A`'s 12-frame run timer `$30` and 4-frame doubling counter `$31`
+  (`:79410-79423`), `sub_3B9D8`'s rider handling -- rider pinned four pixels to
+  the pad's leading side, pad `x_vel` copied into the rider's `x_vel` and
+  `ground_vel`, and the `$32` release that zeroes `y_vel` and sets the in-air
+  bit (`:79437-79470`) -- and `loc_3BA4A`'s one-pixel-per-frame walk back to the
+  home `x` in `$44` (`:79474-79488`). `loc_3B9AC` hands `SolidObjectTop` the
+  *post-move* `x_pos` in d4 (`:79428`), so `MvSonicOnPtfm` computes a zero
+  horizontal carry and must not drag the rider; the return-to-home routine
+  stacks the *pre-move* `x_pos` (`:79475`) and does carry. That distinction is
+  carried by `carriesRiderOnHorizontalMove`, per routine.
+  `TestS3kSonicTailsFbzSegmentTraceReplay` first error moves from frame 64
+  (`y` 0x0769 vs 0x076C) to frame 116 (`tails_x_sub`), clearing the whole
+  launcher sequence; the class stays red at a later, unrelated frontier.
 - Fix: the HCZ geyser survives scrolling off screen so its `LoadEnemyArt`
   restore actually runs. `Obj_HCZWaterWall` has **no** `out_of_range` /
   `MarkObjGone` test anywhere in its body

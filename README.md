@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The FBZ/DEZ player launcher, ported from the ROM
+  (`bugfix/ai-fbz-dez-player-launcher`, merged 2026-08-15).** FBZ's frame-64 3px `y` was not a
+  physics or coordinate issue at all. The fixture's own aux shows Sonic's `interact` becoming a
+  slot whose `object_code` is `0x0003B97A` — the main routine of `Obj_FBZDEZPlayerLauncher`
+  (`sonic3k.asm:79394-79488`, id `$78`). The engine had the **name** in its registry but no
+  instance class, so it spawned a placeholder, the pad was not solid, and Sonic ran straight past.
+  Now ported: top-solid `SolidObjectTop`, the 12-frame run timer and 4-frame doubling counter, the
+  rider handling and the walk back to home x. Two ROM contracts needed care — the landing test and
+  `MvSonicOnPtfm`'s re-seat share the same bare `d3`, and `loc_3B9AC` loads `d4` *after* the move
+  so the carry is zero and the rider must **not** be dragged, while `loc_3BA4A` stacks the pre-move
+  x and *does* carry. FBZ frontier 64 → 116, with the whole launcher sequence now matching.
+  **LRZ identified but not fixed**: the same method names `Obj_LRZCollapsingBridge` (recorded
+  `object_code 0x00039CA8` is literally what the ROM writes at `:77385`) — a second name-only
+  registry entry, so Tails falls through a bridge that is not solid. Catalogued as **P54**.
+
 - **The HCZ segment class goes GREEN: the geyser must survive to re-queue enemy art
   (`bugfix/ai-hcz-geyser-enemy-art-reload`, merged 2026-08-15).**
   `TestS3kSonicTailsHczSegmentTraceReplay` **1135 errors → 0 over 3519 compared frames** — the

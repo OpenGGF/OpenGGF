@@ -76798,3 +76798,73 @@ detail: [docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md
   assertion was weakened, excluded, disabled or otherwise touched. No test setup
   changed either. The hardware-timing port's release conditions were not
   modified.
+
+## 2026-08-15 -- FBZ Sonic+Tails segment: `Obj_FBZDEZPlayerLauncher` was unimplemented
+
+- Command (worktree at base `e2a3c4282`, JDK 21, ROMs from the project root):
+  `mvn -Ptrace-replay -Ds3k.rom.path=<s3k rom> -Dtest.cds.argLine="-Xshare:off" -Dtest=TestS3kSonicTailsFbzSegmentTraceReplay,TestS3kSonicTailsLrzSegmentTraceReplay test`
+- **Both briefed frontiers reproduced exactly** before any change:
+  `TestS3kSonicTailsFbzSegmentTraceReplay` 7759 errors, first error frame 64,
+  `y` expected 0x0769 actual 0x076C, 33712 frames compared;
+  `TestS3kSonicTailsLrzSegmentTraceReplay` 11029 errors, first error frame 100,
+  `tails_y_speed` expected 0x0000 actual 0x0FEF, 38813 frames compared.
+- Neither is a cold-start artefact: both reports carry
+  `bootstrap_error_count 0`, and both first errors are the frame a character
+  lands on an object the engine does not implement.
+- **FBZ root cause (fixed).** Dumping every field differing at frame 64 gave
+  `y`, `camera_y`, `status_byte` (expected `$08` = standing on object) and, one
+  frame later, `x` / `x_speed` / `g_speed`. The fixture's own aux names the
+  object: at frame 64 Sonic's `interact` becomes `0xB172` on slot 5, whose
+  `object_code` is `0x0003B97A` -- `loc_3B97A`, the main routine of
+  `Obj_FBZDEZPlayerLauncher` (`docs/skdisasm/sonic3k.asm:79394-79488`, id `$78`
+  in both SK object pointer sets). The engine had the name in
+  `Sonic3kObjectRegistry` but no instance class, so it spawned a
+  `PlaceholderObjectInstance` and the pad was not solid. Every recorded value
+  in frames 64-77 is reproduced by the ROM routines with no fitted constant:
+  the `x` teleport to `$0094` is `x_pos(a0)` + `moveq #4,d0`, the
+  0x100/0x200/0x400/0x800/0x1000 ramp is `move.w #$100,d1` plus `$31`'s four
+  `asl x_vel`, and the frame-77 release into the air is `$32`.
+- Frontier moved: `TestS3kSonicTailsFbzSegmentTraceReplay` first error
+  **frame 64 -> frame 116** (`tails_x_sub` expected 0xD000 actual 0xB800),
+  8599 errors over 33712 frames compared. The class stays red on a later,
+  independent Tails-CPU frontier; the error total rises because the run now
+  proceeds along the ROM's launched path instead of stopping at the pad.
+- **LRZ root cause (found, not fixed).** Same method, independent cause. At
+  frame 100 Tails' `interact` becomes slot 5, `object_code` `0x00039CA8` =
+  `loc_39CA8`, the main routine of `Obj_LRZCollapsingBridge`
+  (`docs/skdisasm/sonic3k.asm:77383-77437`, id `$31` in SK Set 2 / the `SKL`
+  zone set). The recorded `y_radius` of 28 is the object's own
+  `move.b #$1C,y_radius(a0)` (`:77405`), and Tails' landing `y` of 0x0374 is
+  `y_pos(a0)` 0x03A0 minus that radius minus his own. The engine again has only
+  a name-only registry entry -- `CollapsingBridgeObjectInstance` ports the
+  unrelated `Obj_CollapsingBridge`, not this one -- so the bridge is not solid
+  and Tails falls through. LRZ is unchanged by this round: still 11029 errors,
+  first error frame 100.
+- **Shared cause: no.** Different zones, different object ids, different ROM
+  routines, different characters. The only thing in common is the *shape*:
+  an unimplemented solid object printing as a player/sidekick physics field.
+- **Blast radius, measured on both trees at the same base commit.** Trace
+  profile: 222 report files / 843 tests on both trees, 64 red classes on both;
+  explicit Python set difference in both directions is empty. Default profile:
+  1915 report files / 15114 tests, control 55 red, fix 54 red; the set
+  difference flagged four classes, all of which passed when re-run in isolation
+  on both trees (`TestGameLoopSpecialStageRewindBoundary`,
+  `TestMgzEndBossKnuxInstance`, `TestS3kIczCrushingColumnObject`) or were fixed
+  before the final sweep (`TestRewindCoverageGuard`, which correctly flagged the
+  new object's two `final` scalars; they are now ordinary captured fields).
+  `TestArchitecturalSourceGuard` fails identically on both trees.
+- Unmoved and re-confirmed by name: `TestS3kSonicTailsAizSegmentTraceReplay`
+  and `TestS3kSonicTailsHczSegmentTraceReplay` green;
+  `TestS3kSonicTailsMhzSegmentTraceReplay` 9 errors / frame 1276;
+  `TestS3kSonicTailsIczSegmentTraceReplay` 2862 errors;
+  `TestS3kHczCompleteRunTraceReplay` still deliberately red at exactly 2 errors
+  (first frame 29095) -- the slot phase did not shift;
+  `TestS2CompleteEmeraldRunChain` segment 11 at 236 errors with segment 2
+  absent; `TestS3kAizTraceReplay`, `TestS3kCnzTraceReplay`,
+  `TestS3kMgzTraceReplay`, `TestS3kSpecialStageTraceReplay`,
+  `TestS1CompleteEmeraldVisualRun`, `TestS2CompleteEmeraldVisualRun`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestCollisionLogic` and
+  `TestHardwareTimingAuthorityGuard` all pass.
+- No constant, offset, tolerance or comparison shift was introduced, and no
+  assertion was weakened, excluded, disabled or otherwise touched. No test setup
+  changed. The hardware-timing port was not modified.
