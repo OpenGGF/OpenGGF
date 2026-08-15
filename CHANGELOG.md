@@ -3,6 +3,39 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: HCZ MegaChoppers wait offscreen before doing anything, and deal the
+  `EnemyDefeated` rebound themselves. Two stacked defects, only landable
+  together. (1) `Obj_MegaChopper`'s first instruction is
+  `jsr (Obj_WaitOffscreen).l` (`docs/skdisasm/sonic3k.asm:184233`); that routine
+  (`sonic3k.asm:180271-180302`) moves the object's own address into `$34(a0)` and
+  installs a placeholder that only draws a `$20x$20` `Map_Offscreen` until
+  `Render_Sprites` sets `render_flags` bit 7, so **no** routine runs -- not even
+  `MegaChopper_Init`, which is where `SetUp_ObjAttributes` writes
+  `collision_flags`. The engine began chasing on the spawn frame instead and
+  swam `0x100+` px away from where the ROM holds the badnik. Modelled with the
+  established `waitingForOnscreen` / `placeholderRenderedOnscreen` +
+  `refreshPostCameraRenderState` shape already used by `RibotBadnikInstance`,
+  `CorkeyBadnikInstance` and `MantisBadnikInstance`, with `getCollisionFlags()`
+  returning zero while the gate holds. (2) `ObjDat_MegaChopper`'s flags are
+  `$D7`, the ROM's `Touch_Special` route, so the engine classified the badnik
+  SPECIAL and its `ObjectTouchResponseController` ENEMY-category bounce never
+  ran; in the ROM `MegaChopper_Defeated` calls `EnemyDefeated` itself
+  (`sonic3k.asm:184242-184244`), whose `loc_85758` runs
+  `subi.w #$100,y_vel(a1)` when the player is falling and at or below the
+  badnik. That bounce is now shared as `EnemyDefeatBounce` and invoked from the
+  badnik's own defeat path. Measured on
+  `TestS3kSonicTailsHczSegmentTraceReplay` frame 1434, where `y_speed` expected
+  `-0x00C0` and the engine produced `0x0040`: `0x0040 - 0x0100 = -0x00C0`, with
+  nothing fitted. The three `TestMegaChopperBadnikInstance` cases that drive
+  capture directly now release the gate through a test-only hook, in the shape
+  `ClamerObjectInstance` already established; no assertion was changed.
+  `loc_85AD2`'s coarse-X `$280` deletion arm is modelled too, in the shape
+  `BatbotBadnikInstance` already uses. Measured on
+  `TestS3kSonicTailsHczSegmentTraceReplay`: first error frame 1434 -> 2478,
+  errors 1445 -> 1135. `TestS3kHczCompleteRunTraceReplay` regresses green -> 2
+  errors: a residual ring-collection timing divergence at frames 29095 and
+  29262, four frames early in a boss-hurt ring scatter, with no MegaChopper on
+  screen -- a separate defect the pair exposes rather than causes.
 - Fix: a Star Pointer's orbiting points are deleted when the parent badnik is
   destroyed. ROM `Obj_StarPointer`'s orbit routine `loc_8BEE6` ends in
   `jmp Child_DrawTouch_Sprite` (`docs/skdisasm/sonic3k.asm:190853-190858`),

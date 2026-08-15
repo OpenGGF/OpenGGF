@@ -28,7 +28,45 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** S3K HCZ from the Sonic+Tails complete-run TAS. Per-zone segment: act1 -> seamless act1->act2 transition -> act2 -> the act2->next-zone exit handoff. zone()=1 (S3K zone_id == engine index); act()=0. */
+/**
+ * S3K HCZ from the Sonic+Tails complete-run TAS. Per-zone segment: act1 -> seamless act1->act2
+ * transition -> act2 -> the act2->next-zone exit handoff. zone()=1 (S3K zone_id == engine index);
+ * act()=0.
+ *
+ * <p><b>Expected RED since 2026-08-15, deliberately, with the mechanism traced end to end.</b>
+ * Two errors: {@code rings} 1 vs 2 at frame 29095 and 0 vs 1 at 29262. Nothing here is weakened,
+ * tolerance-fitted or trimmed to reach a green; the measured first error and count live in
+ * {@code docs/status/trace-frontier-log.md} and the mechanism in
+ * {@code docs/status/known-discrepancies.md}.
+ *
+ * <p>The cause is <i>not</i> a defect in this zone. Commit {@code b31069c3f} corrected two
+ * ROM-cited MegaChopper defects — {@code Obj_MegaChopper}'s opening
+ * {@code jsr (Obj_WaitOffscreen)} suppressing every routine including Init until the sprite is
+ * drawn (sonic3k.asm:184233, :180271-180302), and its {@code Touch_Special} defeat path owing the
+ * player the {@code EnemyDefeated} bounce itself (:184242-184244 -> loc_85758's
+ * {@code subi.w #$100,y_vel(a1)}). That moved the HCZ <i>segment</i> frontier 1434 -> 2478.
+ *
+ * <p>It also moved this class red, and the propagation is fully traced: at frame 1481 the
+ * MegaChopper sits at x=3840 with the fix and 3839 without, and this run's own aux records
+ * {@code object_x 0x0F00} = 3840 — <b>the fix is the ROM-correct side.</b> That one pixel changes
+ * object-slot occupancy on 16,289 of 31,482 rows, so 27,600 frames later the boss-hurt ring
+ * scatter puts ring 0 in a different slot (38 vs 4). {@code Obj_Bouncing_Ring} gates its floor
+ * probe on its own SST slot — {@code move.b (V_int_run_count+3).w,d0 / add.b d7,d0 /
+ * andi.b #7,d0 / bne} (sonic3k.asm:35629-35632), {@code d7} being {@code Process_Sprites}' live
+ * slot countdown — and those slots are two apart in the {@code &7} cycle, so the ring bounces
+ * differently and is collected four frames early.
+ *
+ * <p><b>The previous green was accidental, not a baseline.</b> With the slot probe armed,
+ * engine-vs-ROM occupancy diverges on 2387 of 2387 sampled frames on <i>both</i> trees; this test
+ * compares no object identity, slot or position at all. The old green was a slot-phase lottery
+ * that happened to land the boss rings in compatible {@code &7} phases.
+ *
+ * <p><b>Do not "fix" this by adjusting ring timing, slot allocation or the bounce.</b> The
+ * remaining work is slot-occupancy parity, which cannot currently be measured: S3K's SST has no
+ * id field at any offset and objects overwrite their own dispatch pointer to advance state, so
+ * the recorded type is a live program counter and only 4.26% of entries are object-table entries.
+ * See {@code docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md}.
+ */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kHczCompleteRunTraceReplay extends AbstractTraceReplayTest {
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s3k/hcz_completerun");

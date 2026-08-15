@@ -61,6 +61,37 @@ one-frame scroll count — each time explaining *why* the ROM produces its value
 - a **frame count** ("scroll for exactly one frame") with no ported ROM owner for the stop;
 - an **engine stamp** asserting work it did not do, to match a recorder.
 
+## The discriminator for "my fix reds a green class"
+
+This comes up constantly and the two cases look identical in a test report. They are not.
+
+> **Red with an unlocated owner: hold. Red with a fully-traced propagation chain from a cited
+> fix: merge and document.**
+
+Both arose in one session and the rule decides both correctly:
+
+- **Hold.** Removing a camera clamp produced 12 newly-red classes and zero greens. A mechanism
+  had been taken out and *nobody could say what performed its job* — the red was a symptom of an
+  incomplete model. (It later turned out the removal was simply wrong: a generic setup routine
+  reinstated the value ten lines downstream.)
+- **Merge.** A ROM-cited badnik fix produced two errors 27,600 frames later, and every link was
+  traced and cited: spawn-gate fix → one-pixel position → slot-occupancy permutation → a ROM gate
+  keyed on the slot index → a ring collected four frames early. The fixture's own aux confirmed
+  the *fixed* side matched the ROM at the divergence point.
+
+The trap to name explicitly: **"the green was thin" is not the argument** — it's what people say
+right before landing something wrong. The argument is that the green was **accidental**, and you
+have to show that. In the merge case, occupancy already diverged from ROM on 2387 of 2387 sampled
+frames *on both trees*, and the class compared no object identity at all: the green was a
+slot-phase lottery, not a baseline the fix broke.
+
+**When you do land a knowingly-red class**, use the deliberate-red convention rather than an
+inverted assertion pinning the expected failure. A pinned failure fails loudly on *any* change —
+including improvements — and teaches the suite that the red is a contract rather than a frontier.
+Put the marker in the **class's own javadoc**, so the explanation is one hop from the failure;
+the frontier log carries the measured first error and count (its job, updated as things move), and
+`known-discrepancies` carries the mechanism and the removal condition.
+
 ## Fourth rule: make "found-not-fixed" a full success, in writing
 
 State it. Rounds will otherwise optimise for a landed diff.

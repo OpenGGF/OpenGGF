@@ -2141,3 +2141,31 @@ enable `compareObjectNearEvents()` until the identity key is fixed**, or the res
 uninterpretable. With identity resolved the divergence is a near-even mixture of permutation
 (23.3% of sampled instances) and population difference (23.8% short, 11.6% excess); the ROM's
 `AllocateObject` search order is modelled correctly and is **not** the cause.
+
+## HCZ complete-run is deliberately red: a slot-phase consequence of a ROM-correct fix
+
+**Since 2026-08-15.** `TestS3kHczCompleteRunTraceReplay` fails with exactly two errors —
+`rings` 1 vs 2 at frame 29095 and 0 vs 1 at 29262. This is **expected and documented**, not an
+unhandled regression, and the class carries the same marker in its own javadoc.
+
+Commit `b31069c3f` corrected two ROM-cited MegaChopper defects (the `Obj_WaitOffscreen` gate and
+the `EnemyDefeated` bounce the `Touch_Special` path owes the player). At frame 1481 the badnik
+then sits at x=**3840** where it previously sat at 3839 — and this run's own aux records
+`object_x 0x0F00` = 3840, so **the fix is the ROM-correct side and the previous behaviour was
+wrong.**
+
+That one pixel changes object-slot occupancy on 16,289 of 31,482 rows. 27,600 frames later the
+boss-hurt ring scatter places ring 0 in slot 4 rather than 38, and `Obj_Bouncing_Ring` gates its
+floor probe on its own SST slot (`move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 /
+bne`, `sonic3k.asm:35629-35632`, `d7` being `Process_Sprites`' live slot countdown). Those slots
+are two apart in the `&7` cycle, so the ring bounces on different frames and is collected four
+frames early.
+
+**The previous green was accidental.** Occupancy diverges from ROM on 2387 of 2387 sampled frames
+on *both* trees, and this test compares no object identity, slot or position — so the old green
+was a slot-phase lottery that happened to land compatible phases, not a baseline that the fix
+broke.
+
+**Removal condition:** slot-occupancy parity. That is currently unmeasurable from the recorded
+stream — see the SST no-identity finding above — so it needs a different recording surface before
+it can be worked. **Do not close this by adjusting ring timing, slot allocation or the bounce.**

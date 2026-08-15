@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **MegaChopper's offscreen gate and kill bounce, with one deliberate red
+  (`bugfix/ai-megachopper-waitoffscreen-enemydefeated`, merged 2026-08-15).** `Obj_MegaChopper`'s
+  first instruction is `jsr (Obj_WaitOffscreen).l`, which suppresses **every** routine including
+  Init until the sprite is drawn; and its `Touch_Special` defeat path owes the player the
+  `EnemyDefeated` bounce itself (`loc_85758`'s `subi.w #$100,y_vel(a1)`). Both are now modelled.
+  HCZ **segment** frontier 1434 → 2478, errors 1445 → 1135.
+  **`TestS3kHczCompleteRunTraceReplay` becomes deliberately red** (2 errors), and the propagation
+  is traced end to end: at frame 1481 the badnik sits at x=3840 with the fix and 3839 without —
+  and the run's own aux records `0x0F00` = 3840, so **the fix is the ROM-correct side**. That
+  pixel shifts slot occupancy on 16,289 of 31,482 rows, so 27,600 frames later a scattered ring
+  lands in a different slot and `Obj_Bouncing_Ring`'s slot-keyed floor probe collects it four
+  frames early. **The previous green was accidental** — occupancy diverges from ROM on 2387 of
+  2387 sampled frames on *both* trees, and the class compares no object identity at all. Marked in
+  the class's own javadoc, with the mechanism and removal condition in `known-discrepancies`.
+
 - **There is no S3K object identity to map: the recorded value is a live program counter
   (`bugfix/ai-s3k-object-code-identity`, docs merged 2026-08-15).** The obvious fix for the entry
   below — invert the object pointer tables to turn code addresses into ids — **cannot work**, and
