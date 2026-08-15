@@ -76042,3 +76042,89 @@ does not loop. LevelSizes confirms it: ICZ1 is `0, $7000, -$100, $800`.
 committed fixture compares, and it is camera code that produced 12-newly-red/0-green once this
 session. The one change made is to the `clampBottomBoundary` javadoc, whose closing sentence
 ("the engine does not yet enable vertical wrap for S3K") is the false claim this round refuted.
+
+## 2026-08-15 - ICZ 1818 root-caused (Sonic's push bit through a rolling flip); not landed
+
+`TestS3kSonicTailsIczSegmentTraceReplay` at `3379062d7`: first error frame **1818**, 3031 errors
+over 17947 rows. **Root cause found with whole-trace execution evidence. Deliberately not
+landed** — the fix is in shared physics and the blast radius was not measured.
+
+**Rule-1 field dump.** The reported `tails_x` 1px is alphabetical noise; six fields diverge
+together at 1818, and everything (including `x_sub`) is byte-identical through 1817:
+
+| field | ROM | engine |
+|---|---|---|
+| `tails_x` | `0x3EE5` | `0x3EE4` |
+| `tails_x_sub` | `0x8C00` | `0xF400` |
+| `tails_x_speed` / `tails_g_speed` | `0x0000` | `-0x0080` |
+| **`tails_cpu_ctrl2_held`** | **`0x0008` (RIGHT)** | **`0x0004` (LEFT)`** |
+| `tails_status_byte` | `0x0020` | `0x0000` |
+
+So the entire divergence is **one branch decision inside Tails' CPU control on one frame**; the
+`-0x80` is just S3K's decel-overflow clamp applied in the wrong direction.
+
+**The ROM branch** (`sonic3k.asm:26696-26705`, `Tails_CPU_routine 6`): it reads the delayed
+`Ctrl_1_logical` **and the delayed Sonic status byte from the same slot**, then
+`btst #Status_Push,status(a0)` on Tails and `btst #5,d4` on that delayed byte. With Tails
+pushing and the delayed Sonic byte **not** pushing it takes `loc_13E9C` and copies the delayed
+input verbatim; otherwise it steers, forcing RIGHT via `andi.w #$F3F3,d1 / ori.w #$808,d1`.
+
+**Whole-trace confirmation, not fixture-local.** Every frame with `cpu_routine == 6` across all
+17,947 rows was classified steering-vs-`loc_13E9C` and cross-tabulated:
+
+- `('e9c', Tails push, delayed Sonic not pushing)`: **65 frames**
+- `('steer', Tails push, delayed Sonic not pushing)`: **0 frames** — the ROM never steers in that
+  state
+- `('steer', Tails not pushing)`: 1,610 frames
+- exactly **one** frame unexplained by the trace's own status column: **1818**
+
+The follow delay is definitively **16** (`ctrl2_logical` at 1813 equals `ctrl1_logical` at 1797;
+`pos_table_index 0x006C` at 1818 minus `$44` is frame 1802's slot). **`ROM_FOLLOW_DELAY_FRAMES = 16`
+is correct and is not the bug.**
+
+**The cause, and it is a ROM asymmetry worth knowing.** At 1801 Sonic is rolling and hits a wall
+(status `0x24` = Roll|Push). At 1802 `Sonic_RollSpeed`'s direction handlers `sub_11608` /
+`sub_1162C` (`sonic3k.asm:23038-23078`) touch **only `Status_Facing`**:
+
+```
+loc_11610:  bset #Status_Facing,status(a0)
+            move.b #2,anim(a0)
+            rts
+```
+
+The **walking** handlers `sub_14C20` / `sub_14CAC` (`:28036-28039`, `:28104-28108`) pair the same
+facing flip **with `bclr #Status_Push`**. So through a rolling flip the ROM **preserves** Push,
+and `Sonic_RecordPos` (`:21997`, called after `Sonic_Modes` and before the object pass) records
+`Facing|Push` — bit 5 set. Push is cleared later that frame, which is why the recorder's
+*end-of-frame* column for 1802 reads `0x01`.
+
+**Engine probe** (reverted): `RECPROBE trace-1802: status=01 push=false` — the leader-history slot
+carries `push=false`, so `btst #5,d4` inverts, `updateNormal()` takes its `currentPushBypass` arm
+instead of follow steering, and Tails copies LEFT instead of forcing RIGHT. Note `pbSt=24`: the
+engine **already holds the correct byte** at its delay-17 sample, gated behind a riding-object
+predicate that is false here.
+
+**Fix shape.** Sonic's `Status_Push` must survive the roll-mode direction handlers so the value
+recorded at the `Sonic_RecordPos` equivalent carries the bit. The engine clears `pushing` on a
+rolling direction flip where the ROM does not; that clear belongs on the non-rolling movement
+path only.
+
+**Explicitly NOT the fix:** moving `recordedStatus` to delay 17, or widening the delay-17
+push-bypass gate. Delay 16 is proven correct at 1817 and on 1,610 other steering frames — that
+would be a fitted off-by-one this measurement rules out.
+
+**Why not landed:** this is Sonic's push bit in shared physics. It feeds every S1/S2/S3K trace,
+the touch and animation paths, and 65 other correctly-behaving push-bypass frames in this trace
+alone. Blast radius must be measured on both profiles across both trees before it is written.
+
+## 2026-08-15 - HCZ 1434 characterised (not root-caused)
+
+`TestS3kSonicTailsHczSegmentTraceReplay`: frame **1434** has exactly **one** diverging field,
+`y_speed` `-0x00C0` vs `0x0040` — on the **player**, not the sidekick. The cascade starts at 1435
+(`x_speed`, `y`, `x`, `camera_x`, `x_sub`); sidekick fields appear only at 1451, `camera_y` at
+1463, and `air` 1/0 with status `0x42`/`0x40` at 1463.
+
+Reading: the ROM converts forward speed into upward speed at 1434 and goes airborne ~29 frames
+later; the engine keeps its speed and stays grounded. Shape is a ramp/slope launch or a
+solid-object bounce. **INDEPENDENT of the ICZ cause** — different character, different subsystem,
+and the Tails-CPU `d4` mechanism cannot produce a lone player `y_speed`.
