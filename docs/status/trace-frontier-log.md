@@ -77689,3 +77689,113 @@ changed at all. No trace hydration; `docs/skdisasm` read for labels and offsets
 only. No zone/act/route/frame/game predicate, no recorder or fixture change, no
 landed fix undone, and the `hasLaterSlotRiderCosineResidue` table was left
 untouched.
+
+## 2026-08-15 -- S3K MGZ Sonic+Tails segment: frame 13848 refuted, real origin is 17383 (SS entry ring, all-emeralds branch)
+
+Branch `bugfix/ai-mgz-13848`, worktree at base `789607b5f` (`develop`).
+Command (both control and after; reports cleared before every run):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest.cds.argLine="-Xshare:off" -Ds3k.rom.path=<discovered s3k .gen> \
+    -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay -DfailIfNoTests=false test
+```
+
+- Control: FAIL, **3446 errors**, first error 10709 (`x`), 30831 compared rows.
+  Unchanged from the previous round -- the frontier reproduces exactly.
+- **The briefed target (frame 13848) is refuted as a frontier.** Parsing
+  `s3k_mgz1_report.json` rather than the headline: 13848 is **one** error, and
+  it is the *only* error overlapping frames 13848-13863. Every player and
+  sidekick field agrees across the whole span, so `camera_y` is the sole
+  diverging field; it re-converges at 13864 and nothing cascades from it. Per
+  the derived-state rule the camera code is implicated rather than symptomatic,
+  but the whole episode is worth 1 error of 3446. The ROM's `camera_y` ramp over
+  the span is 3,3,4,4,5,5,6,6,6,6,6,6,6,6,4,0 while `player_y` moves only
+  `$08C2 -> $08C1`, i.e. the camera is chasing a boundary, not the player.
+- Frame 15532 (the briefed fallback) is 6 errors, animation ids only,
+  self-correcting by 15561.
+- **Error mass: 36 of 3446 errors start before frame 17383; 3410 (99.0%) start
+  at or after it.** 17383 is the substantive origin and is an independent
+  cascade -- frames 13864-15531 and 15562-17382 are completely clean.
+
+### Root cause at 17383 -- MEASURED, then ROM-cited
+
+- `rings` goes `0x28 -> 0x5A` (40 -> 90) in one frame in the ROM and does not
+  move in the engine. `addi.w #50,(Ring_count).w` has exactly one site in
+  `sonic3k.asm` (line 40937), which is `Monitor_Give_SuperSonic` -- but that
+  also writes `anim = $1F` and `object_control = $81`, and the trace shows the
+  ROM in a plain rolling jump (`anim = $02`, `status = $07`). So the monitor is
+  refuted and the `AddRings` caller is elsewhere.
+- Aux named the owner via the **P62 code-pointer readout**: `object_state`
+  slot 4 rewrites `object_code` `0x00061682 -> 0x0001ABB6` on frame 17383 and
+  the slot is gone at 17384. `0x0001ABB6` is `Delete_Current_Sprite`;
+  `0x00061682` is inside `Obj_SSEntryRing` -- the giant Special Stage entry
+  ring (`sonic3k.asm:128268` onward).
+- `SSEntryRing_Main`'s collision arm `loc_6170A` (`sonic3k.asm:128283-128291`)
+  branches on inventory:
+  `cmpi.b #7,(Chaos_emerald_count).w / bne loc_6173A` (capture sequence),
+  else `tst.w (SK_alone_flag).w / bne loc_61794`,
+  else `bsr SSEntry_CheckLevel / beq loc_61794`,
+  else `cmpi.b #7,(Super_emerald_count).w / beq loc_61794`.
+  `loc_61794` (`:128318-128327`) plays `sfx_BigRing`, sets the collected bit,
+  `bset #5,$38(a0)` and `moveq #50,d0 / jmp (AddRings).l`.
+  `loc_6173A` (`:128290-128295`) instead writes
+  `mapping_frame = 0`, `anim = $1C`, `object_control = $53`.
+- **The fixture reads out both branches.** MGZ is `Current_zone` 2, so
+  `SSEntry_CheckLevel` (`:128433-128443`) returns 0 (an S3 level) and the ROM
+  takes `loc_61794`: +50 rings, ring self-deletes, player keeps rolling. The
+  engine's compared values at 17383 are `player_animation_id` `0x1C` and
+  `player_mapping_frame` `0x0000` -- *exactly* `loc_6173A`'s two writes. The
+  engine took the capture-sequence arm.
+- The engine predicate is **not** wrong.
+  `Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` already
+  models the ROM branch, and `isSonic3HalfLevel()` already models
+  `SSEntry_CheckLevel`. Instrumented at the touch (temporary probe, reverted):
+  `zone=2 hasAllEmeralds=false hasAllSuper=false isS3Half=true hpzRoute=false
+  award=false`. The failing term is `hasAllEmeralds()`.
+- **The real defect is a bootstrap gap, not an object defect.** This fixture is
+  `segment_index: 16` of the `s3k-sonic-tails-complete-emeralds` run, whose
+  `run_manifest.json` records `emeralds_after: 7` on the transition into
+  segment 15 and `emeralds_before: 7` from segment 18 onward -- the recording
+  starts MGZ with all seven Chaos Emeralds. The segment fixture itself carries
+  no emerald inventory in `metadata.json`, in `physics.csv`, or in any aux
+  event (`state_snapshot`, `cpu_state_snapshot` and the frame `-1` bootstrap
+  events have no emerald field), and `AbstractTraceReplayTest` never reads the
+  parent run manifest. A standalone segment replay therefore begins MGZ with
+  zero emeralds and can only take the capture-sequence arm.
+
+### Outcome -- found-not-fixed, deliberately
+
+Nothing landed under `src/`. Closing this requires teaching the segment
+frame-0 bootstrap to seed the starting emerald inventory from the run
+manifest's recorded progression. That is a change to shared, multi-game trace
+bootstrap machinery, and seeding an inventory counter is gameplay state rather
+than the position/RNG/oscillation/frame-counter class the pre-trace bootstrap
+carve-out enumerates -- so it is a hard-rule-4 policy decision to escalate,
+not collateral for a trace round. It was deliberately not attempted here.
+Recorder and fixture changes were out of scope for this round and are in any
+case unnecessary: the manifest already holds the value.
+
+The alternative -- keying the award on the run id, the fixture name or the
+zone -- is a route/name carve-out and was rejected.
+
+`TestS3kMgzCompleteRunTraceReplay` is not a cross-check for this: it replays a
+different fixture (`traces/s3k/mgz_completerun`), not the complete-emeralds
+run, so it never reaches the all-emeralds arm. Its green is unrelated.
+
+### Regression
+
+No file under `src/` changed, so no engine behaviour moved and no sweep was
+run; the temporary probe was reverted and the worktree confirmed clean before
+committing. `TestS3kSonicTailsMgzSegmentTraceReplay` re-measured after the
+revert at the control value, 3446 errors / first error 10709.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift added; no `+3` on a
+camera. No assertion weakened, widened, excluded, made advisory, deleted or
+disabled, and no test file changed. No trace hydration; `docs/skdisasm` read
+for labels and offsets only. No zone/act/route/frame/game predicate, no
+recorder or fixture change, and no landed fix undone -- the
+`hasLaterSlotRiderCosineResidue` residue table was left untouched and not
+re-litigated.

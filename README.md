@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **MGZ reaches the same cold-start boundary as ICZ (`bugfix/ai-mgz-13848`, docs merged
+  2026-08-15).** Both briefed targets were refuted: 13848 is a **single** `camera_y` error that
+  re-converges on the next frame, and 15532 is six self-correcting animation errors. The real
+  origin is frame **17383**, where **3410 of 3446 errors (99.0%)** begin, with everything between
+  completely clean. The ROM's rings step `0x28 → 0x5A` in one frame — the giant ring's `+50`. The
+  P62 code-pointer trick named it with no probe: aux slot 4 rewrites its `object_code` to
+  `Delete_Current_Sprite` on exactly that frame, and the two branch arms write *different* compared
+  fields, so the fixture reads out which side each took. **The object is not at fault** — its
+  predicate already models the full ROM branch and the S3-half test; a probe showed only the
+  *inventory* term failing. MGZ is zone 2, an S3 level, so with all emeralds the ROM awards 50
+  rings while the engine, holding none, takes the capture branch. **That is the closed segment
+  bootstrap boundary**: the run manifest records `emeralds_before: 7`, but no segment fixture
+  carries inventory, and seeding it would be rule-4 hydration of shared multi-game machinery.
+  Escalated rather than half-landed, with **P63** recording the shape.
+
 - **A range table read as offsets instead of cumulative adds delayed the end of the act
   (`bugfix/ai-mgz-hidden-monitor-range`, merged 2026-08-15).** MGZ 12932 showed four player fields
   diverging at once — the signature of `Set_PlayerEndingPose` (`sonic3k.asm:181977-181988`), which

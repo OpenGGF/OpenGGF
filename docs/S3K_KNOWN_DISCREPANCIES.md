@@ -1391,3 +1391,49 @@ platform is slot 7 of a different pivot group and the ROM *does* take the carry.
 (the value left by the previously executed SST slot), then compute the carry from the
 formula above and delete both the table and this entry. Do not extend the table with more
 angles: it cannot be right, because the carry is not a function of the angle alone.
+
+## Segment trace replays start with an empty save-game inventory
+
+**What diverges.** Any per-zone *segment* fixture cut from a complete run replays
+with zero Chaos Emeralds, zero Super Emeralds and an empty
+`Collected_special_ring_array`, regardless of what the recording's player had
+at that point in the movie. Object branches that read those globals therefore
+take the low-inventory arm in the engine and the high-inventory arm in the ROM.
+
+**Measured case.** `TestS3kSonicTailsMgzSegmentTraceReplay`, frame 17383 --
+3410 of the class's 3446 errors start there, and frames 13864-15531 and
+15562-17382 are clean. `Obj_SSEntryRing`'s collision arm `loc_6170A`
+(`docs/skdisasm/sonic3k.asm:128283-128291`) branches on
+`cmpi.b #7,(Chaos_emerald_count).w`. MGZ is `Current_zone` 2, so
+`SSEntry_CheckLevel` (`:128433-128443`) reports an S3 level and the ROM takes
+`loc_61794` (`:128318-128327`): `moveq #50,d0 / jmp (AddRings).l`, ring
+self-retires, player keeps rolling. The trace shows `rings` `0x28 -> 0x5A` on
+that single frame with `anim` still `$02`.
+
+The engine takes `loc_6173A` (`:128290-128295`) instead, which writes
+`mapping_frame = 0`, `anim = $1C`, `object_control = $53` -- and those are
+exactly the engine's compared values at 17383. The object is **not** at fault:
+`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` already
+models the full ROM branch and `isSonic3HalfLevel()` already models
+`SSEntry_CheckLevel`. A probe at the touch reported
+`zone=2 hasAllEmeralds=false hasAllSuper=false isS3Half=true award=false`;
+only the inventory term is wrong.
+
+**Why it is not closed.** The fixture's own `metadata.json`, `physics.csv` and
+frame `-1` bootstrap aux events carry no inventory field, and
+`AbstractTraceReplayTest` does not read the parent run manifest. The value does
+exist in committed data -- `runs/s3k-sonic-tails-complete-emeralds/run_manifest.json`
+records `emeralds_after: 7` into segment 15 and `emeralds_before: 7` from
+segment 18, and MGZ is `segment_index: 16` -- but seeding an inventory counter
+from it is hydration of gameplay state into the engine, which hard rule 4
+permits only for the hardware-timing port. The pre-trace bootstrap carve-out
+covers position, RNG seed, oscillator pre-advance and frame counters, not
+save-game progress.
+
+**Removal condition.** Take an explicit decision on whether starting save-game
+inventory belongs in the frame-0 bootstrap contract. If it does, extend the
+segment bootstrap to derive it from the parent run manifest's recorded
+progression -- for every game, since S1 and S2 segment fixtures have the same
+shape -- and measure the blast radius across every segment class before
+landing. Do **not** close it by keying on the run id, the fixture name, the
+zone or a frame index. Delete this entry when the bootstrap carries the value.

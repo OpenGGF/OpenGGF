@@ -2439,3 +2439,85 @@ reloaded between the two adds, the table is `low, span`. Ports that read it as
 
 **Originating commit.** MGZ Sonic+Tails segment frame 12932; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+---
+
+## P63 -- An object branch gated on save-game inventory cannot be reached by a standalone segment replay
+
+**Symptom.** A per-zone segment trace diverges hard and permanently at the
+frame the player touches one specific object, with a huge error mass and no
+warning beforehand. The player's *physics* is fine on both sides -- positions
+and speeds agree to within a pixel across the touch -- but `rings` takes a
+large one-frame step in the ROM that the engine never takes, and
+`player_animation_id` / `player_mapping_frame` snap to values the engine
+produced from an entirely different ROM routine. Everything after cascades.
+
+**Root cause.** Several S3K objects branch on **inventory that lives outside
+the level** -- `Chaos_emerald_count`, `Super_emerald_count`,
+`Collected_special_ring_array`, `SK_alone_flag`. `Obj_SSEntryRing`'s collision
+arm `loc_6170A` (`docs/skdisasm/sonic3k.asm:128283-128291`) is the canonical
+case:
+
+```
+        cmpi.b  #7,(Chaos_emerald_count).w
+        bne.s   loc_6173A          ; fewer than 7 -> special-stage capture
+        tst.w   (SK_alone_flag).w
+        bne.s   loc_61794          ; S&K alone -> claim 50 rings
+        bsr.w   SSEntry_CheckLevel
+        beq.s   loc_61794          ; an S3 level -> claim 50 rings
+        cmpi.b  #7,(Super_emerald_count).w
+        beq.s   loc_61794          ; S&K level, all Super Emeralds -> 50 rings
+```
+
+`loc_61794` (`:128318-128327`) does `moveq #50,d0 / jmp (AddRings).l` and
+`bset #5,$38(a0)` so the ring retires itself. `loc_6173A` (`:128290-128295`)
+instead writes `mapping_frame = 0`, `anim = $1C`, `object_control = $53`.
+`SSEntry_CheckLevel` (`:128433-128443`) returns 1 for `Current_zone >= 7` or
+exactly 4, else 0.
+
+A per-zone **segment** fixture is a slice out of the middle of a long movie.
+Its `metadata.json`, its `physics.csv` and its frame `-1` bootstrap aux events
+carry position, RNG, oscillator phase and frame counters -- but **no inventory
+counters**. So the engine starts the segment with an empty save state and takes
+the low-inventory arm of every such branch, however faithfully the branch
+itself is ported.
+
+**What to check.** Before opening an object's implementation, check whether the
+ROM branch reads a global that survives across zones. If it does, and the
+fixture is a segment (`segment_index` present in `metadata.json`, a
+`run_manifest.json` in the parent run directory), the object is probably
+correct and the **bootstrap** is the gap. Instrument the predicate and print
+each term rather than assuming which one failed -- in the measured case the
+engine's zone test, its S3-half test and its Super-Emerald test were all right
+and only `hasAllEmeralds()` was false.
+
+**Do not** repair it by keying on the run id, the fixture name, the zone or a
+frame index -- that is a route carve-out. The value is usually recoverable from
+the parent `run_manifest.json`, whose transitions carry `emeralds_before` /
+`emeralds_after` and `rings_before` / `rings_after`, but seeding an inventory
+counter from recorded data is gameplay-state hydration and a hard-rule-4
+policy decision, not something to land inside a trace round.
+
+**The readout trick that identifies the object (see P62).** When the diverging
+fields are player fields, the responsible object is still nameable: an
+`object_state` aux row whose `object_code` **changes** on the divergence frame
+is the ROM rewriting that slot's code pointer. Here slot 4 went
+`0x00061682 -> 0x0001ABB6` on the touch frame and vanished the next.
+`0x0001ABB6` is `Delete_Current_Sprite` (`sonic3k.asm`, immediately before
+`Delete_Referenced_Sprite` and `Draw_Sprite`), so the *previous* code is the
+identity you want. Bracket a raw address by grepping the disassembly for
+`loc_<hex>` / `sub_<hex>` labels either side of it and counting instruction
+bytes inward.
+
+**Corollary worth keeping.** Both arms of such a branch write distinct,
+compared values, so the fixture tells you which arm each side took without any
+instrumentation at all: the ROM's `rings +50` is `loc_61794`, and the engine's
+`anim = $1C` with `mapping_frame = 0` is `loc_6173A`. Look for a branch whose
+two arms write *different compared fields* before writing any probe.
+
+**Cross-game.** S1's `Chaos_emerald_count` / S2's `Emerald_count` gate
+end-of-act and special-stage behaviour the same way, and S1/S2 complete-run
+segment fixtures have the same bootstrap shape.
+
+**Originating investigation.** MGZ Sonic+Tails segment, frame 17383 (3410 of
+3446 errors); see `docs/status/trace-frontier-log.md`, 2026-08-15.
