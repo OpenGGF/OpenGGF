@@ -76128,3 +76128,53 @@ Reading: the ROM converts forward speed into upward speed at 1434 and goes airbo
 later; the engine keeps its speed and stays grounded. Shape is a ramp/slope launch or a
 solid-object bounce. **INDEPENDENT of the ICZ cause** — different character, different subsystem,
 and the Tails-CPU `d4` mechanism cannot produce a lone player `y_speed`.
+
+## 2026-08-15 - ICZ 1818: writer isolated, fix withheld (reds the ICZ complete-run)
+
+Base `181a25ae0`. Two worktrees under `$WT` (`push-roll` = fix, `push-base` = control). All numbers measured at `181a25ae0`.
+
+**The writer is `PlayableSpriteMovement.applyRollStopAnimationChange()`** (its
+`sprite.setPushing(false)` under `PlayerAnimationRules.animationChangeClearsPush()`).
+A probe on that line printed `PROBE rollStopPushClear frame=1803 cpu=false` — the leader,
+on the roll-stop frame, **before** `SpriteManager.tickPlayablePhysics` reaches
+`playable.recordFollowerHistoryForTick()`. Sixteen such clears fire across the whole ICZ
+segment. That is the previously-INFERRED line, now MEASURED.
+
+**The ROM does not clear push there.** `Sonic_RollSpeed`'s roll-stop block
+(`sonic3k.asm:22979-22990`) writes `bclr #2,status` (roll), the radii, `anim=$05` and
+`y_pos` and nothing else; `Tails_RollSpeed` (`:28216-28231`) matches. `Status_Push` is
+cleared only by `Animate_Sonic`/`Animate_Tails` on `anim != prev_anim`
+(`:29359-29364`, `:29681-29686`), which runs **after** `Sonic_RecordPos` in
+`Obj01_Control` (`:21995-22022`). The engine performs the animation-driver clear one
+routine early, so a push-free byte enters the follower history ring.
+
+**Deleting the eager clear does what the diagnosis predicted.**
+`TestS3kSonicTailsIczSegmentTraceReplay`: first error moves **1818 -> 1983**
+(`tails_animation_id` 0x05 vs 0x06), errors **3031 -> 2970**. `...AizSegment...` stayed
+green; `...MhzSegment...` stayed at 9 errors / frame 1276; `...HczSegment...` stayed at
+frame 1434 / 1445 errors.
+
+**But it reds `TestS3kIczCompleteRunTraceReplay`** — green at base (verified on the control
+tree, including with the probe applied), 2372 errors with the fix, first error frame 6118
+`tails_x_speed` (expected `0x0000`, actual `-0x000C`). Per-frame end-of-tick probes on both
+trees differ in exactly two rows:
+
+| engine frame | base (Tails) | with fix (Tails) |
+|---|---|---|
+| 6117 | `push=false roll=false anim=5 gsp=0` | `push=false roll=false anim=0 gsp=-12` |
+| 6118 | `push=false roll=false anim=5 gsp=0` | `push=true roll=false anim=0 gsp=0` |
+
+The trigger is the leader's own roll stop at engine frame **6100** (`PROBE
+rollStopPushRetained frame=6100 cpu=false`): 6100 + the 16/17-frame follow delay lands on
+6116/6117, and the now-retained push makes Tails fall through to follow **steering** where
+the ROM copies the delayed input verbatim. So on this route the ROM's delayed Sonic byte
+has Push **clear** at the roll stop, while the engine has it **set** — i.e. the engine is
+**over-setting `Status_Push` on the leader around frame 6100**, and the eager clear was
+masking it.
+
+**Decision: not landed.** The brief's stated stop condition is exactly this shape (segment
+improves, complete-run reds). The ordering correction is right and should be kept, but it
+must land **together with** the fix for the leader push over-set at complete-run ~6100 —
+that is the next question: which engine site sets `Status_Push` on Sonic at that frame, and
+which ROM path (ground-wall response gate, or an earlier `Animate_*` clear) removes it. No
+full-profile sweep was run, because the decisive protected set already said stop.
