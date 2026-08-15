@@ -76494,3 +76494,82 @@ dispatch made things far worse, not better.
 **Next:** explain the 29095 ring timing. Either it is genuinely independent — in which case fix it
 and land all three together — or the pair does perturb something upstream that no compared field
 reveals, which would itself be worth knowing.
+
+## 2026-08-15 - HCZ complete-run 29095 explained: ring floor-probe phase is SLOT-derived
+
+**Verdict: `pair-perturbs-upstream`, with a large comparison blind spot attached.** The
+MegaChopper pair on `bugfix/ai-megachopper-waitoffscreen-enemydefeated` (`b31069c3f`) is
+**not** exposing an independent third defect. It changes engine object-slot occupancy
+continuously from frame **1481** onward, and that permutation is invisible to every field
+this test compares.
+
+**Method.** Two worktrees, `b31069c3f` (branch) and its base `f0a22505c`. The existing
+env-gated `SlotOccupancyProbe` was extended locally (uncommitted, identical in both trees)
+to also dump the engine's full `occupiedDynamicSlotIdsWithReservations()` map, with occupant
+class and position, on **every** driven row. Two probe files, 44.9 MB each, 31,482 engine
+rows apiece. Command per tree, `-Ptrace-replay`, one class:
+`OGGF_SLOT_PROBE=1 OGGF_ENGINE_DUMP=1 mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=TestS3kHczCompleteRunTraceReplay`.
+Control reproduced exactly: base **green**, branch **2 errors**, first `rings` expected 1
+actual 2 at frame **29095**.
+
+**MEASURED: the trees diverge at frame 1481, not 29095.** Engine slot 10 holds the
+MegaChopper at `x=3839` (base) vs `x=3840` (branch). ROM's own aux for that badnik reads
+`object_x 0x0F00` = **3840** — the branch is the one that matches. From there: **16,289 of
+31,482** rows differ between the trees; the occupied-slot **set** itself differs on
+**12,274** of them, first at frame **2006**. Live MegaChopper object-frames: base 4,678,
+branch 3,125 (both end at 16,525).
+
+**MEASURED: the carrier is one slot, and the mechanism is a ROM phase gate.** At the boss
+hurt (28905) both trees scatter 32 rings at pixel-identical positions. Rings 2..32 occupy
+slots 39-69 on both. Ring **0** occupies slot **38** on base and slot **4** on the branch,
+because the branch's whole HCZ boss object graph sits one slot later (base/ROM slots 4-37,
+branch 5-38) and `AllocateObject` then finds slot 4 free.
+
+`Obj_Bouncing_Ring` gates its floor probe on the object's own SST slot
+(`docs/skdisasm/sonic3k.asm:35629-35632`):
+
+```
+move.b  (V_int_run_count+3).w,d0
+add.b   d7,d0
+andi.b  #7,d0
+bne.s   loc_1A7B0
+```
+
+`d7` is `Process_Sprites`' live slot countdown, and the engine models it faithfully —
+`RingManager.LostRingPool.phaseOffsetForSlot` returns `lastSlotExclusive - 1 - slotIndex`
+(`RingManager.java:1788-1796`). Slot 38 and slot 4 are 34 apart, so they land on floor-probe
+phases two apart in the `& 7` cycle; ring 0 bounces on different frames and is collected
+four frames early. `movea.l a0,a1` at `sonic3k.asm:35658` is why only ring 0 moves: the
+spawner reuses its own slot for ring 0 and `AllocateObjectAfterCurrent` chains the rest.
+
+**MEASURED: the base is right here by coincidence.** ROM `slot_dump` at 28905 has
+`Obj_Bouncing_Ring` (`0x0001A64A`) in slots **38-69** and the boss graph in 4-37 — exactly
+the base's layout. But `SlotOccupancyProbe` reports engine-vs-ROM occupancy divergence on
+**2387 of 2387** sampled frames on **both** trees, totalling **60,274** divergent
+slot-entries on base and **60,441** on the branch (branch has fewer on 271 frames, more on
+383). The complete-run has been green throughout while its object graph disagreed with ROM
+everywhere; it coincided with ROM at the one instant that feeds a compared field.
+
+**The blind spot, stated plainly.** `AbstractTraceReplayTest.compareObjectNearEvents()`
+defaults to `false` and `TestS3kHczCompleteRunTraceReplay` does not override it, and
+`SlotOccupancyProbe` is `OGGF_SLOT_PROBE`-gated off. So **no object identity, slot or
+position is compared in this test at all**, even though the fixture carries 394,205
+`object_state`, 342,381 `object_near` and 2,388 `slot_dump` events. A change can permute the
+entire object graph for 27,000 frames and the suite reports green until the permutation
+happens to reach a slot-phased ROM gate. That is worth more than the fix: the suite's green
+on this class is evidence about player physics only.
+
+**Nothing landed.** The correct third fix is not a MegaChopper change and not a ring change
+— both are faithful. It is the accumulated S3K occupancy divergence that both trees carry,
+which is a frontier of its own, not a one-round edit. Closing 29095 by any means available
+this round would have been a fitted compensation for drift elsewhere.
+
+**Confirmed from the previous round:** "no MegaChopper alive anywhere in frames 28900-29160"
+is **correct** on both trees. **Refuted:** its reading that the pair "introduces no visible
+drift across ~29,000 frames" — it introduces drift on 16,289 rows; the drift is merely
+uncompared.
+
+**Recommendation.** Hold `b31069c3f` off `develop` until either (a) the boss-arena slot
+permutation is closed, or (b) object occupancy is brought into the compared surface for
+S3K complete-runs, so the choice between the two layouts is made on ROM evidence rather than
+on which one happens to green a ring counter.
