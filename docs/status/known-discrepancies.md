@@ -2083,3 +2083,18 @@ moved the layout.
 **Consequence for reading results.** A green S3K complete-run does not imply the object graph
 matches. It implies the compared fields match. Occupancy should be brought into the compared
 surface before slot-sensitive behaviour is judged by these tests.
+
+**Corrected 2026-08-15 by
+[the occupancy scoping audit](../architecture/audits/2026-08-15-s3k-object-slot-occupancy-scoping.md).**
+The 2387/2387 frame figure holds, but **60,274 overstates the real divergence about threefold**.
+S3K stores a 32-bit code pointer in the first long of an SST slot, not an id byte
+(`docs/skdisasm/sonic3k.asm:35985-35988`), so the recorder's `slot_dump` and `object_near` carry
+addresses such as `"0x0001365C"`. Both `SlotOccupancyProbe.parseId` and `TraceBinder`'s
+`parseHexByte` truncate that to its low byte and compare it against the engine's layout object id.
+**40,755 of the 60,274 entries (67.6%) are that artefact**, not a divergence; the genuine
+presence/absence divergence is 19,519 entries on 2025 frames. S1's `object_near` `type` is a real
+one-byte id, which is why the three S1 classes can enable the comparison — **an S3K class must not
+enable `compareObjectNearEvents()` until the identity key is fixed**, or the resulting red is
+uninterpretable. With identity resolved the divergence is a near-even mixture of permutation
+(23.3% of sampled instances) and population difference (23.8% short, 11.6% excess); the ROM's
+`AllocateObject` search order is modelled correctly and is **not** the cause.
