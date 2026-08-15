@@ -589,6 +589,21 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * and never touches SV_MoveCameraUp's top clamp on the way (S1 MZ1 row 3,220:
 	 * v_limittop2 $340, v_limitbtm2 $33E, recorded camera $33E). Consulting minY
 	 * here left the camera unclamped for the whole ascent.
+	 * <p>
+	 * S3K reaches the same clamp by a different route, and it is LIVE — do not gate
+	 * it. Its {@code loc_1C202} (docs/skdisasm/sonic3k.asm:38561-38569) compares d1
+	 * against Camera_max_Y_pos, then subtracts {@code Screen_Y_wrap_value + 1} and
+	 * takes the hard clamp {@code move.w 6(a2),d1} at {@code loc_1C216} only when
+	 * that subtraction borrows. {@code Get_LevelSizeStart} writes
+	 * {@code Screen_Y_wrap_value = -1} (sonic3k.asm:38093), which would make the
+	 * subtraction unable to borrow — but that write survives for exactly one
+	 * DeformBgLayer call, because {@code LevelSetup} (sonic3k.asm:102205) then
+	 * writes {@code #$FFF} unconditionally for every level before LevelLoop begins
+	 * (sonic3k.constants.asm:434 documents the field as "either $7FF or $FFF").
+	 * So every gameplay frame borrows and clamps. The non-borrowing arm
+	 * ({@code sub.w d3,(a1)}) is the vertical WRAP, reached only where
+	 * Camera_max_Y_pos >= the wrap value; the engine does not yet enable vertical
+	 * wrap for S3K. See docs/status/trace-frontier-log.md, 2026-08-15 round 3.
 	 */
 	private short clampBottomBoundary(short value) {
 		return value > maxY ? maxY : value;

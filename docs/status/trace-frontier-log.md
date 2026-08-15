@@ -75889,3 +75889,84 @@ Until that is resolved the engine's unconditional per-frame bottom clamp stays, 
 **knowingly wrong in mechanism**: it has no live ROM site behind it for non-wrapping S3K
 levels, and it is compensating for the scroll-step defect above. Do not re-attempt the gate
 in isolation; land it together with whatever fixes the extra step.
+
+## 2026-08-15 (round 3) - S3K camera: PREMISE REFUTED. `Screen_Y_wrap_value` is `$FFF`, not `-1`
+
+Measured at **`3e960e09b`**. **Nothing landed in `src/` except a comment.** The question this
+round was handed -- *"why does the engine take a camera-Y scroll step at AIZ1 frame 0 when the
+ROM takes none?"* -- **has a false premise. The ROM takes the step too, and then clamps it.**
+
+**The missing writer (MEASURED, ROM-cited).** The previous two rounds concluded that S3K's
+per-frame bottom clamp at `loc_1C202` (`sonic3k.asm:38561-38569`) is dead code, because
+`Get_LevelSizeStart` writes `move.w #-1,(Screen_Y_wrap_value).w` (`:38093`) and `-1 + 1 = 0`
+makes `sub.w d3,d1` unable to borrow. The write is real; **it does not survive**.
+`LevelSetup` (`sonic3k.asm:102205`) -- the unconditional, every-level setup routine invoked
+from `j_LevelSetup` at `:7770`, i.e. **ten lines after** the `Get_LevelSizeStart` /
+`DeformBgLayer` pair at `:7759-7760` -- writes:
+
+```
+move.w  #$FFF,(Screen_Y_wrap_value).w      ; sonic3k.asm:102205
+move.w  #$FF0,(Camera_Y_pos_mask).w
+```
+
+`Get_LevelSizeStart`'s `-1` is therefore live for exactly **one** `DeformBgLayer` call, the
+pre-loop one at `:7760`, and is `$FFF` for every frame of `LevelLoop`. The disassembly says so
+independently: `sonic3k.constants.asm:434` documents `Screen_Y_wrap_value` as
+*"either $7FF or $FFF"*. The six/seven `$7FF`/`$FFF`/`-1` sites catalogued by the previous
+rounds are all correct and all irrelevant -- they were searched for **level-specific**
+writers, and the writer that matters is **generic**.
+
+**Re-trace of AIZ1 frame 0 with the correct value.** `MoveCameraY` grounded path, `d0 = $90`,
+`d3 = Distance_from_top = $60`, `$30 > 6`, `loc_1C1FA` gives `d1 = $396`. At `loc_1C202`:
+`cmp.w 6(a2),d1` -> `$396 >= $390`, no branch; `d3 = $FFF`, `addq.w #1` -> `$1000`;
+`sub.w d3,d1` -> `$0396 - $1000` **borrows**, `bcs` **is taken**, `loc_1C216` does
+`move.w 6(a2),d1` = `Camera_max_Y_pos` = `$390`. **The ROM scrolls and clamps back, every
+frame.** The `sub.w d3,(a1)` no-borrow arm is the *vertical wrap* (it subtracts `$1000` and
+loops the camera to the top); it is reached only where `Camera_max_Y_pos >= $1000`.
+
+**Engine behaviour instrumented at the decision site (MEASURED).** A temporary counter in
+`Camera.clampBottomBoundary` printed `PROBE clampBottom in=396 maxY=390` on the AIZ1 opening
+frames of `TestS3kSonicTailsAizSegmentTraceReplay`. **The engine already does exactly what
+the ROM does**: full `$600` grounded step to `$396`, clamped to `Camera_max_Y_pos = $390`.
+Probe reverted; `git status --porcelain` clean.
+
+**Fixture corroboration (MEASURED,
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/aiz/physics.csv.gz`,
+2290 rows).** `camera_y` is `0x0390` on **1231** of 2290 rows and is pinned there while
+`player_y` sits `$90` below it and while `player_y` later drifts to `$41B`/`$41E` -- a hard
+lower bound, not a coincidence of a frozen player. `camera_y` moves freely *above* `$390`
+(e.g. `0x02FC` at row 1500) and reaches `0x0430` later, once `AIZ1_Resize` raises
+`Camera_max_Y_pos`. Pinning at exactly the `LevelSizes` yend, one-sided, is the signature of
+a live clamp.
+
+**Consequences, in order of importance:**
+
+1. **Do not gate `clampBottomBoundary` on vertical wrap.** The discarded
+   `CameraRules.bottomBoundaryClampGatedByVerticalWrap` design of the previous two rounds is
+   not merely unlucky -- it is **wrong against the ROM**, and the 12-newly-red/0-green
+   measurement was the recorded hardware reporting that correctly. The
+   "knowingly wrong in mechanism" caveat attached to the engine's unconditional per-frame
+   bottom clamp is **withdrawn**: `loc_1C202` is live for every S3K level, and the clamp is a
+   faithful model of its `bcs -> loc_1C216` arm.
+2. **The open question of the two previous rounds -- "where does hardware's `max_Y` pin come
+   from?" -- is answered:** `loc_1C216`, reached because `Screen_Y_wrap_value` is `$FFF`.
+3. **A separate, genuine gap is now visible.** The engine never enables vertical wrap for
+   S3K (`Camera.verticalWrapEnabled` defaults `false`, range `0x800`; no S3K caller of
+   `setVerticalWrapEnabled` exists). The ROM's non-borrowing arm of `loc_1C202` wraps the
+   camera by `$1000` wherever `Camera_max_Y_pos >= $1000` -- HCZ1/HCZ2/MGZ1/MGZ2/LBZ1/DDZ by
+   `LevelSizes`, plus the explicit `$7FF` writers (ICZ2 `:110069`, commented *"We're in a
+   looping level!"*, SOZ2 `:114222`/`:114251`, Slots `:119055`). **Untested and unmeasured
+   this round**; it deserves its own round with a full-profile blast radius, and it is a
+   different defect from the one the last two rounds were chasing.
+4. The MHZ `$1701` arena `+6` residual is **unaffected and still unexplained by this
+   mechanism**: with `$FFF` the ROM would clamp that step to `$320` as the engine does, yet
+   hardware records `$326`. That implies hardware's `Camera_max_Y_pos` there is at least
+   `$326`, i.e. the arena's unimplemented resize/hold sequence -- consistent with that
+   round's own conclusion, and further reason not to treat it as a clamp defect.
+
+**Method note.** Two consecutive rounds verified `loc_1C202` instruction by instruction and
+enumerated every `Screen_Y_wrap_value` writer, and both reached the wrong behavioural
+conclusion, because the search was scoped to level-size and zone code. The generic
+`LevelSetup` write was found this round only by asking *which routine runs between
+`Get_LevelSizeStart` and the first `LevelLoop` iteration*. When a verified reading contradicts
+a recording, the recording wins and the missing write is upstream of where you are looking.
