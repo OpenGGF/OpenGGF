@@ -2083,6 +2083,33 @@ occupancy at all** — it would compare an engine object id against the low byte
 address. S1's `object_near` carries a real one-byte `"type":"0x25"`, which is why the S1
 complete-run classes legitimately enable it. Fixing the identity mapping is the prerequisite for
 any occupancy comparison work.
+
+**Amended 2026-08-15: there is no identity mapping to fix, and truncation is not the real
+defect.** The follow-up audit
+[*S3K trace object identity: the object pointer tables cannot supply it*](../architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md)
+read both S3K object pointer tables out of the ROM — `Sprite_Listing3 = 0x00094EA2` (256 entries)
+and `Sprite_ListingK = 0x000952A2` (185), both taken from the `203C` immediates the object loader
+itself uses at ROM `0x01B6A8` / `0x01B6C4` (`sonic3k.asm:37411-37430`) — and inverted them.
+**Only 7 of the 189 distinct code pointers in the HCZ `slot_dump` stream are table entries at
+all: 2,428 of 56,993 entries, 4.26%** (2.6% across the full event stream). The S3K SST has no id
+field at any offset (`sonic3k.constants.asm:9,20`), and objects overwrite their own dispatch
+pointer with internal sub-routine addresses to advance state — **1,758 `move.l #<label>,(a0)`
+sites in `sonic3k.asm`** — so the recorded value is a live program counter, not a type at any
+width. Containment (nearest preceding table entry) is not a sound repair: it maps `0x00085AD2`
+into `Obj_HiddenMonitor`'s `0x2BCE` gap when the previous audit's co-occurrence map called it
+`Obj_Poindexter` (`$98 → 0x0008827C`), and it produces `+0x2520`-and-larger offsets that no
+single object body spans.
+
+**Consequences.** The 19,519 genuine presence/absence divergence and the 2387/2387 frame headline
+stand, unchanged — they never consulted `type`. The **41.3/23.3/23.8/11.6
+permutation-vs-population mixture is withdrawn**, not refined: it rested on the inferred map, and
+the ROM supplies a sound replacement for 4.26% of entries and nothing for the rest, so that split
+is **not currently measurable**. `compareObjectNearEvents()` must stay off for S3K for a firmer
+reason than before — the field carries no object identity at any width. The comparison S3K could
+support is *occupancy alone* (presence/absence and slot index over `Dynamic_object_RAM`, slots
+4-90, no identity), which is already sound today; identity would instead require annotating every
+ported S3K object with its current ROM routine address.
+
 **The complete-run has been green for its entire life while its object graph disagreed with the
 ROM everywhere.** Its green is evidence about player physics, not about object layout.
 

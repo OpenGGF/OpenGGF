@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **There is no S3K object identity to map: the recorded value is a live program counter
+  (`bugfix/ai-s3k-object-code-identity`, docs merged 2026-08-15).** The obvious fix for the entry
+  below — invert the object pointer tables to turn code addresses into ids — **cannot work**, and
+  the reason is structural. The S3K SST has **no `id` field at any offset**: its conventions begin
+  `code = 0 ; longword` (`sonic3k.constants.asm`), and objects **overwrite their own dispatch
+  pointer with internal sub-routine addresses to advance state** — 1,758 `move.l #<label>,(a0)`
+  sites in `sonic3k.asm`. So the recorded value is a program counter, not a type at any width.
+  Measured against both tables read from the ROM at the addresses the object loader itself uses:
+  only **4.26%** of `slot_dump` entries are table entries (2.6% of the full stream), and they are
+  exactly the objects that dispatch via a `routine` byte instead. A containment rule
+  (nearest preceding table entry) was tested and **rejected as fitted** — it reproduces four
+  inferred labels but misplaces others into unrelated gaps. Consequence: the earlier
+  41/23/24/12 mixture is **withdrawn, not refined** — the permutation-versus-population split is
+  not currently measurable. What survives, because it never needed identity: the 2387/2387 frame
+  headline, the 19,519 genuine presence/absence entries, and mean occupancy 19.9 engine vs 23.9
+  ROM.
+
 - **The occupancy comparator compares the wrong number space
   (`bugfix/ai-s3k-slot-occupancy-scoping`, docs merged 2026-08-15).** Scoping the blind spot below
   corrected its own headline. S3K keeps a **32-bit ROM code pointer** in the first SST long, not an
