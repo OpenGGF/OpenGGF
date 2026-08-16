@@ -735,6 +735,23 @@ public final class TraceReplaySessionBootstrap {
         // authority execute that represented pass again when the shared
         // LevelFrameStep begins the bonus-stage interior.
         GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
+        // ...but the discarded pass also published Collision_response_list, and
+        // that half was NOT reconstructed above. Every object Process_Sprites
+        // ran at loc_6468 tail-calls Add_SpriteToCollisionResponseList
+        // (sonic3k.asm:21199-21207), so the ROM's first LevelLoop pass reads a
+        // populated list in Touch_Response (sonic3k.asm:20656). S3K's touch pass
+        // consumes the PREVIOUS pass's list, so leaving it empty made every
+        // object touch-ineligible for the whole first pass: the Pachinko round
+        // bumper overlapping Player_2's SpawnLevelMainSprites offset
+        // (leader -$20/+4, sonic3k.asm:8205-8216) could not set
+        // collision_property, so sub_32F34's bounce fired one pass late and the
+        // sidekick's whole state ran a pass behind the recording from row 0 on.
+        // Publish the list the represented pass would have left, without
+        // re-dispatching any object.
+        if (GameServices.level().getObjectManager() != null) {
+            GameServices.level().getObjectManager()
+                    .publishRepresentedInitialCollisionResponseList();
+        }
         // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
         // / metadata.rng_seed above): when the trace recorded the ROM's
         // free-running V_int_run_count at bonus-stage entry (recorder

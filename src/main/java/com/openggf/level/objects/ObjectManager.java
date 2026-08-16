@@ -1803,6 +1803,29 @@ public class ObjectManager {
 
     boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
 
+    /**
+     * Publishes the {@code Collision_response_list} that a <em>represented</em>
+     * (already-reconstructed, never dispatched) initial {@code Process_Sprites}
+     * pass would have built, so the first {@code LevelLoop} pass's player slots
+     * read a populated list rather than an empty one.
+     * <p>
+     * ROM: level entry runs {@code Load_Sprites} then {@code Process_Sprites}
+     * once at {@code loc_6468} (docs/skdisasm/sonic3k.asm:7848-7854), before
+     * {@code LevelLoop} begins. Every object executed in that pass tail-calls
+     * {@code Add_SpriteToCollisionResponseList}
+     * (docs/skdisasm/sonic3k.asm:21199-21207), so the list is already populated
+     * when the first {@code LevelLoop} pass's Player_1/Player_2 slots walk it in
+     * {@code Touch_Response} (docs/skdisasm/sonic3k.asm:20656).
+     * <p>
+     * Callers that <em>execute</em> the setup pass must not call this — the
+     * dispatch publishes the list itself. It exists only for entry paths that
+     * reconstruct the pass's resulting object state directly and would otherwise
+     * leave S3K's previous-list read view empty for one pass.
+     */
+    public void publishRepresentedInitialCollisionResponseList() {
+        captureCollisionResponseListForNextFrame();
+    }
+
     private void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
         collisionResponseList.captureForNextFrame(cachedTouchResponseObjects);

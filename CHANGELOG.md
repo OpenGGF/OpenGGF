@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Sonic+Tails Pachinko bonus-stage traces diverged on **row 0** — Tails'
+  bumper bounce fired one `LevelLoop` pass late and every sidekick field then ran a pass
+  behind the recording for the rest of the run. The cause was not intra-frame slot order
+  (the engine's leader-then-sidekick `Process_Sprites` ordering was measured correct, and
+  both playables already resolve their inline touch before the dynamic-object exec loop).
+  ROM level entry runs `Load_Sprites` then `Process_Sprites` once at `loc_6468`
+  (sonic3k.asm:7848-7854), and every object executed there tail-calls
+  `Add_SpriteToCollisionResponseList` (sonic3k.asm:21199-21207), so the first `LevelLoop`
+  pass's player slots walk a populated `Collision_response_list` in `Touch_Response`
+  (sonic3k.asm:20656). The bonus-stage entry path reconstructs that pass's object state
+  directly and discards the pass, but never published the list it would have built — so
+  S3K's previous-list touch pass saw **zero** touch-eligible objects on row 0 and the
+  bumper overlapping Player_2's spawn offset could not set `collision_property`.
+  `ObjectManager.publishRepresentedInitialCollisionResponseList()` now publishes that
+  list, without re-dispatching any object. No constant, tolerance or predicate is
+  introduced, and no trace data reaches engine state.
+  `TestS3kSonicTailsPachinkoBonusTraceReplay` 2401→2185, `…Pachinko2…` 2234→1977,
+  `…Pachinko3…` 187→36 errors, first error frame 0 → 94-116 in all three; the
+  `-Ptrace-replay` and `-Ptrace-replay-r7` red-class sets are byte-for-byte unchanged
+  otherwise.
 - Fix(s3k): the S3K special stage collected a blue sphere one frame early when the
   player landed on it from a jump. The ROM's per-frame player routine calls its
   movement routine `sub_9580` first (sonic3k.asm:11467), and the grid-cell check
