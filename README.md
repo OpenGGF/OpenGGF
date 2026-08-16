@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K bonus-stage entry publishes the collision-response list the ROM's pre-loop pass leaves
+  behind (`bugfix/ai-s3k-pachinko-row0-collision-list`, merged 2026-08-16).** Three Sonic+Tails
+  Pachinko replays diverged at frame 0 across six `tails_*` fields, and two successive diagnoses were
+  wrong: neither "the sidekick's slot runs after the object exec loop" nor "the frame ordering is
+  conditional and takes the wrong branch" survived instrumentation. Measured at the decision sites,
+  `objectsExecuteAfterPlayerPhysics()` is true in the bonus stage, the playable order is already
+  leader-then-sidekick, and both complete their inline touch pass before the bumper executes — the
+  engine's intra-frame order already matches `Process_Sprites`. The actual cause: at row 0 the touch
+  pass scans an **empty** previous-pass `Collision_response_list`, so the bumper overlapping Tails'
+  spawn offset is not touch-eligible and its bounce fires a pass late. The ROM's `loc_6468` runs
+  `Process_Sprites` once before `LevelLoop` (sonic3k.asm:7848-7854) and each object tail-calls
+  `Add_SpriteToCollisionResponseList` (:21199-21207), so the first loop pass walks a populated list.
+  `applyBonusStageEntry` correctly discards that pre-loop pass — re-running it double-executes
+  objects, and measuring that variant regressed both the Slots replay and a green Knuckles class —
+  but it never reconstructed the list the pass publishes. Publishing the list alone fixes the lag
+  with no other change: Pachinko 2401 -> 2185, Pachinko2 2234 -> 1977, Pachinko3 187 -> 36, and the
+  failing field drops from the six-field group to a 1-2px `tails_y`, so the pass-lag is gone rather
+  than moved.
+
 - **`Obj_Wait` fires when its counter goes negative, and a chain diagnostic stops agreeing with
   itself (`bugfix/ai-obj-wait-bmi`, merged 2026-08-16).** The S3K special-stage entry flash waited
   one frame too few: ROM `Obj_Wait` is `subq.w #1,$2E(a0)` / `bmi.s` (sonic3k.asm:177947-177950), a

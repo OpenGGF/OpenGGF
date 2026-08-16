@@ -78689,3 +78689,115 @@ No fitted constant -- `0x20` untouched, only the branch condition. No tolerance,
 offset or nudge. No assertion weakened, widened, deleted, disabled or made advisory.
 No zone/act/route/frame/game-name predicate. No trace hydration. `docs/skdisasm` used
 for citations only. No landed fix undone.
+## 2026-08-16 -- S3K Pachinko trio: the previous round's diagnosis was wrong; the real cause is an empty Collision_response_list at row 0
+
+Base `9f42d43dc`, detached worktrees, JDK 21, all three ROMs, reports cleared before
+every run.
+
+### The previous round's claim is REFUTED, and so is the review that challenged it
+
+The 2026-08-15 entry above concluded "the leader's slot runs before the dynamic-object
+exec loop; the sidekick's whole slot runs after it", and scoped the fix as a reorder of
+shared frame-ordering machinery. **That is not what happens.** A design review then
+argued the inversion might be *conditional* on
+`LevelManager.objectsExecuteAfterPlayerPhysics()` returning `false` in the bonus stage.
+**That is also not what happens.**
+
+Instrumented at the decision sites (temporary, reverted), Pachinko3 versus an AIZ
+control:
+
+```
+LFS fc=0 inline=true module=Sonic3kGameModule zone=20 phase=ORDINARY_LEVEL
+  PPS order=[Sonic:human Tails:cpu ] suppressed=false initialAssembly=false sidekicks=1
+  TICK Sonic ... TOUCH Sonic ... TICK Tails ... TOUCH Tails ...
+  BUMPER update vint=4222 ...
+```
+
+Measured, on both Pachinko and AIZ:
+
+* `objectsExecuteAfterPlayerPhysics()` returns **true**; the module is a non-null
+  `Sonic3kGameModule`. The ordering is **SHARED, not conditional** -- all three games'
+  `ObjectInteractionRules` set the flag true and the only `false` path is a null module,
+  which never occurs here.
+* `SpriteManager.buildPlayableUpdateOrderInto` orders **leader then sidekick**, and both
+  playables run their full `tickPlayablePhysics` -- including the inline
+  `applyTouchResponses` -- **before** the bumper's `update()`, on every frame including
+  row 0. No `skipCpuPhysics` divert, no `isApproaching` divert, no suppression: Tails is
+  `state=NORMAL` throughout. **The engine's intra-frame slot order already matches
+  `Process_Sprites`.**
+
+### The actual cause, and it is one line
+
+The touch loop's own probe at row 0:
+
+```
+TOUCHLOOP sidekick=true objs=0 usePrevList=true usePreUpdate=true   <- fc=0 (row 0)
+TOUCHLOOP sidekick=true objs=4 usePrevList=true ...                 <- fc=1
+```
+
+S3K consumes the **previous** pass's `Collision_response_list`
+(`touchUsesPreviousCollisionResponseList`). At row 0 that list is **empty**, so no object
+is touch-eligible for the whole first `LevelLoop` pass, the round bumper overlapping
+Player_2's spawn offset cannot set `collision_property`, and `sub_32F34`'s bounce fires
+one pass late -- from which the sidekick runs a pass behind the recording forever. Sonic
+is unaffected only because he is not overlapping a bumper.
+
+Why the list is empty is fully located: `TraceReplaySessionBootstrap.applyBonusStageEntry`
+calls `discardPendingInitialProcessSpritesForStateRestoration()`, and the AIZ control
+shows `INITIAL_PROCESS_SPRITES` running once before its row 0 while Pachinko never runs
+it at all. The discard is deliberate and its comment is right that
+`applyBonusStageEntry` reconstructs the pass's object state -- but the pass **also**
+publishes `Collision_response_list`, and that half was never reconstructed. ROM: level
+entry runs `Load_Sprites` then `Process_Sprites` once at `loc_6468`
+(`docs/skdisasm/sonic3k.asm`:7848-7854); every object executed there tail-calls
+`Add_SpriteToCollisionResponseList` (:21199-21207); the first `LevelLoop` pass's player
+slots then walk a populated list in `Touch_Response` (:20656).
+
+### Two experiments, and why the obvious one is wrong
+
+| experiment | Pachinko trio | Slots SonicAndTails Seg1 | Knuckles `TestS3kPachinkoBonusTraceReplay` |
+|---|---|---|---|
+| control | 2401 / 2234 / 187, all f0 | 541, f2587 | GREEN |
+| **A** -- let the discarded setup pass actually run | 2185 / 1977 / 36 | **612, f5 (worse)** | **6 errors, f350 (regressed)** |
+| **B** -- publish the list only, no re-dispatch | 2185 / 1977 / 36 | 541, f2587 (unchanged) | GREEN |
+
+A double-executes objects the reconstruction had already placed. B gives the identical
+benefit with no cost, so B is what landed.
+
+### Landed
+
+`ObjectManager.publishRepresentedInitialCollisionResponseList()` (ROM-cited, and
+documented as being only for entry paths that reconstruct the pass rather than execute
+it), called once at the end of `applyBonusStageEntry`. No constant, tolerance, offset or
+nudge; no zone/act/route/frame/game-name predicate; no trace data reaches engine state --
+the list is built from the engine's own objects by the same `captureForNextFrame` the
+production frame loop uses.
+
+### Verification
+
+| profile | control | fix |
+|---|---|---|
+| `-Ptrace-replay` | 806 tests, 32 red | 806 tests, **32 red -- identical red-class set, both directions** |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red, identical set |
+
+Only three classes change at all, all improving, none by phase-shifting: the first error
+moves from frame 0 to frames 94-116 and the failing field changes from the six-field
+`tails_*` group to a 1-2px `tails_y`, so the one-pass sidekick lag is gone rather than
+relocated.
+
+| class | control | fix |
+|---|---|---|
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 2401, f0 `tails_y_speed` | **2185, f95 `tails_y`** |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 2234, f0 `tails_y_speed` | **1977, f94 `tails_y`** |
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | 187, f0 `tails_y_speed` | **36, f116 `tails_y`** |
+
+Protected greens (AIZ/HCZ Sonic+Tails segments, `Ss`/`Ss2`/`Ss4`/`Ss5`/`Ss6`, the r7
+Knuckles bonus classes) are all still green; `TestS3kHczCompleteRunTraceReplay` remains
+deliberately red at exactly 2.
+
+### Note for the next round
+
+The same defect shape may exist in the **production** bonus-stage entry path
+(`GameLoop`), which was not measured here -- this round only established that the
+trace-replay bootstrap's reconstruction was incomplete. The new frontier for all three
+classes is a 1-2px `tails_y` at frames 94-116, which is a different defect.
