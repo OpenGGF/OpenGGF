@@ -79663,3 +79663,96 @@ stays GREEN; Knuckles `TestS3kPachinkoBonusTraceReplay` stays GREEN in r7;
 `TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2 errors, frame
 29095 `rings`. `…Pachinko2…` 1418 / 3571 rows and `…PachinkoBonus…` 1638 / 2907 rows are
 both unchanged from control, first errors unchanged.
+
+## 2026-08-16 — S3K Pachinko flipper: one lock slot for two riders, and the zero-distance top-solid window
+
+**Target.** `TestS3kSonicTailsPachinko2BonusTraceReplay`, base `33070be50`.
+Control re-measured in this round's own worktree: **1418 errors, 3571 rows compared**,
+first error frame 469 `x_speed` (expected `0x04F3`, actual `0x0100`) — matching the brief.
+
+**The briefed origin (frame 1435) reproduced exactly, and is one of two defects.**
+At frame 1435 the ROM has `air=1`, `status=0x06`, `y=0x061F`, `y_speed=0x08A0` and the
+engine has `air=0`, `status=0x0C`, `y=0x0622`: the engine LANDED on
+`Obj_PachinkoFlipper` (aux slot 16, object code `0x00049C8A`, `(0x0080,0x0628)`) one frame
+before the ROM did. The engine's landed `y` is exactly `playerY + 0 + 3`, i.e. it accepted
+the exact-touch case.
+
+1. **(ROM-cited, measured, NOT landed — see the hold below.)** Every S3K top-solid ride
+   routine — `SolidObjectTop`, `SolidObjectTopSloped`, `SolidObjectTopSloped2` and the
+   `sub_1E410`/`loc_1E42E` entries (sonic3k.asm:41784-41886, 41963-41996, 42076-42097) —
+   funnels into one window at `loc_1E45A` (sonic3k.asm:41974-41984):
+   `sub.w d1,d0 / bhi.w locret_1E4D4` then `cmpi.w #-$10,d0 / blo.w locret_1E4D4`.
+   `bhi` is *not* taken on a zero result, and the following unsigned `blo` against `$FFF0`
+   then rejects it, so the accepted window is exactly `d0 ∈ [-$10,-1]` — engine `distY ∈
+   [1,16]`. Zero-distance (exact touch) is **not** a landing in S3K. The engine's
+   `CollisionRules.topSolidLandingAllowsZeroDist` is `true` for S3K.
+   The flipper's own slope table was re-read out of `s3k.gen` at `0x49E5A` rather than
+   trusted from the disassembly; it matches (`-4 ×9, -5 … -$1B`), and index 13 at Sonic's
+   `relX` gives `-9`, which reproduces the ROM's frame-1436 landing `y = 0x0622` exactly.
+2. **(Landed.)** `Obj_PachinkoFlipper` keeps **two** per-player standing counter bytes and
+   calls `sub_49CFE` once per character with its own pointer: `lea $36(a0),a3 /
+   lea (Player_1).w,a1 … bsr.s sub_49CFE` then `lea $37(a0),a3 / lea (Player_2).w,a1 …
+   bsr.s sub_49CFE` (sonic3k.asm:96389-96397); `sub_49D72`'s release pass repeats the split
+   (:96403-96410). `PachinkoFlipperObjectInstance` collapsed them into one
+   `lockedPlayer` reference. Instrumented at the decision site: with Sonic AND Tails on the
+   same flipper, **1106 consecutive frames** entered the newly-locked branch for *each*
+   character, so `loc_49D54`'s `add.w d1,ground_vel(a1)` never ran again and both riders'
+   `ground_vel` froze at `0x78`/`0x60`.
+
+**Measured, separately.**
+
+| tree | Pachinko2 errors | first error |
+|---|---|---|
+| control `33070be50` | 1418 | f469 `x_speed` |
+| (1) zero-dist window only | 1401 | f469 |
+| (1) + (2) | **442** | f469 |
+| **(2) only — landed** | **1257** | f469 |
+
+All at 3571 rows compared; no starvation.
+
+**The hold, and why.** (1) is fully ROM-derived and is worth 815 errors on this class, but
+on the full `-Ptrace-replay` sweep it turns **five** classes red with no located owner:
+`TestS3kAizTraceReplay` (2 errors, f5435 `y` `0x037C` vs `0x0379`),
+`TestS3kCnzTraceReplay` (**7536** errors, f4604 `y_speed` `0x0000` vs `0x02E8` — the engine
+now *fails* to make a landing the ROM makes), plus the AIZ/CNZ complete runs and
+`TestS3kReplayReferenceClosureIntegration`. Per
+`docs/agent-workflow/briefing-trace-rounds.md` ("red with an unlocated owner: hold"), this
+is held. The shape is a **compensating pair**: some S3K top-solid object's engine geometry
+is a pixel off from the ROM's and the zero-distance acceptance has been absorbing it. The
+removal condition is to locate the CNZ f4604 object's geometry error first; the window
+itself is not in question.
+
+**Remaining frontier after (2).** With (1) held, `…Pachinko2…` sits at **1257 / 3571**,
+first error f469 — whose owner remains the documented bonus-stage slot-occupancy divergence
+(`docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md`), untouched here.
+With (1) applied the class's next frontier is Tails-specific: f1443 `tails_y` `0x0632` vs
+`0x062E` (a one-frame landing-Y transient that the riding re-snap corrects at f1444), then
+f1458 onward around Tails' own flipper launch.
+
+**Explicitly not done.** No constant introduced — `0x18`, `0x0622`, `0x061F` and every
+measured delta are absent from the landed diff. No assertion weakened, widened, demoted or
+deleted. No trace hydration; the `Saved_status_secondary` frame-0 seam and `InteractState`'s
+javadoc were not touched. No zone/act/route/frame/game-name predicate. No fixture
+regenerated. No landed fix undone; the frame-180 `Obj_Attracted_Ring` compensating pair was
+not disturbed.
+
+**Verification** (own tmpdir per tree, `target/surefire-reports` and `target/trace-reports`
+cleared before every run, red sets diffed by name in BOTH directions with a Python set
+difference, never `comm`).
+
+| sweep | control (`33070be50`) | fix worktree |
+|---|---|---|
+| `-Ptrace-replay` | 806 tests, **28 red** | 806 tests, **28 red** |
+| `-Ptrace-replay-r7` | 37 tests, **32 red** | 37 tests, **32 red** |
+| default profile | 15118 tests, 51 red classes | 15118 tests, 51 red classes |
+
+No newly red, no newly green in either trace profile. The default sweep's first pass showed
+`TestRewindCoverageGuard` newly red on a real gap — the new `lockedSidekick` reference had no
+rewind policy; it is now `CAPTURED` alongside `lockedPlayer` in
+`DefaultObjectRewindPolicies`, not baselined. `TestAizSpikedLogGraphRewind`,
+`TestPlaybackAdvanceOnlyInputBridge` and `TestGameLoopSpecialStageRewindGate` moved in that
+same sweep and are green in isolation on BOTH trees (13 tests, 0 failures each) — reused-fork
+ambient movement, not attributable. `Pachinko3`, the unnumbered AIZ/HCZ segment
+classes, `Ss`/`Ss2`/`Ss4`-`Ss7` and the r7 Knuckles bonus classes all stay green;
+`TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2 errors, frame 29095
+`rings`; `…PachinkoBonus…` is untouched at 1638 / f122 `rings`.

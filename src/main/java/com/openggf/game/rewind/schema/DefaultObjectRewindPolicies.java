@@ -407,6 +407,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Sibling of lockedPlayer: ROM Obj_PachinkoFlipper keeps one standing counter
+            // byte per rider ($36(a0) for Player_1, $37(a0) for Player_2,
+            // sonic3k.asm:96389-96397), so the engine carries one lock reference each.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedSidekick"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance", "playerRef"), RewindFieldPolicy.CAPTURED),

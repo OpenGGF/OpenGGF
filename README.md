@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The pachinko flipper tracks two riders, not one (`bugfix/ai-pachinko2-air-1435`, merged
+  2026-08-16).** `Obj_PachinkoFlipper` keeps a **per-player** standing byte — `$36(a0)` for Player_1
+  and `$37(a0)` for Player_2, with separate `sub_49CFE` calls and a `p2_standing_bit`
+  (sonic3k.asm:96389-96397), and a matching release split at :96403-96410. The engine kept a single
+  `lockedPlayer` reference, so with Sonic and Tails on the same flipper each character repeatedly
+  took the newly-locked branch — measured at the decision site as **1106 consecutive frames** —
+  which returns before `loc_49D54`'s `add.w d1,ground_vel(a1)`, freezing both riders' `ground_vel`
+  indefinitely. Split into two slots, with the sidekick reference captured for rewind rather than
+  baselined. Pachinko2 1418 -> 1257 errors, rows compared unchanged at 3571.
+  A second, larger fix at the same frame is **deliberately held**: S3K's top-solid ride routines all
+  funnel into `loc_1E45A` (:41974-41984), whose `sub.w d1,d0 / bhi` then `cmpi.w #-$10,d0 / blo`
+  pair excludes a zero result, so the landing window is `[-$10,-1]` and the engine's
+  `topSolidLandingAllowsZeroDist` is wrong for S3K. Setting it false takes this class to 442 errors
+  but reds five others with no located owner — including `TestS3kCnzTraceReplay` at 7536 errors,
+  where the engine then *fails* a landing the ROM makes. Held as a suspected compensating pair with
+  its removal condition recorded.
+
 - **A collected push orb deletes itself, and its reaction runs from its own slot pass
   (`bugfix/ai-pach2-r257`, merged 2026-08-16).** Two ROM-cited corrections to the pachinko item orb.
   First, the reward push was dispatched inside the *player's* touch pass; ROM `loc_4A312`/`loc_4A34C`
