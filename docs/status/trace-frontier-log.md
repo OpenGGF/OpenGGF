@@ -78998,3 +78998,133 @@ stage's first decrement happened on a row the harness does not step. This is a
 stage-entry phase question shared by every special stage, not a rate constant;
 it was deliberately **not** closed here, because the only way to close it inside
 this round would have been to seed the timer at the fixture's value.
+## 2026-08-15 -- The seven `dez23*` act-2 segment classes are ONE defect: `Obj_HPZSSEntryControl` is not implemented
+
+Diagnostic round, no engine change. Base `develop` `9900b3114`.
+
+### Measured control (my own, at `9900b3114`)
+
+Each class run **alone**, `-Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical`,
+`target/surefire-reports` and `target/trace-reports` removed before every
+invocation (per-class runs, because the trace-report filename `s3k_dez232_report.json`
+collides across all eight `dez23*` classes).
+
+| class | errors | total_frames | first error (alphabetical, not causal) |
+|---|---:|---:|---|
+| `TestS3kSonicTailsDez23SegmentTraceReplay` | 182 | 954 | frame 0 `tails_x` 0x1640/0x1620 |
+| `TestS3kSonicTailsDez232SegmentTraceReplay` | 48 | 139 | frame 0 `tails_y` 0x03A3/0x03A7 |
+| `TestS3kSonicTailsDez233SegmentTraceReplay` | 54 | 154 | frame 0 `tails_y` 0x03A3/0x03A7 |
+| `TestS3kSonicTailsDez234SegmentTraceReplay` | 67 | 198 | frame 0 `tails_x` 0x1640/0x1620 |
+| `TestS3kSonicTailsDez235SegmentTraceReplay` | 62 | 208 | frame 0 `tails_x` 0x1640/0x1620 |
+| `TestS3kSonicTailsDez236SegmentTraceReplay` | 73 | 215 | frame 0 `tails_x` 0x1640/0x1620 |
+| `TestS3kSonicTailsDez237SegmentTraceReplay` | 64 | 215 | frame 0 `x_sub` 0x0000/0xF400 |
+| `TestS3kSonicTailsDez238SegmentTraceReplay` | 621 | 5118 | frame 0 `x_sub` 0x0000/0x0C00 |
+| `TestS3kSonicTailsAiz3SegmentTraceReplay` | 1567 | 8221 | frame 0 `tails_x` 0x0220/0x7F00 |
+
+### The first-reported field is alphabetical; the full frame-0 field set is identical
+
+Dumping **every** field diverging at frame 0 (not the headline) gives the same
+ten-field signature for all seven act-2 `dez23*` classes:
+
+| field | expected | actual |
+|---|---|---|
+| `tails_x` | 0x1640 | 0x1620 |
+| `tails_y` | 0x03A3 | 0x03A7 |
+| `air` / `tails_air` | 0 | 1 |
+| `status_byte` / `tails_status_byte` | 0x0000 | 0x0002 |
+| `player_animation_id` / `tails_animation_id` | 0x001C | 0x0005 |
+| `player_mapping_frame` / `tails_mapping_frame` | 0x0000 | 0x00BA / 0x00AD |
+
+`Dez237` adds `x` / `x_speed` / `g_speed` / `x_sub` only because its frame-0 input
+is `0x0004` -- the engine walks a player the ROM has under object control. Its
+`x_sub` headline is the same defect with a stick held, not a sub-pixel frontier.
+
+The fixtures agree: `dez23` .. `dez23_7` are **byte-identical at frame 0** in every
+physics column except `input` and the free-running `vblank_counter`.
+
+### Root cause, with citation
+
+`dez23*` act 2 is not Death Egg -- `zone_token_for(23)` is just a directory label.
+The level-size table names it: `dc.w $1500, $1640, $320, $320 ; Special Stage Arena (HPZ)`
+(`docs/skdisasm/sonic3k.asm:38144`), and the fixture's frame-0 camera is exactly
+`$15A0/$0320` inside those bounds.
+
+`Obj_HPZSSEntryControl` (`sonic3k.asm:197742`) places **both** characters itself.
+At `loc_90A10` (`:197806-197819`) it arms `move.w #$1F,$2E(a0)`, spawns the
+`Obj_HPZSuperEmerald` set, then does `lea (Player_1).w,a1 / bsr.w sub_90A4C`, then
+`lea (Player_2).w,a1` and **falls through** into the same routine
+(`sub_90A4C`, `:197820-197829`):
+
+```
+sub_90A4C:
+        move.b  #$83,object_control(a1)
+        bset    #7,art_tile(a1)
+        move.b  #0,mapping_frame(a1)
+        move.b  #$1C,anim(a1)
+        move.w  #$1640,x_pos(a1)
+        move.w  #$3A3,y_pos(a1)
+        rts
+```
+
+Six instructions account for every one of the ten diverging fields:
+`x_pos`/`y_pos` give the coincident `$1640/$3A3` for both characters (so Tails is
+*on* Sonic, not the engine's ordinary follow offset of `-$20`); `anim #$1C` and
+`mapping_frame #0` give the animation/mapping pair; and `object_control #$83`
+suppresses all player physics, which is why the ROM reports `air 0` and
+`status_byte 0x00` while the engine falls under gravity (`air 1`, `status 0x0002`).
+The fixture's own `state_snapshot` at frame 0 independently reports
+`anim_id 28 (=0x1C)`, `status_byte 0x00`, `routine 0x02`.
+
+Corroborating fixture evidence: `object_appeared` frame 0 slot 13 is ROM address
+`0x000455CC` at `(0x1640, 0x03C7)` -- the `Obj_SSZHPZTeleporter` this routine
+allocates at exactly those coordinates (`:197776-197779`); slot 8 is `0x00090A72`,
+i.e. `loc_90A72`, the controller's own next routine pointer (`:197832`).
+
+**The engine has no implementation.** `Sonic3kObjectRegistry` *names* id `$B5`
+`HPZSSEntryControl` (:1736), `$B0` `HPZMasterEmerald` (:1731), `$B4`
+`HPZSuperEmerald` (:1735) and `$79` `SSZHPZTeleporter` (:1677), and there is no
+instance class for any of them under `game/sonic3k/objects/`. So the engine runs
+ordinary physics and ordinary sidekick following in the arena.
+
+### The three-cause answer
+
+Not one defect across the eight-row table -- **three**:
+
+1. **The seven act-2 `dez23*` classes (550 errors) are one cause**: the missing
+   `Obj_HPZSSEntryControl` above. Same ten fields, same values, same routine.
+2. **`Dez238` (621) is a different segment and a different cause.** Its metadata
+   is zone 23 **act 1** = Hidden Palace Zone proper (level-size row
+   `sonic3k.asm:38142`), 5118 rows, and its frame 0 is a running act-entry:
+   `x` 0x0036/0x0030, `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000,
+   `rings` 163/0. The rings term is the known save/run-inventory boundary; the
+   running-entry term is separate. Neither is the arena controller.
+3. **`Aiz3` (1567) is a third cause.** `tails_x` 0x0220/**0x7F00** -- the actual is
+   the `sub_13ECA` off-screen respawn sentinel (P64), with
+   `tails_cpu_routine` 0x0006/0x000A and `rings` 75/0. A sidekick-lifetime plus
+   inventory boundary, sharing nothing with (1).
+
+So a fix for (1) will move seven classes and must be expected to move neither
+`Dez238` nor `Aiz3`. Anyone measuring the arena fix against those two will read a
+correct fix as a failure.
+
+### Not landed, and why
+
+Closing (1) is a genuine object bring-up, not a one-round fix: the controller
+queues two `Queue_Kos_Module` archives before it does anything else
+(`ArtKosM_HPZSmallEmeralds`, `ArtKosM_Teleporter`, `:197743-197749`), so a partial
+implementation changes the KosM **ordinal** sequence and risks the P52
+one-missing-producer deadlock across the rest of the run; it also writes two
+palette lines, allocates `Obj_HPZMasterEmerald`, `Obj_SSZHPZTeleporter` and up to
+seven `Obj_HPZSuperEmerald`, and owns the release phase (`loc_90A72` ->
+`loc_90A94`) that must eventually clear `object_control $83` -- leaving that half
+done would freeze both characters for the whole segment. Scoped as a full object
+port with its siblings, against the ROM lines cited above.
+
+### Discipline
+
+No engine change, so no sweep attribution is claimed. No constant introduced --
+`$1640`, `$3A3`, `$1C`, `$83` above are quoted from `sub_90A4C`, not measured off a
+fixture (the fixture is cited only as independent corroboration). No assertion
+weakened, widened, deleted, disabled or made advisory. No zone/act/route/frame/
+game-name predicate. No trace hydration. No landed fix undone. `docs/skdisasm`
+used for labels and citations only.

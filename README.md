@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The seven "dez23" segment reds are one unimplemented object, and the zone is not Death Egg
+  (`bugfix/ai-hpz-ss-arena-diagnosis`, diagnosis merged 2026-08-16).** All seven act-2 `dez23*`
+  classes diverge at frame 0 on the *same ten fields with the same values*; the differing headline
+  fields (`tails_x`, `tails_y`, `x_sub`) were sort-order noise. The level-size table names that zone
+  `Special Stage Arena (HPZ)` (sonic3k.asm:38144), and `Obj_HPZSSEntryControl`'s `loc_90A10` calls
+  `sub_90A4C` for Player_1 and then **falls through** into it for Player_2 (:197806-197829), writing
+  `object_control #$83`, `anim #$1C`, `mapping_frame #0` and coincident `x_pos #$1640` /
+  `y_pos #$3A3` for both characters — six instructions that account for every diverging field,
+  including the "suspiciously round" 32px gap, which is just the engine's own sidekick follow offset
+  showing through because the ROM's placement routine never runs. The engine has no implementation
+  for `HPZSSEntryControl`, `HPZMasterEmerald`, `HPZSuperEmerald` or `SSZHPZTeleporter`. Deliberately
+  not part-ported: the object queues two Kosinski modules before anything else, so a partial port
+  shifts the KosM ordinal sequence for the rest of the run. These classes are out of release-6 scope
+  and now run in `-Ptrace-replay-r7`; the diagnosis is recorded so the eventual port starts from the
+  ROM rather than from the symptom.
+
 - **A third S3K special stage turns green: an early `rts` skips the cell check too
   (`bugfix/ai-s3k-ss-bumper-cell-check`, merged 2026-08-16).** `Ss7` and `Ss3` ran clean for 4,300+
   frames and then broke by exactly 48 on one axis, with velocity oscillating in antiphase. The 48 is
