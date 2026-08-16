@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **An object placed before `LevelLoop` has already run once by the first recorded frame
+  (`bugfix/ai-pachinko-tails-y`, merged 2026-08-16).** Both surviving Pachinko replays diverged on
+  `tails_y` by one pixel — `tails_y` *is* the energy trap's `y_pos`, since `sub_49FE4` writes
+  `move.w y_pos(a0),y_pos(a1)` into the held sidekick every pass. The trap starts descending only
+  after `move.b #4*60,$25(a0)` expires (sonic3k.asm:96595), confirmed against the ROM bytes
+  themselves at `0x49F50`: `117C 00F0 0025`, i.e. 240. The engine's constant was already right; its
+  *phase* was not. Level init runs `Load_Sprites` then `Process_Sprites` once (:7849-7853) **before**
+  `LevelLoop` begins incrementing `Level_frame_counter` (:7885-7894), and the trap's init falls
+  through `move.l #loc_49F5C,(a0)` into `loc_49F5C` with no `rts`, so it executes at counter 0 and
+  burns its first tick a pass before row 0. `applyBonusStageEntry` created the trap and then
+  discarded the pending initial-pass authority, so the object never received that represented pass —
+  the same shape as the collision-response-list defect fixed beside it. The pass now runs for that
+  one bootstrap-created object only; the previously refuted global re-run stays refuted. That the
+  fix is not fitted is shown by the fixtures disagreeing on row index while agreeing on the ROM
+  counter: both step at `gameplay_frame_counter == 0x00F0`, which falls on row 240 in one and 242 in
+  the other. Pachinko 1698 -> 1638, Pachinko2 1605 -> 1418 with its frontier moving 242 -> 469; rows
+  compared unchanged at 2907 and 3571. Pitfall P72 records the shape and the two-fixture method for
+  proving it without touching the engine.
+
 - **A bonus stage keeps the elemental shield you entered with (`bugfix/ai-pachinko-r2`, production
   half merged 2026-08-16).** ROM `loc_2D4CA` saves `Player_1+status_secondary & $71` into
   `Saved_status_secondary` at bonus entry (sonic3k.asm:61925-61930), and

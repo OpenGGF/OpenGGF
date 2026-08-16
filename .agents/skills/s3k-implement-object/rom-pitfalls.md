@@ -2850,3 +2850,46 @@ game-agnostic.
 **Originating commit.** `<pending: S3K bonus-stage entry shield restore>`;
 `TestS3kSonicTailsPachinkoBonusTraceReplay` 1698 errors -> 1692, first error frame
 122 `rings` -> 180. See `docs/status/trace-frontier-log.md`, 2026-08-16.
+
+## P72 -- objects placed before `LevelLoop` have already run once when the first frame is recorded
+
+**Symptom.** An object-owned countdown fires exactly one gameplay pass late, for the
+object's whole life, with everything else in the level aligned. If the object writes a
+player field the fix looks like a one-pixel physics drift; it is not physics at all.
+The classic tell is a trace error whose expected/actual differ by the object's own
+per-frame step (1 for a `subq.w #1,y_pos`), starting at the exact frame the countdown
+constant predicts.
+
+**Mechanism.** S3K's level-init path runs a full object pass BEFORE the main loop
+exists. After `SpawnLevelMainSprites` (`docs/skdisasm/sonic3k.asm:7849`) it calls
+`Load_Sprites`, `Load_Rings`, `Draw_LRZ_Special_Rock_Sprites` and then
+`Process_Sprites` once (`:7853`), and only afterwards does `LevelLoop` (`:7885`) begin
+`addq.w #1,(Level_frame_counter).w` / `Process_Sprites` (`:7889`, `:7894`). So every
+object placed by `SpawnLevelMainSprites` executes once at `Level_frame_counter == 0`,
+before any recorded row. An object whose Init falls through into its main body with no
+`rts` -- `Obj_PachinkoEnergyTrap` does `move.l #loc_49F5C,(a0)` and drops straight into
+`loc_49F5C` (`:96602-96612`) -- burns a countdown tick on that pass too.
+
+**What to check.** For any object placed at level init rather than by the layout
+cursor, ask whether the engine gave it the pre-`LevelLoop` pass. A bootstrap that
+"reconstructs the state after the setup pass" and then discards the pending pass
+authority reconstructs the *placement* but not the *execution*, and the object starts
+one pass behind. Do NOT close the gap by initialising the counter one lower: run the
+represented pass for the object, or the value desyncs the first recording whose
+countdown you did not measure.
+
+**How to prove it without the engine.** The ROM counter, not the row index, is the
+invariant. Find the row where the behaviour first appears in two different fixtures and
+compare `gameplay_frame_counter`, not `frame`: for the Pachinko trap both fixtures step
+`y_pos` first where the counter reads `0x00F0` (= `4*60`, the ROM's `move.b #4*60,$25(a0)`
+at `0x49F4C`: `117C 00F0 0025`), at row 240 in one and row 242 in the other. Two
+fixtures agreeing on the ROM counter and disagreeing on the row index is a derivation;
+one fixture's row index is a fit.
+
+**Cross-game.** S1 and S2 declare `InitialProcessSpritesLifecycle.NONE` -- they have no
+equivalent pre-loop pass -- so this is S3K-scoped. The general lesson (an object placed
+outside the main loop may have executed before frame 0) is not.
+
+**Originating commit.** `<pending: Pachinko trap represented setup pass>`;
+`TestS3kSonicTailsPachinko2BonusTraceReplay` 1605 errors -> 1418, first error frame 242
+`tails_y` -> 469 `x_speed`. See `docs/status/trace-frontier-log.md`, 2026-08-16.

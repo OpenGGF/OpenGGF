@@ -79502,3 +79502,70 @@ diagnosis, which is sound.
 
 Consequence: `TestS3kSonicTailsPachinkoBonusTraceReplay` keeps its frame-122 `rings` frontier in
 the standalone harness. The engine is now correct; the segment cannot show it.
+
+### 2026-08-16 — the Pachinko trap's rise starts one gameplay pass late (`tails_y` 240/242 closed)
+
+Base `f1ecfae39`, measured in two clean worktrees (control at the base commit,
+fix alongside it), JDK 21. Command shape:
+
+```
+mvn -Ptrace-replay test -Dmse=off -Dsurefire.runOrder=alphabetical \
+  -Dtest='TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay,TestS3kSonicTailsPachinko3BonusTraceReplay' \
+  -Ds3k.rom.path=<repo>/s3k.gen -Dsonic1.rom.path=<repo>/s1.gen -Dsonic2.rom.path=<repo>/s2.gen
+```
+
+**Correction to the previous entry.** `TestS3kSonicTailsPachinkoBonusTraceReplay`'s
+FIRST error at `f1ecfae39` is frame 122 `rings` (expected 262, actual 261) — the
+already-documented held-shield consequence above — not `tails_y` 240. `tails_y` 240
+was its third error by start frame. Only `…Pachinko2…` reports `tails_y` first
+(frame 242). Both were measured on this round's own control.
+
+| class | control (`f1ecfae39`) | after |
+|---|---|---|
+| `…PachinkoBonusTraceReplay` | 1698 errors, first 122 `rings` | **1638**, first 122 `rings` (unchanged) |
+| `…Pachinko2BonusTraceReplay` | 1605 errors, first 242 `tails_y` | **1418**, first **469** `x_speed` |
+| `…Pachinko3BonusTraceReplay` | GREEN | GREEN |
+
+All `tails_y` errors at 240/242 are gone. Rows compared unchanged (2907 / 3571 / 357).
+
+**Owner of `tails_y` at that frame.** `Obj_PachinkoEnergyTrap` holds the sidekick and
+writes `move.w y_pos(a0),y_pos(a1)` into it every pass (`sonic3k.asm:96660`,
+`sub_49FE4`, run for BOTH players from `loc_49FD6`). The trap rises by
+`subq.w #1,y_pos(a0)` only after its `move.b #4*60,$25(a0)` countdown reaches zero
+(`:96594-96601`; ROM bytes at `0x49F4C` are `117C 00F0 0025`, so the constant really
+is 240 — verified against the binary, not the expression). So `tails_y` is exactly
+the trap's y, and the divergence was purely *when* the countdown expires.
+
+**Root cause — a pass the engine never ran.** After `SpawnLevelMainSprites`
+(`sonic3k.asm:7849`) the level-init path runs `Load_Sprites` and then
+`Process_Sprites` ONCE (`:7853`) before `LevelLoop` (`:7885`) starts incrementing
+`Level_frame_counter` and running its own `Process_Sprites` (`:7894`). The trap's
+init body falls straight through `move.l #loc_49F5C,(a0)` into `loc_49F5C` with no
+`rts` (`:96602-96612`), so it executes at `Level_frame_counter == 0` — one gameplay
+pass before the first recorded row — and burns the first countdown tick there.
+
+The fixtures confirm this independently of any engine reasoning: in BOTH pachinko
+and pachinko_2 the first `0F30 -> 0F2F` step lands on the row whose
+`gameplay_frame_counter` is `0x00F0` (= 240 = `4*60`), at row 240 and row 242
+respectively — the row indices differ, the ROM counter does not. That is a
+derivation, not a fit.
+
+`TraceReplaySessionBootstrap.applyBonusStageEntry` creates the trap to represent the
+`SpawnLevelMainSprites` placement and then **discards** the pending initial
+`Process_Sprites` authority, so the object it just created never received the
+represented pass. This is the same defect shape as the `Collision_response_list`
+publication landed earlier the same day ("the discarded pass also left state nobody
+rebuilt"); the fix runs the represented pass for that one bootstrap-created object
+rather than re-dispatching every object (which is separately recorded as regressing
+other classes).
+
+**Verification.** `-Ptrace-replay` both trees: 806 tests, **29 red on both**, red
+sets identical by name in both directions (no newly red, no newly green).
+`-Ptrace-replay-r7` both trees: 37 tests, **32 red on both**, identical both
+directions — Knuckles `TestS3kPachinkoBonusTraceReplay` stays green.
+`TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2 errors,
+frame 29095 `rings`.
+
+**Next frontiers on this stage.** `…Pachinko2…` now stops at frame 469 `x_speed`
+(expected `0x04F3`, actual `0x0100`). `…Pachinko1…` still stops at the held-shield
+`rings` frontier at 122, which the standalone harness cannot show as fixed.
