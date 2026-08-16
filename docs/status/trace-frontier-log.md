@@ -79756,3 +79756,76 @@ ambient movement, not attributable. `Pachinko3`, the unnumbered AIZ/HCZ segment
 classes, `Ss`/`Ss2`/`Ss4`-`Ss7` and the r7 Knuckles bonus classes all stay green;
 `TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2 errors, frame 29095
 `rings`; `…PachinkoBonus…` is untouched at 1638 / f122 `rings`.
+
+## 2026-08-16 -- The top-solid zero-distance window and its partner: a two-part compensating pair
+
+Base `eca6cc189`. **Nothing landed.** Both halves are ROM-cited and mutually necessary; the
+combined configuration still leaves an unlocated frontier, so the discriminator says hold.
+
+### Half 1 -- the landing window genuinely excludes zero
+
+Every S3K top-solid ride routine funnels into `loc_1E45A`
+(`docs/skdisasm/sonic3k.asm:41974-41984`): `sub.w d1,d0 / bhi.w locret` then
+`cmpi.w #-$10,d0 / blo.w locret`. `bhi` is not taken on zero and the unsigned `blo` then
+rejects it, so the accepted window is exactly `d0 in [-$10,-1]`. S1's `PlatformObject`
+carries the identical `bhi` / `cmpi.w #-16` / `blo` pair. `CollisionRules
+.topSolidLandingAllowsZeroDist` is `true` for S3K and is wrong.
+
+### Half 2 -- the top-solid family reads `d3`, never `height_pixels`
+
+`Obj_CNZRisingPlatform` sets `move.b #$10,height_pixels(a0)` (`:67137`) and then passes
+`move.w #$11,d3` (`:67145`). `loc_1E44C` (`:41999-42001`) does
+`move.w y_pos(a0),d0 / sub.w d3,d0`, and the continued ride `MvSonicOnPtfm` uses the same
+`d3` (`:41647-41652`); `loc_1E42E` doubles `d1` for the X test only and never touches Y. So
+the ROM's surface is `anchorY - $11` while the engine used `anchorY - $10`.
+
+At CNZ f4604, measured at the decision site: engine `distY = 0`, `maxTop = 30 =
+halfHeight(16) + yRadius(14)`, `anchorY = 1895`, `pCY = 1861`. ROM's surface `1895 - $11 =
+1878` gives `d0 = -1` -- a legal landing inside the window. The engine's `1879` gives `0`,
+which only lands because half 1 is widened to admit it. **The one-pixel surface error and the
+zero-admitting window are the same pixel.** The snap confirms it independently: ROM
+`y_pos = d2 + d0 + 3 = 1863`, engine with `d3` = `1863`, exact.
+
+### The engine already has both operands and the switch
+
+`CnzRisingPlatformInstance.getSolidParams()` is already `SolidObjectParams.of(0x30, 0x10,
+0x11)` -- `airHalfHeight = height_pixels`, `groundHalfHeight = d3`. The selector
+`SolidObjectProvider.usesGroundHalfHeightForTopSolidContact()` already exists and is
+consumed at `ObjectSolidContactController.java:1728`. It is **opt-in, defaulting to false**,
+and `SolidRoutineProfile.topSolid(boolean)` (`:110-114`) hardcodes it false for the whole
+family. **Twelve objects across S1/S2/S3K opt in individually** -- which is itself the
+fingerprint of a wrong default, not of twelve special cases.
+
+### Measured, all four configurations
+
+| config | CNZ | AIZ |
+|---|---|---|
+| baseline | green | green |
+| zero-exclusion alone | 7536 err @ f4604 | 2 err @ f5435 |
+| `d3` alone | 7985 err @ f4689 | green |
+| **both together** | **6976 err @ f9802** | 2 err @ f5435 |
+
+Neither half is landable alone and `d3`-alone is *worse* than the naive change. Together they
+resolve f4604 correctly and move CNZ's frontier 4604 -> 9802.
+
+### Why it is still held
+
+The combined frontier has an unlocated owner:
+
+```
+9802 TOPSOLID distY=0 relY=0 maxTop=28 pCY=612 yRad=19 ySpd=2016
+     air=true roll=false obj=CnzTrapDoorInstance anchorY=644
+```
+
+Same `distY == 0` signature, but **not** a `d3` error: `Obj_CNZTrapDoor` passes
+`move.w #9,d3` (`:67230`) and `CnzTrapDoorInstance` already declares
+`SolidObjectParams.of(0x20, 9, 9)` -- both sides agree at 9, so the remaining pixel comes
+from elsewhere, most likely the trapdoor's own `y_pos` (engine `anchorY = 644` is constant
+across the window) or a different ROM object owning that landing. Instrument it; do not
+reason about it.
+
+### Refuted candidate causes
+
+None of four offered candidates was involved: not a `getY()`/`getCentreY()` anchor
+confusion, not the ride re-snap, not a `y_radius` off-by-one, not probe phase. The cause was
+the object's own surface height -- `d2` where the family only ever reads `d3`.
