@@ -78525,3 +78525,94 @@ fixtures, not inferred from the shared field name.
 No fitted constant, tolerance, offset or nudge. No assertion weakened, widened,
 deleted, disabled or made advisory. No zone/act/route/frame/game-name predicate.
 No trace hydration. `docs/skdisasm` used for citations only. No landed fix undone.
+
+## 2026-08-16 -- Five frame-0 in-scope classes partition into TWO causes, not one
+
+Base `9f42d43dc`. Measured solo-fork with cleared reports (see the fork note below).
+Control reproduces exactly: Hcz2 3437 / Aiz5 2138 / Aiz3 1567 / Aiz2 1034 / Aiz4 963 =
+9,139 errors.
+
+**Nothing landed.** One genuine engine defect is identified with a measured patch held
+pending a policy decision and a full sweep; the rest is entry-state debt.
+
+| class | cause |
+|---|---|
+| Aiz3, Aiz4, Aiz5 | **Engine defect** -- the AIZ dormant-marker predicate ignores the live act |
+| Aiz2, Hcz2 | **Missing run-level entry state** (policy; the §21 mechanism generalised past emeralds) |
+
+### The engine defect (ROM-cited, verified independently)
+
+ROM `loc_13A10` (`docs/skdisasm/sonic3k.asm:26389-26397`) parks the sidekick -- `sub_13ECA`,
+`Tails_CPU_routine = $A`, `object_control = $83` -- only under
+`cmpi.w #0,(Current_zone_and_act).w`, i.e. **AIZ Act 1 alone**. AIZ Act 2 is `$0001`,
+matches nothing in `:26399-26451`, and falls through to `loc_13AF4`/`loc_13B18`: kinematics
+and status cleared, `object_control = 0`, `Tails_CPU_routine = 6` -- exactly the expected
+`0x0006`.
+
+`Sonic3kAIZEvents.shouldEnterIntroSidekickDormantMarker` calls `shouldSpawnIntro(0)` with a
+**hardcoded act literal** (`Sonic3kAIZEvents.java:973`). A probe in
+`SidekickCpuController.updateInit` printed `zone=0 act=1 dormantEvent=true` for Aiz3 and
+Aiz5 -- measured, not inferred. The sibling `Sonic3kICZEvents` predicate already gates on
+its own `activeAct == 0`, and `TestSonic3kAIZEvents:246` **already asserts
+`shouldSpawnIntro(1)` is false**, so the literal was bypassing a contract the suite pins.
+
+### The fix raises the error count, and the field-level diff says why
+
+Held patch (`currentAct` threaded into the predicate; no constant, no carve-out, no
+hydration, no assertion touched):
+
+| class | before | after | first error |
+|---|---:|---:|---|
+| Aiz3 | 1567 | 1778 | `tails_x 0x7F00` -> `rings 75/0` |
+| Aiz4 | 963 | 1226 | `tails_x 0x7F00` -> `rings 8/0` |
+| Aiz5 | 2138 | 2515 | `tails_x 0x7F00` -> `x_speed` |
+| Aiz2 | 1034 | 1034 | unchanged -- correct, act 0 is where the ROM *does* park |
+| Hcz2 | 3437 | 3437 | unchanged |
+| `TestS3kSonicTailsAizSegmentTraceReplay` | GREEN | **GREEN** | protected, intact |
+| `TestS3kSonicTailsHczSegmentTraceReplay` | GREEN | **GREEN** | protected, intact |
+
+**Every leader field improves** (Aiz3: `player_mapping_frame` 319->158,
+`player_animation_id` 73->32, `g_speed` 42->21, `x_speed` 42->25, `routine` 7->1, `angle`
+30->17). The entire regression is confined to **Tails' own** fields (`tails_g_speed`
+35->87, `tails_status_byte` 30->95, `tails_mapping_frame` 15->154). A parked Tails is a
+static wrong value with no physics; a live Tails with an **empty `Pos_table` follow
+history** wanders and is wrong across many more fields. Removing the park unmasks the
+follow-history gap -- the count rises because a second defect becomes visible, not because
+anything got worse.
+
+In normal progression `isEstablishedFollowerEntry()` is true entering AIZ2 from AIZ1, so
+the dormant-marker path is never reached: the change is a **no-op for the AIZ->HCZ release
+slice** and affects only fresh/standalone AIZ2 entries (segment replay, level select).
+
+### Hcz2: the "bootstrap is broken" hypothesis is DEAD, with a positive replacement
+
+Both arms of its kill condition fired. **Eleven** fields differ at frame 0, not `y_speed`
+and consequences; and the ROM row is **not grounded** -- expected `status_byte 0x0002` is
+`Status_InAir` (`sonic3k.constants.asm:175`), so both sides are airborne and there is no
+ground attachment to fail.
+
+The differing bit is `0x40 = Status_Underwater` (`:180`). `StartingWaterHeights.bin` gives
+HCZ1 a starting water height of `0x0500`; the segment's metadata start is `y = 0x05C0`,
+192px below the fresh-boot surface. The engine is correctly underwater **for a fresh HCZ1
+boot**; the ROM is not, because `DynamicWaterHeight` had already moved the level's water by
+the time segment 11 begins. Underwater bit, `rings` 51->0, sub-pixels, `g_speed` and
+animation are one family: **missing run-level entry state**, i.e. §21's mechanism
+generalised past emeralds to water-event state and leader kinematics.
+
+### Corrections to the brief that produced this round
+
+- Aiz2 **is** parked (`tails_x = 0x7F00`); the trace report's field order is **not**
+  alphabetical, which is what hid it. It is still a separate cause: act 0 is where the
+  ROM's park is correct, and the recorded ROM simply never ran routine 0 there because the
+  run was already mid-AIZ1 at routine 6.
+- Aiz3/4/5 are a plain engine bug, not entry-state debt -- the "no policy decision needed"
+  shape the brief predicted, but for different classes than it predicted.
+- Hcz2, nominated as the likely broken-bootstrap case, is the one that is purely policy.
+
+### Environment note worth keeping
+
+`-Dsurefire.forkCount=4` (the default) **SIGABRTed forks** with three rounds running
+concurrently: 3 of 5 classes silently produced no XML at all, which reads as a smaller red
+set. Use `-Dsurefire.forkCount=1` under load. Trace-report filenames also collide --
+Aiz3/Aiz4/Aiz5 all write `s3k_aiz2_report.json` -- so per-class attribution requires solo
+runs or the class's own surefire assertion message.
