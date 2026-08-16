@@ -50,8 +50,20 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
 
     private static final int SURFACE_ACCEL = 0x18;
     private static final int SURFACE_ACCEL_FLIPPED = -0x19; // ROM uses NOT.W on 0x18, yielding -25.
+    // ROM Obj_PachinkoFlipper keeps a SEPARATE per-player standing counter byte and
+    // calls sub_49CFE once per character with its own pointer: `lea $36(a0),a3 /
+    // lea (Player_1).w,a1 ... bsr.s sub_49CFE` then `lea $37(a0),a3 /
+    // lea (Player_2).w,a1 ... bsr.s sub_49CFE` (sonic3k.asm:96389-96397), and
+    // sub_49D72's release pass repeats the same $36/$37 split
+    // (sonic3k.asm:96403-96410). Collapsing both into one reference made a
+    // two-character ride mutually exclusive: with Sonic and Tails both standing on
+    // the same flipper, each character's contact saw the OTHER character in the
+    // single slot, re-entered the newly-locked branch and returned before
+    // loc_49D54's acceleration ever ran, so neither ground_vel advanced again.
     private AbstractPlayableSprite lockedPlayer;
+    private AbstractPlayableSprite lockedSidekick;
     private boolean contactThisFrame;
+    private boolean sidekickContactThisFrame;
     private int triggerFrame = -1;
 
     public PachinkoFlipperObjectInstance(ObjectSpawn spawn) {
@@ -119,14 +131,19 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        contactThisFrame = true;
+        boolean sidekick = isSidekick(player);
+        if (sidekick) {
+            sidekickContactThisFrame = true;
+        } else {
+            contactThisFrame = true;
+        }
 
         if (player.isDebugMode()) {
-            releaseLockedPlayer();
+            releaseLockedPlayer(player);
             return;
         }
 
-        boolean newlyLocked = lockedPlayer != player;
+        boolean newlyLocked = lockedFor(player) != player;
         lockPlayer(player);
         if (newlyLocked) {
             // ROM sub_49CFE (sonic3k.asm:96416-96434): on a NEW lock (a3 byte was
@@ -185,9 +202,14 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (lockedPlayer != null && (!contactThisFrame || lockedPlayer.getAir() || lockedPlayer.isDebugMode())) {
-            releaseLockedPlayer();
+            releaseLockedPlayer(lockedPlayer);
+        }
+        if (lockedSidekick != null
+                && (!sidekickContactThisFrame || lockedSidekick.getAir() || lockedSidekick.isDebugMode())) {
+            releaseLockedPlayer(lockedSidekick);
         }
         contactThisFrame = false;
+        sidekickContactThisFrame = false;
 
         if (triggerFrame >= 0) {
             triggerFrame++;
@@ -198,7 +220,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
     }
 
     private void lockPlayer(AbstractPlayableSprite player) {
-        lockedPlayer = player;
+        setLockedFor(player, player);
         player.setControlLocked(true);
         player.setPinballMode(true);
         // ROM sub_49CFE's newly-locked branch (a3 byte == 0, sonic3k.asm:96422-96434)
@@ -439,22 +461,46 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
             objectManager.clearRidingObject(player);
         }
 
-        lockedPlayer = null;
+        setLockedFor(player, null);
         triggerFrame = 0;
         playFlipperSfx();
     }
 
-    private void releaseLockedPlayer() {
-        if (lockedPlayer == null) {
+    /**
+     * ROM {@code loc_49D48} (sonic3k.asm:96440-96446) clears {@code object_control(a1)}
+     * and the character's OWN counter byte {@code (a3)} -- $36 for Player_1, $37 for
+     * Player_2 (sonic3k.asm:96389-96397) -- so one character leaving the flipper never
+     * releases the other.
+     */
+    private void releaseLockedPlayer(AbstractPlayableSprite player) {
+        if (player == null || lockedFor(player) == null) {
             return;
         }
+        AbstractPlayableSprite lockedPlayer = lockedFor(player);
         lockedPlayer.setControlLocked(false);
         lockedPlayer.setPinballMode(false);
         lockedPlayer.setPinballSpeedLock(false);
         // ROM loc_49D48 (sonic3k.asm:96444) clears object_control(a1) when the
         // player stops standing on the flipper; drop the engine movement gate too.
         ObjectControlState.setMovementSuppressionPreservingOwnership(lockedPlayer, false);
-        lockedPlayer = null;
+        setLockedFor(lockedPlayer, null);
+    }
+
+    /** ROM's Player_2 arm of the {@code $36}/{@code $37} split (sonic3k.asm:96393-96397). */
+    private boolean isSidekick(AbstractPlayableSprite player) {
+        return player.isCpuControlled();
+    }
+
+    private AbstractPlayableSprite lockedFor(AbstractPlayableSprite player) {
+        return isSidekick(player) ? lockedSidekick : lockedPlayer;
+    }
+
+    private void setLockedFor(AbstractPlayableSprite player, AbstractPlayableSprite value) {
+        if (isSidekick(player)) {
+            lockedSidekick = value;
+        } else {
+            lockedPlayer = value;
+        }
     }
 
     private void playFlipperSfx() {

@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Pachinko flipper held ONE lock slot for BOTH characters, so a two-character
+  ride stopped accelerating entirely. ROM `Obj_PachinkoFlipper` keeps a separate per-player
+  standing counter byte and calls `sub_49CFE` once per character with its own pointer --
+  `lea $36(a0),a3 / lea (Player_1).w,a1 ... bsr.s sub_49CFE` then `lea $37(a0),a3 /
+  lea (Player_2).w,a1 ... bsr.s sub_49CFE` (sonic3k.asm:96389-96397), with `sub_49D72`'s
+  release pass repeating the same `$36`/`$37` split (:96403-96410). The engine collapsed
+  both into a single `lockedPlayer` reference, so with Sonic and Tails standing on the same
+  flipper each character's contact saw the OTHER in the slot, re-entered `sub_49CFE`'s
+  newly-locked branch (`(a3) == 0`, :96416-96434) and returned before `loc_49D54`'s
+  `add.w d1,ground_vel(a1)` (:96449-96457) could ever run -- both riders' `ground_vel`
+  froze for the rest of the ride. Split into the ROM's two slots.
+  `TestS3kSonicTailsPachinko2BonusTraceReplay` improves 1418 -> 1257 errors over 3571 rows
+  compared. No constant was introduced and no assertion was changed. Measured neutral
+  elsewhere: `-Ptrace-replay` 806 tests / 28 red and `-Ptrace-replay-r7` 37 tests / 32 red
+  on both the control and fix trees, red sets identical by name in both directions.
 - Fix(s3k): the Pachinko reward orb dispatched its reward from the player's touch pass and
   outlived its ROM delete. ROM `loc_4A312` / `loc_4A34C` (sonic3k.asm:96843-96845,
   96866-96869) react to `collision_property(a0)` from the ITEM's own slot pass via
