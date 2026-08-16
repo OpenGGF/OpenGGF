@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A captured player keeps recording live pad state (`bugfix/ai-pachinko-orb-ctrl-lock`, merged
+  2026-08-16).** The magnet orb called `setControlLocked(true)` on capture. ROM `loc_4A5AA`
+  (sonic3k.asm:97086-97097) writes `x_vel`, `y_vel`, `ground_vel #$800`, `render_flags`, `anim` and
+  `object_control #1` — and **never** `Ctrl_1_locked`; the release tail (:97024-97042) clears only
+  `object_control` bits 0-1. That distinction is load-bearing: `loc_10BF0` (:21968-21971) skips the
+  `Ctrl_1 -> Ctrl_1_logical` copy on `Ctrl_1_locked` *before* testing `object_control` at :21973, so
+  a captured ROM player still records live input and `Sonic_RecordPos` stores it into `Stat_table`.
+  The engine's invented lock froze that word, and 16 rows later the sidekick read the frozen value,
+  so `sub_4A428`'s A/B/C test missed the release press. Deleting the two lock writes — no constant
+  touched, and the 16-frame follow delay was never wrong — moves all three Pachinko classes: 41 -> 22,
+  2280 -> 2166, 2120 -> 1969, with rows compared unchanged at 188 / 2907 / 3571. A unit test pinning
+  `setControlLocked` was corrected to assert it is never called, with the ROM citation.
+
 - **A captured sidekick stays captured off-screen (`bugfix/ai-pachinko-tails-y`, merged 2026-08-16).**
   `PachinkoMagnetOrbObjectInstance` released a CPU sidekick the moment the camera lost it. ROM
   `sub_4A428` (sonic3k.asm:96955-96967) has **no on-screen, camera-distance or render-flag test

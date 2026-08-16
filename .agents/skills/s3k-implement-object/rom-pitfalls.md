@@ -2738,3 +2738,42 @@ collision/interaction helper; S1's `Sonic_Loops`-style tails and S2's
 **Originating commit.** `<pending: S3K special-stage bumper cell-check skip>`;
 `TestS3kSonicTailsSs7SpecialStageTraceReplay` 26 errors -> green,
 `…Ss3…` 113 -> 45. See `docs/status/trace-frontier-log.md`, 2026-08-16.
+
+---
+
+## P69 -- modelling `object_control` with the engine's CONTROL LOCK freezes the recorded `Ctrl_1_logical` word the sidekick follows
+
+**Symptom.** A CPU sidekick reacts to the leader's button press exactly one frame
+late (or not at all) while the leader is being held by an object. The report shows
+a one-frame `tails_cpu_ctrl2_held` / `tails_cpu_ctrl2_pressed` divergence with a
+long tail of `tails_x/y/x_speed/y_speed/rolling/status_byte` errors behind it, and
+it is tempting to read that as a follow-delay phase bug.
+
+**Mechanism.** `Ctrl_1_locked` and `object_control` are different bytes with
+different effects. `Obj01_Control` copies `Ctrl_1 -> Ctrl_1_logical` and only *then*
+tests `btst #0,object_control(a0)` (`docs/skdisasm/sonic3k.asm:21968-21973`), so an
+object-controlled player still refreshes the logical pad word every frame, and
+`Sonic_RecordPos` (`:22132`) writes that live word into `Stat_table`. The sidekick
+reads it back 16 entries later at `Pos_table_index - $44`
+(`loc_13DA6`/`loc_13DD0`, `:26682-26700`). `Ctrl_1_locked`, by contrast, makes the
+engine's ROM-faithful short-circuit in `AbstractPlayableSprite.setLogicalInputState`
+skip the copy, so the recorded word freezes at whatever it held when the lock was
+set -- and 16 frames later the sidekick replays a word that never happened.
+
+**What to check.** When an object holds a player, port the exact byte the ROM
+writes. `sub_4A428`'s Pachinko magnet-orb capture (`:97086-97097`) writes only
+`move.b #1,object_control(a1)`; its release tail (`:97024-97042`) clears
+`object_control` bits 0-1. Neither touches `Ctrl_*_locked`, so neither may call
+`setControlLocked`. Movement suppression is already carried by
+`ObjectControlState`; reaching for the control lock as well is what breaks the
+follow replay. The tell is a leader history entry whose value matches **no** BK2
+row in the window -- a latch, not a lag.
+
+**Cross-game.** S2 `Obj01_Control` has the same ordering (`s2.asm:35933-35935`),
+and the S2 sidekick reads the same delayed `Stat_table`, so any S2 object capture
+modelled with a control lock has the identical defect.
+
+**Originating commit.** `<pending: S3K Pachinko magnet-orb control-lock removal>`;
+`TestS3kSonicTailsPachinko3BonusTraceReplay` 41 errors -> 22,
+`…PachinkoBonus…` 2280 -> 2166, `…Pachinko2Bonus…` 2120 -> 1969. See
+`docs/status/trace-frontier-log.md`, 2026-08-16.

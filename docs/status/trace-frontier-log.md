@@ -79239,3 +79239,79 @@ slot, not in the constant. Not worked in this round.
 
 Pachinko2 is **not** the same frontier — its row 94 divergence is unmoved and
 was not diagnosed here. The three traces do not share one cause; they share two.
+
+
+## 2026-08-16 — Pachinko bonus: the captured player's logical pad word was latched, not the follow phase
+
+Base `3d5e238c4`, two detached worktrees at that commit (control and fixed), JDK 21.
+Command per class:
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Ds3k.rom.path=<repo>/s3k.gen -Dtest=<class> -DfailIfNoTests=false test
+```
+
+### Two corrections to the previous entry, both measured
+
+1. **All three Pachinko classes share one cause.** The previous entry recorded
+   that "Pachinko2 is not the same frontier". Dumping every field that differs on
+   each class's own first failing frame gives an identical set on all three —
+   `tails_y`, `tails_x`, `tails_x_speed`, `tails_y_speed`, `tails_rolling`,
+   `tails_status_byte` (0x0007 vs 0x0003), and a one-frame
+   `tails_cpu_ctrl2_held` 0x0014/0x0004 with `tails_cpu_ctrl2_pressed`
+   0x0010/0x0000. One fix moved all three.
+2. **It is not a follow-delay phase bug.** Instrumenting the write and the read
+   showed the engine's order is already ROM's: within one frame the leader's
+   `recordFollowerHistoryForTick` runs, then the sidekick reads
+   `historyPos - 16`. Probed at pachinko_3 rows 105-135, every read is exactly
+   the entry the leader wrote 16 rows earlier. `ROM_FOLLOW_DELAY_FRAMES` was
+   never wrong and was not changed.
+
+### The actual cause
+
+The probe showed the *leader's own recorded word* was wrong: BK2 row 113 carries
+input `0x0010`, but the leader recorded `0x04` on row 113 and only picked up
+`0x10` on row 114 — and the value it held for the whole preceding capture,
+`0x04`, matches no BK2 row in that window (rows 105-111 are `0x0008`, row 112 is
+`0x0000`). That is a latch, not a lag.
+
+`PachinkoMagnetOrbObjectInstance.capturePlayer` called
+`player.setControlLocked(true)` (and `releasePlayer` cleared it). ROM
+`sub_4A428` `loc_4A5AA` (sonic3k.asm:97086-97097) sets only
+`object_control(a1) = 1`; there is no `Ctrl_1_locked` write in the capture or in
+the `loc_4A4F0`/`loc_4A4F6` release tail (:97024-97042). The engine's control
+lock drives the ROM-faithful `Ctrl_1_locked` short-circuit in
+`setLogicalInputState` (`Obj01_Control` loc_10BF0, sonic3k.asm:21968-21971), so
+`logicalInputState` froze. ROM performs that copy **before** the
+`btst #0,object_control(a0)` test at :21973, so a captured player still records
+live pad state, and `Sonic_RecordPos` (:22132) stores the live `Ctrl_1_logical`
+word into `Stat_table`. The frozen word then reached the sidekick 16 rows later
+through `loc_13DA6`/`loc_13DD0` (:26682-26700) with the release press missing,
+which is why `sub_4A428`'s
+`andi.b #button_A_mask|button_B_mask|button_C_mask,d1` never fired on row 129.
+
+### Result (fix worktree vs control worktree, same base)
+
+| class | control | fixed | rows compared |
+|---|---|---|---|
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | 41 errors, frame 129 `tails_x_speed` | 22 errors, frame 131 `y_sub` | 188 both |
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 2280, frame 95 `tails_y` | 2166, frame 122 `rings` | 2907 both |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 2120, frame 94 `tails_y` | 1969, frame 137 `tails_y` | 3571 both |
+
+`-Ptrace-replay`: 806 tests, 30 red on both trees, red sets identical by name
+(set difference computed both directions). `-Ptrace-replay-r7`: 37 tests, 32 red
+on both trees, identical by name, and no r7 class changed its error count or
+first-error frame. Only the three Pachinko classes changed anywhere.
+
+### Next owner on Pachinko3 — a different object, already present in the control
+
+The 22 remaining errors are **unchanged from the control**: `y_sub`, `x_speed`,
+`y_speed` and `g_speed` constant over rows 131-190 (ROM `0xB600 / -041D /
+0x0E93 / 0x0800`, engine `0x0000` for all four) plus a `player_mapping_frame`
+oscillation. The constant ROM `g_speed = 0x0800` is `loc_4A5AA`'s capture
+signature, so the ROM's Sonic is held by an object over that whole span while the
+engine's is held with all velocities zeroed. The context dump at row 131 shows
+the engine player `lock=true objCtrl=true vel=(0000,0000) g=0000` with
+`PachinkoEnergyTrap` (obj `0xE8`) nearby — i.e. the *energy trap*, not the magnet
+orb, is the next owner, and it looks like the same class of defect: an engine
+capture that zeroes state the ROM leaves alone. Not worked in this round.
