@@ -1074,6 +1074,10 @@ abstract class AbstractRunChainTest {
 
             // --- Step 3: walk every segment -------------------------------------
             LiveTraceComparator activeComparator = driver.comparator();
+            // The cursor each active segment's comparator was attached at, so the
+            // pinned-tail diagnostics can report rows-consumed honestly instead of
+            // echoing the current cursor back at itself.
+            int activeSegmentInitialCursor = initialComparisonCursor;
             SegmentPlan uncomparedInteriorSourceLevel = null;
             int uncomparedInteriorSourceVblank = 0;
             int i = 0;
@@ -1141,6 +1145,7 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), 0, true, null);
                     activeComparator = attachLevelSegment(
                             playback, probe, movie, next, fixture, i + 1);
+                    activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     dynamicArtSegments.beginSegment();
                     dynamicArtGapJournal.nextSegmentArmed(
                             next.segment().dir());
@@ -1159,6 +1164,7 @@ abstract class AbstractRunChainTest {
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed,
                         i + 1);
+                activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -1189,6 +1195,7 @@ abstract class AbstractRunChainTest {
                         break;
                     }
                     activeComparator = bridge.gameplayComparator();
+                    activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     i = bridge.gameplaySegmentIndex();
                     continue;
                 }
@@ -1427,6 +1434,7 @@ abstract class AbstractRunChainTest {
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, framesConsumed, i + 1);
+                    activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     returnRowsConsumed = framesConsumed;
                     returnCursorArrivedOrganically = true;
                 } else {
@@ -1446,6 +1454,7 @@ abstract class AbstractRunChainTest {
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, 1, i + 1);
+                    activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     returnRowsConsumed = 1;
                     returnCursorArrivedOrganically = false;
                 }
@@ -1538,7 +1547,7 @@ abstract class AbstractRunChainTest {
                         });
                 completeSourceTailReportingOnFailure(
                         run.runId(), i, loop, activeComparator, seg, stepCap,
-                        activeComparator.cursor(), levelAtSegmentStart);
+                        activeSegmentInitialCursor, levelAtSegmentStart);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
                 // Normally already closed inside the boundary wait, the moment
@@ -1568,6 +1577,7 @@ abstract class AbstractRunChainTest {
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed,
                         i + 1);
+                activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -1587,7 +1597,7 @@ abstract class AbstractRunChainTest {
                                 probe, exit, stepCap, () -> stepEngineFrame(loop));
                 completeSourceTailReportingOnFailure(
                         run.runId(), i, loop, activeComparator, seg, stepCap,
-                        initialComparisonCursor, levelAtSegmentStart);
+                        activeSegmentInitialCursor, levelAtSegmentStart);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
@@ -1621,6 +1631,7 @@ abstract class AbstractRunChainTest {
                         loop.getCurrentGameMode(), rowsConsumed);
                 activeComparator = attachPreparedInterior(
                         probe, interior, fixture, rowsConsumed);
+                activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -2336,6 +2347,14 @@ abstract class AbstractRunChainTest {
      * fails the run. {@link #assertSegmentPhysics} only records into
      * {@code chainAxisFailures}, so both axes are reported together, additively.
      */
+    /**
+     * The cursor a freshly attached segment comparator starts at, tolerating the
+     * detached (null) comparator an uncompared special-stage interior installs.
+     */
+    private static int cursorOrZero(LiveTraceComparator comparator) {
+        return comparator == null ? 0 : comparator.cursor();
+    }
+
     private void completeSourceTailReportingOnFailure(
             String runId, int segmentIndex, GameLoop loop,
             LiveTraceComparator comparator, SegmentPlan segment, int stepCap,

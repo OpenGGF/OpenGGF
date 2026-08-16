@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  * <p>
  * Spawned by {@link Sonic3kSSEntryRingObjectInstance} when the player touches
  * the big ring. Plays a flash animation at the ring's position, marks the
- * parent ring for deletion mid-animation, waits 32 frames, then triggers
+ * parent ring for deletion mid-animation, waits 33 frames, then triggers
  * the special stage transition.
  * <p>
  * Animation (AniRaw_SSEntryFlash):
@@ -33,7 +33,8 @@ import java.util.logging.Logger;
  * At anim_frame index 3 (when mapping_frame changes for the 4th time):
  * marks parent ring for deletion (ROM: bset #5,$38(a1)).
  * <p>
- * After animation: wait 32 frames ($20), then play sfx_EnterSS and
+ * After animation: Obj_Wait counts $2E down with subq/bmi, so the $20 it is
+ * armed with elapses on the 33rd tick, then play sfx_EnterSS and
  * trigger fade-to-white special stage entry.
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm lines 128330-128423
@@ -52,8 +53,8 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     // ROM: cmpi.b #3,anim_frame(a0) — checks the 0-based frame counter
     private static final int RING_DELETE_ANIM_INDEX = 3;
 
-    // Wait 32 frames after animation before triggering special stage
-    // ROM: move.w #$20,$2E(a0)
+    // ROM: move.w #$20,$2E(a0) (skdisasm/sonic3k.asm:128383). Obj_Wait's
+    // subq/bmi pair spends this on the 33rd tick, not the 32nd -- see updateWait.
     private static final int POST_ANIM_WAIT = 0x20;
 
     private enum State { ANIMATING, WAITING, DONE }
@@ -152,7 +153,14 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
 
     private void updateWait() {
         waitTimer--;
-        if (waitTimer <= 0) {
+        // ROM Obj_Wait (skdisasm/sonic3k.asm:177947-177950):
+        //     subq.w  #1,$2E(a0)
+        //     bmi.s   loc_84892
+        // The branch is bmi (< 0), not a zero test. Armed with $20 by
+        // SSEntryFlash_Finished (:128381-128385), the $34 handler therefore runs
+        // on the 33rd invocation -- when the counter passes below zero -- not on
+        // the 32nd, when it reaches zero.
+        if (waitTimer < 0) {
             // ROM: SSEntryFlash_GoSS — plays sfx_EnterSS then enters special stage.
             // The SFX is played by GameLoop.enterSpecialStage() via
             // Sonic3kSpecialStageProvider.getTransitionSfxId() (sfx_EnterSS = $AF),
