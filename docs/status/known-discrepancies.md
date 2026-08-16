@@ -2201,3 +2201,83 @@ broke.
 **Removal condition:** slot-occupancy parity. That is currently unmeasurable from the recorded
 stream — see the SST no-identity finding above — so it needs a different recording surface before
 it can be worked. **Do not close this by adjusting ring timing, slot allocation or the bounce.**
+
+## 30. S3K standalone Super-Emerald special stages cannot choose their layout set
+
+Seven Sonic+Tails special-stage segments (`ss_8`..`ss_14`) diverge at frame ~135 with
+large positional error (e.g. expected `x=5376`, actual `512`). The engine loads the
+**Chaos** layout set for stages the ROM ran with the **Super** set.
+
+### The ROM
+
+`sub_85B0` masks the index -- `andi.w #7,d0` / `move.b d0,(Current_special_stage).w`
+(`docs/skdisasm/sonic3k.asm:10858`) -- so **the stage index is 0-7 in both halves**. The
+layout set is chosen entirely by `SK_special_stage_flag` at `loc_85E4` (`:10824-10830`):
+set means `a2 = SSLayoutOffs_RAM` with `d3 = Super_emerald_count`, clear means
+`SStageLayoutPtrs` with `d3 = Chaos_emerald_count`, and the `adda.l #LockOnROM_Start,a2`
+S3-half rebase (`:10863-10868`) applies only when it is clear.
+
+Consequence: **`special_stage_index` is not a segment identity.** Index 0 names both `ss`
+(Chaos) and `ss_8` (Super). Seven test-class javadocs claimed the directory ordinal as the
+index (`ss_8` = "index 7" and so on); all seven were wrong and have been corrected.
+
+### The engine's invented index space
+
+`Sonic3kSpecialStageManager` branches on `currentStage < 8` for layouts and
+`superEmeraldMode || currentStage >= 8` for palettes (`:511-514`), an **0-15 index space
+the ROM does not have**. It is reachable only from `debugToggleLayoutSet()` (`:1444`),
+which initializes stage 8 and lets `debugNextStage()` cycle 8-15. Only the emerald-art
+archive site (`:1035`) consumes the flag cleanly.
+
+### Why the obvious predicate is also wrong
+
+`superEmeraldMode` = `hasAllEmeralds() && !hasAllSuperEmeralds()` is a proxy for the normal
+route and is **not ROM-equivalent**:
+
+- the special-stage demo path sets `move.b #1,(SK_special_stage_flag).w` and then
+  `clr.w (Emerald_counts).w` (`sonic3k.asm:5702-5706`) -- flag set, counts zero;
+- level select picks the flag independently (`:10102`).
+
+So an unseen demo or level-select recording defeats the inference. Replacing the invented
+index space with this proxy would swap one non-ROM predicate for another.
+
+### What is blocked, and the decision required
+
+No committed fixture records the flag. The recorder samples only `$FFB0` (Chaos count,
+`tools/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
+byte-empty by design (`S3KCompleteRunSegmenter.cs:24`). Note `run_manifest.json` **does**
+carry `emeralds_before`/`emeralds_after` -- an earlier claim here that it did not was
+wrong -- but that is the Chaos count, not the flag.
+
+Deriving the set from frame-0 position/spheres/rings, or by trying both layouts and keeping
+the match, is a trace oracle. Treating `ss_8`+ or the segment ordinal as "Super" is a route
+predicate that fails the any-BK2 bar.
+
+**Escalation, awaiting a decision that is not the engine's to make:**
+
+1. Recorder exports `sk_special_stage_flag` (`u8`, 0 or 1, ROM RAM `$FFBB`, sampled at the
+   special-stage arm beside `Current_special_stage` `$FE16`) into every S3K special-stage
+   `metadata.json` and the matching `run_manifest.json` entry. This makes the fixture
+   self-describing. **It does not by itself authorise feeding the value into gameplay.**
+2. Then one of:
+   - **bless** `{special_stage_index, sk_special_stage_flag}` as immutable segment-entry
+     identity -- analogous to choosing which test case to initialise, not to hydrating
+     state; or
+   - keep it **comparison-only**, accept that standalone Super-stage segments stay red, and
+     close them through continuous run-chain or predecessor replay instead.
+
+Reconstructing the selector natively instead would need `chaos_emerald_count` (`$FFB0`),
+`super_emerald_count` (`$FFB1`), the seven-byte `collected_emeralds_array`
+(`$FFB2..$FFB8`) -- necessary because the selector inspects individual entries when
+skipping collected stages (`sonic3k.asm:10841`) -- and optionally `emeralds_converted_flag`
+(`$FFBA`).
+
+### Landable today, independently
+
+Removing the 0-15 index space is verifiable **without any fixture**: keep `currentStage`
+strictly 0-7, represent the layout set as an explicit flag on the production stage-entry
+request, consume it at every site (layout, palette, emerald art, award inventory, rewind,
+debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage number, and
+test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
+The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
+at `sonic3k.asm:197730` -- which is not implemented (registry name only).

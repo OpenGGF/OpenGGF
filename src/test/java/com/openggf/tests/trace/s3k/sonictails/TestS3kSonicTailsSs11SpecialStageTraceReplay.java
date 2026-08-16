@@ -7,8 +7,11 @@ import com.openggf.tests.trace.s3k.AbstractS3kSpecialStageTraceReplayTest;
 import java.nio.file.Path;
 
 /**
- * Compared replay of special-stage segment {@code ss_11} (special stage index
- * 10) of the committed {@code s3k-sonic-tails-complete-emeralds} run --
+ * Compared replay of special-stage segment {@code ss_11} (special stage index 3 -- NOT the directory ordinal; ROM sub_85B0 masks the
+ * index with {@code andi.w #7,d0} (sonic3k.asm:10858), so it is 0-7 in BOTH
+ * halves and does not uniquely identify a segment: index 3 also names
+ * {@code ss}. The layout set comes from {@code SK_special_stage_flag}, which no
+ * committed fixture records -- see docs/status/known-discrepancies.md) of the committed {@code s3k-sonic-tails-complete-emeralds} run --
  * bk2 offset 254785, 5096 rows.
  *
  * <p><b>New frontier harness: expected RED.</b> It was added deliberately, to
