@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A third S3K special stage turns green: an early `rts` skips the cell check too
+  (`bugfix/ai-s3k-ss-bumper-cell-check`, merged 2026-08-16).** `Ss7` and `Ss3` ran clean for 4,300+
+  frames and then broke by exactly 48 on one axis, with velocity oscillating in antiphase. The 48 is
+  `2 x 24` — one step of `velocity >> 8` — not a cell size or radius: the ROM takes **one more step
+  in the original direction** before reversing. `loc_96CE` (sonic3k.asm:12037-12039), the bumper's
+  different-cell unlock, is `move.w d2,(Special_stage_velocity).w` followed by `rts`, which leaves
+  `sub_9580` before both the position update at `loc_96FA` and the `bsr.s sub_972E` cell check at
+  :12078 — unlike its same-cell siblings, which `bra` into that shared tail. So the ROM's frame
+  neither moves nor interacts, and the bumper re-arms only on the following frame from the far side
+  of the sphere. The engine modelled the skipped movement but the cell check lives in the manager and
+  ran regardless. `Ss7` **26 -> 0 errors** with `total_frames` unchanged at 4856; `Ss3` 113 -> 45.
+  Pitfall P68 records the general shape: an early `rts` also skips the routine's tail, including a
+  tail the engine hosts in a different class.
+
 - **A gumball triangle bumper the ROM had switched off was still solid
   (`bugfix/ai-gumball-bumper-solid-gate`, merged 2026-08-16).** Both Sonic+Tails Gumball replays
   stopped Tails 7px short of the ROM's wall at frame 33. The engine was not using the leader's

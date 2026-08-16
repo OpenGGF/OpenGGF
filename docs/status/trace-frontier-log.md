@@ -78907,3 +78907,94 @@ again. **Do not retry the bare flag flip.**
   `TestTraceSessionLauncherProductionFailureCleanup` object hash) and one
   parameterized class reports a variable test count
   (`TestMhz1CutsceneObjects$KnucklesPeerArtSubmission`, 83 vs 6, zero failures).
+## 2026-08-16 — S3K special stage: the bumper unlock's `rts` also skips the cell check
+
+Isolated worktree, base `develop` `611a40c17`, JDK 21,
+`-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`,
+`target/surefire-reports` and `target/trace-reports` cleared before every run.
+
+### Measured control (own tree, at `611a40c17`)
+
+| class | SS index | errors | `total_frames` | first error |
+|---|---|---:|---:|---|
+| `TestS3kSonicTailsSs3SpecialStageTraceReplay` | 2 | 113 | 6079 | frame 4760 `player_x` exp 772 act 820 |
+| `TestS3kSonicTailsSs7SpecialStageTraceReplay` | 6 | 26 | 4856 | frame 4389 `player_y` exp 5162 act 5114 |
+
+`-Ptrace-replay` control was **806 tests, 30 red** — not 31. Both classes'
+`unmatched recorded hardware completions` message is a downstream symptom of the
+physics divergence, as briefed; nothing in the timing port was touched.
+
+### Root cause (one defect, both axes)
+
+`ss_7` runs along `angle = 0` (Y axis) and `ss_3` along `angle = $C0` (X axis);
+the recorded turnaround is the same shape on both. Recorded `ss_7` rows
+4387-4390: `y_pos` 5138, 5138 (no move, `velocity` flips `$1800` -> `$E800`),
+5162 (**one more step in the original direction**), then 5138 and away.
+
+That extra forward step is the ROM standing still for one frame *without
+interacting with the cell it is on*. `loc_96CE` (sonic3k.asm:12037-12039), the
+bumper's different-cell unlock, is `move.w d2,(Special_stage_velocity).w / rts`.
+The `rts` leaves `sub_9580` before the position update at `loc_96FA` **and**
+before `bsr.s sub_972E` at sonic3k.asm:12078 — unlike the same-cell branches
+`loc_96F2`/`loc_96F8`, which `bra` into the shared tail. So the bumper the player
+is standing on cannot re-arm on that frame; it re-arms on the next one, after the
+player has been carried one step past it, and the bounce reverses from there.
+
+The engine already modelled the skipped position update (`handleBumperLock`
+returning `null`) but the collision pass is owned by the manager and ran anyway.
+Engine probe at the divergence, `ss_7` f4388: `PRE lock=true interact=634
+idx=666` -> different-cell unlock -> `POST v=-6144 lock=false`, immediately
+followed by `BUMPER activate idx=666 alreadyLocked=false`. The ROM has no such
+activation on that frame.
+
+### Fix
+
+`Sonic3kSpecialStagePlayer.reachedCellCheck()` reports whether that frame's
+`sub_9580` fell through to its cell-check tail. It is cleared at the three exits
+the engine models: the fade rotation `rts` (sonic3k.asm:11921-11922), the
+mid-turn `bne.w locret_972C` (sonic3k.asm:11949), and `loc_96CE`'s `rts`
+(sonic3k.asm:12039). `Sonic3kSpecialStageManager.processCollisionIfEligible()`
+consults it before its existing jumping/clear-routine gate. No constant,
+tolerance, or frame/zone/stage predicate. The `Ss4`/`Ss5` collision-ordering fix
+is untouched and still correct — it decides *where in the frame* the cell check
+runs; this decides *whether* `sub_9580` got that far.
+
+### Result
+
+| class | control | fix | `total_frames` |
+|---|---|---|---:|
+| `TestS3kSonicTailsSs7SpecialStageTraceReplay` | 26, f4389 `player_y` | **GREEN, 0 errors** | 4856 (unchanged) |
+| `TestS3kSonicTailsSs3SpecialStageTraceReplay` | 113, f4760 `player_x` | 45, f5557 `player_y` exp 64262 act 64260 | 6079 (unchanged) |
+
+| profile | control | fix |
+|---|---|---|
+| `-Ptrace-replay` | 806 tests, 30 red | 806 tests, **29 red** — newly green `{Ss7}`, newly red `{}` (Python set difference both directions) |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red, identical set |
+
+Protected greens `Ss`, `Ss2`, `Ss4`, `Ss5`, `Ss6`, `TestS3kSonicTailsAizSegmentTraceReplay`,
+`TestS3kSonicTailsHczSegmentTraceReplay` and the r7 Knuckles bonus classes all stay green;
+`TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2.
+`Ss8`-`Ss14` are unchanged, still on the close-time drain message.
+
+### New `Ss3` frontier — a different defect: the rate timer is one frame late
+
+Instrumented `rate`/`rate_timer` per stepped frame against the fixture's own
+columns. The engine's speed-increase timer is **one frame behind from the first
+stepped frame onwards** and stays exactly one behind:
+
+| trace row | ROM `rate` / `rate_timer` | engine |
+|---:|---|---|
+| 135 (first stepped) | 4096 / 1799 | 4096 / **1800** |
+| 1956 | 5120 / 1800 | 4096 / **1** |
+| 3757 | 6144 / 1800 | 5120 / **1** |
+| 5557 | 7168 / 1800 | 6144 / **1** |
+
+Each `loc_903E` rate increase therefore lands one frame late. It first becomes
+visible in a compared column at row 5557, where the ROM's `velocity` climbs to
+`$1C00` and the engine's stays capped at `$1800` for 409 rows. Rows 22-134 of
+`ss_3` are recorded `lag=1` and are skipped by the harness, but row 134 — a lag
+row — already carries the initialised `rate=4096 / rate_timer=1799`, i.e. the
+stage's first decrement happened on a row the harness does not step. This is a
+stage-entry phase question shared by every special stage, not a rate constant;
+it was deliberately **not** closed here, because the only way to close it inside
+this round would have been to seed the timer at the fixture's value.

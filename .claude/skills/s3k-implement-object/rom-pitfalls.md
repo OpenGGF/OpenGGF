@@ -2700,3 +2700,41 @@ A free-running `counter++` passed down from a coordinator is the shape to grep f
 same loop ordering.
 
 **Originating commit.** `<pending: S3K slots bonus ring-award cadence>`.
+
+---
+
+## P68 -- an early `rts` inside a ROM routine also skips that routine's TAIL, including a tail the engine hosts in another class
+
+**Symptom.** One frame near a state change does the right thing for position or
+velocity but *also* performs an interaction the ROM did not, so a re-arm, a pickup
+or a trigger fires exactly one frame early and everything after it is phase-shifted
+by one step.
+
+**Mechanism.** A ROM routine's terminating `bsr`/`jsr` is not a separate pass: it is
+the last thing the routine does, and **every** earlier `rts` or `bra locret_*`
+suppresses it. `sub_9580` (`docs/skdisasm/sonic3k.asm:11914-12080`) is the worked
+case. Its bumper different-cell unlock, `loc_96CE`, is
+`move.w d2,(Special_stage_velocity).w / rts` (`:12037-12039`) -- an `rts`, where its
+same-cell siblings `loc_96F2`/`loc_96F8` `bra` into the shared tail at `loc_96FA`.
+So that frame skips the position update *and* `bsr.s sub_972E` (`:12078`), the cell
+check. The player neither moves nor interacts, which is precisely what lets the ROM
+re-arm on the same bumper one frame later, from the far side of the sphere. Two
+other exits do the same: the fade rotation's `rts` (`:11921-11922`) and the mid-turn
+`bne.w locret_972C` (`:11949`).
+
+**What to check.** When the engine splits a ROM routine across classes -- a "player"
+object holding the movement and a "manager" holding the routine's tail call -- the
+manager's gate reproduces only the tail's *own* conditions
+(`tst.b jumping / bmi`, `tst.b clear_routine / bne`) and silently loses every
+earlier exit. Enumerate the routine's `rts` / `bra locret_*` sites and have the
+first half report whether execution reached the tail, rather than re-deriving each
+exit's condition at the call site. A gate that returns `null`/`false` to mean "skip
+the position update" is the tell: the same exit almost certainly skips more.
+
+**Cross-game.** The shape is universal wherever a routine ends in a `bsr` to its
+collision/interaction helper; S1's `Sonic_Loops`-style tails and S2's
+`SSPlayer_*` movement routines have the same structure.
+
+**Originating commit.** `<pending: S3K special-stage bumper cell-check skip>`;
+`TestS3kSonicTailsSs7SpecialStageTraceReplay` 26 errors -> green,
+`…Ss3…` 113 -> 45. See `docs/status/trace-frontier-log.md`, 2026-08-16.
