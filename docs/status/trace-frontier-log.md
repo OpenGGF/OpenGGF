@@ -79829,3 +79829,84 @@ reason about it.
 None of four offered candidates was involved: not a `getY()`/`getCentreY()` anchor
 confusion, not the ride re-snap, not a `y_radius` off-by-one, not probe phase. The cause was
 the object's own surface height -- `d2` where the family only ever reads `d3`.
+
+## 2026-08-16 -- AIZ f5435: the ground changes under Sonic, and a fourth cluster member
+
+Base `15ce29d19`. **Nothing landed.** Established by BizHawk PC-execute probes on
+`s3-aiz1-2-sonictails.bk2` (probe frame = trace row - 1, aligned by `lfc`), not by engine
+reasoning.
+
+### Measured
+
+Hooks at `$01E45A` / `$01E46A` / `$01E488`, bytes verified in `s3k.gen`:
+
+```
+f=5433  SURFACE obj=B128 objY=03A0 d3=16 surface=912 p1y=0379  WINDOW d0=0  playerY=889 (rejected)
+f=5434  SURFACE obj=B128 objY=03A0 d3=16 surface=912 p1y=037C  WINDOW d0=-3 playerY=892
+f=5434  ACCEPT  obj=B128 d0=-3 newY=892
+```
+
+The ROM's `y_pos(a1)` was **892 before `Obj_AIZTransitionFloor` ran**, and the snap
+`d2 + d0 + 3 = 892` moves him **zero pixels** -- the object only ran `RideObject_SetRide`.
+The whole `889 -> 892` came from the player's own routine earlier in the same frame. Neither
+the top-solid window nor `d3` is involved at AIZ.
+
+Floor-sensor probes (`Player_AnglePos`, `$00EC2E` / `$00F264` / `$00F266` / the three
+`FindFloor` returns / `$00ED02` / `$00ED32`) show identical probe coordinates, identical
+`Primary/Secondary_collision_addr`, identical `y_radius`/`angle`/`status` across the two
+frames -- and a different answer:
+
+```
+f=5433  TILE a1=FF3308 word=F421  RET_NORMAL dist=1 ... FINAL d1=0
+f=5434  TILE a1=FF3308 word=F15F  RET_BELOW  dist=3 ... FINAL d1=3  APPLY d1=3
+```
+
+**The level data changed under him.** `d1 = 3` is `<= 4` (`x_vel = 0`, `loc_ED2E` cap), so
+`loc_ED32`'s `add.w d1,y_pos(a0)` (`sonic3k.asm:18832`) applied `+3`.
+
+A write hook on `$FF3308` over rows 5400-5440 caught **exactly one** write, at f=5433,
+`pc=$00001CBC` -- inside the Kosinski decompressor's copy loop in `Process_Kos_Queue`.
+
+### The owner
+
+`Chunk_table` **is** `RAM_start` (`sonic3k.constants.asm:284-285`), and the AIZ1->AIZ2
+handoff queues AIZ2's chunk definitions straight over it while the player is still standing
+in AIZ1:
+
+```
+lea (AIZ2_128x128_Kos).l,a1
+lea (RAM_start).l,a2
+jsr (Queue_Kos).l          ; sonic3k.asm:104670-104672
+```
+
+`Process_Kos_Queue` is uninterruptible, so the swap is atomic on one frame -- consistent
+with the single observed write. AIZ2's chunk table replaces AIZ1's live collision mid-act,
+the ground under Sonic drops 3px, his own ground routine snaps him to 892, and only then
+does the transition floor claim him.
+
+The engine models none of it: `AizPreparedTransitionArtState` / `AizPreparedTransitionArtBridge`
+carry no chunk, block or collision content, and nothing in `src/main` references
+`AIZ2_128x128_Kos`.
+
+### Consequence
+
+`topSolidLandingAllowsZeroDist = true` was absorbing the **absent AIZ2 chunk-table swap** --
+the engine reached 892 via `889 + 0 + 3`, the right pixel from a position the ROM had
+already left. That makes it a **fourth member of the compensating cluster**, and unlike the
+other three its compensated defect is a missing engine mechanism rather than a fitted
+constant. It would break for any recording where the swap lands on a different frame or
+block.
+
+### Refuted
+
+- The previous round's inference that the ROM's `y_pos(a1)` was **890** and `Adjust_AIZ2Layout`
+  nudged him: **measured false.** It was 892, and `Adjust_AIZ2Layout` has not executed
+  (`Current_zone_and_act` still `0000`, `Events_routine_bg = $0014`, no `-$2F00/-$80` rebase).
+- The floor object's geometry is exact on both sides (`objY = $03A0`, `d3 = $10`,
+  `y_radius = $13`; steady ride `928 - 16 - 19 = 893` matches row 5436 onward).
+
+### Note for whoever takes this
+
+The recorder already hard-codes an `aiz_handoff_terrain_state` window of frames 5430-5438
+(`S3KAuxEventEngine.cs:657-676`) -- a previous investigation of this same frame that could
+not answer it because its `sonic_floor_*` fields are hook-gated and off in the fixture.
