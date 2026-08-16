@@ -176,7 +176,16 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0x0800);
-        player.setControlLocked(true);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97086-97097) writes ground_vel,
+        // render_flags, anim and `move.b #1,object_control(a1)` -- it never
+        // touches Ctrl_1_locked/Ctrl_2_locked. Setting the engine's control lock
+        // here latched logicalInputState (Obj01_Control's Ctrl_1_locked
+        // short-circuit, sonic3k.asm:21968-21971), so the frozen word was what
+        // Sonic_RecordPos (sonic3k.asm:22132) stored into Stat_table. ROM copies
+        // Ctrl_1 -> Ctrl_1_logical BEFORE the `btst #0,object_control(a0)` test at
+        // sonic3k.asm:21973, so a captured player still records live pad state and
+        // the sidekick's $44-back Stat_table read (loc_13DA6/loc_13DD0,
+        // sonic3k.asm:26682-26700) sees the release press on the correct frame.
         // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97091): `move.b #1,object_control(a1)`
         // sets ONLY bit 0 (movement-suppress) of object_control, not bit 7. The
         // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22019-22022:
@@ -239,8 +248,9 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             player.setYSpeed((short) yVelocity);
         }
 
+        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97024-97042) clears object_control
+        // bits 0-1 only; there is no Ctrl_1_locked write to undo here either.
         player.releaseFromObjectControl(frameCounter);
-        player.setControlLocked(false);
         player.setAir(true);
         player.setOnObject(false);
         if (!player.getRolling()) {

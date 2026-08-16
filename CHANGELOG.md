@@ -3,6 +3,32 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): a Pachinko magnet orb froze the captured player's logical pad word, so
+  the sidekick's delayed follow replay missed the release press edge. ROM
+  `sub_4A428` `loc_4A5AA` (sonic3k.asm:97086-97097) writes `ground_vel`,
+  `render_flags`, `anim` and `move.b #1,object_control(a1)`; it never touches
+  `Ctrl_1_locked`/`Ctrl_2_locked`, and neither does the `loc_4A4F0`/`loc_4A4F6`
+  release tail (:97024-97042). The engine set its control lock on capture, which
+  triggers `Obj01_Control`'s ROM-faithful `Ctrl_1_locked` short-circuit
+  (sonic3k.asm:21968-21971) in `AbstractPlayableSprite.setLogicalInputState` and
+  latched `logicalInputState` for the whole capture. ROM copies
+  `Ctrl_1 -> Ctrl_1_logical` **before** the `btst #0,object_control(a0)` test at
+  :21973, so a captured player keeps recording live pad state, and
+  `Sonic_RecordPos` (:22132) stores that live word into `Stat_table`. With the
+  word frozen, the sidekick's `Pos_table_index - $44` read
+  (`loc_13DA6`/`loc_13DD0`, :26682-26700) never saw the B press that
+  `sub_4A428`'s `andi.b #button_A_mask|button_B_mask|button_C_mask,d1` needs, so
+  the captured sidekick was launched a frame late. Measured on
+  `pachinko_3`: BK2 row 113 presses B, the engine's leader recorded it at row
+  114, and `tails_cpu_ctrl2_held/pressed` diverged at row 129 = 113 + 16. Only
+  the two invented lock writes are removed; no constant is added and the
+  16-frame delay is untouched. `TestS3kSonicTailsPachinko3BonusTraceReplay`
+  41 -> 22 errors (first error frame 129 -> 131), `…PachinkoBonusTraceReplay`
+  2280 -> 2166 (95 -> 122), `…Pachinko2BonusTraceReplay` 2120 -> 1969 (94 ->
+  137), all three at unchanged compared-row counts (188 / 2907 / 3571).
+  `-Ptrace-replay` 806 tests 30 red and `-Ptrace-replay-r7` 37 tests 32 red are
+  name-for-name the same red sets as the control worktree at the same base, with
+  no other class's error count or first-error frame changed.
 - Fix(s3k): the Pachinko magnet orb released a CPU sidekick as soon as it left the
   screen. ROM `sub_4A428` (sonic3k.asm:96955-96967) has no on-screen,
   camera-distance or render-flag test anywhere in its captured branch, and

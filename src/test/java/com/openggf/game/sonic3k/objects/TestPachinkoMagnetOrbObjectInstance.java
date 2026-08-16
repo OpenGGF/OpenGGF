@@ -26,8 +26,14 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
         orb.update(0, main);
 
-        verify(main).setControlLocked(true);
-        verify(sidekick).setControlLocked(true);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97086-97097) captures with
+        // ground_vel/render_flags/anim writes plus `move.b #1,object_control(a1)`
+        // and NO Ctrl_1_locked/Ctrl_2_locked write. Setting the engine control lock
+        // here latched logicalInputState through Obj01_Control's Ctrl_1_locked
+        // short-circuit (sonic3k.asm:21968-21971), which froze the Stat_table word
+        // Sonic_RecordPos (:22132) records for the sidekick's delayed follow read.
+        verify(main, never()).setControlLocked(anyBoolean());
+        verify(sidekick, never()).setControlLocked(anyBoolean());
         verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
@@ -77,7 +83,9 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(0, main);
         orb.update(1, main);
 
-        verify(main).setControlLocked(false);
+        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97024-97042) clears object_control
+        // bits 0-1 only; the release has no Ctrl_1_locked write either.
+        verify(main, never()).setControlLocked(anyBoolean());
         verify(main).setRolling(true);
         // ROM loc_4A4F6 (sonic3k.asm:97029-97042) sets y_radius/x_radius and the
         // Status_Roll bit with NO y_pos write, so the release must preserve the player's
