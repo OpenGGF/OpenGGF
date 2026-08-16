@@ -355,10 +355,20 @@
                                 <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
                             </includes>
                             <!--
-                              Mirror of the tag gate in -Ptrace-replay: a converted
+                              Companion to the tag gate in -Ptrace-replay. A converted
                               zone-per-file class is included by name below, and its
                               in-scope character sets (tagged trace-scope-r6) are
                               dropped here so only the out-of-scope ones run.
+
+                              NOT a strict mirror, and do not "repair" it into one.
+                              TestS3kSlotsBonusTraceReplay is included here by name but
+                              is deliberately ABSENT from the exclude list in
+                              -Ptrace-replay, because tags do the r6-side gating for
+                              converted classes. Adding it there would exclude the
+                              r6-tagged nested class by file name in -Ptrace-replay while
+                              the r7 tag filter already excludes it here, and the
+                              in-scope Slots tests would then run in NEITHER profile,
+                              silently.
                             -->
                             <excludedGroups>performance-measurement,trace-scope-r6</excludedGroups>
                             <excludes>

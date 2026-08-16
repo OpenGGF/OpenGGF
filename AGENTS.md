@@ -273,7 +273,11 @@ Full detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. The expens
   equivalent that doesn't exist.
 - **Dual object pointer tables.** S3K remaps many object IDs by zone set: `S3kZoneSet.S3KL`
   (zones 0-6, AIZ-LBZ, 256 entries) and `SKL` (zones 7-13, MHZ-DDZ, 185 entries). Resolve
-  names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`.
+  names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`. **Zone ids 0-6 are seven
+  ids, not six: FBZ is 4** (`Sonic3kZoneIds.java`). It takes the S3KL *object table* while
+  being an S&K-half *level* — the ROM's own level predicate `SSEntry_CheckLevel`
+  (`sonic3k.asm:128433-128443`) is `Current_zone < 7 && Current_zone != 4`. "Which half" is
+  not one question; cite the routine that owns the question you are asking.
 - **Compression type is encoded in the label suffix** (e.g. `AIZ1_8x8_Primary_KosM`), since
   S3K files use a `.bin` extension. `RomOffsetFinder` auto-infers it.
 - **Known limitation:** some S3K acts log `maxChunkPatternIndex > patternCount` (dynamic

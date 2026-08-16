@@ -12,9 +12,22 @@ total means the run truncated, a larger one means stale reports were counted).
 
 ## The two axes that put a trace out of scope
 
-1. **Zone.** S3K zone ids 0-6 (AIZ, HCZ, MGZ, CNZ, ICZ, LBZ) are the Sonic 3 half and are
-   in scope. Ids 7-13 (MHZ, FBZ, SSZ, SOZ, LRZ, HPZ, DDZ, DEZ) are the S&K half. Anything
-   past LBZ is expected red.
+1. **Zone.** In scope is the name set **{AIZ, HCZ, MGZ, CNZ, ICZ, LBZ}**. Everything else
+   is expected red.
+
+   **Do not express this as an id range.** An earlier revision of this document said
+   "ids 0-6 are the Sonic 3 half" and listed six names for seven ids; the id it silently
+   swallowed is **FBZ = 4** (`Sonic3kZoneIds.java:15`), which is an S&K-half level sitting
+   inside 0-6. The ROM owns this predicate exactly: `SSEntry_CheckLevel`
+   (`docs/skdisasm/sonic3k.asm:128433-128443`) returns "S3 level" only when
+   `Current_zone < 7` **and** `Current_zone != 4` -- an explicit `cmpi.b #4` carve-out for
+   Flying Battery. So the in-scope ids are **{0,1,2,3,5,6}**, and out of scope are FBZ(4),
+   7-0xC (MHZ, SOZ, LRZ, SSZ, DEZ, DDZ), the 0x0D intro/ending scene zone, and the
+   0x16/0x17 boss and arena zones (HPZ is **0x16 act 1**, not 7-13).
+
+   Note FBZ is S&K-half as a *level* while using the S3KL object table (`loc_1B6A8`,
+   `sonic3k.asm:37410-37421`) -- "which half" is not one question, so cite the routine that
+   owns the specific question you are asking.
 2. **Character.** Knuckles routes are out of scope regardless of zone.
 
 Bonus and special stages inherit the scope of the run that recorded them, **not** the name
