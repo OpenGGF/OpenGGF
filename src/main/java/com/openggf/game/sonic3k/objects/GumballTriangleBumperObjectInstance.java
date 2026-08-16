@@ -81,9 +81,28 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         return new GumballTriangleBumperObjectInstance(ctx.spawn());
     }
 
+    /**
+     * ROM {@code loc_60F3E} (sonic3k.asm:127644-127647) opens with
+     * {@code tst.w ($FF2020).l / bpl.s loc_60F8E}: while the shared
+     * triangle-bumper cooldown word is non-negative the bumper branches
+     * straight to {@code Draw_Sprite} and never reaches its
+     * {@code jsr (SolidObjectFull)} at :127651. The bumper is therefore not
+     * merely non-bouncing during the cooldown -- it is entirely intangible, so
+     * neither player nor sidekick is pushed out of it.
+     * <p>
+     * {@code sub_60F94} arms the word with {@code move.w #$F,($FF2020).l}
+     * (:127680) on a bounce and {@code loc_61050}'s
+     * {@code subq.w #1,($FF2020).l} (:127743) counts it back down, both of
+     * which {@link GumballMachineObjectInstance} already models
+     * ({@code onBumperHit} / {@code update}).
+     */
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        return !consumed;
+        if (consumed) {
+            return false;
+        }
+        GumballMachineObjectInstance machine = currentMachineForThisContext();
+        return machine == null || machine.areBumpersActive();
     }
 
     @Override

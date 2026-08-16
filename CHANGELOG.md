@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Gumball bonus stage's triangle bumpers stayed solid during their
+  post-bounce cooldown. ROM `loc_60F3E` (sonic3k.asm:127644-127647) opens with
+  `tst.w ($FF2020).l / bpl.s loc_60F8E`, branching straight to `Draw_Sprite` and
+  never reaching its `jsr (SolidObjectFull)` at :127651 while the shared cooldown
+  word is non-negative — the bumper is intangible, not merely non-bouncing. The
+  engine consulted the cooldown only when applying the bounce, so a bumper the ROM
+  had switched off still pushed characters out of its solid box. Sonic's own bounce
+  arms the word (`sub_60F94`, :127680) and the sidekick then stopped against the
+  disabled bumper's edge instead of the level wall behind it.
+  `TestS3kSonicTailsGumballBonusTraceReplay` 119 -> 78 errors (frontier frame 33 ->
+  209), `TestS3kSonicTailsGumball2BonusTraceReplay` 144 -> 115 (frame 33 -> 64);
+  both at unchanged `total_frames` (590, 783). No other trace-replay, r7 or
+  default-profile class changes red/green or assertion message.
 - Fix(s3k): the S3K special-stage entry flash triggered the special stage one frame
   early. `Obj_Wait` (sonic3k.asm:177947-177950) is `subq.w #1,$2E(a0)` followed by
   `bmi.s`, so the handler stored in `$34` runs when the counter passes *below* zero,
