@@ -140,8 +140,20 @@ public class TestPachinkoMagnetOrbObjectInstance {
         verify(main, times(1)).releaseFromObjectControl(3);
     }
 
+    /**
+     * ROM {@code sub_4A428} (sonic3k.asm:96955-96967) has no on-screen or
+     * camera-distance test in its captured branch, and Player 2 is driven through
+     * the very same subroutine from {@code loc_4A408} (sonic3k.asm:96943-96949).
+     * A CPU sidekick carried off-screen by the orbit therefore stays captured;
+     * only Debug_placement_mode, {@code routine(a1) >= 4}, {@code object_control}
+     * bit 7, or an A/B/C press in its own Ctrl_2_logical pressed byte release it.
+     *
+     * <p>This test previously asserted the opposite -- that an off-screen CPU
+     * sidekick is released -- pinning engine-invented behaviour with no ROM
+     * counterpart.
+     */
     @Test
-    public void offscreenCapturedSidekickReleasesWithoutHoverSfx() {
+    public void offscreenCapturedSidekickStaysCaptured() {
         PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
         AbstractPlayableSprite main = mockPlayerAt(0x400, 0x400);
@@ -159,8 +171,11 @@ public class TestPachinkoMagnetOrbObjectInstance {
         services.resetSfxCount();
         orb.update(16, main);
 
-        verify(sidekick).releaseFromObjectControl(16);
-        assertEquals(0, services.sfxCount);
+        verify(sidekick, never()).releaseFromObjectControl(anyInt());
+        // vIntRunCount 16 is a multiple of the ROM's `(Level_frame_counter+1) & $F`
+        // hover-SFX period, and sub_4A428 reaches Play_SFX on that frame for a
+        // still-captured player regardless of where the camera is.
+        assertEquals(1, services.sfxCount);
     }
 
     private static AbstractPlayableSprite mockPlayerAt(int x, int y) {
