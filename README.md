@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`Obj_Wait` fires when its counter goes negative, and a chain diagnostic stops agreeing with
+  itself (`bugfix/ai-obj-wait-bmi`, merged 2026-08-16).** The S3K special-stage entry flash waited
+  one frame too few: ROM `Obj_Wait` is `subq.w #1,$2E(a0)` / `bmi.s` (sonic3k.asm:177947-177950), a
+  *negative* test rather than a zero test, so the `$20` it is armed with by `SSEntryFlash_Finished`
+  (:128381-128385) elapses on the 33rd tick. The engine tested `<= 0` and fired on the 32nd. Only
+  the comparison changed; the constant is untouched. `TestS3kSonicTailsCompleteEmeraldRunChain`
+  advances from `aiz` cursor 2288 to 2289 of 2290 — still red on the one remaining row, which is the
+  expected result rather than a shortfall. Alongside it, the run-chain tail diagnostic passed
+  `activeComparator.cursor()` as its own `initialCursor`, so `TestS2CompleteEmeraldRunChain` reported
+  "cursor 3977 of 3997 (bootstrap initial cursor 3977)" — two numbers equal by construction, reading
+  as "consumed zero rows" when it had consumed 3977. That tautology had already misled a briefing
+  into treating the S2 and S3K chain failures as one bug; they are two call sites with two ROM
+  owners. The real attach-time cursor is now threaded through both call sites (3977 → 1), with a
+  null guard because an uncompared special-stage interior attaches no comparator at all.
+
 - **Two S3K special stages turn green: the sphere check runs before the jump lands
   (`bugfix/ai-s3k-ss-jump-landing-collision-order`, merged 2026-08-15).** `Ss4` (2 errors) and
   `Ss5` (7) were the only single-digit classes in the suite, both `spheres_left` off by exactly one.

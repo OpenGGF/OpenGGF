@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the S3K special-stage entry flash triggered the special stage one frame
+  early. `Obj_Wait` (sonic3k.asm:177947-177950) is `subq.w #1,$2E(a0)` followed by
+  `bmi.s`, so the handler stored in `$34` runs when the counter passes *below* zero,
+  not when it reaches zero. `SSEntryFlash_Finished` (sonic3k.asm:128381-128385) arms
+  `$2E` with `$20`, so `SSEntryFlash_GoSS` runs on the 33rd tick; the engine's wait
+  tested `<= 0` and fired on the 32nd. Only the branch condition changes — the `$20`
+  constant is untouched. `TestS3kSonicTailsCompleteEmeraldRunChain` advances its
+  `aiz` comparator cursor 2288 -> 2289 of 2290 (still red on the one remaining row);
+  no other trace-replay or r7 class changes red/green or assertion message.
+- Fix(tests): the chain walker's LEVEL->LEVEL stage-exit pinned-tail diagnostic passed
+  the comparator's *current* cursor as its "bootstrap initial cursor", so the message
+  reported the same number twice and read as "this segment consumed zero rows".
+  Both pinned-tail call sites now report the cursor the active segment's comparator
+  was actually attached at (`TestS2CompleteEmeraldRunChain` seg7_ehz2: 3977 -> 1).
+  Diagnostic text only; no assertion's pass/fail behaviour changes.
 - Fix(s3k): the S3K special stage collected a blue sphere one frame early when the
   player landed on it from a jump. The ROM's per-frame player routine calls its
   movement routine `sub_9580` first (sonic3k.asm:11467), and the grid-cell check

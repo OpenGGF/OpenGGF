@@ -78616,3 +78616,76 @@ concurrently: 3 of 5 classes silently produced no XML at all, which reads as a s
 set. Use `-Dsurefire.forkCount=1` under load. Trace-report filenames also collide --
 Aiz3/Aiz4/Aiz5 all write `s3k_aiz2_report.json` -- so per-class attribution requires solo
 runs or the class's own surefire assertion message.
+
+## 2026-08-16 -- S3K `Obj_Wait` fires on negative; chain pinned-tail cursor diagnostic
+
+Base `9f42d43dc`, paired fix/control worktrees, JDK 21, all three ROMs passed.
+
+### Fixes
+
+1. `Sonic3kSSEntryFlashObjectInstance.updateWait()` tested `waitTimer <= 0`. ROM
+   `Obj_Wait` (skdisasm/sonic3k.asm:177947-177950) is `subq.w #1,$2E(a0)` / `bmi.s`,
+   which fires on the transition below zero. Armed with `$20` by
+   `SSEntryFlash_Finished` (:128381-128385) the ROM enters the special stage on the
+   33rd tick. Condition-code correction only; `POST_ANIM_WAIT` (`0x20`) unchanged.
+2. `AbstractRunChainTest`, LEVEL->LEVEL stage-exit branch, passed
+   `activeComparator.cursor()` as `initialCursor` to
+   `completeSourceTailReportingOnFailure`, making the reported "bootstrap initial
+   cursor" equal to the reported cursor by construction. Both pinned-tail call sites
+   now pass the cursor the active segment's comparator was attached at. Diagnostic
+   message only.
+
+### Measurements
+
+| run | tests | red |
+|---|---|---|
+| `-Ptrace-replay` control | 806 | 30 |
+| `-Ptrace-replay` fix | 806 | 30 |
+| `-Ptrace-replay-r7` control | 37 | 32 |
+| `-Ptrace-replay-r7` fix | 37 | 32 |
+| default control | 15116 | 50 |
+| default fix | 15116 | 51 (see below) |
+| default control, `runOrder=alphabetical` | 15097 | 51 |
+| default fix, `runOrder=alphabetical` | 15097 | 50 |
+
+Red-class sets under `-Ptrace-replay` and `-Ptrace-replay-r7` are **identical by
+name** in both directions, and every per-test assertion message is byte-identical
+except two:
+
+- `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+  -- `aiz` comparator cursor **2288 -> 2289 of 2290**. Still RED on the one remaining
+  row; the `Obj_Wait` fix closes exactly one of the two.
+- `TestS2CompleteEmeraldRunChain#ehz1ToDeathEggAcrossEverySpecialStage` -- `seg7_ehz2`
+  "bootstrap initial cursor" **3977 -> 1** at an unchanged comparator cursor 3977 of
+  3997. The S2 20-row deficit is unchanged and remains a separate defect.
+
+`TestS3kHczCompleteRunTraceReplay` stays at its deliberate 2 errors, frame 29095
+`rings`. No `Ss`/`Ss2`/`Ss4`/`Ss5`/`Ss6`, AIZ, HCZ or Knuckles-bonus class moved.
+
+### The default-profile difference is order-dependent, not caused by the change
+
+`TestGameLoopSpecialStageEntryPresentation` and `TestGameLoopSpecialStageRewindGate`
+were red on the fix tree in 3/3 default runs and green on the control in 2/2. They are
+green in isolation on **both** trees (28/28). A run with item 1 **reverted** (the
+test-only diagnostic alone, which cannot reach these classes) reproduced both reds,
+and under `-Dsurefire.runOrder=alphabetical` the polarity **reverses**:
+`TestGameLoopSpecialStageEntryPresentation` is red on the *control* and green on the
+fix. Their own javadoc documents the null-focused-sprite NPE as a fixture fragility.
+Ambient global state across reused forks, not a regression. Same for the run-to-run
+churn in `TestBubblerObjectInstance`, `TestCnzHoverFanObjectInstance`,
+`TestMhzMushroomParachuteObjectInstance` and `TestS3kHczSnakeBlocksObject`.
+
+### Not landed
+
+`LevelLoop`'s remaining `aiz` row (sonic3k.asm:7886-7921) is untouched -- not bundled
+into this commit. Note for the next round: `GameLoop.stepInternal` already calls
+`advanceTraceRunPhysicalRow()` *before* `consumeSpecialStageRequest()` ->
+`enterSpecialStage()`, so the frame that writes `$34` is already recorded as a row;
+the remaining row is somewhere else.
+
+### Discipline
+
+No fitted constant -- `0x20` untouched, only the branch condition. No tolerance,
+offset or nudge. No assertion weakened, widened, deleted, disabled or made advisory.
+No zone/act/route/frame/game-name predicate. No trace hydration. `docs/skdisasm` used
+for citations only. No landed fix undone.
