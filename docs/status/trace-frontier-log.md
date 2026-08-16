@@ -79879,8 +79879,7 @@ lea (RAM_start).l,a2
 jsr (Queue_Kos).l          ; sonic3k.asm:104670-104672
 ```
 
-`Process_Kos_Queue` is uninterruptible, so the swap is atomic on one frame -- consistent
-with the single observed write. AIZ2's chunk table replaces AIZ1's live collision mid-act,
+AIZ2's chunk table replaces AIZ1's live collision mid-act,
 the ground under Sonic drops 3px, his own ground routine snaps him to 892, and only then
 does the transition floor claim him.
 
@@ -79910,3 +79909,50 @@ block.
 The recorder already hard-codes an `aiz_handoff_terrain_state` window of frames 5430-5438
 (`S3KAuxEventEngine.cs:657-676`) -- a previous investigation of this same frame that could
 not answer it because its `sonic_floor_*` fields are hook-gated and off in the fixture.
+
+
+### Correction to the entry above, and to the round briefed from it (2026-08-17)
+
+Two claims in the section above are **wrong** and are corrected here rather than edited away.
+
+**1. `Process_Kos_Queue` is NOT uninterruptible.** I wrote that the swap is "atomic on one
+frame". `Set_Kos_Bookmark` / `Restore_Kos_Bookmark` (`docs/skdisasm/sonic3k.asm:2819-2843`)
+exist precisely to resume a decompression interrupted by V-int -- `Process_Kos_Queue` opens
+`bmi.w Restore_Kos_Bookmark ; branch if decompression was interrupted by V-int` -- and its
+own header comment says it "Processes the **first entry** in the Kosinski decompression
+queue". The single observed write at `pc=$00001CBC` is **one entry draining**, not three
+atomically.
+
+**2. The engine already implements the swap.** I briefed a round to build it, on the
+strength of "nothing in `src/main` references `AIZ2_128x128_Kos`". That is true of the
+*label* and false of the *data*.
+`S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY`
+(`S3kSeamlessMutationExecutor.java:65-95`) resolves AIZ2's chunk and block streams from
+`LevelLoadBlock` entry 1 via `ResourceLoader`/`LoadOp.kosinskiBase` and applies them through
+the mutation surface (`applyBlockOverlay`, two `applyChunkOverlay` calls); it is invoked from
+`Sonic3kAIZEvents.updateFireTransition()` (`:2464`), and the three `Queue_Kos` jobs are
+submitted to the hardware-timing port in `queueAct2KosArt()` (`:2569-2610`). Landed in
+`76f77d32a`. Execution confirmed with temporary probes, not by reading:
+`TestS3kAizTraceReplay` prints `queue fireTransitionFrames=168` and
+`terrainReady fireTransitionFrames=216`; `TestS3kSonicTailsAizSegmentTraceReplay` prints
+neither, so it never enters the fire handoff and cannot be the class that observes the swap.
+
+**The real defect is the release gate, and behind it the phase.** Readiness is gated on an
+invented `FIRE_TERRAIN_DECOMPRESS_FRAMES = 20` stacked on `FIRE_REDRAW_FRAMES = 16`
+(`Sonic3kAIZEvents.java:401`) -- a 36-frame duration applied to work whose readiness the
+timing port already reports twelve lines below in `act2KosArtReady()`.
+
+Two principled re-gatings were measured and **both reverted**: releasing on the three terrain
+handles' own `isReady()` took `TestS3kAizCompleteRunTraceReplay` green -> 4030 errors (first
+frame 6255 `tails_x_speed`); releasing on the drain frame gave 17 errors at frame 6217,
+`y expected 0x0379 actual 0x037C` -- 889 vs 892, the pair from the entry above **with the
+sides swapped**. The trace still expects 889 well past the engine's swap moment, so the
+engine's *submission* is early: `FIRE_BG_MUTATION_Y = 0x0190` fires before the ROM's
+`cmpi.w #$190,(Camera_Y_pos_BG_copy).w` does, and the 20-frame constant was absorbing that
+phase error.
+
+**Next owner:** the fire-rise phase model, not the swap. Establish the ROM frame at which
+`Camera_Y_pos_BG_copy` first reaches `$190` in both movies, compare against
+`fireTransitionFrames = 168`, and fix `advanceFireRise` against `AIZ1BGE_FireTransition`
+(`sonic3k.asm:104654-104668`) **before** touching the release gate -- re-gating first moves
+the AIZ frontier rather than fixing it.
