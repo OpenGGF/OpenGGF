@@ -181,6 +181,24 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     private boolean pushedPlayer;
 
     /**
+     * Mirrors ROM {@code collision_property} bits 0/1 for the Pachinko reward paths.
+     *
+     * <p>ROM {@code loc_4A312} / {@code loc_4A34C} (sonic3k.asm:96843-96845, 96866-96869)
+     * do NOT react inside the player's {@code Touch_Response}: the touch pass only sets
+     * {@code collision_property(a0)}, and the reward itself is dispatched by
+     * {@code sub_4A362}/{@code sub_4A384} from the ITEM's own slot pass later in the same
+     * frame. That distinction is load-bearing whenever another object writes the same
+     * player field afterwards -- a Pachinko reward orb sits in a higher SST slot than
+     * {@code Obj_PachinkoMagnetOrb} (loc_4A408), whose attraction step overwrites
+     * {@code x_vel}/{@code y_vel} every pass, so a push dispatched from the touch pass
+     * (which runs at the player's slot, before every object) is erased before it can be
+     * observed, while ROM's runs after the magnet and survives.
+     */
+    private PlayableEntity pendingTouchPlayer1;
+    private PlayableEntity pendingTouchPlayer2;
+    private int pendingTouchFrameCounter;
+
+    /**
      * Constructs a gumball item.
      *
      * @param spawn the object spawn data
@@ -248,6 +266,8 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             setDestroyed(true);
             return;
         }
+
+        dispatchPendingPachinkoTouches();
 
         if (motionMode == MotionMode.GUMBALL_EJECT) {
             motionState.yVel += Y_GRAVITY;
@@ -392,7 +412,15 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         }
 
         if (rewardMode == RewardMode.PACHINKO) {
-            handlePachinkoReward(player, frameCounter);
+            // ROM Touch_ChkValue only sets collision_property for this $C0-category object;
+            // sub_4A362/sub_4A384 run from the item's own pass. Latch here, dispatch in
+            // update() -- see the pendingTouchPlayer1/2 field doc for why the phase matters.
+            if (player != null && player.isCpuControlled()) {
+                pendingTouchPlayer2 = player;
+            } else {
+                pendingTouchPlayer1 = player;
+            }
+            pendingTouchFrameCounter = frameCounter;
             return;
         }
 
@@ -428,21 +456,43 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * ROM {@code sub_4A362} (sonic3k.asm:96874-96884): runs {@code sub_4A384} for
+     * Player_1 then Player_2, for whichever {@code collision_property} bits the touch pass
+     * set, then clears the property. Called from {@link #update} so the reward lands in the
+     * item's own slot pass, exactly as {@code loc_4A312}/{@code loc_4A34C} do.
+     */
+    private void dispatchPendingPachinkoTouches() {
+        if (rewardMode != RewardMode.PACHINKO) {
+            return;
+        }
+        PlayableEntity player1 = pendingTouchPlayer1;
+        PlayableEntity player2 = pendingTouchPlayer2;
+        // ROM sub_4A362: bclr the bit before dispatching, and clr.b the whole property after.
+        pendingTouchPlayer1 = null;
+        pendingTouchPlayer2 = null;
+        if (player1 != null) {
+            handlePachinkoReward(player1, pendingTouchFrameCounter);
+        }
+        if (player2 != null) {
+            handlePachinkoReward(player2, pendingTouchFrameCounter);
+        }
+    }
+
     private void handlePachinkoReward(PlayableEntity player, int frameCounter) {
-        boolean shouldDelete = true;
+        // ROM sub_4A384 (sonic3k.asm:96888): move.l #Delete_Current_Sprite,(a0) runs
+        // UNCONDITIONALLY, ahead of the subtype dispatch. This is where the Pachinko orb
+        // path differs from the gumball-machine path (loc_60F28), whose delete is skipped
+        // when the handler returns d2 = 0 -- sub_4A384's callers never inspect d2, so even
+        // the subtype-4 push (loc_6115C) deletes the orb. As in ROM, the object still
+        // completes this pass (move + display); the deletion takes effect on its next one.
+        collected = true;
 
         switch (subtype) {
             case 0, 2 -> playSfx(Sonic3kSfx.SMALL_BUMPERS);
             case 3 -> onCollectPachinkoRingReward(player);
-            default -> {
-                int translatedSubtype = subtype - 1;
-                handleGumballReward(player, frameCounter, translatedSubtype);
-                return;
-            }
-        }
-
-        if (shouldDelete) {
-            collected = true;
+            // ROM sub_4A384: subq.w #1,d1 before the off_6110E dispatch.
+            default -> handleGumballReward(player, frameCounter, subtype - 1);
         }
     }
 

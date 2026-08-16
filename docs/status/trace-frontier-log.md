@@ -79569,3 +79569,97 @@ frame 29095 `rings`.
 **Next frontiers on this stage.** `…Pachinko2…` now stops at frame 469 `x_speed`
 (expected `0x04F3`, actual `0x0100`). `…Pachinko1…` still stops at the held-shield
 `rings` frontier at 122, which the standalone harness cannot show as fixed.
+### 2026-08-16 — Pachinko2 frame 469 `x_speed`: the reward orb's push is dispatched in the wrong pass, and the orb outlives its ROM delete
+
+Base `158d921d7`, control re-measured in this round's own worktree, JDK 21.
+
+```
+mvn -Ptrace-replay test -Dmse=off -Dsurefire.runOrder=alphabetical \
+  -Dtest=TestS3kSonicTailsPachinko2BonusTraceReplay \
+  -Ds3k.rom.path=<repo>/s3k.gen -Dsonic1.rom.path=<repo>/s1.gen -Dsonic2.rom.path=<repo>/s2.gen
+```
+
+Control reproduces the briefed frontier exactly: **1418 errors, first error frame 469,
+`x_speed` expected `0x04F3` actual `0x0100`, 3571 rows compared.**
+
+**Frame 469 is a 3-error self-healing blip, not the cascade.** Parsing
+`target/trace-reports/s3k_pachinko1_report.json`: exactly **3 of 1418** errors start before
+frame 1435 (`x_speed` 469, `y_speed` 469, `tails_x` 469-470, all `cascading: false`,
+`frame_span` 1-2). Nine start before 1436, 133 before 1500. The real cascade origin is
+**1435**, where the player is airborne in ROM (`air` 1) and grounded in the engine.
+
+**What owns `x_speed` at 469 — fully derived.** The magnitude is `0x700` at 45°:
+`0x4F3 = ($B5 * $700) >> 8`. The only ROM sites with `muls.w #-$700` are
+`sub_32F56` (`Obj_Bumper`, sonic3k.asm:68941-68970) and **`sub_61176`**
+(sonic3k.asm:127866-127895), the monitor-content "push" handler at `off_6110E[4]`
+(`loc_6115C`, :127849). The fixture's own `object_state` stream identifies the actor
+without any inference: slot 25 holds `0x0004A34C` (`Obj_PachinkoItemOrb`'s converted
+reward, `loc_4A34C`) with `subtype 5` at rows 465-468, and at row 469 its object code
+becomes `0x0001ABB6` with `object_appeared`, then `object_removed` at row 470 —
+i.e. `sub_4A384`'s `move.l #Delete_Current_Sprite,(a0)`. `sub_4A384` does
+`subq.w #1,d1` before `jmp (loc_61100)`, so subtype 5 dispatches `off_6110E[4]` = the
+push. Geometry confirms it: the orb is at `(0x00C0,0x0B85)` and the player at
+`(0x00D0,0x0B75)`, so `d1 = -16`, `d2 = +16` — a 45° push up and to the right, exactly
+`x_vel = +0x04F3`, `y_vel = -0x04F3` (`FB0D` in the CSV). Every other row in 462-481 has
+velocities that are exact multiples of `0x100`, because they are written by the magnet
+orb's attraction step (`loc_4A464`: `sub.w x_pos(a1),d1 / asl.w #8,d1 / neg.w d1`,
+sonic3k.asm:96975-96986), which can only ever produce whole-pixel deltas. 469 is the one
+row that is not, which is itself proof the writer is not the magnet.
+
+**Two engine defects found, both ROM-cited; the frontier is blocked by a third.**
+
+1. *(fixed)* The reward dispatch ran inside the player's touch pass. ROM `loc_4A312`
+   (:96843-96845) and `loc_4A34C` (:96866-96869) do **not** react in `Touch_Response`:
+   the touch pass only sets `collision_property(a0)` for this `$C0`-category object, and
+   `sub_4A362`/`sub_4A384` (:96874-96916) run from the **item's own slot pass**. The
+   engine dispatched inline from `onTouchResponse`, which runs at the player's slot ahead
+   of every object, so `Obj_PachinkoMagnetOrb`'s attraction step overwrote `x_vel`/`y_vel`
+   later in the same frame. Instrumented at the base commit: the engine's push fired one
+   frame early relative to the ROM's row; after latching it to the item's own pass the
+   push now fires on the correct frame (engine `frameCounter` 466 ↔ trace row 469 — the
+   clocks are offset by +3, anchored on the player position, `p=(0xCF,0x0B74)` at the
+   start of engine frame 466 equals row 468 and `(0xD0,0x0B75)` at its end equals row 469).
+2. *(fixed)* The Pachinko orb outlived its ROM delete. `sub_4A384`'s first instruction is
+   an **unconditional** `move.l #Delete_Current_Sprite,(a0)` (:96888). Its callers never
+   inspect `d2`, so even the subtype-4 push deletes the orb — unlike the gumball-machine
+   path `loc_60F28`, whose delete is skipped on `d2 = 0`. The engine reused the
+   gumball-machine `shouldDelete = false` for the push, leaving a collected Pachinko orb
+   alive and touch-eligible forever. The fixture agrees with the ROM reading: slot 25 is
+   `object_removed` at row 470, having completed row 469's move (`0x0B86 -> 0x0B85`).
+3. *(NOT fixed — the actual blocker)* **Bonus-stage slot occupancy and therefore execution
+   order diverge from the ROM.** ROM at row 469 (`object_state`, authoritative):
+   slot 7 `Obj_PachinkoTriangleBumper` `(0x0058,0x0AC0)`, 12 `Obj_PachinkoFlipper`,
+   **17 `Obj_PachinkoMagnetOrb` `(0x00C0,0x0B40)`**, 21 item orb `(0x00C0,0x0AD0)`,
+   23 magnet orb `(0x0130,0x0AD0)`, **25 the reward orb `(0x00C0,0x0B85)`**,
+   26 and 32 `Obj_Bumper` `(0x0100,0x0BE0)` / `(0x0140,0x0BE0)`.
+   Engine at the same row: item orbs at slots 8 `(0xC0,0xD50)`, 14 `(0xC0,0xAD0)`,
+   16 `(0x1C0,0xD50)`, **22 the reward orb**, **25 the magnet orb `(0xC0,0xB40)`**,
+   36 `(0x1B0,0xBE0)`, 44 `(0x1C0,0xA60)`. The engine iterates in ascending slot order
+   (verified by probe), so with magnet 25 > reward 22 the magnet's attraction still runs
+   *after* the correctly-phased push and still overwrites it. The engine also holds four
+   item orbs the ROM has not loaded, and has no object at the ROM's bumper positions.
+   Fixing (1) and (2) therefore leaves the class at **1418 errors, frame 469, unchanged** —
+   which is the honest result, and the frontier's real owner is the bonus-stage object
+   placement/slot allocation, not the item orb.
+
+**Explicitly not done.** No constant was introduced; `0x04F3`, `0x0100` and every measured
+delta are absent from the diff. No assertion was weakened, widened or deleted. No trace
+hydration; the `Saved_status_secondary` frame-0 seam was not touched. No zone/act/route/
+frame/game-name predicate. No fixture regenerated. The magnet-orb `!isOnScreen` release and
+`setControlLocked` corrections, the energy-trap field writes, the elemental-shield
+production fix and the trap's pre-`LevelLoop` `Process_Sprites` pass were all left intact.
+
+**Verification (all four sweeps run strictly sequentially, own tmpdir per tree,
+`target/surefire-reports` and `target/trace-reports` cleared before every run).**
+
+| sweep | control (`158d921d7`, main repo) | fix worktree |
+|---|---|---|
+| `-Ptrace-replay` | 806 tests, **29 red** | 806 tests, **29 red** |
+| `-Ptrace-replay-r7` | 37 tests, **32 red** | 37 tests, **32 red** |
+
+Red sets identical **by name in both directions** for both profiles (Python set difference,
+not `comm`) — no newly red, no newly green. `TestS3kSonicTailsPachinko3BonusTraceReplay`
+stays GREEN; Knuckles `TestS3kPachinkoBonusTraceReplay` stays GREEN in r7;
+`TestS3kHczCompleteRunTraceReplay` remains deliberately red at exactly 2 errors, frame
+29095 `rings`. `…Pachinko2…` 1418 / 3571 rows and `…PachinkoBonus…` 1638 / 2907 rows are
+both unchanged from control, first errors unchanged.
