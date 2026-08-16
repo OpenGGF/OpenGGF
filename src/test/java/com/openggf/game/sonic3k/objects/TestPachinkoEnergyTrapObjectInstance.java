@@ -15,8 +15,16 @@ import static org.mockito.Mockito.*;
 
 public class TestPachinkoEnergyTrapObjectInstance {
 
+    /**
+     * ROM {@code sub_49FE4} loc_49FFC..loc_4A024
+     * (docs/skdisasm/sonic3k.asm:96652-96665) is the whole of the capture and writes
+     * exactly {@code move.w y_pos(a0),y_pos(a1)}, {@code move.b #$81,object_control(a1)}
+     * and {@code bset #Status_InAir,status(a1)}. It never clears x_vel/y_vel/ground_vel,
+     * never touches {@code Ctrl_1_locked}, and never clears the on-object bit — so this
+     * test pins the three ROM writes and the absence of the rest.
+     */
     @Test
-    public void captureLocksHorizontalMovement() {
+    public void captureWritesOnlyTheThreeRomFields() {
         PachinkoEnergyTrapObjectInstance trap = new PachinkoEnergyTrapObjectInstance(
                 new ObjectSpawn(0x78, 0xF30, 0xE8, 0, 0, false, 0));
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
@@ -28,10 +36,14 @@ public class TestPachinkoEnergyTrapObjectInstance {
         trap.update(0, player);
 
         verify(player).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
-        verify(player).setControlLocked(true);
-        verify(player).setXSpeed((short) 0);
-        verify(player).setOnObject(false);
-        verify(player).setCentreY((short) 0xF30);
+        verify(player).setCentreYPreserveSubpixel((short) 0xF30);
+        verify(player).setAir(true);
+        verify(player, never()).setControlLocked(anyBoolean());
+        verify(player, never()).setXSpeed(anyShort());
+        verify(player, never()).setYSpeed(anyShort());
+        verify(player, never()).setGSpeed(anyShort());
+        verify(player, never()).setOnObject(anyBoolean());
+        verify(player, never()).setCentreY(anyShort());
     }
 
     @Test
@@ -63,7 +75,7 @@ public class TestPachinkoEnergyTrapObjectInstance {
         trap.update(0, player);
 
         assertTrue(exitRequested[0]);
-        verify(player, never()).setCentreY(anyShort());
+        verify(player, never()).setCentreYPreserveSubpixel(anyShort());
     }
 
     @Test

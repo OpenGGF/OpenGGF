@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Pachinko energy trap captured the player by clearing state the ROM
+  leaves alone, and never ran its sidekick pass. ROM `sub_49FE4`
+  (sonic3k.asm:96640-96678) writes exactly `move.w y_pos(a0),y_pos(a1)` (a word
+  write, so `y_sub` is untouched), `move.b #$81,object_control(a1)` and
+  `bset #Status_InAir,status(a1)`; it never clears `x_vel`/`y_vel`/`ground_vel`,
+  never touches `Ctrl_N_locked`, and never clears the on-object bit.
+  `PachinkoEnergyTrapObjectInstance` additionally called `setControlLocked(true)`,
+  zeroed all three velocities, cleared the on-object bit and wrote Y through
+  `setCentreY` (which resets the sub-pixel) — reported on `pachinko_3` as `y_sub`,
+  `x_speed`, `y_speed` and `g_speed` frozen at `0x0000` where the ROM holds the
+  pre-capture values across rows 131-190, with a `player_mapping_frame` oscillation
+  behind the zeroed `ground_vel` the rolling animation derives its duration from.
+  `loc_49FD6` (:96634-96637) also runs `sub_49FE4` for `Player_2`, and only the tail
+  after `cmpa.w #Player_1,a1` is main-player-only, so the capture is now a full port
+  of the subroutine run over every native participant — including the ROM's absence
+  of any capture latch and the per-frame `tst.b $2E(a1)` gate on `sfx_Bouncy`. No
+  constant was introduced. `TestS3kSonicTailsPachinko3BonusTraceReplay` 22 errors ->
+  **green** (188 rows compared, unchanged), `…PachinkoBonus…` 2166 -> 1698 (2907
+  rows), `…Pachinko2Bonus…` 1969 -> 1605 with its first error moving from frame 137
+  to 242 (3571 rows). No newly red class on `-Ptrace-replay` or `-Ptrace-replay-r7`.
 - Fix(s3k): a Pachinko magnet orb froze the captured player's logical pad word, so
   the sidekick's delayed follow replay missed the release press edge. ROM
   `sub_4A428` `loc_4A5AA` (sonic3k.asm:97086-97097) writes `ground_vel`,

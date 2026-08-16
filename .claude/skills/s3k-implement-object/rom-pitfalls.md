@@ -2777,3 +2777,42 @@ modelled with a control lock has the identical defect.
 `TestS3kSonicTailsPachinko3BonusTraceReplay` 41 errors -> 22,
 `…PachinkoBonus…` 2280 -> 2166, `…Pachinko2Bonus…` 2120 -> 1969. See
 `docs/status/trace-frontier-log.md`, 2026-08-16.
+
+**Second instance, same stage, different object.** `Obj_PachinkoEnergyTrap`'s
+`sub_49FE4` (`:96640-96678`) writes only `move.w y_pos(a0),y_pos(a1)`,
+`move.b #$81,object_control(a1)` and `bset #Status_InAir,status(a1)`. The engine
+also called `setControlLocked(true)`, zeroed `x_vel`/`y_vel`/`ground_vel`, cleared
+the on-object bit, and wrote Y through the sub-pixel-resetting setter. Note the
+generalisation: **the invented writes travel in a pack**, and the velocity clears
+are as damaging as the lock — a zeroed `ground_vel` also changes the rolling
+animation's frame duration, which surfaces as a `player_mapping_frame` oscillation
+that looks like a separate animation defect. `TestS3kSonicTailsPachinko3BonusTraceReplay`
+22 -> green.
+
+## P70 -- an object's per-player subroutine is called once per player, and the
+main-player-only part is only the tail after `cmpa.w #Player_1,a1`
+
+**Symptom.** A `tails_*` field diverges at the object's own coordinate (for example
+`tails_y` expected exactly the object's `y_pos`) while the equivalent `player_*`
+field is correct, and the object's engine class takes a single `PlayableEntity`.
+
+**Mechanism.** The S3K idiom is a main routine that does
+`bsr sub_X / lea (Player_2).w,a1 / bsr sub_X`, with the subroutine branching on
+`cmpa.w #Player_1,a1` only for the *global* consequences. `Obj_PachinkoEnergyTrap`
+`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96634-96637`) is the clean example: both
+players are snapped to the beam and given `object_control = $81`, and only the rise
+latch, the exit countdown and the level restart are gated on Player 1
+(`:96665-96677`). `Obj_PachinkoMagnetOrb` `loc_4A408` (`:96943-96949`) has the same
+shape with no Player-1 gate at all.
+
+**What to check.** Port the subroutine, then run it over
+`services().playerQuery().playersFor(MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)`
+rather than over the single `update()` participant, and pass down an
+`isMainPlayer` flag for the tail. Check at the same time whether the ROM has a
+capture *latch*: `sub_49FE4` has none — a player outside the band returns at
+`locret_4A078` with nothing written — so an engine `capturedPlayer` field that
+keeps applying the capture is a second invention.
+
+**Originating commit.** `<pending: S3K Pachinko energy-trap capture port>`;
+`TestS3kSonicTailsPachinko2BonusTraceReplay` first error frame 137 -> 242,
+1725 -> 1605 errors; `…PachinkoBonus…` 1743 -> 1698.
