@@ -283,7 +283,15 @@ public sealed interface TraceEvent {
      *     bits 1+6, CPU-blocking bit 7, jumpable bit 0)</li>
      * </ul>
      *
-     * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
+     * <p><strong>Diagnostic only in the per-frame comparison loop:</strong>
+     * no field of this event is ever hydrated into engine state while frames
+     * are being compared. The single exception is the one-time pre-trace
+     * bootstrap seam described in
+     * {@code TraceReplaySessionBootstrap#frame0SavedStatusSecondary}, which
+     * reads {@code statusSecondary} from the FRAME 0 record only, to supply the
+     * {@code Saved_status_secondary} value a standalone bonus segment has no
+     * predecessor zone to produce -- the same class of entry-state seam as
+     * {@code trace.getFrame(0).rings()}. It is never re-read after frame 0.
      */
     record InteractState(int frame, String character, int interact,
                          int interactSlot, int status, int statusSecondary,

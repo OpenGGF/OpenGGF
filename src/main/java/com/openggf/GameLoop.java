@@ -2501,6 +2501,10 @@ public class GameLoop {
             levelManager.getLevelGamestate().setRings(savedState.savedRingCount());
         }
         levelManager.setBonusStageHudLayout(true);
+        if (savedState != null) {
+            applyBonusStageEntryShieldRestore(
+                    resolveMainPlayableSprite(), savedState.savedStatusSecondary());
+        }
         restorePlayableStateForBonusTitleCard();
         forcePlayerHighPriorityInBonusStage();
         refreshPlayableSpriteArtCaches();
@@ -2709,6 +2713,15 @@ public class GameLoop {
             return ShieldType.BASIC;
         }
 
+        return savedShieldType(savedStatusSecondary);
+    }
+
+    /**
+     * ROM {@code SpawnLevelMainSprites_SpawnPowerup} {@code loc_6A02}
+     * (docs/skdisasm/sonic3k.asm:8294-8323) tests the saved elemental bits in
+     * fire -> lightning -> bubble order and re-gives that shield.
+     */
+    static ShieldType savedShieldType(int savedStatusSecondary) {
         int savedShieldBits = savedStatusSecondary & SAVED_SHIELD_MASK;
         if ((savedShieldBits & (1 << STATUS_FIRE_SHIELD_BIT)) != 0) {
             return ShieldType.FIRE;
@@ -2720,6 +2733,34 @@ public class GameLoop {
             return ShieldType.BUBBLE;
         }
         return null;
+    }
+
+    /**
+     * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
+     * (docs/skdisasm/sonic3k.asm:8264-8290) runs on every level spawn, and the
+     * bonus zones are explicitly routed into its restore arm --
+     * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
+     * {@code #$14} (:8270-8273). It re-gives Player 1 the shield saved in
+     * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
+     * shield for the DURATION of the bonus stage, not only after returning to
+     * the level.
+     *
+     * <p>The engine captured the value at entry
+     * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out
+     * ({@link #resolveShieldToRestore}), leaving the bonus-stage player
+     * shieldless. In Pachinko that removes {@code Test_Ring_Collisions}'
+     * {@code Status_LtngShield} arm (:18450-18453), which allocates
+     * {@code Obj_Attracted_Ring} and pulls a nearby ring into the player.
+     */
+    public static void applyBonusStageEntryShieldRestore(
+            AbstractPlayableSprite playable, int savedStatusSecondary) {
+        if (playable == null) {
+            return;
+        }
+        ShieldType shieldType = savedShieldType(savedStatusSecondary);
+        if (shieldType != null) {
+            playable.giveShield(shieldType);
+        }
     }
 
     AbstractPlayableSprite resolveMainPlayableSprite() {

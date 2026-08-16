@@ -79409,3 +79409,71 @@ assertion was weakened, widened or made advisory.
 
 `TestS3kSonicTailsPachinkoBonusTraceReplay` frame 122, `rings` expected 262 actual
 261 — a ring-collection divergence, unchanged in frame and field by this round.
+
+## 2026-08-16 — S3K Pachinko bonus: the engine drops the elemental shield on bonus entry
+
+Command (both trees, reports cleared before every run):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Ds3k.rom.path=<repo>/s3k.gen -Dsonic1.rom.path=<repo>/s1.gen \
+    -Dsonic2.rom.path=<repo>/s2.gen -DfailIfNoTests=false test
+```
+
+Control worktree `722eef2df` detached; fix worktree `bugfix/ai-pachinko-r2` on the
+same base. Numbers below were measured at that commit.
+
+### Root cause
+
+The frame-122 `rings` divergence was not a miscount at 122. Walking both totals back:
+the recording allocates an `Obj_Attracted_Ring` at row 109 (aux `object_appeared`,
+slot 8, `0x0001A88C` at `x=0x00C0 y=0x0D68`), moves it toward Player 1 for 13 passes
+and banks it on row 122 (the slot's code pointer becomes `loc_1A920`, the
+`AttractedRing_GiveRing` sparkle). The engine never allocated one: a probe on
+`RingManager.attractStageRings` printed `shieldType=null` on every pass. Sonic's
+recorded `status_secondary` is `0x21` for this segment — `Status_Shield` plus
+`Status_LtngShield` (sonic3k.constants.asm:184-190).
+
+ROM `SpawnLevelMainSprites_SpawnPowerup` (sonic3k.asm:8264-8290) restores the saved
+elemental shield on the BONUS zone's own level spawn; zone `$14` has its own `beq
+loc_69E0` arm at :8273. The engine restored it only on the way back to the level.
+
+### Result (fix worktree vs control worktree, same base)
+
+| class | control | fixed | rows compared |
+|---|---|---|---|
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 1698, frame 122 `rings` | 1692, frame 180 `rings` | 2907 both |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 1605, frame 242 `tails_y` | 1605, frame 242 `tails_y` | 3571 both |
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | PASS | PASS | 188 both |
+| `TestS3kSonicTailsGumballBonusTraceReplay` | 78, frame 209 `tails_x` | 78, frame 209 `tails_x` | unchanged |
+
+`-Ptrace-replay`: 806 tests, 20 failures + 10 errors on BOTH trees; 28 named red
+classes on both, set difference computed in Python in both directions — empty both
+ways. Every per-class error count and first-error frame is identical except
+`…PachinkoBonus…`.
+
+`-Ptrace-replay-r7`: 37 tests, 30 failures + 2 errors on both trees, 32 named red
+classes, identical sets, and **no r7 class changed its error count**. The Knuckles
+`TestS3kPachinkoBonusTraceReplay` stays green.
+
+Default profile: 15139 tests, 64 failures + 22 errors on both trees, 46 named red
+classes, identical sets both directions.
+
+`TestS3kHczCompleteRunTraceReplay` still red at exactly 2 errors, frame 29095 `rings`.
+
+### Next frontier
+
+`TestS3kSonicTailsPachinkoBonusTraceReplay` frame 180 `rings` is a **1-frame,
+non-cascading blip** (engine 263 / recording 262; the recording reaches 263 at 181).
+Its mechanism is measured and NOT fixed: the ROM's freshly allocated
+`Obj_Attracted_Ring` executes its first `AttractedRing_Move` in the SAME `RunObjects`
+pass that `Test_Ring_Collisions_AttractRing` allocated it in (the allocated slot is
+above Player 1's), while the engine defers to the next frame — the ring's position
+series is ROM's shifted by exactly one pass, for both rings. That one-pass lag is
+currently cancelled by a second ordering error (the engine moves the ring BEFORE the
+player's touch pass, where the ROM's ring object runs after Player 1). The two
+cancel for the first ring and do not for the second. Removing either alone makes the
+class worse, so this is a paired fix and was deliberately left unlanded.
+
+The real cascade for both `…PachinkoBonus…` and `…Pachinko2Bonus…` is now the same
+one: `tails_y` at frame 240 / 242, expected `0x0F2F` actual `0x0F30`.

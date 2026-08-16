@@ -645,6 +645,31 @@ public final class TraceReplaySessionBootstrap {
     }
 
     /**
+     * ROM {@code Saved_status_secondary} as it stood when this bonus stage was
+     * entered, read once from the recorder's frame-0 entry state.
+     *
+     * <p>ROM {@code loc_2D4CA} stores {@code Player_1+status_secondary & $71}
+     * into {@code Saved_status_secondary} at the moment of bonus entry
+     * (docs/skdisasm/sonic3k.asm:61925-61930), and
+     * {@code SpawnLevelMainSprites_SpawnPowerup} reads it back on the bonus
+     * zone's own level spawn (:8264-8323). A standalone segment replay has no
+     * predecessor zone to produce that value, so it comes from frame 0 of the
+     * recording -- the same one-time entry-state seam as
+     * {@code trace.getFrame(0).rings()}. It is never consulted again.
+     */
+    static int frame0SavedStatusSecondary(TraceData trace) {
+        String mainCharacter = trace.metadata().mainCharacter();
+        for (TraceEvent event : trace.getEventsForFrame(trace.getFrame(0).frame())) {
+            if (event instanceof TraceEvent.InteractState state
+                    && mainCharacter != null
+                    && mainCharacter.equalsIgnoreCase(state.character())) {
+                return state.statusSecondary();
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Post-load bonus-stage entry for an s3k_bonus_stage trace segment
      * (spec 2026-07-18, engine-side addition #7). Mirrors the live
      * doEnterBonusStage/prepareBonusStageForTitleCard sequence minus title
@@ -666,6 +691,12 @@ public final class TraceReplaySessionBootstrap {
         }
         BonusStageType type = bonusStageTypeForToken(meta.bonusStageType());
         int frame0Rings = trace.getFrame(0).rings();
+        // Comparison-bootstrap seam, same class as frame0Rings above: a standalone
+        // bonus segment has no predecessor zone to carry Saved_status_secondary in
+        // from, so the value the ROM's SpawnLevelMainSprites_SpawnPowerup restores
+        // at this level spawn (sonic3k.asm:8264-8323) is taken once, at frame 0,
+        // from the entry state the recorder captured. It is never re-read.
+        int savedStatusSecondary = frame0SavedStatusSecondary(trace);
 
         BonusStageProvider provider = GameServices.module().getBonusStageProvider();
         // GameServices has NO public gameplayMode() accessor — resolve the
@@ -677,7 +708,7 @@ public final class TraceReplaySessionBootstrap {
         // setActiveBonusStageProvider -> onEnter -> registerBonusStageAdapter.
         gameplayMode.setActiveBonusStageProvider(provider);
         provider.onEnter(type, new BonusStageState(
-                0, 0, frame0Rings, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, frame0Rings, 0, 0, savedStatusSecondary, 0, 0, 0, 0, 0, 0,
                 (byte) 0x0C, (byte) 0x0D, 0, 0L));
         gameplayMode.registerBonusStageAdapter(provider);
 
@@ -685,6 +716,16 @@ public final class TraceReplaySessionBootstrap {
         // path makes (GameLoop.prepareBonusStageForTitleCard, :2274).
         GameServices.level().getLevelGamestate().setRings(frame0Rings);
         GameServices.level().setBonusStageHudLayout(true);
+        // ROM SpawnLevelMainSprites_SpawnPowerup re-gives Player 1 the saved
+        // elemental shield on the bonus zone's own level spawn (loc_69E0 is
+        // reached from the #$13/#$14 arms, sonic3k.asm:8270-8273), so the
+        // player carries it for the whole bonus stage. Mirrors the live path's
+        // call in GameLoop.prepareBonusStageForTitleCard.
+        GameLoop.applyBonusStageEntryShieldRestore(
+                GameServices.cameraOrNull() != null
+                        ? GameServices.camera().getFocusedSprite()
+                        : null,
+                savedStatusSecondary);
         for (var sprite : GameServices.sprites().getAllSprites()) {
             if (sprite instanceof AbstractPlayableSprite playable) {
                 playable.setHidden(false);

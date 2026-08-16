@@ -2816,3 +2816,37 @@ keeps applying the capture is a second invention.
 **Originating commit.** `<pending: S3K Pachinko energy-trap capture port>`;
 `TestS3kSonicTailsPachinko2BonusTraceReplay` first error frame 137 -> 242,
 1725 -> 1605 errors; `…PachinkoBonus…` 1743 -> 1698.
+
+## P71 -- state the ROM re-establishes on the LEVEL SPAWN, restored by the engine only on the way back out
+
+**Symptom.** A gameplay effect that depends on a persistent player power-up simply
+never happens inside a bonus/special sub-level: rings are not attracted, a fire dash
+does not fire, a bubble bounce does not bounce. The trace symptom is usually a
+`rings` off-by-one many frames after the real event, because the missing effect only
+becomes observable when a scoring branch runs.
+
+**Mechanism.** S3K stores the player's elemental shield across a level reload in
+`Saved_status_secondary` / `Saved2_status_secondary`, and re-gives it in
+`SpawnLevelMainSprites_SpawnPowerup` (`docs/skdisasm/sonic3k.asm:8264-8290`), which
+runs on EVERY level spawn. The bonus zones are not exceptions to it -- they have
+their own explicit arms into the restore (`cmpi.b #$13,(Current_zone).w / beq
+loc_69E0`, and the same for `#$14`, :8270-8273), so the shield is live for the
+DURATION of the bonus stage. The engine had captured the value at entry and consumed
+it only when returning to the level, which reads as a plausible "save and restore"
+pair and is half the ROM's behaviour.
+
+**What to check.** When the engine models a ROM `Saved_*` variable, find every ROM
+READER of it, not just the one that matches the engine's save/restore intuition. A
+value written on the way in and read on the way out is the shape you expect; a value
+written on the way in and read by the *destination's own spawn code* is the shape
+that gets missed. Here `loc_2D4CA` (:61925-61930) writes both saved slots, the
+bonus spawn consumes `Saved_status_secondary` (clearing it), and the return-to-level
+spawn consumes `Saved2_status_secondary` -- two readers, two restores.
+
+**Cross-game.** S1/S2 have no elemental shields, but the pattern -- a destination
+level spawn re-establishing state the engine only restores on the return trip -- is
+game-agnostic.
+
+**Originating commit.** `<pending: S3K bonus-stage entry shield restore>`;
+`TestS3kSonicTailsPachinkoBonusTraceReplay` 1698 errors -> 1692, first error frame
+122 `rings` -> 180. See `docs/status/trace-frontier-log.md`, 2026-08-16.
