@@ -724,8 +724,32 @@ public final class TraceReplaySessionBootstrap {
             boolean present = objectManager.getActiveObjects().stream()
                     .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
             if (!present) {
-                objectManager.addDynamicObject(
-                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+                PachinkoEnergyTrapObjectInstance trap =
+                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn);
+                objectManager.addDynamicObject(trap);
+                // The ROM places this object in Dynamic_object_RAM slot 2 from
+                // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8090-8096), and
+                // loc_6468 then runs Load_Sprites/Process_Sprites ONCE before
+                // LevelLoop (sonic3k.asm:7849-7853 vs :7885-7894). So the trap's
+                // init body -- which falls straight through `move.l #loc_49F5C,(a0)`
+                // into loc_49F5C with no rts (sonic3k.asm:96602-96612) -- executes
+                // at Level_frame_counter == 0, one pass BEFORE the first recorded
+                // row, and consumes the first of the `move.b #4*60,$25(a0)`
+                // countdown ticks (ROM bytes 0x49F4C: 117C 00F0 0025).
+                //
+                // Creating the object here reconstructs only the placement, not
+                // that pass. Without it the trap's `subq.b #1,$25(a0) ... else
+                // subq.w #1,y_pos(a0)` rise (sonic3k.asm:96594-96601) begins one
+                // gameplay pass late for the object's whole life, and because
+                // sub_49FE4 writes `move.w y_pos(a0),y_pos(a1)` into every held
+                // player (:96660), a held sidekick reads one pixel low forever.
+                // Run the represented pass for the object this bootstrap created,
+                // the same "the discarded pass also left state nobody rebuilt"
+                // correction as the Collision_response_list publication below.
+                // The V-int the represented pass ran under is the one before the
+                // first recorded row.
+                trap.update(trace.initialVblankCounter() - 1,
+                        GameServices.sprites().getMainPlayable());
             }
         }
         provider.onDeferredSetupComplete();

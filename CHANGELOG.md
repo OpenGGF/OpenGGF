@@ -3,6 +3,32 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Pachinko energy trap began its rise one gameplay pass late, so every
+  player it held read one pixel low for the rest of the stage. `sub_49FE4` writes
+  `move.w y_pos(a0),y_pos(a1)` into both players every pass (sonic3k.asm:96660, run
+  for Player_1 and Player_2 from `loc_49FD6`), so a held sidekick's `tails_y` IS the
+  trap's `y_pos`; the trap only starts falling toward the player after its
+  `move.b #4*60,$25(a0)` countdown expires (:96594-96601 — the ROM bytes at 0x49F4C
+  are `117C 00F0 0025`, so the constant is 240, verified against the binary rather
+  than the expression). The countdown's first tick is spent OUTSIDE `LevelLoop`: after
+  `SpawnLevelMainSprites` (:7849) the level-init path runs `Load_Sprites` and then
+  `Process_Sprites` once (:7853) before `LevelLoop` (:7885) begins incrementing
+  `Level_frame_counter` and running its own `Process_Sprites` (:7894), and the trap's
+  init body falls straight through `move.l #loc_49F5C,(a0)` into `loc_49F5C` with no
+  `rts` (:96602-96612). Both committed fixtures agree independently: the first
+  `0F30 -> 0F2F` step lands where `gameplay_frame_counter` reads `0x00F0` in each,
+  at different row indices (240 and 242). The bonus-stage replay bootstrap creates the
+  trap to represent that ROM placement but discards the pending initial
+  `Process_Sprites` authority, so the object it just created never received the
+  represented pass; it now runs it, the same "the discarded pass also left state
+  nobody rebuilt" correction as the `Collision_response_list` publication beside it,
+  and without re-dispatching any other object. No constant was introduced.
+  `TestS3kSonicTailsPachinko2BonusTraceReplay` 1605 -> 1418 errors, first error frame
+  242 `tails_y` -> 469 `x_speed` (3571 rows compared, unchanged);
+  `TestS3kSonicTailsPachinkoBonusTraceReplay` 1698 -> 1638 errors, first error still
+  the held-shield frame-122 `rings` (2907 rows, unchanged); `…Pachinko3Bonus…` stays
+  green. `-Ptrace-replay` 806 tests / 29 red and `-Ptrace-replay-r7` 37 tests / 32 red,
+  red sets identical by name in both directions on both trees.
 - Fix(s3k): the player lost its elemental shield for the whole duration of a bonus
   stage. ROM `SpawnLevelMainSprites_SpawnPowerup` (sonic3k.asm:8264-8290) runs on
   every level spawn and routes the bonus zones straight into its restore arm
