@@ -797,8 +797,19 @@ public class Sonic3kSpecialStageManager {
      * <p>Must be called from the sub_9580 position in the frame -- before the
      * jump physics at loc_911E clears {@code Special_stage_jumping} -- see the
      * call site in {@link #update()}.
+     *
+     * <p>The cell check is also the LAST thing sub_9580 does, so every earlier
+     * exit from that routine suppresses it for the frame -- the fade-out
+     * rotation's {@code rts} (sonic3k.asm:11922), the mid-turn
+     * {@code bne.w locret_972C} (sonic3k.asm:11949), and the bumper's
+     * different-cell unlock {@code rts} (loc_96CE, sonic3k.asm:12039).
+     * {@link Sonic3kSpecialStagePlayer#reachedCellCheck()} reports whether the
+     * routine got that far.
      */
     private void processCollisionIfEligible() {
+        if (!player.reachedCellCheck()) {
+            return;
+        }
         if ((player.getJumping() & 0x80) == 0 && clearRoutine == 0 && !exitSpinStarted) {
             processCollision();
         }

@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the S3K special stage ran its cell check on a frame the ROM's
+  `sub_9580` never reaches it, so a bumper re-armed one frame early and the
+  player bounced 48px (two 24px steps) short of the ROM's turnaround. The
+  bumper's different-cell unlock, `loc_96CE` (sonic3k.asm:12037-12039), is a
+  `move.w d2,(Special_stage_velocity).w / rts` -- an `rts`, not the
+  `bra loc_96FA` its same-cell siblings use -- so it leaves the routine before
+  BOTH the position update and the `bsr.s sub_972E` cell check at
+  sonic3k.asm:12078. The ROM's frame therefore neither moves nor interacts, and
+  the bumper it is standing on only re-arms on the *following* frame, from the
+  far side. The engine already modelled the skipped position update but still
+  ran the cell check, re-arming a frame early and reversing at the wrong cell
+  edge. `Sonic3kSpecialStagePlayer` now reports whether `sub_9580` reached its
+  cell-check tail, and the two other early exits that also skip it -- the
+  fade-out rotation's `rts` (sonic3k.asm:11921-11922) and the mid-turn
+  `bne.w locret_972C` (sonic3k.asm:11949) -- are covered by the same flag. No
+  constant, tolerance, frame/zone/stage predicate or trace-derived value is
+  introduced. `TestS3kSonicTailsSs7SpecialStageTraceReplay` **26 errors -> green**
+  over the same 4856 compared rows; `…Ss3…` 113 -> 45 errors, first error frame
+  4760 -> 5557 (a separate rate-timer defect, see the frontier log).
+  `-Ptrace-replay` 806 tests 30 red -> 29 red (one newly green, zero newly red);
+  `-Ptrace-replay-r7` 37 tests, 32 red, identical set.
 - Fix(s3k): the S3K special-stage entry flash triggered the special stage one frame
   early. `Obj_Wait` (sonic3k.asm:177947-177950) is `subq.w #1,$2E(a0)` followed by
   `bmi.s`, so the handler stored in `$34` runs when the counter passes *below* zero,
