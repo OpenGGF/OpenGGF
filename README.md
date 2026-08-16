@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A fourth bonus-stage class turns green: the energy trap writes three fields, not nine
+  (`bugfix/ai-pachinko3-energy-trap`, merged 2026-08-16).** ROM `sub_49FE4`
+  (sonic3k.asm:96640-96678) captures a player with exactly `move.w y_pos(a0),y_pos(a1)` — a *word*
+  write, leaving `y_sub` untouched — plus `move.b #$81,object_control(a1)` and
+  `bset #Status_InAir,status(a1)`. `PachinkoEnergyTrapObjectInstance` additionally called
+  `setControlLocked`, zeroed `x_speed`/`y_speed`/`g_speed`, cleared on-object and wrote Y through a
+  sub-pixel-resetting setter; all six were invented and are deleted, with Y now routed through
+  `NativePositionOps.writeYPosPreserveSubpixel`. A second defect in the same routine: `loc_49FD6`
+  calls `sub_49FE4` for Player_1 **and** Player_2, and only the tail after `cmpa.w #Player_1,a1` is
+  main-only — the engine ran it for the leader alone, which was exactly Pachinko2's first error.
+  `Pachinko3` **22 errors -> PASS**, `Pachinko` 2166 -> 1698, `Pachinko2` 1969 -> 1605 with its
+  frontier moving 137 -> 242; rows compared unchanged at 188 / 2907 / 3571. The
+  `player_mapping_frame` oscillation was not a separate defect — the rolling animation derives its
+  frame duration from `ground_vel`, so zeroing that changed the tick rate, and it closed with no
+  animation change. Pitfall P70 records the per-player shape.
+
 - **A captured player keeps recording live pad state (`bugfix/ai-pachinko-orb-ctrl-lock`, merged
   2026-08-16).** The magnet orb called `setControlLocked(true)` on capture. ROM `loc_4A5AA`
   (sonic3k.asm:97086-97097) writes `x_vel`, `y_vel`, `ground_vel #$800`, `render_flags`, `anim` and

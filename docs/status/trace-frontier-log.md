@@ -79315,3 +79315,97 @@ the engine player `lock=true objCtrl=true vel=(0000,0000) g=0000` with
 `PachinkoEnergyTrap` (obj `0xE8`) nearby — i.e. the *energy trap*, not the magnet
 orb, is the next owner, and it looks like the same class of defect: an engine
 capture that zeroes state the ROM leaves alone. Not worked in this round.
+
+## 2026-08-16 — S3K Pachinko energy trap: the ROM capture writes three fields, the engine wrote eight
+
+Base `36c075340`. Fix worktree on `bugfix/ai-pachinko3-energy-trap`, control worktree
+detached at the same commit (both outside the repository tree). Commands (per tree, `target/surefire-reports` and
+`target/trace-reports` cleared first):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Ds3k.rom.path=$PWD/s3k.gen -Dsonic1.rom.path=$PWD/s1.gen \
+    -Dsonic2.rom.path=$PWD/s2.gen -DfailIfNoTests=false test
+mvn -Ptrace-replay-r7 ... test
+mvn -Dmse=off ... test
+```
+
+### Root cause
+
+`Obj_PachinkoEnergyTrap`'s per-player subroutine `sub_49FE4`
+(`docs/skdisasm/sonic3k.asm:96640-96678`) writes exactly three player fields once
+the player is inside the `$18`-tall band:
+
+```
+move.w  y_pos(a0),y_pos(a1)     ; word write -- y_sub untouched
+move.b  #$81,object_control(a1)
+bset    #Status_InAir,status(a1)
+```
+
+`PachinkoEnergyTrapObjectInstance.updateCapture` additionally called
+`setControlLocked(true)`, `setXSpeed(0)`, `setYSpeed(0)`, `setGSpeed(0)`,
+`setOnObject(false)` and `setCentreY` (which resets the sub-pixel). None of those
+has a ROM counterpart. That is the whole of Pachinko3's residual: rows 131-190 of
+`pachinko_3` hold `y_sub 0xB600 / x_speed -041D / y_speed 0x0E93 / g_speed 0x0800`
+frozen at their pre-capture values while the engine reported `0x0000` for all four.
+
+**The previous round's handover was wrong on one point and it is worth recording.**
+`g_speed = 0x0800` was read as `loc_4A5AA`'s magnet-orb capture signature. It is not:
+the fixture carries `player_g_speed = 0800` continuously from row 0x78, i.e. from well
+before any capture. Nothing writes it during the span at all — the ROM simply leaves
+it alone, which is the point.
+
+The `player_mapping_frame` oscillation in the same span was a downstream symptom, not
+a second defect: the rolling animation's frame duration is derived from `ground_vel`,
+so zeroing it changed the tick rate. It closed with the same fix, no animation change.
+
+### Second, same-routine defect: the sidekick pass
+
+`loc_49FD6` (`:96634-96637`) runs `sub_49FE4` once for `Player_1` and once for
+`Player_2`; only the tail after `cmpa.w #Player_1,a1` (rise latch, exit countdown,
+level restart) is main-player-only. The engine ran the capture for the main player
+only, which is exactly Pachinko2's first error (`tails_y` expected `0x0F30` — the
+trap's own Y — actual `0x0F2A`). `updateCapture` is now a full port of `sub_49FE4`
+run over `MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED`, including the ROM's
+absence of any capture latch (an out-of-band player returns at `locret_4A078` with
+nothing written) and the per-frame `tst.b $2E(a1)` gate on `sfx_Bouncy`.
+
+No constant was introduced. Nothing was seeded from the trace.
+
+### Result (fix worktree vs control worktree, same base)
+
+| class | control | fixed | rows compared |
+|---|---|---|---|
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | 22 errors, frame 131 `y_sub` | **PASS** | 188 both |
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 2166, frame 122 `rings` | 1698, frame 122 `rings` | 2907 both |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 1969, frame 137 `tails_y` | 1605, frame 242 `tails_y` | 3571 both |
+
+`-Ptrace-replay`: 806 tests both trees; control 29 named red classes, fixed 27.
+Set difference computed both directions in Python: **no newly red class**; newly green
+are `TestS3kSonicTailsPachinko3BonusTraceReplay` and
+`TestTraceStructuralRowComparator`. The latter is **not attributable** — it fails with
+`IllegalState GameServices.hardwareTiming() requires an active gameplay mode`, the
+known reused-fork ambient-state flake, and it was red on the control and red on an
+intermediate fixed run of the same tree.
+
+`-Ptrace-replay-r7`: 37 tests, 32 red on both trees, red sets identical by name and
+**no r7 class changed its error count**. The Knuckles `TestS3kPachinkoBonusTraceReplay`
+stays green.
+
+Protected greens (`…AizSegment…`, `…HczSegment…`, `Ss`/`Ss2`/`Ss4`-`Ss7`, the r7
+Knuckles bonus classes) all still green; `TestS3kHczCompleteRunTraceReplay` still red
+at exactly 2 errors, frame 29095 `rings`.
+
+### Assertion corrected (flagged separately)
+
+`TestPachinkoEnergyTrapObjectInstance.captureLocksHorizontalMovement` pinned the
+invented writes — `verify(player).setControlLocked(true)`, `setXSpeed((short) 0)`,
+`setOnObject(false)`, `setCentreY(...)`. It is renamed
+`captureWritesOnlyTheThreeRomFields` and now pins the three ROM writes plus
+`never()` for each invented one, with the `sub_49FE4` citation in its javadoc. No
+assertion was weakened, widened or made advisory.
+
+### Next frontier
+
+`TestS3kSonicTailsPachinkoBonusTraceReplay` frame 122, `rings` expected 262 actual
+261 — a ring-collection divergence, unchanged in frame and field by this round.

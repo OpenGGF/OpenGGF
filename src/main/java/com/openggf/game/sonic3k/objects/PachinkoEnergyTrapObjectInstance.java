@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -14,9 +15,11 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -99,12 +102,29 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
 
         updateDynamicSpawn(currentX, currentY);
 
-        if (hasEscapedThroughTop(playerEntity)) {
-            requestExit();
-        }
-
         maybePlayTransporterSfx(vIntRunCount, playerEntity);
-        updateCapture(vIntRunCount, playerEntity);
+        // ROM loc_49FD6 (docs/skdisasm/sonic3k.asm:96634-96637) runs sub_49FE4 once for
+        // Player_1 and once for Player_2, so the sidekick is captured by exactly the same
+        // subroutine. Only the tail after `cmpa.w #Player_1,a1` is main-player-only.
+        AbstractPlayableSprite mainPlayer =
+                playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
+        for (PlayableEntity participant : captureParticipants(mainPlayer)) {
+            if (participant instanceof AbstractPlayableSprite playable) {
+                runCaptureSubroutine(playable, playable == mainPlayer, vIntRunCount);
+            }
+        }
+    }
+
+    private List<PlayableEntity> captureParticipants(AbstractPlayableSprite mainPlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (mainPlayer == null || participants.contains(mainPlayer)) {
+            return participants;
+        }
+        List<PlayableEntity> withMain = new ArrayList<>(participants.size() + 1);
+        withMain.add(mainPlayer);
+        withMain.addAll(participants);
+        return withMain;
     }
 
     @Override
@@ -149,44 +169,63 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         return beamSpawnCount;
     }
 
-    private void updateCapture(int vIntRunCount, PlayableEntity playerEntity) {
-        if (!(playerEntity instanceof AbstractPlayableSprite player) || player.isDebugMode()) {
+    /**
+     * Port of ROM {@code sub_49FE4} (docs/skdisasm/sonic3k.asm:96640-96678), run once per
+     * player from {@code loc_49FD6}.
+     *
+     * <p>The subroutine writes exactly three player fields — {@code move.w y_pos(a0),y_pos(a1)}
+     * (a word write, so {@code y_sub} is untouched), {@code move.b #$81,object_control(a1)}
+     * and {@code bset #Status_InAir,status(a1)}. It never clears {@code x_vel}/{@code y_vel}/
+     * {@code ground_vel}, never touches {@code Ctrl_N_locked}, and never clears the
+     * on-object bit, so a held player keeps the velocities it entered the beam with.
+     *
+     * <p>There is no capture latch either: a player outside the {@code $18}-tall band simply
+     * returns at {@code locret_4A078} with nothing written.
+     */
+    private void runCaptureSubroutine(AbstractPlayableSprite player, boolean isMainPlayer,
+                                      int vIntRunCount) {
+        if (player.isDebugMode()) {
+            // ROM `tst.w (Debug_placement_mode).w / bne.s locret_4A078` (:96658-96659).
             return;
         }
 
         int playerCenterY = player.getCentreY();
-        int relativeY = playerCenterY - currentY;
-        boolean inCaptureBand = relativeY >= CAPTURE_TOP && relativeY < CAPTURE_BOTTOM_EXCLUSIVE;
-        if (!inCaptureBand && capturedPlayer != player) {
+        if (playerCenterY < PLAYER_ESCAPED_Y) {
+            // ROM head (:96641-96648): a player above -$20 skips the band test entirely.
+            // Only the main player zeroes the exit countdown before falling through.
+            if (isMainPlayer) {
+                exitDelayFrames = 0;
+            }
+        } else {
+            int relativeY = playerCenterY - currentY;
+            if (relativeY < CAPTURE_TOP || relativeY >= CAPTURE_BOTTOM_EXCLUSIVE) {
+                // ROM `addi.w #$C,d0 / cmpi.w #$18,d0 / bhs.s locret_4A078` (:96653-96655).
+                return;
+            }
+            if (isMainPlayer) {
+                capturedPlayer = player;
+            }
+            releaseCompetingMagnetOrbs(player, vIntRunCount);
+            NativePositionOps.writeYPosPreserveSubpixel(player, currentY);
+            if (!player.isObjectControlled()) {
+                // ROM `tst.b $2E(a1) / bne.s loc_4A024` then sfx_Bouncy (:96661-96664):
+                // the bounce plays on every frame the player enters with no object control.
+                playSfx(Sonic3kSfx.BOUNCY);
+            }
+        }
+
+        // loc_4A024 (:96665-96667).
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAir(true);
+        if (!isMainPlayer) {
             return;
         }
-
-        capturedPlayer = player;
-        releaseCompetingMagnetOrbs(player, vIntRunCount);
-        setPlayerCenterY(player, currentY);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-        player.setAir(true);
-        player.setOnObject(false);
-
-        if (!exitArmed) {
-            playSfx(Sonic3kSfx.BOUNCY);
-            LOGGER.info(() -> "Pachinko trap captured player at frame=" + vIntRunCount
-                    + " y=" + currentY + " playerY=" + playerCenterY);
-            exitArmed = true;
-        }
-
+        // ROM `move.b #1,subtype(a0)` (:96670) latches the rise off permanently, then
+        // `subq.b #1,$24(a0) / bcc.s locret_4A078` restarts the level on borrow.
+        exitArmed = true;
         if (!exitRequested && --exitDelayFrames < 0) {
             requestExit();
         }
-    }
-
-    private boolean hasEscapedThroughTop(PlayableEntity playerEntity) {
-        return playerEntity instanceof AbstractPlayableSprite player
-                && player.getCentreY() < PLAYER_ESCAPED_Y;
     }
 
     private void requestExit() {
@@ -235,10 +274,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         } catch (Exception e) {
             // Keep gameplay logic independent from audio state.
         }
-    }
-
-    private void setPlayerCenterY(AbstractPlayableSprite player, int centerY) {
-        player.setCentreY((short) centerY);
     }
 
     private ObjectSpawn createColumnSpawn() {
