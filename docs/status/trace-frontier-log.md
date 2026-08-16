@@ -78801,3 +78801,109 @@ The same defect shape may exist in the **production** bonus-stage entry path
 (`GameLoop`), which was not measured here -- this round only established that the
 trace-replay bootstrap's reconstruction was incomplete. The new frontier for all three
 classes is a 1-2px `tails_y` at frames 94-116, which is a different defect.
+
+## 2026-08-16 -- S3K Sonic+Tails Gumball pair: the bumper cooldown makes bumpers INTANGIBLE
+
+Base `611a40c17`, isolated worktree, JDK 21,
+CRC-verified `s3k.gen` + `s1.gen` + `s2.gen`, `surefire-reports`/`trace-reports`
+cleared before every run, `-Dsurefire.runOrder=alphabetical`.
+
+| class | before | after |
+|---|---|---|
+| `TestS3kSonicTailsGumballBonusTraceReplay` | 119 errors, f33 `tails_x` exp `0x00CF` act `0x00D1` | **78 errors, f209 `tails_x` exp `0x010B` act `0x0109`** |
+| `TestS3kSonicTailsGumball2BonusTraceReplay` | 144 errors, f33 `tails_x_speed` exp `-0x01B0` act `0x0000` | **115 errors, f64 `tails_x_speed` exp `0x0000` act `0x0180`** |
+
+`total_frames` unchanged on both (590 and 783) -- no comparator starvation.
+Control re-measured on this tree; both counts matched the briefed numbers exactly.
+
+### The previous round's diagnosis reproduced, and its named probe found the owner
+
+The 2026-08-15 entry's measurement was correct: the engine zeroes the sidekick's
+`x_speed` seven pixels early. Its two open questions are both answered *no* -- it
+is neither the leader's x-radius nor a stage boundary, and Tails is not colliding
+with Sonic. All 119/144 errors are on `tails_*` fields; nothing on `player_*`.
+
+`0x00D1` is `0x00C4 + $D`. The fixture's `object_state` aux carries a column of
+nine `0x00060F3E` objects at `x = 0x00C4` (and nine mirrored at `0x013C`), and
+`0x00060F3E` is `loc_60F3E`, `Obj_GumballTriangleBumper`'s main routine, which
+calls `SolidObjectFull` with `d1 = $D` (sonic3k.asm:127648-127651). The engine was
+stopping Tails exactly on a triangle bumper's solid edge.
+
+The ROM was not, because that `jsr` is unreachable at the time:
+
+```
+loc_60F3E:
+        tst.w   ($FF2020).l
+        bpl.s   loc_60F8E        ; -> jmp (Draw_Sprite).l
+```
+
+(:127644-127647). `sub_60F94` arms `$FF2020` with `move.w #$F` on a bounce
+(:127680) and `loc_61050`'s `subq.w #1,($FF2020).l` (:127743) counts it down. The
+fixture shows Sonic taking that bounce on row 31 (`player_x_speed` `0xFD24` ->
+`0x0300`, `y_speed` -> `0xFA00`, exactly `sub_60F94`'s `#-$300`/`#-$600` at
+:127763-127775), so rows 32..46 have the whole bumper column switched off --
+which is why the ROM's Tails passes straight through `x = 0x00D1` and only stops
+at `0x00CA` on the level wall behind it (`0x00CA = 0x00C0 + $A`, S3K's fixed
+`CheckLeftWallDist` probe offset).
+
+`GumballMachineObjectInstance` already models the counter faithfully
+(`bumperCooldownTimer`, armed at `0x0F`, decremented per frame). The defect was
+purely in scope: `GumballTriangleBumperObjectInstance.isSolidFor` returned
+`!consumed` and only `onSolidContact` consulted the cooldown, so a bumper the ROM
+had made **intangible** was still a solid the engine pushed characters out of.
+The fix moves the ROM's own `tst.w/bpl` gate to where it belongs -- `isSolidFor`,
+which is what decides whether the engine performs the `SolidObjectFull` call at
+all. No constant was added, adjusted or measured off a fixture.
+
+### Found-not-fixed: the springs' horizontal push (both new frontiers, one cause)
+
+Both surviving frontiers are the same defect, and it is NOT the bumpers.
+
+At gumball_2 f64 and gumball f209 Tails lands on a bottom spring
+(`sidekick_stand_on_obj` `0x2D`/`0x2F`, `interact` `0xBD02`, object code
+`0x00060DAC`, `y_speed` -> `0xF000` = `loc_60DAC`'s `move.w #-$1000,$30(a0)`,
+:127517). The recorded `sidekick_x` moves one pixel *sideways* on that frame
+(`0x00D6` -> `0x00D5`; `0x010A` -> `0x010B`) and `x_speed`/`g_speed` are zeroed.
+`ChildObjDat_61424` (:128170) places the four springs `$20` apart with half-width
+`$1B`, so their solid boxes overlap by `$16`: the ROM's landing character is
+side-pushed by the *neighbouring* spring in the same pass, via
+`SolidObject_cont`'s `loc_1E056` (`move.w #0,ground_vel(a1) / move.w #0,x_vel(a1)`,
+then `sub.w d0,x_pos(a1)`, :41488-41496).
+
+`GumballSpringChild.isTopSolidOnly()` returns `true`, commented *"ROM:
+SolidObjectFull2_1P -- solid from above only"*. **That comment is wrong.**
+`SolidObjectFull2_1P` differs from `SolidObjectFull_1P` only in its
+already-standing re-entry (`beq.w SolidObject_cont` at :41071 vs
+`beq.w loc_1DF88` at :41019, i.e. it skips `loc_1DF88`'s `tst.b render_flags(a0) /
+bpl` on-screen test at :41395-41397); both fresh-contact paths run the same full
+`SolidObject_cont` with its horizontal-push arm.
+
+**Flipping it to `false` was measured and discarded**, per the merge-versus-hold
+discriminator: `TestS3kSonicTailsGumballBonusTraceReplay` went 78 -> **109**
+(frontier back to f64), gumball2 115 -> **116**, and the protected-green
+`TestS3kGumballBonusTraceReplay` went green -> **55 errors, f895 `x`**. Three
+classes worse, zero better, and no located owner for the regression -- so it is
+held. The ROM reading above stands; something in the engine's side-push geometry
+or ordering is propping up the top-solid-only approximation, and that is the next
+probe: instrument the engine's side-push branch for the overlapping-spring pair
+and compare its `d0`/`d5` against `SolidObject_cont` before flipping the flag
+again. **Do not retry the bare flag flip.**
+
+### Verification
+
+- `-Ptrace-replay` on both trees: 806 tests / 188 classes each (not truncated, not
+  stale). Red-class sets diffed by name in both directions with an explicit Python
+  set difference: **zero newly red, zero newly green.** The only assertion-message
+  deltas anywhere in the sweep are the two target classes above, plus one ambient
+  reused-fork flake (`TestTraceStructuralRowComparator`,
+  *"GameServices.hardwareTiming() requires an active gameplay mode"*) that was red
+  on the control tree and green on the fix tree -- unrelated to this change.
+- `-Ptrace-replay-r7` on both trees: 37 tests / 38 classes, 32 red on both,
+  **zero assertion-message deltas**. The Knuckles bonus classes are untouched, as
+  expected for a sidekick-only path.
+- Default profile on both trees: 1915 classes, 87 red on both, identical red sets.
+  Two pre-existing nondeterministic messages differ
+  (`Sonic2SpecialStageLagModelValidationTest` bucket identity,
+  `TestTraceSessionLauncherProductionFailureCleanup` object hash) and one
+  parameterized class reports a variable test count
+  (`TestMhz1CutsceneObjects$KnucklesPeerArtSubmission`, 83 vs 6, zero failures).

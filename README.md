@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A gumball triangle bumper the ROM had switched off was still solid
+  (`bugfix/ai-gumball-bumper-solid-gate`, merged 2026-08-16).** Both Sonic+Tails Gumball replays
+  stopped Tails 7px short of the ROM's wall at frame 33. The engine was not using the leader's
+  radius or a stage boundary, and Tails was not hitting Sonic: `0x00D1` is `0x00C4 + $D`, and the
+  fixture's own aux carries nine `0x00060F3E` objects at `x = 0x00C4` — `Obj_GumballTriangleBumper`,
+  whose `SolidObjectFull` call passes `d1 = $D` (sonic3k.asm:127648-127651). The ROM never reached
+  that call: `loc_60F3E` opens `tst.w ($FF2020).l / bpl.s loc_60F8E` (:127644-127647), so the whole
+  bumper column is intangible while the counter is non-negative — `sub_60F94` arms it with `#$F` on a
+  bounce (:127680) and `loc_61050` counts it down (:127743). The fixture shows Sonic taking that
+  bounce on row 31, so rows 32-46 have the bumpers off and the ROM's Tails falls through to the level
+  wall at `0x00CA`. The engine already modelled the counter, but `isSolidFor` returned `!consumed`
+  and only `onSolidContact` consulted it, so the gate never reached the decision it guards. Errors
+  119 -> 78 and 144 -> 115 with `total_frames` unchanged at 590 and 783.
+
 - **The S3K bonus-stage entry publishes the collision-response list the ROM's pre-loop pass leaves
   behind (`bugfix/ai-s3k-pachinko-row0-collision-list`, merged 2026-08-16).** Three Sonic+Tails
   Pachinko replays diverged at frame 0 across six `tails_*` fields, and two successive diagnoses were
