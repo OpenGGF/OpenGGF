@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the player lost its elemental shield for the whole duration of a bonus
+  stage. ROM `SpawnLevelMainSprites_SpawnPowerup` (sonic3k.asm:8264-8290) runs on
+  every level spawn and routes the bonus zones straight into its restore arm
+  (`cmpi.b #$13,(Current_zone).w / beq loc_69E0` and the same for `#$14`,
+  :8270-8273); `loc_6A02` (:8294-8323) then re-gives Player 1 the shield saved in
+  `Saved_status_secondary` — the value `loc_2D4CA` stored on the way in
+  (:61925-61930). The engine captured that value at entry
+  (`GameLoop.encodeSavedShieldStatus`) but consumed it only on the way OUT
+  (`resolveShieldToRestore`), so the bonus-stage player was unshielded. In Pachinko
+  that removes `Test_Ring_Collisions`' lightning arm (:18450-18453), which allocates
+  `Obj_Attracted_Ring` and pulls a nearby ring in: the recording banks its 262nd ring
+  on frame 122 from a ring attracted at frame 109, and the engine — with no
+  attraction — only walked into that ring 53 frames later. The entry-side restore now
+  runs in `GameLoop.prepareBonusStageForTitleCard`, and the standalone bonus-segment
+  replay bootstrap supplies the `Saved_status_secondary` a segment with no predecessor
+  zone cannot produce, from frame 0 only. No constant was introduced.
+  `TestS3kSonicTailsPachinkoBonusTraceReplay` 1698 -> 1692 errors, first error frame
+  122 `rings` -> 180 `rings` (2907 rows compared, unchanged); `…Pachinko3Bonus…` stays
+  green, `…Pachinko2Bonus…` and `…GumballBonus…` unchanged. `-Ptrace-replay` 806
+  tests / 28 red and `-Ptrace-replay-r7` 37 tests / 32 red, red sets identical by name
+  on both trees.
 - Fix(s3k): the Pachinko energy trap captured the player by clearing state the ROM
   leaves alone, and never ran its sidekick pass. ROM `sub_49FE4`
   (sonic3k.asm:96640-96678) writes exactly `move.w y_pos(a0),y_pos(a1)` (a word

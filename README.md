@@ -228,6 +228,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A bonus stage keeps the elemental shield you entered with (`bugfix/ai-pachinko-r2`, production
+  half merged 2026-08-16).** ROM `loc_2D4CA` saves `Player_1+status_secondary & $71` into
+  `Saved_status_secondary` at bonus entry (sonic3k.asm:61925-61930), and
+  `SpawnLevelMainSprites_SpawnPowerup` routes the bonus zones `$13`/`$14` straight into the restore
+  arm at `loc_6A02` (:8264-8323), re-giving Player 1 that shield on the bonus zone's own level
+  spawn. The engine captured the value at entry and consumed it only on the way *out*, so its
+  bonus-stage player was unshielded — a live-gameplay defect, not a harness one: any real playthrough
+  entering Pachinko with a lightning shield loses ring attraction, because `Test_Ring_Collisions`'
+  lightning arm (:18450-18453) never allocates the attracted ring.
+
 - **A fourth bonus-stage class turns green: the energy trap writes three fields, not nine
   (`bugfix/ai-pachinko3-energy-trap`, merged 2026-08-16).** ROM `sub_49FE4`
   (sonic3k.asm:96640-96678) captures a player with exactly `move.w y_pos(a0),y_pos(a1)` — a *word*
