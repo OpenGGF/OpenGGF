@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Pachinko reward orb dispatched its reward from the player's touch pass and
+  outlived its ROM delete. ROM `loc_4A312` / `loc_4A34C` (sonic3k.asm:96843-96845,
+  96866-96869) react to `collision_property(a0)` from the ITEM's own slot pass via
+  `sub_4A362`/`sub_4A384` (:96874-96916); the touch pass only sets the property. The engine
+  dispatched inline from `onTouchResponse`, which runs at the player's slot ahead of every
+  object, so a `sub_61176` push (`muls.w #-$700`, :127882-127887) was overwritten later the
+  same frame by `Obj_PachinkoMagnetOrb`'s attraction step (`loc_4A464`, :96975-96986). The
+  reward is now latched at touch and dispatched from the item's own update, before
+  `MoveSprite2`, as in ROM. Separately, `sub_4A384`'s `move.l #Delete_Current_Sprite,(a0)`
+  (:96888) is unconditional and its callers never inspect `d2`, so even the subtype-4 push
+  deletes a Pachinko orb -- unlike the gumball-machine path `loc_60F28`; the engine had
+  reused the gumball `d2 = 0` skip and left collected push orbs alive and touch-eligible
+  forever. No constant was introduced and no assertion was changed. Measured neutral:
+  `-Ptrace-replay` 806 tests / 29 red and `-Ptrace-replay-r7` 37 tests / 32 red on both the
+  control and fix trees with red sets identical by name in both directions, and the default
+  sweep 15099 tests on both trees with the only three moved classes
+  (`TestGameLoopSpecialStageEntryPresentation`, `TestModeTracePickerLaunchStatus`,
+  `TestS3kIczCrushingColumnObject`) green in isolation on both trees.
+  `TestS3kSonicTailsPachinko2BonusTraceReplay` stays at 1418 errors, frame 469 `x_speed`,
+  3571 rows compared: its remaining blocker is bonus-stage slot occupancy (the engine puts
+  the magnet orb at slot 25 and the reward orb at 22 where ROM has 17 and 25), recorded in
+  `docs/status/trace-frontier-log.md`.
 - Fix(s3k): the Pachinko energy trap began its rise one gameplay pass late, so every
   player it held read one pixel low for the rest of the stage. `sub_49FE4` writes
   `move.w y_pos(a0),y_pos(a1)` into both players every pass (sonic3k.asm:96660, run

@@ -228,6 +228,18 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A collected push orb deletes itself, and its reaction runs from its own slot pass
+  (`bugfix/ai-pach2-r257`, merged 2026-08-16).** Two ROM-cited corrections to the pachinko item orb.
+  First, the reward push was dispatched inside the *player's* touch pass; ROM `loc_4A312`/`loc_4A34C`
+  only set `collision_property`, and `sub_4A362`/`sub_4A384` run from the **item's own** slot pass
+  (sonic3k.asm:96884-96890), so the engine's push fired a frame early. Second, `sub_4A384` opens with
+  an **unconditional** `move.l #Delete_Current_Sprite,(a0)` (:96898) before any subtype branch, and
+  its callers never read `d2` — unlike gumball's `loc_60F28`, whose delete *is* skipped. The engine
+  had reused the gumball skip, leaving collected push orbs alive and touch-eligible indefinitely.
+  Both are **measured trace-neutral** and land as correctness: the class they were chased through is
+  blocked behind bonus-stage slot occupancy, where the engine's magnet orb sits in a higher slot than
+  the reward orb and so still overwrites the correctly-phased push. Recorded rather than forced.
+
 - **An object placed before `LevelLoop` has already run once by the first recorded frame
   (`bugfix/ai-pachinko-tails-y`, merged 2026-08-16).** Both surviving Pachinko replays diverged on
   `tails_y` by one pixel — `tails_y` *is* the energy trap's `y_pos`, since `sub_49FE4` writes

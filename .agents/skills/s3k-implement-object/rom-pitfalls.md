@@ -2893,3 +2893,47 @@ outside the main loop may have executed before frame 0) is not.
 **Originating commit.** `<pending: Pachinko trap represented setup pass>`;
 `TestS3kSonicTailsPachinko2BonusTraceReplay` 1605 errors -> 1418, first error frame 242
 `tails_y` -> 469 `x_speed`. See `docs/status/trace-frontier-log.md`, 2026-08-16.
+
+---
+
+## The touch pass sets a flag; the object's OWN pass performs the reaction
+
+**Symptom.** A ROM-correct knockback/reward is computed with the right magnitude and
+angle, on the right frame, and the recorded row still shows a different value -- usually
+one written by a *different* object. The engine's value is often the suspiciously round
+one, because the overwriting object writes whole-pixel deltas.
+
+**The ROM shape.** A `$C0`-category object's `Touch_Response` entry does nothing but set
+`collision_property(a0)`. The reaction runs later, from the object's own SST slot pass.
+`Obj_PachinkoItemOrb`'s converted reward is the canonical example: `loc_4A312`
+(`sonic3k.asm:96843-96845`) and `loc_4A34C` (`:96866-96869`) both open with
+`tst.b collision_property(a0) / bsr sub_4A362`, and `sub_4A362`/`sub_4A384`
+(`:96874-96916`) then dispatch through `loc_61100`. `Obj_Bumper`'s pachinko branch
+(`loc_32EF0`, `:68906-68908`) and the gumball items have the identical shape.
+
+**Why the phase is load-bearing.** The engine's touch pass runs at the player's slot,
+ahead of every object. Dispatching the reaction there puts it *before* every object that
+executes after the player -- so any of them that writes the same player field wins. At
+Pachinko `pachinko_2` row 469 the reward orb's `sub_61176` push (`muls.w #-$700`,
+`:127882-127887`) is immediately overwritten by `Obj_PachinkoMagnetOrb`'s attraction step
+(`loc_4A464`, `:96975-96986`, `sub.w x_pos(a1),d1 / asl.w #8,d1 / neg.w d1`). In ROM the
+magnet is a LOWER slot (17 vs 25), so the push lands last and survives. Latch the touch
+and dispatch from `update()`, at the ROM's position within the routine -- for `loc_4A34C`
+that is *before* `MoveSprite2`.
+
+**The tell in the fixture.** Every row written by an attraction/position-copy step has a
+velocity that is an exact multiple of `0x100`, because the write is `delta << 8`. The one
+row that is not is the row some other object wrote. Sorting the CSV that way names the
+writer before any engine reasoning starts.
+
+**Related, same routine.** `sub_4A384`'s `move.l #Delete_Current_Sprite,(a0)` (`:96888`)
+is UNCONDITIONAL and its callers never inspect `d2`, so even the subtype-4 push deletes
+the Pachinko orb -- unlike the gumball-machine path `loc_60F28`, whose delete is skipped
+on `d2 = 0`. Reusing the gumball dispatch wholesale leaves a collected orb alive and
+touch-eligible forever. Two adjacent ROM paths through one dispatch table can disagree
+about deletion; read both callers, not just the table.
+
+**Originating commit.** `<pending: Pachinko reward dispatch phase>`. Measured neutral on
+the target class (the bonus-stage slot occupancy still orders the magnet after the reward
+in the engine -- see `docs/status/trace-frontier-log.md`, 2026-08-16), and neutral across
+`-Ptrace-replay` (29 red), `-Ptrace-replay-r7` (32 red) and the default sweep.
