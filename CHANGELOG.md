@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Pachinko magnet orb released a CPU sidekick as soon as it left the
+  screen. ROM `sub_4A428` (sonic3k.asm:96955-96967) has no on-screen,
+  camera-distance or render-flag test anywhere in its captured branch, and
+  Player 2 runs through exactly the same subroutine from `loc_4A408`
+  (:96943-96949); the only exits are `Debug_placement_mode`,
+  `routine(a1) >= 4`, `object_control` bit 7, and an A/B/C press in that
+  player's own `Ctrl_N_logical` pressed byte. The orbit carries Tails past the
+  right screen edge well before the ROM's release, so the engine ran the
+  `loc_4A4F6` tail — `Status_Roll`, `anim 2`, `y_radius=$E`, `x_radius=7` — 13
+  frames early, which is what the reported 1px `tails_y` actually was: the ball
+  collision box, not a lost sub-pixel carry (both sub-pixel columns match at the
+  divergence). The invented predicate is deleted and no constant is added.
+  `TestS3kSonicTailsPachinko3BonusTraceReplay` first error frame 116 -> 129, and
+  its divergence is now the same delayed-leader-input press edge that
+  `…PachinkoBonusTraceReplay` shows at frame 95 (see the frontier log).
+  `-Ptrace-replay` 806 tests 30 red, `-Ptrace-replay-r7` 37 tests 32 red and the
+  default profile 15139 tests / 65F+22E are all byte-for-byte the same red sets
+  as the control worktree at the same base — nothing newly red, nothing newly
+  green.
 - Fix(s3k): the Gumball bonus stage's triangle bumpers stayed solid during their
   post-bounce cooldown. ROM `loc_60F3E` (sonic3k.asm:127644-127647) opens with
   `tst.w ($FF2020).l / bpl.s loc_60F8E`, branching straight to `Draw_Sprite` and

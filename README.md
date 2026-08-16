@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A captured sidekick stays captured off-screen (`bugfix/ai-pachinko-tails-y`, merged 2026-08-16).**
+  `PachinkoMagnetOrbObjectInstance` released a CPU sidekick the moment the camera lost it. ROM
+  `sub_4A428` (sonic3k.asm:96955-96967) has **no on-screen, camera-distance or render-flag test
+  anywhere** in its captured branch, and Player 2 runs through the identical subroutine from
+  `loc_4A408` (:96943-96949) — there is no separate CPU-sidekick path. The only exits are
+  `Debug_placement_mode`, `routine(a1) >= 4`, `object_control` bit 7, and an A/B/C press in that
+  player's own `Ctrl_2_logical` byte. The orbit carries Tails past the right screen edge at row 111
+  and the ROM holds him 18 rows longer; the engine let go 13 rows early. The predicate is deleted
+  rather than adjusted — no constant added or measured. The fixture's own aux confirmed the ROM side
+  with no instrumentation: `object_control` holds `0x01` for rows 21-128 and clears at 129, exactly
+  where `ctrl2_pressed` steps `0x04 -> 0x14`. Pachinko3's frontier moves 116 -> 129 with rows compared
+  unchanged at 188; error counts rise (36 -> 41, 2185 -> 2280, 1977 -> 2120) because Tails now spends
+  rows inside the orb that he previously spent in free physics, downstream of older divergences at
+  rows 94/95 that this change does not touch. Zero newly red and zero newly green across both trace
+  profiles and all 15,139 default tests. A unit test that pinned the invented release was corrected
+  to the ROM — it now asserts the sidekick stays captured, and additionally asserts the hover SFX the
+  old test denied.
+
 - **The seven "dez23" segment reds are one unimplemented object, and the zone is not Death Egg
   (`bugfix/ai-hpz-ss-arena-diagnosis`, diagnosis merged 2026-08-16).** All seven act-2 `dez23*`
   classes diverge at frame 0 on the *same ten fields with the same values*; the differing headline

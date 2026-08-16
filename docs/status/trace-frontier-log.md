@@ -79128,3 +79128,114 @@ fixture (the fixture is cited only as independent corroboration). No assertion
 weakened, widened, deleted, disabled or made advisory. No zone/act/route/frame/
 game-name predicate. No trace hydration. No landed fix undone. `docs/skdisasm`
 used for labels and citations only.
+
+## 2026-08-16 — Pachinko magnet orb: the invented off-screen CPU-sidekick release
+
+Base `c8c873386`, isolated worktree, branch
+`bugfix/ai-pachinko-tails-y`. Control measured in a second detached worktree at
+the same commit; both trees run with `-Dsurefire.forkCount=2`,
+`-Dsurefire.runOrder=alphabetical`, `-Dmse=off`, and `target/surefire-reports`
+plus `target/trace-reports` cleared before every run.
+
+### Measured control at `c8c873386` (own tree, not inherited)
+
+| class | errors | first error |
+|---|---:|---|
+| `TestS3kSonicTailsPachinko3BonusTraceReplay` | 36 | frame 116, `tails_y` |
+| `TestS3kSonicTailsPachinko2BonusTraceReplay` | 1977 | frame 94, `tails_y` |
+| `TestS3kSonicTailsPachinkoBonusTraceReplay` | 2185 | frame 95, `tails_y` |
+
+`-Ptrace-replay` control is **30 red / 806 tests**, not the 29 quoted in the
+briefing. `-Ptrace-replay-r7` is 32 red / 37 tests. Default profile is 51 red
+classes / 15139 tests (65 failures, 22 errors).
+
+### The 1-2px `tails_y` was not a rounding story
+
+Dumping every field that differs at Pachinko3 frame 116 rather than the
+alphabetically-first one: `tails_rolling` 0 vs 1, `tails_status_byte` 0x03 vs
+0x07, `tails_y_speed` -0x100 vs -0x200, `tails_x_speed` 0x0000 vs 0x0100 — six
+fields at once. Both sub-pixel columns are **identical** at 116 and stay frozen
+at `(0x1800,0x9E00)` on the ROM side from row 21 to row 128, with
+`x_speed == Δx * 0x100` every row. That is the signature of ROM `sub_4A428`'s
+captured branch (`sonic3k.asm:96974-96989`), which writes `x_pos`/`y_pos`
+directly from `sub_4A5E0` and then derives the velocity words from the
+displacement. The 1px `tails_y` is a consequence of the engine having entered
+the ball radii, not of a lost carry.
+
+The fixture's own aux settles the ROM side without instrumentation:
+`interact_state` shows Tails at `object_control = 0x01` for rows 21-128 and
+`0x00` from row 129, and `cpu_state` shows `ctrl2_pressed` stepping
+`0x04 -> 0x14` on exactly row 129. `object_control` bit 0 is "character can jump
+out" (`sonic3k.constants.asm:57`); `sub_4A428` releases on
+`andi.b #button_A_mask|button_B_mask|button_C_mask,d1 / bne.w loc_4A4B4`
+against that player's own `Ctrl_N_logical` pressed byte.
+
+### Root cause and fix
+
+`PachinkoMagnetOrbObjectInstance.shouldReleaseCapturedSidekick` released a
+CPU-controlled sidekick as soon as `Camera.isOnScreen` went false. ROM
+`sub_4A428` has no on-screen, camera-distance or render-flag test anywhere in
+its captured branch, and Player 2 is driven through the very same subroutine
+from `loc_4A408` (`sonic3k.asm:96943-96949`); the only exits are
+`Debug_placement_mode`, `routine(a1) >= 4`, `object_control` bit 7, and the
+A/B/C press. The orbit carries Tails past the right screen edge at row 111
+(screen x 323) while the ROM keeps it captured for another 18 rows, so the
+engine ran the `loc_4A4F6` tail — `Status_Roll`, `anim 2`, `y_radius=$E`,
+`x_radius=7` — 13 rows early. The predicate is deleted; no constant of any kind
+was added or changed.
+
+The unit test `offscreenCapturedSidekickReleasesWithoutHoverSfx` pinned that
+invented behaviour and is rewritten as `offscreenCapturedSidekickStaysCaptured`
+with the ROM citation. **Nothing was weakened**: it still asserts, in the
+opposite direction, plus the hover-SFX count that `sub_4A428` reaches for a
+still-captured player.
+
+### Result
+
+| class | before | after |
+|---|---|---|
+| `Pachinko3` | 36 errors, frame 116 `tails_y` | **41 errors, frame 129 `tails_x_speed`** (188 rows compared of 356) |
+| `Pachinko` | 2185, frame 95 `tails_y` | 2280, frame 95 `tails_y` (2907 rows compared) |
+| `Pachinko2` | 1977, frame 94 `tails_y` | 2120, frame 94 `tails_y` |
+
+| profile | control | with fix |
+|---|---|---|
+| `-Ptrace-replay` | 806 tests, 30 red | 806 tests, 30 red, **identical set by name** |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red, **identical set by name** |
+| default | 15139 tests, 65F/22E, 51 red classes | 15139 tests, 65F/22E, 51 red classes, identical set |
+
+Set differences computed both directions in Python; `comm` not used. No class
+newly red and none newly green anywhere. Error counts rise slightly on the two
+long Pachinko traces because Tails now stays in the orb through rows the engine
+previously spent in free physics — the divergence at rows 94/95 is older than
+this change and is unmoved by it.
+
+### The next owner, named: a one-frame lag on the delayed leader-input replay
+
+Pachinko3 row 129 and Pachinko row 95 are now the **same** divergence:
+
+```
+tails_cpu_ctrl2_held    expected 0x0014  actual 0x0004   span 1
+tails_cpu_ctrl2_pressed expected 0x0010  actual 0x0000   span 1
+tails_rolling           expected 1       actual 0
+tails_x_speed           ROM orb-launch value, engine still on the orbit
+```
+
+ROM `loc_13DA6`/`loc_13DD0` (`sonic3k.asm:26688-26700`) reads the delayed
+`Stat_table` word — the whole `Ctrl_1_logical` word, held byte **and** pressed
+byte — then `andi.w #$F3F3,d1 / ori.w #$404,d1` forces the direction bits while
+leaving A/B/C intact, and `loc_13EB8` stores it to `Ctrl_2_logical`. On
+Pachinko3 the arithmetic checks out exactly at a 16-frame delay: Sonic's
+recorded input is `0x0000` at row 112 and `0x0010` at row 113, and the ROM's
+`ctrl2` is `0x14/0x14` at row 129 and `0x14/0x04` at row 130 — the press edge of
+row 113 replayed at row 129. The engine emits `0x04` at 129 and the correct
+`0x14/0x00` at 130, i.e. it is serving row 112's entry where the ROM serves row
+113's. The lag is invisible while the leader's input is constant and only shows
+on the press edge, which is the one frame that matters because it is what makes
+`sub_4A428` release. `SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES` is 16 and
+`resolveFollowStatDelayFrames()` returns it unconditionally, so the off-by-one
+is in when the history slot is written or read relative to the sidekick's CPU
+slot, not in the constant. Not worked in this round.
+
+Pachinko2 is **not** the same frontier — its row 94 divergence is unmoved and
+was not diagnosed here. The three traces do not share one cause; they share two.
