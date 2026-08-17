@@ -453,7 +453,7 @@ public class ObjectManager {
 
     /**
      * Captures the persistent respawn-remember state (broken/collected/remembered
-     * spawns) to carry across a bonus-stage round-trip reload. See
+     * spawns) to carry across a bonus-stage or special-stage round-trip reload. See
      * {@link PersistentRespawnState} for the ROM {@code Respawn_table_keep} model.
      */
     public PersistentRespawnState capturePersistentRespawn() {
@@ -463,7 +463,7 @@ public class ObjectManager {
     /**
      * Re-establishes respawn-remember state captured by
      * {@link #capturePersistentRespawn()} onto this (freshly reloaded) manager's
-     * placement, so bonus-return respawns broken/collected objects in the state
+     * placement, so stage-return respawns broken/collected objects in the state
      * the player left them (e.g. a monitor broken before the bonus stays broken).
      */
     public void restorePersistentRespawn(PersistentRespawnState state) {

@@ -432,7 +432,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * {@code Object_respawn_table} model: {@link #remembered} and
      * {@link #stayActive}), excluding the windowing state (active set, cursors,
      * counters) that a reload rebuilds. Used to carry the respawn table across a
-     * bonus-stage round-trip reload; see {@link PersistentRespawnState}.
+     * bonus-stage or special-stage round-trip reload; see
+     * {@link PersistentRespawnState}.
      */
     PersistentRespawnState capturePersistentRespawn() {
         return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray());
@@ -441,9 +442,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     /**
      * Re-establishes the respawn-remember state captured by
      * {@link #capturePersistentRespawn()} into this (freshly loaded) controller,
-     * so a spawn remembered before a bonus round-trip is not respawned intact on
+     * so a spawn remembered before a stage round-trip is not respawned intact on
      * return. OR-merges the bits, preserving anything the fresh load already
-     * marked. Spawn indices are stable because the bonus return reloads the same
+     * marked. Spawn indices are stable because the return reloads the same
      * zone/act, so the layout (and therefore the index of each spawn) is identical.
      */
     void restorePersistentRespawn(PersistentRespawnState state) {

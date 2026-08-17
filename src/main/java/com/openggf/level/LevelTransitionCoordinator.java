@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
+import com.openggf.level.objects.PersistentRespawnState;
 
 /**
  * Holds all transition request/consume state that was previously scattered
@@ -22,6 +23,8 @@ public class LevelTransitionCoordinator {
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
+    /** Engine snapshot of Object_respawn_table kept by Respawn_table_keep. */
+    private PersistentRespawnState bigRingReturnRespawnState;
 
     // ── Bonus stage ───────────────────────────────────────────────────
     private BonusStageType bonusStageRequested;
@@ -205,7 +208,17 @@ public class LevelTransitionCoordinator {
      * Saves the big ring return state (ROM: Save_Level_Data2 -> Saved2_*).
      */
     public void saveBigRingReturn(BigRingReturnState state) {
+        saveBigRingReturn(state, null);
+    }
+
+    /**
+     * Saves the big-ring return state together with the persistent object table
+     * that S3K keeps across the special-stage reload.
+     */
+    public void saveBigRingReturn(BigRingReturnState state,
+                                  PersistentRespawnState respawnState) {
         this.bigRingReturn = state;
+        this.bigRingReturnRespawnState = respawnState;
     }
 
     /** Returns true if a big ring return state is saved. */
@@ -218,9 +231,15 @@ public class LevelTransitionCoordinator {
         return bigRingReturn;
     }
 
+    /** Returns the Object_respawn_table snapshot captured at big-ring entry. */
+    public PersistentRespawnState getBigRingReturnRespawnState() {
+        return bigRingReturnRespawnState;
+    }
+
     /** Clears the big ring return state. */
     public void clearBigRingReturn() {
         this.bigRingReturn = null;
+        this.bigRingReturnRespawnState = null;
     }
 
     /**
@@ -791,6 +810,7 @@ public class LevelTransitionCoordinator {
         resultsReturnCardOwnedByCaller = false;
         levelRoutineReentry = false;
         bigRingReturn = null;
+        bigRingReturnRespawnState = null;
         lastStarPostHitSet = true;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;

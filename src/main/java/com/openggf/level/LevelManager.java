@@ -230,6 +230,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean suppressGlobalOscillationForTitleCardPass = false;
     ObjectManager objectManager;
     private PersistentRespawnState persistentRespawnStateForNextObjectReset;
+    /** Keeps a return respawn snapshot alive through the post-load camera snap. */
+    private PersistentRespawnState persistentRespawnStateForCameraSnap;
     private int ringFloorCheckCounterPhase;
     RingManager ringManager;
     ZoneFeatureProvider zoneFeatureProvider;
@@ -706,6 +708,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initCameraBounds() {
         PersistentRespawnState persistentRespawnState = persistentRespawnStateForNextObjectReset;
         persistentRespawnStateForNextObjectReset = null;
+        persistentRespawnStateForCameraSnap = persistentRespawnState;
         LevelManagerInitializationSupport.resetCameraBounds(
                 camera, level, objectManager, persistentRespawnState);
     }
@@ -714,7 +717,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Arms a one-shot respawn-table restore for the next full object-system
      * initialization. The state is consumed inside {@link #initCameraBounds()},
      * after placement bookkeeping is reset and before any initial-window object
-     * can be materialized.
+     * can be materialized. The post-load camera snap receives the same state
+     * once more when the level's placement window is rebuilt there.
      */
     public void restorePersistentRespawnOnNextObjectReset(PersistentRespawnState state) {
         persistentRespawnStateForNextObjectReset = state;
@@ -2810,8 +2814,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initCameraForLevel() {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
+            persistentRespawnStateForCameraSnap = null;
             return;
         }
+        BigRingReturnState bigRingReturn = transitions.hasBigRingReturn()
+                && transitions.isLastStarPostHitSet()
+                ? transitions.getBigRingReturn()
+                : null;
+        // ROM: Load_Starpost_Settings restores Saved2_camera_max_Y_pos before
+        // Get_LevelSizeStart computes the first return camera position
+        // (skdisasm/sonic3k.asm:61834-61837, 38172-38178). Publish that bound
+        // before either camera update below; applying it only in the later
+        // title-card handoff leaves the return one camera step behind.
+        if (bigRingReturn != null) {
+            camera.setMaxY((short) bigRingReturn.cameraMaxY());
+        }
+        PersistentRespawnState persistentRespawnState = persistentRespawnStateForCameraSnap;
         int preSnapCameraX = camera.getX();
         camera.setFrozen(false);
         camera.setFocusedSprite(playable);
@@ -2822,7 +2840,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             camera.setMinX((short) currentLevel.getMinX());
             camera.setMaxX((short) currentLevel.getMaxX());
             camera.setMinY((short) currentLevel.getMinY());
-            camera.setMaxY((short) currentLevel.getMaxY());
+            camera.setMaxY((short) (bigRingReturn != null
+                    ? bigRingReturn.cameraMaxY()
+                    : currentLevel.getMaxY()));
             // Vertical wrapping: enabled when minY < 0. The wrap range differs per game:
             // S1 (UNIFIED): 0x800 (DeformLayers.asm LZ3/SBZ2 loop sections)
             // S3K (DUAL_PATH): level height in pixels (e.g. 0x1000 for MGZ1's 32-row map).
@@ -2853,8 +2873,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 // low SST slots, then frees them before start-area ring groups
                 // execute, reversing parent/child FindFreeObj allocation.
                 // S3K also needs this for its separate Y-camera placement pass.
-                objectManager.reset(camera.getX());
+                objectManager.reset(camera.getX(), persistentRespawnState);
             }
+            // The first reset in initCameraBounds has already consumed the
+            // one-shot load state. Clear the handoff after the final camera
+            // snap so a later gameplay reset cannot inherit a return table.
+            persistentRespawnStateForCameraSnap = null;
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
             // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
@@ -2875,6 +2899,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // S2/S3K cap both directions.
             camera.setUncappedLeftwardScroll(cameraRules.uncappedLeftwardHorizontalScroll());
         }
+        persistentRespawnStateForCameraSnap = null;
     }
 
     private CameraRules cameraRulesFor(GameModule module) {
@@ -3302,6 +3327,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             transitions.setSpecialStageReturnLevelReloadRequested(false);
             transitions.setLevelInactiveForTransition(false);
 
+            // ROM: SSEntryFlash_GoSS sets Respawn_table_keep before entering
+            // the special stage, and the return path skips clearing
+            // Object_respawn_table (skdisasm/sonic3k.asm:128446-128451,
+            // 37457-37465). Reapply the captured table before InitObjectSystem
+            // materializes the new level window. Last_star_post_hit is the
+            // same gate used by Get_LevelSizeStart for Saved2_* restoration.
+            if (transitions.hasBigRingReturn()
+                    && transitions.isLastStarPostHitSet()
+                    && transitions.getBigRingReturnRespawnState() != null) {
+                persistentRespawnStateForNextObjectReset =
+                        transitions.getBigRingReturnRespawnState();
+            }
+
             if (levels.isEmpty()) {
                 // ROM is already loaded by Engine.initializeGame(), so
                 // GameModuleRegistry has the correct module. Just bootstrap
@@ -3675,9 +3713,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     titleCardRequiredInHeadlessMode,
                     queueFreshLevelRuntimeArt);
         } finally {
-            // A load that fails before initCameraBounds must not leak a bonus-return
+            // A load that fails before initCameraBounds must not leak a stage-return
             // respawn table into a later, potentially different, level.
             persistentRespawnStateForNextObjectReset = null;
+            persistentRespawnStateForCameraSnap = null;
         }
     }
 
@@ -4047,7 +4086,38 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public BonusStageType consumeBonusStageRequest() { return transitions.consumeBonusStageRequest(); }
 
     /** @see LevelTransitionCoordinator#saveBigRingReturn(BigRingReturnState) */
-    public void saveBigRingReturn(BigRingReturnState state) { transitions.saveBigRingReturn(state); }
+    public void saveBigRingReturn(BigRingReturnState state) {
+        if (state == null) {
+            transitions.saveBigRingReturn(null, null);
+            return;
+        }
+
+        AbstractPlayableSprite playable = mainPlayableSprite();
+        ShieldType savedShield = captureSpecialStageReturnShield(playable);
+        if (state.savedShieldType() == null) {
+            state = state.withSavedShieldType(savedShield);
+        }
+        PersistentRespawnState respawnState = objectManager != null
+                ? objectManager.capturePersistentRespawn()
+                : null;
+        transitions.saveBigRingReturn(state, respawnState);
+    }
+
+    /**
+     * S3K's SpawnLevelMainSprites_SpawnPowerup consumes only the elemental
+     * shield bits from Saved2_status_secondary. The ordinary BASIC shield bit
+     * is intentionally excluded by the ROM mask.
+     */
+    private static ShieldType captureSpecialStageReturnShield(AbstractPlayableSprite playable) {
+        if (playable == null || !playable.hasShield() || playable.getShieldType() == null) {
+            return null;
+        }
+        ShieldType shieldType = playable.getShieldType();
+        return switch (shieldType) {
+            case FIRE, LIGHTNING, BUBBLE -> shieldType;
+            case BASIC -> null;
+        };
+    }
 
     /** @see LevelTransitionCoordinator#clearLastStarPostHit() */
     public void clearLastStarPostHit() { transitions.clearLastStarPostHit(); }
@@ -4201,6 +4271,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         gameModule = null;
         collisionLayoutYMask = 0;
         objectManager = null;
+        persistentRespawnStateForNextObjectReset = null;
+        persistentRespawnStateForCameraSnap = null;
         ringManager = null;
         zoneFeatureProvider = null;
         levelRenderer.resetState();

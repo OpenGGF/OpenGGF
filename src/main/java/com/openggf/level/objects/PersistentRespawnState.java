@@ -7,15 +7,14 @@ package com.openggf.level.objects;
  * inert shell rather than despawning ({@code stayActive}, e.g. a broken
  * monitor).
  * <p>
- * Used to carry that state across a bonus-stage round-trip level reload. The ROM
- * preserves {@code Object_respawn_table} across the star-post-bonus
- * {@code Restart_level_flag} reload: the star-post bonus entry sets
- * {@code Respawn_table_keep=1} (docs/skdisasm/sonic3k.asm:61930) and the reload's
- * clear routines skip the respawn/ring tables while it is set (e.g.
- * {@code sub_EB1A} :18564-18570, the {@code Object_respawn_table} handling gated
- * at :37432-37434), so the live table simply survives. The engine rebuilds a
- * fresh {@link ObjectPlacementController} on reload, so it instead captures this
- * state at bonus entry and re-establishes it on return.
+ * Used to carry that state across bonus-stage and S3K special-stage round-trip
+ * level reloads. The ROM preserves {@code Object_respawn_table} when the
+ * corresponding entry path sets {@code Respawn_table_keep=1}; the reload's
+ * clear routines then skip the respawn/ring tables (e.g. the S3K special-stage
+ * path at docs/skdisasm/sonic3k.asm:128446-128451 and the table handling gated
+ * at :37457-37465). The engine rebuilds a fresh
+ * {@link ObjectPlacementController} on reload, so it instead captures this
+ * state at stage entry and re-establishes it before return placement.
  *
  * @param rememberedBits {@link java.util.BitSet#toLongArray()} of the remembered set
  * @param stayActiveBits {@link java.util.BitSet#toLongArray()} of the stay-active set
