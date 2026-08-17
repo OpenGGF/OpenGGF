@@ -244,7 +244,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   because it names no row, and its `bk2_frame` is provenance nothing may key on. No engine-side
   change -- `HardwareTimingStreamLoader` reads only the per-segment file, so consuming this
   stream is scoped separately. Harness suite: 591 passed against control's 588, with an
-  identical 11-failure set (all pre-existing).
+  identical 11-failure set (all pre-existing). **No fixture is regenerated or installed by this
+  change** -- the harness README requires explicit approval of the exact bytes and deltas before
+  any capture is installed, so producing the corrected S3K run is a separate, approved step.
 
 - **A life gain or loss is now reported on the frame it happens
   (`feature/ai-lives-trace`, merged 2026-08-17).** No fixture recorded a life counter or a
