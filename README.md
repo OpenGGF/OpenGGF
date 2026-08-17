@@ -242,7 +242,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
   reported as a measurement rather than a regression. Adds
   `TestS2CompleteEmeraldRunPrefix` ratcheting S2 at segment 10; pinning at 11 was
   tried and rejected, because a prefix target does not halt the drive before the
-  pinned segment's interior and so merely restates the frontier.
+  pinned segment's interior and so merely restates the frontier. Gate composition
+  after the merge: S1, S2 and S3K chains red with three distinct named blockers
+  (`dynamic_art.edges` at S1 segment 3; the object V-blank phase feeding the EHZ2
+  capsule's spawn gate at S2 segment 11; a non-exportable pending
+  `KOS_MODULE_QUEUE` submission at S3K segment end), with the S1 and S2 prefix
+  pins green and defended.
 
 - **The S2 masked level-entry loss is modelled per (zone, act)
   (`bugfix/ai-s2-masked-block-loss`, merged 2026-08-17).** `Level:` masks interrupts at

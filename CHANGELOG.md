@@ -2,6 +2,28 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
+
+### Fixed
+- `TraceStructuralRowComparator` no longer reaches for the installed gameplay
+  mode to capture hardware timing. It called `GameServices.hardwareTiming()`,
+  which throws when no gameplay-mode context is installed, so
+  `TestTraceStructuralRowComparator` passed only when an earlier test in the
+  same Surefire fork had leaked a context and failed whenever it ran in
+  isolation. The timing capture is now a constructor dependency alongside the
+  queue-snapshot supplier, and the unit test owns its own
+  `HardwareTimingService`. Production behaviour is unchanged: the convenience
+  constructors supply exactly the call the comparator made inline.
+
+### Added
+- `TestS1CompleteEmeraldRunChain` drives the committed
+  `s1-sonic-complete-withemeralds` route end to end. Release 6 commits to S1, S2
+  and S3K chains green, and S1 had a prefix pin but no chain test, so how far the
+  route replayed was never reported. It is red on arrival, as an honest
+  measurement rather than a regression.
+- `TestS2CompleteEmeraldRunPrefix` ratchets the S2 route at segment 10, the last
+  segment replaying clean on every axis. The chain test's own javadoc deferred
+  this until the frontier cleared segment 1; it now stops in segment 11.
+
 ## Unreleased
 - Fix(s2): the run chain now models Sonic 2's level-entry V-blank mask, so the engine's
   object-visible `Vint_runcount` loses the same number of ticks the ROM does across a

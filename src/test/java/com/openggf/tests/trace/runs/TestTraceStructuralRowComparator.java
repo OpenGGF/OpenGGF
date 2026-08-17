@@ -3,6 +3,7 @@ package com.openggf.tests.trace.runs;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
@@ -121,8 +122,13 @@ class TestTraceStructuralRowComparator {
 
     private static TraceStructuralRowComparator comparator(
             TraceData trace, List<QueueDiagnosticSnapshot> queues) {
+        // Owns its own timing service rather than reaching for the installed
+        // gameplay mode: GameServices.hardwareTiming() throws without one, so
+        // depending on it made this class pass only when an earlier test in the
+        // same fork had leaked a context.
+        HardwareTimingService timing = new HardwareTimingService();
         return new TraceStructuralRowComparator(
-                trace, ToleranceConfig.DEFAULT, 0, () -> queues);
+                trace, ToleranceConfig.DEFAULT, 0, () -> queues, timing::capture);
     }
 
     private static TraceData structuralTrace(Path temp, int frameCount)
