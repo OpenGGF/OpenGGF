@@ -80202,3 +80202,113 @@ ICZ now sits on the section-21 giant-ring boundary alongside LBZ (958) and CNZ (
 blocked for the same reason they are: the engine's `SSEntryRing` branch is ROM-correct and a
 standalone segment cannot carry the run's 7-emerald `Chaos_emerald_count`. The three close
 together, in the ordered run chain, or not at all.
+
+## 2026-08-17 -- MGZ Sonic+Tails segment: 17383 confirmed causal by execution, and 18144/19983 is the frontier behind it
+
+Worktree at base `3ef75f7cc` (`develop`), branch `bugfix/ai-mgz-17383-emerald-bootstrap`.
+Command (control, probe and post-revert control; `target/surefire-reports` and
+`target/trace-reports` cleared before every run):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Ds3k.rom.path=<discovered s3k .gen> \
+    -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay -DfailIfNoTests=false test
+```
+
+- Control: FAIL, **3446 errors**, first error 10709 (`x`, `0x23DB` vs `0x23DC`),
+  **30831 compared rows**. Reproduces the previous round exactly, ~40 merged
+  commits later.
+
+### The headline frame is still a transient; the census reproduces
+
+Parsing `s3k_mgz1_report.json` rather than the assertion message: 10709 opens a
+29-error island that ends at 10839 (`x` / `camera_x` / `tails_x` /
+`tails_cpu_target_x`, all one pixel, every entry `frame_span` 1). It
+re-converges and nothing cascades. **36 of 3446 errors start before 17383;
+3410 (99.0%) start at or after it.** Frames 13864-15531 and 15562-17382 are
+completely clean. This independently re-derives the 2026-08-15 finding.
+
+### 17383 is now confirmed causal by execution, not by mechanism fit
+
+The 2026-08-15 round identified the cause (the segment starts MGZ with zero
+Chaos Emeralds, so `Obj_SSEntryRing`'s collision arm takes the capture branch
+`loc_6173A` instead of `loc_61794`'s `moveq #50,d0 / jmp (AddRings).l`) but
+never measured what closing it is worth. The P62 code-pointer readout was
+re-derived independently here: aux `object_state` slot 4 rewrites
+`object_code` `0x00061682` (`Obj_SSEntryRing`) to `0x0001ABB6`
+(`Delete_Current_Sprite`) on frame 17383, `object_removed` at 17384, and
+`rings` goes `0x28 -> 0x5A` in the ROM while the engine holds at `0x28` and
+writes `player_animation_id = 0x1C` / `player_mapping_frame = 0x0000` --
+exactly `loc_6173A`'s two writes (`sonic3k.asm:128283-128295`, `:128318-128327`).
+
+**Throwaway probe (uncommitted, reverted):** seeding the seven Chaos Emeralds
+in `afterFixtureBuild` -- the inventory the parent `run_manifest.json` records
+the recording as already holding at MGZ entry -- moves the class
+**3446 -> 2002 errors**. Frames 15562-18143 become completely clean and the
+17383 cascade disappears entirely. So the emerald branch is worth
+**1444 of 3446 errors (42%)**, and it is a real execution path, not a
+mechanism that merely fits.
+
+### The frontier behind it is 18144, then 19983 -- sidekick, and unblocked
+
+Under the probe, the successor origin is **18144** (`tails_y` `0x07A3` vs
+`0x07A2`, 5 frames; `tails_cpu_interact` `0x0003` vs `0x0002`), and the mass
+sits at **19983**: 1964 of the residual 2002 errors start at or after 19312,
+and at 19983 the ROM writes `tails_x = 0x7F00`, `tails_y = 0x0000`,
+`tails_cpu_routine = 0x02`, `tails_air = 1` -- the sidekick despawn marker --
+while the engine still has Tails in the level at `0x1C43`. The residual field
+histogram is overwhelmingly sidekick (`tails_y` 292, `tails_y_speed` 126,
+`tails_g_speed` 112, `tails_cpu_ctrl2_held` 111). That is an ordinary
+sidekick despawn/respawn timing target and needs no policy decision.
+
+### Outcome -- found-not-fixed, deliberately; and a brief correction
+
+Nothing landed under `src/`. This round's target was briefed as "unblocked --
+no capture ask, no rule-4 decision". **That framing is wrong and is itself a
+finding**: 99% of the error mass is gated on the segment's starting emerald
+inventory, which is absent from the fixture's `metadata.json`, from
+`physics.csv`, and from every aux event including the frame `-1` bootstrap
+records. It exists only in the parent run's `run_manifest.json`
+*transitions* (`emeralds_before` / `emeralds_after`), which
+`AbstractTraceReplayTest` does not read. Closing it therefore requires either
+
+- teaching the shared, cross-game segment bootstrap to seed a progression
+  counter from the parent run manifest -- new machinery, and seeding an
+  inventory counter is outside the position/RNG/oscillation/frame-counter
+  class the pre-trace bootstrap carve-out enumerates, so it is a hard-rule-4
+  policy decision to escalate; or
+- a recorder/metadata field carrying the segment's starting emerald count --
+  which needs an approved fixture regeneration, currently unauthorised.
+
+Both were deliberately not attempted. Keying the award on the run id, fixture
+name, route or zone would be a carve-out and was rejected. The engine's
+`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` and its
+`isSonic3HalfLevel()` model of `SSEntry_CheckLevel` (`sonic3k.asm:128433-128443`)
+are **not** defective; only the inventory feeding them is.
+
+`TestS3kMgzCompleteRunTraceReplay` remains a non-cross-check: it replays
+`traces/s3k/mgz_completerun`, a different fixture that never reaches the
+all-emeralds arm. `TestS3kSonicTailsCompleteEmeraldRunChain` would carry the
+inventory natively but still stops inside segment 0, sixteen segments short of
+`mgz`.
+
+### Regression
+
+No file under `src/` changed. The probe was reverted and the class re-measured
+after the revert at the control value: **3446 errors, first error 10709,
+30831 compared rows** -- identical to control, so no engine behaviour moved and
+no sweep was warranted.
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift added; in particular
+no `+1` or `-1` anywhere, despite the headline being a one-pixel delta. No
+assertion weakened, widened, excluded, made advisory, deleted or disabled, and
+no test file changed in the landed diff. No trace hydration in committed code;
+the emerald seed existed only as an uncommitted probe. `docs/skdisasm` read for
+labels and offsets only. No zone/act/route/frame/game predicate, no recorder or
+fixture change, no landed fix undone, and
+`MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` was left
+untouched and not relied upon. The concurrently owned Kosinski drain model,
+`Sonic3kAIZEvents`, the hardware-timing port, `CollisionRules`,
+`SolidRoutineProfile` and `CnzTrapDoorInstance` were not read or modified.
