@@ -80800,3 +80800,65 @@ and `target/trace-reports` cleared before every run.
   neither is touched by this change.)
 - `TestTraceStructuralRowComparator` is identically red in isolation on both trees; ignored per
   standing note.
+
+## 2026-08-17 -- S3K Sonic+Tails complete-emerald chain: segment 0 (`aiz`) cleared
+
+`TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+base `542c288b5`, isolated worktree off `$WORKTREE_ROOT/oggf-ssflash-init`.
+
+Command (both trees):
+`mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=<repo>/s3k.gen test`
+
+- **Control (`542c288b5`), reproduced:** `source comparator cannot exhaust after boundary
+  for aiz: production ownership already left LEVEL at tail step 0, comparator cursor 2289
+  of 2290 (bootstrap initial cursor 0), mode path=[SPECIAL_STAGE], level ownership
+  changed=false`.
+- **After the fix:** segment 0 exhausts and the walk advances to segment 1. New frontier:
+  `special stage exited with 1181 represented rows remaining in ss`
+  (`AbstractRunChainTest.assertChainReplay:1271`). Segment 1 is `ss`, 4469 recorded rows,
+  so the engine leaves the special stage roughly 1181 rows early. That is a special-stage
+  duration/exit question, a different owner from this one.
+
+### The last `aiz` row
+
+The tail of the `aiz` segment is the giant-ring capture. Row **2247** (`frame` `$08C7`) is
+the ring-touch frame: `player_animation_id` flips to `$1C` and `player_mapping_frame` to
+`00`, which is `loc_6173A`'s `move.b #$1C,anim(a1)` / `move.b #$53,object_control(a1)`
+(sonic3k.asm:128286-128297). The last recorded row is **2289** -- exactly **42** frames
+later. The ROM's own accounting reproduces 42 with nothing left over:
+
+| ROM step | frames |
+|---|---|
+| `SSEntryFlash_Init` (routine 0, `SetUp_ObjAttributesSlotted` sets routine 2) | 1 (the touch frame itself) |
+| `SSEntryFlash_Main` -> `Animate_RawAdjustFlipX` over `AniRaw_SSEntryFlash` | 9 (8 mapping advances + the terminating `$F4` -> `SSEntryFlash_Finished`) |
+| `Obj_Wait`, `subq.w #1,$2E / bmi` armed with `#$20` | 33 |
+
+`1 + 9 + 33 = 43` executions, the first of which is the touch frame, so
+`SSEntryFlash_GoSS`'s `move.b #$34,(Game_mode).w` lands on touch+42 = row 2289. `LevelLoop`
+(:7886-7921) only tests `cmpi.b #$C,(Game_mode).w` at the bottom of the body, so that frame
+is still a complete iteration and is recorded -- which is why the segment has no terminal
+`$8C` and `levelLoopRowCount` keeps all 2290 rows.
+
+The engine's `Sonic3kSSEntryFlashObjectInstance` had no init state: it began animating on
+its first `update()`. `SSEntryRing`'s touch response allocates the flash via
+`AllocateObject` (:128303-128306) and the engine routes that through
+`spawnDynamicObject` -> `ObjectManager.addDynamicObjectAfterCurrent`
+(AllocateObjectAfterCurrent semantics), so the first `update()` lands on the touch frame --
+the ROM's *init* frame. Total 42 executions instead of 43, `GoSS` on touch+41 = row 2288,
+comparator cursor 2289. Fixed by giving the object the ROM's routine-0 frame. No constant
+was fitted, no assertion touched, and `levelLoopRowCount` is unchanged.
+
+### Blast radius
+
+Red-class sets diffed by NAME in both directions (Python set difference);
+`target/surefire-reports` and `target/trace-reports` cleared before every run.
+
+- `-Ptrace-replay`, both trees: **808 tests, 19 failures / 8 errors, 27 red classes** --
+  identical sets, no newly green, no newly red. (The chain is red on both; its message
+  advances from segment 0 to segment 1.)
+- `-Ptrace-replay-r7`, both trees: **37 tests, 30 failures / 2 errors, 32 red classes** --
+  identical sets.
+- Default profile, both trees, sequential: **15141 tests, 64 failures / 22 errors, 50 red
+  classes** -- identical sets.
+- `TestTraceStructuralRowComparator` red in isolation on both trees; ignored per standing
+  note.

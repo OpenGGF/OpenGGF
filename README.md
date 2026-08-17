@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The special-stage entry flash spends a routine-0 frame, and the run chain clears its first
+  segment (`bugfix/ai-s3k-ssentryflash-init-frame`, merged 2026-08-17).**
+  `TestS3kSonicTailsCompleteEmeraldRunChain` had been dying at `aiz` one row short of exhausting the
+  segment, and the tail turned out to be fully accountable: the giant-ring touch is row 2247, the
+  last recorded row is 2289, and the ROM reproduces that 42-frame gap exactly — 1 frame for
+  `SSEntryFlash_Init` (the touch frame itself, where `SetUp_ObjAttributesSlotted` sets routine 2),
+  9 for `SSEntryFlash_Main` walking `AniRaw_SSEntryFlash`'s nine mapping frames at delay 0 to its
+  `$F4` terminator, and 33 for `Obj_Wait`'s `subq.w #1 / bmi` on the `#$20` it is armed with. 43
+  executions, first on the touch frame, puts `SSEntryFlash_GoSS`'s `move.b #$34,(Game_mode).w`
+  (sonic3k.asm:128405-128410) on touch+42 — and `LevelLoop` only tests the game mode at the *bottom*
+  of its body, so that frame is a complete iteration and is recorded, which is why the segment
+  carries no terminal `$8C`. The engine went straight to its animation state on the first `update()`,
+  spending 42 executions instead of 43 and leaving LEVEL a frame early. An explicit `INIT` state now
+  consumes that tick. Nothing in the comparator or `levelLoopRowCount` was touched — the assertion
+  was correct throughout. The chain now advances to segment 1 (`ss`), where it stops on a
+  special-stage duration owner with 1181 represented rows remaining.
+
 - **The Slots bonus stage is GREEN (`bugfix/ai-slots-r258`, merged 2026-08-17).** Two independent
   defects, both ROM-cited, closed the last 2 errors over an unchanged 5259 compared rows.
   **Frame 3704:** the engine was unloading the slot cage out-of-range, though its live routine
