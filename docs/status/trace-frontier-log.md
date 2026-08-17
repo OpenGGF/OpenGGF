@@ -80636,6 +80636,17 @@ expected outcome for a correctness sweep and it is reported as zero rather than
 dressed up. The value is that the ROM branch is no longer a silent no-op for 47
 objects, which is what makes it hold for a BK2 nobody has recorded yet.
 
+Default profile (`-Dsurefire.forkCount=1`), both trees: the **control run
+truncated** -- it wrote 1679 report classes against the sweep tree's 1915, and its
+13176-test total is therefore not comparable to the sweep's 15118 (a truncated run
+reports fewer red, so the aggregate counters are not used here). Over the
+1679-class intersection: control 43 red, sweep 41, **zero newly red**. The two
+classes red on control and green on the sweep tree --
+`TestMhzMushroomParachuteObjectInstance` and `TestMadmoleBadnikInstance` -- were
+re-run **in isolation on both trees** and are green on both (12/12 and 32/32,
+no failures, no errors), so they are the documented reused-fork ambient flakes and
+not movement. No other class differs in any counter.
+
 ### Discipline
 
 No constant fitted: every published word is the high word of a ROM address read from
