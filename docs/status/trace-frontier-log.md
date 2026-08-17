@@ -81853,3 +81853,38 @@ fixtures and on the engine rather than inferred from the call graph:
 chain with more than twenty level->level boundaries. Whatever the resolution of the
 contradiction above, one application of the masked loss across a whole run is not what a
 per-boundary model implies, and that discrepancy is worth measuring on its own.
+
+### Contradiction resolved: the path is dead, and the masked loss is consumed by the test harness
+
+Three probes in a **single build** (all reverted, none committed), one chain run:
+
+| probe | site | fired |
+|---|---|---|
+| A | `TraceRunReplayWalker.interLevelVblankBudget` entry | **once**, `loss=10` |
+| B | `TraceSessionLauncher.applyRunDestinationVblankAdmission`, above its null check | **never** |
+| C | its call site at :1592, before the `objects != null` guard | **never** |
+
+B and C never firing in the same build that A fires in settles it: **the production
+destination-admission path is genuinely not exercised by the S2 chain**, and the earlier
+retraction was over-cautious. The single A call comes from
+`AbstractRunChainTest.java:2860` — the chain test's own harness computing required ticks —
+not from engine code.
+
+**The architectural consequence is the real finding.** The per-(zone, act) masked loss
+landed in `2ac1487fe` moved the frontier by changing what the *test harness expects*, not by
+changing what the engine *does*. Production `TraceRunVblankClock` seeding
+(`levelDestinationTarget`, `uncomparedInteriorReturnTarget`) does not run on this route at
+all. That fully explains why the SS-return model on `bugfix/ai-ss-return-mask`
+(`0c1fa7a60`) was byte-identical to control — it was placed in code the chain never
+reaches — and it means **the SS-return term belongs in the harness's expectation path, not
+where it currently sits.**
+
+It also resolves the "budget invoked once across 20+ boundaries" oddity from the previous
+entry: one call is what a harness-side computation looks like, not a per-boundary engine
+model. Nothing is wrong with the count.
+
+Standing signal for the next attempt, unchanged and independent of all the above: the engine
+spawns 23 random animals where the ROM spawns 22; the capsule-break phase is `& 7 == 5`
+against the ROM's `2`; that 3-tick offset reproduces the counts through `180/8 = 22.5`; and
+`3 = 11 mod 8` where 11 is the unsubtracted SS-return loss on `ss_5 -> seg7_ehz2`. One ~8s
+chain run reads the count, and it cannot be moved by tuning.
