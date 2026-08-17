@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The special-stage return restores the giant ring's position, not the player's
+  (`bugfix/ai-ss-return-boundary`, merged 2026-08-17).** The chain's segment-1 return boundary was
+  off by 24px in x and 3px in y. `Save_Level_Data2` (sonic3k.asm:61738-61739) writes
+  `move.w x_pos(a0),(Saved2_X_pos).w` — **register-relative**, while every other field it saves is
+  read from a named global (`Player_1+art_tile`, `Ring_count`, `Camera_X_pos`). `SSEntryFlash_GoSS`
+  calls it with `jsr (Save_Level_Data2).l` from inside the flash object's own routine (:128391), so
+  `a0` is the flash — and `SSEntryFlash_Init` copied the flash's coordinates verbatim from its
+  parent giant ring (:128353-128355). **So the ROM stores the ring's position and never the
+  player's**, and `Load_Starpost_Settings` writes it straight back into `Player_1` on return. The
+  fixture proves it: the expected 7112/1216 is exactly the AIZ1 giant ring's recorded position,
+  unchanged for the whole capture, while the engine's 7088/1219 was the player's touch position. The
+  24 and 3 are the ring-minus-player offset and neither appears in the fix — the save simply moved
+  to the flash's `GoSS` expiry, reading the flash's own coordinates. The chain now clears the return
+  boundary and enters segment 2 (`aiz_2`), where it stops on a Kosinski-queue ordinal mismatch that
+  was already present as a suppressed exception before this change.
+
 - **The special-stage entry fade blocks for 22 frames, and the run chain clears segment 1
   (`bugfix/ai-ss-exit-remainder`, merged 2026-08-17).** The chain was leaving `ss` with 1181 of 4469
   rows unconsumed, and it was genuine gameplay divergence rather than a comparator concern: engine
