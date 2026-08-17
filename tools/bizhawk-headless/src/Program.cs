@@ -2228,6 +2228,11 @@ namespace BizHawk.Headless.Gpgx
                         romBytes,
                         sink,
                         options.LoadQueueState);
+                    // The run-level interstitial hardware-timing stream
+                    // outlives every segment, so it is completed here rather
+                    // than at any EndSegment. A no-op unless a completion
+                    // actually landed in a span no segment represents.
+                    sink.CompleteRunFiles();
                 }
                 if (result.RunManifestJson != null)
                 {

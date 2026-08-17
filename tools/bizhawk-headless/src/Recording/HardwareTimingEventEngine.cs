@@ -93,6 +93,25 @@ namespace OpenGGF.BizHawk.Headless
         private int measurementEpoch;
         private int priorMeasurementRawFrame = int.MinValue;
         private int measurementSequenceInFrame;
+        private string interstitialContext;
+
+        /// <summary>
+        /// Names the run-level position of the observations that follow, for
+        /// the spans that belong to no segment (special-stage results, the
+        /// level reload, the locked level intro). Null — the default and the
+        /// only state any per-segment observation ever sees — keeps the
+        /// canonical v5 record shape.
+        ///
+        /// The queue/ordinal ledger itself is unaffected: it was already
+        /// run-wide and already advanced across these spans (the runner
+        /// observed them with a null writer). This only decides how an
+        /// event that does occur there is written down.
+        /// </summary>
+        public string InterstitialContext
+        {
+            get { return interstitialContext; }
+            set { interstitialContext = value; }
+        }
 
         public HardwareTimingEventEngine(byte[] rom)
             : this(rom, null, null, null, null)
@@ -676,7 +695,7 @@ namespace OpenGGF.BizHawk.Headless
             });
         }
 
-        private static void WriteDeferredDirectCompletions(
+        private void WriteDeferredDirectCompletions(
             TextWriter writer,
             int rawFrame,
             List<DeferredDirectCompletion> completions)
@@ -1405,7 +1424,20 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
-        private static void WriteCompletion(
+        /// <summary>
+        /// One completion record. With no interstitial context set — every
+        /// per-segment stream, i.e. every capture the v5 contract already
+        /// describes — the bytes are exactly what they always were, keyed
+        /// by the segment-relative <c>raw_frame</c>.
+        ///
+        /// With a context set, the observation belongs to no segment: there
+        /// is no row and therefore no <c>raw_frame</c> that could name one,
+        /// so the record carries the context's run-level provenance instead.
+        /// The two shapes are deliberately disjoint (distinct field sets,
+        /// distinct files) so a v5 per-segment reader can never be handed an
+        /// interstitial record and vice versa.
+        /// </summary>
+        private void WriteCompletion(
             TextWriter writer,
             int rawFrame,
             string boundary,
@@ -1414,8 +1446,16 @@ namespace OpenGGF.BizHawk.Headless
             string fingerprint)
         {
             writer.Write("{\"event\":\"hardware_work_completed\",");
-            writer.Write("\"raw_frame\":");
-            writer.Write(rawFrame);
+            if (interstitialContext != null)
+            {
+                writer.Write("\"origin\":\"interstitial\",");
+                writer.Write(interstitialContext);
+            }
+            else
+            {
+                writer.Write("\"raw_frame\":");
+                writer.Write(rawFrame);
+            }
             writer.Write(",\"boundary\":\"");
             writer.Write(boundary);
             writer.Write("\",");

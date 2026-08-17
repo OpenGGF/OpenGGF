@@ -18,6 +18,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming pending final module emits one LF event",
                 PendingFinalModuleEmitsOneLfEvent));
             tests.Add(new TestMain.TestCase(
+                "HardwareTiming interstitial context replaces raw_frame with"
+                + " run-level provenance",
+                InterstitialContextReplacesRawFrame));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming clearing the interstitial context restores the"
+                + " canonical record",
+                ClearedInterstitialContextRestoresCanonicalRecord));
+            tests.Add(new TestMain.TestCase(
+                "LazyOpenTextWriter opens nothing until the first write",
+                LazyWriterOpensNothingUntilFirstWrite));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTiming duplicate level frame without retirement writes no event",
                 DuplicateLevelFrameWithoutRetirementWritesNoEvent));
             tests.Add(new TestMain.TestCase(
@@ -232,6 +243,120 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "\"ordinal\":0,\"submission_fingerprint\":\""
                 + fingerprint + "\"}\n",
                 writer.ToString());
+        }
+
+        /// <summary>
+        /// An observation in a span no segment represents has no row, so
+        /// there is no segment-relative raw_frame that could name one. The
+        /// record carries the run-level provenance the runner supplied
+        /// instead, and is field-disjoint from the per-segment shape so the
+        /// two can never be read by the wrong parser.
+        /// </summary>
+        private static void InterstitialContextReplacesRawFrame()
+        {
+            const int source = 0x100;
+            const int destination = 0xA400;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+            engine.InterstitialContext =
+                "\"after_segment\":\"ss\",\"after_segment_index\":12,"
+                + "\"bk2_frame\":52900";
+
+            SetLevelFrame(host, 0x1234);
+            StageActive(host, source, destination, 0x81);
+            engine.ObserveFrameEnd(0, host, writer);
+            SetLevelFrame(host, 0x1235);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            string fingerprint =
+                HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                    "KOS_MODULE_QUEUE",
+                    source,
+                    7,
+                    destination,
+                    1,
+                    "kosinski_moduled",
+                    1);
+            AssertEx.Equal(
+                "{\"event\":\"hardware_work_completed\","
+                + "\"origin\":\"interstitial\",\"after_segment\":\"ss\","
+                + "\"after_segment_index\":12,\"bk2_frame\":52900,"
+                + "\"boundary\":\"post_objects\","
+                + "\"kind\":\"kos_module_queue\","
+                + "\"ordinal\":0,\"submission_fingerprint\":\""
+                + fingerprint + "\"}\n",
+                writer.ToString());
+        }
+
+        /// <summary>
+        /// The context is per-observation. Once cleared, the very next
+        /// event is byte-identical to what every existing per-segment
+        /// stream contains — this is the check that the v5 contract cannot
+        /// be contaminated by a leaked context.
+        /// </summary>
+        private static void ClearedInterstitialContextRestoresCanonicalRecord()
+        {
+            const int source = 0x100;
+            const int destination = 0xA400;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+            engine.InterstitialContext = "\"after_segment\":null,"
+                + "\"after_segment_index\":-1,\"bk2_frame\":7";
+            engine.InterstitialContext = null;
+
+            SetLevelFrame(host, 0x1234);
+            StageActive(host, source, destination, 0x81);
+            engine.ObserveFrameEnd(12, host, writer);
+            SetLevelFrame(host, 0x1235);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(13, host, writer);
+
+            string fingerprint =
+                HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                    "KOS_MODULE_QUEUE",
+                    source,
+                    7,
+                    destination,
+                    1,
+                    "kosinski_moduled",
+                    1);
+            AssertEx.Equal(
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"post_objects\",\"kind\":\"kos_module_queue\","
+                + "\"ordinal\":0,\"submission_fingerprint\":\""
+                + fingerprint + "\"}\n",
+                writer.ToString());
+        }
+
+        /// <summary>
+        /// The runner hands an interstitial writer to the observer on every
+        /// unrepresented frame, and almost none of them emit. If the target
+        /// opened anyway, every S3K run capture would gain a 0-byte file.
+        /// </summary>
+        private static void LazyWriterOpensNothingUntilFirstWrite()
+        {
+            var opens = 0;
+            var target = new StringWriter();
+            var lazy = new LazyOpenTextWriter(() =>
+            {
+                opens++;
+                return target;
+            });
+
+            lazy.Flush();
+            AssertEx.Equal(0, opens);
+            AssertEx.Equal(false, lazy.Opened);
+
+            lazy.Write("x");
+            lazy.Write("y");
+            AssertEx.Equal(1, opens);
+            AssertEx.Equal(true, lazy.Opened);
+            AssertEx.Equal("xy", target.ToString());
         }
 
         private static void DuplicateLevelFrameWithoutRetirementWritesNoEvent()

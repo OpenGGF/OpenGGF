@@ -124,6 +124,7 @@
     <Compile Include="src/Recording/S2Zones.cs" />
     <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
     <Compile Include="src/Recording/HardwareTimingEventEngine.cs" />
+    <Compile Include="src/Recording/LazyOpenTextWriter.cs" />
     <Compile Include="src/Recording/DynamicArtRomProfile.cs" />
     <Compile Include="src/Recording/DynamicArtTransferState.cs" />
     <Compile Include="src/Recording/DynamicArtCaptureRowBuffer.cs" />
