@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **MGZ's reported frontier is a 29-error island; 99% of its mass is the emerald boundary
+  (`bugfix/ai-mgz-17383-emerald-bootstrap`, findings merged 2026-08-17).** Frame 10709 opens an
+  island of 29 one-pixel errors ending at 10839 that re-converges with nothing cascading; **36 of
+  3446 errors start before 17383 and 3410 start at or after it**, with frames 13864-15531 and
+  15562-17382 completely clean. At 17383 the fixture's own aux names the owner with no
+  instrumentation (P62): slot 4 rewrites `object_code` from `Obj_SSEntryRing` to
+  `Delete_Current_Sprite`, and the ROM's `rings` steps `0x28 -> 0x5A` in one frame — the +50 award —
+  while the engine writes `loc_6173A`'s capture values instead, because it holds zero emeralds. A
+  throwaway probe seeding the seven emeralds the parent `run_manifest.json` records at MGZ entry
+  took the class **3446 -> 2002 errors** with 15562-18143 becoming completely clean, so this is
+  execution evidence rather than mechanism fit. The engine's branch is correct; only the inventory
+  feeding it is absent, and it exists in no fixture the segment harness reads. Behind it sits an
+  **unblocked** sidekick frontier at 19983 carrying 1964 of the residual errors, where the ROM
+  writes the despawn marker and the engine keeps Tails in the level.
+
 - **The AIZ terrain swap has no correct instant, and no ROM drain model exists to find one
   (`bugfix/ai-aiz-kos-drain-finding`, findings merged 2026-08-17).** Two premises behind the held
   four-part top-solid cluster are refuted from data already in the fixtures. First, the engine does
