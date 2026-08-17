@@ -47,6 +47,20 @@ public class TraceBinder {
     // frames, and long complete-run segments would otherwise retain tens of
     // thousands of them.
     private int highestComparedFrame = Integer.MIN_VALUE;
+    // Life-count change tracking. A death or a 1UP is only visible as a
+    // *transition*, so alongside the level comparison the binder emits a
+    // per-frame delta comparison whose mismatch names the exact frame the ROM
+    // gained or lost a life. Updated strictly forwards so aux re-merges and
+    // re-comparisons of earlier frames recompute the same delta.
+    private int lastLivesFrame = Integer.MIN_VALUE;
+    private int lastExpectedLives = TraceFrame.LIVES_ABSENT;
+    private int lastActualLives = EngineDiagnostics.LIVES_ABSENT;
+    // Baseline the current frame's delta was measured against, retained so a
+    // re-put of the same frame reproduces the same lives_delta rather than
+    // dropping the field.
+    private int livesBaselineFrame = Integer.MIN_VALUE;
+    private int livesBaselineExpected = TraceFrame.LIVES_ABSENT;
+    private int livesBaselineActual = EngineDiagnostics.LIVES_ABSENT;
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
     // One binder compares one replay segment, so it owns that segment's
     // dynamic-art delivery-id origin. See DynamicArtIdEpoch.
@@ -258,6 +272,8 @@ public class TraceBinder {
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
             fields.put("rings", compareRingCount(expected.rings(), engineDiag.rings()));
         }
+
+        appendLifeCountComparisons(fields, expected, engineDiag);
 
         // Camera coords: only compared when BOTH ROM trace and engine diagnostics
         // recorded them. Engine values are masked to 16 bits to align with ROM's
@@ -701,6 +717,76 @@ public class TraceBinder {
         return new FieldComparison(name,
             String.valueOf(expected), String.valueOf(actual),
             Severity.ERROR, Math.abs(expected - actual));
+    }
+
+
+    /**
+     * Compare the ROM life counter against the engine's.
+     *
+     * <p>Two fields are emitted, and deliberately not folded into one:
+     * <ul>
+     *   <li>{@code lives} -- the level. A missed or spurious death leaves the two
+     *       sides disagreeing from the transition onwards, so this catches the
+     *       condition even if the replay is only inspected later.</li>
+     *   <li>{@code lives_delta} -- the transition. This is the field that answers
+     *       "on which frame". It compares the per-frame change rather than the
+     *       running total, so exactly the frame where the ROM gained or lost a
+     *       life (and the engine did not, or vice versa) reports ERROR instead of
+     *       every frame after it.</li>
+     * </ul>
+     *
+     * <p>When the recording carries {@code life_count} but the engine snapshot has
+     * no life count, {@code lives_present} reports ERROR rather than the
+     * comparison silently disappearing. Recordings made before the column existed
+     * carry {@link TraceFrame#LIVES_ABSENT} and emit no fields at all -- that is
+     * the only path on which nothing is compared, and it is keyed on the recording,
+     * not on the engine.
+     *
+     * <p>Comparison-only: nothing here writes the recorded count anywhere.
+     */
+    private void appendLifeCountComparisons(Map<String, FieldComparison> fields,
+            TraceFrame expected, EngineDiagnostics engineDiag) {
+        int expectedLives = expected.lives();
+        if (expectedLives < 0) {
+            // Pre-life_count recording: no life data was recorded to compare against.
+            return;
+        }
+        int actualLives = engineDiag == null
+                ? EngineDiagnostics.LIVES_ABSENT
+                : engineDiag.lives();
+        boolean enginePresent = actualLives >= 0;
+        fields.put("lives_present", compareFlag("lives_present", true, enginePresent));
+        if (!enginePresent) {
+            return;
+        }
+
+        fields.put("lives", compareDecimal("lives", expectedLives, actualLives));
+
+        if (expected.frame() > lastLivesFrame) {
+            livesBaselineFrame = expected.frame();
+            livesBaselineExpected = lastExpectedLives;
+            livesBaselineActual = lastActualLives;
+            lastLivesFrame = expected.frame();
+            lastExpectedLives = expectedLives;
+            lastActualLives = actualLives;
+        }
+        if (expected.frame() == livesBaselineFrame
+                && livesBaselineExpected >= 0 && livesBaselineActual >= 0) {
+            fields.put("lives_delta", compareDecimal("lives_delta",
+                    expectedLives - livesBaselineExpected,
+                    actualLives - livesBaselineActual));
+        }
+    }
+
+    /**
+     * Exact comparison rendered in decimal. Life counts and their per-frame
+     * deltas are read by humans as counts, not as ROM words, and a delta of
+     * {@code -1} must not print as {@code -0001}.
+     */
+    private static FieldComparison compareDecimal(String name, int expected, int actual) {
+        Severity severity = expected == actual ? Severity.MATCH : Severity.ERROR;
+        return new FieldComparison(name, String.valueOf(expected), String.valueOf(actual),
+                severity, Math.abs(expected - actual));
     }
 
     private FieldComparison compareRingCount(int expected, int actual) {

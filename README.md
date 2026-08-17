@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A life gain or loss is now reported on the frame it happens
+  (`feature/ai-lives-trace`, merged 2026-08-17).** No fixture recorded a life counter or a
+  death event -- the 42-column v5 row had none -- so a spurious death only surfaced
+  indirectly, through `player_routine` changing and the position resetting. `Life_count` is a
+  byte at `$FFFFFE12` in all three games (`s1disasm/_Variables.asm:356`,
+  `s2disasm/s2.constants.asm:1677`, `skdisasm/sonic3k.constants.asm:794`) and all five
+  gameplay recorders now write it as a trailing `life_count` column. `TraceBinder` emits three
+  fields, because a death is only visible as a transition: `lives` (the running level, so a
+  missed death stays divergent), **`lives_delta`** (the per-frame change -- the field that
+  answers *which frame*, since exactly the transition frame reports ERROR rather than every
+  frame after it), and `lives_present` (ERROR when the recording carries a life count and the
+  engine snapshot does not). That third field exists so this cannot repeat the
+  `routine`/`status_byte` pattern, where a failed engine-side guard makes the comparison
+  vanish instead of fail and "no mismatch" stops meaning "checked and passed".
+  `TestTraceLifeCountComparisonGuard` asserts the comparison actually **ran**, not merely that
+  nothing mismatched. Fixtures recorded before the column parse unchanged and report the count
+  absent, keyed on the recording rather than on the engine. The recorded count is
+  comparison-only under hard rule 4 -- never hydrated into engine state. Verified at 789
+  tests, three red, the three chains only.
+
 - **The S2 run chain reconciles its inter-level clock after the admission wait
   (`bugfix/ai-s2-chain-vblank-phase`, merged 2026-08-17).** The level -> level path
   reconciled its V-blank budget *before* `admitLevelWhenReady`, leaving that admission wait's

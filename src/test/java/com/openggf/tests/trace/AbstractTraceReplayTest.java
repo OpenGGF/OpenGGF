@@ -541,7 +541,8 @@ public abstract class AbstractTraceReplayTest {
                         EngineDiagnostics.formattedWithCameraAnimationAndRings(
                                 engineDiag.cameraX(), engineDiag.cameraY(),
                                 engineDiag.animationId(), engineDiag.mappingFrame(),
-                                engineDiag.rings(), engineDiagText),
+                                engineDiag.rings(), engineDiagText)
+                                .withLives(engineDiag.lives()),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
@@ -1312,9 +1313,17 @@ public abstract class AbstractTraceReplayTest {
             solidEvent = combineDiagnostics(solidEvent, additionalEngineObjectDiagnostics(om));
         }
 
+        // Life count for the recorded life_count column. GameServices.gameStateOrNull()
+        // is null outside a gameplay session, in which case -1 makes TraceBinder
+        // raise lives_present rather than dropping the comparison.
+        int lives = GameServices.gameStateOrNull() != null
+                ? GameServices.gameStateOrNull().getLives()
+                : EngineDiagnostics.LIVES_ABSENT;
+
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame());
+                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame(),
+                lives);
     }
 
     private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {

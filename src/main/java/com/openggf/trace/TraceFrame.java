@@ -39,8 +39,14 @@ public record TraceFrame(
     int animationId,
     int mappingFrame,
     // v5: optional first-sidekick state (for Sonic 2 this is Tails)
-    TraceCharacterState sidekick
+    TraceCharacterState sidekick,
+    // v5.1: ROM Life_count ($FFFFFE12 in all three games). -1 when the recording
+    // predates the column. Comparison-only -- never hydrated into engine state.
+    int lives
 ) {
+
+    /** Sentinel for "this recording carries no life counter". */
+    public static final int LIVES_ABSENT = -1;
 
     public TraceFrame(
         int frame,
@@ -69,6 +75,21 @@ public record TraceFrame(
         this(frame, input, x, y, xSpeed, ySpeed, gSpeed, angle, air, rolling, groundMode,
             xSub, ySub, routine, cameraX, cameraY, rings, statusByte, gameplayFrameCounter,
             standOnObj, vblankCounter, lagCounter, -1, -1, null);
+    }
+
+    /** Backward-compatible canonical-arity constructor for recordings without life_count. */
+    public TraceFrame(
+            int frame, int input, short x, short y,
+            short xSpeed, short ySpeed, short gSpeed, byte angle,
+            boolean air, boolean rolling, int groundMode,
+            int xSub, int ySub, int routine, int cameraX, int cameraY,
+            int rings, int statusByte, int gameplayFrameCounter, int standOnObj,
+            int vblankCounter, int lagCounter, int animationId, int mappingFrame,
+            TraceCharacterState sidekick) {
+        this(frame, input, x, y, xSpeed, ySpeed, gSpeed, angle, air, rolling, groundMode,
+                xSub, ySub, routine, cameraX, cameraY, rings, statusByte,
+                gameplayFrameCounter, standOnObj, vblankCounter, lagCounter,
+                animationId, mappingFrame, sidekick, LIVES_ABSENT);
     }
 
     /** Backward-compatible full constructor for v5/v6 call sites. */
@@ -119,7 +140,7 @@ public record TraceFrame(
             air, rolling, groundMode, xSub, ySub, routine,
             visualFrame.cameraX(), visualFrame.cameraY(), visualFrame.rings(),
             statusByte, gameplayFrameCounter, standOnObj, vblankCounter,
-            lagCounter, animationId, mappingFrame, sidekick);
+            lagCounter, animationId, mappingFrame, sidekick, lives);
     }
 
     /**
@@ -134,20 +155,28 @@ public record TraceFrame(
             air, rolling, groundMode, xSub, ySub, routine,
             visualFrame.cameraX(), visualFrame.cameraY(), rings,
             statusByte, gameplayFrameCounter, standOnObj, vblankCounter,
-            lagCounter, animationId, mappingFrame, sidekick);
+            lagCounter, animationId, mappingFrame, sidekick, lives);
     }
 
-    /** V5 level-row column count. */
+    /** V5 level-row column count (recordings without the life_count column). */
     private static final int V5_COLUMNS = 42;
+
+    /**
+     * V5 level-row column count for recordings that carry the trailing
+     * {@code life_count} column. Both widths are accepted: fixtures committed
+     * before the column was added stay parseable, and report {@link #LIVES_ABSENT}.
+     */
+    private static final int V5_COLUMNS_WITH_LIVES = 43;
 
     /**
      * Parse one fixed-width v5 level row (all values in hexadecimal).
      */
     public static TraceFrame parseCsvRow(String line) {
         String[] parts = line.split(",", -1);
-        if (parts.length != V5_COLUMNS) {
+        if (parts.length != V5_COLUMNS && parts.length != V5_COLUMNS_WITH_LIVES) {
             throw new IllegalArgumentException(
-                    "Trace schema 5 requires " + V5_COLUMNS + " CSV columns, got "
+                    "Trace schema 5 requires " + V5_COLUMNS + " or "
+                            + V5_COLUMNS_WITH_LIVES + " CSV columns, got "
                             + parts.length + ": " + line);
         }
         return parseV5Row(parts);
@@ -165,13 +194,17 @@ public record TraceFrame(
 
         TraceCharacterState primary = TraceCharacterState.parseV7CsvColumns(parts, 8);
         TraceCharacterState sidekick = TraceCharacterState.parseV7CsvColumns(parts, 25);
+        int lives = parts.length == V5_COLUMNS_WITH_LIVES
+                ? Integer.parseInt(parts[42].trim(), 16)
+                : LIVES_ABSENT;
 
         return new TraceFrame(frame, input,
                 primary.x(), primary.y(), primary.xSpeed(), primary.ySpeed(), primary.gSpeed(),
                 primary.angle(), primary.air(), primary.rolling(), primary.groundMode(),
                 primary.xSub(), primary.ySub(), primary.routine(), cameraX, cameraY, rings,
                 primary.statusByte(), gameplayFrameCounter, primary.standOnObj(),
-                vblankCounter, lagCounter, primary.animationId(), primary.mappingFrame(), sidekick);
+                vblankCounter, lagCounter, primary.animationId(), primary.mappingFrame(),
+                sidekick, lives);
     }
 
     /** Whether this frame has v2 diagnostic data. */
@@ -233,6 +266,9 @@ public record TraceFrame(
         }
         if (animationId >= 0 && mappingFrame >= 0) {
             base += String.format(" anim=%02X map=%02X", animationId, mappingFrame);
+        }
+        if (lives >= 0) {
+            base += String.format(" lives=%d", lives);
         }
         if (sidekick != null) {
             base += " " + sidekick.formatDiagnostics("sidekick");

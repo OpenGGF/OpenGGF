@@ -30,6 +30,22 @@ All notable changes to the OpenGGF project are documented in this file.
   constructors supply exactly the call the comparator made inline.
 
 ### Added
+- Per-frame life-count reporting in the trace system. No fixture recorded a life
+  counter or a death event at all, so a spurious death only surfaced indirectly
+  through `player_routine` and a position reset. All five gameplay recorders now
+  write a trailing `life_count` column read from ROM `Life_count`, which sits at
+  `$FFFFFE12` in all three games (`s1disasm/_Variables.asm:356` `v_lives`,
+  `s2disasm/s2.constants.asm:1677`, and the S3K `CrossResetRAM` walk already
+  documented in `s3k_complete_run_recorder.lua`). `TraceBinder` compares it as
+  three fields: `lives_present` (ERROR when the recording has a life count and
+  the engine snapshot does not, so the comparison cannot silently disappear),
+  `lives` (the running level), and `lives_delta` (the per-frame change, which
+  names the exact frame a life was gained or lost). The recorded value is
+  comparison-only and is never hydrated into engine state.
+  `TestTraceLifeCountComparisonGuard` asserts the comparison actually runs.
+  Fixtures recorded before the column parse unchanged and report the life count
+  absent; that is the only path on which nothing is compared, and it is keyed on
+  the recording rather than on the engine.
 - `TestS1CompleteEmeraldRunChain` drives the committed
   `s1-sonic-complete-withemeralds` route end to end. Release 6 commits to S1, S2
   and S3K chains green, and S1 had a prefix pin but no chain test, so how far the

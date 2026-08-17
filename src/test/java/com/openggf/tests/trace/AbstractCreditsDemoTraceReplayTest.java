@@ -419,9 +419,16 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
         }
 
+        // Life count for the recorded life_count column. Null outside a gameplay
+        // session, where -1 makes TraceBinder raise lives_present rather than
+        // dropping the comparison.
+        int lives = GameServices.gameStateOrNull() != null
+                ? GameServices.gameStateOrNull().getLives()
+                : EngineDiagnostics.LIVES_ABSENT;
+
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                -1, -1, sprite.getAnimationId(), sprite.getMappingFrame());
+                -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), lives);
     }
 
     private void writeReport(DivergenceReport report, int demoIndex) {
