@@ -81888,3 +81888,44 @@ spawns 23 random animals where the ROM spawns 22; the capsule-break phase is `& 
 against the ROM's `2`; that 3-tick offset reproduces the counts through `180/8 = 22.5`; and
 `3 = 11 mod 8` where 11 is the unsubtracted SS-return loss on `ss_5 -> seg7_ehz2`. One ~8s
 chain run reads the count, and it cannot be moved by tuning.
+
+## 2026-08-17 - Release-6 chain baseline after the comparator fix (10b2fb39b)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS{1,2,3k*}CompleteEmeraldRun{Chain,Prefix}` with all
+three ROM properties. Tree: `develop` at `10b2fb39b`, which includes James's
+`9b077bdfb` and `641467596` S3K special-stage return fixes. 7 tests, 2 failures, 1 error.
+
+| test | result |
+|---|---|
+| `TestS1CompleteEmeraldRunPrefix` | **green** (2 pins) |
+| `TestS2CompleteEmeraldRunPrefix` | **green** (segment 10) |
+| `TestS3kSonicTailsCompleteEmeraldRunPrefix` | **green** (segment 1) |
+| `TestS1CompleteEmeraldRunChain` | red |
+| `TestS2CompleteEmeraldRunChain` | red |
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | red |
+
+Every pin green and every chain red is the intended shape of a ratchet gate: the pins defend
+ground won, the chains report the frontier.
+
+**S1** - segments 3 (`ghz2_2`) and 6 (`ghz3_2`) both diverge at **frame 0** on
+`dynamic_art.edges`, rom `[]` engine `[0, 1]`: the engine publishes two dynamic-art edges at
+segment entry that the ROM does not have. 4,563 and 12,110 errors. Also a walk-failure,
+`source comparator is not complete for mz1: cursor 3390 of 3391` - one row short. Newly
+measured; this route had no chain test before today.
+
+**S2** - unchanged: segment 11 (`seg7_ehz2`), 236 errors, frame 3525,
+`queue.s2_nemesis_plc.busy` rom=false engine=true, plus a walk-failure exhausting that
+segment's source comparator at cursor 3977 of 3997 with `mode path=[TITLE_CARD]`. James's
+S3K fixes did not touch it, as expected.
+
+**S3K** - `IllegalStateException: non-exportable pending hardware submission at segment end:
+KOS_MODULE_QUEUE#14`. The suppressed detail is the useful part: across raw frames 35-3989 the
+ROM expects `KOS_MODULE_QUEUE#24, #25, #26, #27, #28 ... #34` while the engine is pending
+`#14` throughout, and expects `KOS_DECOMPRESSION_QUEUE#43 ... #60` while the engine is
+pending `#27`. **The sha256s match** - engine `#14` carries
+`65c8c371e1ca1f70acf3a74cc1fa689867dcffbe93617a8c968e3de9242f89b3`, which is exactly the
+payload the ROM wants at `#30`. So the engine is loading the right art with the wrong
+ordinal: it is roughly 10 module and 16-33 decompression submissions behind, never ahead
+and never wrong-payload. That is the signature of submissions the engine never makes at all,
+consistent with the unmodelled title-card and results Kosinski art, and it quantifies the
+gap as a submission count rather than a timing offset.
