@@ -242,7 +242,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   12,110 to 4,982 with its first mismatch moving from frame 0 `dynamic_art.edges` to a real
   gameplay divergence at frame 3643 (`rings`), and gap failures drop 3 to 1. The
   `ghz2 -> ghz2_2` and `ghz3 -> ghz3_2` gaps now match exactly including request lists and
-  sha256 ledger fingerprints. No new constants. Verified against all three chains and both
+  sha256 ledger fingerprints. No new constants. Remaining on that chain after this: the
+  `ghz3_2 -> mz1` gap, where the engine closes the source 146 rows early, and an `mz1`
+  walk-failure one row short that this fix leaves unchanged and is therefore independent. Verified against all three chains and both
   visual runs: red set unchanged from control at three classes, all prefix pins green.
 
 - **The structural row comparator no longer depends on ambient global state, and
