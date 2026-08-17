@@ -68,7 +68,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * See {@code docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md}.
  */
 @RequiresRom(SonicGame.SONIC_3K)
-public class TestS3kHczCompleteRunTraceReplay extends AbstractTraceReplayTest {
+public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s3k/hcz_completerun");
     private static final int POINDEXTER_PRE_HIT_FRAME = 5725;
     private static final Set<Integer> POINDEXTER_OBSERVATION_FRAMES =

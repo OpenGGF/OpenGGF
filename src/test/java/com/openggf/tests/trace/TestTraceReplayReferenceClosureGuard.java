@@ -4,7 +4,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay;
-import com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay;
+import com.openggf.tests.trace.s3k.TestS3kAizZoneSliceTraceReplay;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import org.junit.jupiter.api.Test;
@@ -298,7 +298,7 @@ class TestS2ReplayReferenceClosureIntegration extends TestS2Ehz1TraceReplay {
 }
 
 @RequiresRom(SonicGame.SONIC_3K)
-class TestS3kReplayReferenceClosureIntegration extends TestS3kAizCompleteRunTraceReplay {
+class TestS3kReplayReferenceClosureIntegration extends TestS3kAizZoneSliceTraceReplay {
     private int validations;
 
     @Override

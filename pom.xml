@@ -284,6 +284,75 @@
                                 <exclude>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</exclude>
                                 <exclude>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</exclude>
                                 <exclude>**/tests/trace/runs/TestS3kMegaRunChain.java</exclude>
+                                <!--
+                                  Segment gate. A per-zone or per-act segment RESUMES a
+                                  playthrough: it inherits progression state (emeralds above
+                                  all) that it cannot earn, so a green segment proves only
+                                  "given this boundary state, do frames 1..N evolve
+                                  correctly". That is instrumentation, not parity evidence.
+                                  The run chains earn everything by playing and are the gate.
+                                  Segments run in -Ptrace-segments.
+                                  Note the *CompleteRunTraceReplay classes are ALSO per-zone
+                                  slices despite the name — each covers one zone's two acts
+                                  plus the handoff, all sliced from one movie. They differ
+                                  from the sonictails/ set only in that their source movie
+                                  never collects emeralds, so they miss the boundary rather
+                                  than clearing it.
+                                  See docs/status/trace-scope-release-6.md.
+                                -->
+                                <exclude>**/tests/trace/s3k/sonictails/*.java</exclude>
+                                <exclude>**/tests/trace/s3k/*CompleteRunTraceReplay.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Segment traces: instrumentation, not the release gate.
+
+          A per-zone or per-act segment resumes a playthrough mid-flight. It is
+          seeded with position/zone/act from metadata but inherits progression
+          state — emeralds above all — that it has no way to earn, so its
+          comparison answers only "given this boundary state, do frames 1..N
+          evolve correctly". Useful for localisation (a chain red says "somewhere
+          after cursor N"; a segment red names the zone) and cheap to iterate on,
+          but not evidence of parity.
+
+            mvn -Ptrace-segments test
+
+          The run chains are the gate: they play through and earn every piece of
+          run state, so their greens are parity claims.
+        -->
+        <profile>
+            <id>trace-segments</id>
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine}</argLine>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/tests/trace/s3k/sonictails/*.java</include>
+                                <include>**/tests/trace/s3k/*CompleteRunTraceReplay.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
+                            <excludes>
+                                <exclude>**/Debug*.java</exclude>
+                                <exclude>**/*Probe*.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

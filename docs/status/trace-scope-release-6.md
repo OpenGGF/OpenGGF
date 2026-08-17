@@ -170,3 +170,64 @@ either. The fix is for that class to open its own session
 (`TestEnvironment.activeGameplayMode()`, as `TestS3kSlotBonusStageCoordinator` does), not
 to restore the ordering it happened to rely on. Until then it is red in the release-6
 sweep and is **not** a trace-parity failure.
+
+
+## 2026-08-17: the release gate is the run chains, not the segments
+
+**Segments are instrumentation, not evidence.** A per-zone or per-act segment *resumes* a
+playthrough: it is seeded with position/zone/act from metadata but inherits progression
+state -- emeralds above all -- that it has no way to earn. Its comparison can therefore only
+answer *"given this boundary state, do frames 1..N evolve correctly"*. That is useful for
+localisation (a chain red says "somewhere after cursor N"; a segment red names the zone) and
+cheap to iterate on, but it is not a parity claim.
+
+The **run chains** play through and earn every piece of run state. They are the gate.
+
+### The `*CompleteRunTraceReplay` classes were badly named, and it misled this work
+
+They are **not** complete runs. Each covers exactly one zone's two acts plus the handoff into
+the next zone, and all fifteen fixtures are per-zone slices of the *same* movie:
+
+| fixture | rows | zone-acts covered |
+|---|---:|---|
+| `aiz_completerun` | 26,228 | AIZ1, AIZ2, -> HCZ1 |
+| `lbz_completerun` | 46,244 | LBZ1, LBZ2, -> MHZ1 |
+| `soz_completerun` | 59,507 | SOZ1, SOZ2, -> LRZ1 |
+| `ddz_completerun` | 719 | DDZ only |
+
+A genuine complete run would be the ~465,000-row sum replayed continuously. The name
+described the *source movie*, not the scope.
+
+Structurally they are segments. They differ from the `sonictails/` set only in that their
+source movie (`s3k-complete-sonic-tails.bk2`) **never collects emeralds**, so their giant
+rings capture in both ROM and engine and agree -- they miss the inventory boundary rather
+than clearing it. That is the entire reason one family looked healthier than the other, and
+it is why `LbzZoneSlice` is green while `LbzSegment` is red at 7,174.
+
+The seven S3K classes are renamed `TestS3k<Zone>ZoneSliceTraceReplay`. **Historical
+references in `trace-frontier-log.md` keep the old names** -- that log is append-only with a
+byte-for-byte historic-prefix guard, and a historical record should say what was true when it
+was written.
+
+### Profiles
+
+- **`-Ptrace-replay`** -- the release gate. Chains, whole-level replays that start from a
+  clean state, and the S1/S2 suites.
+- **`-Ptrace-segments`** -- every per-zone and per-act segment, including the renamed zone
+  slices. Instrumentation; run it while working a zone.
+- **`-Ptrace-replay-r7`** -- out of release-6 scope (S&K-half zones, Knuckles routes).
+
+### Measured effect
+
+Gate before: 806 tests, 28 red. Gate after: **766 tests, 3 red** -- and only **two** are real:
+
+| class | failure |
+|---|---|
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | special stage exited with 1181 rows remaining in `ss` (segment 1 of 63) |
+| `TestS2CompleteEmeraldRunChain` | 5 axes, end-of-act -> `TITLE_CARD` handoff |
+| `TestTraceStructuralRowComparator` | needs a gameplay session it never opens; fails in isolation on any tree, not a parity failure |
+
+The 40 classes that left the gate did not become green -- they became **honest**. They were
+never parity evidence, and reporting their red count as the release figure overstated how
+much of the remaining work was engine work and understated how far the chains are from
+finished.

@@ -11,7 +11,7 @@ import java.util.List;
 
 /** S3K ICZ from the Sonic+Tails complete-run TAS. Per-zone segment: act1 -> seamless act1->act2 transition -> act2 -> the act2->next-zone exit handoff. zone()=5 (S3K zone_id == engine index); act()=0. */
 @RequiresRom(SonicGame.SONIC_3K)
-public class TestS3kIczCompleteRunTraceReplay extends AbstractTraceReplayTest {
+public class TestS3kIczZoneSliceTraceReplay extends AbstractTraceReplayTest {
     @Override protected SonicGame game() { return SonicGame.SONIC_3K; }
     @Override protected int zone() { return 5; }
     @Override protected int act() { return 0; }

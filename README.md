@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The release gate is the run chains; segments are instrumentation (2026-08-17).** A per-zone or
+  per-act segment *resumes* a playthrough — seeded with position/zone/act, but inheriting
+  progression state (emeralds above all) it cannot earn — so it can only answer "given this boundary
+  state, do frames 1..N evolve correctly". The run chains play through and earn everything, so they
+  are the parity proof. Segments move to a new `-Ptrace-segments` profile.
+  The `*CompleteRunTraceReplay` classes turned out to be **badly named**: each covers one zone's two
+  acts plus the handoff, and all fifteen fixtures are per-zone slices of the *same* movie — a real
+  complete run would be their ~465,000-row sum. They differ from the other segments only in that
+  their source movie never collects emeralds, so they miss the inventory boundary rather than
+  clearing it, which is why `LbzZoneSlice` is green while `LbzSegment` is red at 7,174. The seven
+  S3K classes are renamed `TestS3k<Zone>ZoneSliceTraceReplay`; historical references in the
+  append-only frontier log keep their old names.
+  **Gate: 806 tests / 28 red -> 766 tests / 3 red**, of which only two are real — the S3K chain
+  (stopped in segment 1 of 63) and the S2 chain. The 40 classes that left did not become green, they
+  became honest: reporting their red count as the release figure overstated how much of the
+  remaining work was engine work, and understated how far the chains are from finished.
+
 - **The special-stage entry flash spends a routine-0 frame, and the run chain clears its first
   segment (`bugfix/ai-s3k-ssentryflash-init-frame`, merged 2026-08-17).**
   `TestS3kSonicTailsCompleteEmeraldRunChain` had been dying at `aiz` one row short of exhausting the
