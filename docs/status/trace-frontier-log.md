@@ -81787,3 +81787,36 @@ from tuning the window until the count reads 22.
 Next: establish what the ROM's `Vint_runcount` phase is at the capsule-break frame and
 where the engine's diverges from it. The count (22 vs 23) is now a single cheap green/red
 signal for any candidate fix.
+### The phase error is 3 = 11 mod 8, and the SS-return seeding path is dead code
+
+Two probe runs (both reverted, neither committed) close the loop on the 22-vs-23 count.
+
+**The phase is measurable and explains the count exactly.** At the capsule-break frame the
+ROM's counter sits at `& 7 == 2` and the engine's at `& 7 == 5` — a 3-tick offset. From
+phase 2 the first random spawn falls at +6, giving `floor((180-6)/8)+1 = 22`; from phase 5
+it falls at +3, giving `floor((180-3)/8)+1 = 23`. That is the whole defect, arithmetically.
+
+**3 = 11 mod 8**, and 11 is precisely the special-stage round-trip loss the engine never
+subtracts. `seg7_ehz2` is entered from `ss_5`. So the phase error at the capsule is the
+unsubtracted SS-return mask, surviving mod 8 into a `& 7` gate ~300 frames later.
+
+**But the fix cannot be placed where it currently is.** A probe on
+`TraceSessionLauncher.applyRunDestinationVblankAdmission` printed *nothing* on a full chain
+run — not from the presentation branch, not the level branch, and not from an unconditional
+statement placed above the `runVblankClock == null` check. The method is never invoked for
+this chain. The `TraceRunVblankClock` destination-admission path (`levelDestinationTarget`,
+`uncomparedInteriorReturnTarget`) is therefore dead code for the S2 run route, which is the
+complete explanation for why the SS-return model on `bugfix/ai-ss-return-mask`
+(`0c1fa7a60`) measured byte-identical to control: it could not execute. **That branch must
+not be revived as placed.**
+
+This does not contradict `2ac1487fe` having moved the frontier — the per-(zone, act) masked
+loss evidently reaches the walker through a different consumer of
+`interLevelNonAdvancingMovieRows`. Identifying that consumer is the next step, because it
+is where the SS-return term belongs.
+
+**The cheap signal stands.** Any candidate fix is tested by the animal count: 22 random
+spawns is the ROM, 23 is today's engine, one ~8s chain run to read it, no fixture
+regeneration and no comparator involved. And because the window constant `$B4` and the
+spawn/decrement ordering are both already correct and cited, the count cannot be moved by
+tuning — only by correcting the phase, which is what makes it a rule-3-safe target.
