@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Slot Machine bonus stage bled its `$36`/`$37` interaction throttles down on
+  every frame. ROM `sub_4BE3A` (sonic3k.asm:99194-99206) reads `$30(a0)` -- the special tile
+  id the corner scan stored this frame -- and branches to the tile dispatcher when it is
+  non-zero, so the two `subq.b #1` decrements only run on frames where **no** special tile is
+  under the player. While the player rests in continuous contact with a reversal tile (id 6)
+  `$37(a0)` therefore stays pinned at the `$1E` loaded at :99261, and the `tst.b $37(a0)/bne`
+  gate at :99259 suppresses every further `neg.w (SStage_scalar_index_1)` for as long as the
+  contact lasts. Ticking unconditionally let the reversal re-fire exactly `$1E` frames after
+  the first one, flipping the stage rotation a second time the ROM never performs and leaving
+  `Stat_table`'s angle byte 12 units ahead; the error stayed invisible until the next jump,
+  whose launch velocity `sub_4BBB2` (:99154-99169) derives from that angle. The same routine
+  is also the only place those throttles move, so the object-controlled/debug fallback tick --
+  which ROM `loc_4BA80` (:98770-98774) never reaches -- was removed rather than kept.
 - Fix(s3k): 47 further S3K solid objects now publish the ROM object-code pointer high word
   that `sub_13EFC` latches into `Tails_CPU_interact` while a sidekick stands on them
   (sonic3k.asm:26816-26843). Until now `SidekickCpuController.currentS3kInteractWord()`
