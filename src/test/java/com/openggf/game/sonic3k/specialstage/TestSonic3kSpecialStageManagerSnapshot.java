@@ -18,6 +18,8 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -146,6 +149,28 @@ class TestSonic3kSpecialStageManagerSnapshot {
 
         assertTrue(hasSpeedMultiplier(24));
         assertOnlyAudioSpeedRestoreCalls();
+    }
+
+    @Test
+    void specialStageRingCollectionQueuesRomRingRightSound() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.setSoundMap(new Sonic3kAudioProfile().getSoundMap());
+        audio.resetRingSound();
+        var requestedSounds = new java.util.ArrayList<Integer>();
+        audio.setRequestObserver((requestClass, rawSoundId) ->
+                requestedSounds.add(rawSoundId));
+
+        Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
+        set(manager, "ringsLeft", 2);
+        set(manager, "ringsCollected", 0);
+
+        Method collectRing = Sonic3kSpecialStageManager.class
+                .getDeclaredMethod("collectRing", int.class);
+        collectRing.setAccessible(true);
+        collectRing.invoke(manager, 0x44);
+
+        assertEquals(java.util.List.of(Sonic3kSfx.RING_RIGHT.id), requestedSounds,
+                "S3K's special-stage ring path always queues sfx_RingRight");
     }
 
     @Test

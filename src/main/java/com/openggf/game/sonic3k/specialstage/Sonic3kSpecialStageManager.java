@@ -947,8 +947,11 @@ public class Sonic3kSpecialStageManager {
                 || ringsCollected == EXTRA_LIFE_THRESHOLD_2) {
             GameServices.audio().playSfx(Sonic3kSfx.RING_LOSS.id);
         } else {
-            // Use GameSound.RING which auto-alternates between left and right channels
-            GameServices.audio().playSfx(com.openggf.audio.GameSound.RING);
+            // ROM: loc_9838 seeds sfx_RingRight before the Blue_spheres_stage_flag
+            // threshold branch and always calls Play_SFX with that ID
+            // (skdisasm/sonic3k.asm:12212-12243). This special-stage path does
+            // not use the shared gameplay ring alternation.
+            GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
         }
     }
 

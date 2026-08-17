@@ -3,6 +3,8 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): blue-sphere special-stage ring collection now plays the ROM's
+  `sfx_RingRight` sound directly instead of using gameplay ring-channel alternation.
 - Fix(s2): the run chain now models Sonic 2's level-entry V-blank mask, so the engine's
   object-visible `Vint_runcount` loses the same number of ticks the ROM does across a
   level->level boundary instead of ending it 9 ticks ahead. S2 has 26 `move #$2700,sr`
