@@ -8,6 +8,7 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
@@ -89,8 +90,27 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void initializeStage(int stageIndex) throws IOException {
+        initializeStage(stageIndex, SpecialStageStartupPolicy.FAST);
+    }
+
+    /**
+     * The ROM opens {@code SpecialStage} with a blocking 22-frame
+     * {@code Pal_FadeToWhite} (sonic3k.asm:10591, routine at 5232-5242) before
+     * any special-stage state exists. FAST retires that hold synchronously --
+     * ordinary interactive entry has no external frame source to pace it --
+     * while TRACE_ACCURATE leaves it armed so a BK2-driven caller steps the
+     * ROM's 22 real frames one at a time. Same split
+     * {@code Sonic1SpecialStageProvider} applies to its own pre-physics hold.
+     */
+    @Override
+    public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy)
+            throws IOException {
+        java.util.Objects.requireNonNull(policy, "policy");
         manager.reset();
         manager.initialize(stageIndex);
+        if (policy == SpecialStageStartupPolicy.FAST) {
+            manager.advanceThroughEntryFade();
+        }
     }
 
     @Override

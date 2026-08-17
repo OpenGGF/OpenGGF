@@ -186,6 +186,40 @@ public class Sonic3kSpecialStageManager {
      * across CSV rows 135-157 (23 rows, the first interactive row plus this
      * 22-frame hold) and only starts decrementing at row 158.
      */
+    /**
+     * {@code Pal_FadeToWhite}'s own iteration count: {@code move.w #$15,d4}
+     * with a trailing {@code dbf d4} runs $16 = 22 {@code Wait_VSync}
+     * iterations (sonic3k.asm:5232-5242). Identical to the count
+     * {@link #postBootFadeHoldFrames} takes from {@code Pal_FadeFromWhite}
+     * (sonic3k.asm:5139-5150), which is written the same way.
+     */
+    private static final int PAL_FADE_TO_WHITE_FRAMES = 22;
+
+    /**
+     * Remaining real, input-polled frames the ROM spends in the special
+     * stage's ENTRY fade, before any special-stage state exists at all.
+     * {@code SpecialStage} (sonic3k.asm:10585) opens with
+     * {@code bsr.w Pal_FadeToWhite} (sonic3k.asm:10591); that routine
+     * (sonic3k.asm:5232-5242) is {@code move.w #$15,d4 / ... bsr.w Wait_VSync
+     * ... dbf d4,loc_3D3A}, so it blocks for 22 real frames calling only the
+     * palette helpers -- no {@code Process_Sprites}, and
+     * {@code Special_stage_rate} / {@code Special_stage_rate_timer} are not
+     * written until sonic3k.asm:10701-10707, after the stage load. The engine
+     * performs entry and {@code initializeStage} in one frame, so without this
+     * hold the manager's first 22 stepped frames land on the ROM's fade-to-
+     * white frames and {@code Special_stage_rate_timer} runs 22 frames ahead
+     * of the ROM for the whole stage.
+     * <p>
+     * Same shape and the same derivation as {@link #postBootFadeHoldFrames}
+     * (which models the mirror-image {@code Pal_FadeFromWhite}, also 22
+     * {@code Wait_VSync} iterations), and the same
+     * {@code SpecialStageStartupPolicy} split S1 already uses for
+     * {@code Sonic1SpecialStageManager.SS_STARTUP_HOLD_TICKS}: FAST callers
+     * fast-forward it inside {@code initializeStage}, TRACE_ACCURATE callers
+     * frame-step it.
+     */
+    private int preBootFadeHoldFrames;
+
     private int postBootFadeHoldFrames;
 
     // Debug state
@@ -218,6 +252,7 @@ public class Sonic3kSpecialStageManager {
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
         this.firstUpdateCall = true;
+        this.preBootFadeHoldFrames = PAL_FADE_TO_WHITE_FRAMES;
         this.postBootFadeHoldFrames = 22;
         this.palFadeDelay = 0;
         this.musicSpedUp = false;
@@ -555,11 +590,33 @@ public class Sonic3kSpecialStageManager {
     }
 
     /**
+     * Consume the entry fade-to-white hold without stepping engine frames.
+     * The {@code SpecialStageStartupPolicy.FAST} half of the same split
+     * {@code Sonic1SpecialStageProvider} applies to
+     * {@code Sonic1SpecialStageManager.advanceToEntryPresentation()}: ordinary
+     * interactive entry has no external frame source pacing the ROM's blocking
+     * {@code Pal_FadeToWhite} loop, so the hold is retired inside
+     * {@code initializeStage}; a BK2-driven (TRACE_ACCURATE) caller drives the
+     * 22 real frames itself and must not have them skipped.
+     */
+    public void advanceThroughEntryFade() {
+        preBootFadeHoldFrames = 0;
+    }
+
+    /**
      * Update the special stage by one frame.
      * ROM: loc_84C2 (sonic3k.asm:10737) - main loop
      */
     public void update() {
         if (!initialized || finished) {
+            return;
+        }
+
+        // Entry fade-to-white hold (see preBootFadeHoldFrames javadoc): the
+        // ROM has not reached SSInit yet, so no special-stage state exists on
+        // these frames -- not even the stepped-frame counter.
+        if (preBootFadeHoldFrames > 0) {
+            preBootFadeHoldFrames--;
             return;
         }
 
@@ -1175,6 +1232,7 @@ public class Sonic3kSpecialStageManager {
                 spriteDebugMode,
                 useSkLayouts,
                 firstUpdateCall,
+                preBootFadeHoldFrames,
                 postBootFadeHoldFrames,
                 gameState != null ? gameState.capture() : null,
                 grid.captureRewindSnapshot(),
@@ -1231,6 +1289,7 @@ public class Sonic3kSpecialStageManager {
         spriteDebugMode = snapshot.spriteDebugMode();
         useSkLayouts = snapshot.useSkLayouts();
         firstUpdateCall = snapshot.firstUpdateCall();
+        preBootFadeHoldFrames = snapshot.preBootFadeHoldFrames();
         postBootFadeHoldFrames = snapshot.postBootFadeHoldFrames();
 
         GameStateManager gameState = GameServices.gameStateOrNull();
