@@ -82258,3 +82258,68 @@ Zero new red in any profile.
   is exact; over the 24-row `seg4 -> seg5` act-clear tail the engine ticks 2
   fewer than the cursor advances, so the anchor comes out 2 low and the
   destination target with it. Not chased this round.
+
+## 2026-08-17 - S1 chain: the special-stage presentation bridge was eating its own V-blank span
+
+- Worktree `wt/ai-s1-seg6-vblank`, branch `bugfix/ai-s1-seg6-vblank-drift`, over
+  `c3ace5691`. Control: a clean detached worktree at the same base.
+- **`TestS1CompleteEmeraldRunChain` advanced from segment 6 to segment 18.**
+  Segment 6 (`ghz3_2`) went 4,982 physics errors -> 0, and the walk-failure
+  `source comparator is not complete for mz1: cursor 3390 of 3391` closed with
+  it. The chain now fails on a structural PLC comparison in the `syz2`
+  presentation bridge at row 70
+  (`queue.s1_nemesis_plc.remaining_work` expected 1, actual 24), with segments
+  7, 12 (`dynamic_art.edges` at frame 1), 15 (`queue.s1_nemesis_plc.prepared`)
+  and 16 (`y_speed` at frame 2218) red behind it. All four are newly reachable
+  ground, not regressions.
+- **Root cause: the chain never accounted for the presentation bridge's own
+  V-blank span.** Sonic 1's special stage exits through a results-screen bridge
+  segment, which `AbstractRunChainTest.replaySpecialStagePresentationBridge`
+  drives as physical rows: the engine's level loop does not run on them, so the
+  production counter advanced by ONE tick across `ghz2`'s 800 recorded rows and
+  `ghz3`'s 798. No inter-level reconciliation ran at the bridge's exit either,
+  so the whole deficit survived into the destination and compounded once per
+  stage return: 1,022 ticks lost at `ghz2_2`, 2,040 by `ghz3_2`. That is the
+  2,039 the previous entry measured; it was never a mis-modelled constant but an
+  unaccounted span.
+- **The fix reuses the two budgets already written for this seam, and adds no
+  constant.** At the bridge's exit the tail is projected as
+  `TraceRunReplayWalker.presentationBridgeVblankSpan` -- one tick per recorded
+  row, less the profile's `stageResultsEntryNonAdvancingMovieRows` (7, the rows
+  `SS_Finish` builds the results screen through with interrupts disabled,
+  `sonic.asm:3369-3383`, so the V-int never reaches `VBlank_Exit`'s
+  unconditional `addq.l #1,(v_vblank_count).w` at `:684`) -- and the gap to the
+  destination level is then the ORDINARY `completeInterLevelVblankBudget`, with
+  S1's existing level-entry mask of 6.
+- **A second, one-tick defect in the same path.** The bridge's ENTRY was
+  anchored with `uncomparedInteriorReturnVblankBudget`, the budget for a stage
+  return that lands straight on a gameplay level, rather than
+  `presentationBridgeEntryVblankBudget`, which is written for this anchor and
+  documents the `- 1` the other lacks. Invisible while the bridge swallowed the
+  clock outright; once the span is carried forward it left the entire post-bridge
+  chain one tick high, and one tick is a phase change to a `& 3` consumer. With
+  both corrected, every alignment point in the run enters its segment exactly one
+  below the fixture's recorded `vblank_counter` -- the same convention `ghz1`
+  frame 0 already had (engine 545, fixture 546) and the same at every later
+  attach, where before the offsets were -1022, -2040, -2040.
+
+  | alignment | before | after | fixture |
+  |---|---|---|---|
+  | `ghz2` bridge entry | 8391 | 8390 | 8391 |
+  | `ghz2_2` frame 0 | 8392 | 9413 | 9414 |
+  | `ghz3` bridge entry | 16338 | 17358 | 17359 |
+  | `ghz3_2` frame 0 | 16339 | 18378 | 18379 |
+  | `mz1` frame 1 | 25082 | 27121 | 27122 |
+
+- **Ring slot 124 now behaves as the ROM does.** The spilled ring that the
+  engine used to bounce and collect at frame 3643 falls through and deletes, and
+  the `rings` field matches the fixture for the whole of segment 6. Nothing
+  inside Obj37 was touched; `RLoss_Bounce`'s `(v_vblank_byte + d7) & 3` gate
+  (`_incObj/25, 37 Rings.asm:321-324`) was correct all along and was simply
+  being fed a clock 2,039 ticks out of phase.
+- **The `mz1` walk-failure was the SAME defect, not an independent one** -- the
+  previous entry left that open and called it independent. It closes with the
+  clock and needed no separate change.
+- S1-only by profile data, not by name: both new helpers gate on
+  `alignsStageResultsPresentationVblank()`, which is `-1`/false for S2 and S3K,
+  so neither game's path changes.

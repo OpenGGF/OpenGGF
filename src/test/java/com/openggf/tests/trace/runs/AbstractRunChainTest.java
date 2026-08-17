@@ -1962,12 +1962,15 @@ abstract class AbstractRunChainTest {
             runCoordinator.admitPresentationBridge(
                     special.exitBoundary(), stageExitFrame,
                     loop.getCurrentGameMode());
-            if (sourceLevel != null
-                    && GameServices.module().getTracePlaybackProfile()
-                            .alignUncomparedInteriorReturnVblank()) {
-                alignUncomparedInteriorReturnVblank(
+            if (sourceLevel != null) {
+                alignPresentationBridgeEntryVblank(
                         sourceLevel, bridge, sourceVblank);
             }
+            // The clock the bridge's own recorded rows start on. Its tail is
+            // projected from here at the bridge's exit rather than observed,
+            // for the reason TraceRunVblankClock.sourceTailVblank states.
+            int bridgeEntryVblank =
+                    GameServices.level().getObjectManager().getVblaCounter();
 
             dynamicArtSegments.beginSegment();
             dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir());
@@ -2208,6 +2211,8 @@ abstract class AbstractRunChainTest {
                         "gameplay destination was not ready at its recorded offset");
             }
             assertReturnBoundary(plans, specialIndex, runDir);
+            completeBridgeExitVblankBudget(
+                    bridge, gameplay, bridgeEntryVblank);
             runCoordinator.admitLevel(
                     null, gameplayOffset, loop.getCurrentGameMode(),
                     0, true, null);
@@ -2917,6 +2922,86 @@ abstract class AbstractRunChainTest {
             // count (notably S1's six-row death/act seam).
             objectManager.initVblaCounter(sourceTailVblank + requiredTicks);
         }
+    }
+
+    /**
+     * Anchors the object V-blank clock on the first recorded row of the
+     * presentation bridge a special stage exits through.
+     *
+     * <p>This is {@link TraceRunReplayWalker#presentationBridgeEntryVblankBudget}
+     * -- the budget written for exactly this anchor -- and NOT the
+     * {@code uncomparedInteriorReturnVblankBudget} a stage return uses when it
+     * lands straight on a gameplay level. The two differ by one tick, and the
+     * bridge budget's own contract says why: the anchor is the counter value in
+     * effect ENTERING the row after the source level's final row, and the target
+     * is the value entering the bridge's first row, so the budget is the rows
+     * strictly between them. Using the gameplay-return budget here left the
+     * whole post-bridge chain running one tick high -- invisible while the
+     * bridge swallowed the clock outright, and phase-shifting once
+     * {@link #completeBridgeExitVblankBudget} carries it forward, because
+     * Sonic 1's spilled-ring floor probe gates on
+     * {@code (v_vblank_byte + d7) & 3} ("_incObj/25, 37 Rings.asm":321-324).
+     *
+     * <p>Movie-clock pacing only: the target is the production counter plus a
+     * manifest/BK2 row distance.
+     */
+    private void alignPresentationBridgeEntryVblank(
+            SegmentPlan sourceLevel,
+            SegmentPlan bridge,
+            int sourceVblank) {
+        if (!GameServices.module().getTracePlaybackProfile()
+                .alignsStageResultsPresentationVblank()) {
+            return;
+        }
+        int requiredTicks =
+                TraceRunReplayWalker.presentationBridgeEntryVblankBudget(
+                        sourceLevel.segment(), bridge.segment());
+        GameServices.level().getObjectManager()
+                .initVblaCounter(Math.addExact(sourceVblank, requiredTicks));
+    }
+
+    /**
+     * Reconciles the object V-blank clock across a presentation bridge's EXIT
+     * into the gameplay level that follows it.
+     *
+     * <p>The bridge's entry is already anchored (the special stage's return
+     * alignment lands the counter on the bridge's first recorded row), but the
+     * bridge itself is driven as physical rows: the engine's level loop does not
+     * run on them, so the production counter does not tick across the bridge and
+     * every one of its rows was silently lost from the clock. That is the whole
+     * of Sonic 1's inter-level drift after a special stage -- it accumulates once
+     * per stage return and never recovers.
+     *
+     * <p>Neither half of the projection is a new number. The bridge's own span
+     * is {@link TraceRunReplayWalker#presentationBridgeVblankSpan}: one tick per
+     * recorded row, less the rows the ROM builds the results screen through with
+     * interrupts disabled ({@code SS_Finish}'s {@code disable_ints ...
+     * enable_ints} block, docs/s1disasm/sonic.asm:3369-3383, so the V-int never
+     * reaches {@code VBlank_Exit}'s unconditional {@code addq.l
+     * #1,(v_vblank_count).w} at :684) -- the count the game profile already owns
+     * as {@code stageResultsEntryNonAdvancingMovieRows}. The gap from the
+     * bridge's tail to the destination level's first row is then the ORDINARY
+     * level -> level budget, masked by the destination's own {@code Level:}
+     * entry cost, exactly as any other level -> level boundary in the chain.
+     *
+     * <p>Movie-clock pacing only, like its two neighbours: the targets come from
+     * the production counter plus manifest/BK2 row distances and the profile's
+     * measured masks. No trace field is read back into engine state.
+     */
+    private void completeBridgeExitVblankBudget(
+            SegmentPlan bridge,
+            SegmentPlan gameplay,
+            int bridgeEntryVblank) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignsStageResultsPresentationVblank()) {
+            return;
+        }
+        int bridgeTailVblank = Math.addExact(
+                bridgeEntryVblank,
+                TraceRunReplayWalker.presentationBridgeVblankSpan(
+                        bridge.segment(),
+                        profile.stageResultsEntryNonAdvancingMovieRows()));
+        completeInterLevelVblankBudget(bridge, gameplay, 0, bridgeTailVblank);
     }
 
     private void alignUncomparedInteriorReturnVblank(
