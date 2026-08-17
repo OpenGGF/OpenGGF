@@ -81004,3 +81004,76 @@ worktree at `3f699584a`.
   still pointed at the ring; retargeting it onto the owning file restored parity.)
 - `TestTraceStructuralRowComparator` red in isolation on both trees; ignored per the
   standing note.
+
+
+## 2026-08-17 -- S2 vblank carry: mechanism confirmed, constant NOT landable, change HELD
+
+Base `3f699584a`. **Nothing landed.** The mechanism is exact and ROM-cited; the constant that
+would carry it across uncompared interiors is not route-independent, and applying the carry
+moves the chain frontier *backwards*.
+
+### The mechanism (confirmed, unchanged)
+
+`VintRet: addq.l #1,(Vint_runcount).w` (`docs/s2disasm/s2.asm:508`) sits after the
+`jsr Vint_SwitchTbl` dispatch, and `Vint_Lag` exits via `bra.s VintRet`, so **every** emulated
+frame ticks the counter. The engine's stops during uncompared interiors, leaving it 33,445
+ticks short by `seg7_ehz2`.
+
+### Three refutations, all by measurement
+
+**1. The `seg2_ehz1` question was mis-scoped -- by me.** Segment classes never read
+`TracePlaybackProfile`; only `TraceSessionLauncher`'s run branch and `AbstractRunChainTest`
+do. All five `TestS2*CompleteEmeraldsSegmentTraceReplay` classes are **green on the fix
+tree**. The 47,639-error red belonged to a throwaway *segment-harness* reseed. Neither
+"real masked sidekick divergence" nor "probe off-by-one" was the owner; the question did not
+apply. (`-Ptrace-segments` also contains **no S2 classes at all** -- 70 tests, all S3K.)
+
+**2. "Exactly 10 at every level->level boundary" is FALSE, and this is what makes the
+constant unlandable.** Recomputed independently from the fixtures:
+
+| boundary kind | value |
+|---|---|
+| level -> SS -> level | **11** at all 7 |
+| level -> level | **10** at 20 of 21 |
+| `seg20_ooz1 -> seg21_ooz2` | **9** |
+
+The same metric on S1's complete run returns 6 everywhere and 0 for stage round trips --
+exactly S1's landed `interLevelNonAdvancingMovieRows = 6`, which calibrates the metric against
+a known-good value. The single 9 shows the level figure is a **sub-V-blank rounding of a cycle
+cost**, so route-independence fails. Route-independence was the entire discriminator that made
+S1's constant landable under rule 3 (`TracePlaybackProfile.java:38-51`: "fixed by the block's
+decompression payload, not by the route that reached it"). **10 is a fitted constant and must
+not be landed.**
+
+**No fixture ask is needed to establish this** -- an earlier plan proposed recording a fresh
+BK2 to test zone-independence, and the existing fixture already answers it negatively.
+
+**3. The level->level anchor is separately broken, and it is not a constant problem.**
+Instrumented: every *interior* anchor equals the ROM's tail and every seeded target equals the
+ROM's destination row 0, with `movieRows - 11` exact and no adjustment. The level->level line
+is short by 23 because `seg4_ehz1` -- entered exactly aligned, carrying zero lag rows -- ends
+22 ticks behind the ROM. **The engine under-ticks inside the segment**, with the counter
+apparently frozen through the end-of-act tail. `interLevelNonAdvancingMovieRows` ships `-1`.
+
+### Why it is held
+
+| | control | with the carry |
+|---|---|---|
+| axes | 5 | 3 |
+| walk frontier | `seg7_ehz2`, segment 11 | **segment 7 (`seg5_ehz2`)** |
+| worst segment | 236 errors, f3525 `queue.s2_nemesis_plc.busy` | **122,139 errors**, f524 `sidekick_y` rom `0x0271` engine `0x0272` |
+
+The frontier moves 11 -> 7 with an **unlocated owner**, so the discriminator says hold. The two
+later gap axes vanish only because the walk stops earlier -- not progress.
+
+Disabling the inter-level arm entirely (`-1`) produces the **identical** failure, so the
+special-stage carry alone causes it: a *correct* clock makes `seg5_ehz2` diverge by one pixel
+of `sidekick_y` at frame 524. **That is the next thing to explain, and it is the real owner.**
+
+### Shared machinery touched (on the held branch only)
+
+`TracePlaybackProfile.alignUncomparedInteriorReturnVblank` (boolean) became
+`uncomparedInteriorReturnNonAdvancingMovieRows` (int; S1 = 0, behaviour preserved), consumed by
+`TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget`. **S1 protected set verified green**
+-- prefix, visual run, maze round trip, EHZ halfpipe round trip, the vblank-clock tests and its
+authority guard: 91 tests, 0F/0E.
