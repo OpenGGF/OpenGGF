@@ -81077,3 +81077,77 @@ of `sidekick_y` at frame 524. **That is the next thing to explain, and it is the
 `TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget`. **S1 protected set verified green**
 -- prefix, visual run, maze round trip, EHZ halfpipe round trip, the vblank-clock tests and its
 authority guard: 91 tests, 0F/0E.
+
+
+## 2026-08-17 -- The S3K chain is blocked on level-load art, not on the timing port
+
+Base `2cdaa231c`. **Nothing landed.** The ordinal gap is fully accounted for and the fix is a
+programme, not a round.
+
+### Two corrections to my framing
+
+- **`aiz_2` is AIZ Act 1 re-entered after the first special stage**, not Act 2 (`act` is
+  1-indexed in these fixtures; `aiz_3` is Act 2). I briefed it wrong.
+- **The chain does not reach the end of segment 2.** It fails at
+  `HardwareTimingReplayPort.handoffTo:257` from `beginSegmentRow` -- the **`ss` -> `aiz_2`
+  handoff, before segment 2's first row is driven**. Prefix pins `(2,1)`, `(2,34)` and
+  `(2,4000)` all fail identically. The 29-edge Suppressed list is `aiz_2`'s whole schedule
+  reported at close, not rows driven. **The prefix pin stays at segment 1.**
+
+### The missing producer, located exactly
+
+Engine head fingerprints **equal** the recorded ones they fail against:
+
+| kind | engine head | recorded | fingerprint |
+|---|---|---|---|
+| `KOS_DECOMPRESSION_QUEUE` | `#27` | `#43` | both `c3e8ddd3…` |
+| `KOS_MODULE_QUEUE` | `#14` | `#24` | both `65c8c371…` |
+
+Right art, right order, ordinal 16 / 10 low. **Not a timing defect and not a counting defect**
+-- the ROM ran 16 decompression and 10 module jobs the engine never submitted, in the
+**uncompared interior** between `ss` (bk2 7337) and `aiz_2` (bk2 8817).
+
+**Route-independent across all four S3K run fixtures:** level->level gap 0; level->bonus->level
+gap 0 both ways; **special-stage->level gap 15-27 decomp and 9-14 module at every single
+occurrence**, with size tracking the destination zone (AIZ 16/10, HCZ 17/10, MHZ 27/14) -- a
+per-zone art load, not a constant. Bonus stages load their art inside their own recorded
+segment; a special-stage segment carries one edge of each kind and the reload lands wholly in
+the interior.
+
+**ROM producer:** `Level:` (`docs/skdisasm/sonic3k.asm:7504`) runs on every level entry
+including special-stage return. It clears both queues
+(`clr.w (Kos_decomp_queue_count).w`, `clearRAM Kos_decomp_stored_registers,$6C`,
+`Clear_Nem_Queue`, :7513-7515) then repopulates via `Load_PLC` on the `LevelLoadBlock` PLC
+number (:7570-7582), the `LevelLoad_ActiveCharacter`/player-mode PLC (:7602-7620), and
+`LoadLevelLoadBlock` (:9701-9745), which issues up to two `Queue_Kos_Module` calls and spins
+until `Kos_modules_left` is zero.
+
+**The engine has no counterpart.** Every `KOS_*` submission in `src/main/` is in-level dynamic
+art. Level-load art is not modelled as hardware work at all. Standalone segments never notice
+because `install(schedule, initialOrdinalBases)` absorbs the entire pre-segment load into the
+base -- segment 0 starts at decomp `#9` / module `#2` for exactly that reason. **A chain has no
+second base.**
+
+### Why the obvious fix is forbidden
+
+Rebasing at the handoff, or matching on fingerprint alone, greens the chain by tolerating an
+unmatched completion -- outside rule 4, which may change only *when* engine-created work
+becomes ready. It would also hide real behaviour: the ROM re-decompresses level art **in
+place** on special-stage return, so act-mutated art (the AIZ1 fire terrain locally) is restored
+by that reload. An engine that skips it keeps the mutated art. **The unmatched-completion check
+is doing its job.**
+
+### Scope
+
+- **A.** Route the S3K level-load art path (`Level:` PLC list, `LoadLevelLoadBlock` modules,
+  character art) through `HardwareTimingService.submit`. Ordinal parity becomes a consequence,
+  not a setting.
+- **B.** Decide readiness for interior jobs from the engine's own LIVE load-time profile -- no
+  recorded edges exist there -- with RECORDED admission resuming at the next segment.
+- **C.** Only then can a chain cross a special-stage return.
+- **D.** Cheaper first test case: the `dez23_*` module gap of **2** at a level->level boundary
+  is the same shape, smaller.
+
+**B is not landable without A** (nothing to release), and **A alone reds every chain** -- new
+interior submissions would sit pending at the handoff exactly as `#14` does now. They must land
+together.
