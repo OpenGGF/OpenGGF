@@ -271,7 +271,13 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                         diagnosticCameraX, diagnosticCameraY,
                         sprite.getAnimationId(), sprite.getMappingFrame(),
                         sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(),
-                        sprite.getRingCount(), engineFrameClock);
+                        sprite.getRingCount(), engineFrameClock)
+                        // Life count for the recorded life_count column. Absent
+                        // outside a gameplay session, where -1 makes TraceBinder
+                        // raise lives_present instead of dropping the comparison.
+                        .withLives(GameServices.gameStateOrNull() != null
+                                ? GameServices.gameStateOrNull().getLives()
+                                : EngineDiagnostics.LIVES_ABSENT);
         TraceFrame comparisonExpected = "s3k".equals(trace.metadata().game())
                 ? TraceReplayBootstrap.s3kFrameForGameplayComparison(
                         trace, cursor, previous, expected, phase)

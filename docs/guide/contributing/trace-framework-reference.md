@@ -656,10 +656,24 @@ Optional `pre_trace_oscillation_frames` field, consumed by
 ### 5.2 `physics.csv` — v5
 
 Ordinary level traces have one fixed 42-column symmetric
-primary-character/sidekick row. There is no width autodetection and no
-`csv_version`. Dedicated special-stage readers are selected by `game` plus
+primary-character/sidekick row, or 43 columns when the recording carries the
+trailing `life_count` column (see below). There is no other width autodetection
+and no `csv_version`. Dedicated special-stage readers are selected by `game` plus
 `trace_profile`: S1 uses 14 columns, S2 uses 48, and S3K uses 20. All other
 widths are rejected.
+
+**Life counter (`life_count`, trailing 43rd column).** ROM `Life_count`
+(`$FFFFFE12` in Sonic 1, 2, and 3&K alike). Recorded per-frame so a death or a
+1UP is attributable to the exact frame it happened on. Recordings made before
+the column existed omit it and `TraceFrame.lives()` reports
+`TraceFrame.LIVES_ABSENT`; that is the only path on which no life comparison
+runs, and it is keyed on the recording, never on the engine. When the column is
+present `TraceBinder` emits three fields: `lives_present` (ERROR if the engine
+snapshot carries no life count, so the comparison cannot silently vanish),
+`lives` (the level — a missed death stays divergent from the transition on), and
+`lives_delta` (the per-frame change — the field that names the exact frame a
+life was gained or lost). The recorded value is comparison-only and is never
+hydrated into engine state.
 
 **Compared when both sides record them:** `x_sub`, `y_sub`, `routine`, `status_byte`,
 `rings`, `camera_x`, and `camera_y`. These fields are strict frontier fields when the

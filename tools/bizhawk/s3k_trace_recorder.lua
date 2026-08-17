@@ -342,6 +342,11 @@ ADDR_CAMERA_Y_BG_COPY = 0xEE90
 ADDR_CAMERA_Y_BG_ROUNDED = 0xEE96
 local ADDR_ZONE             = 0xFE10
 local ADDR_ACT              = 0xFE11
+-- byte: Life_count (sonic3k.constants.asm -- Current_zone $FE10, Current_act
+-- $FE11, then Life_count). Recorded per-frame so a death or 1UP is reportable
+-- on the exact frame it happens; comparison-only, never applied to engine state.
+-- GLOBAL (no `local`): keeps the main chunk under Lua's 200-local limit.
+ADDR_LIFE_COUNT             = 0xFE12
 local ADDR_PLAYER_MODE      = 0xFF08
 local ADDR_APPARENT_ACT     = 0xEE4F
 local ADDR_EVENTS_ROUTINE_BG = 0xEEC2
@@ -978,7 +983,7 @@ local function open_files()
         .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
         .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
         .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
-        .. "sidekick_mapping_frame\n")
+        .. "sidekick_mapping_frame,life_count\n")
     physics_file:flush()
 end
 
@@ -4769,7 +4774,8 @@ function on_frame_end()
 
     physics_file:write(string.format(
         "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
-            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%02X\n",
         trace_frame, input_mask,
         camera_x, camera_y,
         rings,
@@ -4805,7 +4811,10 @@ function on_frame_end()
         sidekick.status,
         sidekick.stand_on_obj,
         sidekick.animation_id,
-        sidekick.mapping_frame))
+        sidekick.mapping_frame,
+        -- Life_count ($FFFFFE12): comparison-only life counter, so a death or
+        -- 1UP is attributable to this exact frame. Never fed back into anything.
+        mainmemory.read_u8(ADDR_LIFE_COUNT)))
 
     if trace_frame % 60 == 0 then
         physics_file:flush()

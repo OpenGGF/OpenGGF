@@ -256,7 +256,10 @@ public final class TraceTriageTool {
 
         // Touch-response (enemy bounce / hurt / collide).
         if (f.contains("touch") || f.contains("hurt") || f.contains("bounce")
-                || f.contains("invuln") || f.contains("rings")) {
+                || f.contains("invuln") || f.contains("rings")
+                || f.contains("lives")) {
+            // A life count that diverges is a death the engine did or did not
+            // take, which sits in the same causal family as ring loss.
             return Subsystem.TOUCH_RESPONSE;
         }
 

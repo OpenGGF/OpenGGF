@@ -142,7 +142,8 @@ ROM-vs-engine columns.
 
 The native BizHawk headless harness is the canonical recorder for all three
 games and all production profiles. Every output uses one strict contract:
-`trace_schema: 5`. Ordinary level rows have 42 columns; game/profile selects
+`trace_schema: 5`. Ordinary level rows have 42 columns, or 43 when the recording
+carries the trailing `life_count` column; game/profile selects
 the dedicated S1/S2/S3K special-stage width. A v5 timing file has one grammar,
 and every run manifest includes `dynamic_art_gap_transitions`, even when empty.
 

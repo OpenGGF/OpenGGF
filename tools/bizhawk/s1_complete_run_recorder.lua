@@ -176,6 +176,10 @@ local ADDR_CAMERA_X        = 0xF700   -- long: v_screenposx (camera X pixel:sub)
 local ADDR_CAMERA_Y        = 0xF704   -- long: v_screenposy (camera Y pixel:sub)
 local ADDR_ZONE            = 0xFE10   -- byte: current zone number (v_zone)
 local ADDR_ACT             = 0xFE11   -- byte: current act number (v_act)
+-- byte: v_lives, number of lives (_Variables.asm:356 -- v_zone $FE10, v_act $FE11,
+-- then v_lives). Recorded per-frame so a death or 1UP is reportable on the
+-- exact frame it happens; comparison-only, never applied to engine state.
+local ADDR_LIFE_COUNT      = 0xFE12
 local ADDR_RANDOM          = 0xF636   -- long: v_random pseudo-random number buffer
 ADDR_RANDOM_NUMBER = 0x0029AC        -- RandomNumber (sonic.lst:5991)
 ADDR_FZ_BOSS_PROBE  = 0x01A6DE        -- loc_19F2E, immediately before SolidObject
@@ -493,7 +497,7 @@ local function open_files()
         .. "sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,"
         .. "sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,"
         .. "sidekick_status_byte,sidekick_stand_on_obj,sidekick_animation_id,"
-        .. "sidekick_mapping_frame\n")
+        .. "sidekick_mapping_frame,life_count\n")
     physics_file:flush()
 end
 
@@ -1613,7 +1617,8 @@ local function on_frame_end()
     -- v7 CSV: shared counters, Player state, and an absent Sidekick block.
     physics_file:write(string.format(
         "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X,%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
-            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X\n",
+            .. "%d,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%02X,%02X,%02X,%02X,"
+            .. "%02X\n",
         trace_frame, input_mask,
         camera_x, camera_y,
         rings,
@@ -1633,7 +1638,10 @@ local function on_frame_end()
         stand_on_obj,
         animation_id,
         mapping_frame,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        -- Life_count ($FFFFFE12): comparison-only life counter, so a death or
+        -- 1UP is attributable to this exact frame. Never fed back into anything.
+        mainmemory.read_u8(ADDR_LIFE_COUNT)))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.
