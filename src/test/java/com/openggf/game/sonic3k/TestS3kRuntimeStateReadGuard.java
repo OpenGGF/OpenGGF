@@ -51,17 +51,32 @@ class TestS3kRuntimeStateReadGuard {
         }
     }
 
+    /**
+     * The {@code Save_Level_Data2} snapshot moved from the ring to the flash:
+     * ROM calls it from {@code SSEntryFlash_GoSS} (skdisasm/sonic3k.asm:128392)
+     * with {@code a0} on the flash object, not from the ring's touch response.
+     * The guarded property is unchanged — whichever object owns the save must
+     * read {@code Dynamic_resize_routine} through the typed runtime registry and
+     * never through {@code Sonic3kLevelEventManager} — so it is asserted on the
+     * pair, with the registry read required at the owning site.
+     */
     @Test
     void ssEntryRing_shouldSaveResizeRoutineFromZoneRuntimeState() throws IOException {
-        String file = "src/main/java/com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java";
-        String content = Files.readString(Path.of(file));
+        String ringFile = "src/main/java/com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java";
+        String flashFile = "src/main/java/com/openggf/game/sonic3k/objects/Sonic3kSSEntryFlashObjectInstance.java";
         List<String> violations = new ArrayList<>();
 
-        if (content.contains("Sonic3kLevelEventManager")) {
-            violations.add(file + " still references Sonic3kLevelEventManager directly");
+        for (String file : List.of(ringFile, flashFile)) {
+            if (Files.readString(Path.of(file)).contains("Sonic3kLevelEventManager")) {
+                violations.add(file + " still references Sonic3kLevelEventManager directly");
+            }
         }
-        if (!content.contains("services().zoneRuntimeState()")) {
-            violations.add(file + " does not read the resize routine from services().zoneRuntimeState()");
+        String flashContent = Files.readString(Path.of(flashFile));
+        if (!flashContent.contains("saveBigRingReturn")) {
+            violations.add(flashFile + " no longer models Save_Level_Data2 at SSEntryFlash_GoSS");
+        }
+        if (!flashContent.contains("services().zoneRuntimeState()")) {
+            violations.add(flashFile + " does not read the resize routine from services().zoneRuntimeState()");
         }
 
         if (!violations.isEmpty()) {

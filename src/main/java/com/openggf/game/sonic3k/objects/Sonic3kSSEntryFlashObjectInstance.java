@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
+import com.openggf.level.BigRingReturnState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -144,7 +146,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             // ROM routine 0: SSEntryFlash_Init consumes this frame on its own.
             case INIT -> state = State.ANIMATING;
             case ANIMATING -> updateAnimation();
-            case WAITING -> updateWait();
+            case WAITING -> updateWait(player);
             case DONE -> { }
         }
     }
@@ -167,7 +169,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         }
     }
 
-    private void updateWait() {
+    private void updateWait(AbstractPlayableSprite player) {
         waitTimer--;
         // ROM Obj_Wait (skdisasm/sonic3k.asm:177947-177950):
         //     subq.w  #1,$2E(a0)
@@ -182,6 +184,11 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             // Sonic3kSpecialStageProvider.getTransitionSfxId() (sfx_EnterSS = $AF),
             // so we just trigger the request here.
             state = State.DONE;
+            // ROM SSEntryFlash_GoSS (sonic3k.asm:128387-128392) runs
+            // Clear_SpriteRingMem then `jsr (Save_Level_Data2).l` BEFORE the
+            // destination branch, so both the ordinary special stage and the
+            // Super Emerald arena restart go through it.
+            saveLevelData2(player);
             if (routesToSuperEmeraldArena()) {
                 // ROM loc_618AC (skdisasm/sonic3k.asm:128411-128417):
                 //   move.b #2,(Special_bonus_entry_flag).w
@@ -210,6 +217,47 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             }
             setDestroyed(true);
         }
+    }
+
+    /**
+     * ROM {@code Save_Level_Data2} (skdisasm/sonic3k.asm:61735-61753), called by
+     * {@code SSEntryFlash_GoSS} at sonic3k.asm:128392.
+     * <p>
+     * The call site leaves {@code a0} pointing at the FLASH object -- it is the
+     * object currently being executed -- so
+     * <pre>
+     *   move.w  x_pos(a0),(Saved2_X_pos).w
+     *   move.w  y_pos(a0),(Saved2_Y_pos).w
+     * </pre>
+     * (sonic3k.asm:61738-61739) records the flash's position, which
+     * {@code SSEntryFlash_Init} copied verbatim from the parent giant ring
+     * (sonic3k.asm:128353-128355). Every other field is read from a named global
+     * ({@code Player_1+art_tile}, {@code Ring_count}, {@code Camera_X_pos}, ...),
+     * so the player's own coordinates are never stored.
+     * <p>
+     * {@code Load_Starpost_Settings}'s {@code loc_2D2C2}
+     * (sonic3k.asm:61817-61836) then writes {@code Saved2_X_pos}/{@code Saved2_Y_pos}
+     * straight into {@code Player_1+x_pos}/{@code y_pos} on the return leg: the
+     * player resumes standing at the ring, not where he touched it.
+     */
+    private void saveLevelData2(AbstractPlayableSprite player) {
+        var camera = services().camera();
+        var zoneRuntimeState = services().zoneRuntimeState();
+        int resizeRoutine = zoneRuntimeState instanceof S3kZoneRuntimeState s3kState
+                ? s3kState.getDynamicResizeRoutine()
+                : 0;
+        int meanWaterLevel = 0;
+        var waterSystem = services().waterSystem();
+        int featureZone = services().currentZone();
+        int featureAct = services().currentAct();
+        if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
+            meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
+        }
+        services().saveBigRingReturn(new BigRingReturnState(
+                getX(), getY(),
+                camera.getX(), camera.getY(), player.getRingCount(),
+                player.getTopSolidBit(), player.getLrbSolidBit(),
+                camera.getMaxY(), resizeRoutine, meanWaterLevel));
     }
 
     /**

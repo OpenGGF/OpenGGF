@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): returning from a giant-ring special stage now puts the player back at the
+  RING, not where he touched it. ROM `SSEntryFlash_GoSS` calls `Save_Level_Data2`
+  (skdisasm/sonic3k.asm:128392) from the flash object's own routine, so `a0` is the
+  flash -- and `move.w x_pos(a0),(Saved2_X_pos).w` / `move.w y_pos(a0),(Saved2_Y_pos).w`
+  (sonic3k.asm:61738-61739) store the position `SSEntryFlash_Init` copied verbatim from
+  the parent giant ring (sonic3k.asm:128353-128355). Every other field the routine saves
+  is read from a named global, so the player's coordinates are never stored at all;
+  `Load_Starpost_Settings`'s `loc_2D2C2` (sonic3k.asm:61817-61836) then writes
+  `Saved2_X_pos`/`Saved2_Y_pos` straight into `Player_1+x_pos`/`y_pos` on the return leg.
+  The engine had modelled the snapshot in `Sonic3kSSEntryRingObjectInstance`'s touch
+  response, 42 frames early and anchored on `player.getCentreX()/getCentreY()`; it now
+  lives in `Sonic3kSSEntryFlashObjectInstance` at the `Obj_Wait` expiry that is
+  `SSEntryFlash_GoSS`, before the ordinary-stage / Super-Emerald-arena branch, and reads
+  the flash's own `getX()`/`getY()`. On
+  `TestS3kSonicTailsCompleteEmeraldRunChain` the segment-1 return boundary was
+  `run_boundary.position.x` expected 7112 actual 7088 and `.y` expected 1216 actual 1219;
+  7112/1216 is exactly the AIZ1 giant ring's recorded `object_near` position
+  (slot 40, `0x1BC8`/`0x04C0`). The boundary now passes and the chain enters segment 2.
 - Fix(s3k): the special stage's speed-up timer no longer runs 22 frames ahead of the ROM.
   `SpecialStage` (sonic3k.asm:10585) opens with `bsr.w Pal_FadeToWhite` (:10591), whose
   `move.w #$15,d4 / ... bsr.w Wait_VSync ... dbf d4` loop (sonic3k.asm:5232-5242) blocks

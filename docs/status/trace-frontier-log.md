@@ -80929,3 +80929,78 @@ at `b9721b91d`.
   reused-fork ambient-state flake class.
 - `TestTraceStructuralRowComparator` behaved identically on both trees; ignored per the
   standing note.
+
+## 2026-08-17 - The segment-1 return boundary: `Save_Level_Data2` saves the RING, not the player
+
+- `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+  base `3f699584a`, isolated worktree `$WORKTREE_ROOT/oggf-ssret`, branch
+  `bugfix/ai-ss-return-boundary`.
+- Command (both trees): `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=<repo>/s3k.gen test`.
+- **Control, reproduced exactly as briefed:** `Shared return-boundary comparison failed ...
+  run_boundary.position.x expected=7112 actual=7088 (delta 24),
+  run_boundary.position.y expected=1216 actual=1219 (delta 3)`
+  (`AbstractRunChainTest.assertReturnBoundary:2966`).
+- **Diagnosis (object defect, not physics, not the comparator).** The expected pair is
+  `returnLevel.trace().getFrame(0)` -- row 0 of `aiz_2`, `player_x` `0x1BC8`,
+  `player_y` `0x04C0`. The engine's actual pair is `aiz` row 2289's `player_x`/`player_y`
+  (`0x1BB0`/`0x04C3`), i.e. the position at the moment the player touched the giant ring.
+  The `aiz` aux's `object_near` for slot 40 (`type 0x00061682`, `Obj_SSEntryRing`) carries
+  `x=0x1BC8 y=0x04C0` unchanged for the whole capture: **the expected boundary is the
+  giant ring's position, exactly.** No drift, a different anchor.
+- **Owner: `SSEntryFlash_GoSS` (sonic3k.asm:128387-128392).** It does
+  `jsr (Save_Level_Data2).l` from the flash object's own execution, so `a0` is the flash
+  and `move.w x_pos(a0),(Saved2_X_pos).w` / `move.w y_pos(a0),(Saved2_Y_pos).w`
+  (sonic3k.asm:61738-61739) store the flash's coordinates -- which `SSEntryFlash_Init`
+  copied verbatim from the parent ring (sonic3k.asm:128353-128355). Every other field
+  `Save_Level_Data2` writes is read from a named global (`Player_1+art_tile`,
+  `Ring_count`, `Camera_X_pos`, ...), so the player's own position is never stored.
+  `Load_Starpost_Settings`'s `loc_2D2C2` (sonic3k.asm:61817-61836) writes
+  `Saved2_X_pos`/`Saved2_Y_pos` into `Player_1+x_pos`/`y_pos` on the return leg.
+  The touch response `loc_6173A` (:128290-128306) saves nothing.
+- **Fix:** the `saveBigRingReturn` snapshot moved out of
+  `Sonic3kSSEntryRingObjectInstance.enterSpecialStageSequence` (touch frame, player
+  anchor) into `Sonic3kSSEntryFlashObjectInstance.saveLevelData2()`, called at the
+  `Obj_Wait` expiry that is `SSEntryFlash_GoSS` and before the ordinary-stage /
+  Super-Emerald-arena branch (the ROM's `jsr` precedes `tst.b subtype(a0)`), reading the
+  flash's own `getX()`/`getY()`. No constant fitted -- the ROM value is not 24 or 3, it is
+  "the flash object's position". No assertion weakened, no fixture regenerated.
+  `TestS3kRuntimeStateReadGuard.ssEntryRing_shouldSaveResizeRoutineFromZoneRuntimeState`
+  was retargeted onto the pair (its property -- resize routine read through the typed
+  runtime registry, never through `Sonic3kLevelEventManager` -- is unchanged, and it was
+  mutation-tested: replacing `services().zoneRuntimeState()` in the flash makes it red).
+- **After the fix:** the return boundary passes and the chain enters **segment 2
+  (`aiz_2`)**. It now stops at a hardware-timing frontier at that segment's end:
+  `non-exportable pending hardware submission at segment end:
+  KOS_MODULE_QUEUE#14 sha256:65c8c371...` (`AbstractRunChainTest.stepEngineFrame:3802`),
+  with unmatched recorded completions from `aiz_2` raw_frame 35 through 3989 (the engine
+  sits at `KOS_MODULE_QUEUE#14`/`KOS_DECOMPRESSION_QUEUE#27` while the recording expects
+  `#24..#34`/`#43..#60`). That suppressed edge (`raw_frame=35 boundary=PRE_MAIN_LOOP
+  KOS_DECOMPRESSION_QUEUE#43`) was already present on the control run as a Suppressed
+  exception; it is now the primary failure. That is the next frontier, and it is a
+  Kosinski-queue ordinal question, a different owner from this one.
+
+### Correction to the standing brief
+
+The gate is **768 tests, 3 red classes**, not 766: `TestS2CompleteEmeraldRunChain`,
+`TestS3kSonicTailsCompleteEmeraldRunChain`, `TestTraceStructuralRowComparator`.
+`TestS3kHczZoneSliceTraceReplay` is **green** under `-Ptrace-replay` at `3f699584a` and
+is no longer part of the red set (it is still red under `-Ptrace-segments`).
+
+### Blast radius
+
+Red-class sets diffed by NAME in both directions (Python set difference);
+`target/surefire-reports` and `target/trace-reports` cleared before every run. Control
+worktree at `3f699584a`.
+
+- `-Ptrace-replay`, both trees: **768 tests**, 3 red classes -- identical sets. No newly
+  green, no newly red; the chain's message advances from the segment-1 return boundary to
+  the segment-2 hardware-timing export.
+- `-Ptrace-segments`, both trees: **56 red classes** -- identical sets.
+- `-Ptrace-replay-r7`, both trees: **32 red classes** -- identical sets.
+- Default profile, both trees, `-Dsurefire.forkCount=1` sequential: **15118 tests**,
+  65 failures / 22 errors, **86 red classes** -- identical sets. (A first fix-tree run
+  showed 87, the extra being `TestS3kRuntimeStateReadGuard`, whose file-path assertion
+  still pointed at the ring; retargeting it onto the owning file restored parity.)
+- `TestTraceStructuralRowComparator` red in isolation on both trees; ignored per the
+  standing note.

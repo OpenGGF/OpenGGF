@@ -6,8 +6,6 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.camera.Camera;
-import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
-import com.openggf.level.BigRingReturnState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -505,27 +503,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     private void enterSpecialStageSequence(AbstractPlayableSprite player) {
         state = State.ENTERED;
 
-        // ROM: Save_Level_Data2 — save player position and ring count for return from SS.
-        // This is separate from checkpoint state (ROM: Saved_ vs Saved2_).
-        // ROM line 52685-52701: saves position, rings, solid bits, camera,
-        // Dynamic_resize_routine, and Mean_water_level for the return.
-        var camera = services().camera();
-        var zoneRuntimeState = services().zoneRuntimeState();
-        int resizeRoutine = zoneRuntimeState instanceof S3kZoneRuntimeState s3kState
-                ? s3kState.getDynamicResizeRoutine()
-                : 0;
-        int meanWaterLevel = 0;
-        var waterSystem = services().waterSystem();
-        int featureZone = services().currentZone();
-        int featureAct = services().currentAct();
-        if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
-            meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
-        }
-        services().saveBigRingReturn(new BigRingReturnState(
-                player.getCentreX(), player.getCentreY(),
-                camera.getX(), camera.getY(), player.getRingCount(),
-                player.getTopSolidBit(), player.getLrbSolidBit(),
-                camera.getMaxY(), resizeRoutine, meanWaterLevel));
+        // ROM: the touch response (loc_6173A, sonic3k.asm:128290-128306) does NOT
+        // save the return state. Save_Level_Data2 is called 42 frames later by
+        // SSEntryFlash_GoSS (sonic3k.asm:128392), with a0 pointing at the FLASH
+        // object -- so `move.w x_pos(a0),(Saved2_X_pos).w` (sonic3k.asm:61738-61739)
+        // stores the RING's position, not the player's. The save therefore lives in
+        // Sonic3kSSEntryFlashObjectInstance#saveLevelData2.
 
         // Lock player: hidden + object controlled
         // ROM loc_6173A (sonic3k.asm:128292-128304) writes, in order:
