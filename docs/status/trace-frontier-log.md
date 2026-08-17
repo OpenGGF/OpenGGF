@@ -81662,3 +81662,56 @@ real but small against the special-stage interior deficit; closing that requires
 SS -> level figure of **11** to be modelled too, and the S2 SS carry's arithmetic (whether the
 plain every-row budget lands on the recorded destination row 0, or is 11 short of it) has NOT
 been re-measured since the VintRet tick landed. Measure it before briefing it.
+
+
+## 2026-08-17 - S2 chain: the PLC busy mismatch is an end-of-act handoff, not a queue defect
+
+Answers the measurement the previous entry asked for. The level -> SS -> level figure was
+re-measured after the VintRet tick landed, over all seven round trips of
+`s2-sonic-tails-complete-emeralds`, in `uncomparedInteriorReturnVblankBudget`'s own metric:
+**11 at every one**, against 10 for an ordinary act advance into the same zone. It
+decomposes: 11 = the destination's already-derived level-entry mask (10) + 1 for the
+special stage's own entry mask. `SpecialStage:` (`s2.asm:6537`) masks at :6557 and releases
+at :6613; that span holds VDP register writes, four dmaFillVRAM plane/scroll clears and
+scroll-factor clears, with no ClearScreen, no LoadTitleCard and no ClearPLC - which is
+exactly what makes the `Level:` mask at :4768 cost 10 and this one cost 1. It predicts a
+return into OOZ act 2 must measure 10, not 11, since that destination's mask is 9; no
+committed fixture exercises that. **Landing a flat 11 on top of the table in `2ac1487fe`
+would double-count by 10.**
+
+Also settled: the SS interior loses nothing, and none of the seven SS `physics.csv.gz`
+fixtures records a vblank column at all, so an earlier "deficit 0 on every compared row"
+probe and the 11 were never in conflict - they measure different things.
+
+Frontier at `2ac1487fe`: `TestS2CompleteEmeraldRunChain` segment 11 (`seg7_ehz2`), 236
+errors, first non-camera mismatch f3525 `queue.s2_nemesis_plc.busy` rom=false engine=true.
+Every physics field at that frame matches.
+
+**The mismatch reverses**, which identifies it as a phase offset rather than a content
+error: f3525 engine busy / ROM idle; f3608-3609 ROM busy with `prepared=true` and
+`remaining_work` 5 then 2, engine idle with `remaining_work=-1`.
+
+Ruled out - drain rate. ROM gameplay drains 3 patterns/frame via `ProcessDPLC2`
+(:2219-2222), called from `Do_Updates` (:805-808); the 6/frame `ProcessDPLC` (:2202-2209)
+is called only from `Vint_Title`, `Vint_Menu` and the SS path. The engine's
+`Sonic2PlcService.serviceLevelVBlank()` uses 3 and is correct. Confirmed in the fixture:
+`remaining_work` steps 68, 65, 62, 59 - exactly 3/frame.
+
+Ruled out - the object V-blank clock. The SS-return model above, correctly derived, is
+completely inert on this chain: byte-identical to control. Held unmerged on
+`bugfix/ai-ss-return-mask` (`0c1fa7a60`) rather than merged on the strength of looking
+right.
+
+**The actual owner.** Object ids from the ROM pointer table: `$28` Animal (:29954), `$3A`
+end-of-level results (:29974), `$3E` Egg prison (:29978). The capsule's final state
+`loc_3F406` (:85001-85012) scans `Dynamic_Object_RAM` for any live `ObjID_Animal`, returns
+if one is found, and only when none remain calls `Load_EndOfAct` - spawning Obj3A and
+queueing `PLCID_Results` / `PLCID_ResultsTails` (:34848-34860) - then deletes itself. The
+fixture matches exactly: last `$28` removed f3545, `$3A` spawn + `$3E` removal f3546.
+Obj3A then gates its own sub-object creation on the queue draining: `loc_140AC`
+(:27803-27806) does `tst.l (Plc_Buffer).w` and `rts` while work is pending, so the
+sub-objects appear at f3610 - the frame the ROM's PLC goes idle.
+
+The end-of-act sequence is therefore self-clocking, and the engine enters it ~21 frames
+early. **Next target: animal lifetime/despawn timing in EHZ2, not the PLC queue.** The PLC
+flag is the last link in the chain; fixing it directly would treat the symptom.
