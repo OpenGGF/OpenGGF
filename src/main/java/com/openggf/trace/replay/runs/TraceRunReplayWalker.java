@@ -753,9 +753,13 @@ public final class TraceRunReplayWalker {
      */
     public static int uncomparedInteriorReturnVblankBudget(
             TraceRunManifest.Segment sourceLevel,
-            TraceRunManifest.Segment returnLevel) {
+            TraceRunManifest.Segment returnLevel,
+            int nonAdvancingMovieRows) {
         if (sourceLevel.traceFrameCount() <= 0) {
             throw new IllegalArgumentException("source level must contain recorded frames");
+        }
+        if (nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
         }
         int sourceFinalRow = sourceLevel.bk2FrameOffset()
                 + sourceLevel.traceFrameCount() - 1;
@@ -763,7 +767,7 @@ public final class TraceRunReplayWalker {
         if (movieRows < 0) {
             throw new IllegalArgumentException("interior return precedes source level tail");
         }
-        return movieRows;
+        return Math.max(0, movieRows - nonAdvancingMovieRows);
     }
 
     /**

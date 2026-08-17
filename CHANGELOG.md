@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The whole-run chain harness now reconciles the destination level's V-blank
+  budget a second time, after the production admission wait, instead of only
+  before it. The wait runs real engine frames that the manifest-derived budget
+  already accounts for, so on `s2-sonic-tails-complete-emeralds` the
+  `seg4_ehz1 -> seg5_ehz2` destination attached its clock 148 ticks high. This is
+  the same second-pass reconcile the title-card path already performed. Movie-clock
+  pacing only; no trace field is read into engine state.
+- `TracePlaybackProfile` records how many movie rows a whole
+  level -> special stage -> level round trip masks, measured per game rather than
+  assumed shared. Sonic 2 composes the destination level's entry mask with the
+  special stage's own (`move #$2700,sr` at `s2.asm:6557`, released at `:6613`);
+  Sonic 1 opts out, and its own fixtures confirm it should, measuring a loss of
+  zero on every special-stage round trip. The value is measured and tested but
+  not yet switched on for Sonic 2 -- see the field's javadoc for the blocker.
+
 - `TraceStructuralRowComparator` no longer reaches for the installed gameplay
   mode to capture hardware timing. It called `GameServices.hardwareTiming()`,
   which throws when no gameplay-mode context is installed, so

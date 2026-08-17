@@ -82117,3 +82117,69 @@ Zero new red in any profile.
   `TestS2CompleteEmeraldVisualRun` and `TestAudioPresentationProducer` red on
   control) all pass in isolation on this tree; they are the known
   "hardware timing run is already closed" fork-ordering leak, not regressions.
+
+## 2026-08-17 - S2 chain: the special-stage round trip costs 11 V-blank ticks, and
+## correcting it uncovers an EHZ2 sidekick divergence
+
+- Worktree `wt/s2-chain-phase`, branch `bugfix/ai-s2-chain-vblank-phase`, over
+  `f2b130d36`.
+- **Frontier moved within segment 11.** `TestS2CompleteEmeraldRunChain` still
+  fails at segment 11 (`seg7_ehz2`) on `queue.s2_nemesis_plc.busy`, but from 236
+  errors / first non-camera mismatch frame 3525 to **188 errors / frame 3531**.
+  Command: `mvn -Ptrace-segments -Dtest=TestS2CompleteEmeraldRunChain
+  -Dsonic2.rom.path=<s2.gen> test`.
+- **The previous round's per-segment drift table is confirmed with one
+  correction.** Measured directly by probing `ObjectManager.getVblaCounter()` at
+  each level attach against each fixture's own `vblank_counter` column:
+  `seg1` 0, `seg2` 2, `seg3` 4, `seg4` 3, `seg5` **5** (the earlier entry said
+  6), `seg6` 2, `seg7` 4.
+- **Where the drift is introduced: the special-stage return, and nothing models
+  it.** `TracePlaybackProfile.SONIC_2` had
+  `alignUncomparedInteriorReturnVblank == false`, so on an SS return the harness
+  never reconciles the clock at all and the engine free-runs its own
+  choreography across the stage -- 87 engine ticks against the recording's 5846
+  at `seg1 -> seg2`. The drift step is therefore whatever that choreography
+  happens to cost, which is why the five SS steps are the irregular
+  `+2, +2, -1, -4, +2` rather than a constant.
+- **The ROM's own loss is a clean constant, measured over all 27 boundaries of
+  `s2-sonic-tails-complete-emeralds`** in `movieRows - vblankDelta`: every one of
+  the seven level -> special stage -> level round trips loses exactly **11**;
+  every plain act advance loses **10**, except `ooz1 -> ooz2`'s tabled **9**.
+  The 11 composes as destination-level mask + 1, the +1 being the special
+  stage's own entry mask: `move #$2700,sr` at `s2.asm:6557` released by
+  `move #$2300,sr` at `:6613`, a span of VDP register writes, four
+  `dmaFillVRAM` clears and five `clearRAM` blocks with no `ClearScreen`,
+  `LoadTitleCard` or PLC decompression -- hence 1 where `Level:`'s costs 10.
+  All seven destinations happen to carry the mask of 10, so this fixture cannot
+  separate "11 flat" from the composition; the composition is the shape the two
+  cited mask sites have, and it predicts 10 for a future SS return into OOZ act 2.
+- **The correction works exactly, and is not landed.** With
+  `alignUncomparedInteriorReturnVblank` enabled and the composed loss subtracted,
+  the engine's counter lands on the recorded `vblank_counter` to the tick at every
+  SS return (`seg2` 10108, `seg3` 20009, `seg4` 31224 -- drift 0, was 2/4/3), and
+  segments 2-4 keep passing. But the corrected upstream clock then makes
+  `seg5_ehz2` fail at frame 524 with 122139 errors, `sidekick_y` off by one on
+  Tails' hurt transition (`sidekick_routine` 02 -> 04, `animation_id` 1A) --
+  costing the chain four segments of reach. So the profile carries the measured
+  value (`specialStageEntryNonAdvancingMovieRows = 1`, tested) with the enabling
+  flag still `false`.
+- **The seg5 divergence is not seg5's own clock**, established by two
+  experiments. Forcing seg5's counter to the recorded value (32673 exactly)
+  leaves it failing identically -- same 122139 errors, same frame 524 -- and
+  running with SS-return alignment inert while perturbing seg5's counter by +2
+  and +8 does not reproduce it at all. Nor is it the flag itself: with the flag
+  on and the counter write suppressed, the chain reaches segment 11 normally.
+  It is state carried out of segments 2-4, which pass their comparators but run
+  their uncompared object work on a different `Vint_runcount`. **That is the next
+  target**, and closing it should immediately buy the SS-return correction.
+- **Landed instead, and independently useful:** the level->level path reconciled
+  its V-blank budget *before* `admitLevelWhenReady`, leaving that wait's engine
+  frames unaccounted -- 148 of them at `seg4 -> seg5`, so the destination clock
+  attached 148 ticks high. It now reconciles a second time after admission on the
+  same source anchor, exactly as `prepareAcrossLevelBoundary` already does after
+  its own title-card settle. That is the 236 -> 188 improvement.
+- **Also measured, unresolved:** `sourceTailVblankAtBoundary` back-extrapolates
+  the source anchor at one tick per movie row. Over the 2-row SS exit tail that
+  is exact; over the 24-row `seg4 -> seg5` act-clear tail the engine ticks 2
+  fewer than the cursor advances, so the anchor comes out 2 low and the
+  destination target with it. Not chased this round.

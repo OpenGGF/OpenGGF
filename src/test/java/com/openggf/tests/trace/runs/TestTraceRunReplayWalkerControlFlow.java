@@ -694,7 +694,11 @@ class TestTraceRunReplayWalkerControlFlow {
                 "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
 
         assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                mz1Tail, mz2));
+                mz1Tail, mz2, 0));
+        // The profile-owned masked-row term is subtracted, as it is on the
+        // inter-level budget: Sonic 2's level+special-stage entry composition.
+        assertEquals(2528, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 11));
     }
 
     @Test
