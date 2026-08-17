@@ -82058,3 +82058,62 @@ walk-failure are both downstream of that segment, not of the seam defect.
 | default | 49 | 48 | `TestGameLoopAudioPresentationModes` green (flaky, unreachable from the change) |
 
 Zero new red in any profile.
+## 2026-08-17 - S2 chain segment 11: an Egg Prison off-by-one closed, the V-blank clock still open
+
+- Worktree `wt/s2-capsule-spawn`, branch
+  `bugfix/ai-s2-capsule-spawn-phase`, over `024dfc66d`.
+- Frontier unchanged. `TestS2CompleteEmeraldRunChain` still fails at segment 11
+  (`seg7_ehz2`), 236 physics comparator errors, first non-camera mismatch frame
+  3525 field `queue.s2_nemesis_plc.busy` rom=false engine=true, before and after.
+  Command: `mvn -Ptrace-segments -Dtest=TestS2CompleteEmeraldRunChain
+  -Dsonic2.rom.path=<s2.gen> test`.
+- **Fixed, and it was real.** `loc_3F2FC`'s break delay is `subq.w #1` / `bpl.s`
+  (s2.asm:84909-84910); `bpl` includes zero, so the `$1D` seeded at s2.asm:84902
+  runs 30 passes. The engine tested `> 0` and opened one frame early. Two
+  one-frame patches had grown over it -- an unfounded
+  `skipRandomAnimalSpawnThisFrame` flag and a `+2` on the burst animals'
+  `objoff_36` -- and both are removed. On the ARZ2 level-select trace this moves
+  the capsule from 23 random spawns starting at `Vint_runcount` 14648 to 22
+  starting at 14656, which is exactly what the fixture records.
+- **But it does not move the chain**, because segment 11's capsule is desynced by
+  a different mechanism. Probing `LiveTraceComparator` for the engine's
+  `ObjectManager.getVblaCounter()` against the fixture's own `vblank_counter`
+  column shows a drift constant inside each level segment and stepping only at
+  boundaries:
+
+  | level segment | fixture `vblank_counter` at frame 0 | drift (engine - ROM) mod 8 |
+  |---|---|---|
+  | `seg1_ehz1` | 554 | 0 |
+  | `seg2_ehz1` | 10108 | 2 |
+  | `seg3_ehz1` | 20009 | 4 |
+  | `seg4_ehz1` | 31224 | 3 |
+  | `seg5_ehz2` | 32673 | 6 |
+  | `seg6_ehz2` | 46105 | 2 |
+  | `seg7_ehz2` | 56751 | 4 |
+
+  Five of the six steps are special-stage returns (+2, +2, -1, -4, +2); the one
+  level->level step, `seg4_ehz1` -> `seg5_ehz2`, is +3 and is the same boundary
+  whose `run_gap.edge[*].movie_logical_frame` comparisons in this run report the
+  engine one row low. At drift 4 the capsule arms at engine phase 6 / ROM phase 2;
+  the ROM's first spawn is at +6 and 6 + 8k < 180 admits 22, while the engine's
+  own phase-0 gate first fires at +2 and 2 + 8k < 180 admits 23. Nothing inside
+  `EggPrisonObjectInstance` can close that -- every constant it owns is now
+  ROM-cited. The next real move is boundary V-blank accounting, primarily the
+  special-stage return leg.
+- Note for the single-segment traces: `TestS2Arz2LevelSelectTraceReplay` seeds
+  from `trace.initialVblankCounter()` and its clock matches the fixture exactly
+  (engine 14649 at frame 6994, fixture 14649), which is why the off-by-one was
+  visible there and is masked in the chain.
+- Recorded ROM capsule slots, from `object_near`: EHZ2 body 16 / button 17 /
+  lock 18 / broken 19; ARZ2 body 17 / button 18 / lock 19 / broken 20. The engine
+  reproduces both. It allocates the pieces with FindNextFreeObj where the ROM
+  uses `AllocateObject` (s2.asm:84841); switching to `spawnFreeChild` was tried
+  and changed no recorded slot, so the divergence is documented in the source
+  rather than swapped in blind.
+- Verification: `-Ptrace-replay`, `-Ptrace-segments`, `-Ptrace-replay-r7` and the
+  default profile, run sequentially on this tree and on a clean control at
+  `024dfc66d`, set-diff to no red-class difference in three profiles. The two
+  residual one-class differences (`TestS1CompleteEmeraldVisualRun` red here,
+  `TestS2CompleteEmeraldVisualRun` and `TestAudioPresentationProducer` red on
+  control) all pass in isolation on this tree; they are the known
+  "hardware timing run is already closed" fork-ordering leak, not regressions.

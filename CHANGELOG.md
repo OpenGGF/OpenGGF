@@ -27,6 +27,29 @@ All notable changes to the OpenGGF project are documented in this file.
 ## Unreleased
 - Fix(s3k): blue-sphere special-stage ring collection now plays the ROM's
   `sfx_RingRight` sound directly instead of using gameplay ring-channel alternation.
+- Fix(s2): the Egg Prison's break delay now runs the 30 passes the ROM runs, not
+  29. `loc_3F2FC` is `subq.w #1,objoff_34(a0)` / `bpl.s return_3F352`
+  (s2disasm/s2.asm:84909-84910), and `bpl` branches on zero as well as on
+  positive, so the `$1D` seeded at s2.asm:84902 returns on every pass down to 0
+  and only the pass that reaches -1 falls through. The engine tested `> 0` and so
+  opened the capsule one frame early, which moved the animal burst, the arming of
+  the broken piece, and every downstream `(Vint_runcount+3) & 7` spawn decision
+  by one frame. Two separate one-frame patches had grown to hide it: a
+  `skipRandomAnimalSpawnThisFrame` flag with no counterpart anywhere in
+  `loc_3F3A8`, and a `+2` on the burst animals' `objoff_36`. Both are gone. The
+  flag is replaced by the slot comparison `loc_3F2FC` actually implies -- it arms
+  a different SST slot (`objoff_3C(a0)`, s2.asm:84928-84930) and `ExecuteObjects`
+  walks slots in ascending order, so whether the piece is reached again on the
+  arming frame is slot order, not a constant. The burst offset returns to `+1`,
+  the one frame that folding Obj28's routine-0 pass into the constructor actually
+  costs. On the ARZ2 level-select trace the capsule now fires 22 random spawns at
+  `Vint_runcount` 14656-14824 where it fired 23 from 14648, matching the ROM,
+  and `TestS2Arz2LevelSelectTraceReplay`, `TestS2Cpz2LevelSelectTraceReplay` and
+  `TestS2ObjectOccupancyOracle` stay green. `TestS2CompleteEmeraldRunChain`
+  segment 11 is unchanged at 236 errors / first non-camera mismatch f3525 /
+  `queue.s2_nemesis_plc.busy`: its capsule still spawns 23, because that chain
+  reaches EHZ2 with its V-blank clock 4 ticks out of phase with the recording.
+  See the trace frontier log.
 - Fix(s2): the run chain now models Sonic 2's level-entry V-blank mask, so the engine's
   object-visible `Vint_runcount` loses the same number of ticks the ROM does across a
   level->level boundary instead of ending it 9 ticks ahead. S2 has 26 `move #$2700,sr`

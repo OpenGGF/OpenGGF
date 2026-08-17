@@ -243,8 +243,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   fires **22** random spawns where it fired 23, and the fixture's own `vblank_counter`
   column agrees frame for frame. `TestS2CompleteEmeraldRunChain` is unchanged at segment 11
   -- that chain's capsule still spawns 23 for a separate reason, reaching EHZ2 with its
-  V-blank clock four ticks out of phase with the recording. Gate red set unchanged from
-  control at three classes.
+  V-blank clock four ticks out of phase with the recording, a separate per-segment drift now
+  measured in the frontier log. Gate red set unchanged from control at three classes
+  (777 tests, the three chains), verified in an isolated worktree.
 
 - **Run chains settle the level-load player transfer at admission, as production does
   (`bugfix/ai-s1-chain-seam-edges`, merged 2026-08-17).** An in-run level load stages the
