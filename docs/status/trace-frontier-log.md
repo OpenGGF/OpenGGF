@@ -81283,3 +81283,68 @@ The error was inferring route-dependence from a single deviant value without che
 second movie crossed the same boundary. The data to refute it was already committed. The check
 that found it -- recompute per boundary and look for a second witness, rather than trusting an
 "every boundary measures N" summary -- is the protocol worth keeping.
+
+
+## 2026-08-17 -- S3K level-load art: scope corrected, pilot falsified, accumulation answered
+
+**Nothing landed in `src/`.** Three corrections, one of which retires a design-review risk.
+
+### 1. The engine is NOT missing the producer entirely -- scope A is smaller than briefed
+
+At the failing handoff the engine holds **exactly one** pending decompression (`#27`) and
+**one** pending module (`#14`), with fingerprints `c3e8ddd3…` / `65c8c371…` **byte-equal** to
+the recorded `#43` / `#24` -- the first *in-segment* level-load edges. So the ROM's 17-decomp /
+11-module level entry is modelled by the engine as **1 + 1**, and the deficit is `(17-1)` and
+`(11-1)`.
+
+The producer is a **per-zone event** (`Sonic3kAIZEvents.mainLevelBlockKosQueue` /
+`mainLevelArtKosQueue`), not shared level-entry code. **Scope A is therefore "replace a
+zone-local aggregate submission with the ROM's job-per-`Load_PLC`-entry list", not "add a
+producer from nothing".**
+
+Independent argument against the forbidden shortcut: `c3e8ddd3…` and `65c8c371…` each occur
+**twice** within `aiz_2` (`#43`/`#56`, `#24`/`#30`), so fingerprint-only matching is ambiguous
+on its own terms, quite apart from the ordinal objection.
+
+### 2. The `dez23` gap of 2 is a different phenomenon -- scope D withdrawn
+
+Measured across all 63 segments by differencing `hardware_timing.jsonl` ordinals at each seam:
+
+- Gap-bearing special-stage seams have a real uncompared interior (`ss` ends bk2 7337,
+  `aiz_2` starts 8817 -- **1480 frames**; `ss_8` -> `mhz_2` is 1798).
+- `mhz_N` -> `dez23_N` is **frame-contiguous** (239720 -> 239721). **No interior exists for a
+  `Level:` entry to run in.**
+- `mhz`/`mhz_2`/`mhz_3` have byte-identical timing tails and `dez23`/`_2`/`_3`/`_5`
+  byte-identical heads, yet the first seam has gap 0 and every repeat has module gap 2.
+
+A level-entry producer fires identically on both seams by construction, so A+B **cannot** move
+that gap. Implementing against it would have produced an uninterpretable result either way.
+**There is no cheap pilot**; the smallest genuine instance is `ss_2` -> `aiz_3` at 15/10.
+
+### 3. Accumulation: per-entry, not accumulating -- the review risk is retired
+
+| seam | gap decomp / module |
+|---|---|
+| `ss` -> `aiz_2` | 16 / 10 |
+| `ss_2/3/4` -> `aiz_3/4/5` | 15 / 10 (x3) |
+| `ss_5/6/7` -> `hcz_2/3/4` | 17 / 10 (x3) |
+| `ss_8…14` -> `mhz_2…9` | 27 / 14 (x6) |
+| all level->level, level->bonus, bonus->level | 0 / 0 |
+
+Repeat entries into the same zone give the **identical** gap, so **A must submit per level
+entry** and **a single-boundary fix does exercise the whole mechanism** -- a multi-boundary
+test would reveal nothing extra. One unexplained irregularity: AIZ's first return costs 16
+where later ones cost 15.
+
+### Related: the S2 metric is validated, and the repeated-boundary test passes
+
+Two checks a design review proposed, both free and both run:
+
+- **Intra-segment soundness.** The boundary metric must yield `dv == 1` on every non-lag row.
+  Measured: **0 transitions with `dv != 1`** across `seg2_ehz1` (3,377 rows) and `seg14_cnz1`
+  (12,145 rows). The `bk2_frame_offset` and `vblank_counter` sampling points are aligned, so a
+  boundary residual really is the gap -- this replaces the circular "it reproduces S1's 6"
+  calibration.
+- **Repeated same-kind same-zone boundaries.** The complete-emerald run returns from a special
+  stage into EHZ1 three times and EHZ2 twice, each with different lag history. All five measure
+  **11**. The strongest available invariance test, and it agrees.
