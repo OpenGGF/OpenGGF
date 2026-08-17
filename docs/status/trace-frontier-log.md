@@ -81348,3 +81348,58 @@ Two checks a design review proposed, both free and both run:
 - **Repeated same-kind same-zone boundaries.** The complete-emerald run returns from a special
   stage into EHZ1 three times and EHZ2 twice, each with different lag history. All five measure
   **11**. The strongest available invariance test, and it agrees.
+
+
+## 2026-08-17 -- The S2 masked stretch audit closes: one site, phase pinned, payload zone-varying
+
+The last caveat on the per-zone constant is closed. A design review noted the phase-pinning
+argument only covered `s2.asm:4768`, and warned that if the ~10 aggregated further masked
+stretches later in level init, each would need its own audit before a citation could claim the
+whole number.
+
+**It does not aggregate.** S2 has 26 `move #$2700,sr` sites in total; **exactly one** lies
+between `Level:` (`s2.asm:4757`) and `Level_MainLoop` (`:5088`) -- line **4768**.
+
+The surrounding sequence is:
+
+```
+bsr.w   ClearPLC          ; empties the PLC queue
+bsr.w   Pal_FadeToBlack   ; ends WaitForVint -> .UpdateAllColours -> RunPLC_RAM -> rts
+move    #$2700,sr         ; :4768  <- phase pinned here
+bsr.w   ClearScreen
+jsr     (LoadTitleCard).l ; <- zone-varying payload
+move    #$2300,sr         ; :4772
+```
+
+Two consequences, and together they make the constant properly citable:
+
+1. **Phase at the mask is a ROM constant.** The last thing before it is a V-int-synced wait
+   plus fixed-cost work, and the one potentially route-variable term in that tail
+   (`RunPLC_RAM`) runs on a queue `ClearPLC` has just emptied. So entry phase does not depend
+   on the route -- which is what the two-movie agreement measured empirically, now with a
+   mechanism that **predicts** the table rather than summarising it.
+2. **The masked work is `ClearScreen` + `LoadTitleCard`,** and the title-card payload varies by
+   zone. That is precisely why OOZ measures 9 where every other act advance measures 10 -- and
+   it is the same argument `TracePlaybackProfile`'s javadoc already makes for Sonic 1
+   ("fixed by the block's decompression payload, not by the route that reached it").
+
+### The falsifiable prediction the citation must carry
+
+Key the value as a property of the **destination zone's masked load work**, so the model
+predicts: *every future boundary with the same (destination zone, boundary kind) must measure
+the same loss.* That is the kill condition for future rounds, and every witness available today
+satisfies it -- including five repeated special-stage returns into EHZ, all measuring 11 with
+differing lag history.
+
+### Honest epistemic status
+
+Neither S1's landed 6 nor this 9/10 has been derived by cycle counting. Both are "measured on
+hardware, attributed to a cited masked block, with an invariance argument". This one is
+**stronger** than the S1 precedent on three axes: independent-movie confirmation, the
+structural phase-pinning above, and a single-site audit proving no aggregation. Say that
+plainly in the profile javadoc rather than claiming a derivation nobody performed.
+
+### Scope note
+
+NTSC-scoped. The loss is a `ceil()` of masked cycle cost against frame period; a PAL fixture
+would move it and the table would need re-deriving. Worth one line in the citation.
