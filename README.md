@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S1 and S2 chain frontiers share one root cause: the chain's cross-segment V-blank clock
+  (`bugfix/ai-s1-seg6-rings`, documentation, merged 2026-08-17).** `TestS1CompleteEmeraldRunChain`
+  segment 6 (`ghz3_2`) fails with 4,982 errors that are all a single `rings` delta. A spilled
+  ring probes the floor only when `(v_vblank_byte + d7) & 3 == 0`
+  (`s1disasm/_incObj/25, 37 Rings.asm:321-324`, with `d7 = 127 - slot` from
+  `_inc/ExecuteObjects.asm:12`) — the disassembly's own "crude spreading-out of collision
+  check over multiple frames". The engine's V-blank counter is **2,039 ticks off** the ROM's
+  in that segment and `2039 mod 4 = 3`, so every probe fires on the wrong phase: the ROM lets
+  ring slot 124 fall through the floor and delete, the engine bounces it and collects it three
+  frames early. That is the same defect as `TestS2CompleteEmeraldRunChain` segment 11, whose
+  capsule spawn gate is `(Vint_runcount+3) & 7` — same clock, different divisor. Obj37's own
+  constants are ROM-cited and correct; no object code is at fault. Documented rather than
+  fixed, because the fix belongs in the chain harness's cross-segment accounting and is being
+  worked separately.
+
 - **The Egg Prison break delay runs the 30 passes `bpl` gives it
   (`bugfix/ai-s2-capsule-spawn-phase`, merged 2026-08-17).** `loc_3F2FC` is
   `subq.w #1,objoff_34(a0)` / `bpl.s return_3F352` (`s2disasm/s2.asm:84908-84910`) seeded

@@ -82117,3 +82117,79 @@ Zero new red in any profile.
   `TestS2CompleteEmeraldVisualRun` and `TestAudioPresentationProducer` red on
   control) all pass in isolation on this tree; they are the known
   "hardware timing run is already closed" fork-ordering leak, not regressions.
+
+## 2026-08-17 - S1 chain segment 6: one extra spilled ring, and the same V-blank clock drift as S2 segment 11
+
+- Worktree `wt/s1-seg6`, branch `bugfix/ai-s1-seg6-rings`, over `f2b130d36`.
+- Frontier unchanged, and reproduced exactly on a clean control at the same base.
+  `TestS1CompleteEmeraldRunChain` fails at segment 6 (`ghz3_2`), 4,982 physics
+  comparator errors, first non-camera mismatch frame 3643 field `rings` rom=0
+  engine=1, plus `queue.s1_nemesis_plc.{busy,prepared,remaining_work}` at frame
+  8034 and the walk-failure `source comparator is not complete for mz1: cursor
+  3390 of 3391`. Command: `mvn -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain
+  -Dsonic1.rom.path=<Sonic The Hedgehog (W) (REV01) [!].gen> test`.
+- **Every one of the 4,982 errors is the same `rings` delta of +1.** Sonic's
+  position, velocity, routine and status match the fixture for the whole segment.
+  The engine collects one spilled ring the ROM never collects.
+- **ROM ground truth.** A read-only diagnostic GPGX run over the committed BK2
+  (BizHawk 2.11 headless harness, object RAM dumped, no fixture written) gives the
+  ROM's own Obj37 state for `ghz3_2` frames 3540-3700:
+  - Sonic is hurt at frame 3561 with 51 rings; both ROM and engine spill 19 of the
+    capped 32, the rest truncated by `FindFreeObj` failing
+    (`_incObj/25, 37 Rings.asm:250-251`).
+  - The ROM collects three of them, at frames 3646 (slot 41), 3655 (slot 126) and
+    3689. The engine collects those same three at those same frames, **plus** one
+    at 3643 - the ring in slot 124.
+  - In the ROM, slot 124's ring (spawned with `y_vel` = +$3EC, straight down)
+    never bounces: y goes 880 -> 887 -> 892 -> ... -> 987 and it is deleted below
+    the bottom boundary. In the engine it bounces at the equivalent of frame 3565,
+    settles at (5704, 887) and is collected three frames before the ROM's first
+    re-collection.
+- **Root cause: the spilled-ring floor probe is gated on a V-blank counter that is
+  2,039 off the ROM's in this segment.** `RLoss_Bounce` probes the floor only when
+  `(v_vblank_byte + d7) & 3 == 0` (`_incObj/25, 37 Rings.asm:321-324`), with `d7`
+  the `ExecuteObjects` countdown `127 - slot` (`_inc/ExecuteObjects.asm:12`). All
+  42 bounces observed in the ROM dump satisfy
+  `(vblank_counter + (127 - slot)) & 3 == 0` with no exceptions, which pins the
+  convention. The engine's `ObjectManager.getVblaCounter()` reads 19901 where the
+  ROM's `v_vblank_count` reads 21940; 2039 mod 4 = 3, so **every** spilled-ring
+  probe in the segment fires on the wrong V-blank phase. Slot 124 is simply the
+  ring where a wrong phase changes the outcome instead of the timing.
+- **This is the same defect as the S2 segment 11 entry above**, in a different
+  consumer: there it moved the Egg Prison's `Vint_runcount` gate, here it moves
+  Obj37's floor-probe cadence. Where the drift enters, measured at the chain's own
+  alignment points:
+
+  | alignment | engine anchor | fixture `vblank_counter` | verdict |
+  |---|---|---|---|
+  | `ghz1` tail | 4660 | 4660 | aligned |
+  | `ghz1` -> `ghz2` interior return | budget 3731, lands 8391 | 8391 | aligned |
+  | `ghz2_2` tail | 11998 | 13019 | **1021 short** |
+  | `ghz2_2` -> `ghz3` interior return | budget 4340, lands 16338 | 17359 | inherits the 1021 |
+  | `ghz3_2` frame 0 | 16339 | 18379 | 2040 short |
+
+  `uncomparedInteriorReturnVblankBudget` computes 4340 for the `ss_2` interior and
+  the fixture's own delta across that interior is also 4340 - the budget is right;
+  the **anchor** it is added to is already short. The loss appears between `ghz2`'s
+  first frame and `ghz2_2`'s tail, and `completeInterLevelVblankBudget` never runs
+  for the `ghz2` -> `ghz2_2` seam (the only inter-level alignment that fires in the
+  whole run is `ghz3_2` -> `mz1`). Only two of the six special-stage interiors get
+  an interior-return alignment at all.
+- **Second, independent divergence in the same window.** The ROM's free dynamic
+  slots at the spill are 39, 41, 43, 44, 45, 114-127; the engine's are 39, 41, 42,
+  43, 44, 114-127 - the ROM has slot 42 occupied and 45 free, the engine the
+  reverse. Rings 2-4 therefore take ROM phases 84/83/82 but engine phases 85/84/83.
+  It does not change the collected count here, but it is real and will matter for
+  any other spill.
+- **Nothing landed.** The fix belongs in the chain's cross-segment V-blank
+  accounting, which is shared rule-4-sensitive harness code with its own guards;
+  it is not a ring bug and `LostRingObjectInstance` is ROM-correct as written
+  (S1 `RingRules` = mask 3, phase 0, no render-flag gate, boundary checks on every
+  path - all matching `RLoss_Bounce`). Tuning anything inside Obj37 to absorb a
+  2,039-tick clock error would be a fitted constant.
+- **The `mz1` walk-failure is independent of the ring divergence.** It is a
+  structural row-consumption shortfall (3390 of 3391 recorded rows), and the
+  `rings` field is the only thing the extra pickup changes; a ring count cannot
+  change how many rows a segment consumes. It is, however, in the same family as
+  the root cause: the `ghz3_2` -> `mz1` alignment logs `actual=7 required=222`,
+  a 215-tick correction at that seam. Not proven by making segment 6 green.
