@@ -81662,3 +81662,346 @@ real but small against the special-stage interior deficit; closing that requires
 SS -> level figure of **11** to be modelled too, and the S2 SS carry's arithmetic (whether the
 plain every-row budget lands on the recorded destination row 0, or is 11 short of it) has NOT
 been re-measured since the VintRet tick landed. Measure it before briefing it.
+
+
+## 2026-08-17 - S2 chain: the PLC busy mismatch is an end-of-act handoff, not a queue defect
+
+Answers the measurement the previous entry asked for. The level -> SS -> level figure was
+re-measured after the VintRet tick landed, over all seven round trips of
+`s2-sonic-tails-complete-emeralds`, in `uncomparedInteriorReturnVblankBudget`'s own metric:
+**11 at every one**, against 10 for an ordinary act advance into the same zone. It
+decomposes: 11 = the destination's already-derived level-entry mask (10) + 1 for the
+special stage's own entry mask. `SpecialStage:` (`s2.asm:6537`) masks at :6557 and releases
+at :6613; that span holds VDP register writes, four dmaFillVRAM plane/scroll clears and
+scroll-factor clears, with no ClearScreen, no LoadTitleCard and no ClearPLC - which is
+exactly what makes the `Level:` mask at :4768 cost 10 and this one cost 1. It predicts a
+return into OOZ act 2 must measure 10, not 11, since that destination's mask is 9; no
+committed fixture exercises that. **Landing a flat 11 on top of the table in `2ac1487fe`
+would double-count by 10.**
+
+Also settled: the SS interior loses nothing, and none of the seven SS `physics.csv.gz`
+fixtures records a vblank column at all, so an earlier "deficit 0 on every compared row"
+probe and the 11 were never in conflict - they measure different things.
+
+Frontier at `2ac1487fe`: `TestS2CompleteEmeraldRunChain` segment 11 (`seg7_ehz2`), 236
+errors, first non-camera mismatch f3525 `queue.s2_nemesis_plc.busy` rom=false engine=true.
+Every physics field at that frame matches.
+
+**The mismatch reverses**, which identifies it as a phase offset rather than a content
+error: f3525 engine busy / ROM idle; f3608-3609 ROM busy with `prepared=true` and
+`remaining_work` 5 then 2, engine idle with `remaining_work=-1`.
+
+Ruled out - drain rate. ROM gameplay drains 3 patterns/frame via `ProcessDPLC2`
+(:2219-2222), called from `Do_Updates` (:805-808); the 6/frame `ProcessDPLC` (:2202-2209)
+is called only from `Vint_Title`, `Vint_Menu` and the SS path. The engine's
+`Sonic2PlcService.serviceLevelVBlank()` uses 3 and is correct. Confirmed in the fixture:
+`remaining_work` steps 68, 65, 62, 59 - exactly 3/frame.
+
+Ruled out - the object V-blank clock. The SS-return model above, correctly derived, is
+completely inert on this chain: byte-identical to control. Held unmerged on
+`bugfix/ai-ss-return-mask` (`0c1fa7a60`) rather than merged on the strength of looking
+right.
+
+**The actual owner.** Object ids from the ROM pointer table: `$28` Animal (:29954), `$3A`
+end-of-level results (:29974), `$3E` Egg prison (:29978). The capsule's final state
+`loc_3F406` (:85001-85012) scans `Dynamic_Object_RAM` for any live `ObjID_Animal`, returns
+if one is found, and only when none remain calls `Load_EndOfAct` - spawning Obj3A and
+queueing `PLCID_Results` / `PLCID_ResultsTails` (:34848-34860) - then deletes itself. The
+fixture matches exactly: last `$28` removed f3545, `$3A` spawn + `$3E` removal f3546.
+Obj3A then gates its own sub-object creation on the queue draining: `loc_140AC`
+(:27803-27806) does `tst.l (Plc_Buffer).w` and `rts` while work is pending, so the
+sub-objects appear at f3610 - the frame the ROM's PLC goes idle.
+
+The end-of-act sequence is therefore self-clocking, and the engine enters it ~21 frames
+early. **Next target: animal lifetime/despawn timing in EHZ2, not the PLC queue.** The PLC
+flag is the last link in the chain; fixing it directly would treat the symptom.
+
+### Measured: the ROM's EHZ2 capsule animal schedule (the table the engine must reproduce)
+
+From `seg7_ehz2/aux_state.jsonl.gz`, object type `$28`:
+
+- 8 initial animals all spawn on frame **3227** — the `moveq #7,d6` loop at :84912-84926.
+- 22 further animals spawn **every 8 frames from 3233 to 3401 inclusive**, gated by
+  `move.b (Vint_runcount+3).w / andi.b #7 / bne` (:84972-84974), each consuming one
+  `RandomNumber` call (:84980).
+- **30 spawned, 30 removed.** Last removal f3545; results object + capsule delete f3546.
+
+Every one of the 22 random spawns lands on a constant recorded phase (`vfc & 7 == 2`); the
+offset from the ROM's own `andi #7 == 0` test is a recorder convention, and its constancy
+across all 22 is the point — the cadence is exactly 8 with no drift.
+
+**Why this is the discriminator.** The spawn gate reads the object-visible
+`V_int_run_count`, not a free-running frame index, so a phase error that is not a multiple
+of 8 changes which frames spawn, changes the animal count, desyncs RNG through :84980, and
+moves the frame the last animal leaves — which is what spawns the results object early.
+The engine enters this sequence ~21 frames early.
+
+Next measurement, cheap and decisive: instrument the engine over frames 3200-3410 of this
+segment and compare against the table above — animal spawn count (expect 30), the initial
+burst frame (expect 3227), and the 8-frame cadence start/end (expect 3233/3401). If the
+count matches, the earliness is in the capsule's own state machine and not the clock; if it
+differs, the object clock phase feeding :84972 is the defect.
+
+Ruled out by measurement this round, so nobody re-treads them: the PLC drain rate
+(`ProcessDPLC2` 3/frame, engine matches, fixture confirms 68/65/62/59); the
+`Obj28_ChkDel` horizontal window (:24720-24729 applies only to `subtype != 0`, and neither
+capsule spawn site :84918 or :84977 sets `subtype`, so these animals take the plain
+off-screen path the engine already implements); and the despawn bounds flag
+(`animalObjectUsesRenderFlagDeleteBounds` is `true` for S2, so the engine already uses the
+ROM's `render_flags.on_screen` bit rather than a geometric box).
+
+### Measured: the engine spawns 31 animals where the ROM spawns 30 — a phase defect, not a constant
+
+Temporary probe on `EggPrisonObjectInstance` (reverted; not committed), chain run over
+`seg7_ehz2`:
+
+| | initial | random | total |
+|---|---|---|---|
+| ROM (fixture) | 8 | **22**, f3233 -> f3401 | 30 |
+| engine (probe) | 8 | **23**, vbla 26696 -> 26872 | 31 |
+
+The cadence is right on both sides — exactly 8 frames, no drift, first random spawn 3 ticks
+after the initial burst. What differs is how many multiples of 8 fall inside the window.
+
+**Why this is a phase defect and not a wrong constant.** The spawn phase is `$B4` = 180
+frames (`s2.asm:84995`) and spawns fire when `(Vint_runcount+3) & 7 == 0` (:84972-84974).
+**180/8 = 22.5**, so the window contains 22 or 23 spawn frames purely according to the
+counter phase when the capsule enters the spawning state. The engine's
+`SPAWN_PHASE_DURATION` is already `0xB4`, and its spawn-then-decrement ordering already
+matches `loc_3F3F4` (:84991-84995). Neither is wrong. The engine simply enters the state on
+a phase that captures one extra boundary.
+
+**Consequences of the extra spawn**, both of which are downstream of the same half-interval:
+one extra `RandomNumber` call (:84980) desyncs the RNG stream for everything after it, and
+the extra animal shifts when the capsule's `loc_3F406` scan finds object RAM clear — which
+is what moves the results object, its PLC, and finally the `queue.s2_nemesis_plc.busy` row
+the chain reports at f3525.
+
+**So the object V-blank counter phase is implicated after all**, contrary to the earlier
+entry's reading that the clock work was exhausted. It is not the *drain* of the PLC queue
+that is wrong; it is the phase of the clock feeding a `& 7` gate 300 frames upstream. The
+fix must move the phase at capsule-break time, and the 0.5-interval margin means the
+required correction is small — but any correction must come from the ROM's own timing, not
+from tuning the window until the count reads 22.
+
+Next: establish what the ROM's `Vint_runcount` phase is at the capsule-break frame and
+where the engine's diverges from it. The count (22 vs 23) is now a single cheap green/red
+signal for any candidate fix.
+### The phase error is 3 = 11 mod 8, and the SS-return seeding path is dead code
+
+Two probe runs (both reverted, neither committed) close the loop on the 22-vs-23 count.
+
+**The phase is measurable and explains the count exactly.** At the capsule-break frame the
+ROM's counter sits at `& 7 == 2` and the engine's at `& 7 == 5` — a 3-tick offset. From
+phase 2 the first random spawn falls at +6, giving `floor((180-6)/8)+1 = 22`; from phase 5
+it falls at +3, giving `floor((180-3)/8)+1 = 23`. That is the whole defect, arithmetically.
+
+**3 = 11 mod 8**, and 11 is precisely the special-stage round-trip loss the engine never
+subtracts. `seg7_ehz2` is entered from `ss_5`. So the phase error at the capsule is the
+unsubtracted SS-return mask, surviving mod 8 into a `& 7` gate ~300 frames later.
+
+**But the fix cannot be placed where it currently is.** A probe on
+`TraceSessionLauncher.applyRunDestinationVblankAdmission` printed *nothing* on a full chain
+run — not from the presentation branch, not the level branch, and not from an unconditional
+statement placed above the `runVblankClock == null` check. The method is never invoked for
+this chain. The `TraceRunVblankClock` destination-admission path (`levelDestinationTarget`,
+`uncomparedInteriorReturnTarget`) is therefore dead code for the S2 run route, which is the
+complete explanation for why the SS-return model on `bugfix/ai-ss-return-mask`
+(`0c1fa7a60`) measured byte-identical to control: it could not execute. **That branch must
+not be revived as placed.**
+
+This does not contradict `2ac1487fe` having moved the frontier — the per-(zone, act) masked
+loss evidently reaches the walker through a different consumer of
+`interLevelNonAdvancingMovieRows`. Identifying that consumer is the next step, because it
+is where the SS-return term belongs.
+
+**The cheap signal stands.** Any candidate fix is tested by the animal count: 22 random
+spawns is the ROM, 23 is today's engine, one ~8s chain run to read it, no fixture
+regeneration and no comparator involved. And because the window constant `$B4` and the
+spawn/decrement ordering are both already correct and cited, the count cannot be moved by
+tuning — only by correcting the phase, which is what makes it a rule-3-safe target.
+
+### Correction and an unresolved contradiction — do not build on the previous entry's second half
+
+The previous entry claimed the `TraceRunVblankClock` destination-admission path is dead code
+for the S2 run. **That claim is not safe and should not be relied on.** A later probe placed
+inside `TraceRunReplayWalker.interLevelVblankBudget` *does* fire on a chain run — exactly
+once, with `loss=10` — and its only caller chain runs through
+`TraceRunVblankClock.levelDestinationTarget`, which is only reachable from
+`TraceSessionLauncher.applyRunDestinationVblankAdmission` (called at :1592 under an
+`objects != null` guard). So that method must execute at least once, contradicting two
+probes placed inside it — including one above its `runVblankClock == null` check — that
+printed nothing on full chain runs.
+
+One of those two measurements is wrong and I did not determine which. Until it is settled,
+neither "the path is dead" nor "the path runs normally" is established. Resolve it before
+placing any fix: re-probe both sites in one build, and confirm the probed class is the one
+on the test classpath.
+
+**What survives independently of that contradiction**, because it was measured on the
+fixtures and on the engine rather than inferred from the call graph:
+
+- The engine spawns 23 random animals where the ROM spawns 22 (31 vs 30 total).
+- The capsule-break counter phase is `& 7 == 2` in the ROM and `& 7 == 5` in the engine, and
+  that 3-tick offset reproduces 22 vs 23 exactly via `180/8 = 22.5`.
+- `3 = 11 mod 8`, and 11 is the unsubtracted special-stage round-trip loss on the `ss_5 ->
+  seg7_ehz2` entry.
+- The animal count is a fixture-free binary signal for any candidate fix, and it cannot be
+  moved by tuning, since `$B4` and the spawn/decrement ordering are already correct.
+
+**Also established and independent:** `interLevelVblankBudget` is invoked **once** across a
+chain with more than twenty level->level boundaries. Whatever the resolution of the
+contradiction above, one application of the masked loss across a whole run is not what a
+per-boundary model implies, and that discrepancy is worth measuring on its own.
+
+### Contradiction resolved: the path is dead, and the masked loss is consumed by the test harness
+
+Three probes in a **single build** (all reverted, none committed), one chain run:
+
+| probe | site | fired |
+|---|---|---|
+| A | `TraceRunReplayWalker.interLevelVblankBudget` entry | **once**, `loss=10` |
+| B | `TraceSessionLauncher.applyRunDestinationVblankAdmission`, above its null check | **never** |
+| C | its call site at :1592, before the `objects != null` guard | **never** |
+
+B and C never firing in the same build that A fires in settles it: **the production
+destination-admission path is genuinely not exercised by the S2 chain**, and the earlier
+retraction was over-cautious. The single A call comes from
+`AbstractRunChainTest.java:2860` — the chain test's own harness computing required ticks —
+not from engine code.
+
+**The architectural consequence is the real finding.** The per-(zone, act) masked loss
+landed in `2ac1487fe` moved the frontier by changing what the *test harness expects*, not by
+changing what the engine *does*. Production `TraceRunVblankClock` seeding
+(`levelDestinationTarget`, `uncomparedInteriorReturnTarget`) does not run on this route at
+all. That fully explains why the SS-return model on `bugfix/ai-ss-return-mask`
+(`0c1fa7a60`) was byte-identical to control — it was placed in code the chain never
+reaches — and it means **the SS-return term belongs in the harness's expectation path, not
+where it currently sits.**
+
+It also resolves the "budget invoked once across 20+ boundaries" oddity from the previous
+entry: one call is what a harness-side computation looks like, not a per-boundary engine
+model. Nothing is wrong with the count.
+
+Standing signal for the next attempt, unchanged and independent of all the above: the engine
+spawns 23 random animals where the ROM spawns 22; the capsule-break phase is `& 7 == 5`
+against the ROM's `2`; that 3-tick offset reproduces the counts through `180/8 = 22.5`; and
+`3 = 11 mod 8` where 11 is the unsubtracted SS-return loss on `ss_5 -> seg7_ehz2`. One ~8s
+chain run reads the count, and it cannot be moved by tuning.
+
+## 2026-08-17 - Release-6 chain baseline after the comparator fix (10b2fb39b)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS{1,2,3k*}CompleteEmeraldRun{Chain,Prefix}` with all
+three ROM properties. Tree: `develop` at `10b2fb39b`, which includes James's
+`9b077bdfb` and `641467596` S3K special-stage return fixes. 7 tests, 2 failures, 1 error.
+
+| test | result |
+|---|---|
+| `TestS1CompleteEmeraldRunPrefix` | **green** (2 pins) |
+| `TestS2CompleteEmeraldRunPrefix` | **green** (segment 10) |
+| `TestS3kSonicTailsCompleteEmeraldRunPrefix` | **green** (segment 1) |
+| `TestS1CompleteEmeraldRunChain` | red |
+| `TestS2CompleteEmeraldRunChain` | red |
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | red |
+
+Every pin green and every chain red is the intended shape of a ratchet gate: the pins defend
+ground won, the chains report the frontier.
+
+**S1** - segments 3 (`ghz2_2`) and 6 (`ghz3_2`) both diverge at **frame 0** on
+`dynamic_art.edges`, rom `[]` engine `[0, 1]`: the engine publishes two dynamic-art edges at
+segment entry that the ROM does not have. 4,563 and 12,110 errors. Also a walk-failure,
+`source comparator is not complete for mz1: cursor 3390 of 3391` - one row short. Newly
+measured; this route had no chain test before today.
+
+**S2** - unchanged: segment 11 (`seg7_ehz2`), 236 errors, frame 3525,
+`queue.s2_nemesis_plc.busy` rom=false engine=true, plus a walk-failure exhausting that
+segment's source comparator at cursor 3977 of 3997 with `mode path=[TITLE_CARD]`. James's
+S3K fixes did not touch it, as expected.
+
+**S3K** - `IllegalStateException: non-exportable pending hardware submission at segment end:
+KOS_MODULE_QUEUE#14`. The suppressed detail is the useful part: across raw frames 35-3989 the
+ROM expects `KOS_MODULE_QUEUE#24, #25, #26, #27, #28 ... #34` while the engine is pending
+`#14` throughout, and expects `KOS_DECOMPRESSION_QUEUE#43 ... #60` while the engine is
+pending `#27`. **The sha256s match** - engine `#14` carries
+`65c8c371e1ca1f70acf3a74cc1fa689867dcffbe93617a8c968e3de9242f89b3`, which is exactly the
+payload the ROM wants at `#30`. So the engine is loading the right art with the wrong
+ordinal: it is roughly 10 module and 16-33 decompression submissions behind, never ahead
+and never wrong-payload. That is the signature of submissions the engine never makes at all,
+consistent with the unmodelled title-card and results Kosinski art, and it quantifies the
+gap as a submission count rather than a timing offset.
+
+### S1 chain: the bridge's dynamic-art edges are not drained before gameplay starts
+
+Measured from the fixture, not inferred. `dynamic_art_transfer_state` rows in
+`s1-sonic-complete-withemeralds`:
+
+| segment | rows | frame 0 edges | final edges |
+|---|---|---|---|
+| 2 `ghz2` (presentation bridge) | 800 | **2** | 0 |
+| 3 `ghz2_2` (gameplay) | 3606 | **0** | 0 |
+
+The engine reports `[0, 1]` -- two edges -- at segment 3 frame 0, which is exactly the edge
+count the bridge opens with. The ROM opens the bridge with two transfers, drains them over
+its 800 rows, and enters the gameplay segment with none outstanding. The engine carries them
+across that boundary instead.
+
+Segment 6 (`ghz3_2`) fails identically at frame 0 for the same reason, which is what a
+boundary-drain defect predicts and a content defect would not: the two failing segments are
+both the gameplay half following a bridge, and both differ only at entry.
+
+Note the comparator normalises these ordinals per segment origin
+(`DynamicArtSpecialStageComparator.comparisonFields`, which maps through
+`DynamicArtIdEpoch` because transfer/edge ids are recorder delivery identities allocated
+from emulator power-on rather than ROM state). So `rom=[] engine=[0, 1]` is a genuine
+difference in how many transfers are outstanding, not an id-numbering artefact.
+
+Next: find where a presentation bridge hands off to its gameplay segment and why outstanding
+transfers survive it. The error counts (4,563 at segment 3 and 12,110 at segment 6) are
+downstream of this single entry-state difference, so this is one defect, not thousands.
+
+### Coverage audit: would the trace system catch a spurious death at AIZ2 -> HCZ1?
+
+Asked because a real bug is believed to sit on that transition (Sonic dies when he should
+not). Answer: **the detection would work, but nothing currently reaches it.**
+
+**The detection mechanism is sound.**
+
+- `TraceBinder` compares `routine` and `status_byte` for the player
+  (`src/main/java/com/openggf/trace/TraceBinder.java:226-235`).
+- The fixture populates them. `player_routine` over
+  `s3k-sonic-tails-complete-emeralds`: `aiz_5` records `02` x6951, `00` x121, `04` x103;
+  **`hcz` records `02` for all 3574 rows** and nothing else.
+- So the ROM never leaves normal control anywhere in the HCZ segment, and any engine
+  divergence into a death or hurt routine mismatches on the first frame it happens. The
+  check does not depend on knowing which index is death: in that segment *any* other value
+  is a mismatch. (`Sonic_Index`, `sonic3k.asm:21892-21899`, is 0 Init / 2 Control / 4 / 6 /
+  8 / $A / $C; 4 and 6 are the hurt and death families. The exact index was not pinned down
+  and does not need to be for this argument.)
+
+**But nothing exercises it.**
+
+1. **The chain does not get there.** `TestS3kSonicTailsCompleteEmeraldRunChain` stops at
+   **segment 0 of 63** -- only `..._seg0_report.json` is produced -- on the
+   `KOS_MODULE_QUEUE#14` submission-ordinal error. The AIZ2 -> HCZ1 transition is segments
+   **8 -> 9**. The chain fails eight segments early, so the death bug is masked behind an
+   unrelated blocker.
+2. **The HCZ zone slice is out of the gate.** `TestS3kHczZoneSliceTraceReplay` exists but
+   `pom.xml:304` excludes `**/tests/trace/s3k/*ZoneSliceTraceReplay.java` from
+   `-Ptrace-replay`, including it only in `-Ptrace-replay-r7` (`pom.xml:350`). CLAUDE.md's
+   stated priority is "Keep AIZ -> HCZ stable -- the primary release slice", so the primary
+   slice's own zone coverage is currently gated out of release 6.
+3. **A zone slice would not cover the transition anyway.** It starts at HCZ, so the
+   AIZ2 -> HCZ1 boundary -- where the bug is believed to live -- is exercised by no test in
+   any profile.
+
+**Secondary hazard.** The `routine` / `status_byte` comparisons are guarded by
+`engineDiag != null && expected.routine() >= 0 && engineDiag.routine() >= 0`. If the engine
+diagnostic is absent or either value is negative the field is **silently not compared** --
+the comparison disappears rather than failing. Anything relying on this check to prove a
+death cannot happen should assert the field was actually compared, not merely that no
+mismatch was reported.
+
+**What would close it:** getting the chain past segment 0 is the only route to covering the
+transition itself, because a mid-run start would require hydrating engine state from the
+trace, which hard rule 4 forbids. Re-scoping the HCZ zone slice into `-Ptrace-replay` would
+restore in-zone coverage but still not the boundary.
