@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Slots bonus stage is GREEN (`bugfix/ai-slots-r258`, merged 2026-08-17).** Two independent
+  defects, both ROM-cited, closed the last 2 errors over an unchanged 5259 compared rows.
+  **Frame 3704:** the engine was unloading the slot cage out-of-range, though its live routine
+  `loc_4BF9A` (sonic3k.asm:99324-99560) contains **no** `out_of_range`, `MarkObjGone` or
+  `Delete_Current_Sprite` on any path, and the fixture's own `slot_dump` shows it in SST slot 4 from
+  frame 0 to 3697. A probe caught exactly one unload in the stage. Slot 4 is the lowest dynamic slot
+  the ROM keeps occupied, so freeing it let `AllocateObject`'s forward scan hand it to the batch's
+  **first** ring, which then failed `rewardSlot > cageSlot`, lost its same-frame routine-0 tick and
+  awarded a frame late — while every later ring still allocated above and stayed on cadence. That
+  asymmetry was the whole clue. Neither half of the previously-fixed compensating pair was touched.
+  **Frame 5106:** ROM countdowns use `subq.b #1,2(a0) / bpl`, which tests for **negative**, so a
+  reload of `#N` steps every `N + 1` passes; the engine stepped every `N`. Compounding it,
+  `loc_4BF30` (:99283-99300) claims a slot **without writing the layout byte** — the first frame is
+  published by the first `sub_4B592` pass — while the engine published at creation *and* decremented
+  on that frame, spending the creation pass twice. The idiom is now modelled directly, so all four
+  reloads are the listing's own literals and `SLOT_WALL_COLOR_DELAY` reverts 2 -> 1, the 2 having
+  been a period compensation. Three unit assertions that pinned the eager publish were corrected to
+  the ROM and **strengthened** with per-step publish checks. Zero newly red in all three sweeps; the
+  Knuckles sibling green on both trees.
+
 - **The slot-stage rotation throttle only ticks when no special tile is under the player
   (`bugfix/ai-slots-rotation-throttle`, merged 2026-08-17).** Slots diverged at frame 2587 on a
   *jump*, not a landing: `x_speed` and `y_speed` share the same magnitude and differ only in angle,

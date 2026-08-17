@@ -86,13 +86,19 @@ class TestS3kSlotRenderBuffers {
 
         assertTrue(layoutIndex >= 0);
         assertTrue(buffers.startSlotWallAnimationAt(layoutIndex, 0x02));
+        // ROM loc_4BF30 (sonic3k.asm:99283-99300) only claims the slot; the resting
+        // tile is still in the layout until loc_4B65A's first sub_4B592 pass
+        // (sonic3k.asm:98499-98513) publishes byte_4B688[0] = $D.
+        assertEquals(0x01, buffers.layout()[layoutIndex] & 0xFF);
+        buffers.tickTransientAnimations();
         assertEquals(0x0D, buffers.layout()[layoutIndex] & 0xFF);
         assertEquals(0x0D, buffers.expandedLayout()[expandedIndex] & 0xFF);
 
-        // ROM loc_4B65A advances one flash colour frame every SLOT_WALL_COLOR_DELAY ticks
-        // (the reset+1 timer period), so the flash runs frames.length * delay ticks before it
-        // restores the advanced tile.
-        for (int i = 0; i < S3kSlotRomData.SLOT_WALL_COLOR_FRAMES.length * S3kSlotRomData.SLOT_WALL_COLOR_DELAY; i++) {
+        // loc_4B65A reloads its countdown with #1 and tests it for negative, so each
+        // of the remaining flash colours costs 2 passes, and the table's 0 terminator
+        // -- one entry past the 24 colours -- is what restores the advanced tile.
+        int period = S3kSlotRomData.SLOT_WALL_COLOR_DELAY + 1;
+        for (int i = 0; i < S3kSlotRomData.SLOT_WALL_COLOR_FRAMES.length * period; i++) {
             buffers.tickTransientAnimations();
         }
 

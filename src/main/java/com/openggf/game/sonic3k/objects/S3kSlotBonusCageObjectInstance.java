@@ -77,6 +77,30 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         tickSlotRuntime(vIntRunCount, playerEntity);
     }
 
+    /**
+     * {@code Obj_SlotBonus} owns its whole lifetime: the live routine
+     * {@code loc_4BF9A} (sonic3k.asm:99324-99560) contains no {@code out_of_range}
+     * macro, no {@code MarkObjGone} and no {@code Delete_Current_Sprite} on any
+     * path, so the cage can never unload while the bonus stage is running -- it is
+     * torn down only when the stage itself ends. Taking the shared camera-relative
+     * unload instead frees the cage's SST slot, and because the cage sits in the
+     * lowest dynamic slot the ROM keeps occupied, the next {@code AllocateObject}
+     * (sonic3k.asm:37911-37914, forward scan from the first slot) hands that slot
+     * to a freshly spawned {@code Obj_SlotRing}. A ring landing at or below the
+     * cage's slot has already been passed by the ascending object walk, so it
+     * loses the routine-0 tick it should have run on its own spawn frame and its
+     * {@code $40} countdown reaches zero one frame late.
+     */
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
     public void tickSlotRuntime(int frameCounter, PlayableEntity playerEntity) {
         tickSlotRuntime(frameCounter, playerEntity,
                 playerEntity instanceof AbstractPlayableSprite player ? player.getCentreX() : SNAP_X,

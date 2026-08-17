@@ -100,22 +100,32 @@ class TestS3kSlotLayoutRenderer {
 
         buffers.startRingAnimationAt(0x21);
 
-        for (int i = 0; i < S3kSlotRomData.RING_SPARKLE_DELAY; i++) {
+        // ROM loc_4BF30 and its siblings claim the slot without touching the layout
+        // byte (sonic3k.asm:99283-99300); loc_4B5C2's first sub_4B592 pass publishes
+        // frames[0] because a cleared slot's countdown is 0 and `subq.b #1 / bpl`
+        // falls straight through (sonic3k.asm:98420-98428). Each later step then
+        // costs RING_SPARKLE_DELAY waiting passes plus the publishing pass, since
+        // the reload of #5 is tested for negative, not zero.
+        renderer.tickTransientAnimations(buffers);
+        assertEquals(0x10, buffers.renderCellIdAt(expandedRow, expandedCol));
+
+        int period = S3kSlotRomData.RING_SPARKLE_DELAY + 1;
+        for (int i = 0; i < period; i++) {
             renderer.tickTransientAnimations(buffers);
         }
         assertEquals(0x11, buffers.renderCellIdAt(expandedRow, expandedCol));
 
-        for (int i = 0; i < S3kSlotRomData.RING_SPARKLE_DELAY; i++) {
+        for (int i = 0; i < period; i++) {
             renderer.tickTransientAnimations(buffers);
         }
         assertEquals(0x12, buffers.renderCellIdAt(expandedRow, expandedCol));
 
-        for (int i = 0; i < S3kSlotRomData.RING_SPARKLE_DELAY; i++) {
+        for (int i = 0; i < period; i++) {
             renderer.tickTransientAnimations(buffers);
         }
         assertEquals(0x13, buffers.renderCellIdAt(expandedRow, expandedCol));
 
-        for (int i = 0; i < S3kSlotRomData.RING_SPARKLE_DELAY; i++) {
+        for (int i = 0; i < period; i++) {
             renderer.tickTransientAnimations(buffers);
         }
         assertFalse(buffers.hasActiveTransientAnimationAt(0x21));
@@ -132,8 +142,15 @@ class TestS3kSlotLayoutRenderer {
         int expandedCol = expandedIndex % buffers.layoutStrideBytes();
 
         buffers.startBumperAnimationAt(compactIndex);
-        renderer.tickTransientAnimations(buffers);
 
+        // loc_4B5F2 (sonic3k.asm:98446-98460): the claiming branch leaves the layout
+        // byte alone, the first sub_4B592 pass publishes byte_4B622[0] = $A, and the
+        // reload of #1 costs one waiting pass before $B.
+        renderer.tickTransientAnimations(buffers);
+        assertEquals(0x0A, buffers.renderCellIdAt(expandedRow, expandedCol));
+
+        renderer.tickTransientAnimations(buffers);
+        renderer.tickTransientAnimations(buffers);
         assertEquals(0x0B, buffers.renderCellIdAt(expandedRow, expandedCol));
     }
 
