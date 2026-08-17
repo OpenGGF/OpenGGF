@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): 47 further S3K solid objects now publish the ROM object-code pointer high word
+  that `sub_13EFC` latches into `Tails_CPU_interact` while a sidekick stands on them
+  (sonic3k.asm:26816-26843). Until now `SidekickCpuController.currentS3kInteractWord()`
+  returned `null` for any stood-on object that did not implement
+  `RomObjectCodePointerProvider`, which made the ROM's compare -- and the `sub_13ECA` park
+  it drives (:26800-26809) -- a silent no-op for most of the S3K solid set. Every published
+  value is derived from that object's own ROM code address, not from a fixture: the S3K
+  object pointer tables were located in the user-supplied ROM by requiring all 256
+  `Sprite_Listing3` and all 185 `Sprite_ListingK` longwords to fall inside the address
+  bracket of their disassembly label (unique base $094DE2 / $0951E2), and each object's
+  entry address was then read straight out of `s3k.gen`. The values are **not** uniform:
+  they span `$0001` (`Obj_InvisibleBlock` $0001EC18), `$0002`, `$0003`, `$0004`
+  (`Obj_Pachinko_Platform` $0004A186), `$0005`, `$0006` and `$0008` (the ICZ set,
+  `Obj_Madmole` $0008D580, `Obj_EggCapsule` $00086540). Two objects sitting either side of
+  the same bank boundary -- `Obj_HCZWaterRush` $0002FDA4 and `Obj_HCZCGZFan` $00030580 --
+  are the concrete proof that a blanket `$0003` would have been wrong. Each object's whole
+  code block was checked to lie in a single bank by taking the range from its entry to the
+  next table entry, and every `move.l #loc_XXXXX,(a0)` self-store cited was confirmed
+  byte-exact in `s3k.gen` as `20BC 000X XXXX`. Five objects that genuinely rewrite word 0
+  across a bank boundary are deliberately left unpublished rather than given a constant;
+  see the trace frontier log.
 - Fix(s3k): the MGZ top platform never published its ROM object-code pointer, so an S3K
   sidekick standing on it could not park. `Obj_MGZTopPlatform` writes its own routine
   address into word 0 of its SST (`move.l #loc_34C54,(a0)`, sonic3k.asm:71495-71497), and

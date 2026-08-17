@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -31,7 +32,23 @@ import java.util.List;
  * the previous frame and consumed by the next update.
  */
 public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_ICZCrushingColumn} is installed from the S3K object pointer table at
+     * {@code $0008A44A} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:187929).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0008}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0008;
+    }
+
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN;
 

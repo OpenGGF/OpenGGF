@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **47 S3K solid objects now publish their ROM code word, so the sidekick despawn compare is no
+  longer a silent no-op (`feature/ai-s3k-code-pointer-sweep`, merged 2026-08-17).** ROM `sub_13EFC`
+  latches word 0 of the stood-on object's SST — its live code pointer — and compares it on the next
+  off-screen on-object frame; in the engine that compare reads `currentS3kInteractWord()`, which
+  returned **null** for any object not implementing `RomObjectCodePointerProvider`, disabling the
+  branch entirely. Two measured frontiers this session (FBZ 116, MGZ 19983) were exactly that, and a
+  scan found **52 of 70** S3K solid classes still affected.
+  The values were derived rather than assumed: both ROM object pointer tables were located inside
+  `s3k.gen` by bracketing each of the 441 `Sprite_Listing3`/`Sprite_ListingK` entries between the
+  numbered labels either side and solving for the single base satisfying every constraint, then
+  reading the entry addresses out of the image. **The blanket-`0x0003` hazard was real: the 47
+  landed values span seven high words and only 10 are `0x0003`** — `Obj_HCZWaterRush` at
+  `0x0002FDA4` and `Obj_HCZCGZFan` at `0x00030580` sit either side of a bank boundary in a region
+  with no numbered labels, so only the ROM table separates them. A blanket value would have been
+  wrong for 37 of 47 and would have manufactured spurious parks.
+  Four classes are **deliberately skipped and listed** because their object rewrites its pointer
+  across banks (`Obj_GumballMachine`, `Obj_GumballTriangleBumper`, `Obj_MHZ1CutsceneButton`,
+  `Obj_LBZEndBoss`) — a single high word cannot express them.
+  **Measured trace delta: zero**, reported as such. No committed movie stands an off-screen CPU
+  sidekick on one of these objects at a moment where the latched word differs; the value is that the
+  branch now holds for a recording nobody has made.
+
 - **The MGZ top platform publishes its ROM code word, so the sidekick despawn compare can fire
   (`bugfix/ai-mgz-sidekick-despawn`, merged 2026-08-17).** `sub_13EFC` (sonic3k.asm:26816-26843)
   latches word 0 of the stood-on object's SST into `Tails_CPU_interact` on every on-object frame and,

@@ -80537,3 +80537,124 @@ offsets only. No zone/act/route/frame/game predicate. No landed fix undone;
 relied on. `CollisionRules`, `SolidRoutineProfile`, `CnzTrapDoorInstance`,
 `Sonic3kAIZEvents` and the hardware-timing port were not read or modified. No fixture
 regenerated.
+
+## 2026-08-17 -- S3K sidekick object-code pointer: the sweep, and why a blanket $0003 would have been wrong
+
+`sub_13EFC` (sonic3k.asm:26816-26843) latches word 0 of the stood-on object's SST --
+its live code pointer -- into `Tails_CPU_interact` through `loc_13F2E` on every
+on-object frame, and on an off-screen on-object frame compares the live word against
+the latch; a mismatch parks the sidekick via `sub_13ECA` (:26800-26809). In the engine
+that compare reads `SidekickCpuController.currentS3kInteractWord()`, which returns
+`null` for any object that does not implement `RomObjectCodePointerProvider` --
+so for such an object the ROM branch is a silent no-op in both directions (a
+suppressed park now, a spurious one later once a stale latch meets a publishing
+object).
+
+### Scope, re-measured rather than inherited
+
+The briefed figure was "68 `SolidObjectProvider` classes, 49 without the provider".
+Re-measured on `a6e644786` by scanning `src/main/java/com/openggf/game/sonic3k` for a
+direct `implements ... SolidObjectProvider`: **70 classes, 52 without the provider**.
+The framing reproduces; the count does not, and the difference matters only in that
+one of the 52, `CnzTrapDoorInstance`, is held elsewhere and was left alone.
+
+### How each value was derived (no fitting)
+
+The published quantity is the high word of the ROM address of the routine the object
+stores in word 0 of its own SST. It was obtained from `s3k.gen`, not from a fixture
+and not from a disassembly expression:
+
+1. Both S3K object pointer tables were **located in the user-supplied ROM**, not
+   assumed: for every entry of `Sprite_Listing3` (256 longs) and `Sprite_ListingK`
+   (185 longs) the disassembly label was bracketed by the numbered `loc_`/`sub_`
+   labels either side of it -- those names encode real ROM addresses -- and the ROM was
+   scanned for a base at which *every* longword falls inside its own entry's bracket.
+   Exactly one base satisfied all 256 and all 185 constraints: **$094DE2**
+   (`Sprite_Listing3`) and **$0951E2** (`Sprite_ListingK`). That is a 441-way
+   simultaneous agreement, so the entry addresses that follow are ROM-read.
+2. Each object's entry address was then read out of that table.
+3. Every `move.l #loc_XXXXX,(a0)` self-store cited was confirmed **byte-exact** in
+   `s3k.gen`: the six bytes `20BC 000X XXXX` occur, and at an address a few bytes
+   before the target, exactly as the disassembly shows (`loc_34C54` -> `$34C4E`,
+   `loc_3BA4A` -> `$3B98C`, `loc_32188` -> `$32182`, `loc_8B384` -> `$8B370`, ...).
+4. Each object's code block was checked to lie in **one** bank by taking the range
+   from its entry to the next-higher table entry and requiring both ends to share a
+   high word.
+
+### The blanket-$0003 hazard is real and would have been mostly wrong
+
+Of the 47 values landed, **seven distinct high words** appear:
+
+| high word | objects |
+|---|---|
+| `$0001` | `Obj_InvisibleBlock` ($0001EC18) |
+| `$0002` | AIZ log/floor/bridge set, `Obj_BreakableWall`, `Obj_CollapsingBridge`, `Obj_Button`, `Obj_HCZSnakeBlocks`, `Obj_HCZWaterRush`, LBZ platform/plug/bridge/elevator set, `Obj_MGZLBZSmashingPillar` |
+| `$0003` | `Obj_CNZCannon`, `Obj_CNZCylinder`, `Obj_CNZRisingPlatform`, `Obj_HCZCGZFan`, `Obj_HCZHandLauncher`, `Obj_HCZSpinningColumn`, `Obj_LRZCollapsingBridge`, `Obj_MGZMovingSpikePlatform`, `Obj_MGZSwingingPlatform`, `Obj_MHZSwingBarVertical` |
+| `$0004` | `Obj_Pachinko_Platform` ($0004A186), `Obj_PachinkoTriangleBumper` ($00049AAE) |
+| `$0005` | `Obj_HCZ2Wall`, `Obj_LBZ1InvisibleBarrier` |
+| `$0006` | `Obj_CNZMinibossTop`, `Obj_CNZWaterLevelButton`, `loc_62458` (Knuckles CNZ2 cutscene wall), `loc_6B26E` (HCZ end boss water column) |
+| `$0008` | the whole ICZ set, `Obj_MGZMiniboss`, `Obj_EggCapsule`, `Obj_Madmole` |
+
+Only **10 of 47** are `$0003`. The sharpest case is two HCZ objects on opposite sides
+of the same bank boundary: `Obj_HCZWaterRush` at **$0002FDA4** and `Obj_HCZCGZFan` at
+**$00030580**. Both sit in a region of the disassembly with no numbered labels, so
+neither is resolvable from label names alone -- only the ROM table separates them. A
+blanket `$0003` would have made 37 of the 47 wrong and would have manufactured
+spurious parks.
+
+### Skipped, and why
+
+Five classes are deliberately left without a provider rather than given a constant,
+because their object genuinely rewrites word 0 across a **bank boundary** and a single
+high word cannot model them:
+
+| class | object | conflicting words |
+|---|---|---|
+| `GumballMachineObjectInstance` | `Obj_GumballMachine` $00060C56 | own `$0006` vs `move.l #MoveChkDel,(a0)` in `$0008` |
+| `GumballTriangleBumperObjectInstance` | `Obj_GumballTriangleBumper` $00060F2E | own `$0006` vs `MoveChkDel` `$0008` |
+| `Mhz1CutsceneDoorInstance` | `Obj_MHZ1CutsceneButton` $00062E28 | own `$0006` vs `Wait_Draw` `$0008` |
+| `LbzEndBossInstance` | `Obj_LBZEndBoss` $000738D6 | own `$0007` vs `Obj_FlickerMove` `$0008` vs `Delete_Current_Sprite` `$0001` |
+| `CnzTrapDoorInstance` | -- | not analysed; held elsewhere this session |
+
+These are reported, not guessed. Note that `Mhz1CutsceneButtonInstance` (already
+landed, not touched here) publishes a single word for that same multi-bank
+`Obj_MHZ1CutsceneButton`; that is a partial model of the ROM rather than a fitted
+constant, and it is flagged here as the natural follow-up, not removed.
+
+### Measured delta
+
+`-Ptrace-replay-r7`, both trees, own control from this worktree pair
+(`a6e644786` detached vs the sweep branch): **38 report classes, 32 red on each**.
+The red set is byte-identical by name in both directions, and every class's
+`Tests run / Failures / Errors` tuple is identical -- no newly red class, no newly
+green class, no error-count movement.
+
+The honest reading is that the sweep is currently **inert in the fixtures**: none of
+these 47 objects is stood on by an off-screen CPU sidekick at a moment where the
+latched word differs in its high word, in any recorded movie in the suite. That is the
+expected outcome for a correctness sweep and it is reported as zero rather than
+dressed up. The value is that the ROM branch is no longer a silent no-op for 47
+objects, which is what makes it hold for a BK2 nobody has recorded yet.
+
+Default profile (`-Dsurefire.forkCount=1`), both trees: the **control run
+truncated** -- it wrote 1679 report classes against the sweep tree's 1915, and its
+13176-test total is therefore not comparable to the sweep's 15118 (a truncated run
+reports fewer red, so the aggregate counters are not used here). Over the
+1679-class intersection: control 43 red, sweep 41, **zero newly red**. The two
+classes red on control and green on the sweep tree --
+`TestMhzMushroomParachuteObjectInstance` and `TestMadmoleBadnikInstance` -- were
+re-run **in isolation on both trees** and are green on both (12/12 and 32/32,
+no failures, no errors), so they are the documented reused-fork ambient flakes and
+not movement. No other class differs in any counter.
+
+### Discipline
+
+No constant fitted: every published word is the high word of a ROM address read from
+`s3k.gen`, cited in the class javadoc to its `sonic3k.asm` label line. No fixture
+measured to obtain a value. No assertion weakened, widened, deleted, disabled or made
+advisory; no test file changed at all. No trace hydration. No zone/act/route/frame/
+game-name predicate -- the provider is a per-object ROM fact, exposed at the object
+that owns it. No landed fix undone. `CollisionRules`, `SolidRoutineProfile`,
+`CnzTrapDoorInstance`, `Sonic3kAIZEvents` and the hardware-timing port were not read
+or modified. No fixture regenerated. Red-set differences computed with Python set
+difference in both directions; `comm` not used.
