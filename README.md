@@ -228,6 +228,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 chain accounts for the presentation bridge's own V-blank span
+  (`bugfix/ai-s1-seg6-vblank-drift`, merged 2026-08-17).** The chain's cross-segment object
+  V-blank clock ran **2,039 ticks behind** the recording by segment 6, which put Obj37's
+  spilled-ring floor probe -- gated on `(v_vblank_byte + d7) & 3`
+  (`s1disasm/_incObj/25, 37 Rings.asm:321-324`) -- on the wrong phase for the whole segment,
+  so the engine bounced and collected a ring the ROM lets fall through and delete. Not a
+  mis-modelled constant: Sonic 1's special stage exits through a results-screen presentation
+  bridge whose rows the level loop does not run on, so the production counter advanced by
+  **one tick** across `ghz2`'s 800 recorded rows and `ghz3`'s 798, nothing reconciled the clock
+  at the bridge's exit, and the deficit compounded once per stage return -- 1,022 lost by
+  `ghz2_2`, 2,040 by `ghz3_2`. Both halves of the correction already existed and neither adds a
+  constant: the bridge tail is `presentationBridgeVblankSpan` (one tick per recorded row, less
+  the profile's 7 rows `SS_Finish` builds the results screen through with interrupts disabled,
+  `sonic.asm:3369-3383`, so the V-int never reaches `VBlank_Exit`'s unconditional increment at
+  `:684`), and the gap to the destination is the ordinary inter-level budget with S1's existing
+  mask of 6. It also corrects the bridge's *entry* anchor, which used the stage-return budget
+  instead of `presentationBridgeEntryVblankBudget` and left the post-bridge chain one tick high
+  -- invisible while the bridge swallowed the clock, and one tick is a phase change to a `& 3`
+  consumer. **Segment 6 goes 4,982 errors to 0 and the `mz1` walk-failure closes with it** (it
+  was the same defect, not the independent one an earlier entry called it); the chain reaches
+  **segment 16+**, with its new frontier at segment 7 on `dynamic_art.edges`. Nothing inside
+  Obj37 was touched. S1-only by profile data, not by name: both helpers gate on
+  `alignsStageResultsPresentationVblank()`, false for S2 and S3K.
+
 - **The capture harness records hardware timing across the unrepresented spans
   (`feature/ai-ss-gap-recorder`, merged 2026-08-17).** The S3K complete-run recorder already
   observed hardware-timing frame ends in the spans belonging to no segment -- special-stage
