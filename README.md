@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The MGZ top platform publishes its ROM code word, so the sidekick despawn compare can fire
+  (`bugfix/ai-mgz-sidekick-despawn`, merged 2026-08-17).** `sub_13EFC` (sonic3k.asm:26816-26843)
+  latches word 0 of the stood-on object's SST into `Tails_CPU_interact` on every on-object frame and,
+  on an off-screen on-object frame, compares the live word against it — a mismatch parks Tails via
+  `sub_13ECA`. Instrumentation showed the engine reproducing the ROM's **first ten** latch
+  transitions position-for-position and then missing the eleventh: it *was* riding
+  `MGZTopPlatformObjectInstance` at the matching position, but `currentS3kInteractWord()` returned
+  null because that class never implemented `RomObjectCodePointerProvider`. The latch stuck, the
+  next off-screen landing compared equal, and the park never happened. The ROM stores its own
+  routine address into the slot (`move.l #loc_34C54,(a0)`, :71495-71497), so the published high word
+  is `0x0003` — derived, not measured off the fixture. **Systemic:** 49 of the 68 S3K
+  `SolidObjectProvider` classes still lack the provider, making that compare a silent no-op for each
+  of them; a mechanical ROM-cited sweep is the next target.
+
 - **MGZ's reported frontier is a 29-error island; 99% of its mass is the emerald boundary
   (`bugfix/ai-mgz-17383-emerald-bootstrap`, findings merged 2026-08-17).** Frame 10709 opens an
   island of 29 one-pixel errors ending at 10839 that re-converges with nothing cascading; **36 of

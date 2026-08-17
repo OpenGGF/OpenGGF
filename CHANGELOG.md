@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the MGZ top platform never published its ROM object-code pointer, so an S3K
+  sidekick standing on it could not park. `Obj_MGZTopPlatform` writes its own routine
+  address into word 0 of its SST (`move.l #loc_34C54,(a0)`, sonic3k.asm:71495-71497), and
+  `sub_13EFC` (:26816-26843) latches that word into `Tails_CPU_interact` on every on-object
+  frame, then compares it on the next off-screen on-object frame -- a mismatch tail-calls
+  `sub_13ECA` (:26800-26809), which warps the sidekick to the ($7F00, 0) despawn park.
+  `MGZTopPlatformObjectInstance` did not implement `RomObjectCodePointerProvider`, so
+  `SidekickCpuController.currentS3kInteractWord()` returned `null`, the latch kept the
+  previous `$0002` object's word, and a later off-screen landing on a `$0002xxxx` object
+  compared equal instead of parking. It now returns `$0003`, read from the ROM routine
+  address the fixture's own aux records for the slot (`object_code 0x00034C54`). No
+  constant fitted, no assertion changed.
 - Fix(s3k): AIZ1's fire-refresh phase ran for an invented 16 frames where the ROM runs 7.
   `loc_4FD10` seeds `move.w #$F,(Draw_delayed_rowcount).w`, bumps `Events_routine_bg` to
   `AIZ1BGE_FireRefresh` and falls through `bra.s loc_4FD32`, so the first

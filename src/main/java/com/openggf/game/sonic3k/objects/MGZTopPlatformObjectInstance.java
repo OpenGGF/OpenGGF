@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -65,7 +66,7 @@ import java.util.Map;
  */
 public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, ObjectControlledSolidContactController,
-        SpawnRewindRecreatable {
+        RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TOP_PLATFORM;
 
     // ROM: move.w #$280, priority(a0)
@@ -238,6 +239,22 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     private int firstActivatedWaypointEntryStart = -1;
     private int lastActivatedWaypointEntryStart = -1;
     private int waypointActivationCount;
+
+    /**
+     * ROM {@code Obj_MGZTopPlatform} writes its own routine address into word 0
+     * of the object SST ({@code move.l #loc_34C54,(a0)}, sonic3k.asm:71495-71497),
+     * so the high word an S3K sidekick reads through
+     * {@code Tails_CPU_interact} while standing on this platform is {@code $0003}
+     * ({@code $00034C54}). {@code sub_13EFC} (sonic3k.asm:26816-26843) latches
+     * that word on every on-object frame and compares it against the next
+     * off-screen on-object frame's word; without it a later landing on a
+     * {@code $0002xxxx} object cannot mismatch and the sidekick is never parked
+     * by {@code sub_13ECA}.
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0003;
+    }
 
     public MGZTopPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MGZTopPlatform");
