@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The capture harness records hardware timing across the unrepresented spans
+  (`feature/ai-ss-gap-recorder`, merged 2026-08-17).** The S3K complete-run recorder already
+  observed hardware-timing frame ends in the spans belonging to no segment -- special-stage
+  results, the level reload, the locked level intro -- but passed a **null writer**, so the
+  ledger advanced and the completions were discarded. A published run therefore has an ordinal
+  hole at every special-stage exit (module 13 -> 24 across the `ss -> aiz_2` boundary of
+  `s3k-sonic-tails-complete-emeralds`), and a replay sees work it submitted that can never
+  complete -- the `KOS_MODULE_QUEUE#14` abort that stops that chain. Those completions now go
+  to a run-level `hardware_timing_interstitial.jsonl`, opened lazily on the first such event,
+  so a capture without one publishes no new file and every already-published run keeps its
+  exact inventory. Per-segment `hardware_timing.jsonl` bytes are untouched, so the v5
+  per-segment contract is unchanged. The interstitial record is field-disjoint from the
+  per-segment one: it carries the preceding segment's identity rather than a `raw_frame`,
+  because it names no row, and its `bk2_frame` is provenance nothing may key on. No engine-side
+  change -- `HardwareTimingStreamLoader` reads only the per-segment file, so consuming this
+  stream is scoped separately. Harness suite: 591 passed against control's 588, with an
+  identical 11-failure set (all pre-existing).
+
 - **A life gain or loss is now reported on the frame it happens
   (`feature/ai-lives-trace`, merged 2026-08-17).** No fixture recorded a life counter or a
   death event -- the 42-column v5 row had none -- so a spurious death only surfaced
