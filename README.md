@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 run chain reconciles its inter-level clock after the admission wait
+  (`bugfix/ai-s2-chain-vblank-phase`, merged 2026-08-17).** The level -> level path
+  reconciled its V-blank budget *before* `admitLevelWhenReady`, leaving that admission wait's
+  engine frames unaccounted -- 148 of them at `seg4 -> seg5`, so the destination clock
+  attached 148 ticks high. It now reconciles a second time after admission on the same source
+  anchor, exactly as `prepareAcrossLevelBoundary` already does after its own title-card
+  settle. `TestS2CompleteEmeraldRunChain` moves from 236 errors / first non-camera mismatch
+  frame 3525 to **188 / frame 3531**, still segment 11 on `queue.s2_nemesis_plc.busy`. Also
+  lands, but leaves **disabled**, a special-stage round-trip model composing the destination
+  level's own entry mask with the stage's entry mask (`SpecialStage:` masks at
+  `s2disasm/s2.asm:6557`, releases `:6613`) -- 11 for most returns but 10 for OOZ2, whose own
+  level-entry mask is 9. Enabling it lands the engine on the recorded `vblank_counter` to the
+  tick at every special-stage return (drift 0, was 2/4/3), but then exposes a latent
+  `seg5_ehz2` failure at frame 524 with 122,139 errors on `sidekick_y` during Tails' hurt
+  transition -- proven not to be seg5's own clock, since forcing seg5's counter to the
+  recorded value fails identically. It is committed off rather than enabled wrong. The same
+  measurement over the S1 run gives 6 at every level -> level boundary and **0** at every
+  special-stage round trip, so S1's subtract-nothing model is correct by measurement rather
+  than by precedent.
+
 - **A post-close playback frame is treated as outside the hardware timing run
   (`bugfix/ai-timing-postclose-gap`, merged 2026-08-17).** The playback bridge keeps pumping
   frames after the run closes -- `GameLoop.syncPlaybackInputBridge` runs from
