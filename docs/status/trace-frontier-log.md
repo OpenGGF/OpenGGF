@@ -81559,3 +81559,106 @@ a strictly more accurate clock (loss 23 -> 1), not a new owner.
 separate strand and were not modified. No constant landed, no trace field is read, no
 zone/act/route/frame/game-name predicate was added, no assertion was weakened, no landed fix
 was undone, no fixture was regenerated.
+
+
+## 2026-08-17 -- S2 per-destination level-entry mask LANDED; the table re-derived independently
+
+Base `991052e42`; control worktree detached at the same commit. **Landed.** The frontier does
+not move; segment 11 improves and nothing regresses.
+
+### The table, re-derived from the fixtures rather than carried
+
+Metric `movieRows - vblankDelta` at each seam, where `movieRows = dest.bk2_frame_offset -
+(src.bk2_frame_offset + src.trace_frame_count - 1)` and `vblankDelta = dest vblank_counter[0] -
+src vblank_counter[last]`. Recomputed from scratch over all 27 boundaries of
+`s2-sonic-tails-complete-emeralds`:
+
+| boundary kind | value |
+|---|---|
+| level -> special stage -> level | **11** at all 7 |
+| level -> level | **10** at 20 of 21 |
+| `seg20_ooz1 -> seg21_ooz2` | **9** |
+
+Reproduces the previous rounds' table exactly. The eight act-advance seams available in the
+independently recorded `s2-lvl-select-*.bk2` fixtures agree value-for-value, **including the
+deviant one** (`ooz -> ooz2` = 9; arz/cnz/cpz/htz/mcz/mtz a1->a2 and mtz a2->a3 = 10).
+
+### One correction to the brief: the key is (zone, act), not zone
+
+`seg19_mcz2 -> seg20_ooz1` measures **10** while `seg20_ooz1 -> seg21_ooz2` measures **9**, so
+"OOZ's title-card payload differs" cannot be the whole story and a per-**zone** table would be
+wrong. The landed key is the destination `(zone_id, act)`.
+
+**A second honest limit, stated in the javadoc:** the only boundary that measures 9 is also the
+only boundary whose *source* is OOZ act 1. No fixture separates a destination property from a
+source one. Keying the destination is the choice consistent with the mask living in the
+destination's own `Level:` entry; a future fixture entering OOZ act 2 from elsewhere, or
+leaving OOZ act 1 for elsewhere, decides it. That is written into the citation as the kill
+condition alongside the general prediction (*every future boundary entering the same
+(zone, act) must measure the same loss*) and the NTSC scope note.
+
+### The single-site audit, re-run
+
+26 `move #$2700,sr` in `docs/s2disasm/s2.asm`; exactly **one** between `Level:` (:4757) and
+`Level_MainLoop` (:5088) -- line **4768** -- and no `disable_ints`/`ori #$0700,sr` macro form in
+that span either. Masks `bsr.w ClearScreen` + `jsr (LoadTitleCard).l`, released at :4772.
+
+### Placement
+
+`TracePlaybackProfile` gains `List<MaskedLevelEntryLoss>` (destination zone, destination act,
+rows) beside the existing flat default, plus
+`interLevelNonAdvancingMovieRows(destinationZone, destinationAct)`. `TracePlaybackProfile.SONIC_2`
+is `10` with one override `(6, 2) -> 9`; `SONIC_1` keeps `6` with an empty table and identical
+behaviour. Shared machinery reads it through
+`TraceRunVblankClock.maskedLevelEntryLoss(profile, destinationSegment)`, which resolves the
+identity from the manifest segment it is already crossing into -- **no zone/act literal anywhere
+in shared runtime code.** The record's compact constructor rejects a table without the
+alignment enabled.
+
+### Result: frontier unchanged, segment 11 strictly better
+
+| | control `991052e42` | with the table |
+|---|---|---|
+| axes | 5 | 5 |
+| walk frontier | `seg7_ehz2` (segment 11), tail cursor 3973/3997 | `seg7_ehz2` (segment 11), tail cursor **3977**/3997 |
+| segment 11 | 266 errors, first non-camera f3521 | **236** errors, first non-camera **f3525** |
+| first-error field | `queue.s2_nemesis_plc.busy` rom=false engine=true | same |
+| dynamic-art-gap axes | `seg4_ehz1->seg5_ehz2`, `ss_4->seg6_ehz2`, `ss_5->seg7_ehz2` | same three, same fields |
+
+`seg5_ehz2` did **not** go red. The parity hazard that sank the earlier held branch
+(`Obj4B_ChkPlayers`'s `btst #0,(Vint_runcount+3).w`, s2.asm:60990-60998) did not fire here,
+because this change moves only the level->level residual and leaves the ~19.3k special-stage
+interior deficit -- a separate, unlanded strand -- untouched.
+
+### Verification (own controls, both trees, reports cleared before every run)
+
+- `-Ptrace-replay`: fix **775 tests, 1F/3E**; control **774 tests, 1F/3E**. **Identical red
+  sets** (`TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceStructuralRowComparator`), diffed by name in both directions. The 1-test
+  difference is the new `TestTracePlaybackProfile` method.
+- `-Ptrace-replay-r7`: **37 tests, 30F/2E on both trees, identical red sets** (32 classes).
+- Default profile, sequential: fix 64F/28E over 15140, control 64F/28E over 15141; **identical
+  51-class red sets, no fix-only and no control-only entry.**
+- Protected set green on the fix tree: **106 tests, 0F/0E** -- `TestS1CompleteEmeraldRunPrefix`,
+  `TestS1CompleteEmeraldVisualRun`, `TestS1GhzMazeRoundTripChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestTraceRunVblankClock`,
+  `TestTraceRunVblankClockAuthorityGuard`, `TestTraceRunReplayWalkerControlFlow`,
+  `TestTraceSessionLauncherRunBranch`, `TestS3kSonicTailsCompleteEmeraldRunPrefix`, all five
+  `TestS2*CompleteEmeraldsSegmentTraceReplay`, `TestTracePlaybackProfile`,
+  `TestRunChainSuppressedRowVint`.
+
+### Not touched
+
+No fixture regenerated, no trace field read into engine state, no
+zone/act/route/frame/game-name predicate in shared code, no assertion weakened, no landed fix
+undone. `alignUncomparedInteriorReturnVblank` and
+`stageResultsEntryNonAdvancingMovieRows` stay off for S2 -- the special-stage interior carry is
+a separate strand and remains the largest standing deficit.
+
+### The next thing, measured
+
+The chain still stops at the same place for the same reason. The `-9` this change removes is
+real but small against the special-stage interior deficit; closing that requires the level ->
+SS -> level figure of **11** to be modelled too, and the S2 SS carry's arithmetic (whether the
+plain every-row budget lands on the recorded destination row 0, or is 11 short of it) has NOT
+been re-measured since the VintRet tick landed. Measure it before briefing it.
