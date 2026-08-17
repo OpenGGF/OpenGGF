@@ -80723,3 +80723,80 @@ Frame 3704 `rings` 184 vs 183, `frame_span` 1, non-cascading: the **first** ring
 payout batch is awarded one frame late, and every subsequent ring in the batch is on cadence
 (ROM 3704, 3706, 3708, ...). Frame 5106 `routine` `0x0002` vs `0x0004`, `frame_span` 1,
 flagged cascading. Both are new, separate, and much smaller frontiers.
+
+## 2026-08-17 -- `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` GREEN (5259 rows compared)
+
+Base `61ada7cd6` (develop). Measured in two sibling worktrees: a fix worktree and a control worktree detached at the
+same commit.
+
+Command (both trees, identical):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSlotsBonusTraceReplay test`
+
+Control at `61ada7cd6`: 2 errors, 5259 rows -- frame 3704 `rings` 184 vs 183 (`frame_span` 1,
+non-cascading) and frame 5106 `routine` `0x0002` vs `0x0004` (`frame_span` 1). Reproduces the
+briefed frontier exactly.
+
+After: **PASS, 0 errors, 5259 rows compared** (`total_frames: 5259` in
+`target/trace-reports/s3k_slots1_report.json`). Row count unchanged from control, so the green
+is not comparator starvation.
+
+### Frame 3704 -- the cage was unloading and giving its slot away
+
+Execution evidence, not mechanism fit: a probe on `ObjectManager.unloadCounterBasedOutOfRange`
+recorded exactly one S3K-slot unload in the whole stage,
+`UNLOAD S3kSlotBonusCageObjectInstance camX=1281`, and a per-frame presence probe pinned the
+cage's disappearance from the object manager to engine frame 2513. `Obj_SlotBonus`'s live
+routine `loc_4BF9A` (sonic3k.asm:99324-99560) has no `out_of_range`, `MarkObjGone` or
+`Delete_Current_Sprite` on any path, and the fixture's `slot_dump` shows it in SST slot 4 on
+every dump from frame 0 to 3697. Slot 4 being free then re-phased child allocation: the spawn
+probe recorded `cage=4 reward=4` for the first ring of the 3677 batch (every earlier batch, and
+every later ring of that batch, got 5, 6, 7, ...), so that ring failed the
+`rewardSlot > cageSlot` test that grants the ROM's same-frame routine-0 tick and awarded on
+spawn+26 instead of spawn+25. Fix: `usesCustomOutOfRangeCheck() = true` /
+`isCustomOutOfRange() = false` on the cage (skill pitfall P53 step 2).
+
+### Frame 5106 -- the transient-animation countdown, and its arming pass
+
+A corner probe showed the player frozen at `031C.0200 / 03F3.ED00` with the scan cell constant
+at `(45,33)` for the whole window; what changed was the LAYOUT byte at compact index 450,
+cycling `$D,$E,$F` and settling on `4`. That is `loc_4B65A`'s reel flash. The ROM's
+`subq.b #1,2(a0) / bpl` tests for negative, so a reload of `#1` steps every 2 passes; and the
+claiming branch `loc_4BF30` (:99283-99300) never writes the layout byte -- the first
+`sub_4B592` pass does, later the same frame from `Slots_RenderLayout` (:98159-98161). The
+engine published frame 0 at creation and also decremented on that frame, spending the creation
+pass twice, so the 24-frame flash restored the advanced tile on frame 47 rather than 48 and
+`loc_4BED0`'s `addq.b #2,routine(a0)` fired a frame early.
+
+No constant was fitted. The countdown idiom is now modelled directly and all four reload values
+(`#5` ring, `#1` bumper, `#7` spike, `#1` reel) are the listing's own literals; the previous
+`SLOT_WALL_COLOR_DELAY = 2` was a period compensation for the old convention and reverts to
+`1`.
+
+### Assertion corrections (flagged separately)
+
+Three unit assertions pinned the eager-publish-at-creation behaviour, which the ROM does not
+have. Corrected to the ROM with citations, not weakened:
+`TestS3kSlotLayoutRenderer.transientRingAnimationAdvancesAndFallsBackToExpandedLayoutTile`
+(period is `RING_SPARKLE_DELAY + 1`, first frame published by the first tick),
+`TestS3kSlotLayoutRenderer.transientBumperAnimationUsesExactCompactLayoutIndex` (one tick
+gives `$A`, three give `$B`), and
+`TestS3kSlotRenderBuffers.slotWallAnimationCommitsNextPermanentTileIntoCompactAndExpandedLayout`
+(the layout still holds the resting tile immediately after `startSlotWallAnimationAt`).
+
+### Blast radius
+
+Red-class sets diffed by NAME in both directions (Python set difference), `target/surefire-reports`
+and `target/trace-reports` cleared before every run.
+
+- `-Ptrace-replay`, both trees: 806 tests. Control 30 failures / 29 red classes; fix tree
+  29 / 28. Newly green: `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1`. Newly red: none.
+- `-Ptrace-replay-r7`, both trees: 37 tests, 32 red classes, **identical sets**.
+  `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` GREEN on both trees.
+  `TestS3kKnucklesSuperEmeraldRunChain` red on both, unchanged.
+- Default profile, both trees: 86 failures / 50 red classes on each, identical sets. (The fix
+  tree ran 15099 tests to the control's 15016 -- the control run under-collected
+  `TestBonusStageShieldRestore` and part of
+  `TestMhz1CutsceneObjects$KnucklesPeerArtSubmission`; both are green in the fix tree and
+  neither is touched by this change.)
+- `TestTraceStructuralRowComparator` is identically red in isolation on both trees; ignored per
+  standing note.

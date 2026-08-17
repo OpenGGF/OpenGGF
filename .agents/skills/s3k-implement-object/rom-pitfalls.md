@@ -1953,6 +1953,21 @@ that was fully implemented and simply killed early.
    (`Restore the overwritten badnik explosion art`, `sonic3k.asm:128487`, is another
    instance of the same shape) is a candidate for the same defect.
 
+**A second, cheaper failure mode of the same defect: the freed SLOT re-phases every
+later child allocation.** `Obj_SlotBonus`'s live routine `loc_4BF9A`
+(`docs/skdisasm/sonic3k.asm:99324-99560`) likewise has no `out_of_range`,
+`MarkObjGone` or `Delete_Current_Sprite` on any path, and the fixture's `slot_dump`
+shows it holding SST slot 4 continuously for the whole stage. The engine's shared
+camera unload retired it, and slot 4 is the LOWEST dynamic slot the ROM keeps
+occupied -- so the next `AllocateObject` (`:37911-37914`, forward scan from the
+first slot) handed slot 4 to a freshly spawned `Obj_SlotRing`. That ring now sits
+at the cage's own index rather than above it, the ascending object walk has already
+passed it, it loses the routine-0 tick it should have run on its spawn frame, and
+its `$40` countdown reaches zero one frame late. Only the FIRST ring of a batch is
+affected, which reads as an isolated non-cascading one-frame reward delay rather
+than as an occupancy defect -- so when a single reward in a batch is late and the
+rest are on cadence, check the parent's slot before the child's timer.
+
 **Diagnostic that settles it in one run.** Probe the object's phase machine each
 dispatch AND probe `ObjectManager.unloadCounterBasedOutOfRange` for that class. If the
 phase log simply stops with a countdown still running, and the unload probe's last line
@@ -2952,6 +2967,57 @@ universal; only the edge margin differs per game and per character.
 1983 `tails_animation_id` -> 2336 `player_animation_id` (the giant-ring emerald
 boundary of known-discrepancies section 21). See
 `docs/status/trace-frontier-log.md`, 2026-08-17.
+
+---
+
+## P74 -- a `subq #1 / bpl` countdown waits N+1 frames, and the branch that ARMS it does not publish
+
+**Symptom.** An animation-driven layout/collision byte settles on its resting value
+exactly one frame before the ROM does, thousands of frames into a stage, and the only
+compared field that notices is whatever that byte gates -- here a `routine` bump.
+Every earlier contact looks fine because the phase error only matters at a knife
+edge.
+
+**Mechanism, two halves, and they compound.**
+
+*The countdown.* The 68000 idiom is pre-decrement and test-for-negative:
+
+```
+        subq.b  #1,2(a0)
+        bpl.s   (return)        ; 0 is non-negative, so the reload of N buys
+        move.b  #N,2(a0)        ; N waiting passes, then the (N+1)th steps
+```
+
+A reload of `#1` therefore steps every **2** passes, `#5` every **6**, `#7` every
+**8**. An engine `if (--timer > 0) return; timer = N;` steps every **N**, so
+transcribing the ROM's literal reload gives a period one short -- and "fixing" that
+by storing `N+1` in the constant hides the real convention and leaves the constant
+looking like a fitted number.
+
+*The arming pass.* In S3K's slot machine the branch that claims a transient
+animation slot (`loc_4BF30`, `sonic3k.asm:99283-99300`, and its ring/bumper/spike
+siblings) writes only the type, the target byte's pointer and the restore id. It
+does **not** publish the first animation frame. A slot released with
+`clr.l (a0) / clr.l 4(a0)` (`:98511-98512`) starts with countdown 0, so the first
+`sub_4B592` pass falls straight through and publishes frame 0 -- later the same game
+frame, from `Slots_RenderLayout` (`:98159-98161`). Publishing frame 0 eagerly at
+creation AND letting that frame's pass decrement the countdown spends the creation
+pass twice, so every subsequent step and the terminating restore land one frame
+early.
+
+**What to check.** Model the idiom, not the period: initialise the countdown to 0,
+`if (--timer >= 0) return;`, then reload with the ROM's own literal. Keep the arming
+branch write-free unless the listing shows a store. And read the terminator: all four
+handlers (`loc_4B5C2`/`loc_4B5F2`/`loc_4B65A`/`loc_4B626`, `:98420-98513`) publish a
+table entry of `0` and only then write the resting id, so the restore costs one
+further step beyond the last visible frame.
+
+**Cross-game.** `subq/bpl` countdowns are everywhere in all three disassemblies; the
+period-vs-reload trap applies to every one of them.
+
+**Originating commit.** `<pending: slot transient-animation countdown>`;
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` frame 5106
+`routine 0x0002 vs 0x0004` -> GREEN, 5259 rows compared.
 
 ---
 

@@ -167,13 +167,13 @@ public final class S3kSlotRenderBuffers {
         return compactRow * S3kSlotRomData.SLOT_LAYOUT_SIZE + compactCol;
     }
 
-    private boolean startTransientAnimation(int layoutIndex, byte[] frames, int delay, byte restoreTile) {
+    private boolean startTransientAnimation(int layoutIndex, byte[] frames, int reload, byte restoreTile) {
         if (layoutIndex < 0 || layoutIndex >= layout.length || frames == null || frames.length == 0) {
             return false;
         }
         for (TransientAnimationSlot slot : transientAnimationSlots) {
             if (!slot.active) {
-                slot.start(this, layoutIndex, frames, delay, restoreTile);
+                slot.start(this, layoutIndex, frames, reload, restoreTile);
                 return true;
             }
         }
@@ -199,34 +199,74 @@ public final class S3kSlotRenderBuffers {
         private int frameIndex;
         private byte restoreTile;
 
-        private void start(S3kSlotRenderBuffers buffers, int layoutIndex, byte[] frames, int delay, byte restoreTile) {
+        /**
+         * Claims a free slot exactly as the ROM's {@code sub_4B57C} scan does
+         * ({@code sonic3k.asm:98376-98390}): the creating branch stores only the
+         * animation type, the target layout-byte pointer and the restore id --
+         * see {@code loc_4BF30} ({@code sonic3k.asm:99283-99300}) and its siblings.
+         * Every slot is released with {@code clr.l (a0) / clr.l 4(a0)}
+         * ({@code sonic3k.asm:98511-98512}), so a freshly claimed slot always
+         * starts with countdown 0 and frame index 0, and <b>the layout byte is not
+         * written by the creating branch at all</b>. The first animation frame is
+         * published by the first {@code sub_4B592} pass, which runs later in the
+         * same game frame from {@code Slots_RenderLayout}
+         * ({@code sonic3k.asm:98159-98161}).
+         */
+        private void start(S3kSlotRenderBuffers buffers, int layoutIndex, byte[] frames, int reload, byte restoreTile) {
             active = true;
             this.layoutIndex = layoutIndex;
             this.frames = frames;
-            this.delay = delay;
-            this.timer = delay;
+            this.delay = reload;
+            this.timer = 0;
             this.frameIndex = 0;
             this.restoreTile = restoreTile;
-            buffers.setCompactTile(layoutIndex, frames[0]);
         }
 
+        /**
+         * One {@code sub_4B592} pass over this slot
+         * ({@code sonic3k.asm:98397-98411} dispatching to {@code loc_4B5C2} /
+         * {@code loc_4B5F2} / {@code loc_4B65A} / {@code loc_4B626},
+         * {@code sonic3k.asm:98420-98513}). All four handlers share one idiom:
+         *
+         * <pre>
+         *     subq.b  #1,2(a0)          ; countdown
+         *     bpl.s   (return)          ; still counting: 0 is non-negative, so a
+         *                               ; reload of N yields N waiting passes
+         *     move.b  #N,2(a0)          ; reload
+         *     ... publish frames[index++] ...
+         *     bne.s   (return)          ; the table's 0 terminator falls through
+         *     move.b  <restore id>,(a1) ; and restores the resting tile
+         * </pre>
+         *
+         * <p>The countdown is therefore pre-decrement-and-test-for-negative, and a
+         * newly claimed slot publishes its first frame on the very pass that
+         * follows its creation -- the same frame. Writing {@code frames[0]} in
+         * {@link #start} and <em>also</em> letting that frame's pass decrement the
+         * countdown consumed the creation pass twice, so every subsequent step,
+         * and the final restore, landed one frame early. For the 24-frame reel
+         * flash ({@code byte_4B688}, {@code sonic3k.asm:98517-98545}) that restored
+         * the advanced reel tile on frame 47 instead of the ROM's frame 48 -- and
+         * when the advanced tile is {@code 4}, the goal, the goal-exit routine bump
+         * at {@code loc_4BED0} ({@code sonic3k.asm:99247-99253}) fired a frame
+         * before the ROM's.
+         */
         private void tick(S3kSlotRenderBuffers buffers) {
             if (!active) {
                 return;
             }
-            if (--timer > 0) {
+            if (--timer >= 0) {
                 return;
             }
             timer = delay;
-            frameIndex++;
-            if (frameIndex >= frames.length) {
+            int index = frameIndex++;
+            if (index >= frames.length) {
                 buffers.setCompactTile(layoutIndex, restoreTile);
                 active = false;
                 layoutIndex = -1;
                 frames = new byte[0];
                 return;
             }
-            buffers.setCompactTile(layoutIndex, frames[frameIndex]);
+            buffers.setCompactTile(layoutIndex, frames[index]);
         }
     }
 

@@ -3,6 +3,38 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the Slot Machine bonus cage no longer unloads off-camera, and the stage's
+  transient layout animations no longer run a frame ahead of the ROM. Two independent
+  defects, both closing one error on
+  `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` (2 errors -> GREEN, 5259 rows
+  compared).
+  `Obj_SlotBonus`'s live routine `loc_4BF9A` (sonic3k.asm:99324-99560) contains no
+  `out_of_range`, no `MarkObjGone` and no `Delete_Current_Sprite` on any path, so the
+  cage cannot unload while the stage runs -- and the fixture's own `slot_dump` shows it
+  holding SST slot 4 continuously. The engine applied its shared camera unload anyway
+  (measured: exactly one such unload in the whole stage). Slot 4 is the lowest dynamic
+  slot the ROM keeps occupied, so the next `AllocateObject` (:37911-37914, forward scan
+  from the first slot) handed it to a freshly spawned `Obj_SlotRing`; that ring sat at
+  the cage's own index instead of above it, the ascending object walk had already passed
+  it, and it lost the routine-0 tick it should have run on its spawn frame -- awarding
+  its ring on spawn+26 rather than the ROM's spawn+25. Only the first ring of a batch was
+  affected (frame 3704 `rings` 184 vs 183, non-cascading), because every later ring still
+  landed above the cage.
+  Separately, `sub_4B592`'s four transient-animation handlers (`loc_4B5C2`, `loc_4B5F2`,
+  `loc_4B65A`, `loc_4B626`; :98420-98513) all use the 68000 `subq.b #1,2(a0) / bpl`
+  idiom, which tests the countdown for NEGATIVE -- so a reload of `#N` buys N waiting
+  passes and steps on the (N+1)th. The claiming branches (`loc_4BF30` :99283-99300 and
+  siblings) write only the slot type, the target layout-byte pointer and the restore id;
+  the first animation frame is published by the first `sub_4B592` pass, which runs later
+  in the same game frame from `Slots_RenderLayout` (:98159-98161). The engine published
+  frame 0 eagerly at creation AND let that frame's pass decrement the countdown, spending
+  the creation pass twice, so every later step and the terminating restore landed one
+  frame early. For the 24-entry reel flash (`byte_4B688`, :98517-98545) that restored the
+  advanced reel tile on frame 47 instead of 48 -- and when the advanced tile is `4`, the
+  goal, `loc_4BED0`'s `addq.b #2,routine(a0)` (:99247-99253) fired a frame before the
+  ROM's (frame 5106 `routine` `0x0002` vs `0x0004`). The countdown idiom is now modelled
+  directly, so all four reload constants are the ROM's own literals; the slot-wall value
+  reverts from a period-2 compensation to the listing's `#1`.
 - Fix(s3k): the Slot Machine bonus stage bled its `$36`/`$37` interaction throttles down on
   every frame. ROM `sub_4BE3A` (sonic3k.asm:99194-99206) reads `$30(a0)` -- the special tile
   id the corner scan stored this frame -- and branches to the tile dispatcher when it is
