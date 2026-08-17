@@ -81403,3 +81403,74 @@ plainly in the profile javadoc rather than claiming a derivation nobody performe
 
 NTSC-scoped. The loss is a `ceil()` of masked cycle cost against frame period; a PAL fixture
 would move it and the table would need re-deriving. Worth one line in the citation.
+
+
+## 2026-08-17 -- S3K special-stage return: the fingerprint evidence was a coincidence
+
+**Nothing landed.** The scope I briefed is refuted, and the correction makes the S3K chain a
+multi-part programme rather than one producer fix.
+
+**Honest gap in the producing round: it ran no Maven at all**, so there is no control and no
+verification behind the numbers below -- they are read from `docs/skdisasm/sonic3k.asm` and the
+committed fixtures.
+
+### The "byte-equal fingerprint" was not evidence of a level-entry model
+
+I briefed that the engine's pending `1 + 1` at the handoff, with fingerprints byte-equal to the
+recorded first in-segment edges, meant the ROM's level entry was modelled as an aggregate.
+**It is a payload coincidence.** `Sonic3kAIZEvents.serviceAiz1MainLevelArt` is a port of
+`AIZ1_Resize loc_1C4D0` (`sonic3k.asm:38911-38925`), **not** of `Level:`. Its KosM is
+`0x3A944E` with `tiles_to_bytes($0BE)` -- the same source, destination and module count as
+`LoadLevelLoadBlock`'s `+4` art, because both routines install the same AIZ1 main-level art. The
+fingerprint would match either way.
+
+### A ROM-cited defect found on the way, and it is actionable
+
+`loc_1C4D0` guards its two queue calls with **two** arms the engine's port does not carry:
+
+```
+cmpi.w  #$1400,(Camera_X_pos).w
+blo.s   locret_1C54E
+tst.b   (Last_star_post_hit).w
+bne.s   loc_1C522          ; skips BOTH Queue_Kos and Queue_Kos_Module
+cmpi.w  #2,(Player_mode).w
+bhs.s   loc_1C522          ; so does this
+```
+
+The engine carries the camera-X threshold only. **So at the seam it submits 1 decomp + 1 module
+the ROM does not**, while omitting what the ROM does submit. Worth checking alongside: whether
+`bootstrap.isSkipIntro()` reports skip-intro on the return at all
+(`Sonic3kAIZEvents.java:657-665`) -- the measured `1 + 1` implies it does not.
+
+### Level entry is a minority of the gap
+
+`LoadLevelLoadBlock` (`:9701-9745`) issues at most **two** `Queue_Kos_Module` calls -- the
+entry's `+0` and `+4` art pointers. `LoadLevelLoadBlock2` (`:38674-38741`) uses **blocking
+`Kos_Decomp`**, not `Queue_Kos`, so it emits no edges.
+
+Decoding `LevelLoadBlock` at `0x091F0C`, entry 26 (the `$D00` skip-intro entry both `Level:`
+and `LoadLevelLoadBlock2` force whenever `Last_star_post_hit` is set -- i.e. every
+special-stage return): `+0` art `0x3A566A` = 2 modules, `+4` art `0x3A944E` = 5. **AIZ1 level
+entry is 7 decomp / 2 module against a gap of 15 / 10.**
+
+Same arithmetic elsewhere: HCZ entry 8 modules vs gap 17/10; MHZ entry 8 vs 27/14. The
+remainders -- 9/2, 10/2, 20/6 -- are **not constant**, so no single missing producer explains
+them.
+
+**The remainder is identified:** `Obj_TitleCardInit` (`:62124-62161`, four `Queue_Kos_Module`)
+and `SpecialStage_Results` / `Obj_LevelResultsInit` (`:62522-62554`, `:63063-63100`), plus
+super-emerald art -- which is why MHZ's remainder is three times AIZ's. The engine models
+**none** of these; every `moduleKosQueue()` caller in `src/main` is a zone-event transition-art
+submitter.
+
+### Corrected scope
+
+- **A is two changes:** a shared S3K **level-entry** `LoadLevelLoadBlock` producer, data-driven
+  from the entry so per-zone counts fall out of ROM data (no carve-out, and it does **not**
+  belong in `Sonic3kAIZEvents`), **plus** the `Last_star_post_hit` / `Player_mode` gate on the
+  resize swap. Landing the gate alone removes the engine's only source of AIZ1 main-level art
+  on re-entry, so they are coupled.
+- **C, absent from my brief:** title-card and results KosM art -- **8 of the 10 missing module
+  edges**. A+B cannot close this seam without it.
+- **Ordering that keeps each step measurable against the next recorded ordinal** rather than the
+  whole gap: results art -> title-card art -> level-entry block -> resize gate.
