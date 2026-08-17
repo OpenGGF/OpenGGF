@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A post-close playback frame is treated as outside the hardware timing run
+  (`bugfix/ai-timing-postclose-gap`, merged 2026-08-17).** The playback bridge keeps pumping
+  frames after the run closes -- `GameLoop.syncPlaybackInputBridge` runs from
+  `exitTitleCard`, which can fire once the walk has finished. `beginPlaybackFrame` routed
+  such a frame to `beginSegmentRow` whenever it happened to map inside a segment's raw-frame
+  range, and that throws on a closed run, while a frame landing outside every segment already
+  took the safe gap path in the same method. Once closed there is no row left to latch, so a
+  late frame is outside the run by definition and now takes that same path. Deliberately
+  narrow: `beginSegmentRow` still throws for a deliberate caller latching after close, which
+  is a genuine ordering error rather than a frame arriving late. Found because two unrelated
+  branches -- per-frame life-count recording and the S2 chain V-blank phase work -- both
+  surfaced it as `hardware timing run is already closed` in the visual runs; neither
+  introduced it. It is order-dependent: the `trace-replay` profile runs `forkCount=1,
+  reuseForks=true` under Surefire's default `runOrder=filesystem`, whose order differs per
+  worktree and survives a `mvn clean`, so whichever visual run lands early enough behind the
+  wrong predecessors reached the trap.
+
 - **S1 and S2 chain frontiers share one root cause: the chain's cross-segment V-blank clock
   (`bugfix/ai-s1-seg6-rings`, documentation, merged 2026-08-17).** `TestS1CompleteEmeraldRunChain`
   segment 6 (`ghz3_2`) fails with 4,982 errors that are all a single `rings` delta. A spilled
