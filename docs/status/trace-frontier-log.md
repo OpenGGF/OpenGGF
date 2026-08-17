@@ -80430,3 +80430,110 @@ fixture change, no landed fix undone, and
 untouched and not relied upon. The concurrently owned Kosinski drain model,
 `Sonic3kAIZEvents`, the hardware-timing port, `CollisionRules`,
 `SolidRoutineProfile` and `CnzTrapDoorInstance` were not read or modified.
+
+## 2026-08-17 -- MGZ Sonic+Tails segment: the sidekick despawn at 19983 is a missing ROM object-code pointer on the MGZ top platform
+
+Worktree at base `f86ea9cf6` (`develop`), branch `bugfix/ai-mgz-sidekick-despawn`;
+control worktree detached at the same commit. `target/surefire-reports` and
+`target/trace-reports` cleared before every run.
+
+```
+mvn -Ptrace-replay -Dmse=off -Ds3k.rom.path=<discovered s3k .gen> \
+    -Dtest=TestS3kSonicTailsMgzSegmentTraceReplay -DfailIfNoTests=false test
+```
+
+- Control (own tree): FAIL, **3446 errors**, first error 10709
+  (`x`, `0x23DB` vs `0x23DC`), **30831 compared rows** -- reproduces the
+  2026-08-15 and 2026-08-17 measurements exactly.
+
+### Probe used only to see behind the emerald boundary
+
+The same throwaway, uncommitted `afterFixtureBuild` emerald seed the previous round
+used was re-applied purely to expose the frontier, and reverted before anything was
+measured on the clean tree. Under it, control is **2002 errors / 30830 rows**, the
+successor origin is 18144 and 1964 of the residual errors start at or after 19312 --
+reproducing the previous round's census.
+
+### Every field differing at 18144 and 19983
+
+18144 has exactly one: `tails_y` `0x07A3` vs `0x07A2` (5 frames). 19983 has eleven,
+and they are the despawn park in full: `tails_x` `0x7F00` vs `0x1C43`, `tails_y`
+`0x0000` vs `0x0166`, `tails_cpu_routine` `0x0002` vs `0x0006`, `tails_air` 1 vs 0,
+`tails_status_byte` `0x0002` (Status_InAir) vs `0x0008` (Status_OnObj),
+`tails_cpu_respawn_counter` `0x0000` vs `0x0002`, plus speed/sub/ctrl2 followers --
+and `tails_cpu_interact` `0x0003` vs `0x0002`.
+
+### Root cause, from the ROM
+
+`sub_13EFC` (sonic3k.asm:26816-26843) latches word 0 of the stood-on object's SST
+into `Tails_CPU_interact` on every on-object frame (`loc_13F2E`) and, on an
+off-screen on-object frame, compares the live word against that latch; a mismatch
+tail-calls `sub_13ECA` (:26800-26809), which writes `x_pos #$7F00`, `y_pos #0`,
+`object_control #$81`, `status = 1<<Status_InAir` and `Tails_CPU_routine #2` and
+zeroes the flight timer -- exactly the eleven fields above.
+
+The fixture's own aux gives the two words without instrumentation (P62): at 18144
+Tails' `interact` moves to slot 8, whose `object_code` is `0x00034C54` --
+`Obj_MGZTopPlatform`'s main routine (`move.l #loc_34C54,(a0)`, :71495-71497) -- and
+the recorded `Tails_CPU_interact` goes `0x0002 -> 0x0003` at 18145 and stays there.
+At 19982 Tails lands, still off-screen, on a `0x0002xxxx` object, so 19983's compare
+mismatches and parks him.
+
+Engine-side instrumentation (throwaway) on `SidekickCpuController`'s two latch
+setters showed the engine reproduced ROM's first ten latch transitions
+position-for-position, then missed the eleventh: it *was* riding
+`MGZTopPlatformObjectInstance` at the matching position (`skx=0x15BD sky=0x7A2`),
+but `currentS3kInteractWord()` returned **null** because that class did not
+implement `RomObjectCodePointerProvider`. With the latch stuck at `0x0002`, the
+19982 landing compared equal and the park never happened.
+
+### Fix
+
+`MGZTopPlatformObjectInstance` now implements `RomObjectCodePointerProvider`,
+returning `0x0003`. The value is the high word of the routine address the ROM itself
+stores in word 0 of the slot; it is not derived from any fixture measurement, and it
+holds for any recording in which a sidekick rides this platform.
+
+- Under the probe: **2002 -> 797 errors**, 30830 rows (unchanged). 1205 of the
+  residual errors removed, and the whole 19983 despawn cascade with them.
+- On a clean tree the class is unchanged at **3446 errors / 30831 rows / first error
+  10709**, because 99% of its mass is still gated behind the emerald-inventory
+  boundary (known-discrepancies section 21). The probe number is a diagnosis result,
+  not a class result; both are reported separately and deliberately.
+
+### Related finding, not fixed here
+
+Of the S3K `SolidObjectProvider` classes, 49 still do not implement
+`RomObjectCodePointerProvider`, so `sub_13EFC`'s compare is a silent no-op for every
+one of them. This suppresses parks the ROM performs (as here) and can also cause a
+spurious one later, when a stale latch finally meets an object that does publish a
+word. Filling that in is a mechanical, ROM-cited sweep and a good next target.
+
+### Regression
+
+`-Ptrace-replay` on both trees: 806 tests, **28 red on each**, red class sets
+identical by name in both directions. `-Ptrace-replay-r7`: 37 tests, **32 red on
+each**, sets identical both ways. Default profile (strictly sequential, 15141 tests
+on both trees): control 67 failures / 29 errors across 53 red classes, fix tree
+65 / 25 across 51. The four classes that differed by name --
+`TestGameLoopAudioPresentationModes`,
+`TestGameLoopSpecialStageEntryPresentation`,
+`TestGameLoopSpecialStageRewindDebugBoundary` (red only on control) and
+`TestCnzHoverFanObjectInstance` (red only on the fix tree) -- were re-run in
+isolation on **both** trees and are green on both, so they are the documented
+reused-fork ambient flakes, not movement. All set differences computed in Python in
+both directions (`comm` not used).
+
+### Discipline
+
+No constant, offset, nudge, tolerance or comparison shift added -- the single value
+introduced is the high word of a ROM routine address the object writes into its own
+SST. No assertion weakened, widened, excluded, made advisory, deleted or disabled;
+no test file changed. No trace hydration in committed code: the emerald seed and the
+two `SidekickCpuController` print statements existed only as uncommitted probes and
+were reverted before any reported measurement. `docs/skdisasm` read for labels and
+offsets only. No zone/act/route/frame/game predicate. No landed fix undone;
+`MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` was not touched or
+relied on. `CollisionRules`, `SolidRoutineProfile`, `CnzTrapDoorInstance`,
+`Sonic3kAIZEvents` and the hardware-timing port were not read or modified. No fixture
+regenerated.
