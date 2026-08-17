@@ -81151,3 +81151,84 @@ is doing its job.**
 **B is not landable without A** (nothing to release), and **A alone reds every chain** -- new
 interior submissions would sit pending at the handoff exactly as `#14` does now. They must land
 together.
+
+
+## 2026-08-17 -- The S2 one pixel is a parity lottery, and the control's green was the lottery
+
+Base `2cdaa231c`, measured on the held carry branch. **Nothing landed.** No source file
+changed; all instrumentation was throwaway and reverted.
+
+### It is not a pixel
+
+Every ERROR field at `seg5_ehz2` frame 524 -- eight of them -- is a `HurtCharacter` write
+(`docs/s2disasm/s2.asm:85502-85517`): `sidekick_routine` `0x04`/`0x02`, `status_byte`
+`0x02`/`0x06`, `animation_id` `0x1A`/`0x02`, `rolling` 0/1, and all three speeds. **The ROM
+hurts Tails on 524 and the engine on 525.** Positions are byte-identical through 523.
+
+The one pixel is the tail of that: `HurtCharacter` calls `Sonic_ResetOnFloor_Part2`, whose
+`_cmpi.b #ObjID_Sonic,id(a0) / bne.w Tails_ResetOnFloor_Part2` (`:38130-38132`) dispatches to
+the Tails variant, which on un-rolling does `subq.w #1,y_pos(a0)` where Sonic's does
+`subq.w #5`. Both sides have `y_sub == 0` on that row, which is why a whole-object divergence
+reads as sub-pixel drift.
+
+### The owner: a badnik that alternates target on V-blank parity
+
+`Obj4B_ChkPlayers` (`s2.asm:60990-60998`):
+
+```
+lea     (MainCharacter).w,a1
+btst    #0,(Vint_runcount+3).w
+beq.s   +               ; target Sidekick on uneven frames
+lea     (Sidekick).w,a1
+```
+
+`Obj4B_Shooting` fires a fixed 30 frames after the decision (`shot_timer` `$32`->`$14`,
+`:61034-61041`). Wrong clock parity means the wrong character's x is tested on the frame the
+ROM crossed the trigger strip, so the shot lands one frame late. Per-frame dumps confirm the
+projectile first appears on row **524** -- the row the ROM had already used it.
+
+### The decisive measurement, and why the control was never a baseline
+
+Per-row `rom vblank_counter - engine counter`, printed only on change:
+
+```
+PROBEDEF zone=ehz1 cur=0 eng=22a  rom=22a  deficit=0
+PROBEDEF zone=ehz2 cur=0 eng=7f94 rom=7fa1 deficit=13
+```
+
+- **The special-stage carry is exact**: deficit 0 on every compared row of all four `ehz1`
+  segments across all three round trips, and each seeded target equals that destination's
+  recorded `vblank_counter[0]`.
+- All 13 lost ticks appear at the single `seg4_ehz1 -> seg5_ehz2` level->level boundary.
+- **13 is odd**, so parity is inverted for all of `seg5_ehz2`.
+- The control's deficit at the same row is **19,378 -- even**. The control is 19,378 ticks
+  wrong and *accidentally the right parity*; the carry is ~1500x more accurate and the wrong
+  parity. **The control's green on this segment was a parity lottery, not a baseline.**
+
+That is the sixth compensating pair found this session, and the only one where the
+compensation is "be wrong by an even number".
+
+### Two corrections to the previous entry
+
+1. **"the engine under-ticks 22 inside `seg4_ehz1`'s end-of-act tail" is false.** The deficit
+   is 0 at that segment's last compared row. The 22 lives in the *gap*: of 171 uncompared rows,
+   62 lag rows tick via `serviceLagRowVint`, and 22 of the 109 non-lag rows never tick because
+   `stepEngineFrame` runs with the level body suppressed in `TRANSITION_GAP`.
+2. **The boundary's ROM loss is 10, not 13.** ROM `0x7FA1-0x7EFF = 162` over 172 advances loses
+   10; the engine's `149` loses 23; `23 - 10 = 13`.
+
+### Where the carry stands
+
+The engine-side half is **structural and correct in principle**: every gap row the engine plays
+is a frame on which hardware reached `VintRet: addq.l #1,(Vint_runcount).w` (`s2.asm:508`), so
+all 171 should tick -- the same argument `serviceLagRowVint`'s javadoc already makes for the lag
+subset. Landing it alone takes the engine's boundary loss 23 -> 1, leaving it **9 ahead and
+still odd**, so it does not green `seg5_ehz2` by itself.
+
+The remaining half is the ROM's masked-block loss -- 10 at 20 of 21 boundaries, **9** at
+`seg20_ooz1 -> seg21_ooz2` -- still the unlandable sub-V-blank rounding.
+
+**A parity-only patch is a fitted model with a smaller search space and must not be attempted.**
+
+**Do not retry:** `sidekick_y`, sub-pixel carry, `HurtCharacter` velocities, Tails hurt
+physics. All correct.
