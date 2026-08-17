@@ -424,21 +424,33 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * the three plain {@code Queue_Kos} entries queued at
      * sonic3k.asm:104678-104688 drain inside {@code Process_Kos_Queue}, which
      * decompresses straight over {@code RAM_start} / {@code Block_table}; there is
-     * no separate apply step. Gating this on those three handles' own
-     * {@code isReady()} was measured on 2026-08-17 and releases far too early:
-     * {@code TestS3kAizCompleteRunTraceReplay} green -> 4030 errors, first error
-     * frame 6255 {@code tails_x_speed} -- the identical fingerprint to the same
-     * re-gating attempted and reverted the previous round. The engine's direct
-     * Kosinski queue therefore does not model the ROM's drain rate, and that is
-     * the defect this constant is absorbing. Do not retry the re-gating on its
-     * own; fix the drain model first.
+     * no separate apply step, and no apply <em>instant</em> either.
      *
-     * <p>Recorded ROM reference for whoever does: in
-     * {@code traces/s3k/aiz1_to_hcz_fullrun}, the {@code aiz_fire_transition} aux
-     * family puts the {@code $190} queue on row 5414 and the act flip on row 5496,
-     * and the previous round's write hook on {@code RAM_start} caught the chunk
-     * table landing at row 5434 -- 20 rows after the queue, 13 after this phase
-     * begins. Comparison-only evidence; never read it into engine state.
+     * <p>The drain rate is NOT the defect, and the earlier note here saying so was
+     * wrong on both counts. Under trace replay {@code KOS_DECOMPRESSION_QUEUE} is
+     * {@code RECORDED} (HardwareTimingSchedule), so these handles' readiness is the
+     * ROM's own measured drain, matched by ordinal and submission fingerprint. And
+     * {@code Process_Kos_Queue} (sonic3k.asm:2833-2860) carries no work budget at
+     * all -- it runs the whole archive in one unbounded loop, stopped only by
+     * whichever V-int lands inside it and resumed by {@code Set_Kos_Bookmark} -- so
+     * no frame-granularity drain model can exist. Re-gating on {@code isReady()}
+     * releases the apply *later*, not earlier: recorded completions sit at
+     * queue+41/+45/+49 in {@code traces/s3k/aiz_completerun} (rows 6257/6261/6265,
+     * queue row 6216) and queue+39/+43/+47 in {@code aiz1_to_hcz_fullrun}
+     * (5453/5457/5461, queue 5414).
+     *
+     * <p>The real defect is atomicity. The decompressor writes in place over live
+     * tables, so for those 39-49 frames the terrain is partly AIZ1 and partly AIZ2
+     * in the archive's output order. In {@code aiz_completerun} the ROM's new wall
+     * stops Tails on row 6255 -- queue+39, two frames before the first archive even
+     * retires. This constant lands the atomic swap on queue+39 and therefore
+     * matches; the handle re-gating lands it on queue+49 and produces the 4030
+     * errors at frame 6255 {@code tails_x_speed} recorded by two rounds. Neither is
+     * right for an arbitrary movie: which tile flips on which frame depends on that
+     * tile's offset in the stream. Closing this needs per-frame decompression
+     * progress in the v5 timing stream plus a recapture, not a different number.
+     * See the 2026-08-17 atomicity entry in docs/status/trace-frontier-log.md.
+     * Comparison-only evidence; never read it into engine state.
      */
     private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
@@ -2511,9 +2523,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // `tst.b (Kos_modules_left).w` (sonic3k.asm:104725-104726), gates
                 // the LEVEL RELOAD on the two Queue_Kos_Module art jobs only, which
                 // is what act2KosArtReady() below covers. The terrain tables land
-                // first and independently. FIRE_TERRAIN_DECOMPRESS_FRAMES still
-                // stands in for that drain -- see its javadoc for why, and for the
-                // measurement that says not to re-gate it on its own.
+                // first and independently, and progressively: the tables are half
+                // AIZ1 and half AIZ2 for the whole drain. This atomic swap is an
+                // approximation of that, and FIRE_TERRAIN_DECOMPRESS_FRAMES picks
+                // its instant -- see that constant's javadoc for the measured
+                // recorded completions, why handle readiness is later rather than
+                // earlier, and what closing this properly would require.
                 if (!fireTerrainTablesLoaded
                         && firePhaseFrames >= FIRE_TERRAIN_DECOMPRESS_FRAMES) {
                     S3kSeamlessMutationExecutor.apply(
