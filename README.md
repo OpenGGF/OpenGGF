@@ -246,7 +246,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   recorded value fails identically. It is committed off rather than enabled wrong. The same
   measurement over the S1 run gives 6 at every level -> level boundary and **0** at every
   special-stage round trip, so S1's subtract-nothing model is correct by measurement rather
-  than by precedent.
+  than by precedent. Verified at 778 tests, three red, the three chains only, with both visual
+  runs and all three prefix pins green -- on a tree also carrying the post-close timing fix,
+  without which the order-dependent visual-run trap masks this result.
 
 - **A post-close playback frame is treated as outside the hardware timing run
   (`bugfix/ai-timing-postclose-gap`, merged 2026-08-17).** The playback bridge keeps pumping

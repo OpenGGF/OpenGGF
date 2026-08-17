@@ -1606,6 +1606,10 @@ abstract class AbstractRunChainTest {
                                 + ") was never observed within the boundary window for "
                                 + runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                int semanticSourceTailVblank =
+                        TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                                seg.segment(), playback.getCursorFrame(),
+                                GameServices.level().getObjectManager().getVblaCounter());
                 int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
@@ -1615,6 +1619,16 @@ abstract class AbstractRunChainTest {
                         Objects.requireNonNull(observedLoad[0],
                                 "production level-load receipt was not observed"),
                         i, runDir);
+                // The admission wait above runs engine frames the manifest
+                // budget has already accounted for. Reconcile once more, on the
+                // same source anchor and with the rows the destination really
+                // consumed, so those choreography frames cannot leave the
+                // destination clock adrift -- the same second-pass reconcile
+                // prepareAcrossLevelBoundary already performs after its own
+                // title-card settle. Movie-clock pacing only; no trace field is
+                // read into engine state.
+                completeInterLevelVblankBudget(
+                        seg, next, rowsConsumed, semanticSourceTailVblank);
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed,
                         i + 1);
@@ -2914,7 +2928,9 @@ abstract class AbstractRunChainTest {
             return;
         }
         int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                sourceLevel.segment(), returnLevel.segment());
+                sourceLevel.segment(), returnLevel.segment(),
+                TraceRunVblankClock.specialStageReturnLoss(
+                        profile, returnLevel.segment()));
         // Movie-clock pacing only: the target derives from the source engine
         // counter and manifest/BK2 row distance. No trace field is read back
         // into engine state.

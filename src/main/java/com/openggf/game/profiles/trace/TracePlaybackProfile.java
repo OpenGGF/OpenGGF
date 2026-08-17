@@ -14,14 +14,15 @@ public record TracePlaybackProfile(
         int interLevelNonAdvancingMovieRows,
         List<MaskedLevelEntryLoss> maskedLevelEntryLosses,
         int stageResultsEntryNonAdvancingMovieRows,
+        int specialStageEntryNonAdvancingMovieRows,
         boolean alignUncomparedInteriorReturnVblank,
         boolean reinitializeOscillationAtLoadedLevelAttach,
         RecordedLevelIdentityProfile recordedLevelIdentityProfile) {
 
     public static final TracePlaybackProfile DISABLED = new TracePlaybackProfile(
-			-1, List.of(), -1, false, false, RecordedLevelIdentityProfile.DIRECT);
+			-1, List.of(), -1, -1, false, false, RecordedLevelIdentityProfile.DIRECT);
     public static final TracePlaybackProfile SONIC_1 = new TracePlaybackProfile(
-			6, List.of(), 7, true, true, RecordedLevelIdentityProfile.SONIC_1_ROM);
+			6, List.of(), 7, -1, true, true, RecordedLevelIdentityProfile.SONIC_1_ROM);
 
     /**
      * Sonic 2's level-entry mask, measured per destination level.
@@ -33,7 +34,7 @@ public record TracePlaybackProfile(
     public static final TracePlaybackProfile SONIC_2 = new TracePlaybackProfile(
 			10,
 			List.of(new MaskedLevelEntryLoss(6, 2, 9)),
-			-1, false, false, RecordedLevelIdentityProfile.DIRECT);
+			-1, 1, false, false, RecordedLevelIdentityProfile.DIRECT);
 
     public TracePlaybackProfile {
         if (interLevelNonAdvancingMovieRows < -1) {
@@ -43,6 +44,10 @@ public record TracePlaybackProfile(
         if (stageResultsEntryNonAdvancingMovieRows < -1) {
             throw new IllegalArgumentException(
                     "stageResultsEntryNonAdvancingMovieRows must be -1 or non-negative");
+        }
+        if (specialStageEntryNonAdvancingMovieRows < -1) {
+            throw new IllegalArgumentException(
+                    "specialStageEntryNonAdvancingMovieRows must be -1 or non-negative");
         }
         maskedLevelEntryLosses = maskedLevelEntryLosses == null
                 ? List.of()
@@ -132,6 +137,70 @@ public record TracePlaybackProfile(
             }
         }
         return interLevelNonAdvancingMovieRows;
+    }
+
+    /**
+     * How many movie rows a whole level -> special stage -> level round trip
+     * masks, for a game that models the round trip as a composition rather than
+     * through a presentation bridge.
+     *
+     * <p>The round trip crosses two masked blocks, and the ROM owns each of them
+     * separately:
+     * <ul>
+     *   <li>the destination level's own {@code Level:} mask, already tabled by
+     *       {@link #interLevelNonAdvancingMovieRows(int, int)} — for S2 the
+     *       {@code move #$2700,sr} at docs/s2disasm/s2.asm:4768 over
+     *       {@code ClearScreen} + {@code LoadTitleCard}, released at :4772;</li>
+     *   <li>the special stage's own entry mask — S2's {@code move #$2700,sr} at
+     *       docs/s2disasm/s2.asm:6557, released by {@code move #$2300,sr} at
+     *       :6613. That span carries only VDP register writes, four
+     *       {@code dmaFillVRAM} clears and five {@code clearRAM} blocks; it runs
+     *       no {@code ClearScreen}, {@code LoadTitleCard} or PLC decompression,
+     *       which is why it costs a single frame where {@code Level:} costs ten.</li>
+     * </ul>
+     *
+     * <p>Measured on {@code s2-sonic-tails-complete-emeralds}: all seven
+     * level -> special stage -> level boundaries lose exactly 11 rows in
+     * {@code movieRows - vblankDelta}, against 10 for every plain act advance in
+     * the same run (and 9 for {@code ooz1 -> ooz2}, the tabled deviant). Every
+     * one of those seven destinations happens to carry the mask of 10, so this
+     * fixture alone cannot separate "11 flat" from "destination mask + 1"; the
+     * composition is chosen because it is the shape the two cited mask sites
+     * have, and it is falsifiable — a future special-stage return into OOZ act 2
+     * must measure 10, not 11.
+     *
+     * <p><b>Measured but not yet switched on for Sonic 2.</b> S2 still has
+     * {@link #alignUncomparedInteriorReturnVblank()} {@code false}, so this
+     * number is currently inert. With the alignment enabled the engine's
+     * object V-blank clock lands on the recorded {@code vblank_counter} exactly
+     * at all five special-stage returns of
+     * {@code s2-sonic-tails-complete-emeralds} (drift {@code 2, 4, 3, 2, 4}
+     * before, {@code 0} after), and segments 2-4 keep passing -- but the
+     * corrected upstream clock then uncovers a sidekick divergence in
+     * {@code seg5_ehz2} at frame 524 (Tails' hurt transition, {@code sidekick_y}
+     * off by one) that the wrong clock had been masking, costing the chain more
+     * reach than the correction buys. The flag stays {@code false} until that is
+     * closed. The divergence is not seg5's own clock: forcing seg5's counter to
+     * the recorded value leaves it failing identically, and perturbing seg5's
+     * counter alone with the returns unaligned does not reproduce it.
+     *
+     * <p>Sonic 1 opts out ({@code -1}) because its special stage returns through
+     * the results-screen presentation bridge, whose masked cost is owned by
+     * {@link #alignsStageResultsPresentationVblank()} instead.
+     *
+     * <p><b>Scope: NTSC</b>, for the same {@code ceil()} reason as the level
+     * entry table.
+     *
+     * @param destinationZone recorded zone identity of the destination segment
+     * @param destinationAct recorded (one-based) act of the destination segment
+     */
+    public int specialStageReturnNonAdvancingMovieRows(
+            int destinationZone, int destinationAct) {
+        if (specialStageEntryNonAdvancingMovieRows < 0) {
+            return 0;
+        }
+        return specialStageEntryNonAdvancingMovieRows
+                + interLevelNonAdvancingMovieRows(destinationZone, destinationAct);
     }
 
     /**
