@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the special-stage entry flash no longer enters the special stage a frame
+  early. `Obj_SSEntryFlash` (sonic3k.asm:128332-128348) dispatches on `routine(a0)` once
+  per frame, so its routine-0 `SSEntryFlash_Init` -- whose `SetUp_ObjAttributesSlotted`
+  is what advances the routine to 2 -- owns a whole frame of its own, and
+  `SSEntryFlash_Main`'s first `Animate_RawAdjustFlipX` advance does not run until the
+  next frame. The engine's instance began animating on its very first `update()`. Because
+  `SSEntryRing`'s touch response allocates the flash through `AllocateObject`
+  (:128303-128306) and the engine's `spawnDynamicObject` uses AllocateObjectAfterCurrent
+  semantics, that first `update()` lands on the ring-touch frame itself -- the ROM's init
+  frame -- so the whole 1 + 9 + 33 sequence (init, nine `SSEntryFlash_Main` calls, then
+  `Obj_Wait`'s 33 ticks) finished on touch+41 instead of the ROM's touch+42, and
+  `SSEntryFlash_GoSS`'s `move.b #$34,(Game_mode).w` (:128405-128410) ran one `LevelLoop`
+  iteration early. Measured against the `s3k-sonic-tails-complete-emeralds` AIZ segment,
+  whose recorded ring touch (`anim` `$1C`, `object_control` `$53`) is row 2247 and whose
+  last row is 2289 -- exactly 42 frames later. Modelled with an explicit init state; no
+  constant was fitted.
 - Fix(s3k): the Slot Machine bonus cage no longer unloads off-camera, and the stage's
   transient layout animations no longer run a frame ahead of the ROM. Two independent
   defects, both closing one error on

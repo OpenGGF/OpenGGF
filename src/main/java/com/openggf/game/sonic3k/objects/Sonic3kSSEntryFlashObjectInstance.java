@@ -22,9 +22,14 @@ import java.util.logging.Logger;
  * Sonic 3&K Special Stage Entry Flash (Obj_SSEntryFlash).
  * <p>
  * Spawned by {@link Sonic3kSSEntryRingObjectInstance} when the player touches
- * the big ring. Plays a flash animation at the ring's position, marks the
- * parent ring for deletion mid-animation, waits 33 frames, then triggers
- * the special stage transition.
+ * the big ring. Spends its first frame in the ROM's routine-0 init, plays a
+ * flash animation at the ring's position, marks the parent ring for deletion
+ * mid-animation, waits 33 frames, then triggers the special stage transition.
+ * <p>
+ * The whole sequence is 43 frames of object execution counted from the
+ * ring-touch frame inclusive: 1 init + 9 {@code SSEntryFlash_Main} calls
+ * (8 mapping-frame advances plus the terminating {@code $F4}) + 33
+ * {@code Obj_Wait} ticks.
  * <p>
  * Animation (AniRaw_SSEntryFlash):
  * delay=0, frames: 0, 0, 1, 2, 3(hflip), 3, 2, 1, 0, then $F4 (call finished routine).
@@ -57,10 +62,19 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     // subq/bmi pair spends this on the 33rd tick, not the 32nd -- see updateWait.
     private static final int POST_ANIM_WAIT = 0x20;
 
-    private enum State { ANIMATING, WAITING, DONE }
+    private enum State { INIT, ANIMATING, WAITING, DONE }
     private Sonic3kSSEntryRingObjectInstance parentRing;
 
-    private State state = State.ANIMATING;
+    // ROM Obj_SSEntryFlash (skdisasm/sonic3k.asm:128332-128348) dispatches on
+    // routine(a0) ONCE per frame: routine 0 runs SSEntryFlash_Init, whose
+    // SetUp_ObjAttributesSlotted sets routine to 2, so SSEntryFlash_Main -- and
+    // therefore the first Animate_RawAdjustFlipX advance -- does not run until
+    // the NEXT frame. Obj_SSEntryFlash is allocated by SSEntryRing's touch
+    // response through AllocateObject (:128303-128306), and the engine's
+    // spawnDynamicObject uses AllocateObjectAfterCurrent semantics, so the
+    // instance receives its first update() on the ring-touch frame itself --
+    // which is the ROM's Init frame, not its first Main frame.
+    private State state = State.INIT;
     private int animIndex = 0;
     private int waitTimer = 0;
     private boolean ringDeleteTriggered = false;
@@ -127,6 +141,8 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
+            // ROM routine 0: SSEntryFlash_Init consumes this frame on its own.
+            case INIT -> state = State.ANIMATING;
             case ANIMATING -> updateAnimation();
             case WAITING -> updateWait();
             case DONE -> { }
