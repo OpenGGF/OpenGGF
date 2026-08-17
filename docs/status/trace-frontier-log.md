@@ -80862,3 +80862,70 @@ Red-class sets diffed by NAME in both directions (Python set difference);
   classes** -- identical sets.
 - `TestTraceStructuralRowComparator` red in isolation on both trees; ignored per standing
   note.
+
+## 2026-08-17 - The chain clears the `ss` special stage; frontier moves to the segment-1 return boundary
+
+- `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+  base `b9721b91d` (measured after rebasing off `cc4da4598`, which develop had already
+  advanced past mid-round), isolated worktree under `$WORKTREE_ROOT/oggf-ss-exit`, branch `bugfix/ai-ss-exit-remainder`, commit `704d7de71`.
+- Command (both trees): `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
+  -Ds3k.rom.path=<repo>/s3k.gen test`.
+- **Control, reproduced exactly as briefed:** `special stage exited with 1181 represented
+  rows remaining in ss` (`AbstractRunChainTest.assertChainReplay:1271`).
+- **Diagnosis (engine ended the stage early; not a comparator concern).** Per-row dump of
+  the engine's `Sonic3kSpecialStageComparisonState` against `ss/physics.csv`: engine and
+  ROM agree on `x_pos`/`y_pos`/`angle`/`velocity`/`spheres_left` for 1758 consecutive rows
+  and first diverge at **row 1934**, where the engine's `velocity` steps 4096 -> 4608 while
+  the ROM holds 4096. The ROM's `Special_stage_rate` bump to `$1400` is at row **1956**,
+  22 rows later. From there the paths separate; the engine hits a red sphere the ROM never
+  hits, stops moving at row 2630 with 50 spheres up, and enters `SPECIAL_STAGE_RESULTS` at
+  row 2749 -- 1181 rows before the segment ends (the ROM's own clear is at row 4112).
+- **Owner: the entry fade.** `SpecialStage` (sonic3k.asm:10585) opens with
+  `bsr.w Pal_FadeToWhite` (:10591); that routine (sonic3k.asm:5232-5242) is
+  `move.w #$15,d4 / ... bsr.w Wait_VSync ... dbf d4,loc_3D3A` -- 22 blocking real frames,
+  no `Process_Sprites`, and `Special_stage_rate` / `Special_stage_rate_timer` are not
+  written until :10701-10707. Those are recorded rows **0-21**; rows 22-133 are the load's
+  112 lag rows; row 134 is the boot's `Special_stage_fade_timer=1` `Wait_VSync`; rows
+  135-156 are `Pal_FadeFromWhite`; the main loop's first `Process_Sprites` is row 157 and
+  the recorded `rate_timer` first decrements at row 158.
+- The engine does the mode change and `initializeStage` in one frame, so the chain's 22
+  stepped rows 0-21 were fed to the manager and consumed its existing (correct)
+  `Pal_FadeFromWhite` hold, leaving the timer decrementing from row 136 -- 22 frames ahead
+  of the ROM's 158 -- for the whole stage. The standalone `Ss*` classes never saw this:
+  `AbstractS3kSpecialStageTraceReplayTest.firstInteractiveFrame` starts them at row 135.
+- **Fix:** a pre-boot entry-fade hold in `Sonic3kSpecialStageManager`, sized from
+  `Pal_FadeToWhite`'s own `dbf` count, retired synchronously under
+  `SpecialStageStartupPolicy.FAST` and left armed under `TRACE_ACCURATE` --
+  the split `Sonic1SpecialStageProvider` already applies to its own pre-physics hold. No
+  constant fitted, no assertion touched, no fixture regenerated.
+- **After the fix:** the engine plays all 4469 `ss` rows; `x_pos`, `y_pos`,
+  `spheres_left`, `clear_routine`, `rate` and `rate_timer` match the recording on every
+  non-lag row from 135 to 4468 (`rate_timer` 1799 at row 157, 1798 at 158, bump to
+  `$1400` at 1956 -- identical to the ROM). The chain now clears segment 1 and stops at
+  the **segment-1 return boundary**:
+  `Shared return-boundary comparison failed ... run_boundary.position.x expected=7112
+  actual=7088 (delta 24), run_boundary.position.y expected=1216 actual=1219 (delta 3)`
+  (`AbstractRunChainTest.assertReturnBoundary:2967`). That is the next frontier.
+
+### Blast radius
+
+Red-class sets diffed by NAME in both directions (Python set difference);
+`target/surefire-reports` and `target/trace-reports` cleared before every run. Both trees
+at `b9721b91d`.
+
+- `-Ptrace-replay`, both trees: **773 tests, 3 red classes** -- identical sets
+  (`TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestS3kHczZoneSliceTraceReplay`). No newly green, no newly red; the chain's message
+  advances from the `ss` exhaustion failure to the segment-1 return boundary.
+- `-Ptrace-replay-r7`, both trees: **37 tests, 32 red classes** -- identical sets.
+- Default profile, both trees, `-Dsurefire.forkCount=1` sequential: **15118 tests**;
+  control 51 red classes, fix 52. The delta is ambient, not the change:
+  `TestGameLoopSpecialStageEntryPresentation` (3 errors,
+  `Sonic2SpecialStageDataLoader` -> `NemesisReader: Unexpected end of input data`) and
+  `TestGameLoopSpecialStageRewindBoundary` (4 failures) are **green in isolation on the
+  fix tree** (`-Dmse=off -Dtest=<both>`: 14 tests, 0 failures, 0 errors) and green again
+  on a second full fix-tree run with the default fork count (50 red, no newly red).
+  `SwScrlMhzTest` is red on the control run and green on both fix-tree runs -- the same
+  reused-fork ambient-state flake class.
+- `TestTraceStructuralRowComparator` behaved identically on both trees; ignored per the
+  standing note.

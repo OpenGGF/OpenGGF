@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The special-stage entry fade blocks for 22 frames, and the run chain clears segment 1
+  (`bugfix/ai-ss-exit-remainder`, merged 2026-08-17).** The chain was leaving `ss` with 1181 of 4469
+  rows unconsumed, and it was genuine gameplay divergence rather than a comparator concern: engine
+  and ROM agree on position, angle, velocity and `spheres_left` for 1758 consecutive rows, then the
+  engine's velocity steps at row 1934 while the ROM holds until its `Special_stage_rate` bump at
+  1956 — 22 rows later. `SpecialStage` opens with `bsr.w Pal_FadeToWhite` (sonic3k.asm:10591), which
+  is `move.w #$15,d4` around a `dbf` loop containing `bsr.w Wait_VSync` (:5232-5242) — **22 blocking
+  frames with no `Process_Sprites`**, and `Special_stage_rate` is not written until :10701-10707. The
+  recorded row structure falls straight out of it: rows 0-21 are the fade, 22-133 the load's lag
+  rows, 135-156 `Pal_FadeFromWhite`, first main-loop `Process_Sprites` at 157. The engine did the
+  mode change and `initializeStage` in one frame, so it consumed its `Pal_FadeFromWhite` hold 22 rows
+  early and ran the whole stage ahead. The standalone `Ss*` classes never saw this because their
+  harness starts at row 135. The hold is sized from the ROM's own `dbf` count and retired
+  synchronously under `SpecialStageStartupPolicy.FAST`, the same split S1 already applies. Every
+  non-lag row 135-4468 now matches — position, spheres, `clear_routine`, `rate` and `rate_timer`.
+  This also closes the "stage-entry phase" question a previous round deliberately left open because
+  its only in-round close was seeding from the fixture; it closed from the ROM instead. The chain now
+  stops at the segment-1 **return boundary** (`position.x` expected 7112 actual 7088).
+
 - **The release gate is the run chains; segments are instrumentation (2026-08-17).** A per-zone or
   per-act segment *resumes* a playthrough — seeded with position/zone/act, but inheriting
   progression state (emeralds above all) it cannot earn — so it can only answer "given this boundary

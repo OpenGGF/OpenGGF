@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): the special stage's speed-up timer no longer runs 22 frames ahead of the ROM.
+  `SpecialStage` (sonic3k.asm:10585) opens with `bsr.w Pal_FadeToWhite` (:10591), whose
+  `move.w #$15,d4 / ... bsr.w Wait_VSync ... dbf d4` loop (sonic3k.asm:5232-5242) blocks
+  for 22 real, input-polled frames before the stage is loaded and before
+  `Special_stage_rate` / `Special_stage_rate_timer` are written at all (:10701-10707).
+  The engine performs the mode change and `initializeStage` in one frame, so a BK2-driven
+  caller's first 22 stepped frames landed on the ROM's fade-to-white frames and
+  `Special_stage_rate_timer` decremented 22 frames early for the whole stage: its first
+  `$400` rate bump, and the velocity ramp that follows it, arrived 22 frames before the
+  ROM's. `Sonic3kSpecialStageManager` now arms a pre-boot entry-fade hold alongside its
+  existing `Pal_FadeFromWhite` hold (the mirror routine, sonic3k.asm:5139-5150, also 22
+  iterations), and `Sonic3kSpecialStageProvider` retires it under
+  `SpecialStageStartupPolicy.FAST` while leaving it armed under `TRACE_ACCURATE` -- the
+  same split `Sonic1SpecialStageProvider` applies to its own pre-physics hold. On
+  `TestS3kSonicTailsCompleteEmeraldRunChain` the `ss` segment previously exited into
+  `SPECIAL_STAGE_RESULTS` with 1181 of 4469 recorded rows unconsumed (the engine hit a
+  red sphere the ROM never hit, 50 spheres still up); it now plays all 4469 rows with
+  `x_pos`, `y_pos`, `spheres_left`, `clear_routine`, `rate` and `rate_timer` matching the
+  recording on every non-lag row, and the chain advances to the segment-1 return
+  boundary.
 - Fix(s3k): the special-stage entry flash no longer enters the special stage a frame
   early. `Obj_SSEntryFlash` (sonic3k.asm:128332-128348) dispatches on `routine(a0)` once
   per frame, so its routine-0 `SSEntryFlash_Init` -- whose `SetUp_ObjAttributesSlotted`
