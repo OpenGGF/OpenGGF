@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s2): the run chain now models Sonic 2's level-entry V-blank mask, so the engine's
+  object-visible `Vint_runcount` loses the same number of ticks the ROM does across a
+  level->level boundary instead of ending it 9 ticks ahead. S2 has 26 `move #$2700,sr`
+  sites and exactly one lies between `Level:` (s2disasm/s2.asm:4757) and `Level_MainLoop`
+  (:5088) -- line 4768, masking `bsr.w ClearScreen` plus `jsr (LoadTitleCard).l` until
+  `move #$2300,sr` at :4772 -- so a V-int that would have reached
+  `VintRet: addq.l #1,(Vint_runcount).w` (:507-508) never runs on those rows. Entry phase
+  into the mask is a ROM constant: the preceding `bsr.w ClearPLC` empties the PLC queue
+  and `bsr.w Pal_FadeToBlack` ends in a V-int-synced wait plus fixed-cost work whose one
+  route-variable term (`RunPLC_RAM`) then runs on an empty queue. The count is measured,
+  not cycle-counted, and is keyed per destination level on `TracePlaybackProfile` as
+  owned per-game data: 10 rows at every level entry except OOZ act 2, which measures 9.
+  Both values reproduce in two independently recorded routes -- the complete-emerald run
+  and the `s2-lvl-select-*.bk2` warps -- including the deviant one, and five repeated
+  special-stage returns into EHZ with differing lag history agree with each other. On
+  `TestS2CompleteEmeraldRunChain` segment 11 goes 266 physics errors / first non-camera
+  mismatch f3521 to 236 / f3525, same field `queue.s2_nemesis_plc.busy`, with the walk
+  frontier and axis count unchanged.
 - Fix(s3k): returning from a giant-ring special stage now puts the player back at the
   RING, not where he touched it. ROM `SSEntryFlash_GoSS` calls `Save_Level_Data2`
   (skdisasm/sonic3k.asm:128392) from the flash object's own routine, so `a0` is the

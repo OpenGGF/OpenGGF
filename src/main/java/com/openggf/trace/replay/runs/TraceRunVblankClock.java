@@ -112,7 +112,7 @@ public final class TraceRunVblankClock {
         }
         int ticks = TraceRunReplayWalker.interLevelVblankBudget(
                 source, destination, rowsConsumed,
-                profile.interLevelNonAdvancingMovieRows());
+                maskedLevelEntryLoss(profile, destination));
         return OptionalInt.of(Math.addExact(sourceAnchor.tailVblank(), ticks));
     }
 
@@ -134,6 +134,22 @@ public final class TraceRunVblankClock {
         int ticks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
                 source, destination);
         return OptionalInt.of(Math.addExact(sourceAnchor.tailVblank(), ticks));
+    }
+
+    /**
+     * The destination level entry's masked row count, taken from the game
+     * profile's owned table. The identity comes from the manifest segment the
+     * walker is already crossing into; no zone predicate lives here.
+     */
+    public static int maskedLevelEntryLoss(
+            TracePlaybackProfile profile,
+            TraceRunManifest.Segment destination) {
+        Integer zone = destination.zoneId();
+        Integer act = destination.act();
+        if (zone == null || act == null) {
+            return profile.interLevelNonAdvancingMovieRows();
+        }
+        return profile.interLevelNonAdvancingMovieRows(zone, act);
     }
 
     private SourceAnchor sourceAnchor(

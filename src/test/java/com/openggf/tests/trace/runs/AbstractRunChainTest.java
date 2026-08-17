@@ -41,6 +41,7 @@ import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.replay.runs.DestinationAdmissionReceipt;
 import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
@@ -2858,7 +2859,8 @@ abstract class AbstractRunChainTest {
         }
         int requiredTicks = TraceRunReplayWalker.interLevelVblankBudget(
                 currentLevel.segment(), nextLevel.segment(), nextFramesConsumed,
-                profile.interLevelNonAdvancingMovieRows());
+                TraceRunVblankClock.maskedLevelEntryLoss(
+                        profile, nextLevel.segment()));
         var objectManager = GameServices.level().getObjectManager();
         int actualTicks = objectManager.getVblaCounter() - sourceTailVblank;
         if (actualTicks != requiredTicks) {

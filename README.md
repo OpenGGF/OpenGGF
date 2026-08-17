@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 masked level-entry loss is modelled per (zone, act)
+  (`bugfix/ai-s2-masked-block-loss`, merged 2026-08-17).** `Level:` masks interrupts at
+  `s2.asm:4768` across `ClearScreen` + `jsr (LoadTitleCard).l`, and the V-blank periods elapsing in
+  that window never reach `VintRet`, so the ROM's object clock loses them. Measured across every
+  boundary of the complete-emerald run **and** the eight act advances in independently recorded
+  `s2-lvl-select-*` movies: **11** for level->SS->level, **10** for level->level, and **9** for
+  `ooz a1 -> ooz a2` in *both* movies. Not a fitted constant, on four legs: two independent
+  recordings agree at every boundary including the deviant; five repeated special-stage returns into
+  EHZ all measure 11 despite differing lag history; **exactly one** `move #$2700,sr` lies between
+  `Level:` and `Level_MainLoop`, with entry phase pinned by `Pal_FadeToBlack`'s V-int-synced tail
+  after `ClearPLC` empties the queue; and the varying payload is `LoadTitleCard`, which *predicts*
+  the OOZ deviation. **The key is (zone, act), not zone** — `mcz2 -> ooz1` measures 10 while
+  `ooz1 -> ooz2` measures 9, so a per-zone table would have been wrong. The javadoc states plainly
+  that neither this nor Sonic 1's landed 6 was derived by cycle counting, carries the falsifiable
+  prediction that every future boundary with the same (zone, act, kind) must match, notes the table
+  is NTSC-scoped, and records the one limit no committed fixture can settle: the sole 9 is also the
+  sole boundary whose *source* is OOZ act 1, so destination-keying is a modelling choice.
+  Identical red sets across all three profiles on both trees.
+
 - **Every transition row the engine plays now owes its `VintRet` tick
   (`bugfix/ai-s2-vint-gap-tick`, merged 2026-08-17).** `VintRet: addq.l #1,(Vint_runcount).w`
   (s2disasm/s2.asm:507-508) sits **after** the `jsr Vint_SwitchTbl` dispatch at :504, so every V-int

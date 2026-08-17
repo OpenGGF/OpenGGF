@@ -34,12 +34,29 @@ class TestTracePlaybackProfile {
     }
 
     @Test
+    void sonic2ProfilesItsMeasuredPerDestinationLevelEntryMask() {
+        var profile = new Sonic2GameModule().getTracePlaybackProfile();
+        assertTrue(profile.alignsInterLevelVblank());
+        // The one masked stretch between Level: (docs/s2disasm/s2.asm:4757) and
+        // Level_MainLoop (:5088) is line 4768's move #$2700,sr over ClearScreen
+        // + LoadTitleCard. Measured 10 at 20 of 21 level->level boundaries of
+        // the complete-emerald run, and 10 in every independently recorded
+        // s2-lvl-select-*.bk2 act advance that has a second witness.
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows());
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(0, 2), "EHZ2 entry");
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(6, 1), "OOZ1 entry");
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(7, 3), "MTZ3 entry");
+        // The single deviant destination: entering OOZ act 2 measures 9 in BOTH
+        // the complete-emerald run and s2-lvl-select-OOZ.bk2.
+        assertEquals(9, profile.interLevelNonAdvancingMovieRows(6, 2), "OOZ2 entry");
+    }
+
+    @Test
     void otherGamesLeaveMovieClockAlignmentDisabledUntilMeasured() {
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
                 .alignsStageResultsPresentationVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignsStageResultsPresentationVblank());
-        assertFalse(new Sonic2GameModule().getTracePlaybackProfile().alignsInterLevelVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile().alignsInterLevelVblank());
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());

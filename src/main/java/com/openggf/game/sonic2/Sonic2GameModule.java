@@ -122,6 +122,11 @@ public class Sonic2GameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile() {
+        return com.openggf.game.profiles.trace.TracePlaybackProfile.SONIC_2;
+    }
+
+    @Override
     public Game createGame(Rom rom) {
         plcService = new Sonic2PlcService(rom);
         return new Sonic2(rom);
