@@ -82005,3 +82005,56 @@ mismatch was reported.
 transition itself, because a mid-run start would require hydrating engine state from the
 trace, which hard rule 4 forbids. Re-scoping the HCZ zone slice into `-Ptrace-replay` would
 restore in-zone coverage but still not the boundary.
+
+## 2026-08-17 — S1 complete-run chain: level-load transfer settled at chain admission
+
+**Command.** `mvn -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain
+-Dsonic1.rom.path=<s1.gen> test`, worktree `bugfix/ai-s1-chain-seam-edges`
+(`fd252fa28`) against control `024dfc66d`.
+
+**Before (control `024dfc66d`).** FAIL on 6 axes.
+
+- walk-failure: `source comparator is not complete for mz1: cursor 3390 of 3391`
+- segment 3 (`ghz2_2`): 4563 errors, first at frame 0 `dynamic_art.edges`
+  rom=`[]` engine=`[0, 1]`
+- segment 6 (`ghz3_2`): 12110 errors, same first error
+- dynamic-art-gap: `ghz2 -> ghz2_2`, `ghz3 -> ghz3_2`, `ghz3_2 -> mz1`
+
+**After (`fd252fa28`).** FAIL on 3 axes.
+
+- walk-failure: `mz1: cursor 3390 of 3391` — **unchanged**
+- segment 6 (`ghz3_2`): 4982 errors, first non-camera mismatch now frame **3643**
+  field `rings` rom=0 engine=1
+- dynamic-art-gap: `ghz3_2 -> mz1` only
+
+Segment 3 is clean (4563 → 0) and the two bridge gaps match exactly, request lists
+and `after_ledger_fingerprints` included.
+
+**Cause.** An in-run level load stages the player's tiles in `Level_LoadObj`'s
+`ExecuteObjects` pass (`docs/s1disasm/sonic.asm:2895-2897`); the V-int that performs
+the transfer is the first row of the counted `Level_Delay` + `PalFadeIn_Alt` tail
+(`sonic.asm:2957-2966`), i.e. `preLevelMainLoopDelayFrames` (26) rows before the
+level's first main-loop row — inside the transition gap. Every level-load gap in the
+fixture carries exactly one `mapping_frame` 1 Sonic publish at
+`destination_offset - 26`. Production settles the held preparation at destination
+admission (`TraceSessionLauncher#settlePreMainLoopPlayerTransferAtAdmission`);
+`AbstractRunChainTest` never did, so it survived to the destination's first
+`serviceProductionVBlank`, which drops the tail and flushes at its own row. Every
+later error in segments 3 and 6 was that one edge pair's constant +2 edge-ordinal
+skew.
+
+**Frontier now.** Segment 6 `ghz3_2` frame 3643: the engine collects one ring the ROM
+does not, and holds the +1 offset to the segment's end; a `queue.s1_nemesis_plc`
+divergence follows near frame 8034. The `ghz3_2 -> mz1` gap failure and the `mz1`
+walk-failure are both downstream of that segment, not of the seam defect.
+
+**Sweep (both trees, sequential, reports cleared between runs).**
+
+| Profile | control red classes | fix red classes | delta |
+|---|---|---|---|
+| `-Ptrace-replay` | 4 | 3 | `TestS1CompleteEmeraldVisualRun` green (flaky — passes in isolation on control too) |
+| `-Ptrace-segments` | 55 | 55 | identical |
+| `-Ptrace-replay-r7` | 32 | 32 | identical |
+| default | 49 | 48 | `TestGameLoopAudioPresentationModes` green (flaky, unreachable from the change) |
+
+Zero new red in any profile.
