@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -83,7 +84,22 @@ import java.util.logging.Logger;
  * <p>Grab (sub_6B9E2): player within Y-zone table (word_6BAC2) and 32px H —
  * lock object_control, forced float animation.
  */
-public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
+public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code loc_6B26E} is the routine this object runs, i.e. address
+     * {@code $0006B26E} (docs/skdisasm/sonic3k.asm).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0006}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0006;
+    }
+
 
     private static final Logger LOG = Logger.getLogger(HczEndBossWaterColumn.class.getName());
 

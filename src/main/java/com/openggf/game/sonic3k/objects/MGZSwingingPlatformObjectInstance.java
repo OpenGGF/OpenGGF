@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +32,23 @@ import java.util.List;
  * Status bit 1 (y-flip) selects chain link visual (frame 0 vs frame 1).
  */
 public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_MGZSwingingPlatform} is installed from the S3K object pointer table at
+     * {@code $00033F84} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:70464).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0003}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0003;
+    }
+
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_SWINGING_PLATFORM;
 

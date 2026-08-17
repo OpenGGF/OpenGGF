@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -35,7 +36,23 @@ import java.util.List;
  * {@code LBZCupElevator_Action} (sonic3k.asm:52537-53149).
  */
 public final class LbzCupElevatorInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_LBZCupElevator} is installed from the S3K object pointer table at
+     * {@code $0002694E} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:52542).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0002}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0002;
+    }
+
     private static final int WIDTH_PIXELS = 0x20;
     private static final int HEIGHT_PIXELS = 0x10;
     private static final int SOLID_SIDE_PADDING = 0x0B;
