@@ -154,7 +154,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     // Broken piece state (spawns random animals)
     private int brokenRoutineSecondary = BROKEN_STATE_WAITING;
     private int brokenAnimDuration = 0;
-    private boolean skipRandomAnimalSpawnThisFrame = false;
+    /**
+     * True while the broken piece's SST slot has already been passed by the
+     * ExecuteObjects walk that armed it, so {@code loc_3F3A8} does not run
+     * again until the next frame. Derived from slot order, not from a fixed
+     * one-frame skip -- see {@link #armBrokenPieceSpawning()}.
+     */
+    private boolean brokenPieceAlreadyPassedThisFrame = false;
 
     // Player reference for results screen
     private AbstractPlayableSprite lastPlayer;
@@ -184,6 +190,18 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * from Obj3E_ObjLoadData (docs/s2disasm/s2.asm:84798-84829). The Java
      * parent still owns lock physics and animal spawning, but these children
      * preserve the SST slot pressure later AllocateObject scans observe.
+     * <p>
+     * Divergence: {@code spawnChild} has FindNextFreeObj semantics (scan forward
+     * from the parent slot), while {@code loc_3F220} calls {@code AllocateObject},
+     * which restarts its scan at {@code Dynamic_Object_RAM}
+     * (docs/s2disasm/s2.asm:84841, 33681-33695) and can therefore land a piece
+     * BELOW the body. The two coincide whenever every slot under the body is
+     * already taken, which is what both recorded capsules show -- EHZ2 body 16 /
+     * button 17 / lock 18 / broken 19, ARZ2 body 17 / button 18 / lock 19 /
+     * broken 20, both matching the engine. Switching to {@code spawnFreeChild}
+     * was tried and changed no recorded slot, so the ROM allocator is documented
+     * here rather than swapped in blind; {@link #armBrokenPieceSpawning()} reads
+     * whatever order results instead of assuming one.
      */
     private void spawnComponentSlotObjects() {
         if (componentSlotsSpawned || services().objectManager() == null) {
@@ -303,8 +321,15 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * loc_3F2FC - Wait for delay, then spawn initial animals.
      */
     private void updateBodyBreakDelay() {
+        // ROM: subq.w #1,objoff_34(a0) / bpl.s return_3F352
+        // (docs/s2disasm/s2.asm:84909-84910). bpl branches on a result of ZERO
+        // as well as positive, so the counter seeded with $1D at loc_3F2B4
+        // (s2.asm:84902) is decremented 30 times -- 29 down to 0 all return, and
+        // only the pass that takes it to -1 falls through. Testing `> 0` here
+        // would fire on the 29th pass, one frame early, which shifts every
+        // downstream (Vint_runcount+3) & 7 spawn decision by one.
         breakDelayTimer--;
-        if (breakDelayTimer > 0) {
+        if (breakDelayTimer >= 0) {
             return;
         }
 
@@ -319,10 +344,37 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Tell broken piece to start spawning random animals after $B4 frames
         brokenAnimDuration = SPAWN_PHASE_DURATION;
         brokenRoutineSecondary = BROKEN_STATE_SPAWNING;
-        skipRandomAnimalSpawnThisFrame = true;
+        armBrokenPieceSpawning();
 
         // Body is done
         bodyRoutineSecondary = BODY_STATE_DONE;
+    }
+
+    /**
+     * Decides whether the broken piece's {@code loc_3F3A8} routine still runs on
+     * the frame the body arms it.
+     * <p>
+     * ROM {@code loc_3F2FC} arms the piece by writing {@code $B4} to
+     * {@code anim_frame_duration(a2)} and {@code addq.b #2,routine_secondary(a2)}
+     * on the object in {@code objoff_3C(a0)} (docs/s2disasm/s2.asm:84928-84930).
+     * That is a different SST slot from the body's, and {@code ExecuteObjects}
+     * walks the slots in ascending order, so the piece runs again this frame only
+     * if its slot sits after the body's. When it does, {@code loc_3F3A8} sees the
+     * routine_secondary it was just given and its {@code Vint_runcount+3 & 7}
+     * spawn gate (docs/s2disasm/s2.asm:84972-84974) is live on the arming frame;
+     * when it sits before the body's slot the walk has already passed it and the
+     * gate first runs next frame.
+     * <p>
+     * This is deliberately a slot comparison rather than an unconditional
+     * one-frame skip: the ROM allocates the piece with {@code AllocateObject},
+     * which scans from the start of {@code Dynamic_Object_RAM}
+     * (docs/s2disasm/s2.asm:84841, 33681-33695), so the relative order depends on
+     * which slots were free when the capsule initialised, not on a constant.
+     */
+    private void armBrokenPieceSpawning() {
+        brokenPieceAlreadyPassedThisFrame =
+                brokenSlotChild == null
+                        || brokenSlotChild.getSlotIndex() <= getSlotIndex();
     }
 
     /**
@@ -402,11 +454,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         if (brokenRoutineSecondary == BROKEN_STATE_SPAWNING) {
             // ROM loc_3F3A8 samples (Vint_runcount+3) and spawns only when
-            // its low three bits are zero (docs/s2disasm/s2.asm:84935-84942).
-            if (!skipRandomAnimalSpawnThisFrame && (vIntRunCount & 7) == 0) {
+            // its low three bits are zero (docs/s2disasm/s2.asm:84969-84976).
+            if (!brokenPieceAlreadyPassedThisFrame && (vIntRunCount & 7) == 0) {
                 spawnRandomAnimal();
             }
-            skipRandomAnimalSpawnThisFrame = false;
+            brokenPieceAlreadyPassedThisFrame = false;
 
             // Count down duration
             brokenAnimDuration--;
@@ -553,7 +605,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             // these lower-slot initial children are visible to the manager on
             // the allocation frame, so preserve the ROM frame before
             // Obj28_Prison decrements objoff_36.
-            final int animalDelay = delay + 2;
+            // +1, not +2: the ROM writes d5 straight into objoff_36 and the
+            // animal's first ExecuteObjects pass runs Obj28_InitRandom without
+            // decrementing it, so folding that pass into the constructor costs
+            // exactly one frame. The extra +1 this carried until now was
+            // absorbing the loc_3F2FC break-delay off-by-one now fixed in
+            // updateBodyBreakDelay, not a second folded pass.
+            final int animalDelay = delay + 1;
             final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
             // spawnFreeChild matches the previous addDynamicObject (FindFreeObj /
             // lowest-slot) semantics, but also sets the construction context so the
