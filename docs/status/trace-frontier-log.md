@@ -81232,3 +81232,54 @@ The remaining half is the ROM's masked-block loss -- 10 at 20 of 21 boundaries, 
 
 **Do not retry:** `sidekick_y`, sub-pixel carry, `HurtCharacter` velocities, Tails hurt
 physics. All correct.
+
+
+## 2026-08-17 -- The S2 masked-block loss IS route-independent: no rule amendment needed
+
+**The two-movie kill condition fired the other way, and it withdraws a proposed rule-4
+amendment.**
+
+A previous entry concluded that because `seg20_ooz1 -> seg21_ooz2` measures **9** where twenty
+other level->level boundaries measure **10**, the quantity must be a sub-V-blank rounding of a
+cycle cost and therefore route-dependent and unlandable. That inference was wrong. The 9 is
+evidence of **zone**-dependence, not route-dependence.
+
+Measured across every S2 fixture family that crosses a boundary:
+
+| boundary | complete-emerald run | independent movie | agree? |
+|---|---|---|---|
+| `ooz a1 -> ooz a2` | **9** | **9** (`s2-lvl-select-OOZ.bk2`) | yes |
+| `mtz a1 -> mtz a2` | 10 | 10 (`s2-lvl-select-MTZ.bk2`) | yes |
+| `mtz a2 -> mtz a3` | 10 | 10 (`s2-lvl-select-MTZ.bk2`) | yes |
+| `arz/cnz/cpz/htz/mcz a1 -> a2` | 10 | 10 (matching `s2-lvl-select-*`) | yes |
+| `ehz a1 -> ehz a1` (SS round trip) | 11 | 11 (`s2-ehz-halfpipe-roundtrip.bk2`) | yes |
+
+**Two entirely different routes -- a level-select warp and a full emerald run -- produce the
+same loss at the same boundary, in every case tested, including the deviant one.** Entry phase
+is therefore not route-dependent, and the loss is a property of the masked block's own payload.
+
+That is exactly the shape S1's landed `interLevelNonAdvancingMovieRows = 6` already relies on:
+`TracePlaybackProfile`'s javadoc argues the count is "fixed by the block's decompression
+payload, not by the route that reached it". The same argument holds for S2 -- it simply needs a
+**per-zone** value rather than one number, because OOZ's title-card payload differs.
+
+### Consequences
+
+1. **The proposed rule-4 amendment is withdrawn.** No timing sidecar is needed, no second
+   confined port, no contract extension for the owner to ratify. Rule 3's "derive it" arm
+   applies after all.
+2. **A flat `interLevelNonAdvancingMovieRows` for S2 would still be wrong** -- it must be keyed
+   by the masked block reached, which varies with the destination zone's title-card payload.
+   Landing a single 10 would be fitted; landing a payload-derived per-zone value is not.
+3. **The validation protocol is now established**: a candidate value is route-independent iff
+   two independently recorded movies crossing the same boundary agree. Every S2 boundary with a
+   second witness has one, and all of them agree.
+4. The remaining engine-side half (every non-lag `TRANSITION_GAP` row must tick) is unaffected
+   and still correct.
+
+### What was wrong, and how it was caught
+
+The error was inferring route-dependence from a single deviant value without checking whether a
+second movie crossed the same boundary. The data to refute it was already committed. The check
+that found it -- recompute per boundary and look for a second witness, rather than trusting an
+"every boundary measures N" summary -- is the protocol worth keeping.
