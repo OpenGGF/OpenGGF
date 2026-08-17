@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The AIZ fire redraw takes 7 further passes, derived, not 16 invented
+  (`bugfix/ai-aiz-fire-phase`, merged 2026-08-17).** The fire-rise *phase* turned out to be correct
+  already: `fireTransitionFrames = 168` is the ROM's own number, reproduced by simulating
+  `AIZ1_AIZ2_Transition`'s seed (`move.l #$200000,(Camera_Y_pos_BG_copy).w`,
+  `move.w #$68,(Events_bg).w`, sonic3k.asm:104642-104646) through the `asr.l #5` lerp and
+  `AIZ1_FireRise`'s `+$280` / `$A000` cap, and confirmed against the fixture's own
+  `aiz_fire_transition` aux family — `events_routine_bg` steps at rows 5247 and 5414, and
+  `5414 - 5247 + 1 = 168`. The invented constant was elsewhere: `FIRE_REDRAW_FRAMES = 16`.
+  `loc_4FD10` seeds `move.w #$F,(Draw_delayed_rowcount).w` (:104696) and the first
+  `Draw_PlaneVertBottomUp` runs on the `$190` frame itself; that routine calls
+  `Draw_PlaneVertSingleBottomUp` and re-enters it on `bpl` (:103431-103434), so it drains **two**
+  rows per call — 8 calls, one already spent, leaving **7**. Landed as the derivation
+  `((AIZ1_FIRE_REFRESH_ROWCOUNT + 1) / FIRE_REDRAW_ROWS_PER_CALL) - 1` rather than a number.
+  All three AIZ classes stay green and all three sweeps are name-identical in both directions.
+  `FIRE_TERRAIN_DECOMPRESS_FRAMES = 20` remains, now carrying a `KNOWN INVENTED CONSTANT` javadoc
+  with its measurement: re-gating it on the three `Queue_Kos` handles' readiness reproduces a
+  4030-error AIZ complete-run failure byte-for-byte, because the engine's direct Kosinski queue does
+  not model the ROM's drain rate. That drain model is the next owner.
+
 - **The pachinko flipper tracks two riders, not one (`bugfix/ai-pachinko2-air-1435`, merged
   2026-08-16).** `Obj_PachinkoFlipper` keeps a **per-player** standing byte — `$36(a0)` for Player_1
   and `$37(a0)` for Player_2, with separate `sub_49CFE` calls and a `p2_standing_bit`

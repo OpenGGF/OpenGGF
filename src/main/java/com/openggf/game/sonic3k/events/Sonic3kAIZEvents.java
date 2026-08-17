@@ -397,7 +397,49 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_BG_X_PHASE_MASK = 0x0060;
     private static final int FIRE_WAVE_PHASE_STEP = 6;
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
-    private static final int FIRE_REDRAW_FRAMES = 16;
+    // ROM AIZ1BGE_FireTransition, the Camera_Y_pos_BG_copy >= $190 branch
+    // (sonic3k.asm:104674-104716): loc_4FD10 seeds
+    // `move.w #$F,(Draw_delayed_rowcount).w`, bumps Events_routine_bg to
+    // AIZ1BGE_FireRefresh, and then falls through `bra.s loc_4FD32` so the FIRST
+    // Draw_PlaneVertBottomUp call happens on that same frame. Each call drains TWO
+    // rows (Draw_PlaneVertSingleBottomUp runs once, then again while the counter is
+    // still non-negative; sonic3k.asm:103429-103457), and the routine advances to
+    // AIZ1BGE_Finish on the call that takes the counter negative. The seed and the
+    // drain rate give the pass count outright; it is not a measured budget. Same
+    // shape, and the same two ROM facts, as AIZ2_FIRE_REDRAW_ROWCOUNT below.
+    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104711). */
+    private static final int AIZ1_FIRE_REFRESH_ROWCOUNT = 0x0F;
+    /** Draw_PlaneVertBottomUp drains two rows per call (sonic3k.asm:103429-103457). */
+    private static final int FIRE_REDRAW_ROWS_PER_CALL = 2;
+    /**
+     * Passes spent in AIZ1_FIRE_REFRESH after the transition frame, which already
+     * consumed the first drain call.
+     */
+    private static final int FIRE_REDRAW_FRAMES =
+            ((AIZ1_FIRE_REFRESH_ROWCOUNT + 1) / FIRE_REDRAW_ROWS_PER_CALL) - 1;
+    /**
+     * KNOWN INVENTED CONSTANT -- not ROM-derived, and deliberately left in place.
+     *
+     * <p>The ROM has no such duration. AIZ2's chunk and block tables go live when
+     * the three plain {@code Queue_Kos} entries queued at
+     * sonic3k.asm:104678-104688 drain inside {@code Process_Kos_Queue}, which
+     * decompresses straight over {@code RAM_start} / {@code Block_table}; there is
+     * no separate apply step. Gating this on those three handles' own
+     * {@code isReady()} was measured on 2026-08-17 and releases far too early:
+     * {@code TestS3kAizCompleteRunTraceReplay} green -> 4030 errors, first error
+     * frame 6255 {@code tails_x_speed} -- the identical fingerprint to the same
+     * re-gating attempted and reverted the previous round. The engine's direct
+     * Kosinski queue therefore does not model the ROM's drain rate, and that is
+     * the defect this constant is absorbing. Do not retry the re-gating on its
+     * own; fix the drain model first.
+     *
+     * <p>Recorded ROM reference for whoever does: in
+     * {@code traces/s3k/aiz1_to_hcz_fullrun}, the {@code aiz_fire_transition} aux
+     * family puts the {@code $190} queue on row 5414 and the act flip on row 5496,
+     * and the previous round's write hook on {@code RAM_start} caught the chunk
+     * table landing at row 5434 -- 20 rows after the queue, 13 after this phase
+     * begins. Comparison-only evidence; never read it into engine state.
+     */
     private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
@@ -2461,6 +2503,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 // and scrolls off in act 2 to reveal the new terrain.
                 advanceFireRise(false);
                 firePhaseFrames++;
+                // ROM: the AIZ2 chunk and block tables become live exactly when
+                // their three plain `Queue_Kos` entries drain in Process_Kos_Queue
+                // (sonic3k.asm:104678-104688) -- the decompressor writes straight
+                // over RAM_start / Block_table, so there is no separate "apply"
+                // step and no waiting period of its own. AIZ1BGE_Finish's own wait,
+                // `tst.b (Kos_modules_left).w` (sonic3k.asm:104725-104726), gates
+                // the LEVEL RELOAD on the two Queue_Kos_Module art jobs only, which
+                // is what act2KosArtReady() below covers. The terrain tables land
+                // first and independently. FIRE_TERRAIN_DECOMPRESS_FRAMES still
+                // stands in for that drain -- see its javadoc for why, and for the
+                // measurement that says not to re-gate it on its own.
                 if (!fireTerrainTablesLoaded
                         && firePhaseFrames >= FIRE_TERRAIN_DECOMPRESS_FRAMES) {
                     S3kSeamlessMutationExecutor.apply(

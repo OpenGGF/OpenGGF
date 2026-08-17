@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix(s3k): AIZ1's fire-refresh phase ran for an invented 16 frames where the ROM runs 7.
+  `loc_4FD10` seeds `move.w #$F,(Draw_delayed_rowcount).w`, bumps `Events_routine_bg` to
+  `AIZ1BGE_FireRefresh` and falls through `bra.s loc_4FD32`, so the first
+  `Draw_PlaneVertBottomUp` call happens on the `$190` frame itself
+  (sonic3k.asm:104674-104716); each call drains two rows (:103429-103457). `$F` rows at two
+  per call is eight calls, one already spent -- seven further passes. The engine now derives
+  the count from the seed and the drain rate instead of carrying the number, mirroring the
+  derivation already used for `AIZ2_FIRE_REDRAW_ROWCOUNT` in the same file. Separately
+  established, and recorded in the frontier log: the fire-rise phase itself was never wrong
+  -- `fireTransitionFrames = 168` is what the ROM's own integer arithmetic produces from
+  `move.l #$200000` / `move.w #$68` (`:104642-104646`) plus `AIZ1_FireRise`
+  (s3.asm:104383-104399), and the fixture's `aiz_fire_transition` aux rows put the ROM's
+  `$190` queue exactly 168 passes after the transition begins. No constant was introduced
+  and no assertion was changed. Measured neutral: `-Ptrace-replay` 806 tests / 28 red,
+  `-Ptrace-replay-r7` 37 tests / 32 red, and the default profile 47 red, on both the control
+  and fix trees, red sets identical by name in both directions.
 - Fix(s3k): the Pachinko flipper held ONE lock slot for BOTH characters, so a two-character
   ride stopped accelerating entirely. ROM `Obj_PachinkoFlipper` keeps a separate per-player
   standing counter byte and calls `sub_49CFE` once per character with its own pointer --

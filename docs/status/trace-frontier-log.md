@@ -80035,3 +80035,87 @@ corrected to cite `SolidObjectFull2_1P -> SolidObject_cont` (`:41070-41071`, `:4
 both frontiers should close together. The comment was deliberately left wrong-but-unannotated
 rather than adding a "this is wrong but load-bearing" note that would itself be an unverified
 claim in the file; it belongs in the cluster's commit.
+## 2026-08-17 -- The AIZ fire-rise phase is already exact; the redraw length was not
+
+Base `c738628c6`. **One fix landed**, one
+re-gating measured and deliberately not landed. All three AIZ classes green before and
+after.
+
+### The briefed premise is refuted: 168 is the ROM's own number
+
+The previous entry inferred that the engine's `$190` submission was early, i.e. that
+`FIRE_BG_MUTATION_Y = 0x0190` fires before the ROM's
+`cmpi.w #$190,(Camera_Y_pos_BG_copy).w`. It does not.
+
+`AIZ1_AIZ2_Transition` seeds `move.l #$200000,(Camera_Y_pos_BG_copy).w` and
+`move.w #$68,(Events_bg+$00).w` (`sonic3k.asm:104642-104646`). `AIZ1BGE_FireTransition`
+then runs, per frame, either the `asr.l #5` lerp toward `$680000` (skipping `AIZ1_FireRise`
+while the delta is `>= $1400`) or `AIZ1_FireRise` (`s3.asm:70383-70399`: speed `+= $280`,
+capped `$A000`, `lsl.l #4` added to the copy). Simulating exactly that integer arithmetic
+from exactly that seed gives `Camera_Y_pos_BG_copy >> 16 = $196` on pass **168**. The
+engine's `advanceFireRise` is a faithful transcription of both branches and reports
+`fireTransitionFrames = 168`.
+
+The recorded ROM agrees to the frame. `traces/s3k/aiz1_to_hcz_fullrun`'s
+`aiz_fire_transition` aux family (401 rows, 5200-5600, hooks-off validation data, not a
+diagnostic hook) shows `events_routine_bg` `$08 -> $0C` at row **5247** with
+`camera_y_bg_copy = 0x00224000` -- exactly one `>>5` lerp step past the seed -- and
+`$0C -> $10` at row **5414** with `0x0196BF07`. `5414 - 5247 + 1 = 168`.
+
+No probe, no BizHawk run, no fitted anything: the phase falls out of two ROM immediates and
+is confirmed by data already in the fixture. **The phase model was never the defect.**
+
+### What was the defect: `FIRE_REDRAW_FRAMES = 16`
+
+`loc_4FD10` (`sonic3k.asm:104711-104714`) seeds `move.w #$F,(Draw_delayed_rowcount).w`,
+bumps `Events_routine_bg`, and falls through `bra.s loc_4FD32` -- so the **first**
+`Draw_PlaneVertBottomUp` call happens on the `$190` frame itself. Each call drains **two**
+rows (`sonic3k.asm:103429-103457`), a fact this file already relies on for
+`AIZ2_FIRE_REDRAW_ROWCOUNT`. `$F` rows at 2 per call is 8 calls, one of them already spent,
+so `AIZ1BGE_FireRefresh` occupies **7** further passes, not 16.
+
+The recorded ROM confirms it independently: `events_routine_bg` is `$10` on rows 5414-5420
+and `$14` at 5421 -- 8 calls, 7 dedicated passes.
+
+Landed as a derivation, not a number:
+`((AIZ1_FIRE_REFRESH_ROWCOUNT + 1) / FIRE_REDRAW_ROWS_PER_CALL) - 1`.
+
+### Measured and NOT landed: re-gating the terrain apply
+
+`FIRE_TERRAIN_DECOMPRESS_FRAMES = 20` remains, now documented in place as a known invented
+constant with its measurement attached.
+
+The ROM has no such duration. AIZ2's chunk and block tables go live when the three plain
+`Queue_Kos` entries (`sonic3k.asm:104678-104688`) drain in `Process_Kos_Queue`, which
+decompresses straight over `RAM_start` / `Block_table` -- there is no apply step.
+Separately, `AIZ1BGE_Finish`'s only wait is `tst.b (Kos_modules_left).w`
+(`sonic3k.asm:104725-104726`), which gates the **level reload** on the two
+`Queue_Kos_Module` art jobs alone; the engine's `act2KosArtReady()` covers that correctly.
+
+Gating the terrain apply on the three terrain handles' own `isReady()`:
+
+| change | AIZ | AizCompleteRun | AizSegment |
+|---|---|---|---|
+| control | green | green | green |
+| redraw 16 -> 7 alone | green | **green** | green |
+| redraw + terrain re-gate | green | **4030 err, f6255 `tails_x_speed`** | green |
+
+`4030 / f6255 / tails_x_speed` is byte-for-byte the fingerprint the previous round recorded
+for the same re-gating. **This is the same lever, and pulling it is not a fix**: the
+engine's direct Kosinski queue does not model the ROM's drain rate, so its readiness
+releases far too early. Fix the drain model first; do not retry the re-gating on its own.
+
+Reference for whoever does, all comparison-only: the queue is row 5414, the previous round's
+`RAM_start` write hook caught the chunk table landing at row **5434** (20 rows later,
+13 after `AIZ1BGE_Finish` begins), and the act flip is row **5496** (`act 0x00 -> 0x01`,
+82 rows after the queue). The engine currently applies terrain at
+`fireTransitionFrames = 207` post-fix (216 pre-fix) against the ROM's 188 -- still late,
+but by a smaller margin, and no longer compounded by a nine-frame redraw error.
+
+### Second movie
+
+`traces/s3k/aiz_completerun` does not carry the `aiz_fire_transition` family, so the
+per-frame ROM window exists for one movie only. This does not make the result per-movie:
+both landed quantities are ROM immediates (`$200000`, `$68`, `$280`, `$A000`, `$F`, 2 rows
+per call) evaluated by fixed integer arithmetic from a fixed seed, so they are identical in
+every recording by construction. `TestS3kAizCompleteRunTraceReplay` is green on the fix.
