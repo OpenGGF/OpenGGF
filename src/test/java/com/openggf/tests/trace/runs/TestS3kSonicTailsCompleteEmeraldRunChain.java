@@ -37,12 +37,12 @@ class TestS3kSonicTailsCompleteEmeraldRunChain extends AbstractRunChainTest {
      * The whole route, end to end. This is the frontier the run exists to
      * measure; raise nothing and skip nothing to keep it quiet.
      * <p>
-     * No {@link #assertChainReplayThroughSegmentRow} prefix pin accompanies it,
-     * for the same reason as {@link TestS3kKnucklesSuperEmeraldRunChain}: that
-     * target is only honoured on an INTERIOR segment's row driver, and the
-     * drive stops inside segment 0's own AIZ1 source act -- before any interior
-     * exists -- so a prefix could not be placed short of the frontier. Add one
-     * once the drive reaches segment 1.
+     * The prefix pin now lives in
+     * {@link TestS3kSonicTailsCompleteEmeraldRunPrefix}. It could not exist
+     * before 2026-08-17: the target is only honoured on an INTERIOR segment's
+     * row driver, and the drive used to stop inside segment 0's own AIZ1 source
+     * act, before any interior existed. The drive now reaches segment 1, so the
+     * pin was added. Raise it as this frontier advances; never lower it.
      */
     @Test
     void aiz1ToDoomsdayCollectingEverySevenEmeralds() throws Exception {
