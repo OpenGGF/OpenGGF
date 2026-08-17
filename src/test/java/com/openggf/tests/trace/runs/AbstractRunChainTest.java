@@ -1528,8 +1528,16 @@ abstract class AbstractRunChainTest {
                             // rows to consume would otherwise skip them.
                             boolean fadeVblankRow = sourceArtWindowClosed[0]
                                     && boundaryFade != null && boundaryFade.isActive();
+                            var fadeObjects =
+                                    GameServices.level().getObjectManager();
+                            int fadeVblank = fadeObjects.getVblaCounter();
                             stepEngineFrame(loop);
                             if (fadeVblankRow) {
+                                // Every one of Pal_FadeToBlack's passes is a
+                                // V-int that reaches VintRet; see
+                                // serviceSuppressedRowVint.
+                                serviceSuppressedRowVint(
+                                        fadeObjects, fadeVblank);
                                 playback.onLevelFrameAdvanced();
                             }
                             closeSourceArtWindow.run();
@@ -3643,6 +3651,79 @@ abstract class AbstractRunChainTest {
         objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
     }
 
+    /**
+     * The same V-int service for a NON-lag transition row: the ROM's main loop
+     * DID run on this row, but the engine plays it with the level body
+     * suppressed, so nothing moves the object-visible V-blank clock.
+     *
+     * <p>{@code VintRet: addq.l #1,(Vint_runcount).w}
+     * (docs/s2disasm/s2.asm:507-508) sits AFTER the
+     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:504) and is reached by
+     * every V-int the ROM takes, whichever routine the dispatch selected —
+     * {@code Vint_Lag}, {@code Vint_Level}, {@code Vint_TitleCard} or
+     * {@code Vint_Fade}. The object-visible clock therefore advances exactly
+     * once on every emulated frame, transitions included, and
+     * {@link #serviceLagRowVint}'s argument for the lag subset is that
+     * whole-frame argument restricted to one branch of the same dispatch.
+     *
+     * <p>The concrete span this closes is {@code Pal_FadeToBlack}
+     * (docs/s2disasm/s2.asm:3370-3380), which the level-entry path runs before
+     * the destination title card is created: {@code move.w #$15,d4} then a
+     * {@code .nextframe} loop whose every pass sets
+     * {@code Vint_routine = VintID_Fade} and {@code bsr.w WaitForVint}
+     * (:3376-3377, {@code WaitForVint} at :3957-3962). Each of those passes is
+     * a V-int that reaches {@code VintRet}. The engine spends the same rows
+     * with its level body suppressed.
+     *
+     * <p>Rather than assume which rows the engine already ticks, this states
+     * the invariant directly: a transition MOVIE row ends with the clock
+     * exactly one ahead of where it started. Both call sites are reached once
+     * per movie row the transition spends -- the boundary wait only on the
+     * fade rows it counts, the gap driver on every gap row -- so the rule
+     * counts frames, never engine steps. A row whose body already ticked is left
+     * alone, so the call can never double-count — which matters, because most
+     * rows of a gap DO tick.
+     *
+     * <p>A row on which the destination level's own load replaced the object
+     * manager is skipped: there the V-int belongs to the load's own seeding of
+     * the counter, not to this adapter.
+     *
+     * <p>This carries no position, speed, object state or any physics/aux
+     * comparison value, and reads no trace field: the only input is the
+     * engine's own counter before the row.
+     */
+    private static void serviceSuppressedRowVint(
+            Object objectManagerBefore, int counterBefore) {
+        var objectManager = GameServices.level().getObjectManager();
+        if (suppressedRowOwesVint(
+                objectManager == objectManagerBefore,
+                counterBefore,
+                objectManager.getVblaCounter())) {
+            objectManager.advanceVblaCounter();
+        }
+    }
+
+    /**
+     * Whether a transition row the engine has just played still owes the ROM's
+     * {@code VintRet} tick, given where the object-visible clock stood before
+     * the row and where the engine's own step left it. Pure, so the invariant
+     * {@link #serviceSuppressedRowVint} enforces is assertable without a ROM,
+     * a level or a trace fixture.
+     *
+     * <p>The invariant is the ROM's, stated once: a frame on which the
+     * hardware took a V-int reaches {@code VintRet}
+     * (docs/s2disasm/s2.asm:507-508) exactly once, so the clock ends one
+     * ahead. This is not a correction of a measured difference — the same rule
+     * owes nothing whenever the engine already performed the tick, which is
+     * what most rows of a gap do.
+     */
+    static boolean suppressedRowOwesVint(
+            boolean sameObjectManager, int counterBefore, int counterAfter) {
+        // A row on which the destination level's load replaced the object
+        // manager re-seeded the counter; that V-int belongs to the load.
+        return sameObjectManager && counterAfter == counterBefore;
+    }
+
     private void stepEngineFrameInTransitionGap(
             GameplayModeContext gameplayMode, GameLoop loop,
             PlaybackDebugManager playback, int movieRow) {
@@ -3752,7 +3833,14 @@ abstract class AbstractRunChainTest {
                                 }
                                 return;
                             }
+                            var gapObjects =
+                                    GameServices.level().getObjectManager();
+                            int gapVblank = gapObjects.getVblaCounter();
                             stepEngineFrame(loop);
+                            // TRANSITION_GAP suppresses the source level body,
+                            // so a non-lag gap row can end without the ROM's
+                            // VintRet tick; see serviceSuppressedRowVint.
+                            serviceSuppressedRowVint(gapObjects, gapVblank);
                             if (levelEntryLoadCompletes) {
                                 releasePlayerArtForLevelEntryLoad();
                             }

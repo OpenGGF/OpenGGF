@@ -81474,3 +81474,88 @@ submitter.
   edges**. A+B cannot close this seam without it.
 - **Ordering that keeps each step measurable against the next recorded ordinal** rather than the
   whole gap: results art -> title-card art -> level-entry block -> resize gate.
+## 2026-08-17 -- S2 transition-row VintRet tick LANDED; the two boundary figures reconciled
+
+Base `0dadd376e` (control worktree at the same commit; the tree has since moved to
+`7a6235c0f`, docs-only). **Landed.** Test-only change in `AbstractRunChainTest`, plus a
+fixture-free assertion of the invariant. It greens nothing and was not expected to.
+
+### What landed
+
+`VintRet: addq.l #1,(Vint_runcount).w` (`docs/s2disasm/s2.asm:507-508`) sits AFTER the
+`jsr Vint_SwitchTbl(pc,d0.w)` dispatch at `:504`, so every V-int the ROM takes advances the
+object-visible clock exactly once, whichever routine the dispatch selected -- `Vint_Fade`,
+`Vint_TitleCard`, `Vint_Lag` alike. A transition of N movie rows therefore advances the clock
+by exactly N. The engine plays some transition rows with the level body suppressed, leaving the
+clock still; `serviceSuppressedRowVint` restores the ROM's count on exactly those rows.
+
+**No constant.** The rule is `counterAfter == counterBefore && sameObjectManager`, so a row
+whose own body already ticked is left alone and the rule cannot double-count.
+`TestRunChainSuppressedRowVint` asserts that arithmetic with no ROM, level or fixture.
+
+### The reconciled arithmetic, one statement per boundary
+
+Measured at `seg4_ehz1 -> seg5_ehz2` (the only level->level boundary the S2 chain reaches),
+with a throwaway per-row probe printing recorded `vblank_counter` against the engine's
+`vblaCounter` at each segment's first and last compared row. Probe reverted; both trees
+re-measured after reverting.
+
+| | movie advances | recorded ROM ticks | engine ticks | ROM loss | engine loss | standing deficit at dest row 0 |
+|---|---|---|---|---|---|---|
+| control `0dadd376e` | 172 | 162 | **149** | 10 | **23** | **19378** |
+| with the tick | 172 | 162 | **171** | 10 | **1** | **19356** |
+
+`rom 32511 -> 32673`; engine `13146 -> 13295` control, `13146 -> 13317` with the tick.
+
+**The two figures I was asked to reconcile are both correct and measure different things.**
+`23 - 1 = 22` is the *number of suppressed rows the change now ticks*. `10 - 1 = 9` is the
+*residual*: the engine still loses 1 where the ROM loses 10, so it ends the boundary 9 ticks
+AHEAD and the standing deficit falls by 9 (19378 -> 19356), not by 22. A row count and a
+residual were being read as if they were the same quantity. Nothing disagrees.
+
+The 9 is the ROM's masked-block loss, which stays unlandable and is not this change's to close.
+The special-stage interior carry (the ~19.3k) is untouched: deficits at every ss->level boundary
+move by exactly the same 22 and no more (`26678 -> 26656`), so this change acts only on the
+level->level gap.
+
+### ROM-side loss recomputed independently from the fixtures
+
+Level->level 10 at 20 of 21 boundaries, **9** at `seg20_ooz1 -> seg21_ooz2`; level->SS->level
+11 at all 7. Reproduces the previous round's table exactly.
+
+### Verification (own controls, both trees, reports cleared before every run)
+
+- `-Ptrace-replay`: fix **772 tests, 1F/3E, 3 red**; control **767 tests, 1F/3E, 3 red**.
+  Identical red sets (`TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceStructuralRowComparator`). The 5-test difference is the new class.
+- `-Ptrace-replay-r7`: **37 tests, 32 red on both trees, identical sets.**
+- Default profile, sequential: fix 51 red / control 50 red, sole difference
+  `TestGameLoopSpecialStageEntryPresentation`, which is **green in isolation on both trees** --
+  a reused-fork ambient flake, together with `TestMhz1CutsceneObjects$KnucklesPeerArtSubmission`
+  running 6 of its 83 tests in the same fork (83/83 green in isolation on both trees). That
+  pair accounts for the whole test-count difference.
+- **Protected set green: 96 tests, 0F/0E** -- `TestS1CompleteEmeraldRunPrefix`,
+  `TestS1CompleteEmeraldVisualRun`, `TestS1GhzMazeRoundTripChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestTraceRunVblankClock`,
+  `TestTraceRunVblankClockAuthorityGuard`, `TestTraceRunReplayWalkerControlFlow`,
+  `TestTraceSessionLauncherRunBranch`, plus the new class.
+  `TestS3kSonicTailsCompleteEmeraldRunPrefix` green under `-Ptrace-replay`.
+
+### The phase hazard, measured
+
+`Obj4B_ChkPlayers` picks its target on `btst #0,(Vint_runcount+3).w` (`s2.asm:60990-60998`), so
+a tick-count change flips low-byte phase. **All five `TestS2*CompleteEmeraldsSegmentTraceReplay`
+classes are green on BOTH trees** -- Arz1, Cpz2Seg9, Ehz1Seg1, Ehz1Seg2, Ehz2Seg6. **The S2
+standalone delta is zero.**
+
+Inside the chain the frontier is unmoved and the axis set is unchanged (5 axes both trees, same
+walk failure at `seg7_ehz2`); segment 11 goes 236 errors / first non-camera f3525 to 266 / f3521,
+same field `queue.s2_nemesis_plc.busy`. That is the same axis at a marginally earlier frame with
+a strictly more accurate clock (loss 23 -> 1), not a new owner.
+
+### Not touched
+
+`uncomparedInteriorReturnNonAdvancingMovieRows` and the level->level constant belong to a
+separate strand and were not modified. No constant landed, no trace field is read, no
+zone/act/route/frame/game-name predicate was added, no assertion was weakened, no landed fix
+was undone, no fixture was regenerated.

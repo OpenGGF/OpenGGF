@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Every transition row the engine plays now owes its `VintRet` tick
+  (`bugfix/ai-s2-vint-gap-tick`, merged 2026-08-17).** `VintRet: addq.l #1,(Vint_runcount).w`
+  (s2disasm/s2.asm:507-508) sits **after** the `jsr Vint_SwitchTbl` dispatch at :504, so every V-int
+  the ROM takes advances the object-visible clock exactly once, whichever routine was selected —
+  `Vint_Fade`, `Vint_TitleCard`, `Vint_Lag` alike. A transition of N rows therefore advances the
+  clock by N. The engine played some transition rows with the level body suppressed, leaving the
+  clock still: at `seg4_ehz1 -> seg5_ehz2` it ticked **149** where the ROM ticked 162 over 172 movie
+  advances. With the rule, the engine's loss falls from **23 to 1**. The predicate is structural
+  (`counterAfter == counterBefore && sameObjectManager`), reads no trace field, and is asserted
+  **without a ROM, level or fixture** — including a case pinning that it cannot double-count.
+  This is a correctness landing with **no green attached**, and the phase hazard it carries was
+  measured rather than assumed: `Obj4B_ChkPlayers` picks its target on
+  `btst #0,(Vint_runcount+3).w`, so a tick change flips gameplay parity — all five S2 segment
+  classes stay green on both trees and the chain's axis set is unchanged.
+
 - **The special-stage return restores the giant ring's position, not the player's
   (`bugfix/ai-ss-return-boundary`, merged 2026-08-17).** The chain's segment-1 return boundary was
   off by 24px in x and 3px in y. `Save_Level_Data2` (sonic3k.asm:61738-61739) writes
