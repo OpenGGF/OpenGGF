@@ -81820,3 +81820,36 @@ spawns is the ROM, 23 is today's engine, one ~8s chain run to read it, no fixtur
 regeneration and no comparator involved. And because the window constant `$B4` and the
 spawn/decrement ordering are both already correct and cited, the count cannot be moved by
 tuning — only by correcting the phase, which is what makes it a rule-3-safe target.
+
+### Correction and an unresolved contradiction — do not build on the previous entry's second half
+
+The previous entry claimed the `TraceRunVblankClock` destination-admission path is dead code
+for the S2 run. **That claim is not safe and should not be relied on.** A later probe placed
+inside `TraceRunReplayWalker.interLevelVblankBudget` *does* fire on a chain run — exactly
+once, with `loss=10` — and its only caller chain runs through
+`TraceRunVblankClock.levelDestinationTarget`, which is only reachable from
+`TraceSessionLauncher.applyRunDestinationVblankAdmission` (called at :1592 under an
+`objects != null` guard). So that method must execute at least once, contradicting two
+probes placed inside it — including one above its `runVblankClock == null` check — that
+printed nothing on full chain runs.
+
+One of those two measurements is wrong and I did not determine which. Until it is settled,
+neither "the path is dead" nor "the path runs normally" is established. Resolve it before
+placing any fix: re-probe both sites in one build, and confirm the probed class is the one
+on the test classpath.
+
+**What survives independently of that contradiction**, because it was measured on the
+fixtures and on the engine rather than inferred from the call graph:
+
+- The engine spawns 23 random animals where the ROM spawns 22 (31 vs 30 total).
+- The capsule-break counter phase is `& 7 == 2` in the ROM and `& 7 == 5` in the engine, and
+  that 3-tick offset reproduces 22 vs 23 exactly via `180/8 = 22.5`.
+- `3 = 11 mod 8`, and 11 is the unsubtracted special-stage round-trip loss on the `ss_5 ->
+  seg7_ehz2` entry.
+- The animal count is a fixture-free binary signal for any candidate fix, and it cannot be
+  moved by tuning, since `$B4` and the spawn/decrement ordering are already correct.
+
+**Also established and independent:** `interLevelVblankBudget` is invoked **once** across a
+chain with more than twenty level->level boundaries. Whatever the resolution of the
+contradiction above, one application of the masked loss across a whole run is not what a
+per-boundary model implies, and that discrepancy is worth measuring on its own.
