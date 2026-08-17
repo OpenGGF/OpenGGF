@@ -81749,3 +81749,41 @@ capsule spawn site :84918 or :84977 sets `subtype`, so these animals take the pl
 off-screen path the engine already implements); and the despawn bounds flag
 (`animalObjectUsesRenderFlagDeleteBounds` is `true` for S2, so the engine already uses the
 ROM's `render_flags.on_screen` bit rather than a geometric box).
+
+### Measured: the engine spawns 31 animals where the ROM spawns 30 — a phase defect, not a constant
+
+Temporary probe on `EggPrisonObjectInstance` (reverted; not committed), chain run over
+`seg7_ehz2`:
+
+| | initial | random | total |
+|---|---|---|---|
+| ROM (fixture) | 8 | **22**, f3233 -> f3401 | 30 |
+| engine (probe) | 8 | **23**, vbla 26696 -> 26872 | 31 |
+
+The cadence is right on both sides — exactly 8 frames, no drift, first random spawn 3 ticks
+after the initial burst. What differs is how many multiples of 8 fall inside the window.
+
+**Why this is a phase defect and not a wrong constant.** The spawn phase is `$B4` = 180
+frames (`s2.asm:84995`) and spawns fire when `(Vint_runcount+3) & 7 == 0` (:84972-84974).
+**180/8 = 22.5**, so the window contains 22 or 23 spawn frames purely according to the
+counter phase when the capsule enters the spawning state. The engine's
+`SPAWN_PHASE_DURATION` is already `0xB4`, and its spawn-then-decrement ordering already
+matches `loc_3F3F4` (:84991-84995). Neither is wrong. The engine simply enters the state on
+a phase that captures one extra boundary.
+
+**Consequences of the extra spawn**, both of which are downstream of the same half-interval:
+one extra `RandomNumber` call (:84980) desyncs the RNG stream for everything after it, and
+the extra animal shifts when the capsule's `loc_3F406` scan finds object RAM clear — which
+is what moves the results object, its PLC, and finally the `queue.s2_nemesis_plc.busy` row
+the chain reports at f3525.
+
+**So the object V-blank counter phase is implicated after all**, contrary to the earlier
+entry's reading that the clock work was exhausted. It is not the *drain* of the PLC queue
+that is wrong; it is the phase of the clock feeding a `& 7` gate 300 frames upstream. The
+fix must move the phase at capsule-break time, and the 0.5-interval margin means the
+required correction is small — but any correction must come from the ROM's own timing, not
+from tuning the window until the count reads 22.
+
+Next: establish what the ROM's `Vint_runcount` phase is at the capsule-break frame and
+where the engine's diverges from it. The count (22 vs 23) is now a single cheap green/red
+signal for any candidate fix.
