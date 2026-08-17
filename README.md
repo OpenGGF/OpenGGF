@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Egg Prison break delay runs the 30 passes `bpl` gives it
+  (`bugfix/ai-s2-capsule-spawn-phase`, merged 2026-08-17).** `loc_3F2FC` is
+  `subq.w #1,objoff_34(a0)` / `bpl.s return_3F352` (`s2disasm/s2.asm:84908-84910`) seeded
+  with `#$1D` at `:84902`. `bpl` branches on zero as well as on positive, so the counter
+  returns on every pass down to 0 and only the pass reaching -1 falls through -- **30
+  passes, not 29**. The engine tested `> 0` and opened the capsule one frame early, moving
+  the animal burst, the arming of the broken piece, and every downstream
+  `(Vint_runcount+3) & 7` spawn decision with it. Two one-frame patches had grown over that
+  error and are both removed, including `skipRandomAnimalSpawnThisFrame`, which had no
+  counterpart anywhere in `loc_3F3A8`; whether the broken piece is reached again on its
+  arming frame now follows from the SST slot order `ExecuteObjects` walks
+  (`:84928-84930`) rather than from a constant. On the ARZ2 level-select trace the capsule
+  fires **22** random spawns where it fired 23, and the fixture's own `vblank_counter`
+  column agrees frame for frame. `TestS2CompleteEmeraldRunChain` is unchanged at segment 11
+  -- that chain's capsule still spawns 23 for a separate reason, reaching EHZ2 with its
+  V-blank clock four ticks out of phase with the recording. Gate red set unchanged from
+  control at three classes.
+
 - **Run chains settle the level-load player transfer at admission, as production does
   (`bugfix/ai-s1-chain-seam-edges`, merged 2026-08-17).** An in-run level load stages the
   player's tiles in `Level_LoadObj`'s `ExecuteObjects` pass (`s1disasm/sonic.asm:2895-2897`),
