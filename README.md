@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Run chains settle the level-load player transfer at admission, as production does
+  (`bugfix/ai-s1-chain-seam-edges`, merged 2026-08-17).** An in-run level load stages the
+  player's tiles in `Level_LoadObj`'s `ExecuteObjects` pass (`s1disasm/sonic.asm:2895-2897`),
+  and the V-int performing the transfer is the first row of the counted `Level_Delay` /
+  `PalFadeIn_Alt` tail (`:2957-2966`) -- so it belongs `preLevelMainLoopDelayFrames` (26,
+  already ROM-derived) rows before the level's first main-loop row, inside the transition
+  gap. Every one of the fixture's 21 level-load gaps carries exactly one such publish at
+  `destination_offset - 26`. `AbstractRunChainTest` never called the settle that
+  `TraceSessionLauncher` performs, so the held preparation survived into the destination's
+  first serviced V-blank and landed one edge pair on the wrong side of the seam. On
+  `TestS1CompleteEmeraldRunChain`: segment 3 goes 4,563 errors to **0**, segment 6 goes
+  12,110 to 4,982 with its first mismatch moving from frame 0 `dynamic_art.edges` to a real
+  gameplay divergence at frame 3643 (`rings`), and gap failures drop 3 to 1. The
+  `ghz2 -> ghz2_2` and `ghz3 -> ghz3_2` gaps now match exactly including request lists and
+  sha256 ledger fingerprints. No new constants. Verified against all three chains and both
+  visual runs: red set unchanged from control at three classes, all prefix pins green.
+
 - **The structural row comparator no longer depends on ambient global state, and
   the S1/S2 chains are gated by ratchet (`bugfix/ai-structural-comparator-timing-di`,
   merged 2026-08-17).** `TraceStructuralRowComparator` called
