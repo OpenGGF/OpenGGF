@@ -79956,3 +79956,82 @@ phase error.
 `fireTransitionFrames = 168`, and fix `advanceFireRise` against `AIZ1BGE_FireTransition`
 (`sonic3k.asm:104654-104668`) **before** touching the release gate -- re-gating first moves
 the AIZ frontier rather than fixing it.
+
+## 2026-08-17 -- Gumball pair: one defect, and what props up `isTopSolidOnly()`
+
+Base `c738628c6`. **Nothing landed**; the round stopped at the cluster boundary rather than
+split a mid-flight investigation. Control reproduced exactly: gumball1 78 errors @ f209
+`tails_x` `0x010B`/`0x0109`; gumball2 115 @ f64 `tails_x_speed` `0x0000`/`0x0180`.
+
+### Measurement trap: these two classes collide in the report directory
+
+**Both write `target/trace-reports/s3k_gumball1_report.json`.** Running them in one `mvn`
+invocation leaves only the second class's report, so any per-class report parsed from a
+batch run of this pair is unattributable. Run them solo, or use each class's own surefire
+assertion message.
+
+### A phantom side-push, ruled out
+
+For gumball1 f190-f208, `dX == (x_speed << 8) - 0x10000` exactly -- a constant extra -1px
+every frame, which reads like a persistent side-push. It is not. A probe on every sidekick
+X-writer attributed all **289** of them to `SidekickCpuController.updateNormal -> shiftX(-1)`,
+i.e. the ROM Tails-CPU follow nudge `loc_13E0A` (`sonic3k.asm:26717-26724`), gated on
+`g_speed != 0`. ROM-correct, unrelated, and it vanishes at f209 only because `g_speed`
+becomes 0. Do not read raw `dX` here without accounting for it.
+
+### The two frontiers are one defect (confirmed, not inherited)
+
+Both first-error frames are a spring **landing** (`stand_on_obj` transition,
+`y_speed -> 0xF000` = `move.w #-$1000,$30(a0)`, `:127517`), and both ROM x values are exactly
+a *neighbouring* spring's box edge:
+
+- gumball1 f209: `tails_x = 0x010B = 0xF0 + 0x1B` (right edge of the spring at `0xF0`) while
+  landing on the spring at `0x110`.
+- gumball2 f64: `tails_x = 0x00D5 = 0xF0 - 0x1B` (left edge of that same spring) while
+  landing on the spring at `0xD0`.
+
+Hand-executing `SolidObject_cont` for gumball1 f209 (`x_pos = 0x010A`, spring `x_pos = 0xF0`,
+`d1 = $1B`): `d0 = 0x35` in range, `d0 > d1` so `d0 = -1` and `d5 = 1`; vertical `d1 = 0xB`
+diverts nowhere; `loc_1E050` sees `x_vel > 0` and **skips** the zeroing, falling to
+`loc_1E06E: sub.w d0,x_pos(a1)` -> **+1px** (`:41486-41496`). Reproduces the observed value.
+The `+1` falls out of `move.w #$1B,d1` (`:127519`) against the `$20` child spacing in
+`ChildObjDat_61424` -- no fitted constant.
+
+### What props it up -- and what does NOT
+
+**Ruled out by measurement: `allowsZeroDistanceTopSolidLanding`.** Flipping
+`isTopSolidOnly()` to false *plus* a ROM-cited `allowsZeroDistanceTopSolidLanding -> true`
+override (justified by `loc_1E0D4`'s `tst.w d3 / bmi` + `cmpi.w #$10,d3 / blo loc_1E154`,
+`:41541-41545`, which does accept `d3 == 0`) gives **109 / 116 / 55 -- byte-identical to the
+bare flip.** Add this override to the do-not-retry list alongside the bare flip.
+
+**The prop is the full-solid `d3` vertical-penetration surface** -- the top-solid cluster
+member currently mid-flight. Under the flip, gumball1's first error moves *earlier* to f64
+with `tails_g_speed` expected `0x0150` actual `0x0000`, and a probe on **every** `setGSpeed`
+call for the CPU player over the whole run recorded **6 calls, all `0 -> 0`**: the flip does
+not mis-zero the landing, it **destroys the landing entirely**. A probe on
+`resolveContactInternal` filtered to `GumballSpringChild` + CPU player produced **zero hits**.
+
+At gumball1 f64 the ROM lands cleanly: `x_pos = 0x00D4` against the spring at `0xD0`,
+horizontal penetration `d5 = 0x17`, small vertical penetration at first touch, so
+`cmp.w d1,d5 / bhi loc_1E0D4` (`:41474-41475`) takes the top branch and `loc_1E154` lands
+with `width_pixels = $10` (`ObjDat3_613C8`, `:128134-128138`). That also confirms `d1 = $1B`
+really is `width_pixels + $B`, so the engine's full-solid `collisionHalfWidth - 0x0B` default
+is ROM-correct and is **not** the prop either.
+
+### Correction to a previous round's reading
+
+`SolidObjectFull2_1P` (`:41070-41071`) branches `beq.w SolidObject_cont` on the
+**not-standing / fresh-contact** entry, skipping `loc_1DF88`'s
+`tst.b render_flags(a0) / bpl` (`:41396-41397`) that `SolidObjectFull_1P` (`:41021-41022`)
+takes -- not "on the already-standing re-entry" as previously written. The conclusion is
+unchanged: the fresh-contact path is full `SolidObject_cont`, not top-solid.
+
+### Handover
+
+The Gumball pair is a clean **downstream consumer** of the cluster. When the `d3` surface is
+correct, `GumballSpringChild.isTopSolidOnly()` should become `false` with its comment
+corrected to cite `SolidObjectFull2_1P -> SolidObject_cont` (`:41070-41071`, `:41399`), and
+both frontiers should close together. The comment was deliberately left wrong-but-unannotated
+rather than adding a "this is wrong but load-bearing" note that would itself be an unverified
+claim in the file; it belongs in the cluster's commit.
