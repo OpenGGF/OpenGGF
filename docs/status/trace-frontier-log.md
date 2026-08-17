@@ -81958,3 +81958,50 @@ difference in how many transfers are outstanding, not an id-numbering artefact.
 Next: find where a presentation bridge hands off to its gameplay segment and why outstanding
 transfers survive it. The error counts (4,563 at segment 3 and 12,110 at segment 6) are
 downstream of this single entry-state difference, so this is one defect, not thousands.
+
+### Coverage audit: would the trace system catch a spurious death at AIZ2 -> HCZ1?
+
+Asked because a real bug is believed to sit on that transition (Sonic dies when he should
+not). Answer: **the detection would work, but nothing currently reaches it.**
+
+**The detection mechanism is sound.**
+
+- `TraceBinder` compares `routine` and `status_byte` for the player
+  (`src/main/java/com/openggf/trace/TraceBinder.java:226-235`).
+- The fixture populates them. `player_routine` over
+  `s3k-sonic-tails-complete-emeralds`: `aiz_5` records `02` x6951, `00` x121, `04` x103;
+  **`hcz` records `02` for all 3574 rows** and nothing else.
+- So the ROM never leaves normal control anywhere in the HCZ segment, and any engine
+  divergence into a death or hurt routine mismatches on the first frame it happens. The
+  check does not depend on knowing which index is death: in that segment *any* other value
+  is a mismatch. (`Sonic_Index`, `sonic3k.asm:21892-21899`, is 0 Init / 2 Control / 4 / 6 /
+  8 / $A / $C; 4 and 6 are the hurt and death families. The exact index was not pinned down
+  and does not need to be for this argument.)
+
+**But nothing exercises it.**
+
+1. **The chain does not get there.** `TestS3kSonicTailsCompleteEmeraldRunChain` stops at
+   **segment 0 of 63** -- only `..._seg0_report.json` is produced -- on the
+   `KOS_MODULE_QUEUE#14` submission-ordinal error. The AIZ2 -> HCZ1 transition is segments
+   **8 -> 9**. The chain fails eight segments early, so the death bug is masked behind an
+   unrelated blocker.
+2. **The HCZ zone slice is out of the gate.** `TestS3kHczZoneSliceTraceReplay` exists but
+   `pom.xml:304` excludes `**/tests/trace/s3k/*ZoneSliceTraceReplay.java` from
+   `-Ptrace-replay`, including it only in `-Ptrace-replay-r7` (`pom.xml:350`). CLAUDE.md's
+   stated priority is "Keep AIZ -> HCZ stable -- the primary release slice", so the primary
+   slice's own zone coverage is currently gated out of release 6.
+3. **A zone slice would not cover the transition anyway.** It starts at HCZ, so the
+   AIZ2 -> HCZ1 boundary -- where the bug is believed to live -- is exercised by no test in
+   any profile.
+
+**Secondary hazard.** The `routine` / `status_byte` comparisons are guarded by
+`engineDiag != null && expected.routine() >= 0 && engineDiag.routine() >= 0`. If the engine
+diagnostic is absent or either value is negative the field is **silently not compared** --
+the comparison disappears rather than failing. Anything relying on this check to prove a
+death cannot happen should assert the field was actually compared, not merely that no
+mismatch was reported.
+
+**What would close it:** getting the chain past segment 0 is the only route to covering the
+transition itself, because a mid-run start would require hydrating engine state from the
+trace, which hard rule 4 forbids. Re-scoping the HCZ zone slice into `-Ptrace-replay` would
+restore in-zone coverage but still not the boundary.
