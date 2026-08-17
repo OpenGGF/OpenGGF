@@ -81929,3 +81929,32 @@ ordinal: it is roughly 10 module and 16-33 decompression submissions behind, nev
 and never wrong-payload. That is the signature of submissions the engine never makes at all,
 consistent with the unmodelled title-card and results Kosinski art, and it quantifies the
 gap as a submission count rather than a timing offset.
+
+### S1 chain: the bridge's dynamic-art edges are not drained before gameplay starts
+
+Measured from the fixture, not inferred. `dynamic_art_transfer_state` rows in
+`s1-sonic-complete-withemeralds`:
+
+| segment | rows | frame 0 edges | final edges |
+|---|---|---|---|
+| 2 `ghz2` (presentation bridge) | 800 | **2** | 0 |
+| 3 `ghz2_2` (gameplay) | 3606 | **0** | 0 |
+
+The engine reports `[0, 1]` -- two edges -- at segment 3 frame 0, which is exactly the edge
+count the bridge opens with. The ROM opens the bridge with two transfers, drains them over
+its 800 rows, and enters the gameplay segment with none outstanding. The engine carries them
+across that boundary instead.
+
+Segment 6 (`ghz3_2`) fails identically at frame 0 for the same reason, which is what a
+boundary-drain defect predicts and a content defect would not: the two failing segments are
+both the gameplay half following a bridge, and both differ only at entry.
+
+Note the comparator normalises these ordinals per segment origin
+(`DynamicArtSpecialStageComparator.comparisonFields`, which maps through
+`DynamicArtIdEpoch` because transfer/edge ids are recorder delivery identities allocated
+from emulator power-on rather than ROM state). So `rom=[] engine=[0, 1]` is a genuine
+difference in how many transfers are outstanding, not an id-numbering artefact.
+
+Next: find where a presentation bridge hands off to its gameplay segment and why outstanding
+transfers survive it. The error counts (4,563 at segment 3 and 12,110 at segment 6) are
+downstream of this single entry-state difference, so this is one defect, not thousands.
