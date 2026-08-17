@@ -19,6 +19,26 @@ All notable changes to the OpenGGF project are documented in this file.
   and no assertion was changed. Measured neutral: `-Ptrace-replay` 806 tests / 28 red,
   `-Ptrace-replay-r7` 37 tests / 32 red, and the default profile 47 red, on both the control
   and fix trees, red sets identical by name in both directions.
+- Fix(s3k): the ICZ segment column balanced its riders on a 16px half-width. The player
+  on-object balance test reads the interacting object's own `width_pixels(a1)` byte --
+  `Sonic_Move` (sonic3k.asm:22460-22473) and Tails' `Tails_InputAcceleration_Path`
+  (:27820-27831) both compute `d1 = width_pixels + x_pos(a0) - x_pos(a1)` against
+  `d2 = 2*width_pixels - shift` -- and that byte is independent of the `d1` an object passes
+  to `SolidObject*`. `Obj_ICZSegmentColumn`'s segment has `width_pixels = $20` (`word_8ACEE`,
+  :188863-188864, field order at :176907-176912; verified in the ROM image at 0x8ACEE:
+  `02 80 20 10 0A 00`) while `sub_8AC70` passes `moveq #$2B,d1` to `SolidObjectFull`
+  (:188811-188815). Being full-solid, the engine class hit `getBalanceWidthPixels()`'s generic
+  16px fallback, so a standing Tails 14px right of the column centre computed `d1 = 30`
+  against `d2 = 28` and took the balance-right branch (`anim` 6) where the ROM's `d1 = 46`
+  against `d2 = 60` leaves the standing animation (`anim` 5) alone. Overrode the width with
+  the ROM byte. `TestS3kSonicTailsIczSegmentTraceReplay` 2862 -> 2860 errors over an
+  unchanged 17947 rows compared, first error frame 1983 `tails_animation_id` -> 2336
+  `player_animation_id`, which is the giant-ring emerald-inventory boundary of
+  known-discrepancies section 21 and is separately blocked. No constant was introduced --
+  `$20` is read out of the ROM image -- and no assertion was changed. Measured neutral
+  elsewhere: `-Ptrace-replay` 806 tests / 28 red and `-Ptrace-replay-r7` 37 tests / 32 red on
+  both the control and fix trees with identical red sets by name, and the default profile's
+  red set differs only by known ambient flakes that are green in isolation.
 - Fix(s3k): the Pachinko flipper held ONE lock slot for BOTH characters, so a two-character
   ride stopped accelerating entirely. ROM `Obj_PachinkoFlipper` keeps a separate per-player
   standing counter byte and calls `sub_49CFE` once per character with its own pointer --

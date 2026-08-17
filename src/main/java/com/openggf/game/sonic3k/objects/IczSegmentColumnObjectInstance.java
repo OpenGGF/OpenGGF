@@ -151,6 +151,7 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         private static final int SOLID_HALF_WIDTH = 0x2B;
         private static final int SOLID_HALF_HEIGHT = 0x10;
         private static final int TOP_LANDING_HALF_WIDTH = 0x20;
+        private static final int BALANCE_WIDTH_PIXELS = 0x20;
         private static final int PUSH_BREAK_SPEED = 0x600;
         private static final int PUSH_ANIMATION_ID = 2;
         private static final int CASCADE_WAIT_BASE = 0x0F;
@@ -358,6 +359,22 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         @Override
         public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
             return TOP_LANDING_HALF_WIDTH;
+        }
+
+        @Override
+        public int getBalanceWidthPixels() {
+            // ROM width_pixels byte for the segment, written by SetUp_ObjAttributes3 from
+            // word_8ACEE (docs/skdisasm/sonic3k.asm:188863-188864: dc.w $280 / dc.b $20,$10,$A,0;
+            // field order at :176907-176912). Verified in the ROM image at 0x8ACEE:
+            // 02 80 20 10 0A 00.
+            //
+            // Deliberately NOT the SolidObjectFull d1 ($2B, sub_8AC70 at :188811-188815): the
+            // on-object balance test reads width_pixels(a1), not the solid half-width. Sonic's
+            // Sonic_Move (:22460-22473) and Tails' Tails_InputAcceleration_Path (:27820-27831)
+            // both compute d1 = width_pixels(a1) + x_pos(a0) - x_pos(a1) and compare it against
+            // d2 = 2*width_pixels - shift, so the shared 16px default balances the rider on the
+            // wrong edge of this 32px-wide column.
+            return BALANCE_WIDTH_PIXELS;
         }
 
         @Override

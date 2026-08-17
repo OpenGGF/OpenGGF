@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The on-object balance test reads `width_pixels`, not the solid half-width
+  (`bugfix/ai-icz-tails-balance-width`, merged 2026-08-17).** ICZ diverged on `tails_animation_id`
+  while Tails stood on an `Obj_ICZSegmentColumn` with `ground_vel` exactly 0. The ROM sets standing
+  `anim 5` and then runs the balance test against the *interacting object's own* `width_pixels(a1)`
+  byte (`Tails_InputAcceleration_Path`, sonic3k.asm:27820-27831; Sonic's twin `Sonic_Move`,
+  :22460-22473): `d1 = width_pixels + x_pos(a0) - x_pos(a1)` against `d2 = 2*width_pixels - 4`. That
+  byte is **independent of the `d1` an object passes to `SolidObject*`** — the segment's is `$20`
+  (`word_8ACEE`, verified in the ROM image at `0x8ACEE`: `02 80 20 10 0A 00`) while `sub_8AC70`
+  passes `moveq #$2B,d1` to `SolidObjectFull`. Being full-solid, the engine class fell through to a
+  generic 16px default, so `30 vs 28` read as past-the-edge (`anim 6`) where the ROM's `46 vs 60`
+  is mid-platform (`anim 5`). Rows compared unchanged at 17947. Pitfall P73 records the general
+  shape: **any rideable object whose `width_pixels` differs from its solid `d1` has the same latent
+  defect**, which is an audit target rather than one fix.
+  The class now sits on the §21 emerald-inventory boundary at frame 2336 with `rings` expected 80
+  actual 30 — the +50 giant-ring award — joining LBZ and CNZ there.
+
 - **The AIZ fire redraw takes 7 further passes, derived, not 16 invented
   (`bugfix/ai-aiz-fire-phase`, merged 2026-08-17).** The fire-rise *phase* turned out to be correct
   already: `fireTransitionFrames = 168` is the ROM's own number, reproduced by simulating

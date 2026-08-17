@@ -2896,6 +2896,65 @@ outside the main loop may have executed before frame 0) is not.
 
 ---
 
+## P73 -- the on-object balance width is `width_pixels`, not the solid half-width and not the engine default
+
+**Symptom.** A rider stands still on a solid object and the trace reports a
+one-frame `animation_id` `0x0005` vs `0x0006` (plus its `mapping_frame`), which
+self-heals immediately and looks like a transient worth ignoring. It is a real
+object defect, and while it stands it MASKS every later frontier in the class,
+because the comparator reports the lowest failing frame.
+
+**Root cause.** When ground velocity reaches zero the ROM sets the standing
+animation `#5` and then, if `Status_OnObj` is set, runs the balance test against
+the interacting object's OWN `width_pixels(a1)` byte:
+
+```
+        move.b  width_pixels(a1),d1
+        move.w  d1,d2
+        add.w   d2,d2
+        subq.w  #4,d2            ; Sonic: subq.w #2,d2
+        add.w   x_pos(a0),d1
+        sub.w   x_pos(a1),d1
+        cmpi.w  #4,d1            ; Sonic: cmpi.w #2,d1
+        blt.s   <balance left>
+        cmp.w   d2,d1
+        bge.s   <balance right>  ; else fall through, anim stays 5
+```
+
+Sonic's copy is `Sonic_Move` (`docs/skdisasm/sonic3k.asm:22460-22473`); Tails' is
+`Tails_InputAcceleration_Path` (`:27820-27831`) with the shift of 4 rather than 2.
+`width_pixels` comes from the object's `SetUp_ObjAttributes*` data block
+(field order at `:176907-176912`) and is **independent of the `d1` the object
+passes to `SolidObject*`**. The two genuinely differ: `Obj_ICZSegmentColumn`'s
+segment has `width_pixels = $20` (`word_8ACEE`, `:188863-188864`; ROM image
+`0x8ACEE: 02 80 20 10 0A 00`) while `sub_8AC70` passes `moveq #$2B,d1` to
+`SolidObjectFull` (`:188811-188815`).
+
+**Why it bites.** `AbstractObjectInstance.getBalanceWidthPixels()` defaults to the
+top-solid `SolidObjectParams.halfWidth()`, or to `getOnScreenHalfWidth()`'s generic
+16 for everything else. A full-solid object therefore silently balances on a 16px
+half-width. With the ICZ column, `d1 = 16 + 14 = 30` against `d2 = 28` reads as
+"past the right edge" where the ROM's `d1 = 32 + 14 = 46` against `d2 = 60` is
+comfortably mid-platform.
+
+**What to check.** For every rideable object, read the `width_pixels` byte out of
+its attribute block (verify it in the ROM image -- it is one byte at a known
+address) and override `getBalanceWidthPixels()` whenever it differs from whatever
+the default would return. Do not reuse the solid `d1`, the top-landing half-width,
+or the rendered footprint; all three are separate ROM quantities.
+
+**Cross-game.** S1 `obActWid` (`docs/s1disasm/_incObj/01 Sonic.asm:340-351`) and
+S2 (`s2.asm:36259-36271`) use the same byte for the same test, so the habit is
+universal; only the edge margin differs per game and per character.
+
+**Originating commit.** `<pending: ICZ segment-column balance width>`;
+`TestS3kSonicTailsIczSegmentTraceReplay` 2862 errors -> 2860, first error frame
+1983 `tails_animation_id` -> 2336 `player_animation_id` (the giant-ring emerald
+boundary of known-discrepancies section 21). See
+`docs/status/trace-frontier-log.md`, 2026-08-17.
+
+---
+
 ## The touch pass sets a flag; the object's OWN pass performs the reaction
 
 **Symptom.** A ROM-correct knockback/reward is computed with the right magnitude and
