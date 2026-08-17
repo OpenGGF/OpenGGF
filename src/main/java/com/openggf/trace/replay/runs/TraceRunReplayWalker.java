@@ -212,9 +212,25 @@ public final class TraceRunReplayWalker {
             }
         }
 
-        /** Called by {@link BoundaryProbe} before its comparison delegate. */
+        /**
+         * Called by {@link BoundaryProbe} before its comparison delegate.
+         *
+         * <p>The playback bridge keeps pumping frames after the run closes —
+         * {@code GameLoop.syncPlaybackInputBridge} runs from
+         * {@code exitTitleCard}, which can fire once the walk has finished. Once
+         * closed there is no row left to latch, so such a frame is outside the
+         * run by definition and takes the same gap path this method already
+         * uses for a frame that falls outside every segment. Only the pump is
+         * made tolerant: {@link #beginSegmentRow} still throws for a deliberate
+         * caller latching after close, which is a real ordering error rather
+         * than a frame arriving late.
+         */
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
+            if (closed) {
+                fixture.enterHardwareTimingGap();
+                return;
+            }
             for (int segmentIndex = segments.size() - 1;
                     segmentIndex >= 0;
                     segmentIndex--) {

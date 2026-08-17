@@ -243,7 +243,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   introduced it. It is order-dependent: the `trace-replay` profile runs `forkCount=1,
   reuseForks=true` under Surefire's default `runOrder=filesystem`, whose order differs per
   worktree and survives a `mvn clean`, so whichever visual run lands early enough behind the
-  wrong predecessors reached the trap.
+  wrong predecessors reached the trap. Verified on a tree carrying this fix and the S2 chain
+  V-blank work together: 778 tests, three red, the three chains only, both visual runs and
+  all three prefix pins green.
 
 - **S1 and S2 chain frontiers share one root cause: the chain's cross-segment V-blank clock
   (`bugfix/ai-s1-seg6-rings`, documentation, merged 2026-08-17).** `TestS1CompleteEmeraldRunChain`
