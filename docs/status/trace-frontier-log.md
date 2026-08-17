@@ -81715,3 +81715,37 @@ sub-objects appear at f3610 - the frame the ROM's PLC goes idle.
 The end-of-act sequence is therefore self-clocking, and the engine enters it ~21 frames
 early. **Next target: animal lifetime/despawn timing in EHZ2, not the PLC queue.** The PLC
 flag is the last link in the chain; fixing it directly would treat the symptom.
+
+### Measured: the ROM's EHZ2 capsule animal schedule (the table the engine must reproduce)
+
+From `seg7_ehz2/aux_state.jsonl.gz`, object type `$28`:
+
+- 8 initial animals all spawn on frame **3227** — the `moveq #7,d6` loop at :84912-84926.
+- 22 further animals spawn **every 8 frames from 3233 to 3401 inclusive**, gated by
+  `move.b (Vint_runcount+3).w / andi.b #7 / bne` (:84972-84974), each consuming one
+  `RandomNumber` call (:84980).
+- **30 spawned, 30 removed.** Last removal f3545; results object + capsule delete f3546.
+
+Every one of the 22 random spawns lands on a constant recorded phase (`vfc & 7 == 2`); the
+offset from the ROM's own `andi #7 == 0` test is a recorder convention, and its constancy
+across all 22 is the point — the cadence is exactly 8 with no drift.
+
+**Why this is the discriminator.** The spawn gate reads the object-visible
+`V_int_run_count`, not a free-running frame index, so a phase error that is not a multiple
+of 8 changes which frames spawn, changes the animal count, desyncs RNG through :84980, and
+moves the frame the last animal leaves — which is what spawns the results object early.
+The engine enters this sequence ~21 frames early.
+
+Next measurement, cheap and decisive: instrument the engine over frames 3200-3410 of this
+segment and compare against the table above — animal spawn count (expect 30), the initial
+burst frame (expect 3227), and the 8-frame cadence start/end (expect 3233/3401). If the
+count matches, the earliness is in the capsule's own state machine and not the clock; if it
+differs, the object clock phase feeding :84972 is the defect.
+
+Ruled out by measurement this round, so nobody re-treads them: the PLC drain rate
+(`ProcessDPLC2` 3/frame, engine matches, fixture confirms 68/65/62/59); the
+`Obj28_ChkDel` horizontal window (:24720-24729 applies only to `subtype != 0`, and neither
+capsule spawn site :84918 or :84977 sets `subtype`, so these animals take the plain
+off-screen path the engine already implements); and the despawn bounds flag
+(`animalObjectUsesRenderFlagDeleteBounds` is `true` for S2, so the engine already uses the
+ROM's `render_flags.on_screen` bit rather than a geometric box).
