@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The AIZ terrain swap has no correct instant, and no ROM drain model exists to find one
+  (`bugfix/ai-aiz-kos-drain-finding`, findings merged 2026-08-17).** Two premises behind the held
+  four-part top-solid cluster are refuted from data already in the fixtures. First, the engine does
+  not fail to model the ROM's Kosinski drain — under trace replay it *consumes* recorded readiness
+  (`KOS_DECOMPRESSION_QUEUE -> RECORDED`), matched on ordinal and submission fingerprint, and the
+  AIZ classes being green proves that match rather than assuming it. Second, a ROM-derived drain
+  model **cannot exist**: `Process_Kos_Queue` (sonic3k.asm:2846+) sets the in-progress sign bit and
+  runs the whole archive in one unbounded loop, stopped only by whichever V-int lands inside it, so
+  elapsed frames are a function of leftover 68k cycles — measured at queue+39/+41 for the same
+  archive in the two committed movies. The real obstacle is deeper: `Process_Kos_Queue` writes **in
+  place over `RAM_start`/`Block_table` with no double buffer while the level reads them**, so for
+  39-49 frames the terrain is part AIZ1 and part AIZ2 in the archive's own output order. The engine
+  swaps atomically, and **no single instant is correct for any BK2**. `FIRE_TERRAIN_DECOMPRESS_FRAMES`
+  therefore stays, with its javadoc corrected so the next round is not sent after a model the ROM
+  cannot supply. Progressive decompression is the right answer and needs per-frame decompressed-byte
+  progress for direct-Kosinski jobs — a v5 schema addition and recapture, now the **sixth**
+  outstanding capture ask.
+
 - **The on-object balance test reads `width_pixels`, not the solid half-width
   (`bugfix/ai-icz-tails-balance-width`, merged 2026-08-17).** ICZ diverged on `tails_animation_id`
   while Tails stood on an `Obj_ICZSegmentColumn` with `ground_vel` exactly 0. The ROM sets standing

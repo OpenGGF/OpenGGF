@@ -80202,3 +80202,122 @@ ICZ now sits on the section-21 giant-ring boundary alongside LBZ (958) and CNZ (
 blocked for the same reason they are: the engine's `SSEntryRing` branch is ROM-correct and a
 standalone segment cannot carry the run's 7-emerald `Chaos_emerald_count`. The three close
 together, in the ordered run chain, or not at all.
+
+
+## 2026-08-17 -- AIZ terrain swap: the drain rate is already the ROM's; the defect is atomicity
+
+**Base.** `3ef75f7cc`, isolated detached worktree.
+**Outcome.** Found-not-fixed. No engine behaviour changed. Two briefed premises refuted
+from data already in the fixtures; no run of the suite was needed to attribute either,
+because nothing was landed that could move a class.
+
+### Refuted premise 1: "the engine's Kosinski queue does not model the ROM's drain rate"
+
+Under trace replay it models it exactly, because it does not model it at all -- it consumes
+it. `HardwareTimingSchedule` installs
+`KOS_DECOMPRESSION_QUEUE -> HardwareReadinessAdmissionPolicy.RECORDED`
+(`src/main/java/com/openggf/trace/timing/HardwareTimingSchedule.java:100-108`), so
+`S3kKosDecompressionQueue.isReady()` resolves through
+`HardwareTimingService.RecordedAuthority.admitRecordedCompletion`, which requires the
+engine's FIFO head to match the recorded **ordinal**, the recorded **submission
+fingerprint**, and to be already prepared, or throws
+`UnmatchedRecordedCompletionException`
+(`HardwareTimingService.java:511-533`). The AIZ classes are green today, so that match is
+proven, not assumed.
+
+The three `Queue_Kos` entries of `AIZ1BGE_FireTransition` (`sonic3k.asm:104669-104688`)
+appear in both fixtures' `hardware_timing.jsonl` under identical fingerprints:
+
+| archive | destination | fingerprint | `aiz1_to_hcz_fullrun` | `aiz_completerun` |
+|---|---|---|---|---|
+| queue frame (`load_queue_state` busy edge) | -- | -- | 5414 | 6216 |
+| `AIZ2_128x128_Kos` | `RAM_start` `$FFFF0000` | `1cea11e3` | 5453 (**+39**) | 6257 (**+41**) |
+| `AIZ2_16x16_Primary_Kos` | `Block_table` `$FFFF9000` | `6ab93e49` | 5457 (+43) | 6261 (+45) |
+| `AIZ2_16x16_Secondary_Kos` | `Block_table+$AB8` | `3b4e06b0` | 5461 (+47) | 6265 (+49) |
+
+The `load_queue_state` aux family independently corroborates the sources and destinations
+per frame (`active_source` `0x3B51E8`/`0x3B0052`/`0x3B08F2`, `active_destination`
+`0xFFFF0000`/`0xFFFF9000`/`0xFFFF9AB8`). `lag_counter` is `0` and `vblank_counter`
+advances one per row across both windows, so the 39-vs-41 difference is not lag: it is real
+CPU-time variation, which is what rule 4's recorded stream exists to carry.
+
+**A ROM-derived drain model is impossible, and the ROM says so.** `Process_Kos_Queue`
+(`sonic3k.asm:2833-2860`) has no work budget of any kind. It sets the sign bit on
+`Kos_decomp_queue_count` and runs the whole archive to completion in one unbounded loop;
+the only thing that stops it is whichever V-int happens to land inside it, which
+`Set_Kos_Bookmark` (`:2819-2831`) then resumes. The elapsed frame count is a function of
+how many 68k cycles the frame's main loop left over, and nothing at frame granularity
+predicts it. So option "model the drain" is dead on the ROM's own evidence, and consuming
+the recorded readiness is the only correct source -- which the engine already does.
+
+### Refuted premise 2: re-gating "releases far too early"
+
+It releases *later*, and the two rounds that recorded `4030 errors / frame 6255 /
+tails_x_speed` recorded the symptom of that. In `aiz_completerun`:
+
+```
+row   sidekick_x  sidekick_x_speed  sidekick_g_speed
+6253    0x2FA3          0x00B4            0x00B4
+6254    0x2FA5          0x00A8            0x00A8
+6255    0x2FA5          0xFF9C            0x0000
+```
+
+Tails is walking right and is **stopped by a wall on frame 6255** -- 39 frames after the
+queue, and **two frames before the first archive retires at 6257**. `FIRE_TERRAIN_DECOMPRESS_FRAMES = 20`
+puts the engine's atomic apply at `fireTransitionFrames` 207 against the queue's 168, i.e.
+queue+39, i.e. exactly 6255: the control reproduces the wall on the right frame. Re-gating
+on the three handles' `isReady()` moves the apply to queue+49 (6265), Tails walks on
+through, and everything downstream cascades.
+
+### The actual defect: the ROM has no apply instant
+
+`Process_Kos_Queue` decompresses **straight over** `RAM_start` and `Block_table`, in place,
+with no double buffer, while the level is reading them. For 39-49 frames the chunk and
+block tables are partly AIZ1 and partly AIZ2, in the decompressor's output order. The wall
+that stops Tails at 6255 is a chunk whose bytes landed before the archive finished.
+
+`S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY` swaps the whole terrain
+atomically. **No single instant can be right for any BK2** -- not an invented constant, not
+handle readiness, not a recorded edge. Which frame a given tile flips on depends on that
+tile's offset within the archive and on the frame-by-frame CPU budget, and the two available
+recordings already disagree by two frames on the archive as a whole.
+
+That is why `20` survives: it was fitted to `aiz1_to_hcz_fullrun`, where queue+39 happens to
+be the archive's completion frame, and it survives `aiz_completerun` only because that
+movie's terrain effect is also at queue+39 while its completion is at queue+41. Two
+compensating errors. It is a fitted constant and it will desync the first recording where
+the player is near a chunk that lands at a different point in the stream.
+
+### What would close it, and what it costs
+
+Both routes need something this round does not have.
+
+1. **Progressive decompression.** Model `Process_Kos_Queue` as what it is: an in-place
+   writer whose output becomes visible as it lands. This needs per-frame *progress* for a
+   direct-Kos job, not just its completion edge. The v5 stream records completion only
+   (`hardware_work_completed`); `load_queue_state`'s `total_work` / `remaining_work` are
+   `-1` in both fixtures. Recording a per-frame decompressed-byte count for
+   `KOS_DECOMPRESSION_QUEUE` stays inside rule 4's shape -- it still only decides *when*
+   engine-created work becomes ready, at sub-archive granularity, still matched by kind,
+   ordinal and fingerprint -- but it is a **schema change plus a recapture**, and fixture
+   regeneration was not authorised. It is also cross-game by construction and would need
+   `TestHardwareTimingAuthorityGuard` extended, not relaxed.
+2. **Owner decision to accept an atomic approximation.** If the project accepts that the
+   swap is atomic, the honest atomic instant is the recorded completion of the last of the
+   three handles, and `TestS3kAizCompleteRunTraceReplay` red at frame 6255 is the price.
+   That is a deliberate-red trade, not a fix, and it is worse than the status quo.
+
+**Recommendation: leave `FIRE_TERRAIN_DECOMPRESS_FRAMES` in place** and treat its removal
+as blocked on (1). Deleting it now reds a green class with no mechanism replacing it --
+the "hold" side of the discriminator in `briefing-trace-rounds.md`. Its javadoc is
+corrected in this commit: the previous diagnosis ("releases far too early", "does not model
+the ROM's drain rate") is wrong in both halves and would have sent the next round after a
+drain model that the ROM cannot supply.
+
+### Correction to the previous entry
+
+"The engine currently applies terrain at `fireTransitionFrames = 207` against the ROM's
+188" -- 188 was the frame on which the previous round's write hook saw the **first** byte
+land in `RAM_start` (fullrun row 5434). It is the start of the write, not the point at
+which the table is usable, and it is not a target. The engine is not late by 19 frames; it
+is atomic where the ROM is progressive.
