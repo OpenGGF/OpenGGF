@@ -250,7 +250,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
   was the same defect, not the independent one an earlier entry called it); the chain reaches
   **segment 16+**, with its new frontier at segment 7 on `dynamic_art.edges`. Nothing inside
   Obj37 was touched. S1-only by profile data, not by name: both helpers gate on
-  `alignsStageResultsPresentationVblank()`, false for S2 and S3K.
+  `alignsStageResultsPresentationVblank()`, false for S2 and S3K. Verified against a clean
+  control at the same base with `-Dsurefire.runOrder=alphabetical` throughout: `-Ptrace-replay`
+  788 tests / 3 red both sides with identical sets, `-Ptrace-segments` 70 / 55 both,
+  `-Ptrace-replay-r7` 37 / 32 both, and zero red classes present only in this tree.
 
 - **The capture harness records hardware timing across the unrepresented spans
   (`feature/ai-ss-gap-recorder`, merged 2026-08-17).** The S3K complete-run recorder already
