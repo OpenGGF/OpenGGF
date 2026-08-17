@@ -1253,22 +1253,25 @@ which writes `move.b #$1C,anim(a1)`, `move.b #0,mapping_frame(a1)` and
 own branch (`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture`)
 is ROM-correct; only the emerald count differs.
 
-**Measured instances, re-stamped at `2bab075aa`** (the previously cited ICZ frame
-2336 was stale -- ICZ is now masked by an earlier, unrelated Tails-animation
-frontier at 1983, `tails_animation_id` `0x0005` vs `0x0006`):
+**Measured instances, re-stamped at the ICZ segment-column balance-width fix.**
+The earlier Tails-animation frontier that masked ICZ at 1983 (`tails_animation_id`
+`0x0005` vs `0x0006`) is closed, so ICZ reports this boundary directly at 2336
+again -- the citation that was stale at `2bab075aa` is accurate once more:
 
 | class | errors | first error |
 |---|---:|---|
 | `TestS3kSonicTailsLbzSegmentTraceReplay` | 7174 | 958, `player_animation_id` `0x0002` vs `0x001C` |
 | `TestS3kSonicTailsCnzSegmentTraceReplay` | 6300 | 5754, `player_animation_id` `0x0000` vs `0x001C` |
+| `TestS3kSonicTailsIczSegmentTraceReplay` | 2860 | 2336, `player_animation_id` `0x000D` vs `0x001C` |
 
-These are the two largest release-6 S3K reds and they are **one cause**, not two.
+These are the three largest release-6 S3K reds and they are **one cause**, not three.
 At each frontier exactly two fields differ -- `player_animation_id` and
 `player_mapping_frame` -- with position, speed, sub-pixels, rings and camera all
 matching, and no error group starts before it. On the *next* frame the ROM's
-`rings` steps by exactly +50 (16 -> 66 in LBZ, 94 -> 144 in CNZ). The recorded run
-held 7 emeralds from segment 15 onward, and CNZ (zone 3) and LBZ (zone 6) are both
-S3-half, so the ROM awards while the replay captures.
+`rings` steps by exactly +50 (16 -> 66 in LBZ, 94 -> 144 in CNZ, 30 -> 80 in ICZ).
+The recorded run held 7 emeralds from segment 15 onward, and CNZ (zone 3),
+LBZ (zone 6) and ICZ (zone 5) are all S3-half, so the ROM awards while the replay
+captures.
 
 A temporary probe seeding 7 emeralds at bootstrap -- **not landed, and not
 landable: seeding from the manifest is trace hydration under hard rule 4** --

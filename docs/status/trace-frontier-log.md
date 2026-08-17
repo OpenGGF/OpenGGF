@@ -80035,3 +80035,86 @@ corrected to cite `SolidObjectFull2_1P -> SolidObject_cont` (`:41070-41071`, `:4
 both frontiers should close together. The comment was deliberately left wrong-but-unannotated
 rather than adding a "this is wrong but load-bearing" note that would itself be an unverified
 claim in the file; it belongs in the cluster's commit.
+
+
+## 2026-08-17 -- ICZ Sonic+Tails segment: the 1983 Tails-animation frontier was an object width, and 2336 is the real origin
+
+**Class.** `TestS3kSonicTailsIczSegmentTraceReplay` (release-6 scope).
+**Base.** `3da897c91`, two isolated detached worktrees, one carrying the fix and one left clean as control.
+
+**Command** (identical on both trees, `target/surefire-reports` and `target/trace-reports`
+cleared before every run):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsIczSegmentTraceReplay -DfailIfNoTests=false \
+    -Ds3k.rom.path=$WORKTREE/s3k.gen test
+```
+
+**Control (own tree, `3da897c91`).** FAIL, 2862 errors, first error frame 1983,
+`tails_animation_id` expected `0x0005` actual `0x0006`. Reproduces the briefed figures
+exactly.
+
+**Result.** FAIL, 2860 errors, first error frame 2336, `player_animation_id` expected
+`0x000D` actual `0x001C`. 17947 rows compared, unchanged from control.
+
+### The reported frontier was two errors, and the substantive origin was already elsewhere
+
+Parsing `target/trace-reports/s3k_icz1_report.json` rather than reading the headline:
+frame 1983 is **two** error groups (`tails_animation_id`, `tails_mapping_frame`), both
+`frame_span == 1`, both `cascading: false`. **Exactly 2 of 2862 errors start before frame
+2336.** The 2336 group is the cascade: `player_animation_id` `0x000D` vs `0x001C` and
+`player_mapping_frame` `0x00A0` vs `0x0000`, with `rings` at 2337 expected 80 actual 30 --
+the +50 award of the giant-ring emerald-inventory boundary already documented in
+`docs/status/known-discrepancies.md` section 21. So 1983 masked the section-21 boundary in
+the *report*; it was never the substantive origin.
+
+### Root cause of 1983
+
+At 1983 Tails' `ground_vel` is exactly `0` for one frame while standing on an
+`Obj_ICZSegmentColumn` segment (`status_byte 08`, `stand_on_obj 10`). The ROM sets the
+standing animation `#5` and then runs the on-object balance test against the interacting
+object's own `width_pixels(a1)` byte -- `Tails_InputAcceleration_Path`
+(`docs/skdisasm/sonic3k.asm:27820-27831`), Sonic's twin at `Sonic_Move` (`:22460-22473`).
+
+That byte is `$20` (`word_8ACEE`, `:188863-188864`; field order `SetUp_ObjAttributes3`
+`:176907-176912`; verified directly in `s3k.gen` at `0x8ACEE`: `02 80 20 10 0A 00`). It is
+**not** the `moveq #$2B,d1` that `sub_8AC70` passes to `SolidObjectFull` (`:188811-188815`),
+and the engine class -- being full-solid rather than top-solid -- was falling through
+`AbstractObjectInstance.getBalanceWidthPixels()` to the generic 16px
+`getOnScreenHalfWidth()`.
+
+With Tails 14px right of the column centre: ROM `d1 = 32 + 14 = 46`, `d2 = 2*32 - 4 = 60`,
+so `4 <= d1 < d2` and the standing animation stands (`anim` 5). Engine `d1 = 16 + 14 = 30`
+against `d2 = 28`, so `d1 >= d2` took `loc_14A82` and set `anim` 6 (balance). Fixed by
+overriding `getBalanceWidthPixels()` with the ROM byte. Catalogued as `s3k-implement-object`
+pitfall **P73**.
+
+### Blast radius
+
+| profile | control | fix |
+|---|---|---|
+| `-Ptrace-replay` | 806 run, 28 red | 806 run, 28 red + `TestTraceStructuralRowComparator` |
+| `-Ptrace-replay-r7` | 37 run, 32 red | 37 run, 32 red |
+| default | 15141 run, 84 red methods | 15141 run, 86 red methods |
+
+Red sets diffed by name in both directions with a Python set difference. `-Ptrace-replay-r7`
+is identical class-for-class and count-for-count. The `-Ptrace-replay` delta is
+`TestTraceStructuralRowComparator` (2 methods), which is **identically red in isolation on
+BOTH trees** -- so the brief's claim that it is "green in isolation on both trees" is wrong,
+but the class is unattributable to this change either way. The default-profile delta is
+`TestGameLoopSpecialStageEntryPresentation` (3 methods, new in fix) against
+`TestModeTracePickerLaunchStatus` (1 method, only in control); both are on the known ambient
+flake list and `TestGameLoopSpecialStageEntryPresentation` is green in isolation on the fix
+tree. `TestS3kIczCrushingColumnObject`, the S3K keep-green set, `TestRewindCoverageGuard` and
+`TestStaticStateRewindCoverageGuard` are all green in isolation on the fix tree.
+
+No constant was introduced: `$20` is read out of `s3k.gen`. No assertion was weakened,
+demoted or deleted, and no landed fix was undone.
+
+### Handover
+
+ICZ now sits on the section-21 giant-ring boundary alongside LBZ (958) and CNZ (5754). It is
+blocked for the same reason they are: the engine's `SSEntryRing` branch is ROM-correct and a
+standalone segment cannot carry the run's 7-emerald `Chaos_emerald_count`. The three close
+together, in the ordered run chain, or not at all.
