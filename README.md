@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The structural row comparator no longer depends on ambient global state, and
+  the S1/S2 chains are gated by ratchet (`bugfix/ai-structural-comparator-timing-di`,
+  merged 2026-08-17).** `TraceStructuralRowComparator` called
+  `GameServices.hardwareTiming()`, which throws when no gameplay-mode context is
+  installed, so its unit test passed only when an earlier test in the same Surefire
+  fork had leaked a context and failed whenever it ran alone. The timing capture is
+  now a constructor dependency alongside the queue-snapshot supplier; production
+  behaviour is unchanged. The `-Ptrace-replay` red set drops from three classes to
+  two, both of them chains. Adds `TestS1CompleteEmeraldRunChain`, since release 6
+  commits to S1, S2 and S3K chains green and S1 had a prefix pin but nothing driving
+  the route -- red on arrival at segment 3, `dynamic_art.edges` rom=[] engine=[0, 1],
+  reported as a measurement rather than a regression. Adds
+  `TestS2CompleteEmeraldRunPrefix` ratcheting S2 at segment 10; pinning at 11 was
+  tried and rejected, because a prefix target does not halt the drive before the
+  pinned segment's interior and so merely restates the frontier.
+
 - **The S2 masked level-entry loss is modelled per (zone, act)
   (`bugfix/ai-s2-masked-block-loss`, merged 2026-08-17).** `Level:` masks interrupts at
   `s2.asm:4768` across `ClearScreen` + `jsr (LoadTitleCard).l`, and the V-blank periods elapsing in
