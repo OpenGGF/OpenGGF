@@ -301,7 +301,7 @@
                                   See docs/status/trace-scope-release-6.md.
                                 -->
                                 <exclude>**/tests/trace/s3k/sonictails/*.java</exclude>
-                                <exclude>**/tests/trace/s3k/*CompleteRunTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/*ZoneSliceTraceReplay.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -347,7 +347,7 @@
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/s3k/sonictails/*.java</include>
-                                <include>**/tests/trace/s3k/*CompleteRunTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/*ZoneSliceTraceReplay.java</include>
                             </includes>
                             <excludedGroups>performance-measurement</excludedGroups>
                             <excludes>
