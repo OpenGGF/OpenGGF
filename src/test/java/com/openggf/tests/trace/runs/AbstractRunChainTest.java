@@ -831,7 +831,39 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "coordinator admitted the wrong destination row: " + receipt);
             }
+            settlePreMainLoopPlayerTransferAtAdmission();
             return receipt;
+        }
+
+        /**
+         * Settles a player transfer the level routine staged for its counted
+         * pre-main-loop tail, at the same point production settles it
+         * ({@code TraceSessionLauncher#settlePreMainLoopPlayerTransferAtAdmission},
+         * called from {@code applyRunDestinationAdmission}).
+         *
+         * <p>An in-run level load stages the player's tiles in the
+         * {@code Level_LoadObj} {@code ExecuteObjects} pass
+         * (docs/s1disasm/sonic.asm:2895-2897), and the V-int that performs the
+         * transfer is the first row of the counted {@code Level_Delay} /
+         * {@code PalFadeIn_Alt} tail (docs/s1disasm/sonic.asm:2957-2966). The
+         * transfer therefore belongs {@code preLevelMainLoopDelayFrames} rows
+         * before the level's first main-loop row — inside the transition gap,
+         * not on the destination's first compared row.
+         *
+         * <p>The chain drove every admission without this call, so the held
+         * preparation survived to the destination's first
+         * {@code serviceProductionVBlank}, which drops the tail and flushes at
+         * its own row. That put the load's transfer inside the destination
+         * segment, where the ROM records no edge at all, and left the gap short
+         * the two edges the ROM does record there.
+         */
+        private void settlePreMainLoopPlayerTransferAtAdmission() {
+            DynamicArtLifecycleService lifecycle =
+                    SessionManager.getCurrentGameplayMode()
+                            .dynamicArtLifecycle();
+            if (lifecycle != null && lifecycle.isRunActive()) {
+                lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop();
+            }
         }
 
         private RunPlaybackObservation observation(
