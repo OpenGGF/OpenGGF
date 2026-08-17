@@ -80658,3 +80658,68 @@ that owns it. No landed fix undone. `CollisionRules`, `SolidRoutineProfile`,
 `CnzTrapDoorInstance`, `Sonic3kAIZEvents` and the hardware-timing port were not read
 or modified. No fixture regenerated. Red-set differences computed with Python set
 difference in both directions; `comm` not used.
+
+
+## 2026-08-17 -- S3K Slots bonus (Sonic+Tails): stage-rotation reversal throttle
+
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1`, base `258b826f9`, a fix worktree and a
+clean control worktree at the same commit.
+
+Command (both trees, sequential, reports cleared before each run):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -DfailIfNoTests=false \
+    -Ds3k.rom.path=... -Dsonic1.rom.path=... -Dsonic2.rom.path=... test
+```
+
+| | control `258b826f9` | with fix |
+|---|---|---|
+| errors | **541** | **2** |
+| first error | frame 2587, `y_speed` exp `0x01D4` act `0x0383` | frame 3704, `rings` exp 184 act 183 |
+| rows compared | 5259 | 5259 |
+
+Still RED -- the frontier moved, it did not close.
+
+### Root cause
+
+Frame 2587 is a jump, not a landing: input `0x0010` (button B) with the player parked and
+grounded since row 2534. `sub_4BBB2` (sonic3k.asm:99154-99169) builds the launch velocity from
+`(Stat_table).w & $FC` -- `x_vel = cos*$680>>8`, `y_vel = sin*$680>>8` -- so both sides launch
+at the same magnitude (~`0x650`) and differ only in angle. Solving the recorded pair back
+through that formula gives ROM `Stat_table` high byte `$4C` against the engine's `$58`.
+
+The engine's own `Stat_table` log matched the ROM's (derived independently from the cage
+object's recorded `object_state` position, which `loc_4BF9A` computes by rotating
+`($460,$430)` about the player) through row 2456. The divergence is a second
+`neg.w (SStage_scalar_index_1)` at engine frame 2564, exactly `$1E` frames after the genuine
+one at 2534, while the player sat motionless against a reversal tile.
+
+ROM `sub_4BE3A` (:99194-99206) decrements `$36`/`$37` only on the `$30(a0) == 0` path. With the
+tile in continuous contact `$30(a0)` is non-zero every frame, `$37(a0)` never leaves `$1E`, and
+:99259's `tst.b $37(a0)/bne` blocks the repeat forever. The engine ticked the throttle
+unconditionally. Fix: gate the tick on "no special tile stored this frame", and drop the
+object-controlled/debug fallback tick, since `loc_4BA80` (:98770-98774) returns before
+`sub_4BE3A` is ever reached on those frames.
+
+No constant was introduced. `$1E` and the gate are both read out of the cited listing; the
+value that closed this was a *branch*, not a number.
+
+### Blast radius
+
+- `-Ptrace-replay`, both trees: 806 tests, 20 failures / 10 errors on **each**; red class sets
+  identical by name in both directions (Python set difference, both ways). No newly red, no
+  newly green apart from the target's error-count drop.
+- `-Ptrace-replay-r7`, both trees: 37 tests, 30 failures / 2 errors on each; 32 red classes,
+  identical sets. `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` GREEN on both (1200-row
+  fixture, 0.34 s on both trees) -- unchanged by this fix.
+- Default profile, both trees: 15141 tests. Control 66 failures / 22 errors (52 red classes),
+  fix tree 65 / 22 (51 red classes). Zero newly red. The single class red on control and green
+  on the fix tree, `TestPlaybackDebugManagerOverlayOwnership`, passes in isolation on the
+  control tree and is the known reused-fork ambient flake, not movement.
+
+### Remaining 2 errors on this class
+
+Frame 3704 `rings` 184 vs 183, `frame_span` 1, non-cascading: the **first** ring of the cage
+payout batch is awarded one frame late, and every subsequent ring in the batch is on cadence
+(ROM 3704, 3706, 3708, ...). Frame 5106 `routine` `0x0002` vs `0x0004`, `frame_span` 1,
+flagged cascading. Both are new, separate, and much smaller frontiers.

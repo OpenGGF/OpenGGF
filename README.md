@@ -228,6 +228,20 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The slot-stage rotation throttle only ticks when no special tile is under the player
+  (`bugfix/ai-slots-rotation-throttle`, merged 2026-08-17).** Slots diverged at frame 2587 on a
+  *jump*, not a landing: `x_speed` and `y_speed` share the same magnitude and differ only in angle,
+  because `sub_4BBB2` (sonic3k.asm:99154-99169) builds the launch from `(Stat_table).w & $FC` as
+  `cos*$680>>8` / `sin*$680>>8`. Solving both recorded pairs back through that formula gives ROM
+  `$4C` against engine `$58` — and the engine had fired a **second** `neg.w (SStage_scalar_index_1)`
+  exactly `$1E` frames after the genuine one, while the player sat motionless against a reversal
+  tile. `sub_4BE3A` (:99194-99206) opens `move.b $30(a0),d0 / bne.s loc_4BE5A`, so the `$36`/`$37`
+  throttle decrements run **only on the no-special-tile path**; in continuous contact with tile id 6
+  the `tst.b $37(a0) / bne` at :99259 suppresses the reversal indefinitely. The engine ticked
+  unconditionally — its own comment already noted the ROM gates it. `$1E` was never wrong; a
+  **branch** closed this, not a constant. Errors **541 -> 2** with rows compared unchanged at 5259,
+  and zero newly red across all three sweeps.
+
 - **47 S3K solid objects now publish their ROM code word, so the sidekick despawn compare is no
   longer a silent no-op (`feature/ai-s3k-code-pointer-sweep`, merged 2026-08-17).** ROM `sub_13EFC`
   latches word 0 of the stood-on object's SST — its live code pointer — and compares it on the next

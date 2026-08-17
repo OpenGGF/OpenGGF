@@ -214,14 +214,12 @@ public final class S3kSlotBonusStageRuntime {
         // advances the player's position on the firing frame. When the player is
         // object-controlled (cage grab) or in debug/placement mode, that movement
         // branch (and thus the hook) never runs -- mirroring ROM loc_4BA80, which
-        // skips the whole sub_4BABC..sub_4BE3A chain. Keep the per-frame throttle
-        // tick + slot-wall contact reset for those frames so their timers still bleed
-        // down exactly as they did when this ran unconditionally at frame top.
+        // skips the whole sub_4BABC..sub_4BE3A chain. sub_4BE3A is the ONLY place
+        // the $36/$37 throttles bleed down (sonic3k.asm:99194-99206), so on these
+        // frames the ROM does not decrement them at all; only the engine-local
+        // slot-wall contact latch is reset here.
         if (slotStageState != null && (slotPlayer == null || slotPlayer.isDebugMode()
                 || slotPlayer.isObjectControlled())) {
-            if (slotCollisionSystem != null) {
-                slotCollisionSystem.tickFrameState();
-            }
             slotStageState.clearSlotWallContact();
         }
 
@@ -481,11 +479,27 @@ public final class S3kSlotBonusStageRuntime {
      * slot-wall fallback in {@link #update}, mirroring ROM loc_4BA80.
      */
     private void runPreMovePlayerInteractions() {
-        // ROM sub_4BE3A bleeds its $36/$37 throttles down on the no-special-tile
-        // path; the engine keeps a single per-frame throttle tick immediately before
-        // dispatch so the spike/slot-wall gates observe the same pre-decrement value
-        // they saw when this ran at frame top.
-        if (slotCollisionSystem != null) {
+        // ROM sub_4BE3A (sonic3k.asm:99194-99206) reads $30(a0) -- the special tile
+        // id the corner scan stored this frame -- and branches:
+        //
+        //     move.b  $30(a0),d0
+        //     bne.s   loc_4BE5A      ; a special tile is under the player: dispatch,
+        //                            ; and DO NOT touch the throttles
+        //     subq.b  #1,$36(a0)     ; otherwise bleed both throttles down
+        //     ...
+        //     subq.b  #1,$37(a0)
+        //
+        // The decrement is therefore gated on "no special tile this frame", not
+        // unconditional. While the player rests in continuous contact with a
+        // reversal tile (id 6) $30(a0) is non-zero every frame, $37(a0) stays
+        // pinned at the $1E loaded at sonic3k.asm:99261, and the
+        // `tst.b $37(a0) / bne` gate at :99259 suppresses every further
+        // `neg.w (SStage_scalar_index_1)` for as long as the contact lasts.
+        // Ticking unconditionally let the reversal re-fire exactly $1E frames
+        // after the first one, flipping the stage rotation a second time the ROM
+        // never performs.
+        if (slotCollisionSystem != null && slotStageState != null
+                && slotStageState.lastCollisionTileId() == 0) {
             slotCollisionSystem.tickFrameState();
         }
         if (slotRenderBuffers != null && slotPlayer != null && !slotPlayer.isDebugMode()
