@@ -338,6 +338,9 @@ All notable changes to the OpenGGF project are documented in this file.
   default profile 15139 tests / 65F+22E are all byte-for-byte the same red sets
   as the control worktree at the same base — nothing newly red, nothing newly
   green.
+- Fix(s3k): AIZ1 now reloads the post-intro/main-level graphics profile after
+  returning from a blue-sphere special stage instead of reloading the surfing
+  intro art.
 - Fix(s3k): the Gumball bonus stage's triangle bumpers stayed solid during their
   post-bounce cooldown. ROM `loc_60F3E` (sonic3k.asm:127644-127647) opens with
   `tst.w ($FF2020).l / bpl.s loc_60F8E`, branching straight to `Draw_Sprite` and

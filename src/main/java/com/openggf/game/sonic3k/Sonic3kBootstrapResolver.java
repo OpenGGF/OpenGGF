@@ -27,6 +27,15 @@ public final class Sonic3kBootstrapResolver {
             return Sonic3kLoadBootstrap.NORMAL; // Zone has no intro
         }
 
+        // ROM: LoadLevelLoadBlock selects the post-intro AIZ resource profile
+        // when Saved2_* state is live for a giant-ring special-stage return
+        // (sonic3k.asm:9727-9739). The return reload must not recreate the
+        // surfing intro just because the global skip-intros option is disabled.
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null && levelManager.hasBigRingReturn()) {
+            return new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
+        }
+
         // Zone has an intro — check if we should skip it
         SonicConfigurationService config = GameServices.configuration();
         boolean skipIntros = config.getBoolean(SonicConfiguration.S3K_SKIP_INTROS);
