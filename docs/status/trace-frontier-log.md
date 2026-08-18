@@ -82653,3 +82653,32 @@ path, are byte-identical set-diffed both ways.
   (`gameplay_frame_counter` frozen at 0x2540 across the whole title card,
   V-blank counter +1, `lag_counter` 0); only the recorder's own emulator-side
   `lag_state.lagged`/`lagcount` marks it. Different defect, same class of wall.
+
+### Independently reproduced: the S1 held-iteration wall is real
+
+Verified by the lead, on a detached `develop` worktree with a toggleable probe on
+`TraceExecutionModel.isIterationHeldIntoNextRow` (probe reverted, not committed), rather than
+inherited from the round that first reported it.
+
+| segment | deferral ON (develop) | deferral OFF (probe) |
+|---|---|---|
+| 3 (`ghz2_2`) | green | **red** -- 3 errors, frame 107, `queue.s1_nemesis_plc.prepared` **rom=false engine=true** |
+| 12 (`mz2_3`) | 40 errors, frame 101, `prepared` rom=true engine=false | 37 errors, **frame 593**, `dynamic_art.edge[0].mapping_frame` |
+| 15 (`mz3_2`) | 6 errors, frame 102, `prepared` rom=true engine=false | **green** |
+| 16 | 61 errors, frame 2218, `y_speed` | 61 errors, frame 2218, `y_speed` -- unchanged |
+| `TestS1CompleteEmeraldVisualRun` | green | **red** |
+
+**The decisive observation is the polarity inversion.** With the deferral on, the failing
+segments read `prepared` rom=true engine=false; with it off, the newly failing segment reads
+rom=false engine=true. The two models commit exactly opposite errors, so no frame-granularity
+predicate separates them -- one is not a refinement of the other, and neither dominates.
+Error totals are near-identical (107 with it on, 101 with it off), but the off side also
+turns a pinned-green visual run red, so keeping the deferral is correct.
+
+Segment 16's `y_speed` divergence is byte-identical in both configurations, confirming it is
+an independent defect and not downstream of this one.
+
+This corroborates `469e9f0a6`'s conclusion from a second measurement: the discriminator is
+sub-frame 68000 cycle position, and the sanctioned resolution is the rule-4 hardware-timing
+readiness stream that rule 4 already permits for the S1 PLC pipeline, which needs the S1
+fixtures regenerated with that stream.
