@@ -45,6 +45,15 @@ final class LevelActTransitionExecutor {
                         : null);
         try {
             executeClaimed(request, claimed);
+            // The ROM's own seamless advance -- AIZ1BGE_Finish writes
+            // Current_zone_and_act and calls Load_Level from inside the
+            // level's background-event dispatch
+            // (docs/skdisasm/sonic3k.asm:104733-104746), leaving neither the
+            // level mode nor the recorded run segment. This routine is the
+            // single owner of that identity change, so it is where a run
+            // replay observes the identity reached; a no-op outside a run.
+            com.openggf.TraceSessionLauncher.observeRunSeamlessLevelAdvance(
+                    levelManager);
         } catch (IOException | RuntimeException failure) {
             if (claimed.handoff != null
                     && !claimed.transferComplete

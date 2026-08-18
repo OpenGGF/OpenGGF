@@ -92,6 +92,8 @@ public final class TraceRunPlaybackCoordinator {
     private long transitionStartStepOrdinal = -1;
     private RunBoundarySignal observedBoundary;
     private RunBoundarySignal.LevelLoaded rememberedLevelLoad;
+    private final List<RunPlaybackObservation.LevelIdentity> inLevelAdvances =
+            new ArrayList<>();
 
     public TraceRunPlaybackCoordinator(
             TraceRunManifest run,
@@ -220,6 +222,47 @@ public final class TraceRunPlaybackCoordinator {
         return List.of();
     }
 
+    /**
+     * Observes a level advance production performed while the source segment
+     * still owns production -- the ROM's seamless in-level act advance.
+     *
+     * <p>S3K changes level identity from inside the level's own background
+     * event handler: {@code AIZ1BGE_Finish} writes
+     * {@code move.w #1,(Current_zone_and_act).w} and calls {@code Load_Level}
+     * without leaving {@code GameModeID_Level} or re-entering the {@code Level:}
+     * routine (docs/skdisasm/sonic3k.asm:104733-104746), then offsets the
+     * players, the objects and the camera in place by
+     * {@code d0=$2F00, d1=$80} (docs/skdisasm/sonic3k.asm:104752-104768). Every
+     * seamless act advance on the S3K routes works this way, each from its own
+     * zone's finish routine (for example docs/skdisasm/sonic3k.asm:105755,
+     * 106315, 107617).
+     *
+     * <p>Because the recorder cuts segments on MODE changes, and this advance
+     * changes none, a recorded level segment spans it: the segment's
+     * {@code act} is the act it was ENTERED in, not the only act it covers.
+     * Ownership must therefore also follow the identity production reached this
+     * way. The {@code s3k-sonic-tails-complete-emeralds} segment 2 is exactly
+     * that shape -- 4023 recorded AIZ rows whose camera steps
+     * {@code $2F10 -> $0010} at row 3243, the ROM's own {@code -$2F00} offset.
+     *
+     * <p>Only this one production event widens ownership. A death restart, an
+     * interior return and an ordinary load all arrive as level LOADS and remain
+     * ownership losses, and a boundary advance cannot arrive here because the
+     * source segment is exhausted and the phase is {@code TRANSITION_GAP} by
+     * then. Nothing here weakens row comparison: an advance the recording did
+     * not take still diverges on the segment's very next compared row.
+     */
+    public void observeInLevelAdvance(
+            RunPlaybackObservation.LevelIdentity identity) {
+        Objects.requireNonNull(identity, "identity");
+        if (phase != Phase.CURRENT_SEGMENT
+                || currentSegmentIndex < 0
+                || !"level".equals(currentSegment().kind())) {
+            return;
+        }
+        inLevelAdvances.add(identity);
+    }
+
     /** Returns a destination action only after signal and identity both match. */
     public List<Action> beforeAdmission(RunPlaybackObservation observation) {
         Objects.requireNonNull(observation, "observation");
@@ -240,6 +283,7 @@ public final class TraceRunPlaybackCoordinator {
         }
         observedBoundary = null;
         rememberedLevelLoad = null;
+        inLevelAdvances.clear();
         transitionStartStepOrdinal = -1;
         phase = Phase.CURRENT_SEGMENT;
         return List.of(action);
@@ -425,10 +469,18 @@ public final class TraceRunPlaybackCoordinator {
                                     segment.traceFrameCount());
         }
         return switch (segment.kind()) {
+            // A level segment owns its entry identity at the generation it was
+            // admitted on, plus every identity a seamless in-level advance
+            // carried it to inside the segment -- see observeInLevelAdvance.
+            // The retained advances hold their own load generation, so an
+            // identity that merely looks alike at another generation is still
+            // an ownership loss.
             case "level" -> observation.mode() == GameMode.LEVEL
-                    && matchesLevel(segment, observation.level())
-                    && observation.level().loadGeneration()
-                            == currentLevelGeneration;
+                    && observation.level() != null
+                    && ((matchesLevel(segment, observation.level())
+                                    && observation.level().loadGeneration()
+                                            == currentLevelGeneration)
+                            || inLevelAdvances.contains(observation.level()));
             case "bonus_stage" -> matchesBonus(segment, observation);
             // A recorded special_stage segment spans the ROM's whole
             // GameModeID_SpecialStage, results screen included; the engine

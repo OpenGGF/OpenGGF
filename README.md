@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Run-segment ownership survives the ROM's seamless act advance
+  (`bugfix/ai-s3k-aiz1-aiz2-seam`, merged 2026-08-19).** S3K changes level identity from inside
+  the level's own background-event dispatch: `AIZ1BGE_Finish` writes
+  `move.w #1,(Current_zone_and_act).w` -- the disassembly's own comment reads "Officially change
+  this to act 2" -- and calls `Load_Level` **without leaving `GameModeID_Level` or re-entering
+  `Level:`** (`skdisasm/sonic3k.asm:104733-104746`), then subtracts `d0=$2F00, d1=$80` from both
+  players, the objects and the camera in place (`:104752-104768`). The recorder cuts run segments
+  on **mode** changes, and that advance changes none, so a recorded level segment spans it:
+  segment 2 is 4,023 AIZ rows whose `camera_x` steps `0x2F10 -> 0x0010` at row 3243.
+  `TraceRunPlaybackCoordinator` compared the live identity against the segment's recorded **entry**
+  act only, so the chain failed two rows later with "segment 2 lost production ownership before
+  source closure" -- and because a comparator report is only written when a segment closes, it said
+  nothing at all about the segment's real content. The walk-failure is gone, the segment now
+  closes, and its errors fall from 47,147 to **17,591** with a first real divergence at frame 1726,
+  `sidekick_x` rom `0x28C2` engine `0x28C3` -- **one pixel**. Verified at 791 tests / 4 red,
+  identical to control.
+
 - **The level-load player transfer row is observed, not projected
   (`bugfix/ai-s1-level-load-transfer-row`, merged 2026-08-19).**
   `settlePendingPlayerPreparationBeforeLevelMainLoop` computed the destination's first main-loop

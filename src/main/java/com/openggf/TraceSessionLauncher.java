@@ -2236,6 +2236,20 @@ public final class TraceSessionLauncher {
                         session.isLagOnlySameLevelContinuation())));
     }
 
+    /**
+     * Publishes a seamless in-level act advance production has already applied.
+     * Session-independent, exactly like {@link #markNextRunLevelLoadCause}: the
+     * headless run chain has no live session but shares the same
+     * gameplay-session-owned tracker.
+     */
+    public static void observeRunSeamlessLevelAdvance(
+            com.openggf.level.LevelManager levelManager) {
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        if (context != null) {
+            context.runLevelLoads().observeSeamlessAdvance(levelManager);
+        }
+    }
+
     /** Classifies the next production-owned level load without requesting one. */
     static void markNextRunLevelLoadCause(RunLevelLoadCause cause) {
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
