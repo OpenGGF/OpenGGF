@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K's AIZ vine angle survives a level load (`bugfix/ai-s3k-aiz2-f384`, merged 2026-08-18).**
+  `AIZ_vine_angle` is advanced by `ChangeRingFrame` every Level main-loop iteration
+  (`skdisasm/sonic3k.asm:9693`) and is **deliberately outside** the oscillating-table clear that
+  both the level init and the special-stage init run: `clearRAM
+  Oscillating_table,(AIZ_vine_angle-Oscillating_table)` (`:7622` and `:10606`) stops one word
+  short of it, so the word free-runs for the whole session. The engine kept the carrier on the
+  Sonic3k *Game* object, which `LevelManager.initGameModule` rebuilds on every level load, so
+  every load reset both AIZ giant-ride vines to phase zero. On the AIZ1 re-entry after the first
+  giant-ring special stage that left a vine anchored at `$2070,$035C` hanging its handle straight
+  below at `$2070,$03EC` -- inside `AIZRideVineHandle_TestGrabRange` (`:46717-46748`) for a
+  rolling player at `$2060,$0400` the ROM lets pass -- and `CheckGrab` wrote `anim=$14` and
+  **snapped `x_pos` to the handle**, which is exactly the 16-pixel "engine ahead" divergence.
+  Ownership moves to the session-lived `Sonic3kGameModule`. Segment 2 goes from 74,575 comparator
+  errors at frame 384 (`x` rom `$2060` / engine `$2070`) to **61,979 at frame 393** on
+  `sidekick_x`. The remaining stop is a separate, unfixed one-tick `ChangeRingFrame` deficit
+  across the giant-ring boundary. Verified at 790 tests / 3 red, the three chains only.
+
 - **Sonic 2's RNG seed is cleared on every act load (`bugfix/ai-s2-seg11-plc`, merged
   2026-08-18).** `Level_ClrRam` wipes `MiscLevelVariables` **after** the level's `LoadPLC` calls
   (`s2disasm/s2.asm:4802-4809`) and `RNG_seed` lives inside that block

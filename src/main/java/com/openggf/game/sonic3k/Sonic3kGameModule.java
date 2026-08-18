@@ -102,6 +102,16 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
+    /**
+     * ROM {@code AIZ_vine_angle}, advanced by {@code ChangeRingFrame}
+     * (sonic3k.asm:9693) and never cleared by a level or special-stage init --
+     * both clears stop one word short of it (sonic3k.asm:7622, 10606). The
+     * module is the session-lived owner; the {@code Sonic3k} Game it is handed
+     * to is rebuilt on every level load (LevelManager.java:459), so owning it
+     * there reset the swing phase of every AIZ giant ride vine on re-entry.
+     */
+    private final Sonic3kGlobalAnimationState globalAnimationState =
+            new Sonic3kGlobalAnimationState();
     private final Sonic3kLevelEventManager levelEventManager = new Sonic3kLevelEventManager();
     private final Sonic3kTitleCardManager titleCardManager = new Sonic3kTitleCardManager();
     private final Sonic3kZoneRegistry zoneRegistry = new Sonic3kZoneRegistry();
@@ -136,7 +146,7 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public Game createGame(Rom rom) {
         try {
-            return new Sonic3k(rom);
+            return new Sonic3k(rom, globalAnimationState);
         } catch (java.io.IOException e) {
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;

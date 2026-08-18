@@ -64,14 +64,35 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     private Sonic3kDustArt dustArt;
     private Sonic3kRingArt ringArt;
     private Sonic3kLevelAnimationManager levelAnimationManager;
-    private final Sonic3kGlobalAnimationState globalAnimationState =
-            new Sonic3kGlobalAnimationState();
+    // ROM AIZ_vine_angle ($FFFFFEBA) is deliberately OUTSIDE the level-init
+    // clear: Level does clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)
+    // (sonic3k.asm:10609) and the special stage repeats the same bounded clear
+    // (sonic3k.asm:10606-10607 region), both stopping one word short of it, so the
+    // word free-runs for the whole session. A Game instance does NOT: LevelManager
+    // rebuilds one on every load (LevelManager.java:459), so this state is injected
+    // by the session-lived Sonic3kGameModule instead of being owned here.
+    private final Sonic3kGlobalAnimationState globalAnimationState;
     private Level levelAnimationLevel;
     private int levelAnimationZone = -1;
 
     public Sonic3k(Rom rom) throws IOException {
+        this(rom, new Sonic3kGlobalAnimationState());
+    }
+
+    /**
+     * Session-scoped construction: the module supplies the
+     * {@code AIZ_vine_angle} carrier so it survives the level loads that
+     * replace this {@code Game}.
+     */
+    Sonic3k(Rom rom, Sonic3kGlobalAnimationState globalAnimationState) throws IOException {
         this.rom = rom;
+        this.globalAnimationState = globalAnimationState;
         ensureAddressTablesReady();
+    }
+
+    /** Package-private view for the module-ownership pin in {@code TestSonic3kVineAngleOwnership}. */
+    Sonic3kGlobalAnimationState globalAnimationState() {
+        return globalAnimationState;
     }
 
     @Override
