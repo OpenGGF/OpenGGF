@@ -82984,3 +82984,32 @@ be reached by this change, and passes when run alone in that same control tree.
   102, same field and values). Independently, the gaps preceding the *green*
   segments 8 (`mz1_2`) and 11 (`mz2_2`) carried exactly the same +4/+2 skew in
   the control, so the skew never correlated with a PLC failure.
+
+### S2 chain: the seg7_ehz2 -> seg8_cpz1 handoff overshoots by exactly 2 rows
+
+Measured by the lead after `6be9e24d7` (the RNG seed fix) cleared segment 11 outright and exposed
+this handoff. Recorded from the run manifest, not inferred:
+
+| quantity | value |
+|---|---|
+| `seg7_ehz2` | offset 57031, count 3997, so its last recorded row is 61027 and it ends at 61028 |
+| `mode_change_bk2_frame` | 61029 |
+| `seg8_cpz1` | offset 61206 |
+| gap | 61206 - 61028 = **178 rows** |
+| `gap_admission_runs` | `[23, 11, 62, 14, 7, 36, 25]` -- which sum to **exactly 178** |
+| walk-failure | `cursor advanced past its first recorded row without admission (cursor 61208, offset 61206)` |
+
+So the manifest's own seven admission runs account for the gap exactly, and the engine spends
+**180** rows crossing it -- an overshoot of precisely 2. The transition is
+`entry_kind: level_advance`, a zone change from EHZ act 2 to CPZ act 1.
+
+This is newly *visible* rather than necessarily newly *caused*: before the RNG fix the chain
+diverged inside segment 11 at frame 3531 and never reached this boundary. Whether the overshoot
+pre-existed is cheaply testable by running the chain on a tree without `6be9e24d7` and checking
+whether the same walk-failure appears once segment 11 is otherwise forced past -- that test has
+not been run.
+
+Not yet diagnosed. Note that five separate divergences resolved today were comparison, admission
+or observation plumbing rather than engine defects, and a two-row cursor overshoot at a
+`level_advance` has that shape. `AbstractRunChainTest.requireAdmission` and
+`TraceRunReplayWalker` are the machinery.
