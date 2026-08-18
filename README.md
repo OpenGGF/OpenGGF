@@ -228,6 +228,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 `seg5_ehz2` blocker is a parity-flipped badnik target, not a sidekick position defect
+  (`bugfix/ai-s2-sidekick-y`, documentation, merged 2026-08-18).** `ef002222f` recorded the
+  blocker behind S2's disabled special-stage V-blank composition as a latent `sidekick_y` defect
+  on Tails' hurt transition. **It is not.** Instrumentation shows `applyHurt` is never entered
+  for Tails anywhere near that position: the engine keeps Tails rolling, and its `0x0272` is the
+  plain gravity integration of frame `0x020B`. The ROM's `0x0271` is that same integration minus
+  `Tails_ResetOnFloor_Part2`'s `subq.w #1,y_pos` (`s2disasm/s2.asm:41030`, commented "move Tails
+  up 1 pixel so the increased height doesn't push him slightly into the ground"), reached from
+  `Hurt_Sidekick` via the object-id redirect -- a path the engine already models correctly and
+  simply never runs here. The one-pixel delta compares **two different states**, not two
+  spellings of one position. The missing hurt is a missing Buzz Bomber stinger:
+  `Obj4B_ChkPlayers` (`:60991-61027`) picks its target with `btst #0,(Vint_runcount+3).w` --
+  "target Sidekick on uneven frames" -- then requires a `$28..$30` horizontal strip. At the
+  relevant frame the ROM's counter is an even tick, so it targets Sonic at 45px, inside the
+  strip, and fires 30 frames later. With the composition enabled the engine's object clock in
+  that segment is **uniformly one tick low**, so the Buzzer aims at Tails, 8px away and outside
+  the strip, and never fires. That residual `-1` belongs to the `seg4_ehz1 -> seg5_ehz2`
+  inter-level boundary, not to the composition: the dynamic-art gap axis reports the same
+  one-frame shortfall with the flag in either position. Closing it needs a ROM-derived V-blank
+  at that boundary; an EHZ2 entry-mask exception would be a constant measured from this
+  fixture's own rows, so **nothing was tuned and no behavioural change is landed**. The
+  composition stays disabled: enabling it moves the chain frontier back from segment 11 to
+  segment 7.
+
 - **A run comparator attaching behind a detached-prepared row no longer misses its first frame
   (`bugfix/ai-aiz2-xsub-entry`, merged 2026-08-18).** `TraceRunReplayWalker.BoundaryProbe` pins a
   prepared BK2 row to the delegate that prepared it, so a handoff observed mid-row cannot take
