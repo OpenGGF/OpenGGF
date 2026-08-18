@@ -82378,3 +82378,77 @@ The default-profile count delta is fully accounted: +11 the new
 `TestHardwareTimingInterstitialStream`, +6 `TestBonusStageShieldRestore`, which
 the control fork did not run at all (no surefire XML emitted) though the source
 is present in both trees. All 17 pass.
+
+## 2026-08-18 - S3K complete-run chain: aiz_2 frame-0 entry state closed
+
+- Worktree `<wt>/ai-aiz2-xsub`, branch
+  `bugfix/ai-aiz2-xsub-entry`, over `06846f0cf`.
+- Command: `mvn -Ptrace-replay-r7 -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=<S3K ROM>
+  -Dsurefire.failIfNoSpecifiedTests=false test`.
+- Before: FAIL. Segment 2 (`aiz_2`) 83181 physics comparator errors, first
+  non-camera mismatch frame 0, field `x_sub`, rom `0x0C00`, engine `0x3000`.
+- After: FAIL. Segment 2 (`aiz_2`) 80379 physics comparator errors, first
+  non-camera mismatch frame 94, field `x`, rom `0x1CE2`, engine `0x1CDD`.
+
+**The frame-0 report was never a position defect.** Dumping the full frame-0
+comparison (`-Dtrace.context.fields=all`) shows five diverging fields, not one:
+`x_sub` `0x0C00`/`0x3000`, `x_speed` `0x000C`/`0x0024`, `y_speed`
+`0x0000`/`0x0038`, `player_mapping_frame` 7/8, `sidekick_y_speed`
+`0x0000`/`0x0038`. Every engine value is the recording's frame **1** verbatim.
+`x_sub` is simply the first diverging non-camera physics field in iteration
+order, which is why the one-field headline read as a sub-pixel restore problem.
+
+**Cause.** `TraceRunReplayWalker.BoundaryProbe.setDelegate` pins an
+already-prepared row to the delegate that prepared it, so a handoff observed
+mid-row cannot take that row from its preparer. The special-stage return
+latches `GameMode.LEVEL` on a step that never reaches `afterFrameAdvanced`, so
+the probe carried `framePrepared == true` with `preparedDelegate == null` into
+the return segment; `prepareFrame` then early-returns on the identical row and
+the freshly attached comparator is never adopted for it. Instrumented and
+confirmed at the boundary: the return segment's first gameplay frame executes
+(`PlayableSpriteMovement.handleMovement` runs, producing `x_sub` `0x0C00`,
+`x_speed` `0x000C`, `y_speed` `0x0000` -- the recording's frame 0 exactly), and
+`LiveTraceComparator.afterFrameAdvanced` first fires with `cursor == 0` only
+after the SECOND frame. `framesConsumed` measured 0 for the same reason, against
+the 1 that `attachReturnedLevelSegment`'s COMPARATOR FRAME BASE contract
+documents for a special-stage return.
+
+**Fix.** A row prepared while DETACHED has no preparer to pin to, so
+`setDelegate` adopts it for the incoming delegate and prepares that delegate for
+it. A row prepared by a real delegate still stays pinned to it. Comparison
+plumbing only: it changes which observer sees an already-executed frame, never
+engine state and never what the engine runs.
+
+**Correcting a briefing.** `TestS3kSonicTailsAiz2SegmentTraceReplay` does NOT
+reproduce this divergence and is not a cheaper loop for it. It is a cold-boot
+frontier harness whose own first error is `tails_y` at frame 0 (expected
+`0x04C4`, actual `0x0000`, 1034 errors) -- Tails is not spawned on that path.
+Unchanged by this fix, matching the note in the preceding entry. No level-load
+art programme was needed for the frame-0 state.
+
+**Verification, this tree vs a clean control worktree at the same base
+`06846f0cf`, `-Dsurefire.runOrder=alphabetical`, sequential per tree.** Red sets
+set-diffed both ways; every diff empty.
+
+| profile | control | mine | red-set diff |
+|---|---|---|---|
+| `-Ptrace-replay` | 788 tests, 3 red | 788 tests, 3 red | identical |
+| `-Ptrace-segments` | 70 tests, 55 red | 70 tests, 55 red | identical |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red | identical |
+| default | 15044 tests, 62 F + 19 E | 15115 tests, 62 F + 19 E | identical |
+
+The three complete-run prefixes, both visual runs and the chain do not run under
+any of those profiles and were pinned explicitly
+(`-Ptrace-replay-r7 -Dtest=<the six>` with all three ROM properties): 8 tests,
+7 passed on BOTH trees, the single red being the chain itself.
+
+The default-profile count delta is two nested classes whose surefire report
+attribution is unstable under `reuseForks`:
+`TestMhz1CutsceneObjects$KnucklesPeerArtSubmission` recorded 6 tests on the
+control and 83 (the whole outer class) here, and
+`TestSonic3kIczRewindRoundTrip$ProductionLifecycleBoundaries` 9 against 3. Both
+are green on both trees with zero failures and zero errors, the executed-class
+sets are identical (47 classes reporting), and neither is reachable from the run
+chain. Flagged rather than smoothed over: the counting is unstable, not the
+result.

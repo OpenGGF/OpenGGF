@@ -4,6 +4,27 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- A run chain's return from an uncompared special-stage interior lost its first
+  gameplay frame to the comparator. `TraceRunReplayWalker.BoundaryProbe` pins a
+  prepared BK2 row to the delegate that prepared it, so a handoff observed
+  mid-row cannot hand that row to a newcomer. The special-stage return latches
+  `GameMode.LEVEL` on a step that never reaches `afterFrameAdvanced`, which
+  leaves the probe holding a row prepared while DETACHED -- pinned, with a null
+  preparer. The return segment's comparator attached behind that pin and its
+  first frame ran unobserved.
+
+  The engine executed that frame correctly: on
+  `s3k-sonic-tails-complete-emeralds` segment 2 it reproduces the recording's
+  frame 0 exactly. Only the comparison was displaced, so recorded row 0 was
+  compared against post-frame-1 state and every physics field was reported one
+  frame ahead -- 83181 errors opening at frame 0 with `x_sub` `0x0C00` against
+  `0x3000`, which is that row's own frame-1 value.
+
+  A row prepared while detached now adopts the incoming delegate; a row prepared
+  by a real delegate still stays pinned to it. This is comparison plumbing --
+  it changes which observer sees an already-executed frame, never engine state
+  and never what the engine runs. The chain's segment-2 frontier moves from
+  frame 0 to frame 94 (`x` rom=`0x1CE2` engine=`0x1CDD`).
 - Run fixtures may now carry a run-level `hardware_timing_interstitial.jsonl`
   recording the hardware-work ordinals the ROM consumed in the spans between
   structural segments -- the special-stage results screen, the level reload, a

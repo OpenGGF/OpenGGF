@@ -247,6 +247,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   **frame 94** (`x` rom `0x1CE2` engine `0x1CDD`), errors 83,181 to 80,379. Verified at 790 tests
   / 3 red, the three chains only. Note this retires the standing hypothesis that the
   `ss -> aiz_2` handoff required a four-part level-load art programme: it required none of it.
+  The expensive explanation was wrong; the engine was correct and the observer was not.
 
 - **The S3K chain crosses its recorded interstitial spans
   (`feature/ai-interstitial-timing`, merged 2026-08-18).** A recorder observes hardware

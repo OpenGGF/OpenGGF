@@ -1085,6 +1085,23 @@ public final class TraceRunReplayWalker {
             if (!framePrepared) {
                 preparedFrame = null;
                 preparedDelegate = null;
+                return;
+            }
+            // A row prepared while DETACHED has no preparer to pin to. Without
+            // this, the pin above hands that row to a null delegate: a segment
+            // boundary that settles mid-row (the special-stage return latches
+            // GameMode.LEVEL on a step that never reaches afterFrameAdvanced,
+            // leaving framePrepared set with preparedDelegate == null) would
+            // then run its FIRST gameplay frame unobserved. The engine executes
+            // that frame -- it reproduces the return segment's recorded frame 0
+            // exactly -- but the comparator never sees it, so recorded row 0 is
+            // compared against post-frame-1 state and every physics field is
+            // reported one frame ahead. Adopting the row keeps the comparator's
+            // cursor and the executed frame in lockstep; a row prepared by a
+            // real delegate still stays pinned to it.
+            if (preparedDelegate == null && delegate != null) {
+                preparedDelegate = delegate;
+                delegate.prepareFrame(preparedFrame);
             }
         }
 
