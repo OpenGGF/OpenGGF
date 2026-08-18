@@ -71,6 +71,24 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         steps.add(3, new InitStep("QueueInitialPlcs",
                 "S2 Level: ClearPLC, level-header primary LoadPLC, LoadPLC Std2",
                 () -> queueInitialPlcs(ctx)));
+        // Level_ClrRam wipes MiscLevelVariables after the level's LoadPLC calls
+        // (s2disasm/s2.asm:4806-4809), and RNG_seed lives inside that block
+        // (s2disasm/s2.constants.asm:1412-1421,1467). Every act load therefore
+        // starts from a zero seed, which RandomNumber's zero-sanity check turns
+        // into $2A6D365A on the act's first draw (s2disasm/s2.asm:3975-3979).
+        // Without this the seed carried across acts and every S2 RandomNumber
+        // consumer downstream -- Obj28_InitRandom animal choice, the Egg Prison
+        // release offsets, boss explosion offsets -- read a stream shifted by
+        // the previous acts' draw count. Keep this S2-owned: S1 has the same
+        // rule in its own profile and S3K clears a different range.
+        steps.add(4, new InitStep("ResetRng",
+                "S2 Level_ClrRam: clear RNG_seed with MiscLevelVariables",
+                () -> {
+                    var rng = GameServices.rngOrNull();
+                    if (rng != null) {
+                        rng.setSeed(0L);
+                    }
+                }));
         if (ctx.isIncludePostLoadAssembly()) {
             steps.addAll(postLoadAssemblySteps(ctx));
         }

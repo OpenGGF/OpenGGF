@@ -4,6 +4,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 2 now clears `RNG_seed` on every act load. `Level_ClrRam` wipes
+  `MiscLevelVariables` (docs/s2disasm/s2.asm:4806-4809) and `RNG_seed` lives
+  inside that block (docs/s2disasm/s2.constants.asm:1412-1421,1467), so each act
+  starts from a zero seed that `RandomNumber`'s zero-sanity check turns into
+  `$2A6D365A` on the act's first draw (docs/s2disasm/s2.asm:3975-3979). The
+  engine had been carrying the seed across acts, leaving every S2
+  `RandomNumber` consumer reading a stream shifted by the previous acts' draw
+  count. In `s2-sonic-tails-complete-emeralds` the shift was 27 draws by EHZ2's
+  Egg Prison, so `Obj28_InitRandom` picked the wrong animal for each release
+  (docs/s2disasm/s2.asm:24596-24612) and the capsule's animals cleared object
+  RAM 15 frames early, firing `Load_EndOfAct` -- and with it the results PLC --
+  ahead of the recording (docs/s2disasm/s2.asm:85001-85012). Segment 11 of the
+  chain, previously 188 comparator errors first diverging at frame 3531 on
+  `queue.s2_nemesis_plc.busy`, now replays with zero comparator errors.
 - Sonic 2's run-chain object V-blank clock landed one tick low at every
   `level_advance` boundary. The source-tail anchor was reconstructed by
   projecting the counter backwards across the boundary window at one tick per
