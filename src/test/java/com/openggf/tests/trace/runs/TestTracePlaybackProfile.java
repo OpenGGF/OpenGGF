@@ -76,7 +76,11 @@ class TestTracePlaybackProfile {
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignsStageResultsPresentationVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile().alignsInterLevelVblank());
-        assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
+        // Sonic 2 IS measured: the level -> special stage -> level composition
+        // lands the object clock on the recorded counter at every one of the
+        // complete-emerald run's stage returns, so it is switched on. Sonic 3&K
+        // is still unmeasured.
+        assertTrue(new Sonic2GameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());

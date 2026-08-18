@@ -34,7 +34,7 @@ public record TracePlaybackProfile(
     public static final TracePlaybackProfile SONIC_2 = new TracePlaybackProfile(
 			10,
 			List.of(new MaskedLevelEntryLoss(6, 2, 9)),
-			-1, 1, false, false, RecordedLevelIdentityProfile.DIRECT);
+			-1, 1, true, false, RecordedLevelIdentityProfile.DIRECT);
 
     public TracePlaybackProfile {
         if (interLevelNonAdvancingMovieRows < -1) {
@@ -169,34 +169,39 @@ public record TracePlaybackProfile(
      * have, and it is falsifiable — a future special-stage return into OOZ act 2
      * must measure 10, not 11.
      *
-     * <p><b>Measured but not yet switched on for Sonic 2.</b> S2 still has
-     * {@link #alignUncomparedInteriorReturnVblank()} {@code false}, so this
-     * number is currently inert. With the alignment enabled the engine's
-     * object V-blank clock lands on the recorded {@code vblank_counter} exactly
-     * at all five special-stage returns of
-     * {@code s2-sonic-tails-complete-emeralds} (drift {@code 2, 4, 3, 2, 4}
-     * before, {@code 0} after), and segments 2-4 keep passing -- but the
-     * corrected upstream clock then uncovers a divergence in {@code seg5_ehz2}
-     * at frame 524 that the wrong clock had been masking, costing the chain
-     * more reach than the correction buys, so the flag stays {@code false}.
+     * <p><b>Switched on for Sonic 2.</b> With
+     * {@link #alignUncomparedInteriorReturnVblank()} enabled the engine's object
+     * V-blank clock lands on the recorded {@code vblank_counter} exactly at every
+     * special-stage return of {@code s2-sonic-tails-complete-emeralds} (measured
+     * at the comparator bind: {@code seg2_ehz1}, {@code seg3_ehz1},
+     * {@code seg4_ehz1}, {@code seg6_ehz2} and {@code seg7_ehz2} all bind with
+     * the engine counter equal to the segment's recorded initial value, drift
+     * {@code 0}; it was {@code 2, 4, 3, 2, 4} before).
      *
-     * <p>That divergence is <em>not</em> a {@code sidekick_y} defect, despite
-     * how the comparator names it. Measured in
-     * {@code bugfix/ai-s2-sidekick-y}: the engine never hurts Tails at that
-     * frame at all, so 0x0272 is the plain gravity integration and the ROM's
-     * 0x0271 is the hurt frame's {@code Tails_ResetOnFloor_Part2}
-     * {@code subq.w #1,y_pos} (docs/s2disasm/s2.asm:41023-41031). The hurt is
-     * missing because {@code Obj4B_ChkPlayers}
-     * (docs/s2disasm/s2.asm:60988-61027) selects its target with
-     * {@code btst #0,(Vint_runcount+3).w}, and seg5's object clock runs
-     * uniformly one tick low here, so the Buzz Bomber aims at Tails (outside
-     * its {@code $28..$30} strip) instead of Sonic and never fires the stinger.
+     * <p>It was previously committed disabled because enabling it uncovered a
+     * uniform one-tick shortfall in {@code seg5_ehz2}, which flipped
+     * {@code Obj4B_ChkPlayers}' {@code btst #0,(Vint_runcount+3).w} target
+     * selection (docs/s2disasm/s2.asm:60988-61027) and cost the chain reach.
+     * That shortfall was NOT a property of this composition, nor of the
+     * {@code seg4_ehz1 -> seg5_ehz2} boundary, and no ROM cost was missing from
+     * this table. It came from the chain harness reconstructing the source-tail
+     * anchor by projecting the counter BACKWARDS across the boundary window's
+     * choreography rows at one tick per row, while one of those rows -- the row
+     * on which the destination level's load replaces the object manager -- is
+     * deliberately left unserviced. The dropped tick was subtracted straight out
+     * of the anchor. The harness now observes the anchor on the source's final
+     * recorded row instead of reconstructing it; see
+     * {@code AbstractRunChainTest#latchSourceTailVblank}. With the composition
+     * off, the counter carried an unreconciled but coincidentally EVEN offset
+     * across the uncompared stages, which is why the parity-sensitive
+     * {@code Obj4B} branch happened to survive.
      *
-     * <p>That residual {@code -1} is a property of the
-     * {@code seg4_ehz1 -> seg5_ehz2} inter-level boundary, not of this
-     * composition: the chain's dynamic-art gap axis reports the same one-frame
-     * {@code movie_logical_frame} shortfall there with the flag in either
-     * position. See docs/status/trace-frontier-log.md for the measurements.
+     * <p>The values in this table were confirmed independently of that harness
+     * by measuring the fixture directly: taking the anchor as the source's final
+     * recorded row {@code S} and the target as the destination's first recorded
+     * row {@code D}, {@code (D - S) - (vbl(D) - vbl(S))} is 10 at every plain act
+     * advance, 9 at {@code ooz1 -> ooz2}, and 11 at all seven special-stage
+     * round trips.
      *
      * <p>Sonic 1 opts out ({@code -1}) because its special stage returns through
      * the results-screen presentation bridge, whose masked cost is owned by

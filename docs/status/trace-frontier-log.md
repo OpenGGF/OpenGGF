@@ -82595,3 +82595,116 @@ same class red (while flipping `TestBubblerObjectInstance` green and
 `TestModeTracePickerLaunchStatus` red). The class passes 9/9 in isolation on this
 tree. The three trace profiles, which are the ones that exercise the changed
 path, are byte-identical set-diffed both ways.
+
+## 2026-08-18 — S2 `seg4_ehz1 -> seg5_ehz2`: the residual `-1` was a contaminated anchor, not a missing ROM V-int
+
+Base `a53a84616`, isolated worktree, branch `bugfix/ai-s2-seg45-boundary`.
+
+**The brief's premise was wrong, and so was mine at the start.** The task was to
+find what the ROM spends between `seg4_ehz1`'s last row and `seg5_ehz2`'s first
+main-loop row worth exactly one V-int. The answer is **nothing**: no ROM cost is
+missing, and the masked-loss table in `TracePlaybackProfile` is correct as
+written.
+
+**Independent confirmation of the table.** Measured straight off the fixture,
+anchoring on the source's final recorded row `S` and the destination's first
+recorded row `D`, `(D - S) - (vbl(D) - vbl(S))` is:
+
+- `10` at every plain act advance (7 boundaries),
+- `9` at `ooz1 -> ooz2` (the tabled deviant),
+- `11` at all seven level -> special stage -> level round trips,
+- `6` at every S1 level -> level boundary and `0` at every S1 stage round trip.
+
+Every one of those equals the value the profile already carries. Nothing in the
+table needed changing, and no constant was added by this fix.
+
+**The actual defect.** `TraceRunReplayWalker.sourceTailVblankAtBoundary`
+reconstructs the source-tail anchor by projecting the object clock BACKWARDS from
+wherever the boundary wait stopped, charging one tick per movie row. At a
+`level_advance` boundary that wait runs 23 rows past the source's last recorded
+row (manifest `gap_admission_runs[0] = 23`), and on one of them —
+the row where the destination's load replaces the `ObjectManager` —
+`suppressedRowOwesVint` deliberately declines to service the V-int, on the stated
+premise that the load re-seeds the counter. It does not: the new manager is
+seeded with the old, un-advanced value. Per-row instrumentation of the window:
+
+```
+cursor 32759->32760  vbl 32510->32511   mode=LEVEL       (plays row S; vbl(S)=32511, exact)
+cursor 32760->32761  vbl 32511->32512   mode=LEVEL
+cursor 32761->32761  vbl 32512->32512   serviced=true    (fade rows; cursor+vbl advanced by the service)
+   ... 21 more serviced fade rows ...
+cursor 32782->32782  vbl 32533->32533   mode=TITLE_CARD  (load row: manager replaced, NOT serviced)
+```
+
+The engine's clock is **exactly right** on row `S` (32511, equal to the
+recording). The single dropped tick is then subtracted straight out of the
+anchor, which came out at `vbl(S) - 1 = 32510`, and every value derived from it
+landed one tick low — including the destination clock.
+
+**The fix.** Observe the anchor where it is defined — latched as the source's
+final recorded row is played — instead of reconstructing it afterwards. No
+constant, no new predicate; the value read is the engine's own clock. S1 is
+unaffected because its capture already happens with the cursor still on that row
+(zero rows of back-projection), and its chain output is byte-identical.
+
+**Why the chain looked healthy without it.** With the special-stage composition
+disabled, the S2 clock carried a large unreconciled offset across the uncompared
+stages (`~19366` by `seg5`) that happened to be **even**, so the parity-sensitive
+`Obj4B_ChkPlayers` `btst #0,(Vint_runcount+3).w` branch
+(docs/s2disasm/s2.asm:60988-61027) survived by luck. Enabling the composition
+removed the offset and exposed the anchor defect as a parity flip — which is what
+the previous rounds measured as "the boundary is one V-blank short".
+
+**Composition enabled.** `alignUncomparedInteriorReturnVblank` is now `true` for
+S2. Measured at the comparator bind, the engine clock equals the segment's
+recorded initial value at every S2 level bind of the run:
+
+| bind | rows consumed | engine | recorded | correct value |
+|---|---|---|---|---|
+| `seg2_ehz1` (stage return) | 1 | 10108 | 10108 | 10108 |
+| `seg3_ehz1` (stage return) | 1 | 20009 | 20009 | 20009 |
+| `seg4_ehz1` (stage return) | 1 | 31224 | 31224 | 31224 |
+| `seg5_ehz2` (act advance) | 0 | 32672 | 32673 | 32672 (`recorded - 1`) |
+| `seg6_ehz2` (stage return) | 1 | 46105 | 46105 | 46105 |
+| `seg7_ehz2` (stage return) | 1 | 56751 | 56751 | 56751 |
+
+Drift `0` everywhere. Before the anchor fix, with the composition enabled,
+`seg5_ehz2` bound at 32671 — the `-1` this round closes.
+
+**Frontier: unchanged, and stated plainly.** The S2 chain's reported failures are
+byte-identical to the control's — segment 11 (`arz1`), 188 physics errors, first
+mismatch at frame 3531 `queue.s2_nemesis_plc.busy` rom `false` engine `true`; the
+`seg7_ehz2` source-comparator walk failure; and the same three `[dynamic-art-gap]`
+axes (`seg4_ehz1 -> seg5_ehz2`, `ss_4 -> seg6_ehz2`, `ss_5 -> seg7_ehz2`) with
+identical field lists. **The brief's stated frontier — 122,139 errors at
+`seg5_ehz2` frame 524 — no longer exists on `develop` and had already gone before
+this round started.** This change buys clock correctness and unblocks the
+composition; it does not move the chain, and the remaining `seg4_ehz1 ->
+seg5_ehz2` gap axis (4 edges, `movie_logical_frame` one low) is a movie-cursor
+axis that is unaffected by the object clock and remains open.
+
+**Verification, this tree vs a clean control worktree at the same base
+`a53a84616`, `-Dsurefire.runOrder=alphabetical`, sequential per tree, reports
+cleared before each run.**
+
+| profile | control | mine | red-set diff |
+|---|---|---|---|
+| `-Ptrace-replay` | 788 tests, 3 red | 788 tests, 3 red | identical (the three chains) |
+| `-Ptrace-segments` | 70 tests, 55 red | 70 tests, 55 red | identical |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red | identical |
+| default | 15038 tests, 82 red / 15134 tests, 93 red (two runs) | 15121 tests, 84 red | subset of control run 2 |
+
+The default profile is not a usable discriminator at this base: two runs of the
+**same control tree** at the same commit, with `runOrder` pinned, gave 82 and 93
+red over 15038 and 15134 tests. This tree's 84-red set is a strict subset of
+control run 2's 93 — zero new red. The three
+`TestGameLoopSpecialStageEntryPresentation` failures that appear against control
+run 1 are present in control run 2 as well, and the class passes 9/9 in isolation
+here. The three trace profiles, which are the ones exercising the changed path,
+are byte-identical set-diffed both ways.
+
+`TestTracePlaybackProfile#otherGamesLeaveMovieClockAlignmentDisabledUntilMeasured`
+was updated: its `assertFalse` on S2's `alignUncomparedInteriorReturnVblank` is
+now `assertTrue`. That is the test recording a measurement that has now been
+made, not a demotion — it flips one assertion in the direction the evidence
+above establishes, and the S3K half of the same test is untouched.
