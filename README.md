@@ -228,6 +228,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K chain crosses its recorded interstitial spans
+  (`feature/ai-interstitial-timing`, merged 2026-08-18).** A recorder observes hardware
+  completions across the whole movie, but a run fixture only represents the segments it
+  compares; the spans between -- the special-stage results screen, the level reload, a locked
+  level intro -- still advanced the ROM's hardware ledger, so the recording's ordinals resumed
+  above where the engine's stood. On `s3k-sonic-tails-complete-emeralds` the engine held
+  `KOS_MODULE_QUEUE#14` and `KOS_DECOMPRESSION_QUEUE#27` against a recording that had moved to
+  `#24` and `#43`, and the chain aborted at the handoff. The engine's pending `MODULE#14` is
+  **byte-identical work** to the recording's `MODULE#24`; the offset is exactly the recorded
+  interstitial span. Crossing such a span now advances the production identity cursor **and
+  nothing else** -- it releases nothing, completes nothing, creates nothing, and every release
+  still requires the full kind, ordinal, fingerprint and boundary match against a
+  production-submitted, prepared job. The move is proved on both sides: the span must begin
+  exactly where production's ledger stands and end exactly where the next segment's recorded
+  ordinals begin, with production holding nothing pending, so a skew that is *not* the recorded
+  span fails loudly instead of being absorbed. `bk2_frame` is validated for shape and
+  discarded. Fixtures with no interstitial sidecar take the unchanged handoff path. The S3K run
+  fixture was re-recorded with the extended harness: **every per-segment payload is
+  byte-identical across all 63 segments**, the only additions being the interstitial sidecar and
+  a `recording_date` bump. The chain now advances past the handoff to a pre-existing frontier --
+  segment 2 diverging at frame 0 on entry state (`x_sub` rom `0x0C00` engine `0x3000`), which
+  the untouched control shows too. Verified at 790 tests / 3 red, the three chains only, with
+  `TestHardwareTimingAuthorityGuard` (24 tests) and `TestTraceFixtureCompressionGuard` green.
+
 - **The S1 chain accounts for the presentation bridge's own V-blank span
   (`bugfix/ai-s1-seg6-vblank-drift`, merged 2026-08-17).** The chain's cross-segment object
   V-blank clock ran **2,039 ticks behind** the recording by segment 6, which put Obj37's
