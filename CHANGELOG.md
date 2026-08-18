@@ -4,6 +4,28 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- A run-chain level segment now keeps production ownership across the ROM's
+  seamless in-level act advance. S3K changes level identity from inside the
+  level's own background-event dispatch -- `AIZ1BGE_Finish` writes
+  `move.w #1,(Current_zone_and_act).w` and calls `Load_Level` without leaving
+  `GameModeID_Level` or re-entering `Level:`
+  (docs/skdisasm/sonic3k.asm:104733-104746), then subtracts `d0=$2F00, d1=$80`
+  from both players, the objects and the camera in place (:104752-104768).
+  The recorder cuts segments on MODE changes, and that advance changes none,
+  so a recorded level segment spans it: `s3k-sonic-tails-complete-emeralds`
+  segment 2 is 4023 AIZ rows whose `camera_x` steps `0x2F10 -> 0x0010` at row
+  3243. `TraceRunPlaybackCoordinator` compared the live identity against the
+  segment's recorded ENTRY act only and failed the run two rows later.
+  `LevelManager.executeActTransition`, the single owner of that identity
+  change, now publishes the reached identity to the gameplay-session-owned
+  `RunLevelLoadTracker`, and the coordinator accepts the identities its own
+  current segment reached that way. Nothing else widens -- a death restart, an
+  interior return and an ordinary load all still arrive as level loads and are
+  still ownership losses -- and every row stays compared. The S3K Sonic+Tails
+  complete-emerald chain now runs segment 2 to closure and writes its first
+  report (17591 errors, first non-camera mismatch frame 1726 `sidekick_x
+  rom=0x28C2 engine=0x28C3`) instead of dying undiagnosed at BK2 cursor 12062.
+
 - A rolling sidekick that smashes an S3K cork floor now also drops the
   partner standing on it. `Obj_CorkFloor`'s roll-break branch caches
   `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`

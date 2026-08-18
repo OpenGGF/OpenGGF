@@ -83106,3 +83106,50 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   CPZ act 2 and special stage 6.
 - Command: `mvn -Ptrace-replay-r7 -Dtest=TestS2CompleteEmeraldRunChain
   -Dsonic2.rom.path=<s2 rom> test`.
+
+## 2026-08-18 - S3K Sonic+Tails complete-emerald chain crosses the AIZ1 -> AIZ2 seam
+
+- Branch `bugfix/ai-s3k-aiz1-aiz2-seam`, over `develop` at `ad3352ed4`.
+- **Frontier before:** `TestS3kSonicTailsCompleteEmeraldRunChain` died mid
+  segment 2 with `[walk-failure] segment 2 lost production ownership before
+  source closure (mode=LEVEL, level=LevelIdentity[loadGeneration=3,
+  progressionZone=0, romZone=0, act=1], BK2 cursor=12062)`. No segment 2
+  comparator report was written, because a report is only emitted when a
+  segment closes.
+- **The brief's framing was wrong on one point.** There was no fresh level load
+  at that row: instrumenting `RunLevelLoadTracker` showed the ONLY load in the
+  whole drive was `Receipt[cause=INTERIOR_RETURN, ... act=0]` at generation 3,
+  the special-stage return that opened segment 2. `loadGeneration` never moved
+  again; only the act did.
+- **Cause -- harness plumbing, as this log predicted.** The recorder cuts
+  segments on MODE changes, and S3K's seamless act advance changes none:
+  `AIZ1BGE_Finish` writes `move.w #1,(Current_zone_and_act).w` and calls
+  `Load_Level` from inside the level's own background-event dispatch, without
+  leaving `GameModeID_Level` or re-entering `Level:`
+  (`docs/skdisasm/sonic3k.asm:104733-104746`), then subtracts `d0=$2F00,
+  d1=$80` from both players, the objects and the camera in place
+  (`:104752-104768`). Segment 2 is 4023 recorded AIZ rows that span it: its
+  `camera_x` steps `0x2F10 -> 0x0010` at row 3243, the ROM's own `-$2F00`.
+  `TraceRunPlaybackCoordinator.ownsCurrentSegment` compared the live identity
+  against the segment's recorded ENTRY act only, so ownership was lost two
+  rows later.
+- **Fix.** `LevelManager.executeActTransition` -- the single owner of that
+  identity change, and the entry point AIZ uses directly rather than through
+  the frame-top seamless request -- publishes the reached identity to the
+  gameplay-session-owned `RunLevelLoadTracker`. The coordinator retains those
+  identities for the current segment only and accepts them as ownership.
+  Nothing else widens: a death restart, an interior return and an ordinary
+  load still arrive as level LOADS and are still ownership losses, and every
+  row remains compared, so an advance the recording did not take still
+  diverges immediately.
+- **Frontier after:** segment 2 now runs all 4023 rows and CLOSES, so its
+  report exists for the first time: 17591 comparator errors, first non-camera
+  mismatch frame 1726 `sidekick_x rom=0x28C2 engine=0x28C3`. The chain then
+  stops at `Segment 2 (aiz_2) exit boundary (giant_ring) was never observed`,
+  the downstream consequence of that Tails desync.
+- **Unresolved:** the one-pixel Tails x offset at row 1726 (already recorded in
+  the AIZ1 cork-floor entry above) is now the frontier and is undiagnosed. It
+  is a real gameplay divergence, not plumbing: Sonic's own fields are clean at
+  that row.
+- Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
+  -Ds3k.rom.path=<s3k locked-on .gen> test`.

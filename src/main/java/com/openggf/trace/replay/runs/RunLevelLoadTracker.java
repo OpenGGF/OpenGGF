@@ -23,12 +23,49 @@ public final class RunLevelLoadTracker {
     private RunLevelLoadCause nextCause = RunLevelLoadCause.ORDINARY;
     private long lastCompletedLoadGeneration = -1;
     private Receipt latest;
+    private RunPlaybackObservation.LevelIdentity seamlessAdvance;
+    private long seamlessAdvanceOrdinal;
 
     public void prime(LevelManager levelManager) {
         Objects.requireNonNull(levelManager, "levelManager");
         lastCompletedLoadGeneration =
                 levelManager.getCompletedProductionLoadGeneration();
         latest = null;
+        seamlessAdvance = null;
+    }
+
+    /**
+     * Records a seamless in-level act advance production has already applied.
+     *
+     * <p>The ROM performs this advance from inside the level's own background
+     * event handler -- {@code AIZ1BGE_Finish} writes
+     * {@code move.w #1,(Current_zone_and_act).w} and calls {@code Load_Level}
+     * without leaving {@code GameModeID_Level} or re-entering the {@code Level:}
+     * routine (docs/skdisasm/sonic3k.asm:104733-104746) -- and the engine
+     * mirrors that with an act transition rather than a {@code FULL} load, so
+     * the completed production load generation deliberately does not move. The
+     * identity therefore has to be published separately from a load receipt.
+     */
+    public void observeSeamlessAdvance(LevelManager levelManager) {
+        Objects.requireNonNull(levelManager, "levelManager");
+        if (levelManager.getCurrentLevel() == null) {
+            return;
+        }
+        seamlessAdvance = new RunPlaybackObservation.LevelIdentity(
+                generation(),
+                levelManager.getCurrentZone(),
+                levelManager.getRomZoneId(),
+                levelManager.getCurrentAct());
+        seamlessAdvanceOrdinal = Math.incrementExact(seamlessAdvanceOrdinal);
+    }
+
+    public Optional<RunPlaybackObservation.LevelIdentity> seamlessAdvance() {
+        return Optional.ofNullable(seamlessAdvance);
+    }
+
+    /** Monotonic count of observed seamless advances; an edge detector only. */
+    public long seamlessAdvanceOrdinal() {
+        return seamlessAdvanceOrdinal;
     }
 
     public void markNext(RunLevelLoadCause cause) {

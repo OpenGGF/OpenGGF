@@ -568,6 +568,7 @@ abstract class AbstractRunChainTest {
         private long admittedStepOrdinal;
         private RunPlaybackObservation productionOwnerObservation;
         private int productionOwnerSegmentIndex = -1;
+        private long reportedSeamlessAdvanceOrdinal;
 
         private HeadlessRunCoordinatorAdapter(
                 TraceRunManifest run, Bk2Movie movie,
@@ -581,6 +582,8 @@ abstract class AbstractRunChainTest {
             this.levelLoads = SessionManager.getCurrentGameplayMode()
                     .runLevelLoads();
             this.levelLoads.prime(GameServices.level());
+            this.reportedSeamlessAdvanceOrdinal =
+                    levelLoads.seamlessAdvanceOrdinal();
         }
 
         private void activateInitial(GameMode mode) {
@@ -621,6 +624,7 @@ abstract class AbstractRunChainTest {
 
         private void afterStep(GameMode mode) {
             admittedStepOrdinal++;
+            reportInLevelAdvance();
             RunPlaybackObservation current = observation(mode, false, 0, false);
             RunPlaybackObservation step = productionOwnerSegmentIndex
                     == coordinator.currentSegmentIndex()
@@ -638,6 +642,22 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "unexpected coordinator action after a headless step: " + action);
             }
+        }
+
+        /**
+         * Forwards a seamless in-level act advance production applied inside
+         * the step that just ran, so the coordinator can keep source ownership
+         * across it. The tracker is gameplay-session owned and is written by
+         * {@code LevelIterationAdmissionController} on the transition frame.
+         */
+        private void reportInLevelAdvance() {
+            long ordinal = levelLoads.seamlessAdvanceOrdinal();
+            if (ordinal == reportedSeamlessAdvanceOrdinal) {
+                return;
+            }
+            reportedSeamlessAdvanceOrdinal = ordinal;
+            levelLoads.seamlessAdvance()
+                    .ifPresent(coordinator::observeInLevelAdvance);
         }
 
         private static RunPlaybackObservation withProductionOwner(
