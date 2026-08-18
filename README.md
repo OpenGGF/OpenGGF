@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S1 marks the level inactive before the end-of-act fade (`bugfix/ai-s1-dynart-skew`, merged
+  2026-08-18).** `Got_NextLevel` writes `move.w #1,(f_restart).w` from **inside** `ExecuteObjects`
+  (`s1disasm/_incObj/3A Got Through Card.asm:207`), and `Level_MainLoop` tests it in the
+  instruction immediately after `jsr (ExecuteObjects).l` and branches straight to `GM_Level`
+  (`sonic.asm:3006-3017`, the `FixBugs = 0` arm this build takes) -- so that pass never reaches
+  `DeformLayers`, and `GM_Level`'s `ClearPLC` + `PaletteFadeOut` (`:2711-2712`) run with **no
+  object pass at all**. The engine raised no level-exit until the fade's completion callback, so
+  the whole post-act fade ran as ordinary gameplay frames: the ROM performed **zero** player DPLC
+  transfers for 202 rows, while the engine published mapping frames 9 and 10 -- two extra
+  transfers, four extra ledger edges, the `+4/+2` skew that then compounded to `+6`. Sonic 2
+  already models the identical ROM shape via `Level_Inactive_flag`; S1 simply never had it.
+  `TestS1CompleteEmeraldRunChain` goes from **10 failing axes to 8**, with `mz2 -> mz2_2` and
+  `mz3 -> mz3_2` fully green. **It also settles a question that gated the rule-4 PLC sidecar
+  programme:** the skew is *not* upstream of the segment 12/15 PLC-arming divergence, killed twice
+  -- the gaps before segments 8 and 11 carry the same skew and those segments are green, and with
+  the skew removed 12/15 still fail identically. Verified at 790 tests / 3 red, the three chains
+  only.
+
 - **S3K's AIZ vine angle survives a level load (`bugfix/ai-s3k-aiz2-f384`, merged 2026-08-18).**
   `AIZ_vine_angle` is advanced by `ChangeRingFrame` every Level main-loop iteration
   (`skdisasm/sonic3k.asm:9693`) and is **deliberately outside** the oscillating-table clear that

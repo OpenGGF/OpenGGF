@@ -4,6 +4,26 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 1's end-of-act card now stops the level main loop before its fade, so
+  the post-act fade no longer runs as ordinary gameplay frames. `Got_NextLevel`
+  writes `move.w #1,(f_restart).w` from inside `ExecuteObjects`
+  (docs/s1disasm/_incObj/3A Got Through Card.asm:207) and `Level_MainLoop` tests
+  it in the instruction immediately after `jsr (ExecuteObjects).l`, branching
+  straight to `GM_Level` (docs/s1disasm/sonic.asm:3006-3017, the
+  `Revision<>0` / `FixBugs = 0` arm this build takes), so that pass never
+  reaches `DeformLayers` and `GM_Level`'s `ClearPLC` + `PaletteFadeOut`
+  (docs/s1disasm/sonic.asm:2711-2712) run with no further object pass at all.
+  The engine kept executing the level body for the whole fade, so Sonic's walk
+  animation kept stepping and published player DPLC transfers the ROM never
+  performs -- two extra transfers (four extra ledger edges) in the
+  `ghz3_2 -> mz1` gap of `s1-sonic-complete-withemeralds` and three more in
+  `mz3_2 -> syz1`. That left every later dynamic-art edge four ordinals and two
+  transfer ids adrift, failing six `dynamic-art-gap` axes of
+  `TestS1CompleteEmeraldRunChain`. Two of those six are now green and the other
+  four are reduced to a single residual `movie_logical_frame` off-by-one on the
+  level-load transfer; the chain's axis count drops from ten to eight. This is
+  the same correction, the same mechanism and the same ROM shape as Sonic 2's
+  `Level_Inactive_flag` handling in `ResultsScreenObjectInstance`.
 - Sonic 2 now clears `RNG_seed` on every act load. `Level_ClrRam` wipes
   `MiscLevelVariables` (docs/s2disasm/s2.asm:4806-4809) and `RNG_seed` lives
   inside that block (docs/s2disasm/s2.constants.asm:1412-1421,1467), so each act
