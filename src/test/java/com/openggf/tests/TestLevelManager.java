@@ -104,7 +104,7 @@ public class TestLevelManager {
     public void failedLoadClearsPendingBonusReturnRespawnState() throws Exception {
         LevelManager levelManager = GameServices.level();
         levelManager.restorePersistentRespawnOnNextObjectReset(
-                new PersistentRespawnState(new long[]{1L}, new long[0]));
+                new PersistentRespawnState(new long[]{1L}, new long[0], new long[0]));
 
         assertThrows(IndexOutOfBoundsException.class,
                 () -> levelManager.loadZoneAndAct(-1, 0));

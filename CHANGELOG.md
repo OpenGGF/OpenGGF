@@ -4,6 +4,29 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- S3K's permanent-destroy latch now survives a giant-ring special-stage round
+  trip, and is back in place before the return load's first window scan. S3K has
+  no opt-in remember flag: `Load_Sprites` gives every six-byte layout entry its
+  own `Object_respawn_table` byte and always sets bit 7 on load
+  (`docs/skdisasm/sonic3k.asm:37745-37766`). Only the `Go_Delete_SpriteSlotted`
+  family clears it again (`bclr #7,(a2)`, `:179056-179061`), so an object ended
+  through `Delete_Current_Sprite` -- AIZ's rock, smashed by the player
+  (`:44022-44057`) -- stays gone for the rest of the level. The giant ring sets
+  `Respawn_table_keep = 1` (`:128409-128412`), which makes the reload skip the
+  table wipe at `:37429-37438`, so the table is already populated when
+  `Load_Sprites` scans the entry window.
+
+  The engine models that latch as the placement controller's
+  `destroyedInWindow` set, but `PersistentRespawnState` carried only
+  `remembered`/`stayActive` across the round trip, and the restore ran after
+  `reset()` had already scanned the entry window. On
+  `s3k-sonic-tails-complete-emeralds` the AIZ1 rock at `(0x1D00, 0x04A9)`,
+  smashed during segment 0, was therefore re-created on the segment-2 return and
+  stopped Sonic dead at `x = 0x1CDD` -- the recorded run passes straight through
+  at `x_speed 0x0589`. The latch bits now travel with the other two and are
+  restored before the scan. Segment 2's frontier moves from 80379 errors at
+  frame 94 (`x` rom=`0x1CE2` engine=`0x1CDD`) to 74575 at frame 384
+  (`x` rom=`0x2060` engine=`0x2070`). The S1 and S2 chains are unchanged.
 - A run chain's return from an uncompared special-stage interior lost its first
   gameplay frame to the comparator. `TraceRunReplayWalker.BoundaryProbe` pins a
   prepared BK2 row to the delegate that prepared it, so a handoff observed

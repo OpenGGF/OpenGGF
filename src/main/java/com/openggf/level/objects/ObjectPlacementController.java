@@ -436,7 +436,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * {@link PersistentRespawnState}.
      */
     PersistentRespawnState capturePersistentRespawn() {
-        return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray());
+        return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray(),
+                destroyedInWindow.toLongArray());
     }
 
     /**
@@ -453,6 +454,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
         remembered.or(BitSet.valueOf(state.rememberedBits()));
         stayActive.or(BitSet.valueOf(state.stayActiveBits()));
+        // S3K's permanent-destroy latch lives in destroyedInWindow, not in
+        // `remembered`: the ROM keeps the whole Object_respawn_table across a
+        // giant-ring special-stage round trip (Respawn_table_keep = 1,
+        // docs/skdisasm/sonic3k.asm:128409-128412, which makes the reload skip
+        // the table wipe at :37429-37438), so a bit 7 left set by
+        // Delete_Current_Sprite must survive the return.
+        destroyedInWindow.or(BitSet.valueOf(state.destroyedInWindowBits()));
     }
 
     int restoreRewindState(
@@ -540,6 +548,22 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void reset(int cameraX) {
+        reset(cameraX, null);
+    }
+
+    /**
+     * Resets placement for a level (re)load, re-establishing {@code state}
+     * before the initial-window scan runs.
+     * <p>
+     * The ordering is the point. On a round trip that sets
+     * {@code Respawn_table_keep} the ROM never wipes
+     * {@code Object_respawn_table} at all -- the wipe at
+     * docs/skdisasm/sonic3k.asm:37429-37438 is skipped -- so the table is
+     * already populated when {@code Load_Sprites} first scans the entry
+     * window. Restoring after that scan instead would let a spawn the ROM
+     * still has latched be re-created for the entry window.
+     */
+    void reset(int cameraX, PersistentRespawnState state) {
         active.clear();
         remembered.clear();
         stayActive.clear();
@@ -554,6 +578,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         fwdCounter = 1;
         bwdCounter = 1;
         Arrays.fill(objState, 0);
+        restorePersistentRespawn(state);
 
         if (counterBasedRespawn) {
             resetCounterBased(cameraX);
