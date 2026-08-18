@@ -25,6 +25,26 @@ All notable changes to the OpenGGF project are documented in this file.
   it changes which observer sees an already-executed frame, never engine state
   and never what the engine runs. The chain's segment-2 frontier moves from
   frame 0 to frame 94 (`x` rom=`0x1CE2` engine=`0x1CDD`).
+- Sonic 1 no longer drops the level-load player DMA when a run's movie clock
+  spans the load. `Sonic_LoadGfx` decodes one frame per call and hands it to the
+  V-blank DMA through `f_sonframechg`
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2409), so two stagings are always
+  separated by a V-int. Around a level load the ROM makes exactly two: the
+  `Level_LoadObj` `ExecuteObjects` pass (docs/s1disasm/sonic.asm:2895-2897),
+  served by the first V-int of the `Level_Delay` / `PalFadeIn_Alt` tail
+  (docs/s1disasm/sonic.asm:2956-2961), and the first `Level_MainLoop` pass
+  (docs/s1disasm/sonic.asm:2998), served by the V-int after it. The engine does
+  not spend the tail's rows, so both stagings arrived on one engine row and the
+  second silently replaced the first -- one of the ROM's two DMAs was never
+  published, and every later edge in the destination segment carried an ordinal
+  two short.
+
+  A staging taken while an earlier one is still held for the pre-main-loop tail
+  is now queued behind it instead of overwriting it, and is published by the
+  V-blank that follows the held one. On `s1-sonic-complete-withemeralds` this
+  clears segment 7 (`mz1`) outright, from 2931 comparator errors to none, and
+  takes segment 12 (`mz2_3`) from 11263 to 40 -- both had diverged at frame 1
+  on `dynamic_art.edges` with the ROM recording two edges and the engine none.
 - Run fixtures may now carry a run-level `hardware_timing_interstitial.jsonl`
   recording the hardware-work ordinals the ROM consumed in the spans between
   structural segments -- the special-stage results screen, the level reload, a

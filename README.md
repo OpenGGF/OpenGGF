@@ -244,7 +244,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   at frame 1 on `dynamic_art.edges` -- **14,261 total errors across the run down to 107**.
   Segment 12's remaining failure has changed character to `queue.s1_nemesis_plc.prepared`,
   matching segment 15's, so the next S1 target is shared between two segments. Verified at 790
-  tests / 3 red, the three chains only.
+  tests / 3 red, the three chains only. The fix was accepted on a check set before it ran:
+  segments 7 and 12 shared a signature, so a correct cause had to move both, and moving only one
+  would have been evidence the cut was wrong.
 
 - **The S2 `seg5_ehz2` blocker is a parity-flipped badnik target, not a sidekick position defect
   (`bugfix/ai-s2-sidekick-y`, documentation, merged 2026-08-18).** `ef002222f` recorded the

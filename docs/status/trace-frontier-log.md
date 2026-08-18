@@ -82528,3 +82528,70 @@ OOZ2; adding an ehz2 exception would be a constant measured from this fixture's
 own rows, which hard rule 3 forbids and which would desync the first different
 recording. **No behavioural change was landed.** The composition stays disabled:
 enabling it moves the chain frontier backwards from segment 11 to segment 7.
+## S1 `s1-sonic-complete-withemeralds` chain -- the dropped level-load player DMA
+
+`mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS1CompleteEmeraldRunChain test`,
+worktree `bugfix/ai-s1-seg7-edges2` off `06846f0cf`, S1 ROM `s1.gen`.
+
+**Before.** 10 axes. `[segment-physics]` segment 7 (`mz1`) 2931 errors, first
+non-camera mismatch at frame 1, `dynamic_art.edges` rom `[0, 1]` engine `[]`;
+segment 12 (`mz2_3`) 11263 errors, identical signature; segment 15 (`mz3_2`) 6
+errors at frame 102 on `queue.s1_nemesis_plc.prepared`; segment 16 (`syz1`) 61
+errors at frame 2218 on `y_speed`. Five `[dynamic-art-gap]` axes and the `syz2`
+`[walk-failure]`.
+
+**Cause.** Not a misplaced settle. A probe on `prepareS1` / `flushS1Preparation`
+over movie rows 27180-27500 showed the engine staging twice on the admission row
+27467 -- `mf=1` (the `Level_LoadObj` prelude) immediately overwritten by `mf=5`
+(the first `Level_MainLoop` pass) -- and publishing only the survivor. The ROM
+publishes both: `mf=1` in the gap at row 27441 and `mf=5` inside the segment at
+frame 1. `Sonic_LoadGfx` decodes one frame per call and DMAs it via
+`f_sonframechg` (docs/s1disasm/_incObj/01 Sonic.asm:2394-2409), and the two
+calls are separated by the whole `Level_Delay` / `PalFadeIn_Alt` tail
+(docs/s1disasm/sonic.asm:2895-2897, 2956-2961, 2998), so they can never
+coalesce. The engine does not spend the tail's rows, so both landed on one row.
+Every later in-segment edge was therefore two ordinals short, which is the whole
+2931 and 11263 error mass.
+
+**After.** Segment 7 is green. Segment 12 falls to 40 errors and its first
+mismatch moves to frame 101 on `queue.s1_nemesis_plc.prepared` -- the same
+signature segment 15 already had, i.e. a different, PLC-side defect. Segments 15
+and 16 are unchanged. The two segments the brief predicted would move together
+did move together, which is the evidence the cut was in the right place.
+
+**New frontier.** Still 10 axes; total segment-physics error mass 14261 -> 107.
+- `[segment-physics]` segment 12 (`mz2_3`), 40 errors, frame 101,
+  `queue.s1_nemesis_plc.prepared` rom `true` engine `false`.
+- `[segment-physics]` segment 15 (`mz3_2`), 6 errors, same signature at frame 102.
+- `[segment-physics]` segment 16 (`syz1`), 61 errors, frame 2218, `y_speed`
+  rom `-0283` engine `-0383`.
+- `[walk-failure]` `syz2` row 70, `queue.s1_nemesis_plc.remaining_work` 1 vs 24.
+- Six `[dynamic-art-gap]` axes, one more than before: `mz3 -> mz3_2` is newly
+  red. **Reported as a regression, not smoothed over.** The gap axes compare
+  absolute ordinals, and the engine still runs the source level's Sonic
+  animation for ~15 rows into `ghz3_2 -> mz1` and `mz3_2 -> syz1`, where the ROM
+  records only the load transfer (2 edges vs the engine's 6 and 8). That surplus
+  was previously cancelled at some boundaries by the per-load deficit this fix
+  removed; with the deficit gone the surplus shows unmasked and is now a uniform
+  `+2` transfers rather than a mixture of `+1` and `0`. The remaining defect is
+  the gap-side surplus, not the fix.
+
+**Verification, this tree vs a clean control worktree at the same base
+`06846f0cf`, `-Dsurefire.runOrder=alphabetical`, sequential per tree, reports
+cleared before each run.**
+
+| profile | control | mine | red-set diff |
+|---|---|---|---|
+| `-Ptrace-replay` | 790 tests, 3 red | 790 tests, 3 red | identical (the three chains) |
+| `-Ptrace-segments` | 70 tests, 55 red | 70 tests, 55 red | identical |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red | identical |
+| default | 15157 tests, 48 red | 15157 tests, 49 red | `TestGameLoopSpecialStageEntryPresentation` |
+
+The default-profile delta is ambient, not caused by the change: the failure is
+`ROM read out of bounds: offset=0xe34ee + 260 > size=524288` inside
+`Sonic2SpecialStageDataLoader`, i.e. an S1 ROM leaked into the S2 special-stage
+provider by fork reuse, and a second control run at the same base produces the
+same class red (while flipping `TestBubblerObjectInstance` green and
+`TestModeTracePickerLaunchStatus` red). The class passes 9/9 in isolation on this
+tree. The three trace profiles, which are the ones that exercise the changed
+path, are byte-identical set-diffed both ways.
