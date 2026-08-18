@@ -82452,3 +82452,79 @@ are green on both trees with zero failures and zero errors, the executed-class
 sets are identical (47 classes reporting), and neither is reachable from the run
 chain. Flagged rather than smoothed over: the counting is unstable, not the
 result.
+## 2026-08-18 - S2 seg5_ehz2 "sidekick_y" is a missed Buzz Bomber shot, not a coordinate bug
+
+- Dedicated worktree on branch `bugfix/ai-s2-sidekick-y`, based on `06846f0cf`.
+- Control, composition disabled (as shipped):
+  `mvn -Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain
+  "-Dsonic2.rom.path=$S2_ROM" test`
+  -> 1 test, 1 failure. `TestS2CompleteEmeraldRunChain` frontier is
+  **segment 11 (`seg7_ehz2`), 188 errors, first non-camera mismatch frame 3531
+  `queue.s2_nemesis_plc.busy` rom=false engine=true**. `seg7` (= `seg5_ehz2`)
+  report `errorCount` 0.
+- Enabling `TracePlaybackProfile.SONIC_2`'s `alignUncomparedInteriorReturnVblank`
+  reproduces the documented regression exactly: **segment 7 (`seg5_ehz2`),
+  122139 errors, first non-camera mismatch frame 524 `sidekick_y`
+  rom=0x0271 engine=0x0272**.
+
+### What the divergence actually is
+
+`ef002222f` recorded this as a latent `sidekick_y` defect on Tails' hurt
+transition. Instrumenting the engine refutes that framing:
+
+- `AbstractPlayableSprite.applyHurt` is **never entered** for Tails anywhere
+  near this position in the whole chain when the composition is enabled. The
+  engine does not hurt Tails at frame 0x020C at all; it keeps him rolling, and
+  0x0272 is the plain gravity integration of frame 0x020B
+  (`0x02776300 - 0x56300 = 0x02720000`).
+- The ROM's 0x0271 is that same integration minus the `subq.w #1,y_pos(a0)` in
+  `Tails_ResetOnFloor_Part2` (docs/s2disasm/s2.asm:41023-41031), reached from
+  `Hurt_Sidekick`'s `jsrto JmpTo_Sonic_ResetOnFloor_Part2`
+  (docs/s2disasm/s2.asm:85502-85504) via the object-id redirect at
+  docs/s2disasm/s2.asm:38127-38131. The engine already models this correctly in
+  `PlayableResetOnFloorRadiusTransition`; it simply never runs here.
+- The one-pixel delta is therefore a coincidence of magnitude between two
+  different states (ROM hurt, engine rolling), not a centre-versus-top-left
+  mix-up. The comparator reports `sidekick_y` first only because it precedes
+  the velocity and routine columns in row order.
+
+### Root cause
+
+The ROM hurt comes from a Buzz Bomber stinger. `Obj4B_ChkPlayers`
+(docs/s2disasm/s2.asm:60988-61027) picks its target with
+`btst #0,(Vint_runcount+3).w` -- MainCharacter on even ticks, Sidekick on odd --
+and then requires the target to sit in an `$28..$30` horizontal strip.
+
+At seg5 frame 0x01ED the ROM has Buzzer x=0x06A6 and Sonic x=0x0679
+(distance 45, inside the strip) with `vblank_counter` 0x818E, an **even** tick,
+so it targets Sonic and enters `Obj4B_Shooting`. Thirty frames later
+`Obj4B_ShootProjectile` spawns the stinger, which hits Tails at frame 0x020C.
+
+With the composition enabled the engine's object-visible V-blank clock in
+`seg5_ehz2` is uniformly **one tick low**: measured over frames 0x01AF-0x01ED
+by matching the probe's `player_x` against the fixture, `engineVint -
+recordedVblank = -1` at every sampled frame. The Buzzer therefore evaluates
+`btst #0` on an odd tick, targets Tails (8px away, outside the strip), never
+fires, and the stinger that hurts Tails never exists.
+
+With the composition disabled the clock's absolute value is unrelated to the
+recording but its **parity at this frame happens to be even**, so the shot fires
+and the segment passes. The wrong clock was masking a residual -1, not a
+sidekick defect.
+
+### Independent corroboration, and why nothing was landed
+
+The chain's own dynamic-art gap axis already reports the same -1 at the
+**seg4_ehz1 -> seg5_ehz2** boundary, identically and in **both**
+configurations: `run_gap.edge[8..11].movie_logical_frame` expected
+32921/32922/32929/32930, actual 32920/32921/32928/32929. seg5 is entered by a
+plain level advance, not a special-stage return, so the composition does not
+cause this frame loss -- it only makes it matter, by aligning the absolute clock
+so the residual -1 flips a ROM parity gate.
+
+Closing it needs a ROM-derived account of one V-blank at that inter-level
+boundary. `interLevelNonAdvancingMovieRows` is 10 for every S2 destination bar
+OOZ2; adding an ehz2 exception would be a constant measured from this fixture's
+own rows, which hard rule 3 forbids and which would desync the first different
+recording. **No behavioural change was landed.** The composition stays disabled:
+enabling it moves the chain frontier backwards from segment 11 to segment 7.

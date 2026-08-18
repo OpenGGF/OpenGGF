@@ -250,7 +250,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   at that boundary; an EHZ2 entry-mask exception would be a constant measured from this
   fixture's own rows, so **nothing was tuned and no behavioural change is landed**. The
   composition stays disabled: enabling it moves the chain frontier back from segment 11 to
-  segment 7.
+  segment 7. The corrected diagnosis matters beyond this boundary: the previous one would have
+  sent the next round hunting a sidekick hurt path that never executes.
 
 - **A run comparator attaching behind a detached-prepared row no longer misses its first frame
   (`bugfix/ai-aiz2-xsub-entry`, merged 2026-08-18).** `TraceRunReplayWalker.BoundaryProbe` pins a
