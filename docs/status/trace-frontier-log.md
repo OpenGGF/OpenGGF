@@ -83077,3 +83077,32 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   diagnosed.
 - Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
   -Ds3k.rom.path=<s3k locked-on .gen> test`.
+## S2 complete-emerald chain: segment 12 (`seg8_cpz1`) closure -- CPZ Grabber dive phase
+
+- Branch `bugfix/ai-s2-seg12-closure`, over `develop` at `29bc8edda`.
+- **Frontier before:** `TestS2CompleteEmeraldRunChain` admitted segment 12 and
+  ran 5212 of its 6613 rows before
+  `[walk-failure] segment 12 lost production ownership before source closure
+  (mode=TITLE_CARD, level=LevelIdentity[loadGeneration=10, progressionZone=1,
+  romZone=13, act=0], BK2 cursor=66418)`.
+- **Not plumbing, and not an act clear.** The reloaded identity is `act=0` --
+  the SAME act -- so the fresh load is a death restart, not the advance into
+  CPZ act 2. A new standalone lane,
+  `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay`, reproduces the divergence
+  outside the chain at the identical first error (frame 1541, `x`
+  expected `0x0B25` actual `0x0B24`, 14294 errors), so the defect is
+  pre-existing in CPZ act 1 and independent of the run harness.
+- **Cause.** The CPZ Grabber (`ObjA7`) started its dive a frame late: the
+  engine's delay-to-dive transition returned without applying the `y_vel` that
+  `loc_38EA2` installs, although `ObjA7_Main` calls `ObjectMove` after the
+  routine on every frame (`s2.asm:76677-76684`, `76745-76749`). The grab and
+  the legs' `loc_38FE8` pin therefore landed a frame late, Sonic missed the
+  capture, and the run diverged into a death.
+- **Frontier after:** segment 12 closes with 2 comparator errors (single-frame
+  `sidekick_status_byte`, frames 2700 and 2797) and the chain reaches
+  `[walk-failure] segment 15 lost production ownership before source closure
+  (mode=TITLE_CARD, level=LevelIdentity[loadGeneration=12, progressionZone=1,
+  romZone=13, act=1], BK2 cursor=83819)` -- three segments further on, past
+  CPZ act 2 and special stage 6.
+- Command: `mvn -Ptrace-replay-r7 -Dtest=TestS2CompleteEmeraldRunChain
+  -Dsonic2.rom.path=<s2 rom> test`.

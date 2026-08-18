@@ -175,7 +175,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROL -> updatePatrol(player);
-            case DELAY -> updateDelay();
+            case DELAY -> updateDelay(player);
             case DIVING -> updateDiving(player);
             case CARRYING -> updateCarrying();
             case RELEASING -> updateReleasing();
@@ -233,7 +233,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         return dy > -DETECT_RANGE_Y && dy <= 0;
     }
 
-    private void updateDelay() {
+    private void updateDelay(AbstractPlayableSprite player) {
         delayTimer--;
         if (delayTimer < 0) {
             // Start diving
@@ -241,7 +241,42 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             diveTimer = DIVE_TIMER_INIT;
             yVelocity = DIVE_VELOCITY;
             legsFrame = 4; // Switch to larger legs frame during dive
+
+            // ROM parity: ObjA7_Main runs the sub-state routine and then calls
+            // ObjectMove UNCONDITIONALLY every frame (s2.asm:76677-76684), so the
+            // frame that ENDS the delay already travels by the y_vel that
+            // loc_38EA2 (s2.asm:76745-76749) just installed -- it sets
+            // y_vel = $200 and objoff_2C = $40 and returns straight into that
+            // ObjectMove. Returning here without moving cost the dive one frame,
+            // putting the whole descent (and therefore the legs' touch overlap,
+            // the objoff_30 handshake and the grab itself) a frame behind the
+            // ROM. objoff_2C is NOT decremented on this frame -- loc_38EB4 only
+            // sees it from the next one -- so diveTimer stays at its initial
+            // value here, exactly as the ROM's counter does.
+            //
+            // The legs latch on this frame too: ObjA8 runs after the body in the
+            // same frame, and loc_38F88's gate (s2.asm:76770) is
+            // cmpi.b #4,routine_secondary(a1), which the line above has just
+            // satisfied. Its collision_property was set by the player's own
+            // TouchResponse earlier in the frame, i.e. against the pre-ObjectMove
+            // position -- so the check runs before the move below, exactly as it
+            // does on every other diving frame.
+            if (player != null && checkGrabCollision(player)) {
+                pendingGrabPlayer = player;
+            }
+            applyDiveMove();
         }
+    }
+
+    /**
+     * The vertical half of ObjA7_Main's trailing ObjectMove
+     * (s2.asm:76677-76684): 16.8 fixed-point position += y_vel.
+     */
+    private void applyDiveMove() {
+        int yPos32 = (currentY << 8) | (ySubpixel & 0xFF);
+        yPos32 += yVelocity;
+        currentY = yPos32 >> 8;
+        ySubpixel = yPos32 & 0xFF;
     }
 
     private void updateDiving(AbstractPlayableSprite player) {
@@ -276,11 +311,8 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             yVelocity = -yVelocity;
         }
 
-        // Move vertically using 16.8 fixed point math
-        int yPos32 = (currentY << 8) | (ySubpixel & 0xFF);
-        yPos32 += yVelocity;
-        currentY = yPos32 >> 8;
-        ySubpixel = yPos32 & 0xFF;
+        // Move vertically using 16.8 fixed point math (ObjA7_Main's ObjectMove)
+        applyDiveMove();
     }
 
     private boolean checkGrabCollision(AbstractPlayableSprite player) {
@@ -373,21 +405,26 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT);  // Per disassembly line 76221
 
-        // ROM parity: on the frame the grab is consumed, ObjA8 routine 4
-        // loc_38FE8 (s2.asm:76790-76799) pins the grabbed player's x_pos/y_pos to
-        // the legs sub-object position (body x, body y + $10). Snap immediately so
-        // the player's position matches the ROM on the grab frame, not one frame
-        // later via updateCarrying().
-        player.setX((short) (currentX - player.getWidth() / 2));
-        player.setY((short) (currentY + 0x10 - player.getHeight() / 2));
-
-        // Reverse dive direction to go back up
+        // Reverse dive direction to go back up. ObjA7_GrabCharacter does this
+        // BEFORE returning into ObjA7_Main's ObjectMove (s2.asm:76771-76779):
+        // tst.w y_vel / neg.w y_vel, then the objoff_2C reflection.
         if (yVelocity > 0) {
             yVelocity = -yVelocity;
             // Recalculate remaining time
             int remaining = DIVE_TIMER_INIT - diveTimer;
             diveTimer = remaining + 1;
         }
+
+        // ROM parity: on the frame the grab is consumed the body still travels --
+        // ObjA7_Main's trailing ObjectMove (s2.asm:76677-76684) runs after the
+        // routine, now with the negated y_vel -- and only THEN does ObjA8, aligned
+        // to the moved body by Obj_AlignChildXY (body_y + $10, s2.asm:76681-76684),
+        // pin the grabbed player's x_pos/y_pos to itself in loc_38FE8
+        // (s2.asm:76790-76799). Pinning before that move left the player two
+        // pixels below the ROM on the grab frame.
+        applyDiveMove();
+        player.setX((short) (currentX - player.getWidth() / 2));
+        player.setY((short) (currentY + 0x10 - player.getHeight() / 2));
 
         animFrame = 1; // Closed claws frame
         // Note: Per disassembly, no sound effect plays on grab

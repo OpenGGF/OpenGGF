@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ Grabber dives on the frame its delay ends (`bugfix/ai-s2-seg12-closure`, merged
+  2026-08-18).** `ObjA7_Main` runs the sub-state routine and then calls `ObjectMove`
+  **unconditionally, every frame** (`s2disasm/s2.asm:76677-76684`), so the frame that ends the
+  pre-dive delay already travels: `loc_38EA2` installs `y_vel = $200` / `objoff_2C = $40` and
+  returns straight into that move (`:76745-76749`). The engine returned without moving, putting
+  the descent, the legs' touch overlap, the `objoff_30` handshake and the grab a frame behind --
+  Sonic was never captured and the run diverged into a **death** 3,671 rows later. A second,
+  smaller error found by the same fix: on the grab frame the trailing `ObjectMove` runs again with
+  the `y_vel` `ObjA7_GrabCharacter` has just negated (`:76771-76779`), and only then does `ObjA8`,
+  aligned at `body_y + $10`, pin the player (`:76790-76799`); the engine pinned before that move,
+  leaving the player 2px low. `seg8_cpz1` goes from **14,294 comparator errors to 2**, and the
+  chain advances from segment 12 to **segment 15** -- three segments further, past CPZ2 and
+  special stage 6. The round also added `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay`, a
+  standalone lane that reproduced the defect outside the chain and proved it **pre-existing in CPZ
+  act 1**; it remains red at those 2 residual errors (`tails_status_byte` at frames 2700 and
+  2797), which is the next target. Note the chain could never have reported this itself: a
+  per-segment comparator report is only written when a segment closes, which a player-killing
+  divergence never allows.
+
 - **A standing partner is dropped when a rolling rider smashes a cork floor
   (`bugfix/ai-s3k-corkfloor-partner-drop`, merged 2026-08-18).** S3K's `Obj_CorkFloor` roll-break
   branch caches `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`

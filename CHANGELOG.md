@@ -22,7 +22,25 @@ All notable changes to the OpenGGF project are documented in this file.
   The chain's segment 2 advances from `air rom=1 engine=0` at frame 1688 with
   47147 comparator errors to a clean first 1725 rows, and now reaches the
   seamless AIZ1 -> AIZ2 transition at row ~3245.
-
+- Sonic 2's CPZ Grabber now dives on the ROM's frame. `ObjA7_Main` runs the
+  sub-state routine and then calls `ObjectMove` unconditionally, every frame
+  (`docs/s2disasm/s2.asm:76677-76684`), so the frame that ends the pre-dive
+  delay -- `loc_38EA2`, which installs `y_vel = $200` and `objoff_2C = $40`
+  and returns (`s2.asm:76745-76749`) -- already travels two pixels. The engine
+  returned from that transition without moving, which put the entire descent,
+  and with it the legs' touch overlap, the `objoff_30` handshake and the grab
+  itself, one frame behind the ROM. On the grab frame the same trailing
+  `ObjectMove` runs again with the `y_vel` that `ObjA7_GrabCharacter` has just
+  negated (`s2.asm:76771-76779`), and only then does `ObjA8`, aligned to the
+  moved body at `body_y + $10` (`s2.asm:76681-76684`), pin the captured player
+  to itself in `loc_38FE8` (`s2.asm:76790-76799`); the engine pinned before
+  that move and landed the player two pixels low. The legs' touch latch is now
+  also evaluated on the delay-ending frame, where `loc_38F88`'s
+  `cmpi.b #4,routine_secondary(a1)` gate (`s2.asm:76770`) is already satisfied.
+  Compared replay of `seg8_cpz1` (CPZ act 1, 6613 rows) falls from 14294 errors
+  -- a cascade that killed the player and restarted the act 1401 rows early --
+  to 2, and `TestS2CompleteEmeraldRunChain` advances from failing inside
+  segment 12 (BK2 cursor 66418) to failing inside segment 15 (cursor 83819).
 - Whole-run chain replay no longer asserts a recorded zone id against the
   engine's ROM zone byte for a game whose recorder does not name ROM zones.
   `TraceRunPlaybackCoordinator.matchesLevel` compared
