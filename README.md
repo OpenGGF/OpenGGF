@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K's destroy latch is carried across a giant-ring special-stage return
+  (`bugfix/ai-s3k-aiz2-f94`, merged 2026-08-18).** A rock the player smashed in AIZ1 was being
+  re-created on the return and physically blocking Sonic. S3K has no opt-in remember flag:
+  `Load_Sprites` gives every six-byte layout entry its own `Object_respawn_table` byte and
+  unconditionally `bset #7,(a3)` on load (`skdisasm/sonic3k.asm:37745-37766`). Only the
+  `Go_Delete_SpriteSlotted` family clears it again (`bclr #7,(a2)`, `:179056-179061`), which is
+  the **alive-goes-offscreen** path -- an object ended through `Delete_Current_Sprite`, such as a
+  smashed rock (`AIZLRZEMZRock_BreakFromTop`, `:44022-44057`), leaves bit 7 set and never
+  reloads. The engine models that latch as `ObjectPlacementController.destroyedInWindow`,
+  separately from the S1/S2 opt-in `remembered` set, but `PersistentRespawnState` carried only
+  `remembered`/`stayActive` across a stage round trip so the latch was dropped -- **and** a second
+  ordering defect meant `ObjectManager.reset` restored state *after*
+  `ObjectPlacementController.reset` had already scanned the entry window, so even a carried bit
+  arrived one scan too late. The ROM has no such gap: the giant-ring entry sets
+  `Respawn_table_keep = 1` (`:128409-128412`), the reload skips the table wipe
+  (`:37429-37438`), and the table is already populated when `Load_Sprites` first scans. The AIZ1
+  rock at `(0x1D00, 0x04A9)` stopped Sonic at `x=0x1CDD` from frame 94 where the recording runs
+  through at `x_speed 0x0589`. Segment 2's frontier moves from 80,379 errors at frame 94 to
+  **74,575 at frame 384**; the S1 and S2 chains are byte-identical. No constant introduced. This
+  is the first genuine gameplay defect the chain work has surfaced, as opposed to a harness,
+  recording or observer artefact.
+
 - **The S2 run chain observes its source-tail V-blank anchor instead of projecting it, and the
   special-stage composition is enabled (`bugfix/ai-s2-seg45-boundary`, merged 2026-08-18).** The
   chain reconstructed a `level_advance` boundary's source-tail anchor by projecting the object
