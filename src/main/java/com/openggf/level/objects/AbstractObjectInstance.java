@@ -1148,6 +1148,44 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Adds an already-constructed object using the ROM's plain {@code AllocateObject}
+     * semantics -- a rescan from the base of the dynamic SST array that returns the
+     * LOWEST free slot, which may sit below the spawning object's own slot.
+     * <p>
+     * Use this where the disassembly calls {@code AllocateObject} / {@code FindFreeObj}
+     * rather than {@code AllocateObjectAfterCurrent}: because the object-execution walk
+     * runs slots in ascending order, a child placed below the parent does not run until
+     * the next frame, and that one-frame difference is visible to any routine the child
+     * drives. Same probe/rewind-restore guards as {@link #spawnDynamicObject}.
+     *
+     * @param object the already-constructed object instance to spawn
+     */
+    protected void spawnDynamicObjectLowestFreeSlot(AbstractObjectInstance object) {
+        try {
+            ObjectManager om = services().objectManager();
+            if (om != null) {
+                if (ObjectConstructionContext.isProbeConstruction()) {
+                    return;
+                }
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    om.registerRewindReconstructionChild(object);
+                } else {
+                    om.addDynamicObject(object);
+                }
+            }
+        } catch (IllegalStateException e) {
+            try {
+                LevelManager lm = staticLevelManager();
+                if (lm != null && lm.getObjectManager() != null) {
+                    lm.getObjectManager().addDynamicObject(object);
+                }
+            } catch (Exception ex) {
+                LOG.fine("Could not spawn dynamic object (test env?): " + ex.getMessage());
+            }
+        }
+    }
+
+    /**
      * Creates a dynamic child object with FindNextFreeObj semantics.
      * The supplier is called with the {@link #CONSTRUCTION_CONTEXT} set, so the
      * child's constructor can safely call {@link #services()}.

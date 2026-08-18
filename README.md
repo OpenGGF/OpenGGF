@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K's special-stage entry flash allocates from the lowest free slot, as the ROM does
+  (`bugfix/ai-s3k-aiz2-sidekick16`, merged 2026-08-18).** `loc_61778` allocates
+  `Obj_SSEntryFlash` with `jsr (AllocateObject).l` -- **not** `AllocateObjectAfterCurrent`
+  (`skdisasm/sonic3k.asm:128306-128309`) -- and `AllocateObject` rescans `Dynamic_object_RAM`
+  from its base, returning the **lowest** free SST (`:37911-37914`), while `Process_Sprites` walks
+  `Object_RAM` upwards (`:35965-35992`). A flash landing below the ring's slot therefore runs its
+  routine-0 init on the **following** frame. The engine hard-pinned after-current semantics in
+  `spawnDynamicObject`, so the flash's 43-frame sequence ended one Level iteration early and
+  `SSEntryFlash_GoSS` wrote `Game_mode` a frame ahead of the ROM. Segment 2 goes from 61,979
+  comparator errors at frame 393 (`sidekick_x`) to **47,147 at frame 1688** (`air` rom=1
+  engine=0) -- nearly 1,300 further frames replaying correctly. The round also **refuted** the
+  preceding round's claim that nothing at frame granularity distinguished this: the missing tick
+  is fully ROM-derivable. It separately refuted the brief's suggestion that
+  `TestS3kSonicTailsAiz2SegmentTraceReplay` is a cheaper iteration loop -- run standalone it fails
+  at frame 0 because the segment replay never bootstraps the sidekick, and it is one of the 55
+  pre-existing `-Ptrace-segments` reds. Verified at 790 tests / 3 red, the three chains only.
+
 - **S1 marks the level inactive before the end-of-act fade (`bugfix/ai-s1-dynart-skew`, merged
   2026-08-18).** `Got_NextLevel` writes `move.w #1,(f_restart).w` from **inside** `ExecuteObjects`
   (`s1disasm/_incObj/3A Got Through Card.asm:207`), and `Level_MainLoop` tests it in the

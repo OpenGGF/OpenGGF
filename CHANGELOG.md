@@ -24,6 +24,25 @@ All notable changes to the OpenGGF project are documented in this file.
   level-load transfer; the chain's axis count drops from ten to eight. This is
   the same correction, the same mechanism and the same ROM shape as Sonic 2's
   `Level_Inactive_flag` handling in `ResultsScreenObjectInstance`.
+- S3K's special-stage entry flash is now allocated with the ROM's
+  `AllocateObject` semantics instead of `AllocateObjectAfterCurrent`. The giant
+  ring's touch response calls `jsr (AllocateObject).l`
+  (docs/skdisasm/sonic3k.asm:128306-128309), which rescans
+  `Dynamic_object_RAM` from its base and returns the lowest free SST
+  (`sonic3k.asm:37911-37914`); `Process_Sprites` walks `Object_RAM` upwards
+  (`sonic3k.asm:35965-35992`), so when that slot lands below the ring's own the
+  flash's routine-0 init does not run until the following frame. The engine had
+  pinned after-current semantics, so `Obj_SSEntryFlash`'s 43-frame sequence
+  finished one Level main-loop iteration early and `SSEntryFlash_GoSS` wrote the
+  special-stage `Game_mode` a frame ahead of the ROM. That cost one
+  `ChangeRingFrame` tick of the free-running `AIZ_vine_angle`
+  (`sonic3k.asm:9693`), which the level and special-stage inits never clear, so
+  every AIZ giant ride vine came back from a special stage half a step
+  (`$180`) behind. In `s3k-sonic-tails-complete-emeralds` that stale phase put a
+  vine handle inside `AIZRideVineHandle_TestGrabRange`
+  (`sonic3k.asm:46717-46748`) for CPU Tails on the AIZ1 re-entry: segment 2
+  diverged at frame 393 with `sidekick_x` 16 pixels ahead and
+  `sidekick_animation_id` stuck on the `$14` vine-ride animation.
 - Sonic 2 now clears `RNG_seed` on every act load. `Level_ClrRam` wipes
   `MiscLevelVariables` (docs/s2disasm/s2.asm:4806-4809) and `RNG_seed` lives
   inside that block (docs/s2disasm/s2.constants.asm:1412-1421,1467), so each act
