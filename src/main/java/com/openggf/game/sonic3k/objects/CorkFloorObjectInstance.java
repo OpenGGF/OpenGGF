@@ -251,6 +251,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         playerStanding = false;
         savedPreContactRolling = false;
         rollingBreakPlayer = null;
+        // Per-frame scratch: the riders SolidObjectFull reports standing on
+        // this floor during THIS update, in participation order. It is a local
+        // so it carries no state across frames and needs no rewind capture.
+        List<AbstractPlayableSprite> standingRiders = new ArrayList<>(2);
 
         resolveLaterSlotLeftSiblingBeforeRollingLanding(player);
         SolidCheckpointBatch batch = checkpointAll();
@@ -259,7 +263,8 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
                 break;
             }
             if (participant instanceof AbstractPlayableSprite playable) {
-                applyCheckpointContact(playable, batch.perPlayer().get(participant));
+                applyCheckpointContact(playable, batch.perPlayer().get(participant),
+                        standingRiders);
             }
         }
         if (broken) {
@@ -284,6 +289,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             }
             rollingBreakPlayer.setAir(true);
             rollingBreakPlayer.setOnObject(false);
+            dropOtherStandingRiders(standingRiders);
 
             performBreak(rollingBreakPlayer);
             playerStanding = false;
@@ -336,7 +342,8 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         return withUpdatePlayer;
     }
 
-    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result,
+            List<AbstractPlayableSprite> standingRiders) {
         if (player == null || result == null || broken || result.kind() == ContactKind.NONE) {
             return;
         }
@@ -353,6 +360,9 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         if (result.standingNow()) {
             playerStanding = true;
+            if (!standingRiders.contains(player)) {
+                standingRiders.add(player);
+            }
             if (preContactRollAnimation && canRollBreak(player) && rollingBreakPlayer == null) {
                 rollingBreakPlayer = player;
             } else if (mode == Mode.ICZ_PLANE_SWITCH) {
@@ -363,6 +373,28 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         if (mode == Mode.BREAK_FROM_BELOW && result.kind() == ContactKind.BOTTOM) {
             player.setYSpeed((short) savedPreContactYSpeed);
             performBreak(player);
+        }
+    }
+
+    /**
+     * ROM loc_2A542/loc_2A716: when BOTH riders are standing on the cork floor
+     * and either cached animation byte is $02, the break path runs sub_2A588
+     * (sub_2A7B0 for the ICZ sloped variant) once for Player_1 and once for
+     * Player_2 (sonic3k.asm:58527-58534, 58762-58769). The rider whose cached
+     * anim is not $02 falls straight through to loc_2A5AC / loc_2A7CE, which
+     * still sets Status_InAir, clears Status_OnObj and writes routine 2
+     * (sonic3k.asm:58566-58571, 58764-58768) — it just skips the roll, radii,
+     * anim and the -$300 y_vel launch. The engine previously only ever
+     * released the rolling breaker, so a standing non-rolling partner stayed
+     * grounded on a floor that no longer exists.
+     */
+    private void dropOtherStandingRiders(List<AbstractPlayableSprite> standingRiders) {
+        for (AbstractPlayableSprite rider : standingRiders) {
+            if (rider == null || rider == rollingBreakPlayer) {
+                continue;
+            }
+            rider.setAir(true);
+            rider.setOnObject(false);
         }
     }
 

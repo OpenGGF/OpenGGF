@@ -83039,3 +83039,41 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
 - Command: `mvn -Ptrace-replay-r7 -Dtest=TestS2CompleteEmeraldRunChain
   -Dsonic2.rom.path=s2.gen test`.
 
+
+## 2026-08-18 - S3K Sonic+Tails complete-emerald chain clears AIZ1's cork floor
+
+- Branch `bugfix/ai-s3k-corkfloor-partner-drop`, over `develop` at `29bc8edda`.
+- **Frontier before:** `TestS3kSonicTailsCompleteEmeraldRunChain` failed on two
+  axes at segment 2 (`aiz_2`): `47147 physics comparator errors, first
+  non-camera mismatch at frame 1688 field air rom=1 engine=0`, and
+  `Segment 2 (aiz_2) exit boundary (giant_ring) was never observed`.
+- **Cause.** Not physics and not the special-stage return. At row 1688 a
+  rolling Tails lands on the AIZ1 cork floor (`Obj_CorkFloor`, object slot
+  $23, object code `0x0002A502` in the aux `object_state` rows) that Sonic is
+  standing on. The ROM's both-standing break branch runs `sub_2A588` for
+  Player_1 *and* Player_2 (`docs/skdisasm/sonic3k.asm:58519-58534`); the rider
+  whose cached anim byte is not `$02` still falls through `loc_2A5AC`, which
+  sets `Status_InAir`, clears `Status_OnObj` and writes routine 2
+  (`:58566-58571`). The trace shows exactly that split: Sonic's status goes
+  `$29 -> $23` with y_vel 0 then gravity, Tails takes the `-$300` launch.
+  `CorkFloorObjectInstance` only ever released the breaker, so Sonic kept
+  riding a shattered floor.
+- **Frontier after:** segment 2 compares clean for its first 1725 rows (zero
+  comparator errors through row 1725, ~1121 by row 3000) and the walk now
+  reaches the seamless AIZ1 -> AIZ2 transition the segment's own
+  `metadata.json` says it covers. The chain fails there with
+  `segment 2 lost production ownership before source closure (mode=LEVEL,
+  level=LevelIdentity[loadGeneration=3, progressionZone=0, romZone=0, act=1],
+  BK2 cursor=12062)` -- trace row 3243 is the act change (player x snaps to
+  `0x009C`, camera to `0x0010`), and
+  `TraceRunPlaybackCoordinator.ownsCurrentSegment` requires both an unchanged
+  `loadGeneration` and a `matchesLevel` on the segment's recorded act, so an
+  in-segment seamless act transition cannot keep ownership. That is harness
+  plumbing, not engine behaviour, and is the next thing to fix here.
+- **Also unresolved:** a residual one-pixel Tails x offset opens at row 1726
+  (`sidekick_x rom=0x28C2 engine=0x28C3`, later `sidekick_x_sub rom=0x5000
+  engine=0x6600`) after the same cork break -- the engine is one frame of
+  x_vel to the right when Tails rebounds off the wall at row 1736. Not
+  diagnosed.
+- Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
+  -Ds3k.rom.path=<s3k locked-on .gen> test`.
