@@ -82899,3 +82899,46 @@ be reached by this change, and passes when run alone in that same control tree.
   ROM ran an iteration the recording does not carry. Nothing at frame
   granularity distinguishes it, so no constant was added; the round stopped
   there rather than fit one.
+
+## 2026-08-18 - S1 end-of-act fade stopped animating the level; six dynamic-art-gap axes to four
+
+- Worktree `a fresh worktree`, branch
+  `bugfix/ai-s1-dynart-skew`, over `5fb5832c0` (origin/develop head at the time
+  of the run).
+- Command:
+  `mvn -Ptrace-replay-r7 -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS1CompleteEmeraldRunChain "-Dsonic1.rom.path=<Sonic 1 REV01 .gen>"
+  test`.
+- BEFORE (control, same base): `TestS1CompleteEmeraldRunChain` FAILS on **ten**
+  axes -- one `syz2` walk-failure at row 70
+  (`queue.s1_nemesis_plc.remaining_work` rom=1 engine=24), segment 12 (`mz2_3`)
+  40 errors first at frame 101 `queue.s1_nemesis_plc.prepared` rom=true
+  engine=false, segment 15 (`mz3_2`) 6 errors first at frame 102 on the same
+  field, segment 16 (`syz1`) 61 errors first at frame 2218 `y_speed` rom=-0283
+  engine=-0383, and six `dynamic-art-gap` axes (`ghz3_2 -> mz1`,
+  `mz1 -> mz1_2`, `mz2 -> mz2_2`, `mz2_2 -> mz2_3`, `mz3 -> mz3_2`,
+  `mz3_2 -> syz1`).
+- AFTER: FAILS on **eight** axes. `mz2 -> mz2_2` and `mz3 -> mz3_2` are green;
+  the +4 edge-ordinal / +2 transfer-id skew that the `ghz3_2 -> mz1` gap
+  injected and every later gap carried is gone. The four surviving gap axes are
+  reduced to a single residual: the level-load player transfer lands one movie
+  row late (`run_gap.edge[*].movie_logical_frame` rom 27441/31060/47008/78140,
+  engine +1). That off-by-one predates this change -- it was already the only
+  content of the `mz1 -> mz1_2` and `mz2_2 -> mz2_3` failures -- and remains
+  open.
+- Cause: the S1 end-of-act card started its fade while the level main loop was
+  still running. `Got_NextLevel` writes `f_restart` from inside
+  `ExecuteObjects` (docs/s1disasm/_incObj/3A Got Through Card.asm:207) and
+  `Level_MainLoop` branches to `GM_Level` on the next instruction
+  (docs/s1disasm/sonic.asm:3006-3017), so `GM_Level`'s `PaletteFadeOut`
+  (:2711-2712) runs with no object pass. The recorded run shows this directly:
+  Sonic's walk animation stepped every 9 rows up to the segment's last recorded
+  row (movie 27235, mapping frame 8) and then the ROM performed **no** player
+  DPLC transfer for 202 rows until the load's own at 27441, while the engine
+  published frames 9 and 10 at rows 27244 and 27253.
+- UPSTREAM QUESTION SETTLED: the gap skew is **not** upstream of the segment
+  12/15 `queue.s1_nemesis_plc.prepared` divergence. With the skew removed,
+  segments 12 and 15 still fail identically (40 and 6 errors, frames 101 and
+  102, same field and values). Independently, the gaps preceding the *green*
+  segments 8 (`mz1_2`) and 11 (`mz2_2`) carried exactly the same +4/+2 skew in
+  the control, so the skew never correlated with a PLC failure.
