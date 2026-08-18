@@ -61,6 +61,27 @@ public interface TraceReplayFixture {
     /** Validates and installs the next structural segment's completion schedule. */
     void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule);
 
+    /**
+     * Hands off across a recorded interstitial span, advancing the hardware
+     * identity cursor over ordinals the recording consumed between the two
+     * segments and production never submits.
+     *
+     * <p>Fixtures that predate the run-level interstitial stream inherit the
+     * span-free handoff: an empty span map is the only thing an unrecorded
+     * fixture ever produces, so this default keeps their behaviour identical.
+     */
+    default void handoffHardwareTimingReplay(
+            HardwareTimingSchedule nextSchedule,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind,
+                    com.openggf.game.timing.RecordedOrdinalSpan> interstitialSpans) {
+        if (!interstitialSpans.isEmpty()) {
+            throw new UnsupportedOperationException(
+                    "fixture does not support recorded interstitial spans: "
+                            + getClass().getName());
+        }
+        handoffHardwareTimingReplay(nextSchedule);
+    }
+
     /** Final-run verification, admission closure, observer removal, and deregistration. */
     void closeHardwareTimingReplayRun();
 

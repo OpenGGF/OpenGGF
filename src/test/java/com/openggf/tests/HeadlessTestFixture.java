@@ -184,8 +184,16 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     @Override
     public void handoffHardwareTimingReplay(
             HardwareTimingSchedule nextSchedule) {
+        handoffHardwareTimingReplay(nextSchedule, java.util.Map.of());
+    }
+
+    @Override
+    public void handoffHardwareTimingReplay(
+            HardwareTimingSchedule nextSchedule,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind,
+                    com.openggf.game.timing.RecordedOrdinalSpan> interstitialSpans) {
         if (hardwareTimingReplayPort != null) {
-            hardwareTimingReplayPort.handoffTo(nextSchedule);
+            hardwareTimingReplayPort.handoffTo(nextSchedule, interstitialSpans);
         }
     }
 

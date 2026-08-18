@@ -802,7 +802,10 @@ public final class TraceSessionLauncher {
             this.runHardwareTiming =
                     new TraceRunReplayWalker.HardwareTimingCoordinator(
                             fixture,
-                            TraceRunReplayWalker.hardwareTimingSegments(runSegments));
+                            TraceRunReplayWalker.hardwareTimingSegments(runSegments),
+                            com.openggf.trace.timing
+                                    .HardwareTimingInterstitialStreamLoader
+                                    .load(entry.runDir()));
             this.runCoordinator = new TraceRunPlaybackCoordinator(
                     entry.runManifest(),
                     GameServices.module().getTracePlaybackProfile(),
@@ -4307,8 +4310,16 @@ public final class TraceSessionLauncher {
 
         @Override
         public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            handoffHardwareTimingReplay(nextSchedule, java.util.Map.of());
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(
+                HardwareTimingSchedule nextSchedule,
+                java.util.Map<com.openggf.game.timing.HardwareWorkKind,
+                        com.openggf.game.timing.RecordedOrdinalSpan> interstitialSpans) {
             if (hardwareTimingReplayPort != null) {
-                hardwareTimingReplayPort.handoffTo(nextSchedule);
+                hardwareTimingReplayPort.handoffTo(nextSchedule, interstitialSpans);
             }
         }
 

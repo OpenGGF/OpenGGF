@@ -251,6 +251,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   segment 2 diverging at frame 0 on entry state (`x_sub` rom `0x0C00` engine `0x3000`), which
   the untouched control shows too. Verified at 790 tests / 3 red, the three chains only, with
   `TestHardwareTimingAuthorityGuard` (24 tests) and `TestTraceFixtureCompressionGuard` green.
+  This closes the last of the three chains' original blockers: each now stops on a distinct,
+  named, in-engine divergence rather than on a harness or recording defect.
 
 - **The S1 chain accounts for the presentation bridge's own V-blank span
   (`bugfix/ai-s1-seg6-vblank-drift`, merged 2026-08-17).** The chain's cross-segment object

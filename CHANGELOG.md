@@ -4,6 +4,28 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Run fixtures may now carry a run-level `hardware_timing_interstitial.jsonl`
+  recording the hardware-work ordinals the ROM consumed in the spans between
+  structural segments -- the special-stage results screen, the level reload, a
+  locked level intro. Those spans have no comparison rows, so the recorder
+  observed their completions but had nowhere to put them; the recording's
+  ordinal ledger therefore resumed above where the engine's stood, and every
+  later completion missed by exactly the size of the gap. On
+  `s3k-sonic-tails-complete-emeralds` the engine held `KOS_MODULE_QUEUE#14` and
+  `KOS_DECOMPRESSION_QUEUE#27` against a recording that had moved on to `#24`
+  and `#43`, and the chain aborted at the `aiz_2 -> ss_2` handoff.
+
+  Crossing such a span now advances the production identity cursor and nothing
+  else. It releases nothing, completes nothing and creates nothing: every
+  release still requires the full kind, ordinal, fingerprint and boundary match
+  against a production-submitted, prepared job. The move is proved on both
+  sides before it happens -- the span must begin exactly where production's
+  ledger stands and end exactly where the next segment's recorded ordinals
+  begin, and production must hold nothing pending -- so a skew that is not the
+  recorded span fails loudly instead of being absorbed. Fixtures with no
+  interstitial sidecar, which is all of them until one is recorded, take the
+  unchanged handoff path. The `bk2_frame` field is parsed for shape and then
+  discarded; nothing keys on it.
 - The whole-run chain harness now reconciles the destination level's V-blank
   budget a second time, after the production admission wait, instead of only
   before it. The wait runs real engine frames that the manifest-derived budget
