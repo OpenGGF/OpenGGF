@@ -83106,3 +83106,41 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   CPZ act 2 and special stage 6.
 - Command: `mvn -Ptrace-replay-r7 -Dtest=TestS2CompleteEmeraldRunChain
   -Dsonic2.rom.path=<s2 rom> test`.
+
+## 2026-08-18 -- S1 complete-emerald chain: mid-run level-load transfer row
+
+- Command: `mvn -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain
+  -Dsonic1.rom.path=<s1 rom> -Dsonic2.rom.path=<s2 rom> -Ds3k.rom.path=<s3k rom>
+  test`, worktree branched from `develop` at `ad3352ed4`.
+- **Frontier before:** `TestS1CompleteEmeraldRunChain` red on 8 axes -- four
+  `dynamic-art-gap` axes (`ghz3_2 -> mz1`, `mz1 -> mz1_2`, `mz2_2 -> mz2_3`,
+  `mz3_2 -> syz1`), each reporting both `run_gap.edge[0]` and `edge[1]`
+  `movie_logical_frame` one row late (rom 27441/31060/47008/78140, engine
+  +1); plus segment 12 (40 errors, `queue.s1_nemesis_plc.prepared` at frame
+  101), segment 15 (6 errors, same field at frame 102), segment 16 (61 errors,
+  `y_speed` rom=-0283 engine=-0383 at frame 2218) and the `syz2` row-70
+  walk-failure on `queue.s1_nemesis_plc.remaining_work`.
+- **Measurement, not inference.** A probe at the admission boundary printed
+  `rowsConsumed` and the lifecycle's `movieLogicalFrame` for every admission.
+  It split cleanly: the admissions that consume no destination row (segments 3,
+  6, 11, 15) settle with the clock on `offset - 1`, so `movieLogicalFrame + 1`
+  is exactly the destination's first row and those gaps were already green; the
+  admissions that consume one row (segments 7, 8, 12, 16 -- offsets 27467,
+  31086, 47034, 78166) settle with the clock already on `offset`, and the same
+  projection overshoots. Those four are precisely the four failing gaps, and
+  `offset - 26` equals the recorded value in all four.
+- **Cause.** The row was projected from the movie clock rather than observed.
+  `preLevelMainLoopDelayFrames()` (26 = 4 `Level_Delay` frames +
+  22 `PalFadeIn_Alt`, docs/s1disasm/sonic.asm:2957-2966 and
+  `_inc/Palette Fading.asm:32-51`) was correct and is unchanged; no constant was
+  added or tuned.
+- **Fix.** `settlePendingPlayerPreparationBeforeLevelMainLoop` now takes the
+  admitted destination row, and both call sites
+  (`TraceSessionLauncher#applyRunDestinationAdmission` and the chain harness)
+  pass `receipt.absoluteBk2Row() - receipt.rowsConsumed()`.
+- **Frontier after:** 4 axes. All four `dynamic-art-gap` axes green; segments
+  12/15/16 and the `syz2` walk-failure unchanged at 40/6/61 errors and the same
+  first-error frames and fields.
+- **Not attempted (unchanged wall):** segments 12/15
+  `queue.s1_nemesis_plc.prepared` still needs the rule-4 hardware-timing
+  sidecar's consuming half; the recorder half landed in `b5f20ec98`.

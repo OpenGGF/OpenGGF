@@ -4,6 +4,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 1's level-load player transfer now lands on the row the ROM records for
+  a mid-run load. A level segment's recording starts at `Level_MainLoop`
+  (docs/s1disasm/sonic.asm:2998), after the counted `Level_Delay` /
+  `PalFadeIn_Alt` tail (docs/s1disasm/sonic.asm:2957-2966, 26 rows), so the
+  transfer the load staged belongs that many rows before the destination's
+  first row. The settle projected that row as `movieLogicalFrame + 1` instead
+  of observing it, which is right only for an admission that consumes no
+  destination row; an admission that consumes one has already advanced the
+  shared movie clock onto the destination's first row, and the projection then
+  overshot by one. Both call sites now pass the admitted row from the
+  destination receipt (`absoluteBk2Row - rowsConsumed`). In
+  `s1-sonic-complete-withemeralds` all four such loads -- `ghz3_2 -> mz1`,
+  `mz1 -> mz1_2`, `mz2_2 -> mz2_3` and `mz3_2 -> syz1` -- recorded both gap
+  edges at `movie_logical_frame` 27441 / 31060 / 47008 / 78140 while the engine
+  emitted 27442 / 31061 / 47009 / 78141. The chain drops from 8 failing axes to
+  4, with the remaining three segment axes unchanged in error count.
 - A rolling sidekick that smashes an S3K cork floor now also drops the
   partner standing on it. `Obj_CorkFloor`'s roll-break branch caches
   `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`

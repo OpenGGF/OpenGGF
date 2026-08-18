@@ -1577,14 +1577,21 @@ public final class TraceSessionLauncher {
      * first main-loop row, and the tail's own length is the game's, so the
      * transfer belongs that many rows earlier — before this admission opens
      * the destination's comparison window or reads the gap ledger.
+     *
+     * <p>The admitted row is taken from the receipt rather than the movie
+     * clock. An admission that consumes a destination row has already moved
+     * the clock onto that row, so projecting it forward would place the
+     * transfer a row late.
      */
-    private void settlePreMainLoopPlayerTransferAtAdmission() {
+    private void settlePreMainLoopPlayerTransferAtAdmission(
+            DestinationAdmissionReceipt receipt) {
         if (dynamicArtSegmentGameplayMode == null) {
             return;
         }
         var lifecycle = dynamicArtSegmentGameplayMode.dynamicArtLifecycle();
         if (lifecycle != null && lifecycle.isRunActive()) {
-            lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop();
+            lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop(
+                    receipt.absoluteBk2Row() - receipt.rowsConsumed());
         }
     }
 
@@ -1594,7 +1601,7 @@ public final class TraceSessionLauncher {
         if (objects != null) {
             applyRunDestinationVblankAdmission(receipt, objects);
         }
-        settlePreMainLoopPlayerTransferAtAdmission();
+        settlePreMainLoopPlayerTransferAtAdmission(receipt);
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
