@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Both player DMAs the S1 level load performs are now kept
+  (`bugfix/ai-s1-seg7-edges2`, merged 2026-08-18).** `Sonic_LoadGfx` decodes one frame per call
+  and hands it to the V-blank DMA through `f_sonframechg`
+  (`s1disasm/_incObj/01 Sonic.asm:2394-2409`), so two stagings are always separated by a V-int.
+  Around a level load the ROM makes **exactly two**: the `Level_LoadObj` `ExecuteObjects` pass
+  (`sonic.asm:2895-2897`), served by the first V-int of the `Level_Delay` / `PalFadeIn_Alt` tail
+  (`:2956-2961`), and the first `Level_MainLoop` pass (`:2998`), served by the V-int after it.
+  The engine does not spend the tail's rows, so both stagings arrived on one engine row and the
+  second **overwrote** the first: one of the ROM's two DMAs was never published, and every later
+  edge in the destination segment carried an ordinal two short. A staging taken while an earlier
+  one is still held for the pre-main-loop tail is now queued behind it and published by the
+  V-blank that follows. On `s1-sonic-complete-withemeralds` segment 7 (`mz1`) goes from 2,931
+  comparator errors to **none** and segment 12 from 11,263 to **40**, both of which had diverged
+  at frame 1 on `dynamic_art.edges` -- **14,261 total errors across the run down to 107**.
+  Segment 12's remaining failure has changed character to `queue.s1_nemesis_plc.prepared`,
+  matching segment 15's, so the next S1 target is shared between two segments. Verified at 790
+  tests / 3 red, the three chains only.
+
 - **The S2 `seg5_ehz2` blocker is a parity-flipped badnik target, not a sidekick position defect
   (`bugfix/ai-s2-sidekick-y`, documentation, merged 2026-08-18).** `ef002222f` recorded the
   blocker behind S2's disabled special-stage V-blank composition as a latent `sidekick_y` defect
