@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- A rolling sidekick that smashes an S3K cork floor now also drops the
+  partner standing on it. `Obj_CorkFloor`'s roll-break branch caches
+  `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`
+  (docs/skdisasm/sonic3k.asm:58498-58505) and, when BOTH riders are standing
+  and either cached byte is `$02`, runs `sub_2A588` once for Player_1 and once
+  for Player_2 (docs/skdisasm/sonic3k.asm:58519-58534; the ICZ sloped variant
+  does the same through `sub_2A7B0` at :58716-58769). The rider whose cached
+  anim is not `$02` falls through to `loc_2A5AC` / `loc_2A7CE`, which still
+  sets `Status_InAir`, clears `Status_OnObj` and writes routine 2
+  (docs/skdisasm/sonic3k.asm:58566-58571, :58764-58768) -- it only skips the
+  roll bit, the radii, the anim and the `-$300` y_vel launch. The engine
+  released the breaker alone, so a standing partner kept riding a floor that
+  had already shattered. In `s3k-sonic-tails-complete-emeralds` segment 2 that
+  is exactly frame 1688, where a rolling Tails lands on the AIZ1 cork floor
+  under a standing Sonic: the ROM sets Sonic airborne, the engine did not.
+  The chain's segment 2 advances from `air rom=1 engine=0` at frame 1688 with
+  47147 comparator errors to a clean first 1725 rows, and now reaches the
+  seamless AIZ1 -> AIZ2 transition at row ~3245.
+
 - Whole-run chain replay no longer asserts a recorded zone id against the
   engine's ROM zone byte for a game whose recorder does not name ROM zones.
   `TraceRunPlaybackCoordinator.matchesLevel` compared

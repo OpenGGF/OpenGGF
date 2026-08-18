@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A standing partner is dropped when a rolling rider smashes a cork floor
+  (`bugfix/ai-s3k-corkfloor-partner-drop`, merged 2026-08-18).** S3K's `Obj_CorkFloor` roll-break
+  branch caches `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`
+  (`skdisasm/sonic3k.asm:58498-58505`) and, when both riders are standing and either cached byte
+  is `$02`, runs `sub_2A588` once per player (`:58519-58534`; the ICZ sloped variant does the same
+  through `sub_2A7B0`). The rider whose cached anim is **not** `$02` falls through `loc_2A5AC`,
+  which still sets `Status_InAir`, clears `Status_OnObj` and writes routine 2 (`:58566-58571`) --
+  it only skips the roll bit, the radii, the anim and the `-$300` launch. `CorkFloorObjectInstance`
+  released the breaker alone, so a standing partner kept riding a floor that had already
+  shattered. In segment 2 that is row 1688: a rolling Tails lands on the AIZ1 cork floor under a
+  standing Sonic, the ROM sets Sonic airborne (status `$29 -> $23`) and the engine left him
+  grounded. Segment 2 goes from 47,147 comparator errors with `air rom=1 engine=0` to a clean
+  first 1,725 rows, and the chain now reaches the seamless AIZ1 -> AIZ2 transition the segment
+  covers. Verified at 790 tests / 3 red, the three chains only.
+
 - **Recorded zone identity is compared in the space the recorder used
   (`bugfix/ai-s2-seg8-handoff-3`, merged 2026-08-18).** `TestS2CompleteEmeraldRunChain` cleared
   segment 11 (`seg7_ehz2`) and then failed on the handoff into segment 12 with the cursor two
