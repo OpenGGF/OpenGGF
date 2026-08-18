@@ -228,6 +228,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 run chain observes its source-tail V-blank anchor instead of projecting it, and the
+  special-stage composition is enabled (`bugfix/ai-s2-seg45-boundary`, merged 2026-08-18).** The
+  chain reconstructed a `level_advance` boundary's source-tail anchor by projecting the object
+  clock backwards across the boundary window at one tick per movie row. That window steps the
+  engine through the destination's level load, and `suppressedRowOwesVint` deliberately leaves
+  the row on which the load replaces the `ObjectManager` unserviced -- so the dropped tick was
+  subtracted straight out of the anchor and every value derived from it landed one tick low. The
+  anchor is now latched as the source's final recorded row is played, where the engine's clock is
+  already exact: no reconstruction, **no constant introduced**. S1 is unaffected and its chain
+  output byte-identical. **The previously suspected missing ROM V-int at
+  `seg4_ehz1 -> seg5_ehz2` does not exist** -- the masked-entry losses were re-measured directly
+  as `(D - S) - (vbl(D) - vbl(S))`, giving 10 at every plain act advance, 9 at `ooz1 -> ooz2`, 11
+  at all seven special-stage round trips and 6 / 0 for S1, every one matching the values
+  `TracePlaybackProfile` already carried. With the anchor correct, S2's
+  `alignUncomparedInteriorReturnVblank` is **enabled**: the engine clock now equals the recorded
+  `vblank_counter` at every level bind of the run (drift 0, previously 2/4/3/2/4 at the stage
+  returns). It had been committed disabled because enabling it flipped the parity
+  `Obj4B_ChkPlayers` selects its target with (`btst #0,(Vint_runcount+3).w`,
+  `s2disasm/s2.asm:60988-61027`); with the composition off that parity had survived on a
+  coincidentally even unreconciled offset. Chain frontier unchanged and byte-identical to
+  control at segment 11, 188 errors, frame 3531. Verified at 790 tests / 3 red, the three chains
+  only.
+
 - **S1's remaining PLC-arming divergence is a sub-frame wall, and the sanctioned resolution is
   named (`bugfix/ai-s1-plc-prepared`, documentation, merged 2026-08-18).** Segments 12
   (`mz2_3` frame 101) and 15 (`mz3_2` frame 102) share one cause: an
