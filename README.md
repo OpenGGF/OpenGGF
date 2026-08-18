@@ -228,6 +228,33 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Sonic 1 PLC arming edge is recorded as a hardware-timing sidecar
+  (`feature/ai-s1-plc-hw-timing`, merged 2026-08-18).** S1's remaining PLC-arming divergence
+  cannot be modelled from frame-granularity state: `TraceExecutionModel.isIterationHeldIntoNextRow`
+  is ROM-cited and right in 14 of 15 cases, and the two candidate models commit **exactly
+  opposite** errors -- deferral on gives `rom=true engine=false` on segments 12/15, deferral off
+  gives `rom=false engine=true` on segment 3 -- so no predicate sits between them and the
+  discriminator is sub-frame. CLAUDE.md rule 4 names S1 PLC as one of the three pipelines a
+  regenerable per-movie timing sidecar may drive; this is the **recorder half** of that route.
+  `RunPLC` (`s1disasm/sonic.asm:1379-1420`, ROM `0x0015E4`) arms the queue head iff, on entry,
+  `v_plc_buffer` is non-zero and `v_plc_patternsleft` is zero. It is observed at entry rather than
+  sampled per frame because it **destroys the head identity**: `move.l a0,(v_plc_buffer).w`
+  (`:1405`) writes back a pointer already advanced past the Nemesis header, so no later RAM sample
+  can recover which descriptor was armed. The predicate is likewise only true at entry -- the
+  assembly is built with `FixBugs = 0`, so `v_plc_patternsleft` is written before
+  `NemDec_BuildCodeTable` (`:1396-1399`). That is the second address-filtered execute observer in
+  the harness, alongside the sanctioned S3K one at PC `0x001B46`. The stream is a lazily-opened,
+  field-disjoint per-segment `hardware_timing.jsonl` in the v5 field order the Java loader already
+  enforces, following the S3K precedent: a capture that arms nothing publishes no file. Edges are
+  buffered per advance and committed with the row that advance produced, ordinals allocated at
+  commit, so frames belonging to no row are dropped without leaving an ordinal gap. **No fixture
+  regenerated or installed and no `src/main` change** -- `HardwareWorkKind` has no
+  `NEMESIS_PLC_QUEUE` constant yet, so nothing on the Java side can read this stream; consuming it
+  is scoped separately. A real `ghz1_fullrun` capture reproduces the installed fixture's
+  `physics.csv` and `aux_state.jsonl` hashes **exactly**, with `metadata.json` differing only in
+  `recording_date`, adding 7 edges over 3,905 rows. Harness suite 641 passed against control's
+  632, failure sets diffed and identical at 14, all pre-existing.
+
 - **S3K's destroy latch is carried across a giant-ring special-stage return
   (`bugfix/ai-s3k-aiz2-f94`, merged 2026-08-18).** A rock the player smashed in AIZ1 was being
   re-created on the return and physically blocking Sonic. S3K has no opt-in remember flag:
