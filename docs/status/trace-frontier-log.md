@@ -82864,6 +82864,48 @@ be reached by this change, and passes when run alone in that same control tree.
   `TestModeTracePickerLaunchStatus`); `-Ptrace-replay` 788 / 3 (the three
   chains, both trees); `-Ptrace-segments` 70 / 55 (both); `-Ptrace-replay-r7`
   37 / 32 (both). No branch-only red in any profile.
+## 2026-08-18 - S3K sonic+tails complete-emerald chain: the special-stage entry flash allocates from the lowest free slot
+
+- Worktree `wt/s3k-aiz2-sk16`, branch
+  `bugfix/ai-s3k-aiz2-sidekick16`, based on `5fb5832c0`.
+- Command: `mvn -Ptrace-replay-r7 -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Ds3k.rom.path=s3k.gen -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`.
+- Before: FAIL on 2 axes. Segment 2 (`aiz_2`), 61979 physics comparator errors,
+  first non-camera mismatch frame 393, `sidekick_x` rom=`0x2036`
+  engine=`0x2046`, with `sidekick_animation_id` rom=`0x02` engine=`0x14`.
+- After: still FAIL on 2 axes. Segment 2, 47147 errors, first non-camera
+  mismatch frame **1688**, field `air` rom=1 engine=0. The second axis
+  (unmatched recorded hardware completions) is unchanged.
+- Cause, and the correction to the handover: the residual was indeed the
+  one-tick `ChangeRingFrame` deficit the previous round named, but it is not
+  unobservable timing. `AllocateObject` (`sonic3k.asm:37911-37914`) rescans
+  `Dynamic_object_RAM` from its base and returns the LOWEST free SST, and
+  `loc_61778` (`:128306-128309`) allocates `Obj_SSEntryFlash` through it -- not
+  through `AllocateObjectAfterCurrent`. `Process_Sprites` walks `Object_RAM`
+  upwards (`:35965-35992`), so a flash landing below the ring's slot first runs
+  its routine-0 init on the FOLLOWING frame. The engine's
+  `spawnDynamicObject` pinned after-current semantics, so the flash's 43-frame
+  sequence ended one Level main-loop iteration early and `SSEntryFlash_GoSS`
+  wrote `Game_mode` a frame ahead of the ROM.
+- Why that costs exactly one `AIZ_vine_angle` step: `LevelLoop` writes
+  `Game_mode` inside `Process_Sprites` but still runs `OscillateNumDo` and
+  `ChangeRingFrame` before its `cmpi.b #$C,(Game_mode).w` bottom test
+  (`sonic3k.asm:7884-7922`), so the mode-change iteration ticks the word. The
+  recorder drops exactly that frame -- `S3KCompleteRunSegmenter.Step` returns
+  `None` on the first `0x34` frame with the comment "Entry frame is recorded in
+  NEITHER segment"
+  (`tools/bizhawk-headless/src/Recording/S3KCompleteRunSegmenter.cs:439-452`),
+  which is why every manifest segment boundary in this run has a two-frame gap.
+  Measured directly: an instrumented counter on the engine's
+  `ChangeRingFrame` carrier read 2290 ticks at `enterSpecialStage` before the
+  fix and 2291 after, against the ROM's 2290 recorded `aiz` rows plus the one
+  dropped entry frame. No constant was introduced; the extra tick is an
+  emergent consequence of the allocation call the ROM actually makes.
+- The `-Ptrace-segments` standalone `TestS3kSonicTailsAiz2SegmentTraceReplay`
+  is NOT a usable cheap loop for this frontier: run alone it diverges at frame
+  0 (`tails_y` expected `0x04C4`, actual `0x0000`) because the segment replay
+  does not bootstrap the sidekick. Only the chain exercises the boundary.
+
 ## 2026-08-18 - S3K sonic+tails complete-emerald chain: AIZ_vine_angle survives a level load
 
 - Worktree `wt/s3k-aiz2-f384`, branch

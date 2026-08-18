@@ -72,10 +72,13 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     // SetUp_ObjAttributesSlotted sets routine to 2, so SSEntryFlash_Main -- and
     // therefore the first Animate_RawAdjustFlipX advance -- does not run until
     // the NEXT frame. Obj_SSEntryFlash is allocated by SSEntryRing's touch
-    // response through AllocateObject (:128303-128306), and the engine's
-    // spawnDynamicObject uses AllocateObjectAfterCurrent semantics, so the
-    // instance receives its first update() on the ring-touch frame itself --
-    // which is the ROM's Init frame, not its first Main frame.
+    // response through `jsr (AllocateObject).l` (:128306-128309), which
+    // rescans Dynamic_object_RAM from its base (:37911-37914) and returns the
+    // LOWEST free SST -- possibly below the ring's own slot. Process_Sprites
+    // walks Object_RAM upwards (:35965-35992), so whether this object's
+    // routine-0 init runs on the ring-touch frame or on the frame after is
+    // decided by the allocated slot, not by a fixed assumption here; see the
+    // AllocateObject call site in Sonic3kSSEntryRingObjectInstance.
     private State state = State.INIT;
     private int animIndex = 0;
     private int waitTimer = 0;

@@ -540,7 +540,18 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // Spawn flash child object
         // ROM: direction bit is set on the ring (not flash) based on player approach,
         // but has no visual effect since flash uses internal h-flip toggle.
-        spawnDynamicObject(new Sonic3kSSEntryFlashObjectInstance(
+        //
+        // ROM loc_61778 (docs/skdisasm/sonic3k.asm:128306-128309) calls
+        // `jsr (AllocateObject).l`, NOT AllocateObjectAfterCurrent.
+        // AllocateObject (sonic3k.asm:37911-37914) rescans Dynamic_object_RAM
+        // from its base and returns the LOWEST free SST, so the flash can land
+        // below the ring's own slot; Process_Sprites walks Object_RAM upwards
+        // (sonic3k.asm:35965-35992), so in that case the flash's routine-0 init
+        // does not run until the next frame. spawnDynamicObject would instead
+        // pin AllocateObjectAfterCurrent semantics and always dispatch the
+        // init on the touch frame, shortening the whole entry sequence by one
+        // Level main-loop iteration.
+        spawnDynamicObjectLowestFreeSlot(new Sonic3kSSEntryFlashObjectInstance(
                 this, spawn.x(), spawn.y()));
     }
 
