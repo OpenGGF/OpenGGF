@@ -1556,6 +1556,7 @@ abstract class AbstractRunChainTest {
                             // every art edge after it were stamped 22 rows
                             // early. The predicate is the fade's own liveness,
                             // not a zone, route or frame index.
+                            int rowBeingPlayed = playback.getCursorFrame();
                             com.openggf.graphics.FadeManager boundaryFade =
                                     GameServices.fadeOrNull();
                             // Only rows past the source segment's declared
@@ -1576,6 +1577,7 @@ abstract class AbstractRunChainTest {
                                         fadeObjects, fadeVblank);
                                 playback.onLevelFrameAdvanced();
                             }
+                            latchSourceTailVblank(seg.segment(), rowBeingPlayed);
                             closeSourceArtWindow.run();
                             if (isNewActiveLevelSegment(
                                     next, levelAtSegmentStart)) {
@@ -1610,9 +1612,7 @@ abstract class AbstractRunChainTest {
                                 + runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 int semanticSourceTailVblank =
-                        TraceRunReplayWalker.sourceTailVblankAtBoundary(
-                                seg.segment(), playback.getCursorFrame(),
-                                GameServices.level().getObjectManager().getVblaCounter());
+                        observedSourceTailVblank(seg.segment(), playback);
                 int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
@@ -2726,9 +2726,8 @@ abstract class AbstractRunChainTest {
             Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
             int stepCap,
         Object levelAtSegmentStart) {
-        int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
-                currentLevel.segment(), playback.getCursorFrame(),
-                GameServices.level().getObjectManager().getVblaCounter());
+        int sourceTailVblank =
+                observedSourceTailVblank(currentLevel.segment(), playback);
         probe.setDelegate(null);
         if (!isNewActiveLevelSegment(nextLevel, levelAtSegmentStart)) {
             int offset = nextLevel.segment().bk2FrameOffset();
@@ -3787,6 +3786,63 @@ abstract class AbstractRunChainTest {
     private void serviceLagRowVint() {
         var objectManager = GameServices.level().getObjectManager();
         objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
+    }
+
+    /**
+     * The object V-blank counter observed on the source segment's FINAL recorded
+     * row, latched the moment that row is played, plus the BK2 row it belongs to.
+     */
+    private int sourceTailVblankObservation = 0;
+    private int sourceTailVblankObservationRow = -1;
+
+    /**
+     * Latches the source segment's tail V-blank anchor as its final recorded row
+     * is played, rather than reconstructing it afterwards.
+     *
+     * <p>{@link TraceRunReplayWalker#sourceTailVblankAtBoundary} projects the
+     * anchor BACKWARDS from wherever the boundary wait happens to stop, charging
+     * one tick to every row in between. That premise does not hold across the
+     * boundary window: the window steps the engine through the destination's
+     * load, and {@link #suppressedRowOwesVint} deliberately declines to service
+     * the row on which the load replaces the object manager. The dropped tick is
+     * then subtracted out of the anchor, so every value derived from it —
+     * destination clock included — lands one tick low.
+     *
+     * <p>Observing the anchor where it is defined removes the reconstruction
+     * entirely: on the source's final recorded row the engine's counter is the
+     * one the segment's own comparison ran on, so no assumption about
+     * choreography rows can contaminate it. This is not trace hydration — the
+     * value read is the ENGINE's own clock, never a recorded field.
+     */
+    private void latchSourceTailVblank(
+            TraceRunManifest.Segment source, int rowBeingPlayed) {
+        int sourceFinalRow =
+                source.bk2FrameOffset() + source.traceFrameCount() - 1;
+        if (rowBeingPlayed != sourceFinalRow
+                || sourceTailVblankObservationRow == sourceFinalRow) {
+            return;
+        }
+        sourceTailVblankObservationRow = sourceFinalRow;
+        sourceTailVblankObservation =
+                GameServices.level().getObjectManager().getVblaCounter();
+    }
+
+    /**
+     * The source tail anchor: the latched observation when the chain stepped
+     * through the source's final recorded row one row at a time, and otherwise
+     * the walker's backward projection, which is exact for the paths that stop
+     * with the cursor still on that row.
+     */
+    private int observedSourceTailVblank(
+            TraceRunManifest.Segment source, PlaybackDebugManager playback) {
+        int sourceFinalRow =
+                source.bk2FrameOffset() + source.traceFrameCount() - 1;
+        if (sourceTailVblankObservationRow == sourceFinalRow) {
+            return sourceTailVblankObservation;
+        }
+        return TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                source, playback.getCursorFrame(),
+                GameServices.level().getObjectManager().getVblaCounter());
     }
 
     /**

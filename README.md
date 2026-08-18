@@ -249,7 +249,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   `s2disasm/s2.asm:60988-61027`); with the composition off that parity had survived on a
   coincidentally even unreconciled offset. Chain frontier unchanged and byte-identical to
   control at segment 11, 188 errors, frame 3531. Verified at 790 tests / 3 red, the three chains
-  only.
+  only. The round refuted the brief it was given -- the tick it was sent to find did not exist,
+  and the defect was a projection where an observation was available.
 
 - **S1's remaining PLC-arming divergence is a sub-frame wall, and the sanctioned resolution is
   named (`bugfix/ai-s1-plc-prepared`, documentation, merged 2026-08-18).** Segments 12

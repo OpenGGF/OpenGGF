@@ -4,6 +4,30 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 2's run-chain object V-blank clock landed one tick low at every
+  `level_advance` boundary. The source-tail anchor was reconstructed by
+  projecting the counter backwards across the boundary window at one tick per
+  movie row, but that window steps the engine through the destination's level
+  load, and the row on which the load replaces the `ObjectManager` is
+  deliberately left unserviced — so the dropped tick was subtracted straight out
+  of the anchor. The anchor is now observed on the source segment's final
+  recorded row instead of reconstructed. No timing constant changed: the
+  per-destination masked-entry losses (10, 9 for `ooz1 -> ooz2`, 11 for a
+  special-stage round trip) were re-measured directly off
+  `s2-sonic-tails-complete-emeralds` and all match the values already tabled.
+
+  With the anchor correct, Sonic 2's level -> special stage -> level V-blank
+  composition (`alignUncomparedInteriorReturnVblank`) is enabled. The engine's
+  object clock now equals the recorded `vblank_counter` at every level bind of
+  the complete-emerald run — all five special-stage returns and the
+  `seg4_ehz1 -> seg5_ehz2` act advance — where it previously drifted by 2, 4, 3,
+  2 and 4 ticks. It had been committed disabled because enabling it flipped the
+  parity that `Obj4B_ChkPlayers` selects its target with
+  (`btst #0,(Vint_runcount+3).w`, docs/s2disasm/s2.asm:60988-61027); with the
+  composition off that parity had been surviving on a coincidentally even
+  unreconciled offset. Sonic 1 is unaffected — its anchor already had no rows to
+  project across — and its chain output is byte-identical.
+
 - A run chain's return from an uncompared special-stage interior lost its first
   gameplay frame to the comparator. `TraceRunReplayWalker.BoundaryProbe` pins a
   prepared BK2 row to the delegate that prepared it, so a handoff observed
