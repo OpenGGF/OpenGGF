@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A run comparator attaching behind a detached-prepared row no longer misses its first frame
+  (`bugfix/ai-aiz2-xsub-entry`, merged 2026-08-18).** `TraceRunReplayWalker.BoundaryProbe` pins a
+  prepared BK2 row to the delegate that prepared it, so a handoff observed mid-row cannot take
+  that row from its preparer. But a special-stage return latches `GameMode.LEVEL` on a step that
+  never reaches `afterFrameAdvanced`, leaving the probe holding a row prepared while DETACHED --
+  pinned, with a null preparer -- and the return segment's comparator attached behind that pin,
+  so its **first gameplay frame ran unobserved**. The engine ran that frame correctly: on
+  `s3k-sonic-tails-complete-emeralds` segment 2 it reproduces the recording's frame 0 exactly.
+  Only the comparison was displaced, so recorded row 0 was compared against post-frame-1 state
+  and every physics field read one frame ahead -- 83,181 errors opening at frame 0 with `x_sub`
+  `0x0C00` against `0x3000`, **which is that row's own frame-1 value**. It also explains
+  `framesConsumed` measuring 0 against the 1 that `attachReturnedLevelSegment`'s comparator
+  frame-base contract documents for that transition kind. A row prepared while detached now
+  adopts the incoming delegate; a row prepared by a real delegate still stays pinned to it.
+  Comparison plumbing only: it changes which observer sees an already-executed frame, never
+  engine state and never what the engine runs. Segment 2's frontier moves from frame 0 to
+  **frame 94** (`x` rom `0x1CE2` engine `0x1CDD`), errors 83,181 to 80,379. Verified at 790 tests
+  / 3 red, the three chains only. Note this retires the standing hypothesis that the
+  `ss -> aiz_2` handoff required a four-part level-load art programme: it required none of it.
+
 - **The S3K chain crosses its recorded interstitial spans
   (`feature/ai-interstitial-timing`, merged 2026-08-18).** A recorder observes hardware
   completions across the whole movie, but a run fixture only represents the segments it
