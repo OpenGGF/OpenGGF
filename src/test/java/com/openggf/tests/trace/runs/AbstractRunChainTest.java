@@ -831,7 +831,7 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "coordinator admitted the wrong destination row: " + receipt);
             }
-            settlePreMainLoopPlayerTransferAtAdmission();
+            settlePreMainLoopPlayerTransferAtAdmission(receipt);
             return receipt;
         }
 
@@ -857,12 +857,14 @@ abstract class AbstractRunChainTest {
          * segment, where the ROM records no edge at all, and left the gap short
          * the two edges the ROM does record there.
          */
-        private void settlePreMainLoopPlayerTransferAtAdmission() {
+        private void settlePreMainLoopPlayerTransferAtAdmission(
+                DestinationAdmissionReceipt receipt) {
             DynamicArtLifecycleService lifecycle =
                     SessionManager.getCurrentGameplayMode()
                             .dynamicArtLifecycle();
             if (lifecycle != null && lifecycle.isRunActive()) {
-                lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop();
+                lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop(
+                        receipt.absoluteBk2Row() - receipt.rowsConsumed());
             }
         }
 

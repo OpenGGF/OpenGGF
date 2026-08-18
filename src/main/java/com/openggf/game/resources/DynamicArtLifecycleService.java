@@ -806,7 +806,7 @@ public final class DynamicArtLifecycleService
      * <p>The transfer's row is the level's first main-loop row minus the
      * game's counted pre-main-loop tail
      * ({@link com.openggf.game.LevelInitProfile#preLevelMainLoopDelayFrames()}),
-     * the same relation {@link #settlePendingPlayerPreparationBeforeLevelMainLoop()}
+     * the same relation {@link #settlePendingPlayerPreparationBeforeLevelMainLoop(int)}
      * settles a mid-run load on. Nothing is published when no priming staged a
      * bank, so a segment-scoped replay is unaffected.
      *
@@ -1181,22 +1181,36 @@ public final class DynamicArtLifecycleService
     }
 
     /**
-     * Settles a held pre-main-loop player transfer from the row that precedes
-     * the level's first main-loop row, i.e. the tail's last row.
+     * Settles a held pre-main-loop player transfer from the tail that precedes
+     * the level's first main-loop row.
      *
-     * <p>A run admits a destination while the shared movie clock still reads
-     * the row the transition gap ended on; the level's first main-loop row is
-     * the next one, so the tail's first row — the transfer's — is
-     * {@code movieLogicalFrame + 1 - tailRows}.
+     * <p>The caller supplies the row the destination was admitted on, which is
+     * that level's first main-loop row: a level segment's recording begins at
+     * {@code Level_MainLoop} (docs/s1disasm/sonic.asm:2998), after the counted
+     * {@code Level_Delay} / {@code PalFadeIn_Alt} tail has already run. The
+     * transfer therefore belongs {@code tailRows} rows earlier.
+     *
+     * <p>This row must be observed, not projected from the movie clock. An
+     * admission that consumes no destination row leaves the shared clock on the
+     * gap's last row, but an admission that consumes one has already advanced
+     * it onto the destination's first row; a {@code movieLogicalFrame + 1}
+     * projection is right for the former and one row late for the latter.
+     *
+     * @param firstMainLoopRow movie row the destination was admitted on
      */
-    public void settlePendingPlayerPreparationBeforeLevelMainLoop() {
+    public void settlePendingPlayerPreparationBeforeLevelMainLoop(
+            int firstMainLoopRow) {
         requireRunActive();
+        if (firstMainLoopRow < 0) {
+            throw new IllegalArgumentException(
+                    "firstMainLoopRow must be nonnegative");
+        }
         if (preMainLoopTailRows < 0) {
             // Nothing was staged for a tail: an ordinary submission still
             // belongs to the V-blank that services it, not to this boundary.
             return;
         }
-        flushS1PreparationIfPending(Math.addExact(movieLogicalFrame, 1));
+        flushS1PreparationIfPending(firstMainLoopRow);
     }
 
     /**

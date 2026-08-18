@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The level-load player transfer row is observed, not projected
+  (`bugfix/ai-s1-level-load-transfer-row`, merged 2026-08-19).**
+  `settlePendingPlayerPreparationBeforeLevelMainLoop` computed the destination's first main-loop
+  row as `movieLogicalFrame + 1`. An admission that consumes a destination row has already
+  advanced the shared movie clock onto that row, so the projection overshoots by one. A probe at
+  the admission boundary split the run's admissions cleanly by `rowsConsumed`, and **that split is
+  exactly the pass/fail line**: segments 3, 6, 11 and 15 consume 0 rows and were already green;
+  segments 7, 8, 12 and 16 consume 1 and were the four failing gaps. Both call sites now pass
+  `receipt.absoluteBk2Row() - receipt.rowsConsumed()`. The constant was never at fault --
+  `offset - 26` equals the recorded value in all four cases (27441 / 31060 / 47008 / 78140), and
+  the 26 is `Level_Delay`'s 4 frames (`s1disasm/sonic.asm:2957-2963`) plus `PalFadeIn_Alt`'s 22
+  (`_inc/Palette Fading.asm:32-51`). **No constant added, changed or fitted.**
+  `TestS1CompleteEmeraldRunChain` goes from **8 failing axes to 4**, with all four
+  `dynamic-art-gap` axes green. Verified at 791 tests / 4 red, identical to control.
+
 - **The CPZ Grabber dives on the frame its delay ends (`bugfix/ai-s2-seg12-closure`, merged
   2026-08-18).** `ObjA7_Main` runs the sub-state routine and then calls `ObjectMove`
   **unconditionally, every frame** (`s2disasm/s2.asm:76677-76684`), so the frame that ends the
