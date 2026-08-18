@@ -37,6 +37,17 @@ namespace BizHawk.Headless.Gpgx
             "metadata.json"
         };
 
+        /// <summary>
+        /// Conditional trace-mode outputs: staged like the others, but
+        /// published only if the capture actually wrote to them, so a
+        /// capture that records no hardware-timing edge keeps the exact
+        /// three-file inventory every existing S1 trace has.
+        /// </summary>
+        internal static readonly string[] S1ConditionalTraceOutputFileNames =
+        {
+            "hardware_timing.jsonl"
+        };
+
         internal const string RunManifestFileName = "run_manifest.json";
         internal const string LoadTimeFileName = "load_time_measurements.jsonl";
 
@@ -1120,7 +1131,8 @@ namespace BizHawk.Headless.Gpgx
                     writers[0],
                     writers[1],
                     writers[2],
-                    File.ReadAllBytes(options.RomPath)),
+                    File.ReadAllBytes(options.RomPath),
+                    writers[3]),
                 result =>
                     "BizHawk: " + installation.ManagedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
@@ -1139,7 +1151,9 @@ namespace BizHawk.Headless.Gpgx
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
-                new NoReplacePublisher(options.CreateCompressor()));
+                new NoReplacePublisher(options.CreateCompressor()),
+                CommandLineOptions.TraceOutputFileNames,
+                CommandLineOptions.S1ConditionalTraceOutputFileNames);
         }
 
         private static int RunS1AudioReference(
@@ -2492,7 +2506,8 @@ namespace BizHawk.Headless.Gpgx
             Func<IGpgxHost, TextWriter[], TResult> capture,
             Func<TResult, string> formatSuccess,
             NoReplacePublisher publisher,
-            string[] outputFileNames)
+            string[] outputFileNames,
+            string[] conditionalOutputFileNames = null)
             where TResult : class
         {
             NoReplacePublisher.StagedPublicationSet staged = null;
@@ -2505,6 +2520,7 @@ namespace BizHawk.Headless.Gpgx
                     staged = publisher.StageAll(
                         outputDirectory,
                         outputFileNames,
+                        conditionalOutputFileNames,
                         writers => { result = capture(host, writers); });
                 }
 

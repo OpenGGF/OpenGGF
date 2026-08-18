@@ -161,6 +161,27 @@ namespace OpenGGF.BizHawk.Headless
             string[] fileNames,
             Action<TextWriter[]> write)
         {
+            return StageAll(outputDirectory, fileNames, null, write);
+        }
+
+        /// <summary>
+        /// As <see cref="StageAll(string,string[],Action{TextWriter[]})"/>,
+        /// with a tail of CONDITIONAL file names. Their writers arrive
+        /// after the unconditional ones in the same array, but each opens
+        /// its temporary only on the first character written, and a
+        /// conditional file nothing was written to is neither staged nor
+        /// published — no 0-byte file joins the output inventory.
+        ///
+        /// That is what lets a capture carry an optional sidecar (the S1
+        /// PLC hardware-timing stream) while every capture that produces
+        /// no such record keeps its exact existing inventory.
+        /// </summary>
+        internal StagedPublicationSet StageAll(
+            string outputDirectory,
+            string[] fileNames,
+            string[] conditionalFileNames,
+            Action<TextWriter[]> write)
+        {
             if (string.IsNullOrEmpty(outputDirectory))
             {
                 throw new ArgumentException(
@@ -178,21 +199,27 @@ namespace OpenGGF.BizHawk.Headless
                 throw new ArgumentNullException("write");
             }
 
+            string[] conditional = conditionalFileNames
+                ?? new string[0];
             string fullOutputDirectory =
                 Path.GetFullPath(outputDirectory);
             Directory.CreateDirectory(fullOutputDirectory);
-            var temporaryPaths = new string[fileNames.Length];
-            var staged = new StagedPublication[fileNames.Length];
-            for (var index = 0; index < fileNames.Length; index++)
+            int total = fileNames.Length + conditional.Length;
+            var temporaryPaths = new string[total];
+            var staged = new StagedPublication[total];
+            for (var index = 0; index < total; index++)
             {
+                string name = index < fileNames.Length
+                    ? fileNames[index]
+                    : conditional[index - fileNames.Length];
                 string finalPath = Path.Combine(
                     fullOutputDirectory,
-                    fileNames[index]);
+                    name);
                 string finalDirectory = Path.GetDirectoryName(finalPath);
                 Directory.CreateDirectory(finalDirectory);
                 temporaryPaths[index] = Path.Combine(
                     finalDirectory,
-                    CreateTemporaryName(Path.GetFileName(fileNames[index])));
+                    CreateTemporaryName(Path.GetFileName(name)));
                 staged[index] = new StagedPublication(
                     temporaryPaths[index],
                     finalPath,
@@ -202,8 +229,10 @@ namespace OpenGGF.BizHawk.Headless
 
             try
             {
-                WriteTemporaryFiles(temporaryPaths, write);
-                return new StagedPublicationSet(staged, compressor);
+                bool[] opened = WriteTemporaryFiles(
+                    temporaryPaths, fileNames.Length, write);
+                return new StagedPublicationSet(
+                    SelectStaged(staged, opened), compressor);
             }
             catch
             {
@@ -687,36 +716,78 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
-        private static void WriteTemporaryFiles(
+        /// <summary>
+        /// Keeps every unconditional staged file plus the conditional ones
+        /// that were actually written to. An unwritten conditional file has
+        /// no temporary on disk either, so dropping it here is the whole of
+        /// "publishes no file at all".
+        /// </summary>
+        private static StagedPublication[] SelectStaged(
+            StagedPublication[] staged,
+            bool[] opened)
+        {
+            var kept = new List<StagedPublication>(staged.Length);
+            for (var index = 0; index < staged.Length; index++)
+            {
+                if (opened[index])
+                {
+                    kept.Add(staged[index]);
+                }
+            }
+            return kept.ToArray();
+        }
+
+        /// <summary>
+        /// Opens the first <paramref name="unconditionalCount"/> temporary
+        /// files eagerly and the remainder lazily, runs the capture, and
+        /// reports which temporaries exist. Only a lazy file can report
+        /// false, and only when nothing was written to it.
+        /// </summary>
+        private static bool[] WriteTemporaryFiles(
             string[] temporaryPaths,
+            int unconditionalCount,
             Action<TextWriter[]> write)
         {
             var streams = new FileStream[temporaryPaths.Length];
             var writers = new StreamWriter[temporaryPaths.Length];
+            var handed = new TextWriter[temporaryPaths.Length];
+            var lazy = new LazyOpenTextWriter[temporaryPaths.Length];
+            var opened = new bool[temporaryPaths.Length];
             try
             {
                 for (var index = 0; index < temporaryPaths.Length; index++)
                 {
-                    streams[index] = new FileStream(
-                        temporaryPaths[index],
-                        FileMode.CreateNew,
-                        FileAccess.Write,
-                        FileShare.None);
-                    writers[index] = new StreamWriter(
-                        streams[index],
-                        new UTF8Encoding(false),
-                        1024,
-                        true);
-                    writers[index].NewLine = "\n";
+                    if (index < unconditionalCount)
+                    {
+                        writers[index] = OpenTemporaryWriter(
+                            temporaryPaths, streams, index);
+                        handed[index] = writers[index];
+                        opened[index] = true;
+                        continue;
+                    }
+                    int slot = index;
+                    lazy[index] = new LazyOpenTextWriter(() =>
+                    {
+                        writers[slot] = OpenTemporaryWriter(
+                            temporaryPaths, streams, slot);
+                        opened[slot] = true;
+                        return writers[slot];
+                    });
+                    handed[index] = lazy[index];
                 }
 
-                write(writers);
+                write(handed);
 
                 for (var index = 0; index < temporaryPaths.Length; index++)
                 {
+                    if (!opened[index])
+                    {
+                        continue;
+                    }
                     writers[index].Flush();
                     streams[index].Flush(true);
                 }
+                return opened;
             }
             finally
             {
@@ -726,6 +797,25 @@ namespace OpenGGF.BizHawk.Headless
                     TryDispose(streams[index]);
                 }
             }
+        }
+
+        private static StreamWriter OpenTemporaryWriter(
+            string[] temporaryPaths,
+            FileStream[] streams,
+            int index)
+        {
+            streams[index] = new FileStream(
+                temporaryPaths[index],
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None);
+            var writer = new StreamWriter(
+                streams[index],
+                new UTF8Encoding(false),
+                1024,
+                true);
+            writer.NewLine = "\n";
+            return writer;
         }
 
         private static void TryDispose(IDisposable disposable)

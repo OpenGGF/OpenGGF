@@ -129,6 +129,7 @@
     <Compile Include="src/Recording/DynamicArtTransferState.cs" />
     <Compile Include="src/Recording/DynamicArtCaptureRowBuffer.cs" />
     <Compile Include="src/Recording/S1DynamicArtObserver.cs" />
+    <Compile Include="src/Recording/S1PlcHardwareTimingObserver.cs" />
     <Compile Include="src/Recording/S2DynamicArtObserver.cs" />
     <Compile Include="src/Recording/LoadQueueStateEvent.cs" />
     <Compile Include="src/Recording/LoadQueueStateProjector.cs" />

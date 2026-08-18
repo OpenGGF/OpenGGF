@@ -47,6 +47,7 @@
     <Compile Include="tests/DynamicArtRomProfileTests.cs" />
     <Compile Include="tests/DynamicArtTransferStateTests.cs" />
     <Compile Include="tests/S1DynamicArtObserverTests.cs" />
+    <Compile Include="tests/S1PlcHardwareTimingObserverTests.cs" />
     <Compile Include="tests/S2DynamicArtObserverTests.cs" />
     <Compile Include="tests/GpgxHostTests.cs" />
     <Compile Include="tests/GpgxAudioObserverSourceLockTests.cs" />
