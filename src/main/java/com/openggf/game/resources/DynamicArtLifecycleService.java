@@ -61,6 +61,25 @@ public final class DynamicArtLifecycleService
     private final List<DynamicArtGapTransition> gapTransitions = new ArrayList<>();
     private Preparation s1Preparation;
     /**
+     * A player staging taken while an earlier one is still held for the
+     * level's pre-main-loop tail.
+     *
+     * <p>{@code Sonic_LoadGfx} decodes at most one frame per call and hands it
+     * to the V-blank DMA via {@code f_sonframechg}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2394-2409), so a staging is always
+     * separated from the next one by a V-int. Around a level load the ROM
+     * makes two such calls with the whole {@code Level_Delay} /
+     * {@code PalFadeIn_Alt} tail between them: the {@code Level_LoadObj}
+     * {@code ExecuteObjects} pass (docs/s1disasm/sonic.asm:2895-2897), served
+     * by the tail's first V-int (docs/s1disasm/sonic.asm:2956-2961), and then
+     * the first {@code Level_MainLoop} pass (docs/s1disasm/sonic.asm:2998),
+     * served by the V-int after it. The engine does not spend the tail's rows,
+     * so both stagings arrive on one engine row; letting the second replace
+     * the first would drop a DMA the ROM performs. Holding it here keeps both
+     * transfers, each on its own row.
+     */
+    private Preparation s1PreparationAfterPreMainLoopTail;
+    /**
      * Level-load player bank staged by a fresh playable's priming, held
      * until a run whose movie spans the load publishes it.
      */
@@ -264,6 +283,7 @@ public final class DynamicArtLifecycleService
             List<Long> latestOutstandingTransferIds,
             boolean latestPublished,
             Preparation s1Preparation,
+            Preparation s1PreparationAfterPreMainLoopTail,
             Preparation initialLoadPreparation,
             boolean levelEntryPlayerArtHeld,
             List<Preparation> heldLevelEntryPlayerArt,
@@ -969,9 +989,16 @@ public final class DynamicArtLifecycleService
         if (checked.isEmpty()) {
             return new ArtUpdate(true, -1, List.of());
         }
-        s1Preparation = new Preparation(owner, mappingFrame,
+        Preparation prepared = new Preparation(owner, mappingFrame,
                 toDiagnosticRequests(checked, profile.romArtBase(), -1,
                         profile.vramDestination()));
+        if (s1Preparation != null && preMainLoopTailRows >= 0) {
+            // The held staging belongs to the tail's first V-int; this one is
+            // the main loop's. Queue it rather than replacing the held one.
+            s1PreparationAfterPreMainLoopTail = prepared;
+        } else {
+            s1Preparation = prepared;
+        }
         return new ArtUpdate(true, -1, checked);
     }
 
@@ -1205,7 +1232,8 @@ public final class DynamicArtLifecycleService
 
     private void flushS1Preparation() {
         Preparation preparation = s1Preparation;
-        s1Preparation = null;
+        s1Preparation = s1PreparationAfterPreMainLoopTail;
+        s1PreparationAfterPreMainLoopTail = null;
         long transferId = nextTransferId++;
         List<Long> before = List.copyOf(ledger.keySet());
         Descriptor descriptor = new Descriptor(
@@ -1372,7 +1400,8 @@ public final class DynamicArtLifecycleService
                 pendingS2TransferIds, gapTransitions,
                 publishedOutstanding, latest.frame(), latest.edges(),
                 latest.outstandingTransferIds(), latest.published(),
-                s1Preparation, initialLoadPreparation,
+                s1Preparation, s1PreparationAfterPreMainLoopTail,
+                initialLoadPreparation,
                 levelEntryPlayerArtHeld,
                 List.copyOf(heldLevelEntryPlayerArt), runActive,
                 comparisonSegmentOpen,
@@ -1409,6 +1438,8 @@ public final class DynamicArtLifecycleService
                 snapshot.latestOutstandingTransferIds(), deliverySerial,
                 segmentGeneration, snapshot.latestPublished());
         s1Preparation = snapshot.s1Preparation();
+        s1PreparationAfterPreMainLoopTail =
+                snapshot.s1PreparationAfterPreMainLoopTail();
         initialLoadPreparation = snapshot.initialLoadPreparation();
         levelEntryPlayerArtHeld = snapshot.levelEntryPlayerArtHeld();
         heldLevelEntryPlayerArt.clear();
@@ -1456,6 +1487,7 @@ public final class DynamicArtLifecycleService
         pendingS2TransferIds.clear();
         gapTransitions.clear();
         s1Preparation = null;
+        s1PreparationAfterPreMainLoopTail = null;
         initialLoadPreparation = null;
         levelEntryPlayerArtHeld = false;
         heldLevelEntryPlayerArt.clear();
