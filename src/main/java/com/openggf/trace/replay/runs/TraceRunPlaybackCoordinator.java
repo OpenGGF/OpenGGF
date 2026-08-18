@@ -518,9 +518,11 @@ public final class TraceRunPlaybackCoordinator {
         }
         TracePlaybackProfile.LevelIdentity expected =
                 profile.resolveRecordedLevel(segment.zoneId(), segment.act());
+        int expectedRomZone = profile.resolveRecordedRomZone(segment.zoneId());
         return identity.progressionZone() == expected.zone()
-                && identity.romZone() == segment.zoneId()
-                && identity.act() == expected.act();
+                && identity.act() == expected.act()
+                && (expectedRomZone == TracePlaybackProfile.UNSPECIFIED_ROM_ZONE
+                        || identity.romZone() == expectedRomZone);
     }
 
     private static boolean matchesBonus(

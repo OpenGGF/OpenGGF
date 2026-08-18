@@ -4,6 +4,27 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Whole-run chain replay no longer asserts a recorded zone id against the
+  engine's ROM zone byte for a game whose recorder does not name ROM zones.
+  `TraceRunPlaybackCoordinator.matchesLevel` compared
+  `LevelIdentity.romZone()` directly against the manifest segment's `zone_id`.
+  That holds for Sonic 1, whose recorder writes the ROM's own `v_zone`
+  (an S1 route manifest runs `0, 2, 4, 1, 3, 5` for GHZ, MZ, SYZ, LZ, SLZ,
+  SBZ), and where the comparison is what separates S1's two aliased identities
+  -- LZ act 4 is SBZ3 and SBZ act 3 is Final Zone. Sonic 2's recorder writes
+  the progression index instead (`0..10` in play order, with `rom_zone_id`
+  carried separately in each segment's own `metadata.json`), so CPZ is recorded
+  as zone 1 while the engine loads ROM zone 13 and the two numbers were never
+  in the same space. Every level identity check past EHZ therefore failed, and
+  with it `beforeLoadedLevelActivation`, so no destination could be admitted.
+  The recorded zone space is now the profile's own fact:
+  `TracePlaybackProfile.resolveRecordedRomZone` answers with the ROM zone when
+  the recorder names one and `UNSPECIFIED_ROM_ZONE` when it does not, and the
+  coordinator asserts the ROM zone only in the former case. Nothing is
+  weakened where it applied: a DIRECT profile's progression zone and act
+  already pin the identity, having no aliased pair. `TestS2CompleteEmeraldRunChain`
+  advances from failing at the `seg7_ehz2 -> seg8_cpz1` handoff (BK2 cursor
+  61206) to running 5212 rows into CPZ act 1 before diverging at cursor 66418.
 - Sonic 1's end-of-act card now stops the level main loop before its fade, so
   the post-act fade no longer runs as ordinary gameplay frames. `Got_NextLevel`
   writes `move.w #1,(f_restart).w` from inside `ExecuteObjects`

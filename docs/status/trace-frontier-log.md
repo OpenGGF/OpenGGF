@@ -83013,3 +83013,29 @@ Not yet diagnosed. Note that five separate divergences resolved today were compa
 or observation plumbing rather than engine defects, and a two-row cursor overshoot at a
 `level_advance` has that shape. `AbstractRunChainTest.requireAdmission` and
 `TraceRunReplayWalker` are the machinery.
+## 2026-08-18 - S2 complete-emerald chain clears the EHZ2 -> CPZ1 handoff
+
+- Branch
+  `bugfix/ai-s2-seg8-handoff-3`, over `develop` at `fd8473b66`.
+- **Frontier before:** `TestS2CompleteEmeraldRunChain` cleared segment 11
+  (`seg7_ehz2`) and failed on the handoff into segment 12 (`seg8_cpz1`):
+  `[walk-failure] Segment 11 destination seg8_cpz1 cursor advanced past its
+  first recorded row without admission (cursor 61208, offset 61206)`.
+- **Cause.** Not the load generation, the boundary window or the observation
+  plumbing. A coordinator probe at the failing rows reported
+  `matchesLevel=false` with `loadGen=9`, `currentLevelGeneration=8`,
+  `causeOk=true` and `cause=LEVEL_ADVANCE` -- the engine arrives on time and
+  with the right identity. `matchesLevel` compared the engine's ROM zone (CPZ
+  = 13) against the manifest's recorded `zone_id` (1, S2's progression index).
+  Pre-existing since the coordinator was introduced in `731588c8a`; only made
+  reachable by `6be9e24d7`, which cleared segment 11.
+- **Frontier after:** segment 12 is admitted and runs 5212 of its 6613 recorded
+  rows. Next failure is `[walk-failure] segment 12 lost production ownership
+  before source closure (mode=TITLE_CARD,
+  level=LevelIdentity[loadGeneration=10, progressionZone=1, romZone=13, act=0],
+  BK2 cursor=66418)` -- the engine ends CPZ act 1 about 1401 rows early.
+  CPZ act 1 has no standalone `*CompleteEmeraldsSegmentTraceReplay` lane, so
+  this is a first look at that act under replay.
+- Command: `mvn -Ptrace-replay-r7 -Dtest=TestS2CompleteEmeraldRunChain
+  -Dsonic2.rom.path=s2.gen test`.
+
