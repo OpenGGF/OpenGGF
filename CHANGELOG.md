@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 2's CPZ warp-pipe exit spring now detaches the character it launches.
+  `loc_296C2` writes `y_vel`, sets `status.player.in_air` and then clears
+  `status.player.on_object` (`docs/s2disasm/s2.asm:56455-56462`) -- the bounce
+  happens in the same frame `SolidObject_Always_SingleCharacter` set the
+  standing bit, so the ROM's status on that frame carries `in_air` without
+  `on_object`. `PipeExitSpringObjectInstance` documented the `bclr` in its
+  comment but never performed it, so the launched character kept
+  `on_object` for one frame. That is the whole residual red of
+  `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay`: `tails_status_byte`
+  rom `0x0003` engine `0x000B` at frames 2700 and 2797, the two frames Tails is
+  thrown by the CPZ act 1 pipe-exit spring. The lane is now green over all
+  6613 rows.
 - A rolling sidekick that smashes an S3K cork floor now also drops the
   partner standing on it. `Obj_CorkFloor`'s roll-break branch caches
   `Player_1+anim` and `Player_2+anim` before `SolidObjectFull`
