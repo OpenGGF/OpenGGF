@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S1's remaining PLC-arming divergence is a sub-frame wall, and the sanctioned resolution is
+  named (`bugfix/ai-s1-plc-prepared`, documentation, merged 2026-08-18).** Segments 12
+  (`mz2_3` frame 101) and 15 (`mz3_2` frame 102) share one cause: an
+  `isIterationHeldIntoNextRow` deferral firing where the ROM did not defer. Re-measured
+  independently including the last untested frame-granularity candidate -- `v_oscillate`
+  (`OscillateNumDo`, `s1disasm/sonic.asm:3033`, the instruction after `RunPLC` at `:3032`) is
+  held on the completion row and advanced on the following lag row in all four measured cases,
+  so it does not separate the 14 cases from the one. **The discriminator is sub-frame 68000
+  cycle position**, which no frame-granularity state can express. The proof is complementarity:
+  a reverted probe disabling the deferral makes segment 15 fully green and moves segment 12's
+  frontier from frame 101 to 593, but turns segment 3 red at `ghz2_2` 107 and self-pauses
+  `TestS1CompleteEmeraldVisualRun` -- the two models are exactly complementary, so no
+  frame-granularity model can beat 14/15 while the 1/15 side is pinned green. That is precisely
+  the case hard rule 4 anticipates, and rule 4 already permits recorded hardware timing to drive
+  a delay in the **S1 PLC** art-loading pipeline; taking it needs the S1 fixtures regenerated
+  with that stream. Nothing landed in `src/main`. Separately, the `syz2` walk-failure at row 70
+  is byte-identical under the probe and is a **different** defect: the engine runs exactly one
+  row ahead, servicing 9 patterns on a V-blank the ROM took without completing a main-loop
+  iteration.
+
 - **Both player DMAs the S1 level load performs are now kept
   (`bugfix/ai-s1-seg7-edges2`, merged 2026-08-18).** `Sonic_LoadGfx` decodes one frame per call
   and hands it to the V-blank DMA through `f_sonframechg`
