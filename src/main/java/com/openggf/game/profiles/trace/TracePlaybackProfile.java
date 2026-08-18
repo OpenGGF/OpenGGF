@@ -255,6 +255,37 @@ public record TracePlaybackProfile(
         return stageResultsEntryNonAdvancingMovieRows >= 0;
     }
 
+    /**
+     * Returned by {@link #resolveRecordedRomZone(int)} when the recorder's zone
+     * space does not name ROM zones at all.
+     */
+    public static final int UNSPECIFIED_ROM_ZONE = -1;
+
+    /**
+     * The ROM zone byte a recorded zone id names, or {@link #UNSPECIFIED_ROM_ZONE}
+     * when the recorder's zone space is not the ROM's.
+     *
+     * <p>The two recorded identity spaces differ on exactly this point.
+     * {@link RecordedLevelIdentityProfile#SONIC_1_ROM} records the ROM's own
+     * {@code v_zone} byte -- an S1 manifest's route runs {@code 0, 2, 4, 1, 3, 5}
+     * for GHZ, MZ, SYZ, LZ, SLZ, SBZ -- so the recorded id IS the ROM zone, and
+     * comparing it against the engine's loaded ROM zone is what distinguishes
+     * S1's two aliased identities (LZ act 4 is SBZ3, SBZ act 3 is Final Zone;
+     * see {@link #resolveRecordedLevel}), which share a progression identity
+     * with no other recorded pair.
+     * {@link RecordedLevelIdentityProfile#DIRECT} records the engine's
+     * progression index instead -- an S2 manifest runs {@code 0..10} in play
+     * order, so CPZ is recorded as zone 1 while the ROM zone the engine loads
+     * is 13, and the two numbers are simply in different spaces. A DIRECT
+     * profile therefore has no recorded ROM zone to assert; its progression
+     * zone and act already pin the identity completely, having no aliases.
+     */
+    public int resolveRecordedRomZone(int recordedZone) {
+        return recordedLevelIdentityProfile == RecordedLevelIdentityProfile.SONIC_1_ROM
+                ? recordedZone
+                : UNSPECIFIED_ROM_ZONE;
+    }
+
     /** Converts recorder-native zone/act bytes into engine progression identity. */
     public LevelIdentity resolveRecordedLevel(int recordedZone, int oneBasedAct) {
         int zeroBasedAct = Math.max(0, oneBasedAct - 1);

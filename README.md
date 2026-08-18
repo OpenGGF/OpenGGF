@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Recorded zone identity is compared in the space the recorder used
+  (`bugfix/ai-s2-seg8-handoff-3`, merged 2026-08-18).** `TestS2CompleteEmeraldRunChain` cleared
+  segment 11 (`seg7_ehz2`) and then failed on the handoff into segment 12 with the cursor two
+  rows past the destination's first recorded row without admission. Not the load generation, the
+  boundary window or the observation plumbing: a coordinator probe at the failing rows reported
+  `matchesLevel=false` with `loadGen=9` against `currentLevelGeneration=8`, `causeOk=true` and
+  `cause=LEVEL_ADVANCE` -- **the engine arrives on time and with the right identity**.
+  `matchesLevel` compared the engine's ROM zone (CPZ = 13) against the manifest's recorded
+  `zone_id` (1, S2's progression index); the two numbers are simply in different spaces. The
+  recorded identity spaces differ on exactly this point:
+  `RecordedLevelIdentityProfile.SONIC_1_ROM` records the ROM's own `v_zone` byte -- an S1
+  manifest's route runs `0, 2, 4, 1, 3, 5` for GHZ, MZ, SYZ, LZ, SLZ, SBZ -- so the recorded id
+  **is** the ROM zone, and comparing it is what distinguishes S1's two aliased identities (LZ act
+  4 is SBZ3, SBZ act 3 is Final Zone); `DIRECT` records the engine's progression index, which has
+  no aliases, so zone and act pin the identity completely and there is no recorded ROM zone to
+  assert. `resolveRecordedRomZone` keys on the existing per-game profile rather than adding a game
+  or zone carve-out. **Pre-existing since the coordinator was introduced in `731588c8a`**, only
+  made reachable by `6be9e24d7` clearing segment 11 -- so the handoff failure was not newly
+  caused. The chain now admits segment 12 and replays roughly 5,200 rows of CPZ1 before failing
+  at that segment's own closure. Verified at 790 tests / 3 red, the three chains only.
+
 - **S3K's special-stage entry flash allocates from the lowest free slot, as the ROM does
   (`bugfix/ai-s3k-aiz2-sidekick16`, merged 2026-08-18).** `loc_61778` allocates
   `Obj_SSEntryFlash` with `jsr (AllocateObject).l` -- **not** `AllocateObjectAfterCurrent`
