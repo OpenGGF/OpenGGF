@@ -248,7 +248,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   through at `x_speed 0x0589`. Segment 2's frontier moves from 80,379 errors at frame 94 to
   **74,575 at frame 384**; the S1 and S2 chains are byte-identical. No constant introduced. This
   is the first genuine gameplay defect the chain work has surfaced, as opposed to a harness,
-  recording or observer artefact.
+  recording or observer artefact. Verified at 790 tests / 3 red, the three chains only, with
+  `runOrder` pinned alphabetical.
 
 - **The S2 run chain observes its source-tail V-blank anchor instead of projecting it, and the
   special-stage composition is enabled (`bugfix/ai-s2-seg45-boundary`, merged 2026-08-18).** The

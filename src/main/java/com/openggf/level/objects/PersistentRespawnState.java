@@ -16,8 +16,24 @@ package com.openggf.level.objects;
  * {@link ObjectPlacementController} on reload, so it instead captures this
  * state at stage entry and re-establishes it before return placement.
  *
+ * <p>
+ * S3K does not use the S1/S2 opt-in remember flag at all: {@code Load_Sprites}
+ * gives every six-byte layout entry its own {@code Object_respawn_table} byte
+ * and always sets bit 7 on load (docs/skdisasm/sonic3k.asm:37745-37766). Only
+ * the {@code Go_Delete_SpriteSlotted} family clears it again
+ * ({@code bclr #7,(a2)}, :179056-179061); an object deleted through
+ * {@code Delete_Current_Sprite} -- a rock smashed by the player, for instance
+ * (:44026-44057) -- leaves bit 7 set and never reloads. The engine models that
+ * latch as the placement controller's {@code destroyedInWindow} set rather than
+ * as {@code remembered}, so {@code destroyedInWindowBits} must travel with the
+ * other two or an S3K object destroyed before a giant-ring detour comes back
+ * intact on return.
+ *
  * @param rememberedBits {@link java.util.BitSet#toLongArray()} of the remembered set
  * @param stayActiveBits {@link java.util.BitSet#toLongArray()} of the stay-active set
+ * @param destroyedInWindowBits {@link java.util.BitSet#toLongArray()} of the
+ *     permanent-destroy latch (S3K {@code Object_respawn_table} bit 7)
  */
-public record PersistentRespawnState(long[] rememberedBits, long[] stayActiveBits) {
+public record PersistentRespawnState(
+        long[] rememberedBits, long[] stayActiveBits, long[] destroyedInWindowBits) {
 }

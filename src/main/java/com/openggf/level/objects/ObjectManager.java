@@ -417,8 +417,7 @@ public class ObjectManager {
         rewindObjectIds.clear();
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.reset(cameraX);
-        placement.restorePersistentRespawn(persistentRespawnState);
+        placement.reset(cameraX, persistentRespawnState);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }

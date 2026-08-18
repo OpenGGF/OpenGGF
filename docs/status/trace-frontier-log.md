@@ -82768,6 +82768,31 @@ this round started.** This change buys clock correctness and unblocks the
 composition; it does not move the chain, and the remaining `seg4_ehz1 ->
 seg5_ehz2` gap axis (4 edges, `movie_logical_frame` one low) is a movie-cursor
 axis that is unaffected by the object clock and remains open.
+## 2026-08-18 - S3K sonic+tails emerald chain: aiz_2 f94 was a resurrected rock
+
+- Dedicated worktree on branch `bugfix/ai-s3k-aiz2-f94`,
+  over `a53a84616`.
+- Command, both trees, reports cleared before each run:
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Ds1.rom.path=... -Ds2.rom.path=... -Ds3k.rom.path=... test`.
+- `TestS3kSonicTailsCompleteEmeraldRunChain` segment 2 (`aiz_2`): **FAIL** both
+  before and after. Before 80379 physics errors, first non-camera mismatch at
+  frame 94, field `x`, rom=`0x1CE2` engine=`0x1CDD`. After 74575 errors, frame
+  384, field `x`, rom=`0x2060` engine=`0x2070`. The `giant_ring` exit boundary is
+  still not reached.
+- Cause: the AIZ1 rock at `(0x1D00, 0x04A9)` -- ROM object code `0x0001FD08`,
+  loaded at `aiz` frame 1847 and smashed into debris at frame 2128 -- was
+  re-created on the special-stage return and became a solid wall. The engine
+  models S3K's `Object_respawn_table` bit 7 as the placement controller's
+  `destroyedInWindow` set; `PersistentRespawnState` did not carry it, and the
+  restore ran after `reset()` had already scanned the entry window. ROM:
+  `Load_Sprites` `:37745-37766`, `Go_Delete_SpriteSlotted` `:179056-179061`,
+  `AIZLRZEMZRock_BreakFromTop`/`_Delete` `:44022-44057`,
+  `Respawn_table_keep = 1` `:128409-128412`, skipped table wipe `:37429-37438`
+  (all `docs/skdisasm/sonic3k.asm`).
+- Unchanged elsewhere: `s1-sonic-complete-withemeralds` segments 12/15/16
+  (40 @ f101 `queue`, 6 @ f102 `queue`, 61 @ f2218 `y_speed`) and
+  `s2-sonic-tails-complete-emeralds` segment 11 (188 @ f3531 `queue`).
 
 **Verification, this tree vs a clean control worktree at the same base
 `a53a84616`, `-Dsurefire.runOrder=alphabetical`, sequential per tree, reports
@@ -82794,3 +82819,12 @@ was updated: its `assertFalse` on S2's `alignUncomparedInteriorReturnVblank` is
 now `assertTrue`. That is the test recording a measurement that has now been
 made, not a demotion — it flips one assertion in the direction the evidence
 above establishes, and the S3K half of the same test is untouched.
+| `-Ptrace-replay` | 790 tests, 3 red | 790 tests, 3 red | identical (the three chains) |
+| `-Ptrace-segments` | 70 tests, 55 red | 70 tests, 55 red | identical |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red | identical |
+| default | 15157 tests, 50 red | 15158 tests, 49 red | `TestModeTracePickerLaunchStatus`, control only |
+
+The extra test is the new `TestPersistentRespawnDestroyLatchRoundTrip`. The
+default-profile delta is ambient: `TestModeTracePickerLaunchStatus` failed only
+in the control sweep, on a Mockito `PixelFont.drawText` verification that cannot
+be reached by this change, and passes when run alone in that same control tree.

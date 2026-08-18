@@ -3062,3 +3062,36 @@ about deletion; read both callers, not just the table.
 the target class (the bonus-stage slot occupancy still orders the magnet after the reward
 in the engine -- see `docs/status/trace-frontier-log.md`, 2026-08-16), and neutral across
 `-Ptrace-replay` (29 red), `-Ptrace-replay-r7` (32 red) and the default sweep.
+
+## S3K has no opt-in "remember" flag -- every layout entry is respawn-tracked, and `Delete_Current_Sprite` latches it forever
+
+S1 and S2 make destruction persistence opt-in per layout entry (S1: bit 7 of the object-id
+byte; S2: bit 15 of the layout Y word). **S3K does not.** `Load_Sprites` gives every
+six-byte entry its own `Object_respawn_table` byte, unconditionally `bset #7,(a3)` on load
+and unconditionally stores the address in `respawn_addr(a1)`
+(`docs/skdisasm/sonic3k.asm:37745-37766`; the sibling loaders at `:37804`, `:37847`,
+`:37892` do the same). Bit 15 of the S3K Y word is not a remember flag at all -- the
+loader masks position with `d5 = $FFF` and takes render flags from bits 14/13 only
+(`rol.w #3,d2 / andi.w #3,d2`).
+
+Only the `Go_Delete_SpriteSlotted` family clears the bit again (`bclr #7,(a2)`,
+`:179056-179061`), and that is the *alive-goes-offscreen* path. An object that ends
+through plain `Delete_Current_Sprite` -- a rock smashed by the player
+(`AIZLRZEMZRock_BreakFromTop` -> `AIZLRZEMZRock_Delete`, `:44022-44057`), a badnik that
+became an explosion -- leaves bit 7 set and **never reloads for the rest of the level**.
+
+Two consequences when implementing an S3K object:
+
+- Do not gate persistence on the shared parser's `respawnTracked` flag; for S3K it is
+  reading a bit the ROM ignores. The engine's S3K model is the placement controller's
+  permanent-destroy latch, not the S1/S2 `remembered` set.
+- The latch has to survive a giant-ring special-stage round trip. That entry sets
+  `Respawn_table_keep = 1` (`:128409-128412`), which makes the reload skip the table wipe
+  at `:37429-37438`, so the table is already populated when `Load_Sprites` first scans the
+  entry window. Anything that re-establishes the state *after* the entry-window scan is
+  one scan too late.
+
+**Originating commit.** `<pending: S3K destroy-latch round trip>` -- AIZ1's rock at
+`(0x1D00, 0x04A9)`, smashed before the segment-0 giant ring, came back intact on the
+segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
+80379 errors @ f94 -> 74575 @ f384.

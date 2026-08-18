@@ -144,7 +144,7 @@ class TestBonusStageTransitionCoordinator {
         LevelManager level = mock(LevelManager.class);
         ObjectManager entryObjects = mock(ObjectManager.class);
         PersistentRespawnState respawnState = new PersistentRespawnState(
-                new long[]{0x12L}, new long[]{0x04L});
+                new long[]{0x12L}, new long[]{0x04L}, new long[]{0x20L});
         when(level.getObjectManager()).thenReturn(entryObjects);
         when(entryObjects.capturePersistentRespawn()).thenReturn(respawnState);
 
