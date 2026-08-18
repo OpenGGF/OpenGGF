@@ -7,6 +7,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
 import com.openggf.game.timing.PendingRecordedSubmissionsException;
 import com.openggf.game.timing.RecordedCompletionAuthority;
+import com.openggf.game.timing.RecordedOrdinalSpan;
 import com.openggf.game.timing.UnmatchedRecordedCompletionException;
 
 import java.util.ArrayList;
@@ -233,7 +234,30 @@ public final class HardwareTimingReplayPort
     }
 
     public void handoffTo(HardwareTimingSchedule nextSchedule) {
+        handoffTo(nextSchedule, Map.of());
+    }
+
+    /**
+     * Hands off to the next segment across a recorded interstitial span.
+     *
+     * <p>The span describes ordinals the recording consumed between the two
+     * segments — a special-stage results screen, a level reload, a locked
+     * intro — that production never submits, so production's identity cursor
+     * would otherwise stay behind and every later completion would miss by
+     * exactly the size of the gap.
+     *
+     * <p>Crossing one releases nothing and creates nothing; it only moves the
+     * cursor, and it is proved on both sides before it moves. The span must
+     * begin exactly where production's ledger stands (checked in the
+     * authority) and must end exactly where the next segment's recorded
+     * ordinals begin (checked here). Anything else throws, so a skew that is
+     * not the recorded span cannot be absorbed.
+     */
+    public void handoffTo(
+            HardwareTimingSchedule nextSchedule,
+            Map<HardwareWorkKind, RecordedOrdinalSpan> interstitialSpans) {
         requireActive();
+        Objects.requireNonNull(interstitialSpans, "interstitialSpans");
         verifySegmentEdges();
         HardwareTimingSchedule checkedNext = validateSchedule(nextSchedule);
         if (!checkedNext.admissionPolicies().equals(schedule.admissionPolicies())) {
@@ -272,6 +296,28 @@ public final class HardwareTimingReplayPort
                                 .map(HardwareTimingReplayPort::describe)
                                 .toList());
             }
+        }
+
+        if (!interstitialSpans.isEmpty()) {
+            Map<HardwareWorkKind, Long> nextFirstOrdinals = firstOrdinals(checkedNext);
+            for (Map.Entry<HardwareWorkKind, RecordedOrdinalSpan> entry
+                    : interstitialSpans.entrySet()) {
+                Long nextFirst = nextFirstOrdinals.get(entry.getKey());
+                if (nextFirst == null) {
+                    throw new IllegalStateException(
+                            "recorded interstitial span for " + entry.getKey()
+                                    + " has no matching next-segment edge to resume at: "
+                                    + entry.getValue());
+                }
+                if (nextFirst != entry.getValue().nextOrdinal()) {
+                    throw new IllegalStateException(
+                            "recorded interstitial span does not meet the next segment for "
+                                    + entry.getKey() + ": span ends at "
+                                    + entry.getValue().lastOrdinal()
+                                    + ", next segment resumes at " + nextFirst);
+                }
+            }
+            authority.advanceOrdinalCursorAcrossRecordedSpan(interstitialSpans);
         }
 
         schedule = checkedNext;

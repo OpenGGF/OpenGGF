@@ -82323,3 +82323,58 @@ Zero new red in any profile.
 - S1-only by profile data, not by name: both new helpers gate on
   `alignsStageResultsPresentationVblank()`, which is `-1`/false for S2 and S3K,
   so neither game's path changes.
+
+## 2026-08-18 -- S3K complete-emerald chain: the interstitial ordinal gap closes
+
+**Command.** `mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical
+"-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain" -Ds3k.rom.path=<rom> test`,
+worktree `ai-interstitial` branched from `develop` at `e5eec4953`.
+
+**Before.** `IllegalStateException: non-exportable pending hardware submission at
+segment end: KOS_MODULE_QUEUE#14 sha256:65c8c371...`. The brief attributed this to
+the segment 1 -> 2 handoff; instrumenting the port showed it is the **segment
+2 -> 3** handoff, `aiz_2 -> ss_2`. Full engine-pending set at the abort:
+`KOS_MODULE_QUEUE#14/#15/#16` and `KOS_DECOMPRESSION_QUEUE#27`, against a next
+segment opening at `KOS_MODULE_QUEUE#35` / `KOS_DECOMPRESSION_QUEUE#61`.
+
+**Root cause, measured not inferred.** The engine's pending `MODULE#14`
+(`65c8c371`) is byte-identical work to the recording's `MODULE#24`, which the
+`aiz_2` stream completes at `raw_frame=36`. The offset is exactly the size of
+the recorded interstitial span after segment 1: modules `14..23` (10 edges) and
+decompressions `27..42` (16 edges); engine `27 -> 43` is likewise +16. The
+engine does not reproduce those submissions, so its ledger stayed 10/16 behind.
+The recording's ledger is fully contiguous once the interstitial span is
+counted -- `aiz` modules `2..12`, `ss` `13`, interstitial `14..23`, `aiz_2`
+`24..34` -- which is what makes the rebase provable rather than fitted.
+
+**After.** The abort is gone. `MODULE#24/#25/#26` and `DECOMP#43/#44/#45` now
+match and release. The chain advances past the handoff and stops on the next,
+unrelated frontier.
+
+**New frontier.** Segment 2 (`aiz_2`), two axes:
+- `[segment-physics]` 83181 comparator errors, first non-camera mismatch at
+  **frame 0**, field `x_sub`, rom `0x0C00` vs engine `0x3000`
+  (`target/trace-reports/s3k-sonic-tails-complete-emeralds_seg2_report.json`).
+- `[walk-failure]` segment 2 exit boundary `giant_ring` never observed.
+
+This is an entry-state defect at the special-stage return, not a timing one, and
+it is **pre-existing**: `TestS3kSonicTailsAiz2SegmentTraceReplay` is red on the
+untouched control at the same base, diverging at its own frame 0
+(`tails_y` expected `0x04C4`, actual `0x0000`, 1034 errors). Closing the ordinal
+gap did not cause it; it merely made it reachable.
+
+**Verification, this tree vs a clean control worktree at the same base
+`e5eec4953`, runOrder pinned, sequential per tree.** Red sets set-diffed both
+ways; every diff empty.
+
+| profile | control | mine | red-set diff |
+|---|---|---|---|
+| `-Ptrace-replay` | 788 tests, 3 red | 788 tests, 3 red | identical (the three chains) |
+| `-Ptrace-segments` | 70 tests, 55 red | 70 tests, 55 red | identical |
+| `-Ptrace-replay-r7` | 37 tests, 32 red | 37 tests, 32 red | identical |
+| default | 15098 tests, 83 red | 15115 tests, 83 red | identical |
+
+The default-profile count delta is fully accounted: +11 the new
+`TestHardwareTimingInterstitialStream`, +6 `TestBonusStageShieldRestore`, which
+the control fork did not run at all (no surefire XML emitted) though the source
+is present in both trees. All 17 pass.

@@ -1035,7 +1035,10 @@ abstract class AbstractRunChainTest {
 
         HardwareTimingCoordinator hardwareTiming =
                 new HardwareTimingCoordinator(
-                        fixture, TraceRunReplayWalker.hardwareTimingSegments(plans));
+                        fixture,
+                        TraceRunReplayWalker.hardwareTimingSegments(plans),
+                        com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader
+                                .load(runDir));
         GameplayModeContext gameplayMode =
                 SessionManager.getCurrentGameplayMode();
         gameplayMode.plcFrameLifecycle()
@@ -4350,8 +4353,16 @@ abstract class AbstractRunChainTest {
 
         @Override
         public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            handoffHardwareTimingReplay(nextSchedule, java.util.Map.of());
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(
+                HardwareTimingSchedule nextSchedule,
+                java.util.Map<com.openggf.game.timing.HardwareWorkKind,
+                        com.openggf.game.timing.RecordedOrdinalSpan> interstitialSpans) {
             if (hardwareTimingReplayPort != null) {
-                hardwareTimingReplayPort.handoffTo(nextSchedule);
+                hardwareTimingReplayPort.handoffTo(nextSchedule, interstitialSpans);
             }
         }
 

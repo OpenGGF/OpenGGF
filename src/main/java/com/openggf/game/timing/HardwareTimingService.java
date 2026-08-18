@@ -466,6 +466,47 @@ public final class HardwareTimingService
         }
 
         @Override
+        public void advanceOrdinalCursorAcrossRecordedSpan(
+                Map<HardwareWorkKind, RecordedOrdinalSpan> spans) {
+            requireRecordedAdmission();
+            Objects.requireNonNull(spans, "spans");
+            if (spans.isEmpty()) {
+                return;
+            }
+            List<PendingRecordedSubmission> pending = recordedPendingSubmissions();
+            if (!pending.isEmpty()) {
+                // The cursor is the allocator for the *next* handle. Moving it
+                // while production still holds an unclaimed one would leave that
+                // handle numbered on the old axis with no completion able to
+                // reach it, which is the silent desync this whole path exists
+                // to prevent.
+                throw new IllegalStateException(
+                        "cannot advance the hardware identity cursor while production "
+                                + "holds pending submissions: " + pending.stream()
+                                .map(PendingRecordedSubmission::handle)
+                                .map(HardwareTimingJob::describe)
+                                .toList());
+            }
+            for (Map.Entry<HardwareWorkKind, RecordedOrdinalSpan> entry : spans.entrySet()) {
+                HardwareWorkKind kind = Objects.requireNonNull(entry.getKey(), "hardware work kind");
+                RecordedOrdinalSpan span = Objects.requireNonNull(entry.getValue(), "recorded ordinal span");
+                if (admissionPolicyFor(kind) != HardwareReadinessAdmissionPolicy.RECORDED) {
+                    throw new IllegalStateException(
+                            "recorded ordinal spans only apply to recorded-admission kinds: " + kind);
+                }
+                long cursor = nextOrdinals.getOrDefault(kind, 0L);
+                if (cursor != span.firstOrdinal()) {
+                    throw new IllegalStateException(
+                            "recorded ordinal span does not begin at the production cursor for "
+                                    + kind + ": production next=" + cursor
+                                    + ", recorded span=" + span.firstOrdinal()
+                                    + ".." + span.lastOrdinal());
+                }
+                nextOrdinals.put(kind, span.nextOrdinal());
+            }
+        }
+
+        @Override
         public void admitRecordedCompletion(
                 HardwareServiceBoundary boundary,
                 HardwareWorkKind kind,

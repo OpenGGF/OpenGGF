@@ -12,6 +12,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.timing.HardwareTimingInterstitialSpans;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import java.io.IOException;
@@ -188,12 +189,28 @@ public final class TraceRunReplayWalker {
     public static final class HardwareTimingCoordinator {
         private final TraceReplayFixture fixture;
         private final List<HardwareTimingSegment> segments;
+        private final HardwareTimingInterstitialSpans interstitialSpans;
         private int currentSegment;
         private boolean closed;
 
         public HardwareTimingCoordinator(
                 TraceReplayFixture fixture,
                 List<HardwareTimingSegment> segments) {
+            this(fixture, segments, HardwareTimingInterstitialSpans.empty());
+        }
+
+        /**
+         * Run-level form that also carries the recorded interstitial spans, so
+         * a handoff can cross the ordinals the recording consumed between two
+         * segments. A run with no interstitial sidecar supplies empty spans and
+         * behaves exactly as the two-argument form.
+         */
+        public HardwareTimingCoordinator(
+                TraceReplayFixture fixture,
+                List<HardwareTimingSegment> segments,
+                HardwareTimingInterstitialSpans interstitialSpans) {
+            this.interstitialSpans = Objects.requireNonNull(
+                    interstitialSpans, "interstitialSpans");
             this.fixture = Objects.requireNonNull(fixture, "fixture");
             this.segments = List.copyOf(
                     Objects.requireNonNull(segments, "segments"));
@@ -292,7 +309,8 @@ public final class TraceRunReplayWalker {
             }
             if (segmentIndex == currentSegment + 1) {
                 fixture.handoffHardwareTimingReplay(
-                        segments.get(segmentIndex).schedule());
+                        segments.get(segmentIndex).schedule(),
+                        interstitialSpans.spansAfterSegment(currentSegment));
                 currentSegment = segmentIndex;
             }
         }
