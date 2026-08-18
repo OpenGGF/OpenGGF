@@ -82595,3 +82595,61 @@ same class red (while flipping `TestBubblerObjectInstance` green and
 `TestModeTracePickerLaunchStatus` red). The class passes 9/9 in isolation on this
 tree. The three trace profiles, which are the ones that exercise the changed
 path, are byte-identical set-diffed both ways.
+
+## 2026-08-18 - S1 emerald chain: the held-iteration PLC arming wall, re-measured
+
+- Worktree `ai-s1-plc-prepared`, branch
+  `bugfix/ai-s1-plc-prepared`, based on `a53a84616`. Command:
+  `mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path='"'"'Sonic The Hedgehog (W) (REV01) [!].gen'"'"' test`.
+- Measured baseline at `a53a84616`: `TestS1CompleteEmeraldRunChain` fails on
+  **ten** axes, not the four sometimes quoted -- one `walk-failure`, three
+  `segment-physics` (12, 15, 16) and **five `dynamic-art-gap`** transitions
+  (`ghz3_2 -> mz1` edge_count 2/6, `mz1 -> mz1_2`, `mz2 -> mz2_2`,
+  `mz2_2 -> mz2_3` and `mz3 -> mz3_2` each edge_ordinal +4, `mz3_2 -> syz1`
+  edge_count 2/8). The gap axis is a separate open frontier.
+- Segments 12 (`mz2_3` frame 101, 40 errors) and 15 (`mz3_2` frame 102,
+  6 errors) share one cause: `99746ffa9`'s
+  `TraceExecutionModel.isIterationHeldIntoNextRow` deferral, already documented
+  in [`docs/architecture/research/trace/2026-08-06-s1-plc-arming-row-observability.md`](../architecture/research/trace/2026-08-06-s1-plc-arming-row-observability.md).
+  Both rows are the `3SRAW` shape: `ProcessPLC_3Tiles` retires the head and
+  `RunPLC` (`docs/s1disasm/sonic.asm:3032`) arms the next one inside the same
+  raw frame, because the retail `FixBugs=0` build writes
+  `move.w d2,(v_plc_patternsleft).w` at `sonic.asm:1394-1397` *before*
+  `NemDec_BuildCodeTable` -- so the arm is the first observable effect of
+  `RunPLC` and the decode that follows it is what pushes the iteration past its
+  V-blank. The engine defers the arm to the following lag closure instead.
+- **The deferral is confirmed to be a 14-vs-1 fit, and the split is not
+  observable at frame granularity.** Re-verified independently here: `mz2_3`
+  101, `mz3_2` 102 and `mz3_2` 109 (ROM `prepared` true on row `f`) carry
+  byte-identical row shapes to `ghz2_2` 107 (ROM `prepared` false) -- gameplay
+  frame counter held, V-blank counter +1, `lag_state.lagged` false on `f` and
+  true on `f+1`, `lag_counter` 0. The last remaining candidate discriminator,
+  `v_oscillate` (`OscillateNumDo`, `sonic.asm:3033`, the instruction after
+  `RunPLC`), was measured directly and is **held on row `f` and advanced on
+  `f+1` in all four cases** -- it does not separate them. The sample point falls
+  between 3032 and 3033 in the 14 and before 3032 in the one; that is sub-frame
+  68000 cycle position.
+- Probe (disable the deferral; reverted, not landed): segment 15 goes **fully
+  green**, segment 12's frontier moves **frame 101 -> 593** (40 -> 37 errors,
+  new first field `dynamic_art.edge[0].mapping_frame` rom=1 engine=58),
+  segment 16 unchanged -- but segment 3 (`ghz2_2`) turns red with 3 errors at
+  frame 107 and `TestS1CompleteEmeraldVisualRun` self-pauses there. So the two
+  models are exactly complementary and neither is green.
+- **Wall.** No frame-granularity model can be right more than 14/15 or less
+  than 1/15, and the 1/15 side is pinned by a must-stay-green visual run. The
+  only sanctioned resolution is the hard-rule-4 hardware-timing readiness
+  stream, which rule 4 already permits for the S1 PLC pipeline; it needs the S1
+  fixtures regenerated with a `hardware_timing.jsonl` carrying the arming edge.
+  No engine change landed this round.
+- The `syz2` walk-failure (row 70, `remaining_work` rom=1 engine=24, engine
+  missing the first of the ROM's six queued fingerprints) **does not share the
+  cause** -- it is byte-identical under the probe. It is the engine running
+  exactly one row ahead: the engine's row-70 queue state equals the ROM's
+  row-71 state. ROM row 70 is a V-blank on which no main-loop iteration
+  completed, so the fast handler decompresses nothing while rows 68, 69 and 71
+  each take 9 patterns. Its counters are identical to rows 69 and 71
+  (`gameplay_frame_counter` frozen at 0x2540 across the whole title card,
+  V-blank counter +1, `lag_counter` 0); only the recorder's own emulator-side
+  `lag_state.lagged`/`lagcount` marks it. Different defect, same class of wall.
