@@ -176,13 +176,27 @@ public record TracePlaybackProfile(
      * at all five special-stage returns of
      * {@code s2-sonic-tails-complete-emeralds} (drift {@code 2, 4, 3, 2, 4}
      * before, {@code 0} after), and segments 2-4 keep passing -- but the
-     * corrected upstream clock then uncovers a sidekick divergence in
-     * {@code seg5_ehz2} at frame 524 (Tails' hurt transition, {@code sidekick_y}
-     * off by one) that the wrong clock had been masking, costing the chain more
-     * reach than the correction buys. The flag stays {@code false} until that is
-     * closed. The divergence is not seg5's own clock: forcing seg5's counter to
-     * the recorded value leaves it failing identically, and perturbing seg5's
-     * counter alone with the returns unaligned does not reproduce it.
+     * corrected upstream clock then uncovers a divergence in {@code seg5_ehz2}
+     * at frame 524 that the wrong clock had been masking, costing the chain
+     * more reach than the correction buys, so the flag stays {@code false}.
+     *
+     * <p>That divergence is <em>not</em> a {@code sidekick_y} defect, despite
+     * how the comparator names it. Measured in
+     * {@code bugfix/ai-s2-sidekick-y}: the engine never hurts Tails at that
+     * frame at all, so 0x0272 is the plain gravity integration and the ROM's
+     * 0x0271 is the hurt frame's {@code Tails_ResetOnFloor_Part2}
+     * {@code subq.w #1,y_pos} (docs/s2disasm/s2.asm:41023-41031). The hurt is
+     * missing because {@code Obj4B_ChkPlayers}
+     * (docs/s2disasm/s2.asm:60988-61027) selects its target with
+     * {@code btst #0,(Vint_runcount+3).w}, and seg5's object clock runs
+     * uniformly one tick low here, so the Buzz Bomber aims at Tails (outside
+     * its {@code $28..$30} strip) instead of Sonic and never fires the stinger.
+     *
+     * <p>That residual {@code -1} is a property of the
+     * {@code seg4_ehz1 -> seg5_ehz2} inter-level boundary, not of this
+     * composition: the chain's dynamic-art gap axis reports the same one-frame
+     * {@code movie_logical_frame} shortfall there with the flag in either
+     * position. See docs/status/trace-frontier-log.md for the measurements.
      *
      * <p>Sonic 1 opts out ({@code -1}) because its special stage returns through
      * the results-screen presentation bridge, whose masked cost is owned by
