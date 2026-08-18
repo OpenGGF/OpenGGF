@@ -82828,3 +82828,39 @@ The extra test is the new `TestPersistentRespawnDestroyLatchRoundTrip`. The
 default-profile delta is ambient: `TestModeTracePickerLaunchStatus` failed only
 in the control sweep, on a Mockito `PixelFont.drawText` verification that cannot
 be reached by this change, and passes when run alone in that same control tree.
+
+## 2026-08-18 - S3K sonic+tails complete-emerald chain: AIZ_vine_angle survives a level load
+
+- Worktree `wt/s3k-aiz2-f384`, branch
+  `bugfix/ai-s3k-aiz2-f384`, based on `b5f20ec98`.
+- Command: `mvn -Ptrace-replay-r7 -Ds3k.rom.path=s3k.gen
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`.
+- Before: FAIL, segment 2 (`aiz_2`), 74575 physics comparator errors, first
+  non-camera mismatch frame 384 field `x` rom=`0x2060` engine=`0x2070`.
+- After: still FAIL, segment 2, 61979 errors, first non-camera mismatch frame
+  393 field `sidekick_x` rom=`0x2036` engine=`0x2046`.
+- Cause of the frame-384 stop: the engine reset ROM `AIZ_vine_angle` on the
+  special-stage return, so both AIZ giant ride vines hung at their zero phase.
+  The vine anchored at `$2070,$035C` therefore held its handle straight below
+  at `$2070,$03EC`, inside `AIZRideVineHandle_TestGrabRange`
+  (docs/skdisasm/sonic3k.asm:46717-46748) for the rolling player at
+  `$2060,$0400`; `CheckGrab` wrote `anim=$14` and snapped `x_pos` to the
+  handle. `ChangeRingFrame` advances the word (`sonic3k.asm:9693`) and neither
+  the level nor the special-stage init clears it -- both use
+  `clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)`
+  (`sonic3k.asm:10609`, `:7622`), a length that stops one word short. The
+  engine kept the word on the `Sonic3k` Game, which
+  `LevelManager.initGameModule` rebuilds on every load; it now lives on the
+  session-lived `Sonic3kGameModule`.
+- Solved ROM value for cross-checking: fitting the recorded chain positions of
+  slots 27-35 in `aiz_2/aux_state.jsonl.gz` against `AIZGiantRideVine_Segment`
+  / `_PositionFromParent` gives `AIZ_vine_angle = $9780` at `aiz_2` row 370,
+  advancing by `$180` per row -- exactly the engine's value after the fix.
+- Remaining, NOT fixed: the engine is one `ChangeRingFrame` tick behind the ROM
+  from the first giant-ring boundary onward (engine `$B880` where the ROM has
+  `$BA00`), which is what still grabs Tails at row 393. The deficit is exactly
+  the one Level main-loop iteration at bk2 frame 2867: `aiz`'s last recorded
+  row is bk2 2866 and the manifest's `mode_change_bk2_frame` is 2868, so the
+  ROM ran an iteration the recording does not carry. Nothing at frame
+  granularity distinguishes it, so no constant was added; the round stopped
+  there rather than fit one.

@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- S3K's `AIZ_vine_angle` now survives a level load, so the AIZ giant ride vines
+  keep their swing phase across a giant-ring special-stage round trip. The word
+  is advanced by `ChangeRingFrame` (docs/skdisasm/sonic3k.asm:9693) and is
+  deliberately outside the level and special-stage inits' oscillating-table
+  clear — both use `clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)`
+  (`sonic3k.asm:10609`, `:7622`), a length that stops one word short of it. The
+  engine kept the carrier on the `Sonic3k` `Game`, which
+  `LevelManager.initGameModule` rebuilds on every load, so every re-entry
+  restarted the vines at phase zero; on the AIZ1 re-entry that left the vine
+  anchored at `$2070,$035C` hanging its handle straight down at `$2070,$03EC`,
+  inside `AIZRideVineHandle_TestGrabRange` (`sonic3k.asm:46717-46748`) for a
+  player the ROM lets pass. The session-lived `Sonic3kGameModule` owns it now.
 - Sonic 2's run-chain object V-blank clock landed one tick low at every
   `level_advance` boundary. The source-tail anchor was reconstructed by
   projecting the counter backwards across the boundary window at one tick per
