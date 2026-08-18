@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2's RNG seed is cleared on every act load (`bugfix/ai-s2-seg11-plc`, merged
+  2026-08-18).** `Level_ClrRam` wipes `MiscLevelVariables` **after** the level's `LoadPLC` calls
+  (`s2disasm/s2.asm:4802-4809`) and `RNG_seed` lives inside that block
+  (`s2.constants.asm:1412-1421`), so every S2 act begins with a zero seed -- which
+  `RandomNumber`'s zero-sanity check turns into `$2A6D365A` on the act's first draw
+  (`s2.asm:3975-3979`). The engine carried the seed across acts instead, so **every** S2
+  `RandomNumber` consumer read a stream shifted by the previous acts' draw count. Measured on
+  segment 11 (`seg7_ehz2`): the recorded 22 Egg Prison release x offsets and 22
+  `Obj28_InitRandom` animal choices pin the ROM's pre-release seed to low-21 bits `0x1DB0CA`, and
+  the engine's own draw stream passes through that state **27 draws before** it reaches the
+  release site. With the wrong animals released (`:24596-24612`) the capsule's object RAM cleared
+  15 frames early and `loc_3F406` fired `Load_EndOfAct` -- and with it the results PLC -- ahead of
+  the recording (`:85001-85012`). **Segment 11's 188 comparator errors are now zero**, and the
+  chain clears `seg7_ehz2` entirely, failing later at the handoff into segment 12 (`seg8_cpz1`) on
+  a cursor-admission walk-failure. Verified at 790 tests / 3 red, the three chains only, with
+  `TestS2ObjectOccupancyOracle` (58 tests) green -- a fundamental change to S2 randomness with no
+  collateral.
+
 - **The Sonic 1 PLC arming edge is recorded as a hardware-timing sidecar
   (`feature/ai-s1-plc-hw-timing`, merged 2026-08-18).** S1's remaining PLC-arming divergence
   cannot be modelled from frame-granularity state: `TraceExecutionModel.isIterationHeldIntoNextRow`

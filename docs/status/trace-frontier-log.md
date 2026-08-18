@@ -82828,3 +82828,39 @@ The extra test is the new `TestPersistentRespawnDestroyLatchRoundTrip`. The
 default-profile delta is ambient: `TestModeTracePickerLaunchStatus` failed only
 in the control sweep, on a Mockito `PixelFont.drawText` verification that cannot
 be reached by this change, and passes when run alone in that same control tree.
+
+## 2026-08-18 - S2 complete-emerald chain: segment 11 physics closed
+
+- Worktree branch `bugfix/ai-s2-seg11-plc`, branched from `origin/develop` at
+  `b5f20ec98`.
+- Command:
+  `mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=<S2 ROM> test`
+- Before: FAIL on 5 axes. `[segment-physics] segment 11 diverged: 188 physics
+  comparator errors, first non-camera mismatch at frame 3531 field
+  queue.s2_nemesis_plc.busy rom=false engine=true`, plus a `seg7_ehz2`
+  source-tail walk failure and three `dynamic-art-gap` axes.
+- After: FAIL on 4 axes. The `seg11` report is `errorCount: 0`,
+  `complete: true`; the tail walk failure and the `ss_5 -> seg7_ehz2`
+  dynamic-art-gap axis are gone. The frontier moved off segment 11's rows to
+  the segment 11 -> 12 boundary: `[walk-failure] Segment 11 destination
+  seg8_cpz1 cursor advanced past its first recorded row without admission
+  (cursor 61208, offset 61206)`. Two upstream `dynamic-art-gap` axes
+  (`seg4_ehz1 -> seg5_ehz2`, `ss_4 -> seg6_ehz2`) are unchanged and remain
+  open.
+- Cause: the engine carried `RNG_seed` across acts where `Level_ClrRam` zeroes
+  it (`s2disasm/s2.asm:4802-4809`; `s2.constants.asm:1412-1421,1467`). The
+  desync was measured, not inferred: the recorded 22 Egg Prison release x
+  offsets and 22 `Obj28_InitRandom` animal choices pin the ROM's pre-release
+  seed to low-21 bits `0x1DB0CA`, which the engine's own draw stream passes
+  through 27 draws before it reaches the release site.
+- The handed-over frame-3531 diagnosis -- an object V-blank clock or Egg Prison
+  break-delay problem -- was refuted. The engine's spawn count (22), spawn
+  frames (3233 + 8k), `$B4` window and `loc_3F406` poll all already matched the
+  recording exactly; only the animal *choice* differed.
+- Full-matrix verification (this branch vs a clean `origin/develop` control at
+  the same base, `-Dsurefire.runOrder=alphabetical`, sequential, reports cleared
+  between runs): default 15116 tests / 47 red (control 49, the two extra being
+  order-flaky `TestGameLoopSpecialStageEntryPresentation` and
+  `TestModeTracePickerLaunchStatus`); `-Ptrace-replay` 788 / 3 (the three
+  chains, both trees); `-Ptrace-segments` 70 / 55 (both); `-Ptrace-replay-r7`
+  37 / 32 (both). No branch-only red in any profile.
