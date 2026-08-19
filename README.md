@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The sidekick inherits the leader's collision path, as both ROMs do
+  (`bugfix/ai-s2-seg15-f409`, merged 2026-08-19).** The S2 chain ran Tails on collision path 1 while
+  Sonic ran on path 2: at segment 15 entry the chain held Tails at `0C`/`0D` against Sonic's
+  `0E`/`0F`, where the fixture's `object_state_snapshot` slot 1 records `0x0E`/`0x0F`. The two paths
+  index different 16x16 collision arrays, which is precisely the symptom -- identical `x` and
+  `x_sub`, one pixel of surface Y, and a floor angle of `0x0C` where the ROM reads `0x0A` on a
+  shallowing slope. The standalone lane was exact only because `seedSegmentEntrySolidBits` seeds
+  sidekicks from that snapshot; nothing in the engine ever computed it.
+  **A label that lies, worth knowing before editing anything near it:** `Obj02_Init` branches on
+  `cmpi.w #2,(Player_mode).w / bne.s Obj02_Init_2Pmode` (`s2disasm/s2.asm:38907-38909`), and player
+  mode 2 is *Tails alone* -- so in a Sonic-and-Tails game the branch **is** taken and
+  `Obj02_Init_2Pmode` is the ordinary path despite its name, running `move.w
+  (MainCharacter+top_solid_bit).w,top_solid_bit(a0)` (`:38928`) as a word so `lrb` travels with it.
+  The `$C`/`$D` write below it, which reads exactly like the default, is the Tails-alone branch.
+  S3K's `Tails_Init` is the same shape and the same trap (`loc_1375E`,
+  `skdisasm/sonic3k.asm:26105-26133`), and S1 has no sidekick, so the rule is shared: it lives in
+  `LevelManager.spawnSidekicks` with both citations rather than behind a per-game field. Segment 15
+  comparator errors fall 52639 -> 11629 and sidekick errors 21116 -> 3525, and the chain's first
+  non-queue divergence becomes the standalone lane's own long-standing animation frontier -- so the
+  chain has stopped carrying divergences of its own into the segment.
+
 - **Tails is no longer parked at the despawn marker for the whole of AIZ act 2
   (`bugfix/ai-s3k-seg4-r3`, merged 2026-08-19).** The chain harness now writes a comparator report
   when a segment aborts before closure instead of only when it closes, and that change is what

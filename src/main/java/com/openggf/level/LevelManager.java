@@ -2980,6 +2980,31 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setDeathCountdown(0);
             sidekick.setHighPriority(false);
             sidekick.setDirection(Direction.RIGHT);
+            // The sidekick inherits the leader's collision-path pair, and the
+            // ROM does it unconditionally in both games that have one. S2
+            // Obj02_Init branches on `cmpi.w #2,(Player_mode).w` -- mode 2 is
+            // TAILS ALONE, so the `Obj02_Init_2Pmode` label is a misnomer: it
+            // is the normal Sonic-and-Tails path, and it runs
+            // `move.w (MainCharacter+top_solid_bit).w,top_solid_bit(a0)`
+            // (docs/s2disasm/s2.asm:38907-38928). The `$C`/`$D` write below it
+            // is the Tails-alone branch. S3K Tails_Init is the same shape:
+            // `cmpi.w #2,(Player_mode).w / bne.s loc_1375E`, and loc_1375E runs
+            // `move.w (Player_1+top_solid_bit).w,top_solid_bit(a0)`
+            // (docs/skdisasm/sonic3k.asm:26105-26133). Sonic 1 has no sidekick.
+            //
+            // It is a WORD move in both, so it carries lrb_solid_bit with it.
+            // The leader's own init runs first -- Obj01/Sonic occupies the slot
+            // before Obj02/Tails in the same object pass -- so by here the
+            // leader already holds whatever the star post or special-stage
+            // return restored (S2 Obj79_LoadData, s2.asm:44787). Without this
+            // the sidekick keeps the engine's `$C`/`$D` default and probes the
+            // primary collision array while the leader is on the secondary one,
+            // which reads a different floor angle and a different surface Y on
+            // the same slope.
+            if (player instanceof AbstractPlayableSprite leaderPaths) {
+                sidekick.setTopSolidBit(leaderPaths.getTopSolidBit());
+                sidekick.setLrbSolidBit(leaderPaths.getLrbSolidBit());
+            }
             if (sidekick.getCpuController() != null) {
                 applySidekickLevelBounds(sidekick);
                 // Capture the spawn centre for the deferred CPU placement. ROM

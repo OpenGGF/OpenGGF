@@ -84185,3 +84185,61 @@ fight does not play out the same way.
   76/77/78). The previous round refuted the `Respawn_table_keep` /
   `Ring_status_table` explanation for these by measurement; that remains a
   do-not-retry.
+
+## 2026-08-19 — S2 complete-emeralds segment 15 frame 409: the sidekick was on the wrong collision path
+
+- Base `b8e65a03f` (origin/develop), own worktree, branch
+  `bugfix/ai-s2-seg15-f409`, JDK 21, `-Ptrace-replay -Dmse=off
+  -Dsurefire.runOrder=alphabetical` with the three `.gen` files in the project
+  root, after `rm -rf target/surefire-reports`.
+- **Before:** `TestS2CompleteEmeraldRunChain` FAIL at BK2 cursor 89191. Segment
+  15 carried 33379 comparator errors on the previous base and 52639 here; its
+  first non-queue divergence is segment frame **409**, `sidekick_y` rom
+  `0x05E0` engine `0x05DF` with `sidekick_angle` rom `0x000A` engine `0x000C`.
+  The 73 errors before it are all `queue.s2_nemesis_plc.*` from frames 2-7 and
+  52 onwards -- the pre-existing S2 art frontier the seg10 lane already
+  records, not a precursor.
+- **The V-int hypothesis was killed, not built on.** The previous round's
+  known-discrepancies bullet named the locked title-card V-blank gap as a
+  plausible cause. It is not this. The divergence is sidekick-only -- the main
+  player is exact for all 6849 driven rows -- and a global V-int counter does
+  not enter a floor-angle computation. At frame 408 every compared field
+  matches on both players including sub-pixels, so the engine reaches 409 from
+  identical state and computes a different result: a collision-input
+  difference, not a clock phase.
+- **The measurement.** Engine solid bits at segment 15 entry, probed in both
+  lanes: the standalone lane has Tails `top=0E lrb=0F` and Sonic `0E/0F`; the
+  chain has Tails `top=0C lrb=0D` and Sonic `0E/0F`. The fixture's own
+  `object_state_snapshot` for slot 1 at frame -1 reads `off_3E = 0x0E`,
+  `off_3F = 0x0F`. So the chain ran Tails on the primary collision path while
+  Sonic was on the secondary one; the two paths index different 16x16 arrays,
+  which is exactly a one-pixel surface Y and a different floor angle on a
+  slope. The standalone lane was right only because
+  `TraceReplaySessionBootstrap.seedSegmentEntrySolidBits` already seeds
+  sidekicks from the recorded snapshot -- nothing computed it.
+- **Root cause, and a disassembly label that lies.** `Obj02_Init` branches on
+  `cmpi.w #2,(Player_mode).w / bne.s Obj02_Init_2Pmode` (s2.asm:38907-38909).
+  Player mode 2 is **Tails Alone**, so in a Sonic-and-Tails game the branch is
+  taken and `Obj02_Init_2Pmode` is the ordinary one-player path despite its
+  name; it runs `move.w (MainCharacter+top_solid_bit).w,top_solid_bit(a0)`
+  (:38928). The `$C`/`$D` write below it -- which reads like the default -- is
+  the Tails-alone branch. Reading that label at face value supports a
+  confident, wrong conclusion that the ROM leaves the sidekick's pair
+  untouched on a checkpoint return; the recorded `0x0E` is what refutes it.
+  S3K `Tails_Init` is the same shape, same trap, `loc_1375E` at
+  sonic3k.asm:26105-26133. S1 has no sidekick, so the rule is shared and needs
+  no per-game owner.
+- **After:** the frame-409 divergence is gone. Segment 15 errors **52639 ->
+  11629**, sidekick errors **21116 -> 3525**. The first non-queue divergence is
+  now segment frame **1725, `player_mapping_frame`** (rom `0x0010`, engine
+  `0x000F`) -- which is the standalone seg10 lane's own long-standing first
+  animation divergence, so the chain has converged onto the segment's
+  pre-existing frontier instead of carrying one of its own. The walk still
+  stops at BK2 cursor 89191; that boundary is now an art/animation frontier,
+  not physics.
+- Gate: **790 tests, 4 red**, set-diff empty both ways against a control
+  measured in a second worktree at the same commit with the same command. The
+  change is in shared `LevelManager`, so the S3K keep-green set was run
+  explicitly and passes, including `TestS3kIcz1SnowboardIntroHeadless`.
+  `TestS1S2PlcComparisonOnlyGuard` and `TestBuildToolingGuard` fail identically
+  at control and are pre-existing.
