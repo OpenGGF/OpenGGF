@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`Obj05` skips eleven consecutive frames, proven by a frozen countdown
+  (`bugfix/ai-s2-obj05-probe-r1`, merged 2026-08-19 -- PC-execute probe, no engine change).**
+  `tools/bizhawk/probes/s2_cpz2_obj05_exec_probe.lua` shows `Obj05` executing on **55 of 66** rows
+  across 5535-5600, and the eleven it misses are **consecutive: 5554-5564**. Its own state proves an
+  execution gap rather than a long delay -- `anim_frame_duration` counts `07` down to `01` across
+  5547-5553, **does not tick for eleven rows**, then resumes at `00` and advances at 5565. So the
+  recorded 19-frame hold is 8 rows of ordinary Swish countdown plus 11 rows of not running, and the
+  arithmetic closes exactly. The gate is exact rather than heuristic: `Tails_Tails` occupies a
+  **fixed slot at `$FFFFD000`** (`s2disasm/s2.asm:38944`), so `a0` identifies it without an object-id
+  test and the body animating through the same routine cannot be miscounted. Attribution is stated:
+  all five recorded submissions in the window have a probe `WRITE_MAP` on the same row, with each
+  pre-store `mapping_frame` the predecessor of the recorded value -- **5/5**. The one `WRITE_MAP`
+  with no recorded submission is row 5580, where Swish switches to Flick and both scripts' current
+  frame is `09`, so the value is rewritten unchanged and the dedup `beq` returns without submitting
+  -- a **second, independent confirmation** that edge-absence does not imply no-change. The engine's
+  controller *did* tick across those rows, advancing at 5554, so the engine runs `Obj05` where the
+  ROM does not: an object-execution-lifetime question, outside the object, since `Obj05_Main` has no
+  gate of its own.
+
 - **Caterkiller Jr is implemented after all; the defect is a one-shot latch modelled as a per-frame
   test (`bugfix/ai-s3k-caterkillerjr-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
   **Correcting the previous entry:** `CaterkillerJrHeadInstance` and `CaterkillerJrBodyInstance` do
