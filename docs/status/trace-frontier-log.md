@@ -84073,3 +84073,83 @@ or those three rings are not resurrected rings at all. The next round should set
 that with a one-line probe on the restore branch before re-implementing anything.
 
 - Gate not re-run this round: no `src/main` change was landed.
+
+## 2026-08-19 — S3K complete-emeralds chain: Tails was parked at the despawn marker for all of segment 4
+
+Command (worktree `bugfix/ai-s3k-seg4-r3`, branched from `41733c0da`):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<the root .gen> -DfailIfNoTests=false test
+```
+
+- **Before: FAIL**, `segment 4 lost production ownership before source closure
+  (mode=LEVEL, level=LevelIdentity[loadGeneration=5, ...], BK2 cursor=25464)` —
+  an unrecorded death-and-restart at segment row ~5688. Segment 4 report:
+  **59191 errors**, first non-camera mismatch **frame 0, `sidekick_x`,
+  rom `0x0220`, engine `0x7F00`**.
+- **After: FAIL further on**, `IllegalStateException: non-exportable pending
+  hardware submission at segment end: KOS_MODULE_QUEUE#52` from
+  `HardwareTimingReplayPort.handoffTo` — a *segment handoff*, so segment 4 now
+  completes. Segment 4 report: **57777 errors**, first non-camera mismatch
+  **frame 519, `rings`, rom 75, engine 76**. The death is gone.
+
+**The previous round's target was wrong, and the reason it was wrong is the
+first finding.** The chain's own segment reports never published for a segment
+that aborted before closure, so triage saw `seg0` and `seg2` at errorCount 0 and
+nothing else — the failing segment left no evidence at all. Writing that report
+from the walk's outer catch (separate commit, below) immediately produced a
+first-mismatch of `sidekick_x` at **frame 0**, thousands of rows earlier than the
+row-4857 player-position divergence the previous round had hand-measured. The
+hand measurement was not wrong; it was measuring only the player, which really
+does match to row 4856. Tails had been wrong since the first frame.
+
+**Root cause.** ROM `loc_13A10`, the AIZ1-intro branch of `Tails_CPU_Control`
+(`sonic3k.asm:26389-26397`):
+
+```
+loc_13A10:
+        tst.b   (Tails_CPU_star_post_flag).w
+        bne.w   loc_13AF4                 ; entered from a star post -- fly in
+        cmpi.w  #0,(Current_zone_and_act).w
+        bne.s   loc_13A32                 ; not AIZ act 1 -- ordinary CPU follow
+        bsr.w   sub_13ECA                 ; park at the (0x7F00, 0) marker
+        move.w  #$A,(Tails_CPU_routine).w
+        move.b  #$83,object_control(a0)
+        rts
+```
+
+Neither guard was modelled. `Sonic3kAIZEvents.shouldEnterIntroSidekickDormantMarker`
+called `shouldSpawnIntro(0)` — a hardcoded act — so every AIZ act reached the
+marker, and there was no counterpart to the `Tails_CPU_star_post_flag` test at
+all. That flag is written exactly once, by `Tails_Init`'s
+`move.b (Last_star_post_hit).w,(Tails_CPU_star_post_flag).w` (`:26155`), and read
+exactly once, here; its whole purpose is to suppress the intro marker on a level
+entered from a star post or the special-stage return that follows one. This route
+enters AIZ act 2 from a giant ring with `Last_star_post_hit = 3`, so the ROM fails
+*both* tests and keeps Tails where `SpawnLevelMainSprites_SpawnPlayers` put him
+(`Player_1 - $20`, `+ 4`, `:8363-8369`) — which is exactly what the recording
+shows at segment 4 frame 0, `sidekick_x = 0x0220` against Sonic's `0x0240`.
+
+Measured, engine rows against the fixture (probe on the live sidekick):
+
+| row | ROM | engine (before) |
+|---|---|---|
+| 0 | (544, 980) present | (544, 980), `objectControlled=false`, CPU `INIT` |
+| 1 | (544, 980) present | **(32512, 0)**, `objectControlled=true`, CPU `DORMANT_MARKER` |
+| 2..5689 | present, following | parked at (32512, 0) for the whole act |
+
+So Tails was absent for the entire miniboss fight. The previous round's row-4857
+11-pixel player divergence, the two extra fire hits at 5351 and 5529, the ring
+scatter and the death are all downstream of that: with the sidekick missing the
+fight does not play out the same way.
+
+- **New frontier: the segment 4 -> 5 handoff**,
+  `non-exportable pending hardware submission at segment end:
+  KOS_MODULE_QUEUE#52 sha256:10eb568a...`. Not diagnosed.
+- **Still open, unchanged and now the segment's first mismatch:** three rings the
+  engine collects at rows 519/528/535 that the recording does not (rom 75, engine
+  76/77/78). The previous round refuted the `Respawn_table_keep` /
+  `Ring_status_table` explanation for these by measurement; that remains a
+  do-not-retry.

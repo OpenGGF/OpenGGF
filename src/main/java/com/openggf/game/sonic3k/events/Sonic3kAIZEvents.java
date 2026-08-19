@@ -5,6 +5,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.RespawnState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
@@ -1022,10 +1023,76 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return act == 0 && !bootstrap.isSkipIntro();
     }
 
+    /**
+     * ROM {@code loc_13A10}, the AIZ1 intro branch of {@code Tails_CPU_Control}
+     * (docs/skdisasm/sonic3k.asm:26389-26397):
+     *
+     * <pre>
+     * loc_13A10:
+     *         tst.b   (Tails_CPU_star_post_flag).w
+     *         bne.w   loc_13AF4                 ; entered from a star post -- fly in instead
+     *         cmpi.w  #0,(Current_zone_and_act).w
+     *         bne.s   loc_13A32                 ; not AIZ act 1 -- ordinary CPU follow
+     *         bsr.w   sub_13ECA                 ; park Tails at the (0x7F00, 0) marker
+     *         move.w  #$A,(Tails_CPU_routine).w
+     *         move.b  #$83,object_control(a0)
+     *         rts
+     * </pre>
+     *
+     * <p>Both of the ROM's tests were missing here. The zone/act test was
+     * evaluated against a hardcoded {@code 0} rather than the live
+     * {@code Current_zone_and_act}, so every AIZ act reached this branch, and
+     * the {@code Tails_CPU_star_post_flag} test had no counterpart at all.
+     * {@code Tails_CPU_star_post_flag} is written exactly once, by
+     * {@code Tails_Init}'s {@code move.b (Last_star_post_hit).w,
+     * (Tails_CPU_star_post_flag).w} (sonic3k.asm:26155), and read exactly once,
+     * here -- its whole purpose is to stop the intro marker on a level entered
+     * from a star post or the special-stage return that follows one.
+     *
+     * <p>Without them a special-stage return into AIZ act 2 parked Tails at the
+     * despawn marker on its first CPU tick and left him there for the rest of
+     * the act.
+     *
+     * <p>{@code Last_star_post_hit} is read live rather than latched at the
+     * engine's {@code Tails_Init} equivalent. The ROM latch and a live read can
+     * only differ if the value changes between the level load and the
+     * sidekick's first CPU tick, which requires touching a star post -- itself
+     * gameplay that cannot happen before that tick.
+     */
     public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
         return sidekick != null
-                && shouldSpawnIntro(0)
+                && shouldSpawnIntro(currentActOrIntro())
+                && romLastStarPostHit() == 0
                 && playerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
+    }
+
+    /**
+     * The live act for the ROM's {@code cmpi.w #0,(Current_zone_and_act).w}. The
+     * zone half is implicit: this predicate only runs from the AIZ zone-event
+     * owner.
+     */
+    private int currentActOrIntro() {
+        LevelManager lm = levelManager();
+        return lm == null ? 0 : lm.getCurrentAct();
+    }
+
+    /**
+     * The engine's model of {@code Last_star_post_hit} masked as
+     * {@code Tails_CPU_star_post_flag} sees it: zero when no star post has been
+     * reached. The persistent activation mark is the same value the star post's
+     * own already-hit comparison consumes (sonic3k.asm:61606-61610), and it is
+     * -1 rather than 0 when no post has been reached.
+     */
+    private int romLastStarPostHit() {
+        LevelManager lm = levelManager();
+        if (lm == null) {
+            return 0;
+        }
+        RespawnState checkpoint = lm.getCheckpointState();
+        if (checkpoint == null) {
+            return 0;
+        }
+        return Math.max(0, checkpoint.getStarPostActivationMark());
     }
 
     private boolean spawnIntroObject() {
