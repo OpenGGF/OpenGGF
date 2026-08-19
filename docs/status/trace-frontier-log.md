@@ -90622,3 +90622,37 @@ which branch the closure takes on rows 1 and 8 of `seg10_cpz2`. If it takes the 
 branch, the candidate is dead and the deficit is upstream in when the queue head is armed.
 Note the direction does not obviously fit — this branch would make the engine consume *more*,
 where the measurement has it consuming *less* — so it needs measuring rather than adopting.
+
+## S1 chain segment 12 f593/f601: the engine balances where the ROM stands
+
+**Field names depend on the arm.** With the S1 timing fixture applied the axis surfaces as
+`dynamic_art.edge[0].mapping_frame`; on plain `develop` the segment is 40 errors with its
+first error at f101 (the PLC promotion) and the same 37 animation errors report as
+`player_mapping_frame` / `player_animation_id` at f601-603. The fixture only changes which
+error is *first*. Grep for the physics field names when working this on committed data.
+
+Read as hex, both values resolve to named ROM symbols:
+
+| field | ROM | engine |
+|---|---|---|
+| `player_animation_id` | `0x05` = `id_Wait` → `SonAni_Wait` | `0x06` = `id_Balance` → `SonAni_Balance` |
+| `player_mapping_frame` | `0x01` = `fr_Stand` | `0x3A` = `fr_Balance1` |
+
+`fr_Stand: equ 1` and `fr_Balance1: equ $3A` (`docs/s1disasm/_anim/Sonic.asm:6,63`), and each
+value is the first mapping frame of its script (`:181-190`). So this is **not** a frame skew:
+the engine has Sonic teetering on a ledge where the ROM has him standing idle. The mapping
+frame is merely the first frame of the wrong animation.
+
+**Not a missing port.** `Sonic_Balance` (`_incObj/01 Sonic.asm:436-462`) refuses to balance
+when `ObjFloorDist` returns `< 12` — "would look awkward" — and otherwise requires
+`angleright == 3` or `angleleft == 3`, the empty-tile sentinel.
+`PlayableSpriteMovement.checkTerrainEdgeBalance` already implements all of it, including the
+S1-specific centre-X probe rather than the ±9 side sensors, the `< 12` guard, and the
+sentinel gate, with those ROM lines cited in comments.
+
+**So the defect is in the guard's inputs, and there are exactly two candidates:** either the
+engine's centre `SensorResult.distance()` is `>= 12` where the ROM's `ObjFloorDist` is `< 12`,
+or a latched angle byte holds the `3` sentinel where the ROM's `angleright`/`angleleft` does
+not. Both are measurable at f593 with one probe. The existing comment on that branch flags a
+subtlety about latched-versus-fresh angle bytes, which is the thing most likely to be guessed
+wrong — instrument it rather than reasoning about it.
