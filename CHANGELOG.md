@@ -4,6 +4,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The AIZ1 cutscene miniboss no longer rebounds the player a frame early. Both
+  of `Obj_AIZMinibossCutscene`'s moving routines end in `MoveWaitTouch`
+  (docs/skdisasm/sonic3k.asm:136817-136818, 136845-136847), which runs
+  `MoveSprite2` before `Draw_And_Touch_Sprite` (:179687-179690), and
+  `Add_SpriteToCollisionResponseList` stores only the object-RAM pointer
+  (:21200-21209) — so the player slot's `Touch_Loop` reads `y_pos(a1)` live
+  (:20661-20662, 20674, 20693) and sees the position this object produced on its
+  previous pass. The engine used the generic pre-update snapshot, one frame
+  older again, putting the swing's touch box 1 px high. In the
+  `s3k-sonic-tails-complete-emeralds` `aiz_2` segment that turned
+  `Touch_Height`'s `d0` into `$16` against a `$16` player height at frame 2941,
+  firing `Touch_Enemy`'s boss rebound (`neg.w x_vel/y_vel/ground_vel`,
+  :20907-20914) one frame before the ROM does at frame 2942 — reported as
+  `x_speed` rom `0x0213` engine `-0213`. The object now takes the same
+  `usesCurrentTouchResponseState()` opt-in `Obj_AIZMiniboss` already carries.
 - The Sonic 1 Roller (SYZ, Obj43) no longer despawns off the LEFT edge of the
   screen. `Roll_Action` does not end at `RememberState`: under `FixBugs = 0` --
   the branch both S1 builds take (docs/s1disasm/sonic.asm:20) -- it carries an

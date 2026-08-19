@@ -167,6 +167,31 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         ObjectLifetimeOps.destroyLatched(this);
     }
 
+    /**
+     * The cutscene miniboss publishes its touch entry AFTER its own movement,
+     * exactly like {@link AizMinibossInstance}: both of its moving routines end
+     * in {@code MoveWaitTouch} — {@code AIZMiniboss_MoveWaitTouch} for the drop
+     * (sonic3k.asm:136817-136818) and {@code AIZMiniboss_SwingMoveWaitTouch} for
+     * the swing (sonic3k.asm:136845-136847) — and {@code MoveWaitTouch} runs
+     * {@code MoveSprite2} before {@code Draw_And_Touch_Sprite}
+     * (sonic3k.asm:179687-179690). {@code Add_SpriteToCollisionResponseList}
+     * stores only the object-RAM pointer (sonic3k.asm:21200-21209), so the
+     * player slot's {@code Touch_Loop} reads {@code x_pos(a1)}/{@code y_pos(a1)}
+     * live (sonic3k.asm:20661-20662, 20674, 20693) and therefore observes the
+     * position produced by this object's PREVIOUS pass, not the one before it.
+     *
+     * <p>Without this the swing's touch box lagged an extra frame: at the AIZ1
+     * swing the engine tested {@code y_pos} $34E where the ROM tested $34F, and
+     * the 1px difference put {@code Touch_Height}'s {@code d0} at $16 instead of
+     * $17 against a $16 player height, firing the boss rebound
+     * ({@code Touch_Enemy}.checkhurtenemy, sonic3k.asm:20907-20914) one frame
+     * early.
+     */
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        return true;
+    }
+
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
