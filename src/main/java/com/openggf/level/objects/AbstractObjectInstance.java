@@ -1104,6 +1104,33 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Signed-compare variant of {@link #isInRangeAt(int)}.
+     * <p>
+     * The shared {@code out_of_range} macro ends in {@code bhi} — an UNSIGNED
+     * compare, so an object left of the window wraps to a huge distance and is
+     * deleted (docs/s1disasm/Macros.asm:278-295). A handful of objects carry
+     * their own inlined copy of {@code RememberState} that ends in {@code bgt}
+     * instead, a SIGNED compare: a negative distance is never greater than
+     * {@code $280}, so those objects cannot despawn off the LEFT edge at all.
+     * <p>
+     * Both S1 disassemblies are built with {@code FixBugs = 0}
+     * (docs/s1disasm/sonic.asm:20), which is the branch that keeps the
+     * copy-pasted {@code bgt}; the {@code FixBugs} branch replaces the whole
+     * block with a plain {@code bra.w RememberState} and would despawn on the
+     * left like every other object. The shipped ROM — and therefore every
+     * trace — takes the {@code bgt} path, so that is what the engine models.
+     *
+     * @param objectX the chunk-aligned reference X to test
+     * @return true if in range under the signed window (should NOT be deleted)
+     */
+    protected boolean isInRangeAtSigned(int objectX) {
+        int objAligned = objectX & 0xFF80;
+        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
+        short dist = (short) (objAligned - screenAligned);
+        return dist <= (128 + viewportWidth() + 192);
+    }
+
+    /**
      * Adds an already-constructed object using FindNextFreeObj semantics.
      * <p>
      * <b>Does NOT set {@link #CONSTRUCTION_CONTEXT}.</b> If the object's constructor
