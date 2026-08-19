@@ -90975,3 +90975,41 @@ service on one of them. That is a **row-admission** question — which rows get 
 frames — and not a queue question. Per the standing caution: there is nothing wrong with the
 arming to correct, and correcting it to make row 2 read 2 instead of 5 would be fitting the
 subsystem that the measurement just exonerated.
+
+## S1 complete-emeralds chain re-measured at `bdbcc274c`
+
+Predicted state holds exactly: segment 12 = 3 errors, segment 15 = 6, both on
+`queue.s1_nemesis_plc.prepared`. Nothing unpredicted moved after the glass-pillar fix.
+
+**Where it stops:** the `ss_5 → syz2` special-stage-return presentation bridge —
+`AbstractRunChainTest.replaySpecialStagePresentationBridge` → `assertStructuralComparisonsGreen`,
+syz2 row 70. Segment reports exist through `seg16` and `seg17_dynamic_art`; segment 18 (syz2,
+bk2 offset 92783) never gets a physics report and **segments 18-33 are never replayed**. Sixteen
+of the run's thirty-four segments are unmeasured behind this one boundary, which makes it the
+highest-leverage target on the S1 chain by a wide margin.
+
+**All three failing axes, in movie order** (the segment-physics axes come first in the movie and
+do not stop the walk):
+
+1. `segment 12` (mz2_3, bk2 47034) — 3 errors, all at frame 101: `prepared` rom=true
+   engine=false, `remaining_work` rom=18 engine=-1, `queued_fingerprints` rom `f322185a…`
+   (1 entry) against engine `7e44b415…,f322185a…` (2).
+2. `segment 15` (mz3_2, bk2 66604) — 6 errors, first at frame 102, the same three fields, then
+   the same three again at frame 109 where the ROM's queue is empty and the engine still holds
+   `f322185a…`.
+3. `syz2 row 70` — `remaining_work` expected 1 actual 24; `queued_fingerprints` expected 6
+   entries, actual 5. **This is the walk failure that terminates the chain.**
+
+**The fingerprint mismatch runs in opposite directions**, so "the engine is one entry ahead" is
+not one story across the three: at segments 12 and 15 the engine carries one extra *leading*
+fingerprint the ROM lacks; at syz2 row 70 the ROM has one extra leading fingerprint
+(`23680d69…`) the engine lacks. Why is not established.
+
+**The S2 lane's gap-first reordering does not transfer to S1.** The dynamic-art gap report is
+`gapCount: 18, failureCount: 0`, and all five per-segment dynamic-art reports are 0 errors —
+there is no dynamic-art axis hiding ahead of the physics frontier here.
+
+**Constraint on any fix aimed at the bridge:** no committed S1 or S2 fixture carries a
+`hardware_timing` stream, and a probe logged 100 `NEMESIS_PLC_QUEUE` submissions with zero
+recorded edges and zero unrepresented admissions across the whole chain. The recorded-timing
+port is never active for S1 on committed data, so it cannot be the mechanism.
