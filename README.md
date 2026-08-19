@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The MTZ spring wall no longer takes the `fixBugs`-ON branch, and the push pair is measured and
+  rejected (`bugfix/ai-s2-pushpair-r1`, merged 2026-08-19).** `MTZSpringWallObjectInstance` cleared
+  the player's rolling-jump state by transcribing `s2disasm/s2.asm:53395-53399`, which sits inside an
+  `if fixBugs` block; all three disassemblies build with `fixBugs = 0` (`s2.asm:27`), so the shipped
+  ROM does not execute it. That clear is removed. **The push-gate pair was built, measured as one
+  change, and reverted**: at this base the ungated `Solid_NotPushing` clear plus the
+  `SolidObject_TestClearPush` object-bit gate costs **2** regressions, and adding the 11 blocked
+  object-side sites costs **3 more** -- so the halves are separable after all, and the previous
+  round's "they must land together" was right about necessity and wrong about sufficiency.
+  **The audit paid off exactly where predicted:** round 5 measured 12 regressions for the same pair;
+  10 of those are gone, retired by the 18 object-side sites landed in `8cd07b700`, leaving 2. The
+  residual is `TestS3kMgzTraceReplay` at frame 5061 with `tails_status_byte` expected `0x0000`
+  actual `0x0020` -- a character left holding `Status_Push` -- and `TestS2CompleteEmeraldRunPrefix`
+  on `dynamic_art.edges`. A hypothesis that fitted perfectly was killed rather than shipped:
+  `Sonic_Animate`/`Animate_Player` clear the player's pushing flag on **any** animation change before
+  `SAnim_Do` (`s2.asm:38386-38391`; `skdisasm/sonic3k.asm:29358-29364`, `:24741-24747`) and the engine
+  models that only inside the walk-special branch, but hoisting it to fire on any animation change
+  changed nothing at all -- AIZ 1269, CNZ 2609, MGZ 4411, seg10 2433, identical. The unmodelled
+  mechanism is real; it is not what strands the flag.
+
 - **Unconsumed hardware-completion edges are reported, not aborted on
   (`bugfix/ai-s1-plc-edge-report`, merged 2026-08-19).** When the replay walked past a recorded
   timing edge the engine had submitted nothing for, `HardwareTimingReplayPort` threw and the
