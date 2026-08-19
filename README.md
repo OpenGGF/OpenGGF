@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION: the S1 "one frame located" inference compared two different clocks
+  (`bugfix/ai-s1-rowsconsumed-r1`, second commit, merged 2026-08-19).** The previous entry
+  differenced the engine's **16** measured `SSR_ChkPLC` wait frames against a **17**-frame ROM
+  arm-to-completion span and called the remainder the missing row. **Those are not the same
+  measurement:** 16 counts results-screen `update()` calls that returned early on `isBusy()`, while
+  17 is arm-to-final-completion from recorded arm rows plus a computed tail -- different endpoints,
+  different clocks, which is the "name the clock" trap already recorded twice in this log. **The sign
+  disproves it independently:** if the engine drained in 16 where the ROM took 17 it would reach its
+  exit and admit the destination *earlier*, and the observed slip is *later*, so the subtraction
+  predicts the opposite direction to the symptom. **What survives, each measured on a single basis:**
+  the ROM's per-entry cost model is confirmed from the listing -- `ProcessPLC` decrements
+  `patternsleft` and branches to `ShiftCue` *before* decrementing `framepatternsleft`
+  (`s1disasm/sonic.asm:1473-1477`), and `ShiftCue` shifts and `rts` (`:1494-1517`), so the frame's
+  remaining 9-tile budget is discarded and the cost is `sum(ceil(patterns/9))`; the engine's measured
+  wait equals that model's 16 exactly, so its lost-budget semantics are right; and recorded arm gaps
+  3, 3, 2, 2, 1, 2 against per-entry costs 2, 3, 2, 2, 1, 2 still put one unexplained frame at the
+  first entry, both sides in segment rows. **No longer claimed:** that this frame explains the late
+  admission. The admission slip needs its own single-clock measurement first.
+
 - **The 6600 stop is a rolling-air wall hit, and the absence-claim audit comes back clean bar one
   (`bugfix/ai-s2-stop-6600-r1`, merged 2026-08-19 -- fixture analysis only).** Eight absence claims
   on this thread rest on direct reads of recorded columns, tables or coordinate sets and are
@@ -265,7 +284,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   last entry's 4) against per-entry costs shows **every entry matching except the first**, where the
   ROM takes 3 frames for a 10-pattern entry needing 2: the queue is filled before `SS_NormalExit`'s
   first `WaitForVBlank`, so that V-blank services nothing armed. One frame of arm-versus-service
-  phase -- **to be derived from the listing rather than added wherever it makes admission land.**
+  phase (**retracted below: the 16-versus-17 subtraction compared two different clocks, and its sign
+  predicts the opposite of the observed slip**).
 
 - **RETRACTION: the Roll slip is downstream of physics, and a non-cascading filter hid it
   (`bugfix/ai-s2-roll-anchor-r1`, merged 2026-08-19 -- instrumentation reverted, nothing landed).**
