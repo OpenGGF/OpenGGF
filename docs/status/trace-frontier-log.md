@@ -91517,3 +91517,76 @@ The remaining task is the handoff's task 2 alone — split the release seam into
 iterations so the title-card leave loop's last frame and `Level_MainLoop`'s first frame each
 own a represented V-blank. Task 1 needs no work. The `completeInitialPresentationPlcs`
 asymmetry is a separate thread and, on this evidence, must not be "corrected" in isolation.
+
+## 2026-08-20 — S2 stage_exit seam: the release row's phase cannot be flipped from the title-card lifecycle
+
+Base `e51c6e7e5`, worktree `s2-titlecard-seam-r1`, JDK 21,
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain`.
+Baseline at this base is the previous entry's: 9 failing axes, segment 15 = 7575 errors,
+frame 2, `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5. **No fix landed.** Three
+variants of one change were implemented and all three were refuted, each by a different
+structural invariant.
+
+### The model under test
+
+Counting host iterations at the seam (cursor 82342) against the ROM:
+
+| | represented V-blanks | object passes |
+|---|---|---|
+| ROM leave region (`s2.asm:5006` pass + 25 leave iterations, `:5060-5066`) | 25 | 26 |
+| ROM `Level_MainLoop` first frame (`:5088-5095`) | 1 | 1 |
+| engine title-card iterations | 26 | 26 |
+| engine release iteration | 1 (`LEVEL_TITLE_CARD`) | 0 |
+| engine level fall-through (same host iteration) | 0 (claim refused) | 1 |
+
+The ROM's `s2.asm:5006` pass has no `WaitForVint` of its own — `Sonic2LevelInitProfile`'s own
+comment says so — so the engine carries **one extra represented V-blank** in the leave
+region, and its **last** one is phased `VintID_TitleCard` (ProcessDPLC, 6) where the ROM's is
+`VintID_Level` (ProcessDPLC2, 3). The iteration that runs the level's `RunObjects` is
+therefore `Level_MainLoop`'s first frame wearing a title-card V-blank.
+
+### DO NOT RETRY — three refuted variants of "make the release row a level row"
+
+All in `GameLoopTitleCardLifecycle.update`. Segments 12 and 13 were held as controls
+throughout; none of the three got far enough to report a physics axis at all.
+
+1. **Defer `frame.claim` past the release test and let the level body claim
+   `ORDINARY_LEVEL`.** Chain aborts far earlier than the target, at segment 7:
+   `AssertionError: segment 7 lost production ownership before source closure
+   (mode=TITLE_CARD, level=LevelIdentity[loadGeneration=7, progressionZone=0, romZone=0,
+   act=1], BK2 cursor=38806)`. The release iteration's claim is load-bearing for the run
+   coordinator's production-owner tracking — `PlcLifecycleFrame.claim` drives
+   `dynamicArtLifecycle.serviceProductionVBlank()` — and the level body does not always
+   follow the release (setup-only and transition-request paths return first).
+2. **Keep the claim but issue it after `completeRelease` as `ORDINARY_LEVEL`, keeping the
+   existing `preparePhase` call.** `IllegalStateException: PLC lifecycle frame was already
+   prepared` at `PlcFrameLifecycleCoordinator$PlcLifecycleFrame.prepareAfterLoop:518`, from
+   `LevelFrameStep.execute:475` via `GameLoop.updateLevelMode:1752`. Today's release-path
+   prepare is silently a no-op only because its phase does not match the claimed owner;
+   matching them makes the level body's own prepare a double.
+3. **As (2) but with the release-path prepare dropped on the LEVEL destination, restored
+   only when `completeRelease` reports `SETUP_ONLY`.** `IllegalStateException: missing PLC
+   preparation for ORDINARY_LEVEL` at `PlcLifecycleFrame.finish:556`, at ~8 s into the run
+   (segments 0-1). `GAMEPLAY_FRAME` is not a guarantee that the level body prepares:
+   `updateLevelMode` early-returns on title-card, respawn, next-act, next-zone and zone-act
+   requests before reaching `LevelFrameStep.execute`.
+
+### What this establishes
+
+The release row's phase **cannot** be corrected from inside the title-card lifecycle,
+because that code cannot know whether the level body will run, and both the claim and the
+preparation are mandatory exactly once per represented V-blank. Whoever owns this next has
+to own the level body's participation too — i.e. the genuine seam split, where the releasing
+iteration does not fall through into the level body at all and `Level_MainLoop`'s first
+frame is the NEXT host iteration. That is the shape the earlier "bare early return" attempt
+had; its recorded damage stands, and the three failures above name the three invariants it
+must satisfy: production-owner continuity, exactly-one prepare, and a prepare on every
+claimed row including the paths where `updateLevelMode` returns early.
+
+Note also the extra represented V-blank at the `s2.asm:5006` pass in the table above. It is a
+second, independent discrepancy at the same seam and was not addressed.
+
+### Sweeps
+
+None. All three variants aborted the target chain early, so no red-set comparison was
+meaningful and no suite sweep was run. The tree is identical to `e51c6e7e5`.
