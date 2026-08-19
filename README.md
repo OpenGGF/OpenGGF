@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K chain's frontier moves to the segment 3 -> 4 boundary, blocked by a gap-time
+  hardware-timing wall (`bugfix/ai-s3k-chain-seg2-r2`, documentation, merged 2026-08-19).**
+  `8955a77c1` moved the chain off segment 2; it now stops with
+  `BoundaryStepCapExceededException` at transition index 3 (`entry_kind stage_exit`,
+  `mode_change_bk2_frame=19775`) -- the return from special stage #2 into AIZ act 2. Segments 0-3
+  drive and transitions 0-2 are observed. There is no first-error frame because the segment never
+  closes, so no per-segment report is written. Instrumented rather than inferred: segment 1's return
+  runs `SPECIAL_STAGE -> SPECIAL_STAGE_RESULTS -> TITLE_CARD` and exits after ~120 title-card frames,
+  while segment 3's reaches `TITLE_CARD` and then holds `state=SLIDE_IN artLoading=true
+  artLoaded=false` for all ~36,700 remaining steps. `Sonic3kTitleCardManager.update()` early-returns
+  while `artLoading` is set and `finishQueuedArtIfReady()` is false, so the state machine never runs
+  and `shouldReleaseControl()` never becomes true. The AIZ act-2 title card is created **inside the
+  unrepresented inter-segment gap**, where `HardwareTimingReplayPort.enterUnrepresentedGap()` nulls
+  the raw-frame latch so no recorded completion edge can ever be applied -- the work can never be
+  released. The run **does** ship `hardware_timing_interstitial.jsonl` with 10 module and 15
+  decompression completions after segment 3, but `handoffTo` uses that stream only as a
+  cursor-advance span and releases nothing **by design** (`06846f0cf`). Note the segment 1 -> 2
+  return survived only because it returned to the *same act*, so the title-card art cache hit and
+  nothing was submitted -- which is why this stayed latent. A gap-time release path is a real
+  extension of the interstitial contract and was correctly not forced in one round.
+
 - **The S2 segment-15 root cause is corrected: the chain is NOT on the wrong collision path
   (`feature/ai-r6-cpz2-seg10`, documentation, merged 2026-08-19).** The solid-bit reseed
   (`63501b8a7`) moved `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` from 15,202 errors to
