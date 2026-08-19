@@ -85095,3 +85095,109 @@ fixture cannot land — it costs two new red
 (`TestS1CompleteEmeraldVisualRun#replaysTheSecondGiantRingAndTheSpecialStageBehindIt`
 and `#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission`), both green on
 `develop` today only because no S1 stream existed to expose them.
+
+## 2026-08-19 -- S1 special-stage return bridge: the seven unmatched PLC edges identified
+
+Commands:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical test
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission" test
+```
+
+Branch `bugfix/ai-s1-bridge-submission-r1`, based on `develop` at `1b7a62b4a`.
+Diagnosis only -- **no engine change is landed here**; see "Why nothing landed".
+
+### What the seven edges are
+
+Reversed out of the recorded `submission_fingerprint`s by recomputing
+`HardwareTimingEventEngine.ComputeSubmissionFingerprint` over every entry of
+every `ArtLoadCues` list in the ROM (`Sonic1Constants.ART_LOAD_CUES_ADDR`
+`0x01DD86`). All seven resolve exactly:
+
+| ordinal | raw_frame | list | entry | source | VRAM | tiles |
+|---|---|---|---|---|---|---|
+| 7 | 68 | PLC #0 `PLC_Main` | 0 | `0x03AE64` | `0xF400` | 10 |
+| 8 | 71 | PLC #0 `PLC_Main` | 1 | `0x039812` | `0xD940` | 24 |
+| 9 | 74 | PLC #0 `PLC_Main` | 2 | `0x039908` | `0xFA80` | 12 |
+| 10 | 76 | PLC #0 `PLC_Main` | 3 | `0x039A0E` | `0xF640` | 14 |
+| 11 | 78 | PLC #0 `PLC_Main` | 4 | `0x03A5C8` | `0xF2E0` | 9 |
+| 12 | 79 | PLC #27 `PLC_SSResult` | 0 | `0x02F74A` | `0xA820` | 16 |
+| 13 | 81 | PLC #27 `PLC_SSResult` | 1 | `0x03B64A` | `0xAA20` | 30 |
+
+That is precisely the pair the ROM queues on a special-stage exit --
+`moveq #plcid_Main,d0 / bsr.w NewPLC` then
+`moveq #plcid_SSResult,d0 / bsr.w AddPLC` (`docs/s1disasm/sonic.asm:3384-3387`)
+-- decompressed by the results-screen loop `SS_NormalExit`
+(`sonic.asm:3402-3413`), which sets `id_VBlank_TitleCards` (:3404, so
+`VBlank_TitleCards` runs `ProcessPLC_9Tiles`, :946) and calls `bsr.w RunPLC` at
+its tail (:3409).
+
+### What the ROM is NOT doing there
+
+The prior brief's leading hypothesis -- that the ROM runs `Level_MainLoop`
+across rows the harness suppresses under `TRANSITION_GAP` -- is **refuted**.
+`SS_NormalExit` is part of `GM_Special`, not the level loop. The engine's own
+mode timeline agrees: it enters `SPECIAL_STAGE_RESULTS` at row 8773, which is
+exactly `ghz2`'s `bk2_frame_offset` 8705 + `raw_frame` 68, the frame the ROM
+arms `PLC_Main` entry 0. The engine's results-screen entry is correctly timed.
+
+### Root cause, instrumented rather than inferred
+
+`Sonic1SpecialStageProvider.onEnterResults` **already** performs the ROM's pair
+(`replace(0)`, `appendOperation(27)`), and `Sonic1PlcService` already declares
+`SPECIAL_STAGE_RESULTS` as both a 9-tile V-blank phase and a preparation
+boundary. A probe on that method and on
+`Sonic1RuntimeArtCoordinator.beforeTimingService` showed:
+
+- `onEnterResults` fires exactly once, with no exception (its
+  `catch (Exception ignored)` is not swallowing anything);
+- of 7,826 `PRE_MAIN_LOOP` boundary services in the run, **none** occur after
+  that submission -- all 146 busy frames are GHZ1's level loads before it.
+
+`LevelFrameStep` is the only driver of hardware-timing boundaries, and
+`updateSpecialStageResultsMode` only claimed the PLC lifecycle frame. So
+`submitArmableHead()` never ran and no `HardwareTimingJob` ever existed for a
+recorded edge to release -- "the engine submitted no matching work" is literally
+true. The engine's *native* queue was still serviced, because
+`Sonic1PlcArmTiming.releaseArm` returns `true` when nothing is outstanding
+(`Sonic1PlcArmTiming.java:105-108`), so `prepare()` armed the head unconditionally.
+
+### The change that was tried, and why nothing landed
+
+Routing the iteration through the existing shared helper --
+`LevelFrameStep.executeHardwareTimedObjectScan(..., SPECIAL_STAGE_RESULTS,
+this::runSpecialStageResultsIteration)`, whose `VINT_SERVICE` / objectScan /
+`POST_OBJECTS` / `PRE_MAIN_LOOP` sequence matches `SS_NormalExit` step for step
+-- makes the arm fire (probe-confirmed) and is **gate-clean**: full
+`-Ptrace-replay` 790 / 4 with an empty both-way set-diff against a same-worktree
+control at `1b7a62b4a`.
+
+It is not landed because it also changes phase. Submitting an arm at
+`PRE_MAIN_LOOP` makes `releaseArm()` gate on that job's readiness, and the
+budget scheduler grants one work unit at `POST_OBJECTS`
+(`RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS)`), which is *earlier* in
+the row than the submission -- so preparation defers to the next row. Measured
+against the held fixture, the first divergence moves from segment 3 frame 69 to
+segment 2 frame 68, where the engine shows `prepared=false`,
+`remaining_work=-1` and one extra queued entry against the ROM's
+`prepared=true`, `remaining_work=10` (`PLC_Main` entry 0's tile count -- the
+ROM has armed on the arming row itself).
+
+The gate cannot see that deferral: no committed trace compares S1 or S2
+results-screen queue state except the two complete-emerald run chains, which are
+already red. **Gate-clean here partly means unobserved**, so landing a
+phase-changing edit to shared results-screen code on that evidence would be
+unsound.
+
+### The open question for the next round
+
+Does the ROM's `RunPLC` arm become visible on the arming row (as
+`ghz2`/`raw_frame 68` says) or on the following one, and how does the level path
+already achieve same-row visibility -- GHZ1's seven edges all match today -- when
+the results path with the same boundary sequence does not? Settling that decides
+whether the helper's ordering is right for this loop or whether the results loop
+needs its arm submitted at a different boundary. Note the same gap applies to
+Sonic 2: `Sonic2PlcService.hasPreparationBoundary` also returns `true` for
+`SPECIAL_STAGE_RESULTS` (`Sonic2PlcService.java:173-179`), so its results screen
+is equally unarmed as hardware work.
