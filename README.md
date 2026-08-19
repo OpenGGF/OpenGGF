@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The object pass terminates before `Obj05`'s slot, and only a `d7` clobber survives
+  (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- second PC-execute probe, no engine change).**
+  The structural fact that reframes the question: `Tails_Tails` sits in `LevelOnly_Object_RAM`
+  (`s2disasm/s2.constants.asm:1149-1151`), **past `Object_RAM_End`**, and `RunObjects` reaches it
+  only by widening `d7` from the `Object_RAM` bound to the LevelOnly bound, and only in Demo or Level
+  mode. So "the loop stopped early" is the *default* hypothesis rather than an exotic one. Hooking
+  `RunObject` itself, gated to `a0 = $FFD000`, fires on every row of 5535-5600 **except the same
+  eleven** -- and because that hook sits *before* `RunObject`'s own `move.b id(a0),d0 / beq
+  RunNextObject`, it separates the two remaining shapes decisively: not an emptied slot being
+  skipped, but **the loop terminating before `LevelOnly_Object_RAM`**. Five causes are eliminated
+  from committed data: game-mode truncation (`game_mode` stays 12 across the window, so the widening
+  branch was taken), `Teleport_flag` (it halts *all* objects, but Tails animates at 5559 and 5564
+  inside the gap), the player-dead path (`RunObjectsWhenPlayerIsDead` still branches into
+  `RunObject` over LevelOnly, and Sonic's routine is `02` throughout), displacement or
+  re-establishment (Tails stationary, `present=1`, routine `02`, slot reads `id=05` on both sides),
+  and lag rows (`gameplay_frame_counter` and `vblank_counter` advance in lockstep with `lag_counter`
+  at `0000`, so all eleven are completed iterations). **What remains is `d7` clobbered mid-pass:**
+  `RunObject` `jsr`s into arbitrary object code with `d7` live, so any object failing to preserve it
+  truncates the rest of the pass -- and if that is the mechanism, **the blast radius is the object
+  system rather than two games**, since the pass would end wherever it happens and stop every object
+  after the culprit.
+
 - **The Caterkiller regression is a stale touch-pass sample, and the bodies never shifted
   (`bugfix/ai-s3k-caterkiller-body-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
   The drag hypothesis is refuted: ROM `Obj_Wait`'s `$34` continuation for a body is

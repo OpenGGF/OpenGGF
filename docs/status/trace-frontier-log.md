@@ -86304,3 +86304,64 @@ because the fix must be the slot/phase rule, not a per-object opt-in. Adding
 `usesCurrentTouchResponseState()` to these two classes would make the AIZ slice green and
 would be a carve-out; do not do that without first measuring how many other child-spawned
 objects sample stale state.
+
+## 2026-08-19 — the dispatch loop does not REACH Obj05's slot, and five causes are eliminated
+
+Branch `bugfix/ai-s2-execobjects-r1` off `origin/develop` (`ebde965b8`).
+Second probe `tools/bizhawk/probes/s2_cpz2_runobject_probe.lua` plus fixture
+checks; no engine change.
+
+### Obj05 is not in the main object array at all
+
+`Tails_Tails` sits in `LevelOnly_Object_RAM` (docs/s2disasm/s2.constants.asm:1149-1151),
+**past `Object_RAM_End`** (:1145). `RunObjects` (docs/s2disasm/s2.asm:29805-29824)
+covers it only by widening its own bound: `d7` starts at
+`(Object_RAM_End-Object_RAM)/object_size-1` and is raised to
+`(LevelOnly_Object_RAM_End-Object_RAM)/object_size-1` **only** in Demo or Level
+game mode. So the whole candidate list -- mine and the brief's -- was framed
+around a loop Obj05 is only conditionally inside.
+
+### The loop does not reach the slot
+
+Hooking `RunObject` itself (s2.asm:29832, the loop body) gated to
+`a0 = $FFD000` fires on every row of 5535-5600 **except 5554-5564**, the same
+eleven. `RunObject`'s hook sits *before* its own `move.b id(a0),d0 / beq
+RunNextObject` skip, so this distinguishes the two remaining shapes decisively:
+
+- **not** an emptied slot being skipped -- the loop would still have reached it;
+- the loop **terminates before `LevelOnly_Object_RAM`** on those rows.
+
+### Five explanations eliminated, all from committed data
+
+- **Game mode truncation.** `zone_act_state` reports `game_mode = 12` (`0x0C`,
+  Level) unchanged across the window, so the `d7` widening branch was taken.
+- **`Teleport_flag` early return.** It halts *all* objects, but Tails' animation
+  changes at rows 5559 and 5564 -- inside the gap -- so the object pass ran.
+- **The player-dead path.** `RunObjectsWhenPlayerIsDead` (:29852-29857) runs
+  Reserved normally, Dynamic display-only, then `bra.s RunObject` over
+  LevelOnly -- Obj05 would still run. And Sonic's routine is `02` throughout.
+- **Obj05 displaced or re-established.** Tails is stationary, `present=1`,
+  routine `02`, position `2AB1,04F0` unchanged across the whole window; and the
+  slot reads `id=05` on both sides of the gap.
+- **Lag rows.** `gameplay_frame_counter` and `vblank_counter` advance in lockstep
+  on every row and `lag_counter` is `0000`, so every one of the eleven is a
+  completed main-loop iteration, not a V-blank sample of a stalled one.
+
+### What is left, and the blast-radius answer
+
+The only candidate not yet tested is the brief's "an earlier object consuming the
+dispatch" in its precise form: `d7` being clobbered during the pass by an object
+that runs before `LevelOnly_Object_RAM`. `RunObject` `jsr`s into arbitrary object
+code with `d7` live, so any object that fails to preserve it truncates the
+remainder of the pass.
+
+**That would be general object-dispatch behaviour, not an Obj05 quirk** -- the
+truncation ends the pass wherever it happens, so every object after the culprit
+stops for those rows, including the rest of `LevelOnly_Object_RAM`
+(`SuperSonicStars`, `Sonic_BreathingBubbles`). Flagging that now, as asked,
+rather than after a fix: if this is the mechanism the blast radius is the object
+system, not two games.
+
+The test is one probe: log `d7` at each `RunObject` iteration for rows 5550-5566
+and find the iteration after which it stops decreasing toward the LevelOnly
+range.
