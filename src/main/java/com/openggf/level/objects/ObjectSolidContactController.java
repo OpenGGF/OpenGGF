@@ -359,6 +359,33 @@ public final class ObjectSolidContactController {
                 .add(key);
     }
 
+    /**
+     * Clears the object-side p1/p2 pushing bits for every player, without the
+     * paired player-side clear or the {@code SolidObject_TestClearPush}
+     * Walk/Run restart write.
+     *
+     * <p>ROM equivalent: the two {@code bclr ...,status(a0)} instructions an
+     * object may execute on its own, outside {@code Solid_NotPushing} -- for
+     * example the Obj41 horizontal spring's launch tail at {@code loc_18BAA}
+     * (docs/s2disasm/s2.asm:34073-34076), which clears {@code p1_pushing_bit}
+     * and {@code p2_pushing_bit} on the spring and
+     * {@code status.player.pushing} on the launched character before playing
+     * the spring sound. Clearing the object-side bits there is what stops the
+     * following frame's {@code SolidObject_TestClearPush}
+     * {@code btst d4,status(a0)} (docs/s2disasm/s2.asm:35462-35466) from
+     * passing.
+     */
+    public void releaseObjectPushLatchForAllPlayers(ObjectInstance instance) {
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return;
+        }
+        objectPushingBitSet.values().removeIf(set -> {
+            set.remove(key);
+            return set.isEmpty();
+        });
+    }
+
     boolean hasPushingLatch(PlayableEntity player) {
         Set<Object> set = objectPushingBitSet.get(player);
         return set != null && !set.isEmpty();

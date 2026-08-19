@@ -228,6 +228,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 push gate props up a second site of the same conflation, and a third, independent bug
+  (`bugfix/ai-s2-pushgate-r1`, merged 2026-08-19 -- one fix landed, the pair sequenced behind an
+  audit).** `SolidObject_TestClearPush` gates its `move.w #(Walk<<8)|Run,anim(a1)` restart write on
+  `btst d4,status(a0)` -- the **object's** own pushing bit (`s2disasm/s2.asm:35462-35466`) -- while
+  the engine licenses that write on `sprite.getPushing()`, the **player's** global flag. That only
+  works while the player flag is wrongly held by the per-instance gate, so removing the gate removes
+  the licence and the engine misses restarts the ROM performs. Rows 1733/2263 are not new defects;
+  they are the other half of the same conflation. Verified by PC-execute probe rather than
+  reasoning: row 1732 shows slot 51 stopping at `AtEdge` while still carrying `objstatus 0x20` from
+  1731 and firing the write, and row 2262 is identical with slot 18. **Metric correction:** the
+  headline 2491 -> 5272 is a `dynamic_art` cascade scaling with window length -- five extra diverging
+  rows, not 2781 defects. Count non-cascading windows on this segment, not errors. Fixing the pair
+  exposed a genuinely independent bug: Obj41's horizontal spring tail `loc_18BAA` (`:34073-34076`)
+  executes **three** `bclr`s -- both pushing bits on the spring and `status.player.pushing` on the
+  character -- and the engine ported only the third. **Only that third fix is landed**, latent today.
+  The pair is blocked on a real structural finding: **the engine's per-object push latch is not a
+  model of the ROM object's p1/p2 pushing bits** -- it is written only by
+  `ObjectSolidContactController`, so every ROM site touching those bits from inside an object
+  routine is unmodelled, and promoting the latch to authority for the `btst` produced 12 regressions
+  across all three games. The route is to audit every `bclr #pN_pushing_bit,status(a0)` outside
+  `Solid_NotPushing` in all three disassemblies first. With all three changes the segment reaches
+  2433 and every `player_mapping_frame` divergence closes, including the 6608-7087 tail.
+
 - **The S3K segment-4 frontier is a re-collected ring, and "clears segment 4" was wrong
   (`bugfix/ai-s3k-seg5-r1`, merged 2026-08-19 -- investigation only, no fix).** The chain stops at
   the 4 -> 5 handoff on `non-exportable pending hardware submission: KOS_MODULE_QUEUE#52`, which had
@@ -263,7 +286,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   second object's not-pushing verdict can never clear the first object's flag. **The minimal
   ROM-faithful fix was measured and rejected:** making the player-side clear unconditional closes
   frame 1725 and moves the first animation error to 1733, but takes the seg10 lane from 2491 errors
-  to **5272**, with new divergences at 1733, 2262 and 2263. The per-instance gate is load-bearing;
+  to **5272** (**corrected above**: that count is a `dynamic_art` cascade scaling with the divergence
+  window -- five extra diverging rows, not 2781 defects), with new divergences at 1733 and 2263. The
+  per-instance gate is load-bearing;
   the number is recorded so nobody retries the removal blind.
 
 - **Structural guards are gated by CI, and the eleven that had gone silently red are green

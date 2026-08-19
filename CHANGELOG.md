@@ -34,6 +34,21 @@ All notable changes to the OpenGGF project are documented in this file.
   checks that every guard test class on disk is actually selected by it.
 
 ### Fixed
+- Sonic 2's Obj41 horizontal spring now clears its own object-side pushing
+  bits when it launches a character, not just the character's `status.player.
+  pushing` flag. ROM `loc_18BAA` (docs/s2disasm/s2.asm:34073-34076) executes
+  three `bclr`s -- `p1_pushing_bit` and `p2_pushing_bit` on the spring and
+  `status.player.pushing` on the launched character -- and the object-side pair
+  is what makes the following frame's `SolidObject_TestClearPush`
+  `btst d4,status(a0)` (:35462-35466) fail, so no Walk/Run animation restart
+  follows a spring launch. A BizHawk PC-execute probe over the CPZ2
+  complete-emeralds route confirms the spring's status byte going `0x21` after
+  `SolidObject_AtEdge` and `0x01` at the next frame's `TestClearPush`. The
+  engine modelled only the player-side clear. This is latent on the current
+  push-flag implementation and moves no trace frontier by itself; it is a
+  prerequisite for correcting the `Solid_NotPushing` / `TestClearPush`
+  object-versus-player bit conflation documented in
+  docs/status/trace-frontier-log.md.
 - Sonic 3&K's Tails is no longer parked at the despawn marker for the rest of
   the act when a special stage returns into Angel Island act 2. ROM
   `loc_13A10`, the AIZ1-intro branch of `Tails_CPU_Control`, is guarded twice

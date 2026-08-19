@@ -84702,3 +84702,94 @@ Two facts worth carrying forward:
 **Next target: segment 4 frame 519 (`rings`), via `Respawn_table_keep` /
 `Ring_status_table` persistence across the giant-ring special-stage return.**
 No engine change was landed in this round.
+## 2026-08-19 — S2 CPZ2 push gate, round 5: what the gate was propping up
+
+Answer to the open question above: **the same defect seen from the other side,
+plus one genuinely independent object bug.** Three sites, measured, not argued.
+Branch `bugfix/ai-s2-pushgate-r1` off `origin/develop` (`7c7d86190`).
+
+### Method
+
+Extended `tools/bizhawk/probes/s2_cpz2_push_order_probe.lua` into
+`s2_cpz2_push_owner_probe.lua`, which logs the object pointer `a0` (slot, id and
+the object's own status byte) at every `SolidObject` site plus the two
+`SolidObject_TestClearPush` sites — its entry and the
+`move.w #(Walk<<8)|Run,anim(a1)` restart write six bytes before
+`Solid_NotPushing`. Engine side: a throwaway `System.getenv`-gated file logger on
+the same four transitions, keyed by trace row. Both were removed before commit.
+
+### The three findings
+
+1. **`Solid_NotPushing`'s player-side clear is ungated** (s2.asm:35484-35488).
+   Confirmed on hardware: for rows 1718-1731 slot 51 (Obj74) reaches
+   `SolidObject_AtEdge` every frame and slot 52 (Obj74) then reaches
+   `Solid_NotPushing`, so the recorded `player_status_byte` is `0x49` — set and
+   cleared inside one frame.
+2. **`SolidObject_TestClearPush`'s `btst d4,status(a0)` reads the OBJECT's own
+   pushing bit, not the player's global flag** (s2.asm:35462-35466). This is the
+   same conflation as (1) at the other site. On row 1732 slot 51 stops reaching
+   `AtEdge`, still carries its own bit from 1731, and therefore fires the
+   Walk/Run restart — which is the entire reason the ROM's walk mapping frame
+   returns to `0x0F` on rows 1733 and 2263. The engine licenses that write on
+   `sprite.getPushing()` instead, which only works while the player-side flag is
+   wrongly held; fixing (1) alone removes the licence and opens divergences at
+   1733-1739 and 2263-2268. **The two must move together.**
+3. **Obj41's horizontal spring clears three bits at `loc_18BAA`
+   (s2.asm:34073-34076), and the engine cleared one.** ROM clears
+   `p1_pushing_bit` and `p2_pushing_bit` on the spring *and*
+   `status.player.pushing` on the launched character. The object-side pair is
+   what makes the next frame's `TestClearPush` `btst` fail. The probe shows the
+   spring at slot 23 with `objstatus=0x21` after `AtEdge` on row 445 and
+   `objstatus=0x01` at `TestClearPush` on row 446, so no restart write. This is
+   independent of (1) and (2) and is the fix landed here.
+
+### Measurements — `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`
+
+| Change | Errors | First non-cascading animation divergence |
+|---|---|---|
+| control | 2491 | 1725-1732 `player_mapping_frame` exp `0x0010` act `0x000F` |
+| (1) alone | 5272 | 1733-1739 and 2263-2268 |
+| (2) alone | 3600 | 448-499 and 4415-4419, plus 1725-1732 inverted |
+| (1)+(2) | 3542 | 448-499 and 4415-4419 |
+| (1)+(2)+(3) | **2433** | 5662 `tails_animation_id` |
+
+`(1)+(2)+(3)` closes every `player_mapping_frame` divergence in the segment,
+including the 6608-7087 tail, and moves the first non-cascading animation error
+from row 1725 to row 5662. The error-count column is a poor summary here: the
+bulk of every number is `dynamic_art.*` cascade whose size scales with the
+length of the mapping-frame window, so (1) alone reads as "twice as bad" while
+adding only five diverging rows.
+
+### Why (1)+(2) is not landable, and what blocks it
+
+Full `-Ptrace-replay` with (1)+(2)+(3): **790 tests, 16 red** against a control
+measured in a clean worktree at the same base of **790 tests, 4 red**. Twelve
+regressions, all animation-shaped and spread across all three games —
+`TestS1{Ghz3,Lz2,Slz2,Slz3,Syz1,Syz2}CompleteRunTraceReplay`,
+`TestS1Credits05Sbz1TraceReplay`, `TestS2Ooz2LevelSelectTraceReplay`,
+`TestS2CompleteEmeraldRunPrefix`, `TestS3k{Cnz,Mgz}TraceReplay`,
+`TestS3kReplayReferenceClosureIntegration`.
+
+The root cause of the regressions is a premise of (2) that finding (3) disproves
+in general: **the engine's per-object push latch is not a faithful model of the
+ROM object's `p1/p2_pushing` status bits.** It is written only by
+`ObjectSolidContactController`; every ROM site that manipulates those bits from
+inside an object's own routine is unmodelled. Obj41's `loc_18BAA` is one such
+site, and there are others across all three games. Change (2) promotes that
+latch to the authority for the `btst`, and it is not accurate enough to carry
+that weight yet.
+
+**Do not retry (1) or (2), separately or together, until the latch is a real
+model of the object status bits.** The sequenced route is: audit every ROM
+`bclr #pN_pushing_bit,status(a0)` outside `Solid_NotPushing` in all three
+disassemblies, port each through `releaseObjectPushLatchForAllPlayers`, and only
+then land (1)+(2) as one change.
+
+### Landed here
+
+Only (3): the Obj41 horizontal spring now clears its object-side pushing bits,
+via a new `ObjectSolidContactController#releaseObjectPushLatchForAllPlayers`.
+On current `develop` this is **latent** — the Walk/Run write it prevents is
+already suppressed by the `sprite.getPushing()` licence — so it moves no
+frontier on its own and changes no test. It is landed because it is ROM-correct
+and is a prerequisite for (1)+(2).
