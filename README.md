@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **CPZ act 2's slope divergence is the wrong collision path, and the schema cannot yet express it
+  (`bugfix/ai-s2-cpz2-seg10-slope`, documentation, merged 2026-08-19).** The round refuted its own
+  brief: this is not a ground-sensor or angle-resolution question. `AnglePos`
+  (`s2disasm/s2.asm:43002-43011`) points `Collision_addr` at `Secondary_Collision` and passes
+  `d5 = top_solid_bit` whenever `top_solid_bit != $C`. Decompressing `CPZ_2.kos`,
+  `CPZ_DEZ.kos` and both CPZ 16x16 collision index arrays and re-running `FindFloor` +
+  `Sonic_Angle` over every grounded, object-free frame of the segment found **57 frames where the
+  two paths disagree: path 2 correct on 43, path 1 correct on 0**. The engine's chunk word,
+  collision-index entry, curve angle, height column and tie rule are all byte-identical to the ROM
+  -- it is simply on the wrong array. The recorded run is on path 2 because `Obj79_SaveData` saves
+  `MainCharacter+top_solid_bit` at the star post and `Obj79_LoadData` restores it on the
+  special-stage return (`:44740`, `:44787`), while `Obj01_Init` writes `$C` only when
+  `Last_star_pole_hit` is zero (`:36192-36199`). **No engine change landed**: the standalone lane
+  seeds a fresh player from the trace's first row and **the v5 schema records no `top_solid_bit`
+  field**, so the path is unobservable at segment entry and picking `$E` for this fixture would be
+  a fitted constant. Extending the recorder to carry it is the next step.
+
 - **The AIZ rock's on-screen solid gate is sized from its ROM size bytes
   (`bugfix/ai-s3k-cork-partner`, merged 2026-08-19).** `Render_Sprites` builds `render_flags` bit 7
   from the object's own `width_pixels` and `height_pixels` (`skdisasm/sonic3k.asm:36347-36370`),
