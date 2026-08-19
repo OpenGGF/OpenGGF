@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 title card never releases -- a stall, not a longer span
+  (`bugfix/ai-s1-titlecard-span-r1`, merged 2026-08-19 -- investigation only).** A new instrument was
+  needed because the previous probe's call site never runs in `TITLE_CARD`: `currentGameMode` logged
+  against the shared cursor from the top of `GameLoop.step`, which runs in every mode, with one
+  variable. The results screen ends at **9529 in both cases** and `TITLE_CARD` begins at **9530 in
+  both** -- identical to the row. What differs is the end: without the pair `LEVEL` begins at **9681**
+  after 151 title-card rows; with the pair it **never begins**, the card still running after 213 rows
+  when the run dies at 9743. So it is not a phase that takes longer but **a phase that never
+  completes**, and there is no duration to compare. Recorded as a **hypothesis with a kill condition**
+  rather than a finding: S1's title-card loop waits on the PLC buffer emptying
+  (`s1disasm/sonic.asm:2814`, `:946`), the returning level's load is submitted during that card, and
+  `ghz2_2`'s first recorded edge sits at its `raw_frame` 69 = shared row **9810** -- past the row the
+  card must finish by -- which would mean the engine waits for art that recorded timing cannot release
+  until a row the run never reaches. **Killed if** the queue is empty or already drained while the
+  card still waits. If it holds it is not a fifth part to the change but a statement about which rows
+  a segment's recorded stream must cover, and it would reframe the four-part plan rather than extend
+  it.
+
 - **Plane, solidity bit and quadrant are all identical -- it is the collision data
   (`bugfix/ai-s2-plane-select-r1`, merged 2026-08-19 -- engine instrumentation reverted, new probe
   landed; eighth and ninth eliminations).** ROM at `CheckRightWallDist_Part2` holds `top=0C lrb=0D`

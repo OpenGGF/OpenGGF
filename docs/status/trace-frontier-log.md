@@ -87959,3 +87959,68 @@ physics-code one.
 
 That is a different subsystem from everything this line has covered, and it is
 named as the unexamined remainder rather than as a claim.
+## 2026-08-19 -- The title card never releases: the divergent phase is a stall, not a duration
+
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission" test
+```
+
+Branch `bugfix/ai-s1-titlecard-span-r1`, based on `develop` at `f93f7bd57`.
+Diagnosis only; **no engine change is landed**.
+
+### The instrument
+
+The previous probe logged from `prepareHardwareTimingForAdmission`, which never
+runs in `TITLE_CARD` mode, so it could not see this span at all. This one logs
+`currentGameMode` against the shared BK2 cursor from the top of `GameLoop.step`,
+which runs in every mode. One variable: the predicate fix and boundary traversal
+present or absent.
+
+### The result
+
+| phase boundary | without the pair | with the pair |
+|---|---|---|
+| results screen ends | 9529 | 9529 |
+| `TITLE_CARD` begins | 9530 | 9530 |
+| `LEVEL` begins | **9681** | **never** |
+| `TITLE_CARD` rows observed | 151 | 213 and still running at 9742 |
+
+The results screen and the title card's *start* are identical to the row. The
+title card's **end** does not happen. This is not a longer phase -- it is a
+phase that never completes, and the run dies at 9743 still inside it.
+
+That answers the question the brief posed as its third possibility from the
+other side: the divergent phase is the title card, but the difference is
+qualitative. No duration was measured for the with-pair case because the phase
+has no end to measure.
+
+### What is measured and what is not
+
+**Measured:** the three phase boundaries above, both sides, one clock, one
+variable.
+
+**Not measured, and deliberately left as a hypothesis:** *why* it does not
+release. S1's title-card loop waits on the PLC buffer emptying
+(`Level_TtlCardLoop`, `docs/s1disasm/sonic.asm:2814`, with `VBlank_TitleCards`
+servicing 9 tiles at `:946`), and the returning level's own load is submitted
+during that card. With recorded admission active, a submitted job becomes ready
+only when a matching recorded edge is admitted -- and `ghz2_2`'s first recorded
+edge is at its `raw_frame` 69, i.e. shared row 9810, which is **past** the row
+the title card must have finished by. If that is what happens, the engine waits
+for art that recorded timing cannot release until a row the run can never reach.
+
+That is a coherent story that fits every measurement in this entry, and it is
+exactly the kind of story that has been wrong three times today. It is recorded
+as the next thing to test, not as a finding. **Kill condition:** if the title
+card's PLC queue is empty or already drained while it continues to wait, the
+wait is not about art readiness and this explanation is wrong.
+
+### Consequence for the ordering, if the hypothesis holds
+
+It would mean recorded admission cannot be active across a level load whose art
+the loading screen itself blocks on, unless the edges for that load are
+available at the rows the load occupies. That is a statement about which rows a
+segment's recorded stream must cover, not about the engine's art pipeline, and
+it would reframe the whole four-part change rather than adding a fifth part.
