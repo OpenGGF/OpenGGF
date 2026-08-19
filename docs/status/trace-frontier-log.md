@@ -85023,3 +85023,75 @@ the shipped ROM (`fixBugs = 0`, `s2.asm:27`). Removed, with the flag, the branch
 taken and what the fixed branch would do written at the site per the hard rule.
 Full `-Ptrace-replay` 790 / 4 red, set-identical both ways to the control above;
 `mvn -Pguards test` 499/0.
+
+## 2026-08-19 -- Visual-run recorded-admission lifecycle reconciled
+
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical test
+mvn -Dmse=off -Pguards -Dsurefire.runOrder=alphabetical test
+```
+
+Branch `bugfix/ai-s1-admission-lifecycle-r1`, worktree
+a dedicated worktree, based on `develop` at `1dc79d63c`.
+Same-worktree control at the same commit: **790 / 4 red**; with the change,
+**790 / 4 red**, both-way set-diff empty. `-Pguards` 499 / 0.
+
+`VisualRunReplayHarness` constructed its gameplay context with
+`HardwareReadinessAdmissionPolicy.RECORDED` whenever the run carried a
+hardware-timing stream, then ran production's `finishRunLaunch`, whose
+`TraceReplayDriver.startPreparedLevel` converts the live epoch in place. Two
+owners, one service. The production launcher is the authority here:
+`TraceSessionLauncher.launchRun` arms **LIVE** with the comment *"This context
+owns both title-card presentation and replay. Its live timing epoch is
+converted in place after control release."* A visual run's title-card prelude
+is production-live work; `beginRecordedAdmission` refuses to begin after the
+first submission, while `beginRecordedAdmissionAfterLiveEpoch` requires the
+live jobs retired and then resets `jobs`/`nextOrdinals` so the recorded
+stream's ordinals number from the level's first `RunPLC`. So recorded
+admission does **not** span the whole visual run from construction; it begins
+at the conversion after control release.
+
+The two models had simply never met: every committed `hardware_timing.jsonl`
+is S3K, and the only `VisualRunReplayHarness` users are the S1 and S2
+complete-emerald runs, neither of which carried a stream. The harness and
+`startPreparedLevel` use the *same* predicate
+(`TraceRunReplayWalker.hasHardwareTimingStream`), so any visual run with a
+stream collides by construction — S3K passes because it never takes this route.
+
+The change is a no-op on `develop` (no S1/S2 run carries a stream, so the
+conditional already chose LIVE); it is landed because the site is latent, not
+because it moved a frontier.
+
+### What the held S1 fixture then exposes
+
+With the lifecycle fixed and `bugfix/ai-s1-rerecord-fixture-r1`'s 242-edge
+stream applied, `TestS1CompleteEmeraldVisualRun` no longer throws on
+admission and drives GHZ1 (rows 860-4975), the special stage, its results, the
+GHZ2 title card, and into segment 3 at row 9741 before failing. Two remaining
+symptoms, one cause:
+
+- `queue.s1_nemesis_plc.{queued_fingerprints,remaining_work,prepared}` at
+  segment 3 frame 69, and
+- seven undrained edges at teardown, ordinals **7..13** — exactly segment 2
+  (`ghz2`, offsets 8705-9740), raw_frame 68-81.
+
+The engine's next submission after GHZ1's seven (session-local ordinals 0..6)
+is session-local **#7** carrying fingerprint `3224e355...`, which the stream
+numbers **14** — `ghz2_2`'s first entry, and the same fingerprint as `ghz1`'s
+ordinal 0. So the engine performs a fresh GHZ level load for `ghz2_2` and
+never submits `ghz2`'s seven at all. `ghz2`'s seven fingerprints are unique in
+the run: they appear in no other segment, so this is not level art. Segment 2
+is the special-stage results-and-return bridge — the harness timeline shows the
+engine in `SPECIAL_STAGE_RESULTS` across rows 8773-9505 and reaching `LEVEL`
+only at row 9681, still under `TRANSITION_GAP`, where
+`GameLoop.suppressesRunNativeLevelBody` holds the level body off.
+
+This is **not** the level-load queue-occupancy blocker the S1 chain has been
+tracking, and it is not closable by widening fingerprint matching: the engine
+submits no work there for a recorded edge to release. Until it is resolved the
+fixture cannot land — it costs two new red
+(`TestS1CompleteEmeraldVisualRun#replaysTheSecondGiantRingAndTheSpecialStageBehindIt`
+and `#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission`), both green on
+`develop` today only because no S1 stream existed to expose them.
