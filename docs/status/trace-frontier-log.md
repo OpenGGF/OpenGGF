@@ -88520,3 +88520,76 @@ The writer probe found this in one run, and every part of the ten-round collisio
 search was correct work in a subsystem that was never involved. The technique the
 brief prescribed -- instrument the writer, do not reason from the shape -- is what
 separated them, and it would have worked identically ten rounds ago.
+## 2026-08-19 -- Scoping the arm gate: the port already disclaims authority, and the engine ignores it
+
+Branch `bugfix/ai-s1-arm-scope-r1`, based on `develop` at `a25932e43`.
+**Design and evidence only -- not implemented, not gated.**
+
+### Measured first: the port is in an unrepresented gap for the whole stall
+
+`HardwareTimingReplayPort.apply` instrumented with the pair applied, across the
+213-row title-card stall:
+
+```
+apply VINT_SERVICE latch=null
+apply POST_OBJECTS latch=null
+apply PRE_MAIN_LOOP latch=null
+```
+
+`rawFrameLatch` is `null` on every boundary of every stalled row. The port holds
+no row, so by its own construction no edge can be applied.
+
+### The design, and why it is a bug fix rather than a widening
+
+`enterUnrepresentedGap`'s own javadoc states the contract:
+
+> *"Deactivates row authority while production crosses a movie frame that has no
+> represented trace row. **Production hardware work may continue**, but no
+> recorded completion edge may be applied until the next `beginRawFrame`."*
+> -- `HardwareTimingReplayPort.java:120-126`
+
+"Production hardware work may continue" is exactly what does not happen.
+`Sonic1PlcArmTiming.releaseArm` asks `timing.isReady(outstanding)` and gets
+`false` forever, because readiness can only come from an edge the port has
+disclaimed the authority to apply. **The current behaviour contradicts the
+port's own documented contract**, so closing it is a correction, not an
+extension of the exception.
+
+The rule: **work whose readiness is sought while the port holds no row takes
+native readiness.** The discriminator is `rawFrameLatch == null` -- a property
+of the stream's coverage, not of game, zone, route or frame index. The recorder
+is the authority for why the boundary sits there: it discards anything observed
+before a segment's first row, so a level-load arm has no possible edge
+(`tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83`).
+
+It separates the two cases the brief required, structurally:
+
+| case | port state | behaviour |
+|---|---|---|
+| no edge can exist for this arm | no row latched | native readiness |
+| the edge has not arrived yet | row latched | held, unchanged |
+
+It is **not** "release anything we cannot match". Inside coverage an unmatched
+arm still blocks and still raises, so genuine mismatches stay hard failures and
+the S3K ordinal lesson is untouched. Only the span the stream never described is
+returned to native determinism.
+
+Against hard rule 4: the port still only affects *when* engine-created work
+becomes ready. In a gap it stops affecting anything and the engine's own service
+governs. No work is created, discarded, or valued across the boundary.
+
+### Not done, and it is the substance of the next round
+
+Not implemented and not gated. Two things need deciding by someone with the
+change in front of them:
+
+1. **Which owner expresses it.** `Sonic1PlcArmTiming` talks to
+   `HardwareTimingService`, not to the port, so "the port holds no row" has to
+   reach the arm gate through the service rather than by reaching past it. The
+   wrong shape here would leak port internals into per-game art code.
+2. **Whether `TestHardwareTimingAuthorityGuard` accepts it.** Per the brief the
+   guard is the arbiter. I have not run it against an implementation, so I
+   cannot claim it passes. Nothing in this entry should be read as saying it
+   does.
+
+The four-part change becomes five, and the fixture still lands last.

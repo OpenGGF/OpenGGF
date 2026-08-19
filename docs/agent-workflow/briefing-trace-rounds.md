@@ -322,6 +322,14 @@ half-landed change, and require the blast radius to be measured before anything 
 
 ## A briefing failure mode: the false dichotomy
 
+The general form, arrived at after four instances: **when both offered options presume the current
+behaviour is correct-as-specified, neither can express "the spec was already being violated".** That
+was the answer twice — an invariant and a traversal both correct with the defect outside the pair,
+and a port whose documented contract the implementation already contradicted, so closing the gap
+claimed no new authority. Before offering two options, check whether both assume the existing
+behaviour matches its own stated contract, and if so add the third: that it does not.
+
+
 Over one session a reviewer posed four discriminators as exclusive choices and was wrong every
 time, in three different ways:
 

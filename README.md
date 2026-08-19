@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The arm-scope rule is a correction, not a widening -- the port already says so
+  (`bugfix/ai-s1-arm-scope-r1`, merged 2026-08-19 -- design and evidence only, not implemented).**
+  Measured before designing: with the pair applied, `HardwareTimingReplayPort.apply` sees
+  **`rawFrameLatch == null` on every boundary of every one of the 213 stalled rows**, so the port
+  holds no row and by its own construction no edge can be applied there. And the port's own javadoc
+  states the intended behaviour -- `enterUnrepresentedGap` says *"Production hardware work may
+  continue, but no recorded completion edge may be applied until the next `beginRawFrame`"*
+  (`HardwareTimingReplayPort.java:120-126`). Production hardware work is exactly what does **not**
+  continue: `releaseArm` waits on a readiness that can only come from an edge the port has disclaimed
+  the authority to apply. **The current behaviour contradicts the port's documented contract**, so
+  closing it claims no new authority. **The rule:** work whose readiness is sought while the port
+  holds no row takes native readiness, discriminated on `rawFrameLatch == null` -- a property of the
+  stream's coverage, not of game, zone, route or frame, with the recorder as the authority for why
+  the boundary sits there (`S1PlcHardwareTimingObserver.cs:80-83`). It is **not** "release anything we
+  cannot match": inside coverage an unmatched arm still blocks and still raises, so genuine
+  mismatches remain hard failures and the S3K ordinal lesson is untouched. **Explicitly not claimed:**
+  the design is not implemented and `TestHardwareTimingAuthorityGuard` has not been run against an
+  implementation, so no verdict is implied. Two decisions need the change in front of them -- which
+  owner expresses the rule, since `Sonic1PlcArmTiming` talks to `HardwareTimingService` rather than
+  the port and the wrong shape would leak port internals into per-game art code, and whether the
+  guard accepts that shape.
+
 - **ROOT CAUSE: the S2 stop is the level side boundary, gated on `Current_Boss_ID`
   (`bugfix/ai-s2-solid-stop-r1`, merged 2026-08-19 -- writer probe, no code).** A write hook on
   `MainCharacter + x_vel` capturing the writing PC names it: `0x1A932` is the ordinary per-frame
