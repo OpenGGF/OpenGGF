@@ -4,6 +4,34 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Changed
+- `Obj_WaitOffscreen` is now modelled as the one-shot latch the ROM implements
+  rather than a per-frame visibility gate, for the S3K Caterkiller Jr and
+  Rhinobot. `Obj_WaitOffscreen` (docs/skdisasm/sonic3k.asm:180271-180305) saves
+  the caller's return address in `$34(a0)` and replaces the object's operation
+  pointer with `loc_85AD2`; once the `$20`-by-`$20` placeholder has been drawn,
+  `loc_85B02` does `move.l $34(a0),(a0) / rts` and the real operation is
+  restored **permanently**, so the badnik keeps running whether or not it is
+  still on screen. Re-testing visibility every frame re-froze the Caterkiller
+  the moment it left the viewport -- it never reached the place where Tails
+  rolls into it -- and let the Rhinobot resume its patrol acceleration from a
+  different frame, leaving it ~7 px left of the ROM by the time it charges.
+- The frame-start touch snapshot is now taken on every path, not only when
+  `touchResponseUsesPreviousCollisionResponseList` is false. ROM `Touch_Loop`
+  (docs/skdisasm/sonic3k.asm:20660-20663, 20674-20681) stores object RAM
+  *pointers*, not snapshots, and every placed object sits in a slot after the
+  player, so the player always sees each object's end-of-previous-frame
+  position. `ObjectManager.refreshTouchResponseSnapshot` runs before any object
+  update, so taking the snapshot there captures exactly that -- for every
+  object, whatever phase its own update falls in. The S3K path used to skip it,
+  which was still correct for an object updated before the touch pass but one
+  pass stale for a `spawnChild`-created object updated after it: an AIZ2
+  Caterkiller Jr body segment sampled one pass stale gives `d0 = 16` against
+  `d4 = $10` and touches, where the ROM's own numbers give 17 and `bhi` skips
+  the object. Collision flags are unaffected; that path already read them live.
+  The three changes are only correct together: the touch-phase fix alone
+  removes a stale sample that had been compensating for the Rhinobot's early
+  activation.
+
 - A recorded hardware-completion edge the production run walked past without
   submitting anything for it is now reported as a comparison error instead of
   aborting the replay. The port's authority is over *when* engine-submitted

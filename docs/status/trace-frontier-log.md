@@ -86568,3 +86568,63 @@ no-op there. Both additions are S3K:
   them separately again;
 * the physics residual is 3 errors and it is the Rhinobot's bounce frame, not a position
   sample.
+
+## 2026-08-19 — Landed: the touch-phase snapshot, the Caterkiller latch and the Rhinobot latch
+
+Base `36f3aa333`. `git diff c7e0f7620..36f3aa333 -- src/main/` is empty, so the numbers in
+the two entries above still apply.
+
+### The Rhinobot residual was not a timing defect
+
+The previous entry called it "the Rhinobot's own one-frame timing", carried forward from my
+own wording. That was wrong and the measurement says so. Probing the instance against the
+fixture's `object_state` for object code `0x00086E5C` in the AIZ slice:
+
+* the state transitions land on **exactly** the ROM's rows — patrol -> charge-prep at row
+  7809, charge-prep -> dash at row 7842 — so `CHARGE_PREP_FRAMES` and the dispatch counting
+  are already right;
+* what differs is `x`, and it is already wrong at the fixture's **first** emitted row for
+  that badnik (7788, `dx = -3`), growing to `-7` by 7808 and then frozen at `-7` through the
+  stationary prep and the whole dash.
+
+An offset present before the compared window opens, accumulating during acceleration and
+constant thereafter, is a start-of-motion difference, not a frame gate. The Rhinobot had the
+**same** `Obj_WaitOffscreen` defect as the Caterkiller — `if (!isOnScreenX(...)) return;`
+evaluated every frame — so leaving the viewport re-froze its patrol and it resumed
+accelerating from the wrong frame.
+
+Applying the same one-shot latch closes it: `TestS3kReplayReferenceClosureIntegration`
+green, from 3 errors.
+
+### The KosM handoff closed with it
+
+`TestS3kAizTraceReplay`'s `KOS_MODULE_QUEUE#38` terminal-handoff failure — flagged in the
+previous entry as a separate art-queue question — is also green. It was downstream of the
+Rhinobot activating early, not an independent defect. Nothing was done to the queue.
+
+### Verification
+
+* Full `-Ptrace-replay` at this base: **790 tests / 4 red**, set-identical both ways to the
+  standing baseline (`TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS3kSonicTailsCompleteEmeraldRunChain`, `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`).
+  No S1 or S2 result moved.
+* `mvn -Pguards test`: **499 / 0**.
+* S3K keep-green set by name (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `TestS3kAIZEvents`):
+  **101 / 0**.
+* Chain segment 4: **44,605 -> 40,000** errors, first non-camera mismatch frame **2729 ->
+  3573** (`sidekick_y` rom `0x030B` engine `0x0309`). Frame 2729's `sidekick_y_speed` is now
+  `0x00C0`, matching the ROM: Tails destroys the Caterkiller Jr where the recording does and
+  takes `EnemyDefeated`'s `subi.w #$100` rebound.
+
+The three changes are only correct together. The touch-phase snapshot alone removes a stale
+sample that had been compensating for the Rhinobot's early activation, which is why that
+combination measured 790/6 rather than 790/4.
+
+`ObjectCollisionResponseList.shouldRefreshFrameStartSnapshot()` is removed: it encoded the
+invariant that turned out to be false, and it now has no callers.
+
+### New frontier
+
+Segment 4 of the S3K chain, **frame 3573, `sidekick_y` rom `0x030B` engine `0x0309`**, at
+40,000 errors.

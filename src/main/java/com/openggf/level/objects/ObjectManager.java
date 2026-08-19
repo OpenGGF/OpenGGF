@@ -588,11 +588,21 @@ public class ObjectManager {
     }
 
     private void refreshTouchResponseSnapshot(ObjectInstance inst) {
-        if (collisionResponseList.shouldRefreshFrameStartSnapshot()) {
-            inst.snapshotTouchResponseState();
-        } else {
-            inst.clearSpawnTouchSkip(); // S3K previous-list path: see ObjectInstance.clearSpawnTouchSkip
-        }
+        // ROM Touch_Loop stores object RAM POINTERS, not snapshots: `movea.w (a4)+,a1`
+        // then `x_pos(a1)` (docs/skdisasm/sonic3k.asm:20660-20663, 20674-20681; the S1
+        // ReactToItem and S2 Touch_Response forms are the same shape). Every placed
+        // object sits in a slot after the player, so the player always sees each
+        // object's END-OF-PREVIOUS-FRAME position.
+        //
+        // This runs from LevelManager.prepareTouchResponseSnapshots before any object
+        // updates this frame, so the snapshot captures exactly that position for every
+        // object, whatever phase its own update falls in. The S3K previous-list path
+        // used to skip it, leaving the cache holding whatever the object's own last
+        // update wrote -- still end-of-previous-frame for an object updated before the
+        // touch pass, but one pass older for a spawnChild-created object updated after
+        // it. Collision flags are unaffected: the previous-list path reads them live at
+        // the touch site rather than from this cache.
+        inst.snapshotTouchResponseState();
     }
 
     public void refreshPostCameraRenderState() {

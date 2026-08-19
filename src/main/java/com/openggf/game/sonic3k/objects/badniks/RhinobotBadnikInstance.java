@@ -55,6 +55,8 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     private State state = State.PATROL;
+    /** ROM loc_85B02 restores the saved operation pointer exactly once. */
+    private boolean waitOffscreenReleased;
     private int statusFlags;
     private int accelStep;
     private int targetSpeed;
@@ -81,11 +83,20 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         if (isDestroyed()) {
             return;
         }
-        // Obj_WaitOffscreen publishes a $20-wide placeholder before restoring
-        // the real routine, so render visibility begins at the placeholder's
-        // bounds rather than only when x_pos enters the viewport
-        // (sonic3k.asm:180266-180298).
-        if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+        // Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180271-180305) publishes a
+        // $20-wide placeholder before restoring the real routine, so render
+        // visibility begins at the placeholder's bounds rather than only when
+        // x_pos enters the viewport. It is a ONE-SHOT latch: loc_85B02 does
+        // `move.l $34(a0),(a0) / rts`, restoring the saved operation pointer
+        // permanently, so the badnik keeps running once released whether or not
+        // it is still on screen. Re-testing visibility every frame instead let
+        // the rhinobot resume its patrol acceleration from a different frame,
+        // leaving it ~7 px left of the ROM by the time it charges.
+        if (!waitOffscreenReleased) {
+            if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            waitOffscreenReleased = true;
             return;
         }
 
