@@ -452,6 +452,50 @@
             </build>
         </profile>
 
+        <!-- Structural guard tests: the architectural invariants that no
+             trace fixture can prove and that must never silently stop being
+             enforced.
+
+             They lived only in the default profile, which the trace suites do
+             not run and which is expensive and ROM-sensitive locally, so a red
+             guard could sit unnoticed on develop (TestS1S2PlcComparisonOnlyGuard
+             did). This profile is source-only, needs no ROM, and runs in about
+             a minute, so CI can gate every push to the integration branches on
+             it - the default `test` job is skipped on push entirely.
+
+               mvn -Pguards test
+
+             The include is a name convention, not a path: a guard may live in
+             any package. TestBuildToolingGuard
+             .everyGuardTestClassIsSelectedByTheGuardsProfile checks that every
+             *Guard* test class on disk is actually selected here. -->
+        <profile>
+            <id>guards</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir=${project.build.directory}/test-tmp</argLine>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/Test*Guard*.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- Known-red trace probes are excluded from blocking suites and run
              only when explicitly requested:
                mvn -Ptrace-diagnostics -Dtest=<DebugOrProbeClass> test

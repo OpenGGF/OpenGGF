@@ -360,6 +360,104 @@ class TestBuildToolingGuard {
         }
     }
 
+    /**
+     * Structural guards are the invariants no trace fixture can prove, so a
+     * guard that stops being run stops being enforced without anything going
+     * red. That happened: {@code TestS1S2PlcComparisonOnlyGuard} lives in
+     * {@code com.openggf.trace}, not {@code com.openggf.tests.trace}, so the
+     * trace-replay profile's {@code **}{@code /tests/trace/**} include never
+     * selected it, and it sat red on develop while every gate reported green.
+     *
+     * <p>The guards profile selects by name convention rather than by path,
+     * and this checks that the convention actually covers what is on disk. It
+     * enumerates the guard sources from the filesystem and evaluates the
+     * profile's patterns from {@code pom.xml}; neither side is derived from
+     * the other, so adding a guard under a path or name the profile misses
+     * fails here.
+     */
+    @Test
+    void everyGuardTestClassIsSelectedByTheGuardsProfile() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml does not define the guards profile");
+
+        List<String> includes = textValues(guards, "include");
+        List<String> excludes = textValues(guards, "exclude");
+        assertFalse(includes.isEmpty(), "the guards profile declares no includes");
+        assertTrue(excludes.isEmpty(),
+                "the guards profile must not exclude anything - an exclude is how a "
+                        + "guard silently stops being run; excludes were " + excludes);
+
+        List<String> violations = new ArrayList<>();
+        for (String source : guardTestSources()) {
+            if (includes.stream().noneMatch(pattern -> antMatches(pattern, source))) {
+                violations.add(source + " is not selected by the guards profile");
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("every guard test class must be selected by -Pguards:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    /**
+     * Proves the pattern matcher above can actually reject, so the coverage
+     * check cannot pass by matching everything. A guard named outside the
+     * convention, or parked under a path the profile does not reach, must be
+     * reported rather than quietly admitted.
+     */
+    @Test
+    void guardSelectionMatcherRejectsClassesOutsideTheConvention() {
+        assertTrue(antMatches("**/Test*Guard*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+        assertTrue(antMatches("**/Test*Guard.java", "com/openggf/tests/TestBuildToolingGuard.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/GuardTest.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/TestSomethingElse.java"));
+        assertFalse(antMatches("**/tests/trace/**/*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+    }
+
+    private static List<String> guardTestSources() throws Exception {
+        Path root = Path.of("src", "test", "java");
+        try (Stream<Path> sources = Files.walk(root)) {
+            return sources
+                    .filter(Files::isRegularFile)
+                    .map(path -> root.relativize(path).toString().replace('\\', '/'))
+                    .filter(path -> path.endsWith(".java"))
+                    .filter(path -> {
+                        String name = path.substring(path.lastIndexOf('/') + 1);
+                        // Guard *tests* only: Test-prefixed classes carrying @Test
+                        // methods. Same-named helpers (source scanners, shared
+                        // fixtures) hold no assertions and are not run directly.
+                        return name.startsWith("Test") && name.contains("Guard");
+                    })
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /** Ant-style path matching for the surefire include patterns in {@code pom.xml}. */
+    private static boolean antMatches(String pattern, String path) {
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+            if (c == '*' && i + 1 < pattern.length() && pattern.charAt(i + 1) == '*') {
+                if (i + 2 < pattern.length() && pattern.charAt(i + 2) == '/') {
+                    regex.append("(?:[^/]+/)*");
+                    i += 2;
+                } else {
+                    regex.append(".*");
+                    i++;
+                }
+            } else if (c == '*') {
+                regex.append("[^/]*");
+            } else if (c == '?') {
+                regex.append("[^/]");
+            } else {
+                regex.append(Pattern.quote(String.valueOf(c)));
+            }
+        }
+        return path.matches(regex.toString());
+    }
+
     @Test
     void releaseWorkflowShouldRunBranchPolicyOnMasterPullRequests() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));

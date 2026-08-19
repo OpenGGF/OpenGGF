@@ -543,6 +543,27 @@ public final class GameplayModeContext implements ModeContext {
     }
 
     /**
+     * Restarts the dynamic-art run so its ledger holds only the transfers
+     * this session's own level load produced.
+     *
+     * <p>A session that boots on top of an already-loaded host (the master
+     * title screen live, a throwaway engine-init level load headless)
+     * inherits that load's player-DPLC priming, and every transfer id it
+     * mints afterwards is displaced by the inherited count. The session owns
+     * the dynamic-art lifecycle, so this reset is published from here rather
+     * than by handing the mutation-capable
+     * {@link DynamicArtLifecycleService} to the caller that needs it: callers
+     * barred from dynamic-art mutation authority (trace and ghost code, see
+     * {@code TestS1S2PlcComparisonOnlyGuard}) can ask for a fresh ledger
+     * without being able to write one. No-op when no run is active.
+     */
+    public void restartDynamicArtRunForFreshSession() {
+        if (dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.restartRunForFreshSession();
+        }
+    }
+
+    /**
      * Re-arms the one-row latch that decides which rows of a run-chain
      * transition gap are still owned by the source level's own main loop (see
      * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}).

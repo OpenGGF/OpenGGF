@@ -7,6 +7,26 @@ failures actionable without weakening the guard baselines.
 It is written for an external agent with no chat context. All paths are repo-relative to
 `C:/Users/farre/IdeaProjects/sonic-engine`.
 
+## Running all the guards
+
+```bash
+mvn -Dmse=off -Pguards test
+```
+
+The `guards` profile selects every `Test*Guard*` class and nothing else. It is
+source-only, needs no ROM, and takes about a minute. Use it before pushing anything
+structural.
+
+It exists because the guards used to run only in the default profile: the trace
+profiles select `**/tests/trace/**` and skip them, and CI's default `test` job is
+skipped on push, which is how work lands on develop. A guard could therefore be red
+for weeks while every gate reported green -- `TestS1S2PlcComparisonOnlyGuard` was.
+CI now runs `-Pguards` on pushes to develop and master, and
+`TestBuildToolingGuard.everyGuardTestClassIsSelectedByTheGuardsProfile` fails if a
+guard class on disk is not selected by the profile. If you add a guard, name it
+`Test...Guard...` so the profile picks it up; that meta-test will tell you if it did
+not.
+
 ## How to read a guard failure
 
 1. Find the failing test name in this doc.
