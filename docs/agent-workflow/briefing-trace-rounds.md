@@ -456,3 +456,29 @@ actually needed.
 Ask of a latent correction not only "does this make the engine right" but "does the analysis
 that produced it close a candidate". When it does, say so in the report — that is the part
 the next round consumes.
+
+## Tenth rule: the symptom's axis is not evidence about the cause's axis
+
+A round spent eleven rounds on a signpost that landed 1,200 frames early. It eliminated six
+things about the signpost's vertical behaviour — both timers, the bounce, the cooldown phase,
+the bump window, a velocity shift order — and never once diffed the signpost's **horizontal**
+position, because the symptom was a landing and landings are about Y. The cause was four
+`x_vel` / sub-pixel assignments the ROM does not make, visible as a one-frame divergence on
+the axis nobody had looked at.
+
+"Instrument the writer instead of inferring from motion" is the version of this rule that gets
+quoted, and it is right, but it is not the whole move. The move that worked was instrumenting
+the writer of the variable that was **not** suspected. A symptom tells you where the error
+became visible; it is silent about where it was introduced, and an axis is one of the cheapest
+things to check and one of the easiest to assume.
+
+When a candidate list has grown long and specific, that is evidence the list is being drawn
+from the wrong axis — a correct axis usually yields the cause before six eliminations, not
+after. Treat a long ruled-out list as a prompt to widen the *dimension*, not to keep narrowing
+within it.
+
+A detector built for the suspected axis inherits the same blind spot. The same round's
+kick counter reported fifteen against the ROM's seventeen because it inferred kicks from
+direction changes; the honest fix came from the fixture's own structure — `Obj_EndSignFall`
+adds `#$C` to `y_vel` every frame, so recorded deltas are monotonic and any upward jump of
+two or more is a fresh kick. State a detector's floor when you report its count.
