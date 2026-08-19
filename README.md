@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 false push comes from a solid-object contact, not the wall sensor
+  (`bugfix/ai-s2-push-sensor-r1`, merged 2026-08-19 -- investigation only, no fix).** Instrumenting
+  `AbstractPlayableSprite.setPushing` to capture the caller on every false -> true transition names
+  the frame-1724 set exactly: `sonic x=7925 y=1642 gspd=-6` (x `0x1EF5`, y `0x066A`, `g_speed`
+  `0xFFFA`), from `ObjectSolidContactController.processInlineObjectForPlayer:1849` via
+  `ObjectManager.processCompatibilitySolidCheckpoint` -- `contact.pushing()` on a solid object.
+  Across the whole segment only two of 275 push-sets on Sonic occur at non-zero ground speed and
+  this is one of them. **The terrain path was checked first and is already correct**, recorded so
+  nobody re-checks it: `CalcRoomInFront` probes the projected position (`x_pos + x_vel`,
+  `y_pos + y_vel`) and adds a fixed `+8` to the probe Y when `angle & $38 == 0`
+  (`s2disasm/s2.asm:43944-43990`), and `CollisionSystem.describeCalcRoomInFrontProbe` reproduces
+  both including the `distance >= 0 -> no push` gate `Obj01_CheckWallsOnGround` applies via
+  `tst.w d1 / bpl` (`:36836-36838`). `Obj01_CheckWallsOnGround` does open with a `fixBugs`
+  conditional (`:36818-36826`), but it is not load-bearing here: under `fixBugs = 0` the
+  `.noearlyexit` flat-surface test is absent and the routine takes the `angle + $40 / bmi` early
+  exit, which at angle 0 proceeds either way. The ROM's own `player_status_byte` is `0x49` across
+  1724-1731, so its Sonic is pushed by nothing at all, and the fixture's `object_near` rows place
+  three solid families nearby with none at his height on his side of travel -- notably an Obj74
+  invisible solid block 27px to his **right** while he walks **left**, and an Obj2D one-way barrier
+  whose whole purpose is directional. The next question is which instance the engine's
+  `resolveContact` reports `pushing()` for, and why.
+
 - **The S2 frame-1725 mapping divergence is a false push flag, not an animation bug
   (`bugfix/ai-s2-seg10-anim-r1`, merged 2026-08-19 -- investigation only, no fix).**
   `sprite.getPushing()` is true for frames 1724-1731 while the recorded `player_status_byte` is
