@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **ROOT CAUSE: the S2 stop is the level side boundary, gated on `Current_Boss_ID`
+  (`bugfix/ai-s2-solid-stop-r1`, merged 2026-08-19 -- writer probe, no code).** A write hook on
+  `MainCharacter + x_vel` capturing the writing PC names it: `0x1A932` is the ordinary per-frame
+  speed write, and `0x1A9CA` -- appearing **only at the stop** -- is the third instruction of
+  **`Sonic_Boundary_Sides`** (`s2disasm/s2.asm:37281-37286`), whose `move.w d0,x_pos(a0)` is the
+  "2-pixel correction" and whose `move.w #0,x_vel(a0)` is the dead stop. **It is not a solid object
+  and not collision at all.** And the 64 pixels are literally in the ROM: the boundary expression
+  adds `screen_width-24`, then `tst.b (Current_Boss_ID).w / bne.s` skips **`addi.w #$40,d0`** -- 64
+  more only when no boss is active. That is exactly the engine's overshoot and the magnitude that has
+  been the discriminating constraint for four rounds, it is the only term of that size in the
+  expression, and it is gated by one byte: the ROM holds `Current_Boss_ID` non-zero at 6600 and does
+  not widen, while the engine widens and runs those 64 px. **The chain this closes:**
+  `Current_Boss_ID` -> side boundary -> stop -> `x_speed` -> Roll delay -> mapping frame -> DPLC
+  submission timing -> the 1247-error tail. One value still to confirm directly rather than by
+  inference from a magnitude: `Current_Boss_ID` at row 6600 on both sides, since `Obj5D` leaves the
+  object list after 6084 and the live question is whether the engine clears its boss id when the
+  object goes while the ROM holds it through the end of the act.
+
 - **RETRACTION of a retraction: the recorder discards level-load arms by design
   (`bugfix/ai-s1-quickplc-r1`, merged 2026-08-19).** The narrow question is settled and it is
   **`AddPLC`, not `QuickPLC`**: `LevelHeaders`' first field is the level's 1st PLC, GHZ's is
@@ -280,7 +298,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   aimed at empty space. **Where the stop actually is:** `d3 = x_pos + $A`, so `x_pos` was already
   `2D58` when `CheckRightWallDist` ran -- the clamp and the speed kill happened **earlier in the
   frame, before the terrain pass**. A mechanism zeroing `x_vel` and correcting `x_pos` by two pixels
-  ahead of terrain is the **solid-object** path (`SolidObject_StopCharacter` zeroing inertia and
+  ahead of terrain was read as the **solid-object** path (**retracted below: it is the level side
+  boundary, not collision at all**) (`SolidObject_StopCharacter` zeroing inertia and
   `x_vel`, `SolidObject_AtEdge` doing `sub.w d0,x_pos(a1)`, `s2disasm/s2.asm:35428-35446`) -- named as
   direction, not finding, since the object is unidentified. **A naming inversion worth knowing:** the
   S2 disassembly calls the **16x16** unit a "block" and the **128x128** unit a "chunk", and this
