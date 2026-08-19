@@ -228,6 +228,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 push-order question is narrowed to a PC-execute probe, not answered
+  (`bugfix/ai-s2-push-order-r1`, merged 2026-08-19 -- investigation only, no fix).** The object's
+  bit is live rather than stale: `object_near` slot 51 carries status `0x20` on every frame
+  1721-1731 and `0x00` from 1732, which is exactly the frame Sonic's integer x moves `0x1EF5` ->
+  `0x1EF4`, so it tracks the flush contact and clears when it ends. Every Sonic-side clear of
+  `status.player.pushing` was then enumerated and checked against recorded state: `36575` (standing,
+  gated `tst.w inertia / bne`) explains 1721-1723 only; `38391` (`Sonic_Animate` prologue, on an
+  animation-byte change) explains 1724 only; `36886`/`36949` are gated on `x_flip` *changing* and
+  status `0x49` already has bit 0 set while he keeps walking left, so the `bset` returns non-zero
+  and the clear is skipped; `37374` is the jump path and he never leaves the ground; `38143` is
+  `Sonic_ResetOnFloor` and he never lands. **The fact that makes it sharp:** `player_x` is constant
+  at `0x1EF5` for 1721-1731 while `player_x_sub` falls `0xE200` -> `0x0A00`, and `SolidObject`
+  compares **integer** `x_pos` only (`d0 = x_pos(a1) - d4 + d1`, `s2disasm/s2.asm:35418-35421`), so
+  its branch decision is identical on all eleven frames. That kills every explanation of the shape
+  "a different `SolidObject` branch runs on 1724 than on 1725-1731". It reduces to two cases:
+  either the ROM never reaches `SolidObject_AtEdge` here and something else sets the object's
+  `p1_pushing`, or it does and a clear runs afterwards that is not in the enumerated list.
+  Distinguishing them needs to see **which instruction executes**, not what RAM held at V-blank, so
+  the next step is a PC-execute probe on `SolidObject_LeftRight` (`35413`), `SolidObject_AtEdge`
+  (`35438`), `Solid_NotPushing` (`35484`) and the `SAnim_Do` prologue clear (`38391`), gated to
+  `a1 == MainCharacter`. Recorded as **narrowed, not gated** -- the "cannot be seen at frame
+  granularity" verdict is not valid until that probe exists.
+
 - **The S2 false push is a same-frame ordering question, not geometry -- and it corrects an earlier
   entry (`bugfix/ai-s2-push-contact-r1`, merged 2026-08-19 -- investigation only, no fix).** Logging
   the contacted instance names it on all five frames: **Obj74 invisible solid block**, solid anchor
