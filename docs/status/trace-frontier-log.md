@@ -88255,3 +88255,106 @@ explicitly, not inferred.
 **New frontier: chain segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`.**
 
 No constant was introduced.
+
+## 2026-08-19 — Segment 4 frame 5766: the post-boss signpost spawns on a timer where the ROM gates on a camera-boundary release
+
+Branch `bugfix/ai-s3k-seg4-5766-r1` off `origin/develop` (`8c89e477b`). **Diagnosis only;
+no engine change is landed.** All probes reverted.
+
+### The magnitude rule applies: 1 px is a lower bound, not the defect
+
+The reported delta is `sidekick_x` rom `0x119E` engine `0x119D`. It is not a one-pixel
+error. Both sides are identical value-for-value — `x`, `x_sub`, `x_vel`, `y`, `y_sub`,
+`y_vel`, air, roll, status — through frame 5765 and then separate monotonically. By frame
+5799 the gap is `0x11CB` vs `0x11B4`, **23 px**. Anything sized against one pixel is sized
+against the wrong number.
+
+### What happens at 5766
+
+Tails is airborne and rolling from a jump at 5756 (`y_vel = -0x680`, Tails' jump velocity).
+At 5766 the ROM does two things the engine does not:
+
+| | ROM | engine |
+|---|---|---|
+| `y_vel` | `FB78` -> `FC38` | `FB78` -> `FBB0` |
+| `x_vel` | `00F8` -> `00F1` | `00F8` -> `00F8` |
+
+`FC38` is `-0x400 + 0x38`: the variable jump-height clamp of `Tails_JumpHeight`
+(`docs/skdisasm/sonic3k.asm:28592-28606`) followed by ordinary gravity. `00F1` is
+`0xF8 - 0xF8/32`, the air drag that becomes eligible the moment `y_vel >= -0x400`. Both are
+one consequence: the ROM's Tails released the jump button on that frame and the engine's
+did not.
+
+### Why the engine's Tails still holds jump — instrumented, not inferred
+
+Tails' CPU input is Sonic's input replayed 16 frames later (`loc_13DA6` loads
+`Stat_table[Pos_table_index - $44]`, `docs/skdisasm/sonic3k.asm:26683-26694`). The BK2
+column shows Sonic holding B (`0x10`) from 5740 to 5749 and releasing at 5750; +16 gives
+Tails' jump at 5756 and his release at 5766. The engine reproduces the press exactly.
+
+A probe on `SidekickCpuController.update` shows the release never arrives because **the CPU
+tick stops running**: from frame 5764 the method is entered with `state = NORMAL` and
+returns at the `controller2SignedLocked` guard, leaving the last CPU-written `inputJump`
+latched high. `PlayableSpriteMovement.doJumpHeight` keeps running and keeps reading
+`held = true`. A stack trace on the setter names it: `S3kSignpostInstance.updateLanded` ->
+`applySidekickInputLock`, modelling `Obj_EndSignLanded`'s `st (Ctrl_2_locked).w`
+(`docs/skdisasm/sonic3k.asm:176209-176218`).
+
+The lock **semantics** are right. `Tails_Control`'s `loc_13830`
+(`docs/skdisasm/sonic3k.asm:26195-26200`) is a three-way sign test — zero copies raw
+`Ctrl_2` and runs the CPU, positive skips the copy but still runs the CPU, negative
+(`st` = `$FF`) skips both — and `Obj_EndSignLanded` writes the negative value. The engine
+models that correctly. What is wrong is **when**.
+
+### The fixture disproves the engine's timing directly
+
+`aux_state.jsonl`'s `control_lock_state` records `ctrl2_locked` every frame. In this
+segment it is `0` for all 8235 frames except **6964-6965**, where it is `255`. The engine
+sets it at **5764** — 1,200 frames early. Across the divergence window the recorded
+`ctrl2_logical` is `0x1000` at 5763-5765 and `0x0000` at 5766, so the ROM's CPU pass ran
+and wrote the released word on exactly the frame the engine had already stopped writing.
+
+Engine-side lifecycle, probed: `S3kBossDefeatSignpostFlow` spawns the signpost at frame
+5131 and it reaches `LANDED -> RESULTS` at 5763.
+
+### Root cause
+
+`S3kBossDefeatSignpostFlow.updateWaitFade` advances to `SPAWN_SIGNPOST` on a bare
+`timer--` from `FADE_TIMER` (119 frames). The ROM's post-boss handoff `loc_85CA4`
+(`docs/skdisasm/sonic3k.asm:180495-180552`) requires **three** bits of `$27(a0)` and only
+dispatches the stored routine when all three are set (`andi.b #7,d0; cmpi.b #7,d0; bne`):
+
+* bit 0 — the `$2E` music timer expires and `boss_saved_mus` is replayed (`:180495-180503`);
+* bit 1 — `Camera_min_Y_pos` / `Camera_target_max_Y_pos` have eased to `_unkFAB0`/`_unkFAB2`
+  (`:180505-180527`);
+* bit 2 — `Camera_min_X_pos` / `Camera_max_X_pos` have eased to `_unkFAB4`/`_unkFAB6`
+  (`:180529-180541`).
+
+Those four bounds are loaded per boss by `sub_85D6A` (`:180565-180577`). The engine models
+bit 0 only. A camera ease takes as long as the camera needs; here that is ~1,200 frames
+longer than the timer, which is why the signpost lands at 5763 instead of ~6900.
+
+This is the fitted-model shape hard rule 3 names: a local timer standing in for a global
+condition. It is right for a recording that happens to ease the camera in 119 frames and
+wrong for every other one.
+
+### Why nothing is landed
+
+Modelling the real gate means giving every S3K boss its `_unkFAB0`-`_unkFAB6` bounds and
+routing all four camera-boundary eases through the release, which touches the shared defeat
+flow used by CNZ, ICZ2, MHZ2 and HCZ as well as AIZ2. That is a sized piece of work, not a
+one-line correction, and a partial gate would be a second fitted model on top of the first.
+Recorded here in full so the next lane starts at the ROM routine rather than at the pixel.
+
+### Rejected on evidence — do not retry
+
+* **A one-pixel `sidekick_x` correction.** The delta grows to 23 px by frame 5799.
+* **A sub-pixel or radius cause.** Every sidekick field is byte-identical through 5765.
+* **The jump-height clamp being absent.** `PlayableSpriteMovement.doJumpHeight` implements
+  it, correctly gated on `jumping(a0)`; the probe shows `jumping = true` throughout. Its
+  input is stale, not its logic.
+* **`Ctrl_2_locked` lock semantics.** `loc_13830`'s three-way sign test is modelled
+  correctly; only the trigger frame is wrong.
+
+**Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
+34,112 errors**, reproduced at `8c89e477b` in a clean worktree.
