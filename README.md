@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Recorded hardware admission begins at the live-to-recorded conversion, not at construction
+  (`bugfix/ai-s1-admission-lifecycle-r1`, merged 2026-08-19).** `VisualRunReplayHarness` constructed
+  its gameplay context with `HardwareReadinessAdmissionPolicy.RECORDED` whenever the run carried a
+  timing stream, then ran production's `finishRunLaunch` -> `startPreparedLevel`, which converts the
+  live epoch in place -- two owners, one `HardwareTimingService`. The disagreement was
+  **harness-versus-production**, not "spans a run" versus "per prepared level": production is the
+  authority, and admission begins **once**, at the conversion after control release.
+  `TraceSessionLauncher.launchRun:379-381` arms LIVE with exactly that comment;
+  `HardwareTimingService.beginRecordedAdmission` throws *"recorded hardware admission must begin
+  before the first submission"* because a visual run's title-card prelude is production-live work
+  that submits (44 `TITLE_CARD` steps publishing art before `LEVEL` at step 45); and
+  `beginRecordedAdmissionAfterLiveEpoch` exists solely for this, requiring live jobs retired and
+  resetting `jobs`/`nextOrdinals` so the stream numbers from the level's first `RunPLC`. The
+  double-ownership guard is **unchanged** -- nothing was made idempotent or tolerant. The two models
+  had simply never been reconciled: every committed `hardware_timing.jsonl` is S3K, no
+  `VisualRunReplayHarness` user had a stream, and the harness and `startPreparedLevel` share the same
+  predicate, so any visual run with a stream collides by construction. The change is a **no-op on
+  develop** (the conditional already chose LIVE) and lands a latent site.
+
 - **The MTZ spring wall no longer takes the `fixBugs`-ON branch, and the push pair is measured and
   rejected (`bugfix/ai-s2-pushpair-r1`, merged 2026-08-19).** `MTZSpringWallObjectInstance` cleared
   the player's rolling-jump state by transcribing `s2disasm/s2.asm:53395-53399`, which sits inside an

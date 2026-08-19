@@ -295,14 +295,20 @@ public final class VisualRunReplayHarness {
         TraceLaunchStatus.clear();
         TraceReplaySessionBootstrap.prepareConfiguration(seg0, seg0.metadata());
 
-        boolean recordedHardwareTiming =
-                TraceRunReplayWalker.hasHardwareTimingStream(segments);
+        // A visual run boots LIVE, exactly as the windowed launch does
+        // (TraceSessionLauncher.launchRun's armNextGameplayAdmissionPolicy).
+        // The session's title-card prelude is production-live work, so its
+        // submissions must be admitted live and retired before the level
+        // starts; TraceReplayDriver.startPreparedLevel then converts the
+        // drained service in place via beginRecordedAdmissionAfterLiveEpoch.
+        // Constructing RECORDED here instead takes beginRecordedAdmission's
+        // must-precede-the-first-submission path, which both admits the
+        // prelude's own art from the recorded stream and consumes the
+        // ordinals the stream numbers from the level's first RunPLC.
         HeadlessTestFixture.builder()
                 .withZoneAndAct(entry.zone(), entry.act())
                 .withHardwareReadinessAdmissionPolicy(
-                        recordedHardwareTiming
-                                ? HardwareReadinessAdmissionPolicy.RECORDED
-                                : HardwareReadinessAdmissionPolicy.LIVE)
+                        HardwareReadinessAdmissionPolicy.LIVE)
                 .build();
 
         // HeadlessTestFixture resets transient audio state. Install capture
@@ -629,14 +635,20 @@ public final class VisualRunReplayHarness {
         TraceLaunchStatus.clear();
         TraceReplaySessionBootstrap.prepareConfiguration(seg0, seg0.metadata());
 
-        boolean recordedHardwareTiming =
-                TraceRunReplayWalker.hasHardwareTimingStream(segments);
+        // A visual run boots LIVE, exactly as the windowed launch does
+        // (TraceSessionLauncher.launchRun's armNextGameplayAdmissionPolicy).
+        // The session's title-card prelude is production-live work, so its
+        // submissions must be admitted live and retired before the level
+        // starts; TraceReplayDriver.startPreparedLevel then converts the
+        // drained service in place via beginRecordedAdmissionAfterLiveEpoch.
+        // Constructing RECORDED here instead takes beginRecordedAdmission's
+        // must-precede-the-first-submission path, which both admits the
+        // prelude's own art from the recorded stream and consumes the
+        // ordinals the stream numbers from the level's first RunPLC.
         HeadlessTestFixture.builder()
                 .withZoneAndAct(entry.zone(), entry.act())
                 .withHardwareReadinessAdmissionPolicy(
-                        recordedHardwareTiming
-                                ? HardwareReadinessAdmissionPolicy.RECORDED
-                                : HardwareReadinessAdmissionPolicy.LIVE)
+                        HardwareReadinessAdmissionPolicy.LIVE)
                 .build();
 
         GameLoop loop = new GameLoop(new InputHandler());
