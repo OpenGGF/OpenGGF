@@ -4,6 +4,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The S3K end-of-act signpost keeps its horizontal velocity when it lands.**
+  ROM `loc_838AA` (docs/skdisasm/sonic3k.asm:176191-176194) is the whole landing
+  branch -- routine, `$38` bit 0, and the `$40` timer -- and touches neither
+  velocity nor either sub-pixel; `loc_838D6` clears the velocities only when the
+  post-land timer expires (:176209-176218). The engine also cleared `xVel`,
+  `yVel`, `subX` and `subY` at the landing itself, which removed exactly the
+  state the hidden-monitor re-bounce depends on: `loc_838FA` (:176222-176227)
+  resumes the fall writing only `$20(a0)` and `y_vel`, so the signpost carries
+  its pre-landing `x_vel` back into the air. With it zeroed the engine's
+  signpost hung motionless in x while the ROM's drifted, and by the next
+  bump-from-below test the two were ~40px apart -- outside the `[x-$20, x+$20)`
+  window -- so every subsequent player bump was missed and the signpost settled
+  1,200 frames early. Chain segment 4 of the S3K complete-emeralds run goes from
+  34,112 comparator errors to 292 and now completes.
+
+### Fixed
 - The S3K signpost's bump-from-below now lets at most one player land a hit per
   frame, matching the shipped `FixBugs = 0` build. `sub_83A70` ends in
   `jmp (HUD_AddToScore).l`, a tail jump, so that routine's `rts` consumes the
