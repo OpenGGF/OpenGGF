@@ -196,6 +196,14 @@ half-landed change, and require the blast radius to be measured before anything 
   must log its diagnostic **before** cleanup runs, and when a reported error looks like it belongs
   to teardown rather than to the assertion, suspect that it does. Same family as the empty-probe and
   stale-stream traps above: **the reporting channel misleading you about the thing being reported.**
+- **When a metric is cumulative, its inflections are not events.** A brief asked what happens at the
+  frame where an edge-drift curve resets, on the reasoning that a catch-up is the most informative
+  thing in the window. Nothing happens there. Drift is the integral of a per-frame difference, and a
+  *constant* engine error against a ROM rate swinging 13 to 105 submissions per fifty rows produces
+  ramps where the rate is high and reversals where it is low. One persistent error explained a ramp,
+  a reset and a second ramp, none of which is a happening. Before hunting a cause at an inflection,
+  check whether the reference rate alone produces it — and prefer the rate profile, which is
+  background, over the inflection, which is an artefact.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
