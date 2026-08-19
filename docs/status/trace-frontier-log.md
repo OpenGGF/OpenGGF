@@ -85494,3 +85494,73 @@ in a clean worktree at the same base -- `TestS2CompleteEmeraldRunPrefix` alone.
 seg10 is 2491 -> 2433. The three complete-emerald chains are red in control and in
 the candidate alike, with the same failure modes, so the chain frontier has not
 moved. None of the ten regressions the audit retired have returned.
+
+## 2026-08-19 — the contact-end boundary: no predicate at the write site can be correct
+
+Branch `bugfix/ai-contact-end-airborne-r1` off `origin/develop` (`e83e2d13b`).
+Fixture-first investigation, no code written, nothing landed. Seventh revert of
+the sequence, and it closes the predicate question rather than opening a fix.
+
+### Method
+
+Read the recording before touching the engine, as instructed. For every frame in
+`.../s2-sonic-tails-complete-emeralds/seg5_ehz2` where a monitor's own pushing
+bit changes, the ROM's own bounding-box arithmetic was reconstructed from
+`SolidObject_cont` (docs/s2disasm/s2.asm:35344-35369) using the monitor's
+`d1 = $1A` / `d2 = $F` box (:25595-25599) and the recorded positions:
+
+    d0 = x_pos(a1) - x_pos(a0) + d1      inside iff 0 <= d0 <= 2*d1
+    d3 = y_pos(a1) - y_pos(a0) + 4 + d2 + y_radius(a1)   inside iff 0 <= d3 <= 2*(d2 + y_radius)
+
+The reconstruction validates itself: on every frame where a character is pushing,
+`d0` is exactly `0`, which is `SolidObject_AtEdge`'s `sub.w d0,x_pos(a1)`
+position correction snapping the character to the edge.
+
+### What the ROM does on the contact-end frame
+
+| Frame | Bit | Character | Airborne | Inside box | ROM entry |
+|---|---|---|---|---|---|
+| f2559 | p2 drops | Tails | yes | **yes** (d0=0, d3=28) | `SideAir` -> `Solid_NotPushing`, no write |
+| f377 | p1 drops | Sonic | yes | **no** (d3=-32) | `TestClearPush`, bit set -> **write** |
+| f3408 | p1 drops | Sonic | yes | **no** (d3=-30) | `TestClearPush`, bit set -> **write** |
+| f5092 | p2 drops | Tails | no | **no** | `TestClearPush`, bit set -> **write** |
+
+**The ROM performs the Walk/Run write at `TestClearPush` with the character
+airborne, at f377 and f3408.** That is the decisive row. Any predicate at the
+write site keyed on the character being airborne -- the last candidate left after
+`monitorSolidity()` and the blanket rule were ruled out -- would suppress exactly
+the case the ROM performs. There is no predicate at that site that separates the
+engine's one extra write from the ROM's legitimate ones, because they are the same
+configuration.
+
+So the engine's extra write is not a wrong *kind* of write. It is one extra
+*occurrence* of a pattern the ROM also executes, which means the difference is
+upstream of the write entirely: which monitors hold a latch, and on which frame
+their contact ends. Entry classification was already shown correct last round;
+this round rules out the write site as well.
+
+### What is left, narrowed
+
+Not "the airborne bounding-box path" as scoped -- that was my framing last round
+and this evidence narrows it. The engine reaches `TestClearPush` owning a latch
+once more than the ROM does over the prefix chain (10 writes against 9). The
+question is which monitor contact ends one frame differently, or which monitor the
+engine latches that the ROM never pushes. ROM only ever sets a monitor bit on
+three slots in this segment (17, 18, 28); the engine's instrumented run shows
+eleven monitor instances taking the grounded push path across the chain. Comparing
+those two populations segment-by-segment is the next concrete step, and it is a
+counting exercise against committed data rather than a shared-collision change.
+
+**Do not attempt a contact-resolution change for this.** The blast radius is every
+solid contact in all three games, the win on offer is 58 errors in seg10, and the
+cause has not been localised to contact resolution -- only excluded from entry
+classification and from the write predicate.
+
+### Numbers
+
+No code changed, so no suite run was needed. `e83e2d13b` differs from
+`b9d41b244` by documentation only -- `git diff b9d41b244 e83e2d13b -- src/` is
+empty -- so the last measured figures stand: `(1)+(2)+the MGZ site` at 790 tests
+/ 5 red against a 790/4 control, `TestS2CompleteEmeraldRunPrefix` alone, seg10
+2491 -> 2433, chain frontier unmoved, none of the ten regressions the audit
+retired returning.

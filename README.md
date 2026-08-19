@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The ROM performs the Walk/Run write while airborne, so no write-site predicate exists
+  (`bugfix/ai-contact-end-airborne-r1`, merged 2026-08-19 -- fixture analysis only, no code
+  written).** Reconstructing `SolidObject_cont`'s box arithmetic (`s2disasm/s2.asm:35344-35369`) from
+  the monitor's own `d1=$1A`/`d2=$F` box (`:25595-25599`) and the recorded positions, for every frame
+  in `seg5_ehz2` where a monitor's pushing bit changes, gives a reconstruction that **validates
+  itself**: on every pushing frame `d0` is exactly `0`, which is `SolidObject_AtEdge`'s
+  `sub.w d0,x_pos(a1)` snapping the character to the edge. The result is decisive -- at f377 and
+  f3408 the ROM reaches `TestClearPush` and **performs the write with the character airborne** (out
+  of box, bit set), while f2559 takes `SideAir` (airborne, *inside* box) and writes nothing. So the
+  last remaining predicate candidate, airborne-at-the-write-site, would suppress exactly the case the
+  ROM performs: the engine's extra write is not a wrong *kind* of write but one extra *occurrence* of
+  a pattern the ROM also executes. Entry classification was excluded last round and the write site is
+  excluded now -- **but excluding is not localising**, and a contact-resolution change moves every
+  solid contact in all three games for a 58-error win, so none was attempted. The next step is a
+  population comparison against committed data: the ROM sets a monitor bit on **three** slots in this
+  segment while the engine's instrumented run shows **eleven** monitor instances taking the grounded
+  push path across the chain.
+
 - **The push pair's last regression is contact resolution, not a push predicate
   (`bugfix/ai-s2-pushentry-r1`, merged 2026-08-19 -- investigation only, sixth revert).** In
   `SolidObject_LeftRight` (`s2disasm/s2.asm:35413-35461`) the airborne test branches to
