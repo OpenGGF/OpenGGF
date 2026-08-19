@@ -516,3 +516,26 @@ When a round reaches that point, the finding is the *impossibility*, and it belo
 in those words so the next round does not spend itself re-deriving it. The sanctioned route for
 genuine sub-frame hardware timing is the per-movie sidecar of hard rule 4 — not a cleverer
 predicate.
+
+## Thirteenth rule: "A did not match B" has a third answer — the index is broken
+
+A brief framed a stalled boundary as a binary: either the engine never submitted matching work,
+or it submitted work that failed to match on kind/ordinal/fingerprint. The round returned
+neither. The engine submitted with the exact recorded ordinal, and matching was never
+*attempted*, because the replay port's row latch was stuck at zero while the pending edge sat
+thousands of rows ahead. `consumeAtBoundary` only consumes when the edge's raw frame equals
+the latch, and dropping edges before zero drops nothing, so the two could never meet however
+many boundaries passed.
+
+Both halves of the binary presumed the fault lay in the *matching relationship* between A and
+B. The actual fault was in the **coordinate they are paired on** — and that failure is
+invisible from either side's data, because A and B are each individually correct. Nothing
+about the submission looks wrong; nothing about the recorded edge looks wrong.
+
+So when a symptom is phrased as "A did not match B", carry three candidates, not two: A is
+absent, A is wrong, or **the index is not advancing**. The third is the one no amount of
+staring at A or B will reveal, and it is cheap to test directly — read the pairing coordinate
+and check it moves.
+
+This is also the general form of the false dichotomy that keeps appearing in these briefs: two
+options that share an unstated premise are one option wearing two hats.
