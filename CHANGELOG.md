@@ -4,6 +4,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **Recorded hardware-timing readiness is scoped to the span the trace stream covers.**
+  `HardwareTimingReplayPort.enterUnrepresentedGap` documents that production hardware work
+  may continue while row authority is deactivated, but the S1 Nemesis PLC arm gate waited on
+  a readiness only a recorded edge could supply — and no edge for such work can exist,
+  because the recorder discards anything observed before a segment's first row. An arm
+  submitted in an unrepresented span therefore blocked forever, deadlocking the S1 title
+  card, which loops until the PLC buffer empties. The port now declares row representation
+  to the recorded authority, and the arm gate falls back to native readiness only while row
+  authority is deactivated; inside coverage an unmatched arm still blocks and still raises,
+  so genuine mismatches remain hard failures. Lands with the S1 special-stage results loop
+  traversing its hardware boundaries (matching ROM `SS_NormalExit`) and with a special-stage
+  *mode* row inside a non-special-stage segment taking shared playback authority rather than
+  a segment-local cursor.
+
 - Solid objects no longer reposition a player whose `object_control` byte has bit
   7 set. `SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now
   defaults to `true`: every shared solid tail in all three ROMs performs the same

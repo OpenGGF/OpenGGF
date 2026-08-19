@@ -19,6 +19,7 @@ public final class HardwareTimingService
     private final RomWorkBudgetScheduler scheduler;
     private final LoadTimeProfile loadTimeProfile;
     private final RecordedAuthority recordedAuthority = new RecordedAuthority();
+    private boolean recordedRowRepresented = true;
     private final EnumMap<HardwareWorkKind, Long> nextOrdinals =
             new EnumMap<>(HardwareWorkKind.class);
     private final List<HardwareTimingJob> jobs = new ArrayList<>();
@@ -80,6 +81,34 @@ public final class HardwareTimingService
     public boolean isPending(HardwareWorkHandle handle) {
         HardwareTimingJob job = find(handle);
         return job != null && !job.isClaimed();
+    }
+
+    /**
+     * Whether recorded row authority currently represents a trace row. While it
+     * does not, no recorded edge can be applied, so pending work in that span
+     * must fall back to native readiness rather than wait for a match that
+     * cannot arrive. See {@code HardwareTimingReplayPort#enterUnrepresentedGap}.
+     */
+    public boolean recordedAuthorityRepresentsRow() {
+        return !recordedAdmissionActive || recordedRowRepresented;
+    }
+
+    /**
+     * Admits readiness natively for work submitted where the recorded stream
+     * has no authority. Only legal while row authority is deactivated; it
+     * changes WHEN engine-created work becomes ready and never what the work
+     * is, matching the hardware-timing exception's scope.
+     */
+    public void admitUnrepresentedReadiness(HardwareWorkHandle handle) {
+        if (recordedAuthorityRepresentsRow()) {
+            throw new IllegalStateException(
+                    "native readiness is only available while recorded row"
+                            + " authority is deactivated: " + handle);
+        }
+        HardwareTimingJob job = requireKnown(handle);
+        if (!job.isReady()) {
+            job.admitReadiness();
+        }
     }
 
     public boolean isReady(HardwareWorkHandle handle) {
@@ -426,6 +455,11 @@ public final class HardwareTimingService
     }
 
     private final class RecordedAuthority implements RecordedCompletionAuthority {
+        @Override
+        public void setRecordedRowRepresentation(boolean representingRecordedRow) {
+            recordedRowRepresented = representingRecordedRow;
+        }
+
         @Override
         public void configureAdmissionPolicies(
                 Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {

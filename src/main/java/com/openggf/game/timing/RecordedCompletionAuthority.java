@@ -65,4 +65,21 @@ public interface RecordedCompletionAuthority {
     List<PendingRecordedSubmission> pendingSubmissions();
 
     void endRecordedAdmission();
+
+    /**
+     * Declares whether recorded row authority currently represents a trace row.
+     *
+     * <p>{@code HardwareTimingReplayPort.enterUnrepresentedGap} deactivates row
+     * authority while production crosses a movie frame with no represented row,
+     * and its contract is that "production hardware work may continue, but no
+     * recorded completion edge may be applied until the next beginRawFrame"
+     * (HardwareTimingReplayPort:120-126). Work submitted inside such a span can
+     * never be matched -- the recorder discards anything observed before a
+     * segment's first row, so a level load's own arming reaches no trace file
+     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83)
+     * -- so holding it against recorded readiness deadlocks by construction.
+     * Default {@code true} keeps every existing implementer unchanged.
+     */
+    default void setRecordedRowRepresentation(boolean representingRecordedRow) {
+    }
 }

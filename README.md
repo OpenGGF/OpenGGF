@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 title-card deadlock is closed: readiness sought in an unrepresented span takes native
+  readiness (`bugfix/ai-s1-arm-scope-impl-r1`, merged 2026-08-19 -- first code change in this
+  sequence).** The port declares row representation to the recorded authority at `beginRawFrame` and
+  `enterUnrepresentedGap`; the service exposes `recordedAuthorityRepresentsRow()` and
+  `admitUnrepresentedReadiness(handle)`; and `Sonic1PlcArmTiming.releaseArm` falls back to native
+  readiness **only** while row authority is deactivated. This restores the port's **own documented
+  contract** -- `enterUnrepresentedGap` already stated that production hardware work may continue
+  while no recorded edge may be applied -- so it claims no new authority, and that javadoc is quoted
+  at the gate itself with the recorder citation so the boundary's reason is findable without the log.
+  The arm gate asks the **service**, never the port, so no port internals reach per-game art code,
+  and the new interface method is a `default` so no existing implementer changes.
+  **`TestHardwareTimingAuthorityGuard` 24/0** and `TestS1S2PlcComparisonOnlyGuard` 7/0 by explicit
+  name; `-Ptrace-replay` **790/4 with an empty both-way set-diff** against a control measured at the
+  same base; `-Pguards` 499/0. **The title card releases at 9681 and segment 3 admits at 9741** --
+  the exact recorded row the equality window demands -- with no `rowsConsumed` violation, no stall and
+  no admission exception. The 213-row deadlock is closed **without widening the window**. The next
+  defect is stated as a consequence rather than left to be discovered: the level-load arm released
+  natively in the unrepresented span **still allocated an ordinal**, and since the recorder never
+  counted that arm it must not occupy a place in the shared numbering either -- so the chain now stops
+  at segment 3 frame 69 on a **one-ordinal offset, not a content mismatch**. Readiness was scoped;
+  allocation was not. The fixture therefore still does not land.
+
 - **The S3K frame-5766 divergence is a 119-frame timer standing in for a three-bit ROM gate
   (`bugfix/ai-s3k-seg4-5766-r1`, merged 2026-08-19 -- diagnosis only, deliberately not landed).**
   The reported one-pixel `sidekick_x` delta is a **lower bound**, per the rule this chain derived

@@ -1103,6 +1103,27 @@ public final class TraceSessionLauncher {
         ssCursor++;
     }
 
+    /**
+     * Whether the row being prepared belongs to a recorded special-stage
+     * segment, and so to the segment-local row cursor rather than the shared
+     * movie cursor. This is the segment-kind question the special-stage row
+     * driver already asks of itself; asking it at the call site keeps the
+     * driver from being invoked for a row it has no authority over.
+     */
+    private boolean currentRunSegmentIsRecordedSpecialStage() {
+        int index = currentRunSegmentIndex();
+        if (index < 0 || index >= runSegments.size()) {
+            return false;
+        }
+        if ("special_stage".equals(runSegments.get(index).segment().kind())) {
+            return true;
+        }
+        return index + 1 < runSegments.size()
+                && "special_stage".equals(
+                        runSegments.get(index + 1).segment().kind())
+                && isCurrentRunSegmentExhausted();
+    }
+
     private Optional<SpecialStageRowAdmission> currentRunSpecialAdmission() {
         if (runCoordinator == null || runSpecialRowDriver == null || fadeStarted
                 || runCoordinator.phase()
@@ -3185,7 +3206,8 @@ public final class TraceSessionLauncher {
                 runHardwareTiming.beginPlaybackFrame(
                         GameServices.playbackDebug().currentFrameOrThrow());
             } else if (RunPlaybackObservation
-                    .insideRecordedSpecialStageMode(mode)) {
+                    .insideRecordedSpecialStageMode(mode)
+                    && currentRunSegmentIsRecordedSpecialStage()) {
                 // The recorded segment owns the ROM's whole
                 // GameModeID_SpecialStage span, results tail included
                 // (s2.asm:6721-6800) -- so its rows keep being driven by the
@@ -3193,6 +3215,15 @@ public final class TraceSessionLauncher {
                 // SPECIAL_STAGE -> SPECIAL_STAGE_RESULTS boundary. The driver
                 // falls back to a hardware-timing gap once it is complete.
                 prepareRunSpecialStageHardwareTimingRow();
+            } else if (RunPlaybackObservation
+                    .insideRecordedSpecialStageMode(mode)) {
+                // A special-stage MODE row inside a non-special-stage segment
+                // is an ordinary shared-playback row: it advances one row per
+                // frame against the shared movie cursor, like LEVEL and
+                // BONUS_STAGE above, so it takes the same authority rather
+                // than a segment-local cursor.
+                runHardwareTiming.beginPlaybackFrame(
+                        GameServices.playbackDebug().currentFrameOrThrow());
             } else {
                 fixture.enterHardwareTimingGap();
             }
