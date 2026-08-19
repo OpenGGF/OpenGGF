@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Roll phase slip is not the input, the arithmetic, the script choice or the entry
+  (`bugfix/ai-s2-roll-phase-r1`, merged 2026-08-19 -- fixture and disassembly only, no engine run).**
+  Four eliminations, all from committed data. **Not downstream of physics:** `player_g_speed` is a
+  compared column and the report carries no non-cascading error on any physics field in the tail, so
+  the engine's inertia matches the ROM exactly across 6608-7087. **Not the arithmetic:** ROM
+  `SAnim_Roll` does `mvabs.w inertia(a0),d2` / `cmpi.w #$600,d2` / `neg`, `addi #$400`, `bpl`,
+  `moveq #0` / `lsr.w #8`, and the engine's `updateRoll` plus `computeSpeedDelay` uses the same source
+  register, base, clamp, shift and threshold. **Not the script choice:** `SonAni_Roll` and
+  `SonAni_Roll2` are **byte-identical** in S2, so the `$600` split changes the pointer and nothing
+  about which frames appear -- any theory resting on it is dead before testing. **Not a late entry:**
+  the engine's mapping frames match up to row 6600 with Roll already active from before 6590, and a
+  wrong entry frame would have diverged at the entry rather than after a matching stretch. What
+  remains is **when** the decrement-and-reload happens relative to the rest of the frame, which
+  `updateRoll`'s own comment already flags as subtle -- recorded as *where to look*, explicitly not
+  as a claim about what is wrong. Also settled: this does **not** share a mechanism with the
+  twin-tails cadence, which resolved to the ROM skipping the object's execution entirely (KD29).
+  Same shape, different cause -- sharing a shape is not sharing a mechanism, and the art stream being
+  the messenger for both is a property of the stream.
+
 - **The seg10 ramps are one phase slip in Sonic's Roll script, and the "reset" is an integral
   artefact (`bugfix/ai-s2-seg10-ramps-r1`, merged 2026-08-19 -- fixture analysis only).** The report
   carries exactly **one** non-cascading error across the tail: `player_mapping_frame` expected
