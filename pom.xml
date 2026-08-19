@@ -153,6 +153,14 @@
               Run with: mvn -Pbenchmarks test
             -->
             <id>benchmarks</id>
+            <!-- Benchmarks are wall-clock sensitive, so they default to a single
+                 fork. That default is expressed as the shared surefire.forkCount
+                 property rather than a literal, so the one documented property
+                 still controls fork count everywhere (and -Dsurefire.forkCount
+                 on the command line still wins). -->
+            <properties>
+                <surefire.forkCount>1</surefire.forkCount>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -161,7 +169,7 @@
                         <version>3.2.5</version>
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine}</argLine>
-                            <forkCount>1</forkCount>
+                            <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <groups>performance-measurement</groups>
                             <systemPropertyVariables>

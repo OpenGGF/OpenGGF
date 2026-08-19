@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import java.util.function.Supplier;
 import com.openggf.game.sonic1.titlecard.Sonic1TitleCardMappings;
 
 import java.nio.ByteBuffer;
@@ -32,6 +32,17 @@ import java.nio.ByteBuffer;
  */
 public final class Sonic1FixedTitleCardManager {
     static final int REWIND_STATE_BYTES = 9;
+
+    /**
+     * Resolves the S1 PLC service. Supplied by the owning event manager so this
+     * element routes runtime access through the shared event helpers rather than
+     * reaching the service locator itself (TestZoneEventRuntimeAccessGuard).
+     */
+    private final Supplier<Sonic1PlcService> plcServiceSupplier;
+
+    Sonic1FixedTitleCardManager(Supplier<Sonic1PlcService> plcServiceSupplier) {
+        this.plcServiceSupplier = plcServiceSupplier;
+    }
 
     /** {@code Card_Index} routine 4 — the level-name element (34 Title Cards.asm:15-18). */
     private static final int ROUTINE_LEVEL_NAME_WAIT = 4;
@@ -108,7 +119,7 @@ public final class Sonic1FixedTitleCardManager {
         if (romZone < 0) {
             return;
         }
-        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        Sonic1PlcService plcService = plcServiceSupplier.get();
         if (plcService == null) {
             return;
         }

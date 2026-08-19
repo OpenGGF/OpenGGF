@@ -455,6 +455,18 @@ public final class GameplayModeContext implements ModeContext {
         return fadeManager;
     }
 
+    /**
+     * Advances the session-owned fade one step. Callers outside the session that
+     * only need the per-frame fade tick use this rather than holding the
+     * FadeManager itself, so their package does not gain a graphics edge
+     * (TestArchUnitRules#core_runtime_cycle_cluster_does_not_gain_top_level_edges).
+     */
+    public void updateFade() {
+        if (fadeManager != null) {
+            fadeManager.update();
+        }
+    }
+
     public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
         return plcFrameLifecycle;
     }

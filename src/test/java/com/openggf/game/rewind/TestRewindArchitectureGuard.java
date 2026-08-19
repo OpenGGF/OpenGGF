@@ -118,7 +118,27 @@ class TestRewindArchitectureGuard {
             // captured production-submission ordinals after hardware-ledger restore.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz1RobotnikEventController.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 12),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 12),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 13),
+            // 2026-08-19 triage: three annotation groups landed on develop under the
+            // two precedents already recorded above and were never baselined.
+            //   - Obj11 bridge parent/child slot links (BridgeObjectInstance,
+            //     BridgeSegmentObjectInstance) are object-graph structure relinked by
+            //     adoptSegmentForRewind on the segment's recreate path, exactly like the
+            //     ARZRotPformsObjectInstance and EggPrisonObjectInstance slot children.
+            //   - MgzDrillingRobotnikInstance's KosM queue facade and hardware handles are
+            //     transient facades rebound from captured production-submission ordinals,
+            //     the same shape as Lbz1RobotnikEventController and LbzEndBossInstance.
+            //   - LbzFinalBoss1Instance's 12 -> 13 is TurretSegmentChild's
+            //     nestedChildrenInitialized (6c32885cc). Unlike the entries above it is a
+            //     state flag rather than a link or a handle: it records that the ROM's
+            //     segment init has created its nested children, and it is left transient
+            //     so the boss reconstruction path -- which owns that child graph -- re-runs
+            //     that creation rather than restoring a flag that says it already happened.
+            //     Flagged as the weakest of these four; the LBZ traces the commit advanced
+            //     are green, but a reviewer may want to re-triage it on its own terms.
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/BridgeObjectInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/BridgeSegmentObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java#@RewindTransient", 3),
             // S2 trace-parity slot models keep parent/child graph links and
             // constructor-derived child roles outside scalar rewind capture.
             // Focused graph tests cover recreation and relinking.

@@ -289,9 +289,17 @@ class TestObjectPhysicsStandardizationGuard {
         assertOwnedQueryHelperSuppliesSidekicks(
                 "com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java",
                 "playerQueryFromRuntime");
+        // 165c1e481 moved the oil participation loops out of update() into the
+        // pre-physics and reserved-slot passes so the ROM's NonWaterEffects /
+        // Obj07 ordering is honoured. The participation contract is unchanged, so
+        // the guard follows the loops to the two methods that now own them rather
+        // than pinning an empty update().
         assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
-                "update");
+                "updatePrePhysics");
+        assertOwnedSourceUsesAllEnginePlayers(
+                "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
+                "updateReservedObjectSlots");
         assertOwnedQueryHelperSuppliesSidekicks(
                 "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
                 "playerQueryFromRuntime");

@@ -73,6 +73,24 @@ All notable changes to the OpenGGF project are documented in this file.
   surface Y on the same slope. In `TestS2CompleteEmeraldRunChain` that closed
   segment 15's first physics divergence outright, taking the segment from 52639
   comparator errors to 11629 and its sidekick errors from 21116 to 3525.
+- The eleven structural guards that were red on develop are green again, so the
+  new `-Pguards` CI gate can block pushes. Seven were fixed at the source: the
+  S1 event package and the S3K AIZ/ICZ event handlers now reach the runtime
+  through the shared event helpers (`cameraOrNull()`, `gameService(...)`,
+  `module()`) instead of `GameServices` directly, with the fixed title card
+  taking its PLC service from the owning event manager; the GHZ wrecking ball's
+  two boss explosions go through `ObjectManager.createDynamicObject(...)`, which
+  performs the same `addDynamicObject` in a construction context, so slot
+  allocation is unchanged; `Sonic1RingInstance` publishes its touch response as
+  a `TouchResponseProfile` constant equal to what the hooks already derived;
+  `TraceRunPresentationClosure` ticks the fade through a new
+  `GameplayModeContext.updateFade()` rather than holding the `FadeManager`,
+  removing the `trace -> graphics` package edge; and the `benchmarks` Maven
+  profile's fork count reads `${surefire.forkCount}` (defaulted to 1 in the
+  profile) instead of a literal, so one documented property still controls forks
+  everywhere. Four anti-growth budgets were re-baselined to their true current
+  values with dated justification -- drift accumulated across 47 to 140 commits
+  per file while no CI job ran these guards, which is the gap the gate closes.
 - Trace-replay bootstrap no longer holds dynamic-art mutation authority. The
   host-leakage reset it needs -- restarting the dynamic-art ledger so it holds
   only the transfers the replay's own level load produced -- moved behind

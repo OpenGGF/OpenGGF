@@ -38,6 +38,20 @@ public abstract class AbstractLevelEventManager
         return GameServices.level();
     }
 
+    /**
+     * Returns the current Camera, or {@code null} when no runtime camera exists
+     * yet. Shared helper so event implementations never reach GameServices
+     * directly (TestZoneEventRuntimeAccessGuard).
+     */
+    protected Camera cameraOrNull() {
+        return GameServices.cameraOrNull();
+    }
+
+    /** Resolves a per-game service from the active module. */
+    protected <T> T gameService(Class<T> type) {
+        return GameServices.module().getGameService(type);
+    }
+
     // Current zone and act
     protected int currentZone = -1;
     protected int currentAct = -1;

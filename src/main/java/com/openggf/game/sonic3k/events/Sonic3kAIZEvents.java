@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
 import com.openggf.game.PlayableEntity;
@@ -2958,7 +2957,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * ({@code sonic3k.asm:65002-65004}), and the loop-tail module step sees them.
      */
     private void admitAct2EnemyArt() {
-        if (!(GameServices.module().getObjectArtProvider()
+        if (!(module().getObjectArtProvider()
                 instanceof Sonic3kObjectArtProvider provider)) {
             return;
         }
