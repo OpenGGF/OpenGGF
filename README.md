@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **All seven S1 bridge edges match for the first time; the branch is right and the predicate is
+  wrong (`bugfix/ai-s1-results-row-authority-r1`, merged 2026-08-19 -- investigation only).** The
+  special-stage branch is **load-bearing**: a recorded special-stage segment's rows are *pass-paced*
+  rather than one-per-frame, so they take a segment-local cursor (`beginSegmentRow`) instead of the
+  shared movie cursor `beginPlaybackFrame` uses, and the engine's mode crosses `SPECIAL_STAGE` ->
+  `SPECIAL_STAGE_RESULTS` while still inside that segment, so the branch must survive the mode
+  change. The defect is that `insideRecordedSpecialStageMode(mode)` asks about the **game mode**
+  while the property the branch needs is of the **segment**. They coincide in Sonic 2, whose
+  recorded segment owns the whole `GameModeID_SpecialStage` span including the results tail
+  (`s2disasm/s2.asm:6721-6800`, cited in the branch's own comment), and come apart in Sonic 1, whose
+  results screen also runs inside `GM_Special` while the segment covering those rows is the returning
+  *level* segment. The method's body already asks the segment question three ways, discovers the
+  caller was wrong, and responds by **gapping** -- overriding the frame driver's correct choice purely
+  because it runs last. Measured: the predicate fix **alone** is inert, since unlatching a row cannot
+  help while nothing is submitted; the predicate fix **plus** the results-loop boundary traversal
+  consumes **all seven recorded edges and eliminates every `queue.s1_nemesis_plc.*` comparison
+  error**, `Failures: 2 -> 0`. That is the first time the bridge's edges have ever matched, and it
+  confirms the diagnosis end to end. The pair then trips a coordinator invariant --
+  **`rowsConsumed must be 0 or 1`** -- which is the next question and is well localised.
+
 - **The CPZ boss truncation is recorded, not reproduced
   (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- sweep and dispatch-shape analysis).** Three
   measurements sized the fix out rather than in. It is **necessary but not sufficient**: `Obj5D`

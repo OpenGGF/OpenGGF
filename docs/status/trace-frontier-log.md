@@ -86710,3 +86710,83 @@ for under half of one segment's art cluster, and it would put a writable pass
 budget into dispatch shared by three games. It belongs in the known-discrepancy
 register with the citation, alongside the CPZ2 push gate, unless the ramps turn
 out to share the mechanism -- and they cannot, because the boss is gone by then.
+
+## 2026-08-19 -- Which authority owns a results row: the predicate, not the branch
+
+Commands:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical test
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun,TestS2CompleteEmeraldVisualRun,TestCompleteRunAudioReplayCadence" test
+```
+
+Branch `bugfix/ai-s1-results-row-authority-r1`, based on `develop` at
+`ad539b52c`. Diagnosis only -- **no engine change is landed**.
+
+### What the branch is for
+
+`prepareRunSpecialStageHardwareTimingRow` exists for a real reason. A recorded
+special-stage segment's rows are **pass-paced, not one-per-frame**, so they are
+driven by a segment-local cursor -- `runHardwareTiming.beginSegmentRow(segment,
+runSpecialRowDriver.cursor())` -- rather than the shared movie cursor that
+`beginPlaybackFrame` uses. The engine's mode crosses `SPECIAL_STAGE` ->
+`SPECIAL_STAGE_RESULTS` while still inside that segment, so the branch must
+survive the mode change. The branch is correct for the rows it was written for.
+
+### The defect is the predicate
+
+`insideRecordedSpecialStageMode(mode)` asks about the engine's **game mode**.
+The property the branch actually needs is of the **segment**: does this row
+belong to a recorded special-stage segment? Those coincide in Sonic 2, whose
+recorded segment owns the whole `GameModeID_SpecialStage` span including the
+results tail (`s2.asm:6721-6800`, cited in the branch's own comment). They come
+apart in Sonic 1, whose results screen also runs inside `GM_Special`
+(`SS_NormalExit`, `docs/s1disasm/sonic.asm:3402-3413`) while the recorded segment
+covering those rows is the returning **level** segment `ghz2`.
+
+The method's body already asks the segment question --
+`currentRunSpecialAdmission().isEmpty()`, and two `"special_stage".equals(...kind())`
+tests -- and, on discovering the caller was wrong, responds by calling
+`fixture.enterHardwareTimingGap()`. Because it runs after the frame driver, that
+gap **overrides** the frame driver's correct `beginPlaybackFrame` choice. So the
+branch is asked a question it cannot answer, discovers it cannot answer it, and
+asserts an authority it does not have.
+
+The fix on its own terms is to ask the segment-kind question at the call site --
+preserving the driver's own look-ahead for the handover row -- and to route a
+special-stage **mode** row inside a non-special segment to `beginPlaybackFrame`,
+the same authority `LEVEL` and `BONUS_STAGE` rows take. No predicate on game,
+zone, route or frame.
+
+### Measured: the predicate alone is inert, the pair goes furthest yet
+
+- **Predicate fix alone, with the held fixture**: all seven edges still
+  unmatched. Unlatching the row cannot help while nothing is submitted.
+- **Predicate fix + the results-loop boundary traversal** (`GameLoop`'s
+  `updateSpecialStageResultsMode` through
+  `LevelFrameStep.executeHardwareTimedObjectScan`): **all seven recorded edges are
+  consumed and every `queue.s1_nemesis_plc.*` comparison error disappears** --
+  `Failures: 2 -> 0`. That is the first time the bridge's edges have matched, and
+  it confirms the diagnosis end to end.
+
+### The new blocker
+
+The pair then fails a run-coordinator invariant: `rowsConsumed must be 0 or 1`,
+raised through `TraceSessionLauncher.failRun`. Routing the results iteration
+through the shared boundary helper makes it advance rows in a way the coordinator
+forbids. That is the next question, and it is well localised.
+
+**Method note:** the real reason was masked. `failRun`'s own cleanup
+(`closeHardwareTimingReplayRun`) threw `PendingRecordedSubmissionsException` over
+a single leftover engine submission, and surefire reported *that* instead of the
+diagnostic. An exception thrown while handling a failure replaces the failure --
+log the diagnostic before the cleanup runs when triaging anything that routes
+through `failRun`.
+
+### Why nothing landed
+
+The predicate fix is correct on its own terms but inert alone, and the pair is
+not yet correct. The unobserved-span rule also still applies: no committed trace
+compares S1 results-screen queue state, so a clean gate over that span remains
+absence of evidence. Full `-Ptrace-replay` control at `ad539b52c` is 790 / 4;
+`mvn -Pguards test` 499 / 0.
