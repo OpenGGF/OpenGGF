@@ -228,6 +228,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K giant ring's off-screen release frame is consumed, not run
+  (`bugfix/ai-s3k-seg2-frontier`, merged 2026-08-19).** `Obj_WaitOffscreen`'s release path
+  `loc_85B02` is `move.l $34(a0),(a0)` / `rts` (`skdisasm/sonic3k.asm:180300-180302`, commented
+  *"Restore normal object operation when onscreen"*): it writes the saved code pointer back and
+  returns to the object loop, so neither `SSEntryRing_Init`/`SSEntryRing_Main` nor the
+  `bra.w SSEntryRing_Display` tail (`:128230`) runs on the release frame, and `Obj_SSEntryRing`'s
+  first `Animate_Raw` lands the frame **after**. The engine ran the routine on the release frame
+  itself, advancing the formation animation one frame early and satisfying
+  `cmpi.b #8,mapping_frame(a0)` / `blo.s locret_61708` (`:128266-128267`) a frame early too, firing
+  `loc_6173A` (`:128292-128303`) on frame 3980 instead of 3981. This is the same update-order family
+  as `eb480cc8a`'s live-versus-snapshot touch position -- the eighth consecutive S3K defect in
+  object state, size, allocation, partner, identity or update-order semantics.
+
 - **S2 fixtures re-recorded with correct solid bits, and segment entry seeds from them
   (`feature/ai-s2-tsb-seed`, merged 2026-08-19).** With `900463738` correcting
   `S2Ram.OffTopSolidBit`/`OffLrbSolidBit` from S3K's `0x46`/`0x47` to S2's `$3E`/`$3F`, the S2 run
