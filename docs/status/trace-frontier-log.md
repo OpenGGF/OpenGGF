@@ -89238,3 +89238,61 @@ friends ease at 2 px/frame, which is a different mechanism). It will surface as 
 boss-timing divergence — a boss starting before the camera has settled — and is recorded
 here so that is recognised rather than re-derived. It is **not** the post-defeat signpost
 gate; that is `Obj_EndSignControl`'s timer, and it is already correct.
+
+## 2026-08-19 — `HUD_AddToScore`'s exit `d0`: the value is run-dependent, the outcome is not
+
+Branch `bugfix/ai-s3k-signpost-gate-r1` off `origin/develop` (`c418ee87a`). Comment-only
+change to `S3kSignpostInstance`; no behaviour change, no test movement. This closes a hole
+in the previous entry's own proof.
+
+### The hole
+
+The previous entry established that `sub_83A70`'s tail `jmp (HUD_AddToScore).l` returns to
+`loc_83A6A` with `d0` holding `move.l (a3),d0` — the 32-bit `Score`. That analysed **one**
+of `HUD_AddToScore`'s two exits. The extra-life exit was not mentioned, and it is reachable
+in an ordinary run rather than hypothetical, so the proof was incomplete as written even
+though its conclusion happened to be right.
+
+### Both exits, and why they agree
+
+`HUD_AddToScore` (`docs/skdisasm/sonic3k.asm:17645-17665`):
+
+| exit | last write to `d0` | `d0` at return |
+|---|---|---|
+| `.end` | `move.l (a3),d0` | the whole capped 32-bit `Score` |
+| extra life | `move.w #mus_ExtraLife,d0`, then `jmp (Play_Music).l` | `(Score & $FFFF0000) \| mus_ExtraLife` |
+
+`Play_Music` (`:1471-1475`) writes `d0.b` into Z80 RAM and touches no register; its
+`stopZ80`/`startZ80` macros are pure memory writes
+(`docs/skdisasm/sonic3k.macros.asm:94-103`). So the extra-life exit's `move.w` replaces
+only the **low** word.
+
+The following `swap d0 / tst.w d0` can only see what was in the **high** word, and on both
+exits that is `Score >> 16`. `mus_ExtraLife` is swapped into the high word where `tst.w`
+cannot reach it. **Both exits present the same value to the test.**
+
+### The answer to the question as posed
+
+The exit `d0` is **not a constant** — it is a function of the live score, so it varies from
+run to run and cannot be modelled as a fixed value. But the *decision it drives* is fully
+deterministic: `tst.w` sees `Score >> 16`, which the `999999 = $F423F` cap
+(`:17649-17652`) confines to `0..$F`, and the previous entry proved every one of those
+sixteen cases is rejected — zero returns at `beq.s locret_83ABC`, odd `a1` fails
+`cmpi.b #2,anim(a1)` on a `$00` vector-table byte, and `a1 = 2, 6, $A, $E` pass that test
+but read a `$0000` `y_vel` word that `bpl.s locret_83ABC` rejects.
+
+So this is a branch whose **value is run-dependent and whose behaviour is not**. The landed
+model — "no Player 2 bump on a frame where Player 1 bumped" — is exact for both exits, and
+requires no score state in the engine. That distinction is the substance of this entry: a
+value that varies per run would normally rule out modelling it as a branch, and the reason
+it does not here is the cap plus the vector-table bytes, neither of which is obvious from
+the routine itself.
+
+### Not the frontier
+
+This changes no behaviour and eliminates nothing new: the `FixBugs` pairing was already
+eliminated as a cause last round, since it only ever removes bumps and the engine already
+has too few. The second post-bounce kick (ROM 5595, engine 5606) remains the open question.
+
+**Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
+34,112 errors.**

@@ -426,11 +426,29 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // easy to miss: sub_83A70 ends in `jmp (HUD_AddToScore).l`, a TAIL
         // jump, so HUD_AddToScore's own rts consumes the return address that
         // `bsr.w sub_83A70` pushed and returns straight to loc_83A6A -- with
-        // d0 holding `move.l (a3),d0`, the 32-bit Score (:17654-17665).
+        // whatever HUD_AddToScore left in d0.
+        //
+        // HUD_AddToScore has TWO exits and both leave the same thing in d0's
+        // high word, which is the only half the following `swap d0 / tst.w d0`
+        // can see (:17645-17665):
+        //   - the ordinary `.end` exit returns after `move.l (a3),d0`, so d0 is
+        //     the whole 32-bit Score;
+        //   - the extra-life exit does `move.w #mus_ExtraLife,d0` and tail-jumps
+        //     to Play_Music, which writes only `d0.b` into Z80 RAM and touches
+        //     no register (:1471-1475; its stopZ80/startZ80 macros are pure
+        //     memory writes, sonic3k.macros.asm:94-103). That `move.w` replaces
+        //     only the LOW word, so the high word is still the Score's.
+        // The extra-life exit is reachable in an ordinary run, not hypothetical,
+        // so covering it matters: `swap d0` moves mus_ExtraLife into the high
+        // word where `tst.w` cannot see it, and both exits therefore present the
+        // Score's high word to the test.
         //
         // So on a frame where Player 1 bumps, the Player 2 test reads the HIGH
         // WORD of the score instead of Tails' address, and Player 2 can never
-        // bump. That residual branch is provably inert rather than merely
+        // bump. Note what this does and does not make deterministic: the VALUE
+        // varies from run to run because it is a function of the live score, but
+        // the OUTCOME does not, because every value it can take is rejected
+        // below. That residual branch is provably inert rather than merely
         // unlikely: Score is capped at 999999 = $F423F (:17649-17652), so the
         // swapped value is 0..$F. Zero returns immediately. For 1..$F the ROM
         // does `movea.w d0,a1` and reads `anim(a1)` = $20(a1) and then
