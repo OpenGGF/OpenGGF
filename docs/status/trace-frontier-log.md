@@ -84702,3 +84702,63 @@ Two facts worth carrying forward:
 **Next target: segment 4 frame 519 (`rings`), via `Respawn_table_keep` /
 `Ring_status_table` persistence across the giant-ring special-stage return.**
 No engine change was landed in this round.
+
+## 2026-08-19 — S3K complete-emeralds chain: Ring_status_table survives a
+## Respawn_table_keep reload; segment 4 handoff closed
+
+Follow-up to the entry above, landing its diagnosis. Base `095ebc05c`,
+branch `bugfix/ai-s3k-seg5-r1`.
+
+The ROM gate, not the route: `sub_EB1A` — the rings-manager init reached from
+`loc_E8BE` (`docs/skdisasm/sonic3k.asm:18232-18238`) — wipes
+`Ring_status_table` only while `Respawn_table_keep` is clear
+(`tst.b (Respawn_table_keep).w / bne.s loc_EB30`, `:18561-18570`). That is the
+same byte the engine already models for `Object_respawn_table`, so the ring
+status now travels inside `PersistentRespawnState` rather than as a second
+notion of "keep". It is armed on the presence of that snapshot and deliberately
+*not* on `Last_star_post_hit`, which gates the saved-**position** restore
+(`Load_Starpost_Settings`, `:61763-61836`); `loc_618AC` clears the star-post
+flag while still setting `Respawn_table_keep` (`:128411-128421`), so the two
+must not share a predicate. Both entry paths that set the flag are covered by
+construction — giant ring at `loc_61892` (`:128407-128412`) and Super Emerald at
+`:128421`.
+
+No constant was introduced.
+
+### Measured, with the branch instrumented to prove it executes
+
+`restoreRingStatusTable` fires twice in the run: `before=0 incoming=14` at the
+segment 0 -> 2 return and `before=0 incoming=3` at the 2 -> 4 return.
+
+| | before | after |
+|---|---|---|
+| seg4 ring collections at frames 519/528/535 | 3 (indices 1, 2, 7) | **none** |
+| seg4 first ring collection | frame 519 | frame 1637 (index 34), matching ROM |
+| seg4 `errorCount` | 57,777 | **44,605** |
+| seg4 first non-camera mismatch | frame 519, `rings` | **frame 2729, `sidekick_y_speed`** (ROM `0x00C0`, engine `0x01C0`) |
+| chain stop point | segment 4 -> 5 handoff | **inside segment 5 (`ss_3`), raw frame 5962 of 6215** |
+
+The segment 4 -> 5 handoff is closed: the chain now clears it and drives to
+within 253 rows of the end of the third special stage, failing there on
+`KOS_DECOMPRESSION_QUEUE#91` / `KOS_MODULE_QUEUE#60` with `engine pending:
+<none>`.
+
+**New frontier: segment 4 frame 2729 `sidekick_y_speed`, and segment 5
+(`ss_3`) raw frame 5962.**
+
+### Gate
+
+Control measured at `095ebc05c` in a separate worktree, same command:
+790 tests / 4 red (surefire XML). Fix: 790 tests / 4 red. Set-diff empty in
+**both** directions — no newly red, no newly green. Red set unchanged:
+`TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+`TestS3kSonicTailsCompleteEmeraldRunChain`,
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`.
+`mvn -Pguards test`: 499 / 0.
+
+`TestArchitecturalSourceGuard`'s `LevelManager` size ratchet was hit at first
+(2834 vs 2816 budget) and was **not** raised: the ring-status restore lives in
+`LevelManagerInitializationSupport.initializeRings`, the capture in
+`LevelTransitionCoordinator.saveBigRingReturn`, and `initializeRings` now
+derives `Level` from the manager it already receives, leaving `LevelManager`
+at net zero growth.

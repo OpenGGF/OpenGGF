@@ -755,8 +755,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase H: Create RingManager and cache ring patterns.
      */
     public void initRings() {
-        ringManager = LevelManagerInitializationSupport.initializeRings(
-                this, level, touchResponseTable, audioManager, camera, graphicsManager);
+        ringManager = LevelManagerInitializationSupport.initializeRings(this, touchResponseTable,
+                audioManager, camera, graphicsManager, transitions.bigRingReturnRingStatusTable());
     }
 
     /**
@@ -4125,7 +4125,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         PersistentRespawnState respawnState = objectManager != null
                 ? objectManager.capturePersistentRespawn()
                 : null;
-        transitions.saveBigRingReturn(state, respawnState);
+        transitions.saveBigRingReturn(state, respawnState, ringManager);
     }
 
     /**

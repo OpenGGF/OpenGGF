@@ -221,6 +221,21 @@ public class LevelTransitionCoordinator {
         this.bigRingReturnRespawnState = respawnState;
     }
 
+    /**
+     * Saves the big-ring return state, folding the ring manager's
+     * {@code Ring_status_table} into the same snapshot as the object table.
+     * One ROM byte preserves both, so they travel together.
+     *
+     * @see #bigRingReturnRingStatusTable()
+     */
+    public void saveBigRingReturn(BigRingReturnState state,
+                                  PersistentRespawnState respawnState,
+                                  com.openggf.level.rings.RingManager ringManager) {
+        saveBigRingReturn(state, respawnState == null || ringManager == null
+                ? respawnState
+                : respawnState.withRingStatusBits(ringManager.captureRingStatusTable()));
+    }
+
     /** Returns true if a big ring return state is saved. */
     public boolean hasBigRingReturn() {
         return bigRingReturn != null;
@@ -234,6 +249,37 @@ public class LevelTransitionCoordinator {
     /** Returns the Object_respawn_table snapshot captured at big-ring entry. */
     public PersistentRespawnState getBigRingReturnRespawnState() {
         return bigRingReturnRespawnState;
+    }
+
+    /**
+     * Returns the {@code Ring_status_table} snapshot to re-establish on the
+     * next level load, or {@code null} when the load must start with a clean
+     * table.
+     *
+     * <p>ROM {@code sub_EB1A} -- the rings-manager init reached from
+     * {@code loc_E8BE} (docs/skdisasm/sonic3k.asm:18232-18238) -- wipes
+     * {@code Ring_status_table} only while {@code Respawn_table_keep} is clear:
+     * {@code tst.b (Respawn_table_keep).w} then {@code bne.s loc_EB30} skips
+     * the entire {@code $400}-byte clear (:18561-18570). That is the same byte
+     * which preserves {@code Object_respawn_table}, so the ring status rides in
+     * the same snapshot rather than forming a second notion of "keep".
+     *
+     * <p>The predicate is the presence of that snapshot, and deliberately not
+     * {@link #isLastStarPostHitSet()}: the star-post flag gates the ROM's saved
+     * <em>position</em> restore ({@code Load_Starpost_Settings}, :61763-61836)
+     * and has no bearing on the table wipe. {@code loc_618AC} clears
+     * {@code Last_star_post_hit} while still setting {@code Respawn_table_keep}
+     * (:128411-128421), so the two must not share a predicate. Nor is it keyed
+     * on which entry path ran: {@code loc_61892} sets the flag for the
+     * giant-ring entry (:128407-128412) and :128421 for the Super-Emerald
+     * entry.
+     */
+    public long[] bigRingReturnRingStatusTable() {
+        if (bigRingReturnRespawnState == null) {
+            return null;
+        }
+        long[] bits = bigRingReturnRespawnState.ringStatusBits();
+        return bits.length == 0 ? null : bits;
     }
 
     /** Clears the big ring return state. */
