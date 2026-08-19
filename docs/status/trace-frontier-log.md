@@ -91072,3 +91072,98 @@ The same segment's walk failure reports `cursor 89602, offset 89600` for destina
 uncompared rows here. That suggests one mechanism behind both axes, but it is **not tested**:
 segment 16 never runs, because the walk aborts before it, so the probe produced no output for
 it at all. Someone should test it rather than assume it.
+
+## 2026-08-19 — S2 segment 15: the dead row is the title-card release fall-through
+
+Base `5388737c9`, own worktree, branch `bugfix/ai-s2-row-admission-r1`, JDK 21,
+`-Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+-Dtest=TestS2CompleteEmeraldRunChain`. Baseline reproduced and re-reproduced after
+reverting every probe: segment 15 (`seg10_cpz2`) 7575 errors, first non-camera mismatch
+frame 2, `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5; plus the segment-16
+walk failure `cursor 89602, offset 89600`. **No fix landed.**
+
+### Measured (probes on the executing path, all reverted)
+
+The chain's admission is `AbstractRunChainTest.admitLevelWhenReady` /
+`HeadlessRunCoordinatorAdapter.tryAdmitLevel`, not the launcher. Logging every admission
+decision with its cursor shows two distinct populations:
+
+| destination | entry kind | admitted at | rowsConsumed |
+|---|---|---|---|
+| 7, 12, 13 (green) | `level_advance` | cursor **== offset** | 0 |
+| 2, 4, 6, 9, 11, **15** | `stage_exit` | cursor **== offset + 1** | 1 |
+
+Every special-stage return admits one row late, not just segment 15. That path is the
+`uncomparedInterior` branch of `assertChainReplay`: it pre-seeks the frozen cursor to
+`returnOffset` and then lets the title-card-exit fall-through frame consume row 0
+(`framesConsumed == 1`, adopted as the opening row).
+
+Instrumenting `Sonic2PlcService.serviceVBlank`/`prepare` keyed on the shared cursor gives
+the seam exactly:
+
+```
+cursor 82342  serviceVBlank LEVEL_TITLE_CARD  20 -> 14
+cursor 82342  serviceVBlank LEVEL_TITLE_CARD  14 ->  8
+cursor 82342  GameLoop mode=LEVEL   (fall-through: object pass, no PLC service at all)
+cursor 82343  serviceVBlank LAG      8 ->  8      <- the recording's lag row, correctly placed
+cursor 82344  serviceVBlank ORDINARY_LEVEL 8 -> 5
+cursor 82345  serviceVBlank ORDINARY_LEVEL 5 -> 2
+```
+
+Recorded: row 0 = 5 (a 3-pattern `Vint_Level` service, 8 -> 5), row 1 = lag, row 2 = 2.
+The engine is exactly one 3-pattern service behind from row 0 onward.
+
+`suppressesRunNativeLevelBody` is **false** on that row — the row is not suppressed, and
+the previous entry's "row 0 does nothing at all" is refined by this: **row 0 runs its
+object pass but performs no V-blank PLC service.** Its represented V-blank was already
+claimed by the title card. `PlcLifecycleFrame.claim` assigns one owner per host iteration
+and a later claim returns false without servicing
+(`PlcFrameLifecycleCoordinator.java:457-508`).
+
+### Established root cause
+
+The release iteration is **two ROM frames fused into one host iteration**. S2's
+`Level_TtlCardLoop` waits on `VintID_TitleCard` once per iteration (6 patterns), and
+`Level_MainLoop` arms `VintID_Level` and waits on it (3 patterns) *before* its
+`jsr (RunObjects).l` (`docs/s2disasm/s2.asm:5060-5066`, `:5088-5095`) — the model already
+written into `GameLoop.runGapRowContinuesSourceLevelMainLoop`'s javadoc. The engine's
+fall-through runs the card's V-int service and the level's object pass in one iteration
+and drops the level's V-int service entirely. 6 + 3 = the 9 patterns that reconcile
+`14 -> 5` at row 0; the engine loses the 3.
+
+At `level_advance` boundaries the release row is a driven gap row whose level body is
+suppressed, so no fusion occurs and the destination's row 0 is a clean main-loop row —
+which is why those segments are green. Earlier stage-exit returns (2, 4, 6, 9, 11) carry
+the same fused row; they stay green only because their queues are idle at entry, as
+recorded on 2026-08-19 above.
+
+### Rejected by measurement — do not retry
+
+- **Pre-seek to `returnOffset - 1`** (make the release row a gap row): segment 2 goes red
+  at frame 0, `sidekick_x` rom `0x0DDD` engine `0x0DDE`, 85636 errors, and every
+  `run_gap.edge[*].movie_logical_frame` for `ss -> seg2_ehz1` moves one row early. The
+  destination's row-0 object state and the gap ledger are *correct* on the fused row; only
+  its V-blank service is missing.
+- **Suppress the level body on any title-card release iteration** (no fall-through at
+  all): segment 2 diverges at frame 1132 on `sidekick_y`, 47639 errors, the
+  `seg2_ehz1 -> ss_2` gap ledger loses its only edge, and segment 3's DPLC comparison
+  fails. Too broad — the fall-through carries real level-start work in every game.
+- Anything that adjusts the PLC path so row 2 reads 2 instead of 5. The queue subsystem
+  remains exonerated; the missing service is a lifecycle-ownership fact, not a queue fact.
+
+### The shape a fix must take
+
+The fused release iteration must perform the destination's first `Level_MainLoop` V-int
+service in addition to the title card's, without moving the cursor, the object pass or the
+gap ledger. That needs a second represented V-blank inside one host iteration, which
+`PlcFrameLifecycleCoordinator` currently forbids by design (one owner per frame, guarded
+by `latchBeforeFadeUpdate`'s "previous PLC lifecycle frame is still active"). Landing it is
+structural work in that coordinator, not in the chain harness.
+
+### Segment 16 — tested, and it is a different mechanism
+
+The previous entry recorded the `cursor 89602, offset 89600` gap as untested. Tested: at
+cursor 89600 and 89601 the engine's mode is still `TITLE_CARD` (`READY-BAIL`, title card
+not pending), and it reaches `LEVEL` only at 89602. That is a title-card **duration** at a
+`level_advance` boundary, not the stage-exit fusion above. **One mechanism behind both
+axes is refuted**, not confirmed.
