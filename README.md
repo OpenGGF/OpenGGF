@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The object-side pushing-bit clear sites are catalogued and 18 of 31 are ported
+  (`bugfix/ai-s2-pushbit-audit-r1`, merged 2026-08-19).** 31 sites clear an object's p1/p2 pushing
+  bit outside `Solid_NotPushing` -- 6 in S2, 7 in S1, 18 in S3K -- with per-site ROM citation,
+  player index, firing condition, engine class and port status in
+  [docs/architecture/audits/object-pushing-bit-clear-sites.md](docs/architecture/audits/object-pushing-bit-clear-sites.md).
+  `ObjectSolidContactController` gains `releaseObjectPushLatch(player, instance)`, per-character and
+  returning the ROM `bclr`'s Z flag so callers can branch on it as `Obj45`'s `loc_243EA` and
+  `Obj_LBZPipePlug`'s `loc_274D6` do; the ROM's asymmetries are modelled as written, including
+  `Obj_AutoTunnelInit` and `Obj_LBZTubeElevatorClosed` clearing only `p1_pushing_bit` even when the
+  captured character is Player 2. **The audit is not a precondition for the push-gate pair, as had
+  been assumed:** the 11 sites where the ROM clears the object's bit *without* clearing the
+  character's flag in the same block take the suite 790/4 -> **790/8**, because the controller gates
+  its player-side clear on the object latch as a proxy for "was I the object that set the player's
+  flag?" -- making the latch accurate makes that proxy strand `Status_Push`. Those 11 and the
+  ungated `Solid_NotPushing` clear must land as **one** change. Four defects were found in passing
+  and recorded rather than changed: `MTZSpringWallObjectInstance` takes the **`fixBugs`-ON** branch
+  (`s2.asm:53395-53399`), which the shipped ROM does not; `Sonic1TeleporterObjectInstance` reads
+  `bclr #5` as an object-interaction bit and models it as `setOnObject(false)` when bit 5 is pushing
+  and `on_object` is bit 3; `Sonic1BreakableWallObjectInstance` comments two `bclr`s as "handled
+  implicitly" when neither is; and `Obj_SOZRisingSandWall` (`sonic3k.asm:85939`, `:85951`) has no
+  engine class.
+
 - **S3K keeps the collected-ring set across a `Respawn_table_keep` reload
   (`bugfix/ai-s3k-seg5-r1`, merged 2026-08-19).** The engine re-collected rings the player had
   already taken before a giant-ring special stage. ROM `sub_EB1A` -- the rings-manager init reached

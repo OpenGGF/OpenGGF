@@ -231,6 +231,10 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
             // per-player pushing bit was set at entry but SolidObjectFull no
             // longer reports a side push (sonic3k.asm:41503-41532). Manual
             // checkpoint batching retains that previous bit in the result.
+            // ROM AIZLRZEMZRock clears this character's own pushing bit on
+            // the rock -- p1 in the Player_1 leg, p2 in the Player_2 leg
+            // (docs/skdisasm/sonic3k.asm:44189, :44202, :44233).
+            services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
             player.setPushing(false);
             if (player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()
                     && player.getAnimationId() != Sonic3kAnimationIds.SPINDASH.id()) {

@@ -290,6 +290,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: bclr #5,obStatus(a0) / bclr #5,obStatus(a1) — clear pushing flags
+        // (docs/s1disasm/_incObj/41 Springs.asm:154-156). The first bclr is the
+        // SPRING's own pushed flag; clearing it is what stops the next frame's
+        // Solid_NoCollision `btst #5,obStatus(a0)` (sub SolidObject.asm:243-263)
+        // from passing.
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
 
         triggerSpring();

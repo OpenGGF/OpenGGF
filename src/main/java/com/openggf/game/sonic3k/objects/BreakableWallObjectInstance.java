@@ -247,6 +247,9 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             }
             sidekick.setXSpeed(result.preContact().xSpeed());
             sidekick.setGSpeed(result.preContact().xSpeed());
+            // ROM clears p2_pushing_bit on the wall in the Player_2 leg
+            // (docs/skdisasm/sonic3k.asm:45720, :45739, :45858, :45871).
+            services().objectManager().solidContacts().releaseObjectPushLatch(sidekick, this);
             sidekick.setPushing(false);
         }
     }
@@ -387,6 +390,9 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
             }
         }
 
+        // ROM clears p1_pushing_bit on the wall in the Player_1 leg
+        // (docs/skdisasm/sonic3k.asm:45711, :45848, :45933).
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
 
         if (config.breakMode == BreakMode.KNUCKLES_ONLY

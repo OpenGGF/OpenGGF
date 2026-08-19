@@ -455,6 +455,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        // ROM clears the elevator's OWN p1 bit and only p1, even when the
+        // captured character is Player_2 (docs/skdisasm/sonic3k.asm:58249).
+        services().objectManager().solidContacts().releaseObjectPushLatch(
+                services().playerQuery().mainPlayerOrNull(), this);
         player.setPushing(false);
         player.setAir(false);
         positionCapturedPlayer(player);

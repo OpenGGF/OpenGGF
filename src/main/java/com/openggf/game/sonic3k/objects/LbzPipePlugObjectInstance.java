@@ -249,7 +249,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
         broken = true;
     }
 
-    private static void clearPushStateForBreak(AbstractPlayableSprite player, int savedXVel,
+    private void clearPushStateForBreak(AbstractPlayableSprite player, int savedXVel,
             SolidCheckpointBatch batch, boolean mainPlayerPath) {
         if (batch != null) {
             for (var entry : batch.perPlayer().entrySet()) {
@@ -257,6 +257,9 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
                         || !(entry.getKey() instanceof AbstractPlayableSprite other)) {
                     continue;
                 }
+                // ROM's test-and-clear on the plug's own p2 bit gates the
+                // Player_2 leg (docs/skdisasm/sonic3k.asm:53562, :53587).
+                services().objectManager().solidContacts().releaseObjectPushLatch(other, this);
                 other.setPushing(false);
                 if (mainPlayerPath && entry.getValue().preContact().animationId() == BREAK_ANIMATION_ID) {
                     int otherSavedXVel = entry.getValue().preContact().xSpeed();
@@ -265,6 +268,9 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
                 }
             }
         }
+        // ROM loc_274D6 test-and-clears the plug's own p1 bit before the
+        // Player_1 break (docs/skdisasm/sonic3k.asm:53592).
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         player.setXSpeed((short) savedXVel);
         player.setGSpeed((short) savedXVel);

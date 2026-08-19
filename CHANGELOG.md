@@ -34,6 +34,23 @@ All notable changes to the OpenGGF project are documented in this file.
   checks that every guard test class on disk is actually selected by it.
 
 ### Fixed
+- Solid objects across all three games now clear their OWN per-character
+  pushing bits where the ROM does, instead of leaving that state to the shared
+  solid framework. A ROM object's `p1_pushing_bit`/`p2_pushing_bit` (bit 5 of
+  `obStatus` in Sonic 1) gates `SolidObject_TestClearPush`'s Walk/Run
+  animation-restart write via `btst d4,status(a0)`
+  (docs/s2disasm/s2.asm:35462-35466), so an object routine that clears its own
+  bit suppresses the next frame's restart. Eighteen such sites are now modelled
+  — S2 `Obj45`, `Obj66` and the `Obj26` monitor break; S1 springs and the SBZ
+  rotating junction; S3K's breakable rock and walls, horizontal springs, LBZ
+  launcher and pipe plug, automatic tunnel, LBZ tube elevator and CNZ triangle
+  bumpers — including the ROM's per-character asymmetries, its test-and-clear
+  sites, and the two capture objects that clear only `p1_pushing_bit` even when
+  the captured character is Player 2. `ObjectSolidContactController` gained a
+  per-character `releaseObjectPushLatch` for object routines to use. The full
+  site catalogue, the eleven sites that remain blocked, and four unrelated
+  defects found in passing are in
+  docs/architecture/audits/object-pushing-bit-clear-sites.md.
 - Sonic 2's Obj41 horizontal spring now clears its own object-side pushing
   bits when it launches a character, not just the character's `status.player.
   pushing` flag. ROM `loc_18BAA` (docs/s2disasm/s2.asm:34073-34076) executes

@@ -262,6 +262,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             player.setAir(true);
         }
         clearTouchingMonitor(player);
+        // ROM Obj26_SpawnIcon opens with `clr.b status(a0)`
+        // (docs/s2disasm/s2.asm:25691), wiping the monitor's own standing and
+        // pushing bits for BOTH characters unconditionally on the break path --
+        // not just for the character that broke it.
+        if (objectManager != null) {
+            objectManager.solidContacts().releaseObjectPushLatchForAllPlayers(this);
+        }
         releaseTouchingCharactersOnBreak(objectManager, player);
         player.setYSpeed((short) -player.getYSpeed());
         mappingFrame = BROKEN_FRAME;

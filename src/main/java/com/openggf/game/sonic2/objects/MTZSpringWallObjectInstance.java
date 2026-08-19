@@ -281,6 +281,13 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
         // The REV01 fix clears the roll-jumping flag so the player's controls are
         // unlocked and they cannot get stuck after the spring-wall bounce.
         player.setRollingJump(false);
+        // The two object-side bclrs are unconditional and cover BOTH characters,
+        // so they release the spring wall's own pushing bits whoever bounced
+        // (docs/s2disasm/s2.asm:53393-53394). That is what stops the following
+        // frame's SolidObject_TestClearPush `btst d4,status(a0)` (:35462-35466)
+        // from passing and restarting the walk animation.
+        services().objectManager().solidContacts()
+                .releaseObjectPushLatchForAllPlayers(this);
         player.setPushing(false);
 
         // From disassembly: move.w #SndID_Spring,d0 / jmp (PlaySound).l

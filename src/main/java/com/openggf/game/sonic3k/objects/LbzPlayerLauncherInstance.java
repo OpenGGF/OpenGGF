@@ -135,6 +135,9 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         player.setGSpeed((short) launch);
         player.setDirection(facingLeft ? Direction.LEFT : Direction.RIGHT);
         player.setMoveLockTimer(MOVE_LOCK_FRAMES);
+        // ROM sub_261F2 clears both of the launcher's own pushing bits before
+        // the character's Status_Push (docs/skdisasm/sonic3k.asm:51930-51932).
+        services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
         player.setPushing(false);
     }
 

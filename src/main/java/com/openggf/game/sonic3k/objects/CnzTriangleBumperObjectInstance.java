@@ -103,6 +103,10 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance impl
         player.setJumping(false);
         player.setAir(true);
         player.setRollingJump(false);
+        // ROM sub_32D16 clears both of the bumper's own pushing bits
+        // (`bclr #5` / `bclr #6` on status(a0)) before the character's
+        // Status_Push (docs/skdisasm/sonic3k.asm:68818-68820).
+        services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
         player.setPushing(false);
 
         try {
