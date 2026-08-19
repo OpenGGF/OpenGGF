@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Same Block, same Chunk: the S2 wall is a Chunk-content disagreement
+  (`bugfix/ai-s2-collision-data-r1`, merged 2026-08-19 -- arithmetic and a report re-read).** Position
+  is confirmed identical without a filter, per the rule this lane broke earlier: `y` and `y_speed`
+  diverge only from row **6611**, after the landing, and there is no `angle` or `ground_mode`
+  divergence anywhere in the segment, so both sides scan the same map row at 6600. In the project's
+  terminology -- **Pattern** 8x8, **Chunk** 16x16, **Block** 128x128 -- the ROM's wall face at
+  `x=0x2D62 y=0x04C9` and the engine's probe at `x=0x2D64` both land in **Block(90,9), Chunk(6,4)**,
+  differing only in within-Chunk pixel column, 2 against 4. So it is neither which Block was loaded
+  nor which Chunk sits there: **both sides read the same 16x16 Chunk and disagree about its
+  content.** And the engine's distance says that Chunk reads empty -- at `x=2D5A` the probe reports
+  27 px clear while the Chunk containing it ends 11 px to the right, so the engine found nothing
+  solid in that Chunk at all on the LRB bit and scanned straight past, where the ROM with the same
+  Chunk and the same `lrb_solid_bit=$0D` finds a wall face 2 px away. The next measurement is the
+  **Chunk id** the engine holds at that location against the ROM's layout -- differing ids mean the
+  wrong location was read or decoded, matching ids point at the solidity/height array that id maps
+  to on the primary plane.
+
 - **The S1 title card never releases -- a stall, not a longer span
   (`bugfix/ai-s1-titlecard-span-r1`, merged 2026-08-19 -- investigation only).** A new instrument was
   needed because the previous probe's call site never runs in `TITLE_CARD`: `currentGameMode` logged

@@ -88024,3 +88024,64 @@ the loading screen itself blocks on, unless the edges for that load are
 available at the rows the load occupies. That is a statement about which rows a
 segment's recorded stream must cover, not about the engine's art pipeline, and
 it would reframe the whole four-part change rather than adding a fifth part.
+
+## 2026-08-19 — the divergence is inside a single 16x16 chunk
+
+Branch `bugfix/ai-s2-collision-data-r1` off `origin/develop` (`3e2be0959`).
+Arithmetic and a report re-read; no probe, no engine run, no code.
+
+### Position is identical, confirmed without a filter
+
+`y` and `y_speed` diverge only from row **6611** -- after the landing -- and there
+is no `angle` or `ground_mode` divergence anywhere in the segment. Checked over
+**all** errors with no cascading filter, per the standing rule. So at 6600 both
+sides are at the same `y` and the sensor scans the same row of the map; the only
+positional difference is the 2 px in `x` the ROM's clamp created.
+
+### The layer, in this codebase's terminology
+
+Using the project's naming -- **Pattern** 8x8, **Chunk** 16x16, **Block** 128x128:
+
+    ROM wall face   x=0x2D62  y=0x04C9
+      Block col 90, row 9      (x >> 7, y >> 7)
+      Chunk col 6,  row 4      within that Block
+      within Chunk: px 2, py 9
+
+    engine probe    x=0x2D64  y=0x04C9
+      Block col 90, row 9
+      Chunk col 6,  row 4
+      within Chunk: px 4, py 9
+
+**Same Block, same Chunk.** The two positions differ only in their within-Chunk
+pixel column, 2 against 4. So this is not a question of which Block was loaded or
+which Chunk sits at that position -- both sides are reading the *same* 16x16
+Chunk and disagreeing about its content.
+
+That eliminates two of the four layers the brief named. What remains is the
+Chunk's own solidity/height data and the mapping from it to the height the sensor
+reads.
+
+### What the engine's distance says about the Chunk
+
+At `x = 2D5A` the engine's right probe (at `2D64`) reports **27 px** of clear
+space. The Chunk containing that probe ends 11 px to its right. A reported 27
+therefore means the engine found nothing solid **in this Chunk at all** on the
+LRB bit -- it scanned past it. The ROM, on the same Chunk with the same
+`lrb_solid_bit = $0D`, finds a wall face 2 px away.
+
+So the Chunk reads solid for the ROM and empty for the engine.
+
+### The next measurement, stated precisely
+
+Two numbers settle it, and neither is in the fixture:
+
+1. the **Chunk id** the engine holds at Block (90,9) / Chunk (6,4), against the
+   ROM's layout at the same position -- if they differ, the level pipeline read or
+   decoded the wrong Chunk;
+2. if the ids match, the **solidity/height array** that Chunk id maps to on the
+   primary plane, against the ROM's -- if those differ, the decode of the Chunk
+   table is wrong rather than the layout.
+
+The brief's framing holds: a data difference then splits into "decoded wrongly"
+versus "read the wrong location", and the Chunk id is the value that separates
+them.
