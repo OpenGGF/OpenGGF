@@ -1117,6 +1117,11 @@ abstract class AbstractRunChainTest {
         activeRunCoordinator = runCoordinator;
         Throwable primaryFailure = null;
         boolean prefixReached = false;
+        // Hoisted out of the walk so the abort path below can name the segment
+        // that was live when the walk failed, and hand its comparator to the
+        // report writer. See the catch clause for why that matters.
+        LiveTraceComparator activeComparator = driver.comparator();
+        int i = 0;
         try {
             PlaybackDebugManager playback = GameServices.playbackDebug();
             RealEngineHooks hooks = new RealEngineHooks(loop);
@@ -1131,14 +1136,14 @@ abstract class AbstractRunChainTest {
             runCoordinator.activateInitial(loop.getCurrentGameMode());
 
             // --- Step 3: walk every segment -------------------------------------
-            LiveTraceComparator activeComparator = driver.comparator();
+            activeComparator = driver.comparator();
             // The cursor each active segment's comparator was attached at, so the
             // pinned-tail diagnostics can report rows-consumed honestly instead of
             // echoing the current cursor back at itself.
             int activeSegmentInitialCursor = initialComparisonCursor;
             SegmentPlan uncomparedInteriorSourceLevel = null;
             int uncomparedInteriorSourceVblank = 0;
-            int i = 0;
+            i = 0;
             while (i < plans.size()) {
             SegmentPlan seg = plans.get(i);
             Object levelAtSegmentStart = GameServices.level().getCurrentLevel();
@@ -1731,6 +1736,7 @@ abstract class AbstractRunChainTest {
             // failure is rethrown (or attached to the combined report) at the
             // end of this method; nothing is swallowed.
             primaryFailure = failure;
+            writeAbortedSegmentReport(run.runId(), i, plans, activeComparator, failure);
         } finally {
             activeRunCoordinator = null;
             productionComparator = null;
@@ -4180,6 +4186,39 @@ abstract class AbstractRunChainTest {
     /** Adapter-neutral assertions a committed route can add at a completed source segment. */
     protected void assertCompletedSegmentComparison(
             int segmentIndex, LiveTraceComparator comparator) {
+    }
+
+    /**
+     * Emits the live segment's comparator evidence when the walk aborts inside
+     * it.
+     *
+     * <p>A segment writes its own report from {@link #maybeWriteReport} only
+     * once it closes. A walk that fails mid-segment never reaches that call, so
+     * {@code target/trace-reports/} ends up holding reports for exactly the
+     * segments that went fine and none for the segment that failed -- triage
+     * from the reports alone sees a set of clean segments and no evidence at
+     * all, which is the opposite of what happened. Two separate rounds (S2 and
+     * S3K) each lost time re-deriving per-row divergences by hand that the
+     * comparator had already computed.
+     *
+     * <p>Deliberately NOT {@link #maybeWriteReport}: that also runs
+     * {@link #assertCompletedSegmentComparison} and {@link #assertSegmentPhysics},
+     * which would assert completion on a segment that legitimately did not
+     * complete and could turn one failure into two. This writes the artifact and
+     * nothing else, so it is purely additive evidence; a failure to write is
+     * attached to the original failure rather than replacing it.
+     */
+    private void writeAbortedSegmentReport(
+            String runId, int segmentIndex, List<SegmentPlan> plans,
+            LiveTraceComparator comparator, Throwable failure) {
+        if (comparator == null || segmentIndex < 0 || segmentIndex >= plans.size()) {
+            return;
+        }
+        try {
+            writeChainSegmentReport(runId, segmentIndex, comparator);
+        } catch (Exception | Error reportFailure) {
+            failure.addSuppressed(reportFailure);
+        }
     }
 
     private void writeChainSegmentReport(String runId, int segmentIndex, LiveTraceComparator comparator)
