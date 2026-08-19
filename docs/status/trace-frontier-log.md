@@ -83649,3 +83649,80 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   hardware-timing contract, not to an S3K object, and it was handed to the
   agent that owns that lane rather than duplicated here. No engine source was
   modified, so no red-set sweep was run.
+
+## 2026-08-19 — S3K Sonic+Tails complete-emerald run chain: the gap-time wall was a title-card act, not the interstitial contract
+
+- Measured at `8955a77c1` in a clean worktree (`-Ptrace-replay-r7`,
+  `-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain`, `-Ds3k.rom.path=<s3k .gen>`;
+  1 test, 1 error, ~25 s). Same stop as the entry above: the **segment 3 → 4**
+  boundary, transition index 3, `entry_kind` `stage_exit`,
+  `mode_change_bk2_frame=19775`, `BoundaryStepCapExceededException`, with the
+  engine parked in `TITLE_CARD` / `state=SLIDE_IN artLoading=true` forever.
+- **The entry above misidentified the pending work, and the correction matters.**
+  It records that "the engine reproduces the first four modules and the first
+  decompression job" of the recorded interstitial span — i.e. that production's
+  pending `KOS_MODULE_QUEUE` 36–39 are the span's leading prefix. They are not.
+  The ordinals coincide; the work does not. Instrumenting
+  `Sonic3kTitleCardManager.queueKosmArt` printed the four submissions production
+  makes in that gap, and comparing their fingerprints against
+  `hardware_timing_interstitial.jsonl` gives:
+
+  | slot (VRAM dest) | engine ROM addr | engine ordinal / fingerprint | recorded ordinal / fingerprint |
+  |---|---|---|---|
+  | `$500` red/act sheet | `0xD6F28` | 36 / `10eb568a7072` | 40 / `10eb568a7072` |
+  | `$510` zone text | `0x15C3A2` | 37 / `05324378670c` | 41 / `05324378670c` |
+  | `$53D` act number | `0xD6E46` (`Num2`) | 38 / `6a444320f989` | 42 / `7059802f2a04` (`Num1`, `0xD6D84`) |
+  | `$54D` zone art | `0x39BDC8` | 39 / `8db61dd608db` | 43 / `8db61dd608db` |
+
+  Recorded ordinals 36–39 in that gap are a *different* four-module burst with
+  fingerprints `010ed6d31606`, `5bd13617483f`, `0a336b838ca6`, `924878f28b21`:
+  the special-stage results screen's own `Queue_Kos_Module` calls
+  (`sonic3k.asm:63060-63102` — `ArtKosM_ResultsGeneral`,
+  `ArtKosM_SSResultsSUPER`/`HYPER`(`k`), `ArtKosM_Results<character>`,
+  `ArtKosM_SSResults`), which the engine's results screen never submits. A
+  release path built on the "leading prefix" premise would have matched
+  production's title-card jobs against the results-screen edges.
+- **Root cause: the special-stage return title card is built from
+  `Current_act`, where the ROM builds it from `Apparent_act`.**
+  `Obj_TitleCardInit` never reads `Current_zone_and_act`: the act-number art is
+  `ArtKosM_TitleCardNum2` unless `tst.b (Apparent_act).w` is zero, in which case
+  it is `Num1` (`sonic3k.asm:62131-62141`), and the zone art is indexed by
+  `move.b (Apparent_zone_and_act).w,d0` (`sonic3k.asm:62155`). The two acts
+  diverge across an S3K seamless act transition: `Current_act` advances inside
+  the act-1 background-event dispatch, while `Apparent_act` is only raised later
+  by the end-sign results object's `move.b #1,(Apparent_act).w` at `loc_2DD06`
+  (`sonic3k.asm:62714`). `GameLoop.exitResultsScreen` passed
+  `levelManager.getCurrentAct()`; a probe at that call site printed
+  `curAct=0 appAct=0` for the segment 1 → 2 return and `curAct=1 appAct=0` for
+  segment 3 → 4. The engine's `apparentAct` was already correct — only the
+  consumer was wrong. The bonus-stage return has always read
+  `savedApparentZoneAndAct` (`GameLoop.java:2659-2660`) for exactly this reason.
+- Confirmation from the fixture, not from the fixture's own rows: `aiz_3`'s
+  per-segment `hardware_timing.jsonl` queues `Num2` (`6a444320f989`) at
+  `raw_frame` 7562, so the AIZ act-2 title card happens **inside** segment 4,
+  7562 frames after the return. The manifest's `"act": 2` for `aiz_3` is the
+  segment's later/dominant act, not the act it is entered in.
+- With the act read from `Apparent_act` the returned card is an act-1 card, the
+  title sheet the manager already holds is reused, and nothing is submitted into
+  the unrepresented gap — the same shape as the segment 1 → 2 return that has
+  always passed. The `stage_exit` boundary is observed and the chain enters
+  segment 4.
+- **Frontier after this round: segment 4 (`aiz_3`), `raw_frame` 341.**
+  `IllegalStateException: duplicate or reordered hardware service boundary at
+  raw_frame=341: previous=PRE_MAIN_LOOP, current=VINT_SERVICE`
+  (`HardwareTimingReplayPort.apply`, via `AbstractRunChainTest.stepEngineFrame`).
+  Two production frames land on one represented row: `PRE_MAIN_LOOP` is the last
+  boundary of a frame, so a following `VINT_SERVICE` on the same latch means the
+  raw-frame latch did not advance. Not diagnosed further this round. 341 rows of
+  a segment the chain had never opened compare clean before it.
+- The two other divergences found on the way are real, still open, and must not
+  be fixed in isolation:
+  - `Sonic3kTitleCardManager.java:668` caches the title sheet on
+    `zone`/`act`; `Obj_TitleCardInit` queues all four modules unconditionally on
+    every title-card creation (`sonic3k.asm:62121-62152`). Removing the cache
+    without a gap-time release path hangs every special-stage return.
+  - The engine's special-stage results screen submits none of the four Kos
+    modules or the `Load_PLC_Raw PLC_SpecialResultsText`
+    (`sonic3k.asm:63060-63102`) that the recording shows, which is why
+    production's ordinal cursor sits four module ordinals and five decompression
+    ordinals behind the recording's inside every post-special-stage gap.

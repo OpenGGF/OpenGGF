@@ -3028,9 +3028,20 @@ public class GameLoop {
         // Set flag so exitTitleCard knows to restore checkpoint state
         returningFromSpecialStage = true;
 
-        // Enter title card mode for the current zone/act
+        // Enter title card mode for the APPARENT zone/act. Obj_TitleCardInit
+        // never reads Current_zone_and_act: the act-number art is chosen by
+        // "tst.b (Apparent_act).w / bne" -- Num2 when non-zero, Num1 when zero
+        // (sonic3k.asm:62131-62141) -- and the zone art by
+        // "move.b (Apparent_zone_and_act).w,d0" (sonic3k.asm:62155). The two
+        // acts diverge across an S3K seamless act transition, because
+        // Current_act advances inside the act-1 background-event dispatch while
+        // Apparent_act is only raised later, by the end-sign results object's
+        // "move.b #1,(Apparent_act).w" at loc_2DD06 (sonic3k.asm:62714). A
+        // giant-ring special stage entered in that window returns to a card the
+        // ROM still draws with the act-1 digit. The bonus-stage return already
+        // reads Saved_apparent_zone_and_act for the same reason.
         int zoneIndex = levelManager.getCurrentZone();
-        int actIndex = levelManager.getCurrentAct();
+        int actIndex = levelManager.getApparentAct();
         enterTitleCardFromResults(zoneIndex, actIndex);
 
         // Reveal the title card by fading from white (the screen is currently white

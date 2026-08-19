@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The Sonic 3&K title card shown when a special stage returns to the level now
+  draws the ROM's act. `Obj_TitleCardInit` never reads `Current_zone_and_act`:
+  the act-number art is `ArtKosM_TitleCardNum2` unless `tst.b (Apparent_act).w`
+  is zero, in which case it is `Num1` (docs/skdisasm/sonic3k.asm:62131-62141),
+  and the zone art is indexed by `move.b (Apparent_zone_and_act).w,d0`
+  (sonic3k.asm:62155). The two acts diverge across an S3K seamless act
+  transition, because `Current_act` advances inside the act-1 background-event
+  dispatch while `Apparent_act` is only raised later by the end-sign results
+  object's `move.b #1,(Apparent_act).w` at `loc_2DD06` (sonic3k.asm:62714) --
+  so a giant-ring special stage entered in that window returns to a card the
+  ROM still draws with the act-1 digit. The return path passed `Current_act`;
+  it now passes `Apparent_act`, matching the bonus-stage return, which already
+  read `Saved_apparent_zone_and_act`.
 - Sonic 2 trace-replay segments that resume a level mid-run now start on the
   collision path the ROM has them on. `AnglePos` points `Collision_addr` at
   `Secondary_Collision` and passes `d5 = top_solid_bit` whenever
