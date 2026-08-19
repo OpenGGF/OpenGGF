@@ -228,6 +228,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 bridge's seven recorded edges are `PLC_Main` + `PLC_SSResult`, and the results screen is
+  unarmed as hardware work (`bugfix/ai-s1-bridge-submission-r1`, merged 2026-08-19 -- investigation
+  only, a gate-clean fix deliberately withheld).** Recomputing
+  `HardwareTimingEventEngine.ComputeSubmissionFingerprint` over every entry of every `ArtLoadCues`
+  list in the ROM resolves all seven exactly: ordinals 7-11 are **`PLC_Main`**'s five entries and
+  12-13 are **`PLC_SSResult`**'s two -- the `moveq #plcid_Main,d0 / bsr.w NewPLC` then
+  `moveq #plcid_SSResult,d0 / bsr.w AddPLC` pair the ROM queues on a special-stage exit
+  (`s1disasm/sonic.asm:3384-3387`). Ordinal 7 is `PLC_Main` entry 0 at `0x03AE64`, **10 tiles**, and
+  the ROM's `remaining_work` at that row is 10. **The suppression hypothesis is refuted:** the ROM
+  does not run `Level_MainLoop` there -- the arming routine is `SS_NormalExit` (`:3402-3413`), the
+  results-screen loop inside `GM_Special`, and the engine enters `SPECIAL_STAGE_RESULTS` at exactly
+  the frame the ROM arms `PLC_Main` entry 0, so the timing is right and nothing is suppressed.
+  Nor is the engine failing to load the art: `Sonic1SpecialStageProvider.onEnterResults` already
+  performs the ROM's pair and the **native** queue works. The gap is that it is never submitted as
+  *hardware* work -- of **7,826** `PRE_MAIN_LOOP` services in the run, **zero** follow that
+  submission, so `submitArmableHead()` never runs and no job exists for a recorded edge to release.
+  The obvious fix (routing results-mode through the existing
+  `executeHardwareTimedObjectScan`, whose boundary sequence matches `SS_NormalExit` step for step)
+  is **gate-clean at 790/4 with an empty both-way set-diff** -- and was withheld, because it defers
+  preparation by one row and **no committed trace compares S1/S2 results-screen queue state**, so
+  gate-clean here partly means unobserved. The same gap exists in Sonic 2
+  (`Sonic2PlcService.hasPreparationBoundary` also returns `true` for `SPECIAL_STAGE_RESULTS`).
+
 - **The last push-pair regression is a suppression predicate, not a missing port
   (`bugfix/ai-s2-pushland-r1`, merged 2026-08-19 -- investigation only).** The `object_state` scan
   against the EHZ segment found **no S2 object that clears its own pushing bit while the character
