@@ -88255,3 +88255,65 @@ explicitly, not inferred.
 **New frontier: chain segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`.**
 
 No constant was introduced.
+
+## 2026-08-19 -- The kill condition survives, and the stall is one job the ROM never arms
+
+Branch `bugfix/ai-s1-titlecard-stall-r1`, based on `develop` at `8c89e477b`.
+Diagnosis only; **no engine change is landed**.
+
+### The kill condition does not fire
+
+Stated last round: *if the queue is empty or already drained while the card
+still waits, the hypothesis is wrong.* Measured, with the pair applied, at every
+row of the stall:
+
+```
+9530 TITLE_CARD busy=true queued=15 prepared=false remaining=-1
+...
+9742 TITLE_CARD busy=true queued=15 prepared=false remaining=-1
+```
+
+**One distinct state across all 213 rows.** The queue holds 15 entries, is busy,
+and nothing is ever prepared. The card waits on a queue that never advances by a
+single tile. The ROM basis for the wait is confirmed too:
+`Level_TtlCardLoop` ends `tst.l (v_plc_buffer).w / bne.s Level_TtlCardLoop`
+(`docs/s1disasm/sonic.asm:2840-2841`) -- the card loops until the buffer empties.
+
+### The mechanism, measured rather than inferred
+
+`Sonic1PlcArmTiming.releaseArm` instrumented over the same run: **4,866 passes
+with nothing outstanding, and 214 consecutive blocks on a single handle** --
+`NEMESIS_PLC_QUEUE#14`, fingerprint `afaa752d…`. 214 blocks against 213 stalled
+rows. One job, never released, for the entire wait.
+
+Reverse-mapped against `ArtLoadCues`, that handle is **`PLC_GHZ` entry 0:
+source `0x03CB3C`, VRAM `0x0000`, 461 tiles** -- the returning level's main zone
+art.
+
+### The finding, and it inverts what I expected
+
+**That fingerprint appears zero times in all 242 recorded edges.** Not late, not
+in another segment -- absent from the entire run, which visits every zone. The
+ROM never arms this job through `RunPLC` anywhere in the recording, while the
+engine submits it and then blocks the title card on it forever.
+
+So the consequence I drew last round is **refuted**. I had suggested this might
+mean the capture could not support the segment boundary -- "the capture is
+correct and insufficient". It is not insufficient. The capture is correct and
+complete; the engine is arming work the hardware does not arm.
+
+### The next question, with its lead
+
+The ROM does queue the zone's PLC at level load -- `AddPLC` from the level
+header's first byte (`sonic.asm:2731-2733`), then `plcid_Main2` (`:2736-2737`).
+Yet the recorded first arm for `ghz2_2` is `PLC_Main` entry 0, not the 461-tile
+zone entry. Either the level header's PLC id is not `plcid_GHZ`, or that art
+reaches VRAM by a path that never touches the queue. `QuickPLC`
+(`sonic.asm:1519-1526`) is exactly such a path -- *"instead of adding entries to
+a queue to be processed later, this will decompress and transfer all entries
+immediately, blocking until it is done. Does not use or affect the queue."*
+Establishing which path the ROM uses for the 461-tile entry is the next step,
+and it decides whether the engine's submission is mistimed or spurious.
+
+**Not claimed:** which of those it is. The `QuickPLC` lead fits, and a fitting
+mechanism has been wrong three times today.
