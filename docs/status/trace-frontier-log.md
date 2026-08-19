@@ -90499,3 +90499,48 @@ reaches segment 6:
 **New frontier: segment 6 frame 118 `sidekick_y`, and the one-pixel
 `run_boundary.position.x` at the shared return boundary.** Segment 4 is unchanged
 at 292 camera-only errors.
+## 2026-08-19 -- Diagnostic: the tail carry is safe and inert; the traversal owns all seven regressions
+
+Base `3e98d9c20`, identical to the stored control. Diagnostic only, nothing
+landed. Full `-Ptrace-replay`, `-Dmse=off`, `runOrder=alphabetical`, reports
+cleared.
+
+The rejected change did two things at once: carry the interrupted loop's tail on
+a V-blank-only closure, **and** traverse `PRE_MAIN_LOOP` there so a recorded
+`pre_main_loop` edge has somewhere to be admitted. This run keeps the carry and
+drops the traversal, isolating them.
+
+| arm | red |
+|---|---|
+| control | **4** |
+| carry + traversal | **11** |
+| **carry only** | **4** |
+
+Broken by the carry alone: **none**. Fixed by the carry alone: **none**. And all
+seven regressions recover, individually rather than by count:
+
+    RECOVERED  TestS3kAizPrefixClosureContract
+    RECOVERED  TestS3kReplayReferenceClosureIntegration
+    RECOVERED  TestS1GhzMazeRoundTripChain
+    RECOVERED  TestS3kAizTraceReplay
+    RECOVERED  TestS3kCnzTraceReplay
+    RECOVERED  TestS3kMgzTraceReplay
+    RECOVERED  TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1
+
+**So the `PRE_MAIN_LOOP` traversal is solely responsible for every regression,
+and the tail carry is inert with respect to the whole suite.**
+
+That sharpens the separability answer rather than settling it in favour of the
+change. The halves separate cleanly by *blast radius* -- the carry is safe -- but
+the carry on its own changes nothing observable, because the thing that would
+make it observable is the traversal, and the traversal is what breaks the port's
+per-row ordering invariant. The conflict is therefore located precisely: it is
+not between the carry and the suite, it is between **the traversal and the
+per-row boundary sequence**.
+
+It also means the earlier three-arm run said nothing about whether native replay
+relies on the `LAG` category error. Those seven regressions were an artefact of
+the traversal, not evidence about native replay; with the traversal removed,
+native replay is byte-for-byte the control. **The category-error question remains
+untested**, and this run is the one that shows the previous run could not have
+answered it.
