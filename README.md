@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K frame-5766 divergence is a 119-frame timer standing in for a three-bit ROM gate
+  (`bugfix/ai-s3k-seg4-5766-r1`, merged 2026-08-19 -- diagnosis only, deliberately not landed).**
+  The reported one-pixel `sidekick_x` delta is a **lower bound**, per the rule this chain derived
+  earlier: both sides are byte-identical through frame 5765 and the gap reaches **23 px by 5799**. At
+  5766 the ROM applies `Tails_JumpHeight`'s `-$400` clamp (`skdisasm/sonic3k.asm:28592-28606`) and
+  the air drag that becomes eligible with it; the engine applies neither, because its Tails is still
+  holding jump. Tails' CPU input is Sonic's replayed 16 frames later (`loc_13DA6`, `:26683-26694`),
+  and Sonic released B at 5750 -- but `SidekickCpuController.update` returns at the
+  `controller2SignedLocked` guard from frame 5764, latching the last CPU-written jump hold. That lock
+  models `Obj_EndSignLanded`'s `st (Ctrl_2_locked).w` (`:176209-176218`) and its semantics are
+  **correct** -- `Tails_Control`'s three-way sign test at `loc_13830` (`:26195-26200`) is faithful --
+  but the **timing** is not: the fixture's own `control_lock_state` stream records `ctrl2_locked = 0`
+  for all 8,235 rows except 6964-6965, so **the engine locks roughly 1,200 frames early**. Root cause:
+  `S3kBossDefeatSignpostFlow.updateWaitFade` advances on a bare **119-frame timer**, where ROM
+  `loc_85CA4` (`:180495-180552`) requires **all three bits** of `$27(a0)` -- the music timer **and**
+  the Y camera-boundary ease **and** the X ease, loaded per boss by `sub_85D6A` (`:180565-180577`).
+  The engine models the first only. Nothing is landed because the real gate needs per-boss bounds and
+  all four camera eases routed through the shared defeat flow used by CNZ, ICZ2, MHZ2 and HCZ, and a
+  partial gate would be **a second fitted model on top of the first**.
+
 - **Confirmed: the engine clears `Current_Boss_ID` where the ROM never does, at seven S2 sites
   (`bugfix/ai-s2-boss-id-r1`, merged 2026-08-19 -- probe and source read, fix scoped not landed).**
   The byte is now a direct observation rather than a magnitude inference. Hooking the widening
