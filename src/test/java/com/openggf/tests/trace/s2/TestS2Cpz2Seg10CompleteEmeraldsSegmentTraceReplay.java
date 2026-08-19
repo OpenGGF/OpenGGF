@@ -20,26 +20,47 @@ import java.nio.file.Path;
  * surfaces only as "segment 15 lost production ownership before source
  * closure" with no frame and no field.
  *
- * <p><b>Status at the commit that added it (landed red, deliberately).</b>
- * 15202 errors, 0 bootstrap errors, over 7088 rows. The first 393 rows match
- * exactly on every physics field, so the segment's seeded entry state is
- * sound; the first physics divergence is frame 394, where Sonic is running
- * right down the flattening CPZ act 2 slope at {@code x=0x142D}: the ROM
- * reports {@code y=0x05DC} and {@code angle=0x0A}, the engine {@code y=0x05DB}
- * and {@code angle=0x0C}. Both come out of the same decision --
- * {@code AnglePos} probes the floor under Sonic's right edge then his left
- * edge and {@code Sonic_Angle} keeps whichever distance is smaller, taking the
- * left (Secondary) angle on a tie (docs/s2disasm/s2.asm:43048-43077,
- * 43120-43146; the probe itself is {@code FindFloor}, s2.asm:43413-43470) --
- * so the engine is resolving one of the two sensors a pixel higher and
- * inheriting that sensor's angle. Note the ROM's angle run here is
- * {@code 0E, 0E, 0E, 0A, 0A, 08 ...} and never passes through {@code 0C}.
- * Twelve frames later the ROM leaves the ground ({@code air} 0 -> 1, frames
- * 406-416) and the engine stays attached, and the run diverges from there.
- * That cascade is what kills the chain: the chain's walk reaches BK2 cursor
- * 83819, this segment's row 1477, before the player dies and the engine
- * reloads the act. Reported, not fixed -- the floor-probe divergence is not
- * root-caused and no engine change belongs in a coverage lane.
+ * <p><b>Status (landed red, deliberately).</b> 15202 errors, 0 bootstrap
+ * errors, over 7088 rows. The first 393 rows match exactly on every physics
+ * field, so the segment's seeded entry state is sound; the first physics
+ * divergence is frame 394, where Sonic is running right down the flattening
+ * CPZ act 2 slope at {@code x=0x142D}: the ROM reports {@code y=0x05DC} and
+ * {@code angle=0x0A}, the engine {@code y=0x05DB} and {@code angle=0x0C}.
+ *
+ * <p><b>Root cause (measured, not a floor-probe defect).</b> The two probes
+ * and the {@code Sonic_Angle} min-distance/tie rules (s2.asm:43048-43077,
+ * 43120-43146; {@code FindFloor} at s2.asm:43413-43470) are modelled
+ * correctly, and the engine's chunk word, collision-index entry, curve angle
+ * and height column at the divergent sensor all match the ROM data exactly.
+ * What differs is which of the two per-zone 16x16 collision index arrays the
+ * probe reads. {@code AnglePos} selects {@code Secondary_Collision} and passes
+ * {@code d5 = top_solid_bit} whenever {@code top_solid_bit != $C}
+ * (s2.asm:43002-43011); the engine has the player on the primary path
+ * ({@code $C}) for this whole segment. Replaying {@code FindFloor} against the
+ * ROM's CPZ layout, 128x128 mappings and both CPZ collision index arrays over
+ * every grounded, object-free frame of this segment: on the 57 frames where
+ * the two paths predict different results, {@code top_solid_bit = $E} plus
+ * {@code Secondary_Collision} reproduces the recorded {@code y} and
+ * {@code angle} on 43 and the primary path on 0. Frame 394 is simply the first
+ * frame at which the two arrays disagree. Chunk 265 at
+ * {@code (0x142,0x5E)} carries primary solidity only ({@code word=0x3509}), so
+ * on path 2 the probe falls through it to the full-height chunk below and
+ * reports distance 1 with angle {@code 0x0A} -- exactly the recorded row.
+ *
+ * <p><b>Why the engine is on the wrong path.</b> {@code Obj79_SaveData} copies
+ * {@code MainCharacter+top_solid_bit} into {@code Saved_Solid_bits} when the
+ * star post is hit and {@code Obj79_LoadData} restores it when the level
+ * reloads on the special-stage return (s2.asm:44740, 44787), because
+ * {@code Obj01_Init} only writes {@code $C} when {@code Last_star_pole_hit}
+ * is zero (s2.asm:36192-36199). The recorded run therefore resumes CPZ act 2
+ * already on path 2. This lane cannot reconstruct that: it seeds a fresh
+ * player from the trace's first row, and the v5 physics/aux schema records no
+ * {@code top_solid_bit} or {@code Saved_Solid_bits} field, so the collision
+ * path is unobservable at segment entry. The lane stays red by construction
+ * until either that state is derivable or the chain is used instead; the
+ * chain does play the star post, so the fix that matters there is upstream --
+ * the CPZ act 2 plane switcher that should leave the player on path 2 before
+ * the star post is hit.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

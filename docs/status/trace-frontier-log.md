@@ -83218,3 +83218,49 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
 - Correction to the record: `TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay`
   is GREEN at `ad3352ed4`. Its class comment still describes the 12927-error
   state it was landed in and is stale.
+
+## S2 CPZ act 2 segment 10 — root cause: wrong collision path, not a floor probe
+
+- Worktree branched from `develop` at `7b3c27aba`; JDK 21.
+- Command: `mvn -Ptrace-segments
+  -Dtest=TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay
+  -Dsonic2.rom.path=<s2 rom> test`. Result: 1 test, 1 red, 15202 errors,
+  0 bootstrap errors, 7088 rows. First *physics* error frame 394 (`y` rom
+  `0x05DC` engine `0x05DB`, `angle` rom `0x0A` engine `0x0C`); the report's
+  literal first error is frame 52 `queue.s2_nemesis_plc.busy`, a separate
+  dynamic-art programme that accounts for most of the 15202.
+- **The brief's framing is refuted.** This is not a ground-sensor or
+  angle-resolution defect. Instrumented at frame 394 the engine reads chunk
+  word `0x3509` at `(0x142,0x5E)`, collision id 64, curve angle `0xF4`,
+  height column 11 = 1. Decompressing `level/layout/CPZ_2.kos`,
+  `mappings/128x128/CPZ_DEZ.kos` and both CPZ 16x16 collision index arrays
+  from `docs/s2disasm/` gives byte-identical values, and the engine's
+  min-distance/tie selection matches `Sonic_Angle`
+  (`s2.asm:43120-43146`) exactly.
+- **Cause.** `AnglePos` points `Collision_addr` at `Secondary_Collision` and
+  passes `d5 = top_solid_bit` whenever `top_solid_bit != $C`
+  (`s2.asm:43002-43011`). Re-running `FindFloor` (`s2.asm:43413-43470`)
+  against the ROM data for every grounded, object-free frame of the segment:
+  on the 57 frames where the two collision paths predict different results,
+  `top_solid_bit = $E` + `Secondary_Collision` reproduces the recorded `y` and
+  `angle` on 43 and path 1 on 0. Frame 394 is the first frame the arrays
+  disagree. Chunk 265 has primary solidity only, so path 2 falls through it to
+  the full-height chunk below: distance 1, angle `0x0A` — the recorded row.
+- **Why the recorded run is on path 2.** `Obj79_SaveData` copies
+  `MainCharacter+top_solid_bit` to `Saved_Solid_bits` at the star post and
+  `Obj79_LoadData` restores it on the special-stage return
+  (`s2.asm:44740`, `44787`); `Obj01_Init` writes `$C` only when
+  `Last_star_pole_hit` is zero (`s2.asm:36192-36199`). The engine already has
+  the equivalent machinery (`CheckpointState.savedTopSolidBit`,
+  `LevelManager` checkpoint restore, `ObjectManager` plane switchers), so the
+  chain-side question is which CPZ act 2 plane switcher fails to leave the
+  player on path 2 before the star post.
+- **Wall for the standalone lane.** It seeds a fresh player from the trace's
+  first row, and the v5 physics/aux schema records no `top_solid_bit` /
+  `Saved_Solid_bits` field, so the collision path is unobservable at segment
+  entry. The lane cannot be made green without either recording that state or
+  deriving it — and deriving it by picking `$E` for this fixture would be a
+  fitted constant. Landed nothing in `src/main/`; the lane's class comment now
+  records the measured cause instead of the refuted floor-probe hypothesis.
+- Chain frontier before and after: unchanged — `segment 15 lost production
+  ownership before source closure (romZone=13, act=1, BK2 cursor=83819)`.
