@@ -84567,3 +84567,54 @@ The rest of the correction stands: the red set is the same four in every run
 `**/tests/trace/**` includes select no guard class in package `com.openggf.trace`,
 so guards contribute to neither count and must be run by explicit name.
 
+
+## 2026-08-19 — S2 CPZ2 false push: root cause found, and the minimal ROM-faithful fix is load-bearing
+
+Base `5e1456744`. Diagnosis plus one **rejected** experiment. No engine change
+landed; the frontier did not move.
+
+### Root cause, from the PC-execute probe
+
+The probe (`tools/bizhawk/probes/s2_cpz2_push_order_probe.lua`) shows every frame
+84063-84073 executing the identical sequence against `MainCharacter`:
+
+```
+Sonic_Animate_entry:49 -> SAnim_Do:49 -> SolidObject_LeftRight:49
+  -> SolidObject_AtEdge:49 -> SolidObject_LeftRight:69
+  -> SolidObject_SideAir:69 -> Solid_NotPushing:69
+```
+
+`SolidObject` runs **twice per frame** against the player. Pass 1 reaches
+`SolidObject_AtEdge` and sets the bit (`0x49 -> 0x69`); pass 2 is a different
+object, takes the `SideAir` path into `Solid_NotPushing`, and clears it again.
+The recorded `0x49` is therefore not "no push happened" — it is set and cleared
+*within one frame*, which is exactly why no V-blank-sampled model could
+reconcile the player's clear bit with the object's set bit.
+
+### The engine defect
+
+`Solid_NotPushing` clears two different things and only one is per-object:
+`bclr d4,status(a0)` clears that object's own p1/p2 bit, while
+`bclr #status.player.pushing,status(a1)` clears the **player's single global
+flag unconditionally**, whoever is running (s2.asm:35484-35488; identically in
+S1, `docs/s1disasm/_incObj/sub SolidObject.asm`:261-263). The engine gates the
+player-side clear on `clearObjectPushingBit`, which only succeeds for the
+instance that set it, so a second object's not-pushing verdict cannot clear a
+flag the first object set.
+
+### The minimal fix is correct in isolation and makes things worse
+
+Making the player-side clear unconditional in the `contact.touchSide()` branch,
+keeping `clearObjectPushingBit` for the object-side bookkeeping, **closes frame
+1725** — the mapping-frame divergence there disappears and the first animation
+error moves to 1733. It also takes `TestS2Cpz2Seg10CompleteEmeraldsSegmentTrace
+Replay` from **2491 errors to 5272**, with new animation divergences at 1733,
+2262 and 2263 that did not exist before.
+
+That is the documented "removing a provably-wrong behaviour can make things
+worse" shape: the per-instance gate is load-bearing and something else depends
+on it. Per the skill, the pair has to come out together and the write-up must
+name the pair so the next agent does not retry the removal in isolation — so:
+**do not re-apply the unconditional clear on its own; it has been measured at
+5272.** The open question is what the gate was propping up, and whether that is
+a second defect or the same defect seen from the other side.

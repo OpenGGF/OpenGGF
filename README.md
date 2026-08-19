@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`Solid_NotPushing` clears the player's flag unconditionally; the engine gates it per-instance
+  (`bugfix/ai-s2-push-clear-r1`, merged 2026-08-19 -- root cause found, fix measured and rejected).**
+  A PC-execute probe run over the recorded movie shows `SolidObject` executing **twice per frame**
+  against MainCharacter for BK2 frames 84063-84073, identically each time:
+  `Sonic_Animate_entry:49 -> SAnim_Do:49 -> SolidObject_LeftRight:49 -> SolidObject_AtEdge:49 ->
+  SolidObject_LeftRight:69 -> SolidObject_SideAir:69 -> Solid_NotPushing:69`. Pass 1 sets the push
+  bit (`0x49` -> `0x69`); pass 2, a **different object**, takes the `SideAir` path to
+  `Solid_NotPushing` and clears it again. So the recorded `0x49` is *set and cleared within one
+  frame*, not "never pushed" -- which is why no frame-sampled model could reconcile the player's
+  clear bit with the object's set bit. `Solid_NotPushing` clears **two** things and only one is
+  per-object: `bclr d4,status(a0)` clears that object's own p1/p2 bit, while
+  `bclr #status.player.pushing,status(a1)` clears the player's single global flag **unconditionally,
+  whoever is running** (`s2disasm/s2.asm:35484-35488`; identically in S1 at
+  `s1disasm/_incObj/sub SolidObject.asm:261-263`). The engine gates the player-side clear on
+  `clearObjectPushingBit`, which by construction only succeeds for the instance that *set* it, so a
+  second object's not-pushing verdict can never clear the first object's flag. **The minimal
+  ROM-faithful fix was measured and rejected:** making the player-side clear unconditional closes
+  frame 1725 and moves the first animation error to 1733, but takes the seg10 lane from 2491 errors
+  to **5272**, with new divergences at 1733, 2262 and 2263. The per-instance gate is load-bearing;
+  the number is recorded so nobody retries the removal blind.
+
 - **Structural guards are gated by CI, and the eleven that had gone silently red are green
   (`bugfix/ai-guard-coverage-r1` + `bugfix/ai-guard-triage-r2`, merged 2026-08-19).** The
   `trace-replay` profile's surefire includes are `**/tests/trace/**`, but several guards live in
