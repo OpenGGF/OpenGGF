@@ -134,6 +134,18 @@ half-landed change, and require the blast radius to be measured before anything 
 - **Clear `target/surefire-reports` before every run.** A stale XML counts as a pass; a
   truncated run reports *fewer* red. Give the expected total and say that below it is truncated
   and above it is stale.
+- **Wait on a terminal marker the run emits, never on the absence of a process.** Polling for
+  "no surefire process running" fires within seconds, because Maven spends the first minutes in
+  `testCompile` before any surefire process exists — so "not started yet" is indistinguishable
+  from "finished". A round that trusted it would have set-diffed a directory of stale XML from
+  the previous run and reported it as a clean result. Poll the build log for
+  `BUILD SUCCESS|BUILD FAILURE`, which cannot appear before the run starts. This is the
+  stale-XML trap above arriving from a different direction, and clearing
+  `target/surefire-reports` does not protect against it — an early-firing wait reads the
+  *current* run's partial output as final.
+- **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
+  say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
+  regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
 - **Trace-report filenames collide** between standalone and per-segment classes, so a per-class
   `errorCount` read from a full sweep is not attributable. A class's own surefire assertion
   message is immune — prefer it.
