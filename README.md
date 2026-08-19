@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 fixture must land last, not first -- it regresses the chain diagnostic
+  (`bugfix/ai-s1-fixture-land-r1`, merged 2026-08-19 -- measurement only, sequencing corrected).**
+  The admission double-ownership that originally held the re-recorded fixture **is** gone: both
+  `TestS1CompleteEmeraldVisualRun` cases now fail at teardown on unmatched recorded hardware
+  completions rather than on the admission exception. But they still fail -- 790/4 control against
+  790/6 with the fixture. Worse, a **same-worktree** control shows the fixture changes
+  `TestS1CompleteEmeraldRunChain`'s failure **mode**: without it the chain fails on three comparison
+  axes at `syz2` row 70; with it the chain dies with an `IllegalStateException` at the first segment
+  handoff over the returning level's own pending submission. **The stream replaces a usable
+  diagnostic with a hard error.** So the plan to land the fixture first -- on the reasoning that it
+  makes the other work observable -- is inverted: `rowsConsumed must be 0 or 1` is the critical path,
+  and the fixture should land **last**, when it costs nothing. Measured for the record: the authority
+  predicate fix alone closes **zero** of the seven bridge edges; combined with the results-loop
+  boundary traversal it closes **all seven** and every queue comparison error, then trips the
+  `rowsConsumed` invariant. The rebased fixture is preserved unlanded on
+  `bugfix/ai-s1-rerecord-fixture-r1`.
+
 - **The Roll slip appears exactly where the ordering first becomes observable
   (`bugfix/ai-s2-roll-order-r1`, merged 2026-08-19 -- fixture and disassembly only).** One column
   answers the objection that a slip appearing at row 6601 after a matching stretch means something

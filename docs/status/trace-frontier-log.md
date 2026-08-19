@@ -86712,6 +86712,7 @@ register with the citation, alongside the CPZ2 push gate, unless the ramps turn
 out to share the mechanism -- and they cannot, because the boss is gone by then.
 
 ## 2026-08-19 -- Which authority owns a results row: the predicate, not the branch
+## 2026-08-19 -- The S1 fixture cannot go first: re-measured on current develop
 
 Commands:
 
@@ -86996,3 +86997,68 @@ selecting a frame**. That is a real per-game difference already encoded in the
 engine, so a change that unifies the two orderings would be wrong for one of
 them. Roll is shared: S1 and S3K need explicit measurement, not inference from
 the S2 slice.
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldRunChain" test   # same worktree, with and without the fixture
+```
+
+Branch `bugfix/ai-s1-fixture-land-r1`, based on `develop` at `34c95928e`. The
+re-recorded fixture is rebased and pushed as `29653967a` on
+`bugfix/ai-s1-rerecord-fixture-r1`, **not landed**.
+
+### The original blocker is gone; a different one is not
+
+`bugfix/ai-s1-rerecord-fixture-r1` was held because it introduced two
+`TestS1CompleteEmeraldVisualRun` regressions, traced to admission
+double-ownership at `GameplayModeContext.activateRecordedHardwareAdmission`.
+That is fixed and merged, and the fixture had never been re-measured since.
+
+Re-measured on `34c95928e` against a control at the same commit: **790 / 4
+control, 790 / 6 with the fixture**, both-way set-diff showing the same two
+`TestS1CompleteEmeraldVisualRun` cases as new red.
+
+The failure *kind* has changed, which is the part that matters: `fail=4 err=2`
+rather than `fail=6`. Neither case throws the admission exception any more —
+they fail at teardown on `unmatched recorded hardware completions`, the
+bridge's seven unconsumed edges. The lifecycle fix did its job; the fixture is
+now held by the arming gap instead.
+
+### The fixture makes the S1 chain worse, not merely unmoved
+
+Measured with a **same-worktree** control (the fixture removed from the tree in
+place, not a second checkout), because this is a failure-mode change:
+
+| | `TestS1CompleteEmeraldRunChain` |
+|---|---|
+| without fixture | `AssertionError`, 3 axes, first at **syz2 row 70**, `queue.s1_nemesis_plc.remaining_work` |
+| with fixture | `IllegalStateException`: *non-exportable pending hardware submission at segment end: NEMESIS_PLC_QUEUE#7* |
+
+So the stream does not just fail to move the chain -- it replaces a detailed
+three-axis comparison failure deep in the run with a hard error at the **first
+segment handoff**, destroying the diagnostic that lane has been working from.
+`#7`'s fingerprint `3224e355...` is `ghz2_2`'s first entry, the returning
+level's own load: the same submission the bridge never releases.
+
+### What the authority fix closes, measured
+
+- **Authority (predicate) fix alone:** closes **zero** of the seven bridge
+  edges. Unlatching a row cannot help while nothing is submitted.
+- **Authority fix + the results-loop boundary traversal:** closes **all seven**,
+  and every `queue.s1_nemesis_plc.*` comparison error with them -- then trips the
+  coordinator invariant `rowsConsumed must be 0 or 1`.
+
+### Conclusion: the sequencing is inverted
+
+Landing the fixture first does not make the authority fix observable; it makes
+the chain's existing evidence unreadable and adds two red. The critical path is
+`rowsConsumed`, not the fixture. The order that works is: fix row consumption in
+the results loop, land it with the authority fix (which is inert alone), and
+land the fixture last, when the seven edges are already consumed and it costs
+nothing.
+
+### Method note: a rebase that silently reverted two unrelated files
+
+Rebasing the fixture onto current `develop` produced a commit that reverted 20
+lines of `README.md` and 7 of `docs/agent-workflow/briefing-trace-rounds.md` --
+neither touched by the original commit. Caught by diffing the rebased commit
+against `develop` restricted to non-fixture paths. **Diff a rebased commit
+against its new base by path class before trusting it**; the conflict markers
+only showed one file.
