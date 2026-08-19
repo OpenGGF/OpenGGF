@@ -89340,3 +89340,113 @@ has too few. The second post-bounce kick (ROM 5595, engine 5606) remains the ope
 
 **Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
 34,112 errors.**
+
+## 2026-08-19 -- Merge procedure for stale fixture branches, and the check that does NOT work
+
+Recorded before the work it protects, because it decays out of context otherwise.
+Measured by reproducing the rebase of the held S1 fixture commit onto develop in
+a throwaway worktree.
+
+**The hazard is hunk asymmetry, not a missing conflict marker.** Rebasing a
+long-stale branch that edits shared narrative docs makes git flag every affected
+file -- `README.md`, `docs/agent-workflow/briefing-trace-rounds.md` and this log
+were all flagged. The danger is that each is a *single* conflict region whose
+develop side is one to two orders of magnitude larger than the incoming side:
+
+| file | HEAD (develop) side | incoming side |
+|---|---|---|
+| `README.md` | 646 lines | 5 |
+| `docs/agent-workflow/briefing-trace-rounds.md` | 109 lines | 0 |
+| `docs/status/trace-frontier-log.md` | 2353 lines | 98 |
+
+A "take theirs" resolution -- the reflex when the incoming commit is the one you
+are landing -- silently discards the develop side. The briefing doc is the
+sharpest case: its incoming side is **empty**, so taking theirs deletes 109 lines
+and adds nothing. That is a sufficient explanation for a previously observed
+silent revert without requiring git to have malfunctioned.
+
+**Resolution: append both sides, never take theirs.** Verified on all three
+files -- concatenating the HEAD side then the incoming side leaves **zero** lines
+of `origin/develop` absent from the result.
+
+**The check that does not work.** "Diff the rebased commit against its new base
+restricted to paths the change should not touch, and expect empty" **passes on a
+bad resolution**, because `README.md` is a path such a change legitimately does
+touch -- the merge policy requires a release-log entry there. A check that is
+blind on precisely the files at risk is worse than no check, because it produces
+confidence.
+
+**The check that does work:** assert that no line present in `origin/develop` is
+missing after the resolution, per file, by multiset difference against
+`git show origin/develop:<file>`. Note this is a discovery tool needing
+adjudication rather than a verdict -- a change that intends to delete a comment
+or a test will legitimately flag those lines. Look at what it reports; do not
+expect zero unconditionally.
+
+## 2026-08-19 -- Segments 12/15 root-caused: the loop tail is consumed after the row it belongs to
+
+Base `03ea96bcb`. `mvn -Pguards -Dmse=off -Dsurefire.runOrder=alphabetical
+-Dtest=TestS1CompleteEmeraldRunChain`. Segment 12 = `mz2_3` (40 errors, first
+non-camera mismatch f101), segment 15 = `mz3_2` (6 errors, f102), both on
+`queue.s1_nemesis_plc.prepared` rom=true engine=false. **Nothing landed for this
+yet; findings only.**
+
+**It is neither late nor never.** Instrumenting `prepareHead`,
+`servicePatterns`, `serviceVBlank`, `prepareAfterLoop` and the diagnostics
+sample with a per-row per-zone stamp gives, for MZ act 3:
+
+```
+row101 servicePatterns 3->0             entry completes; no prepareAfterLoop this row
+row102 SAMPLE active=null queued=2      the comparison samples the gap
+row102 serviceVBlank LAG
+row102 prepareAfterLoop ORDINARY_LEVEL  the held tail, consumed here
+row102 prepareHead -> active=3c040/rem=18
+```
+
+The engine holds the correct entry and promotes it with the correct pattern
+count. The comparison sample simply falls between completion and promotion.
+
+**The ROM says that instant cannot exist.** `ProcessPLC` decrements
+`v_plc_patternsleft` and at zero branches to `ProcessPLC_ShiftCue`
+(`docs/s1disasm/sonic.asm:1477`), which shifts the PLC buffer and returns,
+losing the rest of that frame's tile budget (`:1494-1500`). `RunPLC` then starts
+the next entry in the **same frame's main loop**, storing the section count
+before `NemDec_BuildCodeTable` on the shipped `FixBugs = 0` path
+(`:1379-1398`). Shift in V-blank, promote in the same frame's main loop, so a
+start-of-frame sample always sees a promoted, unserviced entry.
+
+**The owner is the lifecycle coordinator, not the PLC queue.**
+`PlcFrameLifecycleCoordinator.prepareAfterLoop` (`:512-535`) sets
+`heldLoopTailPreparation` instead of running it while
+`representedIterationDefersLoopTailPreparation` is set, and the held tail is
+consumed on the *next* claim (`:471-478`) -- after that next row's comparison
+sample. The deferral only bites on a row preceding a lag pair, which is why
+steady-state rows 104-108 match ROM value-for-value, including the 3-tile
+budget of `ProcessPLC_3Tiles` (`:1443-1450`). The PLC service and its queue are
+faithful here; do not re-investigate them.
+
+**The two segments are not symmetric, and the error counts say so.** Counting
+gap samples directly:
+- segment 15: **2** gap samples x 3 fields = 6 errors = its entire error count.
+  Fully explained by this mechanism.
+- segment 12: **1** gap sample x 3 fields = 3 errors at f101. Its other ~37 are a
+  **separate axis** -- `player_mapping_frame` rom=0x0001 eng=0x003A and
+  `player_animation_id` rom=0x0005 eng=0x0006 around f601-603, outside the queue
+  window and not queue-shaped.
+
+They are also not merely "comparable structural points": both are the same two
+PLC entries (`7e44b415`, `f322185a`) in the same MZ art load, one frame apart
+because MZ3's entry is 24 patterns to MZ2's 21.
+
+**Open question that decides the fix shape,** deliberately not guessed: what
+`RunPLC` does across a genuine `Vint_Lag` frame. Consuming the held preparation
+at row close is a sample-visibility change; not holding it for a service with a
+preparation boundary on the completing row changes when engine work happens.
+
+**Method note.** The first instrumentation attempt wired the row stamp into
+`TraceStructuralRowComparator` and reported an empty queue and a 9-tile budget
+everywhere -- flatly contradicting the report. The segment-physics axis runs
+through `LiveTraceComparator`; the structural comparator drives the presentation
+bridge. Two implementations of one contract, and the probe disagreeing with the
+report is what exposed it.
+
