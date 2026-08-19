@@ -92038,3 +92038,71 @@ The lead's suggestion to grep this seam for other comment/code disagreements, af
 ### Sweeps
 
 None. Diagnostic only; the tree is unchanged from `5312ef676`.
+
+## 2026-08-20 — S2 stage_exit seam: the `vblaCounter` rebase is legitimate, and the seam's clock is aligned by the TEST harness
+
+Base `1178c6941`, worktree `s2-titlecard-seam-r1`, JDK 21. **Diagnostic only. No fix
+attempted; the tree is identical to `1178c6941`.**
+
+### RETRACTED — my own "the counter should not jump" lead
+
+The 4290 -> 10108 jump is **not** a defect and needs no fix. `TraceRunVblankClock`
+(`src/main/java/com/openggf/trace/replay/runs/TraceRunVblankClock.java:11-15`) documents
+exactly what it is: *"Carries the ROM-visible object VBlank clock across shortened run
+transitions. Targets derive only from the production source clock and manifest/BK2 row
+distances; no comparison frame value is read into gameplay state."* The committed run's
+segments are **not contiguous in movie time**. `V_int_run_count` is free-running, so it
+really does advance across the rows the run skips; the engine cannot tick it for rows it
+never plays, so it projects the counter forward by the manifest's row distance. A jump is the
+correct behaviour for a shortened run, and the previous entry's suggestion that the rebase
+might be the defect is withdrawn.
+
+### The seed's owner and its ordering, measured
+
+Probe on `initVblaCounter`, `advanceVblaCounter` and every object pass, with caller frames,
+across the segment-2 entry:
+
+```
+3869 cur=10334 STEP mode=TITLE_CARD
+3876 cur=10334   OBJPASS vbla=4290
+3877 cur=10334   TICK  4290 -> 4291   ObjectManager.update:640
+3878 cur=10334   SEED  4291 -> 10108  AbstractRunChainTest.alignUncomparedInteriorReturnVblank:3052
+3879 cur=10335 STEP mode=LEVEL
+3880 cur=10335   OBJPASS vbla=10108
+```
+
+Two facts, both new and both load-bearing for anyone who touches this seam:
+
+1. **The seed is applied by the TEST harness, not by production code** —
+   `AbstractRunChainTest.alignUncomparedInteriorReturnVblank`
+   (`src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java:3042-3053`), which
+   computes `sourceVblank + requiredTicks`. So the level-boundary clock value in the chain
+   test is a chain-harness property at this boundary. Any production change to the seam's row
+   layout is interacting with a test-side alignment that assumes the current layout.
+2. **The seed lands after the release row's tick and before the first `LEVEL` step**, and it
+   overwrites that tick outright. The release row's own tick is therefore discarded in the
+   control arm — which is why the control's release-row pass carries the stale title-card
+   value 4290 and the level's first pass carries the seeded 10108.
+
+### The corrected statement of the divergence
+
+The seed value is identical in both arms; **what differs is which movie row the level's first
+object pass lands on.** Control runs it at cursor 10335; the split runs it at cursor 10334,
+one BK2 row earlier, because the title-card rows do not advance the cursor and removing the
+fall-through moves the level's first pass into the earlier host iteration. From there every
+level pass sits one row ahead of the recording, and the first `vblaCounter`-gated decision to
+notice is the one that forks `sidekick_y` at segment-2 frame 1132.
+
+So the previous entry's "+1 on `vblaCounter`" and this entry's "one movie row early" are the
+same fact stated on the two different clocks the CLAUDE.md gotcha warns about. The actionable
+form is the row one: **the level's first object pass must land on the movie row the recording
+anchors it to**, and the count of object passes before it is not what decides that.
+
+### Not done
+
+The grep for further comment/code disagreements at this seam, after `updateExitBackground`,
+is still outstanding.
+
+### Sweeps
+
+None. Diagnostic only; the tree is unchanged from `1178c6941`.
