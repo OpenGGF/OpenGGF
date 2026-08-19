@@ -189,6 +189,13 @@ half-landed change, and require the blast radius to be measured before anything 
   feel confirmed, and it was adopted into the record and into the reviewer's vocabulary before the
   disassembly was read. When a number factors neatly, check whether a different mechanism produces
   the same number before treating the factorisation as support.
+- **An exception thrown while handling a failure replaces the failure.** A round's real diagnostic
+  -- a coordinator invariant violation -- never reached surefire, because `failRun`'s own cleanup
+  threw `PendingRecordedSubmissionsException` over one leftover submission and that was reported
+  instead. The round spent time on the wrong blocker. Anything routing through a failure handler
+  must log its diagnostic **before** cleanup runs, and when a reported error looks like it belongs
+  to teardown rather than to the assertion, suspect that it does. Same family as the empty-probe and
+  stale-stream traps above: **the reporting channel misleading you about the thing being reported.**
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
