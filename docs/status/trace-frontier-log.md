@@ -89340,3 +89340,83 @@ has too few. The second post-bounce kick (ROM 5595, engine 5606) remains the ope
 
 **Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
 34,112 errors.**
+
+## 2026-08-19 — Segment 4 closed: the engine zeroed the signpost's `x_vel` on landing and the ROM does not
+
+Branch `bugfix/ai-s3k-signpost-gate-r1` off `origin/develop` (`dd4aa0ec6`). One-line-class
+fix; **segment 4 goes 34,112 -> 292 errors and now completes**, and the chain drives past it.
+
+### Closing my own blind spot first
+
+The previous entry warned that a direction-change detector cannot see kicks landed while
+the signpost is still rising, so "15 kicks" was a floor. The fix for that is in the fixture,
+not in a probe: `Obj_EndSignFall` adds `#$C` to `y_vel` every frame
+(`docs/skdisasm/sonic3k.asm:176155-176160`), so the recorded y deltas are **monotonically
+increasing** and any frame whose delta jumps upward by 2 or more is a fresh kick. (A
+threshold of 1 is too tight: sub-pixel velocity quantises to alternating -1/-2 deltas.)
+
+Re-counted that way the ROM has **17** upward events between the first landing and the
+second: the hidden-monitor bounce at 5451, fifteen player kicks, and the landing at 6899.
+The kick at **5628** is the one the old detector missed — 33 frames after 5595, which is
+exactly the `$20` cooldown plus the resuming check, so the ROM's player bumps at the
+earliest legal frame.
+
+### The cause
+
+Instrumenting the `x_vel` writer directly, as asked, confirmed the engine made exactly five
+writes where the ROM makes seventeen — no hidden writes, so the count was real. Diffing the
+engine's signpost against the fixture's `object_state` frame by frame then localised it to
+one axis and one frame:
+
+```
+f=5448  ENG lands            ROM lands 5449
+f=5450  ROM x=11E3  ENG x=11E3   dX = 0
+f=5451  ROM x=11E4  ENG x=11E3   dX = -1     <- ROM drifts, engine does not
+f=5470  ROM x=11F7  ENG x=11E3   dX = -20
+f=5595  ROM x=11BD  ENG x=11E3   dX = +38    <- player at 11BA: in ROM's box, outside engine's
+```
+
+`dY` stayed within 1 px throughout. The engine's signpost was pinned at `x = 11E3` for
+seventy frames after the hidden-monitor bounce while the ROM's drifted, and by the time the
+player's next bump-box test ran the two were ~40 px apart — outside the `[x-$20, x+$20)`
+window. Every later kick then failed for the same reason.
+
+`loc_838AA` (`docs/skdisasm/sonic3k.asm:176191-176194`) is the entire ROM landing branch:
+`move.b #4,routine(a0) / bset #0,$38(a0) / move.w #$40,$2E(a0)`. It touches **neither
+velocity nor either sub-pixel**. `loc_838D6` clears the velocities 64 frames later on the
+results path (`:176209-176218`), which this class already did at that transition. The
+engine additionally cleared `xVel`, `yVel`, `subX` and `subY` at the landing itself — and
+`loc_838FA`'s re-bounce (`:176222-176227`) writes only `$20(a0)` and `y_vel`, so the ROM's
+signpost carries its **pre-landing `x_vel`** back into the air. Zeroing it removed exactly
+the state the re-bounce depends on.
+
+### Result
+
+| | before | after |
+|---|---|---|
+| segment 4 `errorCount` | 34,112 | **292** |
+| segment 4 first non-camera mismatch | frame 5766 `sidekick_x` | **none; `complete: true`** |
+| second signpost landing | engine 5698 vs ROM 6899 | engine **6898** vs ROM 6899 |
+| chain stop | inside segment 4 | **`stage_exit` boundary at bk2 frame 35726** |
+
+Engine kicks now land at 5519, 5594, 5627, 5739, 5808, 5934, 6024, 6104, 6186, 6272, 6356,
+6446, 6576, 6661, 6753 against the ROM's 5520, 5595, 5628, 5740, 5809, 5935, 6025, 6105,
+6187, 6273, 6357, 6447, 6577, 6662, 6754 — every one within a frame.
+
+**New frontier: the segment 4 -> 5 -> 6 boundary.** `awaitBoundary` exceeds its 40,650-step
+cap for `entry_kind 'stage_exit'` at `mode_change_bk2_frame=35726`, with two unmatched
+recorded hardware completions at raw frames 5962/5963
+(`KOS_DECOMPRESSION_QUEUE#91`, `KOS_MODULE_QUEUE#60`). Segment 4's residual 292 errors are
+camera-only.
+
+### Verification
+
+Control worktree at the same base `dd4aa0ec6`, reports cleared before each run: 786 tests
+and 4 red on both sides, both-way red-set diff empty. `mvn -Pguards test` 499 / 0. S3K
+keep-green set plus `TestS3kSignpostInstance` 120 / 0. No constant was introduced; the
+change deletes four assignments the ROM does not make.
+
+The shared defeat flow also serves CNZ, ICZ2, MHZ2 and HCZ; the sweep covers whatever
+fixtures exist for them and none moved, but no fixture is known to exercise a
+hidden-monitor re-bounce outside AIZ, so treat that specific path as **unmeasured** there
+rather than verified.

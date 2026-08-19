@@ -367,10 +367,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                     resultsTimerCatchUpEntries,
                     preservesPostObjectResultDispatchBoundary,
                     bumpedFromBelow);
-            yVel = 0;
-            xVel = 0;
-            subX = 0;
-            subY = 0;
+            // ROM loc_838AA (docs/skdisasm/sonic3k.asm:176191-176194) is the whole
+            // landing branch: it writes routine, $38 bit 0 and the $40 timer, and
+            // touches NEITHER velocity nor either sub-pixel. The velocities are
+            // cleared only later, by loc_838D6 when the post-land timer expires
+            // (:176209-176218) -- which this class already does at that transition.
+            //
+            // Clearing x_vel here broke the hidden-monitor re-bounce. loc_838FA
+            // (:176222-176227) resumes routine 2 with `move.b #$20,$20(a0)` and
+            // `move.w #-$200,y_vel(a0)` only, so the signpost carries its
+            // PRE-LANDING x_vel back into the air and keeps drifting sideways.
+            // With x_vel zeroed the engine's signpost hung motionless in x after
+            // the bounce while the ROM's drifted, and the two were ~40px apart by
+            // the time the player's next bump-box test ran.
             state = State.LANDED;
             landingSparklePending = preservesPostLandingSparkleGate
                     && isRomSparkleFrame(vIntRunCount + 1);
