@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The wall is inside the engine's scan range and simply not detected; plane selection is the
+  candidate (`bugfix/ai-s2-wall-scan-r1`, merged 2026-08-19 -- fixture only).** The wall reading is
+  validated and its face located: horizontal speed is killed dead in one frame at 6600 while vertical
+  motion continues under gravity to a landing at 6611, and **the last step before the stop is 6 px
+  where every preceding step was 8** -- that is `Sonic_DoLevelCollision`'s `add.w d1,x_pos(a0)`
+  clamping him back, so with the probe at `x_pos + $A` the **wall face is at `2D62`**. The engine's
+  `x` at 6600 is `2D5A` and its push sensor is at `+10`, so its probe sits at `2D64`, **two pixels
+  past the wall face** -- the wall is comfortably inside scan range, and the question is what the scan
+  returns rather than why it fails to arrive. **Magnitude does the rest:** the engine runs on to
+  `2D98`, 64 px and eight rows past the ROM's stop, before halting for its own reasons -- it does not
+  hit this wall late, it does not hit it at all, so only a mechanism that makes the wall **absent**
+  fits and the entire small-offset family is excluded by construction. The candidate, named and not
+  claimed: `Sonic_DoLevelCollision` selects the collision **plane** and **solidity bit** before any
+  probe runs (`s2disasm/s2.asm:37889-37895`), and a wrong plane or bit means the wall does not exist
+  for the engine -- the only shape that fits 64 px. S2 objects write exactly those bytes, with the
+  spring launch tail setting both from its subtype at `loc_18B82` (`:34061-34071`) and CPZ carrying
+  plane switchers. **The fixture cannot settle it:** `physics.csv` has `player_ground_mode` but no
+  solid-bit columns, so this needs engine-side instrumentation or a PC-execute probe on the plane
+  selection.
+
 - **The S1 arm-versus-service phase is derived from the listing and holds across 28 segments
   (`bugfix/ai-s1-rowsconsumed-r1`, merged 2026-08-19 -- investigation only, no constant introduced).**
   **ROM order is fill, service, arm.** `NewPLC`/`AddPLC` fill the queue before the loop
