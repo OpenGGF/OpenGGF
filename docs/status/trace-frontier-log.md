@@ -89037,3 +89037,113 @@ Two things I have **not** established, and they decide which:
 
 Neither is guessed here. This entry exists so the next round starts from the
 mechanism that already owns the problem rather than inventing one beside it.
+## 2026-08-19 — Signpost bump: the ROM's `#8` substitution precedes the shift; and where the 1,449 frames actually go
+
+Branch `bugfix/ai-s3k-signpost-gate-r1` off `origin/develop` (`ed1fbfe5f`). One latent
+engine fix landed; **it moves no test**, and the frontier is unchanged. Probes reverted.
+
+### The landed fix
+
+`S3kSignpostInstance.romBumpXVelocity` substituted the ROM's fallback **after** the shift:
+
+```java
+int kickX = (signpostX - playerX) * 16;
+return kickX == 0 ? 8 : kickX;
+```
+
+`sub_83A70` (`docs/skdisasm/sonic3k.asm:176381-176390`) substitutes **before** it:
+
+```
+    move.w  x_pos(a0),d0
+    sub.w   x_pos(a1),d0
+    bne.s   loc_83A92
+    moveq   #8,d0
+loc_83A92:
+    lsl.w   #4,d0
+    move.w  d0,x_vel(a0)
+```
+
+So an exactly aligned player gives `x_vel = 8 << 4 = $80`, where the engine gave `8` — a
+factor of 16 on alignment frames. Non-zero deltas were already correct, which is why the
+existing `sameFrameNativeP2BumpCanOverwriteNativeP1Velocity` expectation (`0x0050` from a
+delta of 5) is unaffected.
+
+**This is a latent site.** The `dx == 0` case does not occur anywhere in the committed
+corpus: segment 4's error count is 34,112 before and after, first mismatch frame 5766 both
+ways, and the full sweep is identical. It is landed because it is wrong, not because it
+fixes anything measured.
+
+### Where the missing 1,449 frames go — measured on both sides
+
+The previous entry established that the ROM signpost lands at 5449, is bounced by the
+hidden monitor at 5450, and does not land again until 6899. Instrumenting the engine's
+bump path and reading the fixture's `object_state` for the signpost
+(`object_code 0x000837B2`, slot 25) localises the divergence precisely:
+
+| event | ROM | engine |
+|---|---|---|
+| first landing | 5449 | 5448 |
+| hidden-monitor bounce | 5450 | yes |
+| 1st post-bounce kick | 5520 | 5519 |
+| 2nd post-bounce kick | 5595 | **5606** |
+| 3rd post-bounce kick | 5740 | none |
+| second landing | 6899 | **5698** |
+
+The engine reproduces the whole pre-landing phase to within one frame, reproduces the
+hidden-monitor bounce (`S3kHiddenMonitorInstance` models `loc_83760`'s `bclr #0,$38(a1)`
+faithfully, cumulative range windows included), and matches the first post-bounce kick.
+It then diverges on the second and never recovers.
+
+The engine's players are inside the ROM bump box on only **19 frames** in the entire
+falling period, of which 5 satisfy `sub_83A70`'s `anim == 2 && y_vel < 0`. The ROM's
+player farms the signpost for points across ~15 direction reversals — and the true hit
+count is higher than 15, because the ROM's apex after the 5595 kick is `0x02D5`, an ~83 px
+rise where a single `y_vel = -$200` against `+$C` gravity can only produce ~43 px. So the
+ROM lands at least one further kick while the signpost is still rising, which a
+direction-change detector cannot see.
+
+The bump box itself is not the problem: `Check_PlayerInRange`
+(`docs/skdisasm/sonic3k.asm:179994-180012`) builds its bounds cumulatively —
+`d3 = x + (a1)+`, `d5 = d3 + (a1)+` — so `EndSign_Range`'s `-$20, $40, -$18, $30` gives
+`[x-$20, x+$20)` and `[y-$18, y+$18)`, which is exactly what `BUMP_LEFT`/`BUMP_RIGHT`/
+`BUMP_TOP`/`BUMP_BOTTOM` encode.
+
+### The `FixBugs = 0` gap in this routine, unresolved
+
+`EndSign_CheckPlayerHit` (`docs/skdisasm/sonic3k.asm:176357-176365`) has a `FixBugs`
+conditional, and the un-fixed path is subtler than the disassembly comment suggests.
+`sub_83A70` ends in `jmp (HUD_AddToScore).l`, a tail jump, so `HUD_AddToScore`'s `rts`
+consumes the return address pushed by `bsr.w sub_83A70` and returns to `loc_83A6A` — with
+`d0` holding whatever `HUD_AddToScore` left, not the packed player addresses. The
+`swap d0 / tst.w d0` that tests Tails therefore reads that value. On the paths where
+`sub_83A70` returns normally (wrong animation, or not moving upward) `d0` is never
+touched and the Tails test is correct.
+
+The engine iterates both players unconditionally, which is the `FixBugs = 1` behaviour.
+Modelling the shipped path requires knowing `HUD_AddToScore`'s exit `d0`; that is not
+done here, and it is a live candidate for the missing kicks on a route that carries a
+sidekick throughout.
+
+### Rejected on evidence — do not retry
+
+* **The bump range window.** `Check_PlayerInRange`'s cumulative bounds match the engine's
+  constants exactly.
+* **The hidden-monitor bounce.** Modelled, and it fires at the ROM's frame.
+* **`Obj_EndSignControl`'s 119-frame timer and `Obj_EndSignLanded`'s `$40` timer.** Both
+  verified correct in the previous entry.
+* **`romBumpXVelocity`'s shift order.** Corrected here; latent, moves nothing.
+
+### Verification
+
+Command (both worktrees, base `ed1fbfe5f`, `target/surefire-reports` cleared before each):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+    -Ds1.rom.path=<s1> -Ds2.rom.path=<s2> -Ds3k.rom.path=<s3k> test
+```
+
+786 tests and 4 red on both sides, both-way red-set diff empty. `mvn -Pguards test`
+499 / 0. S3K keep-green set plus `TestS3kSignpostInstance` 120 / 0.
+
+**Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
+34,112 errors.**
