@@ -4,6 +4,28 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **A coasting S3K special-stage player now accelerates to the current
+  `Special_stage_rate`.** ROM `loc_9628` (docs/skdisasm/sonic3k.asm:11972-11985)
+  dispatches on three tests, not two: `Special_stage_advancing` jumps to the
+  forward acceleration at `loc_964A`; a stage that has not started skips the
+  block; and a started stage then runs `tst.w d2 / bpl.s loc_964A`, so a
+  **non-negative** velocity ALSO lands on the forward acceleration. Only a
+  negative velocity reaches the backward deceleration. The engine ported the
+  `advancing` and the negative-velocity arms but dropped the `bpl`, so a player
+  coasting forward without holding up had its velocity frozen instead of
+  re-clamped to the rate each frame. That is invisible while the rate is
+  unchanged -- the velocity already equals it -- and becomes visible the moment
+  `loc_903E` (:11445-11455) steps `Special_stage_rate` by `$400` on its `30*60`
+  timer: the ROM's coasting player accelerates into the new rate and the
+  engine's does not. The third special stage of the S3K complete-emeralds run is
+  the first committed fixture long enough to reach a fourth rate step, at which
+  point the engine ran the remainder of the stage at `$1800` against the ROM's
+  `$1C00`, reached the last blue sphere 8 frames late, and queued the emerald art
+  module 4 rows after the recorded hardware completion that releases it -- so the
+  stage never cleared. `ss_3` goes from 45 comparator errors to 0, and the
+  complete-emeralds chain now clears the `stage_exit` boundary it had stalled on.
+
+### Fixed
 - **The S3K end-of-act signpost keeps its horizontal velocity when it lands.**
   ROM `loc_838AA` (docs/skdisasm/sonic3k.asm:176191-176194) is the whole landing
   branch -- routine, `$38` bit 0, and the `$40` timer -- and touches neither

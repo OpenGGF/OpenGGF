@@ -90082,3 +90082,108 @@ and close on their own when the traversal does. No hardware-timing-port change c
 `ss`/`ss_2` being frame-exact is what makes 5471 a usable control rather than a guess — and it
 is also what refuted the drift model, which only looked viable while the passing stages were
 measured against the wrong reference.
+
+## 2026-08-19 — `ss_3`: the unported `bpl` in `loc_9628`, and the chain clears the special stage
+
+Branch `bugfix/ai-s3k-ss3-ordering-r1` off `develop` (`712418c5a`).
+
+### The measurement that located it
+
+The previous two rounds established that `ss_3` reaches `clearRoutine` 8 rows late
+while `ss` and `ss_2` are frame-exact, and that every sphere event in `ss_3` is
+frame-exact through the ring conversion at row 5471, both sides leaving
+`spheres_left = 1`. That left one span to sample: 5471 → 5873, 402 frames with no
+sphere event in it.
+
+The comparator already writes its report before the close-time throw, so the span
+did not need a new probe. `s3k_special_stage_2_report.json` names the first error
+directly, and only **two** of its 45 errors are non-cascading — both at the same
+frame:
+
+```
+5557  5965  velocity   exp 0x1A00  act 0x1800   cascading=false
+5557  6214  player_y   exp 0xFB06  act 0xFB04   cascading=false
+```
+
+So it is a **discrete event at frame 5557**, not drift accumulated across the span.
+
+`rate`/`rate_timer` probes cleared the timer of suspicion: the engine steps
+`Special_stage_rate` to `$1C00` during frame 5557, exactly when the ROM does.
+(Read with closure ownership in mind — the probe prints at routine entry, so the
+value seen at row N is the one produced during N-1.) The timer constants are
+faithful too: the ROM literally writes `#30*60` and `#45*60` at
+`sonic3k.asm:11450,11455`, which is what `Sonic3kSpecialStageConstants` holds.
+
+The divergent axis was the one not suspected: **velocity**. The engine's stayed at
+`$1800` permanently while `rate` read `$1C00`.
+
+### The defect
+
+`loc_9628` (`docs/skdisasm/sonic3k.asm:11972-11985`) dispatches on three tests:
+
+```
+loc_9628:
+        tst.b   (Special_stage_advancing).w
+        bne.s   loc_964A          ; advancing -> forward acceleration
+        tst.b   (Special_stage_started).w
+        beq.s   loc_9658          ; not started -> skip
+        tst.w   d2
+        bpl.s   loc_964A          ; NON-NEGATIVE velocity -> forward acceleration
+        ...                       ; only a negative velocity decelerates backward
+```
+
+The engine ported the `advancing` arm and the negative-velocity arm and dropped
+the `bpl`. A started player coasting forward therefore had its velocity frozen
+rather than re-clamped to the rate every frame.
+
+This is invisible while the rate is unchanged, because the velocity already equals
+it. It becomes visible only when `loc_903E` (`:11445-11455`) steps the rate
+mid-stage. `ss` and `ss_2` never reach a fourth step, which is precisely why they
+were frame-exact and made such good controls; `ss_3` reaches one at 5557, after
+which the engine ran `$1800` against the ROM's `$1C00`, arrived at the last sphere
+8 frames late, and queued the emerald module 4 rows after the recorded completion
+edge that would have released it.
+
+No constant was introduced. The fix is one dropped branch, restored and cited.
+
+### Gate
+
+Control in a separate clean worktree at the same base `712418c5a`, every sweep run
+both ways.
+
+| Sweep | Control | Fix | Newly red | Newly green |
+|---|---|---|---|---|
+| `-Ptrace-replay` | 790 / 4 red | 790 / 4 red | none | none |
+| `-Ptrace-segments` | 70 / 59 red | 70 / **58** red | none | `TestS3kSonicTailsSs3SpecialStageTraceReplay` |
+| `-Ptrace-replay-r7` | 108 / 97 red | 108 / **95** red | none | `TestS3kTailsFullChainSsSpecialStageTraceReplay`, `TestS3kTailsFullChainSs5SpecialStageTraceReplay` |
+
+`mvn -Pguards test`: 499 / 0.
+
+The two r7 greens are the result worth having: they are a **different movie**
+(`s3k-full-chain-tails-all-emeralds`, Tails alone) whose special stages were red
+for the same unported branch. The fix was derived from the disassembly and
+verified against a recording it was not measured on.
+
+The special-stage classes are **not** in `-Ptrace-replay`; they run under
+`-Ptrace-segments`. A first pass appeared to show 790 → 791 tests, which was a
+stale surefire XML left in the fix worktree by an earlier isolated `-Dtest=` run,
+not a new test. Counted from a clean `surefire-reports` both sweeps are 790.
+
+### Frontier moved
+
+`TestS3kSonicTailsCompleteEmeraldRunChain` no longer stalls in `ss_3`. Before, the
+walk failed with `awaitBoundary exceeded step cap 40650 for entry_kind
+'stage_exit' (mode_change_bk2_frame=35726)`. Now it clears the special stage and
+reaches segment 6:
+
+```
+- [walk-failure] Shared return-boundary comparison failed:
+  run_boundary.position.x expected=14007 actual=14008
+- [segment-physics] segment 4 diverged: 292 physics comparator errors
+- [segment-physics] segment 6 diverged: 28733 physics comparator errors,
+  first non-camera mismatch at frame 118 field sidekick_y rom=0x0459 engine=0x0460
+```
+
+**New frontier: segment 6 frame 118 `sidekick_y`, and the one-pixel
+`run_boundary.position.x` at the shared return boundary.** Segment 4 is unchanged
+at 292 camera-only errors.
