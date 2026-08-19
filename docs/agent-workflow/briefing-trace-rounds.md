@@ -334,6 +334,26 @@ half-landed change, and require the blast radius to be measured before anything 
   greens the segment and reds the complete-run, the fix is wrong"* is the any-BK2 bar with a
   concrete witness attached.
 
+## What a productive round actually looks like
+
+A lane that took one S1 defect from "the chain is blocked" to a landed fix corrected the summary
+written about it, and the correction is worth keeping as calibration:
+
+> Eleven rounds, one code change of about forty lines, three retracted claims of my own — two of
+> which had already been merged. Most of what I produced was finding out that six earlier
+> explanations were wrong, four of them mine, and the method rules came out of those rather than out
+> of the fix.
+
+That is a reasonable ratio for a defect nobody understood at the outset, and it is **not** the ratio
+a summary implies. Two other threads the same day ran to ten and fifteen rounds with comparable
+shapes — one spent nine correct eliminations inside a subsystem that was never involved, because the
+founding inference went untested.
+
+Expect this. A round ending in *"I measured X, it is not the cause, here is what that rules out"* is
+a good round. A round ending in a landed fix resting on an unmeasured step is not, however green the
+gate — and several such fixes were caught here only because someone went back to ground that had
+already been accepted.
+
 ## A briefing failure mode: the false dichotomy
 
 The general form, arrived at after four instances: **when both offered options presume the current
