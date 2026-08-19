@@ -84618,3 +84618,48 @@ name the pair so the next agent does not retry the removal in isolation — so:
 **do not re-apply the unconditional clear on its own; it has been measured at
 5272.** The open question is what the gate was propping up, and whether that is
 a second defect or the same defect seen from the other side.
+
+## 2026-08-19 -- unconsumed hardware-completion edges are reported, not thrown
+
+Branch `bugfix/ai-s1-plc-edge-report`, based on `develop` at `7c7d86190`.
+
+`HardwareTimingReplayPort` used to abort the whole comparison when the
+production run walked past a recorded completion edge without submitting
+anything for it. The port's authority is over *when* engine-submitted work
+becomes ready; it has no authority to demand a submission the engine never
+made. Such an edge is a statement about engine accuracy, which the comparator
+owns and reports per field, so aborting on it destroyed the per-field evidence
+and hid every later axis of a diverging run. Each dropped edge now lands in the
+same drain the unmatched completions use, carrying its raw frame, boundary,
+kind, ordinal and fingerprint.
+
+Three properties held deliberately:
+
+- **Close stays strict.** No comparison row follows the closing row, so an edge
+  dropped there has nowhere to be counted. `verifyRunComplete` now re-checks
+  for undrained reports *after* `verifySegmentEdges`, closing a hole where
+  close-time drops landed in a list nobody read -- a driver that never drained
+  would have gone silently green.
+- **Nothing is released.** A dropped edge is never admitted, so the release
+  side is unchanged.
+- **No second demotion.** The head-of-queue / ordinal / fingerprint /
+  prepared-payload / serviced-boundary matching in `admitRecordedCompletion`
+  is untouched. That matching is what stops an ordinal coincidence from
+  releasing a job the engine never submitted.
+
+### Staged but unlanded: the S1 nemesis_plc_queue stream
+
+A re-recording of `s1-sonic-complete-withemeralds` carrying 242 `RunPLC` arming
+edges across 28 of its 34 segments is complete and verified, but is **not
+landed with this change**. It sits on `bugfix/ai-s1-rerecord-fixture-r1`
+pending a lifecycle question it is the first fixture to expose:
+
+`TraceReplayDriver.startPreparedLevel:167` calls
+`activateRecordedHardwareAdmission()` whenever
+`trace.hardwareTimingSchedule().hasRecordedInput()`, and before this fixture no
+S1 trace had recorded input, so the branch never fired for an S1 visual run.
+The design question is whether recorded admission spans a whole visual run or
+is re-activated per prepared level -- `startPreparedLevel` assumes the latter,
+the visual session assumes the former, and only a fixture with recorded input
+makes them disagree. Until that is answered, publishing the fixture turns both
+`TestS1CompleteEmeraldVisualRun` cases red.

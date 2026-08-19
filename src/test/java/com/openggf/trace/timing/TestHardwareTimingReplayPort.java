@@ -80,7 +80,11 @@ class TestHardwareTimingReplayPort {
         IllegalStateException error = assertThrows(IllegalStateException.class,
                 port::verifyRunComplete);
 
+        // Demoted mid-run, still strict at close: nothing follows the closing
+        // row that could carry the edge, so it may not be dropped silently.
         assertTrue(error.getMessage().contains("raw_frame=101"), error::getMessage);
+        assertTrue(error.getMessage().contains("were never reported"),
+                error::getMessage);
     }
 
     @Test
@@ -621,8 +625,10 @@ class TestHardwareTimingReplayPort {
         stalePort.beginRawFrame(23);
         stale.service.service(VINT_SERVICE);
         stalePort.apply(VINT_SERVICE);
-        assertThrows(IllegalStateException.class,
-                () -> stalePort.beginRawFrame(24));
+        stalePort.beginRawFrame(24);
+        assertFalse(stale.service.isReady(stale.handle),
+                "a stale row must not release its recorded edge");
+        assertEquals(1, stalePort.drainUnmatchedRecordedCompletions().size());
 
         ReplayHarness gap = harness(false, 1, 54);
         gap.service.service(POST_OBJECTS);
@@ -632,7 +638,9 @@ class TestHardwareTimingReplayPort {
         gapPort.enterUnrepresentedGap();
         gapPort.applySuppressedRowCompletion();
         assertFalse(gap.service.isReady(gap.handle));
-        assertThrows(IllegalStateException.class, gapPort::verifySegmentEdges);
+        gapPort.verifySegmentEdges();
+        assertEquals(1, gapPort.drainUnmatchedRecordedCompletions().size());
+        assertFalse(gap.service.isReady(gap.handle));
     }
 
     @Test
@@ -686,7 +694,9 @@ class TestHardwareTimingReplayPort {
                 "production may keep servicing during a BK2 gap, but the stale row "
                         + "must not release its recorded edge");
         assertEquals(null, port.capture().rawFrameLatch());
-        assertThrows(IllegalStateException.class, port::verifySegmentEdges);
+        port.verifySegmentEdges();
+        assertEquals(1, port.drainUnmatchedRecordedCompletions().size());
+        assertFalse(harness.service.isReady(harness.handle));
     }
 
     @Test
@@ -861,21 +871,82 @@ class TestHardwareTimingReplayPort {
         assertEquals(harness.handle.ordinal() + 1, nextHandle.ordinal());
     }
 
+    /**
+     * The demotion: an edge with no engine submission behind it is engine
+     * inaccuracy the comparator reports, not a contract breach that aborts.
+     */
     @Test
-    void unconsumedEdgeFailsAtSegmentEnd() {
-        ReplayHarness harness = harness(false, 0, 22);
-        HardwareTimingReplayPort port = port(
-                harness.authority, edge(6, POST_OBJECTS, harness.handle));
+    void unconsumedEdgeIsReportedAtSegmentEnd() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                6, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('c')));
+
+        port.handoffTo(HardwareTimingSchedule.empty());
+
+        List<String> reported = port.drainUnmatchedRecordedCompletions();
+        assertEquals(1, reported.size(), reported::toString);
+        String only = reported.get(0);
+        assertTrue(only.contains("unconsumed hardware completion edge"), () -> only);
+        assertTrue(only.contains("at segment end"), () -> only);
+        assertTrue(only.contains("raw_frame=6"), () -> only);
+        assertTrue(only.contains("boundary=" + POST_OBJECTS), () -> only);
+        assertTrue(only.contains("KOS_MODULE_QUEUE#0"), () -> only);
+        assertTrue(only.contains(fingerprint('c')), () -> only);
+    }
+
+    /** Reporting one of N would be a quieter kind of hiding. */
+    @Test
+    void everyUnconsumedEdgeIsReportedOnceNotJustTheFirst() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority,
+                new HardwareCompletionEdge(6, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 0, fingerprint('c')),
+                new HardwareCompletionEdge(7, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 1, fingerprint('d')),
+                new HardwareCompletionEdge(8, POST_OBJECTS,
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 2, fingerprint('e')));
+
+        port.handoffTo(HardwareTimingSchedule.empty());
+
+        List<String> reported = port.drainUnmatchedRecordedCompletions();
+        assertEquals(3, reported.size(), reported::toString);
+        assertTrue(reported.get(0).contains("raw_frame=6"), reported::toString);
+        assertTrue(reported.get(1).contains("raw_frame=7"), reported::toString);
+        assertTrue(reported.get(2).contains("raw_frame=8"), reported::toString);
+    }
+
+    @Test
+    void anEdgeTheRunWalkedPastIsReportedNotSwallowed() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                6, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('c')));
+
+        port.beginRawFrame(9);
+
+        List<String> reported = port.drainUnmatchedRecordedCompletions();
+        assertEquals(1, reported.size(), reported::toString);
+        assertTrue(reported.get(0).contains("before raw_frame=9"), reported::toString);
+    }
+
+    /** A driver with nowhere to record a dropped edge still fails the run. */
+    @Test
+    void aDroppedEdgeNeverDrainedStillFailsTheRun() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                6, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('c')));
+
+        port.beginRawFrame(9);
 
         IllegalStateException error = assertThrows(
-                IllegalStateException.class,
-                () -> port.handoffTo(HardwareTimingSchedule.empty()));
-
-        assertTrue(error.getMessage().contains("unconsumed hardware completion edge"),
-                error::getMessage);
-        assertTrue(error.getMessage().contains("raw_frame=6"),
-                error::getMessage);
-        assertTrue(error.getMessage().contains(describe(harness.handle)),
+                IllegalStateException.class, port::verifyRunComplete);
+        assertTrue(error.getMessage().contains("were never reported"),
                 error::getMessage);
     }
 
