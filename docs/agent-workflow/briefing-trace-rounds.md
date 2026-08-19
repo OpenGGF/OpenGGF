@@ -204,6 +204,15 @@ half-landed change, and require the blast radius to be measured before anything 
   a reset and a second ramp, none of which is a happening. Before hunting a cause at an inflection,
   check whether the reference rate alone produces it — and prefer the rate profile, which is
   background, over the inflection, which is an artefact.
+- **When a defect has a sharp onset after a matching run, ask what made the code path observable,
+  not what changed in it.** A one-step animation slip began at row 6601 after hundreds of matching
+  rows, which looked like proof that the code was correct until something changed. It was not:
+  `g_speed` collapsed to zero at 6600, taking the computed frame duration from 0 to 4, and **while
+  the duration is zero the ordering under suspicion cannot be observed at all** — a decrement on
+  zero is immediately negative, so every frame advances regardless of how decrement, reload and
+  advance are sequenced. The defect had been present throughout and only became expressible at 6601.
+  This costs one fixture column and can retire an apparent contradiction outright, so ask it before
+  concluding that a matching prefix exonerates the mechanism.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
