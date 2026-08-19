@@ -380,11 +380,14 @@ class TestLoadQueueTraceComparison {
                 LoadTimeDecisionSource.MEASURED, "recorded");
         return new HardwareTimingSnapshot(
                 Map.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1L,
-                        HardwareWorkKind.KOS_MODULE_QUEUE, 0L),
+                        HardwareWorkKind.KOS_MODULE_QUEUE, 0L,
+                        HardwareWorkKind.NEMESIS_PLC_QUEUE, 0L),
                 List.of(job),
                 Map.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                         HardwareReadinessAdmissionPolicy.RECORDED,
                         HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED,
+                        HardwareWorkKind.NEMESIS_PLC_QUEUE,
                         HardwareReadinessAdmissionPolicy.RECORDED),
                 true, true, HardwareServiceBoundary.PRE_MAIN_LOOP);
     }

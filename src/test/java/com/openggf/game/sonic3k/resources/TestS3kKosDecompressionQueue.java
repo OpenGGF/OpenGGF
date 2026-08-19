@@ -145,6 +145,8 @@ class TestS3kKosDecompressionQueue {
                     com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                     HardwareReadinessAdmissionPolicy.RECORDED,
                     com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
+                    HardwareReadinessAdmissionPolicy.LIVE,
+                    com.openggf.game.timing.HardwareWorkKind.NEMESIS_PLC_QUEUE,
                     HardwareReadinessAdmissionPolicy.LIVE));
             S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
             HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,

@@ -24,6 +24,13 @@ public final class Sonic1PlcService
 
     private final Rom rom;
     private final NemesisPlcServiceQueue queue;
+    /**
+     * Optional loop-tail arm gate. Absent outside a hardware-timed session,
+     * where the arm is unconditional exactly as it always was. The queue
+     * itself is shared with Sonic 2, so the gate lives here and never inside
+     * {@link NemesisPlcServiceQueue}.
+     */
+    private Sonic1PlcArmTiming armTiming;
 
     public Sonic1PlcService(Rom rom) {
         this(rom, new NemesisPlcServiceQueue());
@@ -87,8 +94,28 @@ public final class Sonic1PlcService
     public enum OperationKind { CLEAR, REPLACE, APPEND }
     public record Operation(OperationKind kind, int plcId) { }
 
+    /** Binds this service's loop-tail arm to a session's hardware-timing ledger. */
+    public void bindArmTiming(Sonic1PlcArmTiming armTiming) {
+        this.armTiming = armTiming;
+    }
+
+    @Override
+    public boolean ownsTimedLoopTailArm() {
+        return armTiming != null && armTiming.isRecordedAuthority();
+    }
+
+    /** Submits the arm {@code RunPLC} is about to make, at the loop-tail boundary. */
+    public void submitArmableHead() {
+        if (armTiming != null) {
+            armTiming.submitArmableHead(queue.capture());
+        }
+    }
+
     /** Models S1 {@code RunPLC}, which arms only the current FIFO head. */
     public void prepare() {
+        if (armTiming != null && !armTiming.releaseArm()) {
+            return;
+        }
         queue.prepareHead();
     }
 

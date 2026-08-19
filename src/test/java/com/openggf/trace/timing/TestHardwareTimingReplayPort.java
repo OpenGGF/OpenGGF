@@ -560,6 +560,8 @@ class TestHardwareTimingReplayPort {
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED,
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.NEMESIS_PLC_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED));
         HardwareWorkHandle moduleHandle = wrongKindService.submit(submission(
                 HardwareWorkKind.KOS_MODULE_QUEUE, false, 1, 58));

@@ -253,6 +253,8 @@ class TestS3kKosStructuralSequence {
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED,
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.NEMESIS_PLC_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED));
         HardwareWorkHandle parent = coordinator.moduleQueue().queue(
                 GameServices.rom().getRom(),

@@ -517,14 +517,18 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (prepared) {
                 throw new IllegalStateException("PLC lifecycle frame was already prepared");
             }
-            if (representedIterationDefersLoopTailPreparation) {
-                // The ROM had not reached this iteration's loop tail when the
-                // row was sampled. A runtime-art coordinator without a PLC
-                // service still owns that same held tail.
+            // A service whose loop-tail arm is itself submitted hardware work
+            // decides its own visibility from that job's readiness, so the
+            // row-shape hold does not also apply to it. Every other owner --
+            // including a runtime-art coordinator with no PLC service at all --
+            // still holds the tail for a later closure.
+            boolean timedArm = service != null && service.ownsTimedLoopTailArm();
+            boolean held = representedIterationDefersLoopTailPreparation && !timedArm;
+            if (held) {
                 heldLoopTailPreparation = phase;
             }
             if (service != null && service.hasPreparationBoundary(phase)) {
-                if (!representedIterationDefersLoopTailPreparation) {
+                if (!held) {
                     service.prepareAfterLoop(phase);
                 }
                 prepared = true;
