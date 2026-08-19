@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K special-stage return preserves the star-post activation mark
+  (`bugfix/ai-s3k-seg4-r1`, merged 2026-08-19).** The engine's star-post activation mark models
+  ROM `Last_star_post_hit`, and the special-stage return's level reload cleared it.
+  `Load_Starpost_Settings`' giant-ring/bonus branch `loc_2D2C2`
+  (`skdisasm/sonic3k.asm:61793-61819`) restores the whole `Saved2_*` block but deliberately writes
+  no `Last_star_post_hit`, so the exit's `ori.b #$80` (`:12121`, `:12676`) over the subtype
+  `sub_2D164` stored at touch (`:61704`) survives, with `LevelSizeLoad`'s `andi.b #$7F` (`:7881`)
+  stripping the marker bit. `sub_2D028`'s `cmp.b d2,d1 / bhs.w loc_2D0EA` (`:61606-61610`) then
+  skips every post at or below that subtype and never reaches the 20-ring bonus-star branch
+  (`:61638-61641`). A probe caught the same post (spawn 736,701 -- the segment 3 -> 4 `stage_exit`'s
+  saved position) activating **twice**: `idx=3 mark=-1 rings=72` in segment 2, then again with
+  `rings=75` on the return. `GameLoop.doExitResultsScreen` now reads the mark before
+  `loadCurrentLevel()` and restores it after, which is exactly what the bonus-stage return already
+  did in `BonusStageTransitionCoordinator.restoreReturnState` -- the special-stage return was a
+  second implementation of the same contract, missing this clause. No constant introduced and
+  nothing keys on zone, act, route or frame. The chain frontier moves from `aiz_3` `raw_frame` 341
+  to BK2 cursor 25464 (segment row 5689), where a level load the recording does not have costs the
+  segment its production ownership.
+
 - **Sonic 1's `RunPLC` arm is now recordable hardware work
   (`bugfix/ai-s1-plc-sidecar-r2`, merged 2026-08-19).** `RunPLC`
   (`s1disasm/sonic.asm:1379-1420`) sits at the tail of `Level_MainLoop` (`:3032`), behind
