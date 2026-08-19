@@ -43,6 +43,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # TestBuildToolingGuard replays real history against the policy script
+          # -- `git show 53de63da2:...` for the machine-local-path grandfather
+          # baseline, and `git switch -c <branch> ccdd33edf4...` to rebuild the
+          # cutover repositories its branch-policy cases need. actions/checkout
+          # defaults to a depth-1 clone, so those commits are absent and eight
+          # cases fail in CI while passing on any developer clone. The policy
+          # job above already takes full history for the same reason.
+          fetch-depth: 0
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
