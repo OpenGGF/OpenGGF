@@ -92198,3 +92198,113 @@ Frame **167** is exactly the frame slot 05 leaves `loc_205DE` for `loc_20620` an
 being solid, handing the trigger to slot 08. `sidekick_y` rom `0x0468` engine `0x0469` --
 one pixel, at the handover. Not investigated; it is the same mechanism's boundary rather
 than a new one.
+
+## 2026-08-20 -- The seam's clock has ONE owner, and it encodes an unasserted `framesConsumed == 1`
+
+Diagnostic round, no production change. Base `a21f99860`, worktree
+a dedicated worktree, branch `bugfix/ai-s2-seam-anchor-r1`.
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+-Dtest=TestS2CompleteEmeraldRunChain test`.
+
+**Baseline re-measured at this base** (matches the prior lane's figures): seg11,
+seg12 and seg13 all `errorCount 0`; seg15 `errorCount 7575`, first non-camera
+mismatch frame 2 field `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5.
+Nine failing axes, including `run_gap.edge[8..11].movie_logical_frame` at
+`seg4_ehz1 -> seg5_ehz2`, every one expected `N` actual `N-1`.
+
+**MEASURED (1): the chain never runs the production anchor.** Both anchor sites
+were instrumented at once and the chain test driven. The harness site
+(`AbstractRunChainTest.alignUncomparedInteriorReturnVblank`) fired six times.
+The production site (`TraceSessionLauncher.applyRunDestinationVblankAdmission`
+-> `TraceRunVblankClock.uncomparedInteriorReturnTarget`) fired **zero** times.
+The production visual path cannot reach the boundary either: driven with
+`VisualRunReplayHarness.stopAfterSegment(3)` it self-pauses at step 8993, cursor
+9681, mode `SPECIAL_STAGE_RESULTS`, segment 1, on three `dynamic_art.*` errors --
+long before the first return. So the brief's "two owners" is real as a duplicated
+contract but not as a live conflict: at this boundary the harness is the only
+owner that executes, and the production implementation is unexercised.
+
+**MEASURED (2): the anchor is the destination's recorded row-0 value, at all
+six returns.** Instrumented targets against the fixtures' `vblank_counter`
+column (row 0 / row 1), modulo the ROM's 16-bit wrap:
+
+| return | anchor | anchor mod 0x10000 | recorded row 0 | recorded row 1 |
+|---|---|---|---|---|
+| `seg2_ehz1` | 10108 | 10108 | 10108 | 10109 |
+| `seg3_ehz1` | 20009 | 20009 | 20009 | 20010 |
+| `seg4_ehz1` | 31224 | 31224 | 31224 | 31225 |
+| `seg6_ehz2` | 46105 | 46105 | 46105 | 46106 |
+| `seg7_ehz2` | 56751 | 56751 | 56751 | 56752 |
+| `seg10_cpz2` | 82031 | 16495 | 16495 | 16496 |
+
+Six for six. The value carries **no engine-layout term**: it is
+`sourceTail + (returnOffset - sourceFinalRow) - specialStageReturnNonAdvancingMovieRows`,
+i.e. movie-row geometry minus the two ROM-cited interrupt-masked spans
+(`s2.asm:4768-4772` and `:6557-6613`). The number of object passes the engine
+runs across the seam appears nowhere in it.
+
+**ESTABLISHED: what IS layout-encoded is the PAIRING, and nothing asserts it.**
+The anchor sets the value at destination row 0; the comparator's base is
+`framesConsumed = playback.getCursorFrame() - returnOffset`, computed at
+`AbstractRunChainTest.java:1493` and passed straight to
+`attachReturnedLevelSegment`. The pair is coherent only when `framesConsumed`
+is 1 -- anchor = value at row 0, first compared row = 1, one tick per compared
+row thereafter. The instrumented control gives `framesConsumed == 1` and
+`cursor == returnOffset + 1` at **all six** returns. The COMPARATOR FRAME BASE
+contract on `attachReturnedLevelSegment` states the value 1 for this transition
+kind, and the comment at `:1414-1418` states it again. **No assertion enforces
+it.** Its sibling `interLevelVblankBudget` does take `nextFramesConsumed` and
+measures to `next.bk2FrameOffset() + nextFramesConsumed`;
+`uncomparedInteriorReturnVblankBudget` hardcodes `+ 0`. Two implementations of
+one contract, one of which carries the term and one of which does not.
+
+**This explains the byte-identical fingerprint, and reads it differently from
+the prior lane.** Any production change that removes one pre-anchor cursor
+advance drops `framesConsumed` to 0. The comparator then silently rebases to
+frame 0 while the anchor still holds row 0's value -- so every compared row is
+read one row early and the clock is +1 against it from the release row onward.
+That is exactly the two-arm probe's single differing column, and it is a
+comparator rebase artefact, not a clock change. The four refuted attempts
+produced identical numbers because they all landed on the same harness rebase,
+whatever production site they touched. The prior lane's reading -- "an identical
+fingerprint means the lever is untouched" -- is right about the lever and wrong
+about where it lives: the lever is the harness.
+
+**Consequence, and the ruling this needs.** As written, this chain test cannot
+evaluate ANY production change to the seam's pre-anchor cursor advance: it
+converts every such change into the same artefact. A fifth production site would
+report the same numbers for the same reason. Two candidate test-side changes,
+neither landed and both needing a ruling first:
+
+1. Assert `framesConsumed == 1` at the uncompared return, turning the silent
+   rebase into a named failure. Strictly additive; greens nothing.
+2. Give `uncomparedInteriorReturnVblankBudget` the `framesConsumed` term its
+   sibling already has, measuring to `returnOffset + framesConsumed - 1` (the
+   value entering the first compared row). Identical today at
+   `framesConsumed == 1`, so it is a structural alignment of two paths, not a
+   fitted constant -- but it makes the anchor layout-independent, which is the
+   precondition for judging any production seam change at all.
+
+Hard rule 4 note: neither candidate hydrates gameplay state; both concern the
+harness's own row bookkeeping. But (1) and (2) change what the chain asserts,
+so they are test-side changes and are reported, not taken.
+
+**NOT ESTABLISHED.** Whether the engine's seam SHOULD consume one destination
+row in the fall-through. That is a production question about
+`GameLoop`/`TitleCardManager`, and no measurement here bears on it -- the
+harness pins the clock either way, so the chain is currently silent on it. It
+cannot be settled until the anchor is layout-independent.
+
+**Opportunistic comment/code sweep (the brief's second task).**
+`TitleCardManager.updateExitBackground`'s javadoc has already been corrected in
+tree -- it now records that the deleting iteration is both the last leave-loop
+pass and the fall-through row, and that a previous version's "1-frame delay"
+claim was refuted. The remaining seam constants check out:
+`LEAVE_LEFT_PASSES 5 + LEAVE_BOTTOM_PASSES 11 + LEAVE_BACKGROUND_PASSES 9 = 25`
+matches the javadoc's per-routine derivation (`s2.asm:27518-27540`,
+`:27542-27551`, `:27587-27604`) and `LEAVE_PLAYABLE_PASSES 26 = 1 + 25` matches
+"1 + 25 = 26 object passes between InitPlayers and Level_MainLoop". One
+observation, unverified and offered only as a candidate: the update() on which
+`leavePass` exceeds `LEAVE_PLAYABLE_PASSES` returns before the state switch, so
+it runs no title-card pass; it transitions to `TEXT_WAIT`, not to the release,
+so it is probably not the seam's release row. No second defect found.
