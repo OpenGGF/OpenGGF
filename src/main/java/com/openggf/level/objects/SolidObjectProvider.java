@@ -151,17 +151,40 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether this object's new {@code SolidObject_cont} contact path rejects
-     * players whose object-control state has bit 7 set before side/top
-     * classification.
+     * Whether this object's new-contact path rejects players whose
+     * object-control state has bit 7 set, before side/top classification and
+     * before the routine writes {@code y_pos}.
      * <p>
-     * Keep this object-local: existing standing-bit/riding branches may still
-     * need to run for captured object-control states, while concrete ROM
-     * routines can opt in when they prove the signed {@code object_control}
-     * test belongs to the new-contact helper path.
+     * Defaults to {@code true}, because every shared solid tail in all three
+     * ROMs performs the same signed {@code object_control} test:
+     * <ul>
+     *   <li>S1 {@code Solid_Collision}
+     *       ({@code _incObj/sub SolidObject.asm:183-184}) and
+     *       {@code MoveWithPlatform}
+     *       ({@code _incObj/sub MvSonicOnPtfm.asm:26-27}) —
+     *       {@code tst.b (f_playerctrl).w; bmi}.</li>
+     *   <li>S2 {@code SolidObject_ChkBounds} ({@code s2.asm:35376-35377}) and
+     *       the platform-landing writer {@code loc_19BA2}
+     *       ({@code s2.asm:35651-35652}) —
+     *       {@code tst.b obj_control(a1); bmi}.</li>
+     *   <li>S3K {@code SolidObject_cont}'s {@code loc_1DFFE}
+     *       ({@code sonic3k.asm:41443-41444}) and the sloped/platform landing
+     *       tail {@code loc_1E45A} ({@code sonic3k.asm:42012-42013}, with its
+     *       reverse-gravity twin at {@code :42060-42061}) —
+     *       {@code tst.b object_control(a1); bmi}. The sloped tail's test sits
+     *       immediately before its {@code move.w d2,y_pos(a1)}, so a bit-7
+     *       rider is never repositioned by the object.</li>
+     * </ul>
+     * These are sign tests ({@code tst.b}/{@code bmi}), not "object control is
+     * nonzero" tests, so positive states such as CNZ's {@code $42} wire cage
+     * still pass. Existing standing-bit/riding branches are consumed before
+     * these tails and are unaffected.
+     * <p>
+     * An object may override to {@code false} only where its own ROM routine
+     * demonstrably bypasses the shared tail; cite the routine when doing so.
      */
     default boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
-        return false;
+        return true;
     }
 
     /**
