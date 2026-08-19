@@ -132,4 +132,37 @@ class TestSonic1PlcArmTiming {
         assertFalse(arm.releaseArm(), "the original job is bound again");
         assertEquals(1, timing.pendingHandles().size());
     }
+
+    /**
+     * The recorder discards everything observed before a segment's first arm
+     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
+     * so an arm released in an unrepresented span is absent from the stream.
+     * It must therefore not occupy a place in the shared numbering either: the
+     * next represented arm has to carry the ordinal the recording gives it.
+     */
+    @Test
+    void anArmReleasedInAnUnrepresentedSpanDoesNotConsumeARecordedOrdinal() {
+        HardwareTimingService timing = new HardwareTimingService();
+        RecordedCompletionAuthority authority = timing.beginRecordedAdmission();
+        Sonic1PlcArmTiming arm = new Sonic1PlcArmTiming(timing);
+
+        authority.setRecordedRowRepresentation(false);
+        arm.submitArmableHead(armableQueue());
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertTrue(arm.releaseArm(), "the unrepresented span falls back to native readiness");
+        assertEquals(List.of(), timing.pendingHandles());
+
+        authority.setRecordedRowRepresentation(true);
+        arm.submitArmableHead(armableQueue());
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertEquals(0L, timing.pendingHandles().get(0).ordinal(),
+                "the first arm the recording describes must be its ordinal 0");
+
+        authority.admitRecordedCompletion(
+                HardwareServiceBoundary.PRE_MAIN_LOOP,
+                HardwareWorkKind.NEMESIS_PLC_QUEUE,
+                0L,
+                submittedFingerprint(timing));
+        assertTrue(arm.releaseArm());
+    }
 }

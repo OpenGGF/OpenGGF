@@ -4,6 +4,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **An arm the recorder never counted no longer occupies a place in the shared
+  hardware-timing numbering.** Work whose readiness is sought while the recorded
+  row authority holds no row falls back to native readiness, but the S1 Nemesis
+  PLC arm released that way still allocated an ordinal from
+  `HardwareTimingService.nextOrdinals`. Ordinals are the only counter the engine
+  and the recording share, and the recorder discards anything observed before a
+  segment's first arm
+  (`tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83`),
+  so that arm reaches no trace file — leaving every later engine handle numbered
+  one ahead of the recording's axis. `HardwareTimingService` now returns an
+  unrepresented submission's identity once production has claimed its result,
+  the mirror of `advanceOrdinalCursorAcrossRecordedSpan`, which skips the cursor
+  across recorded ordinals the engine never submits into. It moves only under
+  the same allocator invariant that guard states: the handle must be the most
+  recently allocated of its kind and already claimed, so nothing unclaimed is
+  ever left numbered on the old axis. No work is created or discarded — only
+  which number later work carries changes.
+
+### Fixed
 - **Recorded hardware-timing readiness is scoped to the span the trace stream covers.**
   `HardwareTimingReplayPort.enterUnrepresentedGap` documents that production hardware work
   may continue while row authority is deactivated, but the S1 Nemesis PLC arm gate waited on

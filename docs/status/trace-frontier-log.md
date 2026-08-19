@@ -89037,3 +89037,49 @@ Two things I have **not** established, and they decide which:
 
 Neither is guessed here. This entry exists so the next round starts from the
 mechanism that already owns the problem rather than inventing one beside it.
+
+## 2026-08-19 -- The unrepresented arm's ordinal is returned; the brief's frontier had already moved
+
+Base `4c377e73e` (origin/develop), worktree branch `bugfix/ai-s1-ordinal-impl-r1`.
+
+**The handed-over symptom no longer reproduces where it was described.** Measured
+in my own tree at the base commit, `mvn -Ptrace-replay -Dmse=off
+-Dsurefire.runOrder=alphabetical -Dtest=TestS1CompleteEmeraldRunChain`:
+segment 3 of `s1-sonic-complete-withemeralds` reports **0 errors**. The chain
+stops instead on three axes -- a `syz2` presentation-bridge row 70
+(`queue.s1_nemesis_plc.queued_fingerprints`, engine short one leading entry;
+`remaining_work` 1 vs 24), segment 12 frame 101 and segment 15 frame 102, both
+`queue.s1_nemesis_plc.prepared` rom=true engine=false (40 and 6 errors).
+
+**Why: no committed S1 or S2 fixture carries a `hardware_timing` stream at all.**
+`find src/test/resources/traces -name 'hardware_timing*'` returns S3K paths only.
+A probe on `HardwareTimingService.submit` / `admitUnrepresentedReadiness` /
+`admitRecordedCompletion` across the whole chain logged 100 `NEMESIS_PLC_QUEUE`
+submissions, ordinals 0..99 contiguous, every one with row representation true,
+and **zero** recorded edges and **zero** unrepresented admissions. The recorded
+port is never active for S1 on committed data, so the ordinal defect cannot fire
+there. The prior round's `ordinal 15` / `3224e355` measurement came from
+`TestS1CompleteEmeraldVisualRun` against a **held, uncommitted** S1 timing
+fixture, which is consistent -- but it makes the defect latent here, not live.
+
+**The defect is real and is now pinned without a fixture.**
+`TestSonic1PlcArmTiming.anArmReleasedInAnUnrepresentedSpanDoesNotConsumeARecordedOrdinal`
+reproduces it exactly at the unit boundary: after one arm is released natively in
+an unrepresented span, the next represented arm is allocated ordinal **1** where
+the recording numbers it **0**. That is the same one-ordinal offset, at the same
+mechanism.
+
+**Both pre-implementation questions are answered by that test, not assumed.**
+(1) An unrepresented submission can carry identity without permanently consuming
+`nextOrdinals`, because the identity must only be unique among *live* ledger
+entries and the off-axis job is claimed -- spent -- before its ordinal is
+reissued; retiring the spent record keeps every lookup total, so no second axis
+is created. (2) The `:511-521` pending-submissions guard does **not** fire on the
+reconciliation path: `Sonic1PlcArmTiming.releaseArm` claims in the same call, and
+the test observes `pendingHandles()` empty at that point.
+
+Pre-existing at the base and untouched here:
+`TestHardwareTimingService.recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`
+errors with "recorded hardware admission is not active". Confirmed by running
+that class alone in a detached control worktree at `origin/develop`.
+

@@ -111,6 +111,79 @@ public final class HardwareTimingService
         }
     }
 
+    /**
+     * Returns the identity an unrepresented submission borrowed, once
+     * production has claimed its result.
+     *
+     * <p>The recorder discards everything it observes before a segment's first
+     * arm (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
+     * so work released through {@link #admitUnrepresentedReadiness} appears
+     * nowhere in the stream. Ordinals are the only counter the engine and the
+     * recording share, so an arm the recorder never counted must not occupy a
+     * place in the shared numbering either: the next represented submission has
+     * to be allocated the ordinal the recording gives it. This is the mirror of
+     * {@code advanceOrdinalCursorAcrossRecordedSpan}, which skips the cursor
+     * across recorded ordinals the engine never submits into; here the engine
+     * submitted an ordinal the recording never carried.
+     *
+     * <p>Nothing is undone and no work is discarded: the job was submitted,
+     * prepared, admitted and claimed, and its result is already in production's
+     * hands. Only its spent ledger record is retired, so no two entries ever
+     * share an identity once the ordinal is reissued. This changes which number
+     * later work carries, never whether that work happens.
+     *
+     * <p>The move is proved before it is made, on the same invariant the
+     * cursor-advance guard states: the cursor is the allocator for the next
+     * handle, so it may only move while production holds nothing unclaimed that
+     * the move would renumber. The handle must be the most recently allocated
+     * of its kind and must already be claimed; anything else throws rather than
+     * silently renumbering a live submission.
+     */
+    public void releaseUnrepresentedIdentity(HardwareWorkHandle handle) {
+        if (recordedAuthorityRepresentsRow()) {
+            throw new IllegalStateException(
+                    "an unrepresented identity is only returned while recorded row"
+                            + " authority is deactivated: " + handle);
+        }
+        HardwareTimingJob job = requireKnown(handle);
+        HardwareWorkKind kind = handle.kind();
+        if (admissionPolicyFor(kind) != HardwareReadinessAdmissionPolicy.RECORDED) {
+            throw new IllegalStateException(
+                    "unrepresented identity only applies to recorded-admission kinds: "
+                            + kind);
+        }
+        if (!job.isClaimed()) {
+            throw new IllegalStateException(
+                    "an unrepresented identity is returned only after production has"
+                            + " claimed its result: " + HardwareTimingJob.describe(handle));
+        }
+        long cursor = nextOrdinals.getOrDefault(kind, 0L);
+        if (handle.ordinal() != cursor - 1) {
+            throw new IllegalStateException(
+                    "only the most recently allocated identity may be returned for "
+                            + kind + ": production next=" + cursor
+                            + ", returning=" + handle.ordinal());
+        }
+        List<HardwareWorkHandle> renumbered = jobs.stream()
+                .filter(candidate -> !candidate.isClaimed()
+                        && candidate.handle().kind() == kind)
+                .map(HardwareTimingJob::handle)
+                .toList();
+        if (!renumbered.isEmpty()) {
+            // Same invariant as advanceOrdinalCursorAcrossRecordedSpan's guard:
+            // moving the allocator while production still holds an unclaimed
+            // handle would leave that handle numbered on the old axis with no
+            // completion able to reach it.
+            throw new IllegalStateException(
+                    "cannot return a hardware identity while production holds pending "
+                            + "submissions of the same kind: " + renumbered.stream()
+                            .map(HardwareTimingJob::describe)
+                            .toList());
+        }
+        jobs.remove(job);
+        nextOrdinals.put(kind, handle.ordinal());
+    }
+
     public boolean isReady(HardwareWorkHandle handle) {
         HardwareTimingJob job = find(handle);
         return job != null && !job.isClaimed() && job.isReady();
