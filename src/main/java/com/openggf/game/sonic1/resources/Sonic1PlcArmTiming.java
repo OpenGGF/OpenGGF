@@ -122,6 +122,16 @@ public final class Sonic1PlcArmTiming
             // (docs/s1disasm/sonic.asm:2840-2841). Fall back to native
             // readiness for the span the stream never described.
             timing.admitUnrepresentedReadiness(outstanding);
+            timing.claim(outstanding);
+            // The recorder never counted this arm, so it must not hold a place
+            // in the shared numbering: the next arm the stream does describe
+            // has to be allocated the ordinal the recording gives it
+            // (S1PlcHardwareTimingObserver.cs:80-83, cited above). Returning
+            // the identity after the claim keeps the allocator invariant --
+            // nothing unclaimed is left numbered on the old axis.
+            timing.releaseUnrepresentedIdentity(outstanding);
+            outstanding = null;
+            return true;
         }
         timing.claim(outstanding);
         outstanding = null;
