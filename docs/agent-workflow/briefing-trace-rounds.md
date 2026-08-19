@@ -248,6 +248,12 @@ half-landed change, and require the blast radius to be measured before anything 
   the fixture."** When setting a falsifiability test, require the prediction to hold somewhere other
   than the case it was derived from — otherwise a model can pass the stated test and still be fitted
   to its origin.
+- **The directional check also scopes: use it to exclude families, not just candidates.** Before
+  investigating a proposed cause, ask whether it predicts the observed sign — and whether it predicts
+  the observed *extent*. "Mode is wrong across twelve rows" cannot be produced by any single-frame
+  mechanism, which excludes the entire one-frame class before any member of it is examined, including
+  one the same lane had derived an hour earlier. One question, applied to the shape of the symptom
+  rather than to a candidate, can retire a family.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.

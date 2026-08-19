@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 admission fails on mode, not drift, and `rowsConsumed` was the alarm rather than the fault
+  (`bugfix/ai-s1-admission-clock-r1`, merged 2026-08-19 -- investigation only).** Measured on one
+  clock with both endpoints named: the shared BK2 cursor, endpoint A the row the recording gives the
+  destination (`ghz2_2.bk2FrameOffset = 9741`), endpoint B the row the engine admits it -- which with
+  the pair applied never arrives. Segment 2 is a `LEVEL_PRESENTATION_BRIDGE` back into its own act, so
+  `destinationReady` takes its exact-physical-row branch and **the row test is equality, not `>=`** --
+  a one-row window with no tolerance. Instrumenting all four components across it shows the row
+  matching, the card not pending and the level identity matching, with the engine in **`TITLE_CARD`**:
+  mode is the only failing component, and it fails across the **entire** window rather than by a
+  frame. That settles three things. `rowsConsumed` reaching 2 is a **downstream symptom** -- the
+  window is missed at 9741 and the counter only trips two rows later, so work on that side would have
+  addressed the alarm. The first-entry PLC frame is **not** part of this and stays a separate open
+  item, since it concerns arm cadence *within* a drain while this is about which mode the engine
+  occupies at a specific shared row. And **the pair is what moves the mode**: before it the engine
+  reached `LEVEL` at 9741 and admission succeeded, and with it the results screen's PLC genuinely
+  drains, `SSR_ChkPLC` holds for a wait that previously never happened, and the results exit, level
+  load and title card all shift later. **The window must not be widened** -- the equality is the
+  bridge's admission authority and the code says so, so relaxing it would admit a destination at a row
+  the recording does not place it on.
+
 - **The wall is inside the engine's scan range and simply not detected; plane selection is the
   candidate (`bugfix/ai-s2-wall-scan-r1`, merged 2026-08-19 -- fixture only).** The wall reading is
   validated and its face located: horizontal speed is killed dead in one frame at 6600 while vertical
