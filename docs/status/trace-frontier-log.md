@@ -88324,3 +88324,74 @@ engine's terrain collision **is** faithful here. Nine rounds of correct
 eliminations were searching a subsystem that was never involved, because the
 first inference -- clamp implies terrain wall -- was never tested against the
 layout until now. The cheap test existed the whole time.
+
+## 2026-08-19 — ROOT CAUSE: it is the level side boundary, gated on Current_Boss_ID
+
+Branch `bugfix/ai-s2-solid-stop-r1` off `origin/develop` (`07fdfd588`).
+New probe `tools/bizhawk/probes/s2_cpz2_xvel_writer_probe.lua`; no code.
+**Not a solid object, not terrain, not collision at all.**
+
+### The writer, measured rather than inferred
+
+A write hook on `MainCharacter + x_vel` capturing the writing PC:
+
+    row 6597  pc=01A932  x_vel=07F4  x_pos=2D3B
+    row 6599  pc=01A932  x_vel=07F4  x_pos=2D4A
+    row 6600  pc=01A932  x_vel=07F4  x_pos=2D52
+    row 6600  pc=01A9CA  x_vel=07F4  x_pos=2D58   <-- new writer, only at the stop
+    row 6601  pc=01A9CA  x_vel=0000  x_pos=2D58
+
+`0x1A932` is Sonic's ordinary per-frame speed write. `0x1A9CA` appears only at the
+stop, and it is the third instruction of **`Sonic_Boundary_Sides`**
+(`loc_1A9BA`, docs/s2disasm/s2.asm:37281-37286):
+
+    Sonic_Boundary_Sides:
+        move.w  d0,x_pos(a0)          ; 1A9BA -- this is the "2-pixel correction"
+        move.w  #0,2+x_pos(a0)
+        move.w  #0,x_vel(a0)          ; 1A9CA -- the dead stop
+        move.w  #0,inertia(a0)
+
+So the clamp that has been read as a wall for ten rounds is the **level side
+boundary**. The premise the brief put up for disproof -- that a solid object stops
+him -- is dead, and so is the wall it replaced.
+
+### And the 64 pixels are in the boundary expression
+
+The right-hand test (s2.asm:37243-37251):
+
+    move.w  (Camera_Max_X_pos).w,d0
+    addi.w  #screen_width-24,d0       ; +296
+    tst.b   (Current_Boss_ID).w
+    bne.s   +
+    addi.w  #$40,d0                   ; +64 MORE when no boss is active
+    +
+    cmp.w   d1,d0
+    bls.s   Sonic_Boundary_Sides
+
+**`addi.w #$40,d0` is 64 -- exactly the engine's overshoot**, the magnitude that
+has been the discriminating constraint for four rounds. The ROM holds
+`Current_Boss_ID` non-zero at row 6600 and therefore does *not* widen the
+boundary; the engine widens it and lets him run those 64 pixels.
+
+That is not a coincidental match: 64 is the only term of that size anywhere in
+the expression, and it is gated by a single byte.
+
+### The chain this closes
+
+    Current_Boss_ID -> side boundary -> stop position -> x_speed -> Roll delay
+        -> mapping frame -> DPLC submission timing -> the 6600-7087 tail
+
+### What still needs confirming, and it is one value
+
+`Current_Boss_ID` at row 6600 on both sides. The magnitude match is strong
+evidence but it is inference from a number; reading the byte is direct. The CPZ
+boss (Obj5D, KD29) leaves the object list after 6084, so the live question is
+whether the engine clears its boss id when the object goes while the ROM holds it
+through the end-of-act sequence.
+
+### Method note
+
+The writer probe found this in one run, and every part of the ten-round collision
+search was correct work in a subsystem that was never involved. The technique the
+brief prescribed -- instrument the writer, do not reason from the shape -- is what
+separated them, and it would have worked identically ten rounds ago.
