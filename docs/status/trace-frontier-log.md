@@ -86639,3 +86639,74 @@ symptom of a CPZ boss register bug.
 - **The engine's dispatch shape.** Reproducing this needs an object loop whose
   remaining-count is writable by object code. Whether the engine's loop can
   express that at all is unestablished, and it decides what the change costs.
+
+## 2026-08-19 — sweep and engine shape: one contributor, and a dispatch that cannot express it
+
+Branch `bugfix/ai-s2-execobjects-r1`, continued. Fixture sweep plus an engine
+read; no probe, no code.
+
+### The truncation happens twice, and only one occurrence diverges
+
+`Obj5D` is present on rows 4841-6084 and is in routine `$08`
+(`Obj5D_Pipe_Retract`) on exactly **two** contiguous runs:
+
+    rows 5112-5123   (12 rows)
+    rows 5553-5564   (12 rows)
+
+Each predicts a truncation on the following eleven rows, the routine byte being
+an end-of-frame sample. The measured truncation was 5554-5564, matching the
+second run exactly.
+
+**The first run produces no divergence at all.** The report's error onsets before
+5554 are only at 52-96 and 1725-1733; nothing starts at 5113. So the truncation
+is **necessary but not sufficient** for the art divergence -- the skipped frames
+have to land where Obj05's animation would otherwise have advanced, and on the
+first run they do not.
+
+### It is one contributor, not the answer to the cluster
+
+Errors by sub-range:
+
+    pre-5000                                69
+    5554-5564  (the truncation window)      44
+    5565-6084  (Obj5D still present)       616
+    6085-6599                              515
+    6600-7087  (the two ramps)            1247
+    TOTAL                                 2491
+
+`Obj5D` does not exist after row 6084, so the truncation cannot reach the ramps:
+**1247 of the 2422 cluster errors -- 51% -- lie beyond any possible Obj5D
+influence.** The mechanism explains the cluster's *onset* and the persistent
+ordinal offset that follows from it, and nothing about the two ramps.
+
+That answers the question the sweep was for: this is a contributor, not the
+answer. A fix here would move the onset and leave more than half the errors
+standing.
+
+### The engine's dispatch cannot express the truncation
+
+`ObjectManager.runExecLoop`
+(`src/main/java/com/openggf/level/objects/ObjectManager.java`:1091) iterates
+
+    for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++)
+
+The bound is the length of a fixed array. There is **no remaining-count that
+object code could write**, and no path by which an executing object shortens the
+enclosing pass. The engine's loop is structurally incapable of the behaviour the
+ROM exhibits.
+
+So reproducing this is not a small fix. It requires introducing a mutable
+pass budget into the shared object loop -- shared by all three games -- and
+exposing it to object code, which is a structural change to dispatch rather than
+an object-local port. Establishing that before proposing code was the right call:
+the cost is not proportional to the 44 errors in the truncation window, nor to
+the share of the cluster it explains.
+
+### Recommendation
+
+Do not implement this. The mechanism is understood, cited and recorded; the
+change needed to reproduce it is disproportionate to a contributor that accounts
+for under half of one segment's art cluster, and it would put a writable pass
+budget into dispatch shared by three games. It belongs in the known-discrepancy
+register with the citation, alongside the CPZ2 push gate, unless the ramps turn
+out to share the mechanism -- and they cannot, because the boss is gone by then.

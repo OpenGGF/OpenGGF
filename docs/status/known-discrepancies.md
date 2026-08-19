@@ -40,6 +40,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
 27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 28. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
+29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
 
 ---
 
@@ -2370,4 +2371,71 @@ improves 2491 -> 2433 and every `player_mapping_frame` divergence in it closes;
 the three complete-emerald chains are red in control and candidate alike with
 identical failure modes; and none of the ten regressions retired by the
 object-side port audit have returned.
+
+---
+
+## S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)
+
+**Status:** open, deliberately not reproduced. **Cost:** part of a 2422-error
+`dynamic_art` cluster in the CPZ2 standalone segment; the mechanism accounts for
+under half of it.
+
+### Original Implementation
+
+`Obj5D_Pipe_Retract_ChkID`, on the shipped `fixBugs = 0` path, carries the
+disassembly authors' own warning:
+
+```
+; 'd7' should not be used here. This causes the 'RunObjects' routine to
+; either run too few objects or too many objects, causing all sorts of errors.
+    moveq   #0,d7
+    move.b  #ObjID_CPZBoss,d7
+    cmp.b   id(a1),d7
+```
+
+`ObjID_CPZBoss` is `$5D`, so the boss **writes `$5D` into `RunObjects`' live loop
+counter**. The iteration's `dbf` takes it to `$5C`, giving 92 further iterations
+from slot 30 and ending the pass at slot 122 — six slots short of
+`LevelOnly_Object_RAM` at `$FFD000`. `Tails_Tails`, `SuperSonicStars` and
+`Sonic_BreathingBubbles` are therefore all skipped for as long as the boss holds
+routine `$08`. Measured: `d7` goes `0072` -> `005C` after slot 29 on every
+affected row, 123 iterations instead of 144.
+
+The `fixBugs = 1` path uses `cmpi.b #ObjID_CPZBoss,id(a1)` and leaves `d7` alone.
+**The engine models `fixBugs = 0`**, so the truncation is the accurate behaviour.
+
+### Our Implementation
+
+`ObjectManager.runExecLoop` iterates `for (currentExecSlot = 0; currentExecSlot <
+execOrder.length; currentExecSlot++)`. The bound is a fixed array length: there is
+no remaining-count an executing object could write, and no path by which an object
+shortens the pass. The engine runs all three `LevelOnly` objects on frames where
+the ROM skips them, and is therefore **more correct than the ROM and wrong**.
+
+### Rationale
+
+Not reproduced, on three grounds measured rather than assumed:
+
+- **It is necessary but not sufficient.** `Obj5D` holds routine `$08` on two runs
+  in the recording, 5112-5123 and 5553-5564. Only the second produces any
+  divergence, because the skipped frames must land where `Obj05`'s animation would
+  otherwise have advanced.
+- **It explains under half the cluster.** `Obj5D` does not exist after row 6084,
+  yet 1247 of the 2422 errors — 51% — lie beyond 6600, in two ramps it cannot
+  influence.
+- **The change is disproportionate.** Reproducing it requires introducing a
+  mutable pass budget into the object dispatch loop *shared by all three games*
+  and exposing it to object code — a structural change to dispatch, not an
+  object-local port.
+
+Recorded here rather than ported because the standing rule that a `fixBugs`
+site must be commented where it is ported cannot apply when nothing is ported.
+This entry is the substitute: the flag, the routine and the citation, so the site
+is findable without the ported comment.
+
+### Verification
+
+Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
+logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
+`$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
 

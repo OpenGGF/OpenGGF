@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ boss truncation is recorded, not reproduced
+  (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- sweep and dispatch-shape analysis).** Three
+  measurements sized the fix out rather than in. It is **necessary but not sufficient**: `Obj5D`
+  holds routine `$08` on two runs in the recording, 5112-5123 and 5553-5564, and only the second
+  produces any divergence, because the skipped frames must land where `Obj05`'s animation would
+  otherwise have advanced. It **explains under half the cluster**: `Obj5D` does not exist after row
+  6084, yet **1247 of the 2422 errors -- 51% -- lie beyond 6600**, in two ramps it cannot influence.
+  And the engine's dispatch **structurally cannot express it**: `ObjectManager.runExecLoop` bounds
+  its iteration on a fixed array length, so there is no remaining-count an executing object could
+  write, and reproducing the ROM would mean introducing a mutable pass budget into the object loop
+  shared by all three games and exposing it to object code. Recorded as
+  [known-discrepancy 29](docs/status/known-discrepancies.md#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
+  with the flag, the routine and the citation -- because the standing rule that a `fixBugs` site must
+  be commented where it is ported cannot apply when nothing is ported, and the register entry is the
+  substitute that keeps the site findable.
+
 - **The CPZ boss writes the dispatch loop's counter, and the disassembly says so in the source
   (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- analysis of the existing probe log, no new
   probe).** Looking for where `d7` drops by more than one per iteration points at exactly one slot on
