@@ -89916,3 +89916,60 @@ order.** Directory names sort `ghz1, ghz2, ghz2_2, ghz3`, while segment order is
 ordinals in glob order reports the stream as non-contiguous when it is perfectly
 contiguous 0..241. A verifier that walks files in the wrong order raises a false
 alarm about ground-truth data, which is the most expensive kind.
+## 2026-08-19 — What distinguishes `ss_3`: the emerald-module submission lands 3 rows AFTER its edge, where `ss`/`ss_2` land 5 rows before
+
+Branch `bugfix/ai-s3k-ss3-measure-r1` off `origin/develop` (`28ce006a4`). Diagnosis only;
+nothing landed. Probes reverted.
+
+### Re-measurement first: the frontier has not moved
+
+`TestS3kSonicTailsCompleteEmeraldRunChain` at `28ce006a4` (two merges past the last
+recorded run) fails identically: `awaitBoundary exceeded step cap 40650 for entry_kind
+'stage_exit' (mode_change_bk2_frame=35726)`, and segment 4 at **292** camera-only errors,
+`complete: true`. No first-error frame/field — segment 4 has no non-camera physics
+mismatch.
+
+### The asymmetry, measured
+
+Probing the emerald-module submission against the port's live row latch, for every special
+stage the run reaches:
+
+| stage | recorded edges (rows) | engine queues module at row | margin |
+|---|---|---|---|
+| `ss` | 4201 / 4202 | **4197** | 5 rows **before** |
+| `ss_2` | 5202 / 5203 | **5198** | 5 rows **before** |
+| `ss_3` | 5962 / 5963 | **5966** | 3 rows **after** |
+
+`ss` and `ss_2` submit with five rows to spare, so the edge finds the work pending and
+admits it. In `ss_3` both edges arrive first, find `pending=<none>`, are dropped by the
+severity demotion, and release nothing; the module is then queued three rows later with
+nothing left to release it. `updateClearEmeraldLoad` polls forever and `stage_exit` never
+settles.
+
+So the answer to "what distinguishes `ss_3`" is not accumulated corruption and not the
+instance itself: **the engine's detection of the stage clear has drifted about eight rows
+later relative to the recorded completion row, and `ss_3` is simply the first stage where
+that drift crosses zero.** The margin sequence +5, +5, -3 is the whole finding; the earlier
+two stages were passing on a shrinking cushion, not because anything about them differs.
+
+That also means this was always going to fail at *some* stage. It surfaced at `ss_3` only
+because the segment-4 signpost fix let the chain reach it.
+
+### Next question, deliberately not guessed
+
+Why the engine's clear is late is unmeasured. The submission site is
+`placeEmerald` -> `queueEmeraldArtModule`, modelling `loc_9C28`-`loc_9C52`
+(`docs/skdisasm/sonic3k.asm:12595-12610`), reached from `clearRoutine` 1. The measurement
+that would localise it is the row at which `clearRoutine` first becomes non-zero in each
+stage, against the same recorded edge rows — if that margin also runs +5/+5/-3 the drift is
+upstream of the clear detection; if it is constant, the drift is inside the clear sequence
+itself.
+
+### Contradiction previously flagged: already settled
+
+The `engine pending: <none>` question was resolved in the preceding entry — the message is
+accurate and describes the admission moment. These numbers corroborate it independently:
+nothing is pending at rows 5962/5963 because the submission has not happened yet.
+
+**Frontier unchanged: `stage_exit` at bk2 frame 35726, stalled inside `ss_3`. Segment 4
+closed at 292 camera-only errors.**
