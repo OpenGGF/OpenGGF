@@ -88024,3 +88024,96 @@ the loading screen itself blocks on, unless the edges for that load are
 available at the rows the load occupies. That is a statement about which rows a
 segment's recorded stream must cover, not about the engine's art pipeline, and
 it would reframe the whole four-part change rather than adding a fifth part.
+
+## 2026-08-19 -- new fixture: the Tails full-chain all-emeralds run (70 segments)
+
+Recorded from `s3k-full-chain-tails-all-emeralds.bk2` (499,823 movie frames, Tails
+alone, AIZ -> DDZ with all seven Chaos Emeralds, all seven Super Emeralds and nine
+bonus stages). Published as `src/test/resources/traces/s3k/runs/s3k-tails-full-chain-all-emeralds/`:
+70 segments (46 level, 15 special stage, 9 bonus), 48 transitions, 484,206 rows.
+
+Capture, both passes, from `3e2be0959`:
+
+```
+tools/bizhawk-headless/run.sh --mode trace --rom "$S3K_ROM_PATH" \
+  --movie docs/BizHawk-2.11-linux-x64/Movies/s3k-full-chain-tails-all-emeralds.bk2 \
+  --run-id s3k-tails-full-chain-all-emeralds --output "$OUT"
+```
+
+`validate_trace_v5.py` passes. Two independent captures compare `equal: true`,
+283 files, `inventory_changes: 0`, aggregate sha256
+`683fdbd2ba638988021e433e1b83ecbe80bce5b537be2847d4026e82ecd2a250` under
+`compare_trace_v5_candidates.py --fail-on-difference`.
+
+### The capture required a recorder fix before it would complete at all
+
+The first two attempts aborted deterministically after 20 segments with
+`Kosinski decompression FIFO changed entry 0 while the prior head remains busy`.
+Instrumenting the throw gave physical slot zero `(0x00391B2E, 0xFFFFE000)` against
+mirrored `(0x00391396, 0xFFFFD000)` -- source advanced by the module's compressed
+length and destination by exactly `$1000`, one whole `Kos_decomp_buffer`
+(`sonic3k.constants.asm:328`, based at `0xFFFFD000`).
+
+That is `Process_Kos_Queue_EndReached` (`sonic3k.asm:2938-2943`) writing the
+decompressor's post-decode `a0`/`a1` over slot zero's own source and destination
+fields -- `Kos_decomp_source`/`Kos_decomp_destination` **are** `Kos_decomp_queue`
+and `Kos_decomp_queue+4` (`sonic3k.constants.asm:901-903`) -- with the in-progress
+sign bit not yet cleared. `15b46e543` already handles the sample taken one
+instruction later, after `andi.w #$7FFF` clears that bit; this movie also lands
+before it. Same ROM state, same shape-derived discriminator, window widened by one
+sample. The native harness suite is `642 passed / 14 failed` identically with and
+without the change (identical failure sets; the 14 are pre-existing).
+
+### Frontier: expected RED, gated to `trace-scope-r7`
+
+The suite is 70 segment classes under
+`com.openggf.tests.trace.s3k.tailsfullchain` plus
+`TestS3kTailsFullChainRunChain`, all tagged `trace-scope-r7` and selected only by
+`-Ptrace-replay-r7`. Verified in both directions: the same class reports
+`Tests run: 0` under `-Ptrace-replay` and runs under `-Ptrace-replay-r7`.
+
+| Segment | Class | Result | Errors | First error |
+|---|---|---|---|---|
+| `aiz` | `TestS3kTailsFullChainAizSegmentTraceReplay` | FAIL | 1 | frame 0 -- `camera_x` expected `0x1300`, actual `0x1308` |
+| `icz` | `TestS3kTailsFullChainIczSegmentTraceReplay` | FAIL | 2026 | frame 0 -- `y_speed` expected `0x0480`, actual `0x0000` |
+| `slots_2` | `TestS3kTailsFullChainSlots2BonusTraceReplay` | PASS | 0 | -- |
+| `ss_14` | `TestS3kTailsFullChainSs14SpecialStageTraceReplay` | ERROR | -- | undrained hardware completions at raw frames 3272/3273 (`KOS_DECOMPRESSION_QUEUE#829`, `KOS_MODULE_QUEUE#550`; engine pending `<none>`) |
+
+```
+mvn -Dmse=off -Ptrace-replay-r7 "-Dtest=TestS3kTailsFullChain<Segment>TraceReplay" \
+  "-Ds3k.rom.path=$S3K_ROM_PATH" "-DfailIfNoTests=false" test
+```
+
+`icz` diverges at frame 0 because the segment starts mid-fall at `y_speed=0x0480`
+and the engine starts at rest -- a segment-entry hydration gap, ahead of anything
+zone-specific.
+
+### Two ROM behaviours this run deliberately performs
+
+Both are ROM behaviour the engine must reproduce, not engine defects to remove.
+
+**ICZ, screen wrap used to push through the sprite walls.** The whole zone is one
+uninterrupted segment (`icz`, zone 5, bk2 offset 174,395, 22,481 rows). Recorded
+here as a negative result on mechanism: this is **not** the ROM's screen-wrap
+variables. Vertical wrap is gated on `Camera_min_Y_pos == -$100` masking `y_pos`
+with `Screen_Y_wrap_value` (`sonic3k.asm:21989-21992`) and every site that enables
+it is SSZ/HPZ (`Obj_SSZCutsceneBridge`, `Obj_SSZHPZTeleporter`, plus two
+unlabelled); `Screen_X_wrap_value` is only ever written `-1`
+(`sonic3k.asm:38092`), so horizontal wrap never activates anywhere. The owning
+routine is therefore still unidentified and is named as such rather than guessed.
+
+**Super Emerald 7 (`special_stage_index: 6` = segment `ss_9`), a latent press
+discharging into an uncommanded turn.** Measured in the committed rows:
+
+```
+f3360-3375  jump=81  turn=fc  ang=00  in=00   turn latched during the jump
+f3376-3391  jump=0   turn=fc  ang=00  in=00   jump over, turn still pending
+f3392       jump=0   turn=fc  ang=fc  in=00   discharges with no input at all
+f3392-3406  ang fc -> c0 at -4/frame          a full $40 (90 degree) turn
+f3407       turn=0   ang=c0  in=01            first press only after it completes
+```
+
+The turn *onset* is commanded, mid-jump; the *discharge*, sixteen frames after the
+jump ends, is not. A sweep for turn onsets with no input finds nothing in any of
+the fifteen special stages, so the onset is the wrong thing to look for -- the
+signature is a `turning` value surviving the jump and firing on its own.

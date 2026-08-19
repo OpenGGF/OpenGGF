@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Tails full-chain all-emeralds trace, and the run-chain test that was running in
+  neither profile (`feature/ai-s3k-tails-fullchain-gating`, merged 2026-08-19 -- new 70-segment
+  fixture, one gating hole closed).** `s3k-full-chain-tails-all-emeralds.bk2` (499,823 frames,
+  Tails alone, AIZ -> DDZ with all seven Chaos Emeralds, all seven Super Emeralds and nine bonus
+  stages) is published as `traces/s3k/runs/s3k-tails-full-chain-all-emeralds/`: 70 segments (46
+  level, 15 special stage, 9 bonus), 48 transitions, 484,206 rows. Two independent captures compare
+  `equal: true` across 283 files with aggregate sha256 `683fdbd2...ecd2a250` under
+  `--fail-on-difference`. The capture only completes because of a recorder fix: the S3K
+  hardware-timing observer rejected a Kosinski FIFO sample taken inside
+  `Process_Kos_Queue_EndReached` (`sonic3k.asm:2938-2943`) before the in-progress sign bit clears,
+  one instruction earlier than the window `15b46e543` already handled -- same ROM state, same
+  shape-derived discriminator, span widened from one sample to two. The suite is 70 segment classes
+  plus a run-chain test, all tagged `trace-scope-r7` and **expected RED**: it is a frontier harness
+  that says where this route diverges, not a regression. `TestS3kTailsFullChainRunChain` carried the
+  r7 tag but was never named in the r7 include list, so `-Ptrace-replay` dropped it by tag and
+  `-Ptrace-replay-r7` never selected it -- it ran in **neither** profile, the exact silent gap the
+  include list warns about; it is now named alongside `TestS3kMegaRunChain`. Also recorded: the two
+  ROM behaviours the run performs on purpose, the ICZ wrap (with the ROM's screen-wrap variables
+  **excluded** by citation and the owning routine named as still unidentified) and the Super
+  Emerald 7 latent turn in `ss_9`, whose `turning` value survives the jump and discharges sixteen
+  frames later with no input on that frame.
+
 - **The S1 title card never releases -- a stall, not a longer span
   (`bugfix/ai-s1-titlecard-span-r1`, merged 2026-08-19 -- investigation only).** A new instrument was
   needed because the previous probe's call site never runs in `TITLE_CARD`: `currentGameMode` logged
