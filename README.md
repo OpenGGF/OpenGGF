@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The last push-pair regression is a suppression predicate, not a missing port
+  (`bugfix/ai-s2-pushland-r1`, merged 2026-08-19 -- investigation only).** The `object_state` scan
+  against the EHZ segment found **no S2 object that clears its own pushing bit while the character
+  is still pushing**: monitors (`0x26`) and sideways spikes (`0x36`) both carry bits 5 and 6 at some
+  point, so the bits are exercised, but they are only ever cleared at end of contact by
+  `Solid_NotPushing`. So the premise that a port was missing was false, and the scan is what
+  disproved it. Instrumenting the Walk/Run write instead shows the pair producing **10** writes over
+  the prefix chain against the control's 9, and the extra one is a monitor the character never
+  breaks -- `anim=16` (`AniIDSonAni_Spring`), Tails **airborne in both the recording and the
+  engine**, with `monitorSolid=false`. `publishSolidPushReleaseAnimationWord` already carries an
+  airborne-monitor suppression, but it is gated on `SolidRoutineProfile.monitorSolidity()`, which
+  S2's `MonitorObjectInstance` does not declare: the guard's comment cites S1, whose monitor has an
+  inline solid routine, while S2's `SolidObject_Monitor_Sonic`/`_Tails` both `bra.w SolidObject_cont`
+  (`s2disasm/s2.asm:25612-25634`) and take the generic path -- so the guard is **inert for S2
+  monitors**. What is deliberately not yet derived is which predicate is correct: a blanket airborne
+  suppression would be wrong, because `SolidObject_SideAir` enters `Solid_NotPushing` *below* the
+  Walk/Run write while the write's own site `SolidObject_TestClearPush` is reached when the character
+  is *outside* the box and has no airborne test at all (`:35462-35483`). Standing numbers:
+  (1)+(2)+the MGZ site is **790/5** against a 790/4 control at the same base, with
+  `TestS2CompleteEmeraldRunPrefix` the only new red, and seg10 still 2491 -> 2433.
+
 - **The push pair is one regression from landable, and the spike ports were wrong
   (`bugfix/ai-s2-pushresidual-r1`, merged 2026-08-19 -- investigation only, all experiments
   reverted).** The pair plus **only** the MGZ spiked-platform site leaves a single new red,

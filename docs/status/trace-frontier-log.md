@@ -85240,3 +85240,74 @@ publishing one extra Walk/Run restart somewhere in the EHZ prefix -- the same cl
 as the CNZ case, an S2 object whose own bit the ROM clears and the engine's latch
 does not. Finding it is the last step before the pair lands, and the S2 fixtures
 should be scanned the same way the S3K ones were before any further site is ported.
+
+## 2026-08-19 — the last residual is not a missing site: it is (2)'s predicate
+
+Branch `bugfix/ai-s2-pushland-r1` off `origin/develop` (`223cec71d`).
+Investigation only; nothing functional landed and the working tree is clean of
+the experimental code.
+
+### The S2 scan says there is no site to port
+
+The `object_state`/`object_near` scan that settled the S3K sites was run against
+`src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/seg5_ehz2`,
+which is the segment the prefix chain reports as "segment 7" (manifest index 7;
+6046 rows, `bk2_frame_offset` 32931 -- the directory suffix is capture order, not
+chain order, and reading it as the chain index sends you to a segment with too
+few rows).
+
+**No S2 object in that segment ever clears its own pushing bit while the
+character is still pushing.** Monitors (type `0x26`) and sideways spikes
+(`0x36`) do carry bits 5 and 6 at some point, so the bits are exercised; they are
+simply only ever cleared at end of contact, by `Solid_NotPushing`. So the
+remaining regression is **not** a missing object-side port, and per the previous
+round's rule the answer lies in (2)'s predicate.
+
+### Where the extra edge comes from, measured
+
+Instrumenting the Walk/Run write itself and diffing against a control at the same
+base: the pair produces **10** writes over the prefix chain where the control
+produces **9**. The single extra one is
+
+    WRITE MonitorObjectInstance@2bbb44da anim=16 who=Tails air=true monitorSolid=false
+
+- The monitor is **not** one that breaks -- its instance id never appears in the
+  break-path release log, so `Obj26_SpawnIcon`'s `clr.b status(a0)`
+  (docs/s2disasm/s2.asm:25691) is not involved.
+- `anim=16` is `AniIDSonAni_Spring` (`$10`). In the recorded segment Tails is in
+  that animation on 221 frames and is airborne on **every one of them**; around
+  the divergence his `sidekick_status_byte` is exactly `0x02`.
+- `air=true` in the engine as well, so the two agree: Tails is airborne on both
+  sides.
+- **`monitorSolid=false`.** `publishSolidPushReleaseAnimationWord` already has an
+  airborne-monitor suppression, but it is gated on
+  `SolidRoutineProfile.monitorSolidity()`, and S2's `MonitorObjectInstance` does
+  not declare it -- the guard's comment cites S1
+  (`_incObj/26, 2E Monitors and Power-Ups.asm:140-160`), whose monitor has its own
+  inline solid routine. S2's monitor has none: `SolidObject_Monitor_Sonic` and
+  `SolidObject_Monitor_Tails` both `bra.w SolidObject_cont`
+  (docs/s2disasm/s2.asm:25612-25634), so it takes the generic path.
+
+So the suppression that should stop this write is inert for S2 monitors.
+
+### What is NOT yet derived, and must be before anything lands
+
+Whether the right predicate is "S2 monitors should declare `monitorSolidity()`"
+or something more general. The generic ROM shape argues against a blanket
+airborne rule: an airborne character inside the box reaches
+`SolidObject_LeftRight` and branches to `SolidObject_SideAir`, which enters
+`Solid_NotPushing` **below** the Walk/Run write -- but the write's own site,
+`SolidObject_TestClearPush`, is reached when the character is *outside* the box
+and has no airborne test at all (docs/s2disasm/s2.asm:35462-35483). So a blanket
+"suppress the write while airborne" would be wrong, and the real question is which
+of those two entries the engine should be taking on this frame.
+
+That is one derivation step, on a single measured frame, with both sides'
+airborne state already agreed. It is the last thing between the pair and landing.
+
+### Standing numbers
+
+`(1)+(2)+the MGZ site` is 790 tests / 5 red against a 790/4 control measured in a
+clean worktree at the same base -- `TestS2CompleteEmeraldRunPrefix` alone, as in
+the previous round; seg10 remains 2491 -> 2433. Nothing was landed because the
+gate is not clean.
