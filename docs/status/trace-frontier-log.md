@@ -87524,3 +87524,76 @@ checks then the floor; `CollisionSystem` switches on
 What has **not** been compared is the scan itself -- `FindWall` with `a3 = $10`
 and `d6 = 0` against the engine's sensor scan -- and the quadrant value at this
 frame. Naming those as unexamined, not as suspects.
+
+## 2026-08-19 — the wall is inside scan range and not detected; plane selection is the candidate
+
+Branch `bugfix/ai-s2-wall-scan-r1` off `origin/develop` (`e0dddb3db`).
+Fixture only; no probe, no engine run, no code.
+
+### The wall reading is validated, and the wall's face is located
+
+    row    x     y     x_spd  y_spd  air roll
+    6598  2D4A  04C4   2036    560    1   1
+    6599  2D52  04C6   2036    616    1   1
+    6600  2D58  04C9      0    672    1   1
+    ...
+    6610  2D58  04ED      0   1232    1   1
+    6611  2D58  04EC      0      0    0   0
+
+Horizontal speed is killed dead in one frame while vertical motion continues
+under gravity to a landing at 6611. That is a wall hit and nothing else -- not a
+capture, not a control lock.
+
+The last step is **6 px** (2D52 -> 2D58) where every preceding step was 8. That is
+`Sonic_DoLevelCollision`'s `add.w d1,x_pos(a0)` clamping him back to the wall
+(docs/s2disasm/s2.asm:37912-37917). With the probe at `x_pos + $A`, the **wall
+face is at `2D62`**.
+
+### The brief's cheap bound: inside range, not detected
+
+The engine's `x` at 6600 is `2D5A` (measured last round against the recorded
+column, which matched value-for-value up to 6599). Its push sensor sits at
+`+10` -- verified last round -- so its probe is at **`2D64`, two pixels past the
+wall face**. The wall is comfortably within reach.
+
+So this is the second of the two problems the brief distinguished: **the wall is
+inside the engine's scan range and simply is not detected.** The question is what
+the scan returns, not why it fails to arrive.
+
+### Magnitude: a whole-wall miss, not a late hit
+
+The engine runs on to `2D98` -- **64 px, eight rows** past the ROM's stop -- before
+stopping for its own reasons. It does not detect this wall late; it does not
+detect it at all. Applying the discriminator the brief carried in: any candidate
+producing a few pixels of difference is excluded by construction, and only a
+mechanism that makes the wall *absent* fits.
+
+### The candidate, named and not claimed
+
+`Sonic_DoLevelCollision` opens by selecting the collision **plane** and the
+solidity **bit** before any probe runs (s2.asm:37889-37895):
+
+    move.l  #Primary_Collision,(Collision_addr).w
+    cmpi.b  #$C,top_solid_bit(a0)
+    beq.s   +
+    move.l  #Secondary_Collision,(Collision_addr).w
+    +
+    move.b  lrb_solid_bit(a0),d5
+
+If the engine holds a different `top_solid_bit`/`lrb_solid_bit` at this frame it
+is probing a different plane, and the wall does not exist for it -- a whole-wall
+miss, which is the only shape that fits 64 px. S2 objects write exactly those
+bytes: the spring launch tail sets `top_solid_bit`/`lrb_solid_bit` from its
+subtype (`loc_18B82`, s2.asm:34061-34071), and CPZ has plane switchers.
+
+**Not claimed**, and note the fixture cannot settle it: `physics.csv` carries
+`player_ground_mode` but no solid-bit columns, so this needs engine-side
+instrumentation or a PC-execute probe on the plane selection, not another
+fixture read.
+
+### Still unexamined
+
+The movement quadrant at 6600. Both sides dispatch identically in shape -- ROM
+`CalcAngle` on `(x_vel, y_vel)` masked to `$C0`, engine
+`TrigLookupTable.calcMovementQuadrant` -- and it remains a cheap read that has
+not been done.
