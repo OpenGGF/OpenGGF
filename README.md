@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 title card blocks on art the hardware never arms -- an engine defect, not a stream gap
+  (`bugfix/ai-s1-titlecard-stall-r1`, merged 2026-08-19).** The kill condition was tested first and
+  does **not** fire: with the pair applied the PLC queue holds **one state across all 213 stalled
+  rows** -- `busy=true queued=15 prepared=false remaining=-1` -- so the card waits on a queue that
+  never advances a single tile, and the ROM basis is confirmed at `Level_TtlCardLoop`'s
+  `tst.l (v_plc_buffer).w / bne.s` (`s1disasm/sonic.asm:2840-2841`). Instrumenting `releaseArm`
+  rather than reasoning about it gives **4,866 passes with nothing outstanding and 214 consecutive
+  blocks on a single handle**, `NEMESIS_PLC_QUEUE#14` -- 214 blocks against 213 stalled rows, one job
+  never released for the whole wait. Reverse-mapped against `ArtLoadCues` that handle is **`PLC_GHZ`
+  entry 0, source `0x03CB3C`, VRAM `0x0000`, 461 tiles**: the returning level's main zone art.
+  **The previous round's consequence is refuted** -- that fingerprint appears **zero times in all 242
+  recorded edges**, absent from a run that visits every zone. So "the capture is correct and
+  insufficient" is wrong: the capture is correct and **complete**, and the engine arms work the
+  hardware never arms through `RunPLC`, then blocks the title card on it forever. The lead, stated
+  and not claimed: the ROM `AddPLC`s the level header's PLC at load (`:2731-2737`) yet `ghz2_2`'s
+  first recorded arm is `PLC_Main` entry 0, and **`QuickPLC`** (`:1519-1526`) decompresses and
+  transfers immediately without using or affecting the queue -- which path the ROM takes decides
+  whether the engine's submission is mistimed or spurious.
+
 - **RETRACTION: there is no terrain wall at 2D62 -- the layout word is zero
   (`bugfix/ai-s2-chunk-id-r1`, merged 2026-08-19).** `FindWall` masks the layout word's low ten bits
   and branches to no-collision when that id is zero, testing the solidity bit only *afterwards*.

@@ -284,6 +284,16 @@ half-landed change, and require the blast radius to be measured before anything 
   attribute, which height mapping" presupposes something is there. None of those questions can return
   "the layout is empty", which was the answer. Before enumerating layers, ask whether the thing being
   layered exists at all.
+- **Before recording a consequence, ask whether one search settles it.** A round drew a substantial
+  conclusion -- "the capture is correct and insufficient" -- and the next round refuted it with a
+  single grep of the fixture for a fingerprint, which appears zero times in 242 edges. The expensive
+  speculation was disproved by the cheapest possible check, and that check was available before the
+  paragraph was written. Pair this with the empty-probe rule: cheap searches belong *before*
+  conclusions, not after them.
+- **A kill condition that only pays out when it fires is half-used.** A surviving kill condition is
+  not a null result: it forced the next measurement rather than ending the line, and that measurement
+  is what overturned the round's own consequence. State kill conditions so that surviving tells you
+  where to look next, not merely that you may continue.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
