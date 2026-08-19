@@ -90853,3 +90853,56 @@ That is a narrower open question than the one this round started with, and it is
 one left standing: rows 0 and 1 of `seg10_cpz2` are still not compared through this path, so
 what happens to the arming across them has not been observed. That observation is the next
 probe — not reasoning about what those rows must contain.
+
+## 2026-08-19 -- S1 seg12 f593 closed: the glass pillar's balance width
+
+Base `ee3ee41ca`. `mz2_3` (segment 12) of `s1-sonic-complete-withemeralds` goes
+from **40 comparator errors to 3**; the three that remain are the unrelated PLC
+promotion errors at f101. Segment 15 unchanged at 6.
+
+**The reported field depends on which arm you are in.** With the S1 timing
+fixture applied it surfaces as `dynamic_art.edge[0].mapping_frame` rom=1
+engine=58 at f593; on committed data the same 37 errors report as
+`player_mapping_frame` / `player_animation_id` at f601-603. The fixture only
+changes which error is *first*.
+
+**Decoded as hex, both fields name ROM symbols:** rom `0x05`/`0x01` is
+`id_Wait`/`fr_Stand`, engine `0x06`/`0x3A` is `id_Balance`/`fr_Balance1`
+(`docs/s1disasm/_anim/Sonic.asm:6,63,181,189`). The engine was teetering where
+the ROM stands idle -- the wrong animation, with the mapping frame merely its
+first frame.
+
+**The first suspicion was wrong and probing which path runs is what caught it.**
+`checkTerrainEdgeBalance` is never entered in this window, so the two candidate
+inputs to its `ObjFloorDist < 12` guard were a claim about a search space that
+did not contain the defect. The balance comes from the **object** path.
+
+**The engine's numbers matched the ROM everywhere except the width.** At row
+593 the recording has `player_x = 0x062A` = 1578 -- identical to the engine --
+and `player_stand_on_obj = 0x4A`, so position and riding state were already
+correct. The engine had `width=16 objX=1600 playerX=1578`, giving
+`d1 = -6` against `Sonic_Balance`'s `#4` left-edge threshold
+(`_incObj/01 Sonic.asm:425-433`).
+
+**`Glass_Main` sets `move.b #64/2,obActWid(a1)` for the pillar and overwrites it
+with `#32/2` only for the reflection child**
+(`_incObj/30 MZ Large Green Glass Blocks.asm:78,84`). The shine is a separate
+instance in the engine, so the pillar class is always 32. With 32,
+`d1 = 10`, inside `[4, 60)`, so the routine falls through to `Sonic_LookUp` and
+holds Wait. **The constant is the ROM's own; it was derived first and confirmed
+by the test second.**
+
+**Verification.** Full `-Ptrace-replay` against a control at the same base
+(`dadd19e5d`), reports cleared, `runOrder=alphabetical`: **156 classes, 4 red on
+both sides, both set-diff directions empty**, same four classes red
+(`TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+`TestS3kSonicTailsCompleteEmeraldRunChain`,
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`). The S1 chain stays red on
+its remaining PLC axis, which the held timing fixture addresses.
+
+Catalogued as `s1-implement-object` pitfall **P32**, because the same shape is
+already documented for the S2 CPZ/WFZ platform and SmashableGround: an object
+whose ROM `obActWid` differs from its rendered footprint needs the
+`getBalanceWidthPixels()` override, and the symptom is a spurious balance
+animation rather than a position error.
+
