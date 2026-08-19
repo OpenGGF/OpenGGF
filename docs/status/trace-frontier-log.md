@@ -87062,3 +87062,97 @@ neither touched by the original commit. Caught by diffing the rebased commit
 against `develop` restricted to non-fixture paths. **Diff a rebased commit
 against its new base by path class before trusting it**; the conflict markers
 only showed one file.
+
+## 2026-08-19 -- rowsConsumed is right; the traversal is exactly one row late
+
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission" test
+```
+
+Branch `bugfix/ai-s1-rowsconsumed-r1`, based on `develop` at `a6f66b8dc`.
+Diagnosis only -- **no engine change is landed**. Control at that commit: 790 / 4.
+
+### What the invariant protects
+
+`destinationRowsConsumedForAdmission` (`TraceSessionLauncher.java:1428-1443`)
+returns, while the coordinator is in `TRANSITION_GAP`, how far the **shared**
+BK2 cursor has already run past the destination segment's `bk2FrameOffset`. The
+coordinator feeds it straight into the destination's starting cursor,
+`Math.addExact(segment.bk2FrameOffset(), rowsConsumed)`
+(`TraceRunPlaybackCoordinator.java:550`).
+
+So `0 or 1` states that **an admitting frame consumes at most one destination
+row** -- which follows directly from the shared clock advancing one row per
+frame. A value of 2 does not mean "the results iteration advances rows
+differently"; it means the gap was still open a row after the destination's
+first row had already been played, so the receipt would name a start cursor the
+run has already passed. The invariant is correctly stated and load-bearing.
+**It must not be relaxed.**
+
+### Measured: the slip is exactly one row
+
+Probing the derivation with the fixture, the predicate fix and the boundary
+traversal all applied:
+
+```
+dst=3 off=9741 cur=9741 rows=0
+dst=3 off=9741 cur=9742 rows=1
+dst=3 off=9741 cur=9743 rows=2   <- throws
+```
+
+Segment 3 (`ghz2_2`) should have been admitted at cursor 9742. It is not, and
+one row later the receipt is unrepresentable. Not a cadence disorder -- a
+one-row delay.
+
+### Where the row goes, and why it is NOT a drain-rate error
+
+With the arm finally firing, ROM `SSR_ChkPLC` genuinely holds the results screen
+while the queue drains -- something that never happened before, because the queue
+was never busy. Measured: **16 consecutive wait frames**.
+
+The ROM's own model gives exactly the same number. `ProcessPLC_9Tiles` sets a
+9-tile budget (`docs/s1disasm/sonic.asm:1431-1438`), and when `patternsleft`
+reaches zero mid-budget `ProcessPLC_ShiftCue` shifts the list and **returns**,
+losing the rest of that frame's budget -- so the cost is per-entry
+`ceil(patterns/9)` summed, not `ceil(total/9)`. For the results screen's seven
+entries (10, 24, 12, 14, 9, 16, 30 patterns):
+
+| model | frames |
+|---|---|
+| `sum(ceil(tiles/9))` | **16** |
+| `ceil(sum(tiles)/9)` | 13 |
+| **engine, measured** | **16** |
+
+The engine already implements the lost-budget semantics correctly. The drain
+rate is not the defect.
+
+### The one frame, located
+
+The fixture's recorded arm frames are **68, 71, 74, 76, 78, 79, 81**, and the
+last entry's 30 patterns need 4 more frames, so the ROM's span is 68..84 --
+**17 frames** against the engine's 16. Differencing the arms gives 3, 3, 2, 2,
+1, 2 against per-entry costs of 2, 3, 2, 2, 1, 2: every entry matches except the
+**first**, where the ROM takes 3 frames for a 10-pattern entry that needs 2.
+
+The entire discrepancy is one frame of arm-versus-service phase at the first
+entry, where the queue was filled by `NewPLC`/`AddPLC` in the exit setup
+(`sonic.asm:3384-3387`) *before* `SS_NormalExit`'s first `WaitForVBlank`, so
+that first V-blank services a queue with nothing yet armed. That is derivable
+from the `RunPLC` / `ProcessPLC_9Tiles` ordering in the listing, and it must be
+derived there -- a frame added anywhere else to make the admission land is a
+fitted constant, and this is precisely the kind of one-frame gap that invites one.
+
+### Where this leaves the four-part change
+
+Invariant: correct, unchanged. Traversal: correct in principle, one row late for
+a reason now localised to a single ROM ordering question. Predicate fix: inert
+alone, correct. Fixture: still last.
+
+### Note for the next rebase
+
+Rebasing `bugfix/ai-s1-rerecord-fixture-r1` silently reverts `README.md` and
+`docs/agent-workflow/briefing-trace-rounds.md`, neither touched by the original
+commit. Diff a rebase of that branch against its new base restricted to
+non-fixture paths before trusting it.
