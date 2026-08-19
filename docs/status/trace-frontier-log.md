@@ -90796,3 +90796,144 @@ Whether all 28,733 segment-6 errors are sidekick fields. The chain report expose
 only `firstNonCameraPhysicsMismatch` plus five `recentMismatches`; every one
 visible is a sidekick field, but that is five of 28,733 and is not quoted as a
 ratio.
+
+## 2026-08-19 — Segment 6 frame 118: the collapsing platform's trigger is one dispatch early
+
+Branch `bugfix/ai-s3k-seg6-sidekick-r1` off `origin/develop` (`ecfa6fba9`). Control
+re-measured in a separate clean worktree at the same base, `target/surefire-reports`
+cleared before every run.
+
+### Slot 05 identified, from the ROM object pointer
+
+The brief's step 1. `sidekick_interact_object` records Tails' `interact` word going
+`0x0000 -> 0xB172` at frame 118, and `0xB172 = Object_RAM($FFB000) + 5 * $4A`, which is
+slot 5 by construction rather than by guess. Its `object_code` is `0x00020594` =
+`loc_20594`, the main routine of **`Obj_CollapsingPlatform`** (`docs/skdisasm/sonic3k.asm:44819`);
+it rewrites itself to `0x000205DE` (`loc_205DE`) at frame 119, when ~24 fragment slots
+appear. So the acquisition that fails is a fresh second-player landing on an AIZ collapsing
+platform on the last dispatch before it fragments.
+
+### The engine fragments one frame early, and that is the whole defect
+
+A probe on the object's `isSolidFor` / `onSolidContact` (reverted) against the recorded
+rows. **Clock discipline first:** the probe's `services().camera().getX()` reads the
+previous frame's camera, because object execution precedes the camera step. Anchored on
+`player_x` — probe `cam=185d` shows Sonic at `0x18e9`, which is the fixture's frame **118**
+`player_x` — so probe `cam=X` is trace frame `index(X) + 1`. Without that anchor every
+number below is off by one.
+
+| trace frame | ROM | engine (probe) |
+|---|---|---|
+| 110 | Sonic lands; `status` `0x81 -> 0x89`; `$3A` **not** set | `state=1`, `tmr=7` |
+| 111 | `$3A` set, `$38` stays 7 | `tmr=6` (first decrement) |
+| 112-117 | `$38` 7 -> 1 | `tmr=5 -> 0` |
+| 118 | `$38` 1 -> 0, still `loc_20594`, `sub_205B6` **seats Tails** (`status 0x89 -> 0x99`, `sidekick_y 0x460 -> 0x459`) | already `state=2`, `tfSkip`; `isSolidFor(Tails)` returns **false** |
+| 119 | `CreateFragments` | — |
+
+The cause is structural and is in the listing. `loc_20594` tests `$3A` and only then
+touches `$38` (`:44819-44824`); it falls through to `loc_205A6`, which reads
+`status(a0) & standing_mask` and sets `$3A` (`:44826-44830`) — **before** reaching
+`sub_205B6` (`:44835`), whose `SolidObjectTopSloped2` is what writes those bits. So `$3A`
+is always set from the *previous* dispatch's solid pass. Fragments land on landing+9. The
+engine's `onSolidContact` set `state = 1` in the landing pass itself, losing that dispatch,
+so it fragmented on 118 and its own transition-skip suppressed Tails' fresh contact.
+
+No constant was introduced. The change deletes a `state = 1` assignment and lets the
+existing `if (triggered)` in `update()` — which already runs before the solid pass, mirroring
+routine-body-then-`sub_205B6` — carry the latency.
+
+### The compensation stack was load-bearing, and had to come out with it
+
+Fixing the trigger **alone** made segment 4 far worse: **292 -> 50,060** errors, first
+mismatch f789 `y`. `performCollapse` said so in its own comment — *"the engine reaches
+fragmentation one dispatch early ... promote this marker on the next update"*. Three
+compensations were absorbing the same frame:
+
+1. `pendingTransitionSkip`, a one-frame deferral of the `CreateFragments` slope skip;
+2. `solidStayTimer = collapseDelays[0] + 1`, one extra post-collapse solid dispatch;
+3. `hasSavedOtherPlayerStandingBit` / `isWithinPendingSlopeCatchRange`, an escape hatch
+   letting P1 re-acquire during the deferral.
+
+Retiring 1 and 3 took segment 4 to 3,582 (f836 `air` rom=1 engine=0 — release now one
+frame *late*, the mirror symptom). Retiring 2 as well restored **292 exactly**. ROM
+`loc_205DE` (`:44855-44858`) runs `sub_205B6` *then* decrements `$38`, releasing at zero, so
+release is `collapseDelays[0]` dispatches after fragmentation with no `+1`; the parent takes
+that byte because `CreateFragments` reuses its own slot as fragment 0 (`movea.l a0,a1`) and
+`move.b (a4)+,$38(a1)` at `:45434` hands out the delay table from `$30(a0)`.
+
+Deleted with them: `TestSonic3kCollapsingPlatformTransitionSolid`'s
+`engineEarlyFragmentPassStillAcceptsFreshFinalDecrementLanding`, whose name states the
+superseded semantics it pinned.
+
+### Frontier moved
+
+`TestS3kSonicTailsCompleteEmeraldRunChain`, same command both arms:
+
+| | control | fix |
+|---|---|---|
+| segment 4 | 292 (camera-only) | **292 (camera-only)** |
+| segment 6 `errorCount` | 28,733 | 28,727 |
+| segment 6 first non-camera mismatch | f118 `sidekick_y` rom `0x0459` engine `0x0460` | **f150 `sidekick_y` rom `0x0468` engine `0x046A`** |
+| `run_boundary.position.x` | 14007 vs 14008 | unchanged (the independent giant-ring pixel) |
+
+The count barely moves because the cascade from the new frontier still dominates; the
+frontier is what moved.
+
+Full `-Ptrace-replay` sweep, both arms at `ecfa6fba9`, `-Dmse=off`,
+`runOrder=alphabetical`, all three ROM properties, `target/surefire-reports` cleared before
+each run: **786 tests, 4 red, both arms, same four classes.** Diffing the whole 19-line
+failure summary rather than the counts, exactly one line differs -- segment 6's, above.
+`TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain` and
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` are byte-identical. `mvn -Pguards`: 499
+/ 0. S3K keep-green set green.
+
+**Method correction worth recording.** The first control worktree was created with
+`git worktree add ... origin/develop` *after* the branch was cut, and `origin/develop` had
+moved to `5388737c9` in between. That control showed S1 chain segment 12 at **3** errors
+against the fix arm's **40**, which read exactly like a cross-game regression from an
+S3K-only object change -- reproducible, and stable under isolated `-Dtest=` re-runs in both
+worktrees, so the usual flakiness checks did not catch it. Re-detaching the control to
+`ecfa6fba9` gives **40**, matching. `origin/develop` moves during a round; pin the control
+by commit hash and verify it with `git rev-parse`, not by the ref name.
+
+### One exposed residual, and the ROM predicate that closes it
+
+The full sweep caught a fifth red the chain test could not see:
+`TestS3kAizTraceReplay`, one error, frame 3317, `status_byte` rom `0x0E` engine `0x06` --
+a missing `Status_OnObj`. Slot `0x0A` there is another collapsing platform, and the rule
+predicts its life exactly: Sonic lands at 3308, the object rewrites to `loc_205DE` at
+**3317** = landing + 9.
+
+On that CreateFragments dispatch the ROM keeps the rider's `Status_OnObj` set, because the
+dispatch never reaches `sub_205B6` to release it; the release lands at 3318. The engine
+already models this in `defersAirborneRiderUnseatThisFrame` -- but the deferral used to be
+carried by the two-frame `transitionFrameSlopeSkip || pendingTransitionSkip` window, which
+happened to cover 3317 while the engine fragmented at 3316. With fragmentation on the
+correct frame, the single-frame flag is set inside `update()`, and the airborne-unseat query
+runs before it.
+
+The predicate that fixes it is ROM state, not a window: `state == 1 && collapseTimer <= 0`
+is precisely `loc_20594`'s `tst.b $38 / beq.w ObjPlatformCollapse_CreateFragments`
+(sonic3k.asm:44822-44823) -- an exhausted countdown *is* the fragmenting dispatch. With it,
+`TestS3kAizTraceReplay` is green (16/16) and the chain holds segment 4 at 292 and segment 6
+at f150.
+
+That residual is worth recording for its own sake: the AIZ trace was **green for the wrong
+reason** before this change, its correct `Status_OnObj` produced by a compensation window
+rather than by the ROM's own skip.
+
+### The new frontier, characterised but not worked
+
+Frame 141 Tails steps onto **slot 8**, a second collapsing platform at `(0x1870, 0x0488)`
+that does **not** fragment in this window (`object_code` stays `0x20594`, `status` `0x90`,
+through frame 165) even though only P2 stands on it. From 141 the recorded `sidekick_y`
+descends `0x046A -> 0x0469` (f145) `-> 0x0468` (f148) while the engine holds `0x046A`. Both
+questions — why the ROM's platform does not collapse under a P2-only standing bit, and why
+the engine's Tails stops re-sampling the slope — are open and were not investigated.
+
+### Not established
+
+The brief's "98.6% of segment 6 errors are sidekick fields" was **not** reproduced or
+verified here: `*_seg6_report.json` carries only `errorCount`, `firstNonCameraPhysicsMismatch`
+and five `recentMismatches`, with `errors: []`. The figure may well be right; it is not
+evidence this entry rests on, and the fix did not need it.
