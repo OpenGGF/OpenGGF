@@ -242,6 +242,17 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // from leaking into the next act's free-scroll approach.
         screenLocked = false;
         bossDefeatedFlag = false;
+        // Current_Boss_ID is cleared by the same level-load RAM wipe as the two
+        // flags above: S2 Level_ClrRam runs `clearRAM Misc_Variables,Misc_Variables_End`
+        // (docs/s2disasm/s2.asm:4810) and Current_Boss_ID (s2.constants.asm:1597) lies
+        // inside Misc_Variables (:1484) .. Misc_Variables_End (:1629), alongside
+        // Boss_defeated_flag (:1595). S1 Level_ClrRam wipes v_misc_variables the same
+        // way (docs/s1disasm/sonic.asm:2741), so this is a universal correction, not a
+        // per-game rule. S2 never writes the byte back to zero anywhere else -- see the
+        // lifetime note on currentBossId -- so without this the previous act's boss id
+        // survives into the next act and Sonic_LevelBound's `tst.b (Current_Boss_ID).w`
+        // (s2.asm:37245-37250) keeps withholding the +$40 right-boundary extension.
+        currentBossId = 0;
     }
 
     public int getScore() {

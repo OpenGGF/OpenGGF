@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **Sonic 2's `Current_Boss_ID` no longer survives a level load.**
+  `GameStateManager.resetForLevel()` cleared `screenLocked` and `bossDefeatedFlag` but
+  not `currentBossId`, even though all three sit inside the block S2 `Level_ClrRam` wipes
+  on every level load (`clearRAM Misc_Variables,Misc_Variables_End`,
+  docs/s2disasm/s2.asm:4810; `Current_Boss_ID` at s2.constants.asm:1597, range
+  :1484-:1629). S2 writes that byte back to zero nowhere else, so EHZ2's boss id persisted
+  into CPZ1 and `Sonic_LevelBound` (s2.asm:37243-37250) kept withholding the `+$40` right
+  level-boundary extension: the player was clamped at `Camera_Max_X_pos + 320-24` instead
+  of `+ $40` beyond it. Segment 12 of the S2 complete-emeralds chain goes from 6,581
+  comparator errors to zero.
 - **The S3K end-of-act signpost keeps its horizontal velocity when it lands.**
   ROM `loc_838AA` (docs/skdisasm/sonic3k.asm:176191-176194) is the whole landing
   branch -- routine, `$38` bit 0, and the `$40` timer -- and touches neither
