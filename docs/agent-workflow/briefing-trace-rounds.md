@@ -213,6 +213,18 @@ half-landed change, and require the blast radius to be measured before anything 
   advance are sequenced. The defect had been present throughout and only became expressible at 6601.
   This costs one fixture column and can retire an apparent contradiction outright, so ask it before
   concluding that a matching prefix exonerates the mechanism.
+- **Diff a rebase against its new base on non-subject paths before trusting it.** Rebasing a trace
+  fixture onto current `develop` produced a commit that silently reverted 20 lines of `README.md`
+  and 7 of `docs/agent-workflow/briefing-trace-rounds.md`, neither touched by the original commit;
+  the conflict markers showed only one file. Check with
+  `git diff <new-base>..<rebased> -- ':!<subject-paths>'` and expect it to be empty. This is the
+  same hazard as the silent-revert merge already recorded in the frontier log, arriving through
+  rebase rather than merge.
+- **Never `git stash` in this repository**, including `--keep-index` for a throwaway control. There
+  are ~26 stale collaborator stashes and a failed push/pop is destructive. To take a control with a
+  change removed, remove the files in place instead. A round that reached for it caught itself, but
+  note the measurement would have been false anyway: the run under the stash still had the fixture
+  present, so it was a control in name only.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
