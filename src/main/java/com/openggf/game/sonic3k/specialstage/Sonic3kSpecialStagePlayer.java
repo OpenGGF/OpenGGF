@@ -259,14 +259,25 @@ public class Sonic3kSpecialStagePlayer {
                     started = true;
                 }
 
-                if (advancing) {
-                    // Accelerate forward
+                // ROM loc_9628 (sonic3k.asm:11972-11985) dispatches on three
+                // tests, not two. `advancing` goes straight to loc_964A; if it
+                // is clear, an unstarted stage skips the whole block; and a
+                // started stage then runs `tst.w d2 / bpl.s loc_964A`, so a
+                // NON-NEGATIVE velocity also lands on the forward
+                // acceleration. Only a negative velocity reaches the backward
+                // deceleration below. Coasting therefore keeps clamping the
+                // velocity up to the current rate rather than freezing it,
+                // which is what lets the player track a mid-stage
+                // Special_stage_rate step without touching the D-pad.
+                if (advancing || (started && vel >= 0)) {
+                    // ROM loc_964A (sonic3k.asm:11988-11993).
                     vel += ACCELERATION;
                     if (vel >= rate) {
                         vel = rate;
                     }
-                } else if (started && vel < 0) {
-                    // Decelerate backward (when started but not pressing up)
+                } else if (started) {
+                    // ROM sonic3k.asm:11979-11984, reached only when d2 is
+                    // negative.
                     vel -= ACCELERATION;
                     if (vel <= -rate) {
                         vel = -rate;
