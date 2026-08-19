@@ -90796,3 +90796,60 @@ Whether all 28,733 segment-6 errors are sidekick fields. The chain report expose
 only `firstNonCameraPhysicsMismatch` plus five `recentMismatches`; every one
 visible is a sidekick field, but that is five of 28,733 and is not quoted as a
 ratio.
+## 2026-08-19 — S2 segment 15: the 27-vs-1 clock is nothing, and that narrows the defect
+
+Base `ee3ee41ca`. No code landed; probe reverted.
+
+### They are the same quantity
+
+Both definitions, read rather than assumed:
+
+- ROM `Level_frame_counter` is incremented in exactly one place in level mode —
+  `Level_MainLoop`, immediately after `WaitForVint` (`docs/s2disasm/s2.asm:5088-5092`) — and
+  zeroed at `Level:` before the title card (`:4773`), so it counts **main-loop iterations
+  since level entry** and does not advance during the title-card loop. (`:13130` is the
+  Ending sequence, a different mode. Note it is *not* covered by `Level_ClrRam`: at
+  s2.constants.asm:1665 it sits outside `Misc_Variables_End` at :1629, which is why the ROM
+  zeroes it explicitly.)
+- `LevelManager.frameCounter` is incremented once per `update()` (`LevelManager.java:1270`),
+  and its own accessor javadoc already states it models `Level_frame_counter`, holding the
+  previous completed level frame.
+
+Same quantity. So the gap was real arithmetic, not a units error — which is exactly why it
+had to be measured rather than argued.
+
+### And the gap is a run-wide constant that green segments carry too
+
+Logging both at every compared row:
+
+| segment | recorded `Level_frame_counter` | engine `LevelManager.frameCounter` | delta |
+|---|---|---|---|
+| `seg1_ehz1` (off 769, first segment) | 1, 2, 3, 4 | 1, 2, 3, 4 | **0** |
+| `seg5_ehz2` (off 32931, green) | 1, 2, 3, 4 | 27, 28, 29, 30 | 26 |
+| `seg8_cpz1` (off 61206, green) | 1, 2, 3, 4 | 27, 28, 29, 30 | 26 |
+| `seg9_cpz2` (off 67996, green) | 1, 2, 3, 4 | 27, 28, 29, 30 | 26 |
+| `seg10_cpz2` (off 82342, **red**) | 2, 3 | 28, 29 | 26 |
+
+Every segment after the run's first carries **exactly +26**, passing and failing alike. It
+therefore cannot explain segment 15, and the "27 versus 1" in the previous entry was this
+same constant seen once, without its control. The engine's `LevelManager` is evidently not
+re-zeroed per segment after the first boundary; that is worth a look on its own terms, but it
+is not this defect and a segment-15 story built on it would have been fiction.
+
+This is the trap the skill documents almost verbatim — *"if the 'defect' is a suspiciously
+round constant across unrelated objects, suspect the clock before the engine"* — and the
+thing that settled it was measuring the **passing** segments, not the failing one.
+
+### What that costs the previous entry, and what it buys
+
+Applying the resolved mapping (`engine = recorded + 26`) to the lag closure measured last
+round: it fired at engine frame **27**, which is recorded `Level_frame_counter` **1** — row 1,
+**exactly where the recording's lag row is**. So the engine's suppressed row is correctly
+placed, and the previous entry's framing of "one row of ordering between the lag row and the
+queue-head arming" is **half wrong**: the lag half is right, and the deficit lives entirely in
+when the queue head is armed.
+
+That is a narrower open question than the one this round started with, and it is now the only
+one left standing: rows 0 and 1 of `seg10_cpz2` are still not compared through this path, so
+what happens to the arming across them has not been observed. That observation is the next
+probe — not reasoning about what those rows must contain.
