@@ -228,6 +228,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 false push is a same-frame ordering question, not geometry -- and it corrects an earlier
+  entry (`bugfix/ai-s2-push-contact-r1`, merged 2026-08-19 -- investigation only, no fix).** Logging
+  the contacted instance names it on all five frames: **Obj74 invisible solid block**, solid anchor
+  (7952, 1600), `halfWidth` 27. Both the anchor and Sonic's (7925, 1642) are ROM **centre**
+  coordinates -- the fixture's `object_near` slot 51 reports x `0x1F10` = 7952, y `0x0640` = 1600 --
+  so `dx = -27` is centre-to-centre and this is not a top-left mix-up. **The contact box is correct
+  and so is the ROM's push:** `Obj74_Init` computes `width_pixels = ((subtype & $F0) + $10) / 2` and
+  `Obj74_Main` adds a hardcoded `addi.w #$B,d1` before `SolidObject_Always`
+  (`s2disasm/s2.asm:46585-46610`), giving 16 + 11 = 27, which is exactly the engine's half-width; at
+  `dx = -27` the block is flush and the ROM's `d0 = playerX - objX + d1 = 0` reaches
+  `SolidObject_AtEdge` via `tst.w d0 / beq` (`:35420`). **Correction to the previous entry:** it said
+  the ROM's Sonic "is pushed by nothing". The player half holds -- `player_status_byte` `0x49` has
+  bit 5 (`status.player.pushing`) clear -- but the same frame's `object_near` row for that Obj74
+  carries status `0x20`, and for an object bit 5 is `status.npc.p1_pushing`
+  (`s2.constants.asm:229`), so the ROM records that player 1 **is** pushing it. Not a contradiction:
+  `SolidObject_AtEdge` sets both bits together (`:35439-35446`), and `Sonic_Animate`'s prologue then
+  clears the *player's* bit alone whenever the animation byte changes (`bclr` at `:38391`, in the
+  block that zeroes `anim_frame`) -- and 1724 is exactly an animation change, Wait `0x05` to Walk
+  `0x00`. The open question is pass ordering, and it is not yet closed: in the ROM the player is
+  slot 0 and Obj74 slot 51, so Animate runs first and the object pass second, which would leave the
+  bit set at end of frame and does not by itself explain a clear byte on 1725-1731. Narrowing the
+  contact box would turn the window green while breaking the object's genuinely-recorded
+  `p1_pushing` bit.
+
 - **The S2 false push comes from a solid-object contact, not the wall sensor
   (`bugfix/ai-s2-push-sensor-r1`, merged 2026-08-19 -- investigation only, no fix).** Instrumenting
   `AbstractPlayableSprite.setPushing` to capture the caller on every false -> true transition names
@@ -244,8 +268,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   conditional (`:36818-36826`), but it is not load-bearing here: under `fixBugs = 0` the
   `.noearlyexit` flat-surface test is absent and the routine takes the `angle + $40 / bmi` early
   exit, which at angle 0 proceeds either way. The ROM's own `player_status_byte` is `0x49` across
-  1724-1731, so its Sonic is pushed by nothing at all, and the fixture's `object_near` rows place
-  three solid families nearby with none at his height on his side of travel -- notably an Obj74
+  1724-1731, so the *player's* push bit is clear (**corrected below: the contacted object records the
+  push on its own side**), and the fixture's `object_near` rows place three solid families nearby -- notably an Obj74
   invisible solid block 27px to his **right** while he walks **left**, and an Obj2D one-way barrier
   whose whole purpose is directional. The next question is which instance the engine's
   `resolveContact` reports `pushing()` for, and why.
