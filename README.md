@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Structural guards are gated by CI, and the eleven that had gone silently red are green
+  (`bugfix/ai-guard-coverage-r1` + `bugfix/ai-guard-triage-r2`, merged 2026-08-19).** The
+  `trace-replay` profile's surefire includes are `**/tests/trace/**`, but several guards live in
+  package `com.openggf.trace` and the architectural ones live elsewhere again, so **no routinely-run
+  profile selected them** -- `TestS1S2PlcComparisonOnlyGuard` had been red on `develop` for some
+  time and every "gate green" report missed it. A new source-only, ROM-free `-Pguards` profile
+  selects them by name convention (`**/Test*Guard*.java`, `**/TestNo*.java`,
+  `**/TestArchUnit*.java`), a **blocking** CI job runs it on every push to the integration branches,
+  and `TestBuildToolingGuard.everyGuardTestClassIsSelectedByTheGuardsProfile` fails if any guard
+  class on disk stops being selected -- mutation-tested by deleting an include, twice. The rule-4
+  violation that exposed all this is fixed rather than allowed: the replay bootstrap's dynamic-art
+  reset now publishes through `GameplayModeContext.restartDynamicArtRunForFreshSession()`, so trace
+  code can request a fresh ledger without ever holding the mutation-capable service, and the guard
+  passes because the violation moved. Of the eleven pre-existing failures, the hard-rule-5 ones
+  (objects reaching services in constructors, zone events referencing `GameServices` directly) were
+  **fixed**; the anti-growth budgets were **re-baselined to today's true value with dated
+  justification**, which is recorded drift rather than concealment -- the largest single commit
+  contributes 27%, 21% and 11% of the growth in `ObjectManager`, `AbstractPlayableSprite` and
+  `LevelManager` respectively, so no one change is hiding inside a raised number. No assertion or
+  `@Test` was deleted anywhere. Verified `-Pguards` 499/0 and `-Ptrace-replay` 790 tests / 4 red,
+  set-diff empty both ways against a control at the same base.
+
 - **A PC-execute probe for the S2 push-order question, written but never run
   (`bugfix/ai-s2-push-probe-r1`, merged 2026-08-19 -- tooling only).**
   `tools/bizhawk/probes/s2_cpz2_push_order_probe.lua` hooks `SolidObject_LeftRight` (`$019A6A`),

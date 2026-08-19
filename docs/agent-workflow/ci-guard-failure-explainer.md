@@ -7,6 +7,38 @@ failures actionable without weakening the guard baselines.
 It is written for an external agent with no chat context. All paths are repo-relative to
 `C:/Users/farre/IdeaProjects/sonic-engine`.
 
+## Running all the guards
+
+```bash
+mvn -Dmse=off -Pguards test
+```
+
+The `guards` profile selects every `Test*Guard*` class and nothing else. It is
+source-only, needs no ROM, and takes about a minute. Use it before pushing anything
+structural.
+
+It exists because the guards used to run only in the default profile: the trace
+profiles select `**/tests/trace/**` and skip them, and CI's default `test` job is
+skipped on push, which is how work lands on develop. A guard could therefore be red
+for weeks while every gate reported green -- `TestS1S2PlcComparisonOnlyGuard` was.
+CI now runs `-Pguards` on pushes to develop and master, and
+`TestBuildToolingGuard.everyGuardTestClassIsSelectedByTheGuardsProfile` fails if a
+guard class on disk is not selected by the profile.
+
+Three naming conventions are recognised, and a guard following any of them is picked
+up automatically:
+
+| Convention | Example |
+|---|---|
+| `Test*Guard*` | `TestS1S2PlcComparisonOnlyGuard` |
+| `TestNo*` (prohibition guards, hard rules 5 and 6) | `TestNoServicesInObjectConstructors` |
+| `TestArchUnit*` | `TestArchUnitRules` |
+
+Name a new guard to match one of them. If you cannot, add an explicit `<include>` to
+the profile *and* teach `isGuardTestClassName` about it -- the meta-test only knows
+about guards it can recognise, so a guard named outside all three conventions is
+still invisible to it. That is the one residual gap in this mechanism.
+
 ## How to read a guard failure
 
 1. Find the failing test name in this doc.

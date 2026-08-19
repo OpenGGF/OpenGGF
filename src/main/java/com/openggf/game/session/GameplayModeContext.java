@@ -455,6 +455,18 @@ public final class GameplayModeContext implements ModeContext {
         return fadeManager;
     }
 
+    /**
+     * Advances the session-owned fade one step. Callers outside the session that
+     * only need the per-frame fade tick use this rather than holding the
+     * FadeManager itself, so their package does not gain a graphics edge
+     * (TestArchUnitRules#core_runtime_cycle_cluster_does_not_gain_top_level_edges).
+     */
+    public void updateFade() {
+        if (fadeManager != null) {
+            fadeManager.update();
+        }
+    }
+
     public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
         return plcFrameLifecycle;
     }
@@ -540,6 +552,27 @@ public final class GameplayModeContext implements ModeContext {
 
     public Optional<TraceRunFrameDriver> traceRunFrameDriver() {
         return Optional.ofNullable(traceRunFrameDriver);
+    }
+
+    /**
+     * Restarts the dynamic-art run so its ledger holds only the transfers
+     * this session's own level load produced.
+     *
+     * <p>A session that boots on top of an already-loaded host (the master
+     * title screen live, a throwaway engine-init level load headless)
+     * inherits that load's player-DPLC priming, and every transfer id it
+     * mints afterwards is displaced by the inherited count. The session owns
+     * the dynamic-art lifecycle, so this reset is published from here rather
+     * than by handing the mutation-capable
+     * {@link DynamicArtLifecycleService} to the caller that needs it: callers
+     * barred from dynamic-art mutation authority (trace and ghost code, see
+     * {@code TestS1S2PlcComparisonOnlyGuard}) can ask for a fresh ledger
+     * without being able to write one. No-op when no run is active.
+     */
+    public void restartDynamicArtRunForFreshSession() {
+        if (dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.restartRunForFreshSession();
+        }
     }
 
     /**

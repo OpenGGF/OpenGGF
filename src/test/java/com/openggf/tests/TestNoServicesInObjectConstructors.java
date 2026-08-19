@@ -640,7 +640,66 @@ public class TestNoServicesInObjectConstructors {
         }
     }
 
+    /**
+     * Whether a {@code new X(...)} at {@code lineIndex} is deferred into a factory
+     * (a {@code Supplier} lambda or a factory method referenced with {@code this::})
+     * that a construction-context wrapper later invokes.
+     *
+     * <p>This is the codebase's normal shape for the wrappers that take a supplier:
+     * the {@code new} is written before the {@code spawnChild(...)} /
+     * {@code spawnFreeChild(...)} call that runs it, so a backwards-only scan for the
+     * wrapper cannot see it. The construction context is established by the wrapper
+     * when it invokes the factory, so these sites do get a context — the deferral is
+     * exactly what makes them safe.
+     */
+    private static boolean isDeferredFactoryConstruction(String[] lines, int lineIndex) {
+        Pattern wrapper = Pattern.compile(
+                "\\b(?:spawnChild|spawnFreeChild|spawnObject|createDynamicObject)\\s*\\(");
+        int searchEnd = Math.min(lines.length, lineIndex + 20);
+
+        // Supplier-lambda form: `... = () -> new X(...)` (possibly wrapped over lines),
+        // with the wrapper call following within the same window.
+        boolean lambda = false;
+        for (int i = lineIndex; i >= Math.max(0, lineIndex - 3) && !lambda; i--) {
+            lambda = lines[i].contains("->");
+        }
+        if (lambda) {
+            for (int i = lineIndex + 1; i < searchEnd; i++) {
+                if (wrapper.matcher(lines[i]).find()) {
+                    return true;
+                }
+            }
+        }
+
+        // Factory-method form: `return new X(...)` inside a method that some wrapper
+        // call in this file passes as a `this::name` method reference.
+        if (!lines[lineIndex].trim().startsWith("return new ")) {
+            return false;
+        }
+        Pattern declaration = Pattern.compile(
+                "\\b(?:public|private|protected)\\b[^;{}()]*\\b(\\w+)\\s*\\(");
+        for (int i = lineIndex; i >= 0; i--) {
+            Matcher declared = declaration.matcher(lines[i]);
+            if (!declared.find()) {
+                continue;
+            }
+            Pattern reference = Pattern.compile(
+                    "\\b(?:spawnChild|spawnFreeChild|spawnObject|createDynamicObject)\\s*\\("
+                            + "\\s*this\\s*::\\s*" + Pattern.quote(declared.group(1)) + "\\b");
+            for (String line : lines) {
+                if (reference.matcher(line).find()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return false;
+    }
+
     private static boolean isContextWrapped(String[] lines, int lineIndex) {
+        if (isDeferredFactoryConstruction(lines, lineIndex)) {
+            return true;
+        }
         if (Pattern.compile("\\b(?:setConstructionContext|spawnChild|spawnFreeChild|spawnObject|createDynamicObject)\\s*\\(")
                 .matcher(lines[lineIndex]).find()) {
             return true;

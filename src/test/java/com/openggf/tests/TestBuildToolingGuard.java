@@ -360,6 +360,159 @@ class TestBuildToolingGuard {
         }
     }
 
+    /**
+     * Structural guards are the invariants no trace fixture can prove, so a
+     * guard that stops being run stops being enforced without anything going
+     * red. That happened: {@code TestS1S2PlcComparisonOnlyGuard} lives in
+     * {@code com.openggf.trace}, not {@code com.openggf.tests.trace}, so the
+     * trace-replay profile's {@code **}{@code /tests/trace/**} include never
+     * selected it, and it sat red on develop while every gate reported green.
+     *
+     * <p>The guards profile selects by name convention rather than by path,
+     * and this checks that the convention actually covers what is on disk. It
+     * enumerates the guard sources from the filesystem and evaluates the
+     * profile's patterns from {@code pom.xml}; neither side is derived from
+     * the other, so adding a guard under a path or name the profile misses
+     * fails here.
+     */
+    @Test
+    void everyGuardTestClassIsSelectedByTheGuardsProfile() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml does not define the guards profile");
+
+        List<String> includes = textValues(guards, "include");
+        List<String> excludes = textValues(guards, "exclude");
+        assertFalse(includes.isEmpty(), "the guards profile declares no includes");
+        assertTrue(excludes.isEmpty(),
+                "the guards profile must not exclude anything - an exclude is how a "
+                        + "guard silently stops being run; excludes were " + excludes);
+
+        List<String> violations = new ArrayList<>();
+        for (String source : guardTestSources()) {
+            if (includes.stream().noneMatch(pattern -> antMatches(pattern, source))) {
+                violations.add(source + " is not selected by the guards profile");
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("every guard test class must be selected by -Pguards:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    /**
+     * Proves the pattern matcher above can actually reject, so the coverage
+     * check cannot pass by matching everything. A guard named outside the
+     * convention, or parked under a path the profile does not reach, must be
+     * reported rather than quietly admitted.
+     */
+    @Test
+    void guardSelectionMatcherRejectsClassesOutsideTheConvention() {
+        assertTrue(antMatches("**/Test*Guard*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+        assertTrue(antMatches("**/Test*Guard.java", "com/openggf/tests/TestBuildToolingGuard.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/GuardTest.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/TestSomethingElse.java"));
+        assertTrue(isGuardTestClassName("TestNoServicesInObjectConstructors.java"));
+        assertTrue(isGuardTestClassName("TestArchUnitRules.java"));
+        assertFalse(isGuardTestClassName("TestSonic2Rng.java"));
+        assertFalse(isGuardTestClassName("ObjectGuardSourceScanner.java"));
+        assertFalse(antMatches("**/tests/trace/**/*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+    }
+
+    /**
+     * The default {@code test} job is skipped on push, and work lands on
+     * develop by direct push, so a guard that only the default profile selects
+     * is effectively ungated. The guards profile is source-only and ROM-free,
+     * so it can and must run on every push.
+     */
+    @Test
+    void ciShouldRunTheGuardsProfileOnPushes() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        Map<String, String> jobs = yamlJobBlocks(workflow);
+        String guardJob = jobs.get("guards");
+        if (guardJob == null) {
+            violations.add(".github/workflows/ci.yml does not define a guards job");
+        } else {
+            if (!guardJob.contains("-Pguards")) {
+                violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
+            }
+            if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
+                violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
+                        + " push, which is how work lands");
+            }
+            if (guardJob.contains("continue-on-error: true")) {
+                violations.add(".github/workflows/ci.yml guards job is non-blocking, so a red guard"
+                        + " reports green");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("structural guards must be gated by CI on every push:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    private static List<String> guardTestSources() throws Exception {
+        Path root = Path.of("src", "test", "java");
+        try (Stream<Path> sources = Files.walk(root)) {
+            return sources
+                    .filter(Files::isRegularFile)
+                    .map(path -> root.relativize(path).toString().replace('\\', '/'))
+                    .filter(path -> path.endsWith(".java"))
+                    .filter(path -> isGuardTestClassName(
+                            path.substring(path.lastIndexOf('/') + 1)))
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /**
+     * The three naming conventions structural guards use. {@code Test*Guard*}
+     * is the current one; {@code TestNo*} is the older prohibition form that
+     * carries hard rules 5 and 6 ({@code TestNoServicesInObjectConstructors},
+     * {@code TestNoDirectMapMutationsInGameplay}); {@code TestArchUnit*} holds
+     * the ArchUnit rule sets. All three must be selected by the guards
+     * profile, so a new guard following any of them is picked up without
+     * anyone remembering to add it.
+     *
+     * <p>Only {@code Test}-prefixed classes: same-named helpers (source
+     * scanners, shared fixtures) carry no assertions and are not run directly.
+     */
+    private static boolean isGuardTestClassName(String name) {
+        if (!name.startsWith("Test")) {
+            return false;
+        }
+        return name.contains("Guard")
+                || name.startsWith("TestNo")
+                || name.startsWith("TestArchUnit");
+    }
+
+    /** Ant-style path matching for the surefire include patterns in {@code pom.xml}. */
+    private static boolean antMatches(String pattern, String path) {
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+            if (c == '*' && i + 1 < pattern.length() && pattern.charAt(i + 1) == '*') {
+                if (i + 2 < pattern.length() && pattern.charAt(i + 2) == '/') {
+                    regex.append("(?:[^/]+/)*");
+                    i += 2;
+                } else {
+                    regex.append(".*");
+                    i++;
+                }
+            } else if (c == '*') {
+                regex.append("[^/]*");
+            } else if (c == '?') {
+                regex.append("[^/]");
+            } else {
+                regex.append(Pattern.quote(String.valueOf(c)));
+            }
+        }
+        return path.matches(regex.toString());
+    }
+
     @Test
     void releaseWorkflowShouldRunBranchPolicyOnMasterPullRequests() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
@@ -1132,7 +1285,8 @@ class TestBuildToolingGuard {
                 continue;
             }
             String jobCondition = yamlJobCondition(job.getValue());
-            if (!conditionExcludesPush(jobCondition)) {
+            if (!conditionExcludesPush(jobCondition)
+                    && !conditionPinsPushToIntegrationBranches(jobCondition)) {
                 violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
                         + " is reachable from a branch push");
             }
@@ -2573,6 +2727,24 @@ class TestBuildToolingGuard {
         command.addAll(List.of(arguments));
         ProcessResult result = run(repository, command, null);
         assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+    }
+
+    /**
+     * True when a job runs on pushes, but only to the integration branches.
+     * Feature-branch pushes stay policy-only and Maven-free (see
+     * {@link #allBranchPushPolicyShouldRemainLightweight()}); develop and
+     * master are where work actually lands, so a source-only gate there costs
+     * one short job per merge and is the only thing standing between a red
+     * structural guard and nobody noticing.
+     */
+    private static boolean conditionPinsPushToIntegrationBranches(String condition) {
+        if (condition == null || condition.isBlank()) {
+            return false;
+        }
+        String normalized = condition.replace("\"", "'");
+        return normalized.contains("github.event_name != 'push'")
+                && normalized.contains("github.ref == 'refs/heads/develop'")
+                && !normalized.contains("github.ref != ");
     }
 
     private static String gitOutput(Path repository, String... arguments) throws Exception {

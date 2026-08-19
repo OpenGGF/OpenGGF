@@ -153,6 +153,14 @@
               Run with: mvn -Pbenchmarks test
             -->
             <id>benchmarks</id>
+            <!-- Benchmarks are wall-clock sensitive, so they default to a single
+                 fork. That default is expressed as the shared surefire.forkCount
+                 property rather than a literal, so the one documented property
+                 still controls fork count everywhere (and -Dsurefire.forkCount
+                 on the command line still wins). -->
+            <properties>
+                <surefire.forkCount>1</surefire.forkCount>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -161,7 +169,7 @@
                         <version>3.2.5</version>
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine}</argLine>
-                            <forkCount>1</forkCount>
+                            <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <groups>performance-measurement</groups>
                             <systemPropertyVariables>
@@ -446,6 +454,57 @@
                                 <exclude>**/*Probe.java</exclude>
                                 <exclude>**/*Probe*.java</exclude>
                             </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Structural guard tests: the architectural invariants that no
+             trace fixture can prove and that must never silently stop being
+             enforced.
+
+             They lived only in the default profile, which the trace suites do
+             not run and which is expensive and ROM-sensitive locally, so a red
+             guard could sit unnoticed on develop (TestS1S2PlcComparisonOnlyGuard
+             did). This profile is source-only, needs no ROM, and runs in about
+             a minute, so CI can gate every push to the integration branches on
+             it - the default `test` job is skipped on push entirely.
+
+               mvn -Pguards test
+
+             The include is a name convention, not a path: a guard may live in
+             any package. TestBuildToolingGuard
+             .everyGuardTestClassIsSelectedByTheGuardsProfile checks that every
+             *Guard* test class on disk is actually selected here. -->
+        <profile>
+            <id>guards</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir=${project.build.directory}/test-tmp</argLine>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/Test*Guard*.java</include>
+                                <!-- Prohibition guards predate the *Guard suffix and enforce
+                                     hard rules 5 and 6 (no getInstance() in objects, no direct
+                                     map mutation). Same three conventions are checked by
+                                     TestBuildToolingGuard, so a new one under any of them is
+                                     picked up automatically. -->
+                                <include>**/TestNo*.java</include>
+                                <include>**/TestArchUnit*.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
                         </configuration>
                     </plugin>
                 </plugins>

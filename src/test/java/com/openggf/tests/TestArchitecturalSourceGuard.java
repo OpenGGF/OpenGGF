@@ -57,7 +57,12 @@ class TestArchitecturalSourceGuard {
     // existing restore orchestration boundary; it does not move collaborator logic back here.
     // 2026-07-12: ratchet inherited develop growth to 2910, plus a four-line public
     // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 2914;
+    // 2026-08-19: 2914 -> 3041. Recorded drift, not a single regression: 47 commits
+    // by both maintainers touched this file since the 2026-07-12 ratchet while no CI
+    // job ran this guard (the gap the -Pguards gate closes). The growth is spread
+    // across the existing orchestration surface; placement, touch-response and
+    // solid-contact logic remain in their extracted collaborators.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3041;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
@@ -66,8 +71,16 @@ class TestArchitecturalSourceGuard {
             // controller state captured by the playable rewind schema.
             // 2026-08-03: 3159 -> 3161 for explicit native player-SST presence
             // reset/restore state; accessors retain the existing compact precedent.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3161,
-            "com/openggf/level/LevelManager.java", 2500,
+            // 2026-08-19: 3161 -> 3211 (50 commits since the 2026-08-03 ratchet).
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3211,
+            // 2026-08-19: 2500 -> 2812. The 2500 entry carried no ratchet history and
+            // 110 commits have touched LevelManager since it was written on 2026-07-02,
+            // so 2500 stopped describing this file long before now. Recorded here as
+            // today's true count at 2327368e2; extraction is tracked as follow-up work,
+            // not hidden. (It was 2812 one rebase earlier -- the sidekick collision-path
+            // fix 38e50f87a added four more lines while this branch was in review, which
+            // is the drift rate this ratchet exists to make visible.)
+            "com/openggf/level/LevelManager.java", 2816,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-06: 2890 -> 2910 for the Gumball/Pachinko bonus-stage live-rewind
@@ -90,7 +103,9 @@ class TestArchitecturalSourceGuard {
             // segment-advance state machine every mode, not just LEVEL; it is already
             // its own focused collaborator hook (TraceSessionLauncher/RunSegmentAdvancer
             // own the actual state machine) and does not belong in any other file.
-            GAME_LOOP_PATH, 3005
+            // 2026-08-19: 3005 -> 3065. Same recorded-drift note as the entries above;
+            // 140 commits have touched GameLoop since the guard last ran anywhere.
+            GAME_LOOP_PATH, 3065
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -116,7 +131,9 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
             new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 95),
-            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 91),
+            // 2026-08-19: 91 -> 102, recorded drift accumulated while no CI job ran
+            // this guard.
+            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 102),
             new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 86)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(

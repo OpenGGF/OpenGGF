@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.game.AbstractLevelEventManager;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
@@ -41,7 +40,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
             new Sonic1FixedAirCountdownManager(Sonic1ZoneEvents::focusedSpriteOrNull);
     private final Sonic1FixedTitleCardManager fixedTitleCardManager =
-            new Sonic1FixedTitleCardManager();
+            new Sonic1FixedTitleCardManager(() -> gameService(Sonic1PlcService.class));
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();
@@ -186,7 +185,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         if (romAct == ACT_3) {
             return;
         }
-        var camera = GameServices.cameraOrNull();
+        var camera = cameraOrNull();
         if (camera == null) {
             return;
         }
@@ -209,7 +208,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // so this is setMinX (immediate), not the eased setMinXTarget.
         camera.setMinX((short) threshold);
         // moveq #plcid_Signpost,d0 / bra.w NewPLC
-        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        Sonic1PlcService plcService = gameService(Sonic1PlcService.class);
         if (plcService != null) {
             try {
                 plcService.replaceQueued(PLC_ID_SIGNPOST);

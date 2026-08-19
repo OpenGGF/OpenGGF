@@ -384,7 +384,7 @@ public final class DynamicArtLifecycleService
 
     /**
      * Restarts an already-active run so the ledger holds only work the
-     * replay's own level load produced.
+     * session's own level load produced.
      *
      * <p>A replay session boots on top of whatever the host had already
      * loaded — the master title screen live, a throwaway engine-init level
@@ -398,8 +398,15 @@ public final class DynamicArtLifecycleService
      * dynamic-art half of the same leakage
      * {@code TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay}
      * already zeroes for the RNG seed and the level subsystems.
+     *
+     * <p>Reached only through
+     * {@link com.openggf.game.session.GameplayModeContext#restartDynamicArtRunForFreshSession()}:
+     * the session owns this lifecycle, so callers that must not hold
+     * mutation authority over it (trace and ghost code) never take a
+     * reference to this service. It takes no arguments and resets to
+     * compile-time constants, so no caller can steer it.
      */
-    public void restartRunForReplayBootstrap() {
+    public void restartRunForFreshSession() {
         resetState();
         runActive = true;
     }

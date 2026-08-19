@@ -41,7 +41,7 @@ public final class TraceRunPresentationClosure {
                     frame -> serviceLagClosure(context, frame));
         } else {
             context.plcFrameLifecycle().runLogicalIteration(
-                    context.getFadeManager()::update,
+                    context::updateFade,
                     frame -> serviceLagClosure(context, frame));
         }
         if (step.commitDeferredBoundaryAfterClosure()) {

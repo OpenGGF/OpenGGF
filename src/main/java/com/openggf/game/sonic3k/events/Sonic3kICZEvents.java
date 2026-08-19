@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.mutation.LayoutMutationContext;
@@ -769,7 +768,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             throw new IllegalStateException(
                     "ICZ2 resource owner requires an exact resource-owner lease");
         }
-        RuntimeArtAdmissionLease rebound = GameServices.module()
+        RuntimeArtAdmissionLease rebound = module()
                 .getObjectArtProvider()
                 .rebindRuntimeArtAdmission(
                         admissionLease.id(),
@@ -817,7 +816,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
                 applyIcz2PreparedArt(tiles8x8);
                 RuntimeArtAdmissionLease lease = restoredAdmissionLease();
-                GameServices.module().getObjectArtProvider()
+                module().getObjectArtProvider()
                         .consumeRuntimeArtAdmission(
                                 lease,
                                 RuntimeArtAdmissionOwnerKind

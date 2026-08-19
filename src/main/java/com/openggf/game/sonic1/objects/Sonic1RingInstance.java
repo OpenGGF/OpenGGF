@@ -9,7 +9,13 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -33,6 +39,30 @@ import java.util.List;
  */
 public class Sonic1RingInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+
+    /**
+     * The ring's published touch profile. Identical to what
+     * {@code TouchResponseProfile.fromProvider(this)} derives — the ring uses the
+     * normal category decode, has no shield reaction, no render-flag gate and a
+     * single touch region — except that it is stated once here rather than
+     * assembled from hooks, so the touch controller and the object agree on one
+     * object of truth. {@code continuousCallbacks} is the ROM behaviour
+     * documented on {@link #requiresContinuousTouchCallbacks()}.
+     */
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            // continuousCallbacks: the ROM re-check documented on
+            // requiresContinuousTouchCallbacks() below.
+            true,
+            // requiresRenderFlagForTouch: the provider default; the ring is only
+            // testable while the render-flag equivalent is set.
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     /** S1 ring collision type: $47 = powerup category ($40) + size index 7. */
     public static final int RING_COLLISION_FLAGS = 0x47;
@@ -296,6 +326,16 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     @Override
     public boolean requiresContinuousTouchCallbacks() {
         return true;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
