@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 results path is gapped by a second row authority, not deferred by a budget
+  (`bugfix/ai-s1-runplc-visibility-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
+  Sequence-numbered probes show **two** paths selecting a row's hardware-timing authority and
+  disagreeing on a results row: `prepareRunFrameHardwareTiming` classifies it `PRESENTATION_VBLANK`
+  and latches a row via `beginPlaybackFrame`, then `prepareHardwareTimingForAdmission` takes its
+  `insideRecordedSpecialStageMode` branch, reaches `prepareRunSpecialStageHardwareTimingRow`, and
+  **gaps** -- because segment 2 is a *level* segment with no special-stage admission. The gap runs
+  last and wins, so the port holds no row at `PRE_MAIN_LOOP` and no recorded edge can be admitted.
+  **The boundary sequence is a red herring:** `LevelFrameStep`'s level tail and
+  `executeHardwareTimedObjectScan` end in the same four steps, and the level path agrees with itself
+  only because `LEVEL`/`BONUS_STAGE` take `beginPlaybackFrame` in *both* places. This corrects the
+  previous entry twice over -- the one-row deferral was **not** caused by
+  `RomWorkBudgetScheduler` granting its unit at `POST_OBJECTS`, since the job is never released at
+  all. Recorded as a trap: **two probe rounds produced empty output that was nearly read as "this
+  path never runs", and both were compilation failures** -- an absent probe file proves nothing until
+  the build is confirmed. Nothing landed, since no committed trace compares S1 results-screen queue
+  state and a clean gate over that span is absence of evidence.
+
 - **The object pass terminates before `Obj05`'s slot, and only a `d7` clobber survives
   (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- second PC-execute probe, no engine change).**
   The structural fact that reframes the question: `Tails_Tails` sits in `LevelOnly_Object_RAM`

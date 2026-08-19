@@ -736,9 +736,20 @@ namespace OpenGGF.BizHawk.Headless
                     index,
                     directQueue[priorStart + index]))
                 {
+                    // TEMPORARY DIAGNOSTIC -- revert before commit.
+                    int diagEntry = DirectEntryAddress(index);
+                    DirectSubmission diagMirror = directQueue[priorStart + index];
                     throw new InvalidDataException(
                         "Kosinski decompression FIFO changed entry "
-                        + index + " " + context + ".");
+                        + index + " " + context + "."
+                        + " DIAG physicalCount=" + physicalCount
+                        + " overlap=" + overlap
+                        + " priorStart=" + priorStart
+                        + " physSource=0x" + S3KRam.U32(host, diagEntry).ToString("X8")
+                        + " physDest=0x" + S3KRam.U32(host, diagEntry + 4).ToString("X8")
+                        + " mirrorSource=0x" + diagMirror.Source.ToString("X8")
+                        + " mirrorDest=0x" + diagMirror.Destination.ToString("X8")
+                        + " sourceDelta=" + (long)(S3KRam.U32(host, diagEntry) - diagMirror.Source));
                 }
             }
         }

@@ -86365,3 +86365,84 @@ system, not two games.
 The test is one probe: log `d7` at each `RunObject` iteration for rows 5550-5566
 and find the iteration after which it stops decreasing toward the LevelOnly
 range.
+
+## 2026-08-19 -- Why the S1 results path never sees its recorded PLC edges: two row authorities disagree
+
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission" test
+```
+
+Branch `bugfix/ai-s1-runplc-visibility-r1`, based on `develop` at `ebde965b8`.
+Diagnosis only -- **no engine change is landed**; see "Why nothing landed".
+
+### The boundary sequence is a red herring
+
+`LevelFrameStep`'s level tail and `executeHardwareTimedObjectScan` end in the
+*same* four steps -- `POST_OBJECTS`, `PRE_MAIN_LOOP`,
+`finishHeldLoopTailClosure`, `prepareAfterLoop(phase)`
+(`LevelFrameStep.java:463-476` and `:194-201`). The sequence is not the
+difference.
+
+### What the difference is
+
+Two independent paths select the row's hardware-timing authority, and on a
+results row they disagree. Sequence-numbered probes over the run
+(`TraceSessionLauncher` was given an `AtomicInteger` and both call sites logged)
+show the per-row order:
+
+```
+[62] DISP PRESENTATION_VBLANK seg=2      <- prepareRunFrameHardwareTiming
+[63] ADMIT mode=SPECIAL_STAGE_RESULTS ... <- prepareHardwareTimingForAdmission
+[64] GAP seg=2                            <- prepareRunSpecialStageHardwareTimingRow
+```
+
+`prepareRunFrameHardwareTiming` classifies the row `PRESENTATION_VBLANK` (731
+times on segment 2) and calls `runHardwareTiming.beginPlaybackFrame(...)`, which
+latches a row. `prepareHardwareTimingForAdmission` then runs, takes its
+`insideRecordedSpecialStageMode(mode)` branch -- true for
+`SPECIAL_STAGE_RESULTS` -- and reaches
+`prepareRunSpecialStageHardwareTimingRow`, whose
+`currentRunSpecialAdmission().isEmpty()` guard fires because segment 2 (`ghz2`)
+is a **level** segment with no special-stage admission. It calls
+`fixture.enterHardwareTimingGap()`, 816 times in the run. **The gap runs last
+and wins**, so the port holds no row when `PRE_MAIN_LOOP` is serviced and no
+recorded edge can ever be admitted.
+
+The level path has same-row visibility for the opposite reason: for
+`GameMode.LEVEL` / `BONUS_STAGE`, `prepareHardwareTimingForAdmission` calls
+`beginPlaybackFrame` (`TraceSessionLauncher.java:3183-3187`) -- the same call the
+frame driver makes -- so the two authorities agree by construction. (Read from
+the code, not measured; the probe logged results rows only.)
+
+The branch's own comment cites `s2.asm:6721-6800`: in Sonic 2 the recorded
+segment does own the whole `GameModeID_SpecialStage` span including the results
+tail. Sonic 1's results screen likewise runs inside `GM_Special`
+(`SS_NormalExit`, `docs/s1disasm/sonic.asm:3402-3413`), but the recorded segment
+covering those rows is the returning level segment, so the assumption does not
+hold and the guard gaps instead.
+
+### Corrections to the previous entry
+
+- The one-row deferral was **not** caused by
+  `RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS)` granting its unit earlier
+  in the row than a `PRE_MAIN_LOOP` submission. The job is never released at
+  all, because the port is gapped. That earlier explanation was reasoning, not
+  measurement, and it was wrong.
+- Two probe rounds produced empty output files that were nearly read as "the
+  code path never runs". Both were **compilation failures** (`cannot find symbol:
+  variable loop`). An absent probe file is not evidence about a code path until
+  the build is confirmed to have succeeded -- check `Tests run:` before
+  interpreting silence.
+
+### Why nothing landed
+
+The principled fix is that a row whose segment carries no special-stage
+admission should not have the special-stage driver force a gap over the frame
+driver's already-selected authority -- a structural rule keyed on the admission's
+presence, with no game, zone or route predicate. It is not landed for the same
+reason as the previous round: the only fixture that compares S1 results-screen
+queue state is the unlanded re-recorded run, so **no committed trace observes the
+field this would move**, and a clean gate over an unobserved span is absence of
+evidence. Full `-Ptrace-replay` control at `ebde965b8` is 790 / 4.
