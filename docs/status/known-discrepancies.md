@@ -39,6 +39,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
 27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
+28. [Title-Card Locked Phase Does Not Advance the V-int Clock](#title-card-locked-phase-does-not-advance-the-v-int-clock)
 
 ---
 
@@ -2284,3 +2285,46 @@ debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage numb
 test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
 The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
 at `sonic3k.asm:197730` -- which is not implemented (registry name only).
+
+---
+
+## Title-Card Locked Phase Does Not Advance the V-int Clock
+
+**Games affected:** Sonic 1 and Sonic 2.
+
+### Original Implementation
+
+`Level_TtlCard` runs its scroll-in loop with a `WaitForVint` on every pass
+(`s2disasm/s2.asm:4914-4916`; Sonic 1 has the identical property). Each of those
+waits is a real V-blank, so `V_int_run_count` genuinely advances while the title
+card is sliding in and holding.
+
+### Our Implementation
+
+`shouldAdvanceVblankClockDuringLockedPhase()` returns `false` for both S1 and S2,
+so during the locked phase the engine takes the camera-only branch and its
+V-blank clock does not tick on those passes.
+
+### Rationale
+
+This was surfaced, not introduced, by the S2 fix that stopped placed objects
+being aged through the card (`bugfix/ai-s2-seg15-r1`). Before that change S2
+dispatched objects during the locked phase, which incidentally advanced the
+clock; freezing the objects to match `ObjectsManager`'s ROM position at
+`s2.asm:5003` removed that side effect and left the clock behaviour visible on
+its own.
+
+The value is left as-is because S1 already had exactly this shape, so matching it
+keeps one cross-game answer rather than two. Changing the object lifetime and the
+clock in the same round would also have made the resulting trace movement
+unattributable to either.
+
+Whether both games should advance the clock here is a genuine open question, not
+a settled divergence, and it is a plausible cause of the current S2 chain
+frontier at segment 15 frame 409.
+
+### Verification
+
+`TestS2CompleteEmeraldRunChain` reaches segment 15 row 6849 of 7088 with the
+clock left unadvanced; the chain reconciles the difference through
+`completeInterLevelVblankBootBudget`.

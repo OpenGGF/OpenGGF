@@ -48,6 +48,26 @@ All notable changes to the OpenGGF project are documented in this file.
   comparison (_incObj/79 Lamppost.asm:57-62). The bonus-stage return already
   carried the mark across its own reload; the special-stage return is the second
   implementation of the same contract and was missing it.
+- Sonic 2's placed level objects no longer age while the title card slides in
+  and holds. `Level:` calls `ObjectsManager` at docs/s2disasm/s2.asm:5003 and
+  `InitPlayers` at :4945, both *after* the `Level_TtlCard` scroll-in wait loop
+  at :4914-4925, so the object RAM that loop dispatches through `RunObjects`
+  holds only the Obj34 title-card pieces -- no level object and no playable
+  exists yet. The level objects run for the single `RunObjects` at :5006 and
+  the 25 iterations of the leave loop at :5060-5066, and for nothing before
+  them. `TitleCardManager` already modelled that window for the players
+  (`shouldRunPlayerPhysics()` returns `leavePass > 0`) but never overrode
+  `shouldRunLevelObjectsDuringLockedPhase()`, so it inherited the default
+  `true` and ticked `ObjectManager` on every locked pass; Sonic 1 and
+  Sonic 3&K already return `false`. A fresh headless load hides this, because
+  its card is only the leave window, but a re-entry card is far longer: the
+  complete-emeralds run's CPZ act 2 special-stage return ran 91 object passes
+  where the ROM runs 26. The ObjA7 Grabber cluster (`x_vel #-$40` per pass,
+  s2.asm:76662-76668) drifted about 17 pixels, unloading one Grabber early and
+  leaving another in the player's path that the ROM never places there --
+  Sonic destroyed it, the badnik rebound negated `y_speed`, and the run died on
+  spikes. `TestS2CompleteEmeraldRunChain` advances from BK2 cursor 83819 to
+  89191, segment 15 row 1477 to 6849 of 7088.
 - The Sonic 3&K title card shown when a special stage returns to the level now
   draws the ROM's act. `Obj_TitleCardInit` never reads `Current_zone_and_act`:
   the act-number art is `ArtKosM_TitleCardNum2` unless `tst.b (Apparent_act).w`

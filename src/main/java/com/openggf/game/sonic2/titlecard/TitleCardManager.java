@@ -1271,6 +1271,32 @@ public class TitleCardManager implements TitleCardProvider {
     }
 
     /**
+     * The level's placed objects have exactly the same ROM lifetime as the
+     * players, and for the same reason: {@code Level:} calls
+     * {@code ObjectsManager} at docs/s2disasm/s2.asm:5003 -- one instruction
+     * before the {@code InitPlayers} window cited above -- so the object RAM
+     * the {@code Level_TtlCard} scroll-in loop at :4914-4925 dispatches holds
+     * only the Obj34 title-card pieces, never a level object. The level
+     * objects therefore run for the single {@code RunObjects} at :5006 and the
+     * 25 leave-loop iterations at :5060-5066, and for nothing before them.
+     *
+     * <p>Without this the engine aged every placed object by the full length
+     * of the card's slide-in and hold. That is invisible on a fresh headless
+     * load, whose card is only the leave window, but a re-entry card (a star
+     * post restart, or a special-stage return inside a run) is far longer: the
+     * CPZ act 2 special-stage return ran 91 object passes where the ROM runs
+     * 26, drifting the ObjA7 Grabber cluster (x_vel {@code #-$40} per pass,
+     * s2.asm:76662-76668) about 17 pixels and putting a badnik in the player's
+     * path that the ROM never places there.
+     *
+     * @see #shouldRunPlayerPhysics()
+     */
+    @Override
+    public boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return leavePass > 0;
+    }
+
+    /**
      * ROM {@code RunObjects} extends its slot count to {@code LevelOnly_Object_RAM}
      * only when {@code Game_Mode} is exactly {@code GameModeID_Level}
      * (docs/s2disasm/s2.asm:29812-29818); {@code GameModeFlag_TitleCard} is set for

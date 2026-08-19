@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2 stops ageing placed objects through the title card
+  (`bugfix/ai-s2-seg15-r1`, merged 2026-08-19).** No carried *value* differed at segment 15 row 0 --
+  the chain and a standalone lane agreed on player position and slot occupancy. What differed was
+  object **age**: the chain had spent 91 object passes since the destination level load where the
+  ROM spends 26. `ObjA7` patrols at `x_vel #-$40` (`s2disasm/s2.asm:76662-76668`), so the CPZ2
+  Grabber cluster entered ~17px further along; the chain then unloaded a Grabber the ROM keeps, and
+  put another 11px left of the recorded `0x1282` -- `object_near` pins it there for the whole
+  window and the standalone lane matches exactly -- directly in the player's path. Sonic destroyed
+  it, the badnik rebound negated `y_speed`, and a death on spikes surfaced **1270 frames later** as
+  the reported ownership loss. `TitleCardManager` already modelled the ROM window for the players
+  via `shouldRunPlayerPhysics()`, because `InitPlayers` (`:4945`) runs after the `Level_TtlCard`
+  scroll-in loop (`:4914-4925`); `ObjectsManager` sits at `:5003`, one instruction earlier, so the
+  placed objects have identical lifetime. S2 simply never overrode
+  `shouldRunLevelObjectsDuringLockedPhase()` and inherited the default `true`, where S1 and S3K both
+  return `false` -- and `TitleCardProvider`'s own javadoc already stated the rule. One-line
+  override, no constant and no zone/route/frame predicate. Invisible on a fresh headless load, whose
+  card is only the leave window; it bites on any long re-entry card. The chain advances 5372 rows,
+  BK2 cursor 83819 -> 89191 (segment 15 row 1477 -> 6849 of 7088), to a new sidekick-side frontier.
+
 - **The S3K special-stage return preserves the star-post activation mark
   (`bugfix/ai-s3k-seg4-r1`, merged 2026-08-19).** The engine's star-post activation mark models
   ROM `Last_star_post_hit`, and the special-stage return's level reload cleared it.
