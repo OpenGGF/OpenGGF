@@ -40,7 +40,16 @@ class TestBuildToolingGuard {
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
     private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
-    private static final String FRONTIER_GRANDFATHER_BASELINE = "53de63da2";
+    // The commit this baseline is read from must be reachable from the
+    // integration branch, or the guard can only pass on a clone that happens to
+    // hold the other ref. 53de63da2 was such a commit: it lives only on
+    // feature/ai-trace-fleet-regeneration, was never pushed to origin, and so is
+    // absent from every CI checkout regardless of fetch depth -- the guard was
+    // green on the authoring machine and unrunnable everywhere else. 9fb9f4011
+    // is an ancestor of develop carrying the byte-identical blob
+    // (c9e3704624c03827fbd3521d1ff276eb60fd3b99), so the baseline content is
+    // unchanged and only its reachability differs.
+    private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
 
     /** {@code -DforkCount=...} — the flag Maven ignores here. */
