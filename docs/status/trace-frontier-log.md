@@ -89192,3 +89192,93 @@ Pre-existing at the base and untouched here:
 `TestHardwareTimingService.recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`
 errors with "recorded hardware admission is not active". Confirmed by running
 that class alone in a detached control worktree at `origin/develop`.
+## 2026-08-19 — `EndSign_CheckPlayerHit`'s `FixBugs = 0` path modelled; the residual wild read is provably inert
+
+Branch `bugfix/ai-s3k-signpost-gate-r1` off `origin/develop` (`5f2a3423f`). One engine fix
+and one test correction. **The frontier does not move**; this is a second latent site on
+the same routine.
+
+### What the shipped ROM actually does
+
+`EndSign_CheckPlayerHit` (`docs/skdisasm/sonic3k.asm:176347-176371`) range-tests both
+players once, then calls `sub_83A70` for Player 1 and afterwards for Player 2. The
+`FixBugs` conditional at `:176357-176365` decides whether `d0` survives the Player 1 call.
+The engine takes `FixBugs = 0`, matching the shipped build.
+
+The destruction route is easy to miss and the disassembly's own comment does not spell it
+out. `sub_83A70` ends in `jmp (HUD_AddToScore).l` — a **tail jump** — so `HUD_AddToScore`'s
+`rts` consumes the return address that `bsr.w sub_83A70` pushed and returns straight to
+`loc_83A6A`, with `d0` holding `move.l (a3),d0`, the 32-bit `Score`
+(`docs/skdisasm/sonic3k.asm:17654-17665`). The `swap d0 / tst.w d0` that is supposed to
+test Tails therefore reads the score's high word.
+
+`d0` survives on every path where Player 1 does **not** score: out of range (`tst.w d0` is
+zero, `beq.s loc_83A6A`), or in range but failing `sub_83A70`'s `cmpi.b #2,anim(a1)` /
+`tst.w y_vel(a1)` tests, both of which `rts` before `d0` is touched. So the rule is exact:
+
+> At most one player bumps the signpost per frame, and it is Player 1 whenever Player 1
+> qualifies. A Player 2 bump is reachable only on frames where Player 1 did not bump.
+
+### The wild read is inert, and that is a fact rather than an assumption
+
+The surviving branch does `movea.w d0,a1` on the swapped score and reads a real object out
+of the bottom of the ROM. It cannot bump, and the ROM bytes prove it rather than making it
+merely unlikely:
+
+* `Score` is capped at `999999 = $F423F` (`docs/skdisasm/sonic3k.asm:17649-17652`), so the
+  swapped word is `0..$F`. Zero returns immediately.
+* For `1..$F` the ROM reads `anim(a1)` = `$20(a1)` from the 68000 vector table. In the
+  locked-on ROM those bytes are `$00` at every odd `a1` — which also means the odd cases
+  return before any word access, so no address error — and `$02` at `a1 = 2, 6, $A, $E`.
+* At all four of those, the `y_vel(a1)` = `$1A(a1)` word is `$0000`, so
+  `tst.w y_vel(a1) / bpl.s locret_83ABC` always returns.
+
+Modelling the branch as "no Player 2 bump this frame" is therefore exact.
+
+### Changes
+
+`S3kSignpostInstance.checkBumpFromBelow` now stops after the first player that bumps, with
+the flag, the branch taken, and what the fixed branch would do named in a comment at the
+site, per the `FixBugs` convention.
+
+`TestS3kSignpostInstance.sameFrameNativeP2BumpCanOverwriteNativeP1Velocity` asserted the
+opposite — that a same-frame Player 2 hit overwrites Player 1's `x_vel` — with a ROM
+citation attached. That is `FixBugs = 1` behaviour and the shipped ROM cannot produce it.
+Replaced by `nativeP1BumpSuppressesTheSameFrameNativeP2Bump`, which pins the shipped
+outcome with the citation that licenses it. This is a **correction of a wrong expectation**,
+not a demotion: the new assertion is strictly stronger, and it fails if the suppression is
+removed.
+
+### Latent again
+
+No frame in the committed corpus has both players simultaneously eligible: chain segment 4
+is 34,112 errors with first mismatch frame 5766 before and after. Landed because the engine
+was taking the bug-fixed branch, not because it fixes a measured failure. It also cannot be
+the source of the missing kicks — it only ever removes bumps, and the engine already has
+too few.
+
+### Still open on this frontier
+
+The second post-bounce kick (ROM 5595, engine 5606) remains unexplained. Ruled out with
+evidence so far: the bump range window, the hidden-monitor bounce, both signpost timers,
+the `$20` cooldown phase (engine bumps at 5210 and 5243 are 33 frames apart, exactly
+`$20` decrements plus the resuming check), `romBumpXVelocity`'s shift order, and now the
+`FixBugs` player pairing.
+
+### Open item, unrelated to this frontier: boss arena entry is ungated
+
+`loc_85CA4` (`docs/skdisasm/sonic3k.asm:180495-180552`) gates a boss's **start** on three
+bits of `$27(a0)`: the `$2E` music timer, the Y camera-boundary ease to
+`_unkFAB0`/`_unkFAB2`, and the X ease to `_unkFAB4`/`_unkFAB6`. Bounds are loaded per boss
+by `sub_85D6A` (`:180565-180577`) from a ROM table, and the two side flags come from
+`Check_CameraInRange` (`:180414-180434`). The install pattern is
+`lea <boss>_CameraRange(pc),a1 / jsr Check_CameraInRange / jsr sub_85D6A /
+move.l #<boss>_WaitStartCallback,(a0)`, with that callback being `jmp (loc_85CA4).l` —
+`Obj_HCZEndBoss` at `:140783-140806` is the clearest example. About twelve bosses use it.
+
+None of this is modelled: the engine has no `_unkFAB0`-`_unkFAB6`, no `Check_CameraInRange`
+side flags, and no drag-follow-then-snap boundary primitive (`Camera.setMinXTarget` and
+friends ease at 2 px/frame, which is a different mechanism). It will surface as a
+boss-timing divergence — a boss starting before the camera has settled — and is recorded
+here so that is recognised rather than re-derived. It is **not** the post-defeat signpost
+gate; that is `Obj_EndSignControl`'s timer, and it is already correct.

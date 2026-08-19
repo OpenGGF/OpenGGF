@@ -413,13 +413,47 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
 
-        // ROM EndSign_CheckPlayerHit checks the range once, then calls sub_83A70
-        // for Sonic and Tails in that order. The delay byte is written inside
-        // sub_83A70, so a same-frame Tails hit can overwrite Sonic's x velocity
-        // (docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387).
+        // ROM EndSign_CheckPlayerHit range-tests both players once, then calls
+        // sub_83A70 for Player 1 and afterwards for Player 2
+        // (docs/skdisasm/sonic3k.asm:176347-176371, 176376-176397).
+        //
+        // FixBugs conditional at docs/skdisasm/sonic3k.asm:176357-176365. The
+        // engine takes the FixBugs = 0 branch, which is what the shipped ROM
+        // does. The fixed branch would push/pop d0 around the Player 1 call so
+        // that the following `swap d0 / tst.w d0` still holds Player 2's
+        // address; the un-fixed branch does not, and d0 is destroyed whenever
+        // Player 1 actually scores a bump. It is destroyed by a route that is
+        // easy to miss: sub_83A70 ends in `jmp (HUD_AddToScore).l`, a TAIL
+        // jump, so HUD_AddToScore's own rts consumes the return address that
+        // `bsr.w sub_83A70` pushed and returns straight to loc_83A6A -- with
+        // d0 holding `move.l (a3),d0`, the 32-bit Score (:17654-17665).
+        //
+        // So on a frame where Player 1 bumps, the Player 2 test reads the HIGH
+        // WORD of the score instead of Tails' address, and Player 2 can never
+        // bump. That residual branch is provably inert rather than merely
+        // unlikely: Score is capped at 999999 = $F423F (:17649-17652), so the
+        // swapped value is 0..$F. Zero returns immediately. For 1..$F the ROM
+        // does `movea.w d0,a1` and reads `anim(a1)` = $20(a1) and then
+        // `y_vel(a1)` = $1A(a1) out of the 68000 vector table at the bottom of
+        // the ROM. In the locked-on ROM those bytes are $00 at every odd a1 and
+        // $02 at a1 = 2, 6, $A, $E -- and at all four of those the y_vel word is
+        // $0000, so `tst.w y_vel(a1) / bpl.s locret_83ABC` always returns. The
+        // wild read therefore never reaches the bump body, and modelling it as
+        // "no Player 2 bump this frame" is exact, not an approximation.
+        //
+        // Consequence for behaviour: at most ONE player bumps the signpost per
+        // frame, and it is Player 1 whenever Player 1 qualifies. A same-frame
+        // Player 2 bump is only reachable when Player 1 did not bump -- either
+        // out of range, or in range but failing sub_83A70's animation/velocity
+        // test, both of which return with d0 intact.
+        boolean bumpedThisFrame = false;
         for (PlayableEntity candidate : playerQuery(player).playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (bumpedThisFrame) {
+                break;
+            }
             if (candidate instanceof AbstractPlayableSprite sprite && isRomBumpCandidate(worldX, worldY, sprite)) {
                 applyRomBumpFromBelow(sprite);
+                bumpedThisFrame = true;
             }
         }
     }
