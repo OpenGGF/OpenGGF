@@ -91894,3 +91894,77 @@ Landing either half alone moves a frame boundary that the other half is supposed
 
 None. Both variants were reverted, so there is nothing to sweep; the tree is unchanged from
 `157b02aec`.
+
+## 2026-08-20 — S2 stage_exit seam: the paired change is refuted; the lever is the release row's object pass
+
+Base `9c6674b20`, worktree `s2-titlecard-seam-r1`, JDK 21, same command as the entries above.
+**Reverted. The tree is identical to `9c6674b20`.** A prediction was recorded before the run,
+per rule 18, and it **failed**.
+
+### The prediction, recorded before measuring
+
+> The pair removes exactly one represented row from the leave region (27 -> 26), so the
+> level's first frame lands on the SAME host-iteration index as the unmodified baseline. The
+> frame-boundary shift that produced the split-alone damage should therefore NOT occur.
+> Segment 2 must NOT show 47639 errors at frame 1132 on `sidekick_y` `0x02CB`/`0x02CC`. **If
+> it does, the lever is untouched and the model is WRONG -- report that, do not look for a
+> fourth site.**
+
+### What was implemented
+
+Both halves, together:
+
+- **`TitleCardManager.update`** — the leave loop's exit is now detected at the BOTTOM of the
+  iteration, after that iteration's own pass body, matching `s2.asm:5065-5066` following
+  `:5061-5064`. The engine's 27th represented row is gone. This also makes the code agree
+  with the comment already sitting on `updateExitBackground`, which states outright that the
+  exit row *"is the 26th and final pass counted by `LEAVE_PLAYABLE_PASSES`, not a pass
+  followed by a separate fall-through frame"* — the implementation had been contradicting its
+  own documented model.
+- **`GameLoopTitleCardLifecycle`** — a new `TitleCardProvider.releasedFromFinalLockedPass()`
+  makes the releasing row run the ordinary locked-phase pass it still owes
+  (`LevelFrameStep.execute` with `spriteManager.update`), not a reduced prelude pass.
+- **`PostTitleCardDestination.completeRelease`** — a `LEVEL` release returns `SETUP_ONLY`, so
+  it ends its host iteration.
+
+### Measured — the prediction failed, identically
+
+| | segment 2 |
+|---|---|
+| split alone (previous entry) | 47639 errors, frame 1132, `sidekick_y` rom `0x02CB` engine `0x02CC` |
+| split + audio tail (previous entry) | byte-identical |
+| **the paired change** | **byte-identical again: 47639, frame 1132, `sidekick_y` `0x02CB`/`0x02CC`** |
+
+Half A demonstrably took effect — a new axis appears (`ss -> seg2_ehz1` gap comparison
+fails, which it did not under the split alone) — so this is not a no-op patch. The row count
+changed and **the error profile did not**.
+
+### What this establishes, and it is a correction to the model
+
+**The surplus represented frame is not the lever.** Removing it changed nothing about the
+damage. Per rule 18 and the recorded prediction, the model is wrong and the answer is not a
+fourth site.
+
+The lever is narrower and is now identified by elimination across four attempts: **the level's
+first object pass running on the title-card release row is load-bearing for segment 2.**
+Every change that stops the level body running on that row — the bare early return, the
+admission-controller split, the split plus tail, and now the split paired with the row-count
+correction — produces exactly 47639 / frame 1132 / `sidekick_y` `0x02CB` -> `0x02CC`,
+regardless of how many represented rows exist around it.
+
+That is the second load-bearing compensation found at this one seam, after
+`SkippedPresentationPlcLifecycle`'s unconditional 25-iteration replay. Both are invisible
+until removed, both are justified in their own comments by a path other than the one they
+actually serve, and both redden previously-green segments when touched. Whatever the real
+defect is, it is being held in place by two of them at once, which is why every single-change
+attempt has measured worse.
+
+**Recommended next step is diagnostic, not corrective:** find what consumes the release row's
+object pass in segment 2 — specifically what makes `sidekick_y` land on `0x02CB` rather than
+`0x02CC` at frame 1132 with it and one pixel off without it. Until that is named, no
+rearrangement of the seam's rows can succeed, because both compensations have to come out
+together and nobody yet knows what they are compensating for.
+
+### Sweeps
+
+None. The change was reverted; the tree is unchanged from `9c6674b20`.
