@@ -3765,7 +3765,19 @@ public final class ObjectSolidContactController {
         // bit so Obj26_Break can use it to airborne Sonic when the monitor
         // is broken two frames later.
         boolean leftSide = playerCenterX <= anchorX;
-        boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+        // ROM Mon_Solid `.sidetouch` skips the horizontal correction only when Sonic is
+        // already moving AWAY from the monitor, not merely when he is not moving into it
+        // (docs/s1disasm/_incObj/"26, 2E Monitors and Power-Ups.asm":121-141). With Sonic
+        // in the monitor's left half (d0 > 0) `.sonicright` runs `tst.w obVelX(a1) /
+        // bmi.s .push`, so a zero x_vel falls through to `.stopsonic` and IS aligned;
+        // only a strictly-negative (leftward, i.e. away) x_vel skips it. The right half
+        // is the mirror: `.sonicleft` runs `bpl.s .push`, so there the correction needs a
+        // strictly-negative x_vel. Requiring a strictly-positive x_vel on the left half
+        // dropped the second of the two corrections the ROM applies in SYZ1 f8396 of the
+        // complete-emerald run, where Sonic falls with x_vel = 0 between a spring at
+        // $1F4E and this monitor at $1F7E: the spring's generic Solid_AlignToSide shoves
+        // him right to $1F69 and the monitor must shove him back to $1F64.
+        boolean movingInto = leftSide ? player.getXSpeed() >= 0 : player.getXSpeed() < 0;
         boolean exactEdgeOverlap = absDistX == 0;
         boolean pushing = !player.getAir();
         boolean skipMonitorSide = deferSideToPostMovement && player.getAir();

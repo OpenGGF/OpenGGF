@@ -4,6 +4,24 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The Sonic 1 Monitor (Obj26) now applies its side correction when Sonic is
+  merely *not moving away* from it, matching `Mon_Solid`. `.sidetouch` splits on
+  the sign of `d0`: with Sonic in the monitor's left half (`d0 > 0`)
+  `.sonicright` runs `tst.w obVelX(a1) / bmi.s .push`, so only a strictly
+  NEGATIVE `x_vel` skips the correction and a zero `x_vel` falls through to
+  `.stopsonic`'s `sub.w d0,obX(a1)`
+  (docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:121-141). The engine
+  required Sonic to be actively moving into the monitor, so a stationary-in-x
+  contact was dropped. In the `s1-sonic-complete-withemeralds` SYZ1 segment at
+  frame 8396 Sonic falls with `x_vel = 0` between a Spring at `$1F4E` and this
+  monitor at `$1F7E`; the ROM applies two corrections in slot order -- the
+  spring's `Solid_OnRight` -> `Solid_AlignToSide` pushes him right to `$1F69`
+  (docs/s1disasm/_incObj/sub SolidObject.asm), then the monitor pulls him back
+  to `$1F64`. The engine kept the spring's push and skipped the monitor's,
+  leaving `x` five pixels right and `camera_x` one behind. Segment 16 of the S1
+  complete-emerald chain (syz1, 9536 rows) now closes clean; the chain's
+  remaining blockers are the pre-existing S1 Nemesis-PLC arming walls in
+  segments 12/15 and the `syz2` presentation bridge.
 - The Sonic 1 Roller (SYZ, Obj43) no longer despawns off the LEFT edge of the
   screen. `Roll_Action` does not end at `RememberState`: under `FixBugs = 0` --
   the branch both S1 builds take (docs/s1disasm/sonic.asm:20) -- it carries an
