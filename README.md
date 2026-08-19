@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Unconsumed hardware-completion edges are reported, not aborted on
+  (`bugfix/ai-s1-plc-edge-report`, merged 2026-08-19).** When the replay walked past a recorded
+  timing edge the engine had submitted nothing for, `HardwareTimingReplayPort` threw and the
+  comparison stopped, hiding every later axis of the segment. That is a severity misclassification:
+  the port's authority is over **when** work the engine submitted becomes ready, and it has no
+  authority to require a submission the engine never made -- an edge with nothing behind it is a
+  statement about engine accuracy, which the comparator owns and reports per field. All three call
+  sites are converted, `verifySegmentEdges` now drains and reports **every** outstanding edge rather
+  than the first, and dropped edges land in the same `unmatchedCompletions` drain guarded by
+  `requireNoUndrainedUnmatchedCompletions()`, so one cannot vanish silently. The release side is
+  untouched: a dropped edge is never admitted and releases nothing, and the head-of-queue / ordinal /
+  fingerprint / prepared-payload / serviced-boundary matching in `admitRecordedCompletion` is
+  byte-for-byte unchanged. The round also closed a real hole found while measuring the arithmetic --
+  `requireNoUndrainedUnmatchedCompletions()` ran *before* `verifySegmentEdges()`, so close-time drops
+  landed in a list nobody checked and a driver that never drained would have gone silently green.
+  Close stays strict; only mid-run drops are demoted. Verified 790/4 set-identical both ways against
+  a control at the same base.
+
 - **The object-side pushing-bit clear sites are catalogued and 18 of 31 are ported
   (`bugfix/ai-s2-pushbit-audit-r1`, merged 2026-08-19).** 31 sites clear an object's p1/p2 pushing
   bit outside `Solid_NotPushing` -- 6 in S2, 7 in S1, 18 in S3K -- with per-site ROM citation,

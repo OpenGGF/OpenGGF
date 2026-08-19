@@ -113,7 +113,7 @@ public final class HardwareTimingReplayPort
                 return;
             }
         }
-        rejectEdgeBefore(rawFrame);
+        dropEdgesBefore(rawFrame);
         rawFrameLatch = rawFrame;
         lastAppliedBoundary = null;
     }
@@ -144,7 +144,7 @@ public final class HardwareTimingReplayPort
                             + ", current=" + boundary);
         }
 
-        rejectEdgeBefore(rawFrameLatch);
+        dropEdgesBefore(rawFrameLatch);
         HardwareCompletionEdge next = nextEdge();
         if (next != null
                 && next.rawFrame() == rawFrameLatch
@@ -167,7 +167,7 @@ public final class HardwareTimingReplayPort
         if (rawFrameLatch == null) {
             return false;
         }
-        rejectEdgeBefore(rawFrameLatch);
+        dropEdgesBefore(rawFrameLatch);
         HardwareCompletionEdge next = nextEdge();
         if (next == null || next.rawFrame() > rawFrameLatch) {
             return false;
@@ -328,11 +328,9 @@ public final class HardwareTimingReplayPort
 
     public void verifySegmentEdges() {
         requireActive();
-        HardwareCompletionEdge edge = nextEdge();
-        if (edge != null) {
-            throw new IllegalStateException(
-                    "unconsumed hardware completion edge at segment end: "
-                            + describe(edge));
+        for (HardwareCompletionEdge edge = nextEdge(); edge != null;
+                edge = nextEdge()) {
+            reportUnconsumedEdge("at segment end", edge);
         }
     }
 
@@ -386,6 +384,12 @@ public final class HardwareTimingReplayPort
         requireNoUndrainedUnmatchedCompletions();
         requireNoUndrainedPendingSubmissions();
         verifySegmentEdges();
+        // Close is the last chance to report: no comparison row follows it, so
+        // an edge dropped here has nowhere to be counted. The demotion exists
+        // to stop a mid-run edge from hiding later axes, not to let the run end
+        // holding evidence, so leftovers at close still fail the run -- now
+        // listing every one of them rather than only the first.
+        requireNoUndrainedUnmatchedCompletions();
         try {
             authority.endRecordedAdmission();
         } catch (PendingRecordedSubmissionsException failure) {
@@ -488,13 +492,40 @@ public final class HardwareTimingReplayPort
                 : null;
     }
 
-    private void rejectEdgeBefore(int rawFrame) {
-        HardwareCompletionEdge next = nextEdge();
-        if (next != null && next.rawFrame() < rawFrame) {
-            throw new IllegalStateException(
-                    "unconsumed hardware completion edge before raw_frame="
-                            + rawFrame + ": " + describe(next));
+    /**
+     * Drops the recorded edges the production run walked past without
+     * submitting anything for them, reporting each as a comparison error.
+     *
+     * <p>Severity demotion, on the same footing as the unmatched-completion
+     * demotion in {@link #apply(HardwareServiceBoundary)}. This port's
+     * authority is over <em>when</em> work the engine submitted becomes
+     * ready; it has no authority to require a submission the engine never
+     * made. An edge with no submission behind it is therefore a statement
+     * about engine accuracy -- the ROM reached an arm point the engine did
+     * not -- which the comparator owns and reports per field, not a contract
+     * violation that may abort the comparison and hide every later axis.
+     * The release side is unchanged: a dropped edge is never admitted, so it
+     * releases nothing.
+     */
+    private void dropEdgesBefore(int rawFrame) {
+        for (HardwareCompletionEdge next = nextEdge();
+                next != null && next.rawFrame() < rawFrame;
+                next = nextEdge()) {
+            reportUnconsumedEdge("before raw_frame=" + rawFrame, next);
         }
+    }
+
+    /**
+     * Records one dropped edge and advances past it. Every dropped edge lands
+     * in the same drain the unmatched completions use, so it is counted by
+     * the comparator or, if the driver never drains it, fails the run through
+     * {@link #requireNoUndrainedUnmatchedCompletions()}. It cannot vanish.
+     */
+    private void reportUnconsumedEdge(String where, HardwareCompletionEdge edge) {
+        unmatchedCompletions.add(
+                describe(edge) + ": unconsumed hardware completion edge "
+                        + where + "; the engine submitted no matching work");
+        edgeCursor++;
     }
 
     /**

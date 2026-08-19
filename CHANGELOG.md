@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 
+### Changed
+- A recorded hardware-completion edge the production run walked past without
+  submitting anything for it is now reported as a comparison error instead of
+  aborting the replay. The port's authority is over *when* engine-submitted
+  work becomes ready, so it has no authority to demand a submission the engine
+  never made -- that is engine accuracy, which the comparator owns and reports
+  per field. Aborting on it destroyed the per-field evidence and hid every
+  later axis of a diverging run. Every dropped edge is counted in the same
+  drain the unmatched completions use, carrying its raw frame, boundary, kind,
+  ordinal and fingerprint; every leftover is reported rather than only the
+  first; a driver that never drains one still fails the run; and close stays
+  strict, because no comparison row follows the closing row that could carry
+  the evidence. The release side is unchanged -- a dropped edge is never
+  admitted, so it releases nothing -- and the head-of-queue / ordinal /
+  fingerprint / prepared-payload / serviced-boundary matching that
+  `admitRecordedCompletion` enforces is untouched. Tests that asserted the old
+  abort now assert the edge is reported *and* explicitly that it is not
+  released, so the property each existed to protect is still measured.
+
+
 ### Added
 - Sonic 1's `RunPLC` arming edge can now be released by recorded hardware
   timing. `RunPLC` (docs/s1disasm/sonic.asm:1379-1420) sits at the tail of
