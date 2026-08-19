@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`rowsConsumed` is correctly stated and the traversal is one row late
+  (`bugfix/ai-s1-rowsconsumed-r1`, merged 2026-08-19 -- investigation only).** The invariant is
+  load-bearing and is **not** relaxed: `destinationRowsConsumedForAdmission` returns how far the
+  shared BK2 cursor has run past the destination segment's offset while the coordinator is in
+  `TRANSITION_GAP`, and the coordinator uses it as the destination's start cursor -- so "0 or 1"
+  states that an admitting frame consumes at most one destination row, which follows from the shared
+  clock advancing one row per frame, and a 2 means the gap was still open after the destination's
+  first row had been played. Probed with fixture, predicate fix and boundary traversal applied:
+  segment 3 should be admitted at cursor 9742 and is not, throwing at 9743 -- **a one-row delay, not
+  a cadence disorder.** It is also **not a drain-rate error**: with the arm firing, `SSR_ChkPLC` holds
+  the results screen 16 frames, and the ROM's own per-entry model -- `ProcessPLC_9Tiles` budgets 9
+  tiles and `ProcessPLC_ShiftCue` returns on completion, losing the rest of the frame -- gives
+  `sum(ceil(tiles/9)) = 16` for the seven entries against 13 for the naive `ceil(total/9)`, and the
+  engine already matches. Differencing the recorded arm frames (68, 71, 74, 76, 78, 79, 81, plus the
+  last entry's 4) against per-entry costs shows **every entry matching except the first**, where the
+  ROM takes 3 frames for a 10-pattern entry needing 2: the queue is filled before `SS_NormalExit`'s
+  first `WaitForVBlank`, so that V-blank services nothing armed. One frame of arm-versus-service
+  phase -- **to be derived from the listing rather than added wherever it makes admission land.**
+
 - **RETRACTION: the Roll slip is downstream of physics, and a non-cascading filter hid it
   (`bugfix/ai-s2-roll-anchor-r1`, merged 2026-08-19 -- instrumentation reverted, nothing landed).**
   The clock anchor holds -- engine `x` matches the recorded value for value through 6599 -- so the
