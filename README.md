@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The push pair's last regression is contact resolution, not a push predicate
+  (`bugfix/ai-s2-pushentry-r1`, merged 2026-08-19 -- investigation only, sixth revert).** In
+  `SolidObject_LeftRight` (`s2disasm/s2.asm:35413-35461`) the airborne test branches to
+  `SolidObject_SideAir` **before** the `bset d4,status(a0)`, so an object's pushing bit is only ever
+  set for a **grounded** character, and `SolidObject_SideAir` returns a side collision through
+  `Solid_NotPushing` -- clearing both bits **without** the `TestClearPush` Walk/Run write. The
+  fixture corroborates both independently: in `seg5_ehz2` every monitor bit-set happens on a grounded
+  frame and the drops at f2559 and f3408 happen while Tails is airborne and still in contact.
+  **The engine already models both correctly**: all 224 object-bit sets fire with `air=false`, six
+  monitors receive an airborne `SideAir` clear, and **exactly one** reaches the `TestClearPush` entry
+  with `air=true` -- a monitor whose contact ends on the *same frame* the character goes airborne, so
+  it never gets a `SideAir` frame and the engine consumes a latch the ROM's `SideAir` frame would
+  have consumed first. So the divergence is a single frame where the engine reports no contact and
+  the ROM reports a side collision: **airborne bounding-box behaviour on the frame contact ends**,
+  shared across all three games and wanting its own scoped round. No push predicate can address it --
+  suppressing at the `TestClearPush` entry when airborne is indistinguishable from the blanket rule,
+  because that entry is the only place the write lives. Standing numbers unchanged:
+  (1)+(2)+the MGZ site is 790/5 against a 790/4 control, seg10 2491 -> 2433, and **none of the ten
+  regressions the audit retired have returned**.
+
 - **The S1 bridge's seven recorded edges are `PLC_Main` + `PLC_SSResult`, and the results screen is
   unarmed as hardware work (`bugfix/ai-s1-bridge-submission-r1`, merged 2026-08-19 -- investigation
   only, a gate-clean fix deliberately withheld).** Recomputing
