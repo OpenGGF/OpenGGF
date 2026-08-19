@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION: the Roll slip is downstream of physics, and a non-cascading filter hid it
+  (`bugfix/ai-s2-roll-anchor-r1`, merged 2026-08-19 -- instrumentation reverted, nothing landed).**
+  The clock anchor holds -- engine `x` matches the recorded value for value through 6599 -- so the
+  row label was never skewed and the eight-row figure is real. What it measures: **the ROM's Sonic
+  stops dead at 6600**, `x` frozen at `2D58` and `g_speed` zeroed, while the engine's keeps moving at
+  `$7F4` for eight more rows. **Two earlier entries claimed the engine's inertia matches the ROM
+  across the tail and that the slip is therefore not downstream of physics. Both are wrong**, and
+  the report carries exactly the divergences that disprove them -- `x_speed` and `g_speed` expected
+  `0x0000` against `0x07F4` across 6600-6607, and `x` expected `0x2D58` across 6600-7087 -- **all
+  flagged `cascading: true`, and both readings had filtered to non-cascading errors.** That is the
+  blind spot this same lane discovered and wrote into the standing protocol, then walked into twice:
+  a filter adopted for a good reason became a habit that hid the answer. The protocol entry is
+  strengthened accordingly, from "be aware of this" to **never conclude *absence* of divergence from
+  a non-cascading filter**. Everything downstream is mechanical: speed stays `$7F4`, so the delay
+  stays 0, so the Roll script advances every frame where the ROM holds five, so the mapping frame
+  slips and stays slipped, so the DPLC stream submits on different frames. The Roll arithmetic,
+  script data, publish order and entry frame really are faithful -- **those eliminations stand, they
+  simply eliminated the wrong suspect.** Four rounds inside the animation found nothing because the
+  animation was never the defect. The open question is why the ROM's Sonic stops dead at 6600 and the
+  engine's does not; with the CPZ boss gone since 6084, a hard stop points at collision or boundary.
+
 - **`Obj_WaitOffscreen` is a one-shot latch, and three coupled S3K fixes land together
   (`bugfix/ai-s3k-rhinobot-timing-r1`, merged 2026-08-19).** The Caterkiller Jr head and the
   Rhinobot both gated their whole routine on a **per-frame** on-screen test, where ROM
@@ -306,9 +327,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 - **The Roll phase slip is not the input, the arithmetic, the script choice or the entry
   (`bugfix/ai-s2-roll-phase-r1`, merged 2026-08-19 -- fixture and disassembly only, no engine run).**
-  Four eliminations, all from committed data. **Not downstream of physics:** `player_g_speed` is a
-  compared column and the report carries no non-cascading error on any physics field in the tail, so
-  the engine's inertia matches the ROM exactly across 6608-7087. **Not the arithmetic:** ROM
+  Four eliminations, all from committed data. ~~**Not downstream of physics**~~ (**retracted below -- it is downstream of physics; that reading
+  filtered to non-cascading errors and the physics divergences are all flagged cascading**). **Not the arithmetic:** ROM
   `SAnim_Roll` does `mvabs.w inertia(a0),d2` / `cmpi.w #$600,d2` / `neg`, `addi #$400`, `bpl`,
   `moveq #0` / `lsr.w #8`, and the engine's `updateRoll` plus `computeSpeedDelay` uses the same source
   register, base, clamp, shift and threshold. **Not the script choice:** `SonAni_Roll` and

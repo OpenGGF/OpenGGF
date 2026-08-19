@@ -162,6 +162,13 @@ half-landed change, and require the blast radius to be measured before anything 
   in a span no fixture covers, say so and treat the clean gate as *absence of evidence*, not
   evidence of absence. The honest options are to extend coverage first, or to land it explicitly
   flagged as unobserved — not to quote the green.
+- **NEVER conclude *absence* of divergence from a non-cascading filter.** Scanning for
+  non-cascading rows is the right way to *find* a defect and the wrong way to *rule one out*. A
+  round claimed "no non-cascading error on any physics field, therefore the engine's inertia
+  matches" and built four subsequent rounds on it; the physics divergences were present and all
+  flagged `cascading: true`. The lane that discovered this blind spot then walked into it twice, so
+  treat it as a hard rule rather than an awareness point: to establish that a field does *not*
+  diverge, read that field's rows directly.
 - **The comparator's `cascading` flag suppresses cluster ONSETS, not just repeats.** A 2422-error
   `dynamic_art` cluster sat in the first report a round read this session and was passed over
   because it was almost entirely `cascading: true` — only three rows were non-cascading. Scanning
