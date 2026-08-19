@@ -90544,3 +90544,81 @@ the traversal, not evidence about native replay; with the traversal removed,
 native replay is byte-for-byte the control. **The category-error question remains
 untested**, and this run is the one that shows the previous run could not have
 answered it.
+
+## 2026-08-19 — S2 segment 15: the discriminator is a lag row, and the PLC phase mapping is already faithful
+
+Base `d6ee4b46a`, `bugfix/ai-s2-pushgate-r2`. No code landed; this is the `s2disasm` read
+that the previous entry named as its next step. It **retracts two claims** from that entry.
+
+### Retraction 1 — it is not the special-stage return
+
+The previous entry framed the deficit as belonging to "the destination admission boundary of
+the special-stage return". That was a correlation. The physics CSV shows the actual
+discriminator directly:
+
+| segment | rows 0..3 `gameplay_frame_counter` | `vblank_counter` | report `laggedFrames` |
+|---|---|---|---|
+| `seg8_cpz1` | 0001, 0002, 0003, 0004 | EDF4..EDF7 | 1 |
+| `seg9_cpz2` | 0001, 0002, 0003, 0004 | 0870..0873 | 1 |
+| `seg10_cpz2` | 0001, **0001**, 0002, 0003 | 406F..4072 | 2 |
+
+`seg10_cpz2` row 1 is a **lag row**: `Level_frame_counter` does not advance while
+`Vint_runcount` does — two V-ints for one main-loop iteration. (The same shape recurs at
+rows 7/8, gfc `0007` twice, which is the segment's second lagged frame.) The fresh entries
+have no lag row at entry, which is why they cannot show the defect. "Special-stage return"
+was never the predicate.
+
+### Retraction 2 — physics did not rule out a row offset
+
+The previous entry argued a comparison-cursor offset was excluded because physics matched at
+the first compared row. That argument is void: the player is motionless across this entire
+window (`player_x` = 0x1180 and `camera_x` = 0x10E0 for rows 0-10), so physics is degenerate
+here and discriminates nothing. Both readings — one missing service, or a one-row offset —
+remain open on the evidence gathered so far.
+
+### The ROM read, which is the useful part
+
+`V_Int` reads `Vint_routine` and immediately stores `VintID_Lag` back into it
+(`docs/s2disasm/s2.asm:500-501`), so any V-int arriving before the main loop re-arms the
+routine dispatches through `Vint_Lag` (:484, :513, :529). **`Vint_Lag` calls neither
+`ProcessDPLC` nor `ProcessDPLC2` on any of its three paths**: the non-level path does
+`sndDriverInput` then `bra.s VintRet` (:533-539), the water path ends `bra.w VintRet`
+(:574-583), and `Vint0_noWater` ends `bra.w VintRet` (:586-642). A lag row therefore
+services no PLC work at all — which is exactly why recorded rows 0 and 1 both hold at
+`remaining_work=5`.
+
+Mapping every S2 V-int handler to its pattern budget, against the engine's
+`Sonic2PlcService.serviceVBlank` switch:
+
+| ROM handler | calls | patterns | engine phase | engine budget |
+|---|---|---|---|---|
+| `Vint_Level` (:808) | `ProcessDPLC2` | 3 | `ORDINARY_LEVEL` | 3 |
+| `Vint_S2SS` (:904) | `ProcessDPLC2` | 3 | `SPECIAL_STAGE` | 3 |
+| `Vint_TitleCard` (:1057) | `ProcessDPLC` | 6 | `LEVEL_TITLE_CARD` | 6 |
+| `Vint_Title` (:681) | `ProcessDPLC` | 6 | `TITLE_SCREEN` | 6 |
+| `Vint_Lag` (:529) | neither | 0 | `LAG` | 0 |
+
+**Every one matches.** Naming trap worth carrying: `ProcessDPLC` decompresses **6** patterns
+(:2202-2213) and `ProcessDPLC2` decompresses **3** (:2219-2227) — inverted from what the
+names suggest, and the S1 comment at :2203 explains why the counts moved.
+
+So the phase→budget mapping has no defect in it, and **"add one service at the boundary" has
+no home** — which is the better outcome the brief hoped for. The classifier is also correct
+at the row level: `TraceExecutionModel.deriveCounterDrivenPhase` sends a gfc-plateau row with
+an advancing V-blank counter to `VBLANK_ONLY`, and `TraceSuppressedRowClosure.execute`
+services it with `PlcLifecyclePhase.LAG`, i.e. nothing — matching `Vint_Lag`.
+
+### The one live candidate, with its kill condition
+
+`TraceSuppressedRowClosure.execute` has **two** branches. The `LAG` branch above is
+ROM-correct. The other fires when the title-card provider reports
+`advancesOnHeldLevelCounter()`, and runs `executeHardwareTimedObjectScan(...,
+PlcLifecyclePhase.LEVEL_TITLE_CARD, ...)` — a **6-pattern** service on a row the ROM
+dispatches through `Vint_Lag` for **0**. A special-stage return re-shows the act's title
+card, so that branch is plausibly live on exactly the rows in question.
+
+This is a hypothesis, not a finding, and it is stated with its kill condition: instrument
+which branch the closure takes on rows 1 and 8 of `seg10_cpz2`. If it takes the `LAG`
+branch, the candidate is dead and the deficit is upstream in when the queue head is armed.
+Note the direction does not obviously fit — this branch would make the engine consume *more*,
+where the measurement has it consuming *less* — so it needs measuring rather than adopting.
