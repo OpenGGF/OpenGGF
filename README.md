@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The monitor's side push fires when the player is not moving away, not only when moving in
+  (`bugfix/ai-s1-seg16-8396`, merged 2026-08-19).** `Mon_Solid`'s `.sonicleft` branch is
+  `bpl.s .push` (`s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:133-135`) -- and **`bpl`
+  includes zero** -- so the ROM pushes whenever `x_vel >= 0`. `ObjectSolidContactController`
+  gated on `xSpeed > 0`. At SYZ1 frame 8396 Sonic falls with `x_vel = 0` between a Spring at
+  `$1F4E` and a Monitor at `$1F7E`: the ROM applies the spring's `Solid_AlignToSide` push to
+  `$1F69` and then the monitor's `.stopsonic` `sub.w d0,obX(a1)` back to `$1F64`, while the engine
+  kept the first and dropped the second, leaving `x` five pixels right for the rest of the act.
+  **Segment 16 (syz1, 9,536 rows) now closes clean**, and the chain drops from 4 failing axes to 3
+  -- all three remaining are the proven PLC-arming walls. The round also **refuted its brief's
+  primary lead**: `Roll_Action_FromLeft`'s `addq.l #4,sp` (`43 Badnik - Roller.asm:104`) really does
+  skip the despawn check for a *waiting* Roller, but it is not this divergence's cause and was not
+  landed speculatively. Flagged for follow-up: `resolveMonitorContact` is shared with S2 and S3K,
+  whose ROMs use the generic `SolidObject_cont` -- whose `SolidObject_AtEdge` applies its position
+  correction **unconditionally** (`s2disasm/s2.asm:35413-35440`) and gates only the speed zeroing --
+  so the shared predicate still needs a per-game split.
+
 - **CPZ act 2's slope divergence is the wrong collision path, and the schema cannot yet express it
   (`bugfix/ai-s2-cpz2-seg10-slope`, documentation, merged 2026-08-19).** The round refuted its own
   brief: this is not a ground-sensor or angle-resolution question. `AnglePos`

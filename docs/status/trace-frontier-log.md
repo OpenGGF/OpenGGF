@@ -83343,3 +83343,41 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   records the measured cause instead of the refuted floor-probe hypothesis.
 - Chain frontier before and after: unchanged — `segment 15 lost production
   ownership before source closure (romZone=13, act=1, BK2 cursor=83819)`.
+
+## S1 `s1-sonic-complete-withemeralds` segment 16 -- the second monitor side-align
+
+- **Command.** `mvn -Ptrace-replay-r7 -Dtest=TestS1CompleteEmeraldRunChain
+  "-Dsonic1.rom.path=<Sonic 1 World REV01 .gen>" test`, worktree branched from
+  `develop` at `ccf7f1049`.
+- **Before.** `segment 16 of s1-sonic-complete-withemeralds diverged: 59
+  physics comparator errors, first non-camera mismatch at frame 8396 field `x`
+  rom=`0x1F64` engine=`0x1F69``, with `camera_x` one pixel behind from f8415.
+  Chain failed on 4 axes.
+- **After.** Segment 16 (syz1, 9536 rows) closes clean. Chain failed on 3 axes:
+  the `syz2` presentation-bridge walk-failure at row 70 and segments 12/15
+  `queue.s1_nemesis_plc.prepared`, all three pre-existing PLC-arming walls.
+- **Cause.** SYZ1 f8396 has Sonic falling with `x_vel = 0` between a Spring
+  (`$41`) at `$1F4E` and a Monitor (`$26`) at `$1F7E`. The ROM applies *two*
+  side corrections in slot order. The spring's generic `SolidObject` reaches
+  `Solid_OnRight`, and with `x_vel = 0` `bpl.s Solid_AlignToSide` shoves Sonic
+  right to `$1F69` (`docs/s1disasm/_incObj/sub SolidObject.asm`,
+  `Solid_OnRight`/`Solid_AlignToSide`). The monitor then runs `Mon_Solid`
+  `.sidetouch`: `d0 = 5 > 0` so `.sonicright` runs `tst.w obVelX(a1) /
+  bmi.s .push`, and a *zero* `x_vel` falls through to `.stopsonic`, which does
+  `sub.w d0,obX(a1)` back to `$1F64`
+  (`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:121-141`).
+- **Fix.** `ObjectSolidContactController.resolveMonitorContact` gated the
+  monitor's horizontal correction on *moving into* the object
+  (`leftSide ? x_vel > 0 : x_vel < 0`). The ROM gates it on *not moving away*:
+  `.sonicright` skips only for a strictly negative `x_vel`, so the left-half
+  test is `x_vel >= 0`. The right-half test (`.sonicleft`, `bpl.s .push`)
+  already matched. One comparison changed; no constant introduced.
+- **Verification.** `-Ptrace-replay` 792 tests / 4 red on both the change and a
+  clean control at the same base, set-diffed both ways with no difference;
+  `-Ptrace-segments` 70/55 red and `-Ptrace-replay-r7` 37/32 red likewise
+  identical. Default profile differed by one class
+  (`TestModeTracePickerLaunchStatus`) that passes in isolation -- the known
+  default-profile flake.
+- Chain frontier before and after: `segment 16 ... frame 8396 field x` ->
+  `segments 12/15 queue.s1_nemesis_plc.prepared` plus the `syz2` row-70
+  bridge walk-failure.
