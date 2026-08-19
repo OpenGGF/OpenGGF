@@ -647,3 +647,32 @@ Corollary for briefs: when a round proposes a new site for a previously rejected
 require it to predict whether the error profile will change. A prediction of "same numbers,
 different site" is a prediction that the site is not the lever — and it is cheap to check
 before the code is written.
+
+## Nineteenth rule: port the READ, not the event that last wrote the field
+
+A routine that reads a field at its own entry is not the same as a callback that fires when
+something writes that field. They differ exactly when **something else writes in between** — and
+that is the case a trace catches and code review does not.
+
+One round chased a missing ride transfer, a missing bit-clear and a pass-ordering defect, and
+killed all three with probes. The engine had every piece of state right — the bits, the clears,
+the interleaving — and set its trigger from an `onSolidContact` callback where the ROM re-reads
+`status(a0) & standing_mask` at every dispatch entry. A latch taken at contact time cannot see a
+clear that arrives afterwards; a fresh read at the ROM's moment can.
+
+So when porting, ask *when the ROM looks*, not *when the value last changed*. A sticky flag set
+at event time is the natural-feeling translation and it is wrong whenever a second writer exists.
+This is invisible to any probe that only checks state **values** — the values were all correct.
+
+## Twentieth rule: an unstable test class is not an attribution instrument
+
+The same round's first default-suite read was control 15,111/56 against fix 15,034/54 — a 77-test
+gap with two classes apparently *fixed* by the change. All of it was instability: the entire 77
+was one class reporting 83 tests in one run and 6 in another, **the same fix tree run twice** gave
+15,034/54 then 15,111/55, and every implicated class passed in isolation in both worktrees.
+
+A class whose *test count* varies between runs cannot support any claim about a change, in either
+direction — including a flattering one. Compare runs of equal size, name the unstable classes, and
+say plainly that nothing outside the measured area is attributable. Banking two accidental green
+classes would have been the easiest thing in the world and would have poisoned the next round's
+baseline.

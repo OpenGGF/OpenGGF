@@ -92106,3 +92106,95 @@ is still outstanding.
 ### Sweeps
 
 None. Diagnostic only; the tree is unchanged from `1178c6941`.
+## 2026-08-20 — Frame 150 closed: the collapse trigger is a fresh read, not a contact latch
+
+Branch `bugfix/ai-s3k-seg6-sidekick-r1` off `1ff45183c`. Control measured in a separate
+worktree pinned to the same hash and verified with `git rev-parse`.
+
+### Three diagnoses refuted before the right one, all by probe
+
+The previous entry handed off "the engine is missing a ride transfer" as the shape of the
+fix. **That was wrong, and so were two fallbacks.** All three died to measurement:
+
+1. **"The engine stops re-claiming Tails with slot 05."** A probe on every early return in
+   `ObjectSolidContactController.processInlineObjectForPlayer` shows both platforms running
+   the **full** path for the sidekick every frame, in slot order. The engine already
+   ping-pongs. The earlier reading came from sampling `isRidingObject` inside the object's
+   `update()` -- before the solid pass -- which is the wrong point in the frame.
+2. **"The engine never clears the previous object's standing bit."** A probe on
+   `objectStandingBitSet` membership shows `setSize` going 2 -> 1 twice per frame. The
+   engine already models `RideObject_SetRide`'s `bclr d6,status(a3)`.
+3. **"The engine batches all updates before all solid passes."** An interleaved probe shows
+   `SETBIT obj=18d0` (slot 05 solid) -> `UPDATE obj=1870` (slot 08 body) -> `SETBIT
+   obj=1870` (slot 08 solid). Ordering is already ROM-correct.
+
+**Every piece of state was right.** The same interleaved log named the actual defect in one
+line: `UPDATE obj=1870 state=0 tmr=7 trig=true`.
+
+### The defect
+
+`triggered` (ROM `$3A`) was a sticky flag set from the `onSolidContact` callback. ROM
+`loc_205A6` (`docs/skdisasm/sonic3k.asm:44826-44830`) instead re-reads
+`status(a0) & standing_mask` **at every dispatch entry**. A fresh read sees what slot 05's
+`RideObject_SetRide` cleared moments earlier; a latch taken at contact time never can. The
+engine held all the correct state and simply read it at the wrong moment.
+
+### The change, object-local
+
+`Sonic3kCollapsingPlatformObjectInstance` only -- no shared runtime file touched, and no
+`GameRules`/provider entry needed, because nothing per-game is involved.
+
+- `onSolidContact` no longer sets `$3A`.
+- `update()` mirrors `loc_20594`/`loc_205A6` in ROM order: run the countdown when `$3A` is
+  already set, **then** re-read the standing bits via
+  `objectManager.hasObjectStandingBit` for both characters
+  (`standing_mask = p1_standing|p2_standing`, `sonic3k.constants.asm:147`).
+
+No constant was introduced; the trigger is now a read of already-modelled ROM state.
+
+### Rule seventeen, again
+
+The first attempt split "set `$3A`" and "start counting" across two dispatches. ROM's next
+dispatch counts directly (`tst.b $38 / beq / subq.b #1,$38`, :44822-44824), so that was one
+frame late and segment 4 went **292 -> 50,060**, with the identical f789 `y` signature as
+the previous round's intermediate state. Collapsing them into one dispatch restored 292.
+
+### Measurements
+
+Both arms at `1ff45183c`, `-Dmse=off -Dsurefire.runOrder=alphabetical`, all three ROM
+properties, `target/surefire-reports` cleared before every run.
+
+| | control | fix |
+|---|---|---|
+| `-Ptrace-replay` | 786 tests, **4 red** | 786 tests, **4 red**, red set **identical both directions** |
+| S3K chain segment 4 | 292 (camera-only) | **292** |
+| S3K chain segment 6 | 28,727 @ f150 `sidekick_y` | **8,941 @ f167** |
+| S1 chain segments 12 / 15 | 3 / 6 | identical |
+| S2 chain segment 15 | 7,575 @ f2 | identical |
+| `run_boundary.position.x` | 14007/14008 | unchanged |
+
+`mvn -Pguards`: 499 / 0. `TestS3kAizTraceReplay` 16/16. S3K keep-green set green.
+
+### The default suite has three order-unstable classes, in both arms
+
+Worth recording because it nearly produced a false "this fix repaired two unrelated tests".
+The default sweep first read control **15,111 tests / 56 red** against fix **15,034 / 54** --
+a 77-test gap and two classes apparently fixed. All of it is instability:
+
+- the entire 77 is one class, `TestMhz1CutsceneObjects$KnucklesPeerArtSubmission`, reporting
+  **83** tests in one run and **6** in another;
+- **the same fix tree run twice** gave `15,034 / 54` then `15,111 / 55`;
+- all three classes -- that one plus `TestGameLoopSpecialStageEntryPresentation` and
+  `TestPlaybackDebugManagerOverlayOwnership` -- pass **in isolation in both worktrees**.
+
+Comparing runs of equal size (control 15,111/56 against a fix run of 15,111/55) leaves one
+difference, itself in that unstable set. **No change outside segment 6 is attributable to
+this fix.** Treat those three classes as unstable until someone fixes their ambient state;
+a single default-suite run is not a safe attribution instrument for them.
+
+### The new frontier
+
+Frame **167** is exactly the frame slot 05 leaves `loc_205DE` for `loc_20620` and stops
+being solid, handing the trigger to slot 08. `sidekick_y` rom `0x0468` engine `0x0469` --
+one pixel, at the handover. Not investigated; it is the same mechanism's boundary rather
+than a new one.

@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -151,8 +152,10 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // ROM flow: loc_20594 (states 0-1) -> loc_205DE (state 2) -> loc_20620 (state 3)
     private int state;
     private int collapseTimer;
-    // Note: triggered flag is set alongside state=1 in onSolidContact() - kept for clarity
-    private boolean triggered;  // player has stood on platform ($3A flag)
+    // ROM $3A: set by loc_205A6 from a FRESH read of this object's own standing
+    // bits at dispatch entry, never from the contact callback. Once set it
+    // latches, exactly as ROM never clears $3A.
+    private boolean triggered;
     private boolean fragmented;
 
     // Post-fragment solid-stay timer: ROM reuses $38 with first delay table entry.
@@ -353,25 +356,9 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             services().objectManager().clearRidingObject(player);
             return;
         }
-        if (contact.standing() && state == 0) {
-            // Player stepped on: set the trigger flag only (ROM: $3A).
-            //
-            // loc_20594 (sonic3k.asm:44819-44824) reads the standing bits at
-            // ROUTINE ENTRY -- `move.b status(a0),d0 / andi.b #standing_mask,d0`
-            // at loc_205A6 (:44826-44830) -- and only then falls through to
-            // sub_205B6 (:44835), whose SolidObjectTopSloped2 is what SETS those
-            // bits. So $3A is always set from the bits written by the
-            // PREVIOUS dispatch, one dispatch after the player actually lands.
-            // The $38 countdown is likewise guarded by `tst.b $3A / beq.s
-            // loc_205A6` (:44819-44820), so the dispatch that sets $3A does not
-            // decrement.
-            //
-            // The engine's update() runs before the solid pass, mirroring the
-            // routine body / sub_205B6 order, so case 0's `if (triggered)`
-            // reproduces that latency exactly. Advancing to state 1 here
-            // instead collapsed the platform one frame early.
-            triggered = true;
-        }
+        // ROM does NOT set $3A from the contact. loc_205A6 re-reads
+        // `status(a0) & standing_mask` at every dispatch ENTRY, which is
+        // modelled in update() -- see readStandingTrigger().
     }
 
     void publishReleaseAnimationState(AbstractPlayableSprite player) {
@@ -382,6 +369,23 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.RUN.id());
     }
 
+    /**
+     * ROM {@code loc_205A6}: {@code move.b status(a0),d0 / andi.b #standing_mask,d0}
+     * (sonic3k.asm:44826-44828). {@code standing_mask = p1_standing|p2_standing}
+     * (sonic3k.constants.asm:147), so either character's standing bit arms the
+     * collapse. Read fresh at dispatch entry, never cached.
+     */
+    private boolean readStandingTrigger() {
+        for (PlayableEntity player : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (player != null
+                    && services().objectManager().hasObjectStandingBit(player, this)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ===== Update =====
 
     @Override
@@ -389,9 +393,32 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         transitionFrameSlopeSkip = false;
         switch (state) {
             case 0 -> {
-                // Normal: just check if triggered via onSolidContact.
+                // ROM loc_20594 (sonic3k.asm:44819-44824): the $38 countdown is
+                // reached only when $3A is ALREADY set, so the dispatch that
+                // sets $3A does not decrement.
                 if (triggered) {
+                    // $3A was set on an earlier dispatch, so this one runs the
+                    // countdown itself -- ROM does not spend a dispatch merely
+                    // "entering" the collapsing state.
                     state = 1;
+                    if (collapseTimer <= 0) {
+                        performCollapse();
+                    } else {
+                        collapseTimer--;
+                    }
+                }
+                // ROM loc_205A6 (sonic3k.asm:44826-44830) then re-reads the
+                // object's own standing bits and sets $3A from them. This is a
+                // fresh read every dispatch, not a latch taken at contact time:
+                // the bits it reads were written by the PREVIOUS dispatch's
+                // sub_205B6, and any other solid object that has re-seated the
+                // same character since will have cleared them via
+                // RideObject_SetRide's `bclr d6,status(a3)` (:42027-42031).
+                // Two overlapping platforms therefore starve each other's
+                // trigger: the lower slot clears the higher slot's bit every
+                // frame before the higher slot's routine body reads it.
+                else if (readStandingTrigger()) {
+                    triggered = true;
                 }
                 // ROM loc_20594 falls through to sub_205B6 -> Sprite_OnScreen_Test
                 // every frame in pre-collapse and standing-trigger states. Mirror

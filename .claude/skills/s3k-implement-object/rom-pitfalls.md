@@ -3173,3 +3173,20 @@ Two things to take from it when implementing any S3K object that reads its own s
 **Originating commit.** `<pending: S3K single-rider standing-bit invariant>` — S3K
 complete-emeralds chain segment 6, frame 150. See `docs/status/trace-frontier-log.md`,
 2026-08-20, for the PC-execute and write-hook probe output naming both writers.
+
+### Follow-up: the engine had every piece of state right and still got it wrong
+
+Worth reading with the entry above, because the fix was not where any of it pointed. Three
+plausible engine defects were proposed and each was refuted by a probe: that the engine
+stopped re-claiming the rider (it does re-claim, every frame, in slot order); that it never
+cleared the previous object's bit (it does, twice per frame); that it batched all object
+updates before all solid passes (the interleaving is already ROM-correct).
+
+The defect was that the object's own trigger was a **sticky flag set from the contact
+callback** rather than a **fresh read at dispatch entry**. `loc_205A6` re-reads
+`status(a0) & standing_mask` every dispatch; a latch taken when the contact happens can
+never observe a clear that arrives afterwards.
+
+**So when porting any ROM routine that reads a field at its own entry, port the READ, not
+the event that last wrote the field.** They differ exactly when something else writes
+between the two, which is precisely the case the trace catches and code review does not.
