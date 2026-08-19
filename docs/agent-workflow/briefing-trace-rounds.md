@@ -482,3 +482,37 @@ kick counter reported fifteen against the ROM's seventeen because it inferred ki
 direction changes; the honest fix came from the fixture's own structure — `Obj_EndSignFall`
 adds `#$C` to `y_vel` every frame, so recorded deltas are monotonic and any upward jump of
 two or more is a fresh kick. State a detector's floor when you report its count.
+
+## Eleventh rule: build the disconfirming case by hand before trusting a ratio
+
+A round supported its model with "8 of 8 promotions are visible on their own row". The
+detector defined a promotion frame as the frame where the larger `remaining_work` first
+appears — so a promotion that was *deferred* past its own row got recounted as a promotion on
+the later row, and then tested for a lag one row further on, where there was none. Every
+counterexample the hypothesis had was silently reclassified into a confirmation. "8 of 8" was
+the definition restated, not evidence, and a change was built on it.
+
+A ratio near unity is the signature of this failure at least as often as it is the signature of
+a real effect. Before quoting one, **construct the disconfirming case by hand and check the
+detector reports it as disconfirming.** A detector that cannot express the counterexample is
+not measuring the hypothesis; it is measuring its own definition.
+
+The same round is also the source of the companion rule: when a fix moved one segment green
+and a different one red, leaving the red count unchanged, the round reverted rather than
+reporting the count. **A count that holds while its membership moves is not a null result** —
+it is two results cancelling, and the one that reads as "no change" is the one hiding a
+regression.
+
+## Twelfth rule: some divergences are not frame-derivable, and hunting a predicate is the error
+
+Frame-granularity state cannot always decide a question. One round established, from
+`Level_MainLoop` and `VBlank_Lag`, that whether a main-loop tail has run when a lag V-blank
+lands depends only on **where in the body the 68000 was interrupted** — and produced two rows
+in committed runs with identical frame-visible engine state and opposite outcomes. No
+predicate over frame state can separate them, so under hard rule 3 there is nothing legitimate
+to write: any discriminator would be fitted by construction.
+
+When a round reaches that point, the finding is the *impossibility*, and it belongs in the log
+in those words so the next round does not spend itself re-deriving it. The sanctioned route for
+genuine sub-frame hardware timing is the per-movie sidecar of hard rule 4 — not a cleverer
+predicate.
