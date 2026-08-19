@@ -90037,3 +90037,48 @@ a LAG closure but incorrectly runs no loop tail there either.
 
 If segment 3 goes green while anything not in this list moves, the model is
 incomplete even though the count improved.
+
+## Correction to the ss_3 drift entry (c5bf32ce1)
+
+The earlier entry said the engine's stage-clear detection "has drifted about eight rows later
+relative to the recorded completion row" and that `ss` and `ss_2` "were passing on a shrinking
+cushion". **Both halves are wrong**, corrected against each stage's own recorded
+`clear_routine` column rather than against the queue margin:
+
+| stage | recorded `clear_routine`=1 | engine clear start | offset |
+|---|---|---|---|
+| `ss` | 4112 | 4112 | **0** |
+| `ss_2` | 5113 | 5113 | **0** |
+| `ss_3` | 5873 | 5881 | **+8** |
+
+Engine clear detection in `ss` and `ss_2` lands on the recorded row **exactly**. There is no
+cushion and nothing shrinks, so the conclusion that "this was always going to fail at some
+stage" does not follow — those two stages are frame-exact and stay green however many stages
+precede them. All eight rows are in `ss_3` alone, which has its own defect. The 4-row
+submission-to-completion gap is the ROM's own module latency, constant across all three and
+reproduced exactly; clear-start to queue is 85 rows in all three, so the clear sequence
+contributes nothing.
+
+The earlier margin arithmetic was also off by one: the queue margins are **4 / 4 / −4**, not
++5 / +5 / −3. The shape was right and the magnitudes were not.
+
+**Where the eight rows are.** Every blue-sphere event in `ss_3` lands on its recorded raw
+frame exactly, through the ring conversion at 5471 which converts 4 and leaves
+`spheres_left=1` on both sides. The final sphere is collected at ROM 5873 against engine 5881,
+so all eight rows accrue in the 402-frame traversal from the second-to-last sphere to the
+last, with no sphere event in between. This reproduces standalone from
+`TestS3kSonicTailsSs3SpecialStageTraceReplay`'s own segment hydration — it is not carried in
+from segment 4.
+
+**Not established:** why the last sphere is eight frames late. That span is player traversal —
+position, angle, velocity, turn timing — and none of it has been measured; the sphere probe
+has no samples inside the span, so a single discrete late event cannot be distinguished from
+drift accumulated across it.
+
+**Frontier:** `ss_3` rows 5471→5873. The unmatched hardware edges at 5962/5963 are downstream
+and close on their own when the traversal does. No hardware-timing-port change can fix this.
+
+**Method note:** this correction exists because the two *passing* stages were instrumented.
+`ss`/`ss_2` being frame-exact is what makes 5471 a usable control rather than a guess — and it
+is also what refuted the drift model, which only looked viable while the passing stages were
+measured against the wrong reference.
