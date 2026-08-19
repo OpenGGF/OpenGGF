@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Tails' twin-tails DPLC has its own cadence, partially coupled to the body
+  (`bugfix/ai-s2-tails-cadence-r1`, merged 2026-08-19 -- fixture and disassembly analysis, no code).**
+  Measured across the whole recording, submissions per owner are `sonic` 1925, `tails` 2574,
+  `tails-tails` 508 -- and **108** of the twin-tails submissions land on frames where the body does
+  not submit, **2174** body submissions have no twin-tails submission, and on the 400 shared frames
+  one body mapping frame maps to *many* twin-tails frames (body frame 72 against 17 distinct ones).
+  So it is not a function of the body and a body-cadence fix cannot close it. Structurally there are
+  two routines and two dedup bytes: `LoadTailsTailsDynPLC` (`s2disasm/s2.asm:41636`, ROM `0x1D184`)
+  dedups on `TailsTails_LastLoadedDPLC` (`0xF7DF`), while `LoadTailsDynPLC` (`:41658`, ROM `0x1D1AC`)
+  dedups on `Tails_LastLoadedDPLC` (`0xF7DE`) -- adjacent bytes, separate gates. The coupling is
+  **partial by design**: `Obj05` is a separate object whose `anim` is re-selected from
+  `Obj05AniSelection` *only when the body's animation changes* (`cmp.b
+  Obj05_parent_prev_anim(a0),d0 / beq.s .display`, `:41753-41757`), after which it advances on its
+  own script with its own frame index and timer -- exactly the 400-shared / 108-independent /
+  one-to-many pattern. **What is not wrong:** the engine already models this shape, in
+  `TailsTailsController` with the `Obj05AniSelection` lookup, a `lastParentAnim` standing for
+  `Obj05_parent_prev_anim`, and its own `frameIndex`/`frameTick`/`mappingFrame`. Neither "missing
+  abstraction" nor "unmodelled stream" survives, and ruling both out is most of the round's value.
+  The round deliberately does **not** claim the defect is in that controller -- it is where the
+  cadence is computed, which makes it where to look.
+
 - **The CPZ2 art divergence is animation cadence seen through the art comparator, not a DPLC defect
   (`bugfix/ai-s2-dplc-interleave-r1`, merged 2026-08-19 -- fixture analysis, and a self-correction).**
   `tails-tails` is a **real** third stream, not a recorder artefact: the recorder hooks ROM decision

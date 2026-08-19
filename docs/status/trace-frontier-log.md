@@ -85770,3 +85770,71 @@ per-owner animation clocks, which is where this thread's push work also lived.
 - The recorded per-owner submission sequence around the onset is dense enough to
   align against without any new capture: `sonic` 11, 1, 11, 1, 11, 1, 76, 1;
   `tails` 91, 1, 4, 1, 4, 1, 4; `tails-tails` 12, 13, 9, 10, 9.
+
+## 2026-08-19 — `tails-tails` has its own cadence, measured and structural
+
+Branch `bugfix/ai-s2-tails-cadence-r1` off `origin/develop` (`c4cc442d8`).
+Fixture and disassembly analysis; no code, nothing landed.
+
+### The discriminator, settled twice over
+
+**Measured**, over the whole `seg10_cpz2` recording. Submission frames per owner:
+`sonic` 1925, `tails` 2574, `tails-tails` 508.
+
+- 108 of the 508 `tails-tails` submissions occur on frames where `tails` does not
+  submit at all;
+- 2174 of the 2574 `tails` submissions occur with no `tails-tails` submission;
+- on the 400 shared frames the same `tails` mapping frame maps to **many**
+  different `tails-tails` mapping frames -- body frame 72 appears against 17
+  distinct tails frames, body frame 1 against three.
+
+So the twin-tails mapping frame is not a function of the body's, and a
+body-cadence fix cannot close it.
+
+**Structural**, from the ROM. They are two routines with two dedup bytes:
+`LoadTailsTailsDynPLC` (docs/s2disasm/s2.asm:41636, ROM `0x1D184`) dedups on
+`TailsTails_LastLoadedDPLC` (`0xF7DF`), and `LoadTailsDynPLC` (:41658, ROM
+`0x1D1AC`) dedups on `Tails_LastLoadedDPLC` (`0xF7DE`) -- adjacent bytes,
+separate gates (s2.constants.asm:1625-1626, whose own comment reads "mapping
+frame number when Tails' **tails** last had their tiles requested"). The recorder
+models both windows separately
+(`tools/bizhawk-headless/src/Recording/DynamicArtRomProfile.cs`:81-84, :103-107).
+
+The inference from the per-stream gate was right, and it is now measurement.
+
+### What actually drives it, and why the coupling is partial
+
+`Obj05` is Tails' tails, a separate object with its own animation state. Its
+`anim` is re-selected from `Obj05AniSelection` **only when the body's animation
+changes** -- `cmp.b Obj05_parent_prev_anim(a0),d0 / beq.s .display`
+(s2.asm:41753-41757). After that selection the object advances on its **own**
+script (`Obj05AniData`) through `Tails_Animate_Part2` with its own frame index
+and timer, and `LoadTailsTailsDynPLC` then dedups on `mapping_frame(a0)` of that
+object (:41760-41763).
+
+Body animation therefore *selects* the tails' script on change, and the tails
+object *advances* independently afterwards. That is exactly the partial coupling
+the measurement shows: 400 shared frames, 108 independent ones, one-to-many
+mapping.
+
+### Where to compare, and what is NOT wrong
+
+The engine already models this shape. `TailsTailsController`
+(`src/main/java/com/openggf/sprites/managers/TailsTailsController.java`, 545
+lines) carries the `Obj05AniSelection` lookup with the ROM citation (:39,
+:233-242), a `lastParentAnim` standing for `Obj05_parent_prev_anim`, and its own
+`frameIndex`, `frameTick` and `mappingFrame` (:180, :300-310, :365). So this is
+**not** a missing abstraction and not a stream the engine fails to model
+separately -- both of those were live possibilities before this round.
+
+The comparison that has not yet been made, and is the next step: that
+controller's per-frame `mappingFrame` against the recorded `tails-tails` mapping
+frames, over 5540-5600 first. The recorded onset sequence is `tails-tails`
+12, 13, 9, 10, 9 at frames 5546, 5565, 5569, 5573, 5575, against `tails`
+91, 1, 4, 1, 4, 1, 4 and `sonic` 11, 1, 11, 1, 11, 1, 76, 1. No new capture is
+needed.
+
+I have deliberately not claimed the defect is inside that controller. It is where
+the cadence is computed, which makes it where to look; three rounds on this
+thread have gone wrong by treating "where the mechanism lives" as "where the bug
+is".
