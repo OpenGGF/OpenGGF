@@ -88827,3 +88827,98 @@ either. Scope was applied to readiness but not to ordinal allocation.
 
 That is the next change, it is the same principle applied one level further, and
 it is **not** implemented here. The fixture therefore still does not land.
+
+## 2026-08-19 — Correction: `loc_85CA4` is the pre-boss arena gate, not the signpost gate. The engine's 119-frame timer is right.
+
+Branch `bugfix/ai-s3k-signpost-gate-r1` off `origin/develop` (`34be27c29`).
+**Diagnosis only; nothing landed.** This entry retracts the root cause in the previous
+entry on this frontier and replaces it.
+
+### The previous entry named the wrong routine
+
+It attributed the 1,200-frame early `Ctrl_2_locked` to
+`S3kBossDefeatSignpostFlow.updateWaitFade`'s 119-frame timer standing in for
+`loc_85CA4`'s three-bit camera-boundary release. Reading the callers refutes it:
+
+* `loc_85CA4` is installed as a boss's **routine at init**, before the fight, with the
+  boss's start routine in `$34(a0)` — `Obj_HCZEndBoss` does
+  `lea HCZEndBoss_SonicCameraRange(pc),a1 / jsr Check_CameraInRange / jsr sub_85D6A /
+  move.l #HCZEndBoss_WaitStartCallback,(a0)`, and that callback is
+  `jmp (loc_85CA4).l` (`docs/skdisasm/sonic3k.asm:140783-140806`). It is the
+  **arena-entry** gate that waits for the camera to settle and then starts the boss. It
+  has nothing to do with the post-defeat signpost.
+* The post-defeat controller is `Obj_EndSignControl`
+  (`docs/skdisasm/sonic3k.asm:180377-180384`), and it *is* a plain timer:
+  `move.w #(2*60)-1,$2E(a0)` with `Obj_EndSignControlDoSign` in `$34(a0)`. 119 frames.
+  **The engine's `FADE_TIMER` already models it exactly.** Implementing the previous
+  entry's proposal would have replaced correct code with a mechanism from a different
+  routine.
+
+`Obj_AIZEndBoss` does not use `sub_85D6A`/`loc_85CA4` at all — it uses `_unkFA82` arena
+data (`:138001-138013`) — so the AIZ2 end boss was never on that path either.
+
+### Which object actually fires, measured
+
+A stack trace at `S3kBossDefeatSignpostFlow`'s constructor names **`AizMinibossInstance`**,
+not the end boss: flow constructed at frame 5023, signpost `LANDED -> RESULTS` at 5763.
+(`AizEndBossInstance` reaches the signpost flow only on the Knuckles branch; the
+Sonic-and-Tails branch correctly spawns `Aiz2EndEggCapsuleInstance`.)
+
+### Where the 1,200 frames actually are
+
+The fixture's `object_state` stream carries the ROM signpost (`object_code 0x000837B2`,
+slot 25). Its routine timeline:
+
+| frame | routine | meaning |
+|---|---|---|
+| 5171 | `0x02` | created, falling |
+| 5449 | `0x04` | landed |
+| **5450** | **`0x02`** | **bounced straight back up** |
+| 6899 | `0x04` | landed again |
+| 6964 | `0x06` | `loc_838D6`, `st (Ctrl_2_locked).w` |
+| 6965 | `0x08` | `Obj_EndSignResults` |
+
+Two facts follow. The lock is 65 frames after the second landing, which is exactly
+`Obj_EndSignLanded`'s `$2E = $40` counted with `subq.w #1 / bmi`
+(`docs/skdisasm/sonic3k.asm:176201-176218`) — so **that timer is right too**. And the ROM's
+signpost spends **1,449 frames in routine 2** between its first and second landings, which
+is the whole of the missing time.
+
+So the defect is neither timer. It is that the ROM's signpost is knocked back up and the
+engine's is not. `Obj_EndSignLanded` re-bounces via `loc_838FA` (routine 2, `$20(a0)=$20`,
+`y_vel=-$200`, `:176222-176227`) whenever `btst #0,$38(a0)` is clear, and
+`Obj_EndSignFall` calls `EndSign_CheckPlayerHit` every frame (`:176155`). Its landing gate
+also refuses to land while `Camera_Y_pos + $50 > y_pos` or `y_vel < 0`
+(`:176162-176168`). The engine models a bounce (`updateLanded`'s `if (!landed)` branch)
+but takes it zero times here.
+
+### `FixBugs = 0` matters directly in this routine
+
+`EndSign_CheckPlayerHit` contains a `FixBugs` conditional (`:176357-176365`). With
+`FixBugs = 0` — the shipped build — `d0` is corrupted by `bsr.w sub_83A70` before the
+`swap d0` that tests Tails, so **the sidekick hit check does not work correctly**. Any
+implementation must reproduce the un-fixed path; taking the fixed branch would give Tails
+a signpost hit the shipped ROM never registers, on a route that carries a sidekick
+throughout.
+
+### Why nothing is landed
+
+The brief for this round specified modelling `loc_85CA4`'s three bits with per-boss bounds
+from `sub_85D6A`. That work is real, but it belongs to boss arena *entry* and would not
+have moved this frontier; it would also have replaced a correct 119-frame timer. The actual
+next step is much narrower and now precisely bounded: model `EndSign_CheckPlayerHit` and
+the `$38` bit-0 re-bounce, on the `FixBugs = 0` path.
+
+### Rejected on evidence — do not retry
+
+* **`loc_85CA4`'s three-bit camera release for the signpost.** Wrong routine; it is the
+  pre-fight arena gate.
+* **`S3kBossDefeatSignpostFlow`'s 119-frame timer.** It correctly models
+  `Obj_EndSignControl`'s `$2E = (2*60)-1`.
+* **`Obj_EndSignLanded`'s `$40` post-land timer.** The fixture shows the ROM taking
+  exactly 65 frames from landing to the lock.
+* **The AIZ2 end boss.** It is the AIZ **miniboss** that spawns this signpost, and the end
+  boss's Sonic/Tails branch uses the egg capsule, which the engine already models.
+
+**Frontier unchanged: segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`,
+34,112 errors**, at `34be27c29`.

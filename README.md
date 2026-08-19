@@ -228,6 +228,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION: `loc_85CA4` is the pre-boss arena-entry gate, and both timers are correct
+  (`bugfix/ai-s3k-signpost-gate-r1`, merged 2026-08-19 -- nothing landed).** `loc_85CA4` is installed
+  as a boss's routine **at init, before the fight**, with the boss's start routine in `$34(a0)`:
+  `Obj_HCZEndBoss` does `lea HCZEndBoss_SonicCameraRange(pc),a1 / jsr Check_CameraInRange /
+  jsr sub_85D6A / move.l #HCZEndBoss_WaitStartCallback,(a0)`, and that callback is
+  `jmp (loc_85CA4).l` (`skdisasm/sonic3k.asm:140783-140806`). It waits for the camera to settle and
+  then **starts** the boss -- it does not gate the post-defeat signpost. The previous round read the
+  routine correctly and inferred its purpose from what it does rather than from **who calls it and
+  when they install it**. **Both timers are right:** `Obj_EndSignControl` sets
+  `move.w #(2*60)-1,$2E(a0)` = 119 frames (`:180377-180384`), which
+  `S3kBossDefeatSignpostFlow.FADE_TIMER` models exactly, and the fixture shows the lock landing 65
+  frames after the signpost's second landing, matching `Obj_EndSignLanded`'s `$2E = $40` counted with
+  `subq/bmi` (`:176201-176218`). **Building the specified gate would have replaced correct code with
+  a mechanism from a different routine**, and `Obj_AIZEndBoss` never touches `sub_85D6A`/`loc_85CA4`
+  at all. **Where the 1,200 frames actually are, from the fixture with no probe:** the ROM signpost
+  (`object_code 0x000837B2`, slot 25) is created at 5171, lands at 5449, **bounces straight back up
+  at 5450**, lands again at 6899, and locks at 6964 -- **1,449 frames being knocked back up**, which
+  the engine's signpost never is. Also measured: a stack trace at the flow's constructor names
+  **`AizMinibossInstance`**, not the end boss. **Flagged for whoever takes it:**
+  `EndSign_CheckPlayerHit` contains a `FixBugs` conditional (`:176357-176365`) -- with `FixBugs = 0`,
+  `d0` is corrupted by `bsr.w sub_83A70` before the `swap d0` that tests Tails, so the shipped ROM's
+  **sidekick** hit check does not work correctly, and taking the fixed branch would give Tails a
+  signpost hit the ROM never registers on a route that carries a sidekick throughout.
+
 - **The S1 title-card deadlock is closed: readiness sought in an unrepresented span takes native
   readiness (`bugfix/ai-s1-arm-scope-impl-r1`, merged 2026-08-19 -- first code change in this
   sequence).** The port declares row representation to the recorded authority at `beginRawFrame` and
@@ -262,9 +286,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
   models `Obj_EndSignLanded`'s `st (Ctrl_2_locked).w` (`:176209-176218`) and its semantics are
   **correct** -- `Tails_Control`'s three-way sign test at `loc_13830` (`:26195-26200`) is faithful --
   but the **timing** is not: the fixture's own `control_lock_state` stream records `ctrl2_locked = 0`
-  for all 8,235 rows except 6964-6965, so **the engine locks roughly 1,200 frames early**. Root cause:
-  `S3kBossDefeatSignpostFlow.updateWaitFade` advances on a bare **119-frame timer**, where ROM
-  `loc_85CA4` (`:180495-180552`) requires **all three bits** of `$27(a0)` -- the music timer **and**
+  for all 8,235 rows except 6964-6965, so **the engine locks roughly 1,200 frames early**. ~~Root cause: a bare 119-frame timer where `loc_85CA4` requires all three bits of `$27(a0)`~~
+  (**retracted below: `loc_85CA4` is the pre-boss arena-entry gate, both timers are correct, and the
+  missing frames are the signpost being knocked back up**). The superseded reading was that
+  `S3kBossDefeatSignpostFlow.updateWaitFade` advances on a bare 119-frame timer where
+  `loc_85CA4` (`:180495-180552`) requires all three bits of `$27(a0)` -- the music timer **and**
   the Y camera-boundary ease **and** the X ease, loaded per boss by `sub_85D6A` (`:180565-180577`).
   The engine models the first only. Nothing is landed because the real gate needs per-boss bounds and
   all four camera eases routed through the shared defeat flow used by CNZ, ICZ2, MHZ2 and HCZ, and a
