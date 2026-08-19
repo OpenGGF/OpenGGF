@@ -87730,3 +87730,66 @@ between the special-stage exit and 9741, on this same cursor, is the next step.
 bridge's admission authority and the comment at `:396-397` says so; relaxing it
 would admit a destination at a row the recording does not place it on, which is
 the fitted-model failure in its purest form.
+
+## 2026-08-19 — Segment 4 frame 3573: neither a position nor a phase error in the approach
+
+Base `e0dddb3db`. Partial diagnosis; nothing landed. Segment 4 stands at 40,000 errors,
+first non-camera mismatch frame **3573** `sidekick_y` rom `0x030B` engine `0x0309`.
+
+### What the recorded columns say before any instrumentation
+
+Across the whole window Tails carries `x_speed = y_speed = g_speed = 0`, constant sub-pixels
+(`x_sub = 0x3B00`, `y_sub = 0x1400`), `anim = 0x20` (`TailsAni_Fly`), `routine = 0x02`, and
+moves by **exactly** `-1` in y per row while x tracks `Tails_CPU_target_X` value-for-value
+(`x == target_x` on every row from 3563). Zero velocity, frozen sub-pixels and integer-only
+motion means these are direct `y_pos` / `x_pos` writes, not physics.
+
+`cpu_state` confirms the owner: `cpu_routine = 4` for rows 3547-3593, returning to 6 at
+3594. Routine 4 is the third entry of `Tails_CPU_Control_Index`
+(`docs/skdisasm/sonic3k.asm:26368-26385`), whose handler is the catch-up flight at
+`loc_13CAA`/`loc_13CBE` — `add.w d2,x_pos(a0)` with a capped `d2`, and
+`moveq #1,d2 / ... / add.w d2,y_pos(a0)`, i.e. exactly ±1 px of y per frame toward
+`Tails_CPU_target_Y` (`:26600-26620`).
+
+So the ROM's y here is a 1 px/frame integer ramp. On such a ramp two pixels would ordinarily
+be two frames of phase — but row 3572 compares clean, so the engine loses two pixels inside
+a single frame. That rules out phase.
+
+### What the engine is doing
+
+Probing the sidekick CPU state machine (probe reverted):
+
+* the engine models this stretch in a dedicated `FLIGHT_AUTO_RECOVERY` state — **not**
+  `APPROACHING`. `TailsRespawnStrategy.updateApproaching`, the obvious suspect and the only
+  place that implements the ROM's `±1` step, **never executes anywhere in the chain run**;
+  the probe file was never created. Aim at `FLIGHT_AUTO_RECOVERY`, not the respawn strategy.
+* aligning by x value rather than by frame number (engine `cx = 0x0EB8` at its `f = 3566`,
+  ROM `x = 0x0EB8` at row 3569, so trace row = probe frame + 3), the engine's centre Y at
+  the CPU-update point is `0x030B` on the row that compares as `0x0309` — **the correct ROM
+  value**. The two pixels are lost between the CPU update and the end-of-frame sample.
+
+### The candidate, and the magnitude test it has to pass
+
+Something moves Tails' centre Y by exactly `-2` after the catch-up step, on a frame where
+the recording has zero velocity and frozen sub-pixels. Two shapes fit that magnitude:
+
+1. a **y_radius change**. `getCentreY()` is `getY() + yRadius`, so a 14 -> 12 radius swap
+   moves the centre by exactly 2 with no movement at all — and would leave `y_sub`
+   untouched, matching the recording's frozen sub-pixels.
+2. residual player physics running after the CPU step. This one has to answer why `y_sub`
+   does not move, since any physics step would disturb it.
+
+(1) explains the magnitude and the sub-pixels together and should be checked first. Confirm
+by logging `getY()` and `getYRadius()` separately either side of the end-of-frame sample —
+if `getY()` is unchanged and the radius moves, it is (1).
+
+Not yet established, and worth stating plainly: whether `FLIGHT_AUTO_RECOVERY` is the right
+model for ROM routine 4 at all, or whether the engine reaches the right positions here by a
+different route. `updateApproaching` never running in a Sonic+Tails run is itself worth a
+look.
+
+### Not this
+
+This is sidekick *following*, not sidekick collision: velocities are zero and the motion is
+a direct position write, so it does not meet the S2 lane's rolling-airborne wall-stop
+thread.

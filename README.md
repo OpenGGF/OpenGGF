@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K frame-3573 divergence is neither position nor phase; `y_radius` is the candidate
+  (`bugfix/ai-s3k-seg4-3573-r1`, merged 2026-08-19 -- partial diagnosis, not a close).** The recorded
+  columns settle the shape without instrumentation: across the window Tails carries **zero** x/y/ground
+  velocity, frozen sub-pixels (`0x3B00`/`0x1400`), anim `0x20`, routine 2, moves exactly **-1 in y per
+  row**, and `x` tracks `Tails_CPU_target_X` value for value, with `cpu_routine 4` for rows 3547-3593
+  -- the catch-up flight at `loc_13CAA`/`loc_13CBE` (`skdisasm/sonic3k.asm:26368-26385`,
+  `:26600-26620`), whose y step is exactly ±1 per frame. So it is **direct position writes on a
+  1 px/frame integer ramp**. On such a ramp two pixels would normally mean two frames of phase --
+  **but row 3572 compares clean, so the engine loses two pixels inside one frame**, which kills phase.
+  Two probe findings redirect the next round: the engine models this in **`FLIGHT_AUTO_RECOVERY`, not
+  `APPROACHING`** -- `TailsRespawnStrategy.updateApproaching` holds the only implementation of the
+  ROM's ±1 step and **never executes** anywhere in the chain run; and aligning by **x value rather
+  than frame number** (engine `cx=0x0EB8` at its f=3566, ROM `x=0x0EB8` at row 3569, so row = probe
+  frame + 3) puts the engine's centre Y at the CPU-update point at the ROM's `0x030B` on the row that
+  compares as `0x0309` -- the two pixels go missing **between the CPU step and the end-of-frame
+  sample**. The candidate accounting for exactly two pixels *and* the frozen sub-pixels together is a
+  **`y_radius` change**, since `getCentreY()` is `getY() + yRadius` and 14 -> 12 moves the centre by
+  exactly 2 with no movement and no sub-pixel disturbance.
+
 - **The S1 admission fails on mode, not drift, and `rowsConsumed` was the alarm rather than the fault
   (`bugfix/ai-s1-admission-clock-r1`, merged 2026-08-19 -- investigation only).** Measured on one
   clock with both endpoints named: the shared BK2 cursor, endpoint A the row the recording gives the
