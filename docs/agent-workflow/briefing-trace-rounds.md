@@ -624,3 +624,26 @@ And **a green test may be green for the wrong reason**. Removing the compensatio
 a passing trace red, and the reason was that the compensation had been supplying a status bit
 the ROM supplies by a different route. That trace had been passing on a coincidence; the fix
 that reddened it is what made it pass for the right reason.
+
+## Eighteenth rule: an identical error fingerprint means the same lever, whatever the site
+
+Two attempts at the S2 title-card seam were implemented at different sites, one deliberately
+chosen to differ *in kind* from the other, with a design note arguing exactly that. They
+produced **byte-identical** failures: same error count, same frame, same field, same two values,
+same three failing axes. The site changed; the lever did not.
+
+An error profile that reproduces to the value is a fingerprint of the *mechanism being moved*,
+not of the code that moved it. When a new approach reproduces a rejected approach's numbers
+exactly, the new approach is the old one wearing different clothes — stop and find what both
+are actually perturbing, rather than looking for a third site.
+
+The same round adds the negative form: a mitigation that changes **nothing** — not the count,
+frame, field or values — was not insufficient, it was irrelevant. Its hypothesis was already
+refutable from code the round had read, since the locked title-card rows take the same bare
+return every frame without harm. Before adding compensating work to a production path on a
+hypothesis, check whether an existing path already does the thing you fear.
+
+Corollary for briefs: when a round proposes a new site for a previously rejected change,
+require it to predict whether the error profile will change. A prediction of "same numbers,
+different site" is a prediction that the site is not the lever — and it is cheap to check
+before the code is written.

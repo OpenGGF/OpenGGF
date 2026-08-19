@@ -91828,3 +91828,69 @@ offset 89600).
 
 Segments 12 and 13 are mandatory and are checked before segment 15's error count is read. A
 split that greens 15 while moving either is wrong.
+
+## 2026-08-20 — S2 stage_exit seam split: implemented, measured, and it inserts a frame instead of re-phasing one
+
+Base `157b02aec`, worktree `s2-titlecard-seam-r1`, JDK 21,
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain`.
+The approved split was implemented at the approved site and measured, then the approved
+step-two mitigation was implemented and measured. **Both reverted. The tree is identical to
+`157b02aec`.**
+
+### What was implemented
+
+`PostTitleCardDestination.completeRelease` returns `SETUP_ONLY` unconditionally for the
+`LEVEL` destination, so a level-bound title-card release ends its host iteration instead of
+falling through into the level body. `BONUS_STAGE` unchanged. This is the site the design
+note argued for, and it satisfied all three invariants by construction: nothing was removed,
+the release row's claim and prepare stayed `LEVEL_TITLE_CARD`, and no `ORDINARY_LEVEL` claim
+was left depending on a body that might early-return. No structural exception fired.
+
+### Measured — the same lever as the bare early return, to the digit
+
+| | chain result |
+|---|---|
+| baseline `157b02aec` | 9 axes; segment 15 = 7575 errors, frame 2, `remaining_work` rom=2 engine=5 |
+| split alone | 3 axes; **segment 2 = 47639 errors, frame 1132, `sidekick_y` rom `0x02CB` engine `0x02CC`**; `seg2_ehz1 -> ss_2` gap comparison fails; chain aborts on a DPLC divergence in special-stage segment 3 |
+| split + row audio tail | **byte-identical: 47639, frame 1132, same field, same values, same three axes** |
+
+47639 / frame 1132 / `sidekick_y` `0x02CB` vs `0x02CC` is the **exact recorded fingerprint of
+the previously rejected bare early return**. The design note's central claim — that the
+admission-controller site differs in kind from that attempt — is **refuted by measurement**.
+The site changed; the lever did not.
+
+**The tail-omission hypothesis is also refuted.** Giving the release row the audio frame a
+locked-phase title-card row runs (`beginAudioFrame` / `advanceAudioFrame`) changed *nothing* —
+not the count, not the frame, not the field, not the values. The missing tail was not the
+cause, and the prediction that it would isolate the damage was wrong. Note also that the
+locked title-card rows already take the same bare `SETUP_ONLY` return every frame without
+harm, which should have weakened that hypothesis before it was written.
+
+Segment 15 is **unmeasured** under the split: the chain now aborts at segment 3, well before
+reaching it.
+
+### The diagnosis — the split adds a frame rather than moving one
+
+The release row is a **surplus represented frame**, and the split preserves it while pushing
+the level's first frame one iteration later. Measured in this worktree twice: the host
+iteration on which the leave loop's exit condition is detected **claims a V-blank and runs no
+object pass**. The ROM has no such frame — `s2.asm:5060-5066` tests
+`tst.b (TitleCard_Background+id).w` at the BOTTOM of the loop, after that same frame's
+`WaitForVint`, `RunObjects`, `BuildSprites` and `RunPLC_RAM`, so the frame that leaves the
+loop *is* the loop's last frame and has already done all of its work.
+
+So the engine's sequence is `[25 leave rows] [exit-detection row] [level row]` where the ROM's
+is `[25 leave rows, the last of which also detects the exit] [level row]`. Ending the release
+iteration therefore does not re-phase the seam — it inserts a whole extra represented frame
+before `Level_MainLoop`, which is what shifts `sidekick_y` by one pixel and costs `seg2_ehz1`
+its gap edge.
+
+**The split is right in direction and incomplete on its own.** It has to be paired with
+collapsing the exit detection into the last leave-loop iteration, so that one host iteration
+runs the leave-loop body *and then* discovers the loop has ended, exactly as the ROM does.
+Landing either half alone moves a frame boundary that the other half is supposed to absorb.
+
+### Sweeps
+
+None. Both variants were reverted, so there is nothing to sweep; the tree is unchanged from
+`157b02aec`.
