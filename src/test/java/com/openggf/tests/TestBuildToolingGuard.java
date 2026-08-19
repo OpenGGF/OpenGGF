@@ -415,6 +415,41 @@ class TestBuildToolingGuard {
         assertFalse(antMatches("**/tests/trace/**/*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
     }
 
+    /**
+     * The default {@code test} job is skipped on push, and work lands on
+     * develop by direct push, so a guard that only the default profile selects
+     * is effectively ungated. The guards profile is source-only and ROM-free,
+     * so it can and must run on every push.
+     */
+    @Test
+    void ciShouldRunTheGuardsProfileOnPushes() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        Map<String, String> jobs = yamlJobBlocks(workflow);
+        String guardJob = jobs.get("guards");
+        if (guardJob == null) {
+            violations.add(".github/workflows/ci.yml does not define a guards job");
+        } else {
+            if (!guardJob.contains("-Pguards")) {
+                violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
+            }
+            if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
+                violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
+                        + " push, which is how work lands");
+            }
+            if (guardJob.contains("continue-on-error: true")) {
+                violations.add(".github/workflows/ci.yml guards job is non-blocking, so a red guard"
+                        + " reports green");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("structural guards must be gated by CI on every push:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
     private static List<String> guardTestSources() throws Exception {
         Path root = Path.of("src", "test", "java");
         try (Stream<Path> sources = Files.walk(root)) {
@@ -1230,7 +1265,8 @@ class TestBuildToolingGuard {
                 continue;
             }
             String jobCondition = yamlJobCondition(job.getValue());
-            if (!conditionExcludesPush(jobCondition)) {
+            if (!conditionExcludesPush(jobCondition)
+                    && !conditionPinsPushToIntegrationBranches(jobCondition)) {
                 violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
                         + " is reachable from a branch push");
             }
@@ -2671,6 +2707,24 @@ class TestBuildToolingGuard {
         command.addAll(List.of(arguments));
         ProcessResult result = run(repository, command, null);
         assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+    }
+
+    /**
+     * True when a job runs on pushes, but only to the integration branches.
+     * Feature-branch pushes stay policy-only and Maven-free (see
+     * {@link #allBranchPushPolicyShouldRemainLightweight()}); develop and
+     * master are where work actually lands, so a source-only gate there costs
+     * one short job per merge and is the only thing standing between a red
+     * structural guard and nobody noticing.
+     */
+    private static boolean conditionPinsPushToIntegrationBranches(String condition) {
+        if (condition == null || condition.isBlank()) {
+            return false;
+        }
+        String normalized = condition.replace("\"", "'");
+        return normalized.contains("github.event_name != 'push'")
+                && normalized.contains("github.ref == 'refs/heads/develop'")
+                && !normalized.contains("github.ref != ");
     }
 
     private static String gitOutput(Path repository, String... arguments) throws Exception {
