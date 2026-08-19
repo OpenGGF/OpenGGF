@@ -228,6 +228,18 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The AIZ1 cutscene miniboss's touch position is read live
+  (`bugfix/ai-s3k-xspeed-signflip`, merged 2026-08-19).** `Obj_AIZMinibossCutscene`'s drop and swing
+  routines both end in `MoveWaitTouch` (`skdisasm/sonic3k.asm:136817-136818`, `:136845-136847`),
+  which runs `MoveSprite2` **before** `Draw_And_Touch_Sprite` (`:179687-179690`), and
+  `Add_SpriteToCollisionResponseList` stores only the object-RAM pointer (`:21200-21209`) -- so the
+  player slot's `Touch_Loop` reads `y_pos(a1)` **live** and observes the position this object
+  produced on its own previous pass. The engine fed the generic pre-update snapshot, one frame older
+  again, so the swing's touch box sat 1px high. That made `Touch_Height`'s `d0` come out `$16`
+  against a `$16` player height at frame 2941, firing `Touch_Enemy`'s boss rebound
+  `neg.w x_vel/y_vel/ground_vel` (`:20907-20914`) **one frame before** the ROM's own hit at 2942 --
+  surfacing as `x_speed` rom `0x0213` engine `-0213`, same magnitude, opposite sign.
+
 - **The monitor's side push fires when the player is not moving away, not only when moving in
   (`bugfix/ai-s1-seg16-8396`, merged 2026-08-19).** `Mon_Solid`'s `.sonicleft` branch is
   `bpl.s .push` (`s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:133-135`) -- and **`bpl`

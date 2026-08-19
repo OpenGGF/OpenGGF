@@ -83381,3 +83381,50 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
 - Chain frontier before and after: `segment 16 ... frame 8396 field x` ->
   `segments 12/15 queue.s1_nemesis_plc.prepared` plus the `syz2` row-70
   bridge walk-failure.
+## S3K Sonic+Tails complete-emerald run chain — segment 2 (`aiz_2`), round: the cutscene miniboss's stale touch position
+
+- Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
+  -Ds3k.rom.path=<rom>` on `bugfix/ai-s3k-xspeed-signflip`, branched from
+  `develop` at `ccf7f10494e81a3cc422bd51112b42a1d3310365`. ~40 s.
+- Frontier BEFORE: segment 2 (`aiz_2`) — 16967 physics comparator errors, first
+  non-camera mismatch at frame 2941 field `x_speed` rom `0x0213` engine
+  `-0213`; the segment's `giant_ring` exit boundary was never observed.
+- Frontier AFTER: segment 2 — 404 errors, first non-camera mismatch at frame
+  3981 field `x` rom `0x0232` engine `0x0230`. The walk now closes segments 2
+  and 3 and stops at the `stage_exit` boundary for the segment entering `aiz_3`
+  (`awaitBoundary exceeded step cap 40650`, mode_change bk2 frame 19775).
+- **The brief's framing is refuted.** The equal-magnitude opposite sign is not a
+  direction decision going the wrong way and nothing is mirrored. Frames
+  2939-2941 of the recorded run hold `x_speed = 0x213` and frame 2942 holds
+  `-0x213` with `y_speed` also negated: this is the AIZ1 miniboss rebound,
+  `Touch_Enemy`'s `.checkhurtenemy` branch `neg.w x_vel / neg.w y_vel /
+  neg.w ground_vel` (`sonic3k.asm:20907-20914`). The ROM runs it on frame 2942;
+  the engine ran it on frame 2941. The reported field is a one-frame-early boss
+  hit, not a sign error.
+- **Cause.** The struck object is `Obj_AIZMinibossCutscene` in its swing routine
+  (`AIZMiniboss_SwingMoveWaitTouch`, `sonic3k.asm:136845-136847`). Its swing
+  itself is exact: instrumented, the engine's `y_pos` matches the recorded
+  slot-5 `y` for every frame of the fight. What differed was the coordinate the
+  touch test used. `MoveWaitTouch` (`sonic3k.asm:179687-179690`) runs
+  `MoveSprite2` before `Draw_And_Touch_Sprite`, and
+  `Add_SpriteToCollisionResponseList` stores only the object-RAM pointer
+  (`sonic3k.asm:21200-21209`), so `Touch_Loop` reads `y_pos(a1)` live
+  (`sonic3k.asm:20661-20662, 20674, 20693`) — the value this object produced on
+  its previous pass. The engine fed it the generic pre-update snapshot, one
+  frame older again: at frame 2941 it tested `y_pos` `0x34E` where the ROM
+  tested `0x34F`.
+- The 1 px decides the frame. Player rolling, `y_radius` `$0E`: `Touch_Height`
+  computes `d0 = y_pos(obj) - height - (y_pos(player) - (y_radius - 3))` against
+  `d5 = 2*(y_radius-3) = $16`, and the boss's `collision_flags` `$CF` selects
+  `Touch_Sizes[$0F] = ($18,$18)` (`sonic3k.asm:20713+`). With `0x34F` at frame
+  2941, `d0 = $17 > $16` → no touch; with the engine's `0x34E`, `d0 = $16` → touch.
+  At frame 2942 the ROM gets `d0 = $15` and hits.
+- Landed: `AizMinibossCutsceneInstance.usesCurrentTouchResponseState()` returns
+  true, the same opt-in `AizMinibossInstance` already carries for the same ROM
+  reason. No constant introduced, no tolerance changed.
+- Verification: `-Ptrace-replay` 790 tests / 4 red, `-Ptrace-segments` 70 / 55
+  red, `-Ptrace-replay-r7` 37 / 32 red — red sets set-diff clean against a
+  control worktree at the same base. Default profile 48 red both sides; the one
+  differing member (`TestAudioPresentationProducer` control-only,
+  `TestPlaybackDebugManagerOverlayOwnership` tree-only) passes in isolation in
+  both trees, so it is the known default-profile flake.
