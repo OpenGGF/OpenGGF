@@ -40,6 +40,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2AuxEventEngine wraps the delayed cpu_state history index",
                 WrapsDelayedCpuStateHistoryIndex));
+            tests.Add(new TestMain.TestCase(
+                "S2Ram pins the solid-bit offsets to the S2 SST layout",
+                PinsSolidBitOffsetsToS2SstLayout));
+        }
+
+        /// <summary>
+        /// Literal pin of the two solid-bit SST offsets against
+        /// docs/s2disasm/s2.constants.asm:70-71 (top_solid_bit = $3E,
+        /// lrb_solid_bit = $3F). These were previously carrying S3K's
+        /// +0x46/+0x47, which are valid only for S3K's 0x4A-byte player SST:
+        /// against S2's 0x40-byte slot, PlayerBase+0x46 is SidekickBase+0x06,
+        /// so the recorder emitted out-of-slot bytes from the sidekick rather
+        /// than $0C/$0E. Asserted as literals, not via the constants under
+        /// test, so this cannot agree with itself the way a seed-then-read
+        /// round trip does.
+        /// </summary>
+        private static void PinsSolidBitOffsetsToS2SstLayout()
+        {
+            AssertEx.Equal(0x3E, S2Ram.OffTopSolidBit);
+            AssertEx.Equal(0x3F, S2Ram.OffLrbSolidBit);
+            // Both must land inside slot 0, i.e. below the 0x40 slot stride.
+            AssertEx.Equal(true, S2Ram.OffTopSolidBit < S2Ram.ObjectSlotSize);
+            AssertEx.Equal(true, S2Ram.OffLrbSolidBit < S2Ram.ObjectSlotSize);
         }
 
         /// <summary>

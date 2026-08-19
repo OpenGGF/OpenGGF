@@ -53,11 +53,20 @@ import java.nio.file.Path;
  * reloads on the special-stage return (s2.asm:44740, 44787), because
  * {@code Obj01_Init} only writes {@code $C} when {@code Last_star_pole_hit}
  * is zero (s2.asm:36192-36199). The recorded run therefore resumes CPZ act 2
- * already on path 2. This lane cannot reconstruct that: it seeds a fresh
- * player from the trace's first row, and the v5 physics/aux schema records no
- * {@code top_solid_bit} or {@code Saved_Solid_bits} field, so the collision
- * path is unobservable at segment entry. The lane stays red by construction
- * until either that state is derivable or the chain is used instead; the
+ * already on path 2. An earlier revision of this note claimed the v5 schema
+ * records no {@code top_solid_bit}, and that was wrong: the S2 aux recorder
+ * has always emitted {@code top_solid_bit}/{@code lrb_solid_bit} on its
+ * {@code state_snapshot} event, but it read them from SST offsets +0x46/+0x47,
+ * which are S3K's (S3K's player SST is 0x4A bytes). S2's is 0x40 bytes and
+ * defines {@code top_solid_bit = $3E} (s2.constants.asm:70-71), so
+ * PlayerBase+0x46 landed in the *sidekick* slot and the field carried
+ * out-of-slot garbage -- 0x39/0xE2 in the installed fixture, never $0C/$0E.
+ * With the offsets corrected, a scratch recapture of this movie reads
+ * {@code top_solid_bit = $0E} at seg10 entry and {@code $0C} at seg8/seg9
+ * entry, which is exactly the save/restore behaviour described above and
+ * confirms the collision-path diagnosis from ROM state rather than from a
+ * value fitted to this fixture. The lane stays red until the regenerated
+ * fixture is installed and its entry state seeded from it; the
  * chain does play the star post, so the fix that matters there is upstream --
  * the CPZ act 2 plane switcher that should leave the player on path 2 before
  * the star post is hit.
