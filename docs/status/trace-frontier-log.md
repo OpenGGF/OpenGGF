@@ -87730,3 +87730,58 @@ between the special-stage exit and 9741, on this same cursor, is the next step.
 bridge's admission authority and the comment at `:396-397` says so; relaxing it
 would admit a destination at a row the recording does not place it on, which is
 the fitted-model failure in its purest form.
+
+## 2026-08-19 -- Retraction: the pair does NOT lengthen the results screen
+
+Branch `bugfix/ai-s1-admission-clock-r1`, based on `develop` at `861671188`.
+Diagnosis only; **no engine change is landed**.
+
+### The claim being retracted
+
+The entry *"The admission slip measured on one clock"* states, as an
+established finding, that the pair moves the engine's mode because *"the results
+screen's PLC genuinely drains, `SSR_ChkPLC` holds it for a wait that previously
+never happened, and the results exit, level load and title card all shift
+later."* That is wrong. It was the one part of that entry carried over from
+reasoning rather than measured, and it is now measured.
+
+### The measurement
+
+Same worktree, same clock (shared BK2 cursor), same probe, one variable — the
+predicate fix and boundary traversal present or absent:
+
+| | results-screen span | rows |
+|---|---|---|
+| with the pair | 8773 .. 9529 | 757 |
+| without the pair | 8773 .. 9529 | 757 |
+
+**Identical, both endpoints.** The results screen neither starts nor ends a row
+differently. `SSR_ChkPLC`'s 16-frame hold is real and the pair does cause it,
+but it is absorbed inside a 757-row screen whose length is set by something else
+entirely — the ROM's own results choreography, which is far longer than the art
+load it waits on. A 16-frame wait inside a 757-row sequence changes nothing
+downstream.
+
+### What survives, and what is now open
+
+Surviving and unaffected: the admission window is an exact single-row equality
+(`TraceRunPlaybackCoordinator:390-402`); at row 9741 the engine is in
+`TITLE_CARD` with every other component of the predicate satisfied; and
+`rowsConsumed` reaching 2 is a downstream symptom. Those were measured.
+
+Now open again: **why** the engine is in `TITLE_CARD` at 9741 with the pair when
+it reaches `LEVEL` there without it. The divergence is not in the results screen.
+It lies between the results screen ending at 9529 and gameplay resuming — the
+title card and level load — and that span has not yet been measured on either
+side. The probe used here logs only from `prepareHardwareTimingForAdmission`,
+which does not run in `TITLE_CARD` mode, so this round says nothing about it.
+That absence is a property of the probe, not of the engine.
+
+### Method note
+
+The retracted claim had the same shape as the two before it: a mechanism that
+would explain the symptom, stated without checking that it fires. `SSR_ChkPLC`
+does hold the screen, the hold is caused by the pair, and the hold is
+irrelevant — all three are true at once, which is exactly why the story was
+convincing. The check that would have caught it is one run with one variable
+changed, and it cost less than writing the paragraph did.
