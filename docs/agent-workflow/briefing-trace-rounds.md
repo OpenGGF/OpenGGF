@@ -254,6 +254,12 @@ half-landed change, and require the blast radius to be measured before anything 
   mechanism, which excludes the entire one-frame class before any member of it is examined, including
   one the same lane had derived an hour earlier. One question, applied to the shape of the symptom
   rather than to a candidate, can retire a family.
+- **A chain of true links can still support a false conclusion, if the effect is absorbed.** A round
+  established that a hold exists, that its change causes the hold, and concluded the downstream phase
+  shifts later. All three statements were true and the conclusion was wrong: the 16-frame hold sits
+  inside a 757-row screen whose length is set elsewhere, so it changes nothing measurable. Measure the
+  span you claim moved, at both endpoints, with one variable — do not infer that a real delay
+  propagates. The most convincing wrong stories are the ones where every individual link checks out.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.

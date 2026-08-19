@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION: the results screen does not lengthen, and the S1 mode question reopens
+  (`bugfix/ai-s1-admission-clock-r1`, merged 2026-08-19).** The previous entry stated as a finding
+  that the pair moves the engine's mode because the results screen's PLC genuinely drains and the
+  results exit, level load and title card all shift later. **Measured, same worktree, same clock, same
+  probe, one variable: the results-screen span is 8773..9529 with the pair and 8773..9529 without it
+  -- 757 rows, identical at both endpoints.** The 16-frame `SSR_ChkPLC` hold is real and the pair does
+  cause it, but it is **absorbed** inside a screen whose length is set by the ROM's results
+  choreography rather than by the art load it waits on. All three things are true at once -- the hold
+  exists, the pair causes it, and it is irrelevant -- and that combination is exactly what made the
+  story convincing. **What survives, because measured:** the single-row admission equality, the engine
+  being in `TITLE_CARD` at row 9741 with every other predicate component satisfied, and `rowsConsumed`
+  = 2 as a downstream symptom. **What reopens:** why the engine is in `TITLE_CARD` at 9741 with the
+  pair and `LEVEL` without it. The divergence is **not** in the results screen -- it lies between 9529
+  and gameplay resuming, in the title card and level load, and neither side of that span is measured.
+  Flagged explicitly: this round's probe logs from `prepareHardwareTimingForAdmission`, which does not
+  run in `TITLE_CARD` mode, so **its silence there is a property of the probe and not of the engine.**
+
 - **The S3K frame-3573 divergence is neither position nor phase; `y_radius` is the candidate
   (`bugfix/ai-s3k-seg4-3573-r1`, merged 2026-08-19 -- partial diagnosis, not a close).** The recorded
   columns settle the shape without instrumentation: across the window Tails carries **zero** x/y/ground
@@ -260,10 +277,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   window is missed at 9741 and the counter only trips two rows later, so work on that side would have
   addressed the alarm. The first-entry PLC frame is **not** part of this and stays a separate open
   item, since it concerns arm cadence *within* a drain while this is about which mode the engine
-  occupies at a specific shared row. And **the pair is what moves the mode**: before it the engine
-  reached `LEVEL` at 9741 and admission succeeded, and with it the results screen's PLC genuinely
-  drains, `SSR_ChkPLC` holds for a wait that previously never happened, and the results exit, level
-  load and title card all shift later. **The window must not be widened** -- the equality is the
+  occupies at a specific shared row. ~~And the pair moves the mode because the results screen drains longer~~ (**retracted below: the
+  results-screen span is 8773..9529 with and without the pair, identical at both endpoints**). **The window must not be widened** -- the equality is the
   bridge's admission authority and the code says so, so relaxing it would admit a destination at a row
   the recording does not place it on.
 
