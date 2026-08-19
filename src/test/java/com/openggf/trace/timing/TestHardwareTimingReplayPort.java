@@ -896,6 +896,54 @@ class TestHardwareTimingReplayPort {
         assertTrue(only.contains(fingerprint('c')), () -> only);
     }
 
+    /**
+     * The dropped-edge report must describe what production actually holds,
+     * never assert that no matching work was submitted. The previous wording
+     * did assert exactly that, and it was measured false on the S1
+     * complete-emeralds run: the engine submits the recorded ordinals and
+     * fingerprints and the edges go unconsumed anyway, so the message routed
+     * the reader into the wrong subsystem.
+     */
+    @Test
+    void unconsumedEdgeReportNamesAdmissionWhenProductionHoldsTheWork() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle held = service.submit(submission(false, 1, 20));
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                6, POST_OBJECTS, held.kind(), held.ordinal(),
+                held.submissionFingerprint()));
+
+        port.verifySegmentEdges();
+
+        String only = port.drainUnmatchedRecordedCompletions().get(0);
+        assertTrue(only.contains("production holds a matching unclaimed submission"),
+                () -> only);
+        assertTrue(only.contains("admission failure rather than missing work"),
+                () -> only);
+        assertFalse(only.contains("submitted no matching work"), () -> only);
+    }
+
+    /**
+     * With nothing pending the report states only what is observable, and
+     * explicitly declines to distinguish "never submitted" from "already
+     * admitted and claimed" -- the port cannot tell those apart.
+     */
+    @Test
+    void unconsumedEdgeReportDoesNotClaimWorkWasNeverSubmitted() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                6, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('c')));
+
+        port.verifySegmentEdges();
+
+        String only = port.drainUnmatchedRecordedCompletions().get(0);
+        assertTrue(only.contains("production holds no unclaimed submission"), () -> only);
+        assertTrue(only.contains("already admitted and claimed"), () -> only);
+        assertFalse(only.contains("submitted no matching work"), () -> only);
+    }
+
     /** Reporting one of N would be a quieter kind of hiding. */
     @Test
     void everyUnconsumedEdgeIsReportedOnceNotJustTheFirst() {

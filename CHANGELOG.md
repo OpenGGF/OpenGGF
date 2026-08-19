@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **A dropped hardware-timing edge now reports what production actually holds.**
+  The diagnostic asserted "the engine submitted no matching work", which the
+  replay port never checks and which was measured false — on the S1
+  complete-emeralds run the engine submits the expected descriptors with exactly
+  the recorded ordinals and fingerprints and the edges go unconsumed anyway, so
+  the message routed the reader into submission when the defect is in admission.
+  It now names a matching unclaimed submission as an admission failure, a
+  same-identity descriptor mismatch as such, or reports nothing unclaimed without
+  choosing between "never submitted" and "already admitted and claimed", which the
+  port cannot distinguish. Comparison-only: no edge is admitted, released or
+  retired differently.
+
+### Fixed
 - **The S3K end-of-act signpost keeps its horizontal velocity when it lands.**
   ROM `loc_838AA` (docs/skdisasm/sonic3k.asm:176191-176194) is the whole landing
   branch -- routine, `$38` bit 0, and the `$40` timer -- and touches neither
