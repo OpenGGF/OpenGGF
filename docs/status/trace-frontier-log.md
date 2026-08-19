@@ -85564,3 +85564,63 @@ empty -- so the last measured figures stand: `(1)+(2)+the MGZ site` at 790 tests
 / 5 red against a 790/4 control, `TestS2CompleteEmeraldRunPrefix` alone, seg10
 2491 -> 2433, chain frontier unmoved, none of the ten regressions the audit
 retired returning.
+
+## 2026-08-19 — the monitor "population surplus" was my own counting error
+
+Branch `bugfix/ai-contact-end-airborne-r1`, continued off `origin/develop`
+(`a706765cd`). Counting round against committed data; no code written, nothing
+landed.
+
+**There is no population surplus.** The engine pushes exactly the same seven
+monitor placements the ROM does, coordinate for coordinate, across the whole
+prefix chain:
+
+    0x0CC0,0x01F5   0x0E40,0x0374   0x1344,0x0375   (seg2_ehz1)
+    0x22C0,0x0375                                    (seg3_ehz1)
+    0x05C0,0x02B6   0x0E30,0x02D1   0x122C,0x01B0   (seg5_ehz2)
+
+ROM side: distinct monitor placements (`object_near` type `0x26`) whose own
+pushing bits ever go from clear to set, over the nine manifest segments the prefix
+chain replays. Engine side: distinct `getSpawn()` coordinates reaching the
+grounded push path in the same run. Seven and seven, and the same seven.
+
+### The error, since it is worth naming precisely
+
+The previous round's "ROM sets a monitor bit on three slots; the engine shows
+eleven monitor instances" compared two figures that were never comparable, in two
+independent ways:
+
+1. **Different denominator.** Three was `seg5_ehz2` alone; eleven was the whole
+   prefix chain. On the same denominator the ROM figure is seven, not three.
+2. **Different unit.** Eleven counted distinct Java object identities. The chain
+   reloads a level at each segment boundary, so one placement becomes a fresh
+   instance in every segment it appears in; ROM slots do not behave that way.
+   Counting placements instead makes the two sides commensurable.
+
+This was a measurement correction, not a finding, and it is the thing that was
+cheapest to rule out first.
+
+### What it eliminates
+
+Of the three candidate causes for a surplus, two are now dead outright:
+
+- **not a spawn/lifecycle bug** -- the engine spawns and pushes the same
+  placements the ROM does;
+- **not a placement or camera-window bug** -- same coordinates, same segments;
+- **the only surviving difference is contact-end timing on a single frame**, which
+  is the third category and the narrowest.
+
+Combined with the two previous rounds, the extra Walk/Run write is now excluded
+from entry classification, from the write-site predicate, and from object
+population. What remains is one frame in one contact, on a monitor placement the
+engine handles correctly everywhere else.
+
+### Standing position
+
+Unchanged and unmeasured this round, since no code changed: `(1)+(2)+the MGZ
+site` is 790 tests / 5 red against a 790/4 control, `TestS2CompleteEmeraldRunPrefix`
+alone, seg10 2491 -> 2433, chain frontier unmoved.
+
+Anyone picking this up should weigh that remaining scope honestly. Three rounds of
+exclusion have narrowed it to a single contact-end frame worth 58 errors in
+seg10, and every candidate fix so far has lived in code shared by all three games.

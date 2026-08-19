@@ -39,6 +39,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
 27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
+28. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 
 ---
 
@@ -2304,3 +2305,69 @@ debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage numb
 test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
 The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
 at `sonic3k.asm:197730` -- which is not implemented (registry name only).
+
+---
+
+## S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame
+
+**Status:** open, deliberately not fixed. **Cost:** 58 comparator errors in the
+CPZ2 standalone segment, and one red class if the push-gate pair is landed.
+
+### Original Implementation
+
+`SolidObject_TestClearPush` gates its `move.w #(Walk<<8)|Run,anim(a1)` restart
+write on `btst d4,status(a0)` -- the object's own pushing bit
+(`docs/s2disasm/s2.asm:35462-35466`). `SolidObject_LeftRight` branches to
+`SolidObject_SideAir` **before** the `bset d4,status(a0)` (`:35413-35461`), so an
+object's pushing bit is only ever set for a grounded character, and the airborne
+side path returns through `Solid_NotPushing` without reaching the write.
+
+### Our Implementation
+
+The engine licenses that write on `sprite.getPushing()` -- the player's global
+flag -- and gates its player-side clear on a per-instance latch. Landing the
+ROM-faithful pair (ungated player clear plus object-bit gate) plus the MGZ
+spiked-platform site leaves exactly **one** extra Walk/Run write over the S2
+prefix chain, 10 against the ROM's 9, and `TestS2CompleteEmeraldRunPrefix` red on
+a shifted `dynamic_art` edge ordinal.
+
+### Rationale
+
+The cause has been **excluded from three places and localised to none**:
+
+- **Entry classification.** The engine reaches the same entries the ROM does:
+  all 224 object-bit sets fire grounded, and six monitors take the airborne
+  `SideAir` clear as the ROM does.
+- **The write-site predicate.** The ROM itself performs the write while airborne
+  (f377, f3408 in `seg5_ehz2`, out of box with the bit set), so an
+  airborne-at-the-write-site suppression would suppress the case the ROM
+  performs. Verified by reconstructing `SolidObject_cont`'s box arithmetic
+  (`:35344-35369`) from the object's own `d1`/`d2` and the recorded positions --
+  a reconstruction that validates itself, since `d0` is exactly `0` on every
+  pushing frame, which is `SolidObject_AtEdge`'s `sub.w d0,x_pos(a1)`.
+- **Object population.** The engine pushes exactly the same seven monitor
+  placements the ROM does, coordinate for coordinate, across the nine segments
+  the prefix chain replays. An earlier "three ROM slots against eleven engine
+  instances" was a counting error -- different denominator (one segment against
+  the chain) and different unit (ROM slots against Java identities, which the
+  chain re-creates per segment reload).
+
+What remains is a single contact-end frame where the engine reports no contact
+and the ROM reports a side collision. Every candidate fix lives in collision code
+shared by all three games, so the blast radius is every solid contact in Sonic 1,
+2 and 3&K -- against a 58-error win in one segment. Excluding is not localising,
+and acting on three exclusions rather than one localisation is how a narrow
+symptom acquires a wide fix.
+
+The push-gate pair is therefore **not landed**, and this entry exists so the next
+attempt starts from the three exclusions rather than repeating them.
+
+### Verification
+
+`(1)+(2)+MGZ site` measures 790/5 against a 790/4 control at the same base with
+`TestS2CompleteEmeraldRunPrefix` the only new red; the CPZ2 standalone segment
+improves 2491 -> 2433 and every `player_mapping_frame` divergence in it closes;
+the three complete-emerald chains are red in control and candidate alike with
+identical failure modes; and none of the ten regressions retired by the
+object-side port audit have returned.
+

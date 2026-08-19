@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **No monitor population surplus, and the push pair is recorded as a known discrepancy
+  (`bugfix/ai-contact-end-airborne-r1`, merged 2026-08-19 -- counting round, scope closed).** The
+  engine pushes exactly the **same seven** monitor placements the ROM does, coordinate for
+  coordinate, across the nine segments the prefix chain replays. The earlier "three ROM slots against
+  eleven engine instances" was two stacked counting errors -- a different denominator (one segment
+  against the whole chain) and a different unit (ROM slots against Java object identities, which the
+  chain re-creates at every segment reload). That is not merely a correction: matching populations
+  is a **positive** result about spawning and placement, so it eliminates two of the three candidate
+  causes outright. With the two preceding rounds the extra Walk/Run write is now excluded from entry
+  classification, from the write-site predicate, and from object population -- leaving one
+  contact-end frame on a placement the engine handles correctly everywhere else. **Scope closed
+  deliberately:** three rounds of exclusion have narrowed this to a single frame worth 58 comparator
+  errors in one segment, while every candidate fix lives in collision code shared by all three games.
+  Excluding is not localising, and acting on three exclusions rather than one localisation is how a
+  narrow symptom acquires a wide fix. The pair stays unlanded and the position is
+  [known-discrepancy 28](docs/status/known-discrepancies.md#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame),
+  so the next attempt starts from the exclusions rather than repeating them.
+
 - **The ROM performs the Walk/Run write while airborne, so no write-site predicate exists
   (`bugfix/ai-contact-end-airborne-r1`, merged 2026-08-19 -- fixture analysis only, no code
   written).** Reconstructing `SolidObject_cont`'s box arithmetic (`s2disasm/s2.asm:35344-35369`) from
