@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 bosses no longer clear `Current_Boss_ID`, because the ROM never does
+  (`bugfix/ai-s2-boss-id-fix-r1`, merged 2026-08-19).** Seven S2 boss classes -- CPZ, EHZ, HTZ, ARZ,
+  CNZ, OOZ and WFZ -- drop `setCurrentBossId(0)`, each replaced by a comment citing the ROM's
+  silence: `Current_Boss_ID` appears in `s2.asm` only as boss-arena setup writes and `tst.b` readers,
+  with **zero explicit clears**, so it resets only through the level-load RAM clear and persists to
+  the end of the act. The consequence was that `Sonic_Boundary_Sides` widened the level's right edge
+  by `addi.w #$40,d0` -- gated on the boss id being zero -- letting the engine run **64 px** past the
+  ROM's stop. **S3K was read rather than assumed and is a genuine third case:**
+  `clr.b (Boss_flag).w` at **31 sites**, one annotated "Unlock the screen". So **S1 clears, S3K
+  clears, S2 does not** -- the engine was right for two games and wrong for one -- and
+  `GameStateManager`'s field comment now states all three lifetimes instead of S1's as universal.
+  `bossDefeatedFlag` and `screenLocked` are untouched. **Verified 790/4 set-identical both ways
+  against a control measured in a clean worktree at the same commit, with no S1 or S3K test moved**,
+  guards 499/0, and the CPZ2 standalone segment **2491 -> 1749 errors**. The causal chain was checked
+  link by link rather than assumed: the stop lands at 6600 with zero `x` errors, `x_speed` and
+  `g_speed` match with zero errors, the Roll delay follows, the mapping-frame slip at 6608-7087 is
+  **gone** -- and the tail collapses only **partly**, 1247 -> 505. The residual is entirely
+  `dynamic_art` carrying a **+2 ordinal offset in from the 5554 onset**, which is the separate DPLC
+  submission-timing divergence recorded earlier and untouched here -- so it is not a second break in
+  this chain but the chain ending where an earlier independent defect takes over.
+
 - **RETRACTION: `loc_85CA4` is the pre-boss arena-entry gate, and both timers are correct
   (`bugfix/ai-s3k-signpost-gate-r1`, merged 2026-08-19 -- nothing landed).** `loc_85CA4` is installed
   as a boss's routine **at init, before the fight**, with the boss's start routine in `$34(a0)`:

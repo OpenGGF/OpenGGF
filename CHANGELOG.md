@@ -17,7 +17,20 @@ All notable changes to the OpenGGF project are documented in this file.
   traversing its hardware boundaries (matching ROM `SS_NormalExit`) and with a special-stage
   *mode* row inside a non-special-stage segment taking shared playback authority rather than
   a segment-local cursor.
-
+- Sonic 2 bosses no longer clear `Current_Boss_ID` when they are defeated. The
+  shipped ROM never clears it: docs/s2disasm/s2.asm writes it only as
+  `move.b #N,(Current_Boss_ID).w` from the boss-arena setup routines and
+  otherwise only reads it with `tst.b`, so it resets solely through the
+  level-load RAM clear and stays set to the end of the act. Because
+  `Sonic_Boundary`'s right-hand test widens the player's side limit by `$40`
+  only while that byte is zero (s2.asm:37243-37251), clearing it let the
+  character run 64 pixels past the ROM's clamp after every S2 boss. Seven boss
+  classes did so. The lifetime is genuinely per-game and is now documented as
+  such on the field: Sonic 1 does clear it (at the Egg Prison,
+  s1disasm/_incObj/3E Prison Capsule.asm:97), Sonic 3&K clears its equivalent
+  `Boss_flag` at 31 sites, and Sonic 2 is the exception. In CPZ2 this closes the
+  player position, speed and animation divergence that followed the boss fight
+  and takes the standalone segment from 2491 comparator errors to 1749.
 - Solid objects no longer reposition a player whose `object_control` byte has bit
   7 set. `SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now
   defaults to `true`: every shared solid tail in all three ROMs performs the same

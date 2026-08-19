@@ -39,11 +39,33 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     private int currentBossId;
 
+    /*
+     * LIFETIME IS PER-GAME, and the three games do not agree. A comment here once
+     * said this field is "cleared on every boss defeat"; that is true of S1 only,
+     * and stating it as universal is how seven S2 bosses came to clear it.
+     *
+     *  S1  -- CLEARED. The Egg Prison clears it on release
+     *         (docs/s1disasm/_incObj/3E Prison Capsule.asm:97), and the LZ boss
+     *         clears it too (_incObj/77 Boss - LZ Main.asm:288).
+     *  S2  -- NEVER CLEARED. docs/s2disasm/s2.asm writes it only as
+     *         `move.b #N,(Current_Boss_ID).w` from the boss-arena setup routines
+     *         (ids 1-9) and otherwise only reads it with `tst.b`. There is no
+     *         `clr.b` and no `move.b #0` anywhere in the file, so it resets only
+     *         through the level-load RAM clear and persists to the end of the act.
+     *  S3K -- CLEARED. `clr.b (Boss_flag).w` appears at 31 sites in
+     *         docs/skdisasm/sonic3k.asm, one annotated "Unlock the screen";
+     *         note S3K uses the separate boolean Boss_flag rather than an id.
+     *
+     * The asymmetry matters because Sonic_Boundary's right-hand test widens the
+     * side boundary by $40 only while this is zero (docs/s2disasm/s2.asm:37243-37251).
+     */
+
     /**
      * Boss defeated flag (S2 ROM: {@code Boss_defeated_flag} at $FFFFF7A7).
      * Dynamic level events use this separately from {@link #currentBossId}; S2
      * bosses set it when their escape sequence begins while {@code Current_Boss_ID}
-     * can remain nonzero for boundary/player logic.
+     * remains nonzero for boundary/player logic -- see the lifetime note on
+     * {@link #currentBossId}, which S2 never clears.
      */
     private boolean bossDefeatedFlag;
 
