@@ -84355,3 +84355,63 @@ Identify which of those instances the engine's `resolveContact` returns
 wall-sensor one. The eight-frame span is explained: nothing re-clears the flag
 until the push script's own timer expires at 1732, so a single wrong contact
 frame is ridden out.
+
+## 2026-08-19 — S2 seg10 frame 1724: the instance is Obj74, and the ROM's object DOES record the push
+
+Diagnosis only; no engine change, no frontier movement. Base `6845db531`.
+
+### The instance
+
+Logging the contacted instance at `ObjectSolidContactController`'s
+`contact.pushing()` site names it unambiguously, on all five frames of the
+window: **`Obj74` invisible solid block** (`InvisibleBlockObjectInstance`),
+solid anchor `(7952, 1600)`, `halfWidth 27`, `halfHeight 64`. The anchor is the
+ROM `x_pos`/`y_pos` — the fixture's `object_near` slot 51 reports exactly
+`x 0x1F10 = 7952`, `y 0x0640 = 1600` — so this is a centre-convention number on
+both sides and not a top-left mix-up. Sonic's ROM centre is `(7925, 1642)`, so
+`dx = -27`, **exactly equal to the half-width**, and `|dy| = 42` against a half
+height of 64.
+
+The engine's 27 is not invented: `Obj74_Init` computes
+`width_pixels = ((subtype & $F0) + $10) / 2` and `Obj74_Main` then loads it and
+adds a hardcoded `addi.w #$B,d1` before calling `SolidObject_Always`
+(docs/s2disasm/s2.asm:46585-46600,46603-46610). For this subtype that is
+`16 + 11 = 27`. The engine's combined half-width matches the ROM's `d1`.
+
+### Correction to the previous entry: the ROM's OBJECT records a push
+
+The previous entry said the ROM's Sonic "is pushed by nothing". The player half
+of that is right — `player_status_byte` is `0x49` across 1724-1731 and
+`status.player.pushing` is bit 5 (s2.constants.asm:215), which is clear. But
+the fixture's `object_near` row for that same Obj74 instance carries
+**`status: 0x20`**, and for an object bit 5 is `status.npc.p1_pushing`
+(s2.constants.asm:229) — "pushed by player 1". So the ROM's Obj74 believes
+Sonic is pushing it while the ROM's Sonic does not carry the flag.
+
+That is not a contradiction in the recording; it is a same-frame ordering fact,
+and it is the key to the whole window. `SolidObject_AtEdge` sets **both** bits
+together (`bset d4,status(a0)` and
+`bset #status.player.pushing,status(a1)`, s2.asm:35439-35446), and `d0 == 0`
+reaches `SolidObject_AtEdge` through `tst.w d0 / beq` (s2.asm:35420). But
+`Sonic_Animate`'s prologue clears the player's bit alone whenever the animation
+byte changes — `bclr #status.player.pushing,status(a0)` at s2.asm:38391, in the
+same block that zeroes `anim_frame` and `anim_frame_duration`. Frame 1724 is
+exactly an animation change, Wait `0x05` to Walk `0x00`. The object keeps its
+bit; the player loses his.
+
+### What that means for the engine, and the open question
+
+The engine models the animation-change clear (`PlayableSpriteAnimation`'s
+`animationChangeClearsPush()` path calls `setPushing(false)`), so the mechanism
+exists. The question is now **ordering**, not geometry: which of the object
+solid pass and `Sonic_Animate` runs last on frame 1724, and on the seven frames
+after it where the ROM's player bit stays clear while the engine's stays set.
+In the ROM the player occupies object slot 0 and Obj74 is in slot 51, so
+`Sonic_Animate` runs first and the object pass second — which would leave the
+player's bit set at end of frame and does not by itself explain a clear byte on
+1725-1731. Establishing what re-clears it on those frames is the next step, and
+it is a player/object pass-order question rather than a contact-box one.
+
+No fix is proposed here: the contact box is the ROM's, and changing it to
+suppress the flush contact would break the object's own recorded
+`p1_pushing` bit, which the ROM does set.
