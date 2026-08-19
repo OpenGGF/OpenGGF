@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`Obj05` has no execution gate, and edge-absence is not evidence of inactivity
+  (`bugfix/ai-s2-obj05-exec-r1`, merged 2026-08-19 -- disassembly read, and a retraction).**
+  `Obj05_Main` (`s2disasm/s2.asm:41722-41763`) copies parent state, runs the selection guard, then
+  falls through `.display` to `Tails_Animate_Part2`, `LoadTailsTailsDynPLC` and `DisplaySprite` --
+  **no on-screen test, no early return, no budget, no display-only path.** So "why does Obj05 not
+  execute" has no answer inside the object; if it skips, `ExecuteObjects` did not reach it. **But
+  skipping is not established.** The consecutive `tails-tails` submission gaps across 5538-5593 are
+  8, 19, 4, 4, 2, 9, 1, 8 -- the gaps of 1 and 2 are *shorter* than any script duration and land
+  exactly on recorded parent animation changes, so they are selection-driven same-update first-frame
+  writes, which **positively confirms** the previous round's reading of `Tails_Animate_Part2` in the
+  ROM's own output. The 4s are Flick and the 8s are Swish. **Only the single 19-frame gap is
+  anomalous**, and the previous round generalised from that one gap to "the object did not run".
+  **The retraction that matters:** `LoadTailsTailsDynPLC` writes `TailsTails_LastLoadedDPLC`
+  (`:41641`) **before** testing whether the DPLC is empty (`subq.w #1,d5 / bmi.s return_1D1FE`,
+  `:41646-41647`), so a mapping frame with no DPLC entries updates the dedup byte and emits nothing.
+  Absence of an edge therefore does not prove the mapping frame did not change, and **every
+  "held for N frames" reading from this stream is a lower bound on activity rather than a measurement
+  of it** -- including the 8-against-19 inference, whose arithmetic was sound but whose premise was
+  weaker than it was treated as. The recording cannot settle the remaining gap, since it carries no
+  per-frame `Obj05` `anim`/`anim_frame`/`anim_frame_duration`; a PC-execute probe on
+  `Tails_Animate_Part2` gated to the Obj05 slot would.
+
 - **The twin-tails divergence is an object-execution-frequency question, not an animation one
   (`bugfix/ai-s2-obj05-script-r1`, merged 2026-08-19 -- disassembly read, no code).**
   `Tails_Animate_Part2` sets `anim_frame_duration = 0` on an animation change
@@ -239,8 +261,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   Flick -> Swish chain. **The round also weakened its own earlier evidence:** Swish and Flick have
   *identical frame values*, differing only in duration (8 against 4 per step) and ending, so the
   matching value sequence never established that both sides were running the same animation --
-  timing-not-value stands, but nothing more. What remains is decisive: **no single script can hold
-  one mapping frame for the recorded 19 frames** -- Swish 8, Flick 4, Pushing 10 -- and the routine
+  timing-not-value stands, but nothing more. What remained looked decisive -- **no single script can hold
+  one mapping frame for the recorded 19 frames** (**retracted below: edge absence is a lower bound on
+  activity, not a measurement of it**) -- Swish 8, Flick 4, Pushing 10 -- and the routine
   has no path that advances without writing a frame, so the ROM's `Obj05` **did not execute** on some
   of those frames. Recorded as a coupling, with its disconfirmation stated: under `fixBugs = 0` the
   caller forces `Obj05Ani_Pushing` whenever Tails' push status bit is set (`:41745-41751`), a bit the
