@@ -83571,3 +83571,61 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   `RELEASE_FRAMES` constant citing `loc_85B02`, and it gained a discriminating
   assertion — six updates after release must still show `mapping_frame 0`,
   which is false the moment the release frame is dropped again.
+
+## Round: S2 complete-emeralds segment 15 — the chain frontier is not the collision path
+
+- Base `8955a77c1` (develop head at the time), worktree `feature/ai-r6-cpz2-seg10`,
+  JDK 21, `-Dsonic2.rom.path=<the S2 REV01 `.gen` in the project root>`.
+- Measured `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` after `63501b8a7`:
+  **2491 errors, 0 warnings, 0 bootstrap errors over 7088 rows**, first error
+  frame 52 `queue.s2_nemesis_plc.busy` (expected false, actual true). The
+  briefing figure of 15,202 errors / first physics error frame 394 was the
+  pre-`63501b8a7` state; the corrected aux fixtures plus
+  `TraceReplaySessionBootstrap.seedSegmentEntrySolidBits` moved the lane by
+  12,711 errors and retired the frame-394 divergence entirely.
+- Field split of the 2491: 2302 `dynamic_art.*`, 10 `queue.s2_nemesis_plc.*`,
+  179 physics/animation. `dynamic_art` errors occupy 706 distinct start frames
+  in two clusters, 1725-1733 and 5554 onwards; the 5554 cluster opens with one
+  extra engine-submitted edge, after which every `edge_ordinal` and
+  `transfer_id` is skewed by two and the remainder cascades. The frame-52 block
+  is a two-frame phase offset — identical queued fingerprints, ROM busy 54-97
+  against engine 52-95.
+- `TestS2CompleteEmeraldRunChain` did **not** move: still `segment 15 lost
+  production ownership before source closure (mode=TITLE_CARD,
+  romZone=13 act=1, BK2 cursor=83819)`, byte-identical to the pre-round message.
+- **Correction to the standing diagnosis.** The claim that the chain fails
+  because the engine is on collision path 1 in CPZ act 2, and that the fix is an
+  upstream plane switcher that should leave the player on path 2 before the star
+  post, is refuted:
+  - chain segment 13 is `seg9_cpz2`, CPZ act 2 from level start through the star
+    post, and it closes with `errorCount 0` over 5837 frames. That is not
+    reachable on the wrong collision path — the two CPZ index arrays disagree on
+    dozens of frames of that route.
+  - temporary probes in `CheckpointState.savePlayerSolidBitsIfPresent` and the
+    checkpoint solid-bit restore in `LevelManager` show the chain saving
+    `top=$0E lrb=$0F` at the CPZ act 2 star post (ROM `Obj79_SaveData`,
+    docs/s2disasm/s2.asm:44740) and restoring `$0E/$0F` on the special-stage
+    return (`Obj79_LoadData`, s2.asm:44787). A per-frame probe shows the player
+    still holding `$0E` at and beyond the divergence.
+  The engine's S2 plane switcher (`ObjectManager.PlaneSwitchers`) was re-read
+  against `Obj03` (s2.asm:45625-45761) — span table, `subtype&3` radius index,
+  bit3/bit4 path selection, bit5/bit6 priority, the `render_flags.x_flip`
+  skip and the subtype-bit7 grounded gate all model the ROM. No defect found
+  there.
+- **New chain frontier.** Chain segment 15 diverges at segment frame 210
+  (engine frame 26 aligns to recorded frame 0; one lag row skipped before 210).
+  Both sides are airborne, rolling, `g_speed 2`, `top_solid_bit $0E`, at
+  x `0x1268`. The ROM descends `y 0x0591 -> 0x0592 -> 0x0593`; the engine
+  reverses to `0x058F` and then oscillates around `y 0x058E`, its `y_vel`
+  flipping from positive to about `-0x1E0` every nine frames. The recorded
+  `object_near` rows for those frames carry the CPZ Grabber cluster —
+  `ObjA7`/`ObjA8`/`ObjA9`/`ObjAA` (s2.asm:30089-30092) — at x `0x1282`. The run
+  ends with a `SPIKE` death at `(0x174A,0x07CC)` around segment frame 1477,
+  which is the `BK2 cursor=83819` walk failure.
+- The standalone lane is exact at segment frame 210, so it cannot host this
+  divergence; the discriminator is entry state the chain carries in and the
+  metadata start does not. Identifying that state is the next step, and it was
+  not attempted here rather than guessed at.
+- Landed: documentation only — the corrected root-cause note on the segment lane
+  and this entry. No runtime or test logic changed, so no behaviour sweep is
+  claimed beyond the runs recorded above.
