@@ -84002,3 +84002,74 @@ was introduced and nothing keys on zone, act, route or frame.
   `shouldAdvanceVblankClockDuringLockedPhase()` false, so this matches existing
   engine shape rather than inventing one; whether both games should advance the
   clock is a separate, cross-game question.
+## 2026-08-19 — S3K complete-emeralds chain: segment 4's stop is a real death, diagnosed not fixed
+
+Command (worktree `bugfix/ai-s3k-seg4-r2`, branched from `baca0d164`):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<the root .gen> -DfailIfNoTests=false test
+```
+
+FAIL, unchanged this round: `segment 4 lost production ownership before source
+closure (mode=LEVEL, level=LevelIdentity[loadGeneration=5, progressionZone=0,
+romZone=0, act=1], BK2 cursor=25464)`.
+
+**The harness message is a real gameplay defect, not a harness artefact.** Probes
+on `LevelManager.loadCurrentLevel` and `AbstractPlayableSprite.applyDeath`
+identified the fresh load as
+`LevelManager.restartCurrentLevelAfterDeath <- TraceSessionLauncher.runDeathRestartLoad
+<- GameLoop.doRespawn`: the engine's player dies where the recording's player never
+leaves `player_routine 02`. This is the user-visible "Sonic dies when he should
+not" on the AIZ2 route.
+
+Measured chain of events in segment 4 (`aiz_3`), engine rows against the fixture's
+own rows:
+
+| segment row | what the engine does | what the recording has |
+|---|---|---|
+| 519, 528, 535 | collects three rings (75 -> 76 -> 77 -> 78) | `rings` stays `0x4B` (75) |
+| 0 .. 4856 | player centre matches the recorded `player_x`/`player_y` **exactly** | — |
+| 4857 | first position divergence: engine (4396, 832) vs ROM (4393, 821) | — |
+| 4888 | hurt by `AizMinibossInstance` (id 0x91), `shield=true`, 113 rings kept | ROM's own hurt is at 4916, `routine 02 -> 04`, `rings` stays 111 |
+| 5351 | hurt by `AizMinibossBodyChild` (id 0x90), FIRE, `shield=false`, 113 rings scattered to 0 | ROM is not hurt; `routine 02`, `rings` 111 |
+| 5529 | hurt again by the same child with `rings=0` -> `applyDeath(FIRE)` | ROM is not hurt |
+| ~5688 | death fade completes, `restartCurrentLevelAfterDeath` | — |
+
+So the death is the third link in a chain, not the defect: the engine takes two
+extra miniboss fire hits that the ROM does not take, and the second of those lands
+with zero rings because the first scattered them. `HurtCharacter`'s ring branch is
+`btst #0,status_secondary(a0) / bne.s loc_102DA` (docs/skdisasm/sonic3k.asm:21074-21086)
+— a shielded hit skips the scatter entirely and `Ring_count` is never written by
+that routine at all, which is why the recording's 111 rings survive its own hurt.
+
+**The frontier is therefore the AIZ2 miniboss fight, first diverging at segment row
+4857 with an 11-pixel Y difference after 4857 exactly-matching rows.** The player is
+on the miniboss at the recorded hurt (`routine_change` at 4916 carries
+`stand_on_obj: 31`), so the miniboss's own vertical phase is the thing to instrument
+next, not the player.
+
+**Tried and refuted this round — do not retry without new evidence.** The three
+extra rings at rows 519/528/535 looked like collected rings resurrected by the
+special-stage return's level reload, and the ROM supports that mechanism exactly:
+the rings manager's init clears `Ring_status_table` in `sub_EB1A`
+(`sonic3k.asm:18561-18570`) only when `Respawn_table_keep` is clear, and
+`Respawn_table_keep` is set by the giant/special ring entry (`:128411`, `:128421`)
+and the star post's bonus entry (`:61930`, which additionally commits the in-flight
+`Ring_consumption_table` via `Clear_SpriteRingMem`, `:37963-37975`). The same flag
+gates the `Object_respawn_table` clear at `loc_1B6CA` (`:37432-37436`), which the
+engine already carries across the return — so this looked like the missing half of
+one ROM contract, the same shape as the star-post mark fixed in `baca0d164`.
+
+It was implemented (capture the `RingManager` collected set at
+`saveBigRingReturn`, reapply it after the return reload's manager rebuild) and
+**measured to change nothing**: with the change applied, the first ring divergence
+is still row 519 (ROM 75, engine 76) and the first position divergence is still row
+4857, byte for byte the same as without it. The change was reverted rather than
+landed, because a fix whose effect cannot be demonstrated is dead code, not a
+latent-site correction. Either the staging predicate does not fire on this return,
+or those three rings are not resurrected rings at all. The next round should settle
+that with a one-line probe on the restore branch before re-implementing anything.
+
+- Gate not re-run this round: no `src/main` change was landed.

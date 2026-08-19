@@ -228,6 +228,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K chain's segment-4 failure is a real death, and the cause is the AIZ2 miniboss
+  (`bugfix/ai-s3k-seg4-r2`, merged 2026-08-19 -- investigation only, no fix).** Probes on
+  `LevelManager.loadCurrentLevel` and `AbstractPlayableSprite.applyDeath` name the unrecorded level
+  load exactly -- `restartCurrentLevelAfterDeath <- TraceSessionLauncher.runDeathRestartLoad <-
+  GameLoop.doRespawn` -- so the engine's player dies where the recording never leaves
+  `player_routine 02`. The death is the third link, not the defect: the player's centre matches the
+  recorded `player_x`/`player_y` **exactly** through row 4856, diverges by 11px in Y at row 4857,
+  takes a shielded hit at 4888 that the ROM also takes, then takes a hit at **5351 that the ROM does
+  not** -- shield gone, 113 rings scattered -- and dies to the same miniboss child at 5529. The
+  recorded `routine_change` at 4916 carries `stand_on_obj: 31`, so the player is riding the boss:
+  the frontier is the miniboss's vertical phase, and the ring count is a consequence of the extra
+  hit rather than a cause. **Recorded as a do-not-retry:** the three extra rings collected at rows
+  519/528/535 looked like collected rings resurrected by the special-stage return's reload, and the
+  ROM backs that mechanism precisely (`sub_EB1A` clears `Ring_status_table` only when
+  `Respawn_table_keep` is clear, `skdisasm/sonic3k.asm:18561-18570`; the flag is set by the giant-ring
+  and star-post bonus entries, `:128411`, `:128421`, `:61930`; and the same flag gates the
+  `Object_respawn_table` clear at `loc_1B6CA`, `:37432-37436`, which the engine already carries). It
+  was implemented and **changed nothing measurable** -- same first ring divergence, same first
+  position divergence, same failure cursor -- so it was reverted rather than banked as a plausible
+  no-op. Note also that `-Ptrace-replay` publishes no segment report for segment 4 at all, because
+  the segment aborts before closure: anyone triaging from `target/trace-reports/` alone sees two
+  clean segments and no evidence.
+
 - **Sonic 2 stops ageing placed objects through the title card
   (`bugfix/ai-s2-seg15-r1`, merged 2026-08-19).** No carried *value* differed at segment 15 row 0 --
   the chain and a standalone lane agreed on player position and slot occupancy. What differed was
