@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K title card returns on the apparent act, not the current one
+  (`bugfix/ai-s3k-chain-seg2-r2`, merged 2026-08-19).** `Obj_TitleCardInit` never reads
+  `Current_zone_and_act`: act art is `Num2` unless `tst.b (Apparent_act).w` is zero
+  (`skdisasm/sonic3k.asm:62131-62141`) and zone art indexes `Apparent_zone_and_act` (`:62155`). The
+  two diverge across an S3K seamless act transition -- `Current_act` advances in the act-1
+  background-event dispatch while `Apparent_act` follows later at `:62714` ("Change to act 2 if in
+  act 1") -- and `GameLoop.exitResultsScreen` passed `Current_act`. A probe printed `curAct=0
+  appAct=0` for the surviving segment 1 -> 2 return and `curAct=1 appAct=0` for the failing
+  3 -> 4: **the engine's `apparentAct` was already right; only the consumer was wrong.** The wrong
+  act made the returned card a different act from the loaded one, so four Kos modules were queued
+  inside the unrepresented gap where `enterUnrepresentedGap()` forbids applying any recorded edge,
+  and the card held `SLIDE_IN artLoading=true` for all ~36,700 remaining steps. One line, matching
+  the bonus-stage return that already reads `savedApparentZoneAndAct`; inert for S1/S2 and for
+  non-seamless returns, since every load path writes `apparentAct = currentAct`. **The round also
+  refuted the previous frontier-log entry**, which recorded production's pending
+  `KOS_MODULE_QUEUE` 36-39 as "the leading prefix" of the recorded interstitial span: the ordinals
+  coincide but the work does not -- recorded 36-39 are the special-stage results screen's four
+  `Queue_Kos_Module` calls (`:63060-63102`), which the engine never submits, while the title-card
+  jobs are recorded 40-43. **A release path matching on ordinal would have released the wrong
+  jobs.** The chain now opens segment 4 (`aiz_3`) and compares 341 rows clean before a new,
+  undiagnosed boundary-ordering failure at `raw_frame` 341.
+
 - **The S3K chain's frontier moves to the segment 3 -> 4 boundary, blocked by a gap-time
   hardware-timing wall (`bugfix/ai-s3k-chain-seg2-r2`, documentation, merged 2026-08-19).**
   `8955a77c1` moved the chain off segment 2; it now stops with
