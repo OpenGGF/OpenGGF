@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ boss writes the dispatch loop's counter, and the disassembly says so in the source
+  (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- analysis of the existing probe log, no new
+  probe).** Looking for where `d7` drops by more than one per iteration points at exactly one slot on
+  every gap row and no other: **slot 29, `Obj5D`, the CPZ boss** (`s2disasm/s2.asm:61449`), whose
+  routine steps `$0E` -> `$08` at row 5553 and holds `$08` -- `Obj5D_Pipe_Retract` -- across the
+  whole gap. The `fixBugs = 0` path of `Obj5D_Pipe_Retract_ChkID` carries the disassembly authors'
+  own comment: *"'d7' should not be used here. This causes the 'RunObjects' routine to either run too
+  few objects or too many objects, causing all sorts of errors."* It executes `moveq #0,d7` then
+  `move.b #ObjID_CPZBoss,d7`, writing `$5D` into the enclosing loop counter; the iteration's `dbf`
+  takes it to `$5C`, which is exactly the measured `0072 -> 005C`. `$5C` = 92 more iterations from
+  slot 30 ends at slot 122, six short of `LevelOnly_Object_RAM`. Every observation closes.
+  **Retracting the previous entry:** `d7` is *not* "consumed a whole number of extra times" -- it is
+  an absolute overwrite with a constant, and it only resembled clean whole-slot arithmetic because
+  `$5D` happens to look like a plausible count. The behaviour to reproduce is *"this object writes
+  the dispatch loop's remaining count to `$5D`"*, which is more specific and more implementable than
+  either "corruption" or "over-consumption". Under `fixBugs = 0` the fixed path's
+  `cmpi.b #ObjID_CPZBoss,id(a1)` is not taken, so the truncation is shipped behaviour: **the
+  twin-tails art divergence is a downstream symptom of a CPZ boss register bug the disassembly
+  documents.**
+
 - **The touch-phase premise is false on the S3K path only, and the fix is to make the invariant true
   (`bugfix/ai-touch-phase-rule-r1`, merged 2026-08-19 -- investigation only, not landable yet).**
   Population measured rather than assumed: `ObjectManager.refreshTouchResponseSnapshot` takes the
@@ -255,8 +275,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   engine change).** `d7` is **not corrupted**: it starts at `$8F` and reaches `0000` on every row
   including the gap rows. What changes is *reach* -- **123 iterations ending at `$FFCE80`** on the
   eleven gap rows against **144 ending at `$FFD3C0`** on their neighbours. `$FFD3C0 - $FFCE80 =
-  $540 = 21 x $40`, exactly twenty-one object slots, so `d7` was **decremented 21 times more than
-  the loop body ran** rather than clobbered to a wrong value -- `RunObject` `jsr`s into object code
+  $540 = 21 x $40`, exactly twenty-one object slots, which *looked* like `d7` being **decremented 21 times more than
+  the loop body ran** rather than clobbered (**retracted below: it is an absolute overwrite with the
+  constant `$5D`, and the clean slot arithmetic was a coincidence**) -- `RunObject` `jsr`s into object code
   with `d7` live, so an object running its own `dbf d7` consumes iterations from the enclosing pass.
   `LevelOnly_Object_RAM` starts at `$FFD000`, **six slots past the stopping point**, so
   `Tails_Tails`, `SuperSonicStars` and `Sonic_BreathingBubbles` are all skipped together: **the
