@@ -88666,3 +88666,60 @@ the expectations to check against are already written down: the stop lands at
 6600, `x_speed` matches, the Roll delay becomes non-zero on the ROM's row, the
 mapping-frame slip closes, and the tail collapses. If only some of that follows,
 the chain has a second break.
+
+## 2026-08-19 — LANDED: S2 bosses no longer clear Current_Boss_ID
+
+Branch `bugfix/ai-s2-boss-id-fix-r1` off `origin/develop` (`87a82d8cc`).
+
+### The change
+
+Seven S2 boss classes dropped their `setCurrentBossId(0)` on defeat -- CPZ, EHZ,
+HTZ, ARZ, CNZ, OOZ, WFZ -- each replaced by a comment citing why the ROM has no
+such write. `GameStateManager`'s field comment, which said the id is "cleared on
+every boss defeat", is corrected to state all three lifetimes explicitly, since
+encoding S1's behaviour as universal is how the seven sites came to exist.
+
+**S3K was read rather than assumed**, as instructed, and is a third case: it
+clears `Boss_flag` at **31** sites in `docs/skdisasm/sonic3k.asm`, one annotated
+"Unlock the screen". So S1 clears, S3K clears, S2 does not. The engine was right
+for two games and wrong for one.
+
+`bossDefeatedFlag` and `screenLocked` were not touched. None of the seven sites
+was entangled with them; the OOZ call sits inside an `if (!bossDefeatedFlagSet)`
+block but is independent of it and the block is unchanged.
+
+### Verification
+
+Full `-Ptrace-replay` at this base: **790 tests / 4 red**, set-identical both ways
+to a control measured in a clean worktree at the same commit. No S1 or S3K test
+moved. `mvn -Pguards test` **499 / 0**. The baseline had not in fact shifted
+despite the warning that it might -- measured rather than quoted.
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`: **2491 -> 1749 errors**,
+a reduction of 742.
+
+### The causal chain, checked link by link rather than assumed
+
+| Expectation | Result |
+|---|---|
+| stop lands at 6600 | **yes** -- zero `x` errors anywhere in the segment |
+| `x_speed` matches | **yes** -- zero `x_speed` and `g_speed` errors |
+| Roll delay non-zero on the ROM's row | **yes**, by consequence |
+| mapping-frame slip closes | **yes** -- the 6608-7087 `player_mapping_frame` window is gone |
+| the tail collapses | **partly** -- 1247 -> 505 |
+
+Four of five hold exactly. The fifth is partial and the reason is identified
+rather than left open: the residual 505 are **all** `dynamic_art`, and the first
+is at 6604 with `outstanding_transfer_ids [4725]` against `[4727]` -- a **+2
+ordinal offset** carried in from the **5554 onset**, which is the separate
+DPLC submission-timing divergence recorded earlier and untouched by this change.
+The 5565-6599 band is unchanged at 1131 errors, consistent with that.
+
+So this is not a second break in this chain; it is the chain ending where the
+earlier, independent onset takes over.
+
+### What is now the leading defect in this segment
+
+With the tail's own cause removed, the first non-cascading animation error is
+back to **1725-1732 `player_mapping_frame`** -- the CPZ2 push gate, known
+discrepancy 28, which is where this whole line of work started.
