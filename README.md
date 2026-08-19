@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The 6600 stop is a rolling-air wall hit, and the absence-claim audit comes back clean bar one
+  (`bugfix/ai-s2-stop-6600-r1`, merged 2026-08-19 -- fixture analysis only).** Eight absence claims
+  on this thread rest on direct reads of recorded columns, tables or coordinate sets and are
+  verified; one rested on the non-cascading filter and was already retracted. The one most suspected
+  -- that the first `Obj5D` routine-`$08` run produces no divergence -- **survives a direct
+  re-check**: zero errors start in 5113-5130, and only eleven start anywhere in 4900-5560, all at
+  5554 or later. One imprecision is recorded anyway: a sweep bucket labelled `5554-5564` actually
+  spanned 5000-5564, and although the count of 44 survives because nothing starts between 5000 and
+  5553, the label was wrong and a reader could not have known. **On the stop itself**, recorded
+  `mode_change` events place Sonic **airborne across the whole window** -- rolling at 6586, air at
+  6588 with `on_object` dropping, landing at 6611 -- so his `x` freezes at `2D58` at 6600 **mid-air**,
+  with recorded `x_speed` and `g_speed` both zero against the engine's `0x07F4`. A rolling, airborne
+  character whose horizontal speed is zeroed dead in one frame at a fixed `x` is a **wall hit**, and
+  the engine hitting the same wall eight rows late confirms this as trigger timing rather than a
+  missing mechanism. The strongly-indicated candidate is the signature `trace-replay-bug-fixing`
+  already documents -- rolling-air sliding into a flush wall, where the ROM's probe uses a fixed pixel
+  offset while the engine uses `centreX + xRadius` and rolling shrinks `x_radius` from 9 to 7, so the
+  engine's probe falls short. **Not yet verified at this site**, and stated as a candidate with its
+  citation so the next round confirms or kills it in one read.
+
 - **`rowsConsumed` is correctly stated and the traversal is one row late
   (`bugfix/ai-s1-rowsconsumed-r1`, merged 2026-08-19 -- investigation only).** The invariant is
   load-bearing and is **not** relaxed: `destinationRowsConsumedForAdmission` returns how far the

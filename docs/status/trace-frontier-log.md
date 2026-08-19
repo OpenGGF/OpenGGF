@@ -87348,3 +87348,64 @@ Rebasing `bugfix/ai-s1-rerecord-fixture-r1` silently reverts `README.md` and
 `docs/agent-workflow/briefing-trace-rounds.md`, neither touched by the original
 commit. Diff a rebase of that branch against its new base restricted to
 non-fixture paths before trusting it.
+
+## 2026-08-19 — absence-claim audit, and the 6600 stop is a rolling-air wall hit
+
+Branch `bugfix/ai-s2-stop-6600-r1` off `origin/develop` (`c9ebdb4e5`).
+Fixture only; no probe, no engine run, no code.
+
+### 1. Audit of this thread's "no divergence on X" claims
+
+| Claim | Basis | Status |
+|---|---|---|
+| No S2 object in `seg5_ehz2` clears its own pushing bit mid-push | direct scan of recorded `status` bytes | **verified** |
+| Engine and ROM push the same seven monitor placements | direct coordinate-set comparison | **verified** |
+| Parent animation matches recorded `sidekick_animation_id` frame for frame | direct column read | **verified** |
+| `ANI_SELECTION_S2` matches `Obj05AniSelection` entry for entry | direct table read | **verified** |
+| `game_mode` stays 12 across the truncation window | direct `zone_act_state` read | **verified** |
+| Tails stationary/present/routine 02 across the gap | direct column read | **verified** |
+| Counters advance in lockstep, `lag_counter` zero | direct column read | **verified** |
+| First `Obj5D` routine-`$08` run produces no divergence | re-checked directly: **zero** errors start in 5113-5130, and only eleven start anywhere in 4900-5560, all at 5554+ | **verified** |
+| Inertia matches the ROM across the tail | non-cascading filter | **RETRACTED** (previous entry) |
+
+One imprecision worth recording even though the conclusion survives: the sweep's
+bucket labelled `5554-5564` actually spanned 5000-5564. The count of 44 is still
+the truncation window's, because no error starts between 5000 and 5553 -- but the
+label was wrong and a reader could not have known.
+
+### 2. The 6600 stop
+
+Recorded `mode_change` events place Sonic **airborne** across the whole window:
+
+    6586  sonic rolling  0 -> 1
+    6588  sonic air      0 -> 1   (and on_object 1 -> 0)
+    6611  sonic air      1 -> 0   (and rolling 1 -> 0)
+
+So he rolls, jumps at 6588, and lands at 6611. His `x` freezes at `2D58` at
+**6600**, mid-air, with recorded `x_speed` **and** `g_speed` both zero -- the
+report's own figures are `x_speed exp 0x0000 act 0x07F4` and `g_speed exp 0x0000
+act 0x07F4` over 6600-6607.
+
+A rolling, airborne character whose horizontal speed is zeroed dead in one frame
+at a fixed `x` is a **wall hit**. The engine keeps `0x07F4` for eight more rows
+and stops at 6608, so it hits the same wall late rather than not at all -- the
+"trigger timing, not missing mechanism" reading.
+
+### The candidate, named because it is already documented
+
+This is the canonical shape the `trace-replay-bug-fixing` skill records: *"a
+rolling-air sliding into a flush wall"*, where the ROM's wall probe uses a fixed
+pixel offset while the engine uses `centreX + xRadius`, and rolling shrinks
+`x_radius` from 9 to 7 so the engine's probe falls short. The skill names the
+probe offset as the prime suspect for exactly this signature.
+
+I have **not** verified the engine's probe offset at this site, so this is the
+strongly-indicated candidate rather than a finding. It is stated with its
+citation so the next round can confirm or kill it in one read rather than
+rediscovering the pattern.
+
+### Carried forward
+
+The banked eliminations stand and need no repeating: the Roll arithmetic, script
+data, publish order and entry frame are faithful. They eliminated the wrong
+suspect, which is not the same as being wasted.
