@@ -589,3 +589,38 @@ overwrites the suite run's result, and the surviving XML then reports the solo o
 isolated run cannot settle an order-dependent failure anyway, so the re-run destroys the record
 without answering the question. Copy the reports out first, or run the check in a separate
 worktree.
+
+## Sixteenth rule: pin a control by commit hash — `origin/develop` moves under you
+
+A round created its control worktree with `git worktree add … origin/develop` *after* cutting
+its branch, and develop advanced in between. The control then showed a different S1 chain error
+count from the branch — which looked exactly like a cross-game regression caused by an
+S3K-only object change. It was **reproducible**, and it **survived isolated `-Dtest=` re-runs
+in both worktrees**, so every flakiness check passed it through. Re-detaching the control to the
+branch's actual base made the discrepancy vanish.
+
+The failure is silent, reproducible, and points at the change under test. On a busy day develop
+can move several times an hour, so `origin/develop` is not a base — it is whatever the last
+fetch happened to see.
+
+**`git rev-parse` the base once, and create both worktrees from that hash.** Quote the hash in
+the report. A control that is not provably at the branch's base measures two changes at once
+and attributes both to yours.
+
+## Seventeenth rule: a compensation stack is load-bearing — remove it in one move
+
+When a defect has been absorbed elsewhere, fixing the real cause alone makes things dramatically
+worse before better. One round fixed a one-dispatch trigger latency and watched a segment go
+from 292 errors to 50,060, because three separate compensations had been tuned around the
+original defect and now over-corrected: a one-frame deferral, a `+ 1` on a timer, and a
+re-acquisition hatch for a lost state bit. All three had to come out with the fix, in the same
+change.
+
+Two things follow. **Expect a real fix to look catastrophic mid-flight**, and do not revert on
+the first number — find what was absorbing the defect. The compensations name themselves if you
+look: one of them carried a comment describing the very behaviour it was working around.
+
+And **a green test may be green for the wrong reason**. Removing the compensation stack turned
+a passing trace red, and the reason was that the compensation had been supplying a status bit
+the ROM supplies by a different route. That trace had been passing on a coincidence; the fix
+that reddened it is what made it pass for the right reason.

@@ -3095,3 +3095,35 @@ Two consequences when implementing an S3K object:
 `(0x1D00, 0x04A9)`, smashed before the segment-0 giant ring, came back intact on the
 segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
 80379 errors @ f94 -> 74575 @ f384.
+
+## A routine that reads its own standing bits at entry has one dispatch of trigger latency
+
+`Obj_CollapsingPlatform`'s trigger looks like "start the countdown when a player stands on
+me", and porting it that way collapses the platform one frame early -- because the ROM does
+not read the standing bits at contact time. `loc_20594` (`docs/skdisasm/sonic3k.asm:44819`)
+tests `$3A`, and only if it is already set does it touch the `$38` countdown. It then falls
+through to `loc_205A6` (`:44826-44830`), which reads `status(a0) & standing_mask` and sets
+`$3A` -- **before** reaching `sub_205B6` (`:44835`), whose `SolidObjectTopSloped2` is the
+thing that writes those bits.
+
+So the read at the top of dispatch N observes what dispatch N-1's solid helper wrote. The
+landing dispatch sets nothing; the next dispatch sets `$3A` and does not decrement; the one
+after that is the first decrement. Fragments land on `landing + 9`, not `landing + 8`.
+
+Generalise the shape, not the object: **whenever a routine both reads a field at entry and
+writes it via a later sub-call in the same dispatch, the read is one dispatch stale, and a
+port that reacts inside the contact callback loses that latency.** The engine's
+`update()`-then-solid-pass split already mirrors the routine-body-then-`sub_205B6` order, so
+the fix is to let the callback set only the flag and let the next `update()` act on it --
+never a counter tweaked by one.
+
+Watch for the compensations such an early trigger accretes downstream. This one had grown
+three: a one-frame deferral of the CreateFragments slope skip, a `+1` on the post-collapse
+solid-stay timer, and a saved-standing-bit escape hatch letting P1 re-acquire during the
+deferral. Each was individually plausible and each was absorbing the same frame. Removing
+the trigger defect alone made segment 4 of the S3K chain **worse** (292 -> 50,060 errors);
+the pair, plus the timer, restored 292 exactly. Two wrongs that cancel come out together.
+
+**Originating commit.** `<pending: S3K collapsing-platform trigger latency>` -- AIZ act 2
+(`aiz_4`, chain segment 6), where the ROM seats Tails on the platform at frame 118 on the
+dispatch the engine had already fragmented. Frontier f118 `sidekick_y` -> f150.

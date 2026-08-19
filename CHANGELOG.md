@@ -25,6 +25,22 @@ All notable changes to the OpenGGF project are documented in this file.
   the balance window by 16 and started the balancing animation where the ROM
   stands idle. Closes 37 of segment 12's 40 comparator errors on the S1
   complete-emeralds run.
+- **The AIZ collapsing platform no longer starts its countdown a dispatch early.**
+  `Obj_CollapsingPlatform`'s `loc_20594` (docs/skdisasm/sonic3k.asm:44819) reads
+  `status(a0) & standing_mask` at `loc_205A6` (:44826-44830) — before falling
+  through to `sub_205B6` (:44835), whose `SolidObjectTopSloped2` is what sets
+  those bits. `$3A` is therefore always set from the previous dispatch, and the
+  guarded `$38` countdown does not decrement on the dispatch that sets it, so the
+  platform fragments nine dispatches after the player lands, not eight. The engine
+  set its collapsing state inside the contact callback instead, fragmenting one
+  frame early and suppressing a second player's fresh landing on the final
+  pre-collapse dispatch. Three compensations that had grown around the early
+  fragmentation are retired with it: the one-frame deferral of the
+  `CreateFragments` slope skip, the `+1` on the post-collapse solid-stay timer
+  (`loc_205DE` at :44855-44858 runs `sub_205B6` before decrementing), and the
+  saved-standing-bit re-acquisition hatch. Segment 6 of the S3K complete-emeralds
+  chain moves its first non-camera mismatch from frame 118 to frame 150; segment 4
+  is unchanged at 292 camera-only errors.
 
 ### Fixed
 - **A dropped hardware-timing edge now reports what production actually holds.**
