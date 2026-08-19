@@ -89662,4 +89662,70 @@ row right.
 transition row. The lag-row service is a separate, genuinely ROM-citable defect
 and is the part of this worth pursuing -- but only paired with whatever
 addresses the promotion phase, and the promotion phase is not frame-derivable.
+## 2026-08-19 — The ss_3 `stage_exit` stall: the port's row latch is frozen at 0, so the edge at row 5962 is unreachable
 
+Branch `bugfix/ai-s3k-ss3-boundary-r1` off `origin/develop` (`5cd388b97`). **Diagnosis
+only; nothing landed.** Probes reverted.
+
+### It is neither of the two candidates
+
+The brief framed this as either "the engine never submits matching work" or "it submits
+work that fails to match on kind, ordinal or fingerprint". Instrumentation says **neither**.
+
+The engine *does* submit, with the exact ordinal the recorder expects. A probe on
+`Sonic3kSpecialStageManager.queueEmeraldArtModule` records three submissions across the
+run — `ordinal=13`, `ordinal=35`, `ordinal=60` — against the recorded module ordinals for
+`ss` (13), `ss_2` (35) and `ss_3` (60). Ordinal 60 is precisely the completion reported
+unmatched.
+
+And matching is never *attempted*. A probe at `HardwareTimingReplayPort.apply` shows that
+during the stall the port holds `latch=0` while `nextEdge` is
+`raw_frame=5962 PRE_MAIN_LOOP KOS_DECOMPRESSION_QUEUE#91`. `consumeAtBoundary` only
+consumes when `next.rawFrame() == rawFrameLatch`, and `dropEdgesBefore(0)` drops nothing,
+so an edge at row 5962 is unreachable from a latch of 0 no matter how many boundaries pass.
+The engine's submission and the recorded edge never meet.
+
+**So this is a third category: the port's row clock does not advance during the segment.**
+The port is an innocent witness, but not because the work is missing — because nothing is
+telling it which row it is on. This is the documented "never latched a raw frame" trap in a
+new guise: the latch is not null here, it is stuck at zero.
+
+### The stall, and its size
+
+`TraceSessionLauncher`'s special-stage branch calls
+`fixture.beginTraceRow(ssCursor, ssCursor)`, so a frozen latch means `ssCursor` is frozen.
+With the edge unreachable, the queued module never becomes ready, and
+`Sonic3kSpecialStageManager.updateClearEmeraldLoad` — which models `loc_9C5C`'s
+`tst.b Kos_modules_left; bne locret_9C7E` poll (`docs/skdisasm/sonic3k.asm:12613-12620`) —
+returns early forever. Measured: **34,693** `WAITING modulesLeft` iterations and 34,933
+`clearRoutine == 2` passes, against the walker's 40,650-step cap. The special stage never
+clears, so `stage_exit` never settles, and `verifyRunComplete` reports both edges at
+teardown.
+
+The two unmatched completions one frame apart in two different queues are therefore not two
+defects and not one upstream event feeding both. They are **the only two edges the segment
+has**, both stranded by the same frozen cursor.
+
+### What has NOT been explained
+
+`ss` and `ss_2` are structurally identical — every special stage in this run carries exactly
+two edges at 94-96% of its rows (`ss` 4201/4202 of 4469, `ss_2` 5202/5203 of 5435, `ss_3`
+5962/5963 of 6215, `ss_4` 4869/4870 of 5102) — and both cleared, releasing ordinals 13 and
+35. So the cursor is **not** frozen in every special stage, and what distinguishes `ss_3`
+is not yet established. That is the next question, and it is deliberately left open rather
+than guessed at.
+
+Note also that this stall is **newly exposed rather than newly caused**: before the segment-4
+signpost fix the chain stopped inside segment 4 and never drove `ss_3` to its end.
+
+### Contradiction to settle, flagged rather than resolved
+
+The teardown message says `engine pending: <none>` while the probe shows the engine holding
+a submitted ordinal-60 module. Both cannot describe the same moment. The likely reconciler
+is that `verifyRunComplete` runs at close, after the run aborted and the queues were reset,
+so `<none>` is a teardown artefact rather than a statement about the stall — but that is
+untested. It is recorded here because two of my own measurements disagree and the next
+round should not build on either until one is confirmed.
+
+**Frontier: `stage_exit` at bk2 frame 35726, stalled inside `ss_3` on the emerald-module
+wait. Segment 4 remains closed at 292 camera-only errors.**
