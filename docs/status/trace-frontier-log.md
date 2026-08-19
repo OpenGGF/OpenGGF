@@ -83469,3 +83469,68 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   stays red by construction.
 - Chain frontier before and after: unchanged — `segment 15 lost production
   ownership before source closure (romZone=13, act=1, BK2 cursor=83819)`.
+
+## S3K Sonic+Tails complete-emerald run chain — segment 2 (`aiz_2`), round: the giant ring's release frame
+
+- Command: `mvn -Ptrace-replay-r7 -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
+  -Ds3k.rom.path=<rom> -Dsonic1.rom.path=<rom> -Dsonic2.rom.path=<rom>` on
+  `bugfix/ai-s3k-seg2-frontier`, branched from `develop` at
+  `900463738ef80859d5a2fe8e1b995f12107861ae`. ~40 s.
+- Frontier BEFORE: segment 2 (`aiz_2`) — 404 physics comparator errors, first
+  non-camera mismatch at frame 3981 field `x` rom `0x0232` engine `0x0230`. This
+  confirms the previous round's reported frontier unchanged at this base.
+- Frontier AFTER: segment 2 closes with `errorCount: 0`. The chain still fails,
+  now on the single pre-existing walk axis — `awaitBoundary exceeded step cap
+  40650 for entry_kind 'stage_exit' (mode_change_bk2_frame=19775)` — which was
+  already present, with identical numbers, in the BEFORE run.
+- Cause: frame 3981 of `aiz_2` is the AIZ2 giant ring capture. The aux stream
+  shows slot 18 flipping `object_code` `0x00085AD2` -> `0x00061682` on frame
+  3940, `routine` `0x02` -> `0x04` on frame 3981, Sonic's `object_control`
+  becoming `0x53` on 3981, and `Obj_SSEntryFlash` (`0x000617BE`) allocated into
+  slot 22 the same frame — i.e. `loc_6173A` (`sonic3k.asm:128292-128303`). The gate that decides *which* frame is
+  `cmpi.b #8,mapping_frame(a0) / blo.s locret_61708` (`sonic3k.asm:128266-128267`)
+  — the ring's formation animation, not the range box: `SSEntry_Range`
+  (`sonic3k.asm:128315`) is `dc.w -$18,$30,-$28,$50`, and Sonic is inside that
+  box from frame 3976 onward.
+- The ROM arithmetic, which the engine has to reproduce exactly:
+  `Animate_RawNoSST` does `addq.w #1,d0` *before* reading the script
+  (`sonic3k.asm:177346-177349`), so the first entry of `AniRaw_SSEntryRing`
+  (`sonic3k.asm:128510-128511`, `dc.b 4,0,0,1,2,3,4,5,6,7,$F8,$C`) is skipped.
+  Eight entries at `4+1` frames each, plus the one frame that consumes the
+  initial zero timer, puts the `$F8` jump — and therefore the first
+  `mapping_frame` of `$A` — on update 41. Frame 3941 + 40 = 3981. Exact.
+- So the ring's first `Animate_Raw` must land on frame 3941, one frame *after*
+  the frame on which the aux first reports the restored `Obj_SSEntryRing` code
+  pointer. That is `Obj_WaitOffscreen`: `loc_85B02` is
+  `move.l $34(a0),(a0) / rts` (`sonic3k.asm:180300-180302`) — it writes the
+  saved pointer back and returns to the object loop, so on the release frame
+  neither `SSEntryRing_Init`/`_Main` nor the `bra.w SSEntryRing_Display` tail
+  (`sonic3k.asm:128230`) is reached.
+- Landed: `Sonic3kSSEntryRingObjectInstance` now consumes that release frame.
+  When the off-screen wait first releases the ring it sets `displayReleased` and
+  returns, skipping both `advanceAnimation()` and the display pass for that one
+  frame. No constant was changed; the animation table, delays and range box are
+  untouched.
+- Discrimination note. The observable — engine Sonic frozen at `0x0230,0x03E5`
+  while the ROM reaches `0x0232,0x03EB` — is produced identically by "the gate
+  opens a frame early" and by "the ring polls a stale player position". These
+  were separated, not assumed: a temporary probe recorded the touch with
+  `player=230,3e5`, and S3K sets
+  `ObjectInteractionRules.objectsExecuteAfterPlayerPhysics = true`
+  (`GameRules.java:408`), so the ring necessarily sees the player's *post-move*
+  position for its own frame. Seeing the frame-3980 position therefore means the
+  ring fired on frame 3980. The probe also showed release -> `mapping_frame 10`
+  spanning exactly 40 updates, matching the ROM span, which rules the animation
+  table itself in.
+- Verification (sequential, reports cleared per run, `-Dsurefire.runOrder=alphabetical`,
+  set-diffed against a clean control worktree at the same base):
+  `-Ptrace-replay` 790 tests, 4 red both sides, identical sets (the three chains
+  plus the deliberately-red `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`);
+  `-Ptrace-replay-r7` 37 tests, 32 red both sides, identical sets;
+  `-Ptrace-segments` 70 tests, 55 red both sides, identical sets.
+- `TestSonic3kSSEntryRingFormation` needed updating: it modelled `Animate_Raw`
+  correctly but counted from the object's first `update()`, silently assuming
+  that update was the first `Animate_Raw`. Its totals now carry an explicit
+  `RELEASE_FRAMES` constant citing `loc_85B02`, and it gained a discriminating
+  assertion — six updates after release must still show `mapping_frame 0`,
+  which is false the moment the release frame is dropped again.

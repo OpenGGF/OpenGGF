@@ -131,6 +131,14 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     private boolean inIdleAnim;
     /** ROM: Obj_WaitOffscreen has released the ring into its own routine. */
     private boolean displayReleased;
+    /**
+     * ROM {@code loc_85B02} (sonic3k.asm:180300-180302) restores the object's
+     * code pointer and then {@code rts}es straight back to the object loop, so
+     * on the release frame neither {@code SSEntryRing_Init}/{@code _Main} nor
+     * {@code SSEntryRing_Display} runs. The ring's first {@code Animate_Raw}
+     * happens on the frame after the release.
+     */
+    private boolean releasedThisFrame;
 
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
@@ -167,6 +175,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        releasedThisFrame = false;
         switch (state) {
             case MAIN -> updateMain(player);
             case ENTERED -> { /* Ring continues displaying; flash controls deletion */ }
@@ -176,6 +185,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // SSEntryRing_Display in the SAME frame (sonic3k.asm:128229-128230);
         // loc_61794 ends `jmp (AddRings)`, whose rts lands on that bra. So a
         // touch that sets bit 5 of $38 is seen by the display pass immediately.
+        if (releasedThisFrame) {
+            // ROM loc_85B02 rts'd back to the object loop; SSEntryRing_Display
+            // is not reached on the release frame.
+            return;
+        }
         runDisplayPass();
     }
 
@@ -275,7 +289,15 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
                 return;
             }
+            // ROM loc_85B02 (sonic3k.asm:180300-180302) only writes the saved
+            // code pointer back into (a0) and rts'es; Obj_SSEntryRing itself is
+            // not entered until the following frame. Consuming the release
+            // frame here keeps the formation animation - and therefore the
+            // `cmpi.b #8,mapping_frame` collision gate at sonic3k.asm:128266 -
+            // on the ROM's schedule instead of opening it a frame early.
             displayReleased = true;
+            releasedThisFrame = true;
+            return;
         }
 
         // ROM: jsr (Animate_Raw).l — advance animation using down-counter

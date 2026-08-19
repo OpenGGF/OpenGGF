@@ -4,6 +4,23 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The Sonic 3&K Special Stage entry ring no longer opens its collision gate a
+  frame early. `Obj_WaitOffscreen`'s release path `loc_85B02` is
+  `move.l $34(a0),(a0) / rts` (docs/skdisasm/sonic3k.asm:180300-180302): it
+  writes the saved code pointer back and returns to the object loop, so neither
+  `SSEntryRing_Init`/`SSEntryRing_Main` nor the `bra.w SSEntryRing_Display` tail
+  (:128230) runs on the release frame, and the ring's first `Animate_Raw` lands
+  the frame after. The engine ran the routine on the release frame itself, which
+  advanced the formation animation one frame early and therefore satisfied
+  `cmpi.b #8,mapping_frame(a0)` (:128266-128267) a frame early too. In segment 2
+  (`aiz_2`) of the S3K Sonic+Tails complete-emerald run this fired `loc_6173A`
+  (:128292-128303) on frame 3980 instead of 3981, freezing Sonic at `x = $230`
+  with `object_control = $53` before his last move to `$232`. The animation
+  arithmetic itself is unchanged and matches the ROM exactly: `Animate_RawNoSST`
+  increments `anim_frame` before reading the script (:177346-177349), so the
+  leading entry of `AniRaw_SSEntryRing` (:128510-128511) is skipped and the
+  `$F8` jump to the idle script — the first `mapping_frame` >= 8 — falls on
+  update 41. Segment 2 now closes with zero comparator errors.
 - The Sonic 1 Monitor (Obj26) now applies its side correction when Sonic is
   merely *not moving away* from it, matching `Mon_Solid`. `.sidetouch` splits on
   the sign of `d0`: with Sonic in the monitor's left half (`d0 > 0`)
