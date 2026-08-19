@@ -83571,3 +83571,81 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   `RELEASE_FRAMES` constant citing `loc_85B02`, and it gained a discriminating
   assertion — six updates after release must still show `mapping_frame 0`,
   which is false the moment the release frame is dropped again.
+
+## 2026-08-19 — S3K Sonic+Tails complete-emerald run chain: the frontier left segment 2, and the new stop is a gap-time hardware-timing wall
+
+- Measured at `8955a77c1` (clean worktree, `-Ptrace-replay-r7`,
+  `-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain`, `-Ds3k.rom.path=<s3k .gen>`;
+  1 test, 1 error, ~25 s).
+- **Frontier before this round (per the brief): segment 2 (`aiz_2`). It is no
+  longer there.** After `8955a77c1` the drive reaches the **segment 3 → 4**
+  boundary: transition index 3, `entry_kind` `stage_exit`,
+  `mode_change_bk2_frame=19775` — the return from special stage #2 (`ss_2`)
+  into `aiz_3` (AIZ act 2). Segments 0–3 drive and transitions 0–2 are
+  observed.
+- The failure is an exception, not a comparator miss, so there is no
+  first-error frame/field to quote:
+  `TraceRunReplayWalker$BoundaryStepCapExceededException: awaitBoundary exceeded
+  step cap 40650 for entry_kind 'stage_exit' (mode_change_bk2_frame=19775, last
+  observed bk2 frame=19775)`. The frozen cursor is expected for an uncompared
+  special-stage interior (`AbstractRunChainTest` pre-seeks it to the return
+  offset); what never happens is the `StageExit` signal.
+- **Root cause, instrumented rather than inferred.** A temporary probe over the
+  post-rows tail of each interior printed the game mode and the S3K title-card
+  manager's private state each frame. Segment 1's return runs
+  `SPECIAL_STAGE → SPECIAL_STAGE_RESULTS → TITLE_CARD` and exits after ~120
+  title-card frames. Segment 3's return reaches `TITLE_CARD` and then holds
+  `state=SLIDE_IN artLoading=true artLoaded=false currentZone=0 currentAct=1`
+  for every one of the remaining ~36 700 steps.
+  `Sonic3kTitleCardManager.update()` early-returns while `artLoading` is set and
+  `finishQueuedArtIfReady()` is false, so the state machine never runs and
+  `shouldReleaseControl()` never becomes true.
+- Why the art never becomes ready: the AIZ act-2 title card is created inside
+  the **unrepresented inter-segment gap**, and
+  `HardwareTimingReplayPort.enterUnrepresentedGap()` clears `rawFrameLatch`, so
+  by construction no recorded completion edge may be applied until the next
+  `beginRawFrame`. Work the engine submits in a gap can therefore never be
+  released. The suppressed `PendingRecordedSubmissionsException` at run close
+  names exactly that work: `KOS_MODULE_QUEUE` 36, 37, 38, 39 and
+  `KOS_DECOMPRESSION_QUEUE` 62.
+- The engine is not wrong to submit it. `Obj_TitleCardInit` issues **four**
+  unconditional `Queue_Kos_Module` calls — red/act sheet, zone-text sheet, act
+  number, zone-specific card (`sonic3k.asm:62122`, `:62135`, `:62144`, `:62149`)
+  — and `Obj_TitleCardCreate` then waits on `Kos_modules_left`
+  (`sonic3k.asm:62170`). Blocking on that queue is the ROM behaviour.
+- Those pending ordinals are exactly the **leading** ordinals of the recorded
+  interstitial span for this boundary.
+  `hardware_timing_interstitial.jsonl` records, after segment 3,
+  `kos_module_queue` 36–45 (10, all `post_objects`) and
+  `kos_decompression_queue` 62–76 (15, all `pre_main_loop`). The engine
+  reproduces the first four modules and the first decompression job and stalls;
+  the rest is work the run never submits.
+- Why segment 1 → 2 survives and segment 3 → 4 does not:
+  `Sonic3kTitleCardManager` caches the title sheet
+  (`!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex`,
+  `Sonic3kTitleCardManager.java:668`). Segment 1 returns to the **same** act, so
+  the cache hits and nothing is submitted into that gap; segment 3 returns to
+  act 2, so all four modules are queued. **That cache is itself a divergence** —
+  the ROM queues all four modules on every title-card creation with no reuse
+  test — and it is currently masking the same wall at the earlier boundary. Its
+  own recorded gap (`kos_module_queue` 14–23) is absorbed as a pure cursor
+  advance. Removing the cache without a gap-release path would hang the segment
+  1 → 2 boundary too.
+- **Wall, reported rather than worked around.** There is no ROM-derived constant
+  or single-object fix here. Closing this boundary needs the interstitial stream
+  to stop being cursor-advance-only:
+  `HardwareTimingInterstitialSpans` deliberately discards everything but the
+  first/last ordinal per kind, on the documented premise that "production
+  replaying the run does not reproduce those submissions". This boundary refutes
+  that premise — production reproduces the span's leading prefix. A fix has to
+  (a) let production's gap-submitted work reach readiness while no row is
+  represented, proving the overlap against the recorded interstitial records'
+  `kind`/`ordinal`/`submission_fingerprint`/`boundary`, and (b) let
+  `advanceOrdinalCursorAcrossRecordedSpan` resume from production's post-gap
+  cursor instead of requiring the span to begin exactly at it
+  (`HardwareTimingService.java:498-505`, which today throws for any overlap, and
+  refuses outright while pending submissions exist, `:477-489`).
+- Nothing was landed this round: the change above belongs to the interstitial
+  hardware-timing contract, not to an S3K object, and it was handed to the
+  agent that owns that lane rather than duplicated here. No engine source was
+  modified, so no red-set sweep was run.
