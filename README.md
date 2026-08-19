@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The ROM truncates its own object pass by exactly 21 slots, so the engine is "more correct" and
+  therefore wrong (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- third PC-execute probe, no
+  engine change).** `d7` is **not corrupted**: it starts at `$8F` and reaches `0000` on every row
+  including the gap rows. What changes is *reach* -- **123 iterations ending at `$FFCE80`** on the
+  eleven gap rows against **144 ending at `$FFD3C0`** on their neighbours. `$FFD3C0 - $FFCE80 =
+  $540 = 21 x $40`, exactly twenty-one object slots, so `d7` was **decremented 21 times more than
+  the loop body ran** rather than clobbered to a wrong value -- `RunObject` `jsr`s into object code
+  with `d7` live, so an object running its own `dbf d7` consumes iterations from the enclosing pass.
+  `LevelOnly_Object_RAM` starts at `$FFD000`, **six slots past the stopping point**, so
+  `Tails_Tails`, `SuperSonicStars` and `Sonic_BreathingBubbles` are all skipped together: **the
+  twin-tails art divergence is one visible corner of a truncated object pass.** Exactly 21 slots on
+  all eleven rows and absent on every neighbour, consistent with one object holding a routine for
+  eleven frames. **Under `fixBugs = 0` this is shipped behaviour** and is what every recorded trace
+  carries, so the engine running `Obj05` on all eleven rows is more correct than the ROM and
+  therefore wrong; any fix belongs in the engine's dispatch, reproducing the truncation, and never
+  in correcting the ROM's register handling. Blast radius is **object dispatch across all three
+  games**.
+
 - **The S1 results path is gapped by a second row authority, not deferred by a budget
   (`bugfix/ai-s1-runplc-visibility-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
   Sequence-numbered probes show **two** paths selecting a row's hardware-timing authority and

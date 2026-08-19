@@ -86446,3 +86446,61 @@ reason as the previous round: the only fixture that compares S1 results-screen
 queue state is the unlanded re-recorded run, so **no committed trace observes the
 field this would move**, and a clean gate over an unobserved span is absence of
 evidence. Full `-Ptrace-replay` control at `ebde965b8` is 790 / 4.
+## 2026-08-19 — the object pass truncates 21 slots early, and it is shipped ROM behaviour
+
+Branch `bugfix/ai-s2-execobjects-r1`, continued. Third probe
+`tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua`; no engine change.
+
+### d7 is not corrupted -- the loop simply ends early
+
+Logging `a0` and `d7` at every `RunObject` iteration over rows 5550-5566:
+
+    row    iters  first a0  last a0   d7 first  d7 last  reached $FFD000+
+    5550   144    FFB000    FFD3C0    008F      0000     yes
+    5553   144    FFB000    FFD3C0    008F      0000     yes
+    5554   123    FFB000    FFCE80    008F      0000     NO
+    ...    123    FFB000    FFCE80    008F      0000     NO
+    5564   123    FFB000    FFCE80    008F      0000     NO
+    5565   144    FFB000    FFD3C0    008F      0000     yes
+
+`d7` starts at `$8F` and reaches `0000` on **every** row, gap rows included. It is
+never left holding garbage. What changes is how far `a0` gets: 123 iterations
+ending at `$FFCE80` instead of 144 ending at `$FFD3C0`.
+
+`$FFD3C0 - $FFCE80 = $540 = 21 * $40` -- exactly twenty-one object slots. So `d7`
+was decremented twenty-one times more than the loop body ran, rather than being
+clobbered to a wrong value. `RunObject` `jsr`s into object code with `d7` live
+(docs/s2disasm/s2.asm:29832-29843), so an object performing its own `dbf d7` --
+or any `subq`/`moveq` on `d7` -- consumes iterations from the enclosing pass.
+
+### The second observable is confirmed by construction
+
+`LevelOnly_Object_RAM` begins at `$FFD000`, six slots **past** the stopping point.
+So `Tails_Tails` (`$FFD000`), `SuperSonicStars` (`$FFD040`) and
+`Sonic_BreathingBubbles` (`$FFD080`) are all skipped on the same eleven rows.
+The twin-tails art divergence is one visible corner of a truncated object pass.
+
+### Stable, not accidental
+
+The truncation is exactly 21 slots on all eleven rows and absent on every
+neighbouring row. That is a persistent state across the span, not a per-frame
+accident -- consistent with one object holding a particular routine for eleven
+frames.
+
+### This is shipped behaviour and the engine must reproduce it
+
+`fixBugs = 0`. The ROM truncates its own object pass here, so the truncation is
+what the shipped game does and what every recorded trace carries. **The engine
+running Obj05 on all eleven rows is "more correct" and therefore wrong.** A fix
+belongs in the engine's dispatch -- reproducing the truncation -- and never in
+"correcting" the ROM's register handling.
+
+That also sets the blast radius: this is object dispatch, shared by all three
+games. S1 and S3K must be measured explicitly, not inferred from an S2 slice.
+
+### What is left
+
+Which object consumes the twenty-one iterations. The stopping point is slot 122
+(`$FFCE80`), so the culprit is at or before it; logging the object id per
+iteration on a single gap row identifies it, and the eleven-row stability means
+any one gap row will do.
