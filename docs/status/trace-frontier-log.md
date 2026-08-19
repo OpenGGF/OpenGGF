@@ -84943,3 +84943,83 @@ is re-activated per prepared level -- `startPreparedLevel` assumes the latter,
 the visual session assumes the former, and only a fixture with recorded input
 makes them disagree. Until that is answered, publishing the fixture turns both
 `TestS1CompleteEmeraldVisualRun` cases red.
+
+## 2026-08-19 — the CPZ2 push pair measured as one change: not landable, and why
+
+Branch `bugfix/ai-s2-pushpair-r1` off `origin/develop` (`6fe29aa4b`). The pair was
+built and measured exactly as scoped — the ungated `Solid_NotPushing` player-side
+clear (1), the `SolidObject_TestClearPush` object-bit gate (2), and the object-bit
+sites the previous round left blocked (3) — then **reverted**. Only the unrelated
+`fixBugs` correction below is landed on this branch.
+
+### Decomposition, all at `6fe29aa4b`, full `-Ptrace-replay`, both-way set-diff
+
+| Tree | Red | Delta vs control | New red |
+|---|---|---|---|
+| control (clean worktree, same base) | 4 | — | — |
+| (1)+(2) | 6 | +2 | `TestS2CompleteEmeraldRunPrefix`, `TestS3kMgzTraceReplay` |
+| (1)+(2)+(3) | 9 | +5 | the above plus `TestS3kAizTraceReplay`, `TestS3kCnzTraceReplay`, `TestS3kReplayReferenceClosureIntegration` |
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` goes 2491 → 2433 under the
+pair, the same improvement measured in round 5, and every `player_mapping_frame`
+divergence in that segment closes.
+
+### The round-5 regression count was re-measured, not carried
+
+Round 5 measured (1)+(2) at **twelve** regressions. At this base it is **two**.
+Ten went away, and they went away because of the object-side sites landed in
+`8cd07b700`: `TestS1{Ghz3,Lz2,Slz2,Slz3,Syz1,Syz2}CompleteRunTraceReplay`,
+`TestS1Credits05Sbz1TraceReplay`, `TestS2Ooz2LevelSelectTraceReplay`,
+`TestS3kCnzTraceReplay` and `TestS3kReplayReferenceClosureIntegration` are all
+green under the pair now. That is the audit paying off exactly where it was
+predicted to, and it is the reason the brief's instruction to re-measure rather
+than carry the number mattered.
+
+### What the residual is made of
+
+- **+2 from (2) alone.** `TestS3kMgzTraceReplay` is red under (1)+(2) with the
+  object-bit sites **reverted**, so it is not caused by (3). First error frame
+  5061, `tails_status_byte` expected `0x0000` actual `0x0020` — the character
+  left holding `Status_Push`. `TestS2CompleteEmeraldRunPrefix` fails on
+  `dynamic_art.edges` at segment 7 frame 5396, `rom=[] engine=[8564]`.
+- **+3 from (3).** `TestS3kAizTraceReplay` (`tails_mapping_frame` 0x07 vs 0x08 at
+  10448), `TestS3kCnzTraceReplay` and `TestS3kReplayReferenceClosureIntegration`
+  (both the same `status_byte` `0x0020` stranding shape) appear only when the
+  object-bit-only sites are added.
+
+So the two halves of the residual are separable and the object-bit-only sites are
+still the more expensive half — the previous round's conclusion that they must
+land *with* the pair is right about necessity and wrong about sufficiency.
+
+### A hypothesis raised and killed by measurement
+
+`Sonic_Animate` / `Animate_Player` clear the player's pushing flag on **any**
+animation change, before `SAnim_Do` dispatches (`docs/s2disasm/s2.asm:38386-38391`;
+`docs/skdisasm/sonic3k.asm:29358-29364`, `:24741-24747`). The engine models that
+clear only inside `PlayableSpriteAnimation`'s walk-special branch, gated on a
+`ScriptedVelocityAnimationProfile`, so it does not fire for Hurt, Spring or Roll
+transitions — a plausible source of the surviving `Status_Push` stranding.
+
+Hoisting the clear so it fires on any animation change (still behind
+`PlayerAnimationRules.animationChangeClearsPush()`) changed **nothing**: AIZ 1269,
+CNZ 2609, MGZ 4411 and seg10 2433 errors, identical to the run without it. The
+mechanism exists and is unmodelled, but it is not what strands the flag here.
+Recorded so the next round does not spend a cycle on it.
+
+### Recommendation
+
+Do not land the pair as it stands. The next tractable step is the `+2` half:
+find what should clear `Status_Push` at MGZ frame 5061 under (1)+(2) with the
+object-bit sites out. That is a two-test problem rather than a five-test one, and
+it is the smallest tree in which the pair's own residue is visible without the
+object-bit sites confounding it.
+
+### Landed here instead
+
+`MTZSpringWallObjectInstance` was taking the `fixBugs`-ON branch: it called
+`player.setRollingJump(false)` for the roll-jumping clear at
+`docs/s2disasm/s2.asm:53395-53399`, which sits inside `if fixBugs` and is not in
+the shipped ROM (`fixBugs = 0`, `s2.asm:27`). Removed, with the flag, the branch
+taken and what the fixed branch would do written at the site per the hard rule.
+Full `-Ptrace-replay` 790 / 4 red, set-identical both ways to the control above;
+`mvn -Pguards test` 499/0.

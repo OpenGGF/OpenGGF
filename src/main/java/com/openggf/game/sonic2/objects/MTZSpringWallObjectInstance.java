@@ -276,11 +276,17 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
         SpringHelper.applyCollisionLayerBits(player, subtype);
 
         // From disassembly: bclr #p1_pushing_bit,status(a0) / bclr #p2_pushing_bit,status(a0)
-        //   if fixBugs (REV01): bclr #status.player.rolljumping,status(a1)
-        //   bclr #status.player.pushing,status(a1)   (s2.asm:52916-52923)
-        // The REV01 fix clears the roll-jumping flag so the player's controls are
-        // unlocked and they cannot get stuck after the spring-wall bounce.
-        player.setRollingJump(false);
+        //   if fixBugs: bclr #status.player.rolljumping,status(a1)
+        //   bclr #status.player.pushing,status(a1)
+        // (docs/s2disasm/s2.asm:53393-53400).
+        //
+        // fixBugs = 0 in the shipped ROM (docs/s2disasm/s2.asm:27), so the
+        // roll-jumping clear between the two is NOT executed and the engine
+        // must not perform it either. The fixed branch would clear
+        // status.player.rolljumping so the character's controls unlock and they
+        // cannot get stuck after the spring-wall bounce; on the un-fixed path
+        // the flag survives the bounce, which is the behaviour every recorded
+        // trace carries.
         // The two object-side bclrs are unconditional and cover BOTH characters,
         // so they release the spring wall's own pushing bits whoever bounced
         // (docs/s2disasm/s2.asm:53393-53394). That is what stops the following

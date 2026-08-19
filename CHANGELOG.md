@@ -54,6 +54,12 @@ All notable changes to the OpenGGF project are documented in this file.
   checks that every guard test class on disk is actually selected by it.
 
 ### Fixed
+- Sonic 2's MTZ yellow spring walls no longer clear the bounced character's
+  roll-jumping flag. That clear is `bclr #status.player.rolljumping,status(a1)`
+  at docs/s2disasm/s2.asm:53395-53399, which sits inside an `if fixBugs` block;
+  `fixBugs = 0` in the shipped ROM (s2.asm:27), so the flag survives the bounce
+  and every recorded trace carries that behaviour. The engine was taking the
+  fixed branch.
 - Solid objects across all three games now clear their OWN per-character
   pushing bits where the ROM does, instead of leaving that state to the shared
   solid framework. A ROM object's `p1_pushing_bit`/`p2_pushing_bit` (bit 5 of
