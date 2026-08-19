@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The seg10 ramps are one phase slip in Sonic's Roll script, and the "reset" is an integral
+  artefact (`bugfix/ai-s2-seg10-ramps-r1`, merged 2026-08-19 -- fixture analysis only).** The report
+  carries exactly **one** non-cascading error across the tail: `player_mapping_frame` expected
+  `0x0041`, actual `0x0040`, across **480 rows spanning both ramps and the reset between them**. Both
+  values belong to anim `02`, and `SonAni_Roll` (`s2disasm/s2.asm:38695`) is
+  `dc.b $FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF` -- `0x41` at indices 1/3/5/8 and `0x40` at index 7 --
+  so reading `0x40` where the ROM reads `0x41` is the engine **one script step out of phase within
+  Roll**. The `$FE` prefix makes duration speed-dependent, which is how a one-step offset persists
+  for hundreds of rows without self-correcting. **There is no reset event at f6724.** Drift is the
+  integral of (engine - ROM) submissions, and the ROM's own rate swings wildly across the tail --
+  per 50 rows: 105, 14, 34, 32, 26, 13, 15, 21, 54, 46 -- so a constant phase error against a rate
+  varying 13 to 105 produces ramps where the rate is high and reversals where it is low. The reset is
+  where the ROM's rate recovers relative to the engine's, **an artefact of the integral rather than a
+  happening**, and looking for a cause at it would have found nothing. The 363-edge burst can be
+  dropped entirely: it sits *before* the ramp, which begins where the ROM's rate **collapses** at
+  6600. So the tail is Sonic's Roll animation phase, not the art pipeline -- the same shape as the
+  twin-tails cadence work one layer up, and independent of both KD28 and KD29.
+
 - **All seven S1 bridge edges match for the first time; the branch is right and the predicate is
   wrong (`bugfix/ai-s1-results-row-authority-r1`, merged 2026-08-19 -- investigation only).** The
   special-stage branch is **load-bearing**: a recorded special-stage segment's rows are *pass-paced*

@@ -86790,3 +86790,75 @@ not yet correct. The unobserved-span rule also still applies: no committed trace
 compares S1 results-screen queue state, so a clean gate over that span remains
 absence of evidence. Full `-Ptrace-replay` control at `ad539b52c` is 790 / 4;
 `mvn -Pguards test` 499 / 0.
+## 2026-08-19 — the ramps are one phase error, and there is no reset event to find
+
+Branch `bugfix/ai-s2-seg10-ramps-r1` off `origin/develop` (`34c95928e`).
+Fixture analysis; no probe, no code.
+
+### One phenomenon, not two
+
+The report carries exactly **one** non-cascading error across the whole tail:
+
+    6601-6604  player_mapping_frame  exp 0x0040  act 0x0041
+    6606-6606  player_mapping_frame  exp 0x0041  act 0x003F
+    6608-7087  player_mapping_frame  exp 0x0041  act 0x0040
+
+That last window is 480 rows and **spans both ramps and the reset between them**.
+The differing terminal state is not a second mechanism; it is the same error
+meeting a different local rate.
+
+### The error is a one-step phase slip in Sonic's Roll script
+
+Mapping frames `0x40` and `0x41` belong to animation `02`, and
+`SonAni_Roll` is (docs/s2disasm/s2.asm:38695)
+
+    dc.b $FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF
+
+`0x41` occupies script indices 1, 3, 5 and 8; `0x40` occupies index 7. Reading
+`0x40` where the ROM reads `0x41` is the engine sitting **one script step out of
+phase within Roll**. The `$FE` prefix makes the duration speed-dependent, which
+is how a one-step offset can persist for hundreds of rows without self-correcting.
+
+Across 6608-7087 the tail is anim `00` on 165 rows, `05` on 151, `02` on 136,
+`07` on 18 and `08` on 14, so Roll is a third of it -- enough to drive the DPLC
+stream, since a submission happens exactly when a mapping frame changes.
+
+### There is no reset event at f6724
+
+The brief expected a discrete ROM catch-up. There is none to find. Drift is the
+integral of (engine submissions - ROM submissions), and the **ROM's own rate
+varies enormously** across the tail. Submissions per 50 rows:
+
+    6550-6599  105      6800-6849   13
+    6600-6649   14      6850-6899   15
+    6650-6699   34      6900-6949   21
+    6700-6749   32      6950-6999   54
+    6750-6799   26      7000-7049   46
+
+A constant phase error against a rate that swings between 13 and 105 produces
+ramps where the rate is high and reversals where it is low. The "reset" at 6724
+is where the ROM's rate recovers relative to the engine's -- an artefact of the
+integral, not an event. **Looking for what happens at 6724 would have found
+nothing.**
+
+### The 363-edge burst is a ROM rate feature, not the trigger
+
+It sits in the 6500 bucket, *before* the ramp. The ramp begins where the ROM's
+rate **collapses** at 6600, not where the burst occurs. Deferring it was right and
+it can now be dropped rather than investigated.
+
+### An over-reading I caught in this round
+
+Sampling the tail every twenty rows showed a stationary Sonic and I nearly wrote
+up "the players go idle and stop submitting". `player_x` in fact takes 120+
+distinct values across 6604-7087. The sparse sample landed on a stationary
+stretch. Recording it because the shape -- a plausible mechanism assembled from a
+sample too coarse to support it -- is the same failure this thread has hit before.
+
+### Where this goes
+
+The target is Sonic's Roll animation phase, not the art pipeline: a single
+one-step slip that persists for 480 rows and expresses itself through the DPLC
+stream because submissions are mapping-frame-change-driven. That is the same
+shape as the twin-tails cadence work, one animation layer up, and it is
+independent of both the CPZ boss (KD29) and the push gate (KD28).
