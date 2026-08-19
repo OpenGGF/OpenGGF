@@ -175,6 +175,12 @@ half-landed change, and require the blast radius to be measured before anything 
   signature, not spurious generation. And do not assume a steady reference rate; the ROM's own edge
   rate across one window ran from 32 to 363 per hundred frames, and the divergence ramp began
   exactly at the burst.
+- **An empty probe output proves nothing until the build is confirmed.** Two rounds produced no
+  probe output and nearly read it as "this code path never runs"; both were compilation failures.
+  Before drawing any conclusion from absence, show the probe compiled and ran — for Lua, `luac -p`
+  plus a hit on a hook you know fires; for engine instrumentation, a line that prints
+  unconditionally. This is the same shape as the recorded-stream trap: **absence is only evidence
+  once you have shown the thing that would have reported presence was working.**
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
