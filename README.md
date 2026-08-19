@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ2 art cluster is a DPLC stream-interleaving and service-rate question, not an object one
+  (`bugfix/ai-s2-seg10-art-r1`, merged 2026-08-19 -- fixture analysis, no code).** 2422 errors from
+  frame 5554 onward, all but three `dynamic_art`. Raw count is the wrong measure, since one wrong
+  edge shifts every later `edge_ordinal` and `transfer_id`; measuring **edge-ordinal drift**
+  (cumulative engine edges minus ROM edges) shows **three regimes rather than one defect** -- onset
+  `+1` at f5554, a step to `+4` at f5573 that then *holds* oscillating +4/+5 for ~700 frames, a first
+  ramp to `+42` at f6605, a **reset to `+5`** at f6724 where the ROM catches up, a second ramp to
+  `+59`, and finally the engine ending **45 edges behind** at f7057. A run-ahead followed by a
+  catch-up is a service-rate signature, not spurious generation. The ROM's own rate is wildly
+  non-uniform across the window -- per 100 frames: 92, 93, 54, 35, 32, 108, 128, 191, 143, 81, 164,
+  **363**, 97, 114, 59, 149, 154 -- and the first ramp begins exactly at the 363-edge burst, so any
+  analysis assuming a steady reference rate will misread it. The onset itself is an **interleaving**
+  error across **three** streams (`tails` 5147 edges, `sonic` 3849, `tails-tails` 1015): at f5564 the
+  comparator reports `edge[0].owner` expected `sonic`, actual `tails-tails`, with different
+  `rom_source_address`, `source_tile_index` and `vram_destination` -- the engine is not emitting a
+  corrupted version of the right edge but **a different stream's edge in that slot**. Scope
+  correction: 5554-6600 is independent of the 5662 Tails animation divergence, but 6601-7087 is
+  **coupled** to it, since the three non-cascading `player_mapping_frame` windows there sit inside the
+  second ramp and reclassify under the push-pair candidate.
+
 - **No monitor population surplus, and the push pair is recorded as a known discrepancy
   (`bugfix/ai-contact-end-airborne-r1`, merged 2026-08-19 -- counting round, scope closed).** The
   engine pushes exactly the **same seven** monitor placements the ROM does, coordinate for

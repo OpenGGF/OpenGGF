@@ -85624,3 +85624,82 @@ alone, seg10 2491 -> 2433, chain frontier unmoved.
 Anyone picking this up should weigh that remaining scope honestly. Three rounds of
 exclusion have narrowed it to a single contact-end frame worth 58 errors in
 seg10, and every candidate fix so far has lived in code shared by all three games.
+
+## 2026-08-19 — CPZ2 seg10's 5554-7087 art cluster: a DPLC stream question, not an object one
+
+Branch `bugfix/ai-s2-seg10-art-r1` off `origin/develop` (`5a655bc9c`).
+Fixture-and-report analysis; no code written, nothing landed.
+
+### Shape of the cluster
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` is 2491 errors, and they split
+cleanly: 10 at frames 52-96 (`queue.s2_nemesis_plc.*`), 59 at 1725-1733 (the push
+work, now closed as known-discrepancy 28), and **2422 from 5554 onward**. All but
+three of the 2422 are `dynamic_art.*`; the exceptions are the
+`player_mapping_frame` windows at 6601-7087.
+
+Raw error count is the wrong measure here, for the reason recorded earlier on this
+thread: one wrong edge shifts every later `edge_ordinal` and `transfer_id`, so the
+errors are a multiplier on a much smaller number of real events. The measure that
+means something is **edge-ordinal drift**, which is cumulative engine edges minus
+cumulative ROM edges.
+
+### Drift, and why it is not "an extra edge"
+
+    f1726   -1     (the push cluster: engine emits one edge fewer)
+    f5554   +1     onset: edges exp [8095] act [8095, 8096]
+    f5559   +2
+    f5564   +5
+    f5565   +7
+    f5573   +4     <- steps up, then HOLDS
+    ...            oscillating +4/+5 for ~700 frames, through f6241
+    f6605   +11 -> +42 by f6657      first ramp
+    f6724   +5                        reset: ROM catches up
+    f6738   +5 -> +59 by f6944        second ramp
+    f7006   -1
+    f7057   -46 / f7060  -45          engine ends the segment 45 edges BEHIND
+
+Three regimes, and the answer to "extra edge, missing edge, or shifted ordinal" is
+**all three, in different sub-windows**:
+
+- a single extra engine edge at 5554, which within ten frames becomes a **stable
+  phase offset of +4/+5** that then tracks the ROM's rate for ~700 frames;
+- two **ramps** where the engine runs ahead, each followed by a reset back toward
+  +5 as the ROM catches up -- so the engine is emitting real work early, not
+  inventing work;
+- a large **negative** excursion at the end, the engine finishing 45 edges behind.
+
+A run-ahead followed by a catch-up is a service-rate/ordering signature, not a
+spurious-generation one. And the ROM's own rate is wildly non-uniform across this
+window -- per 100 frames it goes 92, 93, 54, 35, 32, 108, 128, 191, 143, 81, 164,
+**363**, 97, 114, 59, 149, 154 -- so drift excursions must be read against that
+profile and not against an assumed constant rate. The first ramp begins right at
+the 363-edge burst.
+
+### Three concurrent owners, and the onset is an interleaving error
+
+The recorded stream carries **three** owners, not two: `tails` 5147 edges, `sonic`
+3849, `tails-tails` 1015. At the onset frame 5564 the comparator reports
+`edge[0].owner` expected `sonic`, actual `tails-tails`, alongside
+`request_count` 4 against 1 and a completely different `rom_source_address`,
+`source_tile_index` and `vram_destination`. The engine is not emitting a corrupted
+version of the ROM's edge; it is emitting **a different stream's edge in that
+slot**.
+
+### Verdict, flagged early as asked
+
+**This is a DPLC stream ordering and service-rate question, not an object one.**
+Nothing in the evidence points at object lifetime, placement or contact. It is a
+different subsystem from everything on this thread so far and plausibly a
+different lane; the `plc-system` skill and the queue/dynamic-art triage section of
+`trace-replay-bug-fixing` are the right entry points, not the object references.
+
+### One correction to the framing this round was given
+
+The cluster was described as beginning 108 frames before the first Tails animation
+divergence at 5662 and therefore independent of it. The **onset** at 5554 is
+indeed independent -- it precedes 5662 and its first errors are pure
+`dynamic_art`. But the cluster is not wholly independent of the animation work:
+its three non-cascading `player_mapping_frame` windows at 6601-7087 sit inside the
+second ramp, and under the push-pair candidate measured earlier those windows
+change classification. Treat 5554-6600 as independent and 6601-7087 as coupled.
