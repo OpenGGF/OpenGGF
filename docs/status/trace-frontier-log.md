@@ -88180,3 +88180,78 @@ Not investigated, and not blocking the sidekick solid-contact fix that thread
 handed off. Recorded so the negative result is not lost with the lane that found
 it.
 
+
+## 2026-08-19 — Frame 3573 closed: the sloped-landing tail's object_control sign test was missing
+
+Branch `bugfix/ai-s3k-solid-gate-r1` off `origin/develop` (`0b19dccc7`).
+
+### Correction to the handoff: it is the collapsing platform, not the star post
+
+A stack-trace probe on `resolveContactInternal`, gated to a CPU sidekick with
+`isObjectControlled()`, named the second writer directly. All 15 hits in the whole
+chain run are `Sonic3kCollapsingPlatformObjectInstance`, not a star post, and their
+`centreY` sequence 779, 776, 776, 774, 772 ... 759 is exactly the divergence window
+(ROM `y = 0x030B = 779` at frame 3573).
+
+The gate at `ObjectSolidContactController:1188` **is** reached — 16,035 times for an
+object-controlled sidekick in this run. It returns "allow" because the collapsing
+platform declares `allowsObjectControlledSolidContacts() = true`, which in the engine
+opted the object out of *all* object-control gating rather than only the
+bits-0-6 part.
+
+### The ROM gate, and which routine actually owns it
+
+`SolidObject_cont`'s `loc_1DFFE` is not on this path. A sloped top-solid object
+reaches `SolidObjectTopSloped2` -> `SolidObjCheckSloped2`, which never enters
+`SolidObject_cont`. The sign test that owns it is in the shared landing tail
+`loc_1E45A` (`docs/skdisasm/sonic3k.asm:42012-42013`), sitting immediately before
+`move.w d2,y_pos(a1)` at `:42016-42017`, with its reverse-gravity twin at
+`:42060-42061`. The same test exists in S2 `loc_19BA2` (`docs/s2disasm/s2.asm:35651-35652`)
+and S1 `MoveWithPlatform` (`docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm:26-27`), so
+this is a universal correction. All are `tst.b`/`bmi` sign tests, not nonzero tests.
+
+### The change
+
+`SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now defaults to `true`
+with those citations; objects may override to `false` where their own routine
+demonstrably bypasses the shared tail (`AizDrawBridgeObjectInstance` already does,
+for its cutscene override). Six of the eight objects that opt into
+`allowsObjectControlledSolidContacts` already overrode it to `true`; the default was
+the outlier.
+
+### Execution evidence
+
+With the fix, the probe records **zero** `resolveContactInternal` entries for an
+object-controlled sidekick in the whole run — the gate fires.
+
+### Measurements
+
+Command (both worktrees, same base `0b19dccc7`, `target/surefire-reports` cleared
+before each):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+    -Ds1.rom.path=<s1> -Ds2.rom.path=<s2> -Ds3k.rom.path=<s3k> test
+```
+
+| | control | fix |
+|---|---|---|
+| tests run (surefire XML, minus skipped) | 786 | 786 |
+| red classes | 4 | 4 |
+| chain segment 4 `errorCount` | 40,000 | **34,112** |
+| chain segment 4 first non-camera mismatch | frame 3573 `sidekick_y` | **frame 5766 `sidekick_x`** (rom `0x119E`, engine `0x119D`) |
+
+Both-way red-set diff is empty: no new red, none newly green. The three unrelated
+reds keep byte-identical failure text (`TestS1CompleteEmeraldRunChain` syz2 row 70
+`queue.s1_nemesis_plc.remaining_work`; `TestS2CompleteEmeraldRunChain` segment 15
+ownership at BK2 cursor 89191; `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`
+2491 errors, frame 52 `queue.s2_nemesis_plc.busy`). S1 and S2 were measured
+explicitly, not inferred.
+
+`mvn -Pguards test`: 499 / 0. S3K keep-green set (`TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+`TestSonic3kAIZEvents`): 101 / 0.
+
+**New frontier: chain segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`.**
+
+No constant was introduced.

@@ -228,6 +228,31 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The bit-7 object-control gate now defaults to rejecting new solid contacts
+  (`bugfix/ai-s3k-solid-gate-r1`, merged 2026-08-19).** A sidekick in CPU flight carries
+  `object_control = $81`, and the ROM's shared landing tail sign-tests bit 7 immediately before
+  writing the rider's y -- `loc_1E45A` (`skdisasm/sonic3k.asm:42012-42013`, with its reverse-gravity
+  twin at `:42060-42061`), `loc_19BA2` in S2 (`s2disasm/s2.asm:35651-35652`) and `MoveWithPlatform` in
+  S1 (`_incObj/sub MvSonicOnPtfm.asm:26-27`). The engine modelled that exclusion on the touch path but
+  not the solid one, so a second writer moved Tails' y on top of his legitimate CPU step and doubled
+  his vertical catch-up rate. `SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now
+  defaults to **`true`** with all six citations: six of the eight objects opting into
+  `allowsObjectControlledSolidContacts` already overrode it to `true`, so **the default was the
+  outlier**, and `AizDrawBridgeObjectInstance` keeps its documented override to `false`. **Two
+  corrections to the diagnosis it inherited:** the writer is **not** the star post -- a stack-trace
+  probe gated to an object-controlled CPU sidekick records 15 hits in the whole run and all fifteen
+  are `Sonic3kCollapsingPlatformObjectInstance`, whose `centreY` sequence matches the divergence
+  window exactly, and `Sonic3kStarPostObjectInstance` is not even a `SolidObjectProvider`; and
+  `SolidObject_cont`/`loc_1DFFE` is **not** the routine on this path, since a sloped top-solid object
+  runs `SolidObjectTopSloped2` and never enters it. The existing gate at
+  `ObjectSolidContactController:1188` **is** reached, 16,035 times, and returned "allow" because the
+  platform's opt-in disabled *all* object-control gating rather than only the bits-0-6 part. Chain
+  segment 4 falls **40,000 -> 34,112 errors** and its first non-camera mismatch moves from frame 3573
+  `sidekick_y` to frame 5766 `sidekick_x`. Execution verified: with the fix the probe records **zero**
+  contact entries for an object-controlled sidekick. **Untested, not verified:**
+  `MhzMushroomCapObjectInstance` also opts in without the hook, so its behaviour changed too, and no
+  committed fixture exercises an MHZ bit-7 rider.
+
 - **The S3K sidekick's second writer is a checkpoint solid contact the ROM gates out
   (`bugfix/ai-s3k-sidekick-writer-r1`, merged 2026-08-19 -- diagnosis complete, fix deliberately not
   attempted).** The constant is innocent, as the transition shape predicted: `sidekickFlightYStep` is

@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 
+### Fixed
+- Solid objects no longer reposition a player whose `object_control` byte has bit
+  7 set. `SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now
+  defaults to `true`: every shared solid tail in all three ROMs performs the same
+  signed test before writing `y_pos` -- S1 `MoveWithPlatform`
+  (docs/s1disasm/_incObj/sub MvSonicOnPtfm.asm:26-27) and `Solid_Collision`
+  (docs/s1disasm/_incObj/sub SolidObject.asm:183-184), S2 `loc_19BA2`
+  (docs/s2disasm/s2.asm:35651-35652) and `SolidObject_ChkBounds`
+  (docs/s2disasm/s2.asm:35376-35377), S3K `loc_1E45A`
+  (docs/skdisasm/sonic3k.asm:42012-42013, reverse-gravity twin at :42060-42061)
+  and `SolidObject_cont`'s `loc_1DFFE` (docs/skdisasm/sonic3k.asm:41443-41444).
+  These are `tst.b`/`bmi` sign tests, so positive object-control states such as
+  CNZ's `$42` wire cage still pass. Objects that opted into
+  `allowsObjectControlledSolidContacts` previously lost the bit-7 rejection along
+  with the bits-0-6 one; the AIZ collapsing platform was consequently adding a
+  second vertical step to Tails' `object_control = $81` catch-up flight
+  (`Tails_FlySwim_Unknown`, docs/skdisasm/sonic3k.asm:26534), doubling his
+  catch-up rate.
+
 ### Changed
 - `Obj_WaitOffscreen` is now modelled as the one-shot latch the ROM implements
   rather than a per-frame visibility gate, for the S3K Caterkiller Jr and
