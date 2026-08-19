@@ -432,6 +432,7 @@
                                 <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
                                 <include>**/tests/trace/s3k/tailsfullchain/*.java</include>
                                 <include>**/tests/trace/runs/TestS3kTailsFullChainRunChain.java</include>
+                                <include>**/tests/trace/runs/TestS3kTailsFullChainRunChain.java</include>
                             </includes>
                             <!--
                               Companion to the tag gate in -Ptrace-replay. A converted
