@@ -89973,3 +89973,67 @@ nothing is pending at rows 5962/5963 because the submission has not happened yet
 
 **Frontier unchanged: `stage_exit` at bk2 frame 35726, stalled inside `ss_3`. Segment 4
 closed at 292 camera-only errors.**
+## 2026-08-19 -- raw_frame derived from the recorder, and predictions recorded before measuring
+
+Base `0f4188e0e`, S1 `hardware_timing` fixture branch. **Predictions written
+before any fix was attempted, deliberately, so the measurement can disconfirm
+them.**
+
+**What `raw_frame` denotes, derived from the recorder rather than chosen.**
+`S1PlcHardwareTimingObserver.CommitRow` documents itself as committing "the
+edges observed during the advance that produced trace row rawFrame", and
+`S1RunCaptureRunner` calls `CommitHardwareTimingRow()` at the end of
+`AppendLevelRow` **before** `traceFrame++` (`:524-525`), so the stamp is the
+index of the row written from the RAM state sampled after that same advance.
+The arm is observed at `RunPLC` entry during that advance, so **row N's own
+queue sample already reflects the arm**.
+
+Validated against the fixture rather than asserted: for every edge in `ghz2_2`
+(7) and `mz3_2` (10), `raw_frame` equals exactly the row at which the queue
+sample first shows the promoted entry -- 17 of 17, no exceptions.
+
+    ghz2_2  edge raw_frames [69, 101, 108, 2926, 2946, 2958, 3068]
+            promotion rows  [69, 101, 108, 2926, 2946, 2958, 3068]
+
+So an edge stamped N must be admitted such that the closure producing row N's
+compared state performs the promotion.
+
+**Where the engine puts it instead, measured.** In `ghz2_2`:
+
+```
+ADVANCE cursor=106
+ CLAIM ORDINARY_LEVEL / submitArmableHead / tail RUN / prepare() releaseArm=FALSE
+ADVANCE cursor=107          <- row107 samples active=null, matching ROM f107
+ CLAIM LAG                   <- produces row108's state: no tail at all
+ADVANCE cursor=108 skipped=true
+ CLAIM ORDINARY_LEVEL / tail RUN / prepare() releaseArm=TRUE   <- promotes here
+ADVANCE cursor=109          <- row109 shows the promotion; ROM had it at 108
+```
+
+That `releaseArm=false` is one of only **two** in the entire run (73,397 calls),
+so the arm-submitted-this-closure case is genuinely rare and genuinely here. The
+LAG closure that produces row108's state runs no loop tail, so a recorded edge
+stamped 108 has nothing to release into. `mz3_2` differs only because its
+row-shape deferral supplies a tail at the LAG claim via `CONSUME-HELD`.
+
+**ROM basis for treating that as a defect:** `RunPLC` is in `Level_MainLoop`
+(`sonic.asm:3032`), not in the V-blank handler. A lag V-blank takes
+`VBlank_Lag`, services no PLC, and `rte`s back into the same main-loop
+iteration, which still reaches its tail. The engine correctly services no PLC on
+a LAG closure but incorrectly runs no loop tail there either.
+
+**Predictions if that reading is right** -- recorded now, before implementing:
+
+1. `ghz2_2` (segment 3) f109 `remaining_work` rom=11 engine=14 resolves; segment
+   3 returns to **0 errors**.
+2. `mz3_2` (segment 15) **stays green at 0**. Its promotion already lands in the
+   right closure, so an earlier release must not disturb it.
+3. Segment 12 **stays at 37** with its first error unchanged at f593
+   `dynamic_art.edge[0].mapping_frame`. Its remaining errors are not queue-shaped.
+4. `TestS1CompleteEmeraldVisualRun` edges #14-#20 become consumed and it returns
+   to **green 2/2**, which is its state on develop without the fixture.
+5. The `syz2` row 70 structural-bridge failure (`prepared` true/false,
+   `remaining_work` 1/-1) is the same promotion-late shape and **also resolves**.
+
+If segment 3 goes green while anything not in this list moves, the model is
+incomplete even though the count improved.
