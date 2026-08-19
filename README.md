@@ -228,6 +228,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Confirmed: the engine clears `Current_Boss_ID` where the ROM never does, at seven S2 sites
+  (`bugfix/ai-s2-boss-id-r1`, merged 2026-08-19 -- probe and source read, fix scoped not landed).**
+  The byte is now a direct observation rather than a magnitude inference. Hooking the widening
+  instruction -- whose execution *is* the boss-id test -- shows **`WIDEN+40` never executes**, so
+  `Current_Boss_ID` is non-zero on every row, with `d0` a constant `2D58` and `d1` crossing it by
+  exactly two pixels at 6600, which accounts for the whole clamp arithmetically. **The lifetime, read
+  from the ROM before deciding where to change the engine:** `Current_Boss_ID` appears in `s2.asm`
+  only as `move.b #N` from boss-arena setup and as `tst.b` readers -- **zero explicit clears** -- so it
+  resets only via the level-load RAM clear and persists to the end of the act. The engine clears it
+  on defeat at **seven** S2 sites (CPZ, EHZ, HTZ, ARZ, CNZ, OOZ, WFZ). `GameStateManager`'s javadoc
+  says the field is "cleared on every boss defeat", which is **true for S1** -- the Egg Prison clears
+  it, citing `3E Prison Capsule.asm:97` -- and **false for S2**: the doc encodes S1's lifetime as if
+  it were universal. The fix is therefore seven sites rather than one, because a CPZ-only change
+  would be fitting the symptom, and those sites interact with `bossDefeatedFlag` and `screenLocked`,
+  each with its own cited ROM lifetime, on a boundary shared across three games.
+
 - **The arm-scope rule is a correction, not a widening -- the port already says so
   (`bugfix/ai-s1-arm-scope-r1`, merged 2026-08-19 -- design and evidence only, not implemented).**
   Measured before designing: with the pair applied, `HardwareTimingReplayPort.apply` sees
