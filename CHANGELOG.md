@@ -4,6 +4,26 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The Sonic 1 Roller (SYZ, Obj43) no longer despawns off the LEFT edge of the
+  screen. `Roll_Action` does not end at `RememberState`: under `FixBugs = 0` --
+  the branch both S1 builds take (docs/s1disasm/sonic.asm:20) -- it carries an
+  inlined copy of that subroutine which closes with `bgt.w .offscreen`, a
+  SIGNED compare, instead of the `out_of_range` macro's unsigned `bhi`
+  (docs/s1disasm/_incObj/43 Badnik - Roller.asm:63-70, and the disassembly's
+  own note at :58-62; macro at docs/s1disasm/Macros.asm:278-295). A negative
+  distance can never exceed `$280`, so a Roller that has scrolled off the left
+  stays alive and keeps rolling. The engine used the shared unsigned window and
+  deleted it. In the `s1-sonic-complete-withemeralds` SYZ1 segment the Roller
+  spawned at `x=0x710` rolls right while Sonic runs right, leaves the window on
+  the left at `x=0x859`, and -- kept alive by the ROM -- is still rolling when
+  Sonic comes back left, so it runs `Roll_Action_StopAndUnfold` 48px to his
+  left at `x=0x955` and is destroyed there. With the unsigned window the
+  respawned copy unfolded 372px early and Sonic never received the
+  `React_Enemy` `addi.w #$100,obVelY` rebound
+  (docs/s1disasm/_incObj/Sonic ReactToItem.asm:299-309), which is the frame-2218
+  `y_speed` rom `-0x283` engine `-0x383` divergence exactly. Segment 16 of the
+  S1 complete-emerald chain advances from frame 2218 to frame 8396 and drops
+  from 61 to 59 comparator errors.
 - Sonic 1's level-load player transfer now lands on the row the ROM records for
   a mid-run load. A level segment's recording starts at `Level_MainLoop`
   (docs/s1disasm/sonic.asm:2998), after the counted `Level_Delay` /

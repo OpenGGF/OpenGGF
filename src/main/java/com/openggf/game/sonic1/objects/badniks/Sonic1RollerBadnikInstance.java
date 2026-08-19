@@ -494,11 +494,27 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
 
     @Override
     public boolean isPersistent() {
-        // Roll_Action ends at RememberState, whose out_of_range macro deletes the
-        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
-        // window (docs/s1disasm/_incObj/43 Badnik - Roller.asm:56 ->
-        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
-        return !isDestroyed() && isInRange();
+        // Roll_Action does NOT end at RememberState. Under FixBugs = 0 -- the
+        // branch both S1 builds take (docs/s1disasm/sonic.asm:20) -- it carries
+        // an inlined copy of RememberState that closes with `bgt.w .offscreen`
+        // instead of the macro's `bhi`
+        // (docs/s1disasm/_incObj/43 Badnik - Roller.asm:63-70, and the
+        // disassembly's own note at :58-62). That signed compare cannot be
+        // satisfied by a negative distance, so a Roller that has scrolled off
+        // the LEFT edge stays alive and keeps rolling; only the right edge
+        // despawns it. The FixBugs branch (:56) would `bra.w RememberState` and
+        // despawn on both edges.
+        //
+        // The difference is load-bearing, not cosmetic: in the SYZ1 complete-run
+        // trace the Roller that starts at x=0x710 rolls right while Sonic runs
+        // right, leaves the window on the left at x=0x859, and -- because the ROM
+        // keeps it -- is still rolling when Sonic comes back left, so it performs
+        // Roll_Action_StopAndUnfold 48px to his left at x=0x955 and is destroyed
+        // there. With the unsigned window the engine deleted it at 0x859, the
+        // respawned copy unfolded 372px too early, and Sonic never got the
+        // React_Enemy `addi.w #$100,obVelY` rebound
+        // (docs/s1disasm/_incObj/Sonic ReactToItem.asm:299-309).
+        return !isDestroyed() && isInRangeAtSigned(getX());
     }
 
     @Override

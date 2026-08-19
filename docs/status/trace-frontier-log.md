@@ -83218,3 +83218,46 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
 - Correction to the record: `TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay`
   is GREEN at `ad3352ed4`. Its class comment still describes the 12927-error
   state it was landed in and is stale.
+
+## 2026-08-19 — S1 complete-emerald chain, segment 16 (syz1): the Roller's signed despawn
+
+- Command: `mvn -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain
+  -Dsonic1.rom.path=<s1 rom>` in a worktree branched from `develop` at
+  `7b3c27aba`.
+- Before: 4 red axes — syz2 presentation-bridge walk-failure at row 70,
+  segments 12/15 `queue.s1_nemesis_plc.prepared`, and segment 16 at frame
+  2218 `y_speed` rom `-0x283` engine `-0x383` (61 comparator errors).
+- After: 3 red axes at their previous frontiers plus segment 16 advanced to
+  frame 8396, `x` rom `0x1F64` engine `0x1F69` (59 errors). The 2218 axis is
+  closed; the chain still fails overall.
+- Cause: `Roll_Action` does not end at `RememberState`. Under `FixBugs = 0`
+  it carries an inlined copy that closes with `bgt.w .offscreen` — a SIGNED
+  compare — instead of the `out_of_range` macro's `bhi`
+  (`docs/s1disasm/_incObj/43 Badnik - Roller.asm:63-70`, with the
+  disassembly's own note at `:58-62`; macro at `docs/s1disasm/Macros.asm:
+  278-295`). A Roller that scrolls off the LEFT edge therefore cannot
+  despawn. In syz1 the Roller spawned at `x=0x710` rolls right while Sonic
+  runs right, leaves the window on the left at `x=0x859`, and — kept alive by
+  the ROM — is still rolling when Sonic comes back left, so it runs
+  `Roll_Action_StopAndUnfold` 48px to his left at `x=0x955` and is destroyed
+  there. The engine deleted it at `0x859`; the respawned copy unfolded 372px
+  (55 rows) early, so Sonic never received the `React_Enemy`
+  `addi.w #$100,obVelY` rebound
+  (`docs/s1disasm/_incObj/Sonic ReactToItem.asm:299-309`) — exactly the
+  observed 0x100 y_speed delta.
+- Refutation of the round's brief: the syz2 row-70 axis is NOT a
+  "projected vs observed" plumbing bug. Row 70 of `syz2` is a RECORDED LAG
+  FRAME (`aux_state.jsonl` `lag_state` `lagged=true`, `lagcount` 1116→1117 —
+  the only lag frame in the whole PLC span, rows 68-85). On a lag frame
+  `V_int_routine` is already 0, so the V-blank dispatches `VBlank_Lag`
+  (`docs/s1disasm/sonic.asm:711`) which never calls `ProcessPLC_9Tiles`, and
+  the title-card loop completes no iteration, so `RunPLC` does not arm the
+  next entry either (`sonic.asm:1379-1420`, `1431-1441`, `2819`). The whole
+  18-row span reconstructs exactly under "one `ProcessPLC` + one `RunPLC` per
+  completed main-loop iteration" with entry totals 10, 24, 12, 14, 9, 16, 30
+  and a single missing iteration at row 70. The engine is not one row ahead by
+  a projection error; the ROM is one iteration behind by a genuine CPU
+  overrun. Closing it needs BOTH a service delay and an arming delay, and the
+  landed S1 sidecar recorder (`b5f20ec98`) records only the arming edge — so
+  this axis is a strictly LARGER instance of the segments 12/15 wall, not a
+  cheaper one.

@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The SYZ Roller cannot despawn off the left edge, and now does not
+  (`bugfix/ai-s1-syz2-plc-row`, merged 2026-08-19).** `Roll_Action` does not end at
+  `RememberState`: under `FixBugs = 0` (`s1disasm/sonic.asm:20`) it carries an inlined copy closing
+  with `bgt.w .offscreen` -- a **signed** compare -- where the `out_of_range` macro uses unsigned
+  `bhi` (`_incObj/43 Badnik - Roller.asm:63-70`, whose own comment reads *"bgt (signed check)
+  instead of the usual bhi (unsigned check)!"*; macro at `Macros.asm:278-295`). A negative distance
+  can never exceed `$280`, so a Roller off the **left** edge never despawns. Instrumented, not
+  inferred: the SYZ1 Roller spawned at `x=0x710` leaves the window at `x=0x859` and, kept alive by
+  the ROM, is still rolling when Sonic returns leftward, so it unfolds at `x=0x955` where Sonic
+  destroys it. The engine deleted it and the respawned copy unfolded at `x=0x7a3`, 372px and 55 rows
+  early, so Sonic never took `React_Enemy`'s `addi.w #$100,obVelY` -- and `-0x383 + 0x100 = -0x283`
+  is the frame-2218 delta exactly. Segment 16 advances from frame **2218 to 8396**, a 6,178-row
+  gain. **The round also refuted its brief's primary candidate:** the `syz2` row-70 walk-failure is
+  not projected-vs-observed plumbing but a **recorded lag frame** -- the only one in the whole PLC
+  span -- where `VBlank_Lag` (`sonic.asm:711`) skips `ProcessPLC_9Tiles` and the title-card loop
+  completes no iteration, so `RunPLC` never arms either. The span reconstructs exactly under one
+  service plus one arm per completed iteration. That makes it a *larger* instance of the segments
+  12/15 sidecar wall, needing both a service and an arming delay where the landed recorder captures
+  only arming. Verified at 792 tests / 4 red, identical to control.
+
 - **The CPZ pipe-exit spring detaches the character it launches
   (`bugfix/ai-s2-seg15-closure`, merged 2026-08-19).** `loc_296C2` sets
   `status.player.in_air` and then clears `status.player.on_object`
