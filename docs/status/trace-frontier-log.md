@@ -91767,3 +91767,64 @@ on every claimed row including `updateLevelMode`'s five early-return paths.
 
 None, and none were warranted: no engine change was made. The tree is identical to
 `5e4f3530a`.
+
+## 2026-08-20 — S2 stage_exit seam split: design note (no code)
+
+Base `49b38ba69`. **No code written.** This is the shape ruling requested before implementation,
+against the three invariants the previous three attempts died on.
+
+### Site
+
+`LevelIterationAdmissionController.admit`'s `TITLE_CARD` branch, not
+`GameLoopTitleCardLifecycle`. The three refuted variants all tried to correct the release
+row's *phase* from inside the title-card lifecycle, which cannot work because that code does
+not decide whether the level body runs. The admission controller does: it already returns
+`SETUP_ONLY` for a title-card iteration, and `GameLoop.prepareAdmittedIteration` (`:1354`)
+turns that into "this host iteration ends here", so the next host iteration is a fresh one.
+
+**The mechanism already exists in production and is not new for this change.**
+`admit` (`LevelIterationAdmissionController:41-43`) already converts a title-card control
+release into a non-fall-through iteration via
+`TraceSessionLauncher.claimTitleCardControlReleaseBarrierIfActive()` ->
+`VisualTraceLaunchPhase.claimTitleCardControlRelease()` (`:21-28`). That barrier is one-shot
+and scoped to the visual launch's own initial card. The split generalises the same mechanism
+to every title-card release whose destination is `LEVEL`: the release consumes its iteration,
+and `Level_MainLoop`'s first frame becomes the NEXT host iteration, which claims
+`ORDINARY_LEVEL` and services `Vint_Level`'s `ProcessDPLC2` through the ordinary path.
+
+### The three invariants
+
+| Invariant | How the site satisfies it |
+|---|---|
+| Production-owner continuity | The release row's `frame.claim(LEVEL_TITLE_CARD)` is **unchanged** — nothing is removed. Variant 1 failed because it deleted that claim and with it `dynamicArtLifecycle.serviceProductionVBlank()`. Here the row keeps exactly the owner it has today; only the level body's participation in that row changes. |
+| Exactly one preparation per represented row | The release row claims `LEVEL_TITLE_CARD` and prepares `LEVEL_TITLE_CARD`, both unchanged. The double-prepare of variant 2 arose only because the phases were made to match while the level body still ran on the row; with the body moved off the row there is one claim and one prepare. |
+| A preparation on every claimed row, including `updateLevelMode`'s five early-return paths | Those paths are reached only by rows the level body owns. The release row is no longer such a row, and the following row is an ordinary level row taking the normal `LevelFrameStep.execute` path. Variant 3 failed by leaving an `ORDINARY_LEVEL` claim on a row whose prepare depended on a body that might early-return; that coupling is gone. |
+
+### The 21 refused claims
+
+The split adds no claim, so it cannot assume one succeeds. A release row that finds the token
+already owned — 21 of 94 title-card iterations at cursor 82342, an active blocking fade
+pre-claiming in `latchBeforeFadeUpdate()` — behaves exactly as it does today. The change is
+confined to whether the level body runs on that row.
+
+### The one thing this note cannot settle
+
+`SETUP_ONLY` returns from `prepareAdmittedIteration` **before** `inputHandler.update()` and
+`updateNonGameplayAudio`. That is the same tail omission that damaged the earlier bare
+early-return attempt (segment 2 red at frame 1132 on `sidekick_y`, 47639 errors, `seg2_ehz1`
+losing its only gap edge). The proposed mitigation is to give the release row the tail the
+locked-phase title-card rows already run — `beginAudioFrame` / `advanceAudioFrame` and
+`inputHandler.update()` — rather than a bare return. Whether that is sufficient is a
+measurement, not a derivation, and it is the first thing to check if the split regresses
+segment 2.
+
+One risk is **retired** by evidence rather than argument: the split adds a host iteration, but
+title-card-mode iterations do not advance the shared BK2 cursor. All 94 title-card iterations
+and ~25k probe events at this seam sit at cursor 82342. So the extra iteration cannot consume
+a recorded row, and cannot by itself worsen the segment-16 walk failure (cursor 89602 vs
+offset 89600).
+
+### Controls
+
+Segments 12 and 13 are mandatory and are checked before segment 15's error count is read. A
+split that greens 15 while moving either is wrong.
