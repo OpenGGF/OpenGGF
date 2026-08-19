@@ -153,6 +153,15 @@ half-landed change, and require the blast radius to be measured before anything 
   class runs first; `-Dsurefire.runOrder=alphabetical` reduces but has not eliminated it. When a
   chain class changes its *failure mode* rather than its pass/fail, verify by stashing nothing and
   re-running the **same** worktree with the change reverted, before attributing anything.
+- **"Gate-clean" is not evidence when nothing observes the changed behaviour.** Before treating an
+  empty both-way set-diff as approval to land, ask which committed trace actually compares the
+  field the change moves. A round found that routing S1's results mode through the hardware-timed
+  scan was gate-clean at 790/4 — and withheld it, because **no committed trace compares S1/S2
+  results-screen queue state** except two chains that are already red, so the suite could not have
+  seen the one-row preparation shift the change introduces. Where a change alters shared behaviour
+  in a span no fixture covers, say so and treat the clean gate as *absence of evidence*, not
+  evidence of absence. The honest options are to extend coverage first, or to land it explicitly
+  flagged as unobserved — not to quote the green.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
