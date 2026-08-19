@@ -84305,3 +84305,53 @@ wrong, which is a green for the wrong reason; the recorded status byte is the
 discriminator that rules it out. The open question for the next attempt is why
 the engine raises `pushing` at 1724 while Sonic walks left from a standstill at
 x `0x1EF5`, and that is a wall-sensor question, not an animation one.
+
+## 2026-08-19 — S2 seg10 frame 1724: the false push is an OBJECT contact, not the wall sensor
+
+Diagnosis only; no engine change and no frontier movement. Base `2327368e2`,
+lane `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`.
+
+### The terrain wall sensor is not involved, and is not the thing to fix
+
+The previous entry left "why does the engine raise `pushing` at 1724" open, and
+the natural reading is that `Obj01_CheckWallsOnGround` / `CalcRoomInFront` is
+mismodelled. It is not. Instrumenting `AbstractPlayableSprite.setPushing` to
+capture the caller on every false->true transition shows the frame-1724 set --
+`sonic x=7925 y=1642 gspd=-6`, which is exactly `x 0x1EF5`, `y 0x066A`,
+`g_speed 0xFFFA` -- coming from
+`ObjectSolidContactController.processInlineObjectForPlayer:1849` via
+`ObjectManager.processCompatibilitySolidCheckpoint`, i.e. `contact.pushing()`
+on a **solid object**. The terrain path is never the setter here.
+
+For the record, the terrain path was checked against the ROM before that was
+established, and the two details most likely to be wrong are already right:
+`CalcRoomInFront` probes the projected position `x_pos + x_vel` / `y_pos +
+y_vel` and adds a fixed `+8` to the probe Y when `angle & $38 == 0`
+(docs/s2disasm/s2.asm:43944-43990), and `CollisionSystem
+.describeCalcRoomInFrontProbe` reproduces both, including the `distance >= 0 ->
+no push` gate that `Obj01_CheckWallsOnGround` applies via `tst.w d1 / bpl`
+(s2.asm:36836-36838). Note also that `Obj01_CheckWallsOnGround` opens with a
+`fixBugs` conditional (s2.asm:36818-36826): under the shipped `fixBugs = 0` the
+`.noearlyexit` flat-surface test is absent and the routine runs the
+`angle + $40 / bmi` early exit, which at angle 0 proceeds either way.
+
+### What the ROM says about the objects
+
+The recorded `player_status_byte` is `0x49` for the whole 1724-1731 window, so
+bit 5 `status.player.pushing` is clear on every frame -- the ROM's Sonic is
+pushed by nothing, terrain or object. The fixture's `object_near` rows for
+`sonic` at 1724 place these solids near him: `Obj6B` CPZ square platforms
+(s2.asm:30026) at `x 0x1EF0` in slots 36 and 40, five pixels to his left but
+124 above and 36 below him respectively; `Obj74` invisible solid blocks
+(s2.asm:30037) at `x 0x1F10`, twenty-seven pixels to his *right* while he walks
+left; and an `Obj2D` one-way barrier (s2.asm:29959) at `x 0x1E78`. None is at
+his height on his side of travel, which is consistent with the ROM setting no
+push.
+
+### Next step
+
+Identify which of those instances the engine's `resolveContact` returns
+`pushing()` for, and why -- a solid-object contact-box question, not a
+wall-sensor one. The eight-frame span is explained: nothing re-clears the flag
+until the push script's own timer expires at 1732, so a single wrong contact
+frame is ridden out.
