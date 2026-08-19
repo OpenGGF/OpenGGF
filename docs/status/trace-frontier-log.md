@@ -85909,3 +85909,78 @@ wrong every time it inferred a mechanism instead of reading or measuring it. The
 next step is to read the ROM's animation routine against the controller's
 `frameTick`/`frameIndex` handling for the 5546-5569 window specifically, where
 both sides' inputs are now known to agree.
+
+## 2026-08-19 — reading Tails_Animate_Part2: two eliminations and a weakened premise
+
+Branch `bugfix/ai-s2-obj05-script-r1` off `origin/develop` (`b9f19dc5e`).
+Disassembly read against the controller; no code, nothing landed.
+
+### The same-update selection application is faithful, not a defect
+
+`Tails_Animate_Part2` (docs/s2disasm/s2.asm:41270-41303) sets
+`anim_frame_duration = 0` when `anim != prev_anim` (:41276-41278). Control then
+reaches `subq.b #1,anim_frame_duration(a0) / bpl.s TAnim_Delay` (:41288-41289),
+so the byte goes to **-1**, `bpl` is **not** taken, the duration is reloaded and
+`TAnim_Do2` writes the new script's first frame **in the same update**.
+
+`TailsTailsController` does exactly this: `frameTick = 0` on the change
+(:253), then `remaining = frameTick - 1` is negative so it falls through to the
+reload and the write. **Eliminated.**
+
+This is the claim I declined to make last round from the recorded shape -- that
+the ROM "lets the outgoing script finish". The routine does the opposite. Reading
+it rather than confirming the shape was the right instruction.
+
+### The scripts and durations match exactly
+
+    Obj05Ani_Swish:  dc.b 7, 9,$A,$B,$C,$D,$FF          (s2.asm:41815)
+    Obj05Ani_Flick:  dc.b 3, 9,$A,$B,$C,$D,$FD,1        (:41817)
+    Obj05Ani_Pushing: dc.b 9,$87,$88,$89,$8A,$FF        (:41830)
+
+against `SWISH_FRAMES_S2 = {9,A,B,C,D}` delay 7, `FLICK_FRAMES_S2 = {9,A,B,C,D}`
+delay 3 ending into Swish, `SKID_PUSH_FRAMES_S2 = {87,88,89,8A}`
+(`TailsTailsController.java`:141-145). Frame lists, durations and the Flick `$FD`
+chain all agree. **Eliminated.**
+
+### A caveat that weakens the previous round's own evidence
+
+**Swish and Flick have identical frame values.** They differ only in duration --
+8 frames per step against 4 -- and in how they end. So "the value sequences match"
+cannot distinguish which script either side is running, and last round's
+identical-sequence finding is weaker evidence than it appeared. It still
+establishes timing-not-value; it does not establish that both sides are in the
+same animation.
+
+### What the hold length now rules in
+
+No single script can hold one mapping frame for the recorded **19** frames: Swish
+holds 8, Flick 4, Pushing 10. And the routine has no path that advances the script
+without writing a frame -- `.display` (:41758) skips only the *selection*, while
+`Tails_Animate_Part2` runs unconditionally once called. So the ROM's Obj05 did not
+**execute** on some of those frames. That is an object-execution-frequency
+question, not an animation-script one, and it is where the next round should start.
+
+### A real coupling, recorded with its disconfirmation
+
+Under `fixBugs = 0` the Obj05 caller forces `d0 = 4` -- `Obj05Ani_Pushing` --
+whenever Tails' push status bit is set (`btst #status.player.pushing,status(a2)`,
+s2.asm:41745-41751). The disassembly's own comment records why that is a bug:
+the bit is set whenever Tails is merely *stood next to* something. The engine
+gates the same override on `sprite.getPushing()`
+(`TailsTailsController.java`:399-404).
+
+So **Tails' push flag directly selects the twin-tails animation script**, and that
+is the same flag this thread proved diverges in CPZ2 (known-discrepancy 28). The
+two investigations are coupled through that bit.
+
+It does **not** explain 5546-5593: the recorded mapping frames there are
+`0x09-0x0D`, the Swish/Flick list, not `Pushing`'s `0x87-0x8A`. Recorded here
+because any push-flag divergence elsewhere will surface as a twin-tails art
+divergence, and nobody should have to rediscover the link.
+
+### Blast radius, for whenever a change is proposed
+
+`TailsTailsController` is shared: it carries `ANI_SELECTION_S3K`,
+`SWISH_FRAMES_S3K` and an `isS3k` branch throughout (:149-153, :437-441). S3K's
+sidekick has its own art streams, so a change here is a two-game change even
+though the ROM citations above are S2.

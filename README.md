@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The twin-tails divergence is an object-execution-frequency question, not an animation one
+  (`bugfix/ai-s2-obj05-script-r1`, merged 2026-08-19 -- disassembly read, no code).**
+  `Tails_Animate_Part2` sets `anim_frame_duration = 0` on an animation change
+  (`s2disasm/s2.asm:41276-41278`); `subq.b #1` takes it to **-1**, so `bpl` is not taken, the
+  duration reloads and `TAnim_Do2` writes the new script's first frame **in the same update**. The
+  ROM does **not** let the outgoing script finish, and the engine's same-update selection is
+  therefore faithful -- eliminated. The scripts match exactly too: `Obj05Ani_Swish`,
+  `Obj05Ani_Flick` and `Obj05Ani_Pushing` agree with the controller's frame lists, delays and the
+  Flick -> Swish chain. **The round also weakened its own earlier evidence:** Swish and Flick have
+  *identical frame values*, differing only in duration (8 against 4 per step) and ending, so the
+  matching value sequence never established that both sides were running the same animation --
+  timing-not-value stands, but nothing more. What remains is decisive: **no single script can hold
+  one mapping frame for the recorded 19 frames** -- Swish 8, Flick 4, Pushing 10 -- and the routine
+  has no path that advances without writing a frame, so the ROM's `Obj05` **did not execute** on some
+  of those frames. Recorded as a coupling, with its disconfirmation stated: under `fixBugs = 0` the
+  caller forces `Obj05Ani_Pushing` whenever Tails' push status bit is set (`:41745-41751`), a bit the
+  disassembly notes is set merely by standing next to something -- so any push-flag divergence
+  elsewhere will surface as twin-tails art, though it does **not** explain this window, whose frames
+  are `0x09-0x0D` rather than Pushing's `0x87-0x8A`. `TailsTailsController` is shared with S3K by
+  construction, so any change here is structurally a two-game change.
+
 - **The twin-tails divergence is timing, mid-script, and confined to 15 rows
   (`bugfix/ai-s2-tails-mapframe-r1`, merged 2026-08-19 -- instrumentation written, used and
   reverted).** The mapping-frame **value** sequence is identical on both sides -- 12, 13, 9, 10, 9,
