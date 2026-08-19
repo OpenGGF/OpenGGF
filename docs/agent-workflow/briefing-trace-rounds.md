@@ -239,6 +239,15 @@ half-landed change, and require the blast radius to be measured before anything 
   mismatch was computable at the moment the candidate was proposed. A skill that documents a
   signature tells you the shape and not that your instance matches it, so before adopting one, check
   that the effect it predicts is the size of the effect you have.
+- **A model must predict outside the case that motivated it.** A round derived a structural rule
+  from one segment, where all six of its later gaps matched exactly, and was one step from reporting
+  it as general. That segment was a back-to-back drain of a freshly filled queue, which most
+  segments are not; the rule survived only after testing on nine continuous-drain segments across a
+  28-segment stream, and after restricting the comparison to cases where the quantity means
+  anything. **One segment agreeing with a model is the segment-level form of "a green fixture proves
+  the fixture."** When setting a falsifiability test, require the prediction to hold somewhere other
+  than the case it was derived from — otherwise a model can pass the stated test and still be fitted
+  to its origin.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.

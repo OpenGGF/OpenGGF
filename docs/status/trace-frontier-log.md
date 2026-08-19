@@ -87524,3 +87524,65 @@ checks then the floor; `CollisionSystem` switches on
 What has **not** been compared is the scan itself -- `FindWall` with `a3 = $10`
 and `d6 = 0` against the engine's sensor scan -- and the quadrant value at this
 frame. Naming those as unexamined, not as suspects.
+## 2026-08-19 -- The first service frame after a fresh PLC fill decompresses nothing
+
+Branch `bugfix/ai-s1-rowsconsumed-r1` (continued), based on `develop` at
+`a6f66b8dc`. Analysis of the held fixture's recorded arm stream; **no engine
+change is landed**.
+
+### The ordering, in the form the brief demands
+
+- **ROM:** fill, then **service**, then **arm**. `NewPLC`/`AddPLC` fill the queue
+  before the loop (`docs/s1disasm/sonic.asm:3384-3387`); `ClearPLC` zeroes
+  `v_plc_patternsleft` along with the buffer, because `v_plc_buffer_end` lies
+  past it in RAM (`docs/s1disasm/_Variables.asm:165-177`, `sonic.asm:1363-1370`);
+  `SS_NormalExit` then runs `WaitForVBlank` *before* `RunPLC`
+  (`sonic.asm:3405-3409`). So the first V-blank after a fill finds
+  `patternsleft == 0`, `ProcessPLC_9Tiles` takes its `beq` and returns
+  (`sonic.asm:1431-1433`), and **that frame decompresses nothing**. The arm
+  happens at the loop tail, and real service begins on the *next* frame.
+- **An engine that arms at submission time** does fill, then **arm**, then
+  service — so its first service frame does 9 tiles' work where the ROM's does
+  none. One frame, exactly once per fill.
+
+This predicts the anomaly without reference to the admission cursor: the
+first arm-to-arm gap after a fill is `ceil(patterns/9) + 1`, every later gap in
+a continuous drain is exactly `ceil(patterns/9)`.
+
+### Tested across the whole stream, not one segment
+
+Reverse-mapping all 242 recorded edges to `ArtLoadCues` entries (0 unresolved)
+and differencing each arm-to-arm gap against the preceding entry's
+`ceil(patterns/9)`:
+
+| position | deltas observed |
+|---|---|
+| first arm -> second arm | 1 (x9), 2 (x4), 3, 21 (x12), 22 (x2) -- **never 0** |
+| every later arm -> arm | 0 (x30), 2, 3, 4, 8, 9, 13, ... -- **never 1** |
+
+The complementary absence is the result: a first gap is never exact, and a later
+gap is never off by exactly one. The large deltas are not counter-examples --
+they are transitions where the queue went idle between entries (a level's later
+`AddPLC` arriving thousands of frames after the previous entry drained), so
+`gap - cost` measures dead time rather than decompression. Restricted to
+continuous drains the pattern is clean: **+1 at the first transition after a
+fill, 0 thereafter.**
+
+### Correction to my own reasoning
+
+I first derived this from `ghz2` alone, where all six later gaps match their
+per-entry cost exactly, and was about to report "every subsequent transition
+matches". That generalisation was unsafe: `ghz2` is a back-to-back drain of a
+freshly filled seven-entry queue, which most segments are not, and on the full
+corpus "gap - cost" is meaningless wherever the queue idles. The rule survived
+the wider test, but on 9 continuous-drain segments rather than 1, and only after
+restricting the comparison to the cases where the quantity means anything. One
+segment agreeing with a model is the segment-level form of "a green fixture
+proves the fixture".
+
+### What this does not yet establish
+
+That this one frame is what delays the destination admission. Per the retraction
+above, that link still needs its own single-clock measurement. What is
+established is a structural, listing-derived rule with no constant in it, which
+predicts a quantity measured across 28 segments.

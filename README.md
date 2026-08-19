@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S1 arm-versus-service phase is derived from the listing and holds across 28 segments
+  (`bugfix/ai-s1-rowsconsumed-r1`, merged 2026-08-19 -- investigation only, no constant introduced).**
+  **ROM order is fill, service, arm.** `NewPLC`/`AddPLC` fill the queue before the loop
+  (`s1disasm/sonic.asm:3384-3387`); `ClearPLC` zeroes `v_plc_patternsleft` along with the buffer,
+  because `v_plc_buffer_end` lies *past* it in RAM (`_Variables.asm:165-177`,
+  `sonic.asm:1363-1370`), so the counter is provably 0 at loop entry rather than assumed to be; and
+  `SS_NormalExit` runs `WaitForVBlank` **before** `RunPLC` (`:3405-3409`), so the first V-blank after
+  a fill finds `patternsleft == 0`, `ProcessPLC_9Tiles` takes its `beq` and returns (`:1431-1433`),
+  and **that frame decompresses nothing**. An engine arming at submission time orders it fill, arm,
+  service, so its first service frame does 9 tiles' work where the ROM's does none -- one frame,
+  exactly once per fill. That predicts a quantity with **no reference to the admission cursor**: the
+  first arm-to-arm gap after a fill is `ceil(patterns/9) + 1`, every later gap in a continuous drain
+  exactly `ceil(patterns/9)`. Reverse-mapping all 242 edges to `ArtLoadCues` entries with zero
+  unresolved and differencing every gap gives a **complementary absence** -- first gaps are 1 (x9), 2
+  (x4), 3, 21 (x12), 22 (x2) and **never 0**; later gaps are 0 (x30), 2, 3, 4, 8, 9, 13 and **never
+  1**. **Still not established:** that this frame is what delays the destination admission; that link
+  needs its own single-clock measurement and the earlier retraction stands.
+
 - **The wall-probe candidate is killed: the engine already uses the ROM's fixed offset
   (`bugfix/ai-s2-wall-probe-r1`, merged 2026-08-19 -- one read each side, seventh elimination).**
   ROM `CheckRightWallDist_Part2` does `addi.w #$A,d3` -- a **fixed +10, not `x_radius`** -- with
