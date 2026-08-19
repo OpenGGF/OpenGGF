@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A cursor owner already exists, so the S1 ordinal fix is alignment rather than a second counter
+  (`bugfix/ai-s1-ordinal-scope-r1`, merged 2026-08-19 -- survey only, deliberately not implemented).**
+  The pre-implementation question is answered: **ordinals are the only shared counter**.
+  `HardwareTimingService.submit` allocates from `nextOrdinals`, one per `HardwareWorkKind`, and that
+  ordinal is part of the handle identity; nothing else counts arms, since `hasSubmitted` is a boolean
+  epoch flag and the port's other `ordinal` references are enum positions or reads of a recorded
+  edge's own ordinal. **But asking it turned up something that changes the design.**
+  `RecordedCompletionAuthority.advanceOrdinalCursorAcrossRecordedSpan` is already called from the
+  port for interstitial spans (`HardwareTimingReplayPort:322`) -- the **mirror-image** case, where
+  *recorded* ordinals belong to a span the engine never submits into and the cursor must skip so the
+  next engine handle lands on the recording's axis. Its guard states the invariant that governs this
+  case too: *"The cursor is the allocator for the next handle. Moving it while production still holds
+  an unclaimed one would leave that handle numbered on the old axis with no completion able to reach
+  it, which is the silent desync this whole path exists to prevent."* So the codebase already treats
+  "the two axes must not drift" as the property to protect and already has an owner for adjusting it,
+  and **the parallel-counter design this round was drifting toward would have been the wrong shape**
+  -- a second axis beside the mechanism built to make them meet. Two things remain unmeasured and
+  decide the implementation: whether an unrepresented submission can carry identity **without**
+  consuming `nextOrdinals`, given the ordinal is part of the handle and used for lookup; and whether
+  the pending-submissions guard fires on the reconciliation path, since the natively released arm is
+  *claimed* rather than pending by then.
+
 - **S2 bosses no longer clear `Current_Boss_ID`, because the ROM never does
   (`bugfix/ai-s2-boss-id-fix-r1`, merged 2026-08-19).** Seven S2 boss classes -- CPZ, EHZ, HTZ, ARZ,
   CNZ, OOZ and WFZ -- drop `setCurrentBossId(0)`, each replaced by a comment citing the ROM's

@@ -88979,3 +88979,61 @@ earlier, independent onset takes over.
 With the tail's own cause removed, the first non-cascading animation error is
 back to **1725-1732 `player_mapping_frame`** -- the CPZ2 push gate, known
 discrepancy 28, which is where this whole line of work started.
+## 2026-08-19 -- Before scoping allocation: ordinals are the only counter, and a cursor mechanism already exists
+
+Branch `bugfix/ai-s1-ordinal-scope-r1`, based on `develop` at `ed1fbfe5f`.
+**Pre-implementation survey only -- no change made.** The brief asked for this
+to be established first, and it changes the design enough to be worth reporting
+before writing code.
+
+### Ordinals are the only shared numbering
+
+`HardwareTimingService.submit` (`:49-64`) allocates from `nextOrdinals`, one
+counter per `HardwareWorkKind`, and that ordinal becomes part of the handle's
+identity. Nothing else counts arms: `hasSubmitted` is a boolean epoch flag, not
+a counter, and the port's other `ordinal` references are either
+`HardwareServiceBoundary.ordinal()` (enum position, unrelated) or reads of a
+recorded edge's own ordinal. So the answer to the brief's question is yes --
+one counter, and it is the identity allocator.
+
+### But a cursor mechanism already exists, and it points the other way
+
+`RecordedCompletionAuthority.advanceOrdinalCursorAcrossRecordedSpan` is called
+from the port when a schedule is installed with **interstitial spans**
+(`HardwareTimingReplayPort:322`). It exists for the mirror-image case: recorded
+ordinals that belong to a span the engine never submits into, where the cursor
+must skip forward so the engine's next handle is numbered on the recording's
+axis.
+
+Its own guard states the invariant that governs my case too (`:511-521`):
+
+> *"The cursor is the allocator for the next handle. Moving it while production
+> still holds an unclaimed one would leave that handle numbered on the old axis
+> with no completion able to reach it, which is the silent desync this whole
+> path exists to prevent."*
+
+So the codebase already treats "the two axes must not drift" as the property to
+protect, and already has an owner for adjusting the cursor. **A parallel
+counter for unrepresented work would be the wrong shape** -- it would create a
+second axis rather than keep the one axis aligned, and it would sit outside the
+mechanism that exists to keep them meeting.
+
+### What that implies for the design, and what still needs deciding
+
+The engine's natively released arm consumed ordinal 14 on the recorded axis,
+so every later engine handle is numbered one ahead -- measured as engine
+ordinal 15 carrying the fingerprint the recording numbers 14. The fix must
+either not consume a recorded-axis ordinal for such work, or reconcile the
+cursor afterwards through the existing owner.
+
+Two things I have **not** established, and they decide which:
+
+1. Whether an unrepresented submission can be given identity without consuming
+   `nextOrdinals`, given the ordinal is part of `HardwareWorkHandle` and used
+   for lookup. Uniqueness must hold without a second axis.
+2. Whether the `:511-521` pending-submissions guard would fire on the
+   reconciliation path. The natively released arm is claimed rather than
+   pending by then, but that needs measuring, not assuming.
+
+Neither is guessed here. This entry exists so the next round starts from the
+mechanism that already owns the problem rather than inventing one beside it.

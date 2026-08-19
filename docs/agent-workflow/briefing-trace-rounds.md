@@ -313,6 +313,13 @@ half-landed change, and require the blast radius to be measured before anything 
   explaining". Without it the round would have read `AddPLC`, seen it agree with the engine, and
   stopped. This does work no falsifiability test does: it binds the *agreeable* branch as well as the
   disagreeable one.
+- **Survey the mechanism, not just the thing you plan to change.** A brief asked whether a counter
+  had a second instance elsewhere -- a sensible pre-implementation check. Asking it surfaced
+  something larger: an owner for adjusting that counter already existed, handling the mirror-image
+  case, with a guard stating the very invariant the new work needed to preserve. The planned design
+  would have added a second axis beside the mechanism built to make the axes meet. "What else does
+  this?" is a narrower question than "what already owns this?", and only the second finds a
+  collaborator you were about to duplicate.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
