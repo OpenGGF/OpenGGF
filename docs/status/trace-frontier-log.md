@@ -91590,3 +91590,102 @@ second, independent discrepancy at the same seam and was not addressed.
 
 None. All three variants aborted the target chain early, so no red-set comparison was
 meaningful and no suite sweep was run. The tree is identical to `e51c6e7e5`.
+## 2026-08-20 — Segment 6 frame 150: slot 05 clears slot 08's standing bit before slot 08 can read it
+
+Branch `bugfix/ai-s3k-seg6-sidekick-r1` rebased onto `e51c6e7e5`. Diagnosis only;
+nothing landed, probes were throwaway and are removed.
+
+### Two hypotheses killed, one of them my own
+
+The handoff proposed that `loc_205A6`'s mask might test only the P1 standing bit. It does
+not: `standing_mask = p1_standing|p2_standing` (`docs/skdisasm/sonic3k.constants.asm:147`,
+bits 3 and 4), so a P2-only bit satisfies it. Dead on a one-line read.
+
+And the previous entry's *"slot 08 does not fragment through f165"* was an artefact of a
+window truncated at 165. It fragments at **f176**. Retracted.
+
+### The asymmetry is real, across the whole corpus
+
+Every collapsing platform in every committed S3K fixture, first standing bit to
+fragmentation:
+
+| landings | bits | delta |
+|---|---|---|
+| 19 | `0x08` (P1) | 9 |
+| 1 | `0x08` (P1) | 10 (a lag frame) |
+| **1** — `aiz_4` slot 08 | **`0x10` (P2 only)** | **35** |
+
+### The countdown is textbook; the trigger never latches
+
+A BizHawk PC-execute hook on `loc_20594` entry (address `0x020594`), reading slot 08's
+`$38`, `$3A` and `status` directly:
+
+```
+trace=141..167   $38=07 $3A=00 status=80    <- bit CLEAR at routine entry
+trace=168        $38=07 $3A=00 status=90    <- first entry that sees it set
+trace=169        $38=07 $3A=01 status=90    <- $3A set, no decrement (the known latency)
+trace=170..176   $38=06,05,04,03,02,01,00   -> CreateFragments at 176
+```
+
+So the countdown behaves exactly as the previous round established, once it starts. The
+whole 26-frame gap is that `loc_205A6` reads the standing bit **clear** from f141 to f167,
+while the recorder's V-blank sample reads it **set** across the same frames. Both are reads
+of the same byte at different points in the frame.
+
+### The two writers, named
+
+A write hook on the status byte, logging `a0` and `a1`, gives exactly two writes per frame:
+
+```
+f=35868 trace=142 pc=0001E4A0 status=90 a0=B172 a0slot=5 a1=B04A   <- CLEAR
+f=35868 trace=142 pc=0001E4C0 status=80 a0=B250 a0slot=8 a1=B04A   <- SET
+```
+
+Both are `RideObject_SetRide` (`docs/skdisasm/sonic3k.asm:42027-42046`), both with
+`a1 = 0xB04A` = `Player_2`. **Slot 05 -- the first platform, fragmented at f119 and sitting
+in its post-fragment `loc_205DE` solid-stay state, which still calls
+`SolidObjectTopSloped2` -- runs first because it is the lower slot, and executes
+`bclr d6,status(a3)` with `a3` = Tails' `interact` = slot 08, clearing slot 08's standing
+bit. Slot 08 then runs, re-seats Tails, and re-sets it.** Slot 08's own `loc_20594`
+therefore always reads the bit clear at entry, and its trigger cannot latch until slot 05
+stops being solid -- which is what happens at f168.
+
+Every observation reconciles, including the 35 that looked anomalous against nineteen 9s.
+
+### The general rule
+
+**A player rides exactly one object, and `RideObject_SetRide` enforces that by clearing the
+PREVIOUS object's standing bit on re-seat (`btst #Status_OnObj,status(a1)` ->
+`movea.w interact(a1),a3` -> `bclr d6,status(a3)`, :42027-42031). Where two solid objects
+overlap the same character, the lower-slot one wins the read the higher-slot one depends
+on.** A per-object standing flag that does not share this single-rider invariant will latch
+triggers the ROM never latches. This generalises well past collapsing platforms.
+
+### Stated as inference, not measurement
+
+That the engine latches slot 08 at f142 and fragments at f150. The evidence is
+circumstantial but strong: 141 + 9 = 150 is exactly the divergence frame, and 9 is the
+delta the landed trigger-latency fix produces. It was not probed on the engine side.
+
+### The second question, and where the line is
+
+The recorded `sidekick_y` descent `0x046A -> 0x0469` (f145) `-> 0x0468` (f148) tracks
+`sidekick_x` `0x18AA -> 0x189B` as Tails decelerates leftward along the slope, so it is
+ordinary per-pixel slope sampling and needs no separate explanation. The engine holding y
+is most simply explained by its platform having already fragmented at f150. Plausibly one
+defect, **not proven**; an engine-side probe settles it and belongs in the fix round.
+
+### Method notes, reusable
+
+- **BizHawk write hooks take SYSTEM-BUS addresses** (`0xFFB27A`), while `mainmemory.read_*`
+  inside the callback takes RAM-relative (`0xB27A`). A correct-looking write probe returned
+  **zero events** until this was fixed -- an empty probe beside a phenomenon known to occur
+  is the same tell as an empty histogram beside a non-zero error count.
+- `event.onmemorywrite` reports the PC of the **next** instruction and the callback reads
+  the **pre-write** value. Both writers above were identified by pairing that offset with
+  the `a0` register rather than by trusting the PC alone.
+- **Worktrees symlink only `docs/*disasm`, not `docs/BizHawk-2.11-linux-x64`**, and
+  `BIZHAWK_HOME` must point at a **writable** tree because the launcher generates config
+  into it. Copy the 175 MB tree into an `agent-scratch` task directory and set
+  `BIZHAWK_HOME` to that; do not point it at the primary checkout, which another session
+  may be using.

@@ -3127,3 +3127,49 @@ the pair, plus the timer, restored 292 exactly. Two wrongs that cancel come out 
 **Originating commit.** `<pending: S3K collapsing-platform trigger latency>` -- AIZ act 2
 (`aiz_4`, chain segment 6), where the ROM seats Tails on the platform at frame 118 on the
 dispatch the engine had already fragmented. Frontier f118 `sidekick_y` -> f150.
+
+## A player rides exactly one object, and re-seating clears the previous object's standing bit
+
+`RideObject_SetRide` (`docs/skdisasm/sonic3k.asm:42027-42046`) is the tail every top-solid
+landing goes through, and it opens by *un-seating* the player from whatever they were on:
+
+```
+RideObject_SetRide:
+        btst    #Status_OnObj,status(a1)
+        beq.s   loc_1E4A0
+        movea.w interact(a1),a3
+        bclr    d6,status(a3)          ; clear the PREVIOUS object's standing bit
+loc_1E4A0:
+        move.w  a0,interact(a1)
+        ...
+        bset    d6,status(a0)          ; set THIS object's standing bit
+```
+
+So an object's own standing bit is not private state it can rely on across frames. Any
+other solid object that seats the same character clears it. And because objects run in slot
+order, **the lower-slot object wins the read the higher-slot object depends on**: where two
+solids overlap one character, the lower slot clears the higher slot's bit every frame,
+before the higher slot's routine gets to read it.
+
+Measured instance: AIZ act 2 has two collapsing platforms whose spans overlap Tails. Slot 05
+has already fragmented and sits in `loc_205DE`, which still calls `SolidObjectTopSloped2`;
+slot 08 is intact. Per frame, slot 05 clears slot 08's bit and slot 08 re-sets it. A
+V-blank sample therefore shows slot 08's bit **set** for 35 straight frames while slot 08's
+own `loc_20594` reads it **clear** on every one of those entries, so its `$3A` trigger never
+latches and its `$38` countdown never starts. Slot 08 fragments 35 dispatches after Tails
+lands; nineteen P1 landings elsewhere in the corpus fragment after 9.
+
+Two things to take from it when implementing any S3K object that reads its own standing bit:
+
+- **Do not model the standing bit as per-object state the object controls.** It is one
+  shared "who is this character riding" relation, and the object's bit is a projection of
+  it. An engine that gives each object an independent flag will latch triggers the ROM never
+  latches — and the symptom appears in the *other* object, frames later.
+- **A V-blank-sampled fixture cannot see this.** The recorder samples after every object has
+  run, so it records the last writer's value. Only a routine-entry read shows what the
+  object's own code saw. When a recorded bit and an object's behaviour disagree, suspect
+  intra-frame ordering before suspecting the object.
+
+**Originating commit.** `<pending: S3K single-rider standing-bit invariant>` — S3K
+complete-emeralds chain segment 6, frame 150. See `docs/status/trace-frontier-log.md`,
+2026-08-20, for the PC-execute and write-hook probe output naming both writers.
