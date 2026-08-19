@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The Marble Zone glass pillar uses its ROM `obActWid` for edge balancing.**
+  `Sonic_Balance` reads the stood-on object's SST width byte, and `Glass_Main`
+  sets `#64/2` for the pillar, overwriting it with `#32/2` only for the
+  reflection child. The engine's pillar inherited the 16px default, which shifted
+  the balance window by 16 and started the balancing animation where the ROM
+  stands idle. Closes 37 of segment 12's 40 comparator errors on the S1
+  complete-emeralds run.
+
+### Fixed
 - **A dropped hardware-timing edge now reports what production actually holds.**
   The diagnostic asserted "the engine submitted no matching work", which the
   replay port never checks and which was measured false — on the S1

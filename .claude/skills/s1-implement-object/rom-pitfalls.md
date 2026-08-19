@@ -601,3 +601,43 @@ move-lock setter; keep any launch marker free of input semantics.
 `docs/s1disasm/_incObj/41 Springs.asm:144`.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.
+
+## P32 -- An object's ROM `obActWid` is not its rendered footprint, and Sonic_Balance reads the ROM one
+
+**Symptom.** The player plays the *balancing* animation while standing on an
+object, where the ROM stands idle. It reports as an animation mismatch, not a
+position one: `player_animation_id` `0x06` (`id_Balance`) against `0x05`
+(`id_Wait`), and `player_mapping_frame` `0x3A` (`fr_Balance1`) against `0x01`
+(`fr_Stand`). Position and riding state look perfectly correct on both sides,
+which is what makes it confusing -- the recorded `player_x` and
+`player_stand_on_obj` match the engine exactly.
+
+**Root cause.** `Sonic_Balance` computes
+`d1 = obActWid(a1) + obX(a0) - obX(a1)` and balances when `d1 < 4` or
+`d1 >= 2*obActWid - 4`. `obActWid` is the stood-on object's own SST width byte,
+which is frequently NOT the rendered sprite footprint and is NOT the
+(possibly extended) SolidObject X-check width. An engine object that inherits
+the default half-width instead of overriding it shifts the whole balance window
+by the difference, so a player standing anywhere in the object's inner region
+falls below the `#4` left-edge threshold and starts balancing.
+
+**Correct pattern.** Override `getBalanceWidthPixels()` with the value the ROM
+writes to `obActWid` for that object, and read the ROM carefully when one
+routine sets it more than once -- a spawner often sets the parent's width and
+then overwrites it for a child. In the MZ glass block, `Glass_Main` writes
+`#64/2` for the pillar and only afterwards `#32/2` for the reflection child, so
+the pillar is 32 and the shine is 16.
+
+**How to spot it.** Compare the engine's `d1` against the ROM's before assuming
+a position bug. If `player_x` and `player_stand_on_obj` both match the
+recording, the width is the only remaining input.
+
+**ROM citation.** `docs/s1disasm/_incObj/01 Sonic.asm:425-433` (the balance
+window); `docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm:78,84` (the
+pillar/shine widths). Cross-game: the same pattern is already documented in
+`PlayableSpriteMovement` for the S2 CPZ/WFZ moving platform Obj19, whose
+subtype `width_pixels` is `$20`/`$18`/`$40`, and for SmashableGround
+(`docs/s2disasm/s2.asm:48703-48705`) whose balance width is `$10` while its
+SolidObject width is `$1B`.
+
+**Originating commit.** MZ glass pillar balance width (this change).

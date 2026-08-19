@@ -474,6 +474,26 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
         // loc_B5EA: glass_dist is current value
     }
 
+    /**
+     * The pillar's SST {@code obActWid}, which {@code Sonic_Balance} reads.
+     *
+     * <p>{@code Glass_Main} sets {@code move.b #64/2,obActWid(a1)} for the
+     * pillar and only then overwrites it with {@code #32/2} for the reflection
+     * child (docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm:78,84).
+     * The shine is a separate instance here, so this class is always the
+     * pillar and always the wider value.
+     *
+     * <p>Without the override the inherited 16 makes the balance test
+     * {@code d1 = player_x + width - object_x} read 22px lower than the ROM's,
+     * which puts a player standing anywhere in the pillar's left half below the
+     * {@code #4} left-edge threshold and starts the balancing animation where
+     * the ROM stands still (_incObj/01 Sonic.asm:425-433).
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return 64 / 2;
+    }
+
     // --- Helpers ---
 
     /**
