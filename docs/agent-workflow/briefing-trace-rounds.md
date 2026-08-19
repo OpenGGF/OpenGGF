@@ -181,6 +181,14 @@ half-landed change, and require the blast radius to be measured before anything 
   plus a hit on a hook you know fires; for engine instrumentation, a line that prints
   unconditionally. This is the same shape as the recorded-stream trap: **absence is only evidence
   once you have shown the thing that would have reported presence was working.**
+- **A tidy number is not evidence for the model that produced it.** A round measured an object
+  pass ending 21 slots early, observed that `21 x $40 = $540` exactly, and concluded the loop
+  counter had been "consumed a whole number of extra times" rather than overwritten. The arithmetic
+  was true and the mechanism was wrong: the counter is written absolutely with the constant `$5D`,
+  which merely happens to look like a plausible count. The clean factorisation made the wrong model
+  feel confirmed, and it was adopted into the record and into the reviewer's vocabulary before the
+  disassembly was read. When a number factors neatly, check whether a different mechanism produces
+  the same number before treating the factorisation as support.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
