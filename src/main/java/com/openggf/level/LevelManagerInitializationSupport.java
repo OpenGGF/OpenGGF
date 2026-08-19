@@ -41,16 +41,27 @@ final class LevelManagerInitializationSupport {
         objectManager.reset(camera.getX(), persistentRespawnState);
     }
 
+    /**
+     * @param keptRingStatusTable ROM {@code Ring_status_table} preserved across
+     *     a reload the ROM performed with {@code Respawn_table_keep} set, or
+     *     {@code null} for an ordinary load that starts with a clean table.
+     *     Applied immediately after {@link RingManager#reset(int)} -- which is
+     *     the engine's equivalent of {@code sub_EB1A}'s wipe -- and before any
+     *     ring can be drawn or touched.
+     * @see com.openggf.level.LevelTransitionCoordinator#bigRingReturnRingStatusTable()
+     */
     static RingManager initializeRings(
             LevelManager levelManager,
-            Level level,
             TouchResponseTable touchResponseTable,
             AudioManager audioManager,
             Camera camera,
-            GraphicsManager graphicsManager) {
+            GraphicsManager graphicsManager,
+            long[] keptRingStatusTable) {
+        Level level = levelManager.getCurrentLevel();
         RingManager rings = new RingManager(
                 level.getRings(), level.getRingSpriteSheet(), levelManager, touchResponseTable, audioManager);
         rings.reset(camera.getX());
+        rings.restoreRingStatusTable(keptRingStatusTable);
         rings.ensurePatternsCached(graphicsManager, level.getPatternCount());
         var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {

@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K keeps the collected-ring set across a `Respawn_table_keep` reload
+  (`bugfix/ai-s3k-seg5-r1`, merged 2026-08-19).** The engine re-collected rings the player had
+  already taken before a giant-ring special stage. ROM `sub_EB1A` -- the rings-manager init reached
+  from `loc_E8BE` (`skdisasm/sonic3k.asm:18232-18238`) -- wipes `Ring_status_table` **only while
+  `Respawn_table_keep` is clear**: `tst.b (Respawn_table_keep).w / bne.s loc_EB30` skips the whole
+  `$400`-byte clear (`:18561-18570`). The giant-ring entry sets that flag at `loc_61892`
+  (`:128407-128412`) and the Super-Emerald entry at `:128421`. Since that is the same ROM byte which
+  already preserves `Object_respawn_table`, the collected-ring set now rides inside
+  `PersistentRespawnState` rather than becoming a second notion of "keep" -- and it is armed on the
+  presence of that snapshot, **not** on `Last_star_post_hit`, which gates the saved-position restore
+  (`Load_Starpost_Settings`, `:61763-61836`) and is cleared by `loc_618AC` while
+  `Respawn_table_keep` stays set, so the two must not share a predicate. **Measured with the restore
+  branch instrumented to prove it executes** -- it fires twice per run (`incoming=14`, then `3`):
+  the three spurious pickups at segment-4 frames 519/528/535 are gone, first collection moves to
+  frame 1637 matching the ROM, segment 4 falls **57,777 -> 44,605 errors**, its first non-camera
+  divergence moves from frame 519 (`rings`) to frame 2729 (`sidekick_y_speed`), and **the chain
+  clears the segment 4 -> 5 handoff**, reaching raw frame 5962 of 6215 inside the third special
+  stage. `LevelManager`'s size ratchet was hit and **not raised**: the restore lives in
+  `LevelManagerInitializationSupport` and the capture in `LevelTransitionCoordinator`, leaving
+  `LevelManager` at net zero growth.
+
 - **The S2 push gate props up a second site of the same conflation, and a third, independent bug
   (`bugfix/ai-s2-pushgate-r1`, merged 2026-08-19 -- one fix landed, the pair sequenced behind an
   audit).** `SolidObject_TestClearPush` gates its `move.w #(Walk<<8)|Run,anim(a1)` restart write on

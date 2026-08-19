@@ -49,6 +49,24 @@ All notable changes to the OpenGGF project are documented in this file.
   prerequisite for correcting the `Solid_NotPushing` / `TestClearPush`
   object-versus-player bit conflation documented in
   docs/status/trace-frontier-log.md.
+- S3K no longer resurrects already-collected rings across a special-stage
+  round trip. ROM `sub_EB1A` -- the rings-manager init reached from `loc_E8BE`
+  (docs/skdisasm/sonic3k.asm:18232-18238) -- wipes `Ring_status_table` only
+  while `Respawn_table_keep` is clear (`tst.b (Respawn_table_keep).w / bne.s
+  loc_EB30`, :18561-18570), and the giant-ring entry sets that flag at
+  `loc_61892` (:128407-128412), as does the Super-Emerald entry at :128421. It
+  is the same byte that preserves `Object_respawn_table`, so the collected-ring
+  set now travels inside the existing `PersistentRespawnState` snapshot rather
+  than forming a second notion of "keep", and is re-established on the return
+  load before any ring can be drawn or touched. It is deliberately not gated on
+  `Last_star_post_hit`, which owns the saved-*position* restore
+  (`Load_Starpost_Settings`, :61763-61836) and is cleared by `loc_618AC` while
+  `Respawn_table_keep` is still set (:128411-128421). In the
+  `s3k-sonic-tails-complete-emeralds` run this removes three spurious ring
+  pickups at the start of the AIZ segment following the second special stage,
+  taking that segment from 57,777 to 44,605 comparison errors and moving its
+  first non-camera divergence from frame 519 to frame 2729; the chain now
+  clears the segment 4 -> 5 handoff it previously aborted on.
 - Sonic 3&K's Tails is no longer parked at the despawn marker for the rest of
   the act when a special stage returns into Angel Island act 2. ROM
   `loc_13A10`, the AIZ1-intro branch of `Tails_CPU_Control`, is guarded twice
