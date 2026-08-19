@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Tails is no longer parked at the despawn marker for the whole of AIZ act 2
+  (`bugfix/ai-s3k-seg4-r3`, merged 2026-08-19).** The chain harness now writes a comparator report
+  when a segment aborts before closure instead of only when it closes, and that change is what
+  found this: segment 4's first-ever report showed **59191 errors with the first non-camera mismatch
+  at frame 0** -- `sidekick_x` rom `0x0220` against engine `0x7F00` -- so Tails sat at the ROM
+  despawn marker for all 5690 rows. The previous round's hand-measurement had tracked only the
+  player, which genuinely does match to row 4856, so every symptom it chased (an 11px divergence at
+  4857, two unrecorded fire hits, a ring scatter, a death and restart) was downstream of a sidekick
+  that was never there. `loc_13A10`, the AIZ1-intro branch of `Tails_CPU_Control`
+  (`skdisasm/sonic3k.asm:26389-26397`), is guarded twice -- `tst.b (Tails_CPU_star_post_flag).w` and
+  `cmpi.w #0,(Current_zone_and_act).w` -- and only past both does it call `sub_13ECA` to warp Tails
+  to `(0x7F00,0)`. Neither was modelled: the engine called `shouldSpawnIntro(0)` with a hardcoded
+  act, so every AIZ act reached the marker, and the star-post test had no counterpart at all.
+  `Tails_CPU_star_post_flag` is written once and read once, by `Tails_Init`'s `move.b
+  (Last_star_post_hit).w,...` (`:26155`), and exists solely to suppress the intro marker on a level
+  entered from a star post or a special-stage return after one -- which is exactly this route, which
+  enters act 2 with `Last_star_post_hit = 3`. Both guards now live at the AIZ zone-event owner.
+  **The unrecorded death-and-restart is gone** and the chain clears segment 4 entirely, stopping at
+  the 4 -> 5 handoff on a non-exportable pending `KOS_MODULE_QUEUE#52`.
+
 - **The S3K chain's segment-4 failure is a real death, and the cause is the AIZ2 miniboss
   (`bugfix/ai-s3k-seg4-r2`, merged 2026-08-19 -- investigation only, no fix).** Probes on
   `LevelManager.loadCurrentLevel` and `AbstractPlayableSprite.applyDeath` name the unrecorded level

@@ -25,6 +25,23 @@ All notable changes to the OpenGGF project are documented in this file.
   two walls that blocked publishing them.
 
 ### Fixed
+- Sonic 3&K's Tails is no longer parked at the despawn marker for the rest of
+  the act when a special stage returns into Angel Island act 2. ROM
+  `loc_13A10`, the AIZ1-intro branch of `Tails_CPU_Control`, is guarded twice
+  (docs/skdisasm/sonic3k.asm:26389-26397): `tst.b (Tails_CPU_star_post_flag).w /
+  bne.w loc_13AF4` and `cmpi.w #0,(Current_zone_and_act).w / bne.s loc_13A32`.
+  Only past both does it call `sub_13ECA` to warp Tails to `(0x7F00, 0)` and set
+  `Tails_CPU_routine = $A` / `object_control = $83`. Neither guard was modelled:
+  the zone/act test was evaluated against a hardcoded act 0 rather than the live
+  `Current_zone_and_act`, and the star-post test had no counterpart at all.
+  `Tails_CPU_star_post_flag` is written exactly once, by `Tails_Init`'s
+  `move.b (Last_star_post_hit).w,(Tails_CPU_star_post_flag).w`
+  (sonic3k.asm:26155), and read exactly once, at that branch -- its whole
+  purpose is to stop the intro marker on a level entered from a star post or the
+  special-stage return that follows one. Both guards are now modelled at the AIZ
+  zone-event owner, so a return into AIZ act 2 keeps Tails beside Sonic exactly
+  as `SpawnLevelMainSprites_SpawnPlayers` placed him
+  (`Player_1 - $20`, `+ 4`, sonic3k.asm:8363-8369).
 - A Sonic 3&K special-stage return no longer re-arms the star post it was
   entered from. The engine's star-post activation mark models the ROM's
   "last checkpoint reached" byte, and that byte is not part of what the return's
