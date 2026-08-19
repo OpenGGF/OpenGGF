@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K sidekick's second writer is a checkpoint solid contact the ROM gates out
+  (`bugfix/ai-s3k-sidekick-writer-r1`, merged 2026-08-19 -- diagnosis complete, fix deliberately not
+  attempted).** The constant is innocent, as the transition shape predicted: `sidekickFlightYStep` is
+  1 for all three games and `updateFlightAutoRecovery` applies it exactly once per dispatch, one
+  dispatch per frame. A stack-trace probe on Tails' `setY` (73 writes in the whole run) names the
+  second writer: `ObjectSolidContactController.resolveContactInternal` via `resolveSlopedContact`,
+  `processInlineObjectForPlayer` and `resolveCheckpointForPlayer` -- **star-post solid contact**,
+  supplying the -2 at the transition and one extra -1 every frame after, on top of the CPU step. That
+  is the two-writers-out-of-phase shape exactly. **The ROM has no such writer:** `SolidObject_cont`
+  reaches `loc_1DFFE` (`skdisasm/sonic3k.asm:41443-41445`) where `tst.b object_control(a1) / bmi`
+  skips the solid interaction outright when bit 7 is set, and `Tails_FlySwim_Unknown` runs with
+  `object_control = $81` (`:26511`, `:26542`). S2 has the identical gate at `SolidObject_ChkBounds`
+  (`s2disasm/s2.asm:35376-35377`), so this is a **universal correction rather than a per-game
+  divergence** -- and the engine already models the exclusion on the *touch* path
+  (`isTouchResponseSuppressedByObjectControl`) but not on the *solid* one. Also answered: the second
+  writer is **not** present throughout -- only 16 of the 73 writes are the contact path and they begin
+  at the transition frame, so it is a writer that switches on. **Two cautions recorded rather than
+  resolved:** the ROM gate is on bit 7 specifically (`tst.b`/`bmi`), so `isObjectControlled()` is not
+  the same predicate; and the failing path enters via `processCompatibilityCheckpoint` and may bypass
+  the existing object-control gate entirely.
+
 - **Same Block, same Chunk: the S2 wall is a Chunk-content disagreement
   (`bugfix/ai-s2-collision-data-r1`, merged 2026-08-19 -- arithmetic and a report re-read).** Position
   is confirmed identical without a filter, per the rule this lane broke earlier: `y` and `y_speed`
