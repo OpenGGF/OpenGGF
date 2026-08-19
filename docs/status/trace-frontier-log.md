@@ -87156,3 +87156,54 @@ Rebasing `bugfix/ai-s1-rerecord-fixture-r1` silently reverts `README.md` and
 `docs/agent-workflow/briefing-trace-rounds.md`, neither touched by the original
 commit. Diff a rebase of that branch against its new base restricted to
 non-fixture paths before trusting it.
+
+### Correction to the entry above: 16 and 17 are not the same measurement
+
+The entry differences "engine, measured: 16" against "ROM span 68..84 = 17
+frames" and treats the remainder as the missing row. That difference is not
+legitimate, and the sign gives it away: if the engine really drained in 16
+frames where the ROM took 17, the engine would reach its exit and admit the
+destination **earlier**, not a row later. The observed slip is in the opposite
+direction to what the subtraction predicts.
+
+The two numbers are on different bases -- the same "name the clock" trap already
+recorded twice in this log:
+
+- **16** counts results-screen `update()` calls that returned early because
+  `SSR_ChkPLC` saw `isBusy()` at the top of the frame.
+- **17** is arm-to-final-completion, derived from recorded arm rows plus a
+  computed tail for the last entry.
+
+Different endpoints, different clocks. They must not be subtracted, and no
+conclusion should rest on their difference.
+
+What survives the correction, because each part is measured or derived on one
+basis:
+
+- The ROM's per-entry cost model is confirmed from the listing.
+  `ProcessPLC`'s loop decrements `v_plc_patternsleft` and branches to
+  `ProcessPLC_ShiftCue` **before** decrementing `v_plc_framepatternsleft`
+  (`docs/s1disasm/sonic.asm:1473-1477`), and `ShiftCue` shifts the list and
+  `rts` (`:1494-1517`), so the rest of that frame's 9-tile budget is discarded.
+  Cost is `sum(ceil(patterns/9))`, not `ceil(sum/9)`.
+- The engine's measured wait equals that model's 16 exactly, so the engine's
+  lost-budget semantics are right.
+- Recorded arm gaps 3, 3, 2, 2, 1, 2 against per-entry costs 2, 3, 2, 2, 1, 2
+  put one unexplained frame at the **first** entry. Both sides of that
+  comparison are in segment rows, so it stands on its own.
+
+**What is no longer claimed:** that this first-entry frame explains the late
+admission. It may be unrelated. The admission slip needs its own measurement,
+on one clock, before anything is attributed to it.
+
+A hypothesis worth testing rather than assuming, with its kill condition:
+`RunPLC` calls `NemDec_BuildCodeTable` before returning
+(`docs/s1disasm/sonic.asm:1399`), and the disassembly's own note on the 9/3-tile
+split says the quantisation exists "because of how slow Nemesis is". If that
+build overruns the tail into the next V-blank, the ROM loses a service frame to
+lag at the first entry only -- sub-frame execution time, not derivable at frame
+granularity, and therefore the case hard rule 3 reserves for the recorded
+sidecar rather than for a derived constant. **Kill condition:** if the same
+extra frame appears at entries whose arms follow a completed entry rather than a
+fresh `NewPLC` fill, the cause is not the code-table build and this explanation
+is wrong.
