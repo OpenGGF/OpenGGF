@@ -84415,3 +84415,70 @@ it is a player/object pass-order question rather than a contact-box one.
 No fix is proposed here: the contact box is the ROM's, and changing it to
 suppress the flush contact would break the object's own recorded
 `p1_pushing` bit, which the ROM does set.
+
+## 2026-08-19 — S2 seg10 1724-1731: the ROM clear sites are enumerated, and none of them fits
+
+Diagnosis only; no engine change, no frontier movement. Base `98f30d544`.
+This round narrows the question and does **not** answer it. Recording the
+eliminations so the next attempt does not repeat them.
+
+### The object's bit is re-evaluated per frame, not set once and left
+
+`object_near` slot 51 (the Obj74) carries `status 0x20` —
+`status.npc.p1_pushing`, s2.constants.asm:229 — on every frame from 1721 to
+1731, and `0x00` from 1732 onward. Frame 1732 is exactly the frame Sonic's
+integer `x` finally moves, `0x1EF5 -> 0x1EF4`. So the object's bit tracks the
+flush contact and is cleared the moment it ends; it is not a stale set.
+
+### Sonic is flush for the whole window, and barely moving
+
+`player_x` is `0x1EF5` for 1721-1731 and `player_x_sub` falls `0xE200` ->
+`0x0A00` across it, so he traverses most of one pixel without the integer
+changing. `SolidObject` compares integer `x_pos` only
+(`d0 = x_pos(a1) - d4 + d1`, s2.asm:35418-35421), so its branch decision is
+constant across the whole window.
+
+### Every ROM clear site, and which can fire
+
+`status.player.pushing` (bit 5, s2.constants.asm:215) is clear on the player for
+all of 1721-1731 — `player_status_byte` is `0x49` throughout. The Sonic-side
+clear sites are:
+
+- **s2.asm:36575** — the standing branch, gated `tst.w inertia(a0) / bne`.
+  Fires only while inertia is zero, so it explains **1721-1723** and nothing
+  after.
+- **s2.asm:38391** — `Sonic_Animate`'s prologue, on an animation-byte change.
+  Fires on **1724** only (Wait `0x05` -> Walk `0x00`).
+- **s2.asm:36886 / :36949** — `Sonic_MoveLeft` / `Sonic_MoveRight`, gated on the
+  `x_flip` bit *changing*. Status `0x49` already has bit 0 set and he keeps
+  walking left, so the `bset` returns non-zero and the clear is skipped.
+- **s2.asm:37374** — the jump path. He never leaves the ground.
+- **s2.asm:38143** — `Sonic_ResetOnFloor`. He never lands.
+- **s2.asm:35487** — `Solid_NotPushing`, reached from
+  `SolidObject_SideAir`/`Solid_NoCollision`.
+
+So for **1725-1731 no Sonic-side clear fires**, and `SolidObject_AtEdge` sets
+the player's bit and the object's together (s2.asm:35439-35446). The recorded
+player bit is nevertheless clear on every one of those frames while the object's
+is set.
+
+### The contradiction, stated precisely
+
+Either the ROM does not reach `SolidObject_AtEdge` in this window at all — in
+which case something other than `SolidObject_AtEdge` is setting the object's
+`p1_pushing`, since that bit is demonstrably live — or it does reach it and a
+clear runs after it that is not in the list above. The integer geometry is
+constant across 1721-1731, so whichever branch of `SolidObject` executes,
+executes identically on all of them; that rules out any explanation which
+requires different branches on different frames of the window.
+
+### Next step: a PC-execute probe, not more frame-granularity reasoning
+
+This is now a mid-frame control-flow question and frame-sampled RAM cannot
+settle it. Hook `SolidObject_LeftRight` (s2.asm:35413), `SolidObject_AtEdge`
+(s2.asm:35438), `Solid_NotPushing` (s2.asm:35484) and `SAnim_Do`'s prologue
+clear (s2.asm:38391), gated to `a1 == MainCharacter` / `a0` = the Obj74 slot and
+to BK2 frames `bk2_frame_offset + 1721..1733`, and record which fires in what
+order per frame. That names the owner directly. See the *BizHawk Live
+Diagnostic Capture* section of the `trace-replay-bug-fixing` skill for the probe
+contract.
