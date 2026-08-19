@@ -83428,3 +83428,44 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   differing member (`TestAudioPresentationProducer` control-only,
   `TestPlaybackDebugManagerOverlayOwnership` tree-only) passes in isolation in
   both trees, so it is the known default-profile flake.
+## 2026-08-19 — S2 aux recorder read `top_solid_bit` from the S3K SST offset
+
+- Context: follow-up to the CPZ2 segment 10 collision-path root cause. The prior
+  round's blocker — "the v5 schema records no `top_solid_bit`, so the collision
+  path is unobservable at segment entry" — is **refuted**. The S2 aux recorder
+  has always emitted `top_solid_bit`/`lrb_solid_bit` on `state_snapshot`; it
+  simply read them from the wrong address.
+- Cause: `S2Ram.OffTopSolidBit`/`OffLrbSolidBit` carried `0x46`/`0x47`, which are
+  S3K's offsets (S3K's player SST is `0x4A` bytes, `S3KRam.cs:174`). S2's slot is
+  `0x40` bytes and defines `top_solid_bit = $3E`, `lrb_solid_bit = $3F`
+  (`s2.constants.asm:70-71`), so `PlayerBase+0x46` == `SidekickBase+0x06` — an
+  out-of-slot read of the sidekick. The installed complete-emeralds fixture
+  therefore records `top_solid_bit` as `0x39` (Sonic) / `0x47` (Tails) and
+  `lrb_solid_bit` as `0xE2` / `0xBA`, none of which are the legal `$0C`/`$0E`
+  and `$0D`/`$0F`. No Java comparator asserts either field, so nothing was ever
+  red; the harness unit test seeded RAM with those same garbage bytes through the
+  constant under test, so it could not disagree with itself.
+- Landed: the two offsets corrected with a citation comment, plus a literal
+  offset pin (`S2Ram pins the solid-bit offsets to the S2 SST layout`) that
+  asserts `0x3E`/`0x3F` as literals and requires both to be below the `0x40`
+  slot stride. Harness suite `--no-gates`: control 599 passed / 11 failed,
+  patched 600 passed / 11 failed — same 11 pre-existing environmental failures
+  (audio observer identity artifacts), one new pass. No `src/main/` change, so
+  the Maven trace sweep was not run.
+- Evidence: scratch recapture of `sonic-2-sonic-tails-complete-emeralds.bk2`
+  (candidate root outside the repo, nothing installed). Entry `state_snapshot`
+  now reads `top_solid_bit=$0C` for `seg8_cpz1` and `seg9_cpz2` and `$0E` for
+  `seg10_cpz2` — the star-post save/restore of `MainCharacter+top_solid_bit`
+  across the special-stage return (`Obj79_SaveData`/`Obj79_LoadData`,
+  `s2.asm:44740`, `:44787`; `Obj01_Init` writes `$C` only when
+  `Last_star_pole_hit` is zero, `:36192-36199`). This confirms the prior round's
+  `$E` from ROM state rather than from a constant fitted to the fixture.
+  Decompressed `physics.csv` payloads for `seg8_cpz1` and `seg10_cpz2` hash
+  identical to the installed fixtures, so the correction is aux-only.
+- Not landed: fixture regeneration. The corrected recorder changes committed aux
+  bytes, so every S2 fixture carrying a `state_snapshot` needs republishing under
+  the harness publication contract with explicit approval of the exact deltas.
+  Until that lands, the seg10 lane cannot seed its entry `top_solid_bit` and
+  stays red by construction.
+- Chain frontier before and after: unchanged — `segment 15 lost production
+  ownership before source closure (romZone=13, act=1, BK2 cursor=83819)`.

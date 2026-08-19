@@ -103,8 +103,13 @@ namespace OpenGGF.BizHawk.Headless
         public const int OffSubtype = 0x28;              // u8 subtype
         public const int OffMoveLock = 0x2E;             // u16be move_lock (S2 delta: S1's is +0x3E)
         public const int OffStandOnObj = 0x3D;           // u8 standonobject (SST index, 0 = none)
-        public const int OffTopSolidBit = 0x46;          // u8 top_solid_bit ($0C/$0E)
-        public const int OffLrbSolidBit = 0x47;          // u8 lrb_solid_bit ($0D/$0F)
+        // S2 delta: S3K's player SST is 0x4A bytes and puts these at +0x46/+0x47,
+        // but S2's is 0x40 bytes and defines top_solid_bit = $3E, lrb_solid_bit
+        // = $3F (s2.constants.asm:70-71). Reading +0x46/+0x47 off PlayerBase
+        // (0xB046) lands inside the *sidekick* slot at SidekickBase+0x06, so the
+        // S3K offsets produce out-of-slot garbage here, not $0C/$0E.
+        public const int OffTopSolidBit = 0x3E;          // u8 top_solid_bit ($0C/$0E)
+        public const int OffLrbSolidBit = 0x3F;          // u8 lrb_solid_bit ($0D/$0F)
 
         // Status flag bits (same layout as S1).
         public const int StatusFacingLeft = 0x01;

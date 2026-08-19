@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 recorder reads its solid bits from S2's own SST layout
+  (`bugfix/ai-s2-top-solid-bit-offset`, merged 2026-08-19).** This round **refuted the premise it
+  was given**. The previous round concluded "the v5 schema records no `top_solid_bit`, so the
+  collision path is unobservable"; in fact the S2 aux recorder has always emitted
+  `top_solid_bit`/`lrb_solid_bit` on its `state_snapshot` event -- it simply read them from the
+  wrong address. `S2Ram.OffTopSolidBit`/`OffLrbSolidBit` carried `0x46`/`0x47`, which are
+  **S3K's** offsets (`S3KRam.cs:174-175`, valid for S3K's `0x4A`-byte player SST). S2's slot is
+  `0x40` bytes and defines `top_solid_bit = $3E`, `lrb_solid_bit = $3F`
+  (`s2disasm/s2.constants.asm:70-71`), so `PlayerBase+0x46` is `SidekickBase+0x06` -- the recorder
+  emitted **out-of-slot bytes from the sidekick**. The installed fixture records `0x39`/`0xE2` and
+  `0x47`/`0xBA`; none are the legal `$0C`/`$0E` or `$0D`/`$0F`. It survived because no Java
+  comparator asserts either field **and** the harness unit test seeded RAM with those exact garbage
+  bytes *through the constant under test* -- a write-then-read round trip that cannot disagree with
+  itself, written from captured output, which the harness README explicitly forbids ("never make a
+  capture certify itself"). The fix corrects both constants and adds a **literal pin** asserting
+  them against the disassembly rather than round-tripping through them. Every other S2 offset was
+  checked and is genuinely S2's, so the copy-paste was isolated to this pair.
+
 - **The AIZ1 cutscene miniboss's touch position is read live
   (`bugfix/ai-s3k-xspeed-signflip`, merged 2026-08-19).** `Obj_AIZMinibossCutscene`'s drop and swing
   routines both end in `MoveWaitTouch` (`skdisasm/sonic3k.asm:136817-136818`, `:136845-136847`),
