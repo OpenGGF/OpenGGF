@@ -84243,3 +84243,65 @@ fight does not play out the same way.
   explicitly and passes, including `TestS3kIcz1SnowboardIntroHeadless`.
   `TestS1S2PlcComparisonOnlyGuard` and `TestBuildToolingGuard` fail identically
   at control and are pre-existing.
+
+## 2026-08-19 — S2 seg10 frame 1725: diagnosis only, the frontier did not move
+
+No engine change and no measured movement; this records a decode so the next
+attempt starts from it. Base `47a56c0d7`, lane
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` (2491 errors, 7088 rows),
+`-Ptrace-replay -Dmse=off`.
+
+### The two error clusters are independent, and the animation one is small
+
+`dynamic_art` errors occupy exactly two clusters, **1725-1733** and
+**5554-7087**. Only about **57** of the 2302 are in the first; the other ~2245
+are in the second. The second begins **108 frames before** the first Tails
+animation divergence at 5662, so it is not caused by the sidekick animation
+either. Closing frame 1725 is therefore worth roughly 2% of the art errors, not
+the bulk. The co-location of the 1725 cluster with the mapping-frame error makes
+the two look like one problem; the frame arithmetic is what separates them.
+
+### Causation runs animation -> art, not art -> animation
+
+At 1725 the ROM carries three edges `[2855, 2856, 2857]` and the engine two; the
+missing one is a **Sonic** edge whose `mapping_frame` is 16, the exact value the
+engine failed to publish, after which every `edge_ordinal` and `transfer_id` in
+the cluster is shifted by one. The ROM dependency is one-way — `Sonic_Animate`
+writes `mapping_frame` (docs/s2disasm/s2.asm:38494-38495) and `LoadSonicDynPLC`
+then reads it to build the DPLC — so art cannot move the mapping frame. Fixing
+the art in this window would be a no-op on the cause.
+
+### The values are adjacent script entries, not a numeric skew
+
+`SonAni_Walk` is `dc.b $FF, $F,$10,$11,$12,$13,$14, $D, $E, $FF`
+(s2.asm:38691); the leading `$FF` is the control flag that selects the walk/run
+special handler, not a duration. So `0x0F` and `0x10` are entries 0 and 1 of the
+same frame list. Read as integers, 15 against 16 suggests a frame-index
+arithmetic bug; read as symbols it is one script step, at an animation
+transition — Sonic leaves animation `0x05` (Wait, mapping `0x01`) at 1723 and
+the ROM publishes `$0F` at 1724 and `$10` at 1725.
+
+### Root cause: the push flag, not the animation code
+
+Probe attribution was **verified, not assumed**: the probe tags each row with the
+sprite's own code and a per-sprite sequence, and its published mapping agrees
+with the fixture on 6592 of 7087 rows, with every one of the 495 disagreements
+falling inside a reported `player_mapping_frame` divergence span (8 rows at
+1725-1732, 487 at 6601-7087). An earlier probe that split the two playables by
+row parity was discarded as unverifiable.
+
+With that attribution, `sprite.getPushing()` is **true for frames 1724-1731**,
+and the recorded `player_status_byte` is `0x49` for the whole window — bit 5,
+`status.player.pushing`, is **clear in the ROM on every one of those frames**.
+The engine raises a push the ROM never has. `PlayableSpriteAnimation
+.updateWalkRun`'s push branch then decrements the timer and returns *without*
+publishing, so `mapping_frame` stays latched at `$0F` for exactly the eight
+frames of the divergence, and the push script publishes `0x49` at 1732 when the
+timer finally expires — after which the walk resumes correctly at 1733.
+
+**The animation code is the victim, not the defect.** Making that branch publish
+the walk mapping anyway would turn this window green while leaving the push flag
+wrong, which is a green for the wrong reason; the recorded status byte is the
+discriminator that rules it out. The open question for the next attempt is why
+the engine raises `pushing` at 1724 while Sonic walks left from a standstill at
+x `0x1EF5`, and that is a wall-sensor question, not an animation one.
