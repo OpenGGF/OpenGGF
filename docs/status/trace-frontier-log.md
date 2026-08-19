@@ -86054,3 +86054,70 @@ Obj05 slot would carry it, and that is the cheapest next step.
 
 No change was proposed, so the two-game blast radius on `TailsTailsController`
 was not exercised.
+
+## 2026-08-19 — probe: Obj05 does not execute for eleven consecutive rows
+
+Branch `bugfix/ai-s2-obj05-probe-r1` off `origin/develop` (`669dbb99a`).
+New probe `tools/bizhawk/probes/s2_cpz2_obj05_exec_probe.lua`; no engine change.
+
+### The answer
+
+`Obj05` executes on **55 of the 66** rows in 5535-5600. The eleven it misses are
+**consecutive**: rows **5554-5564**. Every other row has exactly one
+`Tails_Animate_Part2` entry with `a0 = Obj05`.
+
+The object's own state proves this is an execution gap and not a long delay:
+
+    row 5547  idx=04 dur=07 map=0C
+    row 5548  idx=04 dur=06 map=0C
+    ...
+    row 5553  idx=04 dur=01 map=0C
+    (rows 5554-5564: no entry at all)
+    row 5565  idx=04 dur=00 map=0C  -> ADVANCE, WRITE_MAP
+
+`anim_frame_duration` counts 07, 06, 05, 04, 03, 02, 01 across 5547-5553, does
+**not tick** for eleven rows, then resumes at 00 and advances. The recorded
+19-frame hold is exactly 8 rows of ordinary Swish countdown plus 11 rows of not
+running.
+
+The gate is exact rather than heuristic: `Tails_Tails` is a fixed slot at
+`$FFFFD000` (docs/s2disasm/s2.asm:38944), so `a0` identifies it without an
+object-id test, and `Tails_Animate_Part2` animating the body in the same routine
+can never be miscounted as the tails.
+
+### Attribution, stated rather than assumed
+
+Every recorded `tails-tails` submission in the window has a probe `WRITE_MAP` on
+the same row -- 5546, 5565, 5569, 5573, 5575, five of five. The probe samples
+`mapping_frame` *before* the store, and each pre-store value is the predecessor of
+the recorded one (`0B`->12, `0C`->13, `0D`->9, `09`->10, `0A`->9).
+
+The one probe `WRITE_MAP` with **no** recorded submission is row 5580, where the
+selection switches Swish -> Flick and both scripts' current frame is `09`: the
+value is rewritten unchanged, so `LoadTailsTailsDynPLC`'s `beq` returns without
+submitting. That is the dedup behaving exactly as read, and it is a second,
+independent confirmation that edge-absence does not imply no-change.
+
+### What this does to the previous two rounds
+
+Two rounds ago I concluded the object did not execute. Last round I retracted
+that as over-generalised, because the premise it rested on -- edge-absence
+implying no mapping-frame change -- is genuinely weak, and seven of the eight gaps
+turned out to be ordinary script and selection behaviour.
+
+**The conclusion was true and the retraction was still correct.** The inference
+did not support it; the probe does. Both rounds stand: the retraction was right
+about the reasoning, and the original conclusion is now established by
+measurement rather than by arithmetic over a stream that under-reports.
+
+### The live question, now precisely bounded
+
+Why `ExecuteObjects` does not reach `Obj05` for rows 5554-5564. `Obj05_Main` has
+no gate of its own (established last round), so the cause is outside the object:
+slot occupancy, deletion and respawn, or the object list not being walked that
+far. The engine's controller *did* tick across those rows -- it advanced at 5554
+-- so the engine runs Obj05 where the ROM does not, which is an
+object-execution-lifetime question rather than an animation one.
+
+No engine change was made, so the two-game `TailsTailsController` blast radius
+remains unexercised.
