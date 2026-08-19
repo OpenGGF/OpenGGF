@@ -88385,3 +88385,67 @@ and it decides whether the engine's submission is mistimed or spurious.
 
 **Not claimed:** which of those it is. The `QuickPLC` lead fits, and a fitting
 mechanism has been wrong three times today.
+
+## 2026-08-19 -- The ROM uses AddPLC, and the recorder discards the arm by contract
+
+Branch `bugfix/ai-s1-quickplc-r1`, based on `develop` at `a41fef286`.
+Diagnosis only; **no engine change is landed**. This entry **retracts the
+central claim of `a41fef286`.**
+
+### The narrow question, settled from the listing
+
+`LevelHeaders`' first field is the level's 1st PLC, and GHZ's is `plcid_GHZ`
+(`docs/s1disasm/_inc/LevelHeaders.asm:17-18`). `GM_Level` reads that byte and
+calls **`AddPLC`** (`docs/s1disasm/sonic.asm:2731-2733`), then `AddPLC
+plcid_Main2` (`:2736-2737`).
+
+So the ROM loads the returning level's 461-tile zone art **through the queue**,
+armed by `RunPLC`, exactly as the engine does. It is **not** `QuickPLC`. The
+lead that fit everything was wrong again, and reading the call rather than
+confirming the fit is what settled it.
+
+### Why the entry is absent from the recording, and what that retracts
+
+The previous entry concluded from the fingerprint's absence across all 242 edges
+that *"the engine is arming work the hardware never arms through `RunPLC`"*.
+**That is wrong.** The hardware arms it. The recorder discards it, and says so
+in its own contract:
+
+> *"Binds the observer to one segment's stream. Anything observed before the
+> arm belongs to no row and is discarded, so the level load's own PLC arming
+> never reaches a trace file."*
+> -- `tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83`
+
+The absence is a property of the instrument, not of the ROM. This is the fourth
+member of that family today, and the first where the filtering was documented in
+the source I had already read in an earlier round.
+
+### Where that leaves the position -- stated plainly, because it has moved twice
+
+1. First I proposed the recorded edge arrives too late, and suggested this might
+   mean *"the capture is correct and insufficient"*.
+2. Then I retracted that on the grep, concluding the capture was complete and
+   the engine was at fault.
+3. Now: **the capture is correct and insufficient after all**, for a different
+   and much more precise reason than (1). Not a late edge -- **no edge for a
+   level-load arm can ever exist**, because the recorder's segment contract
+   excludes exactly those arms.
+
+The engine's submission is correct and must not be removed. Neither of the two
+fix shapes the brief offered applies: the submission is not spurious, so
+"stop creating it" is wrong; and it cannot be released from the stream, so
+"release it" is impossible.
+
+### What this decides
+
+Recorded admission must not gate an arm the recorder does not record. A
+level-load arm has no representation in any segment's stream and never will, so
+holding one against recorded readiness is a deadlock by construction --
+precisely what the 214 consecutive `releaseArm` blocks measured. That is a
+statement about the timing port's scope, not about the art pipeline, and it is
+the reason the pair cannot be landed as it stands.
+
+**Not claimed:** how to scope it. Any change here touches the hardware-timing
+port's authority and must be weighed against
+`TestHardwareTimingAuthorityGuard` and hard rule 4 rather than designed from
+this entry alone.
