@@ -85984,3 +85984,73 @@ divergence, and nobody should have to rediscover the link.
 `SWISH_FRAMES_S3K` and an `isS3k` branch throughout (:149-153, :437-441). S3K's
 sidekick has its own art streams, so a change here is a two-game change even
 though the ROM citations above are S2.
+
+## 2026-08-19 — Obj05 execution: no gate exists, and my own "did not execute" was over-generalised
+
+Branch `bugfix/ai-s2-obj05-exec-r1` off `origin/develop` (`6df49c234`).
+Disassembly read plus a re-reading of the recorded gap structure; no code,
+nothing landed. This round **retracts a conclusion from the previous one**.
+
+### `Obj05_Main` has no execution gate
+
+`Obj05` is an ordinary two-routine object (`Obj05_Init`, `Obj05_Main`,
+docs/s2disasm/s2.asm:41697-41707). `Obj05_Main` (:41722) copies the parent's
+angle, status and position, applies the priority bit, runs the selection guard,
+then falls through `.display` to `Tails_Animate_Part2`, `LoadTailsTailsDynPLC`
+and `DisplaySprite` (:41758-41763). There is **no on-screen test, no early
+return, no budget and no display-only path** anywhere in it.
+
+So "why does Obj05 not execute" has no answer inside the object. If it skips, the
+cause is that `ExecuteObjects` did not reach it -- slot, deletion or list
+position -- not anything the object does.
+
+### The gap structure refutes "the object did not execute" as the explanation
+
+Recorded gaps between consecutive `tails-tails` submissions across 5538-5593 are
+
+    8, 19, 4, 4, 2, 9, 1, 8
+
+Gaps of **1 and 2 are shorter than any script duration** -- Swish holds 8, Flick
+4, Pushing 10. They are produced by *selection changes* writing the new script's
+first frame in the same update, and each one lands exactly on a recorded parent
+animation change: 5575 (parent -> 5, Swish, writes 9 immediately) and 5585
+(parent -> 5 again, same). The 4-frame gaps are Flick's duration; the 8-frame
+gaps are Swish's.
+
+So the recording positively confirms last round's reading of
+`Tails_Animate_Part2` -- the same-update first-frame write is real and visible in
+the ROM's own output. **Only the single 19-frame gap at 5546-5565 is anomalous.**
+Last round I generalised from that one gap to "the object did not run"; the other
+seven gaps are all explained by scripts and selections, and that conclusion was
+too broad.
+
+### A caveat that weakens edge-absence as evidence generally
+
+`LoadTailsTailsDynPLC` writes `TailsTails_LastLoadedDPLC` **before** testing
+whether the DPLC is empty:
+
+    move.b  d0,(TailsTails_LastLoadedDPLC).w     ; s2.asm:41641
+    ...
+    subq.w  #1,d5
+    bmi.s   return_1D1FE                         ; :41646-41647
+
+A mapping frame whose DPLC has no entries therefore updates the dedup byte and
+emits **nothing**. So the absence of an edge does not prove the mapping frame did
+not change, and every "held for N frames" reading taken from this stream is a
+lower bound on activity rather than a measurement of it. That applies to the
+19-frame gap as much as to anything else, and it applies retroactively to the
+readings in the previous two entries.
+
+### Where this leaves the 19-frame gap
+
+Unexplained by anything readable. `Obj05_Main` has no gate; the scripts and
+durations match; the same-update selection write is confirmed in the ROM's own
+output; and the parent animation is recorded as changing at 5550, 5559 and 5564
+inside the gap, each of which should have produced either a selection write or a
+script advance. Settling it needs the ROM's per-frame Obj05 `anim`,
+`anim_frame` and `anim_frame_duration`, which the recording does not carry -- an
+`event.onmemoryexecute` probe on `Tails_Animate_Part2` with `a0` gated to the
+Obj05 slot would carry it, and that is the cheapest next step.
+
+No change was proposed, so the two-game blast radius on `TailsTailsController`
+was not exercised.
