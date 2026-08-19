@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Caterkiller regression is a stale touch-pass sample, and the bodies never shifted
+  (`bugfix/ai-s3k-caterkiller-body-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
+  The drag hypothesis is refuted: ROM `Obj_Wait`'s `$34` continuation for a body is
+  `CaterKillerJrBody_SpawnProjectile`, the projectile fire timer, **not** a position-history follow
+  (`skdisasm/sonic3k.asm:177949-177957`, `:183466-183483`), so the only head coupling is the creation
+  frame and the engine reproduces it faithfully. With the one-shot latch applied, the head **and all
+  six segments** match the fixture's own `CaterKillerJrBody` records byte-exact **at shift zero**
+  across the whole third activation -- 196-231 rows each, including row 17028. Nothing is shifted at
+  all. The real defect is in the **touch pass**: at the failing frame the body's live position is
+  `(0x2C71, 0x0586)`, its row-17027 value, but the overlap test is fed `getPreUpdateX/Y` =
+  `(0x2C70, 0x0587)`, its row-**17026** value. ROM `Touch_Loop` dereferences the live SST pointer --
+  the list stores pointers, not snapshots -- so it sees `0x2C71`, and running the ROM's own
+  arithmetic gives `d0 = 0x2C71 - 8 - (0x2C60 - 8) = 17` against `d4 = $10`, so `bhi` skips and there
+  is no touch. The stale sample gives 16 and touches: **a one-pixel miss from a one-pass-stale
+  sample.** `Touch_Sizes[0x17]`, the player box and `isOverlapping` were all checked and are correct.
+  The obvious fix would make the AIZ slice green immediately but is a per-object carve-out; the call
+  site's own comment claims "those pointers still hold frame-start x/y at this phase", and that
+  premise is **false for `spawnChild`-created objects whose update falls after the touch pass** -- so
+  the fix wants to be the phase rule rather than an opt-in.
+
 - **`Obj05` skips eleven consecutive frames, proven by a frozen countdown
   (`bugfix/ai-s2-obj05-probe-r1`, merged 2026-08-19 -- PC-execute probe, no engine change).**
   `tools/bizhawk/probes/s2_cpz2_obj05_exec_probe.lua` shows `Obj05` executing on **55 of 66** rows
