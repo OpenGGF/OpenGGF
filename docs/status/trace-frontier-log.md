@@ -86331,3 +86331,75 @@ Which object consumes the twenty-one iterations. The stopping point is slot 122
 (`$FFCE80`), so the culprit is at or before it; logging the object id per
 iteration on a single gap row identifies it, and the eleven-row stability means
 any one gap row will do.
+
+## 2026-08-19 — the culprit is the CPZ boss, and it IS a clobber (retraction)
+
+Branch `bugfix/ai-s2-execobjects-r1`, continued. No new probe -- the answer was
+already in the `d7` log from the previous entry.
+
+### The object
+
+Finding where `d7` drops by more than one per iteration points at exactly one
+slot, on every gap row and on no other row:
+
+    row 5553 (144 iters)  no jump: d7 descends by exactly 1 every iteration
+    row 5554 (123 iters)  after slot 29  a0=FFB740 d7=0072 -> a0=FFB780 d7=005C
+    row 5560 (123 iters)  after slot 29  a0=FFB740 d7=0072 -> a0=FFB780 d7=005C
+    row 5565 (144 iters)  no jump
+
+Slot 29 holds **`Obj5D`, the CPZ boss** (docs/s2disasm/s2.asm:61449). Its routine
+steps `$0E` -> `$08` at row 5553 and holds `$08` across the whole gap; `$08` is
+`Obj5D_Pipe_Retract` (`Obj5D_Index`, :61472-61484).
+
+### The mechanism, and the disassembly says it outright
+
+`Obj5D_Pipe_Retract_ChkID` under `fixBugs = 0`:
+
+    ; 'd7' should not be used here. This causes the 'RunObjects' routine
+    ; to either run too few objects or too many objects, causing all
+    ; sorts of errors.
+        moveq   #0,d7
+        move.b  #ObjID_CPZBoss,d7
+        cmp.b   id(a1),d7
+
+`ObjID_CPZBoss` is `$5D`. The boss writes **`$5D` into `d7`**, the enclosing
+`RunObjects` loop counter, and the `dbf` at the bottom of the iteration then
+decrements it to `$5C`. That is precisely the measured `0072 -> 005C`.
+
+`$5C` = 92 remaining iterations from slot 30 puts the last slot at 122, six short
+of `LevelOnly_Object_RAM` at `$FFD000`. Every observation closes exactly.
+
+### Retraction: it IS a clobber
+
+Last entry I said `d7` was "consumed a whole number of extra times, not clobbered
+to a wrong value", and corrected the brief's wording on that basis. **That was
+wrong.** It is an absolute overwrite with a constant -- the boss's own object id
+-- and it only *looked* like clean whole-slot arithmetic because `$5D` happens to
+be a plausible-looking count. The observed drop of 22 is `0x72 - 0x5C`, not
+twenty-two decrements.
+
+The correction matters for the engine model, in the opposite direction from the
+way I argued it: the behaviour to reproduce is **"this object writes the dispatch
+loop's remaining count to `$5D`"**, which is more specific and more faithfully
+implementable than either "corruption" or "over-consumption".
+
+### fixBugs = 0 governs
+
+The shipped ROM takes this path; the fixed path uses `cmpi.b #ObjID_CPZBoss,id(a1)`
+and leaves `d7` alone. So the truncation is shipped behaviour, every recorded
+trace carries it, and the engine must reproduce it rather than correct it. The
+ROM authors documented the consequence in the source: *"either run too few
+objects or too many objects, causing all sorts of errors."*
+
+The twin-tails art divergence that started this line of work is one downstream
+symptom of a CPZ boss register bug.
+
+### Still open
+
+- **The full-run sweep.** Whether the truncation recurs outside 5554-5564 and how
+  much of the 2422-error cluster it accounts for. Given the cause is the CPZ boss
+  in its pipe-retract routine, the 6601-7087 sub-cluster is a natural suspect,
+  but that is a prediction and not yet measured.
+- **The engine's dispatch shape.** Reproducing this needs an object loop whose
+  remaining-count is writable by object code. Whether the engine's loop can
+  express that at all is unestablished, and it decides what the change costs.
