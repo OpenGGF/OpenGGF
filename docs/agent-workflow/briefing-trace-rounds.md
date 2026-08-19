@@ -272,6 +272,18 @@ half-landed change, and require the blast radius to be measured before anything 
   is why two implementations reach opposite conclusions from the same inputs: the engine side alone
   yields a value with nothing to compare against, and the ROM side alone yields the same. The cost is
   both, structurally, and a brief that presents it as a choice under-budgets the round.
+- **Test the premise that admits the cheapest disproof, before elaborating a mechanism.** A thread
+  inferred "a character stopped dead at a fixed x means a wall" and spent **nine rounds** eliminating
+  probe offsets, plane selection, solidity bits, quadrant dispatch and collision-data layers — every
+  elimination correct, and all of them inside a subsystem that was never involved, because the
+  layout word at that position is zero and there is no wall. One probe on the layout would have
+  settled it at any point. When a chain of eliminations keeps coming back faithful, suspect the
+  founding inference rather than the next layer: a subsystem that is faithful everywhere you look may
+  be faithful because it is not the one at fault.
+- **A layer list must include the layer above it.** Asking "which Chunk, which Block, which solidity
+  attribute, which height mapping" presupposes something is there. None of those questions can return
+  "the layout is empty", which was the answer. Before enumerating layers, ask whether the thing being
+  layered exists at all.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.

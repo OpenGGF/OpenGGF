@@ -88255,3 +88255,72 @@ explicitly, not inferred.
 **New frontier: chain segment 4 frame 5766, `sidekick_x` rom `0x119E` engine `0x119D`.**
 
 No constant was introduced.
+
+## 2026-08-19 — RETRACTION: there is no terrain wall at 2D62; the ROM's layout is empty
+
+Branch `bugfix/ai-s2-chunk-id-r1` off `origin/develop` (`8c89e477b`).
+New probe `tools/bizhawk/probes/s2_cpz2_chunkid_probe.lua`; no code.
+**This overturns the wall reading three entries have been built on.**
+
+### A naming inversion that has to be stated first
+
+The S2 disassembly calls the **16x16** unit a "block" and the **128x128** unit a
+"chunk". This codebase inverts both -- Chunk is 16x16, Block is 128x128
+(CLAUDE.md). `FindWall`'s `blockID` is therefore this codebase's **Chunk id**.
+Every layer name below is the codebase's.
+
+### The measurement
+
+`FindWall` masks the layout word's low ten bits for the tile id and branches to
+`loc_1E9C2` (no collision) when that id is zero, testing the solidity bit `d5`
+only afterwards. Hooking both exits at row 6600:
+
+    row 6600  NOCOLLISION  word=0000  tile_id=0000  d5=0D  d3=2D41  d2=04C9
+    row 6600  NOCOLLISION  word=0000  tile_id=0000  d5=0D  d3=2D62  d2=04C9
+
+Two calls, both the **no-collision** exit, both with a layout word of **zero**.
+The second is `d3 = 2D62` -- exactly the position computed as the "wall face"
+from the ROM's own 2-pixel clamp.
+
+**The ROM's layout is empty there.** There is no terrain wall at `2D62`, so the
+question "which Chunk id, and does its solidity bit differ" has no subject: the
+id is `0000` on the ROM side and the tile is absent, not solid.
+
+### What this retracts
+
+Three entries reasoned from "a wall face at `2D62`", derived from the 6-pixel
+clamp into `2D58`. The clamp is real; the inference that terrain caused it is
+wrong. Consequences:
+
+- the eighth elimination (plane and solidity bit identical) stands but was
+  eliminating a path that never had a wall to find;
+- the engine's right push sensor reporting 27 px of clear space is **correct** --
+  the terrain there really is clear, and it agrees with the ROM;
+- the previous entry's Block/Chunk arithmetic is arithmetically right and aimed
+  at empty space.
+
+### Where the stop actually happens
+
+`d3 = 2D62` is `x_pos + $A`, so `x_pos` was **already `2D58`** when
+`CheckRightWallDist` ran. The clamp and the speed kill happened **earlier in the
+frame**, before `Sonic_DoLevelCollision`'s terrain checks.
+
+A mechanism that zeroes `x_vel` and corrects `x_pos` by two pixels before the
+terrain pass is the **solid-object** path: `SolidObject_StopCharacter` writes
+`move.w #0,inertia(a1)` and `move.w #0,x_vel(a1)`, and `SolidObject_AtEdge`
+does `sub.w d0,x_pos(a1)` (docs/s2disasm/s2.asm:35428-35446). That is the exact
+shape -- dead stop plus small positional correction -- and it runs in the object
+pass, ahead of the player's own level collision.
+
+Named as the indicated direction, not a finding: the object responsible has not
+been identified, and the earlier `object_near` dump around 6596 shows Obj3E (egg
+prison) parts at `2CD0` and Obj28 animals at `2D4F` and `2D76`, none of which is
+obviously a solid at `2D62`.
+
+### Method note
+
+Every collision-path elimination on this line came back faithful because the
+engine's terrain collision **is** faithful here. Nine rounds of correct
+eliminations were searching a subsystem that was never involved, because the
+first inference -- clamp implies terrain wall -- was never tested against the
+layout until now. The cheap test existed the whole time.

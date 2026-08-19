@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION: there is no terrain wall at 2D62 -- the layout word is zero
+  (`bugfix/ai-s2-chunk-id-r1`, merged 2026-08-19).** `FindWall` masks the layout word's low ten bits
+  and branches to no-collision when that id is zero, testing the solidity bit only *afterwards*.
+  Hooking both exits at row 6600 gives **two calls, both taking the no-collision exit, both with
+  `word = 0000`** -- and the second is `d3 = 2D62`, exactly the "wall face" derived from the ROM's own
+  clamp. **The Chunk-id question has no subject: the id is zero and the tile is absent, not solid.**
+  The 6-pixel clamp is real; the inference that *terrain* caused it was wrong. The engine's 27-px
+  clear reading is **correct and agrees with the ROM**, and the Block/Chunk arithmetic was right and
+  aimed at empty space. **Where the stop actually is:** `d3 = x_pos + $A`, so `x_pos` was already
+  `2D58` when `CheckRightWallDist` ran -- the clamp and the speed kill happened **earlier in the
+  frame, before the terrain pass**. A mechanism zeroing `x_vel` and correcting `x_pos` by two pixels
+  ahead of terrain is the **solid-object** path (`SolidObject_StopCharacter` zeroing inertia and
+  `x_vel`, `SolidObject_AtEdge` doing `sub.w d0,x_pos(a1)`, `s2disasm/s2.asm:35428-35446`) -- named as
+  direction, not finding, since the object is unidentified. **A naming inversion worth knowing:** the
+  S2 disassembly calls the **16x16** unit a "block" and the **128x128** unit a "chunk", and this
+  codebase inverts **both** -- so `FindWall`'s `blockID` is the codebase's **Chunk id**. **The
+  method note is the uncomfortable one:** every collision-path elimination came back faithful because
+  the engine's terrain collision *is* faithful here, so nine rounds of correct eliminations searched a
+  subsystem that was never involved -- the founding inference went untested against the layout until
+  now, and the cheap test existed the whole time.
+
 - **The bit-7 object-control gate now defaults to rejecting new solid contacts
   (`bugfix/ai-s3k-solid-gate-r1`, merged 2026-08-19).** A sidekick in CPU flight carries
   `object_control = $81`, and the ROM's shared landing tail sign-tests bit 7 immediately before
@@ -489,7 +510,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   `mode_change` events place Sonic **airborne across the whole window** -- rolling at 6586, air at
   6588 with `on_object` dropping, landing at 6611 -- so his `x` freezes at `2D58` at 6600 **mid-air**,
   with recorded `x_speed` and `g_speed` both zero against the engine's `0x07F4`. A rolling, airborne
-  character whose horizontal speed is zeroed dead in one frame at a fixed `x` is a **wall hit**, and
+  character whose horizontal speed is zeroed dead in one frame at a fixed `x` is a wall hit
+  (**retracted below: there is no terrain wall there -- the layout word is zero**), and
   the engine hitting the same wall eight rows late confirms this as trigger timing rather than a
   missing mechanism. The strongly-indicated candidate is the signature `trace-replay-bug-fixing`
   already documents -- rolling-air sliding into a flush wall, where the ROM's probe uses a fixed pixel
