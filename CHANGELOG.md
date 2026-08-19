@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 
+### Added
+- Sonic 1's `RunPLC` arming edge can now be released by recorded hardware
+  timing. `RunPLC` (docs/s1disasm/sonic.asm:1379-1420) sits at the tail of
+  `Level_MainLoop` (:3032), behind every expensive call in the loop, and arms
+  the head of `v_plc_buffer` iff that buffer is non-empty and
+  `v_plc_patternsleft` is zero. How long a given ROM iteration takes to reach
+  that tail is a 68000 cost that no frame-granularity trace field carries, so
+  the arm is now submitted as ordinary hardware work
+  (`HardwareWorkKind.NEMESIS_PLC_QUEUE`, wire name `nemesis_plc_queue`) by a
+  new S1-owned `Sonic1PlcArmTiming`, and `Sonic1PlcService.prepare()` releases
+  the queue head only once that job is ready. The submission is built purely
+  from the engine's own logical FIFO state and carries no payload -- every
+  Nemesis pattern is still decompressed natively. Under live admission the
+  boundary that prepares the job also releases it, so live play arms in the
+  frame it always did. The gate lives in the S1 service, not in the
+  `NemesisPlcServiceQueue` shared with Sonic 2, whose behaviour is unchanged.
+  No committed trace fixture carries a `nemesis_plc_queue` stream yet, so no
+  replay behaviour changes with this commit; see
+  docs/status/trace-frontier-log.md for the measured candidate captures and the
+  two walls that blocked publishing them.
+
 ### Fixed
 - The Sonic 3&K title card shown when a special stage returns to the level now
   draws the ROM's act. `Obj_TitleCardInit` never reads `Current_zone_and_act`:

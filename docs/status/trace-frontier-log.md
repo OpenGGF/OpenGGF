@@ -83783,3 +83783,82 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
     (`sonic3k.asm:63060-63102`) that the recording shows, which is why
     production's ordinal cursor sits four module ordinals and five decompression
     ordinals behind the recording's inside every post-special-stage gap.
+## 2026-08-19 — S1 PLC arm sidecar: consumer landed, S1 fixtures measured and not published
+
+- Commands (sequential, `target/surefire-reports` cleared before each run,
+  `-Dsurefire.runOrder=alphabetical`, set-diffed against a clean control worktree
+  at the same base `develop@8955a77c1`): `-Ptrace-replay`, `-Ptrace-segments`,
+  `-Ptrace-replay-r7`, default profile, all three ROM properties supplied.
+- Control measured here, matching the previous round's published control exactly:
+  `-Ptrace-replay` 790 tests / 4 red (the three chains plus
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`); `-Ptrace-segments`
+  70 / 55; `-Ptrace-replay-r7` 37 / 32; default 15041 / 101.
+- Landed: `HardwareWorkKind.NEMESIS_PLC_QUEUE` (wire name `nemesis_plc_queue`,
+  `pre_main_loop`-only, matching the merged recorder at
+  `tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs`), and an
+  S1-owned consumer: `Sonic1PlcArmTiming` submits the `RunPLC` arm
+  (`docs/s1disasm/sonic.asm:1379-1420`) as hardware work at the loop-tail
+  `PRE_MAIN_LOOP` boundary (`sonic.asm:3032`) whenever the engine's own logical
+  FIFO is armable, and `Sonic1PlcService.prepare()` releases `prepareHead()`
+  only once that job is ready. Under live admission the boundary that prepares
+  the job also releases it, so live arming is unchanged. The submission is
+  driven entirely from engine queue state, carries no payload — every Nemesis
+  pattern is still decompressed natively — and creates no work the engine did
+  not already decide to do. The gate sits in the S1 service, never in the
+  S1/S2-shared `NemesisPlcServiceQueue`.
+- Also landed: `PlcLifecycleService.ownsTimedLoopTailArm()`, so a service whose
+  arm is itself a submitted, recorded job is not additionally held by the replay
+  row-shape classification in `PlcFrameLifecycleCoordinator`. The two would
+  stack. The classification itself is retained: S2's PLC service and S3K's
+  runtime-art coordinator both still depend on it and neither has a recorded
+  arm stream, so deleting it outright is a separate change with its own
+  regression surface.
+- `TestS1S2PlcComparisonOnlyGuard` asserted that the timing registry may admit
+  only S3K Kosinski kinds. That assertion predates the broadening of the
+  hardware-timing exception to a cross-game contract covering S1 PLC, S2 DPLC
+  and S3K Kosinski queues, and now contradicts it. The registry stays closed —
+  it is now pinned to the three declared kinds — and every structural isolation
+  assertion in that class is unchanged.
+- Recapture (executive authority to re-record): five `--mode trace` passes of the
+  committed S1 movies (BizHawk 2.11 Linux x64, ROM CRC32 `AFE05EEE`) into a
+  scratch candidate root, diffed before anything was copied in. For the
+  `s1-sonic-complete-withemeralds` run all 34 segments are present,
+  `run_manifest.json` is byte-identical, and every `physics.csv` and
+  `aux_state.jsonl` payload hashes identical to the installed fixture;
+  `metadata.json` differs only in `recording_date`. The only new content is a
+  per-segment `hardware_timing.jsonl`. The same holds for
+  `s1-ghz-maze-roundtrip`, `ghz1_fullrun`, `mz1_fullrun` and the complete-run
+  segment set (whose candidate `lz4`/`sbz3` directories are the installed
+  `sbz3_completerun`/`fz_completerun`, confirmed by payload hash).
+- Not published: those timing streams. Installed, `-Ptrace-replay` goes 4 red ->
+  31 red with no test moving to green; `-Ptrace-segments` and `-Ptrace-replay-r7`
+  are byte-identical set-wise, so nothing outside S1 is affected. Publishing was
+  therefore rejected rather than shaped to the fixtures that happened to pass.
+- What the measurement shows, since it is the useful result. 17 of the 19
+  `*_completerun` fixtures and `ghz1_fullrun` replay green with recorded arm
+  gating active, so the consumer is sound for ordinary segment replay. The
+  failures are two distinct walls:
+  - **Run-chain segment-entry rows.** `TraceRunReplayWalker`'s
+    `beginPlaybackFrame` derives a segment row from the BK2 cursor, and the
+    first row of a post-special-stage segment is consumed by the presentation
+    bridge without a `beginTraceRow`, so no hardware boundary is ever applied to
+    it. The recorder correctly attributes an arm to that row (`ghz2` ordinal 7 at
+    `raw_frame=68`), and the port rejects it: `unconsumed hardware completion
+    edge before raw_frame=69`. This affects every segment the run enters from a
+    special stage — `ghz2`, `ghz3`, `mz2`, `mz3`, `syz2`, `syz3` — and takes the
+    chain's failure earlier than its previous frontier rather than past it.
+  - **`mz1_fullrun`, `lz2_completerun`, `sbz3_completerun`** diverge with the
+    stream installed while their siblings do not; not yet diagnosed.
+- Chain frontier before and after: unchanged, and deliberately so, because the
+  streams that would move it are not published. Control and tree both report
+  `[walk-failure] syz2 row 70 queue.s1_nemesis_plc.remaining_work expected=1
+  actual=24` plus `[segment-physics] segment 12 (mz2_3): 40 errors, first
+  non-camera mismatch at frame 101 queue.s1_nemesis_plc.prepared rom=true
+  engine=false`.
+- Note on the direction of those two errors, which the next round needs: at
+  `syz2` row 70 the engine has already consumed a descriptor the ROM still has
+  queued — it arms *early*, which the sidecar's hold can correct. At `mz2_3`
+  frame 101 the ROM has armed and the engine has not — it arms *late*, which a
+  hold cannot correct on its own and which depends on the row-shape hold being
+  removed for S1 at the same time. Both were reproduced on the control tree at
+  this base.

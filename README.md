@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1's `RunPLC` arm is now recordable hardware work
+  (`bugfix/ai-s1-plc-sidecar-r2`, merged 2026-08-19).** `RunPLC`
+  (`s1disasm/sonic.asm:1379-1420`) sits at the tail of `Level_MainLoop` (`:3032`), behind
+  `ExecuteObjects`, `DeformLayers`, `BuildSprites`, `ObjPosLoad` and `PaletteCycle`, and arms the
+  head of `v_plc_buffer` iff that buffer is non-empty and `v_plc_patternsleft` is zero. How long a
+  given ROM iteration takes to reach that tail is a 68000 cost, not a value any frame-granularity
+  trace field carries -- so under the cross-game hardware-timing contract that arm edge is the one
+  thing about S1 PLC service recorded timing may delay. The new `Sonic1PlcArmTiming` submits the
+  arm at the `PRE_MAIN_LOOP` boundary from **engine queue state only**, creating no work the engine
+  had not already decided to do and carrying no payload: every Nemesis pattern is still decompressed
+  natively. The gate sits in the S1 service, never in the `NemesisPlcServiceQueue` shared with
+  Sonic 2, and under live admission the same boundary that prepares the job releases it, so live
+  play arms in the frame it always did. `HardwareWorkKind` gains `NEMESIS_PLC_QUEUE` and
+  `TestS1S2PlcComparisonOnlyGuard`'s registry assertion, which had pinned the exception to S3K
+  Kosinski work alone, is repinned to the three kinds the documented cross-game contract names;
+  the registry stays closed by exact-set match and every structural isolation assertion is
+  unchanged. **This change is inert today** -- no committed fixture carries a `nemesis_plc_queue`
+  stream, and `-Ptrace-replay` is 790/4 set-identical to a clean control at the same base. It
+  exists to unblock the re-record that will carry one.
+
 - **The S3K title card returns on the apparent act, not the current one
   (`bugfix/ai-s3k-chain-seg2-r2`, merged 2026-08-19).** `Obj_TitleCardInit` never reads
   `Current_zone_and_act`: act art is `Num2` unless `tst.b (Apparent_act).w` is zero

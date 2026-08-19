@@ -169,7 +169,9 @@ class TestLevelFrameHardwareTimingBoundaries {
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED,
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED));
+                com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.NEMESIS_PLC_QUEUE,
+                com.openggf.game.timing.HardwareReadinessAdmissionPolicy.LIVE));
         HardwareWorkSubmission submission = submission(
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1);
         HardwareCompletionEdge edge = new HardwareCompletionEdge(

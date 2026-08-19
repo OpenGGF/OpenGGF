@@ -106,6 +106,8 @@ public final class HardwareTimingSchedule {
                 HardwareReadinessAdmissionPolicy.RECORDED);
         policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED);
+        policies.put(HardwareWorkKind.NEMESIS_PLC_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED);
         return Map.copyOf(policies);
     }
 
