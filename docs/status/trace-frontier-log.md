@@ -88593,3 +88593,63 @@ change in front of them:
    does.
 
 The four-part change becomes five, and the fixture still lands last.
+
+## 2026-08-19 -- Arm scope implemented: the title card releases and segment 3 admits
+
+Branch `bugfix/ai-s1-arm-scope-impl-r1`, based on `develop` at `57bfce2db`.
+
+### What landed
+
+Three changes that cannot be separated from each other:
+
+1. **Arm scope.** `HardwareTimingReplayPort` now tells the recorded authority
+   when row representation starts and stops (`beginRawFrame` /
+   `enterUnrepresentedGap`), the service exposes
+   `recordedAuthorityRepresentsRow()` and `admitUnrepresentedReadiness(handle)`,
+   and `Sonic1PlcArmTiming.releaseArm` falls back to native readiness when row
+   authority is deactivated. The contract being restored is quoted at the gate:
+   `enterUnrepresentedGap` says production hardware work may continue while no
+   edge may be applied. Declared as a `default` interface method so no existing
+   implementer changes.
+2. **Results-loop boundary traversal**, matching `SS_NormalExit`
+   (`docs/s1disasm/sonic.asm:3402-3413`).
+3. **Row-authority predicate**: a special-stage *mode* row inside a
+   non-special-stage segment takes shared playback authority, not the
+   segment-local cursor.
+
+### Verification
+
+`-Ptrace-replay` **790 / 4**, both-way set-diff against a same-base control
+**empty both ways**. `mvn -Pguards test` **499 / 0**.
+`TestHardwareTimingAuthorityGuard` **24 / 0** and
+`TestS1S2PlcComparisonOnlyGuard` **7 / 0** by explicit name -- the guard the
+brief named as arbiter accepts the shape.
+
+### With the held fixture: the deadlock is closed
+
+```
+9530 TITLE_CARD  phase=TRANSITION_GAP segment=2
+9681 LEVEL       phase=TRANSITION_GAP segment=2
+9741 LEVEL       phase=CURRENT_SEGMENT segment=3
+```
+
+The title card releases at 9681 and **segment 3 is admitted at 9741** -- the
+exact row the recording places it on, and the row the equality window requires.
+No `rowsConsumed` violation, no stall, no admission exception. The 213-row
+deadlock is gone.
+
+### Where the chain stops next, and the cause
+
+`TestS1CompleteEmeraldVisualRun` still fails, now at **segment 3 frame 69** on
+`queue.s1_nemesis_plc.{prepared,queued_fingerprints,remaining_work}`, with
+unmatched edges from `ghz2_2`'s own stream. The engine reports ordinal **15**
+carrying `3224e355`, which the recording numbers **14**: a **one-ordinal
+offset**, not a content mismatch.
+
+The cause follows from this round's own change: the level-load arm released
+natively in the unrepresented span still **allocated an ordinal**. The recorder
+never counted that arm, so it must not occupy a place in the shared numbering
+either. Scope was applied to readiness but not to ordinal allocation.
+
+That is the next change, it is the same principle applied one level further, and
+it is **not** implemented here. The fixture therefore still does not land.

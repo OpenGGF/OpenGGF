@@ -115,6 +115,7 @@ public final class HardwareTimingReplayPort
         }
         dropEdgesBefore(rawFrame);
         rawFrameLatch = rawFrame;
+        authority.setRecordedRowRepresentation(true);
         lastAppliedBoundary = null;
     }
 
@@ -128,6 +129,7 @@ public final class HardwareTimingReplayPort
         requireActive();
         rawFrameLatch = null;
         lastAppliedBoundary = null;
+        authority.setRecordedRowRepresentation(false);
     }
 
     public void apply(HardwareServiceBoundary boundary) {
