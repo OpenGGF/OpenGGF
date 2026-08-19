@@ -544,6 +544,37 @@ to left, restoring mappings `$2B-$2D` on the following steep curve.
 
 ## P30 — Player edge balance reads the object's raw `obActWid`, not the padded `SolidObject` collision width
 
+**Symptom.** The player plays the *balancing* animation while standing on an
+object where the ROM stands idle. It reports as an animation mismatch, not a
+position one: `player_animation_id` `0x06` (`id_Balance`) against `0x05`
+(`id_Wait`), and `player_mapping_frame` `0x3A` (`fr_Balance1`) against `0x01`
+(`fr_Stand`). Position and riding state look perfectly correct on both sides,
+which is what makes it confusing -- the recorded `player_x` and
+`player_stand_on_obj` match the engine exactly.
+
+**How to spot it.** Compare the engine's `d1` against the ROM's before assuming
+a position bug. If `player_x` and `player_stand_on_obj` both match the
+recording, the width is the only remaining input.
+
+**What `obActWid` actually is.** `_Constants.asm:230` names it *action width*,
+and the per-object comments call it *sprite display width*, but neither is the
+whole story: it is one byte with several consumers and it is never the rendered
+sprite extent (the mappings own that). It is read by `BuildSprites`' horizontal
+on-screen cull, `d1 = obX - cameraX +/- obActWid` tested against 0 and 320
+(`docs/s1disasm/_inc/BuildSprites.asm:49-58`); by `Sonic_Balance`
+(`01 Sonic.asm:423`); and by many objects as their own solidity width passed
+straight to `PlatformObject`, sometimes after adding `sonic_solid_width`. So an
+object whose ROM `obActWid` differs from the engine's default has *two* wrong
+consumers, not one -- the balance window and the render cull -- and where the
+byte genuinely serves both, supplying it at `getOnScreenHalfWidth()` fixes both
+and `getBalanceWidthPixels()` inherits it. Where a class already models its
+on-screen width from a different quantity, override the balance accessor alone.
+
+**Cross-game.** The same shape is documented in `PlayableSpriteMovement` for the
+S2 CPZ/WFZ moving platform Obj19, whose subtype `width_pixels` is
+`$20`/`$18`/`$40`, and for SmashableGround (`docs/s2disasm/s2.asm:48703-48705`)
+whose balance width is `$10` while its SolidObject width is `$1B`.
+
 **Symptom.** Sonic stands still safely inboard on a wide full-solid object, but
 the engine selects Balance while the ROM retains Wait. Physics and standing
 contact remain exact; only animation/facing diverge.
@@ -572,6 +603,17 @@ animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
 block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`). Obj31 chained
 stomper was the next exposed instance: raw `$38/$30/$10`, not the collision
 argument extended by `$B`.
+Obj30 MZ glass pillar followed (`d7422d98f`): `Glass_Main` writes
+`move.b #64/2,obActWid(a1)` = 32 to every pillar child including the parent's own
+slot, reused as child 0 via `movea.l a0,a1`
+(`30 MZ Large Green Glass Blocks.asm:57,78`), and overwrites it with `#32/2` only
+for the reflection child at `:84`. The routine 2/6 `SolidObject` argument is
+`#64/2+sonic_solid_width` = `$2B` (`:99,:117`). The default 16 put `d1` at `-6`
+where the ROM has `10`, so the player balanced on a pillar he was standing well
+inside. A standing audit of every S1 `SolidObjectProvider` against its ROM byte
+is recorded in
+`docs/architecture/audits/2026-08-19-s1-obactwid-balance-width-audit.md`; the
+Obj30 case is not the only one.
 
 ## P31 -- Only the horizontal spring locks the player's grounded controls
 
@@ -602,42 +644,9 @@ move-lock setter; keep any launch marker free of input semantics.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.
 
-## P32 -- An object's ROM `obActWid` is not its rendered footprint, and Sonic_Balance reads the ROM one
+## P32 -- merged into P30
 
-**Symptom.** The player plays the *balancing* animation while standing on an
-object, where the ROM stands idle. It reports as an animation mismatch, not a
-position one: `player_animation_id` `0x06` (`id_Balance`) against `0x05`
-(`id_Wait`), and `player_mapping_frame` `0x3A` (`fr_Balance1`) against `0x01`
-(`fr_Stand`). Position and riding state look perfectly correct on both sides,
-which is what makes it confusing -- the recorded `player_x` and
-`player_stand_on_obj` match the engine exactly.
-
-**Root cause.** `Sonic_Balance` computes
-`d1 = obActWid(a1) + obX(a0) - obX(a1)` and balances when `d1 < 4` or
-`d1 >= 2*obActWid - 4`. `obActWid` is the stood-on object's own SST width byte,
-which is frequently NOT the rendered sprite footprint and is NOT the
-(possibly extended) SolidObject X-check width. An engine object that inherits
-the default half-width instead of overriding it shifts the whole balance window
-by the difference, so a player standing anywhere in the object's inner region
-falls below the `#4` left-edge threshold and starts balancing.
-
-**Correct pattern.** Override `getBalanceWidthPixels()` with the value the ROM
-writes to `obActWid` for that object, and read the ROM carefully when one
-routine sets it more than once -- a spawner often sets the parent's width and
-then overwrites it for a child. In the MZ glass block, `Glass_Main` writes
-`#64/2` for the pillar and only afterwards `#32/2` for the reflection child, so
-the pillar is 32 and the shine is 16.
-
-**How to spot it.** Compare the engine's `d1` against the ROM's before assuming
-a position bug. If `player_x` and `player_stand_on_obj` both match the
-recording, the width is the only remaining input.
-
-**ROM citation.** `docs/s1disasm/_incObj/01 Sonic.asm:425-433` (the balance
-window); `docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm:78,84` (the
-pillar/shine widths). Cross-game: the same pattern is already documented in
-`PlayableSpriteMovement` for the S2 CPZ/WFZ moving platform Obj19, whose
-subtype `width_pixels` is `$20`/`$18`/`$40`, and for SmashableGround
-(`docs/s2disasm/s2.asm:48703-48705`) whose balance width is `$10` while its
-SolidObject width is `$1B`.
-
-**Originating commit.** MZ glass pillar balance width (this change).
+This entry duplicated P30 above: both describe an object whose ROM `obActWid`
+differs from the engine's default shifting the `Sonic_Balance` window. Two lanes
+catalogued the same defect within an hour. The number is retained because commit
+`d7422d98f` cites it; read P30.
