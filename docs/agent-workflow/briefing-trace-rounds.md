@@ -143,6 +143,16 @@ half-landed change, and require the blast radius to be measured before anything 
   stale-XML trap above arriving from a different direction, and clearing
   `target/surefire-reports` does not protect against it — an early-firing wait reads the
   *current* run's partial output as final.
+- **For the run chains, a control in a *different worktree* is not sufficient — use the same
+  worktree.** `TestS3kSonicTailsCompleteEmeraldRunChain` has been observed failing with **two
+  different exceptions in two worktrees at the same commit with no local changes** (an
+  `awaitBoundary` step-cap walk-failure in one, `IllegalStateException: non-exportable pending
+  hardware submission` in the other), and it survives `mvn clean`. A round spent a bisect cycle
+  attributing that to its own change before an empty-diff control refuted it. The known mechanism
+  is Surefire's filesystem `runOrder` differing per worktree, which changes which order-dependent
+  class runs first; `-Dsurefire.runOrder=alphabetical` reduces but has not eliminated it. When a
+  chain class changes its *failure mode* rather than its pass/fail, verify by stashing nothing and
+  re-running the **same** worktree with the change reverted, before attributing anything.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
