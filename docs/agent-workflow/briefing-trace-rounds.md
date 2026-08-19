@@ -416,3 +416,43 @@ correct in its measurements and wrong in its scope.
   another arm of the same ROM branch**.
 - Instructions to make a specific test pass. Name the frontier and the acceptance shape instead;
   several of the most valuable rounds ended with the target class unchanged.
+
+## Eighth rule: a check that is blind on the files at risk is worse than no check
+
+The prescribed merge check used to be "diff the rebased commit against its new base,
+restricted to paths the change should not touch, and expect empty". A round reproduced a
+known-bad rebase and showed that check **passes on the bad resolution**, because the files
+that actually lose content — `README.md` and this document — are paths the change
+legitimately *does* touch. The merge policy requires the README entry, so they can never be
+on the "should not touch" list.
+
+The real hazard is not a missing conflict marker. Git flags every conflicted file. It is the
+**asymmetry of the hunks**: develop's side can be one to two orders of magnitude larger than
+the incoming side, and in the worst case the incoming side is **empty**, so a reflexive "take
+theirs" deletes content and adds nothing.
+
+So: resolve conflicts **append-both, never take-theirs**, then assert that **no line present
+in the base is missing from the result** (multiset difference per file). Treat that check as
+a discovery tool, not a verdict — it correctly flags intentional deletions too, and those need
+adjudicating rather than suppressing. A merge in which it fires and every hit is a line the
+change deliberately replaces is a clean merge; one in which it fires and nobody looked is not.
+
+A check that cannot fail on the case it exists to catch does not produce safety. It produces
+confidence, which is worse.
+
+## Ninth rule: a latent correction can be worth more as evidence than as a fix
+
+The usual value of landing a latent fix is hygiene — the engine was on the wrong branch, so
+correct it and note that nothing measured moved. Occasionally the value inverts.
+
+One round modelled a `FixBugs = 0` path and, in doing so, established from the ROM bytes that
+a surviving wild read is **inert** rather than merely unlikely: the score cap bounds the
+swapped word, odd addresses return before any word access, and every remaining case is
+rejected by the following test. The fix itself was latent and could never have moved the
+frontier — it only ever *removes* an interaction the engine already had too few of. But
+proving inertness **eliminated the site from the candidate list**, which is what the frontier
+actually needed.
+
+Ask of a latent correction not only "does this make the engine right" but "does the analysis
+that produced it close a candidate". When it does, say so in the report — that is the part
+the next round consumes.
