@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The twin-tails divergence is timing, mid-script, and confined to 15 rows
+  (`bugfix/ai-s2-tails-mapframe-r1`, merged 2026-08-19 -- instrumentation written, used and
+  reverted).** The mapping-frame **value** sequence is identical on both sides -- 12, 13, 9, 10, 9,
+  10, 9, 10 -- and the engine simply reaches 13/9/10/9 early, then **re-converges exactly from row
+  5573 onward, row for row**, for the rest of the window. Divergence is confined to **5554-5569**,
+  which generalises the previous round's byte-exact single-edge match to the whole sequence. The
+  first divergence at 5554 is a mapping change with **no preceding selection** -- Swish advancing
+  `frameIndex` 4 -> 5 on its own tick -- where the engine holds map=12 for **8** frames and the ROM
+  holds it for **19**. The selections that follow are also applied differently: at 5559 both sides
+  select Flick, but the ROM's next submission is the *outgoing* Swish script's 13 at 5565 with
+  Flick's frames appearing only from 5569, while the engine applies the new script's first frame in
+  the same update. **Two further eliminations:** the divergence is not upstream of the controller --
+  the engine's parent animation matches the recorded `sidekick_animation_id` exactly, frame for frame
+  across the window -- and it is not the selection table, since `ANI_SELECTION_S2` matches ROM
+  `Obj05AniSelection` entry for entry over the indices used here. What remains is the `Obj05` script's
+  own frame timing and how an in-flight script interacts with a new selection: two adjacent paths in
+  one controller. The 8-against-19 hold is **not a multiple relationship**, which argues a missing
+  suppression rather than a wrong delay constant.
+
 - **Tails' twin-tails DPLC has its own cadence, partially coupled to the body
   (`bugfix/ai-s2-tails-cadence-r1`, merged 2026-08-19 -- fixture and disassembly analysis, no code).**
   Measured across the whole recording, submissions per owner are `sonic` 1925, `tails` 2574,

@@ -85838,3 +85838,74 @@ I have deliberately not claimed the defect is inside that controller. It is wher
 the cadence is computed, which makes it where to look; three rounds on this
 thread have gone wrong by treating "where the mechanism lives" as "where the bug
 is".
+
+## 2026-08-19 — tails-tails mapping frame: timing, mid-script, and two more eliminations
+
+Branch `bugfix/ai-s2-tails-mapframe-r1` off `origin/develop` (`0b1ada62e`).
+Instrumented comparison; the instrumentation was reverted and nothing landed.
+
+### Q1: timing, not value
+
+Engine `TailsTailsController.mappingFrame` against the recorded `tails-tails`
+mapping frames over 5540-5600:
+
+    row     ROM     engine
+    5546    12      12      <- agree
+    5554    --      13      <- engine advances early
+    5559    --       9
+    5563    --      10
+    5564    --       9
+    5565    13      --
+    5569     9      (selection only, no map change)
+    5573    10      10      <- re-converged
+    5575     9       9
+    5584    10      10
+    5585     9       9
+    5593    10      10
+
+The **value** sequence is identical -- 12, 13, 9, 10, 9, 10, 9, 10 on both sides.
+The engine reaches 13, 9, 10, 9 early and then re-converges exactly from 5573
+onward, row for row, for the rest of the window. The divergence is confined to
+**5554-5569** and is purely when each value appears. This generalises the
+byte-exact single-edge match from the previous round to the whole sequence.
+
+### Q2: mid-script, not selection
+
+The first divergence, at 5554, is a `MAPCHANGE` with **no** preceding `SELECT`:
+`anim=1` (Swish) advancing `frameIndex` 4 -> 5 on its own `frameTick`. The engine
+holds map=12 for **8** frames (5546 -> 5554); the ROM holds it for **19**
+(5546 -> 5565). So the tails object is advancing its own script faster than the
+ROM's, before any parent-driven re-selection is involved.
+
+The selections that follow are then applied differently. At 5559 both sides
+select Flick (parent anim 7), but the ROM's next submission is map=**13** at 5565
+-- the outgoing Swish script still running -- and Flick's frames only appear from
+5569. The engine applies the new script's first frame in the same update.
+
+### Two more places ruled out
+
+- **Not upstream of the controller.** The engine's parent animation matches the
+  recorded `sidekick_animation_id` **exactly, frame for frame**, across the whole
+  window: 8@5543, 5@5550, 7@5559, 5@5564, 7@5569, 5@5575, 7@5580, 5@5585,
+  8@5593. Tails' body cadence is correct here; the divergence is genuinely inside
+  the tails object.
+- **Not the selection table.** `ANI_SELECTION_S2`
+  (`TailsTailsController.java`:42-50) matches ROM `Obj05AniSelection`
+  (docs/s2disasm/s2.asm) entry for entry over the indices this window uses --
+  0, 0, 3, 3, 9, 1, 0, 2 for parent anims 0-7. Parent 5 -> Swish and parent 7 ->
+  Flick are both correct.
+
+So across this thread the divergence is now excluded from entry classification,
+the write-site predicate, object population, the DPLC layer, the body's animation
+cadence, and the selection table. What remains is the Obj05 script's own frame
+timing and how an in-flight script interacts with a new selection -- two adjacent
+code paths in one 545-line controller.
+
+### Deliberately not claimed
+
+That the ROM "lets the outgoing script finish". That is the shape of the
+recorded evidence, not a read of `Tails_Animate_Part2`, and this thread has been
+wrong every time it inferred a mechanism instead of reading or measuring it. The
+next step is to read the ROM's animation routine against the controller's
+`frameTick`/`frameIndex` handling for the 5546-5569 window specifically, where
+both sides' inputs are now known to agree.
