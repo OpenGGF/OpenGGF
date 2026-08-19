@@ -86144,3 +86144,97 @@ together), and re-measure all three activations plus the body-segment train agai
 Rejected, with numbers, so it is not retried: model A (latch without the dispatch
 consumption) keeps the full sweep at 790/4 and also clears frame 2729 — but it is measured
 1-2 frames early on every activation, so its green is coincidental.
+
+## 2026-08-19 — Caterkiller Jr: the bodies are not shifted; the touch pass samples them one pass stale
+
+Follow-up to the `Obj_WaitOffscreen` entry above, answering the two questions it left open.
+Base `9d1b3bd97`, worktree-local `Obj_WaitOffscreen` latch applied (model B) for every
+measurement below. Nothing was landed.
+
+### 1. The body segments are independently positioned
+
+ROM `CaterKillerJr_RunBodyWait` (`docs/skdisasm/sonic3k.asm:183466-183473`) calls `Obj_Wait`
+for segments with `subtype < 6`, and `Obj_Wait` (`:177949-177957`) is a plain countdown on
+`$2E(a0)` that jumps to the continuation in `$34(a0)` when it expires. For a body that
+continuation is `CaterKillerJrBody_SpawnProjectile` (`:183480-183483`) — it is the
+**projectile fire timer**, not a position-history follow. Each segment then runs the head's
+own `SlowSwing`/`FastSwing`/`FinishSwing` routines over its own state, from its own
+`x_vel = -$100`, staggered only by the `CaterKillerJrBody_WaitDelays` table
+(`$B, $17, $23, $2F, $37, $3F`, `:183424-183425`).
+
+The only coupling to the head is the **creation frame**: `CreateChild3_NormalRepeated` runs
+inside `CaterKillerJr_Init`, so a one-frame shift of the head's release does shift all six.
+That coupling is real and the engine reproduces it — it is not an engine-side invention.
+
+### 2. But nothing is shifted, so that is not the defect
+
+The AIZ slice fixture emits the bodies directly: object code `0x0008778C` is
+`CaterKillerJrBody` (`loc_8778C`), six records per frame with subtypes `0x00..0x0A`.
+Comparing the engine's six segments against those records across the whole third
+activation (rows 16814-17101), mapping `vIntRunCount` to rows through the fixture's
+`vblank_counter`:
+
+| subtype | best shift | rows matched |
+|---|---|---|
+| 0x0 | 0 | 231/231 |
+| 0x2 | 0 | 224/224 |
+| 0x4 | 0 | 214/214 |
+| 0x6 | 0 | 207/207 |
+| 0x8 | 0 | 201/201 |
+| 0xA | 0 | 196/196 |
+
+Byte-exact, at shift zero, on every compared row — **including 17028**, the row
+`TestS3kReplayReferenceClosureIntegration` fails on. The head is exact on this activation
+too. So row 17028 is inside the model's window, and the "one-frame head shift drags the
+bodies onto the player" hypothesis is **refuted**: the head and all six bodies are exactly
+where the ROM puts them when the engine hurts the player and the ROM does not.
+
+### 3. The real defect: the touch pass reads a two-rows-old position
+
+At the failing frame the engine's player is at the ROM's row-17028 coordinates
+(`0x2C60, 0x0574`) and is HURT by body subtype `0x2`. Probing the touch call site:
+
+* the body's live `getX()/getY()` at that moment is `(0x2C71, 0x0586)` — its **row 17027**
+  position, i.e. it has not yet moved for 17028;
+* the value actually fed to the overlap test is `getPreUpdateX()/getPreUpdateY()` =
+  `(0x2C70, 0x0587)` — its **row 17026** position.
+
+ROM `Touch_Loop` (`sonic3k.asm:20660-20663, 20674-20681`) does `movea.w (a4)+,a1` and then
+reads `x_pos(a1)` — the collision response list stores **object RAM pointers, not
+snapshots**, so the player sees whatever the object's RAM holds when the player runs. Every
+placed object sits in a slot after the player, so that is its end-of-previous-frame
+position: `(0x2C71, 0x0586)`, the engine's live value, not its pre-update cache.
+
+Run the ROM's own arithmetic on the ROM's own numbers. Player box from
+`Touch_NoInstaShield` (`:20643-20659`): `d2 = x_pos - 8`, `d4 = $10`,
+`d5 = 2*(y_radius-3)`. `Touch_Sizes` (`:20713`) index `0x17` is `(8, 8)`, which is what the
+body's `collision_flags = $97` selects (`ObjDat_CaterKillerJrTallBody`, `:183487-183490`).
+
+```
+d0 = obj_x - obj_width - player_left = 0x2C71 - 8 - (0x2C60 - 8) = 0x11 = 17
+cmp.w d4,d0 / bhi Touch_NextObj      ; 17 > 16  -> no touch
+```
+
+With the stale row-17026 x the same arithmetic gives `0x2C70 - 8 - 0x2C58 = 16`, and
+`bhi` is false, so the engine touches. **A one-pixel miss caused by a one-pass-stale
+sample.**
+
+Everything else on that path is already correct and was checked rather than assumed:
+`isOverlapping` transcribes `Touch_Width`/`Touch_Height` faithfully including the
+carry-based left/top branches, the size table entry is right, and the player box is right.
+
+### Next step
+
+`ObjectTouchResponseController` already has the sanctioned per-object hook —
+`ObjectInstance.usesCurrentTouchResponseState()` — and the call site's own comment says the
+list "stores object RAM pointers, but those pointers still hold frame-start x/y at this
+phase". For these `spawnChild`-created segments that premise does not hold: the touch pass
+runs before their update, so frame-start is one pass older than the pointer ROM would
+dereference.
+
+The question to settle before changing anything is whether this is Caterkiller-specific or
+a general property of child-spawned objects whose update phase falls after the touch pass —
+because the fix must be the slot/phase rule, not a per-object opt-in. Adding
+`usesCurrentTouchResponseState()` to these two classes would make the AIZ slice green and
+would be a carve-out; do not do that without first measuring how many other child-spawned
+objects sample stale state.
