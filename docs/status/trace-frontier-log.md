@@ -85703,3 +85703,70 @@ indeed independent -- it precedes 5662 and its first errors are pure
 its three non-cascading `player_mapping_frame` windows at 6601-7087 sit inside the
 second ramp, and under the push-pair candidate measured earlier those windows
 change classification. Treat 5554-6600 as independent and 6601-7087 as coupled.
+
+## 2026-08-19 — CPZ2 seg10 art cluster: submission time, and the DPLC layer is faithful
+
+Branch `bugfix/ai-s2-dplc-interleave-r1` off `origin/develop` (`5374de13c`).
+Fixture analysis; no code, nothing landed. **This corrects the previous round's
+verdict**, which called the cluster a DPLC stream-ordering problem.
+
+### `tails-tails` is a real third stream, not a recorder artefact
+
+Both sides model it. The recorder hooks the ROM decision window `0x1D184-0x1D1FE`
+with VRAM bank `0xF600`
+(`tools/bizhawk-headless/src/Recording/DynamicArtRomProfile.cs`:83, :125), which
+is `LoadTailsDynPLC` (docs/s2disasm/s2.asm:41658) -- the DPLC for Tails' twin
+tails, a genuinely separate art stream from his body. The engine carries a
+matching `ProductionArtProfile`
+(`src/main/java/com/openggf/game/resources/DynamicArtLifecycleService.java`:38-53).
+Three streams is correct; the engine is not inventing one.
+
+### It is a submission-time question, and the proof is byte-exact
+
+At the divergence frame 5564 the comparator reports `edge[0]` expected `owner`
+`sonic` / `mapping_frame` 11, actual `tails-tails` / 10, with
+`rom_source_address` 412960, `source_tile_index` 80, `vram_destination` 62976,
+`byte_length` 384 and `request_count` 1.
+
+The recording contains exactly that edge -- **at frame 5573**:
+
+    f5573  tails-tails map=10  rom=412960 tile=80 vram=62976 len=384  (1 request)
+
+Byte for byte identical, nine frames apart. The engine is not emitting a wrong
+edge, a corrupted edge, or an edge in the wrong queue slot. It is emitting **the
+right edge at the wrong time**. That settles the discriminator: submission time,
+not queue priority.
+
+### Which relocates the defect upstream of DPLC entirely
+
+The ROM gates each stream's submission on its own mapping frame changing --
+`LoadTailsDynPLC_Part2` is `cmp.b (Tails_LastLoadedDPLC).w,d0 / beq return_1D1FE`
+(s2.asm:41662-41664), with the equivalent dedup for Sonic. A submission happens
+exactly when that owner's mapping frame differs from its last loaded one, which
+is why the recorded stream shows quiet runs (no submission at all between f5554
+and f5559) punctuated by submit/complete pairs on consecutive frames.
+
+So the engine's dedup mechanism is faithful. What differs is **when each owner's
+mapping frame changes**, and the DPLC layer reports that difference downstream.
+The cluster is an animation-cadence divergence observed through the art
+comparator, not an art-pipeline defect.
+
+**Correction to record.** Last round I concluded this was "a DPLC stream ordering
+and service-rate question, not an object one" and recommended a DPLC lane. The
+first half is wrong: the DPLC layer is faithful in mechanism and content. The
+recommendation to avoid the object references still holds, but the right target
+is the mapping-frame cadence feeding the three streams -- and by extension the
+per-owner animation clocks, which is where this thread's push work also lived.
+
+### Practical consequences for whoever takes it
+
+- **Do not chase the ramps or the 363-edge burst.** They are downstream of
+  submission timing; a mapping-frame cadence fix changes what they look like.
+- **The useful probe is per-owner mapping frame over 5540-5600**, engine against
+  the recorded `dynamic_art_transfer_state` mapping frames, one owner at a time.
+  `sonic` and `tails` mapping frames are already compared directly by the physics
+  columns; `tails-tails` is only observable through the art stream, which makes it
+  the one worth instrumenting.
+- The recorded per-owner submission sequence around the onset is dense enough to
+  align against without any new capture: `sonic` 11, 1, 11, 1, 11, 1, 76, 1;
+  `tails` 91, 1, 4, 1, 4, 1, 4; `tails-tails` 12, 13, 9, 10, 9.

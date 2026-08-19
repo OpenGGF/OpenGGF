@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ2 art divergence is animation cadence seen through the art comparator, not a DPLC defect
+  (`bugfix/ai-s2-dplc-interleave-r1`, merged 2026-08-19 -- fixture analysis, and a self-correction).**
+  `tails-tails` is a **real** third stream, not a recorder artefact: the recorder hooks ROM decision
+  window `0x1D184-0x1D1FE` at VRAM bank `0xF600`, which is `LoadTailsDynPLC`
+  (`s2disasm/s2.asm:41658`), the DPLC for Tails' twin tails and genuinely separate from his body art,
+  and the engine carries a matching `ProductionArtProfile`. **The proof is byte-exact:** at frame
+  5564 the engine's edge is `tails-tails`, `mapping_frame` 10, `rom_source_address` 412960,
+  `source_tile_index` 80, `vram_destination` 62976, `byte_length` 384, one request -- and the
+  recording contains *exactly that edge* at frame **5573**. Byte for byte, nine frames apart. The
+  engine emits the **right edge at the wrong time**, not a wrong edge, a corrupted one, or one in the
+  wrong queue slot. Since the ROM gates each stream on its own mapping frame changing --
+  `LoadTailsDynPLC_Part2` is `cmp.b (Tails_LastLoadedDPLC).w,d0 / beq return_1D1FE` (`:41662-41664`)
+  -- the engine's dedup mechanism and its content are both faithful, and what differs is *when each
+  owner's mapping frame changes*. **This retires the previous round's "DPLC stream ordering and
+  service-rate" verdict**, which this same lane had given and which the routing was based on; the
+  ramps and the 363-edge burst are plausibly all downstream of submission timing rather than a
+  separate service-rate question. Next is per-owner mapping-frame cadence over 5540-5600, and
+  `tails-tails` is the one worth instrumenting because `sonic` and `tails` are already compared by
+  the physics columns while `tails-tails` is observable *only* through the art stream.
+
 - **The CPZ2 art cluster is a DPLC stream-interleaving and service-rate question, not an object one
   (`bugfix/ai-s2-seg10-art-r1`, merged 2026-08-19 -- fixture analysis, no code).** 2422 errors from
   frame 5554 onward, all but three `dynamic_art`. Raw count is the wrong measure, since one wrong
