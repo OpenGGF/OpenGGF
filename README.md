@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The touch-phase premise is false on the S3K path only, and the fix is to make the invariant true
+  (`bugfix/ai-touch-phase-rule-r1`, merged 2026-08-19 -- investigation only, not landable yet).**
+  Population measured rather than assumed: `ObjectManager.refreshTouchResponseSnapshot` takes the
+  frame-start snapshot only when `ObjectCollisionResponseList.shouldRefreshFrameStartSnapshot()`,
+  which is `!usePrevious`, driven by the typed rule
+  `touchResponseUsesPreviousCollisionResponseList` -- **S1 false, S2 false, S3K true**. So S1 and S2
+  already hold the invariant the call site's comment asserts, and the premise is false on the S3K
+  path only, and there only for `spawnChild`-created objects updated after the touch pass. The sweep
+  confirms it structurally: **no S1 or S2 result moved.** Two candidate fixes measure behaviourally
+  identical, and the better shape is to **drop the gate so every object gets the frame-start
+  snapshot** -- that makes the invariant true rather than routing around it, and
+  `prepareTouchResponseSnapshots` runs before any object update, so the snapshot *is* the
+  end-of-previous-frame position by construction. With the Caterkiller latch: closure integration
+  **1877 errors -> 3** (first error row 17028 -> 7848) and chain segment 4 **44,605 -> 40,000**
+  (first non-camera mismatch 2729 -> 3573). **Still not landable at 790/6 against 790/4**, both
+  additions S3K: the closure integration's remaining 3 errors are one Rhinobot `EnemyDefeated`
+  bounce applied a frame early -- the player state at the touch matches the ROM exactly, so it is the
+  Rhinobot's own timing that the stale sample had been *compensating* for -- and
+  `TestS3kAizTraceReplay` fails on a `KOS_MODULE_QUEUE#38` terminal handoff in a different
+  subsystem. No monitor or SPECIAL contact moved anywhere in the sweep, consistent with
+  edge-triggered contacts being insensitive to a one-pass position shift.
+
 - **The ROM truncates its own object pass by exactly 21 slots, so the engine is "more correct" and
   therefore wrong (`bugfix/ai-s2-execobjects-r1`, merged 2026-08-19 -- third PC-execute probe, no
   engine change).** `d7` is **not corrupted**: it starts at `$8F` and reaches `0000` on every row

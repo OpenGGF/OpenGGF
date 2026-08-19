@@ -549,13 +549,16 @@ namespace OpenGGF.BizHawk.Headless
             ref List<DeferredDirectCompletion> deferredCompletions)
         {
             directEntryShift = 0;
-            if (HeadRetirementWriteInFlight(host, physicalCount, busy))
+            if (HeadRetirementWriteInFlight(host, physicalCount))
             {
                 // Read the sample as the post-retirement state the ROM has
                 // already committed everywhere except the count decrement
-                // and the entry shift-up.
+                // and the entry shift-up. The sign bit is part of what the ROM
+                // is still committing, so it is read as retired too; leaving it
+                // set here would report a busy head that has already finished.
                 directEntryShift = 1;
                 physicalCount--;
+                busy = false;
             }
             try
             {
@@ -803,10 +806,28 @@ namespace OpenGGF.BizHawk.Headless
         /// read as the stable state the ROM is two instructions away from
         /// committing.
         /// </summary>
+        // Process_Kos_Queue_EndReached (sonic3k.asm:2938-2943) commits the
+        // retirement in four separate instructions: it writes the decompressor's
+        // post-decode a0/a1 over slot zero's own source and destination fields
+        // (Kos_decomp_source/Kos_decomp_destination ARE Kos_decomp_queue and
+        // Kos_decomp_queue+4 -- sonic3k.constants.asm:901-903), then clears the
+        // in-progress sign bit, then decrements the count, then shifts entries up.
+        // A frame-end sample can land anywhere inside that span, and
+        // Set_Kos_Bookmark (sonic3k.asm:2818-2828) bookmarks V-ints throughout it.
+        //
+        // The span is therefore two samples wide, not one. The narrower case --
+        // sampled after the sign bit was cleared, count still 1 -- was fixed in
+        // 15b46e543. The wider one is sampled one instruction earlier, before
+        // "andi.w #$7FFF,(Kos_decomp_queue_count)", so the busy bit still reads
+        // set while slot zero already holds the post-decode cursors. Both are the
+        // same ROM state and are recognised the same way: by the mirrored head's
+        // own ROM-derived shape. Nothing else can produce those two values,
+        // because a genuinely new head can only reach slot zero through the count
+        // decrement and shift-up that have not run yet.
         private bool HeadRetirementWriteInFlight(
-            IGpgxHost host, int physicalCount, bool busy)
+            IGpgxHost host, int physicalCount)
         {
-            if (busy || physicalCount < 1 || directQueue.Count < 1)
+            if (physicalCount < 1 || directQueue.Count < 1)
             {
                 return false;
             }

@@ -86504,3 +86504,67 @@ Which object consumes the twenty-one iterations. The stopping point is slot 122
 (`$FFCE80`), so the culprit is at or before it; logging the object id per
 iteration on a single gap row identifies it, and the eleven-row stability means
 any one gap row will do.
+
+## 2026-08-19 — The stale touch sample is an S3K-only path defect, and fixing it exposes a second one
+
+Measured at `c7e0f7620` (develop has since moved to `725839a8b`; the object-pass truncation
+merged there may interact with these numbers — re-measure before acting on them).
+Nothing landed.
+
+### Where the false invariant lives
+
+`ObjectManager.refreshTouchResponseSnapshot` takes the frame-start snapshot only when
+`ObjectCollisionResponseList.shouldRefreshFrameStartSnapshot()`, which is `!usePrevious`.
+`usePrevious` comes from the typed rule
+`ObjectInteractionRules.touchResponseUsesPreviousCollisionResponseList`, and the three
+`GameRules` records give **S1 false, S2 false, S3K true**.
+
+So on S1 and S2 every object's pre-update cache is refreshed before the touch pass and *is*
+its end-of-previous-frame position — the invariant the call site asserts holds there. On
+S3K the refresh is skipped and the cache holds whatever the object's own last update wrote:
+still end-of-previous-frame for an object updated before the touch pass, but one pass older
+for a `spawnChild`-created object updated after it. **The premise is false only on the S3K
+path, and only for objects updated after the touch pass** — a typed-rule population, not an
+object-identity one. That answers the S1/S2 question structurally, and the sweep below
+confirms it empirically.
+
+### Both candidate fixes are behaviourally identical
+
+1. treat `usePreviousCollisionResponseList` like `usesCurrentTouchState` at the call site,
+   so the sampled position follows the same split the collision *flags* already follow;
+2. drop the gate in `refreshTouchResponseSnapshot` so every object gets the frame-start
+   snapshot on every path — that method runs from
+   `LevelManager.prepareTouchResponseSnapshots` (`LevelFrameStep:299`) before any object
+   updates, so the snapshot is the end-of-previous-frame position by construction.
+
+Both measured: `TestS3kReplayReferenceClosureIntegration` **1,877 errors -> 3**, first error
+row 17028 -> 7848; chain segment 4 **44,605 -> 40,000**, first non-camera mismatch frame
+2729 -> 3573. Option (2) is the better shape — it makes the invariant true rather than
+routing around it — and its ROM basis is `Touch_Loop` storing object RAM pointers rather
+than snapshots (`docs/skdisasm/sonic3k.asm:20660-20663, 20674-20681`).
+
+### Still not landable: two S3K tests go red
+
+Full `-Ptrace-replay` with (2) plus the Caterkiller `Obj_WaitOffscreen` latch: **790 tests /
+6 red** against the standing 790/4. Every S1 and S2 result is unchanged, confirming the
+no-op there. Both additions are S3K:
+
+* `TestS3kReplayReferenceClosureIntegration` — 3 errors, first at row 7848, `y_speed` rom
+  `-0x2C8` engine `-0x1C8`. A touch probe shows the engine's Rhinobot ENEMY kill applying
+  `EnemyDefeated`'s `addi.w #$100` (`sonic3k.asm:20982-20984`) on row 7848 where the
+  recording applies it on 7849. The player state at the touch matches the ROM's row
+  exactly, so this is the Rhinobot's own one-frame timing, newly visible once the sample
+  stopped being stale. The stale sample had been compensating for it.
+* `TestS3kAizTraceReplay` — fails on terminal pending hardware work
+  (`KOS_MODULE_QUEUE#38`), an art-queue handoff rather than a physics divergence. Not
+  diagnosed; different subsystem.
+
+### Settled, do not re-derive
+
+* the premise is false on S3K only, by typed rule, not by object identity;
+* per-object `usesCurrentTouchResponseState()` on the Caterkiller classes goes green and is
+  a carve-out that leaves the invariant false for the next `spawnChild` object;
+* the two candidate fixes are behaviourally identical on this corpus — no need to measure
+  them separately again;
+* the physics residual is 3 errors and it is the Rhinobot's bounce frame, not a position
+  sample.
