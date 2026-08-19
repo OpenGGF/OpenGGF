@@ -24,6 +24,25 @@ All notable changes to the OpenGGF project are documented in this file.
   `y_speed` rom `-0x283` engine `-0x383` divergence exactly. Segment 16 of the
   S1 complete-emerald chain advances from frame 2218 to frame 8396 and drops
   from 61 to 59 comparator errors.
+- The AIZ/LRZ/EMZ rock now leaves the ROM's on-screen solid gate on the exact
+  frame the ROM does. `Render_Sprites` builds `render_flags` bit 7 from the
+  object's own `width_pixels` / `height_pixels` bytes -- the vertical test is
+  `y_pos >= camera_y - height_pixels` (docs/skdisasm/sonic3k.asm:36347-36370)
+  -- and `Obj_AIZLRZEMZRock` writes both bytes from `AIZLRZEMZRock_SizeData`
+  indexed by `subtype >> 4` (docs/skdisasm/sonic3k.asm:43844-43854, table at
+  43832-43840). The engine was using the shared 16-px default for both extents,
+  so a size-2 rock (`$18` wide, `$F` tall) stayed "on screen" one frame past the
+  ROM. `SolidObject_cont` gates its side/top resolution on that same bit
+  (docs/skdisasm/sonic3k.asm:41396-41398), so the stale frame left the rock
+  solid for one extra pass and it pushed the player back out by one pixel.
+  In `s3k-sonic-tails-complete-emeralds` segment 2, AIZ1's rock at
+  `(0x28A0, 0x0442)` pushed Tails `+1` on both row 1725 and row 1726 while the
+  ROM pushes only on 1725 -- the camera reaches `y=0x0452` at the end of 1725
+  and the rock's bottom edge is `0x0451`. Segment 2 goes from 17591 comparator
+  errors with the first non-camera mismatch at frame 1726 to 16967 with the
+  first at frame 2941, 1215 further clean rows.
+
+### Fixed
 - Sonic 1's level-load player transfer now lands on the row the ROM records for
   a mid-run load. A level segment's recording starts at `Level_MainLoop`
   (docs/s1disasm/sonic.asm:2998), after the counted `Level_Delay` /

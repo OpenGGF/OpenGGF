@@ -83261,3 +83261,40 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   landed S1 sidecar recorder (`b5f20ec98`) records only the arming edge — so
   this axis is a strictly LARGER instance of the segments 12/15 wall, not a
   cheaper one.
+## S3K Sonic+Tails complete-emerald run chain — segment 2 (`aiz_2`), round: rock on-screen gate
+
+- Command: `mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=<s3k locked-on
+  .gen> test`, worktree branched from `develop` at `7b3c27aba`.
+- **Frontier before:** segment 2 closes with 17591 comparator errors, first
+  non-camera mismatch frame 1726 `sidekick_x rom=0x28C2 engine=0x28C3`.
+- **Frontier after:** segment 2 closes with 16967 comparator errors, first
+  non-camera mismatch frame 2941 `x_speed rom=0x0213 engine=-0213` — Sonic's
+  own field, a different and later divergence. 1215 further clean rows. The
+  chain still stops at `Segment 2 (aiz_2) exit boundary (giant_ring) was never
+  observed`.
+- **Cause (NOT the cork-floor partner drop the brief proposed).** The
+  divergence is a one-frame-late off-screen transition on AIZ1's
+  `Obj_AIZLRZEMZRock` at `(0x28A0, 0x0442)`, subtype `$22`.
+  `AIZLRZEMZRock_SizeData` entry 2 is `$18, $F`
+  (docs/skdisasm/sonic3k.asm:43832-43840, written at :43844-43854), and
+  `Render_Sprites` clears/sets `render_flags` bit 7 from those bytes with the
+  vertical test `y_pos >= camera_y - height_pixels`
+  (docs/skdisasm/sonic3k.asm:36347-36370). Camera Y ends row 1724 at `0x044A`
+  (rock on screen: `0x442 >= 0x43B`) and row 1725 at `0x0452` (rock off
+  screen: `0x442 < 0x443`). `SolidObjectFull_1P` routes a non-standing player
+  to `loc_1DF88`, whose `tst.b render_flags(a0) / bpl loc_1E0A2`
+  (docs/skdisasm/sonic3k.asm:41396-41398) makes the object non-solid, so the
+  ROM's `sub.w d0,x_pos(a1)` side push at `loc_1E06E` (:41482) runs on row
+  1725 and not on row 1726. The engine's gate is already implemented in
+  `ObjectSolidContactController` but read the shared 16-px
+  `getOnScreenHalfWidth` / `getOnScreenHalfHeight` defaults, so the rock stayed
+  on screen through row 1726 and pushed Tails `+1` a second time. Tails' own
+  `x_vel` (`+$16`) and the `loc_13E0A` `subq.w #1,x_pos` follow nudge
+  (docs/skdisasm/sonic3k.asm:26717-26724) were already exact on both rows.
+- **Landed:** `AizLrzRockObjectInstance` overrides both on-screen extents from
+  its existing `SIZE_TABLE` (already byte-for-byte `AIZLRZEMZRock_SizeData`).
+- **Verified** at 790 tests / 4 red on `-Ptrace-replay` (the three chains plus
+  the deliberately-red `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`),
+  identical to the control on the same base; `-Ptrace-segments` 70/55 and
+  `-Ptrace-replay-r7` 37/32 red sets byte-identical to control.

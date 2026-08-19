@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The AIZ rock's on-screen solid gate is sized from its ROM size bytes
+  (`bugfix/ai-s3k-cork-partner`, merged 2026-08-19).** `Render_Sprites` builds `render_flags` bit 7
+  from the object's own `width_pixels` and `height_pixels` (`skdisasm/sonic3k.asm:36347-36370`),
+  and `Obj_AIZLRZEMZRock` writes both bytes from `AIZLRZEMZRock_SizeData` indexed by
+  `subtype >> 4` (`:43844-43854`, table at `:43832-43840`). `AizLrzRockObjectInstance` left both
+  on-screen extents at the shared 16-px default, so a size-2 rock (`$18` wide, `$F` tall) stayed on
+  screen one frame past the ROM. `SolidObjectFull_1P` routes a non-standing player to `loc_1DF88`,
+  whose `tst.b render_flags(a0)` / `bpl` makes the object non-solid (`:41396-41398`), so that stale
+  frame kept the rock **solid** for one extra pass and its `loc_1E06E` side push ran once too often.
+  The AIZ1 rock at `(0x28A0, 0x0442)` pushed Tails +1 on rows 1725 **and** 1726 where the ROM pushes
+  only on 1725, because camera Y ends row 1724 at `0x044A` (on screen) and row 1725 at `0x0452`
+  (off screen). Segment 2 goes from 17,591 errors at frame 1726 to **16,967 at frame 2941**
+  (`x_speed`, Sonic's own field), 1,215 rows further. Verified at 792 tests / 4 red, identical to
+  control.
+
 - **The SYZ Roller cannot despawn off the left edge, and now does not
   (`bugfix/ai-s1-syz2-plc-row`, merged 2026-08-19).** `Roll_Action` does not end at
   `RememberState`: under `FixBugs = 0` (`s1disasm/sonic.asm:20`) it carries an inlined copy closing

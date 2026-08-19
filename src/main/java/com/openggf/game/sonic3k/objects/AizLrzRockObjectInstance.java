@@ -339,6 +339,29 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        // Render_Sprites builds the on-screen flag from the object's own
+        // width_pixels/height_pixels bytes (sonic3k.asm:36347-36370), and
+        // Obj_AIZLRZEMZRock writes both from AIZLRZEMZRock_SizeData indexed by
+        // subtype >> 4 (sonic3k.asm:43844-43854, table at 43832-43840). The
+        // shared 16-px default is wrong for every rock size: it widens the
+        // horizontal gate for the $18/$28-wide entries and, worse, keeps the
+        // $F-tall entries "on screen" one frame past the ROM, because the
+        // vertical test is y_pos >= camera_y - height_pixels. That extra frame
+        // leaves the rock solid for one pass after the camera has scrolled off
+        // its bottom edge, so SolidObject_cont still runs its side push
+        // (sonic3k.asm:41396-41398 gates that path on render_flags bit 7).
+        return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][0];
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // height_pixels from the same AIZLRZEMZRock_SizeData entry
+        // (sonic3k.asm:43852-43854); see getOnScreenHalfWidth.
+        return SIZE_TABLE[Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1)][1];
+    }
+
+    @Override
     public int getBalanceWidthPixels() {
         // Obj_AIZLRZEMZRock stores byte_1F9D0's unpadded width in
         // width_pixels. Tails_Move reads that byte for its on-object balance
