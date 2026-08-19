@@ -42,6 +42,28 @@ All notable changes to the OpenGGF project are documented in this file.
   zone-event owner, so a return into AIZ act 2 keeps Tails beside Sonic exactly
   as `SpawnLevelMainSprites_SpawnPlayers` placed him
   (`Player_1 - $20`, `+ 4`, sonic3k.asm:8363-8369).
+- A CPU sidekick now inherits the leader's collision-path bits when a level
+  loads, so Tails probes the same 16x16 collision array Sonic does. Both games
+  with a sidekick do this unconditionally, and both hide it behind a
+  misleadingly named branch: Sonic 2's `Obj02_Init` tests
+  `cmpi.w #2,(Player_mode).w` (docs/s2disasm/s2.asm:38907), where mode 2 is
+  *Tails Alone*, so in a Sonic-and-Tails game the branch is taken and the
+  `Obj02_Init_2Pmode` label is reached on the ordinary one-player path, running
+  `move.w (MainCharacter+top_solid_bit).w,top_solid_bit(a0)` (:38928) -- a word
+  move, so `lrb_solid_bit` travels with it. The `$C`/`$D` write below that
+  branch, which reads like the default, is the Tails-alone path. Sonic 3&K's
+  `Tails_Init` is the same shape: `cmpi.w #2,(Player_mode).w / bne.s loc_1375E`
+  and `move.w (Player_1+top_solid_bit).w,top_solid_bit(a0)`
+  (docs/skdisasm/sonic3k.asm:26105-26133). Sonic 1 has no sidekick. The leader's
+  own init runs first in both ROMs -- it occupies the object slot before the
+  sidekick's -- so the copy picks up whatever a star post or special-stage
+  return restored (S2 `Obj79_LoadData`, s2.asm:44787). Previously the sidekick
+  kept the engine's `$C`/`$D` default: on the complete-emeralds run's CPZ act 2
+  special-stage return, Sonic resumed on the secondary path while Tails stayed
+  on the primary one, and Tails read a different floor angle and a different
+  surface Y on the same slope. In `TestS2CompleteEmeraldRunChain` that closed
+  segment 15's first physics divergence outright, taking the segment from 52639
+  comparator errors to 11629 and its sidekick errors from 21116 to 3525.
 - A Sonic 3&K special-stage return no longer re-arms the star post it was
   entered from. The engine's star-post activation mark models the ROM's
   "last checkpoint reached" byte, and that byte is not part of what the return's
