@@ -91013,3 +91013,62 @@ there is no dynamic-art axis hiding ahead of the physics frontier here.
 `hardware_timing` stream, and a probe logged 100 `NEMESIS_PLC_QUEUE` submissions with zero
 recorded edges and zero unrepresented admissions across the whole chain. The recorded-timing
 port is never active for S1 on committed data, so it cannot be the mechanism.
+## 2026-08-19 — S2 segment 15 localised: row 0 is a dead row
+
+Base `bdbcc274c`. No code landed; probe reverted. **Row indices logged directly at the
+closure and service sites — no counter mapping, no inference.**
+
+The probe sets the row from the run walker's own per-row hook
+(`TraceRunReplayWalker` -> `fixture.beginTraceRow`) and tags every `prepare()`, every
+service and every suppressed closure with it.
+
+```
+segment 12  seg8_cpz1  GREEN        segment 15  seg10_cpz2  RED
+ row=0 ROW BEGIN                     row=0 ROW BEGIN
+ row=0 serviceLevelVBlank 8->5       row=0   (nothing at all)
+ row=0 prepare armed true->true      row=1 ROW BEGIN
+ row=1 ROW BEGIN                     row=1 SUPPRESSED CLOSURE
+ row=1 serviceLevelVBlank 5->2       row=2 ROW BEGIN
+ row=1 prepare armed true->true      row=2 serviceLevelVBlank 8->5
+ row=2 serviceLevelVBlank 2->-1      row=2 prepare armed true->true
+ row=2 prepare armed false->true     row=3 serviceLevelVBlank 5->2
+```
+
+`seg9_cpz2` (segment 13, also green) is identical to segment 12.
+
+**Segment 15's row 0 does nothing whatsoever** — no V-blank service, no arming, and no
+suppressed closure either. Row 1 is the suppressed closure, which is *correct*: it is exactly
+where the recording's lag row sits. Row 2 then performs row 0's work, and every row after
+inherits the shift.
+
+Against the ROM model derived in the previous entry, recorded row 0 is
+`Level_frame_counter = 1` — the level's first `Level_MainLoop` iteration — whose `Vint_Level`
+services 3 patterns (8 -> 5) and whose tail runs `RunPLC_RAM`. The recording samples 5 there,
+confirming it. So row 0 is an ordinary level main-loop row that the engine drives as a dead
+row.
+
+### Both earlier ordering framings were wrong
+
+Two entries ago: "the engine places its lag closure before the no-op service". One entry ago,
+retracting that: "the suppressed row is correctly placed" — that half was right. The tentative
+claim left standing last entry, that the engine runs the closure and the service in the
+opposite order to the ROM, is **also wrong**. The truth is simpler than either: the closure is
+in the right place and row 0 is simply empty. This is why the ordering claim was left unproven
+rather than asserted — the counter mapping would have licensed the wrong answer for a third
+time.
+
+### What this means for a fix
+
+The defect is **row admission** — which rows get driven as level frames — and the previous
+entry's exoneration of the PLC subsystem holds: nothing in the queue path differs between the
+green segments and the red one. Any change that adjusts the PLC path so row 2 reads 2 instead
+of 5 would be fitting a subsystem that three separate measurements have now cleared. What
+lands must make row 0 run the level frame the ROM runs on it.
+
+### Untested, recorded so it is not mistaken for a finding
+
+The same segment's walk failure reports `cursor 89602, offset 89600` for destination
+`seg11_arz1` — a **two-row** gap at destination admission, the same magnitude as the two
+uncompared rows here. That suggests one mechanism behind both axes, but it is **not tested**:
+segment 16 never runs, because the walk aborts before it, so the probe produced no output for
+it at all. Someone should test it rather than assume it.
