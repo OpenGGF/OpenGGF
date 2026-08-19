@@ -87902,3 +87902,60 @@ second writer of the sidekick's y in this state before looking for a wrong const
 
 Note for whoever takes it: `TailsRespawnStrategy.updateApproaching` still never executes in
 this run (previous entry), so the `+/-1` step it implements is not the code doing this.
+## 2026-08-19 — plane and solidity bit are identical: eighth elimination
+
+Branch `bugfix/ai-s2-plane-select-r1` off `origin/develop` (`861671188`).
+Engine instrumentation (reverted) plus a new probe
+`tools/bizhawk/probes/s2_cpz2_plane_probe.lua`; no code landed.
+
+### Both sides are on the same plane with the same bit
+
+ROM, hooked at `CheckRightWallDist_Part2` (`loc_1EEE4`):
+
+    row 6594  d3=2D2B  x=2D2B  top=0C  lrb=0D
+    row 6599  d3=2D52  x=2D52  top=0C  lrb=0D
+    row 6600  d3=2D58  x=2D58  top=0C  lrb=0D
+    ... unchanged through 6611
+
+Engine, at `doWallCheck`:
+
+    row 6599  x=2D52  top=0C  lrb=0D  quadrant=192  dist=19
+    row 6600  x=2D5A  top=0C  lrb=0D  quadrant=192  dist=27
+
+`top_solid_bit = $0C` selects `Primary_Collision` (s2.asm:37890-37893) on both
+sides, `lrb_solid_bit = $0D` on both, and the movement quadrant is `$C0` on both
+-- so the **quadrant is settled too**, and the engine's wall check runs every row
+on the correct sensor. **Eighth elimination**, and the ninth thing the previous
+round left unexamined is closed with it.
+
+### What the engine's scan actually returns
+
+    dist = 26, 18, 27, 19, 27, 19, 27, 19, 27, 19 ...
+
+Never negative, so never a hit -- and **alternating rather than decreasing** while
+`x` advances 8 px per row. A sensor closing on a static wall returns a shrinking
+distance. An alternating 27/19 against an 8-px step is a sensor measuring to a
+repeating boundary, not to a wall face: the engine's probe is finding no wall
+there at all.
+
+### The ROM's clamp is only two pixels, which constrains this further
+
+Natural steps at `x_speed = $7F4` (7.95 px) are 8, 8, 8, 7, 8. The step into the
+stop is **6** -- so the ROM's `Sonic_DoLevelCollision` clamp moved him back from a
+natural `2D5A` to `2D58`, a **2-pixel** pushback against a wall face at `2D62`.
+The engine reached exactly that `2D5A` and reported 27 px of clear space.
+
+Same position, same plane, same solidity bit, same quadrant, same probe offset --
+and opposite answers.
+
+### Where that leaves it
+
+Every part of the *decision* has now been eliminated: the probe offset, the plane
+selection, the solidity bit, the quadrant dispatch, and the wall check running at
+all. What has not been examined is **the collision data the scan reads**. A wall
+present for the ROM and absent for the engine at `x = 2D62` on the primary plane
+is a level-data question -- chunk/block solidity at that location -- rather than a
+physics-code one.
+
+That is a different subsystem from everything this line has covered, and it is
+named as the unexamined remainder rather than as a claim.

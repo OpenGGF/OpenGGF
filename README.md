@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Plane, solidity bit and quadrant are all identical -- it is the collision data
+  (`bugfix/ai-s2-plane-select-r1`, merged 2026-08-19 -- engine instrumentation reverted, new probe
+  landed; eighth and ninth eliminations).** ROM at `CheckRightWallDist_Part2` holds `top=0C lrb=0D`
+  unchanged across 6594-6611; the engine at `doWallCheck` holds `top=0C lrb=0D` with `quadrant=192`
+  every row. `$0C` selects `Primary_Collision` on both sides, so the plane, the solidity bit **and**
+  the previously-unexamined quadrant all match, and the engine's wall check is running every row on
+  the correct sensor. **What the scan returns is the finding:** `dist = 26, 18, 27, 19, 27, 19, ...`
+  -- never negative, and **alternating rather than decreasing** while `x` advances 8 px per row. A
+  sensor closing on a static wall returns a shrinking distance; alternating 27/19 against a uniform
+  step is a sensor measuring to a repeating boundary, so **the engine's probe finds no wall there at
+  all.** The ROM's clamp narrows it further: natural steps at `$7F4` are 8, 8, 8, 7, 8 and the step
+  into the stop is **6**, so the clamp pushed him back from a natural `2D5A` to `2D58` -- a 2-pixel
+  correction against a wall face at `2D62`, at the exact position where the engine reported 27 px of
+  clear space. Same position, same plane, same bit, same quadrant, same probe offset, opposite
+  answers. Every part of the *decision* is now eliminated, and what has **not** been examined is the
+  **collision data the scan reads** -- chunk and block solidity at that location, a level-data
+  question rather than a physics-code one, and a different subsystem from everything this line has
+  covered. Also recorded as excluded: the `loc_18B82` spring path, since both sides hold identical
+  solidity bytes whether or not that thread relates to known-discrepancy 28.
+
 - **The S3K sidekick defect is a doubled catch-up rate, not a two-pixel offset
   (`bugfix/ai-s3k-yradius-3573-r1`, merged 2026-08-19 -- diagnosis only, both candidates dead).**
   Logging `getY()`, `getYRadius()` and `getCentreY()` at the sidekick CPU update across the window

@@ -267,6 +267,11 @@ half-landed change, and require the blast radius to be measured before anything 
   inside a 757-row screen whose length is set elsewhere, so it changes nothing measurable. Measure the
   span you claim moved, at both endpoints, with one variable — do not infer that a real delay
   propagates. The most convincing wrong stories are the ones where every individual link checks out.
+- **A same-value/different-outcome question needs both sides instrumented, not either.** Offering
+  "instrument the engine or probe the ROM, whichever is cheaper" is a false economy when the question
+  is why two implementations reach opposite conclusions from the same inputs: the engine side alone
+  yields a value with nothing to compare against, and the ROM side alone yields the same. The cost is
+  both, structurally, and a brief that presents it as a choice under-budgets the round.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
