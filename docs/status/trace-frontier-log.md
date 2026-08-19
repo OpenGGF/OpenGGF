@@ -89528,3 +89528,71 @@ The shared defeat flow also serves CNZ, ICZ2, MHZ2 and HCZ; the sweep covers wha
 fixtures exist for them and none moved, but no fixture is known to exercise a
 hidden-monitor re-bounce outside AIZ, so treat that specific path as **unmeasured** there
 rather than verified.
+## 2026-08-19 -- Segments 12/15 are sub-frame, not frame-derivable; and a detector that could not disagree
+
+Base `03ea96bcb`. Follows the root-cause entry above. **Nothing landed. The
+change described here was implemented, measured, and reverted.** Baseline
+re-confirmed after revert: segment 12 at 40 errors f101, segment 15 at 6 errors
+f102, both `queue.s1_nemesis_plc.prepared` rom=true engine=false.
+
+**What `RunPLC` does across a lag frame, settled from the listing.** A lag frame
+is not a skipped iteration. `Level_MainLoop` arms `v_vblank_routine`, spins in
+`WaitForVBlank` until the handler clears it (`sonic.asm:1782-1789`), bumps
+`v_framecount`, then runs the body. A V-blank arriving mid-body finds
+`v_vblank_routine` still 0 and takes `VBlank_Lag` (`:658`), which services no
+PLC, then `rte` -- and **the main loop resumes exactly where it was
+interrupted**. So `RunPLC` (`:3032`) executes exactly once per main-loop
+iteration regardless of how many V-blanks fired during it. Whether it has
+already executed when a lag V-blank lands depends only on where in the body the
+interrupt fell.
+
+**Both outcomes occur in the committed run, which is what kills the fix.**
+
+| case | promoting frame | next frame | ROM behaviour |
+|---|---|---|---|
+| `mz3_2` f102 | `remain 3 -> 18` visible on its own row | f103 lags | tail ran **before** the lag |
+| `ghz2_2` f107 | `prepared=false remain=-1 nqueued=1` | f108 lags, shows `remain=14` | tail ran **after** the lag |
+
+`ghz2_2` f107 is the state the previous entry asserted the ROM could never
+present -- an empty active slot behind a non-empty queue. **It presents it.**
+That retraction matters more than the rest of this entry.
+
+Entering both rows the engine state is identical: active slot just emptied,
+queue non-empty, next row lags. The only difference is the 68000's position
+within the loop body when the interrupt arrived. That is sub-frame execution
+timing with no frame-granularity predicate, so under hard rule 3 the answer is
+not a tuned discriminator. The current behaviour (always hold) is correct for
+`ghz2_2` and wrong for `mz2_3`/`mz3_2`; the change below is the opposite side of
+the same coin. Neither generalises, and a green suite either way would be one
+arbitrary side of a coin flip.
+
+**The change that was tried and reverted, so nobody repeats it.** Add
+`PlcLifecycleService.loopTailWouldPromote()` (S1/S2 both return
+`activeEntry == null && !queuedEntries.isEmpty()`, mirroring the guard both
+`RunPLC`s open with -- `sonic.asm:1380-1383`, `s2.asm:2150-2153`) and exempt a
+promoting tail from the row-shape hold in
+`PlcFrameLifecycleCoordinator.prepareAfterLoop`. Measured result: **segment 15
+green, segment 12 40 -> 37** with its new first error at f593
+`dynamic_art.edge[0].mapping_frame` rom=1 engine=58 -- the predicted
+player-animation axis -- **and segment 3 (`ghz2_2`) newly red at 3 errors, f107,
+`prepared` rom=false engine=true.** Two red segments became two red segments:
+the red-set count was unchanged while its membership changed, which is exactly
+the shape that reads as progress and is not.
+
+**The methodological failure, which is the reusable part.** The change rested on
+"8 of 8 promotions followed by a lag show the ROM promoting on its own row". That
+detector **could not produce a disconfirming instance.** It defined a promotion
+frame as the frame where the larger `remaining_work` first appears, so every
+promotion it found was by construction visible on its own row. A deferred
+promotion like `ghz2_2` f107 was recorded as a promotion at f108 and then tested
+for a lag at f109, where there is none -- so the counterexamples were silently
+dropped rather than counted against the hypothesis. 8/8 was not evidence; it was
+the definition restated. Before trusting a ratio, construct the disconfirming
+case by hand and check the detector reports it.
+
+**Where this leaves the frontier.** Frame-granularity state cannot decide it, so
+the sanctioned route is the per-movie hardware-timing sidecar of hard rule 4 --
+whose S1 PLC pipeline is exactly this queue. That makes the held S1
+`hardware_timing` fixture not merely an observability unblock but plausibly the
+only legitimate mechanism for closing 12/15. Do not spend another round hunting
+a frame-derivable predicate.
