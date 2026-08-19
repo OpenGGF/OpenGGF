@@ -162,6 +162,19 @@ half-landed change, and require the blast radius to be measured before anything 
   in a span no fixture covers, say so and treat the clean gate as *absence of evidence*, not
   evidence of absence. The honest options are to extend coverage first, or to land it explicitly
   flagged as unobserved — not to quote the green.
+- **The comparator's `cascading` flag suppresses cluster ONSETS, not just repeats.** A 2422-error
+  `dynamic_art` cluster sat in the first report a round read this session and was passed over
+  because it was almost entirely `cascading: true` — only three rows were non-cascading. Scanning
+  for non-cascading rows is the right first filter and it will hide any defect whose own onset the
+  flag classifies as cascading. Before concluding a report holds nothing, check the cascading rows'
+  *distribution* as well as their count.
+- **For `dynamic_art`, count drift, not errors.** One wrong edge shifts every later `edge_ordinal`
+  and `transfer_id`, so the error count is a multiplier on a small number of real events — 2422
+  errors resolved to a handful of discrete timing events plus two bursts. Measure cumulative engine
+  edges minus ROM edges and read the *regimes*: a run-ahead followed by a catch-up is a service-rate
+  signature, not spurious generation. And do not assume a steady reference rate; the ROM's own edge
+  rate across one window ran from 32 to 363 per hundred frames, and the divergence ramp began
+  exactly at the burst.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
