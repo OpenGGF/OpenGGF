@@ -4,6 +4,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The S3K signpost's bump-from-below now lets at most one player land a hit per
+  frame, matching the shipped `FixBugs = 0` build. `sub_83A70` ends in
+  `jmp (HUD_AddToScore).l`, a tail jump, so that routine's `rts` consumes the
+  return address pushed by `bsr.w sub_83A70` and returns to `loc_83A6A` with
+  `d0` holding the 32-bit `Score` instead of the packed player addresses
+  (docs/skdisasm/sonic3k.asm:176357-176365, 17654-17665). The `swap d0 /
+  tst.w d0` that should test Tails therefore cannot reach him whenever Player 1
+  scored. The surviving wild read is provably inert: `Score` caps at `$F423F`,
+  so `a1` is `0..$F`, and every vector-table `y_vel` word it can address is
+  `$0000`, which `bpl.s locret_83ABC` rejects. The engine previously ran both
+  players unconditionally, which is the bug-fixed branch.
+  `TestS3kSignpostInstance` gains `nativeP1BumpSuppressesTheSameFrameNativeP2Bump`,
+  replacing an expectation that asserted the opposite. Latent site: no committed
+  trace has both players simultaneously eligible, so no trace result changes.
+
+### Fixed
 - The S3K end-of-act signpost's bump-from-below kick now substitutes the ROM's
   `#8` fallback *before* the shift. `sub_83A70`
   (docs/skdisasm/sonic3k.asm:176381-176390) does `sub.w x_pos(a1),d0 / bne.s + /
