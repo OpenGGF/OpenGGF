@@ -84482,3 +84482,60 @@ to BK2 frames `bk2_frame_offset + 1721..1733`, and record which fires in what
 order per frame. That names the owner directly. See the *BizHawk Live
 Diagnostic Capture* section of the `trace-replay-bug-fixing` skill for the probe
 contract.
+
+## 2026-08-19 — S2 CPZ2 push-order PC-execute probe: written and contract-clean, but NOT executed here
+
+Base `222f1b7a9`. No engine change, no frontier movement, and **no probe output**:
+the probe could not run in this environment. Landing the tooling per the
+"reusable infrastructure" rationale, with the blocker recorded so the next
+attempt does not re-hit it blind.
+
+### What landed
+
+`tools/bizhawk/probes/s2_cpz2_push_order_probe.lua`, using
+`probe_runtime.lua`'s declarative stage-and-hooks contract. Stage gate is ROM
+state only — `Game_Mode & $7F == $0C`, `Current_Zone == $0D` (CPZ),
+`Current_Act == 1` — with the frame window narrowing an already stage-gated
+capture, per the probe contract. Hooks, with the character-register gate each
+one needs:
+
+| Hook | Address | Gate | Why |
+|---|---|---|---|
+| `SolidObject_LeftRight` | `$019A6A` | `a1 == $FFB000` | entry to the left/right branch |
+| `SolidObject_AtEdge` | `$019A90` | `a1 == $FFB000` | sets pushing on BOTH object and player (s2.asm:35439-35446) |
+| `SolidObject_SideAir` | `$019AB6` | `a1 == $FFB000` | the `<=4` vertical / airborne exit |
+| `Solid_NotPushing` | `$019ADC` | `a1 == $FFB000` | clears pushing on both |
+| `Sonic_Animate` entry | `$01B350` | `a0 == $FFB000` | status BEFORE the prologue clear |
+| `SAnim_Do` | `$01B384` | `a0 == $FFB000` | status AFTER it |
+
+The last pair brackets the `bclr` at s2.asm:38391 without needing that
+instruction's own address, which is the only address in the set I could not
+read directly off a `loc_` comment. Every other address is the `loc_` annotation
+on the label itself. Each row logs the frame and the PC explicitly rather than
+inferring either from stream order. The probe is read/log only.
+
+`luac -p` accepts it and `TestBizhawkProbeContractGuard` passes (4 tests).
+Neither of those says it produces correct output — it has never executed.
+
+### Why it did not run, precisely
+
+`docs/BizHawk-2.11-linux-x64` is **not linked into an agent worktree** — the
+post-checkout hook links the disassembly trees only — so `BIZHAWK_HOME` must be
+pointed at the primary checkout's copy. With that done the launcher starts
+EmuHawk, parses its flags and initialises SDL2, then dies at
+`Form.Show()` / `SetVisibleCore` with `X11 Error: BadMatch (invalid parameter
+attributes)` from Mono's `XplatUIX11`. The session is Wayland
+(`XDG_SESSION_TYPE=wayland`) with Xwayland providing `/tmp/.X11-unix/X0`, and
+Mono WinForms cannot get the visual it wants there. `Xvfb` is not installed, and
+would not obviously help since the Lua path wants hardware GL. The output file
+is created and left empty, which is the signature to look for.
+
+The native headless harness is not an alternative for this: `GpgxHost` does not
+support `event.onmemoryexecute`, which is the whole mechanism here.
+
+### So the question stays open, and is still not "gated"
+
+The previous entry's eliminations stand and nothing here weakens or strengthens
+them. This is an environment blocker on the diagnostic, not evidence about the
+engine, and it must not be read as "cannot be seen at frame granularity" — that
+verdict still requires the probe to have actually run.

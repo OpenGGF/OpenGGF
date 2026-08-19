@@ -228,6 +228,28 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **A PC-execute probe for the S2 push-order question, written but never run
+  (`bugfix/ai-s2-push-probe-r1`, merged 2026-08-19 -- tooling only).**
+  `tools/bizhawk/probes/s2_cpz2_push_order_probe.lua` hooks `SolidObject_LeftRight` (`$019A6A`),
+  `SolidObject_AtEdge` (`$019A90`), `SolidObject_SideAir` (`$019AB6`) and `Solid_NotPushing`
+  (`$019ADC`) gated on `a1 == $FFB000`, plus `Sonic_Animate` entry (`$01B350`) and `SAnim_Do`
+  (`$01B384`) gated on `a0 == $FFB000`, read-and-log only, on `probe_runtime.lua`'s declarative
+  stage-and-hooks contract. The stage gate is ROM state only. Nothing is seeded or derived through
+  the constant under test: hook addresses come from the disassembly's own `loc_` annotations and RAM
+  locations from the production S2 recorder's existing constants. The one address not readable from
+  a `loc_` comment -- the `bclr` at `s2.asm:38391` -- is **bracketed rather than guessed**:
+  `Sonic_Animate` entry reads status before the prologue clear and `SAnim_Do` after, and both paths
+  reach `SAnim_Do`. `luac -p` accepts it and `TestBizhawkProbeContractGuard` passes; **neither says
+  the output is correct, and there is no output.** It cannot run in this environment: EmuHawk
+  initialises SDL2 then dies at `Form.Show()` with `X11 Error: BadMatch` from Mono's `XplatUIX11`
+  under a Wayland session served by Xwayland, with no `Xvfb`/`Xephyr` installed; the native headless
+  harness is not a fallback because `GpgxHost` has no `event.onmemoryexecute`, which is the entire
+  mechanism. Also worth knowing: `docs/BizHawk-2.11-linux-x64` is **not** linked into agent
+  worktrees (the post-checkout hook links only the disassembly trees), so `BIZHAWK_HOME` must point
+  at the primary checkout. The failure signature is an `OGGF_OUT` file created and left at zero
+  bytes. **This is a blocked diagnostic, not evidence about the engine** -- it must not be read as
+  "cannot be seen at frame granularity". The previous round's eliminations stand unchanged.
+
 - **The S2 push-order question is narrowed to a PC-execute probe, not answered
   (`bugfix/ai-s2-push-order-r1`, merged 2026-08-19 -- investigation only, no fix).** The object's
   bit is live rather than stale: `object_near` slot 51 carries status `0x20` on every frame
