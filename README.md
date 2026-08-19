@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K segment-4 frontier is a re-collected ring, and "clears segment 4" was wrong
+  (`bugfix/ai-s3k-seg5-r1`, merged 2026-08-19 -- investigation only, no fix).** The chain stops at
+  the 4 -> 5 handoff on `non-exportable pending hardware submission: KOS_MODULE_QUEUE#52`, which had
+  been read as the segment being clear. It is not: the segment's own report carries **57,777
+  errors**, with the first non-camera physics mismatch at frame 519 -- `rings`, ROM 75 against
+  engine 76. The engine **re-collects three rings** at (936,724), (968,740) and (1000,756) that it
+  already collected in segment 2 at pixel-identical player positions. The manifest's 2 -> 3
+  transition is a giant-ring entry that restores the player behind them, and the ROM does not
+  re-collect because that entry path sets `Respawn_table_keep`
+  (`skdisasm/sonic3k.asm:128407-128412`), which makes the rings-manager init skip its
+  `Ring_status_table` wipe (`:18561-18570`, reached from `:18232-18238`) -- the same "missing half of
+  one contract" shape as the star-post fix. **`KOS_MODULE_QUEUE#52` is not invented work:** the
+  engine submits exactly the four `Obj_TitleCardInit` KosM jobs (`:62108-62166`) with fingerprints
+  matching the recording, one raw frame late, after ~7,000 frames of accumulated divergence -- so
+  the handoff failure is a consequence rather than a cause. Also recorded: the timing port tolerates
+  arbitrarily **early** submission and only ever fails **late**.
+
 - **`Solid_NotPushing` clears the player's flag unconditionally; the engine gates it per-instance
   (`bugfix/ai-s2-push-clear-r1`, merged 2026-08-19 -- root cause found, fix measured and rejected).**
   A PC-execute probe run over the recorded movie shows `SolidObject` executing **twice per frame**
@@ -421,7 +438,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   (Last_star_post_hit).w,...` (`:26155`), and exists solely to suppress the intro marker on a level
   entered from a star post or a special-stage return after one -- which is exactly this route, which
   enters act 2 with `Last_star_post_hit = 3`. Both guards now live at the AIZ zone-event owner.
-  **The unrecorded death-and-restart is gone** and the chain clears segment 4 entirely, stopping at
+  **The unrecorded death-and-restart is gone** and the chain now walks segment 4 to its end (**corrected below: walking to the end is not comparing clean -- the segment carries 57,777 errors**), stopping at
   the 4 -> 5 handoff on a non-exportable pending `KOS_MODULE_QUEUE#52`.
 
 - **The S3K chain's segment-4 failure is a real death, and the cause is the AIZ2 miniboss

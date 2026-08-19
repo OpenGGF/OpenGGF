@@ -84618,3 +84618,87 @@ name the pair so the next agent does not retry the removal in isolation — so:
 **do not re-apply the unconditional clear on its own; it has been measured at
 5272.** The open question is what the gate was propping up, and whether that is
 a second defect or the same defect seen from the other side.
+
+## 2026-08-19 — S3K complete-emeralds chain: the segment 4 frontier is a
+## re-collected ring, not the KosM handoff
+
+Command (worktree at `origin/develop` `7c7d86190`, branch
+`bugfix/ai-s3k-seg5-r1`):
+
+```
+rm -rf target/surefire-reports
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -DfailIfNoTests=false \
+    -Ds3k.rom.path=<s3k rom> test
+```
+
+Result: FAIL, `IllegalStateException: non-exportable pending hardware
+submission at segment end: KOS_MODULE_QUEUE#52`, thrown from the segment 4 ->
+5 handoff. That exception is what stops the drive, and it had been read as
+"segment 4 is clear". **It is not.** The segment's own comparison report,
+`target/trace-reports/s3k-sonic-tails-complete-emeralds_seg4_report.json`,
+carries **57,777 errors**, with `firstNonCameraPhysicsMismatch` at **frame 519,
+field `rings`, ROM 75 vs engine 76**. Segments 0 and 2 are 0 errors.
+
+### Root cause of the segment-4 divergence
+
+The engine collects three rings the ROM does not, at segment-4 raw frames
+**519, 528, 535** — ring layout entries `(936,724)`, `(968,740)`, `(1000,756)`,
+with the player at `(0x39C,0x2C5)`, `(0x3BA,0x2D4)`, `(0x3DD,0x2E6)`.
+From frame 1637 onward the engine's ring collections match the recording
+frame-for-frame, so the AIZ ring layout and the collection mechanics are right.
+
+Those three rings were **already collected** in segment 2 (`aiz_2`) at frames
+3620/3628/3636, at pixel-identical player positions, taking the ROM's count
+72 -> 75. The run manifest's transition 2 -> 3 is
+`entry_kind: giant_ring`, `saved_x_pos: 736`, `saved_y_pos: 701`, so the
+special-stage return restores the player *behind* those rings and the movie
+runs the same stretch again.
+
+The ROM does not re-collect them because the giant-ring special-stage entry
+sets `Respawn_table_keep`:
+
+- `loc_61892` — `move.b #1,(Respawn_table_keep).w` on the special-stage entry
+  path (`docs/skdisasm/sonic3k.asm:128407-128412`).
+- `sub_EB1A` — the rings-manager init clears `Ring_status_table` **only** when
+  `Respawn_table_keep` is zero: `tst.b (Respawn_table_keep).w / bne.s loc_EB30`
+  skips the `$400`-byte wipe (`docs/skdisasm/sonic3k.asm:18561-18570`), reached
+  from `loc_E8BE` (`:18232-18238`).
+
+So on a special-stage return the collected-ring table survives and those rings
+never respawn. The engine's segment-4 level restore does not carry that state.
+This is a real engine defect and it is the segment-4 frontier; it is not
+modelled anywhere today (`Ring_status_table` appears in the tree only as a
+comment in `LevelManager.rebuildManagersForActTransition`, which describes the
+*act-transition* path where the ROM does clear the table).
+
+### What `KOS_MODULE_QUEUE#52` actually is — correcting the previous read
+
+It is **not** work the engine invents. Instrumenting `HardwareTimingService`
+.submit() shows the engine submits exactly four KosM parents `#52`-`#55` with
+fingerprints matching the recording's `#52`-`#55` byte for byte, from
+`Sonic3kTitleCardManager.loadAllArt` via
+`S3kResultsScreenObjectInstance.initializePublishedTitleCard` — i.e. the ROM's
+own `Obj_TitleCardInit`, which queues exactly four `Queue_Kos_Module` jobs
+(`docs/skdisasm/sonic3k.asm:62108-62166`), reached from `loc_2DD06`'s mutation
+of the results SST into `Obj_TitleCard` (`:62708-62720`).
+
+The engine submits them on raw frame **7558**'s object pass. The recording
+completes the first module's direct child at **7557** `pre_main_loop` and the
+parent at 7558 `post_objects`, so the engine is one raw frame late and the
+head never becomes prepared in time ("engine job is not prepared"). Every later
+recorded edge then misses, and at the segment boundary `#52` is still pending.
+
+Two facts worth carrying forward:
+
+- **The port tolerates arbitrarily early submission, only never late.** The
+  previous title-card group was submitted by the engine at raw frame 5798 and
+  released by recorded edges at 6968-6973 — 1,170 frames early — with no
+  complaint. Ordinal-plus-head matching does the work, not timing.
+- Because this lateness sits at the end of ~7,000 frames of divergence, it
+  cannot be attributed to any single cause while frame 519 is red. Do not fix
+  the handoff first.
+
+**Next target: segment 4 frame 519 (`rings`), via `Respawn_table_keep` /
+`Ring_status_table` persistence across the giant-ring special-stage return.**
+No engine change was landed in this round.
