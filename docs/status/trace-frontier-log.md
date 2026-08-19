@@ -90905,4 +90905,73 @@ already documented for the S2 CPZ/WFZ platform and SmashableGround: an object
 whose ROM `obActWid` differs from its rendered footprint needs the
 `getBalanceWidthPixels()` override, and the symptom is a spurious balance
 animation rather than a position error.
+## 2026-08-19 — S2 segment 15: the PLC ledgers are identical, so the defect is not in the PLC subsystem
 
+Base `7185fff40`. No code landed; probe reverted. **The arming reading is refuted too.**
+
+### The ROM model, derived and confirmed against the recording
+
+`RunPLC_RAM` (`docs/s2disasm/s2.asm:2148-2195`) arms the next entry only when `Plc_Buffer` is
+non-empty **and** `Plc_PatternsLeft == 0`, and it is called from the tail of `Level_MainLoop`
+(`:5107`) and the tail of the title-card loop (`:5064`) — never from a V-int. So a lag row,
+which runs no main-loop iteration, neither services nor arms. That predicts the recording
+exactly:
+
+| recorded row | gfc | ROM | sampled `remaining_work` |
+|---|---|---|---|
+| 0 | 1 | `Vint_Level` services 3; tail `RunPLC_RAM` | 5 |
+| 1 | 1 | `Vint_Lag` — no service, no main loop, no arm | 5 |
+| 2 | 2 | `Vint_Level` services 3 | 2 |
+| 3 | 3 | services 3, entry finishes, tail arms the next (12) | 12 |
+
+The engine's `hasPreparationBoundary(LAG) == false` matches `RunPLC_RAM`'s absence from the
+V-int path.
+
+### The engine's ledger is identical in the passing and failing segments
+
+Logging every `prepare()` (with armed-before/after) and every service (with remaining
+before/after), against the engine's level frame counter:
+
+```
+seg8_cpz1 (passes)                     seg10_cpz2 (fails)
+ lvlFrame=26  6-pattern x6, 22->...->8  lvlFrame=26  6-pattern x6, 22->...->8   IDENTICAL
+ lvlFrame=26  serviceLevelVBlank 8->5   lvlFrame=27  serviceLevelVBlank 8->5    <-- only difference
+ SEG row=0 rom=5 eng=5                  SEG row=2 rom=2 eng=5
+```
+
+Every service, every arming, every `armedBefore`/`armedAfter` pair matches between the two
+segments — including the `armedBefore=false armedAfter=true` transitions where an entry
+completes and the next is armed. **The queue is doing the same thing in both.** So the
+deficit is not a missing service (refuted two entries ago), not a wrong pattern budget
+(refuted three entries ago), and **not an arming defect either** (refuted here). Nothing in
+the PLC subsystem differs between the segment that passes and the segment that fails.
+
+What differs is only which engine level-frame the first level-phase service lands on — 26
+against 27 — and correspondingly that the failing segment's comparison begins at recorded row
+2 while the passing segment's begins at row 0.
+
+### Interpretation, deliberately marked tentative
+
+Applying the `+26` mapping puts the failing segment's `8->5` service on recorded row **1**,
+the lag row, with the ROM doing it on row **0**. That would mean the engine runs the lag
+closure and the level service in the opposite order to the ROM.
+
+**I am flagging rather than asserting this.** I have now used this counter mapping to support
+opposite conclusions in consecutive entries — two entries ago to claim the suppressed row is
+misplaced, one entry ago to retract that claim — which is exactly the name-the-clock trap
+applied to a derived mapping rather than a raw counter. The mapping was measured at compared
+rows only; extrapolating it to uncompared rows 0 and 1 is an assumption, not a measurement.
+
+**The next probe should log the trace row index directly at the closure and service sites**,
+rather than inferring it from a level-frame counter. Until then the ordering claim is
+unproven in both directions.
+
+### Where the defect is not
+
+Whatever the resolution, the engine's PLC pipeline executes the same steps in the same order
+in both segments. The failing segment simply has two recorded rows before its first compared
+row for which the engine performed no pipeline work at all, while the ROM ran a `Vint_Level`
+service on one of them. That is a **row-admission** question — which rows get driven as level
+frames — and not a queue question. Per the standing caution: there is nothing wrong with the
+arming to correct, and correcting it to make row 2 read 2 instead of 5 would be fitting the
+subsystem that the measurement just exonerated.
