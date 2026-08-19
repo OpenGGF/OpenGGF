@@ -232,6 +232,13 @@ half-landed change, and require the blast radius to be measured before anything 
   change removed, remove the files in place instead. A round that reached for it caught itself, but
   note the measurement would have been false anyway: the run under the stash still had the fixture
   present, so it was a control in name only.
+- **On an accumulating defect the reported delta is a lower bound, not the target.** The magnitude
+  rule below assumes the divergence you can see is the size of the effect. That holds for a
+  one-shot discrepancy and inverts for a rate error: a sidekick reported two pixels out turned out to
+  be stepping at double the ROM's rate, with the comparator's first hit merely the row where the
+  accumulation crossed the threshold. Before sizing a mechanism against a reported delta, check
+  whether the delta is *stable* across the window or *growing* — sizing a rate error against its
+  first observation aims at the wrong number entirely.
 - **Check the magnitude before accepting a signature match.** A documented pattern fitted a
   divergence qualitatively -- rolling-air sliding into a flush wall -- and was proposed as the prime
   candidate. Its arithmetic never fitted: the mechanism offers a 3-pixel shortfall (rolling shrinks

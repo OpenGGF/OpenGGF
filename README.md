@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K sidekick defect is a doubled catch-up rate, not a two-pixel offset
+  (`bugfix/ai-s3k-yradius-3573-r1`, merged 2026-08-19 -- diagnosis only, both candidates dead).**
+  Logging `getY()`, `getYRadius()` and `getCentreY()` at the sidekick CPU update across the window
+  gives **`rad = 15` on every frame**, before, during and after, with `getCentreY()` tracking
+  `getY()` exactly -- and a second probe on `setCollisionRadii` agrees from the other side, since
+  Tails' only radius swaps in the whole chain run are 15 <-> 14 and none lands in this window. The
+  same measurement disposes of the residual-physics alternative too, because `getY()` itself is what
+  moves. **What is actually happening is larger than the frontier suggested:** the engine steps
+  `0300, 02FF, 02FE, 02FD` matching at -1 per frame, then **-3 in one frame**, then **0**, then **-2
+  per frame from there on**, while the ROM steps -1 per frame across the whole span and well past row
+  3589 -- `loc_13CBE` (`skdisasm/sonic3k.asm:26600-26620`) is `moveq #1,d2` negated by sign then
+  `add.w d2,y_pos(a0)`, exactly one pixel, always. So this is a **doubled vertical catch-up rate** in
+  `FLIGHT_AUTO_RECOVERY`, and frame 3573 is merely where the accumulating difference first reaches
+  the comparator. **That inverts the magnitude discipline for this class:** on an accumulating defect
+  the reported delta is a **lower bound**, not the target, and sizing a mechanism against two pixels
+  would size it against the wrong number. The shape to explain next is the **3-then-0-then-2**
+  transition: a single step constant changing 1 to 2 does not produce a 3 px frame followed by a 0 px
+  frame, whereas two independent ±1 steps applied per frame and momentarily out of phase does -- so
+  look for a second writer of the sidekick's `y` before looking for a wrong constant.
+
 - **RETRACTION: the results screen does not lengthen, and the S1 mode question reopens
   (`bugfix/ai-s1-admission-clock-r1`, merged 2026-08-19).** The previous entry stated as a finding
   that the pair moves the engine's mode because the results screen's PLC genuinely drains and the

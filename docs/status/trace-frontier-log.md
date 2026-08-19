@@ -87847,3 +87847,58 @@ does hold the screen, the hold is caused by the pair, and the hold is
 irrelevant — all three are true at once, which is exactly why the story was
 convincing. The check that would have caught it is one run with one variable
 changed, and it cost less than writing the paragraph did.
+
+## 2026-08-19 — Frame 3573: not the radius. The vertical catch-up step doubles.
+
+Base `cf5835573`. Diagnosis only; nothing landed.
+
+### The radius candidate is dead
+
+Logging `getY()`, `getYRadius()` and `getCentreY()` at the sidekick CPU update for the whole
+window (probe reverted): **`rad = 15` on every frame**, before, during and after the
+divergence. `getCentreY()` tracks `getY()` exactly. No radius change occurs, so the
+two pixels cannot come from `getCentreY() = getY() + yRadius` moving under a constant
+position. A separate probe on `setCollisionRadii` confirms it from the other side — Tails'
+only radius swaps in the whole chain run are 15 <-> 14, a one-pixel change, and none lands
+in this window.
+
+That also disposes of the residual-physics alternative in the same measurement: `getY()`
+itself is what moves.
+
+### What actually happens
+
+Engine `y` at the CPU update, segment 4 (its own frame numbering; trace row = frame + 3,
+anchored by matching `cx = 0x0EB8` to the recorded `x = 0x0EB8`):
+
+```
+f=3566  y=0300   f=3570  y=02FA   <- -3 in one frame
+f=3567  y=02FF   f=3571  y=02FA   <-  0
+f=3568  y=02FE   f=3572  y=02F8   <- -2
+f=3569  y=02FD   f=3573  y=02F6   <- -2
+                 f=3574  y=02F4   <- -2  ... and -2 per frame thereafter
+```
+
+The ROM's y is `-1` per frame across this entire span and keeps stepping `-1` well past row
+3589. `loc_13CBE` (`docs/skdisasm/sonic3k.asm:26600-26620`) is `moveq #1,d2`, negated when
+`y_pos > target`, then `add.w d2,y_pos(a0)` — **exactly one pixel, always**.
+
+So the frontier is not two pixels of anything. It is a **doubled vertical catch-up rate**:
+the engine's `FLIGHT_AUTO_RECOVERY` settles at 2 px per frame from f=3570, with a 3 px frame
+and a 0 px frame at the transition. Frame 3573 is simply the first row where the
+accumulating difference reaches the comparator, and `delta = 2` is an artefact of where the
+comparison happened to land, not the size of the defect. Anyone sizing a mechanism against
+"two pixels" is sizing it against the wrong number.
+
+x is unaffected: `cx` advances `+8` per frame on both sides throughout, matching
+`Tails_CPU_target_X` value-for-value.
+
+### Next step
+
+Find what changes at f=3570 to double the step. The 3-then-0-then-2 pattern at the
+transition is the shape to explain: a single step-size constant changing from 1 to 2 does
+not produce a 3 px frame followed by a 0 px frame, but **two independent +/-1 steps applied
+per frame** does, if one of them is momentarily out of phase with the other. Look for a
+second writer of the sidekick's y in this state before looking for a wrong constant.
+
+Note for whoever takes it: `TailsRespawnStrategy.updateApproaching` still never executes in
+this run (previous entry), so the `+/-1` step it implements is not the code doing this.
