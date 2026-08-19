@@ -29,52 +29,61 @@ import java.nio.file.Path;
  * errors are {@code dynamic_art.*} and the first error overall is frame 52
  * {@code queue.s2_nemesis_plc.busy} (expected false, actual true).
  *
- * <p><b>Root cause (measured, not a floor-probe defect).</b> The two probes
- * and the {@code Sonic_Angle} min-distance/tie rules (s2.asm:43048-43077,
- * 43120-43146; {@code FindFloor} at s2.asm:43413-43470) are modelled
- * correctly, and the engine's chunk word, collision-index entry, curve angle
- * and height column at the divergent sensor all match the ROM data exactly.
- * What differs is which of the two per-zone 16x16 collision index arrays the
- * probe reads. {@code AnglePos} selects {@code Secondary_Collision} and passes
+ * <p><b>Root cause, part 1 -- collision path (fixed).</b> {@code AnglePos}
+ * points {@code Collision_addr} at {@code Secondary_Collision} and passes
  * {@code d5 = top_solid_bit} whenever {@code top_solid_bit != $C}
- * (s2.asm:43002-43011); the engine has the player on the primary path
- * ({@code $C}) for this whole segment. Replaying {@code FindFloor} against the
- * ROM's CPZ layout, 128x128 mappings and both CPZ collision index arrays over
- * every grounded, object-free frame of this segment: on the 57 frames where
- * the two paths predict different results, {@code top_solid_bit = $E} plus
- * {@code Secondary_Collision} reproduces the recorded {@code y} and
- * {@code angle} on 43 and the primary path on 0. Frame 394 is simply the first
- * frame at which the two arrays disagree. Chunk 265 at
- * {@code (0x142,0x5E)} carries primary solidity only ({@code word=0x3509}), so
- * on path 2 the probe falls through it to the full-height chunk below and
- * reports distance 1 with angle {@code 0x0A} -- exactly the recorded row.
- *
- * <p><b>Why the engine is on the wrong path.</b> {@code Obj79_SaveData} copies
- * {@code MainCharacter+top_solid_bit} into {@code Saved_Solid_bits} when the
- * star post is hit and {@code Obj79_LoadData} restores it when the level
- * reloads on the special-stage return (s2.asm:44740, 44787), because
- * {@code Obj01_Init} only writes {@code $C} when {@code Last_star_pole_hit}
- * is zero (s2.asm:36192-36199). The recorded run therefore resumes CPZ act 2
- * already on path 2. An earlier revision of this note claimed the v5 schema
- * records no {@code top_solid_bit}, and that was wrong: the S2 aux recorder
- * has always emitted {@code top_solid_bit}/{@code lrb_solid_bit} on its
- * {@code state_snapshot} event, but it read them from SST offsets +0x46/+0x47,
- * which are S3K's (S3K's player SST is 0x4A bytes). S2's is 0x40 bytes and
+ * (docs/s2disasm/s2.asm:43005-43011). The engine used to enter this segment on
+ * the primary path because the aux recorder read {@code top_solid_bit} from SST
+ * offsets +0x46/+0x47, which are S3K's; S2's player SST is 0x40 bytes and
  * defines {@code top_solid_bit = $3E} (s2.constants.asm:70-71), so
- * PlayerBase+0x46 landed in the *sidekick* slot and the field carried
- * out-of-slot garbage -- 0x39/0xE2 in the installed fixture, never $0C/$0E.
- * With the offsets corrected, a scratch recapture of this movie reads
- * {@code top_solid_bit = $0E} at seg10 entry and {@code $0C} at seg8/seg9
- * entry, which is exactly the save/restore behaviour described above and
- * confirms the collision-path diagnosis from ROM state rather than from a
- * value fitted to this fixture. That fixture is now installed and the entry
- * pair is seeded from it in
- * {@code TraceReplaySessionBootstrap.seedSegmentEntrySolidBits} -- initial
- * state only, with the engine's own path selection left engine-derived
- * thereafter, and only the ROM's two legal pairs accepted. The chain does play
- * the star post, so the fix that matters there is still upstream -- the CPZ
- * act 2 plane switcher that should leave the player on path 2 before the star
- * post is hit.
+ * PlayerBase+0x46 landed in the *sidekick* slot and every installed fixture
+ * carried out-of-slot bytes. With the offsets corrected the recapture reads
+ * {@code $0E} at this segment's entry and {@code $0C} at seg8/seg9 entry --
+ * the save/restore behaviour of {@code Obj79_SaveData} / {@code Obj79_LoadData}
+ * (s2.asm:44740, 44787) over {@code Obj01_Init}'s {@code $C} default
+ * (s2.asm:36192-36199). {@code TraceReplaySessionBootstrap
+ * .seedSegmentEntrySolidBits} seeds that entry pair for a metadata-start
+ * segment; path selection stays engine-derived thereafter. The frame-394
+ * divergence is gone and {@code x}/{@code y} are exact to frame 6600/6611.
+ *
+ * <p><b>What is left in this lane.</b> The S2 art-loading frontier: 2302 of the
+ * 2491 errors are {@code dynamic_art.*}, in two clusters (frames 1725-1733 and
+ * 5554 to the end of the segment). The 5554 cluster begins with one edge the
+ * engine submits and the ROM does not, after which every {@code edge_ordinal}
+ * and {@code transfer_id} is skewed and the rest cascades. The first error
+ * overall is frame 52 {@code queue.s2_nemesis_plc.busy}: the fingerprints match
+ * exactly, but the engine starts draining the entry Nemesis PLC queue two
+ * frames before the ROM does (ROM busy 54-97, engine 52-95) -- a phase offset,
+ * not a content mismatch.
+ *
+ * <p><b>What this lane does NOT explain -- correction.</b> An earlier revision
+ * of this note said the chain's segment-15 failure was the same collision-path
+ * defect reached from upstream, i.e. "the CPZ act 2 plane switcher that should
+ * leave the player on path 2 before the star post is hit". That is refuted by
+ * direct measurement on the chain:
+ * <ul>
+ *   <li>chain segment 13 is {@code seg9_cpz2} -- CPZ act 2 from level start
+ *       through the star post -- and it closes with 0 comparator errors over
+ *       5837 frames, which is impossible on the wrong collision path;</li>
+ *   <li>instrumenting {@code CheckpointState.savePlayerSolidBitsIfPresent} and
+ *       {@code LevelManager}'s checkpoint solid-bit restore shows the chain
+ *       saving {@code top=$0E lrb=$0F} at the CPZ act 2 star post and restoring
+ *       {@code $0E/$0F} on the special-stage return, and the player still holds
+ *       {@code $0E} at the point it diverges.</li>
+ * </ul>
+ * The chain's real segment-15 divergence is at segment frame 210, x
+ * {@code 0x1268}, with both sides airborne and rolling on path 2: the ROM
+ * descends {@code y 0x0591 -> 0x0592 -> 0x0593} while the engine reverses to
+ * {@code 0x058F} and then oscillates around {@code y 0x058E} with
+ * {@code y_vel} repeatedly flipping from positive to roughly {@code -0x1E0}
+ * every nine frames. The recorded {@code object_near} rows at those frames show
+ * the CPZ Grabber cluster -- {@code ObjA7}/{@code ObjA8}/{@code ObjA9}/
+ * {@code ObjAA} (s2.asm:30089-30092) -- parked at x {@code 0x1282}. The engine
+ * eventually dies of {@code SPIKE} at {@code (0x174A,0x07CC)}, which is what
+ * surfaces as "segment 15 lost production ownership before source closure ...
+ * BK2 cursor=83819". This lane cannot reproduce that divergence, because at
+ * segment frame 210 the lane is exact; the discriminator is entry state the
+ * chain carries and the metadata start does not.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

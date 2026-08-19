@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 segment-15 root cause is corrected: the chain is NOT on the wrong collision path
+  (`feature/ai-r6-cpz2-seg10`, documentation, merged 2026-08-19).** The solid-bit reseed
+  (`63501b8a7`) moved `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` from 15,202 errors to
+  **2,491** and retired the frame-394 divergence entirely -- but the chain did not move, and three
+  independent measurements refute the standing diagnosis. Manifest index 13 (`seg9_cpz2`, CPZ act 2
+  from level start through the star post) closes with **errorCount 0 over 5,837 frames**, which is
+  unreachable on the wrong collision path; probes on the checkpoint save/restore show the chain
+  storing `top=$0E lrb=$0F` at the star post (ROM `Obj79_SaveData`, `s2disasm/s2.asm:44740`) and
+  restoring the same on the special-stage return (`:44787`), with the player still on `$0E` past the
+  divergence; and `ObjectManager.PlaneSwitchers` was re-read line by line against `Obj03`
+  (`:45625-45761`) with no defect found. **The real chain frontier, newly measured:** segment 15
+  diverges at segment frame 210 with both sides airborne, rolling, `g_speed 2`, at x `0x1268` -- the
+  ROM descends `y 0x0591 -> 0x0593` while the engine reverses to `0x058F` and then oscillates with
+  `y_vel` flipping every nine frames, amid the recorded CPZ Grabber cluster
+  (`ObjA7`/`ObjA8`/`ObjA9`/`ObjAA`, `:30089-30092`) at x `0x1282`, ending in a SPIKE death at BK2
+  cursor 83819. **Critically, the standalone lane is exact at frame 210, so it cannot host this
+  divergence** -- the discriminator is entry state the chain carries in and a metadata start does
+  not. The lane is therefore *not* a faithful proxy for the chain failure, correcting an assumption
+  two prior briefs were built on.
+
 - **The S3K giant ring's off-screen release frame is consumed, not run
   (`bugfix/ai-s3k-seg2-frontier`, merged 2026-08-19).** `Obj_WaitOffscreen`'s release path
   `loc_85B02` is `move.l $34(a0),(a0)` / `rts` (`skdisasm/sonic3k.asm:180300-180302`, commented
