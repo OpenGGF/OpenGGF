@@ -87062,3 +87062,64 @@ neither touched by the original commit. Caught by diffing the rebased commit
 against `develop` restricted to non-fixture paths. **Diff a rebased commit
 against its new base by path class before trusting it**; the conflict markers
 only showed one file.
+
+## 2026-08-19 — Roll tick: one faithful piece, one structural difference, one unresolved clock
+
+Branch `bugfix/ai-s2-roll-tick-r1` off `origin/develop` (`15cc8e480`).
+Disassembly read plus throwaway engine instrumentation, reverted; nothing landed.
+**This round stops short of naming the defect, deliberately.**
+
+### Faithful: the frame publish/increment order
+
+`updateScriptWithDelay` (`PlayableSpriteAnimation.java`:591-619) sets the tick to
+the new delay, reads `frames[frameIndex]`, publishes the mapping frame, then
+increments the index. `SAnim_Do2`/`TAnim_Next` do the same -- read at the current
+`anim_frame`, store `mapping_frame`, then `addq.b #1,anim_frame`. Read-then-
+increment on both sides.
+
+### Structural difference: the engine gates Roll twice
+
+The ROM reaches Roll through exactly one gate. `SAnim_Do` does
+`move.b (a1),d0 / bmi.s SAnim_WalkRunZoom`, then `addq.b #1,d0 / bne.w SAnim_Roll`
+sends `$FE` scripts straight to `SAnim_Roll`, whose `subq.b #1 / bpl.w SAnim_Delay`
+is the only timer decision on the path. The walk/run publish-first handling is on
+the `$FF` branch and a Roll script never touches it.
+
+The engine has two. The outer gate at :280-285 tests `remaining >= 0` and returns,
+unless `walkRunPublishesFrameBeforeTimerAdvance(delayOrFlag)` bypasses it; control
+then reaches `updateSpecialScript` -> `updateRoll`, which tests `remaining >= 0`
+again (:551-554). Two decision points where the ROM has one, on a path the ROM
+reaches without consulting the walk/run ordering flag at all.
+
+Recorded as a difference in shape. It is **not** shown to produce the slip, and
+saying otherwise would be the mistake this thread has made before.
+
+### Unresolved, and it blocks the conclusion
+
+Instrumenting `updateRoll` shows the engine reading `gSpeed = 2036` on every row
+my instrumentation labels 6596-6607, dropping to 0 at 6608. The recording has
+`player_g_speed` dropping to 0 at **6600**.
+
+`g_speed` **is** a compared field (`TraceBinder.java`:219), and the report has no
+divergence on it -- so the engine's *end-of-frame* speed matches the ROM's. Two
+readings fit:
+
+1. the engine's animation samples ground speed **before** the frame's speed
+   update, where ROM `Sonic_Animate` runs at the end of the object's code after
+   `Sonic_Move` -- a player-pipeline ordering defect; or
+2. **my row label is offset from the trace row.** `DBG_ROW` is set in
+   `beginTraceRow`, and an eight-row gap is not the one-frame skew reading (1)
+   predicts.
+
+These are different findings and this round did not separate them. Per the
+standing rule about naming the clock, the eight-row figure is not usable as
+evidence until the engine-side label is anchored against something both sides
+agree on -- post-camera `camera_x` against the recorded column is the cheap
+anchor, and it should be done before anyone acts on either reading.
+
+### What the next round needs
+
+Anchor the clock first. If the offset is real, reading (1) becomes a specific,
+testable claim about where the animation sits in the player update; if the label
+is skewed, the engine may be sampling correctly and the whole line closes as a
+sixth elimination.

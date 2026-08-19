@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Roll tick round stops short deliberately: the engine clock is unanchored
+  (`bugfix/ai-s2-roll-tick-r1`, merged 2026-08-19 -- instrumentation written, used and reverted).**
+  Two results and one refusal. **Faithful:** `updateScriptWithDelay` sets the tick, reads
+  `frames[frameIndex]`, publishes, then increments, matching `SAnim_Do2`'s read-then-increment -- so
+  the publish/increment order is not the defect. **Structural difference, recorded but not blamed:**
+  the ROM reaches Roll through **one** timer gate (`SAnim_Do`'s `bmi` to `SAnim_WalkRunZoom`, whose
+  `addq.b #1,d0 / bne.w SAnim_Roll` sends `$FE` straight through, with its `subq/bpl` the only timer
+  decision on that path), while the engine has **two** -- an outer gate bypassed when
+  `walkRunPublishesFrameBeforeTimerAdvance` is true, then `updateRoll`'s own. **The refusal:**
+  instrumenting `updateRoll` shows the engine reading `gSpeed = 2036` across rows labelled 6596-6607
+  and dropping to 0 at 6608, where the recording drops at 6600. `g_speed` **is** a compared field
+  with no divergence reported, so the engine's end-of-frame speed matches the ROM's -- which leaves
+  two readings: the animation samples ground speed *before* the frame's speed update (a
+  player-pipeline ordering defect), or **the row label itself is offset**, since an eight-row gap is
+  not what a one-frame sampling skew predicts. The round had the first written up as the answer
+  before noticing that the eight-row gap contradicts its own prediction, and stopped rather than
+  report it. Per the standing "name the clock" rule the figure is unusable until the engine label is
+  anchored against something both sides agree on, and post-camera `camera_x` is the cheap anchor.
+
 - **The S1 fixture must land last, not first -- it regresses the chain diagnostic
   (`bugfix/ai-s1-fixture-land-r1`, merged 2026-08-19 -- measurement only, sequencing corrected).**
   The admission double-ownership that originally held the re-recorded fixture **is** gone: both
