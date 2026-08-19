@@ -565,3 +565,27 @@ one that does not, so treat "and it explains that regression too" as a reason to
 not as corroboration. Second, the fourth instance happened *after* the round built the probe
 that exists to prevent it — because it read the result back off a quoted excerpt instead of
 re-running the probe. An instrument only helps on the runs you actually use it for.
+
+## Fifteenth rule: a profile's includes bound your sweep, not its excludes
+
+`-Ptrace-replay` does not merely exclude a few classes. It carries an `<includes>` block of
+`**/tests/trace/**` **and nothing else** (`pom.xml`, the profile block). It runs roughly 792
+tests over 156 classes. The default suite runs roughly **15,176 tests over 1,919 classes**.
+
+So a "clean trace sweep" says nothing whatever about the object suite, the unit suite, the
+rewind guards, or any test of a shared accessor. For a change confined to trace comparison
+logic that is fine. For a change to a shared runtime accessor — a width, a sensor, a lifecycle
+predicate — the trace profile is close to no coverage at all, and reporting it as an empty
+both-way diff overstates the evidence by two orders of magnitude in class count.
+
+Before treating a sweep as bounding a change's blast radius, **read the profile's `<includes>`
+and count what it actually ran**. Ask which suite exercises the thing you edited, and run that
+one too. A round that changed an object's on-screen cull width found the entire unit suite
+invisible to the profile it had been told to sweep with.
+
+Corollary, learned the same day: **do not re-run a single class inside the worktree whose
+surefire XML is your evidence.** A solo `-Dtest=` run regenerates `target/surefire-reports` and
+overwrites the suite run's result, and the surviving XML then reports the solo outcome. An
+isolated run cannot settle an order-dependent failure anyway, so the re-run destroys the record
+without answering the question. Copy the reports out first, or run the check in a separate
+worktree.
