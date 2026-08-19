@@ -91968,3 +91968,73 @@ together and nobody yet knows what they are compensating for.
 ### Sweeps
 
 None. The change was reverted; the tree is unchanged from `9c6674b20`.
+
+## 2026-08-20 — S2 stage_exit seam: the release row's object pass supplies one tick of `vblaCounter`, and nothing else
+
+Base `5312ef676`, worktree `s2-titlecard-seam-r1`, JDK 21. **Diagnostic only. No fix
+attempted; the tree is identical to `5312ef676`.** Two-arm probe: the unmodified control and
+the minimal split (`PostTitleCardDestination` returning `SETUP_ONLY` for `LEVEL`), each
+logging every `ObjectManager` object pass across segment 2 with the shared cursor,
+`vblaCounter`, `frameCounter`, and the sidekick's centre and raw 16-bit sub-pixels. 3404
+passes captured per arm.
+
+### Result — it is a clock offset, not a physics difference
+
+**The sidekick's motion is not affected at all for 1132 frames.** Both arms produce
+byte-identical `skx` / `sky` / `skxs` / `skys` at every pass index from segment start through
+cursor 11465. The pass count is identical (3404) and the cursor alignment is identical.
+
+**Exactly one column differs: `vblaCounter`, by +1, for every level object pass from the
+release row onward.** The offset is constant across the whole segment:
+
+| cursor | control `vbla` | split `vbla` |
+|---|---|---|
+| 10334 (first passes) | 4264, 4265 … | identical |
+| 10908 | 10681 | 10682 |
+| 11508 | 11281 | 11282 |
+| 13711 (last) | 13484 | 13485 |
+
+At the release row the control arm runs one object pass carrying `vbla=4290` and the next
+pass carries `vbla=10108`; the split arm has no `vbla=4290` pass and starts at `10108`. So
+the release row's object pass supplies **one tick of `vblaCounter` alignment** — that is the
+entirety of what removing it changes.
+
+### The fork, at exactly the reported frame
+
+```
+                    cursor 11466 = segment-2 frame 1132
+control  1158 cur=11466 vbla=11239  skx=1933 sky=715  skxs=35584 skys=3584
+split    1158 cur=11466 vbla=11240  skx=1933 sky=716  skxs=35584 skys=3584
+control  1159 cur=11467 vbla=11240  skx=1931 sky=711
+split    1159 cur=11467 vbla=11241  skx=1937 sky=719
+```
+
+The recorded value is `0x02CB` = 715, so the control arm is correct and the split is one
+pixel high — precisely the reported `sidekick_y rom=0x02CB engine=0x02CC`. Positions match
+for 1132 frames and then fork in a single frame and never re-converge, which is the signature
+of **a gated decision firing on the wrong clock parity, not accumulating drift.** All 47639
+errors descend from that one frame.
+
+### What this reframes
+
+The seam is not a structural problem and four structural attempts were aimed at the wrong
+thing. The question is now specific and answerable: **what is `V_int_run_count` on
+`Level_MainLoop`'s first frame, and does the engine's release row leave `vblaCounter` on that
+value?**
+
+One observation from the probe deserves its own look and was not chased here: `vblaCounter`
+**jumps from 4290 to 10108** across the release boundary in both arms. `V_int_run_count` is
+free-running hardware state; a jump means the engine rebases the counter at the level
+boundary, and the release row's object pass is the last pass on the pre-level base. If that
+rebase is the defect, both of this seam's load-bearing compensations — the release row's pass
+and `SkippedPresentationPlcLifecycle`'s unconditional replay — plausibly exist to absorb it,
+which would explain why every single-change attempt measured worse.
+
+### Not done
+
+The lead's suggestion to grep this seam for other comment/code disagreements, after the
+`updateExitBackground` one, was not carried out.
+
+### Sweeps
+
+None. Diagnostic only; the tree is unchanged from `5312ef676`.
