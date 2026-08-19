@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 fixtures re-recorded with correct solid bits, and segment entry seeds from them
+  (`feature/ai-s2-tsb-seed`, merged 2026-08-19).** With `900463738` correcting
+  `S2Ram.OffTopSolidBit`/`OffLrbSolidBit` from S3K's `0x46`/`0x47` to S2's `$3E`/`$3F`, the S2 run
+  was recaptured. **The diff is the cleanest possible evidence the fix did only what it claimed:**
+  all 35 `physics.csv` payloads byte-identical, all 7 special-stage `aux_state.jsonl` byte-identical,
+  and the 28 level `aux_state.jsonl` files differ with **zero diff lines outside
+  `top_solid_bit`/`lrb_solid_bit`**; `metadata.json` differs only in `recording_date`. The fresh
+  values are legal and confirm the diagnosis directly from ROM state -- `seg8_cpz1` and `seg9_cpz2`
+  record `$0C`/`$0D`, while **`seg10_cpz2` records `$0E`/`$0F`**, the secondary-collision path
+  `AnglePos` selects whenever `top_solid_bit != $C` (`s2disasm/s2.asm:43002-43008`).
+  `TraceReplaySessionBootstrap.seedSegmentEntrySolidBits` seeds the pair from the frame-0
+  `state_snapshot` for metadata-start segments only, accepting **only** the ROM's two legal pairs
+  and otherwise leaving the engine on its default. Comparison-only under hard rule 4: initial state
+  only, never hydrated mid-run, with path selection engine-derived thereafter.
+
 - **The S2 recorder reads its solid bits from S2's own SST layout
   (`bugfix/ai-s2-top-solid-bit-offset`, merged 2026-08-19).** This round **refuted the premise it
   was given**. The previous round concluded "the v5 schema records no `top_solid_bit`, so the

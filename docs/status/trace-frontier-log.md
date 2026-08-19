@@ -83469,3 +83469,41 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   stays red by construction.
 - Chain frontier before and after: unchanged — `segment 15 lost production
   ownership before source closure (romZone=13, act=1, BK2 cursor=83819)`.
+
+## 2026-08-19 — S2 complete-emeralds fixtures republished; seg10 seeds the ROM's collision path
+
+- Command: `mvn -Ptrace-replay -Dtest=TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay
+  -Dsonic2.rom.path=<s2 rom> test`, worktree branched from `develop@900463738`.
+- Recapture: one `--mode trace --run-id s2-sonic-tails-complete-emeralds` pass of
+  `sonic-2-sonic-tails-complete-emeralds.bk2` (BizHawk 2.11 Linux x64, ROM CRC32
+  `7B905383`) into a scratch candidate root, diffed against the installed run
+  before anything was copied in. All 35 segments present; `run_manifest.json`
+  byte-identical; every `physics.csv` payload hashes identical to the installed
+  fixture and every row count matches; the seven special-stage `aux_state.jsonl`
+  payloads are byte-identical. The 28 level `aux_state.jsonl` payloads differ on
+  `top_solid_bit`/`lrb_solid_bit` and on nothing else (0 diff lines outside those
+  fields in every segment). `metadata.json` differs only in `recording_date`.
+- Installed: the 28 level `aux_state.jsonl.gz` payloads and all 35
+  `metadata.json`. `physics.csv.gz` left untouched — it is byte-identical.
+- Landed: entry seeding of `top_solid_bit`/`lrb_solid_bit` for a metadata-start
+  segment (`TraceReplaySessionBootstrap.seedSegmentEntrySolidBits`), alongside
+  the metadata start centre and the existing entry-velocity seed. ROM: `AnglePos`
+  points `Collision_addr` at `Secondary_Collision` and passes
+  `d5 = top_solid_bit` whenever `top_solid_bit != $C` (`s2.asm:43002-43008`), so
+  the pair selects which of a zone's two 16x16 collision index arrays every probe
+  reads; it is not level-start state, because `Obj01_Init` writes the `$C`/`$D`
+  default only when `Last_star_pole_hit` is zero (`s2.asm:36192-36199`) and
+  `Obj79_SaveData`/`Obj79_LoadData` save and restore it across the star post and
+  the special-stage return (`s2.asm:44740`, `:44787`). Only the ROM's two legal
+  pairs (`$C`/`$D`, `$E`/`$F`, `s2.constants.asm:70-71`) are accepted; anything
+  else leaves the engine on its own default. Initial state only — the engine's
+  path selection stays engine-derived for every subsequent frame.
+- Result on `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`: 15202 errors ->
+  2491 over the same 7088 rows, 0 bootstrap errors. Still red, deliberately.
+  The frame-394 physics divergence (`y` rom `0x05DC` engine `0x05DB`, `angle`
+  rom `0x0A` engine `0x0C`) is gone. 2302 of the remaining 2491 errors are
+  `dynamic_art.*` and 10 are `queue.*`; first error is now frame 52
+  `queue.s2_nemesis_plc.busy` (expected false, actual true). First main-player
+  physics divergence moved frame 394 -> 2252 (`air` rom 1 engine 0); `x`/`y`
+  stay exact to frame 6600/6611. The residue is the S2 PLC/dynamic-art frontier,
+  not collision.

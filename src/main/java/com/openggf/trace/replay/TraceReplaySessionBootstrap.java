@@ -506,6 +506,99 @@ public final class TraceReplaySessionBootstrap {
      * once before any frame is driven. It is not per-frame hydration: nothing
      * reads the trace again after this point.
      */
+
+    /**
+     * Seeds each playable's {@code top_solid_bit} / {@code lrb_solid_bit} from
+     * the segment's recorded entry snapshot.
+     *
+     * <p>ROM: {@code AnglePos} points {@code Collision_addr} at
+     * {@code Secondary_Collision} and passes {@code d5 = top_solid_bit}
+     * whenever {@code top_solid_bit != $C} (s2.asm:43002-43008), so the pair
+     * selects which of a zone's two 16x16 collision index arrays every floor
+     * and wall probe reads. It is not level-start state: {@code Obj01_Init}
+     * writes the {@code $C}/{@code $D} default only when
+     * {@code Last_star_pole_hit} is zero (s2.asm:36192-36199), and
+     * {@code Obj79_SaveData} / {@code Obj79_LoadData} save and restore
+     * {@code MainCharacter+top_solid_bit} across a star post and the
+     * special-stage return (s2.asm:44740, :44787). A segment that resumes a
+     * level mid-run therefore inherits the pair from the star post, not from
+     * the zone default, and no metadata field carries it.
+     *
+     * <p>Initial state only, and only for a metadata-start segment: this runs
+     * once, before the first row is driven, alongside the metadata start
+     * centre it belongs to. The engine's own path selection
+     * ({@code GroundSensor} / {@code LevelManager.getSolidTileForChunkDesc})
+     * stays engine-derived for every subsequent frame; nothing re-reads the
+     * trace. Only the ROM's two legal pairs are accepted, so a snapshot that
+     * carries anything else leaves the engine on its own default rather than
+     * importing a recorded byte blindly.
+     */
+    private static void seedSegmentEntrySolidBits(TraceData trace, AbstractPlayableSprite sprite) {
+        if (trace == null || trace.frameCount() == 0) {
+            return;
+        }
+        applyRecordedSolidBits(trace, sprite, trace.metadata().mainCharacter());
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : sprites.getRegisteredSidekicks()) {
+            applyRecordedSolidBits(trace, sidekick, sprites.getSidekickCharacterName(sidekick));
+        }
+    }
+
+    private static void applyRecordedSolidBits(TraceData trace,
+                                               AbstractPlayableSprite playable,
+                                               String characterLabel) {
+        if (playable == null || characterLabel == null || characterLabel.isBlank()) {
+            return;
+        }
+        TraceEvent.StateSnapshot snapshot = null;
+        for (TraceEvent event : trace.getEventsForFrame(0)) {
+            if (event instanceof TraceEvent.StateSnapshot candidate
+                    && characterLabel.equalsIgnoreCase(
+                            String.valueOf(candidate.fields().get("character")))
+                    && candidate.fields().containsKey("top_solid_bit")) {
+                snapshot = candidate;
+                break;
+            }
+        }
+        if (snapshot == null) {
+            return;
+        }
+        int top = unsignedByteField(snapshot, "top_solid_bit");
+        int lrb = unsignedByteField(snapshot, "lrb_solid_bit");
+        // The ROM only ever holds one of two pairs here: the primary path
+        // ($C/$D) or the secondary path ($E/$F) -- s2.constants.asm:70-71
+        // documents the field domains, and Obj01_Init and the plane switchers
+        // write them as a pair.
+        boolean primary = top == 0x0C && lrb == 0x0D;
+        boolean secondary = top == 0x0E && lrb == 0x0F;
+        if (!primary && !secondary) {
+            return;
+        }
+        playable.setTopSolidBit((byte) top);
+        playable.setLrbSolidBit((byte) lrb);
+    }
+
+    private static int unsignedByteField(TraceEvent.StateSnapshot snapshot, String field) {
+        Object raw = snapshot.fields().get(field);
+        if (raw instanceof Number number) {
+            return number.intValue() & 0xFF;
+        }
+        if (raw == null) {
+            return -1;
+        }
+        String text = raw.toString().trim();
+        try {
+            return (text.startsWith("0x") || text.startsWith("0X")
+                    ? Integer.parseInt(text.substring(2), 16)
+                    : Integer.parseInt(text)) & 0xFF;
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
     private static void seedSegmentEntryVelocity(
             TraceData trace, AbstractPlayableSprite sprite) {
         if (trace == null || sprite == null
@@ -1291,6 +1384,7 @@ public final class TraceReplaySessionBootstrap {
         sprite.setCentreX(meta.startX());
         sprite.setCentreY(meta.startY());
         seedSegmentEntryVelocity(trace, sprite);
+        seedSegmentEntrySolidBits(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
