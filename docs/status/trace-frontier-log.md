@@ -84073,3 +84073,37 @@ or those three rings are not resurrected rings at all. The next round should set
 that with a one-line probe on the restore branch before re-implementing anything.
 
 - Gate not re-run this round: no `src/main` change was landed.
+
+## 2026-08-19 — correction: the `-Ptrace-replay` count is 790, not 792
+
+Two entries above record a `-Ptrace-replay` gate as **792 tests / 4 red**. That
+count could not be reproduced. Measured independently at three commits, on both
+a change tree and a clean control, always with
+`-Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical` and all three ROM
+paths, reading the red set from the surefire XML rather than `MSE:TEST_FAIL`:
+
+| Commit | Tree | XML files | Tests | Red |
+|---|---|---|---|---|
+| `72ae015e6` | control | 156 | 790 | 4 |
+| `a51ce6820` | S1 PLC arm | 156 | 790 | 4 |
+| `baca0d164` | control | 156 | 790 | 4 |
+| `78ea43c97` | S2 title-card fix | 156 | 790 | 4 |
+
+Five runs across four trees agree on 790. The red set is the same four in every
+run: the three complete-emerald run chains plus
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`.
+
+The difference is therefore in how 792 was obtained — a different profile, an
+extra `-Dtest`, or a partially-populated `target/surefire-reports` — and not a
+change between commits. **Treat 790 as the baseline and re-measure rather than
+quoting either number.** Two related traps are already recorded in this log: a
+truncated run reports *fewer* tests while looking healthier, and a stale
+`target/surefire-reports` counts old XML as passes, so a count that disagrees
+with a fresh control is evidence about the run, not about the tree.
+
+Note also that the profile's surefire includes are `**/tests/trace/**` only, so
+test classes in package `com.openggf.trace` — including
+`TestS1S2PlcComparisonOnlyGuard` — are **not** selected by it and contribute
+nothing to either count. Guards must be run by explicit name in a separate
+invocation.
+
