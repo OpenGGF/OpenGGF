@@ -91167,3 +91167,94 @@ cursor 89600 and 89601 the engine's mode is still `TITLE_CARD` (`READY-BAIL`, ti
 not pending), and it reaches `LEVEL` only at 89602. That is a title-card **duration** at a
 `level_advance` boundary, not the stage-exit fusion above. **One mechanism behind both
 axes is refuted**, not confirmed.
+
+## 2026-08-19 — S2 stage_exit seam: the ROM runs two V-int waits, so the fusion is a frame-model error
+
+Base `1282065ee`, worktree `s2-row-admission-r1`, JDK 21, same command as the entry above.
+Baseline re-reproduced before and after every probe: segment 15 = 7575 errors, frame 2,
+`queue.s2_nemesis_plc.remaining_work` rom=2 engine=5. **No fix landed.**
+
+### The ROM question, answered
+
+Yes — two V-int waits, and two object passes, with an arm between them.
+
+`Level`'s title-card leave loop (`docs/s2disasm/s2.asm:5060-5066`):
+
+```
+-	move.b	#VintID_TitleCard,(Vint_routine).w
+	bsr.w	WaitForVint
+	jsr	(RunObjects).l
+	jsr	(BuildSprites).l
+	bsr.w	RunPLC_RAM
+	tst.b	(TitleCard_Background+id).w
+	bne.s	-
+```
+
+One V-int per iteration. `Vint_TitleCard` (`s2.asm:1005`) ends in `bsr.w ProcessDPLC`
+(`s2.asm:1057`), and `ProcessDPLC` decompresses **6** patterns (`s2.asm:2202-2218` — note
+the inverted naming: `ProcessDPLC2` at `:2219-2227` does 3).
+
+Then `Level_StartGame`'s `bclr #GameModeFlag_TitleCard,(Game_Mode).w` (`s2.asm:5081-5082`),
+and `Level_MainLoop` (`s2.asm:5088-5095`):
+
+```
+Level_MainLoop:
+	bsr.w	PauseGame
+	move.b	#VintID_Level,(Vint_routine).w
+	bsr.w	WaitForVint
+	addq.w	#1,(Level_frame_counter).w
+	...
+	jsr	(RunObjects).l
+```
+
+`Vint_Level` (`s2.asm:698`) reaches `Do_Updates` (`:783-795`, `:808`) which calls
+`ProcessDPLC2` — **3** patterns. So the ROM's seam is two whole frames:
+
+| ROM frame | V-int | patterns | object pass | arm |
+|---|---|---|---|---|
+| last leave-loop iteration | `VintID_TitleCard` | 6 | yes | `RunPLC_RAM` |
+| first `Level_MainLoop` (recorded row 0, `Level_frame_counter = 1`) | `VintID_Level` | 3 | yes | — |
+
+### The engine, measured at the same seam
+
+Probe on `ObjectManager.update` (the 8-arg overload every other overload delegates to, so
+it catches every pass), on the `GameLoop` mode dispatch, and on
+`Sonic2PlcService.serviceVBlank`/`prepare`, all keyed on the shared playback cursor:
+
+```
+82342  vblank LEVEL_TITLE_CARD 20 -> 14   prepared(RunPLC_RAM)
+82342  vblank LEVEL_TITLE_CARD 14 ->  8   prepared(RunPLC_RAM)
+82342  LOOP mode=LEVEL released=true
+82342  OBJPASS                            <- the ONLY object pass at the seam
+82343  vblank LAG              8 ->  8    (no object pass)
+82344  vblank ORDINARY_LEVEL   8 ->  5    OBJPASS  prepared(RunPLC_RAM)
+```
+
+Two facts, both new:
+
+1. **The fused release iteration runs exactly one object pass and one V-int service, and
+   they belong to different ROM frames** — the service is the leave loop's (6, correct),
+   the object pass is `Level_MainLoop`'s. `Vint_Level`'s 3 patterns are never serviced.
+2. **The engine's title-card leave-loop iterations run no object pass at all.** Four
+   `LEVEL_TITLE_CARD` V-blank services fire at this seam and not one `OBJPASS` accompanies
+   them, while ROM `s2.asm:5062` runs `jsr (RunObjects).l` on every iteration.
+
+### Verdict
+
+The ROM genuinely runs two frames, so **one host iteration representing both is the
+modelling error** — the same shape as asking `hasPreparationBoundary(LAG)` a question
+outside its domain. `PlcFrameLifecycleCoordinator`'s one-owner-per-represented-V-blank rule
+is correct and must **not** be relaxed to admit a second frame per iteration. The seam has
+to become two host iterations.
+
+That re-frames the previous entry's rejection of "suppress the level body on the title-card
+release": the *shape* was right and the implementation was crude. A bare early return there
+removes the region's only object pass and returns before the iteration's tail work, which
+is why segment 2 drifted to a frame-1132 `sidekick_y` divergence rather than failing at the
+seam. Retrying it requires giving the leave loop its own `RunObjects` first (finding 2
+above), which is a prerequisite, not a detail.
+
+Scope for whoever takes it: this is S2 title-card leave-loop object passes plus a seam
+frame split, affecting all six `stage_exit` returns and every title-card exit in three
+games. Sweep all three; the previous entry's two rejected experiments and their damage
+still stand.
