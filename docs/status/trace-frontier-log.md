@@ -90082,3 +90082,45 @@ and close on their own when the traversal does. No hardware-timing-port change c
 `ss`/`ss_2` being frame-exact is what makes 5471 a usable control rather than a guess — and it
 is also what refuted the drift model, which only looked viable while the passing stages were
 measured against the wrong reference.
+
+## `hasPreparationBoundary(LAG)` is a category error, not a wrong ROM claim
+
+`git log -S hasPreparationBoundary` yields exactly one commit, `bf371ad94` (2026-07-29,
+"fix(plc): complete phase-owned PLC lifecycle"), with an empty message body and no comment on
+the method. Intent is not recoverable by reading. The structure settles it anyway.
+
+Every `RunPLC` call site in `sonic.asm` is a main loop, and they map one-for-one onto the
+predicate's `true` list: `Tit_MainLoop` (:2075), `LevelSelect` (:2202),
+`GotoDemo_PreDelayLoop` (:2370), `Level_TtlCardLoop` (:2819), `Level_SkipScroll` inside
+`Level_MainLoop` (:3032), `SS_NormalExit` (:3409), `Cred_WaitLoop` (:3884). The `false` list
+is otherwise all real loops that do not call it — `SPECIAL_STAGE`, `TWO_PLAYER_RESULTS`,
+`ENDING`, `POST_CREDITS`, `NORMAL_PAUSE`, `SPECIAL_STAGE_PAUSE`, `CREDITS_DEMO_FADE`.
+
+So the predicate answers **"does this ROM loop call `RunPLC`?"**, and `LAG` is the only entry
+in either list that is not a loop — it names the `VBlank_Lag` handler. For
+`serviceVBlank(LAG)` that is coherent and correct. For `hasPreparationBoundary(LAG)` it is a
+category error: a lag V-blank has no loop tail of its own, because the loop it interrupted is
+still running and will still reach its own `RunPLC`. `false` is not a claim that was made and
+got wrong; it is the safe-looking default for an entry outside the predicate's domain.
+
+Consequently neither available action is right. Flipping to `true` asserts that a lag V-blank
+*has* its own tail, which is equally a category error and is what would promote
+unconditionally under live admission. And there is no documented conflated concern to separate
+by renaming.
+
+**The shape the finding implies:** a lag closure should not answer this predicate for itself;
+it should carry the *interrupted* iteration's tail. That machinery already exists —
+`heldLoopTailPreparation` / `CONSUME-HELD` — and it is why `mz3_2` works and `ghz2_2` does
+not: the two differ only in whether `representedIterationDefersLoopTailPreparation` happened
+to mark the iteration.
+
+**The separable halves.** That a lag closure carries the interrupted iteration's tail is a
+structural claim, derivable from the ROM. *When* that tail lands relative to the lag row is
+the sub-frame question already proved undecidable from frame-granularity state, and remains
+the sidecar's to answer. A change may make the first unconditional; it must not silently pick
+a side of the second, and any native default chosen in the sidecar's absence is a documented
+limitation rather than a derivation.
+
+**General form, worth carrying:** before asking whether a predicate's value is right, ask
+whether its *subject* is in the predicate's domain. A category error presents as a plausible
+boolean and survives review, because both candidate values look like answerable claims.
