@@ -552,6 +552,32 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    /**
+     * {@code Sonic_Balance} reads the stood-on object's {@code obActWid}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423), which {@code CFlo_Main} sets to
+     * {@code #136/2} = 68 -- already modelled here as {@link #CFLO_ACT_WIDTH}
+     * for the BuildSprites delete bound, and not the {@code #64/2} = 32 that
+     * {@code CFlo_ChkTouch} passes to {@code PlatformObject} as {@code d1}
+     * (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:172,184)
+     * and that {@link #getSolidParams()} models.
+     *
+     * <p>Required rather than tidy, for the same reason as the GHZ collapsing
+     * ledge: the base {@code getBalanceWidthPixels()} falls back to
+     * {@code getSolidParams().halfWidth()} for top-solid objects, on the premise
+     * that a {@code PlatformObject} caller passes {@code obActWid} straight
+     * through as {@code d1}. This one passes a literal instead, so the fallback
+     * intercepts and only an override at this accessor reaches the balance test.
+     *
+     * <p>Balance only. The on-screen half-width is deliberately left alone
+     * because this class already models the ROM byte for its own cull through
+     * {@link #CFLO_ACT_WIDTH}; the duplication is noted rather than unified so
+     * that this change alters exactly one decision.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return CFLO_ACT_WIDTH;
+    }
+
     @Override
     public boolean usesCollisionHalfWidthForTopLanding() {
         // CFlo_ChkTouch passes #64/2 directly as PlatformObject's d1

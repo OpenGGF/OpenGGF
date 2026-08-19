@@ -4,6 +4,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The collapsing floor balances on its ROM `obActWid` of 68, not its platform
+  width.** `Sonic_Balance` reads the stood-on object's `obActWid`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:423`); `CFlo_Main` sets `#136/2` = 68
+  while `CFlo_ChkTouch` passes `#64/2` = 32 to `PlatformObject`
+  (`docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:172,184`).
+  The class already modelled 68 as `CFLO_ACT_WIDTH` for its BuildSprites delete
+  bound, so only the balance test was reading the wrong quantity. Like the GHZ
+  collapsing ledge, the override is required rather than tidy: the top-solid
+  fallback in `getBalanceWidthPixels()` returns
+  `getSolidParams().halfWidth()` on the premise that a platform caller passes
+  `obActWid` through as `d1`, and this object passes a literal instead.
+
+### Fixed
 - **The GHZ collapsing ledge balances on its ROM `obActWid` of 100, not its
   collision width.** `Sonic_Balance` reads the stood-on object's `obActWid`
   (`docs/s1disasm/_incObj/01 Sonic.asm:423`), which `Ledge_Main` sets to
