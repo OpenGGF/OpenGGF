@@ -3011,6 +3011,38 @@ public class GameLoop {
         // - S2: same zone/act, objects reset, rings cleared (Obj79_LoadData clr.w Ring_count)
         // - S3K: same zone/act, objects reset, rings restored from Saved2_ring_count
         levelManager.consumeSpecialStageReturnLevelReloadRequest();
+        // The star-post activation mark is the engine's model of the ROM's
+        // "last checkpoint reached" byte, and that byte is NOT part of what the
+        // return's level reload clears.
+        //
+        // S3K: Load_Starpost_Settings' giant-ring/bonus branch loc_2D2C2
+        // (docs/skdisasm/sonic3k.asm:61793-61819) restores the whole Saved2_*
+        // block but deliberately writes no Last_star_post_hit, so the value the
+        // special-stage exit left there survives -- the exit's
+        // "ori.b #$80,(Last_star_post_hit).w" (:12121, :12676) over the subtype
+        // sub_2D164 stored when the post was touched (:61704), with LevelSizeLoad's
+        // "andi.b #$7F,(Last_star_post_hit).w" (:7881) stripping the marker bit
+        // before LevelLoop. sub_2D028 then reads it as already-hit for every post
+        // whose subtype is at or below it ("cmp.b d2,d1 / bhs.w loc_2D0EA",
+        // :61606-61610), which is what stops the post the player entered from
+        // re-arming its 20-ring bonus stars (:61638-61641) on the return.
+        //
+        // S1 is the same shape: v_lastlamp is cleared only by the end-of-act card
+        // (docs/s1disasm/_incObj/3A Got Through Card.asm:198), a death
+        // (_incObj/01 Sonic.asm:1116) and a new game (sonic.asm:1968) -- never by a
+        // level reload -- and Lamp_Blue gates on the identical "last >= subtype"
+        // comparison (_incObj/79 Lamppost.asm:57-62).
+        //
+        // The bonus-stage return already carries this across its own reload
+        // (BonusStageTransitionCoordinator.restoreReturnState); the
+        // special-stage return is the second implementation of the same contract
+        // and was missing it.
+        int returnStarPostActivationMark = -1;
+        RespawnState checkpointBeforeReturnReload = levelManager.getCheckpointState();
+        if (checkpointBeforeReturnReload != null) {
+            returnStarPostActivationMark =
+                    checkpointBeforeReturnReload.getStarPostActivationMark();
+        }
         // The reload's title card is presented below by this method, so the
         // load must request it (keeping the queued initial PLCs live for the
         // card's locked loop) rather than model an omitted presentation.
@@ -3019,6 +3051,13 @@ public class GameLoop {
             levelManager.loadCurrentLevel();
         } finally {
             levelManager.setResultsReturnCardOwnedByCaller(false);
+        }
+        if (returnStarPostActivationMark >= 0) {
+            RespawnState checkpointAfterReturnReload = levelManager.getCheckpointState();
+            if (checkpointAfterReturnReload != null) {
+                checkpointAfterReturnReload.restoreStarPostActivationMark(
+                        returnStarPostActivationMark);
+            }
         }
 
         // Consume any pending title card request to prevent double title card

@@ -4,6 +4,29 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- A Sonic 3&K special-stage return no longer re-arms the star post it was
+  entered from. The engine's star-post activation mark models the ROM's
+  "last checkpoint reached" byte, and that byte is not part of what the return's
+  level reload clears: `Load_Starpost_Settings`' giant-ring/bonus branch
+  `loc_2D2C2` (docs/skdisasm/sonic3k.asm:61793-61819) restores the whole
+  `Saved2_*` block but deliberately writes no `Last_star_post_hit`, so the value
+  the special-stage exit left there survives -- the exit's
+  `ori.b #$80,(Last_star_post_hit).w` (sonic3k.asm:12121, :12676) over the
+  subtype `sub_2D164` stored when the post was touched (:61704), with
+  `LevelSizeLoad`'s `andi.b #$7F,(Last_star_post_hit).w` (:7881) stripping the
+  marker bit before `LevelLoop`. `sub_2D028` then reads it as already-hit for
+  every post whose subtype is at or below it
+  (`cmp.b d2,d1 / bhs.w loc_2D0EA`, :61606-61610), which is what stops the post
+  the player entered from re-arming its 20-ring bonus stars (:61638-61641).
+  The engine cleared the mark with the rest of the checkpoint state on the
+  reload, so the post fired again and the player was pulled into a bonus stage
+  the ROM never enters. S1's `v_lastlamp` is the same shape -- cleared only by
+  the end-of-act card (docs/s1disasm/_incObj/3A Got Through Card.asm:198), a
+  death (_incObj/01 Sonic.asm:1116) and a new game (sonic.asm:1968), never by a
+  level reload, with `Lamp_Blue` gating on the identical "last >= subtype"
+  comparison (_incObj/79 Lamppost.asm:57-62). The bonus-stage return already
+  carried the mark across its own reload; the special-stage return is the second
+  implementation of the same contract and was missing it.
 - The Sonic 3&K title card shown when a special stage returns to the level now
   draws the ROM's act. `Obj_TitleCardInit` never reads `Current_zone_and_act`:
   the act-number art is `ArtKosM_TitleCardNum2` unless `tst.b (Apparent_act).w`

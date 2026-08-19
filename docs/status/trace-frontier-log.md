@@ -83783,3 +83783,90 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
     (`sonic3k.asm:63060-63102`) that the recording shows, which is why
     production's ordinal cursor sits four module ordinals and five decompression
     ordinals behind the recording's inside every post-special-stage gap.
+
+## 2026-08-19 — S3K complete-emeralds chain: the special-stage return re-armed its own star post
+
+Command (worktree `bugfix/ai-s3k-seg4-r1`, branched from `72ae015e6`):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<the root .gen> -DfailIfNoTests=false test
+```
+
+- **Before: FAIL, segment 4 (`aiz_3`), `raw_frame` 341.**
+  `IllegalStateException: duplicate or reordered hardware service boundary at
+  raw_frame=341: previous=PRE_MAIN_LOOP, current=VINT_SERVICE`.
+- **After: FAIL, segment 4 (`aiz_3`), BK2 cursor 25464 — segment row 5689.**
+  `AssertionError: segment 4 lost production ownership before source closure
+  (mode=LEVEL, level=LevelIdentity[loadGeneration=5, progressionZone=0, romZone=0,
+  act=1], BK2 cursor=25464)`.
+
+The reported boundary-ordering exception was a symptom, not the defect. A probe
+on `HardwareTimingReplayPort.beginRawFrame`/`apply` printed the real sequence:
+rows 332-340 each ran one `VINT_SERVICE`/`POST_OBJECTS`/`PRE_MAIN_LOOP` triple
+from `LevelFrameStep.execute` (`GameLoop.updateLevelMode`), then row 341 ran a
+triple from `LevelFrameStep.executeHardwareTimedObjectScan`
+(`GameLoopTitleCardLifecycle.update`) and a *second* one with no intervening
+latch. The engine was in `TITLE_CARD`, and the recording is not: `aiz_3`'s
+`zone_act_state` reports `game_mode 12` at frame 0 and does not raise
+`apparent_act` until frame 7554.
+
+A second probe on `GameLoop.changeGameModeForBoundary` showed no logged mode
+change after the segment's own `TITLE_CARD -> LEVEL` release, because the entry
+runs through `changeGameModeWithoutRewindBoundary` — it was
+`enterBonusTitleCardAfterLevelLoadBoundary`, i.e. a **bonus stage**. A third
+probe on `Sonic3kStarPostObjectInstance.activate` printed the cause outright:
+
+```
+STARPOST_ACTIVATE idx=3 mark=-1 rings=72 spawn=(736,701) player=(730,684)   <- segment 2, correct
+STARPOST_ACTIVATE idx=3 mark=-1 rings=75 spawn=(736,701) player=(729,675)   <- segment 4, spurious
+```
+
+The same star post — the one whose special-stage entry produced the 3 -> 4
+`stage_exit` transition, `saved_x_pos` 736 / `saved_y_pos` 701 — activated a
+second time on the return, with `mark = -1` because the return's level reload
+cleared the whole checkpoint state. With 75 rings it re-armed its 20-ring bonus
+stars, the player touched one, and the engine entered a bonus stage the ROM never
+enters.
+
+**Root cause: the engine's star-post activation mark models `Last_star_post_hit`,
+and the ROM's return does not clear it.** `Load_Starpost_Settings`' giant-ring /
+bonus branch `loc_2D2C2` (`sonic3k.asm:61793-61819`) restores the whole `Saved2_*`
+block but deliberately writes no `Last_star_post_hit`, so the value the exit left
+survives: `ori.b #$80,(Last_star_post_hit).w` (`:12121`, `:12676`) over the
+subtype `sub_2D164` stored at touch time (`:61704`), with `LevelSizeLoad`'s
+`andi.b #$7F,(Last_star_post_hit).w` (`:7881`) stripping the marker bit before
+`LevelLoop`. `sub_2D028`'s `cmp.b d2,d1 / bhs.w loc_2D0EA` (`:61606-61610`) then
+treats every post at or below that subtype as already hit, so the bonus-star
+branch (`:61638-61641`) is never reached. S1's `v_lastlamp` is the same shape:
+cleared only by the end-of-act card (`s1disasm/_incObj/3A Got Through Card.asm:198`),
+a death (`_incObj/01 Sonic.asm:1116`) and a new game (`sonic.asm:1968`), never by
+a level reload, with `Lamp_Blue` gating on the identical comparison
+(`_incObj/79 Lamppost.asm:57-62`).
+
+The bonus-stage return already carried the mark across its own reload
+(`BonusStageTransitionCoordinator.restoreReturnState`). The special-stage return
+is the second implementation of the same contract and was missing it — the
+"two paths that should agree, but don't" shape. `GameLoop.doExitResultsScreen`
+now reads the mark before `loadCurrentLevel()` and restores it after. No constant
+was introduced and nothing keys on zone, act, route or frame.
+
+- **Corrections to the brief this round carried.** The failure was described as a
+  hardware-timing boundary-ordering defect and the title-card / results-screen
+  paths as the live suspects. Both are wrong: the timing port's exception is a
+  faithful report of two engine frames landing on one represented row, and the
+  title card it named is a *bonus* title card. Nothing in
+  `HardwareTimingReplayPort`, `TraceRunReplayWalker` or the title-card code was
+  changed.
+- **Next frontier, not diagnosed this round.** Segment 4 now compares to BK2
+  cursor 25464 (segment row 5689) before the coordinator reports lost production
+  ownership at `loadGeneration=5` in the same act. A fresh level load happens
+  there that the recording does not have; the recording's own `routine_change`
+  rows show the player hurt at segment frame 4916 and recovered at 4960, so a
+  hurt/death divergence in that window is the first thing to instrument — this is
+  a hypothesis, not a measured cause.
+- Gate: 792 tests, 4 red — `TestS1CompleteEmeraldRunChain`,
+  `TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`. Set-diff against the
+  recorded control red set is empty both ways.
