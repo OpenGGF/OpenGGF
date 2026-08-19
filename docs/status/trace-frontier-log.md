@@ -87902,3 +87902,71 @@ second writer of the sidekick's y in this state before looking for a wrong const
 
 Note for whoever takes it: `TailsRespawnStrategy.updateApproaching` still never executes in
 this run (previous entry), so the `+/-1` step it implements is not the code doing this.
+
+## 2026-08-19 — The second writer is checkpoint solid contact, and the ROM excludes it
+
+Base `6ec275196`. Diagnosis only; nothing landed.
+
+### The constant is innocent, as the transition shape predicted
+
+`SidekickCpuRules.sidekickFlightYStep` is **1** for all three games, and
+`SidekickCpuController.updateFlightAutoRecovery` applies it exactly once per dispatch
+(`moveq #1,d2` parity). One dispatch per frame — the state probe shows one line per frame
+number. So the doubled rate is a second writer, not a wrong step.
+
+### Who it is
+
+A `setY` probe on Tails filtered to the divergence band, logging a stack trace (probe
+reverted), gives 73 writes in the whole chain run and names the second writer at the
+transition frame:
+
+```
+SETY 02FC -> 02FA | ObjectSolidContactController.resolveContactInternal:4460
+  <- resolveSlopedContact:3972 <- processInlineObjectForPlayer:1886
+  <- resolveCheckpointForPlayer:1369 <- resolveCheckpointBatch:1338
+  <- processCompatibilityCheckpoint:1321
+```
+
+That is the **checkpoint (star post) solid contact** pushing the sidekick. It supplies the
+`-2` at the transition and then one extra `-1` on every following frame, on top of the CPU
+step — which is exactly the 3-then-0-then-2 shape, two writers momentarily out of phase.
+
+### The ROM does not have this writer
+
+It is invented, not misplaced. `SolidObject_cont` reaches `loc_1DFFE`
+(`docs/skdisasm/sonic3k.asm:41443-41445`):
+
+```
+loc_1DFFE:
+    tst.b   object_control(a1)
+    bmi.w   loc_1E0A2          ; bit 7 set -> skip the solid interaction entirely
+```
+
+`Tails_FlySwim_Unknown` — ROM routine 4, the state in question — runs with
+`object_control = $81` (`sonic3k.asm:26511, 26542`), so bit 7 is set and the ROM's solid
+handling skips the sidekick outright. S2 has the identical gate at
+`SolidObject_ChkBounds` (`docs/s2disasm/s2.asm:35376-35377`), so this is a universal
+correction rather than a per-game divergence.
+
+The engine already models the exclusion on the **touch** path —
+`ObjectTouchResponseController.updateSidekick` calls
+`isTouchResponseSuppressedByObjectControl()` and returns — but not on the **solid** path.
+
+### Why the existing solid gate does not catch it
+
+`ObjectSolidContactController` is object-control aware (`:1188-1206`,
+`allowsObjectControlledSolidContacts()` / `allowsSolidContactsWhileObjectControlled`), but
+permissively: an object-controlled player may still take solid contacts when the profile
+allows. Two gaps to settle before changing anything:
+
+1. the ROM gate is on **bit 7 specifically** (`tst.b` / `bmi`), not on "object control is
+   nonzero", so `isObjectControlled()` is not the same predicate;
+2. the failing call path enters through `processCompatibilityCheckpoint` /
+   `resolveCheckpointBatch`, which may not pass the `:1188` gate at all — confirm before
+   assuming a profile flag is the right lever.
+
+### Blast radius
+
+`ObjectSolidContactController` is shared across all three games and every solid object, and
+the ROM gate exists in S2 as well as S3K, so a fix must be measured on S1 and S2 explicitly.
+S1 has no sidekick, but the gate applies to the main player there too.
