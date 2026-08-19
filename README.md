@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S2 frame-1725 mapping divergence is a false push flag, not an animation bug
+  (`bugfix/ai-s2-seg10-anim-r1`, merged 2026-08-19 -- investigation only, no fix).**
+  `sprite.getPushing()` is true for frames 1724-1731 while the recorded `player_status_byte` is
+  `0x49` throughout, so bit 5 (`status.player.pushing`) is **clear in the ROM on every one of those
+  frames** -- the engine raises a push the ROM never has. `PlayableSpriteAnimation.updateWalkRun`'s
+  push branch then decrements its timer and returns without publishing, latching `mapping_frame` at
+  `$0F` for exactly the eight divergent frames, with the push script emitting `0x49` at 1732 as the
+  timer expires and the walk resuming correctly at 1733. **Publishing the walk mapping from the push
+  branch would turn the window green and would have passed review** -- and would have left the push
+  flag wrong; only the recorded status byte distinguishes "the animation branch mishandles a real
+  push" from "there is no push". The animation code is a faithful victim, and the open question --
+  why a push is raised at 1724 while Sonic walks left from a standstill at x `0x1EF5` -- is a
+  wall-sensor investigation in another subsystem. The probe behind this was attribution-checked
+  first: it agrees with the fixture on 6592 of 7087 rows, with all 495 disagreements falling inside
+  reported divergence spans. Also recorded: `SonAni_Walk` is `dc.b $FF,$F,$10,...` (`s2.asm:38691`)
+  where the leading `$FF` is the walk/run control flag rather than a duration, so `0x0F`/`0x10` are
+  adjacent steps of one script and not a numeric skew; and the segment's `dynamic_art` errors are
+  **two** clusters (~57 at 1725-1733, ~2245 at 5554-7087), the second beginning 108 frames before
+  the first Tails animation divergence and therefore independent -- so closing 1725 is worth about
+  2% of the art errors, not the bulk.
+
 - **The sidekick inherits the leader's collision path, as both ROMs do
   (`bugfix/ai-s2-seg15-f409`, merged 2026-08-19).** The S2 chain ran Tails on collision path 1 while
   Sonic ran on path 2: at segment 15 entry the chain held Tails at `0C`/`0D` against Sonic's
