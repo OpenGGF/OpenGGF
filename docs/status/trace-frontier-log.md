@@ -88153,3 +88153,30 @@ allows. Two gaps to settle before changing anything:
 `ObjectSolidContactController` is shared across all three games and every solid object, and
 the ROM gate exists in S2 as well as S3K, so a fix must be measured on S1 and S2 explicitly.
 S1 has no sidekick, but the gate applies to the main player there too.
+
+## 2026-08-19 — open item: `TailsRespawnStrategy.updateApproaching` never executes
+
+Recorded on hand-off from the S3K sidekick thread, because it was a useful
+negative for that investigation and may be a defect in its own right.
+
+`TailsRespawnStrategy.updateApproaching` holds the only implementation of the
+ROM's ±1 sidekick catch-up step (`skdisasm/sonic3k.asm:26368-26385`,
+`loc_13CBE` at `:26600-26620`, `moveq #1,d2` negated by sign then
+`add.w d2,y_pos(a0)`). A stack-trace probe over a full Sonic+Tails chain run
+found it **never executes** — the probe file was never created. The live path is
+`FLIGHT_AUTO_RECOVERY` instead.
+
+Two consequences:
+
+- Anyone reading the engine to understand sidekick catch-up will read that
+  method and be reading dead code. It cost one round on this thread before the
+  probe showed it never runs.
+- Whether it *should* execute in a Sonic+Tails run is unexamined. If the ROM
+  reaches an approach state the engine routes elsewhere, that is a second defect
+  hiding behind the first; if the method is genuinely unreachable for this team
+  configuration, it is dead code that should say so.
+
+Not investigated, and not blocking the sidekick solid-contact fix that thread
+handed off. Recorded so the negative result is not lost with the lane that found
+it.
+
