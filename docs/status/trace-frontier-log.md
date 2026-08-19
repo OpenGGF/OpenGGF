@@ -90130,7 +90130,6 @@ limitation rather than a derivation.
 **General form, worth carrying:** before asking whether a predicate's value is right, ask
 whether its *subject* is in the predicate's domain. A category error presents as a plausible
 boolean and survives review, because both candidate values look like answerable claims.
-<<<<<<< HEAD
 
 ## 2026-08-19 — S2 complete-emeralds chain: `Current_Boss_ID` survives a level load
 
@@ -90171,7 +90170,6 @@ both ways** — no regressions, nothing else fixed. `mvn -Pguards`: 499/499 gree
 early); the remaining physics frontier is segment 15 (`seg10_cpz2`), 7575 errors, first
 mismatch frame 2 `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5, with the walk
 failure at the `seg11_arz1` admission. No constant was introduced by this fix.
-=======
 ## 2026-08-19 -- raw_frame derived from the recorder, and predictions recorded before measuring
 
 Base `0f4188e0e`, S1 `hardware_timing` fixture branch. **Predictions written
@@ -90236,8 +90234,6 @@ a LAG closure but incorrectly runs no loop tail there either.
 
 If segment 3 goes green while anything not in this list moves, the model is
 incomplete even though the count improved.
-
->>>>>>> 404c6c3fb (docs: derive raw_frame from the recorder and record predictions before measuring)
 
 ## 2026-08-19 -- LAG leaves the predicate's domain: predictions before measuring
 
@@ -90340,3 +90336,62 @@ admitted at a `pre_main_loop` edge without either a second `PRE_MAIN_LOOP`
 traversal on the row (breaks ordering) or a change to how edges are addressed
 (breaks the recorder contract). Do not engineer around it; a different shape is
 needed, and the derivation about `LAG` remains available for it.
+
+## 2026-08-19 — S2 chain segment 15 (`seg10_cpz2`): one PLC service short across the special-stage return
+
+Base `1f16f8bc6` (origin/develop), isolated worktree on `bugfix/ai-s2-pushgate-r2`.
+Re-measured before starting; the chain is unchanged at 9 failing axes and segment 15 is
+still 7575 errors, first non-camera mismatch frame 2,
+`queue.s2_nemesis_plc.remaining_work` rom=2 engine=5.
+
+**Found, not fixed.** All probes below were throwaway and are reverted; no engine change
+was landed this round.
+
+### Where the comparison actually happens
+
+`TestS2CompleteEmeraldRunChain` segment reports are written from `LiveTraceComparator`, not
+from `TraceStructuralRowComparator` — a probe placed in the latter never fired. Both classes
+hold their own copy of the `LoadQueueComparisonProjection` call with identical alignment
+(`loadQueueStatesForComparisonFrame(frame)`, same-frame); only the `LiveTraceComparator`
+one is live for this test. Worth knowing before instrumenting either.
+
+### What was measured
+
+Per-row `RAW` / `EXP` / `ACT` for `s2_nemesis_plc`, with a marker on every
+`Sonic2PlcService.serviceLevelVBlank()`:
+
+| segment | entry kind | first compared row | recorded rows 0.. | engine samples |
+|---|---|---|---|---|
+| `seg8_cpz1` (off 61206) | fresh level entry | 0 | 5, 2, 12, 9, 6 | 5, 2, 12, 9, 6 — exact |
+| `seg9_cpz2` (off 67996) | fresh level entry | 0 | 5, 2, 12, 9, 6 | exact |
+| `seg10_cpz2` (off 82342) | special-stage return | 2 | 5, **5**, 2, 12, 9, 6, 3 | 5, 2, 12, 9, 6, 3 — one row late from the first compared row onward |
+
+The engine's diagnostic is sampled before that row's service (the service marker follows
+each comparison block), and the fresh-entry segments match under exactly that convention.
+So the sampling point is not the difference: **by its first compared row the engine has
+performed one fewer `serviceLevelVBlank(3)` than the recording had, across the destination
+admission boundary of the special-stage return.** Every later row inherits the shift, which
+is what makes it 7575 errors rather than one.
+
+The recording's own extra held row (rows 0 and 1 both at 5, where a fresh entry drops to 2
+by row 1) is the return path's ROM signature. The engine holds for one row more than that.
+
+### Hypothesis killed by instrumenting rather than reasoning
+
+`LevelFrameStep.admit` returns `SETUP_ONLY` on `consumePendingInitialProcessSpritesPass()`
+and that branch returns before `serviceBoundary(VINT_SERVICE)`, so a `SETUP_ONLY` row
+performs no PLC service — a mechanism that would explain the missing service exactly.
+**It never fires.** A marker on that branch printed zero times across the whole run. Do not
+re-open it.
+
+Also note the earlier ss-return segments `seg6_ehz2` (off 46374) and `seg7_ehz2` (off 57031)
+carry `busy=false` queues at entry and therefore cannot show this defect; `seg10_cpz2` is
+simply the first special-stage return whose destination has PLC work outstanding. Like the
+S3K `ss_3` entry above, this was always going to surface somewhere.
+
+### What was NOT established
+
+Which ROM rows the engine's uncompared rows 0 and 1 correspond to on the return path, and
+which V-blank handler the ROM runs on each of them. Until that is read out of the level
+re-entry path, "add one service at the boundary" is a fitted correction of exactly the shape
+hard rule 3 forbids, and it was deliberately not landed. That reading is the next step.
