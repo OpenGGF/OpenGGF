@@ -90130,3 +90130,43 @@ limitation rather than a derivation.
 **General form, worth carrying:** before asking whether a predicate's value is right, ask
 whether its *subject* is in the predicate's domain. A category error presents as a plausible
 boolean and survives review, because both candidate values look like answerable claims.
+
+## 2026-08-19 — S2 complete-emeralds chain: `Current_Boss_ID` survives a level load
+
+Isolated worktree on branch `bugfix/ai-s2-pushgate-r2`, base `c701d5311` (origin/develop).
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS2CompleteEmeraldRunChain \
+    -Dsonic2.rom.path="<REV01 .gen>" test
+```
+
+**The brief's premise was stale.** Segment 10 was reported at ~1749 errors on a
+push-release restart (KD28); at `c701d5311` segments 0-11, 13 and 14 all report
+`errorCount: 0`. The chain now walks to segment 15 and the physics frontier had moved to
+**segment 12 = `seg8_cpz1`**, 6581 errors, first non-camera mismatch frame 5852,
+field `x` rom=`0x28A9` engine=`0x28A8`.
+
+**Cause.** Probe of `LiveTraceComparator` over rows 5700-5880 (throwaway, reverted) showed
+the engine clamping hard at `x=0x28A8`, `x_sub=0`, `x_speed=0` and never moving again,
+while the ROM ran on to `0x28E8` before the same clamp. `Camera_Max_X_pos` is frozen at
+`0x2780` for both: `0x2780 + (320-24) = 0x28A8` and `+ $40` again is `0x28E8`.
+`Sonic_LevelBound` (`docs/s2disasm/s2.asm:37243-37250`) adds that `$40` only while
+`Current_Boss_ID` is zero. The engine still held EHZ2's boss id (set in the preceding
+segment `seg7_ehz2`) because `GameStateManager.resetForLevel()` cleared `screenLocked` and
+`bossDefeatedFlag` but not `currentBossId` — although all three live inside the block that
+`Level_ClrRam` wipes at every level load (`clearRAM Misc_Variables,Misc_Variables_End`,
+s2.asm:4810; `Current_Boss_ID` at s2.constants.asm:1597, `Boss_defeated_flag` at :1595,
+range :1484-:1629). S2 writes the byte back to zero nowhere else, so it had persisted for
+the rest of the run.
+
+**Result at my own base.** Segment 12: **6581 -> 0**, and the chain drops from 10 failing
+axes to 9. Full sweep (`-Dtest='*TraceReplay*,*RunChain*'`, 165 classes) against a control
+worktree at the same commit: **65 red before, 65 red after, red-set membership identical
+both ways** — no regressions, nothing else fixed. `mvn -Pguards`: 499/499 green.
+
+**New S2 chain frontier**: earliest remaining failure in movie order is the dynamic-art gap
+`seg4_ehz1 -> seg5_ehz2` (`run_gap.edge[8..11].movie_logical_frame`, engine one frame
+early); the remaining physics frontier is segment 15 (`seg10_cpz2`), 7575 errors, first
+mismatch frame 2 `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5, with the walk
+failure at the `seg11_arz1` admission. No constant was introduced by this fix.
