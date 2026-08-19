@@ -4,6 +4,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The GHZ collapsing ledge balances on its ROM `obActWid` of 100, not its
+  collision width.** `Sonic_Balance` reads the stood-on object's `obActWid`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:423`), which `Ledge_Main` sets to
+  `#200/2` on the shipped `FixBugs = 0` branch
+  (`docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:37-48`) --
+  the disassembly's own comment argues 200 is too wide a culling radius and
+  "could cause wrapping issues", and that is the branch every recorded trace
+  takes. The class already declared it as `ACTIVE_WIDTH = 0x64` and never used
+  it. The override is required rather than tidy: `getBalanceWidthPixels()`
+  falls back to `getSolidParams().halfWidth()` for top-solid objects on the
+  premise that a platform caller passes `obActWid` through as `d1`, and this
+  object passes the literal `#96/2` = 48 to `SlopeObject` (`:61`) instead, so
+  the fallback intercepts and no `getOnScreenHalfWidth()` override could reach
+  the balance test.
+
+### Fixed
 - **The monitor's balance width is its ROM `obActWid` of 15, not the shared 16.**
   `Mon_Main` sets `move.b #30/2,obActWid(a0)`
   (`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:43`); the `#16/2` at
