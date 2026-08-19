@@ -84539,3 +84539,31 @@ The previous entry's eliminations stand and nothing here weakens or strengthens
 them. This is an environment blocker on the diagnostic, not evidence about the
 engine, and it must not be read as "cannot be seen at frame granularity" — that
 verdict still requires the probe to have actually run.
+
+## 2026-08-19 — the 790 vs 792 split is a units mismatch, not a disagreement
+
+The correction above concluded that 790 is the number to quote and that the
+difference lay "in how 792 was obtained". The conclusion is right and the
+explanation was wrong, so here is the actual cause, established by observing
+both figures on a single run:
+
+**Maven's console summary reports 792. The surefire XML aggregate reports 790.
+Same run, same profile, same flags.** Neither number is a mistake and neither
+tree was misconfigured; the two counters count slightly different things.
+
+Quote **790** — the XML aggregate — because the measurement protocol set-diffs
+red sets read from `target/surefire-reports/*.xml`, and a count must come from
+the same source as the set it accompanies. A console figure paired with an
+XML-derived red set is two measurements wearing one label.
+
+This also retires the earlier suspicion that agents reporting 792 had run a
+different profile or passed an extra `-Dtest`. They had not. Two rounds reported
+each figure honestly and the apparent conflict was an artefact of which line each
+had read.
+
+The rest of the correction stands: the red set is the same four in every run
+(the three complete-emerald run chains plus
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`), and the profile's
+`**/tests/trace/**` includes select no guard class in package `com.openggf.trace`,
+so guards contribute to neither count and must be run by explicit name.
+
