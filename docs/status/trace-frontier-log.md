@@ -90721,3 +90721,78 @@ Which component decides the placement. The engine's rows 0 and 1 are not compare
 this path, so their contents were not visible to this probe, and it is not yet established
 whether the correction belongs in the suppressed row's placement or in when the queue head is
 armed. Both remain consistent with everything measured.
+
+## 2026-08-19 — The `run_boundary.position.x` pixel is independent of segment 6: one giant ring's spawn x
+
+Branch `bugfix/ai-s3k-seg6-r1` off `develop` (`eaf89ab44`). Diagnosis only; nothing
+landed, probes reverted. Recorded because the relatedness question had to be
+settled before either frontier could be worked, and the answer removes one of them
+from the critical path.
+
+### A coincidence of numbers, caught and corrected
+
+The first reading — mine — was that the failing boundary is segment 6's entry,
+because segment 6 is `aiz_4` at bk2 offset **35726**, the exact frame the old
+`stage_exit` stall quoted. That is a coincidence and it is wrong.
+`expected=14007=0x36B7` is `aiz_5` frame 0, so the failing boundary is the
+`ss_4 -> aiz_5` return: **segment 8's entry, two segments downstream of segment 6.**
+
+### What the boundary compares, and all four measured
+
+`assertReturnBoundary` (`AbstractRunChainTest:3092-3142`) compares the live focused
+sprite's `getCentreX()` against the return segment's recorded frame 0. The engine's
+value comes from `BigRingReturnState`, saved by
+`Sonic3kSSEntryFlashObjectInstance.saveLevelData2` from the flash's
+`getX()`/`getY()` — which `SSEntryFlash_Init` (`sonic3k.asm:128353-128355`) copies
+verbatim from the parent giant ring's `x_pos`/`y_pos`.
+
+Probing every save in the run against every return segment's frame 0:
+
+| ring | return segment | engine saved | recorded frame 0 | |
+|---|---|---|---|---|
+| 1 | `aiz_2` | (7112, 1216) | (7112, 1216) | exact |
+| 2 | `aiz_3` | (576, 976) | (576, 976) | exact |
+| 3 | `aiz_4` | (6584, 1104) | (6584, 1104) | exact |
+| 4 | `aiz_5` | (**14008**, 1488) | (**14007**, 1488) | x off by one, y exact |
+
+Three boundaries exact in both axes, and the restore is shown to be identity
+(saved 6584 -> `aiz_4` frame 0 `player_x` `0x19B8` = 6584). So the save/restore
+machinery is **proven correct rather than presumed**, and the question shrinks from
+"the boundary machinery is wrong" to "one static giant ring's spawn x is one pixel
+high". Same ring, y exact, `0x36B7` vs `0x36B8`.
+
+### Independence established as mechanism, not correlation
+
+The disconfirming case was built and checked: that the ROM's ring moves while the
+engine's static one is correct at spawn and wrong at contact. It does not.
+`Obj_SSEntryRing`'s `Init` and `Main` (`sonic3k.asm:128238-128330`) contain no
+`x_pos` write, and `Sonic3kSSEntryRingObjectInstance` never writes x either — it
+only reads `getX()` for a camera band test. **Both rings are static, so nothing
+dynamic inside segment 6, sidekick included, can move it.** The ring is colocated
+with segment 6 (it lives in `aiz_4`) but causally disjoint from it.
+
+The centre/top-left suspicion was killed rather than reported: an `ObjectInstance`
+has no `getCentreX()` at all, so for an object `getX()` **is** the ROM `x_pos` and
+the save site is correct as written. That is the project's most expensive gotcha
+and it is not this one.
+
+### Consequence for the ordering
+
+Segment 6 blocks before segment 8's return boundary does, so the ring pixel cannot
+be the frontier until segment 6 is closed. It is real, bounded and deferred.
+
+**Also established, and it is what makes segment 6 workable:** ring 3's boundary
+*into* `aiz_4` is exact in both axes, so **segment 6's entry state is clean and its
+`sidekick_y` divergence is generated inside segment 6, not inherited.** That
+removes the whole class of upstream/hydration causes.
+
+### Not established
+
+Why that one ring's x is one high. Three of four decode exactly, which argues
+against a systematic layout-decode bug and toward something specific to this ring
+or its spawn path, but the layout data was not opened and no guess is recorded here.
+
+Whether all 28,733 segment-6 errors are sidekick fields. The chain report exposes
+only `firstNonCameraPhysicsMismatch` plus five `recentMismatches`; every one
+visible is a sidekick field, but that is five of 28,733 and is not quoted as a
+ratio.
