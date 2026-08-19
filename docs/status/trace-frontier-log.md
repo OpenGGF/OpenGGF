@@ -90656,3 +90656,68 @@ or a latched angle byte holds the `3` sentinel where the ROM's `angleright`/`ang
 not. Both are measurable at f593 with one probe. The existing comment on that branch flags a
 subtlety about latched-versus-fresh angle bytes, which is the thing most likely to be guessed
 wrong — instrument it rather than reasoning about it.
+## 2026-08-19 — S2 segment 15: title-card closure branch killed; the deficit is an arming/lag-row ordering
+
+Base `f718d9ac9`. No code landed; probes were throwaway and are reverted.
+
+### The candidate is dead
+
+The previous entry's live hypothesis was that `TraceSuppressedRowClosure.execute` takes its
+`advancesOnHeldLevelCounter()` branch — servicing `LEVEL_TITLE_CARD` = 6 patterns — on a row
+the ROM dispatches through `Vint_Lag` for 0. A marker on the branch decision fired **34 times
+across the whole run and reported `advancesOnHeld=false` every time**. The `LAG` branch, which
+services nothing and matches `Vint_Lag`, is taken on every suppressed row in the run — not
+merely on the two rows the kill condition named. The hypothesis is refuted outright; do not
+re-open it.
+
+### What the passing cases show, which is the useful part
+
+Instrumenting the two segments that pass alongside the one that fails, with the queue's
+rom/engine remaining work and every service call interleaved:
+
+```
+seg8_cpz1  (off 61206, passes)   ... serviceLevelVBlank(3)      <- consumes nothing
+                                 row=0 rom=5  eng=5
+                                 ... serviceLevelVBlank(3)
+                                 row=1 rom=2  eng=2
+
+seg10_cpz2 (off 82342, fails)    CLOSURE gfc=27 advancesOnHeld=false   <- the lag row
+                                 ... serviceLevelVBlank(3)      <- consumes nothing
+                                 row=2 rom=2  eng=5
+                                 ... serviceLevelVBlank(3)
+                                 row=3 rom=12 eng=2
+```
+
+Both entries have the **same shape**: one `serviceLevelVBlank(3)` that consumes nothing
+because the queue head is not yet armed, then real 3-pattern services every row. The engine
+is not missing a service call and its pattern budget is not wrong — the previous entry
+established the budgets already match the ROM handler for handler.
+
+What differs is *where the suppressed row sits relative to that no-op service*. The engine
+puts its lag closure immediately **before** the no-op service; the recording's lag row —
+`Level_frame_counter` stalling at row 1 — falls immediately **after** its equivalent no-op
+row. One row of ordering, which is exactly the size of the deficit.
+
+`seg10_cpz2` drives exactly two suppressed closures, matching its two recorded lag rows, and
+the second falls between compared rows 7 and 9 (row 8 is absent from the comparison stream
+because it is the suppressed row) — which is where the recording's second lag row is. So the
+count and the placement of the lag rows are right in the large; it is their phase against the
+arming that is off.
+
+### Two traps for whoever takes this next
+
+- **`prepared=true` does not mean the ROM's `Plc_PatternsLeft` is loaded.** Both sides report
+  `prepared=true` at the first compared row while a service runs and consumes nothing. The
+  diagnostic flag and the armed head are different things, and reading the flag as "armed"
+  will send you looking in the wrong place.
+- **The engine's `LevelManager` frame counter reads 27 at this entry** where the recorded
+  `Level_frame_counter` is 1. That is an observation, not a finding — it may simply be a
+  different clock, and per the "name the clock" rule it must be established as the same
+  quantity before anything is built on it.
+
+### Still open
+
+Which component decides the placement. The engine's rows 0 and 1 are not compared through
+this path, so their contents were not visible to this probe, and it is not yet established
+whether the correction belongs in the suppressed row's placement or in when the queue head is
+armed. Both remain consistent with everything measured.
