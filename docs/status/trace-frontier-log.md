@@ -84793,3 +84793,50 @@ On current `develop` this is **latent** — the Walk/Run write it prevents is
 already suppressed by the `sprite.getPushing()` licence — so it moves no
 frontier on its own and changes no test. It is landed because it is ROM-correct
 and is a prerequisite for (1)+(2).
+
+## 2026-08-19 — object pushing-bit audit (precondition for the CPZ2 push pair)
+
+Branch `bugfix/ai-s2-pushbit-audit-r1` off `origin/develop` (`966ffada6`).
+Full site catalogue, engine cross-check and the defects found in passing are in
+[docs/architecture/audits/object-pushing-bit-clear-sites.md](../architecture/audits/object-pushing-bit-clear-sites.md);
+only the outcome is repeated here.
+
+31 object-side clear sites were found across the three disassemblies — 6 in S2,
+7 in S1, 18 in S3K — plus two framework siblings of `Solid_NotPushing` (S1's
+monitor `.stoppushing` and `sub SolidWall`) that the engine already covers.
+`ObjectSolidContactController` gained `releaseObjectPushLatch(player, instance)`
+(per-character, returning the ROM `bclr`'s Z flag so a caller can branch on it as
+`Obj45`/`Obj_LBZPipePlug` do) alongside the existing all-players form.
+
+**18 sites landed, latent and regression-free.** Full `-Ptrace-replay` is
+790 tests / 4 red, set-identical both ways to a control measured in a clean
+worktree at the same base; `mvn -Pguards test` is 499/0.
+
+**11 sites are blocked, and the reason corrects the round-5 sequencing.** Every
+blocked site is one where the ROM clears the object's bit and does NOT clear the
+character's own pushing flag in the same block — S2 `Obj36_Sideways` and
+`Obj76_Main`, S3K `Obj_Spikes` and `Obj_MGZMovingSpikePlatform`, S1's smashable
+wall and teleporter. Porting them took the suite from 790/4 to 790/8, with
+`TestS3kAizTraceReplay`, `TestS3kCnzTraceReplay`, `TestS3kMgzTraceReplay` and
+`TestS3kReplayReferenceClosureIntegration` newly red on `status_byte`
+`expected=0x0000 actual=0x0020`.
+
+That is the round-5 gate defect seen from a third side. The controller gates its
+player-side clear on `clearObjectPushingBit` succeeding, so it uses the object
+latch as a proxy for *"was I the object that set the player's flag?"*. Making the
+latch accurate makes that proxy strand the flag. Round 5 recorded the audit as a
+precondition for the pair; it is more entangled than that — **the object-bit-only
+sites and the ungated player-side clear must land in one change.** Sites where
+the ROM clears both bits together are separable, and those are what landed.
+
+Recommended next round: land the ungated `Solid_NotPushing` player-side clear,
+the `SolidObject_TestClearPush` object-bit gate, and the 11 remaining object-bit
+sites as a single change, then re-measure. The 12 regressions round 5 measured
+for the pair alone should be re-measured on top of this branch rather than
+assumed to carry over: several of them were animation-shaped, and 18 of the
+sites feeding that animation decision now behave differently.
+
+One measurement caution recorded in the audit and worth repeating: the S3K
+complete-emerald run chain fails with two different exceptions in two worktrees
+at the same commit with no local changes, surviving `mvn clean`. Do not attribute
+a failure-mode change in that class without a same-worktree control.

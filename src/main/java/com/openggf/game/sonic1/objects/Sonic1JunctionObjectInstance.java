@@ -468,6 +468,9 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) GRAB_INERTIA);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        // ROM Jun_Move's grab clears the junction's OWN pushed flag before the
+        // player's (docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:87-88).
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         player.setAir(true);
 

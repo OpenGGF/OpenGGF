@@ -368,6 +368,13 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             player.setYSpeed((short) 0);
         }
         applySubtypeLaunchEffects(player, true);
+        // ROM Obj45_LaunchCharacterHorizontal consumes the object's own pushing
+        // bit for this character with a test-and-clear -- `bclr d6,status(a0)`
+        // where d6 is p1_pushing_bit in the MainCharacter leg and p2_pushing_bit
+        // in the Sidekick leg, and the following `beq` abandons the launch when
+        // it was already clear (docs/s2disasm/s2.asm:50537-50545). So the bit is
+        // per-character and is consumed by the launch itself.
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         playSpringSound();
     }

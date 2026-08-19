@@ -386,6 +386,42 @@ public final class ObjectSolidContactController {
         });
     }
 
+    /**
+     * Clears the object-side pushing bit for one player only, without the
+     * paired player-side clear or the {@code SolidObject_TestClearPush}
+     * Walk/Run restart write, and reports whether the bit had been set.
+     *
+     * <p>ROM equivalent: a single {@code bclr #pN_pushing_bit,status(a0)} an
+     * object routine executes on its own. Many such sites are per-character --
+     * S2 {@code Obj36_Sideways} clears only {@code p1_pushing_bit} in its
+     * MainCharacter branch and only {@code p2_pushing_bit} in its Sidekick
+     * branch (docs/s2disasm/s2.asm:29438-29450) -- so clearing both would be
+     * wrong. Others are a test-and-clear whose {@code beq} decides whether the
+     * rest of the routine runs at all, for example S2 {@code Obj45}'s
+     * {@code loc_243EA} (docs/s2disasm/s2.asm:50543-50545); the return value is
+     * that {@code bclr}'s Z flag, so a caller can branch on it exactly as the
+     * ROM does.
+     *
+     * @return true when the object's pushing bit for that player was set
+     */
+    public boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance) {
+        if (player == null) {
+            return false;
+        }
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return false;
+        }
+        Set<Object> set = objectPushingBitSet.get(player);
+        if (set == null || !set.remove(key)) {
+            return false;
+        }
+        if (set.isEmpty()) {
+            objectPushingBitSet.remove(player);
+        }
+        return true;
+    }
+
     boolean hasPushingLatch(PlayableEntity player) {
         Set<Object> set = objectPushingBitSet.get(player);
         return set != null && !set.isEmpty();

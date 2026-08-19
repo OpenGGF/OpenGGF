@@ -366,6 +366,11 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             if (!player.getRolling()) {
                 player.setAnimationId(Sonic3kAnimationIds.WALK);
             }
+            // ROM sub_23190's launch tail clears BOTH p1_pushing_bit and
+            // p2_pushing_bit on the spring, unconditionally, before clearing the
+            // launched character's own Status_Push
+            // (docs/skdisasm/sonic3k.asm:47950-47952).
+            services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
             player.setPushing(false);
         } else if (springType == TYPE_UP || springType == TYPE_DIAGONAL_UP) {
             player.setAnimationId(Sonic3kAnimationIds.SPRING);
