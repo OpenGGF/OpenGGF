@@ -232,6 +232,13 @@ half-landed change, and require the blast radius to be measured before anything 
   change removed, remove the files in place instead. A round that reached for it caught itself, but
   note the measurement would have been false anyway: the run under the stash still had the fixture
   present, so it was a control in name only.
+- **A clean break beats stable-or-growing as a first discriminator.** Asking whether a delta is
+  stable or growing distinguishes a one-shot discrepancy from a rate error, and both are useful. But
+  the sharper question is whether the two sides are *bit-identical* up to the divergence frame: a
+  gradual drift shows small disagreements earlier, while a clean break at a single frame says a
+  discrete event fired on one side only. On one round that took the lane to an input lock in one
+  step rather than into physics, because every position, velocity and status field matched exactly
+  through the preceding frame.
 - **On an accumulating defect the reported delta is a lower bound, not the target.** The magnitude
   rule below assumes the divergence you can see is the size of the effect. That holds for a
   one-shot discrepancy and inverts for a rate error: a sidekick reported two pixels out turned out to
