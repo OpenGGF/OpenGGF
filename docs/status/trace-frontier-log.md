@@ -91418,3 +91418,102 @@ The practical consequence: for an ambiguous diff, repeat the suite per tree rath
 re-running the suspect class in isolation. An isolated run cannot settle an order-dependent
 failure, and re-running it inside the worktree whose surefire XML is the evidence overwrites
 that evidence with the solo outcome.
+## 2026-08-19 — S2 stage_exit seam: the leave loop already runs its object passes; the fusion is a claim refusal
+
+Base `143b3a4ce`, worktree `s2-titlecard-seam-r1`, JDK 21,
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain`.
+Baseline re-reproduced at this base before and after every probe: 9 failing axes, segment 15 =
+7575 errors, first non-camera mismatch frame 2, `queue.s2_nemesis_plc.remaining_work` rom=2
+engine=5. **No fix landed.**
+
+### RETRACTED — the previous entry's finding 2 is wrong
+
+*"The engine's title-card leave-loop iterations run no object pass at all"* does not hold.
+A probe on `ObjectManager.update` (the 8-arg overload every other delegates to), on
+`GameLoopTitleCardLifecycle.update`, and on `Sonic2PlcService.serviceVBlank` — the last
+carrying an 8-frame caller tag — counted, across the whole segment-15 seam at shared cursor
+82342:
+
+| Event | Count |
+|---|---|
+| `vblank LEVEL_TITLE_CARD` from `GameLoopTitleCardLifecycle.update` | 73 |
+| `vblank LEVEL_TITLE_CARD` from `SkippedPresentationPlcLifecycle.runIteration` | 25 |
+| title-card iterations with `shouldRunPlayerPhysics()` true | 26 |
+| `ObjectManager` passes in the title-card region | 26 |
+| `ObjectManager` passes in the fused level fall-through | 1 |
+
+26 is exactly the ROM's count — the single `RunObjects` at `s2.asm:5006` plus the 25
+iterations of the leave loop at `:5060-5066` — and `TitleCardManager.shouldRunPlayerPhysics`
+/ `shouldRunLevelObjectsDuringLockedPhase` already gate on `leavePass > 0` with those
+citations. **Task 1 of the handoff is already implemented and correct.** The earlier probe
+almost certainly sampled the pre-leave card (slide-in / hold), where 47 of the 73 services
+legitimately run with no object pass because `InitPlayers` (`s2.asm:4945`) has not created
+the players yet.
+
+### CONFIRMED, with the mechanism now named
+
+The previous entry's finding 1 holds. The tail of the seam is:
+
+```
+STEP mode=TITLE_CARD
+  vblank LEVEL_TITLE_CARD           <- claimed by GameLoopTitleCardLifecycle
+  TC-update ... release taken       <- no object pass on this iteration
+  [25x SkippedPresentationPlcLifecycle vblank+prepare, from
+   LevelManager.completeInitialTitleCardPresentation:3191]
+STEP-ADMITTED mode=LEVEL released=true
+  OBJPASS                           <- no vblank service of its own
+```
+
+The level fall-through runs its object pass with **no `ORDINARY_LEVEL` service**, because the
+title-card branch already claimed this host iteration's represented V-blank and
+`PlcFrameLifecycleCoordinator` refuses the second claim. `Vint_Level`'s `ProcessDPLC2` = 3
+patterns (`s2.asm:698`, `:783-795`, `:808`, `:2219-2227`) are therefore never serviced, and
+5 - 3 = 2 reconciles the failing row exactly. The fusion is a **claim refusal**, not a missing
+call: nothing needs adding to the level body, the seam needs a second host iteration.
+
+Also newly measured: the host iteration on which the leave loop's exit condition is detected
+consumes a V-blank service and runs **no** object pass. In the ROM the exit test
+(`tst.b (TitleCard_Background+id).w`, `s2.asm:5065-5066`) is evaluated after that frame's own
+`RunObjects`, inside the same frame — so the engine spends one represented frame on loop exit
+that the ROM does not have. The counts happen to balance against the fused release, which is
+why the total is right and the phase is not.
+
+### The other owner at this seam
+
+`Sonic2LevelInitProfile.completeInitialPresentationPlcs` runs `drain` + secondary-PLC
+`append` + `SkippedPresentationPlcLifecycle.runIterations(LEVEL_TITLE_CARD, 25)`
+unconditionally from `LevelManager.completeInitialTitleCardPresentation:3191` — including on
+a **presented** card, where the 25 leave-loop V-blanks really ran as host iterations. Its own
+comment justifies it as *"A headless load omits that presentation, so replay its PLC service
+here"*, and the sibling player-pass replay three lines below **is** guarded by
+`initialPresentationOmitted` with an explicit *"a presented card really dispatches them"*
+rationale. The asymmetry is real and worth understanding; it is not, however, the defect —
+see the rejected experiment. `Sonic1LevelInitProfile.completeInitialPresentationPlcs` has the
+identical shape (`drain` + append + `runIterations(PALETTE_FADE, 22)`).
+
+### DO NOT RETRY — rejected experiment
+
+**Append the S2 secondary PLC at the ROM's `loadZoneBlockMaps` point on the presented path
+(`TitleCardManager.enterLeftSwooshExit`, the `s2.asm:5003-5006` pass) and skip the
+omitted-path drain + 25-iteration replay there.** ROM-plausible — `loadZoneBlockMaps`
+(`s2.asm:4939`, `:20103-20110`) really does append before the leave loop, and no V-int is
+serviced between it and the loop's first `WaitForVint` — and **measured worse**:
+
+- 9 failing axes -> 11.
+- **Segments 12 and 13, previously frame-exact green controls, both went red**: 14 errors
+  each, frame 0, `queue.s2_nemesis_plc.remaining_work` rom=5.
+- Segment 15 got marginally worse: 7575 -> 7576, same first mismatch.
+- Two further `dynamic-art-gap` axes shifted by 2 (`ss_5 -> seg7_ehz2` edge_count 16 vs 18,
+  `seg7_ehz2 -> seg8_cpz1` and `ss_6 -> seg10_cpz2` edge_ordinal off by 2).
+
+So the 25-iteration replay is **load-bearing on the presented path** and is not the
+double-service it reads as. Whatever it is compensating for has to be found before it is
+touched. Instrumenting segments 12 and 13 as controls is what caught this; do not measure a
+change at this seam without them.
+
+### Scope for whoever takes it
+
+The remaining task is the handoff's task 2 alone — split the release seam into two host
+iterations so the title-card leave loop's last frame and `Level_MainLoop`'s first frame each
+own a represented V-blank. Task 1 needs no work. The `completeInitialPresentationPlcs`
+asymmetry is a separate thread and, on this evidence, must not be "corrected" in isolation.
