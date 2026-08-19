@@ -87459,3 +87459,68 @@ sidecar rather than for a derived constant. **Kill condition:** if the same
 extra frame appears at entries whose arms follow a completed entry rather than a
 fresh `NewPLC` fill, the cause is not the code-table build and this explanation
 is wrong.
+
+## 2026-08-19 — the wall-probe candidate is KILLED: the engine already uses the fixed offset
+
+Branch `bugfix/ai-s2-wall-probe-r1` off `origin/develop` (`7d5f9da55`).
+One read each side, as scoped; no probe, no engine run, no code.
+**Seventh elimination on this defect.**
+
+### The ROM's probe is a fixed +10
+
+    CheckRightWallDist:
+        move.w  y_pos(a0),d2
+        move.w  x_pos(a0),d3
+    CheckRightWallDist_Part2:
+        addi.w  #$A,d3          ; fixed, not x_radius
+        lea     (Primary_Angle).w,a4
+        movea.w #$10,a3
+        bsr.w   FindWall
+
+Confirmed for S2 at `CheckRightWallDist` -- the identical construct the skill
+cites for S3K at `sonic3k.asm:20195`. `Sonic_DoLevelCollision` calls it and
+`CheckLeftWallDist` and zeroes `x_vel` on a hit (docs/s2disasm/s2.asm:37906-37917).
+
+### The engine already does the same thing
+
+`AbstractPlayableSprite` (:4557-4602):
+
+    byte xRad = (byte) xRadius;
+    // SPG: Push sensors always use x = +/-10, regardless of rolling state
+    byte push = 10;
+    ...
+    pushSensors[0].setOffset((byte) -push, yOffset);
+    pushSensors[1].setOffset(push, yOffset);
+
+Ground and ceiling sensors use `xRadius`; **push sensors do not**. The fixed ±10
+is already there, already commented, and already independent of the rolling
+radius shrink. `doWallCheck` (`CollisionSystem.java`:1313-1328) scans those
+sensors and zeroes `x_speed` on a negative distance, matching the ROM.
+
+**So the documented signature does not apply to this instance.** The skill names
+the probe offset as the prime suspect for "rolling-air sliding into a flush
+wall"; here that suspect is already correct. Matching a documented signature is
+not the same as matching its cause, and the brief was right to demand the read
+rather than accept the pattern.
+
+The arithmetic also never fitted: rolling shrinks `x_radius` 9 -> 7, a 3-pixel
+shortfall, against a divergence of eight rows at roughly 8 px/frame -- about 64
+pixels. That mismatch was visible before the read and I should have weighed it
+when proposing the candidate rather than after.
+
+### Still true, and still unexplained
+
+A rolling, airborne Sonic is stopped dead at `x = 2D58` on row 6600 with both
+`x_speed` and `g_speed` zeroed, and the engine holds `0x07F4` for eight more
+rows. Only the cause is in doubt.
+
+### Where the next look goes, unclaimed
+
+The dispatch shape matches on both sides: ROM `Sonic_DoLevelCollision` takes
+`CalcAngle` on `(x_vel, y_vel)`, masks to `$C0`, and branches to left-wall,
+ceiling-and-walls or right-wall handling with the default running both wall
+checks then the floor; `CollisionSystem` switches on
+`TrigLookupTable.calcMovementQuadrant(xSpeed, ySpeed)` with the same four cases.
+What has **not** been compared is the scan itself -- `FindWall` with `a3 = $10`
+and `d6 = 0` against the engine's sensor scan -- and the quadrant value at this
+frame. Naming those as unexamined, not as suspects.

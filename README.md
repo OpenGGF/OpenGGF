@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The wall-probe candidate is killed: the engine already uses the ROM's fixed offset
+  (`bugfix/ai-s2-wall-probe-r1`, merged 2026-08-19 -- one read each side, seventh elimination).**
+  ROM `CheckRightWallDist_Part2` does `addi.w #$A,d3` -- a **fixed +10, not `x_radius`** -- with
+  `movea.w #$10,a3` into `FindWall`, and `Sonic_DoLevelCollision` zeroes `x_vel` on a hit
+  (`s2disasm/s2.asm:37906-37917`). The engine's `AbstractPlayableSprite` builds ground and ceiling
+  sensors from `xRadius` but push sensors from a **fixed 10**, with a comment already stating push
+  sensors are independent of rolling state. So the documented rolling-air signature does not apply to
+  this instance -- the prime suspect the skill names is already correct here. **The arithmetic never
+  fitted either:** rolling shrinks `x_radius` 9 -> 7, a **3-pixel** shortfall, against a divergence of
+  eight rows at roughly 8 px/frame -- about **64 pixels**. That mismatch was visible when the
+  candidate was proposed, not only after reading it; a documented pattern's fit on the *qualitative*
+  signature was allowed to carry a *quantitative* claim it could not support. Still true and still
+  unexplained: a rolling, airborne Sonic stopped dead at `x = 2D58` on row 6600 with both `x_speed`
+  and `g_speed` zeroed while the engine holds `0x07F4` for eight more rows. Named as unexamined
+  rather than suspected: the scan itself -- `FindWall` with `a3 = $10`, `d6 = 0` against the engine's
+  sensor scan -- and the quadrant value at that frame; the dispatch shape matches on both sides.
+
 - **RETRACTION: the S1 "one frame located" inference compared two different clocks
   (`bugfix/ai-s1-rowsconsumed-r1`, second commit, merged 2026-08-19).** The previous entry
   differenced the engine's **16** measured `SSR_ChkPLC` wait frames against a **17**-frame ROM

@@ -232,6 +232,13 @@ half-landed change, and require the blast radius to be measured before anything 
   change removed, remove the files in place instead. A round that reached for it caught itself, but
   note the measurement would have been false anyway: the run under the stash still had the fixture
   present, so it was a control in name only.
+- **Check the magnitude before accepting a signature match.** A documented pattern fitted a
+  divergence qualitatively -- rolling-air sliding into a flush wall -- and was proposed as the prime
+  candidate. Its arithmetic never fitted: the mechanism offers a 3-pixel shortfall (rolling shrinks
+  `x_radius` 9 to 7) against a divergence of eight rows at ~8 px/frame, about 64 pixels. The
+  mismatch was computable at the moment the candidate was proposed. A skill that documents a
+  signature tells you the shape and not that your instance matches it, so before adopting one, check
+  that the effect it predicts is the size of the effect you have.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.
