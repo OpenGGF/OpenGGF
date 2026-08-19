@@ -488,6 +488,13 @@
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/Test*Guard*.java</include>
+                                <!-- Prohibition guards predate the *Guard suffix and enforce
+                                     hard rules 5 and 6 (no getInstance() in objects, no direct
+                                     map mutation). Same three conventions are checked by
+                                     TestBuildToolingGuard, so a new one under any of them is
+                                     picked up automatically. -->
+                                <include>**/TestNo*.java</include>
+                                <include>**/TestArchUnit*.java</include>
                             </includes>
                             <excludedGroups>performance-measurement</excludedGroups>
                         </configuration>

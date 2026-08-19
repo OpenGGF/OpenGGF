@@ -412,6 +412,10 @@ class TestBuildToolingGuard {
         assertTrue(antMatches("**/Test*Guard.java", "com/openggf/tests/TestBuildToolingGuard.java"));
         assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/GuardTest.java"));
         assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/TestSomethingElse.java"));
+        assertTrue(isGuardTestClassName("TestNoServicesInObjectConstructors.java"));
+        assertTrue(isGuardTestClassName("TestArchUnitRules.java"));
+        assertFalse(isGuardTestClassName("TestSonic2Rng.java"));
+        assertFalse(isGuardTestClassName("ObjectGuardSourceScanner.java"));
         assertFalse(antMatches("**/tests/trace/**/*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
     }
 
@@ -457,16 +461,32 @@ class TestBuildToolingGuard {
                     .filter(Files::isRegularFile)
                     .map(path -> root.relativize(path).toString().replace('\\', '/'))
                     .filter(path -> path.endsWith(".java"))
-                    .filter(path -> {
-                        String name = path.substring(path.lastIndexOf('/') + 1);
-                        // Guard *tests* only: Test-prefixed classes carrying @Test
-                        // methods. Same-named helpers (source scanners, shared
-                        // fixtures) hold no assertions and are not run directly.
-                        return name.startsWith("Test") && name.contains("Guard");
-                    })
+                    .filter(path -> isGuardTestClassName(
+                            path.substring(path.lastIndexOf('/') + 1)))
                     .sorted()
                     .toList();
         }
+    }
+
+    /**
+     * The three naming conventions structural guards use. {@code Test*Guard*}
+     * is the current one; {@code TestNo*} is the older prohibition form that
+     * carries hard rules 5 and 6 ({@code TestNoServicesInObjectConstructors},
+     * {@code TestNoDirectMapMutationsInGameplay}); {@code TestArchUnit*} holds
+     * the ArchUnit rule sets. All three must be selected by the guards
+     * profile, so a new guard following any of them is picked up without
+     * anyone remembering to add it.
+     *
+     * <p>Only {@code Test}-prefixed classes: same-named helpers (source
+     * scanners, shared fixtures) carry no assertions and are not run directly.
+     */
+    private static boolean isGuardTestClassName(String name) {
+        if (!name.startsWith("Test")) {
+            return false;
+        }
+        return name.contains("Guard")
+                || name.startsWith("TestNo")
+                || name.startsWith("TestArchUnit");
     }
 
     /** Ant-style path matching for the surefire include patterns in {@code pom.xml}. */
