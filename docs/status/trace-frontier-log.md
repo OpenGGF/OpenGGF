@@ -87123,3 +87123,76 @@ Anchor the clock first. If the offset is real, reading (1) becomes a specific,
 testable claim about where the animation sits in the player update; if the label
 is skewed, the engine may be sampling correctly and the whole line closes as a
 sixth elimination.
+
+## 2026-08-19 — RETRACTION: the Roll phase is downstream of a physics divergence
+
+Branch `bugfix/ai-s2-roll-anchor-r1` off `origin/develop` (`38fcf8ba2`).
+Anchor measurement plus a report re-read; instrumentation reverted, nothing
+landed. **This round retracts the central claim of two earlier entries.**
+
+### The anchor holds -- the clock was never skewed
+
+Logging the engine's `x` alongside the row label and comparing against recorded
+`player_x`:
+
+    label 6594  engineX=2D2B  recorded=2D2B   MATCH
+    label 6595  engineX=2D33  recorded=2D33   MATCH
+    ... through 6599, value for value
+
+So the row label is correct and the eight-row figure is real. That is the **third
+possibility** named in the brief: engine and recording agree on row identity and
+the `g_speed` transition still differs.
+
+### What actually happens at 6600
+
+    label 6600  engineX=2D5A  recorded=2D58   engineG=2036  recordedG=0
+    label 6601  engineX=2D62  recorded=2D58   engineG=2036  recordedG=0
+    ...
+    label 6607  engineX=2D92  recorded=2D58   engineG=2036  recordedG=0
+    label 6608  engineX=2D98  recorded=2D58   engineG=0     recordedG=0
+
+The ROM's Sonic **stops dead** at row 6600 -- `x` freezes at `2D58`, `g_speed`
+goes to zero. The engine's Sonic keeps moving at `$7F4` for eight more rows.
+
+### The retraction, and how the error was made
+
+Two earlier entries state that the engine's inertia matches the ROM exactly
+across the tail, and conclude on that basis that the Roll phase slip is *not*
+downstream of physics. **Both are wrong.** The report carries exactly the
+divergences that disprove them:
+
+    6600-6607  x_speed  exp 0x0000  act 0x07F4   cascading=true
+    6600-6607  g_speed  exp 0x0000  act 0x07F4   cascading=true
+    6600-7087  x        exp 0x2D58  act 0x2D5A   cascading=true
+
+They are flagged `cascading: true`, and both earlier readings filtered to
+non-cascading errors and reported "no physics divergence".
+
+That is the **cascading-flag blind spot this lane itself put into the standing
+protocol** -- "the flag suppresses cluster onsets, not just repeats" -- applied
+correctly once and then walked into twice. A filter adopted for a good reason
+became a habit that hid the answer.
+
+### Where the defect actually is
+
+Sonic's ground speed fails to drop to zero at row 6600. Everything downstream
+follows mechanically:
+
+- speed stays `$7F4`, so `max(0, $400 - |g|) >> 8` stays 0;
+- delay 0 means the Roll script advances every frame while the ROM holds five;
+- the mapping frame slips one step and stays slipped;
+- the DPLC stream submits on different frames, producing the whole 6600-7087
+  ramp structure.
+
+The Roll arithmetic, the script data, the publish order and the entry frame are
+all faithful -- those eliminations stand. They were eliminations of the *wrong
+suspect*. Four rounds inside the animation found nothing because the animation
+was never the defect.
+
+### What the next round needs
+
+Why the ROM's Sonic stops dead at 6600 and the engine's does not. `x` freezing at
+`2D58` with `g_speed` zeroed in one frame is a hard stop -- a solid object, a
+wall, or a boundary -- and the boss (KD29) is gone by 6084, so it is something
+else. That is a physics/collision question, and the art cluster has been its
+symptom all along.
