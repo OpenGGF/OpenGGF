@@ -87524,3 +87524,74 @@ checks then the floor; `CollisionSystem` switches on
 What has **not** been compared is the scan itself -- `FindWall` with `a3 = $10`
 and `d6 = 0` against the engine's sensor scan -- and the quadrant value at this
 frame. Naming those as unexamined, not as suspects.
+
+## 2026-08-19 -- The admission slip measured on one clock: the engine is in the wrong MODE, not late by a frame
+
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission" test
+```
+
+Branch `bugfix/ai-s1-admission-clock-r1`, based on `develop` at `e0dddb3db`.
+Diagnosis only -- **no engine change is landed**.
+
+### The clock and the endpoints
+
+One clock throughout: the **shared BK2 cursor**. Endpoint A is the row the
+recording gives the destination segment, `ghz2_2.bk2FrameOffset = 9741`.
+Endpoint B is the row the engine admits it -- which, with the predicate fix and
+the boundary traversal applied, never arrives.
+
+### The admission window is a single row, and it is missed on mode alone
+
+Segment 2 is a `LEVEL_PRESENTATION_BRIDGE` back into its own act, so
+`TraceRunPlaybackCoordinator.destinationReady` takes its exact-physical-row
+branch (`:390-402`): mode is `LEVEL`, no initial title card pending,
+`sharedBk2Cursor() == destination.bk2FrameOffset()`, and level identity matches.
+The row test is **equality, not `>=`** -- a one-row window with no tolerance.
+
+Instrumenting all four components across the window:
+
+```
+BRIDGE cur=9739 want=9741 mode=TITLE_CARD card=false lvlOk=true -> false
+BRIDGE cur=9740 want=9741 mode=TITLE_CARD card=false lvlOk=true -> false
+BRIDGE cur=9741 want=9741 mode=TITLE_CARD card=false lvlOk=true -> false
+BRIDGE cur=9742 want=9741 mode=TITLE_CARD card=false lvlOk=true -> false
+```
+
+At the admission row itself the row matches, the card is not pending, the level
+identity matches -- and the engine is in **`TITLE_CARD`**. Mode is the only
+failing component, and it fails across the whole window, not by a frame.
+
+### What this settles
+
+- **`rowsConsumed` reaching 2 is a downstream symptom, not the fault.** The
+  window is missed at 9741; the counter only reaches 2 two rows later because
+  admission never happened. Fixing anything on the `rowsConsumed` side would
+  address the alarm rather than the cause.
+- **The first-entry PLC frame is a separate open item.** It concerns arm cadence
+  *within* a drain; this is about which mode the engine is in at a specific
+  shared row. Nothing measured here implicates it, and per the brief it is
+  recorded as its own item rather than folded in.
+- **The pair is what moves the mode.** Before it, the engine reached
+  `mode=LEVEL` at cursor 9741 and admission succeeded -- the earlier bridge
+  round's timeline shows `step=8926 cursor=9741 mode=LEVEL segment=3`. With the
+  pair, the results screen's PLC genuinely drains, `SSR_ChkPLC` holds it for a
+  wait that previously never happened, and the results exit, level load and
+  title card all shift later. The shift is at least 2 rows; this probe cannot
+  bound it above, because the run throws at 9743.
+
+### The real question, now correctly posed
+
+The engine's results-and-return sequence takes longer than the recording allows
+between the special-stage exit and gameplay resuming at 9741. The recording is
+hardware, and hardware *did* perform that 16-frame drain -- so the total is not
+the problem; the engine must be starting the drain later, or spending frames
+elsewhere in the sequence that the ROM does not. Measuring where those rows go
+between the special-stage exit and 9741, on this same cursor, is the next step.
+
+**Do not fix this by widening the admission window.** The equality is the
+bridge's admission authority and the comment at `:396-397` says so; relaxing it
+would admit a destination at a row the recording does not place it on, which is
+the fitted-model failure in its purest form.
