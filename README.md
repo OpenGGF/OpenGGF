@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **`Obj_WaitOffscreen` is a one-shot latch, and three coupled S3K fixes land together
+  (`bugfix/ai-s3k-rhinobot-timing-r1`, merged 2026-08-19).** The Caterkiller Jr head and the
+  Rhinobot both gated their whole routine on a **per-frame** on-screen test, where ROM
+  `Obj_WaitOffscreen` (`skdisasm/sonic3k.asm:180271-180305`) is a **one-shot latch**: `loc_85B02`
+  restores the saved operation pointer permanently once the placeholder has been drawn, after which
+  the badnik runs for the rest of its life on screen or off. Leaving the viewport therefore re-froze
+  the Rhinobot's patrol and it resumed accelerating from the wrong frame. **The Rhinobot was not a
+  timing defect** -- its state transitions land on exactly the ROM's rows (patrol to charge-prep at
+  7809, charge-prep to dash at 7842), so the frame counting was already right; what differs is `x`,
+  already wrong at the fixture's *first* emitted row for that badnik and growing during acceleration
+  then frozen once stationary, which is a start-of-motion difference rather than a frame gate. The
+  third piece is the touch-pass snapshot: `ObjectCollisionResponseList.shouldRefreshFrameStartSnapshot()`
+  encoded an invariant that is false for `spawnChild`-created objects updated after the touch pass,
+  and it is **removed** rather than worked around, so every object now gets the frame-start snapshot
+  and the call site's comment becomes true. **`TestS3kAizTraceReplay`'s `KOS_MODULE_QUEUE#38`
+  terminal handoff is green too** -- it was downstream of the Rhinobot activating early, not an
+  independent art-queue defect, and nothing was done to the queue. Chain segment 4 falls **44,605 ->
+  40,000 errors**, its first non-camera mismatch moves 2729 -> 3573, and frame 2729's
+  `sidekick_y_speed` is now the ROM's `0x00C0`. Verified 790/4 set-identical both ways with no S1 or
+  S2 result moved, `-Pguards` 499/0, and the S3K keep-green set 101/0.
+
 - **The Roll tick round stops short deliberately: the engine clock is unanchored
   (`bugfix/ai-s2-roll-tick-r1`, merged 2026-08-19 -- instrumentation written, used and reverted).**
   Two results and one refusal. **Faithful:** `updateScriptWithDelay` sets the tick, reads
