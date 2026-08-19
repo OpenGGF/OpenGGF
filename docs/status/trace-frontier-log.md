@@ -88520,3 +88520,76 @@ The writer probe found this in one run, and every part of the ten-round collisio
 search was correct work in a subsystem that was never involved. The technique the
 brief prescribed -- instrument the writer, do not reason from the shape -- is what
 separated them, and it would have worked identically ten rounds ago.
+
+## 2026-08-19 — CONFIRMED: the engine clears Current_Boss_ID on boss defeat; the ROM never does
+
+Branch `bugfix/ai-s2-boss-id-r1` off `origin/develop` (`fd77e0ca6`).
+New probe `tools/bizhawk/probes/s2_cpz2_bossid_probe.lua` plus a source read; no
+code. **Root cause and its owner are both identified.**
+
+### The byte, measured directly rather than inferred
+
+Hooking the widening instruction itself, whose execution *is* the boss-id test:
+
+    row 6596  COMPARE  d0=2D58  d1=2D3B
+    row 6599  COMPARE  d0=2D58  d1=2D52
+    row 6600  COMPARE  d0=2D58  d1=2D5A   <- x exceeds the limit, clamp fires
+    row 6603  COMPARE  d0=2D58  d1=2D58
+
+`WIDEN+40` (`0x1A99E`) **never executes** in the window, so `Current_Boss_ID` is
+**non-zero** on every row. The magnitude inference is now a direct observation.
+The boundary `d0` is a constant `2D58`, and `d1` crosses it at row 6600 by exactly
+two pixels -- which is the whole of the "2-pixel correction" and the dead stop.
+
+### The ROM never clears the byte
+
+`Current_Boss_ID` appears in `docs/s2disasm/s2.asm` only as `move.b #N,...` from
+boss-arena setup (ids 1-9) and as `tst.b` readers. Explicit clears --
+`clr.b (Current_Boss_ID)` or `move.b #0,(Current_Boss_ID)` -- number **zero**. It
+is reset only by the level-load RAM clear, so in the shipped ROM the boss id
+**persists to the end of the act**.
+
+### The engine clears it on defeat, at seven sites
+
+    Sonic2CPZBossInstance.java:352      setCurrentBossId(0)
+    Sonic2EHZBossInstance.java:312      setCurrentBossId(0)
+    Sonic2HTZBossInstance.java:401      setCurrentBossId(0)
+    Sonic2ARZBossInstance.java:457      setCurrentBossId(0)
+    Sonic2CNZBossInstance.java:643      setCurrentBossId(0)
+    Sonic2OOZBossInstance.java:253      setCurrentBossId(0)
+    Sonic2WFZBossInstance.java:606      setCurrentBossId(0)
+
+`GameStateManager`'s own javadoc states the field is "cleared on every boss
+defeat". That is **true for S1** -- `Sonic1EggPrisonObjectInstance` clears it and
+cites `s1disasm/_incObj/3E Prison Capsule.asm:97` -- and **false for S2**, where
+no such instruction exists.
+
+So after the CPZ boss is defeated around row 6084 the engine's id becomes zero,
+`Sonic_Boundary`'s `addi.w #$40,d0` applies, and Sonic runs the 64 pixels.
+
+### The chain, now confirmed end to end
+
+    S2 boss defeat clears currentBossId (engine only)
+      -> side boundary widens by $40
+      -> stop at 2D98 instead of 2D58, eight rows late
+      -> x_speed holds $7F4 instead of 0
+      -> Roll delay stays 0 instead of 4
+      -> mapping frame slips one script step
+      -> DPLC submissions land on different frames
+      -> the 6600-7087 tail, 1247 errors
+
+### Why no code landed this round
+
+The principled fix is that **no S2 boss should clear the id**, because the ROM
+never does -- seven sites, not one. A CPZ-only change would be fitting the
+symptom. Seven sites also interact with `bossDefeatedFlag` and `screenLocked`,
+both of which have their own cited ROM lifetimes, and the boundary is shared
+across three games.
+
+That is a measured behavioural change needing the full gate -- 790/4 both-way
+set-diff, guards 499/0, and explicit S1 and S3K measurement -- rather than
+something to append to a diagnostic round. Scoping it is the next round's job and
+the expectations to check against are already written down: the stop lands at
+6600, `x_speed` matches, the Roll delay becomes non-zero on the ROM's row, the
+mapping-frame slip closes, and the tail collapses. If only some of that follows,
+the chain has a second break.
