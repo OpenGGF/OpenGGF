@@ -89861,3 +89861,58 @@ it crosses the recorded row.
 
 **Frontier unchanged: `stage_exit` at bk2 frame 35726, stalled inside `ss_3`. Segment 4
 remains closed at 292 camera-only errors.**
+## 2026-08-19 -- The fixture and the reverted native fix agree; and "submitted no matching work" is false
+
+Base `731c03b78`, S1 `hardware_timing` fixture branch. Measurement only.
+
+**Why S1 needs a recorded timing sidecar at all -- the two independent routes,
+recorded together because this is the clearest justification the project has
+produced.**
+
+1. *Frame state cannot decide it.* `ghz2_2` f107 and `mz3_2` f102 are reached in
+   identical engine state by an identical execution path, and the ROM presents
+   opposite outcomes (`prepared=false remain=-1` against
+   `prepared=true remain=18`). A constructed disconfirming pair, so unlike a
+   ratio it cannot be circular.
+2. *The sidecar does decide it, and lands exactly where the native attempt was
+   reaching.* Adding the timing stream **with no engine change at all**
+   reproduces the reverted native fix outcome for outcome: segment 15 green,
+   segment 12 40 -> 37, frontier moved to `dynamic_art.edge[0].mapping_frame` at
+   f593.
+
+The second is the stronger statement: the native attempt was not merely
+unprovable, it was approximating something the sanctioned mechanism supplies
+exactly.
+
+**`VisualRun` before and after, since the fixture is what changes it.**
+`TestS1CompleteEmeraldVisualRun` is **green (2/2) on develop without the
+fixture** and **2 red with it** -- one failure plus one teardown error. The
+fixture causes both.
+
+**"The engine submitted no matching work" is a false diagnostic.** The
+`UnmatchedRecordedCompletionException` text names edges #14-#20 and asserts the
+engine submitted nothing matching. Logging every `HardwareTimingService.submit`
+during the same run refutes it -- the engine submits the expected descriptors
+with **exactly** the recorded fingerprints:
+
+```
+SUBMIT NEMESIS_PLC_QUEUE#14 sha256:afaa752d...   <- unrepresented arm, borrows 14
+SUBMIT NEMESIS_PLC_QUEUE#14 sha256:3224e355...   <- matches recorded #14 exactly
+SUBMIT NEMESIS_PLC_QUEUE#15 sha256:32e1caaa...   <- matches recorded #15 exactly
+SUBMIT NEMESIS_PLC_QUEUE#16 sha256:f5ff42a5...   <- matches recorded #16 exactly
+```
+
+So the answer to "submits nothing or submits late" is **neither**: it submits
+the right work with the right identity, and the edges go unconsumed anyway. The
+defect is in admission, not submission, and the exception's wording sends the
+reader to the wrong subsystem. Ordinal 14 appearing twice with different
+fingerprints is `releaseUnrepresentedIdentity` working as designed -- the
+unrepresented arm borrows 14 and returns it, and the represented arm then takes
+14 and matches the recording.
+
+**Verification method note: walk a run's segments in manifest order, never glob
+order.** Directory names sort `ghz1, ghz2, ghz2_2, ghz3`, while segment order is
+`ghz1, ss, ghz2, ghz2_2, ss_2, ghz3`. Concatenating `hardware_timing.jsonl`
+ordinals in glob order reports the stream as non-contiguous when it is perfectly
+contiguous 0..241. A verifier that walks files in the wrong order raises a false
+alarm about ground-truth data, which is the most expensive kind.
