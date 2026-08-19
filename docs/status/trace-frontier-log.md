@@ -91689,3 +91689,81 @@ defect, **not proven**; an engine-side probe settles it and belongs in the fix r
   into it. Copy the 175 MB tree into an `agent-scratch` task directory and set
   `BIZHAWK_HOME` to that; do not point it at the primary checkout, which another session
   may be using.
+
+## 2026-08-20 — S2 stage_exit seam: there is no surplus V-blank; the `:5006` pass is preceded by `WaitForVint`
+
+Base `5e4f3530a`, worktree `s2-titlecard-seam-r1`, JDK 21. **No fix landed, and none was
+attempted** — the hypothesis was settled by the disassembly plus one probe run, before any
+engine change.
+
+### The hypothesis
+
+That the engine issues one represented V-blank too many in the title-card leave region,
+because the ROM's leading `RunObjects` at `s2.asm:5006` has no `WaitForVint` of its own —
+in which case the seam's symptom would be a surplus title-card claim rather than a
+misplaced level claim, and the fix would be local instead of structural.
+
+### Refuted, and the earlier "25 vs 26" figure re-read
+
+`s2.asm:4912-4945` settles it:
+
+```
+4914 Level_TtlCard:
+4915 	move.b	#VintID_TitleCard,(Vint_routine).w
+4916 	bsr.w	WaitForVint          <- scroll-in loop's per-iteration V-int
+4917 	jsr	(RunObjects).l
+...
+4922 	bne.s	Level_TtlCard
+4923 	tst.l	(Plc_Buffer).w
+4924 	bne.s	Level_TtlCard
+4925 	move.b	#VintID_TitleCard,(Vint_routine).w
+4926 	bsr.w	WaitForVint          <- the one that precedes the :5006 pass
+4927 	jsr	(Hud_Base).l
+...
+4938 	bsr.w	LoadZoneTiles
+4939 	jsrto	JmpTo_loadZoneBlockMaps
+...
+4945 	bsr.w	InitPlayers
+```
+
+Between `:4926` and the `RunObjects` at `:5006` there is **no other `WaitForVint`** — only
+straight-line loading. So the leading object pass *is* preceded by a V-int, the one at
+`:4926`, and a host iteration carrying that V-int plus that object pass is the correct
+shape. **There is no surplus represented V-blank of the proposed kind.**
+
+The "1 + 25 object passes but only the leave loop's 25 V-blanks" figure in
+`Sonic2LevelInitProfile.TITLE_CARD_LEADING_OBJECT_PASSES`'s javadoc — which is what the
+previous entry's table was built from — is an accounting statement about the **omitted
+presentation's replay window**, which begins after `:4926` has already happened. It is not a
+claim that the presented path issues a V-blank the ROM does not. The previous entry's table
+row *"engine title-card iterations 26 V-blanks / 26 object passes"* is correct as a count and
+was wrong as an anomaly; treat that row as withdrawn.
+
+### What the probe confirmed
+
+Probe on `frame.claim`'s return value, `Sonic2PlcService.serviceVBlank`, and
+`ObjectManager.update`, over the whole seam at shared cursor 82342:
+
+| | |
+|---|---|
+| title-card host iterations | 94 |
+| of those, `claim` returned **false** (row already owned, e.g. by an active blocking fade) | 21 |
+| `LEVEL_TITLE_CARD` services | 98 |
+| object passes | 27 |
+
+The iteration that runs the leading `:5006` object pass claims and services normally, with
+`activeRemainingWork = -1` at this seam — the queue is idle there, so even if that claim
+were surplus it would decompress nothing at this boundary. The 21 refused claims are a
+separate, expected precedence behaviour and not part of this seam's arithmetic.
+
+### Verdict
+
+The local explanation is refuted and **the structural seam split stands as the remaining
+work**, with the three invariants recorded in the previous entry as its specification:
+production-owner continuity, exactly one preparation per represented row, and a preparation
+on every claimed row including `updateLevelMode`'s five early-return paths.
+
+### Sweeps
+
+None, and none were warranted: no engine change was made. The tree is identical to
+`5e4f3530a`.
