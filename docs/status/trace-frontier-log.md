@@ -89596,3 +89596,70 @@ whose S1 PLC pipeline is exactly this queue. That makes the held S1
 `hardware_timing` fixture not merely an observability unblock but plausibly the
 only legitimate mechanism for closing 12/15. Do not spend another round hunting
 a frame-derivable predicate.
+
+## 2026-08-19 -- Single-sequence trace: identical engine execution, two different ROM outcomes
+
+Base `110bf6d43`. **Nothing landed.** One temporary probe routed every call site
+through a single monotonic counter, so ordering is read directly instead of
+being reconstructed by correlating per-row labels. That instrument change is
+what makes this entry trustworthy where the previous two were not.
+
+**The instrument defect it replaced.** Labelling probe output by comparison row
+is wrong, because a row's label persists over work belonging to the *following*
+row, and lag rows take the skipped path and never re-stamp. Two probes built
+that way report in different units while looking identical. Use one global
+sequence and log the row boundary as its own event.
+
+**Resolved: the contradiction from the previous entry.** The claim that
+`prepareHead()` is invoked at the completing row's loop tail was an artifact of
+that mislabelling. The sequence shows the completing row's tail is **HELD** and
+`prepare()` is never called on it; the `releaseArm=true` observations came from
+other closures. One queue instance and one service instance throughout -- no
+second instance, no second comparator.
+
+**The decisive comparison.** Engine execution around the transition is
+*identical*, instruction for instruction, in the failing and passing segments:
+
+```
+sample rem3 -> MARK-DEFER -> service 3->0 -> prepareAfterLoop HOLD
+sample active=null  <-- compared here
+CLAIM phase=LAG -> CONSUME-HELD -> prepareHead PROMOTED
+(next row, skipped=true) CLAIM ORDINARY_LEVEL -> service -> tail RUN
+```
+
+| | engine at the compared row | ROM at that row | result |
+|---|---|---|---|
+| `ghz2_2` f107 | `active=null queued=1` | `prepared=false remain=-1 nqueued=1` | **matches** |
+| `mz3_2` f102 | `active=null queued=2` | `prepared=true remain=18 nqueued=1` | **mismatches** |
+
+Same engine state, same engine execution, two different ROM outcomes. **No
+frame-granularity predicate can separate these rows, because there is nothing in
+frame-granularity state to separate them by.** This supersedes the previous
+entry's "8 of 8" argument, which came from a detector that could not produce a
+disconfirming instance; this one is a constructed counterexample pair and does
+not depend on any ratio.
+
+**New, ROM-citable, and independent of the sub-frame question: the engine
+services PLC patterns on a lagged row.** On the recorder-lagged row
+(`skipped=true`) the engine runs a full `ORDINARY_LEVEL` closure including
+`servicePatterns` -- `18->15` in `mz3_2` row103, `14->11` in `ghz2_2` row108.
+The ROM services nothing there: `VBlank_Lag` (`docs/s1disasm/sonic.asm:711-740`)
+handles only the LZ palette case and music and never reaches `ProcessPLC`, and
+the recording agrees -- `mz3_2` f103 holds at 18 and f110 holds at 14.
+
+**But it currently cancels the first discrepancy, so the two must move
+together.** The engine is one closure late promoting *and* services one extra
+time on the lag row; from the row after the transition the values re-converge,
+which is exactly why only the transition rows diverge. Removing the lag-row
+service alone leaves `mz3_2` row104 sampling 18 where the ROM has 15. This is
+the "two sites of one conditional move together or not at all" shape, and it
+also explains the reverted change in the previous entry: fixing the promotion
+timing alone made segment 15 green and broke segment 3, because in `ghz2_2` the
+ROM genuinely has not promoted at f107 and the cancellation was what made that
+row right.
+
+**Standing guidance unchanged:** do not hunt a frame-derivable predicate for the
+transition row. The lag-row service is a separate, genuinely ROM-citable defect
+and is the part of this worth pursuing -- but only paired with whatever
+addresses the promotion phase, and the promotion phase is not frame-derivable.
+
