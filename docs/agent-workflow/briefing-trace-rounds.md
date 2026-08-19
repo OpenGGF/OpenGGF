@@ -294,6 +294,18 @@ half-landed change, and require the blast radius to be measured before anything 
   not a null result: it forced the next measurement rather than ending the line, and that measurement
   is what overturned the round's own consequence. State kill conditions so that surviving tells you
   where to look next, not merely that you may continue.
+- **Re-read a source you have already used, when it is the source of a surprising absence.** Four
+  rounds turned on a recorded arm that was missing from a stream. The explanation was a comment in
+  the recorder, forty lines from the fingerprint function the same lane had used to build its reverse
+  map: level-load arms are discarded by design and never reach a trace file. Having read a file once
+  makes it *less* likely to be re-read, not more. When an absence is doing load-bearing work, go back
+  to the thing that produces the data before reasoning about what the absence means.
+- **Ask for an inconvenient result to be explained, not accepted.** A brief pre-committed a round to
+  explaining an outcome that would otherwise have looked like confirmation — "if the ROM does use
+  AddPLC then the entry should appear in the recording and it does not, so that outcome would need
+  explaining". Without it the round would have read `AddPLC`, seen it agree with the engine, and
+  stopped. This does work no falsifiability test does: it binds the *agreeable* branch as well as the
+  disagreeable one.
 - **A partial run is not a result, however suggestive.** If a gate is killed or interrupted,
   say so and quote no numbers from it. "465 of 790 with 4 red, consistent with the two known
   regressions" is a reasonable thing to *notice* and an unreasonable thing to *report*.

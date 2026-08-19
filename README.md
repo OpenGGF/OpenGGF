@@ -228,6 +228,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **RETRACTION of a retraction: the recorder discards level-load arms by design
+  (`bugfix/ai-s1-quickplc-r1`, merged 2026-08-19).** The narrow question is settled and it is
+  **`AddPLC`, not `QuickPLC`**: `LevelHeaders`' first field is the level's 1st PLC, GHZ's is
+  `plcid_GHZ` (`LevelHeaders.asm:17-18`), and `GM_Level` reads that byte and calls `AddPLC`
+  (`s1disasm/sonic.asm:2731-2733`). The 461-tile zone art goes **through the queue, armed by
+  `RunPLC`** -- exactly what the engine does. That triggers the other half of the brief, which asked
+  for the missing recording to be *explained* rather than accepted, and the explanation was in a file
+  this lane had already read: *"Anything observed before the arm belongs to no row and is discarded,
+  so the level load's own PLC arming never reaches a trace file"*
+  (`S1PlcHardwareTimingObserver.cs:80-83`). **The absence is a property of the instrument**, so
+  `a41fef286`'s "the engine arms work the hardware never arms" is wrong -- the hardware arms it and
+  the recorder throws it away. **The position has now moved twice and both prior entries are
+  superseded:** "correct and insufficient" was right in words and wrong in mechanism, and its
+  retraction was wrong outright. **What it decides:** the engine's submission is correct and must not
+  be removed, so neither candidate fix shape applies -- it is not spurious, and it cannot be released
+  from a stream that will never contain it. **Recorded admission must not gate an arm the recorder
+  does not record**, because a level-load arm has no representation in any segment's stream and
+  holding one against recorded readiness is a deadlock by construction -- which is exactly the 214
+  consecutive `releaseArm` blocks measured last round. How to scope that is deliberately **not**
+  claimed: it touches the port's authority, hard rule 4 and `TestHardwareTimingAuthorityGuard`.
+
 - **The S1 title card blocks on art the hardware never arms -- an engine defect, not a stream gap
   (`bugfix/ai-s1-titlecard-stall-r1`, merged 2026-08-19).** The kill condition was tested first and
   does **not** fire: with the pair applied the PLC queue holds **one state across all 213 stalled
@@ -240,8 +261,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   entry 0, source `0x03CB3C`, VRAM `0x0000`, 461 tiles**: the returning level's main zone art.
   **The previous round's consequence is refuted** -- that fingerprint appears **zero times in all 242
   recorded edges**, absent from a run that visits every zone. So "the capture is correct and
-  insufficient" is wrong: the capture is correct and **complete**, and the engine arms work the
-  hardware never arms through `RunPLC`, then blocks the title card on it forever. The lead, stated
+  insufficient" is wrong: the capture is correct and complete, and the engine arms work the
+  hardware never arms (**retracted below: the hardware does arm it -- the recorder discards level-load
+  arms by design, so the absence is a property of the instrument**). The lead, stated
   and not claimed: the ROM `AddPLC`s the level header's PLC at load (`:2731-2737`) yet `ghz2_2`'s
   first recorded arm is `PLC_Main` entry 0, and **`QuickPLC`** (`:1519-1526`) decompresses and
   transfers immediately without using or affecting the queue -- which path the ROM takes decides
