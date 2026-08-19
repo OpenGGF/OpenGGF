@@ -134,3 +134,47 @@ and those are what landed here.
    `IllegalStateException: non-exportable pending hardware submission`. It
    survives `mvn clean`. Attributing a failure-mode change in that class to a
    code change is therefore unsound without a same-worktree control.
+
+## Correction, 2026-08-19 — the firing conditions of the blocked sites are wrong
+
+The catalogue above records where each `bclr` *exists*, and that part stands. It
+also implies each site fires whenever its branch's touch-side bit is set, and for
+the spike-family sites that is **wrong**, proven from committed fixture data.
+
+The S3K fixtures carry a per-frame `object_state` aux event with the object's own
+`status` byte, so whether a given object-side `bclr` fires is checkable directly —
+no probe needed. Over `src/test/resources/traces/s3k/cnz`:
+
+- `Obj_Spikes`' second routine (`loc_2413E`, docs/skdisasm/sonic3k.asm:48965) holds
+  status `0x22` — `p1_pushing_bit` **set** — continuously across rows 1266-1271
+  while the character pushes against it, and drops to `0x02` on row 1272, the same
+  row the character's own `Status_Push` clears. That is the ordinary end-of-contact
+  `sub_1E0C2` clearing both bits, not the object's own `bclr`.
+- Across the whole route the spike's `p1_pushing_bit` drops four times and on **none**
+  of them is the character still pushing.
+
+So `Obj_Spikes`' `bclr #p1_pushing_bit,status(a0)` (:49066, :49073, :49160, :49167)
+does **not** fire on a mere side touch. A port that fires it on every
+`contact.touchSide()` clears a bit the ROM keeps, and the object then never reaches
+`sub_1E0C2` to clear the character's flag — which is exactly the `status_byte`
+`0x0000` vs `0x0020` regression those ports produced.
+
+The same scan is the way to settle every remaining site. On
+`src/test/resources/traces/s3k/mgz` it finds objects that genuinely do clear their
+own bit mid-push, including `loc_21692` (docs/skdisasm/sonic3k.asm:45757), the
+`Obj_BreakableWall` break routine already landed in `8cd07b700` — so the method
+distinguishes real sites from mis-derived ones rather than rejecting all of them.
+
+**Before porting any remaining site, derive its firing condition from the ROM's
+`d6` mask semantics and confirm against the recorded `object_state` status byte
+that the bit actually drops mid-push on some route.** Existence in the listing is
+not evidence that the branch is reached.
+
+### Revised status of the blocked set
+
+| Site | Verdict |
+|---|---|
+| S3K `Obj_MGZMovingSpikePlatform` (:71091, :71102) | **Correct as ported.** With (1)+(2) it closes `TestS3kMgzTraceReplay` frame 31111 (`player_animation_id` `0x1A` vs `0x00`) and leaves AIZ, CNZ and the reference-closure test green. |
+| S3K `Obj_Spikes` (:49066, :49073, :49160, :49167) | **Firing condition wrong**, per the CNZ evidence above. Needs re-derivation. |
+| S2 `Obj36_Sideways` (:29443, :29449), `Obj76_Main` (:55775, :55781) | Same ROM shape as `Obj_Spikes`; treat as unverified until the same scan is run against S2 fixtures. |
+| S1 smashable wall, SBZ teleporter | Untested since they were reverted with the spike group; no evidence either way. |

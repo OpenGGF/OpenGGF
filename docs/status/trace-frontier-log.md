@@ -85176,3 +85176,67 @@ own address — so slot comparison should key on the head plus the
 
 No engine change was landed this round; nothing was measured that could move a
 red set, so no sweep is reported.
+## 2026-08-19 — the pair's residual is one test, and one ported site was wrong
+
+Branch `bugfix/ai-s2-pushresidual-r1` off `origin/develop` (`1dc79d63c`).
+Investigation only; nothing functional landed. All measurements are full
+`-Ptrace-replay`, both-way set-diff against a control measured in a clean
+worktree at the same base (790 tests / 4 red).
+
+### Result
+
+| Tree | Red | New |
+|---|---|---|
+| control | 4 | — |
+| (1)+(2)+all 12 object-bit sites | 9 | AIZ, CNZ, MGZ, reference-closure, S2 prefix |
+| **(1)+(2)+the MGZ spiked-platform site only** | **5** | **`TestS2CompleteEmeraldRunPrefix` alone** |
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` improves 2491 -> 2433 as before.
+So the pair is now one regression away from landable, not five and not twelve.
+
+### Two corrections to the previous round's report
+
+1. **MGZ was not independent of (3).** Round 7 concluded "MGZ is red under (1)+(2)
+   with the object-bit sites reverted, so (3) does not cause it". Wrong in the
+   other direction: MGZ is red because the MGZ site was *missing*. Solo, the pair
+   alone leaves MGZ with exactly one error -- frame 31111, `player_animation_id`
+   expected `0x001A` (Hurt) actual `0x0000` (Walk), i.e. (2) publishing the
+   Walk/Run restart where the ROM does not. Adding the site turns MGZ green.
+   The full-suite view had hidden this behind a different frame and field.
+2. **There is no fork-order sensitivity.** MGZ ran solo-green and batch-red at one
+   point, which looked like the documented MCZ-style ordering trap. It was not:
+   the batch contained the spike ports, and with those removed MGZ is green in the
+   same batch. Checking cost one run and avoided a third false attribution.
+
+### The spike ports are wrong, and the fixture proves it
+
+`Obj_Spikes` holds `p1_pushing_bit` **set** in its own status byte for the entire
+push (CNZ rows 1266-1271, status `0x22`) and drops it on row 1272 together with the
+character's `Status_Push` -- the ordinary `sub_1E0C2` end-of-contact clear. Across
+the whole route its bit never drops while the character is still pushing. So its
+`bclr` does not fire on a mere side touch, and a port that fires on every
+`contact.touchSide()` clears a bit the ROM keeps; the object then never reaches
+`sub_1E0C2`, which is precisely the `status_byte` `0x0000` vs `0x0020` shape.
+
+The method generalises and needs no probe: S3K fixtures carry per-frame
+`object_state` with the object's status byte, so any site's firing can be checked
+against committed data. Details and the revised per-site verdicts are in
+[docs/architecture/audits/object-pushing-bit-clear-sites.md](../architecture/audits/object-pushing-bit-clear-sites.md).
+
+### Hypothesis killed, for the second time and for a new reason
+
+The `Sonic_Animate` animation-change clear was re-tested with instrumentation
+rather than inference. The branch is reachable and `animationChangeClearsPush()`
+is `true` for S3K -- but the player's animation does not change anywhere in the
+CNZ divergence window: one change at row 1268 (Run -> Walk) and the next at 1288,
+with the divergence at 1272. It cannot be the mechanism here. Do not re-open it.
+
+### What is left
+
+`TestS2CompleteEmeraldRunPrefix` fails on `dynamic_art.edges` at segment 7: the
+engine emits one extra DPLC edge and every later `transfer_id`/`edge_ordinal`
+shifts by one (`rom=[8628, 8629]` vs `engine=[8629]` at frame 5472). That is (2)
+publishing one extra Walk/Run restart somewhere in the EHZ prefix -- the same class
+as the CNZ case, an S2 object whose own bit the ROM clears and the engine's latch
+does not. Finding it is the last step before the pair lands, and the S2 fixtures
+should be scanned the same way the S3K ones were before any further site is ported.

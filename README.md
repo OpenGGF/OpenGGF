@@ -228,6 +228,24 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The push pair is one regression from landable, and the spike ports were wrong
+  (`bugfix/ai-s2-pushresidual-r1`, merged 2026-08-19 -- investigation only, all experiments
+  reverted).** The pair plus **only** the MGZ spiked-platform site leaves a single new red,
+  `TestS2CompleteEmeraldRunPrefix`, where the same combination plus all 12 blocked sites left five --
+  so the regression count has gone **12 -> 5 -> 1** across three rounds while seg10 still improves
+  2491 -> 2433. **The discriminator needed no probe:** S3K fixtures carry a per-frame `object_state`
+  aux event containing *the object's own status byte*. On CNZ, `Obj_Spikes` (`loc_2413E`) holds
+  status `0x22` -- `p1_pushing_bit` **set** -- continuously across rows 1266-1271 while the character
+  pushes, dropping to `0x02` only on row 1272, the same row the character's `Status_Push` clears,
+  which is the ordinary `sub_1E0C2` end-of-contact clear of both bits. Across the whole route the
+  spike's bit drops four times and on **none** of them is the character still pushing. So its `bclr`
+  does not fire on a mere side touch: firing it on every `contact.touchSide()` clears a bit the ROM
+  keeps, the object never reaches `sub_1E0C2`, and the character's flag strands -- exactly the
+  observed `status_byte` `0x0000` vs `0x0020`. The same scan discriminates rather than condemning:
+  on MGZ it confirms `loc_21692`, the `Obj_BreakableWall` break already landed in `8cd07b700`,
+  genuinely clearing its own bit mid-push. **Existence in the audit listing is not evidence the
+  branch is reached**, and the audit doc now carries that rule with revised per-site verdicts.
+
 - **The S3K segment-4 `sidekick_y_speed` divergence is a badnik the engine never spawns
   (`bugfix/ai-s3k-seg4-r4`, merged 2026-08-19 -- investigation only, no fix).** Segment 4 diverges at
   frame 2729 on `sidekick_y_speed`, ROM `0x00C0` against engine `0x01C0` -- a delta of exactly
