@@ -539,3 +539,23 @@ and check it moves.
 
 This is also the general form of the false dichotomy that keeps appearing in these briefs: two
 options that share an unstated premise are one option wearing two hats.
+
+## Fourteenth rule: closure ownership is the row after, never the row before
+
+Four times in one session a round mis-assigned engine work to the wrong comparison row, and
+each time the error survived because the mistaken reading was *coherent*. A closure sits
+between two cursor advances and produces the state sampled by the **next** row. So work
+observed after the advance for row N belongs to row N+1's sample, not row N's.
+
+The most expensive instance: a round reported a genuine-looking, ROM-citable defect — the
+engine servicing PLC patterns on a recorder-lagged row where `VBlank_Lag` services none — and
+built a two-compensating-defects model on it, including a retrospective explanation of an
+earlier regression. Re-measured, the service belonged to the following row and the engine's
+lag handling had been correct all along. The whole model went with it.
+
+Two things make this worth its own rule. First, the retrospective explanation is what bought
+the model belief; a wrong model that explains a past surprise is more persuasive than a right
+one that does not, so treat "and it explains that regression too" as a reason to re-measure,
+not as corroboration. Second, the fourth instance happened *after* the round built the probe
+that exists to prevent it — because it read the result back off a quoted excerpt instead of
+re-running the probe. An instrument only helps on the runs you actually use it for.

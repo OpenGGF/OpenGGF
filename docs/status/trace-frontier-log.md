@@ -89729,3 +89729,74 @@ round should not build on either until one is confirmed.
 
 **Frontier: `stage_exit` at bk2 frame 35726, stalled inside `ss_3` on the emerald-module
 wait. Segment 4 remains closed at 292 camera-only errors.**
+The published stream demonstrates the consequence directly: its 242 edges carry
+only **38 distinct fingerprints**, and 32 of those recur. The most common,
+`sha256:3224e355...`, appears **22 times** -- once at `raw_frame` 69 (70 in
+`lz2`, 80 in `lz4`) in each of the 22 level segments. That is the standard
+level-load PLC arm, the same descriptor at the same point of every level.
+
+So a fingerprint match alone does **not** identify a job, and any future work
+must not treat it as if it did. `admitRecordedCompletion` is safe because it
+requires head-of-queue *and* ordinal *and* fingerprint *and* a prepared payload
+*and* a serviced boundary: the ordinal and the queue head do the
+disambiguation, and the fingerprint proves the matched job is the same *work*.
+Each is necessary; none is sufficient.
+
+This also settles what wall 1 is. The engine's pending `NEMESIS_PLC_QUEUE#7` at
+the `ghz1` -> `ss` boundary carries the same fingerprint as `ghz1`'s edge 0
+because it is the same level-load descriptor, which the ROM legitimately arms
+again at every level start -- **not** because the engine submitted the same job
+twice. Wall 1 is therefore the contract question it appeared to be (how a
+pending submission crosses a boundary whose next segment records no edges to
+match it against), not a duplicate-submission bug, and the next round should
+chase it as such.
+
+## 2026-08-19 -- RETRACTION: the engine does not service PLC on a lagged row
+
+Base `731c03b78`, measured on the S1 `hardware_timing` fixture branch with a
+single-sequence probe. **The "lag-row service" defect reported in the previous
+entry does not exist.** It was a fourth closure mis-assignment of the same kind
+the single-sequence probe was built to eliminate, and it survived because I read
+it back off a quoted excerpt instead of re-running the instrument.
+
+The sequence around a lagged row is:
+
+```
+ADVANCE cursor=107            <- row107 compared
+ CLAIM phase=LAG              <- closure producing row108's state: NO service
+ADVANCE cursor=108 skipped=true
+ CLAIM phase=ORDINARY_LEVEL   <- closure producing row109's state
+  service budget=3 rem 14->11
+```
+
+A closure sits **between** two advances and produces the state sampled by the
+*next* row. The `14->11` service therefore belongs to row109, not to the lagged
+row108. The lagged row's own closure claims `LAG` and services nothing, which is
+correct against `VBlank_Lag` (`docs/s1disasm/sonic.asm:711-740`). The engine's
+lag handling was right all along, there is no separable native half, and the
+"two compensating defects that must move together" model in the previous entry
+is withdrawn with it.
+
+**The real remaining gap, measured on the fixture branch.** With the timing
+stream active, `mz3_2` goes green and `ghz2_2` (segment 3) goes red at f109 with
+`remaining_work` rom=11 engine=14 -- the engine one 3-tile service behind. The
+promotion lands one closure late:
+
+- In `mz3_2` the row-shape deferral fires, the tail is held, and `CONSUME-HELD`
+  runs it at the `LAG` claim -- so the promotion lands in the closure that
+  produces the lagged row's state, matching the ROM.
+- In `ghz2_2` the deferral does not fire. The tail runs at the completing row's
+  own closure, where `submitArmableHead` has just submitted an arm and
+  `releaseArm()` is still false, so `prepare()` returns without promoting. The
+  promotion waits for the recorded edge, which is admitted at the *following*
+  `ORDINARY_LEVEL` closure.
+
+So the open question is which production boundary a recorded edge's `raw_frame`
+is applied at, not anything about lag-frame servicing. `TestS1CompleteEmeraldVisualRun`
+reports the same gap from the other side: edges #14-#20 unconsumed with "the
+engine submitted no matching work".
+
+**Method note, the fourth instance.** Every one of these mis-assignments has the
+same shape: attributing a closure's work to the row whose advance it follows
+rather than the row whose state it produces. Log the row boundary as its own
+event, and read closure ownership as *the row after*, never the row before.
