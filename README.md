@@ -228,6 +228,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The Roll slip appears exactly where the ordering first becomes observable
+  (`bugfix/ai-s2-roll-order-r1`, merged 2026-08-19 -- fixture and disassembly only).** One column
+  answers the objection that a slip appearing at row 6601 after a matching stretch means something
+  changed at 6601: `g_speed` collapses from `$7F4` to **0 in a single frame at row 6600**, so the
+  computed duration `max(0, $400 - |g|) >> 8` goes **0 -> 4**. **While the delay is zero the ordering
+  is unobservable** -- `subq.b #1` on a zero duration is immediately negative, `bpl` is never taken,
+  and every frame reloads and advances regardless of how decrement, reload and advance are sequenced,
+  so both implementations agree *by construction*. The moment the delay becomes non-zero there is a
+  countdown to be off by, and any ordering difference shows on the **first slow frame** and then
+  persists, both sides advancing every five frames in lockstep one step apart. So the ordering
+  hypothesis now carries a **confirmed positive prediction** rather than merely surviving. The
+  arithmetic is independently confirmed from the recording too: with duration 4 the ROM holds `0x40`
+  across 6600-6604 and `0x41` across 6605-6609, five rows per step, exactly `delay + 1`. **Not yet
+  established: which side is early** -- a missed reload on the transition frame, a decrement on the
+  wrong side of the gate, and a tick seeded one short all fit. Note `updateRoll`'s existing comment
+  records that S3K's walk/run handler publishes the current mapping *before* its timer gate while
+  `loc_12A2A` gates Roll *before* selecting a frame, so a change unifying the two orderings would be
+  wrong for one of them -- the per-game difference is already documented in the code.
+
 - **The Roll phase slip is not the input, the arithmetic, the script choice or the entry
   (`bugfix/ai-s2-roll-phase-r1`, merged 2026-08-19 -- fixture and disassembly only, no engine run).**
   Four eliminations, all from committed data. **Not downstream of physics:** `player_g_speed` is a

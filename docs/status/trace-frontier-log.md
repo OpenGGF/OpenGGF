@@ -86937,3 +86937,62 @@ writing `d7`), not to a timer defect. The two are the same *shape* -- an
 animation frame-timer phase observed through the DPLC stream -- and different
 causes. Sharing a shape is not sharing a mechanism, and the art stream being the
 messenger for both is a property of the stream, not evidence of a common root.
+
+## 2026-08-19 — why the slip starts at 6601: the delay is zero until 6600
+
+Branch `bugfix/ai-s2-roll-order-r1` off `origin/develop` (`8bde7ab85`).
+Fixture and disassembly only; no probe, no engine run, no code.
+
+### The discriminator, answered
+
+The brief's objection was the right one: if the decrement/reload ordering were
+wrong it should be wrong from the first Roll frame, yet the stream matched up to
+6600. The fixture resolves it in one column.
+
+    row   anim map  g_speed  |g|   delay = max(0,$400-|g|)>>8
+    6595   02   41    2036   2036   0
+    6599   02   41    2036   2036   0
+    6600   02   40       0      0   4
+    6604   02   40       0      0   4
+    6605   02   41       0      0   4
+
+`g_speed` collapses from **$7F4 to 0 in a single frame at row 6600**, and the
+computed duration goes from **0 to 4**.
+
+**While the delay is zero the ordering is unobservable.** `subq.b #1` on a zero
+duration is immediately negative, `bpl` is never taken, and every frame reloads
+and advances regardless of how the decrement, the reload and the advance are
+sequenced. Both implementations advance once per frame and agree by construction.
+
+The moment the delay becomes non-zero there is a countdown to be off by, and any
+ordering difference shows on the **first slow frame** -- then persists, because
+from there both sides advance every five frames in lockstep, one step apart.
+
+So the ordering hypothesis is not merely still standing; it now has a confirmed
+positive prediction. The slip appears exactly where the ordering first becomes
+observable, and nowhere earlier because nowhere earlier could show it.
+
+### The ROM cadence confirms the arithmetic independently
+
+With duration 4 the ROM holds `0x40` across 6600-6604 and `0x41` across
+6605-6609 -- five rows per step, which is `delay + 1`. The recorded cadence
+matches the formula read out of `SAnim_Roll`, so the arithmetic is confirmed from
+the recording as well as from the listing.
+
+### What this does not establish
+
+Which side is early. The report has the engine at `0x41` on 6601 where the ROM
+holds `0x40` until 6605, so the engine takes its next step about four rows early
+-- but whether that is a missed reload on the transition frame, a decrement
+applied on the wrong side of the gate, or a tick seeded one short is not settled
+by this evidence, and reading the two sequences at instruction granularity is the
+next step rather than something to infer here.
+
+### A caution for whoever lands it
+
+`updateRoll`'s existing comment records that **S3K's walk/run handler publishes
+the current mapping before its timer gate while `loc_12A2A` gates Roll before
+selecting a frame**. That is a real per-game difference already encoded in the
+engine, so a change that unifies the two orderings would be wrong for one of
+them. Roll is shared: S1 and S3K need explicit measurement, not inference from
+the S2 slice.
