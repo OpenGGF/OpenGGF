@@ -2,6 +2,22 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
+### Fixed
+- **The S3K collapsing platform's collapse trigger is a fresh read, not a contact latch.**
+  ROM `loc_205A6` (docs/skdisasm/sonic3k.asm:44826-44830) re-reads
+  `status(a0) & standing_mask` at every dispatch entry, so `$3A` reflects the
+  standing bits as they stand at the *start* of that dispatch. Any other solid
+  object that has re-seated the same character since will have cleared them via
+  `RideObject_SetRide`'s `bclr d6,status(a3)` (:42027-42031), so two overlapping
+  platforms starve each other's trigger: the lower slot clears the higher slot's
+  bit every frame before the higher slot's routine body reads it. The engine set
+  its trigger from the `onSolidContact` callback instead, which latches once and
+  can never observe the clear. In AIZ act 2 that made a platform collapse 26
+  dispatches early while the ROM's waits for the neighbouring platform to stop
+  being solid. Segment 6 of the S3K complete-emeralds chain goes from 28,733
+  comparator errors to 8,941, moving its first non-camera mismatch from frame 118
+  to frame 167.
+
 
 ### Fixed
 - **The monitor's balance width is its ROM `obActWid` of 15, not the shared 16.**
