@@ -228,6 +228,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K segment-4 `sidekick_y_speed` divergence is a badnik the engine never spawns
+  (`bugfix/ai-s3k-seg4-r4`, merged 2026-08-19 -- investigation only, no fix).** Segment 4 diverges at
+  frame 2729 on `sidekick_y_speed`, ROM `0x00C0` against engine `0x01C0` -- a delta of exactly
+  `$100`, which is what `EnemyDefeated`'s `.bounceplayerup` subtracts from `y_vel` when the
+  attacking player sits at or below the badnik it just destroyed
+  (`skdisasm/sonic3k.asm:20973-20989`). The aux stream shows ROM slot 5 turning into
+  `Explosion_Index` at that frame, and that slot held object code `0x000876D0` =
+  **`Obj_CaterKillerJr`** (`:183322`), which `Sonic3kObjectRegistry` names for S3KL id `0x8F` but
+  which **has no factory and no instance class** -- so the engine never spawns it and Tails
+  free-falls through empty space. Confirmed by execution rather than mechanism fit: throwaway probes
+  showed Tails at the ROM's exact position with `yvel=0x01C0` and no badnik within 48px, and
+  `EnemyDefeatBounce.apply` firing six times across the whole run, all for Sonic -- so the shared
+  sidekick rebound path is correct and only the object is missing. Blast radius is the two AIZ act 2
+  segments (`aiz_3`, `aiz_4`); no other segment in the movie references it.
+
 - **Recorded hardware admission begins at the live-to-recorded conversion, not at construction
   (`bugfix/ai-s1-admission-lifecycle-r1`, merged 2026-08-19).** `VisualRunReplayHarness` constructed
   its gameplay context with `HardwareReadinessAdmissionPolicy.RECORDED` whenever the run carried a
