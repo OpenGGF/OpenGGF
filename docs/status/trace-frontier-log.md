@@ -90087,7 +90087,13 @@ measured against the wrong reference.
 
 `git log -S hasPreparationBoundary` yields exactly one commit, `bf371ad94` (2026-07-29,
 "fix(plc): complete phase-owned PLC lifecycle"), with an empty message body and no comment on
-the method. Intent is not recoverable by reading. The structure settles it anyway.
+the method. That is not the whole record: the same commit touches 20+ files and carries a
+CHANGELOG entry stating the predicate's domain in the author's own words — the queues are
+serviced and prepared "at each native title, title-card, level, fade, results, credits,
+ending, special-stage, and pause lifecycle boundary". Every phase named is a game-mode loop,
+and **`LAG` is absent from the list**. So the `false` is not a considered ROM claim about lag;
+it is the value an exhaustive switch over the enum forced for a member outside the stated
+domain.
 
 Every `RunPLC` call site in `sonic.asm` is a main loop, and they map one-for-one onto the
 predicate's `true` list: `Tit_MainLoop` (:2075), `LevelSelect` (:2202),
