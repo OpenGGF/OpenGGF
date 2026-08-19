@@ -246,6 +246,28 @@ half-landed change, and require the blast radius to be measured before anything 
   greens the segment and reds the complete-run, the fix is wrong"* is the any-BK2 bar with a
   concrete witness attached.
 
+## A briefing failure mode: the false dichotomy
+
+Over one session a reviewer posed four discriminators as exclusive choices and was wrong every
+time, in three different ways:
+
+- *"Does recorded admission span a whole visual run, or is it re-activated per prepared level?"* —
+  **neither.** It begins once, at the live-to-recorded conversion after control release.
+- *"Is the twin-tails DPLC driven by the body's animation state, or does it have its own trigger?"*
+  — **both.** The body selects the script on change; the tails then advance on their own timer.
+- *"Is the divergence at a selection, or mid-script?"* — **both**, and answering only the first half
+  would have produced a partially-effective fix that invited stopping.
+- *"Is the invariant wrong, or is the traversal wrong?"* — **neither.** Both are right, and the
+  defect is one frame of ROM phase that the traversal newly exposes because before it the wait never
+  happened at all.
+
+Each framing pointed at a fix that would look partially effective. Write discriminators as open
+questions unless you can state why the alternatives cannot both hold — and expect a third case where
+neither holds and the mechanism sits outside the pair. Where a hedge is needed, phrase each
+proposition separately: *"if the sequence matches and the divergence is upstream"* is one conditional
+bundling two independent claims, and it cannot express the case that occurred, where the sequence did
+not match and the upstream was correct.
+
 ## Sixth rule: stamp every number with the commit it was measured at
 
 Measured facts go stale at the next landing — that is what a fix is *for*. Two rounds in one
