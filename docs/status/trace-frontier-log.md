@@ -83190,3 +83190,31 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   that row.
 - Command: `mvn -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain
   -Ds3k.rom.path=<s3k locked-on .gen> test`.
+## S2 complete-emerald run chain — segment 15 (`seg10_cpz2`)
+
+- Command: `mvn -Ptrace-replay -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=<s2 rom> test`,
+  worktree branched from `develop` at `ad3352ed4`.
+- **Frontier before and after: unchanged.** `[walk-failure] segment 15 lost
+  production ownership before source closure (mode=TITLE_CARD,
+  level=LevelIdentity[loadGeneration=12, progressionZone=1, romZone=13,
+  act=1], BK2 cursor=83819)`. The reloaded identity is the SAME act as the
+  segment's own, so the fresh load is a death restart, not an act clear.
+- New standalone lane `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`
+  (landed red, deliberately): 15202 errors, 0 bootstrap errors, 7088 rows.
+  Rows 0-393 match exactly on every physics field. First physics error frame
+  394 — `y` rom `0x05DC` engine `0x05DB`, `angle` rom `0x0A` engine `0x0C` —
+  on the flattening slope at `x=0x142D`; `air` then diverges 406-416 where the
+  ROM leaves the ground and the engine stays attached. BK2 cursor 83819 is this
+  segment's row 1477, well downstream of that cascade. The owning routines are
+  `AnglePos` / `Sonic_Angle` (`docs/s2disasm/s2.asm:43048-43077`,
+  `43120-43146`) over `FindFloor` (`s2.asm:43413-43470`). NOT root-caused.
+- Landed instead: the CPZ warp-pipe exit spring now performs the
+  `bclr #status.player.on_object` of `loc_296C2`
+  (`docs/s2disasm/s2.asm:56455-56462`).
+  `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay` goes from 2 errors to
+  green over 6613 rows. The chain frontier does not move — the seg8 residual
+  was a status bit downstream of nothing.
+- Correction to the record: `TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay`
+  is GREEN at `ad3352ed4`. Its class comment still describes the 12927-error
+  state it was landed in and is stale.

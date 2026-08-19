@@ -125,6 +125,11 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
 
         // ROM: bset #status.player.in_air
         player.setAir(true);
+        // ROM: bclr #status.player.on_object,status(a1) (s2.asm:56461). The launch
+        // detaches the character from the spring in the same frame SolidObject set
+        // the standing bit, so status must not still carry on_object on the bounce
+        // frame (seg8_cpz1 f2700/f2797: rom 0x03, engine was 0x0B).
+        player.setOnObject(false);
         // ROM loc_296C2 (s2.asm:56394-56435) never writes inertia in the non-twirl
         // path. Do NOT zero g_speed here - the landing-frame inertia must be preserved
         // exactly as the ROM does (e.g. CPZ pipe-exit f2038: inertia stays -03B4).

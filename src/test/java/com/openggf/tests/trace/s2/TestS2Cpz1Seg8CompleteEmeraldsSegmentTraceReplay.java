@@ -22,12 +22,13 @@ import java.nio.file.Path;
  * {@link TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay} exists for the same
  * reason.
  *
- * <p><b>Status at the commit that added it (landed red, deliberately).</b>
- * 2 errors, 0 bootstrap errors, over 6613 rows. Both are single-frame
- * {@code tails_status_byte} mismatches (frames 2700 and 2797), expected
- * {@code 0x0003} actual {@code 0x000B} — the sidekick carries
- * {@code status.player.on_object} for one frame where the ROM does not.
- * Reported, not fixed: no engine change belongs in a coverage lane.
+ * <p><b>Status.</b> Landed red at the commit that added it: 2 errors over
+ * 6613 rows, both single-frame {@code tails_status_byte} mismatches (frames
+ * 2700 and 2797), expected {@code 0x0003} actual {@code 0x000B}. Those are the
+ * two frames the CPZ act 1 warp-pipe exit spring throws Tails: {@code loc_296C2}
+ * clears {@code status.player.on_object} as it launches
+ * (docs/s2disasm/s2.asm:56455-56462) and the engine did not. Green since that
+ * {@code bclr} was ported.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

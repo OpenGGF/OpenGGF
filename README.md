@@ -228,6 +228,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The CPZ pipe-exit spring detaches the character it launches
+  (`bugfix/ai-s2-seg15-closure`, merged 2026-08-19).** `loc_296C2` sets
+  `status.player.in_air` and then clears `status.player.on_object`
+  (`s2disasm/s2.asm:56460-56461`). The launch happens in the same frame
+  `SolidObject_Always_SingleCharacter` set the standing bit, so on the bounce frame the ROM's
+  status carries `in_air` **without** `on_object`. `PipeExitSpringObjectInstance` documented that
+  `bclr` but never performed it. That was the entire residual red of
+  `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay` -- `tails_status_byte` rom `0x0003` engine
+  `0x000B` at frames 2700 and 2797, the two frames the CPZ act 1 pipe-exit spring throws Tails --
+  and **that lane is now green over all 6,613 rows**. The round also lands
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` **deliberately red**, so that the chain's
+  opaque "segment 15 lost production ownership before source closure" walk-failure has a frame and
+  a field: 15,202 errors over 7,088 rows, rows 0-393 exact, first physics error at frame 394
+  (`y` rom `0x05DC` engine `0x05DB`, `angle` rom `0x0A` engine `0x0C`) on the flattening CPZ act 2
+  slope, then `air` 406-416. **Not root-caused, and reported as such.** Gate 792 tests / 4 red: the
+  three chains plus the new lane, with the old one closed.
+
 - **Run-segment ownership survives the ROM's seamless act advance
   (`bugfix/ai-s3k-aiz1-aiz2-seam`, merged 2026-08-19).** S3K changes level identity from inside
   the level's own background-event dispatch: `AIZ1BGE_Finish` writes
