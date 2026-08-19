@@ -4,6 +4,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The MZ glass pillar is culled at its own `obActWid`, not the shared 16.**
+  `d7422d98f` fixed the pillar's balance width by overriding
+  `getBalanceWidthPixels()`, which left the byte's other ROM consumer wrong:
+  `BuildSprites` reads `obActWid` as the horizontal on-screen cull bound,
+  testing `obX - cameraX +/- obActWid` against 0 and 320
+  (`docs/s1disasm/_inc/BuildSprites.asm:49-58`), so the engine still culled the
+  pillar at 16 where `Glass_Main` sets `#64/2` = 32
+  (`docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm:78`). Supplying the
+  byte at `getOnScreenHalfWidth()` serves both consumers, since
+  `getBalanceWidthPixels()` defaults to it. Neither is the rendered extent
+  (`Map_Glass` owns that) nor the collision width
+  (`#64/2+sonic_solid_width` = `$2B`, `:99,:117`, already modelled separately).
+
+### Fixed
 - **The Marble Zone glass pillar uses its ROM `obActWid` for edge balancing.**
   `Sonic_Balance` reads the stood-on object's SST width byte, and `Glass_Main`
   sets `#64/2` for the pillar, overwriting it with `#32/2` only for the
