@@ -91399,3 +91399,22 @@ The brief's "98.6% of segment 6 errors are sidekick fields" was **not** reproduc
 verified here: `*_seg6_report.json` carries only `errorCount`, `firstNonCameraPhysicsMismatch`
 and five `recentMismatches`, with `errors: []`. The figure may well be right; it is not
 evidence this entry rests on, and the fix did not need it.
+
+## Two measurement numbers every object change should know
+
+Recorded here because they bound what any verification on this repo can claim, and both were
+established by measurement rather than assumed:
+
+- **`-Ptrace-replay` covers 156 of 1,919 test classes** — its `<includes>` is `**/tests/trace/**`
+  and nothing else, roughly 792 tests against the default suite's ~15,176. It contains **no
+  object unit tests**. A change to a shared runtime accessor measured only on the trace profile
+  is measured on 8% of the suite.
+- **The default suite's run-to-run noise floor is about two classes on identical code.** Running
+  it twice per tree, a control moved by two classes between two runs of the same commit, and one
+  class went red on both the control and fix sides in different runs. So a single-class red-set
+  difference is inside the noise and is not attributable without repeating the runs.
+
+The practical consequence: for an ambiguous diff, repeat the suite per tree rather than
+re-running the suspect class in isolation. An isolated run cannot settle an order-dependent
+failure, and re-running it inside the worktree whose surefire XML is the evidence overwrites
+that evidence with the solo outcome.

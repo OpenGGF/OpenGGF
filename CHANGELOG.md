@@ -4,6 +4,23 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The monitor's balance width is its ROM `obActWid` of 15, not the shared 16.**
+  `Mon_Main` sets `move.b #30/2,obActWid(a0)`
+  (`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:43`); the `#16/2` at
+  `:234` belongs to `Pow_Main`, the Obj2E power-up icon, which is a separate
+  object and a separate class. The engine already depended on 15 twice without
+  naming it -- `Mon_Solid`'s `.normal` passes `#30/2+sonic_solid_width` = `$1A`
+  to `Mon_SolidSides` (`:100`), the literal already in `getSolidParams()`, and
+  the falling branch reads `obActWid` and adds `sonic_solid_width` itself
+  (`:72`) -- but `getBalanceWidthPixels()` fell through to the shared 16, so the
+  balance window `d1` against `#4` and `2*width-4`
+  (`_incObj/01 Sonic.asm:425-433`) was shifted by a pixel at both edges on an
+  object the player stands on constantly. Supplied at `getOnScreenHalfWidth()`,
+  which `BuildSprites` also reads as the on-screen cull bound
+  (`docs/s1disasm/_inc/BuildSprites.asm:49-58`), so both consumers get the ROM
+  byte and the balance accessor inherits it.
+
+### Fixed
 - **The MZ glass pillar is culled at its own `obActWid`, not the shared 16.**
   `d7422d98f` fixed the pillar's balance width by overriding
   `getBalanceWidthPixels()`, which left the byte's other ROM consumer wrong:
