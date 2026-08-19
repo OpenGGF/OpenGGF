@@ -519,26 +519,22 @@ predicate.
 
 ## Thirteenth rule: "A did not match B" has a third answer — the index is broken
 
-A brief framed a stalled boundary as a binary: either the engine never submitted matching work,
-or it submitted work that failed to match on kind/ordinal/fingerprint. The round returned
-neither. The engine submitted with the exact recorded ordinal, and matching was never
-*attempted*, because the replay port's row latch was stuck at zero while the pending edge sat
-thousands of rows ahead. `consumeAtBoundary` only consumes when the edge's raw frame equals
-the latch, and dropping edges before zero drops nothing, so the two could never meet however
-many boundaries passed.
+When a symptom is phrased as "A did not match B", carry three candidates, not two: A is absent,
+A is wrong, or **the index they are paired on is not advancing**. The third is invisible from
+either side's data, because A and B are each individually correct — nothing about the
+submission looks wrong and nothing about the recorded edge looks wrong. It is also cheap to
+test directly: read the pairing coordinate and check it moves.
 
-Both halves of the binary presumed the fault lay in the *matching relationship* between A and
-B. The actual fault was in the **coordinate they are paired on** — and that failure is
-invisible from either side's data, because A and B are each individually correct. Nothing
-about the submission looks wrong; nothing about the recorded edge looks wrong.
+**The round that produced this rule then retracted its own example.** It reported the replay
+port's row latch frozen at zero; re-probed, the latch advances 30,667 times, and the reading
+had come from the *tail* of a probe log after the port had finished. The real defect was the
+first candidate after all — the engine had no matching work pending when the edge arrived.
+The frame is kept because it is sound and it is a gap real briefs have; the example is kept
+because a rule whose exemplar was withdrawn should say so rather than quietly acquire a new one.
 
-So when a symptom is phrased as "A did not match B", carry three candidates, not two: A is
-absent, A is wrong, or **the index is not advancing**. The third is the one no amount of
-staring at A or B will reveal, and it is cheap to test directly — read the pairing coordinate
-and check it moves.
-
-This is also the general form of the false dichotomy that keeps appearing in these briefs: two
-options that share an unstated premise are one option wearing two hats.
+Which is the wider lesson here: **an elegant reframing is not evidence that it describes the
+case in front of you.** A frame that would have been right about a different defect is still
+wrong about this one.
 
 ## Fourteenth rule: closure ownership is the row after, never the row before
 

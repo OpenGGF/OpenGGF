@@ -89800,3 +89800,64 @@ engine submitted no matching work".
 same shape: attributing a closure's work to the row whose advance it follows
 rather than the row whose state it produces. Log the row boundary as its own
 event, and read closure ownership as *the row after*, never the row before.
+
+## 2026-08-19 — Retraction: the latch is NOT frozen. Admission is attempted and the engine has nothing pending.
+
+Branch `bugfix/ai-s3k-ss3-cursor-r1` off `origin/develop` (`a8653d7d3`). Diagnosis only;
+nothing landed. **This retracts the previous entry's root cause.**
+
+### What the previous entry got wrong
+
+It concluded that the port's row latch was frozen at 0, so `consumeAtBoundary` could never
+fire and matching was never attempted — a "third category" beyond absent-work and
+failed-match. That was wrong, and the error was a sampling mistake I should have caught:
+the `latch=0` reading came from the **tail** of the probe log, after the port had finished,
+and I generalised a tail sample to the whole run.
+
+Instrumenting `beginRawFrame` directly shows **30,667** latch advances reaching a maximum of
+8234. The latch moves fine.
+
+### What actually happens
+
+Probing `admitRecordedCompletion` at its decision point:
+
+```
+ADMIT-ATTEMPT KOS_DECOMPRESSION_QUEUE#91  head=NULL  pending=<none>
+ADMIT-ATTEMPT KOS_MODULE_QUEUE#60         head=NULL  pending=<none>
+UNMATCHED-RECORDED raw_frame=5962 ... KOS_DECOMPRESSION_QUEUE#91
+UNMATCHED-RECORDED raw_frame=5963 ... KOS_MODULE_QUEUE#60
+```
+
+Admission **is** attempted for both edges, and at that moment the engine's pending set is
+**entirely empty** — not "no matching head", but nothing of any kind awaiting admission.
+The edges are then dropped by the severity demotion in
+`HardwareTimingReplayPort.consumeAtBoundary`, so they release nothing, the emerald module
+never becomes ready, and `updateClearEmeraldLoad` spins.
+
+For contrast, the same probe shows a healthy admission earlier in the run with a populated
+pending list, so the mechanism works where the engine has submitted in time.
+
+### So it is the brief's FIRST category after all
+
+The engine does not have matching work pending when the recorded edge arrives. The
+`engine pending: <none>` in the teardown message was accurate all along and describes the
+admission moment, not a post-reset artefact — which also settles the contradiction the
+previous entry flagged, in favour of the reading I had treated as less likely.
+
+### The remaining question, restated correctly
+
+A previous probe showed the engine **does** queue the emerald module with `ordinal=60`, the
+exact ordinal recorded. So the work is submitted at some point but is not pending when the
+edge arrives. The live hypothesis is therefore **ordering**: the engine reaches the
+special-stage clear (`placeEmerald` -> `queueEmeraldArtModule`, modelling `loc_9C28`-`loc_9C52`,
+`docs/skdisasm/sonic3k.asm:12595-12610`) *later* than the recorded row 5962/5963, so the
+edge is consumed and dropped before the submission exists. That is untested and is the next
+measurement: log the engine frame at which ordinal 60 is queued against the recorded edge
+row.
+
+`ss` and `ss_2` clearing while `ss_3` does not remains unexplained and is likely the same
+ordering question — a clear that drifts later each stage would fail on the first stage where
+it crosses the recorded row.
+
+**Frontier unchanged: `stage_exit` at bk2 frame 35726, stalled inside `ss_3`. Segment 4
+remains closed at 292 camera-only errors.**
