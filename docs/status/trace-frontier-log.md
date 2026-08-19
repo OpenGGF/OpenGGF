@@ -86862,3 +86862,78 @@ one-step slip that persists for 480 rows and expresses itself through the DPLC
 stream because submissions are mapping-frame-change-driven. That is the same
 shape as the twin-tails cadence work, one animation layer up, and it is
 independent of both the CPZ boss (KD29) and the push gate (KD28).
+
+## 2026-08-19 — Roll phase: inertia matches, the arithmetic matches, the entry matches
+
+Branch `bugfix/ai-s2-roll-phase-r1` off `origin/develop` (`08768205b`).
+Fixture and disassembly only; no probe, no engine run, no code.
+
+### Q2 — the slip is NOT downstream of physics
+
+`player_g_speed` is a **compared** physics column
+(`seg10_cpz2/physics.csv.gz` carries `player_x_speed`, `player_y_speed`,
+`player_g_speed`, `player_angle`, `player_x_sub`, `player_y_sub` and the rest),
+and the report has **no** non-cascading error on any of them anywhere in the
+tail -- the only ones from 6500 onward are the three `player_mapping_frame`
+windows. So the engine's inertia matches the ROM exactly across 6608-7087, and
+the phase error is not the downstream of a speed difference.
+
+### The duration arithmetic is a faithful transcription
+
+ROM `SAnim_Roll` (docs/s2disasm/s2.asm):
+
+    mvabs.w inertia(a0),d2       ; d2 = |inertia|
+    cmpi.w  #$600,d2             ; Roll2 at or above, Roll below
+    neg.w   d2
+    addi.w  #$400,d2             ; $400 - |inertia|
+    bpl.s   + / moveq #0,d2      ; clamp at zero
+    lsr.w   #8,d2
+    move.b  d2,anim_frame_duration(a0)
+
+Engine `PlayableSpriteAnimation.updateRoll` (:554-568) with
+`computeSpeedDelay` (:696-702):
+
+    int speed = Math.abs(sprite.getGSpeed());
+    ... activeId = (speed >= runThreshold && roll2Id >= 0) ? roll2Id : rollId;
+    int delay = computeSpeedDelay(speed, 0x400, 8);
+    // computeSpeedDelay: value = base - speed; if (value < 0) value = 0; return value >> shift;
+
+Same source register, same base, same clamp, same shift, same threshold. **Not
+the arithmetic.**
+
+### The Roll/Roll2 branch cannot matter in S2
+
+    SonAni_Roll:  dc.b $FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF
+    SonAni_Roll2: dc.b $FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF
+
+Byte-identical. The `$600` selection changes which pointer is used and nothing
+about which frames appear, so any theory resting on that branch is dead before it
+is tested.
+
+### Q1 — it is not a late Roll entry
+
+The engine's mapping frames **match** up to row 6600 with Roll already active
+(anim `02` from before 6590), and the first divergence is at 6601. A wrong entry
+frame would have diverged from the entry itself, not after a matching stretch.
+
+### What is left
+
+Not the input, not the arithmetic, not the script choice, not the entry. What
+remains is **when** the decrement-and-reload happens relative to the rest of the
+frame. `updateRoll`'s own comment flags that ordering as subtle:
+
+    // S3K's walk/run handler publishes the current mapping before its timer
+    // gate, but loc_12A2A gates Roll before selecting a script frame.
+
+I am **not** claiming the ordering is the defect. It is what is left after four
+eliminations, which is where to look and not what is wrong -- the distinction
+that cost this thread rounds at `TailsTailsController`.
+
+### Not the same mechanism as the twin-tails cadence
+
+Asked whether this shares a cause with the Obj05 work: **no.** That divergence
+resolved to the ROM skipping the object's execution entirely (KD29, the CPZ boss
+writing `d7`), not to a timer defect. The two are the same *shape* -- an
+animation frame-timer phase observed through the DPLC stream -- and different
+causes. Sharing a shape is not sharing a mechanism, and the art stream being the
+messenger for both is a property of the stream, not evidence of a common root.
