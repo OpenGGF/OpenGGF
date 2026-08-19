@@ -85311,3 +85311,81 @@ airborne state already agreed. It is the last thing between the pair and landing
 clean worktree at the same base -- `TestS2CompleteEmeraldRunPrefix` alone, as in
 the previous round; seg10 remains 2491 -> 2433. Nothing was landed because the
 gate is not clean.
+
+## 2026-08-19 — the entry derivation: the engine's choice is right, one monitor never gets its SideAir frame
+
+Branch `bugfix/ai-s2-pushentry-r1` off `origin/develop` (`b9d41b244`).
+Investigation only; nothing landed, tree clean of the experimental code. This is
+the sixth revert of the sequence and it is a negative result about the predicate,
+not about the pair.
+
+### The ROM control flow, derived
+
+`SolidObject_cont`'s bounding-box tests send a character **outside** the box to
+`SolidObject_TestClearPush`. **Inside** the box, and with the vertical distance
+not dominating, control reaches `SolidObject_LeftRight`
+(docs/s2disasm/s2.asm:35413-35461):
+
+- within four pixels of the top/bottom edge -> `SolidObject_SideAir`;
+- otherwise the position is corrected and `btst #status.player.in_air,status(a1)`
+  branches airborne characters to `SolidObject_SideAir` **before** the
+  `bset d4,status(a0)` that sets the object's own pushing bit.
+
+So two ROM facts follow, and both are load-bearing:
+
+1. **An object's pushing bit is only ever set for a grounded character.** The
+   `bset` sits after the airborne branch, so an airborne side hit can never set
+   it.
+2. **`SolidObject_SideAir` returns a side collision and enters
+   `Solid_NotPushing`**, clearing the object bit and the character's flag,
+   *without* the `SolidObject_TestClearPush` Walk/Run write.
+
+The fixture corroborates both directly. In
+`.../s2-sonic-tails-complete-emeralds/seg5_ehz2`, every observed transition of a
+monitor's (type `0x26`) own pushing bit from clear to set happens on a frame where
+that character is grounded (`f347`, `f2541`, `f3393`, `f2584`), and the drops at
+`f2559` and `f3408` happen while Tails is airborne and still in contact -- that is
+`SideAir`/`Solid_NotPushing` firing.
+
+### The engine already models both facts
+
+Instrumenting the three entries for monitors across the prefix chain:
+
+- every `PUSH` (object-bit set) fires with `air=false`, all 224 of them -- the
+  engine matches the grounded-only `bset`;
+- six monitors receive an airborne `SIDEAIR` clear for Tails -- the engine reaches
+  the SideAir entry and clears the latch there, as the ROM does;
+- **exactly one** monitor reaches `TESTCLEARPUSH-owned` with `air=true`.
+
+That one is the extra Walk/Run write. It is a monitor whose contact ends on the
+same frame the character becomes airborne, so it never receives a SideAir frame:
+the engine goes grounded-push -> out-of-box in one step, and consumes a latch that
+the ROM's SideAir frame would have consumed first.
+
+### So the answer to the question, and why nothing landed
+
+The engine's entry choice is **not** wrong in general -- it takes SideAir on every
+airborne in-contact frame, matching the ROM. The divergence is a single frame where
+the engine reports no contact and the ROM (on this evidence) still reports a side
+collision. That is a **contact-resolution boundary** difference, not a push
+predicate, and it cannot be fixed by any change to the push bits:
+
+- `monitorSolidity()` is the wrong owner and was not used;
+- a blanket airborne suppression is wrong, for the reason already recorded --
+  `SolidObject_TestClearPush` has no airborne test at all;
+- and suppressing the write when the character is airborne at the TestClearPush
+  entry would be indistinguishable from the blanket rule, because that entry is
+  the only place the write lives.
+
+The remaining work is in the airborne bounding-box/contact-resolution path on the
+frame contact ends, which is shared across all three games and has a far wider
+blast radius than a push-bit change. It should be scoped and measured on its own,
+not folded into the pair.
+
+### Standing numbers, unchanged
+
+`(1)+(2)+the MGZ site` remains 790 tests / 5 red against a 790/4 control measured
+in a clean worktree at the same base -- `TestS2CompleteEmeraldRunPrefix` alone.
+seg10 is 2491 -> 2433. The three complete-emerald chains are red in control and in
+the candidate alike, with the same failure modes, so the chain frontier has not
+moved. None of the ten regressions the audit retired have returned.
