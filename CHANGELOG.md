@@ -4,6 +4,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- The S3K end-of-act signpost's bump-from-below kick now substitutes the ROM's
+  `#8` fallback *before* the shift. `sub_83A70`
+  (docs/skdisasm/sonic3k.asm:176381-176390) does `sub.w x_pos(a1),d0 / bne.s + /
+  moveq #8,d0 / + lsl.w #4,d0`, so a player exactly aligned with the signpost
+  gives `x_vel = 8 << 4 = $80`; the engine substituted after the shift and gave
+  `8`, a factor of 16 too small on alignment frames. Non-zero deltas were
+  already correct. This is a latent site -- no committed trace reaches the
+  `dx == 0` case -- so no test changes.
+
+### Fixed
 - **Recorded hardware-timing readiness is scoped to the span the trace stream covers.**
   `HardwareTimingReplayPort.enterUnrepresentedGap` documents that production hardware work
   may continue while row authority is deactivated, but the S1 Nemesis PLC arm gate waited on

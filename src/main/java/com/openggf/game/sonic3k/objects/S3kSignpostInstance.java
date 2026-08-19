@@ -452,8 +452,22 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     }
 
     static int romBumpXVelocity(int signpostX, int playerX) {
-        int kickX = (signpostX - playerX) * 16;
-        return kickX == 0 ? 8 : kickX;
+        // ROM sub_83A70 (docs/skdisasm/sonic3k.asm:176381-176390):
+        //   move.w x_pos(a0),d0
+        //   sub.w  x_pos(a1),d0
+        //   bne.s  loc_83A92
+        //   moveq  #8,d0
+        // loc_83A92:
+        //   lsl.w  #4,d0
+        //   move.w d0,x_vel(a0)
+        // The #8 substitution happens BEFORE the shift, so an exactly aligned
+        // player produces x_vel = 8 << 4 = $80, not 8. Substituting after the
+        // shift understated the kick by a factor of 16 on alignment frames.
+        int delta = (short) (signpostX - playerX);
+        if (delta == 0) {
+            delta = 8;
+        }
+        return (short) (delta << 4);
     }
 
     static boolean hasRomBumpPose(AbstractPlayableSprite player) {

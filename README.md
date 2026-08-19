@@ -228,6 +228,31 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **The S3K signpost frontier is the second post-bounce kick; a latent `romBumpXVelocity` fix lands
+  (`bugfix/ai-s3k-signpost-gate-r1`, merged 2026-08-19).** The specified three-bit gate was **not**
+  built, for the reason recorded in the retraction it carries: `loc_85CA4` is the arena-**entry**
+  gate, installed as a boss's routine at init with the boss's start routine in `$34(a0)`, and
+  "replace the 119-frame timer" would have deleted correct code modelling `Obj_EndSignControl`'s
+  `move.w #(2*60)-1,$2E(a0)`. The round took the success criteria as the instruction and the
+  mechanism as superseded. **Landed and honestly latent:** `romBumpXVelocity` applied the ROM's `#8`
+  fallback *after* the `<< 4`, where `sub_83A70` (`skdisasm/sonic3k.asm:176381-176390`) does
+  `bne.s + / moveq #8,d0 / + lsl.w #4,d0` -- so an exactly aligned player gives `x_vel = $80` where
+  the engine gave `8`, sixteen times too small. **The `dx == 0` case occurs nowhere in the corpus**,
+  the sweep is identical, and it is landed because it is wrong rather than because it fixes anything.
+  **Both sides measured:** the engine tracks the ROM to within a frame through the first landing at
+  5449/5448, reproduces the hidden-monitor bounce, matches the first post-bounce kick at 5520/5519 --
+  then diverges on the **second** (5595 against 5606) and never lands the third, so its signpost
+  second-lands at 5698 where the ROM's does at 6899. The bump box is **ruled out**, not left open:
+  `Check_PlayerInRange` builds bounds cumulatively and gives exactly the engine's constants. The
+  round also flags its own instrument's blind spot -- a kick count of 15 is a **floor**, since the
+  ROM's apex after the 5595 kick implies an ~83 px rise where one `y_vel = -$200` yields ~43, so at
+  least one more kick lands while the signpost is still rising and a direction-change detector cannot
+  see it. **The live candidate:** `EndSign_CheckPlayerHit`'s `FixBugs = 0` path, subtler than the
+  disassembly's own comment -- `sub_83A70` ends in `jmp (HUD_AddToScore).l`, a tail jump, so
+  `HUD_AddToScore`'s `rts` consumes the return address and control resumes with `d0` holding whatever
+  that routine left, which the `swap d0 / tst.w d0` Tails test then reads. Closing it needs
+  `HUD_AddToScore`'s exit `d0`, which is not yet established.
+
 - **A cursor owner already exists, so the S1 ordinal fix is alignment rather than a second counter
   (`bugfix/ai-s1-ordinal-scope-r1`, merged 2026-08-19 -- survey only, deliberately not implemented).**
   The pre-implementation question is answered: **ordinals are the only shared counter**.
