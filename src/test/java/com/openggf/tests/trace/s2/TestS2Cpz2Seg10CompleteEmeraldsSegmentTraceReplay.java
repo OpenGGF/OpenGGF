@@ -20,12 +20,14 @@ import java.nio.file.Path;
  * surfaces only as "segment 15 lost production ownership before source
  * closure" with no frame and no field.
  *
- * <p><b>Status (landed red, deliberately).</b> 15202 errors, 0 bootstrap
- * errors, over 7088 rows. The first 393 rows match exactly on every physics
- * field, so the segment's seeded entry state is sound; the first physics
- * divergence is frame 394, where Sonic is running right down the flattening
- * CPZ act 2 slope at {@code x=0x142D}: the ROM reports {@code y=0x05DC} and
- * {@code angle=0x0A}, the engine {@code y=0x05DB} and {@code angle=0x0C}.
+ * <p><b>Status (landed red, deliberately).</b> 2491 errors, 0 bootstrap
+ * errors, over 7088 rows. The collision-path root cause below is fixed: with
+ * the regenerated fixture's entry {@code top_solid_bit} seeded, the frame-394
+ * divergence is gone, {@code x}/{@code y} stay exact to frame 6600/6611, and
+ * the first main-player physics divergence is frame 2252 ({@code air} rom 1,
+ * engine 0). What remains is the S2 art-loading frontier: 2302 of the 2491
+ * errors are {@code dynamic_art.*} and the first error overall is frame 52
+ * {@code queue.s2_nemesis_plc.busy} (expected false, actual true).
  *
  * <p><b>Root cause (measured, not a floor-probe defect).</b> The two probes
  * and the {@code Sonic_Angle} min-distance/tie rules (s2.asm:43048-43077,
@@ -65,11 +67,14 @@ import java.nio.file.Path;
  * {@code top_solid_bit = $0E} at seg10 entry and {@code $0C} at seg8/seg9
  * entry, which is exactly the save/restore behaviour described above and
  * confirms the collision-path diagnosis from ROM state rather than from a
- * value fitted to this fixture. The lane stays red until the regenerated
- * fixture is installed and its entry state seeded from it; the
- * chain does play the star post, so the fix that matters there is upstream --
- * the CPZ act 2 plane switcher that should leave the player on path 2 before
- * the star post is hit.
+ * value fitted to this fixture. That fixture is now installed and the entry
+ * pair is seeded from it in
+ * {@code TraceReplaySessionBootstrap.seedSegmentEntrySolidBits} -- initial
+ * state only, with the engine's own path selection left engine-derived
+ * thereafter, and only the ROM's two legal pairs accepted. The chain does play
+ * the star post, so the fix that matters there is still upstream -- the CPZ
+ * act 2 plane switcher that should leave the player on path 2 before the star
+ * post is hit.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

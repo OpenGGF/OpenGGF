@@ -4,6 +4,23 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- Sonic 2 trace-replay segments that resume a level mid-run now start on the
+  collision path the ROM has them on. `AnglePos` points `Collision_addr` at
+  `Secondary_Collision` and passes `d5 = top_solid_bit` whenever
+  `top_solid_bit != $C` (docs/s2disasm/s2.asm:43002-43008), so the
+  `top_solid_bit`/`lrb_solid_bit` pair selects which of a zone's two 16x16
+  collision index arrays every floor and wall probe reads. It is not
+  level-start state: `Obj01_Init` writes the `$C`/`$D` default only when
+  `Last_star_pole_hit` is zero (s2.asm:36192-36199), and
+  `Obj79_SaveData`/`Obj79_LoadData` save and restore it across a star post and
+  the special-stage return (s2.asm:44740, :44787). A metadata-start segment now
+  seeds the pair from its recorded entry snapshot -- initial state only,
+  accepting only the ROM's two legal pairs (s2.constants.asm:70-71), with the
+  engine's own path selection left engine-derived for every later frame. The
+  `s2-sonic-tails-complete-emeralds` fixtures were re-recorded so the field
+  carries real values: every `physics.csv` payload and `run_manifest.json` are
+  byte-identical to the installed run, and the level `aux_state.jsonl` payloads
+  differ on those two fields and nothing else.
 - The Sonic 1 Monitor (Obj26) now applies its side correction when Sonic is
   merely *not moving away* from it, matching `Mon_Solid`. `.sidetouch` splits on
   the sign of `d0`: with Sonic in the monitor's left half (`d0 > 0`)
