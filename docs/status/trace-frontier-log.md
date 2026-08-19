@@ -90130,6 +90130,7 @@ limitation rather than a derivation.
 **General form, worth carrying:** before asking whether a predicate's value is right, ask
 whether its *subject* is in the predicate's domain. A category error presents as a plausible
 boolean and survives review, because both candidate values look like answerable claims.
+<<<<<<< HEAD
 
 ## 2026-08-19 — S2 complete-emeralds chain: `Current_Boss_ID` survives a level load
 
@@ -90170,3 +90171,172 @@ both ways** — no regressions, nothing else fixed. `mvn -Pguards`: 499/499 gree
 early); the remaining physics frontier is segment 15 (`seg10_cpz2`), 7575 errors, first
 mismatch frame 2 `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5, with the walk
 failure at the `seg11_arz1` admission. No constant was introduced by this fix.
+=======
+## 2026-08-19 -- raw_frame derived from the recorder, and predictions recorded before measuring
+
+Base `0f4188e0e`, S1 `hardware_timing` fixture branch. **Predictions written
+before any fix was attempted, deliberately, so the measurement can disconfirm
+them.**
+
+**What `raw_frame` denotes, derived from the recorder rather than chosen.**
+`S1PlcHardwareTimingObserver.CommitRow` documents itself as committing "the
+edges observed during the advance that produced trace row rawFrame", and
+`S1RunCaptureRunner` calls `CommitHardwareTimingRow()` at the end of
+`AppendLevelRow` **before** `traceFrame++` (`:524-525`), so the stamp is the
+index of the row written from the RAM state sampled after that same advance.
+The arm is observed at `RunPLC` entry during that advance, so **row N's own
+queue sample already reflects the arm**.
+
+Validated against the fixture rather than asserted: for every edge in `ghz2_2`
+(7) and `mz3_2` (10), `raw_frame` equals exactly the row at which the queue
+sample first shows the promoted entry -- 17 of 17, no exceptions.
+
+    ghz2_2  edge raw_frames [69, 101, 108, 2926, 2946, 2958, 3068]
+            promotion rows  [69, 101, 108, 2926, 2946, 2958, 3068]
+
+So an edge stamped N must be admitted such that the closure producing row N's
+compared state performs the promotion.
+
+**Where the engine puts it instead, measured.** In `ghz2_2`:
+
+```
+ADVANCE cursor=106
+ CLAIM ORDINARY_LEVEL / submitArmableHead / tail RUN / prepare() releaseArm=FALSE
+ADVANCE cursor=107          <- row107 samples active=null, matching ROM f107
+ CLAIM LAG                   <- produces row108's state: no tail at all
+ADVANCE cursor=108 skipped=true
+ CLAIM ORDINARY_LEVEL / tail RUN / prepare() releaseArm=TRUE   <- promotes here
+ADVANCE cursor=109          <- row109 shows the promotion; ROM had it at 108
+```
+
+That `releaseArm=false` is one of only **two** in the entire run (73,397 calls),
+so the arm-submitted-this-closure case is genuinely rare and genuinely here. The
+LAG closure that produces row108's state runs no loop tail, so a recorded edge
+stamped 108 has nothing to release into. `mz3_2` differs only because its
+row-shape deferral supplies a tail at the LAG claim via `CONSUME-HELD`.
+
+**ROM basis for treating that as a defect:** `RunPLC` is in `Level_MainLoop`
+(`sonic.asm:3032`), not in the V-blank handler. A lag V-blank takes
+`VBlank_Lag`, services no PLC, and `rte`s back into the same main-loop
+iteration, which still reaches its tail. The engine correctly services no PLC on
+a LAG closure but incorrectly runs no loop tail there either.
+
+**Predictions if that reading is right** -- recorded now, before implementing:
+
+1. `ghz2_2` (segment 3) f109 `remaining_work` rom=11 engine=14 resolves; segment
+   3 returns to **0 errors**.
+2. `mz3_2` (segment 15) **stays green at 0**. Its promotion already lands in the
+   right closure, so an earlier release must not disturb it.
+3. Segment 12 **stays at 37** with its first error unchanged at f593
+   `dynamic_art.edge[0].mapping_frame`. Its remaining errors are not queue-shaped.
+4. `TestS1CompleteEmeraldVisualRun` edges #14-#20 become consumed and it returns
+   to **green 2/2**, which is its state on develop without the fixture.
+5. The `syz2` row 70 structural-bridge failure (`prepared` true/false,
+   `remaining_work` 1/-1) is the same promotion-late shape and **also resolves**.
+
+If segment 3 goes green while anything not in this list moves, the model is
+incomplete even though the count improved.
+
+>>>>>>> 404c6c3fb (docs: derive raw_frame from the recorder and record predictions before measuring)
+
+## 2026-08-19 -- LAG leaves the predicate's domain: predictions before measuring
+
+Base `423425359`. **Written before the change was made.**
+
+**The change.** A lag closure stops answering `hasPreparationBoundary` for
+itself and carries the **interrupted** iteration's tail instead. `LAG` names
+`VBlank_Lag`, not a loop; the loop it interrupts is still running and reaches
+its own `RunPLC` (`docs/s1disasm/sonic.asm:3032`). Neither `true` nor `false`
+is a correct answer for a member outside the predicate's domain, so the member
+stops being asked.
+
+**The half that is NOT decided here.** *When* that tail lands relative to the
+lag row is sub-frame and stays the sidecar's to answer. Where the sidecar is
+absent the engine must still do something, and whatever it does is a
+**documented default, not a derivation** -- recorded at the site and in
+known-discrepancies rather than presented as ROM truth.
+
+**Predictions.**
+
+1. Segment 3 (`ghz2_2`) f109 `remaining_work` rom=11 engine=14 **resolves; 0
+   errors**, because the edge stamped 108 finally has a tail to release into.
+2. Segment 15 (`mz3_2`) **stays green at 0**. It already lands correctly via
+   `CONSUME-HELD`; making the carry unconditional must not disturb it.
+3. Segment 12 (`mz2_3`) **stays at 37**, first error unchanged at f593
+   `dynamic_art.edge[0].mapping_frame`. Not queue-shaped.
+4. `TestS1CompleteEmeraldVisualRun` returns to **green 2/2** -- its state on
+   develop without the fixture.
+5. The `syz2` row 70 bridge failure (`prepared` true/false, `remaining_work`
+   1/-1) **resolves**; same promotion-late shape.
+6. **The wider S1 sweep is the real test.** This touches every S1 lag row in
+   every trace, sidecar or not. Prediction: **no S1 or S2 trace class changes
+   state in either direction.** A green fixture bought with a moved red set
+   elsewhere is the count-holds-while-membership-moves trap.
+7. Native replay **without** the fixture is unchanged. If it regresses, that is
+   information -- it would mean native replay had been relying on the category
+   error -- and it gets reported, not reverted on sight.
+
+If 1 lands while 6 does not, the change is not the derivation it claims to be.
+
+## 2026-08-19 -- Carrying the interrupted loop's tail: rejected, with measurements
+
+Base `3e98d9c20`. **Rejected. Preserved on `bugfix/ai-s1-lag-tail-carry-r1`
+(`b902ba4fb`), not landed.** The derivation survives; this realisation of it
+does not.
+
+**The three-arm sweep**, full `-Ptrace-replay`, `-Dmse=off`,
+`runOrder=alphabetical`, reports cleared before each run:
+
+| arm | red |
+|---|---|
+| control, develop `3e98d9c20` | **4** |
+| develop + the change, no fixture | **11** |
+| S1 timing fixture + the change | **11** |
+
+Broken by the change alone, at an identical base: `TestS3kAizTraceReplay`,
+`TestS3kCnzTraceReplay`, `TestS3kMgzTraceReplay`,
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1`,
+`TestS3kAizPrefixClosureContract`, `TestS3kReplayReferenceClosureIntegration`,
+`TestS1GhzMazeRoundTripChain`. **Fixed: none, in either direction, in either
+arm.**
+
+Pre-registered predictions 1-3 held (segment 3 to 0, segment 15 stays 0, segment
+12 stays 37 at f593); 4 improved without holding; **5, 6 and 7 failed.** On the
+fixture arm the change greens segments 3 and 15 while reddening
+`TestS1GhzMazeRoundTripChain` -- count-holds-while-membership-moves at suite
+scale rather than segment scale.
+
+**Cause: the implementation, not the reading.** Making the V-blank-only closure
+traverse `PRE_MAIN_LOOP` violates the replay port's boundary-ordering invariant,
+because the row goes on to traverse further boundaries: *"duplicate or reordered
+hardware service boundary at raw_frame=16670: previous=PRE_MAIN_LOOP,
+current=POST_OBJECTS"*. `LevelFrameStep.serviceVBlankOnly` is shared, so the
+damage is cross-game.
+
+**Why the halves are inseparable in the code as it stands.** Admission requires
+`lastServicedBoundary == PRE_MAIN_LOOP`, so a recorded `pre_main_loop` edge needs
+that traversal present on its row -- and adding it breaks ordering. Both cannot
+hold at once.
+
+**Archaeology on the ordering invariant: its subject is genuinely the row, and
+per-row is correct.** Introduced by `25e900795` (2026-07-27, *"gate prepared
+hardware completions from timing input"*), whose message body is again empty --
+but the record is not. `lastAppliedBoundary` is reset inside `beginRawFrame`
+(`HardwareTimingReplayPort:91,119,131`), so the monotonic sequence is scoped to a
+raw frame **by construction, not incidentally**. The same commit's audit,
+`docs/architecture/audits/2026-07-27-s3k-hardware-timing-inventory.md`, states
+that "`raw_frame` is the segment-local frame-end observation index", and its
+sibling test is named for activating "the current row" before VInt service.
+
+A recorded edge addresses work as the pair `(raw_frame, boundary)`. Per-row
+monotonicity is exactly what makes that pair a unique address within a row, so
+widening the invariant's subject to the iteration would make two boundaries in
+one row indistinguishable and break edge addressing outright. **This is not the
+`LAG` category error one level up: the invariant's subject and the recorder's
+stamping unit are the same unit.**
+
+**Therefore the conflict is essential, not incidental.** A carried tail cannot be
+admitted at a `pre_main_loop` edge without either a second `PRE_MAIN_LOOP`
+traversal on the row (breaks ordering) or a change to how edges are addressed
+(breaks the recorder contract). Do not engineer around it; a different shape is
+needed, and the derivation about `LAG` remains available for it.

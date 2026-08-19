@@ -440,6 +440,16 @@ change deliberately replaces is a clean merge; one in which it fires and nobody 
 A check that cannot fail on the case it exists to catch does not produce safety. It produces
 confidence, which is worse.
 
+**Amendment: conflict markers are not the trigger — the file being rebased is.** A later round
+rebased a branch onto develop and silently lost a 32-line section of the frontier log. Git
+raised **no conflict** in that region; the section was simply present in neither develop nor
+the rebased result, and it was the round's pre-registered predictions, the thing that made its
+whole result legible. It was caught only because the missing-line assertion was run anyway,
+after a rebase that reported clean. So run the assertion after **any** rebase or merge that
+touches `trace-frontier-log.md`, `briefing-trace-rounds.md`, `README.md` or `CHANGELOG.md` —
+not only when markers appear. Silent loss is the failure mode the check exists for, and it
+leaves no signal to prompt you.
+
 ## Ninth rule: a latent correction can be worth more as evidence than as a fix
 
 The usual value of landing a latent fix is hygiene — the engine was on the wrong branch, so
