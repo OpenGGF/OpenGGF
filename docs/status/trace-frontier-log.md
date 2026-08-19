@@ -86054,3 +86054,93 @@ Obj05 slot would carry it, and that is the cheapest next step.
 
 No change was proposed, so the two-game blast radius on `TailsTailsController`
 was not exercised.
+## 2026-08-19 — Correction: Caterkiller Jr IS implemented; the seg4 divergence is `Obj_WaitOffscreen` release semantics
+
+**This entry corrects the previous one.** Its central claim — that `Obj_CaterKillerJr`
+"has no factory and no instance class" — is **false**. `CaterkillerJrHeadInstance` and
+`CaterkillerJrBodyInstance` exist, the registry registers S3KL `0x8F` to the head
+(`Sonic3kObjectRegistry`, zone-set-guarded against SKL Butterdroid), and `0x8F` is in both
+`Sonic3kObjectProfile` implemented sets. The earlier claim came from a `grep ... | head -20`
+that truncated before reaching the S3K hits; the S1 Caterkiller matches filled the window.
+Everything else in that entry — the `$100` delta, `EnemyDefeated .bounceplayerup`, the ROM
+slot turning into `Explosion_Index`, the blast radius — still holds.
+
+### The actual cause
+
+`CaterkillerJrHeadInstance.updateMovement` gated the whole badnik on
+`if (!isOnScreen(0x20)) return;` **every frame**. ROM `Obj_WaitOffscreen`
+(`docs/skdisasm/sonic3k.asm:180271-180305`) is a **one-shot latch**: it pops the caller's
+return address into `$34(a0)`, overwrites the object's operation pointer with `loc_85AD2`,
+and `loc_85AD2` tests `render_flags` bit 7 and — once the `$20`-by-`$20` placeholder has
+been drawn — runs `move.l $34(a0),(a0) / rts` (`loc_85B02`), restoring the real operation
+**permanently**. `0x00085AD2` is visible as an object code in the fixtures' own
+`slot_dump`, which is what a still-waiting object literally runs.
+
+In the AIZ2 recording the badnik is released while on camera (at trace frame 2093 it is
+42 px right and 147 px below the camera origin) and is still swinging 775 px below the
+camera 600 frames later. The engine's per-frame test re-freezes it the moment it leaves
+the viewport, so it never reaches the place where Tails rolls into it.
+
+### Two candidate models, measured against the ROM
+
+Both were measured on `aiz_completerun`, whose aux carries `object_state` for the head
+(object code `0x000876D0`) across three activations. Engine `vIntRunCount` was mapped to
+trace rows through the fixture's own `vblank_counter` column (13553→12649, 17518→16614,
+17706→16802), so no clock was assumed.
+
+| model | slot 19 | slot 9 | slot 38 |
+|---|---|---|---|
+| A: latch, routine runs on the release frame | 2 frames early (253/253 exact at that shift) | 1 early (87/88) | 1 early (256/256) |
+| B: latch, release frame consumes a dispatch (ROM `loc_85B02` restores and `rts`s) | 1 early | **exact** | **exact** |
+
+The motion model itself is right — every activation matches the recorded x/y series
+*exactly* at its best shift. The only error is when the object is released. Model B is
+strictly closer on all three activations and is what the listing says.
+
+### Result, and why nothing was landed
+
+Chain measurements (own control, same worktree, base `e33c9a727`):
+
+* control: segment 4 = **44,605** errors, first non-camera mismatch frame **2729**
+  `sidekick_y_speed` rom `0x00C0` engine `0x01C0`;
+* model B: segment 4 = **40,000** errors, first non-camera mismatch frame **3573**
+  `sidekick_y` rom `0x030B` engine `0x0309`. (40,000 is a real count; there is no error
+  cap in `DivergenceReport`.)
+
+Execution evidence for B: the latch fired exactly twice in the chain run, at `x=0AE0
+y=0560` and `x=0C90 y=0620` — the two positions at which the fixture's own
+`object_appeared` records place object code `0x000876D0`. `EnemyDefeatBounce.apply` gained
+a seventh call, `Tails cx=0BFB cy=0616 yvel=0x01C0 enemyY=0x0611`, every value matching the
+ROM's frame-2729 row; `0x01C0 - 0x100 = 0x00C0`.
+
+**But model B turns a currently-green test red**, so it was not landed. Full
+`-Ptrace-replay`: control 790 tests / 4 red (the documented baseline set); with B,
+790 / **5** — `TestS3kReplayReferenceClosureIntegration` (the only runner of
+`aiz_completerun`) fails with 1,877 errors, first error row 17028, player `y` rom `0x0574`
+engine `0x056F`. It reproduces when run alone, so the attribution is solid.
+
+A touch probe pinned the mechanism exactly: at the divergent frame the engine's player is
+**HURT by a `CaterkillerJrBodyInstance`** (`px=2C60 py=0574 pyv=FCC8 objY=0587`) whose
+values are precisely the ROM's row-17028 player state — while the recorded player is
+mid-jump on an unbroken `+$38` gravity ramp with no hurt at all. So correcting the head's
+release phase shifts the six body segments by one frame and drops one onto the player.
+
+### Next step
+
+The residual is in the **visibility predicate**, not a phase constant: no uniform shift
+makes all three activations exact, because `isOnScreen(0x20)` flips at a different moment
+relative to ROM's `Draw_Sprite` per activation. The head's init dispatch is a second,
+compensating error — ROM `CaterKillerJr_Init` creates the children and falls into
+`CaterKillerJr_StartSlowSwing`, which sets routine 4 and returns **without moving**, while
+the engine spawns bodies and swings in the same dispatch. Model B is currently correct only
+because those two errors cancel on two of three activations.
+
+The tractable next round is therefore: model `Obj_WaitOffscreen`'s release as
+"the placeholder was drawn on the previous frame" using the ROM's own render-box test
+rather than `isOnScreen`, land the missing init dispatch at the same time (they must move
+together), and re-measure all three activations plus the body-segment train against
+`aiz_completerun`. Do **not** land the latch alone.
+
+Rejected, with numbers, so it is not retried: model A (latch without the dispatch
+consumption) keeps the full sweep at 790/4 and also clears frame 2729 — but it is measured
+1-2 frames early on every activation, so its green is coincidental.

@@ -228,6 +228,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Caterkiller Jr is implemented after all; the defect is a one-shot latch modelled as a per-frame
+  test (`bugfix/ai-s3k-caterkillerjr-r1`, merged 2026-08-19 -- investigation only, nothing landed).**
+  **Correcting the previous entry:** `CaterkillerJrHeadInstance` and `CaterkillerJrBodyInstance` do
+  exist and S3KL `0x8F` is registered and listed as implemented. The "no factory, no instance class"
+  claim came from a truncated grep whose window filled with the *S1* Caterkiller. The real cause of
+  the segment-4 divergence is that the head gates its whole routine on a **per-frame**
+  `isOnScreen(0x20)` test, while ROM `Obj_WaitOffscreen`
+  (`skdisasm/sonic3k.asm:180271-180305`) is a **one-shot latch**: `loc_85B02` restores the saved
+  operation pointer permanently once the placeholder has been drawn, after which the badnik runs for
+  the rest of its life on or off screen. Two models were measured against `aiz_completerun`'s
+  recorded `object_state` for object code `0x000876D0`, with `vIntRunCount` mapped to trace rows
+  through the fixture's own `vblank_counter` column: latching **with** the release frame consuming a
+  dispatch is exact on two of three activations and one frame early on the third; latching without
+  it is one to two frames early on all three. The motion model itself reproduces every recorded x/y
+  series exactly. The correct model moves segment 4 from **44,605 errors at frame 2729 to 40,000 at
+  frame 3573**, with a probe showing Tails taking the `EnemyDefeated` rebound at the ROM's exact
+  values -- **but it also turns `TestS3kReplayReferenceClosureIntegration` red** (1,877 errors at row
+  17028), because shifting the head by one frame shifts the six body segments onto the player, so
+  nothing was landed. Sweep: control 790/4, with the change 790/5.
+
 - **`Obj05` has no execution gate, and edge-absence is not evidence of inactivity
   (`bugfix/ai-s2-obj05-exec-r1`, merged 2026-08-19 -- disassembly read, and a retraction).**
   `Obj05_Main` (`s2disasm/s2.asm:41722-41763`) copies parent state, runs the selection guard, then
@@ -477,8 +497,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   attacking player sits at or below the badnik it just destroyed
   (`skdisasm/sonic3k.asm:20973-20989`). The aux stream shows ROM slot 5 turning into
   `Explosion_Index` at that frame, and that slot held object code `0x000876D0` =
-  **`Obj_CaterKillerJr`** (`:183322`), which `Sonic3kObjectRegistry` names for S3KL id `0x8F` but
-  which **has no factory and no instance class** -- so the engine never spawns it and Tails
+  **`Obj_CaterKillerJr`** (`:183322`), which `Sonic3kObjectRegistry` names for S3KL id `0x8F` and which
+  was reported as having **no factory and no instance class** (**corrected below: both exist; that
+  claim came from a truncated grep**) -- so the engine never spawns it and Tails
   free-falls through empty space. Confirmed by execution rather than mechanism fit: throwaway probes
   showed Tails at the ROM's exact position with `yvel=0x01C0` and no badnik within 48px, and
   `EnemyDefeatBounce.apply` firing six times across the whole run, all for Sonic -- so the shared
