@@ -85023,3 +85023,85 @@ the shipped ROM (`fixBugs = 0`, `s2.asm:27`). Removed, with the flag, the branch
 taken and what the fixed branch would do written at the site per the hard rule.
 Full `-Ptrace-replay` 790 / 4 red, set-identical both ways to the control above;
 `mvn -Pguards test` 499/0.
+
+## 2026-08-19 — S3K complete-emeralds chain, segment 4: the `sidekick_y_speed` divergence is a missing badnik
+
+Command (worktree at `origin/develop` `1dc79d63c`, JDK 21):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -DfailIfNoTests=false \
+    -Ds3k.rom.path=<discovered s3k .gen> test
+```
+
+Result: FAIL, unchanged from the briefed frontier — segment 4
+(`aiz_3`, zone 0 act 2, 8235 rows) at **44,605** comparator errors, first
+non-camera mismatch **frame 2729 `sidekick_y_speed` rom=0x00C0 engine=0x01C0**,
+plus the `stage_exit` walk failure at `mode_change_bk2_frame=35726`.
+
+### Root cause
+
+Not physics, and not a stranded status bit. Tails is underwater and rolling
+(`status=0x47`, `Status_Underwater` set; gravity is `$38 - $28 = $10` per frame,
+`sonic3k.asm:25885`), free-falling on a clean `+$10` ramp. At frame 2729 the ROM
+subtracts exactly `$100`:
+
+* `EnemyDefeated` (`docs/skdisasm/sonic3k.asm:20973-20989`) rewrites the badnik
+  slot to `Obj_Explosion` and then, for a player whose `y_vel` is positive and
+  whose `y_pos` is at or below the badnik's, runs `.bounceplayerup:
+  subi.w #$100,y_vel(a0)`. Tails `y=0x0616` vs badnik `y=0x0611` takes that
+  branch; `0x01C0 - 0x100 = 0x00C0`, the recorded value exactly.
+
+The aux stream shows the kill directly: ROM slot 5 holds object code
+`0x000876D0` from frame 2011, and at frame 2729 that slot's code becomes
+`0x0001E66E` — `Explosion_Index`'s handler (`sonic3k.asm:42204`) — while slot 4
+gains the points object and the six `subtype 0x00..0x0A` children are removed two
+frames later.
+
+`0x000876D0` is **`Obj_CaterKillerJr`** (`docs/skdisasm/sonic3k.asm:183322`;
+`CaterKillerJr_Init` is `loc_876EC`, its projectile `CaterKillerJrProjectile_Main`
+is `loc_8782C` at `:183460`). The engine knows the name — `Sonic3kObjectRegistry`
+maps S3KL id `0x8F` to `"CaterKillerJr"` — but has **no factory and no instance
+class**, so the object never spawns.
+
+### Execution evidence
+
+A throwaway probe in `ObjectTouchResponseController.updateSidekick` dumped every
+object within 48px of Tails whenever he was inside the kill neighbourhood, and a
+probe in `EnemyDefeatBounce.apply` logged every rebound in the whole run. Both
+reverted before commit. Results:
+
+* At the engine frame corresponding to trace row 2729 (manager clock 2725; the
+  aux `vfc` for that row is also 2725), Tails is at `cx=0BFB cy=0616` — the ROM's
+  position to the pixel — with `yvel=01C0`, and the only objects near him are a
+  `Sonic3kSpikeObjectInstance` and the air-countdown. The Caterkiller Jr is
+  simply absent.
+* `EnemyDefeatBounce.apply` fires **six** times across the entire
+  AIZ→Doomsday run, all for Sonic. Tails never rebounds off a badnik anywhere.
+
+So the shared rebound path is present and correct on both the player and sidekick
+sides (`ObjectTouchResponseController.handleTouchResponseSidekick`); nothing is
+wrong with it. The divergence is purely the absent object.
+
+### Blast radius
+
+Scanning every segment's `aux_state.jsonl.gz` for object code `0x000876D0`:
+`aiz_3` (segment 4) 770 records and `aiz_4` (segment 6) 509 records; zero
+everywhere else in the run. Both AIZ act 2 segments are affected; no other zone
+in this movie is.
+
+### Next step
+
+This is an `s3k-implement-object` task, not a physics fix. Scope from the
+listing: a head with five routines (`CaterKillerJr_Index`, `:183330`) that
+`SetUp_ObjAttributes` from `ObjDat_CaterKillerJr` and sets `x_vel = -$100`, six
+body segments created by `CreateChild3_NormalRepeated` whose `ObjDat` and
+`$2E` wait delays come from `CaterKillerJrBody_ObjDatIndex` /
+`CaterKillerJrBody_WaitDelays` (`:183414-183422`), and a projectile child
+(`CaterKillerJrProjectile_Init`, `loc_8780A`). Note the ROM children run through
+a shared child handler — their aux `object_code` is not `CaterKillerJrBody`'s
+own address — so slot comparison should key on the head plus the
+`subtype 0x00..0x0A` sequence.
+
+No engine change was landed this round; nothing was measured that could move a
+red set, so no sweep is reported.
