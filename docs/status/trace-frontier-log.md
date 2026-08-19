@@ -83949,3 +83949,56 @@ was introduced and nothing keys on zone, act, route or frame.
   `TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
   `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`. Set-diff against the
   recorded control red set is empty both ways.
+
+## 2026-08-19 — S2 complete-emeralds segment 15: the discriminator was object age, not entry state
+
+- Base `72ae015e6` (origin/develop), own worktree, branch `bugfix/ai-s2-seg15-r1`,
+  JDK 21. Commands, both with `-Ptrace-replay -Dmse=off
+  -Dsurefire.runOrder=alphabetical` and the S1/S2/S3K `.gen` files found in the
+  project root, after `rm -rf target/surefire-reports`:
+  `-Dtest=TestS2CompleteEmeraldRunChain` and the full profile sweep.
+- **Before:** `TestS2CompleteEmeraldRunChain` FAIL — `segment 15 lost production
+  ownership before source closure (mode=TITLE_CARD, romZone=13 act=1, BK2
+  cursor=83819)`. Segment 15's own comparator carried 33379 errors; its first
+  non-queue divergence is segment frame 209, `y_speed` rom `0x00E0` engine
+  `-0x00E0`, an exact negation.
+- **The measurement that named it.** The chain's and the standalone lane's
+  engine state were dumped per frame and aligned to `seg10_cpz2`'s recorded rows
+  by matching `player_x`/`player_y` over rows 150-250 (chain offset 91, solo
+  offset 24). At segment row 0 both lanes agree on player position and on slot
+  occupancy, so no carried *value* differs. What differs is how many object
+  passes each lane has already spent since the level load: the standalone lane
+  24, the chain 91. ObjA7 patrols at `x_vel #-$40` (s2.asm:76662-76668), so the
+  chain's Grabbers enter 16-17 px further along — slot 22 at 4225 against 4241,
+  slot 37 at 4760 against 4776.
+- Consequences, in order: segment row 43 the chain unloads the slot-22 Grabber
+  the ROM keeps; segment row 209 the slot-37 Grabber is 11 px left of the ROM's
+  (`object_near` pins it at `0x1282` for the whole window, which the standalone
+  lane matches exactly) and stands in the player's path. Sonic, airborne and
+  rolling, destroys it — slot 37 becomes `0x27`, an `0x28` animal appears — and
+  the badnik rebound negates `y_speed`. The engine then dies of SPIKE at
+  `(0x174A, 0x07CC)`, which is the ownership loss at cursor 83819, ~1270 frames
+  downstream of the actual divergence.
+- **Root cause.** `ObjectsManager` (s2.asm:5003) and `InitPlayers` (:4945) both
+  run after the `Level_TtlCard` scroll-in wait loop (:4914-4925), so no level
+  object exists for the card's slide-in and hold. S2's `TitleCardManager`
+  already encoded that window for the players via `leavePass`, but never
+  overrode `shouldRunLevelObjectsDuringLockedPhase()`; the default is `true`, so
+  every locked pass aged the placed objects. S1 and S3K already return `false`.
+- **After:** `TestS2CompleteEmeraldRunChain` still FAIL, frontier moved to BK2
+  cursor **89191** — segment 15 row **6849 of 7088**, 5372 rows further. The
+  frame-209 divergence is gone; the first non-queue mismatch is now segment
+  frame **409, `sidekick_y`** (rom `0x05E0`, engine `0x05DF`) with
+  `sidekick_angle` rom `0x000A` engine `0x000C`.
+- `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` is unchanged at 2491
+  errors, first error frame 52 `queue.s2_nemesis_plc.busy`, as expected: a
+  metadata-start segment's card is only the leave window, so it never had the
+  extra passes.
+- **Follow-up, deliberately not folded in.** With the locked phase no longer
+  dispatching objects, S2 takes the camera-only branch and its V-blank clock
+  does not tick on those passes. ROM `Level_TtlCard` does `WaitForVint` every
+  pass (s2.asm:4914-4916), so `V_int_run_count` really does advance there. S1
+  has the identical ROM property and also leaves
+  `shouldAdvanceVblankClockDuringLockedPhase()` false, so this matches existing
+  engine shape rather than inventing one; whether both games should advance the
+  clock is a separate, cross-game question.
