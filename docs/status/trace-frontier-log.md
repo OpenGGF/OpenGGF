@@ -99993,3 +99993,41 @@ failure, not a boundary-order failure.
 **A second-angle confirmation of game neutrality.** All 274 hardware-timing files in the
 corpus are S3K; S1 and S2 have none at all. That is independent of the `Game_Mode` bit-7
 argument recorded earlier and points the same way.
+
+## 2026-08-20 — The row model already exists; what remains is the presentation handoff
+
+Measured before writing anything: every hardware boundary the engine emits across the
+AIZ2→HCZ1 window (recorded rows 7025-7180), on the base tree.
+
+| Recorded rows | Driver | Boundaries per row |
+|---|---|---|
+| ≤ 7031 | `LevelFrameStep.execute` (gameplay) | VINT, POST_OBJECTS, PRE_MAIN_LOOP |
+| 7032-7052 | `consumeTransitionFreezeRow` | VINT only (21 rows; ROM's fade is 22) |
+| 7053-7174 | `serviceVBlankOnly` + `serviceHardwarePostObjectsOnly` + `serviceHardwarePreMainLoopOnly` | VINT, POST_OBJECTS, PRE_MAIN_LOOP (120 rows) |
+
+**So the row model for this window is already implemented.** Those 120 rows already consume
+one recorded row each and already emit exactly the triple the ROM derivation predicts. Both
+ROM loop shapes have engine forms already, and both match the derivation:
+
+- `LevelFrameStep.executeHardwareTimedObjectScan` (185-197) emits VINT → object scan →
+  POST_OBJECTS → PRE_MAIN_LOOP — `loc_62CC`.
+- the three `…Only` services emit the same triple with no object pass — `loc_7870`. Its
+  Javadoc already states the semantics the confirmation round proved: "The ROM still runs
+  this loop-tail boundary even though it does not run the ordinary object/physics body for
+  that row."
+
+What is missing in the window is therefore not row ownership but the **work inside those
+rows**: no title-card owner runs, so none of its four archives is queued, and the level-art
+batch is starved behind the wedge.
+
+**Wall 3 re-reads accordingly.** With the parked presentation candidate, rows 7053+ are
+driven *only* by `executeHardwareTimedObjectScan` from the title-card mode — the `…Only`
+path does not run — and no `beginPlaybackFrame` for row 7054 ever arrives once the mode
+leaves `LEVEL`. So the title-card loop iterates without consuming recorded rows, while the
+path it displaced did consume them. Wall 3 is a **handoff between two existing row owners**,
+not a missing row model.
+
+**Consequence for the sequence.** The row-model piece as scoped does not exist as separate
+work, and the part that does remain — making the title-card owner's iterations consume one
+recorded row each — is only reachable and only measurable once the presentation runs, which
+is the next piece. The two are inseparable. Stopping here rather than folding them together.
