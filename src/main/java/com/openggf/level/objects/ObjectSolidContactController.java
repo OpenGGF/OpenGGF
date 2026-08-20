@@ -211,6 +211,23 @@ public final class ObjectSolidContactController {
         ObjectSpawn spawn = instance.getSpawn();
         // Spawn record is stable across slot reload; fall back to the
         // instance reference for dynamic / spawn-less objects.
+        //
+        // CAUTION: that stability is the opposite of what the ROM does, so every
+        // latch keyed here OUTLIVES the object it describes. Object-side state
+        // lives in the SST slot and dies with it -- S2
+        // DeleteObject/DeleteObject2 (docs/s2disasm/s2.asm:30329-30345), S1
+        // DeleteObject/DeleteChild (docs/s1disasm/_incObj/sub
+        // DeleteObject.asm:10-20) and S3K
+        // Delete_Current_Sprite/Delete_Referenced_Sprite
+        // (docs/skdisasm/sonic3k.asm:36108-36125) all zero the whole slot -- so
+        // an object that unloads and reloads from the same layout entry must
+        // come back with its per-player bits CLEAR. Any new map keyed on this
+        // value therefore needs an expiry paired with the object's removal, the
+        // way the pushing bits are released at
+        // ObjectManager.removeActiveObject. Without one, a reloaded instance
+        // reads a bit its predecessor set: an EHZ2 monitor did exactly that
+        // 2,778 frames after the fact and published a solid-release animation
+        // word the ROM never writes.
         return spawn != null ? spawn : instance;
     }
 
