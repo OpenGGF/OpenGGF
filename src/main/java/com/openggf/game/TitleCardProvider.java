@@ -146,6 +146,65 @@ public interface TitleCardProvider {
         // No-op unless the game models a gameplay-phase title-card exit tail.
     }
 
+    /**
+     * Sequences everything an omitted title-card presentation still owes.
+     *
+     * <p>Omitting the presentation does not delete the owner, so both halves of
+     * its lifetime still run: {@link #beginOmittedPresentationExitTail} models
+     * the tail, and {@link #beginOmittedFreshLevelOwner} models the entry art
+     * {@code Obj_TitleCardInit} queues on the object's first dispatch
+     * (docs/skdisasm/sonic3k.asm:62108-62164). The entry half runs only for a
+     * load that owns the destination's fresh runtime art — a host-placed level
+     * entry never reached the game's own {@code Level:} routine and so
+     * installed no owner to queue it.
+     *
+     * @param ownsFreshLevelRuntimeArt whether this load owns the destination's
+     *        fresh runtime art ({@code LevelLoadContext#isQueueFreshLevelRuntimeArt})
+     */
+    default void beginOmittedPresentation(
+            int zoneIndex, int actIndex, boolean ownsFreshLevelRuntimeArt) {
+        beginOmittedPresentationExitTail(zoneIndex, actIndex);
+        if (ownsFreshLevelRuntimeArt) {
+            beginOmittedFreshLevelOwner(zoneIndex, actIndex);
+        }
+    }
+
+    /**
+     * Whether an omitted fresh-level presentation still owns a live title-card
+     * object whose per-iteration dispatch belongs to this row.
+     *
+     * <p>Omitting the presentation does not delete the owner. S3K installs
+     * {@code Obj_TitleCard} in slot 5 and runs the locked loop
+     * {@code loc_62CC} (docs/skdisasm/sonic3k.asm:7735-7748) until the object
+     * clears {@code objoff_48}; every iteration of that loop is one V-int, so
+     * the owner is dispatched once per recorded row whether or not anything is
+     * drawn.
+     */
+    default boolean ownsOmittedFreshLevelPresentation() {
+        return false;
+    }
+
+    /**
+     * Installs the owner an omitted fresh-level presentation still has, and
+     * runs the art work its first dispatch performs.
+     *
+     * <p>Called only for a load that owns the destination's fresh runtime art
+     * ({@code LevelLoadContext#isQueueFreshLevelRuntimeArt}). A host-placed
+     * level entry does not reach the game's own {@code Level:} routine and
+     * installs no owner, so it queues nothing.
+     */
+    default void beginOmittedFreshLevelOwner(int zoneIndex, int actIndex) {
+        // No-op unless the game models an omitted fresh-level title owner.
+    }
+
+    /**
+     * Runs one dispatch of an omitted fresh-level owner, in the object-scan
+     * position of its loop iteration. Renders nothing.
+     */
+    default void updateOmittedFreshLevelOwner() {
+        // No-op unless the game models an omitted fresh-level title owner.
+    }
+
     /** Publishes an armed fresh-level handoff when an omitted native owner reaches its exit. */
     default void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
         // No-op for games without a title-owned fresh-level hardware handoff.

@@ -133,6 +133,25 @@ public final class TraceSuppressedRowClosure {
                 context.gameModule().getTitleCardProvider();
         LevelEventProvider levelEvents = context.levelEventProvider();
         if (titleCardProvider != null
+                && titleCardProvider.ownsOmittedFreshLevelPresentation()) {
+            // An omitted presentation still has the owner Level: installed at
+            // sonic3k.asm:7735, and loc_62CC (7736-7748) dispatches it once per
+            // V-int. The boundary set of that loop is the same triple this row
+            // already services -- Process_Kos_Queue ahead of Wait_VSync, then
+            // Process_Kos_Module_Queue -- so the owner's dispatch goes in the
+            // object-scan position and nothing else about the row changes.
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    context,
+                    lifecycleFrame,
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                    titleCardProvider::updateOmittedFreshLevelOwner);
+            if (levelEvents != null) {
+                levelEvents.advanceVblankOnlyState();
+            }
+            levelManager.getObjectManager().advanceVblaCounter();
+            return;
+        }
+        if (titleCardProvider != null
                 && titleCardProvider.advancesOnHeldLevelCounter()) {
             LevelFrameStep.executeHardwareTimedObjectScan(
                     context,

@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **An omitted title card no longer skips the art its owner queues before it draws.**
+  `Obj_TitleCardInit` (`docs/skdisasm/sonic3k.asm:62108-62164`) queues four archives --
+  RedAct `$500`, the zone name `$510`, the act number `$53D` and the zone graphic `$54D` --
+  on the object's first dispatch, before anything is presented. `Level:` installs that owner
+  and enters its locked loop regardless of what the host displays, so those
+  `Queue_Kos_Module` calls belong to the owner's creation rather than to its presentation,
+  and omitting the presentation was dropping them. The work now runs for any load that owns
+  the destination's fresh runtime art (`LevelLoadContext#isQueueFreshLevelRuntimeArt`) --
+  the same ownership the level's own `LoadLevelLoadBlock` art already carries, and an
+  engine-side statement about the kind of load rather than about a zone, game or route. A
+  host-placed level entry never reached the game's own `Level:` routine, installs no owner,
+  and so still queues nothing. On the Sonic 3 & Knuckles complete-emerald run this recovers
+  the four `KOS_MODULE_QUEUE` ordinals `#97`-`#100` at the AIZ2 -> HCZ1 boundary, with the
+  recorded sources, destinations and fingerprints matching; the destination's own two level
+  art ordinals `#101`/`#102` remain outstanding behind the submission-ordering question.
+
 - **A title-card release no longer fuses the level's first frame into the card's own.**
   `Level_MainLoop`'s `WaitForVint` is a console frame of its own
   (`docs/s2disasm/s2.asm:5088-5090`), so the iteration that leaves the title card is not
