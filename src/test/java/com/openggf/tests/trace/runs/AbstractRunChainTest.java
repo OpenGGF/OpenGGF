@@ -1493,6 +1493,34 @@ abstract class AbstractRunChainTest {
                             throw new AssertionError(
                                     "Uncompared interior return has no source-level clock anchor");
                         }
+                        // Scoped to the anchored games ON PURPOSE. The anchor and
+                        // attachReturnedLevelSegment's comparator base are one contract
+                        // and are coherent only at framesConsumed == 1: at 0 the
+                        // comparator rebases to frame 0 while the anchor still targets
+                        // row 0's value, every compared row is read one row early, and
+                        // the artefact is indistinguishable from a physics divergence
+                        // in the report. That is what masked four separate structural
+                        // attempts at the S2 seam.
+                        //
+                        // A game whose profile leaves alignUncomparedInteriorReturnVblank
+                        // false runs no anchor here, so it has no pairing to be
+                        // incoherent and no business being asserted against. S3K takes
+                        // GameModule's default TracePlaybackProfile.DISABLED
+                        // (GameModule.java:334-336) and reaches its aiz_2 return with
+                        // framesConsumed == 0 -- a legitimate second return shape, not a
+                        // defect. An earlier version of this assertion sat outside this
+                        // guard and aborted the whole S3K chain at segment 1 for exactly
+                        // that reason; it was reverted in 34e58af86. Do not widen it.
+                        assertEquals(1, framesConsumed,
+                                "Uncompared interior return must consume exactly the "
+                                        + "destination's frame 0 before the comparator "
+                                        + "attaches (cursor " + playback.getCursorFrame()
+                                        + ", offset " + returnOffset + ", segment "
+                                        + plans.get(i + 1).segment().dir() + "). The "
+                                        + "V-blank anchor targets row 0's value and the "
+                                        + "comparator bases at framesConsumed; at any "
+                                        + "other value the two disagree and every "
+                                        + "compared row is read off by one. For " + runDir);
                         alignUncomparedInteriorReturnVblank(
                                 uncomparedInteriorSourceLevel, plans.get(i + 1),
                                 uncomparedInteriorSourceVblank, framesConsumed);
