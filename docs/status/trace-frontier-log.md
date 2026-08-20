@@ -98961,3 +98961,54 @@ The four extra edges inside `seg10_cpz2`, and the `ss_6 -> seg10_cpz2` row drift
 destination is segment 15, the first red segment, at
 `queue.s2_nemesis_plc.remaining_work rom=2 engine=5` — worth testing whether the drift and
 the three-pattern deficit are the same event.
+
+## 2026-08-20 — LZ3: the clock and RNG hypotheses are dead; it is one slot
+
+Round `s1-plc-admission-r2`, continued. Two read/log-only BizHawk probes committed under
+`tools/bizhawk/probes/`, both stage-gated with a movie-frame floor; run against a scratch copy of
+BizHawk so the shared checkout was untouched. No engine change.
+
+**Self-check first:** the ROM's `Pri_EndAct` reaches `jsr (GotThroughAct)` at raw frame 12247,
+exactly the recorded `NEMESIS_PLC_QUEUE` ordinal 166. Trace, manifest offset and probe agree.
+
+**The clock hypothesis is refuted.** `Anml_ChkFloor`'s `btst #4,(v_vblank_byte)` flip fires for
+slot 41 in the ROM and the engine's slot-41 animal also goes right. The flip decisions agree;
+there is no phase slip.
+
+**The RNG-phase hypothesis is refuted too**, before anyone reached for it. The ROM's eight burst
+species draws are 2,2,3,3,2,2,2,2 and the engine's are identical. The RNG is in phase and produces
+the same sequence.
+
+### What differs: which animal gets which draw
+
+The draw log shows the capsule opening with **seven** `Anml_FromEnemy` draws on one frame and the
+**eighth on the next**, because `FindFreeObj` put the first-created burst animal in slot 33 —
+*below* the capsule. An object below its spawner does not run until the following frame, so that
+animal takes the **last** draw rather than the first. The engine places all eight burst animals
+above the capsule, so all eight draw in creation order in a single frame: same eight numbers,
+rotated by one position.
+
+The animal at x=8386 carries the third-longest prison delay, so it is already among the last
+released. The rotation gives it species 3 — the slowest in the game — where the ROM gives it
+species 2. Its ROM counterpart departs at frame 12135; the engine's departs 123 frames later, and
+that sets the act's completion twelve frames late. The ROM's genuine last animal is slot 40,
+departing 12148 with `GotThroughAct` the next frame.
+
+So the whole chain — species assignment, which animal is slowest, which leaves last, the twelve
+frames, the missed PLC arm, the dropped edge, the returned ordinal, the wedged queue, roughly
+74,000 errors across segments 27-33 — follows from one slot. The rotation is **not inferred from
+the tidy "off by one"**: the draw log directly shows the 7/1 frame split with callers
+distinguishing the explosion's own draw from each animal's.
+
+### The transferable finding
+
+**An object's slot relative to its spawner decides whether it runs in the same frame as its
+spawner, and that decides RNG draw order among siblings created together.** Any engine-versus-ROM
+slot permutation can therefore reorder random draws even when the RNG is perfectly in phase, and a
+sibling set that looks like "the same animals in a different order" is not cosmetic when the
+siblings differ in speed. Not S1-specific; S3K sidekick and badnik spawn sets have the same
+exposure.
+
+**Not established:** why slot 33 is free in the ROM and occupied in the engine at that frame. The
+engine's LZ3 arena carries fewer live dynamic objects than the ROM's at capsule-open, which is
+where to look — one slot at one frame rather than a zone-wide question.
