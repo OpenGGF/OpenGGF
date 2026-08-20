@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 1's giant-ring flag no longer survives the special stage it triggered.**
+  `f_bigring` is a level variable: `Level_ClrRam` runs `clearRAM v_levelvariables`
+  (`docs/s1disasm/sonic.asm:2742`) and `f_bigring` (`_Variables.asm:285`) sits inside
+  `v_levelvariables` (`:179`) .. `v_levelvariables_end` (`:301`), the block the
+  disassembly comments as "variables that are reset between levels". Obj7C's
+  `move.b #1,(f_bigring).w` (`_incObj/4B, 7C Giant Ring and Flash.asm:123`) is the ROM's
+  only other write to the byte, so the engine -- which never cleared it -- kept the flag
+  set for the rest of the run once any giant ring had been collected. `Got_ChkSS`
+  (`_incObj/3A Got Through Card.asm:199-201`) reads it at every act end and writes
+  `v_gamemode = id_Special`, so each later act diverted into a special stage the player
+  had not earned, regardless of ring count and even though `GRing_Main` gates the ring
+  itself on `ss_giantring_rings` (50) and on not already holding all six emeralds.
 - **A level-to-level transition fade now consumes the recorded rows it owns.** Every game's
   fade-out is `move.w #$15,d4` over a `dbf` around a V-blank wait -- S3K `Pal_FadeToBlack`
   (`docs/skdisasm/sonic3k.asm:5042-5052`), S2 `Pal_FadeToBlack`
