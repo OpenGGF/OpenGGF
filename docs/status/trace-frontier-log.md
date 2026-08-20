@@ -100748,3 +100748,102 @@ bit on a side contact, not for a rider.
 The remaining question is which `SolidObject` branch the engine is taking for a player
 already riding the object, and it is an object-collision question rather than an animation
 or dynamic-art one. Nothing here was changed; the chain is unchanged at 13 axes.
+
+## 2026-08-21 — Segment 15's spurious push: the block below never released it
+
+Branch `bugfix/ai-solid-rider-push-r1` off `origin/develop` (`93f12fb3d`).
+Landed: `e50418388` (fix) and `743bc9afe` (pin re-base).
+
+### The brief's premise is half right, and the half that is wrong matters
+
+The push is spurious and it is object solid contact — both confirmed. But it is
+**not** raised against the object the player is riding. The rider is
+`MTZPlatformObjectInstance`; the push comes from a **different** object, S2's
+`Obj74` invisible solid block, and the engine's contact against it is a correct
+side contact. Nothing about the riding path is at fault, so "which `SolidObject`
+branch does the engine take for a rider" is the wrong question. The right one is
+what the ROM does with the push bit *afterwards*.
+
+### What is actually there
+
+`docs/s2disasm/level/objects/CPZ_2.bin` places five `Obj74` at `x = $1F10`,
+subtype `$17`, at `y = $540, $5C0, $640, $6C0, $740` — a contiguous vertical wall,
+each `y_radius = 64`, tiling every 128 px with no gap. The player sits at
+`x = $1EF5`, `y = $66A`, i.e. exactly on the `d0 = 0` left edge of the `$640`
+block and **within four pixels of the top edge of the `$6C0` block below it**.
+
+The engine already computes both, in ROM slot order, and gets the ROM's answers:
+
+```
+f=1725  Obj74 oy=1600  contact=push=true,  side=true,  dx=0
+f=1725  Obj74 oy=1728  contact=push=false, side=true,  dx=0
+```
+
+The second is `SolidObject_LeftRight`'s `cmpi.w #4,d1 / bls SolidObject_SideAir`
+(`docs/s2disasm/s2.asm:35411-35412`), the four-pixel top/bottom escape.
+
+### The defect
+
+`SolidObject_SideAir` calls `Solid_NotPushing`, which does
+
+```
+bclr d4,status(a0)                       ; this object's pushing bit
+bclr #status.player.pushing,status(a1)   ; the PLAYER's pushing bit
+```
+
+The second `bclr` is **unconditional** — no ownership test. Only the entry
+*above* it, `SolidObject_TestClearPush`, is guarded by
+`btst d4,status(a0) / beq SolidObject_NoCollision`. The engine had folded the two
+together, gating the player-side clear on `clearObjectPushingBit(...)`, so the
+lower block — which never raised the push — never released it either. The bit
+therefore stood for the whole window, and S2's walk handler held the published
+mapping frame and then selected `SonAni_Push`, which is the missing dynamic-art
+edge.
+
+All three games share the routine and the unconditional player-side clear:
+`docs/s1disasm/_incObj/sub SolidObject.asm:246-263`,
+`docs/s2disasm/s2.asm:35453-35487`,
+`docs/skdisasm/sonic3k.asm:41509` and `:41527-41531`. No game or zone predicate,
+no constant, no tolerance.
+
+### Measurement
+
+Candidate `743bc9afe` against control `93f12fb3d`, both arms in the same
+worktree (`git reset --hard`), JDK 21, `-Dmse=off`, all three ROM paths explicit.
+
+| arm | `-Ptrace-replay` | `-Pguards` | default suite |
+|---|---|---|---|
+| control | 800 tests / **6** failures / 4 skipped | 500 / 0 | 15,194 / 51 F / 67 E / 18 skipped |
+| candidate | 800 tests / **6** failures / 4 skipped | 500 / 0 | 15,194 / 51 F / 67 E / 18 skipped |
+
+Reach proven equal on both arms: identical `in com.openggf...` class-name sets,
+identical `Tests run: 0,` counts (6 under `-Ptrace-replay`, 14 in the default
+suite), and the failing-method sets diff clean by full untruncated message
+(117 methods in the default suite; 6 under `-Ptrace-replay`).
+
+Chain axis counts are unchanged on all three: S1 **22**, S2 **13**, S3K **2**.
+Two per-segment counts move, both down, and no segment moves up:
+
+| chain | segment | control | candidate |
+|---|---|---|---|
+| `s2-sonic-tails-complete-emeralds` | 15 | 7502 errors, first non-camera frame 1725 `dynamic_art.edges` | **7415** errors, first non-camera frame **2252** `air` |
+| `s1-sonic-complete-withemeralds` | 24 | 18221 errors, first non-camera frame 3182 `dynamic_art.edges` | **18205** errors, same frame/field/values |
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` standalone goes 1739 -> 1681
+errors with the same frontier move to frame 2252 `air` — the frame this class's
+own javadoc already names as the segment's standing physics divergence.
+
+### The one test that had to be re-pinned
+
+`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` pins
+segment 24's cold-start divergence at 18221 and says in its own message to update
+the pin if it is fixed. It now reads 18205, with the first non-camera mismatch
+identical in frame, field and values — the same defect with a shorter tail, seen
+independently by the full chain and by the cold-start walk in the same run. The
+pin was re-based, not demoted: the assertion still fails on any change to the
+first mismatch, and the chain axis it belongs to is still red.
+
+### What this does not close
+
+S2 segment 15's remaining 7415 errors and its new frontier at frame 2252
+(`air` rom 1, engine 0) are untouched by this and are the next thing to take.
