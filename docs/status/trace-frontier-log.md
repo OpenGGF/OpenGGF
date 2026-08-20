@@ -97106,3 +97106,105 @@ survive it. The naming collision itself is deliberately left in place; renaming 
   `aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck` failure
   the control reports (control 46 tests / 1 failure). S1 and S2 complete-run
   chains are byte-identical by full failure message across both arms.
+
+## 2026-08-20 -- The S3K AIZ2->HCZ seam amplifier: a 23-row block where the ROM's gameplay clock is stopped
+
+Round `bugfix/ai-s3k-seam-amplifier-r1` off `215570dd6`, worktree
+`wt/s3k-seam-amp-r1` with a same-commit control at `wt/s3k-seam-amp-r1-ctl`.
+Diagnosis and a rejected candidate; **no engine change is landed**.
+
+Command (all arms):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+  -Ds3k.rom.path=... -Dsonic1.rom.path=... -Dsonic2.rom.path=... test
+```
+
+### The instrument
+
+A probe in `AbstractRunChainTest`'s coordinator adapter logging, per engine step,
+the observation's `admittedStepOrdinal` (an engine clock the coordinator already
+carries) against `sharedBk2Cursor`, plus the focused sprite's centre position and
+`LevelManager.isLevelInactiveForTransition()`. One variable per arm.
+
+### The amplifier, measured
+
+`s3k-sonic-tails-complete-emeralds` segment 8 has `bk2_frame_offset` 46432, so
+`row = cursor - 46432`. In the **recording**, `aiz_5` rows 7031-7053 hold
+`gameplay_frame_counter` pinned at `1B63` and `player_y` pinned at `0342` while
+`frame` and `vblank_counter` keep ticking -- **23 rows on which the ROM's
+gameplay clock is stopped** for the exit fade, and the transition is row 7054.
+
+That block is the quantum. Both arms, aligned on the shared cursor:
+
+| arm | reaches `player_y=0342` | reported cursor |
+|---|---|---|
+| recording | row 7031 | 53486 |
+| ordering fix, delay 1 | row 7032 (**1 late**) | 53465 |
+| ordering fix, delay 2 | row 7055 (**24 late**) | 53488 |
+
+The delay-2 arm is one engine frame later in the fall, so it is still at
+`player_y=0336` when row 7031 arrives. The replay faithfully suppresses the
+gameplay tick across the recorded pinned-clock rows, so it cannot finish the fall
+until the block ends -- it sits motionless for the block's whole length and
+crosses 23 rows later. **One engine frame maps to 0 or 23 reported cursor frames
+depending on which side of the block's first row the engine lands.**
+
+### The second half: the engine's own fade consumes no rows
+
+Symmetrically, `GameLoop`'s `freezeForNonRewindableTransition` branch returns
+without calling `playbackDebugManager.onLevelFrameAdvanced()`, so the engine's
+own 23-frame exit fade freezes the cursor. The delay-1 arm therefore transitions
+at cursor 53464 -- 22 rows short of the recorded 53486 -- even though its fall
+was only one row late. The bonus-exit branch in `updateBonusStageMode` already
+compensates for exactly this and says so in its comment; the level->level branch
+does not.
+
+**So the control's `53488` was two errors cancelling**: a fall 24 rows late minus
+a cursor 22 rows short. That is why the mechanically-correct ordering fix on
+`bugfix/ai-s3k-bridge-flag-r1` read as a 21-frame regression. By the arithmetic
+above it is a **23-row improvement**, not a regression.
+
+### The candidate, and why it is rejected
+
+Mirroring the bonus-exit compensation into the level-fade branch (advance the
+VBla counter and the shared cursor once per frozen frame, gated off the bonus and
+ending pending flags) makes the S3K seam land on `BK2 cursor=53486` -- the
+recorded transition row exactly -- when paired with the ordering fix. Alone it
+reports 53509, because it exposes the delay-2 lateness the stall was hiding.
+
+**It regresses the S2 chain.** Same command, `-Dtest='*RunChain,*RoundTripChain'`,
+both arms 10 tests / 4 failures / 1 error / 2 skipped with an identical class set
+and no `Tests run: 0,` lines; the S2 message changes from a 9-axis comparison
+failure to `Segment 6 destination seg5_ehz2 cursor advanced past its first
+recorded row without admission (cursor 32933, offset 32931)`. The engine's fade
+span and the ROM's pinned-clock span differ by a per-game amount (S3K under by 2,
+S2 over by 2). Closing that needs the fade length derived from the ROM routine
+that owns it, not trimmed to fit; trimming it is the fitted-constant trap.
+
+### Consequence for anyone reading this cursor
+
+`BK2 cursor` at a level->level seam is **not** a frame count and deltas there are
+not linear. The discriminator that does arbitrate is the recorded row on which
+the engine reaches the pinned `player_y` -- here `0342` at `aiz_5` row 7031.
+Quote that, not the cursor.
+
+### Correction: the bridge-flag candidate's verdict is inverted
+
+The entry above titled *"S3K AIZ2 bridge/button dispatch order (REJECTED candidate)"* recorded that
+the ordering fix moved the chain from two frames over to twenty-one under, and rejected it on that
+basis. **That reading was wrong, and the fix is a 23-row improvement.**
+
+The control's `53488` is two errors cancelling: a fall that reaches the recording's pinned
+`player_y=0342` twenty-four rows late, against a cursor twenty-two rows short because the engine's
+own exit fade consumes no rows. The candidate removes one of those errors and exposes the other,
+which reads as a regression only if the cursor is treated as a frame count.
+
+**The candidate on `bugfix/ai-s3k-bridge-flag-r1` (`6c40da228`) should be reconsidered for landing
+once the fade length is derived** — it is ROM-correct by object-layout argument and measurably
+closer on the discriminator that actually arbitrates. It remains unlanded for now because the
+paired fade compensation regresses S2 by the same mechanism in the opposite direction.
+
+**Quote the discriminator, not the cursor.** At a level-to-level seam the BK2 cursor is not a
+frame count and its deltas are not linear. The arbitrating measurement is the recorded row on
+which the engine reaches the pinned `player_y` — row 7031 of `aiz_5`, value `0342`.
