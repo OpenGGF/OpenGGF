@@ -1217,6 +1217,12 @@ memory-starved arm dies partway, and if the classes it lost happened to be green
 unchanged. Every hazard in rules 30-38 shares this shape: the output of a run that did less looks
 like the output of a run that found less.
 
+**Know your suite's full denominator and refuse any total below it.** A round today saw a
+candidate default run report `13986 / 41F / 3139E`; the same tree re-run gave `15196 / 53F /
+71E`. The complete default suite is ~15,196 tests — a run reporting materially fewer did not
+finish, and its failure counts mean nothing. The same discipline applies per profile: know the
+number, and treat anything short of it as a dead run rather than a result.
+
 Three checks that actually establish completeness, in increasing order of strength:
 
 1. **Compare the set of test classes run, by name.** A truncated arm shows a *short class list*,
