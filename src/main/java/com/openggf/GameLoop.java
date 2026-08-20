@@ -4273,7 +4273,13 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            levelManager.loadZoneAndActForFreshRuntime(zone, act);
+            // A cutscene-driven zone/act change is a ROM Level: entry, so it
+            // installs Obj_TitleCard and runs its blocking card loop like any
+            // other (sonic3k.asm:62108-62161 deletes the owner only for the
+            // ending and the 2P zones). That loop's four Queue_Kos_Module
+            // submissions are part of the destination's lifecycle, so a
+            // headless run must retain the presentation rather than omit it.
+            levelManager.loadZoneAndActWithTitleCard(zone, act);
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
