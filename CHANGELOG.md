@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 2 landings now publish the floor angles the next grounded frame reads.**
+  `Sonic_CheckFloor` hands `FindFloor` the shared `Primary_Angle` / `Secondary_Angle`
+  bytes as its output pointer exactly as the grounded `Player_AnglePos` path does
+  (`docs/s2disasm/s2.asm:44035-44068`), and both character tails copy them into
+  `next_tilt` / `tilt` unconditionally every frame -- Obj01 at `s2.asm:36252-36253`,
+  Obj02 at `s2.asm:38987-38988`. The engine modelled that publish for Sonic 3 & Knuckles
+  only, so a Sonic 2 landing left both characters consuming the angle bytes their last
+  *grounded* dispatch had written, from wherever they stood before the jump. Where a
+  side probe had missed there, the byte was the empty-floor sentinel `3`, and the first
+  grounded frame after landing read it as a ledge and took the balance branch on ground
+  the ROM stands on. In the complete-emerald run that produced a one-frame Tails balance
+  during a title card and, with it, an extra pair of dynamic-art edges whose ordinal and
+  transfer-id skew then propagated through every later segment gap of the run.
 - **A trace run's hardware-timing coordinator no longer infers which segment a frame belongs
   to from the shared BK2 cursor.** `TraceRunReplayWalker.HardwareTimingCoordinator` scanned
   its segments last-to-first and took the first whose `bk2FrameOffset` the cursor had passed.
