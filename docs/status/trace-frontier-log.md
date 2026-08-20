@@ -93891,3 +93891,72 @@ from bridge stepping:
 its failure is iteration- or accumulation-order dependent, not a fixed drift. Anyone fixing
 that test should establish which bucket actually drifts before matching either number --
 the reported bucket is not evidence about the defect.
+
+## 2026-08-20 -- the start-at-segment instrument, and segment 22 settled
+
+Branch `feature/ai-start-at-segment-r1` off `57a711aec`, commit `fc481e34a`.
+
+Three items were blocked on one absent capability. When a change lets the chain reach
+segments it never reached before, the ordinary chain supplies **no control arm** for those
+segments: the unchanged code terminates earlier and never executes them, so their
+divergences cannot be attributed either way. That is why segment 22 and the `-216` cursor
+walk-failure were both undetermined, and it would have recurred for every future change
+that moves the frontier.
+
+### The instrument
+
+`AbstractRunChainTest.assertChainReplayFromSegment(runDir, startSegmentIndex)` boots the run
+**at** a segment and walks forward, carrying none of the state the skipped segments would
+have left. It **re-bases the manifest** -- the chosen segment becomes segment 0, transitions
+belonging to skipped segments are dropped and the rest re-based, dynamic-art gap transitions
+sliced by the same count -- rather than teaching the walk to start partway.
+
+Re-basing is what keeps it **test-only**. Every index in the replay (segment indices, the
+coordinator transcript, exit-boundary lookups, the gap journal's positional pairing) is
+relative to the run it was given, so handing the machinery a run that genuinely starts here
+keeps all of it correct by construction. `TraceRunPlaybackCoordinator.activateInitialLevel`
+still hardcodes `run.segments().getFirst()` and still refuses anything else -- **no
+`src/main` change was needed.** Booting at a non-zero movie offset was already an exercised
+path: segment 0 of this run boots at `bk2FrameOffset` 860.
+
+`assertChainReplayThroughSegmentRow` remains the wrong tool for this and is still uncalled:
+it replays *through* a prefix and still walks from segment 0.
+
+### Measured: segments 22, 23 and 24 are entry-owned
+
+Booting at segment 22 reproduces all three divergences **exactly**:
+
+| segment (re-based) | errors | first non-camera mismatch | full chain |
+|---|---|---|---|
+| 22 (0) | 15,564 | frame 8115 `x_sub` rom=0x3B00 engine=0x2300 | identical |
+| 23 (1) | 54 | frame 1 `remaining_work` rom=17 engine=20 | identical |
+| 24 (2) | 18,722 | frame 1 `remaining_work` rom=17 engine=20 | identical |
+
+Same counts, frames, fields and values. All three are owned by their own entry conditions,
+are **not** carry-in, and are **not caused** by the bridge lag change that let the chain
+arrive there. **Segment 22 is no longer undetermined**, and 23/24 now have a direct control
+alongside the earlier lag-flag mechanism argument.
+
+Pinned by `TestS1ColdStartAttribution`, in the ratcheting-pin idiom of
+`TestS1CompleteEmeraldRunPrefix`: it asserts the defects are still present and unchanged
+from a cold start, which is what makes them attributable. Fixing one will fail it -- update
+the pin, never relax it.
+
+### Two limits of the instrument, documented rather than papered over
+
+- **The boot segment's own comparison is written to its report but is NOT raised as a chain
+  axis.** Segment 0 was absent from a 21-axis failure list while its report carried 15,564
+  errors. Read the report, not the axis list, for the boot segment. This nearly produced the
+  exact opposite conclusion here -- see below.
+- **Run-cumulative dynamic-art ordinals are meaningless in a re-based run.** The gap axes
+  show `edge_ordinal` deltas around 54,286 purely because 22 segments of transfers were
+  skipped. Ignore ordinal/transfer-id gap deltas from a cold start.
+
+### Process note: a negative result is scoped to where you looked, third time tonight
+
+The first read of the cold-start axis list showed segments 1,2,3,4,5,7,8,9,10 and no
+segment 0, and the conclusion drafted from it was "segment 22 does **not** reproduce from a
+cold start, therefore it is carry-in" -- the precise opposite of the truth. The list had
+been truncated by a `head -20` **and** the boot segment is never in it. The report file
+settled it. Same shape as the aggregated histogram and the class-name diff: the absence was
+in the view, not in the data.
