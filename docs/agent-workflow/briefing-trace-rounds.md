@@ -909,3 +909,31 @@ not just the one the headline is drawn from.
 
 The tell is a phrase that has been repeated across rounds without anyone re-measuring it. Those
 are exactly the claims that stop being checked.
+
+## Thirty-second rule: a row's emulator frame is `bk2_frame_offset + row + 1`
+
+Six rounds on one S3K segment ran aground on an apparent impossibility: the trace's row 0
+carried an animation value and a frame counter that, according to every probe, never held those
+values at the same time. Rounds proposed a mislabelled fixture, a composite row sampled at
+different instants, and a recorder that read some other byte. All three were wrong.
+
+The row was simply one frame later than everyone was looking. The recorder's arm gate calls
+`start_new_segment` — which stamps `bk2_frame_offset = emu.framecount()` — and then **returns
+without recording that frame**. So the arm frame carries no row, and a row's emulator frame is
+`offset + row + 1`. Every contiguous segment succession in the run satisfies it.
+
+The trap is that `offset + row` is also correct — for a *different quantity*. It is the 0-based
+**BK2 input index**, which is what the input-mask helper computes, and its own source comment
+warns that `emu.framecount()` runs one ahead of it in the recorder loop. One publication
+sentence states both relations, and both are true. Conflating them is what manufactured the
+contradiction.
+
+**When you write a probe, compare `emu.framecount()` to `bk2_frame_offset + row + 1`.** Comparing
+to `offset + row` silently lands on the arm frame — which is the *pre-settle* frame, still
+carrying the load's lag count with status and animation not yet written — and that frame looks
+exactly like a genuine engine divergence at row 0. It cost this segment several rounds, and it
+retracted a writer list that, re-indexed, turned out to describe events fifty rows downstream.
+
+The general form: when a measurement and a fixture disagree about *when*, suspect the index
+convention before suspecting either instrument. Two off-by-one-related quantities with similar
+names, both documented, is the setup.
