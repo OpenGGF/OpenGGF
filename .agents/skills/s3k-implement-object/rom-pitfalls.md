@@ -3021,6 +3021,58 @@ period-vs-reload trap applies to every one of them.
 
 ---
 
+## `clr.b spin_dash_flag` is a BYTE write, and the engine splits that byte across three flags
+
+**Symptom.** A player or sidekick that once passed through a spin tube, flipper or dash
+trigger never decelerates again while rolling. Ground velocity is changed only by slope
+gravity: it climbs on a slope and then sits perfectly flat on level ground, where the ROM
+loses a few units per frame. The reported field is usually `x_sub` or `x` — a sub-pixel or
+one-pixel drift — because those cross an integer boundary first, but `x_speed` and
+`g_speed` diverge on the *same* frame and are the real origin.
+
+**The ROM shape.** `spin_dash_flag` is one byte with several meanings: bit 0 is pinball
+mode, bit 7 is the speed lock, and a nonzero value also marks a spindash charge.
+`Obj_AutoSpin` writes `$01` or `$81` to it; the roll routines then test it at their own
+entry and skip their whole body when bit 7 is set:
+
+```
+Tails_RollSpeed:
+        ...
+        tst.b   spin_dash_flag(a0)
+        bmi.w   loc_14DF0          ; skip input, friction AND deceleration
+```
+
+(`docs/skdisasm/sonic3k.asm:28180-28181`; `Sonic_RollSpeed` at `:22935-22936` is identical.)
+Every ROM site that releases the player writes the whole byte — `move.b #0,spin_dash_flag(a1)`
+or `clr.b spin_dash_flag(a1)` — so all three meanings clear together.
+
+**What to check.** The engine represents that one byte as `pinballMode`,
+`pinballSpeedLock` and `spindash`. **Any port of a `clr.b`/`move.b #0` to `spin_dash_flag`
+must clear all three.** Clearing a subset leaves a latch that no later code will remove,
+and the symptom appears thousands of frames later in a completely different object's
+neighbourhood — the AIZ ride vine's grab (`AIZRideVineHandle_CheckGrab`,
+`docs/skdisasm/sonic3k.asm:46743`) cleared only the charge, and a lock set by a spin tube
+~3,100 rows earlier survived to the end of the level.
+
+**How to find it fast.** Put a stack probe on the *setter* and count transitions across the
+whole segment. One `-> true` and no `-> false` in four thousand rows is conclusive on its
+own, and takes one run. Do not start from the reported field: check whether `x_speed` and
+`g_speed` diverge on the same frame, and if they do, the sub-pixel is downstream.
+
+**Do not assume the constant is wrong.** The engine's rolling friction here was already
+exactly right (`getRunAccel() / 2`, matching `Acceleration_P2 asr #1`). Instrument the
+branch before touching a value — the defect was that a correct computation was being
+skipped, and any "correction" to the friction number would have been a fitted model.
+
+**Known remaining sites (audit, unverified).** `ForcedSpinObjectInstance` (S2),
+`MGZDashTriggerObjectInstance` and `CnzCannonInstance` clear pinball mode and the charge
+but not the bit-7 lock. Check each against its own ROM write before changing it.
+
+**Originating commit.** AIZ ride-vine grab clears the full byte; S3K complete-emeralds
+chain segment 6 `1,955 -> 0` errors (segment green).
+
+---
+
 ## A grab-and-hold object drops a rider whose `render_flags` bit 7 is clear
 
 **Symptom.** A player or CPU sidekick is captured by a grab object (vine handle, grapple,

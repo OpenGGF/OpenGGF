@@ -867,3 +867,24 @@ third is the one that gets skipped.
 The tell that was available and missed: the round's own story left a loose thread unexplained
 (why a cold start behaved differently), and it did not pull it. **An explanation that leaves one
 of your own observations unaccounted for is not finished**, however well it fits the rest.
+
+## Thirtieth rule: a mass-error run is an environment artefact until proven otherwise
+
+A default-suite run reported 13,834 tests and 3,745 errors. The cause was
+`UnsatisfiedLinkError: Failed to locate library: libglfw.so` — a race on the shared
+`/tmp/lwjgl_farrell` native-extraction directory against a concurrent run in another worktree.
+The clean re-run gave 15,193. The round discarded the first rather than reporting it.
+
+Two tells, and they are cheap: the failures are `NoClassDefFoundError` / `UnsatisfiedLinkError`
+on natives rather than assertions, and the test *count* is far below the known total. Grep the
+log for `libglfw` before reading anything into the numbers.
+
+Note this is a **different** artefact from a self-collision between two Maven runs in one
+worktree, and it does not require that: two runs in *different* worktrees are enough, because the
+native extraction directory is shared across the machine. So "I only have one run in my tree" is
+not protection.
+
+The general form, which now has three instances this session: **before believing a number that
+would be a big result, check whether the run that produced it was healthy.** A truncated run
+reports fewer red and reads as an improvement; a native-extraction race reports thousands of
+errors and reads as a catastrophe; both are the environment, not the change.
