@@ -94277,3 +94277,70 @@ cold start ever fails this handoff, the `-216` stops being carry-in and the diag
 
 No item on the S1 tail is undetermined any more. Segments 22, 23 and 24 are entry-owned and
 not change-caused; the `-216` is carry-in with a stated method for narrowing it.
+
+## 2026-08-20 -- the `-216` is lost INSIDE segment 24, not accumulated across the run
+
+Branch `feature/ai-216-bisect-r1` off `74e3dc506`. **Found, not fixed.** Documentation only;
+no committed engine or harness change this round.
+
+The specified method was to bisect the boot segment downward from 24 until the
+`lz1_2 -> lz2` handoff started failing. **That method does not work, and a better one
+replaced it.** Both results are recorded because the failed method is itself a limit on the
+instrument.
+
+### Why the bisect is blocked: the instrument can only boot at some segments
+
+Booting below 22 never reaches the handoff at all. Checked positively -- the
+`lz1_2 -> lz2` branch print is simply **absent** for those runs, which per the rule this
+frontier earned means *not reached*, never *clean*. Each fails at its own **first** boundary,
+in two distinct ways:
+
+| boot | segment | outcome |
+|---|---|---|
+| 24, 23, 22 | `lz1_2`, `lz1`, `syz3_2` | reaches the handoff; `firstGameplayFrame=0` |
+| 21, 18 | `syz3`, `syz2` | `segment 1 lost production ownership before source closure`; `syz2` also mismatches `x` at trace frame 0 (expected 0x0030, actual 0x072A) |
+| 19, 16 | `syz2_2`, `syz1` | `coordinator denied segment 1 admission in phase TRANSITION_GAP` |
+
+**Instrument limitation, now known:** `assertChainReplayFromSegment` can boot only at
+segments whose start state and whose *exit boundary* are both reachable from a plain level
+load. A segment that returns from a special stage carries a position the cold boot cannot
+reconstruct, and a segment whose exit is a special-stage entry is refused admission from
+`TRANSITION_GAP`. In this run's tail only 22, 23 and 24 satisfy both.
+
+### The better method, and the result
+
+Rather than bisecting boots, measure the cursor deficit **at every segment start** in the
+full chain -- each segment knows its own `bk2FrameOffset`, so the deficit is directly
+observable without any cold start:
+
+    0 ghz1 0    1 ss 0     3 ghz2_2 0   4 ss_2 0    6 ghz3_2 0
+    7 mz1 1     8 mz1_2 1  9 ss_3 0    11 mz2_2 0  12 mz2_3 1
+   13 ss_4 0   15 mz3_2 0  16 syz1 1   17 ss_5 0   19 syz2_2 0
+   20 ss_6 0   22 syz3_2 0 23 lz1 1    24 lz1_2 1
+
+**Every observed segment start is 0 or 1 -- including segment 24 itself.** The cursor is
+correct entering `lz1_2`. The 216 frames are therefore **not accumulated across the run**;
+segment 24 consumes 216 fewer frames than its 16,294 recorded rows, and arrives short at its
+own exit.
+
+(Segments 2, 5, 10, 14, 18 and 21 are absent from that list because they are consumed inside
+the special-stage and bridge blocks rather than at the top of the walk. Their absence is by
+construction and is not evidence either way.)
+
+### Restated
+
+The `-216` is **not** a run-long cursor leak. It is a **frame-consumption shortfall inside
+segment 24**, present when segment 24 is entered from the chain and absent when it is entered
+cold -- so it depends on carried-in engine state that is *not* the cursor, which enters
+correct.
+
+**The bridge lag change is neither implicated nor exonerated.** It cannot be reached by this
+measurement: the change alters how the chain traverses the `ss_5 -> syz2` bridge at 17->18,
+and every segment start after that, including 22, 23 and 24, has a correct cursor. What
+differs on arrival at 24 is some other engine state, not yet identified.
+
+### Next
+
+Confined to segment 24. Compare `lz1_2` executed row-for-row between a chain entry and a cold
+entry and find where the two diverge in frames consumed -- 435 of its rows are recorded lag
+frames, and lag rows are exactly where consumption and recording can disagree.
