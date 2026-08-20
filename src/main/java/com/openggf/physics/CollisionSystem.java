@@ -196,34 +196,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystem.Angl
         secondaryAngleRegister = probeAngleOrEmptySentinel(left);
     }
 
-    /**
-     * Zeroes the shared floor-angle registers the way a level load does.
-     *
-     * <p>Both registers are level-scoped RAM inside the block {@code Level_ClrRam}
-     * wipes, alongside the player last-loaded-DPLC registers the art pipeline
-     * already clears there. Sonic 2 runs
-     * {@code clearRAM Misc_Variables,Misc_Variables_End}
-     * (docs/s2disasm/s2.asm:4810) and {@code Primary_Angle} / {@code Secondary_Angle}
-     * sit inside it (docs/s2disasm/s2.constants.asm:1484, 1558, 1560, 1629), two
-     * entries past {@code Sonic_LastLoadedDPLC} at :1556. Sonic 1 is the same
-     * shape: {@code clearRAM v_levelvariables} (docs/s1disasm/sonic.asm:2742) with
-     * {@code v_anglebuffer} / {@code v_anglebuffer2} inside it
-     * (docs/s1disasm/_Variables.asm:179, 232, 234, 301).
-     *
-     * <p>The registers matter across a load because the airborne landing probe
-     * does not seed them: {@code Sonic_CheckFloor} leaves a missing side's byte
-     * untouched, unlike grounded {@code Player_AnglePos}, which preloads the
-     * empty-floor sentinel {@code 3} first. A landing whose side probe finds
-     * nothing therefore publishes whatever the registers already held, and the
-     * next grounded control frame reads that byte as its {@code tilt} /
-     * {@code next_tilt} copy. Carrying a stale {@code 3} across a level load
-     * makes that frame see an empty-tile sentinel and take the balance branch
-     * on a ledge the ROM stands on.
-     */
-    public void clearAngleRegistersForLevelLoad() {
-        resetAngleRegisters();
-    }
-
     public int getPrimaryAngleRegister() {
         return primaryAngleRegister;
     }
