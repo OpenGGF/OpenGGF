@@ -177,6 +177,11 @@ public final class TraceSuppressedRowClosure {
                             HardwareServiceBoundary.PRE_MAIN_LOOP);
                 }
             }
+            // The absorbed lag V-blank is behind this row, so the iteration that
+            // absorbed it reaches its own loop tail here, before the row is
+            // sampled (docs/s1disasm/sonic.asm:709 VBlank_Lag, :3032 RunPLC).
+            // The tail arms only what its own readiness allows.
+            context.runtimeArtCoordinator().runHeldIterationLoopTail();
         }
 
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {

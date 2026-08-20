@@ -97304,3 +97304,102 @@ this measurement it repairs two segments and costs one. Whether it lands is
 still a separate decision under the reviews' remaining conditions — the 242-edge
 one-to-one accounting and the contract/status documentation reconciliation are
 untouched by this round.
+
+## 2026-08-20 — The `ghz2_2` edges are not a descriptor question: the held iteration's `RunPLC` has no row to run on
+
+Branch `bugfix/ai-s1-ghz2-edges-r1`, worktree off `origin/develop` at `9d829ec75`,
+with the held fixture delta from `bugfix/ai-s1-rerecord-fixture-r1` applied as an
+unstaged working-tree change. Control arm: same base, same fixture, engine
+unchanged.
+
+### Retract: the engine does submit `ghz2_2`'s ordinals, with the right descriptors
+
+The previous entry's reading — "the engine submits exactly one further arm,
+ordinal 14, fingerprint `afaa752d…`, and never submits into 14-20" — measured
+`TestS1CompleteEmeraldVisualRun`'s **first** test, which pins at segment 3's
+*admission* and so stops before `ghz2_2` has run a single row. The second test
+walks the segment, and there the engine submits and consumes `#14`, `#15` and
+`#16` with the recorded fingerprints exactly.
+
+Enumerating every S1 `ArtLoadCues` entry through the recorder's canonical
+descriptor encoding identifies both fingerprints outright:
+
+| fingerprint | PLC | entry |
+|---|---|---|
+| `3224e355…` | `plcid_Explode` (2) | `0x39F62`, tile 1440, 96 patterns |
+| `32e1caaa…`, `f5ff42a5…` | `plcid_GHZAnimals` (`$15`) | `0x3B884` / `0x3BF06` |
+| `afaa752d…` | `plcid_GHZ` (4) | `0x3CB3C`, tile 0, 461 patterns |
+
+`afaa752d…` is the level header's own zone-art PLC, armed during the pre-row
+level load and released unrepresented — as it is at `ghz1`. `3224e355…` and the
+two animal entries are what `Card_ChangeArt` queues
+(`_incObj/34 Title Cards.asm`:155-166), and `Sonic1FixedTitleCardManager`
+queues them correctly. There was no descriptor defect to find.
+
+### What actually blocks the fixture: one row, `queue.s1_nemesis_plc`
+
+With the fixture applied the chain's segment 3 fails at `ghz2_2` frame 109,
+`remaining_work rom=11 engine=14` — the same first error the visual run stalls
+on. `ghz2_2` frame 107 is the repo's only recorded held-iteration row: 106 ends
+with `remaining_work` 3, 107 completes the entry and arms nothing, the lag
+V-blank closes 108 **already carrying the armed 14**, and 109 services it to 11.
+
+The ROM reaches `RunPLC` (sonic.asm:3032) after `VBlank_Lag` (:709) and before
+108 is sampled. The engine could not: `a51ce6820` exempted a hardware-timed arm
+from the row-shape hold, and a V-blank-only closure has no preparation boundary
+of its own (`hasPreparationBoundary(LAG)` is false), so the tail had no row to
+run on until 109 — where it armed too late for 109's own V-blank to service it.
+
+### Rejected candidate: restore the row-shape hold for timed arms
+
+Committed on this branch and then reverted. Holding the tail and running it from
+`claim()` on the lag closure fixes segment 3 and **regresses segments 12 and 15**
+(`mz2_3` frame 101, `mz3_2` frame 102, `prepared rom=true engine=false`), taking
+the chain from 7 axes to 8. Restricting the hold to `LAG` claims changes nothing.
+
+The recordings say why, and the two shapes are genuinely different:
+
+| | completion row | which row carries the arm | lag row |
+|---|---|---|---|
+| `ghz2_2` | 107, arms nothing | **108, the lag row** | 108 |
+| `mz2_3` | 101, arms in the same row | **101, an ordinary row** | 102, services nothing |
+| `mz3_2` | 102 | **102** | 103 |
+
+A hold guesses, and guesses wrong for two segments out of three. Which row arms
+is exactly what the recorded edge's `raw_frame` already states.
+
+### Landed: give the suppressed row the loop tail it is owed
+
+`RuntimeArtCoordinator.runHeldIterationLoopTail()` (default no-op), implemented
+by `Sonic1RuntimeArtCoordinator` as `Sonic1PlcService.prepare()` and called by
+`TraceSuppressedRowClosure` on every suppressed row. It offers the tail the row;
+`releaseArm()` still decides, from the arm's own submitted job, whether anything
+becomes visible — so `mz2_3`'s lag row 102, which the recording gives no
+completion, arms nothing and stays green. The call is gated on
+`ownsTimedLoopTailArm()`, the exact complement of the hold's exemption, so each
+configuration keeps exactly one mechanism. No new port access; nothing keys on a
+frame, zone, route or game.
+
+### Measurements, all at `9d829ec75` + fixture, one variable
+
+- S1 chain **7 axes → 6**: segment 3 green; segments 12, 15, 22, 23, 24, both
+  `dynamic-art-gap` axes and the `-216` walk-failure are unchanged.
+- `TestS1CompleteEmeraldVisualRun` 1 failure → 0. The second test now walks past
+  the second giant ring, the special stage, GHZ3 and MZ1 to segment 11.
+- S2 chain 9 axes and S3K chain (segment 8 ownership) byte-identical.
+- `-Ptrace-replay` 191 tests, 53 failures, 8 errors — class set, `Tests run: 0,`
+  lines and full failure set **byte-identical** to the control.
+- `-Pguards` 500/0, including `TestHardwareTimingAuthorityGuard` 24/0.
+- Default suite 15196 tests, 52 failures both arms; the error delta (69 → 64) is
+  the known order-dependent noise — six `TestGameLoopSpecialStageEntryPresentation`
+  / `TestMgzEndBossKnuxInstance` reds gone, one `TestCnzHoverFanObjectInstance`
+  red gained, which is green in isolation. Class set identical.
+
+### Residual, found not fixed
+
+`TestS1CompleteEmeraldVisualRun`'s first test still errors at teardown on
+`ghz2_2`'s seven edges. Its pin stops at segment 3's admission, before any of
+those rows, but teardown closes through `verifyRunComplete()`, which demands
+every edge of the whole run. `verifyPrefixComplete(inclusiveRawFrame)` exists for
+exactly this and would still fail on any edge at or before the stop row. That is
+a harness closure question, not an engine defect, and not an invariant to relax.
