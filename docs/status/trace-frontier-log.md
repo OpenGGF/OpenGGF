@@ -99571,3 +99571,48 @@ shared cursor is frozen at 9701 and the rows come from the gap driver's own
 That sequence, not the cursor and not `lastMovieRowRun`, is what moves by one under the
 hand-back, and it is the next round's instrument.
 The candidate stays parked at `091ce15ba` on `bugfix/ai-s2-chain-r7`.
+## 2026-08-20 — S1 Obj3F explosion spawn frame: landed, and the LZ3 late arm is gone
+
+Commit `668667729` on `bugfix/ai-s1-explosion-spawn-frame`, measured against `687f19ef0` in one
+worktree with the control detached at the base commit.
+
+The previous entry's "deliberately not fixed" is now closed. The three-game claim resolved as: the
+predecrement-on-spawn is correct for Obj27 in **all three** games — S1 `ExItem_Main` falls through
+at `sonic.lst` 9450→9456, S2 `Obj27_Init` at `s2.asm:46734-46737`, S3K at
+`sonic3k.asm:42202-42205` — and wrong **only** for S1's Obj3F, whose `Expl_Main` ends
+`jmp (QueueSound2).l` (`sonic.lst`: 94C0). S2's boss explosion is a different object entirely
+(`ObjC3`, init ends `rts`), already modelled by `BossExplosionObjectInstance`, which **already**
+skips its own spawn frame. So the fix is per-id, not per-game, and the blast radius is smaller
+than feared: Obj3F has exactly three construction sites in `src/main`, all Sonic 1 — the prison
+capsule, the Walking Bomb badnik and the Ball Hog cannonball — and none in the test tree.
+
+Command (both arms):
+`mvn -Ptrace-replay -Dmse=off -Ds1.rom.path=… -Ds2.rom.path=… -Ds3k.rom.path=… test`
+
+| axis | control `687f19ef0` | fix `668667729` |
+|---|---|---|
+| `-Ptrace-replay` | 800 tests, 6 red, 4 skipped | 800 tests, 6 red, 4 skipped |
+| red class set | — | **identical, both directions** |
+| S1 chain segment 26 (lz3) | 11437 errors | **11334** |
+| every other S1/S2/S3K segment | — | unchanged |
+| `-Pguards` | — | 500/0 BUILD SUCCESS |
+| default suite | 15194 tests, 56F/74E | 15194 tests, 55F/74E |
+
+The three default-suite class names that differ (`TestBubblerObjectInstance`,
+`TestCheckpointStarpostGraphRewind`, `TestS3kHczCgzFanGraphRewind`) each pass in isolation on both
+arms, and none can reach the changed path. Treated as the known reused-fork ambient family, not
+attributed to the fix either way.
+
+An initial version cached the predicate in a `final` field and failed `TestRewindCoverageGuard`
+correctly; it is now read from the spawn's object id, which is what the ROM's routine dispatch
+reads and is reconstructible from the rewind-captured spawn alone. No baseline entry was added.
+
+### The frontier moved, under the unlanded sidecars
+
+Measured with the S1 timing sidecars applied on top (branch `bugfix/ai-s1-fixture-landing-r1`,
+still **not landed**): the first unmatched recorded edge moves from lz3
+`NEMESIS_PLC_QUEUE#166 @ raw 12247` to slz1 `#170 @ raw 4570`. Segments 12 and 15 go green and
+segment 27 falls 14233 → 5212. Segments 28-33 still collapse, now owned by the **slz1 horizontal
+drift** — `dx` accumulating 0 → −33 from rom frame 4305, which puts Sonic ~30 px behind and makes
+him reach the signpost about five frames late. That is the parked follow-up; the LZ3 animal-wait
+defect is closed.
