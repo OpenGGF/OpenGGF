@@ -99937,3 +99937,59 @@ sets. Mapping them onto the port's contract — each iteration one recorded row,
 emitted `PRE_MAIN_LOOP` then `VINT_SERVICE` inside one latched row because the row never
 advanced. That mapping is the one inference here that is not pure ROM reading, and it
 should be confirmed against the recorded boundary sequence before it is relied on.
+
+## 2026-08-20 — Boundary-mapping confirmation, and a correction to the two-shape claim
+
+The one step of the ordering derivation that was not pure ROM reading, checked against the
+recorded boundary sequence and re-read in the disassembly.
+
+**Correction.** The previous entry said the transition window's two loops "emit different
+boundary sets". They do not. Read side by side, `loc_62CC` (7736-7748) and `loc_7870`
+(9735-9743) are identical except for `Process_Sprites` / `Render_Sprites`:
+
+```
+move.b #$C,(V_int_routine).w   |  move.b #$C,(V_int_routine).w
+jsr (Process_Kos_Queue).l      |  jsr (Process_Kos_Queue).l
+bsr.w Wait_VSync               |  bsr.w Wait_VSync
+jsr (Process_Sprites).l        |
+jsr (Render_Sprites).l         |
+bsr.w Process_Nem_Queue_Init   |  bsr.w Process_Nem_Queue_Init
+jsr (Process_Kos_Module_Queue) |  jsr (Process_Kos_Module_Queue).l
+```
+
+Both set `V_int_routine` to `#$C`, both call `Process_Kos_Queue` **before** `Wait_VSync`,
+and both close on `Process_Kos_Module_Queue`. So the two spans emit the **same three
+service points in the same order**; only the object pass between VInt and the module step
+differs. Per iteration k the emission order is `PRE_MAIN_LOOP` (row k-1's tail, exactly as
+`HardwareServiceBoundary` documents), then VInt for row k, then the module step for row k —
+i.e. within a row, `VINT_SERVICE` → `POST_OBJECTS` → `PRE_MAIN_LOOP`. The row model
+therefore needs one boundary shape, not two. That simplifies the round.
+
+**What the recording confirms.** Across all 8,330 recorded hardware-timing edges in the
+fixture corpus there are exactly two `(boundary, kind)` combinations, with no exceptions:
+
+| Boundary | Kind | Edges |
+|---|---|---|
+| `post_objects` | `kos_module_queue` | 3,353 |
+| `pre_main_loop` | `kos_decompression_queue` | 4,977 |
+
+Two rows carry more than one edge; both are `post_objects` then `pre_main_loop`, in order.
+Zero rows are out of order. Crucially, `#101`/`#102` complete at `post_objects` while
+`LoadLevelLoadBlock` is blocked in `loc_7870` — a loop with no object pass — and a parent
+queued there can only retire inside that loop, since it blocks until `Kos_modules_left` is
+zero. **`POST_OBJECTS` names the module-queue service point, not "an object pass ran".**
+An implementation that suppressed the boundary where no objects execute would never match
+the level-art edges.
+
+**What the recording cannot confirm.** `vint_service` appears in **zero** recorded edges,
+anywhere in the corpus. The recording therefore says nothing about the VInt position in the
+per-row order — and that is precisely the boundary wall 3 fails on (`previous=PRE_MAIN_LOOP,
+current=VINT_SERVICE`). The port's ordinal check is an engine-side invariant, not a recorded
+fact, so the VInt position rests on the ROM reading above rather than on the fixtures. That
+reading does close it: `Process_Kos_Queue` runs ahead of `Wait_VSync` in both loops, so the
+`PRE_MAIN_LOOP` the engine emitted belonged to the *previous* row. Wall 3 is a row-advance
+failure, not a boundary-order failure.
+
+**A second-angle confirmation of game neutrality.** All 274 hardware-timing files in the
+corpus are S3K; S1 and S2 have none at all. That is independent of the `Game_Mode` bit-7
+argument recorded earlier and points the same way.
