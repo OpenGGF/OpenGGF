@@ -101192,3 +101192,67 @@ the pair against all three anchors together: chain `slz1` f3871, `slz1_completer
 
 Residual on segment 27 remains 10 slot-divergent frames, all of them one `0x25` the ROM holds in
 slot 41 (then 40) that the engine does not, sampled f4637-f4736.
+
+## 2026-08-21 — SETTLED: the ROM's capsule lock writer runs at row 6007, so the engine is 14 rows early
+
+Round off `origin/develop` `a2a6a2114`. **Found, not fixed — nothing landed but this entry.**
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+### The signature
+
+`sub_865DE` creates its children from two blocks whose counts are in the data itself:
+`ChildObjDat_86B7A` declares `dc.w 5-1` with code `loc_867D6`, and `ChildObjDat_86B9A`
+declares `dc.w 9-1` with code `loc_86820` (`docs/skdisasm/sonic3k.asm:182188-182202`). So the
+routine's fingerprint in a recording is a **five-and-nine burst on one frame**.
+
+Counting identical `object_appeared` types per frame across the whole segment, exactly one row
+carries it:
+
+```
+row 6006  {0x000867CA: 1}
+row 6007  {0x00085102: 5, 0x0008689C: 9, 0x0008488A: 1, 0x0001E66E: 1}
+row 6008  {0x000868B6: 1}
+```
+
+Nine `0x0008689C` — an address inside the same routine region as `loc_86820` (`$86820` ->
+`$8689C`, the pointer the child's own init leaves behind) — alongside five of another type.
+**`sub_865DE` runs on row 6007.**
+
+### The 6620 burst is the same nine objects, not a second creation
+
+`object_appeared` fires on a slot's **code-pointer change**, not only on creation: slot 4 emits
+it for `0x000863C0` and then `0x000863D6` on consecutive rows 6620 and 6621, which is one
+object advancing a routine. The nine `0x000868F2` at row 6620 are therefore the nine children
+created at 6007 advancing (`$8689C` -> `$868F2`), which is why that row shows a nine with no
+accompanying five. The competing attribution is closed.
+
+### The number
+
+| | ROM | engine |
+|---|---|---|
+| capsule open / `sub_865DE` | **6007** | `onParentOpen` **5993** |
+| `Ctrl_2_locked` published | 6007 | lock **5994** |
+
+**The engine opens the capsule 14 rows early.** That is exactly enough to swallow the row-6000
+follow nudge, which sits between 5994 and 6007, and nothing else — which is why the symptom is
+one pixel on one row.
+
+The previous entry's "on the order of thirteen rows" is confirmed at 14, now on a positive
+signature rather than a consistent-looking coincidence. The retracted "630-670 rows" is closed
+for good.
+
+### Corroboration
+
+`Ctrl_2_held_logical` is `0x18` from row 5990 through 6112 and `0x00` from 6113. Under a
+negative `Ctrl_2_locked` both writers of `Ctrl_2_logical` are skipped (`loc_13830`,
+`:26195-26198`), so the byte freezes — consistent with a lock at 6007 holding `0x18` until a
+release at 6113, a 106-row window the engine also models (`releaseTailsControlNow` /
+`tickTailsControlRelease`). Note this is corroboration only: it is equally consistent with a
+later lock, which is why the child-count signature is the evidence and this is not.
+
+### Next
+
+Why the engine's capsule-button trigger fires 14 rows early. Both sides agree on the boss
+defeat (5487) and the capsule spawn (5671), and Sonic's physics match through 5999, so the
+14 rows are in the capsule's own descent-to-pressable behaviour, not in the fight or in
+Sonic's approach.
