@@ -94114,3 +94114,119 @@ tell your own collision from another worktree's harmless CPU contention.
 f3887, `sidekick_x_sub rom=0x7700 engine=0x7A00` — three sub-pixel units on the sidekick,
 still inside the vine sequence's aftermath (`sidekick_angle` first errors at f3885 in the
 pre-fix histogram, so this region was already the second cluster). Not instrumented.
+
+## 2026-08-20 — f3887: a spin-tube speed lock the vine grab never cleared. Segment 6 GREEN
+
+Branch `bugfix/ai-s3k-f3887-r1` off `dba63f7d9`. Fix landed. Chain segment 6
+**1,955 -> 0 errors — the segment is green.** Segment 4 unchanged at 250.
+
+### The distribution chose the hypothesis, and it was not the headline field
+
+Per-field histogram at this base, split by frame. All 1,955 errors fall in ONE 400-frame
+window (3800-3999: 1007, 4000-4199: 948) and all are sidekick fields:
+
+```
+  216  first=3887  sidekick_x_speed      162  first=3913  sidekick_mapping_frame
+  216  first=3887  sidekick_g_speed      120  first=3913  sidekick_status_byte
+  215  first=3887  sidekick_x_sub        109  first=3934  sidekick_angle
+  215  first=3888  sidekick_y_sub         39  first=3919  sidekick_air
+  208  first=3895  sidekick_x             34  first=4017  sidekick_ground_mode
+  186  first=3902  sidekick_y             24  first=3913  sidekick_animation_id
+  185  first=3888  sidekick_y_speed        8  first=3913  sidekick_rolling
+```
+
+`x_speed` and `g_speed` diverge on the SAME frame as `x_sub`, so the reported
+`sidekick_x_sub` was where the comparator stopped, not a sub-pixel accumulation defect.
+The previous round's guess — "second cluster of the same region, probably a rounding path"
+— was **wrong**, and the histogram killed it before any time was spent on it.
+
+### The value pairs, which name the mechanism outright
+
+Tails lands **rolling** at r3885 (`rol=1`, `air=0`). Then, per frame:
+
+| | slope rows 3887-3894 (`angle=0x04`) | flat rows 3895-3902 (`angle=0x00`) |
+|---|---|---|
+| ROM `ground_vel` delta | **+4** | **-3** |
+| engine `ground_vel` delta | **+7** | **0** |
+
+The engine runs **+3/frame hotter than the ROM, on every frame, in both regimes**. On the
+flat rows the slope term is exactly zero, so the ROM's -3 is entirely rolling friction and
+the engine applies none. (From r3903 the ROM's delta becomes -0x23 = friction 3 + the
+`#$20` controlled-roll deceleration, which confirms the decomposition.)
+
+### Instrumenting the branch rather than believing the arithmetic
+
+The engine *does* implement that friction — `doRollSpeed` computes
+`naturalDecel = getRunAccel() / 2`, matching `Tails_RollSpeed`'s
+`move.w Acceleration_P2,d5 / asr.w #1,d5` (sonic3k.asm:28171-28172). So "the engine omits
+friction" needed proving, not assuming. A probe on the roll path printed:
+
+```
+3895  ROLLPATH gs 0217 ->repel 0217 ->speed 0217  runAccel=0006 ... pinball=true
+```
+
+`runAccel=0x06`, so the engine's friction would be **exactly the ROM's 3**. The constant
+was never wrong. `pinball=true` was: `doRollSpeed` early-returns on
+`getPinballSpeedLock()`, skipping input, friction and deceleration, so only slope gravity
+could move the speed — which is precisely the observed shape.
+
+That early return is itself ROM-correct: `Tails_RollSpeed` opens with
+`tst.b spin_dash_flag(a0) / bmi.w loc_14DF0` (sonic3k.asm:28180-28181). The ROM decelerates,
+so ROM's bit 7 is CLEAR and the engine's is SET. The defect is upstream of the roll code.
+
+### The upstream write
+
+A stack probe on `setPinballSpeedLock` over the whole segment found **exactly one
+transition in ~4,200 rows**: set at row 209 by `AutoSpinObjectInstance.enableSpin`, and
+never cleared again.
+
+`AIZRideVineHandle_CheckGrab` clears it: `move.b #0,spin_dash_flag(a1)`
+(sonic3k.asm:46743), and Tails grabs that handle at row 3318. It is a **byte** write, and
+the engine splits that one ROM byte across three flags — pinball mode (bit 0), pinball
+speed lock (bit 7), and the spindash-charge sense. The port called only
+`setSpindash(false)`, so bit 7 stayed latched from the row-209 spin tube for the rest of
+the level.
+
+### The fix
+
+Three lines at the ported grab site: clear all three flags the ROM's byte write clears.
+**No constant introduced**; the friction value was already correct and untouched.
+
+### Measured — both arms, same worktree, control by same-tree revert
+
+`-Ptrace-replay`:
+
+| | control (dba63f7d9) | with fix |
+|---|---|---|
+| totals | 794 run, 5 failures, 4 skipped | **identical** |
+| red classes | 5, incl. `TestS1ColdStartAttribution` | **identical set** |
+| s1 seg12/15/22/23/24, s2 seg15 | 3 / 6 / 15564 / 54 / 18722, 7575 | **all identical** |
+| s3k seg4 | 250 | **250** |
+| **s3k seg6** | **1,955 @ f3887** | **0 — GREEN** |
+
+`TestS1ColdStartAttribution` (S1 `camera_y` at frame 475) is **red in both arms** — it is
+pre-existing on `dba63f7d9`, not a regression, and is unreachable from an S3K object class.
+
+Default (non-trace) suite: control 15,193 run / 54 red classes; fix 15,193 run / 53 red
+classes. **Zero classes red only with the fix.** The one class red only in the CONTROL is
+`TestGameLoopSpecialStageEntryPresentation`, a member of the known order-dependent set.
+
+### Audit — the same incomplete port exists elsewhere, NOT fixed here
+
+`clr.b spin_dash_flag` zeroes the whole byte, but six engine sites clear only some of the
+three flags. Each needs its own ROM check before being touched, and none was changed:
+
+- `ForcedSpinObjectInstance` (S2), `MGZDashTriggerObjectInstance`, `CnzCannonInstance` —
+  clear pinball mode + spindash, not the bit-7 lock.
+- `CollisionSystem:1226`, `PlayableSpriteMovement:864` and `:3747` — engine-internal
+  roll-preservation and landing guards rather than direct ports of a ROM byte write; these
+  are *not* obviously the same bug and should not be changed without their own evidence.
+
+### Method note
+
+One default-suite run reported 13,834 tests with 3,745 errors and was **discarded, not
+reported**: the cause was `UnsatisfiedLinkError: Failed to locate library: libglfw.so`, a
+race on the shared `/tmp/lwjgl_farrell` native-extraction directory against a concurrent
+run in another worktree. A clean re-run gave 15,193. A mass-error run whose failures are
+`NoClassDefFound`/`UnsatisfiedLink` on natives is an environment artefact; check for
+`libglfw` in the log before reading anything into the numbers.

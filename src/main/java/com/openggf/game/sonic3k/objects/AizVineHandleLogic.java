@@ -166,6 +166,20 @@ final class AizVineHandleLogic {
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
+        // ROM AIZRideVineHandle_CheckGrab: move.b #0,spin_dash_flag(a1)
+        // (sonic3k.asm:46743). That is a byte write, so it clears the WHOLE
+        // field, and the engine splits that one ROM byte across three flags:
+        //   bit 0 ($01) -> pinball mode
+        //   bit 7 ($80) -> pinball speed lock
+        //   the spindash-charge sense used by Tails_Spindash
+        // Clearing only the charge left bit 7 latched from an earlier
+        // Obj_AutoSpin capture, and Tails_RollSpeed's own entry test
+        //   tst.b spin_dash_flag(a0) / bmi.w loc_14DF0   (sonic3k.asm:28180-28181)
+        // then skipped input, friction and deceleration for the rest of the
+        // level -- so a landed, rolling sidekick kept its ground_vel forever
+        // and only slope gravity could change it.
+        player.setPinballMode(false);
+        player.setPinballSpeedLock(false);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM grab path (sonic3k.asm:46739-46743 loc_22302) writes only:

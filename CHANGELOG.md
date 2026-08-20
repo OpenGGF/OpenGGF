@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The AIZ ride-vine grab clears the whole `spin_dash_flag` byte, releasing a stale
+  spin-tube speed lock.** `AIZRideVineHandle_CheckGrab` writes
+  `move.b #0,spin_dash_flag(a1)` (`docs/skdisasm/sonic3k.asm:46743`) — a byte write, so it
+  zeroes every bit. The engine models that one ROM byte as three flags (pinball mode from
+  bit 0, the pinball speed lock from bit 7, and the spindash-charge sense), and the ported
+  grab cleared only the charge. A sidekick that had passed through an `Obj_AutoSpin` spin
+  tube therefore kept bit 7 latched for the rest of the level, and
+  `Tails_RollSpeed`'s own entry test `tst.b spin_dash_flag(a0) / bmi.w loc_14DF0`
+  (`docs/skdisasm/sonic3k.asm:28180-28181`) then skipped input, friction and deceleration
+  on every subsequent roll — so a landed, rolling Tails held her ground velocity forever
+  and only slope gravity could change it. No physics constant changed: the engine's rolling
+  friction already matched `Acceleration_P2 asr #1`; the branch that applies it simply never
+  ran.
+
+### Fixed
 - **The AIZ giant ride vine releases a player who scrolls off screen.**
   `AIZRideVineHandle_ProcessPlayer` tests the held player's `render_flags` before the
   routine check and before it reads the buttons — `tst.b render_flags(a1) / bpl.w
