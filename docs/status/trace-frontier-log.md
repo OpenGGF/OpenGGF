@@ -96376,24 +96376,37 @@ wave splash through `InitialWaveSplashSstOwner`.
 Same-tree control at `4637322cb`; `-Dmse=off`, `-Dsurefire.runOrder=alphabetical`
 on both arms, all three ROM paths explicit, JDK 21, arms serial.
 
-- `-Ptrace-replay`: control **796 / 6 failures / 0 errors / 4 skipped**, run twice
-  with an identical failure set. Fix **796 / 5 / 0 / 4**. The three complete-run
-  chains and the two S3K/S2 segment failures are present in both arms; the S3K chain
-  axis report is byte-identical.
+- `-Ptrace-replay`: **796 tests / 6 failures / 0 errors / 4 skipped on both arms.**
+  Control run three times (twice in a second worktree at `4637322cb`, once
+  same-tree from a detached checkout of `4637322cb`), fix run twice. The three
+  complete-run chains and the two S3K/S2 segment failures appear in every run.
+  The fix arm's *first* run reported 5, with
+  `TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart`
+  green; its second run reported 6 with that test red again, so the 5 was a flake
+  in the fix arm, not a control-side one. **No frontier moved in either
+  direction.**
 - `-Pguards`: 500/500, no budget ratchet needed (the removed raw call site is not in
   the object package the `RAW_ADD_DYNAMIC_OBJECT_*` budget covers).
+- Default suite: **15196 tests / 52 failures / 64 errors / 18 skipped on both arms**,
+  arms run in parallel in separate worktrees. Diffed by message, the failure sets are
+  identical except for two known order-dependent items -- the
+  `Sonic2SpecialStageLagModelValidationTest` bucket that drifts
+  (`segmentType=3, speedFactor=12` vs `speedFactor=0`) and a
+  `TraceSessionLauncher` identity-hash string. Nothing power-up, super-form or
+  slot-related differs.
 
 ### Not established
 
-- **Why the arms differ on `TestS1ColdStartAttribution`.** It fails in both control
-  runs (segment 22 came out with `errorCount: 0`, i.e. *cleaner* than its pin) and
-  passes in the fix arm. An S2-only change has no mechanism to reach an S1 segment
-  that runs earlier in alphabetical order, so this is most likely pre-existing
-  order/JVM-state sensitivity in a shared `reuseForks` JVM rather than an effect of
-  this change -- but that is a hypothesis, not a measurement. It is reported as a
-  green flip this round does not claim.
-- The S1 chain's reported first-error frame also moved (3181 -> 3123, different
-  segment state) with no plausible causal path from an S2-only edit; same caveat.
+- **`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` is
+  flaky under `-Ptrace-replay`.** It failed in all three control runs and in one of
+  two fix runs, always the same way: segment 22 came out with `errorCount: 0`, i.e.
+  *cleaner* than its pin expects. Run alone with `-Dtest=`, the class passes 2/2.
+  Both arms use `forkCount=1, reuseForks=true`, so the whole profile shares one JVM;
+  this looks like carried JVM state rather than anything this change touches, but
+  that is a hypothesis, not a measurement. Worth a round of its own -- a
+  characterisation pin that reports green about half the time cannot attribute
+  anything. The S1 chain's reported first-error frame varies with it (3181 vs 3123,
+  different segment states).
 - Whether S2's Super Sonic stars at slot 129 changes any recorded route. No S2
   fixture in the suite went super in a way that moved a frontier either direction.
 - **Execution order for fixed slots remains diverged** and this change widens the
