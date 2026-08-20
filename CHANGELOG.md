@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Tails' catch-up flight cancels a spindash charge, as the ROM does.**
+  `Tails_Catch_Up_Flying`'s `loc_13B50` writes `spin_dash_flag = 0` (twice) and
+  `spin_dash_counter = 0` along with the rest of the recovery flight state
+  (`docs/skdisasm/sonic3k.asm:26522-26524`). The engine ported that block but
+  omitted those two writes. Because the flag is read at the top of
+  `Tails_Spindash` (`:28696`), which only runs from the grounded routine, a
+  charge begun before an off-screen respawn survived the entire recovery flight
+  — 769 frames in the measured case — and the first grounded frame after landing
+  took the release path with a fully decayed counter, launching Tails at the
+  speed table's index-0 entry (`0x800`) instead of leaving him running. Segment 6
+  of the S3K complete-emeralds chain drops from 8,940 to 7,663 comparator errors
+  and its first non-camera mismatch moves from frame 3245 to frame 3339.
+
+### Fixed
 - **One player stands on exactly one object.** Seating a player clears the
   previous owner's standing bit in all three games: S3K's five seating helpers
   each carry `btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 /

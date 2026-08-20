@@ -3272,3 +3272,47 @@ When porting any ROM routine of this shape:
 
 **Originating commit.** S3K complete-emeralds segment 6, first non-camera mismatch
 f167 -> f3245. See `docs/status/trace-frontier-log.md`, 2026-08-20.
+
+## Port every field a ROM state block writes — an omitted clear can fire hundreds of frames later
+
+When a ROM routine installs a state by writing a block of player fields, porting "the fields
+that obviously matter" is not enough. `Tails_Catch_Up_Flying`'s `loc_13B50`
+(`docs/skdisasm/sonic3k.asm:26498-26529`) writes velocities, `status`, radii, the flip
+selector, `double_jump_flag`, `object_control`, facing, animation — and also:
+
+```
+move.b  d0,spin_dash_flag(a0)
+move.b  d0,spin_dash_flag(a0)     ; ROM writes it twice; harmless, but it IS written
+move.w  d0,spin_dash_counter(a0)
+```
+
+The engine's port had every other field and omitted those two. Nothing failed for **769
+frames**, because `spin_dash_flag` is only read at the top of `Tails_Spindash`
+(`:28696`), which runs solely from the grounded routine — and the whole recovery flight is
+airborne. The charge sat in RAM across the entire flight and detonated on the first grounded
+frame after landing: `doUpdateSpindash` saw the down button released, took the release path,
+and read the speed table at index `(counter >> 8) = 0`, launching Tails at `0x800`.
+
+What makes this class expensive to debug is the delay and the disguise. The reported
+divergence was `sidekick_y` off by **one pixel** — the roll-height adjustment applied on the
+way out of the spindash — hundreds of frames from the omission, in a different subsystem,
+wearing the signature of an unrelated known bug.
+
+When porting a ROM block-write:
+
+- **Diff the routine's writes against your port field by field.** A missed *clear* is far
+  more dangerous than a missed *set*, because a clear only matters when the field was
+  already dirty, which is exactly the case no unit test sets up.
+- **A duplicated ROM instruction is still an instruction.** Do not treat the second
+  `move.b d0,spin_dash_flag(a0)` as noise to be tidied away; it tells you the field is in
+  the block.
+- **Ask where the omitted field is READ.** If the reader is gated to a state the block's
+  own state excludes (grounded vs airborne here), the bug is guaranteed to be latent and
+  delayed rather than immediate. That is a reason to be more careful, not less.
+- **When a trace's headline field is a small positional delta, read the per-field error
+  histogram before theorising.** Here the same frame carried `g_speed 0x0800 vs 0x0024`,
+  `rolling 1 vs 0` and a roll animation; the one-pixel `y` was the least informative field
+  of the set and the only one in the headline.
+
+**Originating commit.** S3K complete-emeralds segment 6, 8,940 -> 7,663 errors, frontier
+f3245 -> f3339. See `docs/status/trace-frontier-log.md`, 2026-08-20.

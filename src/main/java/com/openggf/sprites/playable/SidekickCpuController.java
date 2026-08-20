@@ -3946,6 +3946,17 @@ public class SidekickCpuController {
         // first routine-4 frame where x_pos == target (no facing write).
         sidekick.setDirection(Direction.RIGHT);
         sidekick.setDoubleJumpFlag(0);
+        // ROM loc_13B50 also clears the spindash charge before installing the
+        // flight state: `move.b d0,spin_dash_flag(a0)` (written twice) and
+        // `move.w d0,spin_dash_counter(a0)` (sonic3k.asm:26522-26524).
+        // Catch-up flight can fire while Tails is mid-charge, and the flag is
+        // read at the TOP of Tails_Spindash (:28696), which only runs from the
+        // grounded routine. Without this clear the charge survives the whole
+        // recovery flight and the first grounded frame after landing takes the
+        // release path with a decayed counter, launching Tails at the speed
+        // table's index-0 entry instead of leaving him running.
+        sidekick.setSpindash(false);
+        sidekick.setSpindashCounter((short) 0);
 
         flightTimer = 0;
         catchUpUsesRomVisibleLevelFrameCounter = false;

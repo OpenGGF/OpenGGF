@@ -92643,3 +92643,105 @@ part.
   tool; it took one build and a ~31-second chain run.
 - `releaseSolidPassExposed`'s two-step -> one-step collapse is still unmeasured since the
   f167 fix landed adjacent to it.
+
+## 2026-08-20 — f3245 was never a one-pixel bug: a spindash surviving a respawn
+
+Branch `bugfix/ai-s3k-f3245-r1` off `0ac23fd31`. Fix landed. Segment 6: **8,940 -> 7,663**
+errors, first non-camera mismatch **f3245 -> f3339**.
+
+### RETRACT: "same one-pixel signature, plausibly the same family"
+
+That was my own hand-off caveat after the f167 round, and it is wrong. `sidekick_y
+rom=0x05C3 engine=0x05C4` is the headline field, but instrumenting the comparator's own
+per-field error stream shows what f3245 actually is:
+
+```
+3245 sidekick_g_speed   rom=0x0024 eng=0x0800
+3245 sidekick_rolling   rom=0      eng=1
+3245 sidekick_status_byte rom=0x0008 eng=0x000C   (Status_Roll set)
+3245 sidekick_animation_id rom=0x0000 eng=0x0002
+3245 sidekick_mapping_frame rom=0x0008 eng=0x0096
+3245 sidekick_y         rom=0x05C3 eng=0x05C4
+```
+
+**The engine performs a full spindash the ROM never performs.** The one-pixel `y` is only
+the roll-height adjustment that `doReleaseSpindash` applies on the way out. Nothing about
+the f167 formula pair is involved.
+
+Method note: the chain's `*_seg6_report.json` carries `errorCount` plus a **five-entry ring
+buffer**, not an error list — `errors` is absent, and reading it as one yields "total
+errors: 0". The per-field histogram above came from instrumenting
+`LiveTraceComparator.absorbDivergentFields` directly. That histogram also shows the headline
+is not the earliest divergence at all: `sidekick_animation_id` first errs at **823** and
+`player_animation_id` at **203**, thousands of frames before 3245.
+
+### What actually happens, measured
+
+| what | where |
+|---|---|
+| engine starts a spindash | seg 6 row **2476**, `anim=8`, CPU-controlled |
+| ROM starts a spindash | seg 6 row **2476** (`anim` 8), charging (`anim` 9) from 2477 |
+| ROM Tails despawns | by row 2571 — `sidekick_x=0x7F00, y=0` |
+| ROM Tails respawns | row **2572** at exactly `(Sonic.x, Sonic.y - 0xC0)` = `(0x2BEB, 0x4FB)` |
+| engine "releases" the spindash | row **3245**, counter `0x0`, 769 frames after the charge began |
+
+So the engine's spindash **entry is correct** — it matches the ROM frame for frame. The
+teleport to `(leader.x, leader.y - 0xC0)` identifies row 2572 as `Tails_Catch_Up_Flying`'s
+`loc_13B50` unambiguously.
+
+### The ROM rule
+
+`loc_13B50` (`sonic3k.asm:26498-26529`) writes a block of recovery-flight state, and inside
+it:
+
+```
+move.b  d0,spin_dash_flag(a0)
+move.b  d0,spin_dash_flag(a0)     ; ROM writes it twice; harmless
+move.w  d0,spin_dash_counter(a0)
+```
+
+`sonic3k.asm:26522-26524`, with `d0 = 0`. The engine's port of that block writes velocities,
+status, radii, flip selector, `double_jump_flag`, `object_control`, facing and animation —
+and **omits those two**. The flag is read at the top of `Tails_Spindash` (`:28696`), which
+runs only from the grounded routine, so nothing ever observed the stale charge in the air.
+On the first grounded frame after landing, `doUpdateSpindash` saw `!inputDown`, took the
+release path, and read the speed table at index `(counter >> 8) = 0` — S3K's index-0 entry
+is `0x800`.
+
+The fix adds exactly those two writes at the ported site. No constant, no timer, no
+zone/route/frame predicate. It is state-machine-scoped (`CATCH_UP_FLIGHT`), not game-scoped,
+so no carve-out is introduced; S2 reaches its respawn through `SPAWNING` and is untouched.
+
+### Measurement
+
+Base `0ac23fd31`, same command both trees.
+
+| | control | with fix |
+|---|---|---|
+| segment 4 | 292 | **292**, unchanged |
+| segment 6 | 8,940, f3245 | **7,663, f3339** `sidekick_x rom=0x3205 engine=0x3207` |
+| `run_boundary.position.x` | 14007 vs 14008 | unchanged |
+| trace-replay | 792 run, 4 failures, 4 skipped | identical, red set **name-identical** |
+| default (run 1) | 15176 run, 55 failures, 73 errors | 15168 run, 56 failures, 70 errors — **a fork crashed** |
+| default (run 2) | — | 15176 run, 54 failures, 73 errors, **zero classes red only with the fix** |
+| guards | — | 500 run, 0 failures |
+
+Run 1 of the default suite hit a `SurefireBooterForkException` and lost 8 tests, which also
+produced a spurious change-only red (`TestPlaybackDebugManagerOverlayOwnership`, already
+seen as base-only twice earlier today). Run 2 is a full 15176 with no fork exception and no
+class red only with the fix. Both anomalies were one-off.
+
+This is the first change in this sequence that reduces the error **count** materially
+(-1,277) rather than only moving the frontier.
+
+### The new frontier, and what is NOT established
+
+f3339, `sidekick_x rom=0x3205 engine=0x3207` — two pixels of X on the sidekick, which is a
+different signature again. **Not instrumented.** Given this round, the standing instruction
+is: do not assume it belongs to any family, and read the per-field histogram before the
+headline field.
+
+Still open and older than any of this: `sidekick_animation_id` from row 823 (647 errors) and
+`player_animation_id` from row 203 (49 errors). These are the earliest divergences in the
+segment by a wide margin and nobody has looked at them. They may well be the real cascade
+origin that the physics frontier keeps walking away from.

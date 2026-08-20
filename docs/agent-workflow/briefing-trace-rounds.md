@@ -718,3 +718,25 @@ that your change never touched.
 
 This applies to whoever merges as much as to whoever rebases — when merges rewrite hashes,
 every stacked child inherits this hazard.
+
+## Twenty-third rule: the headline field is not the earliest divergence — read the histogram
+
+A chain segment's report gives `errorCount` and a **five-entry ring buffer of recent
+mismatches**. There is no full `errors` list; parsing it as one reports zero. So the field named
+in "first non-camera mismatch at frame N" is whatever the comparator happened to hit first on
+the *physics* axis, and it is routinely the least informative field in the set.
+
+At one frontier the headline was a one-pixel `sidekick_y`. Instrumenting
+`LiveTraceComparator.absorbDivergentFields` to build a real per-field histogram showed the same
+frame also carried `g_speed` `0x24` against `0x800`, `rolling` 0 against 1, `Status_Roll` set,
+and a different animation id — the engine was performing a **whole spindash the ROM never
+performs**, and the pixel was just the roll-height adjustment on the way out.
+
+The same histogram showed two animation axes first diverging **thousands of frames earlier**
+than the physics frontier everyone was watching.
+
+So: before briefing or chasing a frontier, build the per-field histogram and read the *earliest*
+divergence per field, not the reported one. The headline tells you where the comparator stopped,
+not where the engine went wrong. And a report format that looks like a full error list but is a
+ring buffer will quietly answer "no errors" — check what the file actually contains before
+trusting a parse of it.
