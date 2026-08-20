@@ -1058,6 +1058,14 @@ result rather than a build failure.
 else.** A probe that produced no output because it never compiled is not evidence about the
 engine.
 
+**The nastier variant: a failed compile leaves the *previous* run's reports in place.** A round
+today hit a main-source compile failure and then grepped `target/surefire-reports/TEST-*.xml`,
+which still held the prior run's results — a complete, well-formed, entirely stale answer to a
+question the build never asked. It caught the problem only because its new probe strings were
+absent from the output. So the check is not merely "did this run fail"; it is **"is this report
+from this run"**. Confirm the build succeeded before reading any report file, and if you are
+probing, confirm your own probe's output is present rather than inferring from what is missing.
+
 Same family: `-Ptrace-replay` sets its own `<surefire.argLine>` in the profile's
 `<properties>`, so a CLI `-Dsurefire.argLine=...` is **silently ignored** — no warning, and the
 run proceeds looking exactly like one that honoured the flag. Pass probe switches by environment
