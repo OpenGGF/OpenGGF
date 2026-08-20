@@ -94469,3 +94469,48 @@ reaches at the end of `lz1_2`, and the boundary should traverse its gap normally
 well-posed item -- one skipped Nemesis PLC service on a chain segment's first frame, with a
 green standalone fixture proving the engine has the correct behaviour -- is therefore the
 right thing to fix next, and this axis is a candidate to close with it.
+
+## 2026-08-20 -- segments 23/24: the handoff-consumed frame, and why it is not the whole answer
+
+Branch `feature/ai-seg2324-fix-r1` off `d25be9710`. **Found, not fixed.** Documentation only.
+Partial round: the localisation below is real, and the hypothesis it suggested is **killed**.
+
+### The shape
+
+`prepareAcrossLevelBoundary` returns `settledFramesConsumed` (0 or 1), which becomes the new
+segment's comparator `framesConsumed`. When it is 1, the comparator begins at recorded row 1
+while the engine's state is whatever the level-load/title-card handoff left -- it has not run
+a gameplay main-loop pass that services the Nemesis PLC. The ROM services **3 units between
+row 0 and row 1** (20 -> 17). So the engine presents row-0 queue state at row 1: exactly one
+V-int of PLC service behind, which is the observed `rom=17 engine=20`.
+
+### The hypothesis that this suggests, and its kill
+
+*"`settledFramesConsumed == 1` causes the frame-1 `remaining_work` divergence."* **False as
+stated.** From the full-chain segment-start deltas, the segments entering with cursor
+`offset + 1` are `mz1`(7), `mz1_2`(8), `mz2_3`(12), `syz1`(16), `lz1`(23), `lz1_2`(24).
+Only 23 and 24 diverge at frame 1 on `remaining_work`; **`mz2_3` enters with the same delta
+of 1 and first diverges at frame 101**, on the same field. So a consumed handoff frame is
+**not sufficient** to produce the frame-1 divergence, and any fix predicated on "delta 1
+means one missing service" would be fitted to two segments rather than derived.
+
+A related datum from the cold-start run at segment 22: re-based segments 8 and 9 diverge at
+frame 1 with `remaining_work rom=16 engine=19` -- the **same +3**, at a different absolute
+value. Whatever this is, it is a general one-service lag at some level entries, not something
+about LZ1.
+
+### What is established
+
+- The engine is exactly **one PLC service pass (3 units)** behind at these entries, not an
+  arbitrary amount.
+- The standalone `lz1_completerun` fixture carries **byte-identical rows** and its replay is
+  green, so the engine has the correct behaviour on a path that does not go through a chain
+  boundary handoff.
+- The consumed handoff frame is part of the picture but does not by itself select which
+  segments diverge.
+
+### Next
+
+Find what distinguishes `lz1`/`lz1_2` from `mz2_3` at entry, given all three consume a
+handoff frame. That discriminator -- not the consumed frame -- is the defect. Do not fix
+against the two failing segments without it.
