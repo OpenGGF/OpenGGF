@@ -984,3 +984,25 @@ The general rule, which now has four instances behind it: **before reporting a n
 else could have produced this output.** A measurement you cannot distinguish from an
 environment artefact is not evidence, and the artefacts here are not rare — four separate ones
 turned up in a single day.
+
+## Thirty-fifth rule: a failed compile looks like a short test run
+
+A lane lost four probe iterations to an uncaught `cannot find symbol`. A Maven run whose
+compilation fails produces a log of a few kilobytes that, skimmed, looks like a test run that
+simply finished quickly — and if you are grepping for `Tests run:` or for your probe's output,
+the *absence* of both reads as "the probe did not fire", which is a plausible experimental
+result rather than a build failure.
+
+**Grep every run for `COMPILATION ERROR` and `BUILD FAILURE` before interpreting anything
+else.** A probe that produced no output because it never compiled is not evidence about the
+engine.
+
+Same family: `-Ptrace-replay` sets its own `<surefire.argLine>` in the profile's
+`<properties>`, so a CLI `-Dsurefire.argLine=...` is **silently ignored** — no warning, and the
+run proceeds looking exactly like one that honoured the flag. Pass probe switches by environment
+variable instead. (This is a second instance of the `-Dmse=off` lesson: a property that never
+reaches the fork produces a confident, wrong measurement rather than an error.)
+
+Both belong to the rule this document keeps re-deriving: **an experiment that could not have
+worked returns the same shape of nothing as an experiment that worked and found nothing.**
+Before believing a negative result, prove the instrument ran.
