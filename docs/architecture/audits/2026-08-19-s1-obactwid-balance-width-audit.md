@@ -247,3 +247,99 @@ question is geometric or lifecycle, not mechanical.
   of the five fixes move `getOnScreenHalfWidth()`, which is the cull consumer, so
   they change it deliberately and in the ROM's direction — but no measurement
   isolated the cull from the balance.
+
+## Round two, 2026-08-20: the six remaining rows
+
+All six are now settled except one. `RECORDED_UNASSESSED` is down from fifteen to
+a single entry.
+
+### Reachable, and fixed
+
+| Object | ROM `obActWid` | how settled |
+|---|---|---|
+| Obj85 FZ Eggman | 32 combat (48 defeat fall) | slot provenance |
+| Obj86 FZ Plasma Launcher | **0** | slot provenance |
+| Obj66 SBZ Rotating Junction | 48 (parent) | headless drop probe |
+| Obj2A SBZ Small Door | 8 | headless drop probe |
+
+**The FZ pair came from tracing slot provenance, and both old citations were
+wrong.** `BossFinal_Main` walks `BossFinal_ObjData2` with `a1` seeded as
+`movea.l a0,a1` — the same parent-is-child-zero shape as the MZ glass pillar and
+the MZ lava wall — so row 0's `#64/2` = 32 lands in Eggman's own slot
+(`:56-58,96-101`). The previously cited `:357,370` are `BossFinal_Eggman_Fall`'s
+*post-defeat escape* widths. Both sites are `Revision` conditionals rather than
+`FixBugs` ones: REV00 writes `obWidth`.
+
+Only the combat 32 is balance-observable. Reaching `Eggman_Fall` requires the
+boss defeated, and `Sonic ReactToItem.asm:268` sets `obStatus` bit 7 on a
+defeated boss — which `Sonic_Balance` tests and branches on *before* it reads the
+width (`01 Sonic.asm:418-420`). Worth remembering generally: **a defeated boss is
+exempt from the balance test entirely**, so no boss's post-defeat width is ever
+balance-observable.
+
+**The plasma launcher's byte is zero, and that is the ROM's omission, not the
+port's.** `BossPlasma_Main` writes `move.b #16/2,obWidth(a0)` where it meant
+`obActWid` (`:990-1001`) — the same fumble the listing flags for the cylinders at
+`:776-778`, except the cylinders gained an `obActWid` write in REV01 and this one
+never did, in either revision. Nothing else writes it, and `DeleteObject` zeroes
+all `$40` bytes of a slot before `FindFreeObj` can hand it out
+(`sub DeleteObject.asm:10-19`), so it stays 0 for the object's whole life.
+
+Zero is not inert, and this is the interesting part. `Sonic_Balance` forms
+`d1 = obActWid + dx` and `d2 = 2*obActWid - 4`, balancing when `d1 < 4` or
+`d1 >= d2`. At `obActWid = 0` those become `dx < 4` and `dx >= -4`, which between
+them leave no gap — **the ROM balances the entire time the player stands on the
+launcher**, left-facing inboard of `dx = 4` and right-facing beyond it. A width
+of zero is not "no balance window", it is a total one.
+
+**Obj2A is the audit's first row where the ROM byte is smaller than the shared
+default**, so the inherited 16 made the window *wider* than the ROM's rather than
+narrower — suppressing balance across `4 <= |dx| < 12`. Every earlier fix
+widened; this one narrows. Worth stating because "the default is too small" was
+becoming an unexamined assumption.
+
+### Assessed and unreachable
+
+**Obj4E MZ Lava Wall** joins `RECORDED_UNREACHABLE`. `LWall_Main` seeds `a1` with
+`movea.l a0,a1`, so the parent's own slot takes the whole `.make` block — both
+`obActWid = #160/2` = 80 **and** `obColType = col_128x64|col_hurt` (`:22-37`).
+The parent is the stood-on slot (`LWall_Solid`, routine 2), so standing on the
+lava wall is standing on a hurt object.
+
+The boxes genuinely overlap rather than merely abut, which is what makes this
+decisive rather than suggestive. `SolidObject` seats the player at
+`objY - d3 - y_radius` = `objY - 44`. `ReactToItem` builds his box from a top
+edge of `y - (height - 3)` with height `2*(height - 3)`, i.e. `objY-60 .. objY-28`
+(`Sonic ReactToItem.asm:14-38`). `col_128x64` is a **64x32 extent** — the macro
+stores half-width and half-height (`:76-79,100`) — spanning `objY-32 .. objY+32`.
+Four pixels of overlap, every frame. Same `v_invinc` caveat as the spikes.
+
+### Still undetermined: one
+
+**Obj0C LZ Flapping Door** (40). Two probe attempts failed for reasons that are
+about the probe, not the level, and I would rather leave it open than report a
+negative the method cannot support:
+
+- The lz2 and lz3 placements never spawn. S1 loads objects from an X-ordered
+  cursor that only advances as the camera moves right, so a teleported camera
+  skips them; walking the camera forward in 128px steps did not fix it either,
+  so something further gates LZ object loading in this harness.
+- The sbz3 placement spawns but the player falls through. That is at least
+  partly the probe's fault: `Flap_Animate` only makes the door solid while
+  `obFrame == 0` **and** `sonic_x < door_x` (`0C LZ Flapping Door.asm:47-51`), and
+  the door toggles open/closed on a `subtype * 60` frame timer, so a 120-frame
+  observation window at subtype 2 can miss the closed phase entirely. Offsetting
+  the player 8 and 16px left did not change the outcome.
+
+What would settle it: drive the probe from the door's own state rather than a
+fixed window — wait for `obFrame == 0`, place the player left of `door_x`, and
+only then drop him; and establish why LZ placements do not load before trusting
+any LZ result.
+
+### Method note
+
+The drop probe is positive-evidence-only and was not committed. It shows a top
+surface is standable where the player is placed; it does not show a route reaches
+that spot, and it cannot spawn what the camera jumps past. Read as "reachable"
+its results are sound. Read as "unreachable" they would not be — which is exactly
+why Obj4E was settled from the ROM instead.

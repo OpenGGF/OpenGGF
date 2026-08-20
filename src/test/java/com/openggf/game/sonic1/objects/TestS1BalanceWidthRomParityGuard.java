@@ -195,9 +195,48 @@ class TestS1BalanceWidthRomParityGuard {
                         + "straight to Spikes_Hurt, so standing on one damages the player every frame "
                         + "instead of idling. The exception is v_invinc, which skips Spikes_Hurt; no "
                         + "level was checked for an invincibility monitor in reach of a wide spike"));
+        ROM_ACT_WID.put("Sonic1LavaWallObjectInstance", new Entry(px(80), Disposition.RECORDED_UNREACHABLE,
+                "4E MZ Wall of Lava.asm:22-37,77-87; Sonic ReactToItem.asm:14-38,100",
+                "LWall_Main seeds a1 with movea.l a0,a1, so the parent's own slot takes the .make "
+                        + "block -- both obActWid = #160/2 and obColType = col_128x64|col_hurt. The "
+                        + "parent is the stood-on slot (LWall_Solid, routine 2), so standing on it is "
+                        + "standing on a hurt object. The boxes overlap rather than merely abut: "
+                        + "SolidObject seats the player at objY - d3 - y_radius = objY - 44, "
+                        + "ReactToItem gives him a box of objY-60..objY-28 (top edge at y - "
+                        + "(height-3), height 2*that), and col_128x64 is a 64x32 extent spanning "
+                        + "objY-32..objY+32, so 4px of overlap hurts him every frame. Same "
+                        + "v_invinc caveat as the spikes"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
+        ROM_ACT_WID.put("Sonic1FZBossInstance", new Entry(dynamic("32 combat / 48 defeat fall"), Disposition.DECLARES_OWN_WIDTH,
+                "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:56-58,96-101,355-371",
+                "BossFinal_ObjData2 row 0 lands in the parent's own slot via movea.l a0,a1. Both "
+                        + "sites are Revision conditionals, not FixBugs ones: REV00 writes obWidth. "
+                        + "Only the combat 32 is balance-observable -- reaching Eggman_Fall needs the "
+                        + "boss defeated, and Sonic_Balance skips a stood-on object whose obStatus "
+                        + "bit 7 is set (Sonic ReactToItem.asm:268; 01 Sonic.asm:418-420). The fall "
+                        + "value is still the live BuildSprites cull bound"));
+        ROM_ACT_WID.put("FZPlasmaLauncher", new Entry(px(0), Disposition.DECLARES_OWN_WIDTH,
+                "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:990-1001,1022-1027; sub DeleteObject.asm:10-19",
+                "zero, and that is the ROM's own omission rather than a gap here: BossPlasma_Main "
+                        + "writes obWidth where it meant obActWid -- the same fumble the listing flags "
+                        + "for the cylinders at :776-778, except the cylinders were repaired in REV01 "
+                        + "and this was not, in either revision. DeleteObject zeroes the slot, so the "
+                        + "byte stays 0. At 0 the Sonic_Balance window covers every position, so the "
+                        + "ROM balances the whole time the player stands on it"));
+        ROM_ACT_WID.put("Sonic1JunctionObjectInstance", new Entry(px(48), Disposition.DECLARES_OWN_WIDTH,
+                "66 SBZ Rotating Junction.asm:32,43,47-48,60",
+                "parent only. The #112/2 = 56 at :43 belongs to the cover-up children, which Jun_Main "
+                        + "puts straight into routine 4 (Jun_Display, display-only) at :32 and never "
+                        + "makes solid, so 48 is the only value balance can read. Full-solid, so the "
+                        + "byte is supplied at getOnScreenHalfWidth(). Jun_Action d1 is "
+                        + "#74/2+sonic_solid_width at :60"));
+        ROM_ACT_WID.put("Sonic1SmallDoorObjectInstance", new Entry(px(8), Disposition.DECLARES_OWN_WIDTH,
+                "2A SBZ Small Door.asm:20-21,62",
+                "half the shared default, so the inherited 16 made the balance window WIDER than the "
+                        + "ROM's, not narrower. The class already held the byte as an unused ACT_WIDTH "
+                        + "constant. ADoor_Animate d1 is #12/2+sonic_solid_width = $11 at :62"));
 
         // --- Top-solid, routine passes obActWid straight through as d1 --------------
         ROM_ACT_WID.put("Sonic1PlatformObjectInstance", new Entry(px(32), Disposition.FALLBACK_MATCHES_ROM, "18 Platforms.asm:30,70"));
@@ -239,14 +278,7 @@ class TestS1BalanceWidthRomParityGuard {
         // than a known defect. Closing one means reading its reachability first.
         record Deferred(String type, int rom, String cite) { }
         for (Deferred deferred : List.of(
-                new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
-                new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
-                new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
-                new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"),
-                new Deferred("FZPlasmaLauncher", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:1022-1027 "
-                        + "(BossPlasma_Collision d1 = #16/2+sonic_solid_width; no obActWid write in the object -- "
-                        + "the :781 previously cited here is EggmanCylinder_Init's, a different object)"),
-                new Deferred("Sonic1FZBossInstance", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:357,370"))) {
+                new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"))) {
             ROM_ACT_WID.put(deferred.type(), new Entry(deferred.rom() < 0 ? dynamic("see citation") : px(deferred.rom()),
                     Disposition.RECORDED_UNASSESSED, deferred.cite()));
         }
