@@ -99535,3 +99535,39 @@ row and own their hardware-timed work, which is a fourth change in a fourth subs
 (title-card row ownership in the trace drive) behind the three already recorded. Stopping
 here as agreed rather than continuing. Nothing landed for this wall; the two parked
 candidates from the previous entry remain parked and unmeasured against S1/S2.
+## 2026-08-20 — S2 stage-exit stamp: it is not the release row, and the retraction now holds on both fixtures
+Attempting the stamp fix so the hand-back can land clean. Not achieved; three things are
+settled that were not before.
+### The `lastMovieRowRun` retraction is now checked on both fixtures
+The previous entry retracted `lastMovieRowRun` on the strength of the complete-emerald chain
+alone, which is one fixture. Re-tested on `TestS2EhzHalfpipeRoundTripChain`, whose gap the
+journal's own doc describes as the frozen-cursor case: dropping the `- 1` again produces
+**no change at all** — still `ss -> seg2_ehz1` expected 9675 actual 9674 and
+`ss_2 -> seg3_ehz1` expected 19133 actual 19132. The stale-stamp recovery does not fire for
+these edges on either fixture, so their stamps are live rather than frozen. The retraction
+stands.
+### Consuming the release row is not the mechanism
+The obvious reading — the release iteration hands the host back without spending its row, so
+everything after is one row early — is **wrong**. Probing
+`playbackDebugManager.getCursorFrame()` per iteration across the halfpipe's `ss -> seg2_ehz1`
+transition, the base and hand-back cursor timelines are identical except for one entry:
+```
+DIFF (cursor 9701, LEVEL)   base 1 iteration   hand-back 2 iterations
+```
+Same distinct cursors, same iteration counts everywhere else, and the destination's row 0
+runs at cursor 9701 in both arms. The hand-back's extra iteration sits at the same cursor as
+the one it splits, so it spends no row and moves no later row.
+Two implementations of "consume the release row" were tried and both reproduce the
+hand-back's result exactly, 16 axes and the same 2 halfpipe axes: reporting the ordinary
+`completeRelease` result while short-circuiting the level body with a V-blank-only service
+(rejected outright — `LevelFrameStep.serviceVBlankOnly` accepts only `LAG`, `NORMAL_PAUSE`
+and `SPECIAL_STAGE_PAUSE`, and widening that guard is not a change to make casually), and
+the same short-circuit with no service.
+### Where the stamps actually come from
+The `ss` segment ends at row 9528 and `seg2_ehz1` begins at 9701, so the failing edges at
+9674/9675 sit 147 rows into a 173-row gap — nowhere near the release. During that gap the
+shared cursor is frozen at 9701 and the rows come from the gap driver's own
+`TraceRunFrameDriver.Step.movieRow()`, which `stateMovieLogicalRow(step)` states per row.
+That sequence, not the cursor and not `lastMovieRowRun`, is what moves by one under the
+hand-back, and it is the next round's instrument.
+The candidate stays parked at `091ce15ba` on `bugfix/ai-s2-chain-r7`.
