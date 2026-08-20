@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The Sonic 1 water splash no longer consumes a level-object SST slot.** Entering
+  water writes `id_Splash` straight into `v_splash`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:274,299`), which is
+  `v_objspace+object_size*12` (`docs/s1disasm/_Variables.asm:71`) -- a fixed SST below
+  `v_lvlobjspace`, so the ROM never runs `FindFreeObj` for it. The engine allocated the
+  splash from the dynamic pool instead, so in LZ1 it took the freshly-freed slot 34 one
+  frame before the LZ door loaded; the door was pushed to 45 and, being above the button
+  at 35 rather than below it, saw the switch press on the press frame instead of the
+  frame after. Its whole ascent then ran one 2px step ahead of the ROM's, which flipped
+  `Solid_ChkCollision`'s `d3 >= 2*d2` test a frame early and -- through
+  `Solid_NoCollision`'s retail walk-jump bug, live under `FixBugs = 0`
+  (`docs/s1disasm/_incObj/sub SolidObject.asm:253-259`) -- restarted the walk animation
+  a frame early, shifting every later `dynamic_art.edges` ordinal. The slot is now a
+  typed `PowerUpRules.waterSplashFixedSlotIndex`, alongside the existing shield and
+  invincibility-stars fixed slots; S2 and S3K declare `-1` and keep dynamic allocation.
 - **The S1 title-card release step no longer consumes the level's first recorded
   frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
   `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),
