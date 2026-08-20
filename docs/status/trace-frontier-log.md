@@ -101115,3 +101115,80 @@ nine `0x000868F2` objects at row 6620 are also a candidate for `sub_865DE`'s chi
 Pinning which of 6006 or 6620 runs `sub_865DE` is the remaining measurement, and the answer
 decides whether the capsule opens thirteen rows early or six hundred. **Do not carry either
 number forward until it is settled.**
+
+## 2026-08-21 — slz1's f3871 residual: the collapse timer is one frame late, and fixing it alone regresses
+
+Round `s1-slz1-graze-r1`, follow-up on the residual left by the Orbinaut fix. Branch
+`bugfix/ai-s1-slz1-graze-r1`. **Nothing landed. Candidate rejected, with the measurement.**
+
+### What f3871/f3875 are
+
+The two SLZ collapsing floors (Obj53 `CFlo`) at `0x1BA0,0x01E8` and `0x1BE0,0x01E8`
+fragmenting into eight pieces. `FragmentatePlatform`
+(`docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:305-320`) turns the parent
+into piece 0 in place and allocates the other seven; under `FixBugs = 0` — the shipped branch —
+that allocator is `FindFreeObj`, scanning from the start, which is why the ROM's seven land
+scattered low (44, 46, 51, 53, 54, 55, 56) rather than above the parent.
+
+### Measured: the engine fragments one frame late
+
+Probing the engine's `Sonic1CollapsingFloorObjectInstance` state against the fixture, aligned by
+player x (which matches the ROM exactly through the whole window):
+
+| | ROM | engine |
+|---|---|---|
+| stand-on (`player_stand_on_obj` -> `0x40`) | f3863 | routine 4 entered f3863 |
+| first routine-4 body | f3864, timer 7 | f3864, timer 7 |
+| fragmentation | **f3871** | **f3872** |
+
+`CFlo_OnPlatform` (`:203-208`) is unconditional — test the timer, and if non-zero set the flag
+*and* decrement — so an initial `collapsible_timedelay` of 7 (`CFlo_Main`, `:172`) gives eight
+frames from the first routine-4 body to fragmentation. The engine's `updateCollapse` has a
+`collapseEnteredThisFrame` branch that sets the flag and returns without decrementing on that
+first frame, costing exactly one.
+
+**The ROM's eight-frame count is uniform**, checked on a second fixture so it is not read off
+one recording: in `slz1_completerun` the player stands on at f4045 and f4052 and those floors
+fragment at f4053 and f4060.
+
+### Candidate: delete the skip
+
+Removing the `collapseEnteredThisFrame` branch (and the field) does exactly what it should on
+the chain fixture — **both the f3871 and f3875 slot divergences disappear**, segment 27 stays
+green, its slot diff drops 12 -> 10, and every other `segment N ... diverged` line on all three
+chains is unchanged.
+
+### Rejected: `-Ptrace-replay` 800 / **8** failures, up from 6
+
+Two previously-green fixtures regress:
+
+| test | errors | first error |
+|---|---|---|
+| `TestS1Slz1CompleteRunTraceReplay` | 2115 | f4061 `air` expected 0, actual 1 |
+| `TestS1Mz3CompleteRunTraceReplay` | 9426 | f2173 `air` expected 0, actual 1 |
+
+**And the reason is not that the candidate is wrong about the timer.** Probing
+`slz1_completerun`'s `0x1360` floor under the candidate shows it reaching `routine=4 delay=0` at
+player x `0x1388` — trace frame 4060 — which is the frame the ROM fragments it. The
+fragmentation frame is *correct on both fixtures*.
+
+What regresses is a **second, independent one-frame defect the candidate uncovers**: how long
+the player stays supported after fragmentation. ROM rows have him grounded at f4061
+(`x=0x1390`, `air=0`) and airborne only at f4062; the engine has him airborne at f4061. The ROM
+owner is `CFlo_FragmentPiece.delayCollapse` (`:227-243`) — decrement, call `CFlo_WalkOff`, and
+clear the player's standing bit **only** once the timer reaches zero.
+
+So two one-frame errors were cancelling: the late fragmentation was holding the player up for
+the frame the support path drops him too early. The `collapseEnteredThisFrame` skip is a fitted
+compensation for a defect elsewhere, and it is invisible on any recording where the player has
+already run off the floor before it collapses — which is exactly the chain fixture's case, and
+why that one wanted the skip gone.
+
+### Next
+
+Model `CFlo_FragmentPiece.delayCollapse`'s support hold first, then remove the skip, and verify
+the pair against all three anchors together: chain `slz1` f3871, `slz1_completerun` f4061, and
+`mz3_completerun` f2173. Landing either half alone is net-negative.
+
+Residual on segment 27 remains 10 slot-divergent frames, all of them one `0x25` the ROM holds in
+slot 41 (then 40) that the engine does not, sampled f4637-f4736.
