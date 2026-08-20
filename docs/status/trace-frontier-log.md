@@ -97678,3 +97678,37 @@ exactly. S1 and S2 chains byte-identical to the figures measured on develop the 
 once on a BK2 cursor that is not a frame count at this seam, once on a probe row convention that
 was off by one. Its lower reported cursor (53465 against the control's 53488) is only the fade
 rows it does not consume, which the ownership condition owns.
+## 2026-08-20 - S1 complete-run segment 22 (SYZ3) speed-shoes expiry frontier closed
+
+- Worktree `wt/s1-seg22-xsub-r1`, branch `bugfix/ai-s1-seg22-xsub-r1`, over
+  `497bb21e0`. Control arm `wt/s1-seg22-xsub-r1-ctl` at the same commit.
+- Headline before: `TestS1CompleteEmeraldRunChain` segment 22 (`syz3_2`)
+  reported 15,564 physics comparator errors, first non-camera mismatch at
+  frame 8115 field `x_sub` `rom=0x3B00 engine=0x2300`. The reported field was
+  not the defect: a per-field histogram of all 15,564 (`x_sub` 2,447 of them,
+  behind `y_sub` at 3,879) showed `x_speed` diverging on the *same* frame with
+  a constant delta of `$18`, and every engine `x_speed` value equal to the
+  ROM's from one frame earlier -- one frame of phase lag, not a sub-pixel bug.
+- Root cause: speed shoes. The ROM's `Sonic_Display` decrements `shoetime` and
+  restores acceleration only after `Sonic_Modes` has already moved Sonic that
+  frame (`docs/s1disasm/_incObj/01 Sonic.asm:76,80,186-191`), so the frame that
+  zeroes the timer still moves boosted. The engine ticks timers before the
+  movement step; S1's `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` was 0
+  where S2, with identical ROM structure, already used 1. Probed directly: the
+  engine took the monitor at level frame 6913 and expired at 8113, dropping the
+  boost one movement frame before the ROM did. Air acceleration fell from `$30`
+  to `$18` a frame early and never recovered.
+- After: segment 22 reports 44 errors and **no** non-camera physics mismatch
+  across its full 12,072 frames. The residue is an unrelated `camera_y`
+  cluster confined to frames 475-518 that self-heals; the next 7,597 frames are
+  clean. The S1 chain drops from 8 failing axes to 7.
+- Segments 23 (`lz1`, 16 errors) and 24 (`lz1_2`, 18,221 errors) are unchanged,
+  as is the `lz1_2 -> lz2` `-216` walk failure and segments 12/15's
+  `queue.s1_nemesis_plc.prepared`. `TestS1ColdStartAttribution`'s segment-22 pin
+  was updated from `15564 / frame 8115 / x_sub` to `44 / no non-camera physics
+  mismatch`; its 23 and 24 pins still hold verbatim.
+- Commands (all `-Ptrace-replay -Dmse=off`, all three ROM paths explicit,
+  one Maven invocation per worktree, arms serial):
+  `-Dtest=TestS1CompleteEmeraldRunChain,TestS2*RunChain*,TestS3k*RunChain*` and
+  `-Dtest=TestS3k*RunChain* -DforkCount=1`. All S2 and S3K chain failure
+  messages are byte-identical between arms.
