@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Solid-object push release (`bugfix/ai-solid-rider-push-r1`, merged 2026-08-21):**
+  a solid object now releases the player's pushing flag even when a different
+  solid raised it, matching the unconditional player-side clear in all three
+  disassemblies. Where solids tile without a gap, the neighbouring block that
+  takes the four-pixel side-air branch is what the ROM relies on to leave the
+  player not pushing, so the engine's ownership gate stranded the flag. Two
+  per-segment trace error counts fall and none rise.
+
 - **Managed agent scratch storage (2026-08-14):** Codex, Claude Code, trace
   diagnostics and benchmark retention now use a validated disk-backed
   `$AGENT_SCRATCH_ROOT`; Claude Code also receives `TMPDIR`, `TMP`, and `TEMP`

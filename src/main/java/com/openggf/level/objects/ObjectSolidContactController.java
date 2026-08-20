@@ -2018,11 +2018,25 @@ public final class ObjectSolidContactController {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
             provider.setPlayerPushing(player, true);
-        } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
+        } else if (contact.touchSide()) {
             // Solid_SideAir calls Solid_NotPushing directly when the player is
             // airborne or within four pixels of the top/bottom edge. Unlike
             // Solid_NoCollision, that entry does not execute retail S1's
             // walk-jump-bug animation-word write.
+            //
+            // Solid_NotPushing clears the PLAYER's pushing bit unconditionally
+            // (`bclr #5,obStatus(a1)` / `bclr #status.player.pushing,status(a1)`
+            // / `bclr #Status_Push,status(a1)`), with no test of whether this
+            // object owns the push -- only the object's own bit clear is
+            // guarded, and `bclr` on an already-clear bit is a no-op. All three
+            // games agree: docs/s1disasm/_incObj/sub SolidObject.asm:246-263,
+            // docs/s2disasm/s2.asm:35453-35487, docs/skdisasm/sonic3k.asm:41509,
+            // 41527-41531. So the player's bit must clear here even when this
+            // object never set it; a neighbouring solid that raised the push
+            // this frame (S2 Obj74 blocks tile vertically, and the slot below
+            // takes the four-pixel Solid_SideAir branch) is exactly the case
+            // the ROM relies on to leave the player not pushing.
+            clearObjectPushingBit(player, instance);
             player.setPushing(false);
             provider.setPlayerPushing(player, false);
         }

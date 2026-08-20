@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A solid object's four-pixel side-air branch now releases the player's push bit even when
+  it never raised it.** `Solid_NotPushing` clears `status(a1)` bit 5 unconditionally
+  (`docs/s1disasm/_incObj/sub SolidObject.asm:246-263`,
+  `docs/s2disasm/s2.asm:35453-35487`, `docs/skdisasm/sonic3k.asm:41509, 41527-41531`); only
+  the *object's* own bit clear is guarded, and the engine was gating both on ownership. S2's
+  Obj74 invisible blocks tile vertically, so at a block seam the upper block raises the push
+  at its edge and the lower block — the player within four pixels of its top — reaches
+  `Solid_SideAir` and clears it again. Standing on a platform against such a seam in CPZ2, the
+  engine held a push the ROM does not, which S2's walk handler turns into a held mapping frame
+  and then a spurious push frame.
 - **Sonic 2's Super transformation now fires just past the apex, not on the way up.**
   `Sonic_JumpHeight` ends `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
   (`docs/s2disasm/s2.asm:37432-37434`). On a big-endian word `tst.b` reads the **high**
