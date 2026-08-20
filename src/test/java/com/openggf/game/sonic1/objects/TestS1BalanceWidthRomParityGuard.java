@@ -156,6 +156,11 @@ class TestS1BalanceWidthRomParityGuard {
                         + "so the byte is supplied at getOnScreenHalfWidth(); the cull consumer is "
                         + "dormant because Invis_Solid gates on ChkObjectVisible, which never reads "
                         + "obActWid. Invis_Solid d1 is obActWid+sonic_solid_width at :43-45"));
+        ROM_ACT_WID.put("Sonic1PushBlockObjectInstance", new Entry(dynamic("PushB_Var: 16 for the 1x1, 64 for the 4x1"), Disposition.DECLARES_OWN_WIDTH,
+                "33 MZ, LZ Pushable Blocks.asm:22-24,48-49",
+                "full-solid (isTopSolidOnly() is false), so the byte is supplied at "
+                        + "getOnScreenHalfWidth(). PushB_Action pads d1 by sonic_solid_width without "
+                        + "writing it back. mz2 places the one 4x1 block, subtype $81"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -201,7 +206,6 @@ class TestS1BalanceWidthRomParityGuard {
         record Deferred(String type, int rom, String cite) { }
         for (Deferred deferred : List.of(
                 new Deferred("Sonic1SpikeObjectInstance", -1, "36 Spikes.asm:23-28,46 (subtype table: 20/16/4/28/64/16)"),
-                new Deferred("Sonic1PushBlockObjectInstance", -1, "33 MZ, LZ Pushable Blocks.asm:23-24,48 (16 or 64)"),
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
                 new Deferred("Sonic1EdgeWallObjectInstance", 8, "44 GHZ Edge Walls.asm:22"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),

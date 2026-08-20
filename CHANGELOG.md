@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The 4x1 pushable block balances at `PushB_Var`'s 64, not the shared 16.**
+  `PushB_Main` indexes the subtype into `PushB_Var` and stores the first byte of
+  the pair straight into `obActWid` — `#32/2` = 16 for the 1x1 block, `#128/2` =
+  64 for the 4x1 (`docs/s1disasm/_incObj/33 MZ, LZ Pushable Blocks.asm:22-24,48-49`).
+  The engine already derived that byte for the collision width, which
+  `PushB_Action` forms by padding it without writing the padded value back, and
+  then handed the balance test the default instead — so on mz2's 4x1 block the
+  player balanced 48px inboard of the ROM's edges at both ends. The 1x1 block and
+  both collision widths are unchanged.
+
+### Fixed
 - **Invisible barriers balance at their subtype-derived ROM `obActWid`.**
   `Invis_Main` computes the byte as `((subtype & $F0) + $10) >> 1` and stores it
   (`docs/s1disasm/_incObj/71 Invisible Solid Barriers.asm:22-27`), giving anything
