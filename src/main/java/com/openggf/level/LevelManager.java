@@ -841,6 +841,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (levelLoadLifecycle != null) {
             levelLoadLifecycle.clearPlayerDplcDedupRegistersForLevelLoad();
         }
+        // The same clearRAM block also holds the shared floor-angle registers
+        // (S2 Primary_Angle / Secondary_Angle at s2.constants.asm:1558, 1560;
+        // S1 v_anglebuffer / v_anglebuffer2 at _Variables.asm:232, 234), two
+        // entries past the DPLC registers cleared above. A landing probe that
+        // finds no floor on one side retains the register byte rather than
+        // seeding the sentinel, so a stale 3 carried across a load makes the
+        // first grounded frame balance on a ledge the ROM stands on.
+        CollisionSystem levelLoadCollision = GameServices.collisionOrNull();
+        if (levelLoadCollision != null) {
+            levelLoadCollision.clearAngleRegistersForLevelLoad();
+        }
         playableArtInitializer.initialize();
     }
 
