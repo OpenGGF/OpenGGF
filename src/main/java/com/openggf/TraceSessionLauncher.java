@@ -1681,7 +1681,7 @@ public final class TraceSessionLauncher {
             if (runDynamicArtGapJournal != null
                     && receipt.segmentIndex() > 0) {
                 gapComparison = runDynamicArtGapJournal.destinationOpened(
-                        receipt.segmentIndex());
+                        receipt.segmentIndex(), receipt.rowsConsumed());
             }
         }
         if (receipt.executionPolicy()

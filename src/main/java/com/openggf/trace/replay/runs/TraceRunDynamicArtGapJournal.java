@@ -80,7 +80,17 @@ public final class TraceRunDynamicArtGapJournal {
                 .toList();
     }
 
-    public FrameComparison destinationOpened(int destinationSegmentIndex) {
+    /**
+     * Closes the gap and compares it, at the instant the destination segment
+     * opens.
+     *
+     * @param destinationRowsConsumed the destination's own recorded rows the
+     *                                engine has already run when admission is
+     *                                polled; see
+     *                                {@link #lastMovieRowRun(int, int)}
+     */
+    public FrameComparison destinationOpened(
+            int destinationSegmentIndex, int destinationRowsConsumed) {
         if (sourceSegmentIndex < 0
                 || destinationSegmentIndex != sourceSegmentIndex + 1) {
             throw new IllegalStateException(
@@ -95,7 +105,9 @@ public final class TraceRunDynamicArtGapJournal {
                         : List.of();
         added = rowsCountedBackFromAdmission(
                 added, admission.movieLogicalFrame(),
-                admission.unannouncedRows());
+                admission.unannouncedRows(),
+                lastMovieRowRun(destinationSegmentIndex,
+                        destinationRowsConsumed));
 
         TraceRunManifest.Segment source = manifest.segments().get(sourceSegmentIndex);
         TraceRunManifest.Segment destination =
@@ -150,6 +162,43 @@ public final class TraceRunDynamicArtGapJournal {
     }
 
     /**
+     * The last BK2 movie row the engine has actually run when a destination is
+     * admitted.
+     *
+     * <p>The recorder stamps a gap edge with the movie row it is executing at
+     * the moment the ROM callback fires: {@code PrepareDynamicArtCursor} is
+     * called with {@code rowsConsumed} <em>before</em> the host advances
+     * ("tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs":207-222),
+     * so a gap edge carries the zero-based index of the row being executed.
+     * The destination is armed after that row has completed, with
+     * {@code bk2FrameOffset = frameNow} (:529-532), so the recorder's own
+     * cursor at the arm still holds {@code bk2FrameOffset - 1} — the last row
+     * it ran, one row before the destination's row zero. S1 arms the same way
+     * ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":199-215).
+     *
+     * <p>The engine must count back from that same instant. It cannot use the
+     * cursor's announced row for it: a harness that pre-seeks an uncompared
+     * interior freezes the cursor on the destination's first row for the whole
+     * span, so the announced row names a row the engine has not reached yet.
+     * The rows the engine has genuinely run end at
+     * {@code bk2FrameOffset + destinationRowsConsumed - 1}, which is the arm
+     * frame itself when admission is polled before the destination's row zero
+     * runs and that row when it is polled after — the two phases in which a
+     * game's title-card release can leave the boundary
+     * (docs/architecture/audits/trace/2026-08-20-s2-title-card-mode-flip-phase.md).
+     * Both terms move together, so the recovered edge rows do not.
+     */
+    private int lastMovieRowRun(
+            int destinationSegmentIndex, int destinationRowsConsumed) {
+        if (destinationRowsConsumed < 0) {
+            throw new IllegalArgumentException(
+                    "destinationRowsConsumed must be non-negative");
+        }
+        return manifest.segments().get(destinationSegmentIndex).bk2FrameOffset()
+                + destinationRowsConsumed - 1;
+    }
+
+    /**
      * Recovers each gap edge's movie row by subtracting the rows that passed
      * unannounced after it.
      *
@@ -193,13 +242,15 @@ public final class TraceRunDynamicArtGapJournal {
     public static List<DynamicArtGapTransition> rowsCountedBackFromAdmission(
             List<DynamicArtGapTransition> added,
             int admissionMovieLogicalFrame,
-            int admissionUnannouncedRows) {
+            int admissionUnannouncedRows,
+            int lastMovieRowRun) {
         Map<Integer, Integer> nextIndexByRow = new HashMap<>();
         List<DynamicArtGapTransition> rowed = new ArrayList<>(added.size());
         for (DynamicArtGapTransition transition : added) {
             DynamicArtGapTransition.GapEdge edge = transition.edge();
             int row = edge.movieLogicalFrame() == admissionMovieLogicalFrame
                     ? rowCountedBackFromAdmission(edge.movieLogicalFrame(),
+                            admissionMovieLogicalFrame, lastMovieRowRun,
                             admissionUnannouncedRows,
                             edge.unannouncedRowsAtEmit())
                     : edge.movieLogicalFrame();
@@ -219,12 +270,23 @@ public final class TraceRunDynamicArtGapJournal {
      * Row a stamp actually belongs to, given the unannounced-row counts at the
      * stamp and at the gap's end. A stamp taken in the same row as the end has
      * nothing to subtract.
+     *
+     * <p>A stale stamp — one carrying the admission's own row, which is what a
+     * frozen cursor re-announces — counts back from
+     * {@code lastMovieRowRun} rather than from the stamp, because the stamp
+     * names a row the engine may not have run yet. See
+     * {@link #lastMovieRowRun(int, int)}. A live stamp is already the row it
+     * happened on and keeps its own base.
      */
     public static int rowCountedBackFromAdmission(
             int stampedRow,
+            int admissionMovieLogicalFrame,
+            int lastMovieRowRun,
             int admissionUnannouncedRows,
             int unannouncedRowsAtStamp) {
-        return Math.toIntExact(Math.subtractExact((long) stampedRow,
+        long base = stampedRow == admissionMovieLogicalFrame
+                ? lastMovieRowRun : stampedRow;
+        return Math.toIntExact(Math.subtractExact(base,
                 Math.max(0, admissionUnannouncedRows - unannouncedRowsAtStamp)));
     }
 
