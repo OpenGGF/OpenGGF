@@ -137,6 +137,13 @@ class TestS1BalanceWidthRomParityGuard {
                 "FixBugs = 0 branch (#38/2); the fixed branch would write #48/2 = 24. Full-solid, so "
                         + "the byte is supplied at getOnScreenHalfWidth() and balance inherits it. "
                         + "Rock_Solid d1 is #32/2+sonic_solid_width = $1B at :31"));
+        ROM_ACT_WID.put("Sonic1SpinPlatformObjectInstance", new Entry(dynamic("128 trapdoor / 16 spinner"), Disposition.DECLARES_OWN_WIDTH,
+                "69 SBZ Spinning Platforms and Trapdoors.asm:28-31,46,49",
+                "Spin_Main writes #256/2 for every Obj69 on the FixBugs = 0 branch and overwrites "
+                        + "it with #32/2 only on the spinner path; the split is the subtype bit 7 the "
+                        + "class already reads. Full-solid, so the byte is supplied at "
+                        + "getOnScreenHalfWidth(). Trapdoor SolidObject d1 is #128/2+sonic_solid_width "
+                        + "= $4B at :85"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -189,7 +196,6 @@ class TestS1BalanceWidthRomParityGuard {
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
                 new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
                 new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"),
-                new Deferred("Sonic1SpinPlatformObjectInstance", 128, "69 SBZ Spinning Platforms and Trapdoors.asm:31 (FixBugs = 0 branch)"),
                 new Deferred("Sonic1SpringObjectInstance", -1, "41 Springs.asm:45,56 (16 upright, 8 the smaller variant)"),
                 new Deferred("Sonic1EggPrisonButtonObjectInstance", 12, "3E Prison Capsule.asm:34,50 (subtype 1, switch)"),
                 new Deferred("Sonic1BossBlockInstance", -1, "75, 76 Boss - SYZ Main and Blocks.asm:756"),

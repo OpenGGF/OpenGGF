@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The SBZ trapdoor balances at its ROM `obActWid` of 128, not the shared 16.**
+  `Spin_Main` writes `move.b #256/2,obActWid(a0)` for every Obj69 on the shipped
+  `FixBugs = 0` branch and overwrites it with `#32/2` = 16 only on the
+  spinning-platform path
+  (`docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:28-31,46,49`),
+  so the trapdoor keeps 128. With the inherited 16 the player balanced anywhere
+  more than 12px from the trapdoor's centre, where the ROM's window of
+  `d1 < 4 || d1 >= 252` balances essentially nowhere on it — visible on every
+  closed trapdoor in sbz1 and sbz2. The spinner's ROM byte already equalled the
+  default and is unchanged, as are both variants' separately authored collision
+  widths.
+
+### Fixed
 - **The GHZ purple rock balances at its ROM `obActWid`, not the shared 16.**
   `Rock_Main` writes `move.b #38/2,obActWid(a0)` = 19 on the shipped
   `FixBugs = 0` branch (`docs/s1disasm/_incObj/3B GHZ Purple Rock.asm:20-27`);
