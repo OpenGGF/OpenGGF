@@ -65,6 +65,11 @@ public interface TraceExecutionModel {
      * queue-identity or art value.
      */
     static boolean isIterationHeldIntoNextRow(TraceFrame current, TraceFrame next) {
+        // EXPERIMENT ONLY (rejected candidate): disable the deferral entirely
+        // to measure which fixture rows depend on it.
+        if (true) {
+            return false;
+        }
         return current != null
                 && next != null
                 && hasAuthoritativeVblankCounter(current)
