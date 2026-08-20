@@ -99501,3 +99501,37 @@ the trio re-verified passing in isolation in both arms at this base.
 Segment 8's new frontier is row 3673, `x_speed` rom `-0200` engine `0x03F4` — the primary
 player now, not the sidekick. The 18 unmatched `aiz_5` hardware completions in rows
 7056-7155 remain, and are present in the control.
+
+## 2026-08-20 — Wall 3 is the transition-freeze row model, and it is a fourth subsystem
+
+Continuing the entry above with the fence lifted. Wall 3 —
+`duplicate or reordered hardware service boundary at raw_frame=7053:
+previous=PRE_MAIN_LOOP, current=VINT_SERVICE` — was instrumented rather than argued.
+
+Every boundary at row 7053 comes from one caller: `updateTitleCardMode` →
+`GameLoopTitleCardLifecycle.update` → `LevelFrameStep.executeHardwareTimedObjectScan`.
+The title-card mode runs a full `VINT_SERVICE`/`POST_OBJECTS`/`PRE_MAIN_LOOP` sequence and
+then begins a second iteration's `VINT_SERVICE` **on the same latched row**, because the
+BK2 playback bridge stops pumping once the mode leaves `LEVEL`: no
+`beginPlaybackFrame` for row 7054 ever arrives. The title-card loop is free-running with
+respect to the movie.
+
+The rows immediately before it show the model that is actually in place. Rows 7043-7052
+each apply only `VINT_SERVICE`, from
+`LevelIterationAdmissionController.consumeTransitionFreezeRow` — the V-blank-only row
+model for a level-to-level fade, correctly cited to `Pal_FadeToBlack`
+(sonic3k.asm:5042-5052) and its 22-frame `dbf`.
+
+That model covers about 22 of the window's rows; the window is 143. The recording puts the
+ROM's departure from the AIZ2 loop at row 7031 (`game_mode=0x8C`) and the destination's
+first gameplay row at 7175. `Obj_TitleCardInit` ends with `move.w #90,$2E(a0)`
+(sonic3k.asm:62162) — a 90-frame card wait — which with the fade and the load accounts for
+the remaining ~120 rows. Those rows are a real ROM main loop, not a freeze: each is one
+V_int of the destination's `Level:` entry, and the four `Queue_Kos_Module` submissions
+happen inside it.
+
+So the correct model is that the title-card loop's iterations each consume one recorded
+row and own their hardware-timed work, which is a fourth change in a fourth subsystem
+(title-card row ownership in the trace drive) behind the three already recorded. Stopping
+here as agreed rather than continuing. Nothing landed for this wall; the two parked
+candidates from the previous entry remain parked and unmeasured against S1/S2.
