@@ -67,8 +67,9 @@ final class GameLoopTitleCardLifecycle {
             // Level_ClrRam does not clear it; this store is the sole reset and it
             // runs for a special-stage return exactly as for a fresh entry.
             spriteManager.setFrameCounter(0);
-            releaseResult.accept(destination.completeRelease(
-                    levelManager, exitTitleCard, preludePasses > 0));
+            destination.completeRelease(
+                    levelManager, exitTitleCard, preludePasses > 0);
+            releaseResult.accept(LevelFrameResult.SETUP_ONLY);
             return true;
         }
 
