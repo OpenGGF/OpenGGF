@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **An object's standing bit now expires with its slot, as the delete routines do.**
+  The object-side p1/p2 standing bits were keyed on the persistent `ObjectSpawn`, so they
+  outlived the instance they described and a solid reloaded from the same layout entry
+  could answer "this player is standing on me" on the strength of a bit its predecessor
+  set. The ROM zeroes the whole SST slot on delete — S2 `DeleteObject`/`DeleteObject2`
+  (`docs/s2disasm/s2.asm:30329-30345`), S1 `DeleteObject`/`DeleteChild`
+  (`docs/s1disasm/_incObj/sub DeleteObject.asm:10-20`), S3K `Delete_Current_Sprite`/
+  `Delete_Referenced_Sprite` (`docs/skdisasm/sonic3k.asm:36108-36125`) —
+  so `ObjectManager.removeActiveObject` now releases the standing latch beside the existing
+  pushing release. Object-side only: none of those routines touches the player's slot, so a
+  player standing on a self-deleting object keeps `Status_OnObj` and keeps pointing at the
+  freed slot, exactly as the ROM leaves it.
+
+### Fixed
 - **The SBZ rotating junction and small door balance at their ROM `obActWid`.**
   `Jun_Main` writes `move.b #96/2,obActWid(a0)` = 48 for the junction parent
   (`docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:47-48`); the `#112/2` = 56

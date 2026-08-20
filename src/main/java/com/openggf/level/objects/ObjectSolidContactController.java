@@ -451,6 +451,41 @@ public final class ObjectSolidContactController {
     }
 
     /**
+     * Clears the object-side p1/p2 STANDING bits for every player, without
+     * touching the player's own {@code Status_OnObj} or the engine's riding
+     * state.
+     *
+     * <p>ROM equivalent: the object half of {@code DeleteObject}. Object-side
+     * state lives in the SST slot and is zeroed wholesale when the slot is
+     * released -- S2 {@code DeleteObject}/{@code DeleteObject2}
+     * (docs/s2disasm/s2.asm:30329-30345), S1 {@code DeleteObject}/
+     * {@code DeleteChild} (docs/s1disasm/_incObj/sub DeleteObject.asm:10-20),
+     * S3K {@code Delete_Current_Sprite}/{@code Delete_Referenced_Sprite}
+     * (docs/skdisasm/sonic3k.asm:36108-36125).
+     *
+     * <p>Deliberately object-side ONLY. None of the three delete routines
+     * touches the player's slot, so a player standing on an object that
+     * deletes itself keeps {@code Status_OnObj} set and keeps
+     * {@code interact}/{@code standonobject} pointing at the freed slot until
+     * some other routine changes it. Clearing the player's bit here would be a
+     * second, unrelated behaviour change.
+     *
+     * <p>Piece-scoped keys are collapsed to their owning object, matching
+     * {@code bclr d6,status(a0)} clearing one status byte for the whole object.
+     */
+    public void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance) {
+        Object owner = airUnseatLatchKeyFor(instance);
+        if (owner == null) {
+            return;
+        }
+        objectStandingBitSet.values().removeIf(set -> {
+            set.removeIf(existing ->
+                    java.util.Objects.equals(standingBitOwnerOf(existing), owner));
+            return set.isEmpty();
+        });
+    }
+
+    /**
      * Clears the object-side pushing bit for one player only, without the
      * paired player-side clear or the {@code SolidObject_TestClearPush}
      * Walk/Run restart write, and reports whether the bit had been set.

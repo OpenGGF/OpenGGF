@@ -3848,6 +3848,13 @@ public class ObjectManager {
             // without this the stale bit survives the unload and the reloaded
             // object publishes a release the ROM never performs.
             solidContacts.releaseObjectPushLatchForAllPlayers(removed);
+            // Same delete-routine citation, standing half. The object-side
+            // standing bit is in that same zeroed status byte, so a reloaded
+            // solid must not answer "this player is standing on me" on the
+            // strength of a bit its predecessor set. Object-side only: none of
+            // the three routines touches the player's slot, so the player's own
+            // Status_OnObj and the engine's riding state are left alone.
+            solidContacts.releaseObjectStandingLatchForAllPlayers(removed);
             notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext

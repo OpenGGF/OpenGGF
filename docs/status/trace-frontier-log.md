@@ -93347,3 +93347,91 @@ and `groundedSlidePreservesObjectPublishedWalk` already assert `null` for
   `TouchResponseProvider` hook together) was executed by the previous lane and is
   recorded in the 2026-08-20 entry above; this lane inherited the end state and did
   not re-run step 1 in isolation.
+## 2026-08-20 — the standing bit: same ROM rule, three measured occurrences, SWEPT
+
+Worktree `ai-s2-ehz2-walk-r1`, branch `bugfix/ai-standing-latch-r1`, JDK 21, on top of the
+merged pushing-bit fix. Swept and landed from `bugfix/ai-standing-latch-r2` in worktree
+`ai-standing-latch-r2`, rebased onto `develop` at `9f88b3b36`; see "Swept" below.
+
+### The rule, which is the same one
+
+The object-side STANDING bit shares the pushing bit's exposure: it is keyed on the
+persistent `ObjectSpawn` via `airUnseatLatchKeyFor`, so it outlives the instance, while the
+ROM zeroes the whole SST slot on delete — S2 `DeleteObject`/`DeleteObject2`
+(`s2.asm:30329-30345`), S1 `DeleteObject`/`DeleteChild`
+(`_incObj/sub DeleteObject.asm:10-20`), S3K `Delete_Current_Sprite`/
+`Delete_Referenced_Sprite` (`sonic3k.asm:36108-36125`).
+
+Fix: `releaseObjectStandingLatchForAllPlayers`, called beside the pushing release at
+`ObjectManager.removeActiveObject`. **Object-side only.** None of the three delete routines
+touches the player's slot, so a player standing on a self-deleting object keeps
+`Status_OnObj` and keeps `interact`/`standonobject` pointing at the freed slot, exactly as
+the ROM leaves it; clearing the player's bit would be a separate change. Piece-scoped keys
+collapse to their owning object, matching `bclr d6,status(a0)` clearing one status byte.
+
+### Why this needed measuring rather than reasoning
+
+The standing bit is **self-limiting in a way the pushing bit is not**:
+`evictPreviousStandingBitOwner` drops every other owner each time a player is seated, so at
+most one key is live per player and a stale bit survives only if the player seats on
+nothing at all between unload and reload. That is exactly the argument for concluding it
+cannot happen. It narrows the window without closing it.
+
+### The detector, and the correction to its first reading
+
+A probe on `hasObjectStandingBit` firing when the bit is read by an instance other than the
+one that set it (`System.identityHashCode` on both sides, deduplicated) found **10 reads**.
+That number was reported upward as "10 stale reads across three object families" and **that
+was wrong**. A second pass classifying each read by whether the owner instance had actually
+gone through removal settles it:
+
+| | reads | verdict |
+|---|---|---|
+| `BridgeObjectInstance` (Tails, 1768,712) | 2 | genuine cross-reload staleness — closed |
+| `SinkingMudObjectInstance` (Tails, 4480,2272) | 1 | genuine cross-reload staleness — closed |
+| `OOZLauncherObjectInstance` (Sonic) | 7 | **`ownerRemoved=false` — NOT staleness** |
+
+The seven launcher reads are at (9024,240) x2, (4416,624), (6720,1008), (7104,1008),
+(10432,880) and (9920,1392), and in every one the owner instance was never removed. They
+are a parent and its fragment children sharing one `ObjectSpawn` key **inside a single
+lifetime** — a limitation of the detector, not a defect. An owner-mismatch detector cannot
+distinguish "reloaded" from "live sibling" without the removal flag; anyone re-running this
+probe needs that column or they will re-derive the same false positives.
+
+**Corpus evidence for this fix is therefore three occurrences in two object families, not
+ten.** The fix does not rest on that count — it rests on the three delete routines.
+
+### Measured
+
+- `-Ptrace-replay` with the fix: **792 tests, 4 failures**, the same four classes, and every
+  failure message identical to develop including S3K segment 6 at 7,434 and segment 4 at
+  250. **Measurement-neutral**, which is the expected shape here.
+- Detector: 10 reads before, 7 after — the three genuine ones closed, the seven artefacts
+  unaffected (correctly, since nothing is stale about them).
+- Spot-checks green together: `TestS2CompleteEmeraldRunPrefix`, `TestS3kAizTraceReplay`
+  (16/16), `TestS3kMgzTraceReplay`, `TestS3kCnzTraceReplay` (27/27).
+
+### Swept (branch `bugfix/ai-standing-latch-r2`, base `9f88b3b36`, JDK 21)
+
+Both arms measured in the same worktree with a same-tree revert as the control (never a
+second worktree, never `git stash`), `-Dmse=off`, all three ROM paths passed explicitly.
+
+- `-Ptrace-replay`: **792 / 4 failures in both arms**, the same four classes, and the first
+  failure *message* per class identical — including S1 seg12 frame 101 and seg15 frame 102
+  `queue.s1_nemesis_plc.prepared`, S2 seg15 frame 2 `remaining_work rom=2 engine=5`, S3K
+  segment 6 at 7,434 (`sidekick_x rom=0x3205 engine=0x3207`, frame 3339) and segment 4 at
+  250, and CPZ2 seg10 frame 52 `queue.s2_nemesis_plc.busy`. Measurement-neutral.
+- `-Pguards`: **500 / 0** in both arms.
+- Default (non-trace) suite: 15,190 tests in all five runs. Fix arm 60 / 61 / 59 red
+  classes, control arm 60 / 59. The two arms' class sets differ only by members of the
+  known order-dependent set (`TestSonic1LabyrinthObjectsBasic`,
+  `TestMhzMushroomParachuteObjectInstance`, `TestMGZSwingingPlatformObjectInstance`,
+  `TestGameLoopAudioPresentationModes`, and a lag-denominator bucket whose *message* varies
+  run to run). `TestMhzMushroomParachuteObjectInstance` was red in two fix runs and green
+  in the third with no change to the tree, which is what settled it as noise rather than a
+  regression. Net zero.
+
+### Still not established, carried forward unchanged
+
+- Whether `previousCheckpointStillOwnsWalk` / `persistentLatchStillOwnsWalk` have a native
+  meaning at the synthetic off-screen solid gate. Retained, still unjustified.
