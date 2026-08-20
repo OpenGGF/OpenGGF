@@ -1239,6 +1239,16 @@ public final class TraceRunReplayWalker {
         }
 
         @Override
+        public boolean hasUnconsumedRecordedRows() {
+            // Row ownership is the row delegate's to answer; the probe adds
+            // only boundary latching. No prepareFrame() here -- this query is
+            // read on frozen frames that never prepared a row.
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            return rowDelegate != null && rowDelegate.hasUnconsumedRecordedRows();
+        }
+
+        @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
             PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
                     framePrepared ? preparedDelegate : delegate;

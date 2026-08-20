@@ -97974,3 +97974,66 @@ those rows, but teardown closes through `verifyRunComplete()`, which demands
 every edge of the whole run. `verifyPrefixComplete(inclusiveRawFrame)` exists for
 exactly this and would still fail on any edge at or before the stop row. That is
 a harness closure question, not an engine defect, and not an invariant to relax.
+## 2026-08-20 — the level-to-level fade freeze does own its rows: 22 consumed, 121 still unowned
+
+Branch `bugfix/ai-s3k-fade-ownership-r1`, worktree pair off `6cbad2e64` (candidate +
+same-commit detached control). All numbers below are from single-class runs with
+`-Ptrace-replay -Dmse=off` and all three ROM paths explicit.
+
+**The brief's premise holds, and the ownership condition is the right shape.**
+`GameLoop.updateLevelMode`'s `freezeForNonRewindableTransition` branch returned without
+advancing the playback cursor, so the engine's transition fade consumed no recorded rows —
+while the ROM's fade is `move.w #$15,d4` over a `dbf` around a V-blank wait in every game
+(S3K `Pal_FadeToBlack` docs/skdisasm/sonic3k.asm:5042-5052, S2 `Pal_FadeToBlack`
+docs/s2disasm/s2.asm:3370-3382, S1 `PaletteFadeOut`
+`docs/s1disasm/_inc/Palette Fading.asm`:134-145, whose source literally spells the count
+`22-1`). V_int, the recorder's row source, ticks across all 22.
+
+Landed as an **ownership predicate, not a constant**: a new
+`PlaybackFrameObserver.hasUnconsumedRecordedRows()` (default `false`), answered by
+`LiveTraceComparator` as `cursor < trace.frameCount()` and forwarded by
+`TraceRunReplayWalker.BoundaryProbe` to its row delegate. The freeze consumes a row only
+while the source span still holds rows the cursor has not reached, so a run whose recorder
+cut the segment on its last live gameplay row (S2 `seg4_ehz1`, whose fade sits in the
+171-row driver-owned gap before `seg5_ehz2`) grants nothing and cannot double-count. No
+game name, zone, route, or frame index appears in the condition; the count is never written
+down anywhere.
+
+### MEASURED
+
+Fixture rows below are **0-based indices into `aiz_5`'s `physics.csv`**
+(`row = cursor - 46432`); the pinned `player_y=0342` is row 7031, matching the brief.
+
+- `aiz_5` rows 7031-7053 hold `gameplay_frame_counter` frozen at `1B63` with
+  `player_y=0342` and `vblank_counter` incrementing every row. Row 7031 is the last live
+  gameplay row; rows **7032-7053 are exactly 22 frozen fade rows**, `Pal_FadeToBlack`'s own
+  span, carried inline in the segment.
+- From row 7054 onward `player_x`/`player_y`/`gameplay_frame_counter` all read `0000` —
+  the level is unloaded. Rows 7054-7174 are **121 rows** of level-load/title-card span,
+  ending at `0280,0020` (the destination level's start position).
+- `TestS3kSonicTailsCompleteEmeraldRunChain`, same assertion both arms
+  (`segment 8 lost production ownership before source closure`):
+  control **BK2 cursor=53465**, candidate **BK2 cursor=53486**. The delta is 21 consumed
+  rows plus the `finishPlaybackBoundary` request-consume frame that consumes nothing — the
+  22-row block, consumed exactly, no more and no less.
+- Instrumented probe on the freeze branch: 21 frozen frames observed at cursors
+  53464-53484, each reporting `unconsumed=true`, `driver=false`.
+- `TestS2EhzHalfpipeRoundTripChain` (the early-warning test a naive constant regressed):
+  **green** on the candidate.
+- `-Ptrace-replay` candidate arm: `Tests run: 799, Failures: 6, Errors: 0, Skipped: 4`,
+  six `Tests run: 0,` lines — the full denominator, not a truncated run.
+
+### ESTABLISHED
+
+The seam is still red, and the fade was never its whole cause. Segment 8's tail after the
+last gameplay row is **143 rows, not 22**: the 22 fade rows the engine now owns, then 121
+rows across which the recorded level is unloaded and the destination is built. The engine
+still leaves the source level 121 rows early. The fade fix moves the frontier onto that
+level-load span; it does not reach it.
+
+### NOT ESTABLISHED
+
+- Whether the 121-row load span should be consumed by the source segment's freeze, by a
+  destination-side admission, or by the driver-owned gap. Nothing here measures that.
+- Whether the request-consume `finishPlaybackBoundary` frame should advance. It was left
+  alone, as the brief's decomposition indicated, and remains unmeasured standalone.
