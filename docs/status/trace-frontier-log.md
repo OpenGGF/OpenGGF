@@ -98156,3 +98156,140 @@ rows 7064-7128 and 7156-7174, given that Kosinski readiness demonstrably paces t
 
 Adjacent question left untouched as briefed: whether `finishPlaybackBoundary`'s
 request-consume frame should advance is not settled by this work.
+## 2026-08-20 — The S1 `-216` walk was a stale `f_bigring`, not a cursor problem; frontier 24 → 33
+Command (both arms, same worktree, control by detaching to the base commit so Surefire's
+filesystem run order is held fixed):
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS1CompleteEmeraldRunChain \
+  -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> test
+Base `44675e740`, candidate `bugfix/ai-s1-minus216-r1`. S1 chain red in both arms.
+### MEASURED
+- Control: asserts to **segment 24**, walk failure
+  `Destination playback cursor advanced -216 frames during level-load handoff
+  (lz1_2 -> lz2, destination offset 139553, cursor 139337)`.
+- Candidate: asserts to **segment 32**, walk failure moves to
+  `segment 33 lost production ownership before source closure (mode=TITLE_CARD,
+  progressionZone=6, BK2 cursor=210396)`.
+- Unrecorded BK2 gap at every level→level seam in this run: syz3_2→lz1 216, lz1→lz1_2 216,
+  lz1_2→lz2 217, lz2→lz3 216, lz3→slz1 220, slz1→slz2 219, slz2→slz3 219, slz3→sbz1 219,
+  sbz1→sbz2 220, sbz2→lz4 217. `lz1_2` holds 16294 recorded rows; the cursor consumed 16295.
+- Probe at the throw site: `mode=SPECIAL_STAGE pendingRebind=true zone=3:1
+  titleCardRequested=false`.
+- Probe on every `bigRingCollected` write across the run: `false -> true` once in GHZ1,
+  then six `true -> true`, and **no `-> false` anywhere**. Act ends read
+  `specialStageAfter=true` at rings 118/66/76/112/97/51 (six genuine collections) and then
+  at `zone=1:0 rings=20` with no collection in that act.
+- S2 complete-emeralds chain and S3K mega chain: full-message diffs **identical** between
+  arms.
+### ESTABLISHED
+`-216` was never a magnitude to explain. ~216-220 is the ordinary S1 act-transition gap at
+every seam in this run, so a cursor sitting one fall-through past the source's last row
+means only that the destination rebind never fired.
+
+It never fired because the engine was in a special stage. `f_bigring` is a level variable —
+`Level_ClrRam` runs `clearRAM v_levelvariables` (`docs/s1disasm/sonic.asm:2742`) and
+`f_bigring` (`_Variables.asm:285`) lies inside `v_levelvariables` (`:179`) ..
+`v_levelvariables_end` (`:301`), commented "variables that are reset between levels".
+Obj7C's `move.b #1,(f_bigring).w` (`_incObj/4B, 7C Giant Ring and Flash.asm":123`) is the
+ROM's only other write. The engine never cleared it, so after the first giant ring every
+act end read it as set and `Got_ChkSS` (`_incObj/3A Got Through Card.asm":199-201`) wrote
+`v_gamemode = id_Special` — bypassing `GRing_Main`'s own gates on `ss_giantring_rings` (50)
+and on already holding all six emeralds. Cleared in `GameStateManager.resetForLevel()`,
+beside the other `Level_ClrRam` flags it already models.
+
+Every axis the candidate adds (segments 25, 26, 27, 29, 31, 32 and the lz2→lz3 … slz3→sbz1
+dynamic-art-gap axes) is at or beyond the lz1_2→lz2 boundary: newly-reached territory, not
+a regression. The axis count rises 7 → 17 only because nine segments now replay at all.
+### NOT ESTABLISHED
+- The standing prediction that this closes "once segment 24 stops diverging" is **killed**.
+  Segment 24's `firstNonCameraPhysicsMismatch` is `dynamic_art.edges` at frame 3182 and all
+  18,221 errors are `dynamic_art.*`; its physics is clean, and the probe read rings=20 at
+  the act end, matching the recorded last row (0x14). The two are independent, and segment
+  24's error count is unchanged by this fix.
+- Segment 33's "lost production ownership" is the same axis shape S2 has hit repeatedly
+  (`TestS2Cpz1Seg8…`, `TestS2Cpz2Seg10…`, `TestS2EhzHalfpipeRoundTripChain`). A shared
+  cause is plausible and unmeasured here.
+
+### Instrument hazard
+
+Under `-Ptrace-replay`, a **main-source compile failure still leaves the previous run's
+`target/surefire-reports/TEST-*.xml` in place**, so grepping the report after a failed build
+returns the prior run's numbers looking like a fresh result. Confirm a probe string is
+present in the compiled class before quoting a probed run.
+
+## 2026-08-20 — Both quiet bands have ROM pacers: the title-card slide, the Nemesis queue, and one un-waited straight line
+
+Row convention unchanged: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = bk2_cursor - 46432`.
+
+**The previous entry's premise that rows 7064-7128 are un-paced is wrong.** They are
+paced, by two ROM-owned counters that need no recorded input at all. Only the *second*
+band, 7156-7174, is genuinely outside every existing mechanism.
+
+### The destination `Level:` load has exactly two `Wait_VSync` loops, and they are visible
+
+`Level:` reaches a V-blank only inside these two, both using `V_int_routine = $C`:
+
+- `loc_62CC` (`docs/skdisasm/sonic3k.asm:7737-7752`) — the title-card loop. Exits when
+  `Obj_TitleCard $48 == 0` **and** `Nem_decomp_queue == 0`.
+- `loc_7870` inside `LoadLevelLoadBlock` (`:9737-9743`) — the layout loop. Exits when
+  `Kos_modules_left == 0`.
+
+`VInt_A_C` (`:798-840`) neither increments nor resets `Lag_frame_count` — only `VInt_0_Main`
+(`:566-570`) increments it and only `Do_Updates` (`:783-786`, reached from `VInt_8`/`VInt_10`)
+clears it. So `lag_counter == 0` across rows 7054-7155 is a *positive* statement that one of
+the two loops was executing on every one of those V-blanks, and `lag_counter` climbing from
+7156 is a positive statement that neither was.
+
+### Segment 8's tail, decomposed against the recorded aux stream
+
+`aux_state.jsonl` carries `object_state` for slot 8, object code `0x0002D690` = `Obj_TitleCard`
+(ROM `$2D690`), on every row. It settles the whole span:
+
+| rows | n | ROM | what paces it |
+|---|---|---|---|
+| 7032-7053 | 22 | `Pal_FadeToBlack` (`:7521`) | `dbf` over `Wait_VSync`; no decompression, no completions — correct |
+| 7054 | 1 | `Clear_DisplayData` + `move.w d0,(Level_frame_counter)` (`:7534-7538`); title card installed, routine `0x00` | straight line |
+| 7055-7063 | 9 | slot 8 routine `0x02` = `Obj_TitleCardCreate` (`:62166`), which returns early while `Kos_modules_left != 0` | **Kosinski.** `Obj_TitleCardInit` makes exactly four `Queue_Kos_Module` calls (`:62124-62151`); the stream carries exactly four `kos_module_queue` completions here, ordinals 97-100 at rows 7057/7059/7061/7063 |
+| 7064-7092 | 29 | slot 8 routine `0x04` = `Obj_TitleCardWait`; children appear in slots 9-12 at 7064 (`0x0002D95C` x3 = `Obj_TitleCardElement`, `0x0002D8E2` = `Obj_TitleCardRedBanner`) | **the banner slide.** `ObjArray_TtlCard` (`:62450`) gives targets `$120/$17C/$184/$C0` against starts `$260/$2FC/$344/$10`, stepped `$10`/frame (`:62372-62378`, `:62314-62319`). Longest is the act element: `($344-$184)/$10 = 28` steps. One step is already applied by row 7064 (recorded children are at `$250/$2EC/$334/$20`), so the last step lands on 7091 and 7092 is the frame `$34` reads zero and `loc_2D84C` runs `clr.w $48`. **29 rows, predicted from ROM data, zero fitted constants.** |
+| 7093-7125 | 33 | slot 8 routine `0x06` = `Obj_TitleCardWait2`; `$48` now zero, so only the second loop term remains | **the Nemesis PLC queue** submitted by `Load_PLC` at `loc_60DA` (`:7606`), drained by `Process_Nem_Queue` at **6 patterns/frame** (`:2160-2167`), called from `VInt_A_C` (`:839`). Frame cost is `ceil(patterns/6)` per queued piece, and `patterns` is the word at the head of each Nemesis blob in the ROM |
+| 7126-7128 | 3 | `Get_LevelSizeStart` (`:38068`) writes `Player_1+x/y_pos` from `Sonic_Start_Locations` and the camera; the recorded snap to `player=0280,0020` / `camera=01E0,0000` is HCZ1's entry in `LevelSizes` | straight line |
+| 7129-7155 | 27 | `loc_7870` layout loop | **Kosinski.** `kos` ordinals 148-155 and `kosM` 101-102, exactly this window |
+| 7156-7174 | 19 | `loc_62FE`-`loc_64DC`: `HUD_DrawInitial`, `LoadLevelLoadBlock2`, `j_LevelSetup`, `Animate_Init`, `LoadSolids`, `SpawnLevelMainSprites`, `Load_Sprites`, `Load_Rings`, `Pal_FillBlack` | **nothing.** This stretch contains no `Wait_VSync` and no `V_int_routine` write at all. `lag_counter` climbing `0001->0011` is `VInt_0_Main` counting V-blanks the main loop never asked for — a *witness*, not a driver. `SpawnLevelMainSprites` fires at 7174 (slot 1 Tails at `0260,0024`, `sidekick_present` 0->1) |
+
+### What this changes
+
+- **Band 1 (7064-7128) is fully engine-derivable and needs no trace input.** The previous
+  entry's guess ("layout / Nemesis-PLC load and the title-card delay") was half right and
+  half wrong: the title-card delay here is the *slide*, not the 90-frame `$2E` wait — `$2E`
+  is still 90 when the loop exits, because the loop's gate is `$48`, cleared at the end of
+  routine `0x04`. Both terms are ROM data (`ObjArray_TtlCard` deltas; Nemesis pattern
+  counts at 6/frame), so modelling them writes down no length and holds for any BK2.
+- **The recorder's `kind` set is the reason the span looked quiet**, not the ROM. Only
+  Kosinski kinds are emitted; the Nemesis queue is invisible to `hardware_timing.jsonl`
+  even though it is a real decompression queue with a ROM-fixed rate. It does not need to
+  be recorded — 6 patterns/frame is derivable — but if it were, the whole of 7055-7155 would
+  be inside the existing contract's shape.
+- **Band 2 (7156-7174) is outside the hardware-timing contract's shape entirely**, and not
+  for a fixable reason. The contract releases the readiness of *submitted* work; here no
+  hardware job completes at all, so there is nothing whose readiness could be released.
+  This is the rule-3 case where genuine hardware timing is not derivable from
+  frame-granularity state: the answer is a regenerable per-movie timing sidecar under
+  rule 4, or an added recorder signal, never a constant. 19 rows is this payload's number
+  and no other movie's.
+
+**No change landed.** The next question is narrower again: whether modelling the title-card
+slide and the 6-pattern Nemesis drain is enough to make segment 8 reach
+`currentSegmentExhausted`, given that band 2 still has no clock.
+
+Not established: the exact Nemesis pattern count behind the 33 rows at 7093-7125 (the
+mechanism and the 6/frame rate are cited from the ROM; the payload total was not summed).
+Not measured: nothing was built or run this round — no runtime code changed.
+
+### Correction to `13e977e8b`'s closing line
+
+That entry ended by guessing the un-paced remainder was "layout / Nemesis-PLC load and the
+title-card delay". The layout half is right. **The title-card half misleads and should not be
+followed:** the gate that holds `loc_62CC` is `$48`, cleared at the end of the title card's
+*slide* routine, not the 90-frame `$2E` wait — which is still 90 when the loop exits and paces
+nothing in this span. Anyone taking that line literally would model the wrong counter and land a
+90 that never fires.
