@@ -98755,3 +98755,78 @@ merely unwise.
 
 **Not established:** the mechanism inside the animals object for LZ, and the mechanism behind the
 `slz1` horizontal shortfall. Symptom and location for both, not cause.
+## 2026-08-20 — S3K Sonic+Tails chain: segment 8 closes; frontier moves to segment 9 admission
+
+Command (both arms, JDK 21, all three ROM paths explicit):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test
+```
+
+Branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `d7806a697`; same-tree control at
+`d7806a697`. Row convention below: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = cursor - 46432`. Sampling in the coordinator's `afterStep` reads a cursor already
+advanced past the row that step produced.
+
+**Before (control, `d7806a697`):** FAIL — `segment 8 lost production ownership before source
+closure (mode=LEVEL, romZone=1, act=0, BK2 cursor=53486)`. The walk aborted inside
+`stepFrames`, so segment 8's physics axis was never asserted.
+
+**After:** FAIL on 2 named axes —
+`coordinator denied segment 9 admission in phase TRANSITION_GAP`, and
+`segment 8 ... 8960 physics comparator errors, first non-camera mismatch at frame 1973 field
+sidekick_y rom=0x0146 engine=0x014B`.
+
+### What the recording says about the seam
+
+`aiz_5` carries exactly two `zone_act_state` events: row 0 (`zone 0 act 1`, `game_mode 12`)
+and **row 7031** (`zone 1 act 0`, `game_mode 140 = $8C`). Bit 7 is set by the first
+instruction of `Level:` (`docs/skdisasm/sonic3k.asm:7504-7505`), so from row 7031 the ROM is
+loading HCZ1 and `Current_zone_and_act` already names it. Rows 7032-7053 are the fade; row
+7054 is `Clear_DisplayData` plus `move.w d0,(Level_frame_counter).w` — every player and
+sidekick field zeroes there. `Obj_TitleCard` (slot 8, `0x0002D690`) walks routine
+`0x00`@7054 → `0x02`@7055 → `0x04`@7064 → `0x06`@7093; the destination start position
+(`camera 0x01E0/0x0000`, player `0x0280/0x0020`) is written at row 7126; `lag_counter` then
+climbs from row 7156 to the segment's last row 7174.
+
+### Discriminators
+
+- The engine's observed identity across the whole tail is `romZone=1, act=0` — the same
+  zone/act the recording's own `zone_act_state` names at row 7031. The engine and the ROM
+  agree; the ownership predicate did not.
+- With the tail walked, segment 8's comparator reports mismatches on **one row only**, row
+  7126, five fields (`sidekick_present`, `player_mapping_frame`, `player_animation_id`,
+  `air`, `y_speed`): the ROM has written the start position but not yet released the player,
+  and the engine has. Rows 7054-7125 and 7127-7173 produce no mismatches at all.
+
+### Remaining blockers at this seam, in the order they now surface
+
+1. **Segment 9 admission.** At the gap the cursor is 53605 against segment 9's offset 53608
+   — three rows short (segment 8's own rows 7173 and 7174, plus the one movie row 53607
+   between the segments). Level identity, `rememberedLevelLoad` and `observedBoundary` all
+   already match; only `sharedBk2Cursor >= destination.bk2FrameOffset()` fails.
+2. **Hardware timing.** All 18 recorded completions in `aiz_5` rows 7056-7155
+   (`kos_decompression_queue` #144-155, `kos_module_queue` #97-102) go unmatched with
+   `engine pending: <none>` — the engine submits no queued Kosinski work for the HCZ1 load.
+   Present in the control too, as a suppressed `HardwareTimingReplayPort` exception.
+3. **Segment 8 gameplay.** 8960 comparator errors, first non-camera mismatch at row 1973
+   (`sidekick_y` rom `0x0146` engine `0x014B`, delta 5) — five thousand rows upstream of the
+   seam, and previously masked by the ownership abort.
+
+### Refuted by this round
+
+The premise that this seam is a load-span deficit — that the engine must be taught to
+*spend* the tail rows — is wrong. Instrumented with the ownership failure suppressed, the
+engine already advances the cursor one recorded row per engine step from 53486 to 53605.
+The tail was never being skipped.
+
+### Suite state
+
+`-Ptrace-replay`: 800 tests, 6 failures in **both** arms; identical failing sets by full
+message except the S3K chain line itself; identical 155-class name sets; equal `Tests run: 0,`
+counts, so neither arm truncated. `-Pguards`: 500/500 green. Default suite: 15194 tests,
+54 failures + 67 errors (candidate) against 64 + 67 (control); the 13 control-only and 3
+candidate-only differences are all order-dependent classes unrelated to run coordination
+(`TestS3kSnaleBlasterBadnik` reflection, `TestSonic3kButtonObjectInstance`,
+`TestGameLoopSpecialStageRewindDebugBoundary`), each passing in isolation in both arms.
+`TestS2EhzHalfpipeRoundTripChain` green on the candidate.

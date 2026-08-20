@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A level run segment no longer has to own the source level across rows the ROM spends
+  loading the next one.** `TraceRunPlaybackCoordinator.ownsCurrentSegment` demanded the
+  engine still report the source segment's zone/act on every recorded row up to the
+  segment's last. A recorder cuts run segments on MODE, and a level-to-level load changes
+  no mode, so a level segment's final rows are the DESTINATION's `Level:` routine: it opens
+  `bset #7,(Game_mode).w` -- "Set bit 7 of F600 is indicate that we're loading the level"
+  (`docs/skdisasm/sonic3k.asm:7504-7505`; S1 `GM_Level` `docs/s1disasm/sonic.asm:2702-2703`,
+  S2 `Level:` `docs/s2disasm/s2.asm:4757-4758`) -- rewrites `Current_zone_and_act` to the
+  destination, then fades, clears the display and zeroes `Level_frame_counter`. Requiring
+  the source identity there asks the engine to be in a level the ROM has itself left; the
+  engine reports the destination, exactly as the recording does. Ownership now also holds
+  past the segment's recorded level-loop rows, which `TraceRunReplayWalker.levelLoopRowCount`
+  already derives from the recorded `zone_act_state`'s `Game_Mode` bit 7 -- the same
+  predicate the chain drive uses to decide a source comparator is exhausted. No length is
+  encoded: an ordinary segment's level loop runs to its final row, so the clause can only be
+  true at a cursor the segment is exhausted at anyway. On the S3K Sonic-and-Tails run this
+  closes segment 8, which had aborted the walk at its AIZ2 -> HCZ1 seam.
+
 - **A trace run's hardware-timing coordinator no longer infers which segment a frame belongs
   to from the shared BK2 cursor.** `TraceRunReplayWalker.HardwareTimingCoordinator` scanned
   its segments last-to-first and took the first whose `bk2FrameOffset` the cursor had passed.

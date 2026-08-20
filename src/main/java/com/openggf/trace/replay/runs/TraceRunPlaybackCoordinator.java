@@ -84,6 +84,13 @@ public final class TraceRunPlaybackCoordinator {
     private final TraceRunReplayWalker.BoundaryPairing boundaries;
     private final List<TraceRunReplayWalker.SegmentExecutionPolicy>
             executionPolicies;
+    /**
+     * Per-segment count of rows the recording spends inside the ROM's level
+     * MAIN LOOP, as opposed to rows it spends loading the next level. A
+     * negative entry means the plans were not supplied and the distinction
+     * cannot be drawn.
+     */
+    private final List<Integer> levelLoopRows;
     private final int transitionStepCap;
 
     private Phase phase = Phase.DESTINATION_READY;
@@ -129,11 +136,19 @@ public final class TraceRunPlaybackCoordinator {
             this.executionPolicies = plans.stream()
                     .map(TraceRunReplayWalker.SegmentPlan::executionPolicy)
                     .toList();
+            this.levelLoopRows = plans.stream()
+                    .map(plan -> plan.trace() == null
+                            ? -1
+                            : TraceRunReplayWalker.levelLoopRowCount(plan.trace()))
+                    .toList();
         } else {
             this.executionPolicies = run.segments().stream()
                     .map(segment -> "special_stage".equals(segment.kind())
                             ? TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL
                             : TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY)
+                    .toList();
+            this.levelLoopRows = run.segments().stream()
+                    .map(segment -> -1)
                     .toList();
         }
         this.transitionStepCap = TraceRunReplayWalker.interSegmentStepCap(run);
@@ -480,7 +495,8 @@ public final class TraceRunPlaybackCoordinator {
                     && ((matchesLevel(segment, observation.level())
                                     && observation.level().loadGeneration()
                                             == currentLevelGeneration)
-                            || inLevelAdvances.contains(observation.level()));
+                            || inLevelAdvances.contains(observation.level())
+                            || pastRecordedLevelLoop(segment, observation));
             case "bonus_stage" -> matchesBonus(segment, observation);
             // A recorded special_stage segment spans the ROM's whole
             // GameModeID_SpecialStage, results screen included; the engine
@@ -551,6 +567,48 @@ public final class TraceRunPlaybackCoordinator {
                 rowsConsumed, identity, loadGeneration,
                 observation.timingScheduleGeneration(),
                 observation.dynamicArtGeneration(), policy(segmentIndex)));
+    }
+
+    /**
+     * Whether the recording itself says the ROM has left this level segment's
+     * MAIN LOOP and is loading the next level.
+     *
+     * <p>{@code Level:} opens with
+     * {@code bset #7,(Game_mode).w} -- the disassembly's own comment reads
+     * "Set bit 7 of F600 is indicate that we're loading the level"
+     * (docs/skdisasm/sonic3k.asm:7504-7505). S1's {@code GM_Level} sets the
+     * same bit -- {@code bset #7,(v_gamemode).w ; add $80 to screen mode (for
+     * pre level sequence)} (docs/s1disasm/sonic.asm:2702-2703) -- and S2's
+     * {@code Level:} names it, {@code bset #GameModeFlag_TitleCard,
+     * (Game_Mode).w} (docs/s2disasm/s2.asm:4757-4758). The routine
+     * rewrites {@code Current_zone_and_act} to the DESTINATION before it fades,
+     * clears the display and zeroes {@code Level_frame_counter}, so every row
+     * from that {@code bset} onward is the destination's load, recorded under
+     * the source segment only because the recorder cuts segments on MODE and
+     * the mode does not change across a level-to-level load.
+     *
+     * <p>{@link TraceRunReplayWalker#levelLoopRowCount} already answers where
+     * that happens, from the recorded {@code zone_act_state}'s
+     * {@code Game_Mode} bit 7 -- the same predicate the drive uses to decide a
+     * source comparator is exhausted. Requiring the ENGINE to still own the
+     * source level's identity across those rows asks it to be in a level the
+     * ROM has itself already left; the engine legitimately reports the
+     * destination there, exactly as the recording does.
+     *
+     * <p>No length appears here. A segment whose recorded level loop runs to
+     * its final row -- every ordinary segment -- has
+     * {@code levelLoopRows == traceFrameCount}, so this can only be true at a
+     * cursor the segment is exhausted at anyway, and nothing is relaxed. It
+     * widens ownership only where the recording carries load rows, and only
+     * for as long as the recording says the load lasts.
+     */
+    private boolean pastRecordedLevelLoop(
+            TraceRunManifest.Segment segment,
+            RunPlaybackObservation observation) {
+        int loopRows = levelLoopRows.get(currentSegmentIndex);
+        return loopRows >= 0
+                && observation.sharedBk2Cursor()
+                        >= Math.addExact(segment.bk2FrameOffset(), loopRows);
     }
 
     private int destinationIndex() {
