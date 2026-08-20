@@ -96114,3 +96114,66 @@ puts the player box edge exactly on the fragment box edge; +3 px tips it into ov
 - The segment's `rings` divergence (recording 0x4E, engine 78 -- a shield absorbing the hit
   in the recording) is not resolved by this change; the engine still holds the wrong ring
   count from frame 603 of the standalone harness onward.
+
+## 2026-08-20 -- S3K chain: `raw_frame moved backward` is an AIZ2->HCZ1 load-timing skew
+
+Command (worktree `bugfix/ai-s3k-rawframe-r1`, base `2c5723e82`):
+
+```bash
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds1.rom.path=$PWD/s1.gen -Ds2.rom.path=$PWD/s2.gen -Ds3k.rom.path=$PWD/s3k.gen test
+```
+
+Base measured in this tree (~38 s, so the chain is a usable iteration harness here): 3 axes
+-- `[walk-failure] hardware timing raw_frame moved backward: previous=33, current=0`,
+segment 4 250 physics errors, segment 8 10375 physics errors (first non-camera mismatch
+frame 1973 `sidekick_y` rom=0x0146 engine=0x014B). The previous entry's numbers reproduce.
+
+### What the assertion actually names
+
+Instrumenting `HardwareTimingCoordinator.beginSegmentRow` shows the backward move is inside
+**segment 9** (`hcz`, `bk2_frame_offset` 53608), not at a handoff -- `cur=9` throughout:
+
+```
+PROBE seg=8 traceIndex=7174 rawFrame=7174 bk2Off=46432 rows=7175
+PROBE seg=9 traceIndex=0..33 rawFrame=0..33 bk2Off=53608 rows=3574
+PROBE seg=9 traceIndex=0  rawFrame=0
+```
+
+Segment 8 (`aiz_5`) walks to its last row; the engine's own title-card/level-load
+choreography then consumes movie frames 53608-53641, which `beginPlaybackFrame`'s
+cursor arithmetic reads as HCZ rows 0-33; `prepareAcrossLevelBoundary` re-seeks the cursor
+to 53608 at the real level load, so HCZ row 0 is driven a second time. Both raw frames are
+segment-local (`raw_frame == trace index` for every segment in this run), so `33 -> 0` is
+the re-seek, not drift.
+
+### The underlying skew
+
+The recording loads HCZ *inside segment 8's tail*: `aiz_5/hardware_timing.jsonl` completes
+`kos_decompression_queue` ordinals 144-155 at raw frames 7056-7154 (segment 8 has 7175
+rows), and `hcz/hardware_timing.jsonl` does not begin until raw frame 35
+(`kos_decompression_queue#156`). In the base run every one of 144-155 is reported unmatched
+with `engine pending: <none>` -- the engine has not submitted them yet at those rows -- and
+an instrumented rerun finds `KOS_DECOMPRESSION_QUEUE#144` pending during the crossing.
+**The engine submits the HCZ level load's Kosinski work at least ~119 rows later than the
+ROM**, which is what pushes its load choreography into the destination segment's BK2 range.
+
+### Rejected candidate (`0ec47ad31`, reverted in `HEAD`)
+
+Holding hardware timing in its unrepresented gap across the whole adjacent-level crossing
+(mirroring the comparison delegate being detached there) is semantically right for frames
+the driver is about to replay, and keeps `-Pguards` green (500 tests,
+`TestHardwareTimingAuthorityGuard` included). It does not move the frontier: the walk
+failure becomes `transition step cap 40650 exceeded for adjacent_level from segment 8 at
+BK2 cursor 53608`, with 40592 polls of `kos-decomp head held in unrepresented gap:
+KOS_DECOMPRESSION_QUEUE#144 depth=1`. Only S1 implements the unrepresented-gap
+native-readiness fallback (`Sonic1PlcArmTiming:110-124`); S3K's Kosinski queues have none,
+so work submitted inside a gap can never complete and the HCZ load never finishes.
+
+### Not established
+
+- Whether the S3K Kosinski queues *should* gain S1's unrepresented-gap fallback. It would
+  unblock the candidate, but the candidate only hides the ~119-row submission skew above.
+- Where the late submission comes from -- whether the engine defers the HCZ load itself or
+  reaches the AIZ2 exit late. Nothing here measured that.
+- Nothing in this round touched the segment 4 (250) or segment 8 (10375) physics axes.
