@@ -324,9 +324,18 @@ class TestTitleCardObjectExecution {
                     "S2 title card should release within the test guard");
             assertEquals(26, passesWhileCardUp,
                     "S2 must run exactly the ROM's 26 pre-Level_MainLoop level-object passes");
+            // Level_frame_counter is cleared at s2.asm:4772, and Level_MainLoop
+            // increments it at :5092 -- one instruction AFTER its own
+            // bsr.w WaitForVint at :5091. That wait is the console frame the
+            // release iteration ends on, so the counter is still 0 when the
+            // title-card flag clears and reads 1 only once Level_MainLoop's
+            // first pass has resumed from the wait.
+            assertEquals(0, GameServices.sprites().getFrameCounter(),
+                    "the release iteration ends on Level_MainLoop's WaitForVint "
+                            + "(s2.asm:5091), before its addq at :5092");
+            loop.step();
             assertEquals(1, GameServices.sprites().getFrameCounter(),
-                    "Level_frame_counter is cleared at s2.asm:4772 and first incremented by "
-                            + "Level_MainLoop's addq at :5092, so the release iteration leaves it at 1");
+                    "Level_MainLoop's first pass past the wait performs the addq");
         }
 
         if (checkSonic1ReleaseHandoff) {
