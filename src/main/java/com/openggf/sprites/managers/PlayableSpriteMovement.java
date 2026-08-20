@@ -209,6 +209,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	@Override
+	public void resetGroundAngleLatches() {
+		latchedNextTilt = 0;
+		latchedTilt = 0;
+	}
+
+	@Override
 	public void resetTransientState() {
 		jumpPressed = false;
 		jumpPrevious = false;

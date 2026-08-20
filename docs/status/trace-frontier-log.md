@@ -96114,3 +96114,98 @@ puts the player box edge exactly on the fragment box edge; +3 px tips it into ov
 - The segment's `rings` divergence (recording 0x4E, engine 78 -- a shield absorbing the hit
   in the recording) is not resolved by this change; the engine still holds the wrong ring
   count from frame 603 of the standalone harness onward.
+
+## 2026-08-20 — RETRACTION: the two floor probes agree. Segment 4's balance comes from a carried-over `next_tilt`
+
+- Worktree `ai-s3k-floorprobe-r1`, branch `bugfix/ai-s3k-floorprobe-r1`, over
+  `b68d4d579`. Control worktree `ai-s3k-floorprobe-r1-control` at the same commit.
+
+**RETRACT the previous entry's closing question** — *"why does the engine's balance
+floor probe find ground at `(0x0240,0x03D0)` that `AnglePos` does not?"* It does not
+find ground. There is no probe disagreement, and there never was: reaching
+`setBalanceForEdge` at all **requires** the centre probe to report no floor
+(`checkTerrainEdgeBalance` returns early when `centerDist < $C`), so both probes agreeing
+"no floor" is a precondition of the wrong write, not a contradiction with it.
+
+Measured with a probe on `checkTerrainEdgeBalance`'s three scans and on
+`captureTiltAnglesForGroundDispatch`, filtered to the two row-0 centres. Chain
+`TestS3kSonicTailsCompleteEmeraldRunChain`, segment 4 row 0:
+
+```
+TERRAIN Sonic x=576 y=976 ang=0 gsp=0 air=false tilt=3 nextTilt=3 lastCap=[x=631 y=1217 t=3 nt=3] | leftDist=28 rightDist=28
+CENTER  Sonic x=576 y=976 ... | centerDist=28 centerOffset=9
+TERRAIN Tails x=544 y=980 ang=0 gsp=0 air=false tilt=3 nextTilt=3 lastCap=[x=632 y=1217 t=3 nt=3] | leftDist=99 rightDist=99
+CENTER  Tails x=544 y=980 ... | centerDist=99
+```
+
+Every distance is `>= $C`. The branch that fires is `latchedNextTilt == 3`.
+
+### The actual defect: a latch the ROM clears at every level load
+
+`latchedNextTilt`/`latchedTilt` are the engine's copy of the ROM SST bytes
+`next_tilt`/`tilt`, which `Sonic_Balance` reads to pick its edge branch
+(`sonic3k.asm:22538`, `:22568`) and which the player tail copies out of
+`Primary_Angle`/`Secondary_Angle` after the movement dispatch (`:21999-22000` Sonic,
+`:26243-26244` Tails). The engine writes them only in
+`captureTiltAnglesForGroundDispatch`, reached only from the grounded dispatch paths, and
+**nothing cleared them**: `resetTransientState()` does, but its only caller is the rewind
+restore. So the `3` — `FindFloor`'s empty-tile sentinel — captured at `(631,1217)`, the
+last grounded frame before the giant ring in `aiz_2`, survived the special stage and the
+AIZ2 level load into segment 4 row 0.
+
+The ROM cannot carry it. `Level:` reaches `clearRAM Object_RAM,(Kos_decomp_buffer-Object_RAM)`
+(`sonic3k.asm:7504`, `:7619`) and `Player_1` is the first slot of `Object_RAM`
+(`sonic3k.constants.asm:303-304`); the same shape exists in S2 (`Level_ClrRam`,
+`s2.asm:4806-4808`, `s2.constants.asm:1096-1101`) and S1 (`Level_ClrRam`,
+`s1disasm/sonic.asm:2739-2740`, `_Variables.asm:43, 53`). This is why the standalone
+`TestS3kSonicTailsAiz3SegmentTraceReplay` never showed the defect: with fresh state it
+reads `tilt=0 nextTilt=0` at the same coordinates, takes neither edge branch, and leaves
+Wait — the same probe output as the fixed chain.
+
+Fix: `AbstractPlayableSprite.resetState()`, which already models that SST clear for
+`balanceState`, `topSolidBit`/`lrbSolidBit` and `runningMode`, now also calls a new
+`SpriteMovementManager.resetGroundAngleLatches()`. Shared across all three games with no
+per-game gate, because all three clear the same array. No constant is derived from a
+fixture.
+
+### Measurement
+
+Both arms `-Dmse=off`, all three ROM paths, JDK 21, `-Dsurefire.runOrder=alphabetical`
+(see below).
+
+| Arm | `-Ptrace-replay` | S3K chain seg 4 |
+|---|---|---|
+| control `b68d4d579` | 796 run, 5 failures | **250** errors |
+| with the fix | 796 run, 5 failures | **45** errors |
+
+Failure sets **identical**, and every other segment count identical: S1 chain segments
+12/15/22/23/24 at 3/6/15564/16/18684, S2 chain segment 15 at 7575, walk-failure still
+`segment 8 lost production ownership` at BK2 cursor 51972 on both arms. The −205 is
+exactly the 205 animation errors the brief predicted; the 45 that remain are the camera
+cluster at rows 7726-7730 (`camera_x`, delta 7-8), a pre-existing and separate issue.
+
+`-Pguards`: 500 run, 0 failures on both arms after bumping the
+`AbstractPlayableSprite.java` effective-line ratchet 3211 → 3212 for the one-line
+delegating call (the guard's own documented mechanism; note recorded in
+`TestArchitecturalSourceGuard`).
+
+Default suite: control 15194 run / 52 failures / 64 errors; fix 15194 / 52 / 67. The
+failure *sets* differ by five classes in the known order-dependent noise band — four
+appear only in the fix arm (`TestBubblerObjectInstance`,
+`TestGameLoopSpecialStageEntryPresentation` ×3) and one only in the control
+(`TestModeTracePickerLaunchStatus`). All five pass in isolation in the fix tree, and none
+touches playable-sprite angle latches. Reported as unattributed noise, not as proven inert.
+
+### Measurement hazard, hit twice
+
+1. **Filesystem run order picked a different S1 victim per worktree.** The first
+   `-Ptrace-replay` pair looked like a regression: both arms 5 failures, but the control
+   failed `TestS1Credits00Ghz1TraceReplay` (0.19 s, frame 0 `y_sub`) while the fix failed
+   `TestS1Slz3CompleteRunTraceReplay` (4.4 s, frame 0 `x_speed`). Both pass in isolation;
+   re-running both arms with `-Dsurefire.runOrder=alphabetical` produced identical failure
+   sets. **Equalise run order before comparing failure sets across worktrees** — a swap is
+   the signature, and neither isolated run would have settled it.
+2. **A background `mvn` died with its launching shell and left a log that reads like a
+   pass.** 33 lines ending mid-`testCompile`, no `Tests run:` line anywhere, and the
+   harness reported the *shell's* exit 0. Detach with `setsid ... </dev/null` and poll for
+   `BUILD SUCCESS|BUILD FAILURE` before reading any total.
