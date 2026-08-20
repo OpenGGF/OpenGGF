@@ -1126,6 +1126,22 @@ Two corollaries earned alongside it:
   at least one carrying a comment with the same premise. A single ROM argument usually settles
   every instance in one direction — so when you kill one, audit the family.
 
+**Widened after the audit: the tell is directional, and the mirror image is just as common.**
+Enumerating all thirteen sites turned up pre-charging once more, and its opposite — a *skipped*
+creation dispatch — twice. One site ran its gradual update before the switch that arms it, so the
+creation-frame dispatch never happened and every later one ran a frame late. Another held a flag
+whose comment explained why the creation dispatch should be skipped, and which was **never set to
+true**: dead code that changed nothing and would have re-taught the defect to the next reader.
+
+So the review tell is not "a comment justifying a seeded constant". It is **any comment reasoning
+about which engine hook runs first**, in either direction. If a comment's argument is about
+engine ordering rather than about a ROM routine, the code under it is guessing at a question the
+ROM answers by construction.
+
+A corollary from the same audit, worth copying: where a reserved slot genuinely *is* behind the
+live cursor, the honest fix is to expose an explicit method that runs the allocation-frame
+dispatch — not to pre-charge an accumulator to fake having run it.
+
 ## Forty-first rule: prove an arm was not truncated, don't infer it from its total
 
 Two arms reporting the same total is weak evidence that both ran completely. A contended or
