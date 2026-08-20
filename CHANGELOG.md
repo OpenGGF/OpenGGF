@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 1's speed shoes now stay boosted for the same movement frame the ROM does.**
+  `Sonic_Display` decrements `shoetime` and, on the decrement that reaches zero,
+  restores `v_sonspeedmax` / `v_sonspeedacc` / `v_sonspeeddec`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:186-191`) -- but the player's control
+  routine calls it *after* it has already dispatched `Sonic_Modes`
+  (`:76,80`), so the frame whose display step zeroes the timer still moved with
+  boosted acceleration. The engine ticks its timers before the movement step, and
+  S1's `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` was 0 while S2 -- whose
+  ROM structure is identical (`docs/s2disasm/s2.asm:36240,36244,36310-36312`) --
+  already carried the 1-tick compensation. S1 therefore dropped the boost one
+  movement frame early. On the `s1-sonic-complete-withemeralds` SYZ3 segment the
+  shoes taken mid-act expired a frame ahead of the ROM, and the resulting
+  acceleration shortfall of `$18` cascaded through position, animation and
+  dynamic-art edges for the remaining ~4,000 frames: 15,564 comparator errors
+  down to 44, and no non-camera physics mismatch left in the segment.
 - **The level timer no longer restarts after a giant-ring special-stage return.**
   `Save_Level_Data2` copies the whole `Timer` longword to `Saved2_timer` at giant-ring
   entry (`docs/skdisasm/sonic3k.asm:61745`) and `Load_Starpost_Settings`'s `loc_2D2C2`

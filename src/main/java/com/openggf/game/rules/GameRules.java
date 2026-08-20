@@ -159,7 +159,7 @@ public record GameRules(
                     true
             ),
             new PowerUpRules(
-                    0,
+                    1,
                     6,
                     8,
                     12,
