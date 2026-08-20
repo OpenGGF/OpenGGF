@@ -95722,3 +95722,75 @@ alone still trades S3K red for S2 red.
 The framing that S3K "relies on the unowned path to update an overlay nobody else updates"
 is false. The overlay has a represented owner on every one of these rows; the unowned path
 is a second dispatch on top of it.
+
+## 2026-08-20 — the duplicate title-card dispatch is removed; the S2 deferral no longer costs S3K
+
+Base `659014d9d`, worktree `bugfix/ai-s3k-dup-dispatch-r1`, JDK 21, `-Dmse=off`,
+all three ROM paths explicit. Same-tree control measured first at the base commit.
+
+### Landed: the unowned title-card path stands down when the row has an owner
+
+`RecordingFrameDriver` called
+`TraceSuppressedRowClosure.executeUnownedTitleCardWork` on rows where its own
+`stepNormalTitleCard` dispatches the same provider inside the row's represented
+object scan, and `updateActiveTitleCardOverlay` did the same on ordinary rows. The
+gate added is the caller's own statement of ownership — driver state, not the
+provider's identity, game, zone or frame index.
+
+- Three complete-run chains, `-Ptrace-replay`: **byte-identical to control**,
+  diffed by message. S2 segment 15 stays 7575; S1 and S3K chain messages unchanged.
+- `TestS3kReplayReferenceClosureIntegration`: green → **16 errors, all at frame
+  26179** (`x` 0x0280/0x0000, `y`, `camera_x`, `camera_y`,
+  `queue.s3k_kos_module.busy/prepared/remaining_work/queued_fingerprints`) plus 8
+  `hardware_timing.unmatched_completions` from frame 26182. It was green *because
+  of* the duplicate and is not restored to keep it green.
+- `-Pguards`: 500 tests, 0 failures, 0 errors.
+- Default suite: 15194 tests, 55 failures / 66 errors against a same-tree control
+  at `659014d9d` of 15194 / **54** / 66. The single delta is
+  `TestCnzHoverFanObjectInstance.overlappingActiveFansRecoverLayoutOrderWhenManagedSlotsAreReversed`,
+  which passes in isolation and touches no title-card path. Order-dependent; **not
+  positively exonerated**, only unattributed.
+
+### Established: the 12-row exit phase is ROM-correct and 7 was the artifact
+
+Instrumented (probe reverted): the fresh-level card runs one dispatch per row from
+bk2 27051 to 27122, and the EXIT phase is dispatches 1-14 at rows 27109-27122.
+Every element matches `ObjArray_TtlCard` (`docs/skdisasm/sonic3k.asm:62450`)
+exactly. `Obj_TitleCardWait2` increments `$32` once per dispatch while `$30` (live
+children) is non-zero (`:62249-62262`); each child moves `+$20` per dispatch once
+`$32 >= $28(a0)` and retires on the dispatch after it renders off-screen
+(`Obj_TitleCardElement`, `:62354-62372`). The last child is `Obj_TitleCardName`,
+`$28 = 3`, target `$120`, `width_pixels $80`: from x 160 at +32/frame from `$32 = 3`
+it reaches 448 — the width-based off-screen bound — at `$32 = 11` and is deleted at
+`$32 = 12`. The owner then needs one further dispatch to observe `$30 == 0`.
+**So the ROM exit phase is 12 dispatches of child motion plus the owner's
+observe-and-retire dispatch, which is what the engine now does.** The control's
+7 rows were 14 dispatches compressed two-per-row by the duplicate. No constant was
+fitted from either count.
+
+### Established: the S2 deferral no longer trades S3K for S2
+
+With the ownership fix in place, the previously rejected unconditional deferral
+(`deferOverlay = rowSuppressed && provider != null`) measured:
+
+- S2 segment 15: 7575 → **7511 (−64)**, first mismatch unchanged at frame 2
+  `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5.
+- `TestS3kReplayReferenceClosureIntegration`: **16 errors, frame 26179 — identical
+  to the fix-only arm.** The S3K regression it used to carry is gone entirely.
+- S1 and S3K chain messages unchanged from the fix-only arm.
+
+The candidate is committed on this branch as its own commit but **its ROM
+justification is not established here** — only that it no longer costs S3K.
+
+### Not established
+
+- Why the remaining 16 errors land at frame 26179. The exit length is ROM-correct
+  and the recorded card span (72 rows) is matched, so the seam being late is not an
+  exit-length problem; the rows the duplicate used to steal must be accounted for
+  elsewhere in the card. Candidates not measured: the 9 stalled `SLIDE_IN` rows
+  waiting on the Kos queue, and the engine's 22-frame DISPLAY hold against
+  `Obj_TitleCardInit`'s `move.w #90,$2E(a0)` (`:62368`).
+- The previous lane's untested guess that the extra `update()` changes
+  `shouldAdvanceVblankClockDuringLockedPhase()` for the row's later hardware
+  service is **discarded, not confirmed**: the probe shows `vblankClock=true` on
+  every single dispatch across the whole card, so that predicate never varies here.
