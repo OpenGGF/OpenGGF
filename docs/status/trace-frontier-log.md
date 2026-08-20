@@ -93639,3 +93639,61 @@ is right where it does not matter and wrong exactly in the bridges that do.
 
 Correlation script: `tools`-free standalone, preserved at
 `agent-scratch` task `s1-bridge-rowgap-20260820T072707Z-1399555-18367f8c/lag-correlation.py`.
+
+## 2026-08-20 -- S1 lag V-int admission extended to bridge rows: chain 15 -> 24, sweep pending
+
+Branch `feature/ai-s1-bridge-lag-r2` (rebased from `feature/ai-s1-lag-sidecar-r1`), fix
+commit `029cab6d9`, base `origin/develop` `0f5e724e5`. Recorded by the incoming lane on
+handoff; the measurements below are the **outgoing** lane's, chain-only, and were taken
+before any `-Ptrace-replay` or default-suite sweep.
+
+**The change.** The ROM's `VBlank:` branches to `VBlank_Lag` when `v_vblank_routine` is 0
+(`docs/s1disasm/sonic.asm:656-657`). That routine reaches no `ProcessPLC` call (:711-746)
+yet still advances `v_vblank_count` through `VBlank_Exit` (:684-687): a lag V-int
+decompresses nothing while the counter moves. The presentation-bridge disposition modelled
+only the *other* ROM case -- no V-int elapsed at all, derived from counter shape -- so
+`syz2`/`syz3` row 70 serviced nine patterns the ROM never serviced. `recordedRowIsLagVint`
+adds the already-recorded aux `lag_state.lagged` as a second, independent reason to select
+the suppressed closure. No new stream, no re-record, no new event kind, no contract
+extension: `TraceRunSpecialStageRows.syntheticLagPhase` is the existing precedent for the
+same admission on special-stage rows, and this is the coverage gap beside it.
+
+Wired in **both** implementations of the bridge stepping -- `TraceSessionLauncher` and
+`AbstractRunChainTest:2058` -- because they duplicate one contract. Wiring only the
+launcher produced a run byte-identical to control. See the standing item below.
+
+### Measured (chain only)
+
+- The `ss_5 -> syz2` bridge row 70 axis is **CLOSED**. The chain previously terminated
+  there; it now runs through and reaches **segment 24** (was 15 plus the bridge).
+- Unchanged, as predicted: segment 12 `mz2_3` (3 errors, frame 101) and segment 15
+  `mz3_2` (6 errors, frame 102). Neither is reachable by any lag model -- `mz2_3`'s first
+  lag row is at 102, *after* its error at 101.
+- Newly visible, segments never replayed before (**not** regressions): segment 22 (15,564
+  errors, frame 8115 `x_sub`), segment 23 (54 errors, frame 1, `remaining_work` rom=17
+  engine=20), segment 24 (18,722 errors, same frame-1 shape), two dynamic-art-gap axes.
+- A walk-failure "Destination playback cursor advanced -216 frames during level-load
+  handoff" replaced the bridge one. **Not confidently newly visible** -- it may be caused
+  by this change, and is first in the queue.
+- `-Pguards` 500/0, no guard edited, no assertion weakened, registry still closed.
+
+### The `lagStateForFrame` javadoc constraint was rewritten, not deleted
+
+Its previous wording -- "Diagnostic only... the engine must NOT change its stepping from
+these values" -- was already contradicted by `syntheticLagPhase`, so it was stale rather
+than load-bearing. The rewrite records the one sanctioned use (main-loop *admission* under
+the cross-game hardware-timing contract's first replay contract, naming the precedent) and
+states that deriving any *value* rather than an admission, or reading `lagcount`, remains
+outside it.
+
+### Standing item: two implementations of one bridge-stepping contract
+
+`TraceSessionLauncher` and `AbstractRunChainTest` each carry their own copy of the bridge
+stepping logic. A future change to one will silently no-op in the other, exactly as this
+one did until both were wired. Worth collapsing.
+
+### Not established at time of writing
+
+- Any evidence about other S1/S2/S3K trace classes under this change -- the
+  `-Ptrace-replay` sweep and the default suite had **not** been run. Landing is blocked on
+  both.
