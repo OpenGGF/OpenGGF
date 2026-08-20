@@ -95404,7 +95404,16 @@ failures.
 
 Branch `bugfix/ai-s3k-seg4-writers-r1` off `c7ac4b7c0`. **Diagnosis only, nothing landed;
 probes reverted, tree clean.** Control re-measured at this base: chain segment 4 **250**,
-`run_boundary.position.x` expected 14007 actual 14008 — both unchanged.
+`run_boundary.position.x` expected 14007 actual 14008 — both unchanged. Re-measured again
+after rebasing onto `f9dbcf95b`: identical, with zero `liblwjgl` / `GlfwKeyNameResolver` hits
+in the run log.
+
+The comparator's row-0 full-frame dump corroborates the characterisation independently:
+**every PHYSICS field MATCHes** — including `air=1`, `status=0x02` and `routine=0x02` on both
+characters — and the only ERRORs at row 0 are the four ANIMATION fields, player `0x05`/`0xBA`
+vs `0x0C`/`0xA1` and sidekick `0x05`/`0xAD` vs `0x06`/`0x9A`. Those are exactly the ids the
+stale `balanceState` values below (2 for Sonic, 1 for Tails) select, so the fixture's own dump
+agrees with the write-site probe on both the cause and the fact that physics is untouched.
 
 ### Step 1 — the arm-frame PCs, named with a listing rather than by eye
 
