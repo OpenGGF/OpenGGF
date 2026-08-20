@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A giant-ring special-stage return now restores the level timer instead of
+  starting the act's clock again.** `Save_Level_Data2` copies the whole `Timer`
+  longword to `Saved2_timer` when the entry flash hands off
+  (`docs/skdisasm/sonic3k.asm:61745`), and `Load_Starpost_Settings`'s
+  `loc_2D2C2` writes it back, then forces `Timer_frame` to 59 and steps
+  `Timer_second` back one so the next tick puts the second straight back
+  (`:61803-61805`). The engine built a fresh `LevelTimer` on the return load, so
+  every detour through a special stage restarted the act clock from zero.
+  `BigRingReturnState` now carries `savedTimerFrames` alongside the rest of the
+  `Saved2_*` snapshot and applies the ROM's restore arithmetic.
+  The visible cost was the end-of-act time bonus: on the
+  `s3k-sonic-tails-complete-emeralds` AIZ2 exit the engine read 91 elapsed
+  seconds against the ROM's 169, taking `TimeBonus` index 3 (500) instead of
+  index 5 (300) (`:62556-62574`, table at `:62910-62918`). The extra 200 points
+  are 20 extra tally frames, which delayed the whole post-results cutscene --
+  `Restore_PlayerControl`, the forced walk right, the cutscene-Knuckles spawn,
+  the button, the collapsing draw bridge and Sonic's fall past
+  `Camera_max_Y_pos` -- and with it the HCZ level load.
+
 - **A suppressed trace row no longer advances any title-card overlay from the
   unowned closure.** The deferral in
   `TraceSuppressedRowClosure.executeUnownedTitleCardWork` previously named two
