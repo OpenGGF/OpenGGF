@@ -1069,3 +1069,29 @@ way: **the absence of test output reads as "nothing went wrong" rather than "not
 Detach properly (`setsid ... </dev/null`) and poll for an explicit `BUILD SUCCESS` or
 `BUILD FAILURE` line before reading any total. An exit code from a wrapper is not the build's
 verdict, and a log that simply stops is not a result.
+
+## Thirty-ninth rule: create round worktrees copy-on-write
+
+Rounds want their own worktree, and often a second one for a same-tree control arm. A full
+checkout of this repository is roughly 800MB, so a day of parallel rounds accumulates tens of
+gigabytes of near-identical trees.
+
+On a filesystem with native reflink support (btrfs, XFS with `reflink=1`, APFS), that cost is
+almost entirely avoidable: the **`cow-git-worktree` skill** creates a worktree by reflinking
+unchanged tracked files from an existing clean worktree instead of checking them out afresh.
+Measured here: a new worktree reported ~810MB apparent size and **zero exclusive bytes** — every
+block shared with its source until something writes to it. Creation took about 20 seconds and
+the resulting tree's `git status --short` was empty.
+
+Reflinks are copy-on-write, not hard links: writing to a file in either tree diverges it
+normally, so the two worktrees stay fully independent. **Never** substitute hard links here —
+they would make an edit in one round silently corrupt another.
+
+Use the skill for creating a round's worktree and its control arm. Use ordinary git for
+`list`, `move`, `remove` and everything else. The helper falls back to a normal checkout when
+the source and target are on different filesystems or the platform lacks reflinks, and reports
+which path it took — check that report rather than assuming the optimisation applied.
+
+This pairs with the thirty-sixth rule: worktrees become cheap to create *and* the branch remains
+the artifact, so there is no reason either to hoard finished trees or to skimp on a proper
+control arm.
