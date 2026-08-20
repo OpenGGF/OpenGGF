@@ -96698,3 +96698,99 @@ Integrity check worth reusing: both `-Ptrace-replay` arms ran **155 test classes
 by name**, with the same `796 run / 4 skipped` denominator. A truncated or memory-starved arm
 shows a short class list, not merely a lower failure count — so comparing the class *set* is a
 stronger check than comparing totals.
+
+## 2026-08-20 — Gap-edge stamping: the reference is the last row RUN, and the error was in the base, not the anchor
+
+Base `aea82587b`, branch
+`bugfix/ai-gap-edge-stamping-r1`. Follow-up to the S2 title-card re-phase audit
+(`docs/architecture/audits/trace/2026-08-20-s2-title-card-mode-flip-phase.md`), residual 1.
+
+### The recorder's convention, read first
+
+`S2RunCaptureRunner` calls `state.PrepareDynamicArtCursor(rowsConsumed)` **before**
+`host.Advance()` (`tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs:207-222`), and
+`PrepareDynamicArtCursor` sets `DynamicArtLogicalFrame = movieLogicalFrame` while the run is
+unarmed (:456-460). `AddRawEdge` stamps that value (`S2DynamicArtObserver.cs:789-812`) and
+`PublishGap` carries it to `movie_logical_frame` (:306-341). So **a gap edge's stamp is the
+zero-based index of the movie row the recorder is executing** — nothing about it is derived from
+admission. S1 is identical (`S1RunCaptureRunner.cs:189`, `S1DynamicArtObserver.cs:403`).
+
+`ArmLevelSegment(frameNow, host)` sets `bk2FrameOffset = frameNow` **after** the advance
+(:529-532), so at the arm the recorder's own cursor still holds `bk2FrameOffset - 1`: the last row
+it ran, one row before the destination's row zero. The engine's cursor shares the convention —
+`PlaybackDebugManager` applies the frame at `getCursorFrame()` then advances (:317-320).
+
+### MEASURED
+
+Probe on `TestS2EhzHalfpipeRoundTripChain` (temporary, not committed), base vs. the re-phase
+prototype `da8fae6e4`, same run, same edges:
+
+```
+base   seg3_ehz1 armRow=19159 armUnann=12330  edge unannAtEmit=12329 -> row 19158  (recorded)
+proto  seg3_ehz1 armRow=19159 armUnann=12329  edge unannAtEmit=12329 -> row 19159  (+1)
+```
+
+Edge stamps and per-edge `unannouncedRowsAtEmit` are **byte-identical** between the two phases.
+The only quantity that moved is the admission-instant total, by exactly one — the fused row-zero
+iteration the prototype no longer runs before admission. `armRow` equals the destination's
+`bk2_frame_offset` (19159, and 9701 for seg2) because a pre-seeked uncompared interior freezes the
+cursor there.
+
+Sweeping all chains, the count-back is *actually applied* (stamp equals the admission row **and**
+the delta is non-zero) only at S2 pre-seeked returns — `seg2/3/4_ehz1`, `seg6/7_ehz2`,
+`seg10_cpz2`. The S1 `lz1` gap and every S3K gap carry live stamps, so they take the identity
+branch; this seam is S2-visible today.
+
+### ESTABLISHED — and one correction to the brief
+
+The brief's proposed reference, `bk2FrameOffset + rowsConsumed - 1`, is **the right quantity** —
+"the last movie row the engine actually ran" — but it belongs in the **subtraction base**, not as a
+replacement for `admissionMovieLogicalFrame`. The staleness test must stay on the admission row
+(a frozen cursor re-announces exactly that row, which is how staleness is detectable without
+reading a recorded row); only the base the delta is subtracted from changes. Both formulations are
+algebraically equal at the landed phase, which is why this is a **strict no-op today**: with
+`rowsConsumed == 1`, `bk2FrameOffset + 1 - 1` *is* the frozen stamp.
+
+`destinationOpened` now takes the destination's consumed-row count (`receipt.rowsConsumed()`, which
+the launcher already carried), and `rowCountedBackFromAdmission` takes the admission row and the
+last-run row so a live stamp keeps its own base.
+
+### Verification, both directions
+
+`TestTraceRunDynamicArtGapJournal` gains three cases: the same edge recovers the same row at both
+phases; a last-run row shifted **either** way shifts every recovered row by exactly that much
+(this is the test that fails if the reference is off by one in either direction); and a live stamp
+ignores the last-run row entirely. 5/5 green.
+
+### Measurement (all `-Dmse=off`, all three ROM paths, JDK 21)
+
+Same-tree control at `aea82587b` in a sibling worktree, diffed by message, never by class name.
+
+| Arm | Base | Candidate | Delta |
+|---|---|---|---|
+| `-Ptrace-replay` | 796 run, 4F 0E | 799 run, 4F 0E | identical failure set (+3 new unit tests) |
+| `-Ptrace-replay-r7` | 108 run, 85F 10E | 108 run, 85F 10E | identical failure set |
+| `-Pguards` | — | 500/500 | green |
+| All ten chain classes | 4F 1E | 4F 1E | identical, including axis counts (8/9/2) |
+| Default suite | 51F 68E / 51F 65E (two runs) | 53F 67E / 52F 67E (two runs) | ambient churn only; see below |
+
+The default suite churns by several classes between two runs of the **same** tree (base run 1 red
+in `TestGameLoopSpecialStageEntryPresentation` ×3, run 2 green), consistent with the reused-fork
+ambient-state flakiness already on record. `TestCnzHoverFanObjectInstance` was red on candidate run
+1 and green on candidate run 2. `TestPlaybackAdvanceOnlyInputBridge` was red on both candidate runs
+and green on both base runs but green in isolation on **both** trees — recorded as NOT ESTABLISHED
+below rather than claimed either way.
+
+### Prototype verification (measurement only — NOT landed)
+
+The prototype `da8fae6e4` plus this change, in a scratch worktree:
+`TestS2EhzHalfpipeRoundTripChain` **passes outright** — physics, gap and structural axes all green,
+where the prototype alone was red on the gap axis at every edge. The re-phase itself stays on
+`bugfix/ai-s2-modeflip-phase-r1` and is not merged here; residual 2 (the
+`uncomparedInteriorReturnVblankBudget` `returnFramesConsumed < 1` contract) is untouched and still
+wants its own round.
+
+### Frontier
+
+Residual 1 is closed. The S2 re-phase and, behind it, the `comparePosition` collapse to
+`start_x`/`start_y` are unblocked as far as this seam is concerned.

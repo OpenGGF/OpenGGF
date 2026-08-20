@@ -92,3 +92,20 @@ step), `TestS1GhzMazeRoundTripChain`, `TestS3kSonicTailsCompleteEmeraldRunPrefix
 `start_x`/`start_y` yet. It is only safe once all three games agree on the arm frame,
 and S2 does not — and the prototype that makes it agree is not landable until the
 gap-edge admission reference above is settled.
+
+## Follow-up, 2026-08-20: residual 1 is closed
+
+Settled on `bugfix/ai-gap-edge-stamping-r1` (base `aea82587b`). The recorder stamps a
+gap edge with the movie row it is *executing* — `PrepareDynamicArtCursor(rowsConsumed)`
+runs before `host.Advance()`
+("tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs":207-222) — and arms the
+destination after that row completes (:529-532), so its own cursor at the arm holds
+`bk2FrameOffset - 1`.
+
+Measured, base vs. this prototype on the same run: edge stamps and per-edge
+`unannouncedRowsAtEmit` are identical; only the admission-instant unannounced total
+moves, by exactly one. So the defect was never in the anchor row but in the row the
+delta is subtracted *from*. The base is now
+`bk2FrameOffset + destinationRowsConsumed - 1`; the staleness test stays on the
+admission row. With that change this prototype's `TestS2EhzHalfpipeRoundTripChain`
+passes outright. Residual 2 is unchanged.

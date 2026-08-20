@@ -89,6 +89,21 @@ All notable changes to the OpenGGF project are documented in this file.
   a frame early, shifting every later `dynamic_art.edges` ordinal. The slot is now a
   typed `PowerUpRules.waterSplashFixedSlotIndex`, alongside the existing shield and
   invincibility-stars fixed slots; S2 and S3K declare `-1` and keep dynamic allocation.
+- **Dynamic-art gap edges are re-rowed against the last movie row the engine ran,
+  not against the row the frozen playback cursor is announcing.** The recorder
+  stamps a gap edge with the movie row it is executing — `PrepareDynamicArtCursor`
+  is called with `rowsConsumed` *before* the host advances
+  (`tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs:207-222`) — and
+  arms the destination after that row completes, so its own cursor at the arm
+  holds `bk2FrameOffset - 1`. The engine's cursor is frozen on the destination's
+  first row across a pre-seeked uncompared interior, so
+  `TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission` was counting back
+  from a row it had not necessarily reached: correct only while a boundary
+  admits *after* the destination's row zero has run, and one row late for a
+  boundary that admits on the ROM's title-card arm frame. The subtraction base is
+  now `bk2FrameOffset + destinationRowsConsumed - 1`, which names the same instant
+  at either phase. No behaviour changes at the currently landed phase, where the
+  two references are equal.
 - **The S1 title-card release step no longer consumes the level's first recorded
   frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
   `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),

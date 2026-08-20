@@ -329,7 +329,15 @@ abstract class AbstractRunChainTest {
             }
         }
 
-        private void nextSegmentArmed(String nextSegmentDir) {
+        /**
+         * @param lastMovieRowRun the last BK2 row the engine has actually run
+         *                        at this arm, {@code bk2FrameOffset +
+         *                        rowsConsumed - 1} for the destination; see
+         *                        {@code TraceRunDynamicArtGapJournal
+         *                        .lastMovieRowRun}
+         */
+        private void nextSegmentArmed(String nextSegmentDir,
+                int lastMovieRowRun) {
             if (gapStartMovieLogicalFrame == null) {
                 throw new AssertionError(
                         "dynamic-art next segment armed without a structural gap");
@@ -349,12 +357,13 @@ abstract class AbstractRunChainTest {
                             : List.of();
             added = TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
                     added, nextSegmentArmMovieLogicalFrame,
-                    nextSegmentArmUnannouncedRows);
+                    nextSegmentArmUnannouncedRows, lastMovieRowRun);
             // The same recovery for the gap's own first row: a frozen cursor
             // reports the gap's END row at both ends of the span.
             int recoveredGapStartMovieLogicalFrame =
                     TraceRunDynamicArtGapJournal.rowCountedBackFromAdmission(
                             gapStartMovieLogicalFrame,
+                            nextSegmentArmMovieLogicalFrame, lastMovieRowRun,
                             nextSegmentArmUnannouncedRows,
                             gapOpenedUnannouncedRows);
             structuralGaps.add(new DynamicArtStructuralGapEvidence(
@@ -1314,7 +1323,8 @@ abstract class AbstractRunChainTest {
                     activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     dynamicArtSegments.beginSegment();
                     dynamicArtGapJournal.nextSegmentArmed(
-                            next.segment().dir());
+                            next.segment().dir(),
+                            next.segment().bk2FrameOffset() - 1);
                     i++;
                     continue;
                 }
@@ -1335,7 +1345,8 @@ abstract class AbstractRunChainTest {
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
-                        next.segment().dir());
+                        next.segment().dir(),
+                        next.segment().bk2FrameOffset() + rowsConsumed - 1);
                 i++;
                 continue;
             }
@@ -1675,7 +1686,9 @@ abstract class AbstractRunChainTest {
                             .advanceComparisonCursor(returnRowsConsumed);
                 }
                 dynamicArtGapJournal.nextSegmentArmed(
-                        plans.get(i + 1).segment().dir());
+                        plans.get(i + 1).segment().dir(),
+                        plans.get(i + 1).segment().bk2FrameOffset()
+                                + returnRowsConsumed - 1);
                 i++;
             } else if (entryMode == BoundaryEntryMode.LEVEL_LOAD) {
                 SegmentPlan next = plans.get(i + 1);
@@ -1804,7 +1817,8 @@ abstract class AbstractRunChainTest {
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
-                dynamicArtGapJournal.nextSegmentArmed(next.segment().dir());
+                dynamicArtGapJournal.nextSegmentArmed(next.segment().dir(),
+                        next.segment().bk2FrameOffset() + rowsConsumed - 1);
                 i++;
             } else {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
@@ -1859,7 +1873,8 @@ abstract class AbstractRunChainTest {
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
-                        interior.segment().dir());
+                        interior.segment().dir(),
+                        interior.segment().bk2FrameOffset() + rowsConsumed - 1);
                 i++;
             }
             }
@@ -2142,7 +2157,8 @@ abstract class AbstractRunChainTest {
                     GameServices.level().getObjectManager().getVblaCounter();
 
             dynamicArtSegments.beginSegment();
-            dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir());
+            dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir(),
+                    bridge.segment().bk2FrameOffset() - 1);
 
             TraceStructuralRowComparator structural =
                     new TraceStructuralRowComparator(
@@ -2360,7 +2376,8 @@ abstract class AbstractRunChainTest {
                     0, true, null);
             dynamicArtSegments.beginSegment();
             dynamicArtGapJournal.nextSegmentArmed(
-                    gameplay.segment().dir());
+                    gameplay.segment().dir(),
+                    gameplay.segment().bk2FrameOffset() - 1);
             LiveTraceComparator comparator =
                     attachReturnedLevelSegment(
                             probe, gameplay, fixture, 0, gameplayIndex);
