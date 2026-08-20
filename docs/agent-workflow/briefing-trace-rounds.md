@@ -962,3 +962,25 @@ Corollary, and the reason this rule is worth its length: a writer list derived f
 PCs was published, briefed, and built on for two rounds before being retracted wholesale. State
 your PC→label method and your confidence whenever you report writers, so the next round can
 check the derivation instead of inheriting the conclusion.
+
+## Thirty-fourth rule: two Maven invocations in one worktree corrupt each other
+
+A lane ran a second Maven invocation in a worktree that already had one running. The second
+clobbered `target/test-classes` while the first was reading it, and the first reported **"No
+tests matching pattern"** — a message that reads as "your `-Dtest` filter is wrong" or "that
+class does not exist", not as "another process deleted the class files underneath me".
+
+It joins the family this document keeps returning to: `liblwjgl` extraction failures that
+surface as ~100 errors at 0.002s, contended suites that die partway and report *fewer* red than
+the baseline, and truncated runs that look like progress. Every one of them produces output
+that is structurally indistinguishable from a real result unless you know the signature.
+
+**One Maven invocation per worktree, and run arms serially.** If you need parallelism, use
+separate worktrees — they are cheap, and the control-arm discipline wants a separate tree
+anyway. When a run reports something about *tests not existing* rather than tests failing,
+check for a concurrent build before believing it.
+
+The general rule, which now has four instances behind it: **before reporting a number, ask what
+else could have produced this output.** A measurement you cannot distinguish from an
+environment artefact is not evidence, and the artefacts here are not rare — four separate ones
+turned up in a single day.
