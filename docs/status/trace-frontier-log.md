@@ -96932,3 +96932,27 @@ only from a single-class run.
 Verification, same tree: `-Ptrace-replay` x2 -- `Tests run: 799, Failures: 5` both arms,
 identical red set by message and identical 157-class list, pin green 2/2 in profile
 (previously red 3/3 / 1/2). `-Pguards` 500/0. Default suite: no run-chain test red.
+
+### Scope of the segment-report overwrite — which of today's figures are affected
+
+Only the thirteen classes extending `AbstractRunChainTest` write
+`<runId>_seg<N>_report.json`; the standalone `*SegmentTraceReplay` classes reference a run
+without writing chain segment reports. So the exposure is per-run and much narrower than the
+raw reference count suggests:
+
+- **`s1-sonic-complete-withemeralds`** — written by `TestS1CompleteEmeraldRunChain`,
+  `TestS1CompleteEmeraldRunPrefix` and `TestS1ColdStartAttribution`. The last **re-bases** its
+  manifest to start at segment 22, so its `seg0`/`seg1`/`seg2` files collide with the chain's
+  real `seg0`/`seg1`/`seg2` — different segments, same filenames. That is exactly the collision
+  that produced the pin flake. Figures quoted from the chain's own `_seg23_`/`_seg24_` reports
+  are **not** affected, because no other writer produces those indices.
+- **`s3k-sonic-tails-complete-emeralds`** — written by `TestS3kSonicTailsCompleteEmeraldRunChain`
+  and `TestS3kSonicTailsCompleteEmeraldRunPrefix`. The prefix walks only through segment 1
+  (`assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1)`), so it writes `seg0`/`seg1` only and
+  **cannot** overwrite `seg4` or `seg8`. Today's segment 4 (250 -> 45 -> 0) and segment 8
+  (24143 -> 10375) figures are therefore unaffected.
+
+The general rule still holds — a report file from a multi-class profile run is not attributable
+without checking who else writes that index — but the specific headline numbers landed today
+survive it. The naming collision itself is deliberately left in place; renaming touches
+`TestBuildToolingGuard` and several documents.
