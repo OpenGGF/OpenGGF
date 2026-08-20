@@ -17,10 +17,32 @@ this document remains the cross-game authority boundary.
 The trace-v5 consolidation supersedes the schema-selection mechanics below,
 without changing this document's authority boundary. Current metadata declares
 only `trace_schema: 5`; `hardware_timing_schema` is removed. Presence of
-`hardware_timing.jsonl` enables the one current registry, covering both
-`kos_module_queue` and `kos_decompression_queue`. Every event still admits only
-matching, prepared, production-submitted ROM work after kind, ordinal, stable
-submission fingerprint, and service-boundary checks succeed.
+`hardware_timing.jsonl` enables the one current registry. Every event still
+admits only matching, prepared, production-submitted ROM work after kind,
+ordinal, stable submission fingerprint, and service-boundary checks succeed.
+
+The registry covers three kinds, and is closed to any kind not listed here:
+
+| Wire name | `HardwareWorkKind` | Owning pipeline |
+|---|---|---|
+| `kos_module_queue` | `KOS_MODULE_QUEUE` | S3K resumable Kosinski/KosinskiM module queue |
+| `kos_decompression_queue` | `KOS_DECOMPRESSION_QUEUE` | S3K direct Kosinski queue |
+| `nemesis_plc_queue` | `NEMESIS_PLC_QUEUE` | Sonic 1 `RunPLC` arming edge (`docs/s1disasm/sonic.asm:1379`) |
+
+`nemesis_plc_queue` records the moment the ROM accepts the Nemesis PLC FIFO
+head for decompression -- the *arming* edge, not the delivery of any decoded
+art. Every pattern the entry later decompresses is still produced natively by
+the production PLC pipeline, so this kind stays inside the authority boundary
+this document already defines: it moves only *when* an engine-submitted arm
+becomes visible, never *what* the arm loads. `S1ConditionalTraceOutputFileNames`
+(`tools/bizhawk-headless/src/Program.cs`) publishes the S1 stream only when the
+capture actually observed an edge, so an S1 fixture that records none keeps its
+historical three-file inventory rather than gaining an empty stream.
+
+`HardwareWorkKind` is the normative list;
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`
+pins the enum to exactly these three, so adding a fourth is a deliberate,
+reviewed contract change rather than an implementation detail.
 
 Historical schema-1/schema-2 names and recorder stamps later in this document
 describe the evidence and decisions that led to v5. They are not live parser
@@ -37,6 +59,50 @@ its only gameplay-visible consequence is that the 68K main loop missed a
 frame, the existing lag-row contract is sufficient. A new completion event is
 reserved for work that remains pending while the main loop continues and the
 ROM explicitly polls a hardware-owned readiness gate.
+
+### 2026-08-20 coverage status: contract, implementation, fixtures
+
+Three questions have three different answers, and conflating them has already
+mis-briefed at least one round. Keep them apart.
+
+**Contract scope -- cross-game.** Unchanged since this document was approved.
+Recorded timing *may* delay readiness in the S1 Nemesis PLC, S2 DPLC, and S3K
+Kosinski pipelines, under the single authority boundary defined here.
+
+**Implementation -- S1 and S3K.** Both ends are live for two of the three:
+
+- S3K: `S3kKosModuleQueue` and `S3kKosDecompressionQueue` submit
+  `KOS_MODULE_QUEUE` / `KOS_DECOMPRESSION_QUEUE`; recorded by
+  `S3KTraceCaptureRunner` and `S3KCompleteRunCaptureRunner`.
+- S1: `Sonic1PlcArmTiming` submits `NEMESIS_PLC_QUEUE` and
+  `Sonic1PlcService.ownsTimedLoopTailArm()` gates the loop-tail arm on
+  `isRecordedAuthority()`; recorded by `S1PlcHardwareTimingObserver`, wired
+  into both `S1TraceCaptureRunner` and `S1RunCaptureRunner`.
+- S2: **not implemented.** No source under `game/sonic2/` references
+  `HardwareWorkKind` at all, and no S2 recorder constructs
+  `HardwareTimingEventEngine`. The S2 DPLC pipeline is inside the contract's
+  permitted scope and outside its built scope. Do not describe it as available.
+
+**Fixture coverage -- S3K only.** Every committed `hardware_timing.jsonl` in
+`src/test/resources/traces` is under `s3k/` (272 of them, plus 2
+`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
+one.
+
+The consequence for S1 is specific, and is not the same thing as the mechanism
+being absent. Recorded admission is installed only by
+`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream, every
+kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
+`Sonic1PlcArmTiming.isRecordedAuthority()` returns false, and the arm is
+released by the same boundary that prepared it -- exactly the behaviour that
+predates the timing port. So the S1 path today is **implemented but dormant**:
+it is exercised by unit and guard tests, and by no committed trace fixture.
+A round debugging an S1 PLC divergence should reason about the native service
+model, not about a recorded edge, until an S1 fixture carrying a stream lands.
+
+Recorded timing is not the first resort for S1 in any case: a divergence that
+looks like elapsed hardware cost is usually a counted ROM wait loop in the
+wrong place (see the `plc-system` skill's S1 `segment_start - 26` load-pair
+invariant).
 
 ### Historical pre-v5 wire format (not live)
 
@@ -208,7 +274,7 @@ the eligibility gate above before receiving trace authority.
 | Activity | Sonic 1 | Sonic 2 | Sonic 3 & Knuckles | Replay contract | Current disposition |
 |---|---|---|---|---|---|
 | Long synchronous decompression or level initialization | Physical VInts occur while the main loop is unavailable | Explicitly visible in special-stage and level-start lag rows | Present during black-screen level loads and other initialization | Lag | S1/S2 substantially covered; audit S3K lag capture parity |
-| Normal PLC processing | `RunPLC` services a persistent queue while ordinary loops and some objects poll it | Normal/fade/special handlers service a persistent queue; ordinary gameplay can poll it | PLC/AniPLC coexist with later Kos queues | Native deterministic service queue; external completion candidate only if lag/phase is insufficient | Do not record individual PLC entries; audit service cadence and polled gates |
+| Normal PLC processing | `RunPLC` services a persistent queue while ordinary loops and some objects poll it | Normal/fade/special handlers service a persistent queue; ordinary gameplay can poll it | PLC/AniPLC coexist with later Kos queues | Native deterministic service queue; the S1 *arming* edge is an approved external completion | S1: `NEMESIS_PLC_QUEUE` records only the FIFO-head arming edge -- still do not record individual PLC entries or decoded art. S2: unbuilt; audit service cadence and polled gates |
 | Direct Kosinski decompression queue | Not used as the S3K-style owner | Not used as the S3K-style owner | `Kos_decomp_queue_count` independently gates AIZ intro and ICZ act-transition progression | External completion in S3K schema 2 | `KOS_DECOMPRESSION_QUEUE` is authoritative only under the reviewed schema-2 registry |
 | Kosinski/KosinskiM module queue | Not used as the S3K-style owner | Not used as the S3K-style owner | Resumable module queue remains pending while results/title/event code continues polling | External completion | `KOS_MODULE_QUEUE` is the first approved authoritative kind |
 | Nemesis, Enigma, Saxman, raw map decompression | Normally synchronous from gameplay's point of view | Normally synchronous; special-stage work produces lag rows | Normally synchronous unless wrapped in an explicit deferred queue | Lag | No codec-specific trace authority |
@@ -289,7 +355,12 @@ Authoritative edges live in a dedicated hardware-timing stream, not
   completion.
 - There is no payload containing gameplay state or work progress.
 
-The container contract is exact:
+The container contract below is **pre-v5 and not live** -- its schema
+selector and `trace_schema` value are both superseded by the v5 grammar
+section above, which is the authority: metadata declares only
+`trace_schema: 5`, `hardware_timing_schema` is removed, and presence of the
+file alone enables the single registry. The list is retained unedited as
+migration evidence.
 
 - filename: `hardware_timing.jsonl`;
 - metadata discovery key: `"hardware_timing_schema": 1` or
@@ -483,6 +554,16 @@ For the S3K Kos queues:
 - keep stage gating ahead of any optional diagnostic hook;
 - retain invisible, sound-disabled, maximum-speed operation; and
 - terminate within a bounded window.
+
+For the S1 Nemesis PLC queue, `S1PlcHardwareTimingObserver` follows the same
+rules against the ROM's own `v_plc_buffer` FIFO. Two of its properties are
+load-bearing for the engine side and must not drift: it observes the head
+before the shift that destroys head identity, and it discards anything seen
+before a segment's first recorded row. The latter is why
+`Sonic1PlcArmTiming.releaseArm()` falls back to native readiness in an
+unrepresented span -- a level load's own `RunPLC` arming reaches no trace file,
+so no edge for it can ever exist, and holding it against recorded readiness
+would deadlock the ROM title-card wait.
 
 The native harness is the fixture-publication authority. Before publication, its
 implementation must be established against the audited ROM/disassembly

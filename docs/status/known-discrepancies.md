@@ -1066,13 +1066,19 @@ ROM-header secondary cue. A trace may select the ordinary production
 presentation-omitted transition, but it cannot submit, mutate, service, or
 release either queue.
 
-The hardware-timing replay exception below does not apply to S1/S2 PLCs.
-Physics and auxiliary trace data remain comparison-only, and no S1/S2
-recorded completion edge is accepted. No S1 or S2 capture can supply one
-either: see "Recorder coverage" under that exception. Remove or amend this
-entry only if a future cycle-accuracy finding proves the modeled native
-service budget insufficient and the hardware-timing contract is deliberately
-expanded with its own guarded schema.
+The hardware-timing replay exception below does not apply to S2 DPLCs at
+all, and applies to S1 PLCs only at the `RunPLC` FIFO-head arming edge
+(`NEMESIS_PLC_QUEUE`). Physics and auxiliary trace data remain
+comparison-only for both games, no recorded edge may carry decoded art or any
+other payload, and no S2 capture can supply an edge of any kind. Everything
+this entry describes — the native service queue, its cadence, and every
+pattern it produces — stays natively owned in both games; the S1 exception
+moves only *when* an engine-submitted arm becomes visible. No committed S1 or
+S2 fixture carries a timing stream today, so in practice no recorded edge
+reaches either game's PLC service: see "Coverage" under that exception.
+Remove or amend this entry only if a future cycle-accuracy finding proves the
+modeled native service budget insufficient and the hardware-timing contract is
+deliberately expanded further.
 
 ---
 
@@ -1147,9 +1153,11 @@ readiness of a job only when the engine independently submitted and prepared
 the same job and its kind, ordinal, stable submission fingerprint, and service
 boundary match the recording.
 
-The live v5 contract grants this authority to both `KOS_MODULE_QUEUE` and
-`KOS_DECOMPRESSION_QUEUE` whenever the dedicated `hardware_timing.jsonl`
-stream is present. The stream has one complete registry; policy is never
+The live v5 contract grants this authority to `KOS_MODULE_QUEUE`,
+`KOS_DECOMPRESSION_QUEUE` and `NEMESIS_PLC_QUEUE` whenever the dedicated
+`hardware_timing.jsonl` stream is present. `NEMESIS_PLC_QUEUE` carries only
+S1's `RunPLC` FIFO-head *arming* edge; every pattern the armed entry
+decompresses is still produced natively by the production PLC pipeline. The stream has one complete registry; policy is never
 inferred from which kinds happen to have rows. Direct Kosinski edges can
 release only a prepared FIFO head at `pre_main_loop`.
 Schema-2 direct edges can release only a prepared head that the shared
@@ -1177,25 +1185,47 @@ scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
 
-### Recorder coverage: S3K only
+### Coverage: implemented for S1 and S3K, fixtures S3K-only
 
-The contract's wording is cross-game — recorded timing *may* delay S1 PLC, S2
-DPLC, and S3K Kosinski readiness. **The recorder implements it for S3K only.**
-`HardwareTimingEventEngine` is constructed solely by
-`tools/bizhawk-headless/src/Recording/S3KCompleteRunCaptureRunner.cs`:428 and
-`.../S3KTraceCaptureRunner.cs`:297, and `hardware_timing.jsonl` appears only in
-`CommandLineOptions.S3kTraceOutputFileNames` — never in `TraceOutputFileNames`,
-and never in the shared S1/S2 run-mode sink (`StagedRunSegmentSink`:47-49).
+Three separate questions; do not collapse them.
 
-Consequently an S1 or S2 capture emits no `hardware_timing.jsonl`, and
-re-recording an S1/S2 run cannot produce one. Treat "re-record it with the
-hardware-timing stream" as unavailable for those games until the recorder side
-is built deliberately, alongside the timing-kind registry change that
-`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`
-currently pins to Kosinski kinds. Recorded timing is not the first resort in any
-case: an S1 divergence that looks like elapsed hardware cost is usually a
-counted ROM wait loop in the wrong place (see the `plc-system` skill's S1
-`segment_start - 26` load-pair invariant).
+**Contract scope is cross-game.** Recorded timing *may* delay S1 Nemesis PLC,
+S2 DPLC, and S3K Kosinski readiness.
+
+**Implementation covers S1 and S3K.** The live registry is
+`KOS_MODULE_QUEUE`, `KOS_DECOMPRESSION_QUEUE`, and `NEMESIS_PLC_QUEUE`
+(`HardwareWorkKind`), pinned by
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`.
+On the engine side `Sonic1PlcArmTiming` submits the S1 `RunPLC` arming edge and
+`Sonic1PlcService.ownsTimedLoopTailArm()` gates on `isRecordedAuthority()`. On
+the recorder side `HardwareTimingEventEngine` is constructed by
+`S3KCompleteRunCaptureRunner`, `S3KTraceCaptureRunner`, `S1TraceCaptureRunner`
+and `S1RunCaptureRunner`; `S1PlcHardwareTimingObserver` supplies the S1 edges,
+`StagedRunSegmentSink` defines the run-mode sink, and
+`CommandLineOptions.S1ConditionalTraceOutputFileNames` publishes the S1 stream
+only when the capture observed an edge. **S2 is not implemented at either end**
+— no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
+recorder constructs `HardwareTimingEventEngine`.
+
+**Fixture coverage is S3K-only.** Every committed `hardware_timing.jsonl` under
+`src/test/resources/traces` is beneath `s3k/` (272, plus 2
+`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
+one.
+
+So the S1 path is **implemented but dormant**, which is not the same as absent.
+Recorded admission is installed only by
+`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream every
+kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
+`isRecordedAuthority()` is false, and the arm is released by the boundary that
+prepared it — the pre-timing-port behaviour. An S1 trace divergence today must
+be reasoned about against the native service model, because no committed
+fixture can supply an edge.
+
+"Re-record it with the hardware-timing stream" is now available for S1 and
+still unavailable for S2. It is not the first resort for S1 in any case: a
+divergence that looks like elapsed hardware cost is usually a counted ROM wait
+loop in the wrong place (see the `plc-system` skill's S1 `segment_start - 26`
+load-pair invariant).
 
 ### Historical pre-v5 evidence (not live)
 
