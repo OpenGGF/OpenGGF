@@ -95059,3 +95059,83 @@ A per-frame (not per-write) log over movie frames ~19770-19840 of: `Camera_X_pos
 
 Camera is the discriminator to trust: the trace definitely carries it and the probe can
 definitely read it, and unlike the counter its name is not doing any work.
+
+## 2026-08-20 — giant ring: the layout decodes to 14008 and so does the ROM; the pixel is a boundary sampling instant
+
+Branch `bugfix/ai-s3k-ring-layout-r1` off `abd274f95`. **Diagnosis only, nothing landed.**
+Control at base: `run_boundary.position.x` expected 14007 actual 14008, segment 4 at 250.
+
+### The brief's premise was wrong: the engine's ring spawn x is correct
+
+Raw S3K object-placement bytes for all four giant rings the run collects, read from the ROM
+through the pointer table at `Sonic3kConstants.SPRITE_LOC_PTRS_ADDR` (`0x1E3D98`) and decoded
+by hand against `Load_Sprites` (`sonic3k.asm:37749-37760`: `move.w -2(a0),x_pos(a1)` is a
+verbatim word copy, `y` is `and.w #$FFF`):
+
+| ring | act | record | file offset | bytes | x | y | subtype |
+|---|---|---|---|---|---|---|---|
+| 1 | AIZ1 | #25 | `0x1E4570` | `1bc804c08501` | 7112 | 1216 | 1 |
+| 2 | AIZ2 | #19 | `0x1E48E8` | `024003d08503` | 576 | 976 | 3 |
+| 3 | AIZ2 | #226 | `0x1E4DC2` | `19b804508504` | 6584 | 1104 | 4 |
+| 4 | AIZ2 | #673 | `0x1E583C` | `36b805d08505` | **14008** | 1488 | 5 |
+
+All four decode exactly, in identical record shape, and the engine's spawn x matches all four.
+**There is no decode defect and there is nothing different about the fourth entry.** The ring
+-> flash -> `Saved2_X_pos` -> `Load_Starpost_Settings` chain is identity end to end
+(`sonic3k.asm:128349-128352`, `:128392`, `:61738-61739`, `:61794-61799`), which the previous
+lane had already proven; the layout is now proven too. So the ROM restores **14008**, exactly
+as the engine does.
+
+### Where 14007 comes from: row 0 is one MoveSprite after the restore
+
+`aiz_5` row 0 reads `player_x=0x36B7`, `player_x_sub=0xF400`, `player_x_speed=0xFFF4` (-12),
+input `0x0004` (left). `MoveSprite2` sign-extends the velocity, shifts it left 8 and adds it to
+the 32-bit `x_pos:x_sub` pair (`sonic3k.asm:36053-36061`), so `0x36B8_0000 - 0x0C00 =
+0x36B7_F400` — the recorded pixel **and** sub-pixel, exactly. Row 0 is the recorder's
+end-of-frame sample of the destination's first gameplay frame, not the restore.
+
+The invariant holds across **all 20 return segments** of the run: `x_sub == (x_speed << 8) &
+0xFFFF` in every one, with `y_sub = 0` and `y_speed = 0` in every one (hence y is exact at every
+boundary). `aiz_5` is the **only** return in the entire run whose first frame has a negative
+velocity, and therefore the only one where that single add crosses a pixel boundary. The three
+sibling rings are not evidence of a correct comparison — they carry `x_speed` of `0` or `+12`,
+which cannot change the pixel. Same shape in the S2 run: `seg6_ehz2` row 0 is
+`x=4735 sub=0xF400 speed=-12`, restore 4736, and it is that run's only negative-velocity return.
+
+### The comparator is not the fix site — measured, not argued
+
+`TraceRunBoundaryComparator.comparePosition` compares the raw row 0 against an engine snapshot
+sampled at the boundary. Backing the single `MoveSprite2` add out of the expectation (recovering
+the restored pixel, guarded by the `sub == velocity << 8` shape test) **closed the S3K pixel**:
+the chain then walks past the segment-8 boundary and runs ~5540 frames of `aiz_5` before failing
+deeper, at *"segment 8 lost production ownership before source closure (BK2 cursor=51972)"*, with
+no segment-8 physics errors.
+
+But the same change turned `TestS2CompleteEmeraldRunChain` red in the **opposite** direction:
+`run_boundary.position.x expected=4736 actual=4735`. The change was reverted.
+
+### The real defect, localised
+
+A probe on `assertReturnBoundary` (temporary, reverted) recorded the call site and both values
+for every return boundary in both runs. **Both games use the same call site**
+(`AbstractRunChainTest.java:1569`) — the two-call-sites hypothesis is refuted. What differs is
+the engine state at that instant:
+
+| run | interior | engine x | recorded row0 x | restore |
+|---|---|---|---|---|
+| S2 | 8 (`seg6_ehz2`) | **4735** | 4735 | 4736 |
+| S3K | 7 (`aiz_5`) | **14008** | 14007 | 14008 |
+
+Same contract, same code, opposite phase: **the S2 engine has already executed the destination's
+first gameplay frame when the boundary is sampled; the S3K engine has not.** Every other boundary
+in both runs is phase-blind because its first frame cannot move the pixel.
+
+So the fix belongs in the S3K special-stage return path — it reaches the boundary one gameplay
+frame earlier than S2's — and not in the comparator, which is correct for a path in S2's phase.
+Do not re-attempt the comparator normalisation; it trades one game's red for the other's.
+
+### Do not redo
+
+- The layout bytes are decoded above for all four rings; there is no decode defect.
+- The flash-seed hypothesis (previous lane) and the ring/flash/save/restore chain are eliminated.
+- The comparator-side back-derivation is measured and rejected.
