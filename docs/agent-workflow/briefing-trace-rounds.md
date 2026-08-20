@@ -1338,3 +1338,20 @@ one, prove the instrument was live: count the files, grep for the signature the 
 produce, or run the arm you expect to *fail* and confirm it does. A partial `git apply` is
 especially dangerous because it does part of its job and reports a conflict you may reasonably
 attribute to a file you did not care about.
+
+## Forty-sixth rule: a silent probe may be a build that never compiled
+
+A probe inserted between an `@Override` annotation and its method made the build fail, and
+`mvn -q` printed **nothing at all**. The empty output read exactly like "this code path never
+runs", and briefly retired a hypothesis that was correct.
+
+This is the failed-compile hazard again with the loudest signal removed: `-q` suppresses the very
+line that would have told you. **Re-run without `-q` before believing a silent probe**, and treat
+"my probe produced no output" as a claim about the build until proven otherwise — the same way a
+null result is a claim about the instrument.
+
+A companion from the same round: **`DynamicArtLifecycleService.movieLogicalFrame` is not a live
+movie-row clock across a special stage.** It sat at the destination's `bk2_frame_offset` for all
+4673 special-stage iterations and every gap iteration. It cannot be used to time a gap, and a
+quantity that looks like a frame counter is worth checking against a second source before you
+build on it.
