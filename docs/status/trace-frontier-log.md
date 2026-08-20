@@ -99571,3 +99571,77 @@ shared cursor is frozen at 9701 and the rows come from the gap driver's own
 That sequence, not the cursor and not `lastMovieRowRun`, is what moves by one under the
 hand-back, and it is the next round's instrument.
 The candidate stays parked at `091ce15ba` on `bugfix/ai-s2-chain-r7`.
+
+## 2026-08-20 — S2 title-card release: the fusion and the stamp, landed together
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` at `e027fe323`;
+candidate `13725e85f` + `1a...` on `bugfix/ai-s2-chain-r9`.
+
+### RETRACT the retraction: `lastMovieRowRun` was the residual after all
+
+Two entries ago this log retracted `lastMovieRowRun` because editing it produced
+byte-identical output on both the complete-emerald chain and the halfpipe round-trip. **That
+retraction was wrong, and the reason is worth recording.** `TraceRunDynamicArtGapJournal`
+carries a private `lastMovieRowRun(int, int)` helper, and `AbstractRunChainTest` computes
+`bk2FrameOffset + rowsConsumed - 1` itself at seven call sites. The chain harness uses the
+harness copy; the journal's helper is not on that path. Both null results came from editing
+the copy that does not run.
+
+Instrumenting the recovery itself settles it. Halfpipe `ss -> seg2_ehz1`, first edge:
+
+| arm | stamp | admission | lastRun | admUn | emitUn | recovered |
+|---|---|---|---|---|---|---|
+| base (fused) | 9701 | 9701 | **9701** | 5841 | 5815 | 9675 — correct |
+| handed back | 9701 | 9701 | **9700** | 5841 | 5815 | 9674 — one early |
+
+The unannounced counts are **identical in both arms**; only the derived base moves. The
+unit test that encoded the opposite — that the counts move with the phase and the base must
+move with them — was asserting a model the live measurement contradicts.
+
+### The fix: count back from the stamp
+
+`lastRun == admission` at every recovery in the base arm (3794, 9701, 12604, 19159). A stale
+stamp *is* the admission row, because the admission stands on the destination's first row
+whether or not that row has run. So the base collapses to the stamp and the derived quantity
+disappears — no `lastMovieRowRun` parameter, no harness arithmetic, no journal helper. It is
+byte-identical on every boundary that was already green and correct on the ones that were
+not.
+
+Landed with the hand-back, which is what exposed it:
+
+| | base | landed |
+|---|---|---|
+| axes | 13 | **13** (same gaps, same field counts) |
+| segment 15 first error | frame 2, `queue…remaining_work` | frame **1725**, `dynamic_art.edges` |
+| segment 18 first error | frame 1, `queue…remaining_work` | frame **4014**, `x` |
+| errors | 7511 / 14289 | 7502 / 14265 |
+| `TestS2EhzHalfpipeRoundTripChain` | green | **green** |
+
+### One test expectation corrected, not demoted
+
+`TestTitleCardObjectExecution` asserted `Level_frame_counter == 1` after the release, citing
+`Level_MainLoop`'s `addq` at `s2.asm:5092`. That `addq` is one instruction **after** the
+same routine's `bsr.w WaitForVint` at `:5091`, and that wait is the console frame the release
+iteration ends on — so the citation supports `0`, not `1`. The expectation now reads `0` and
+a further step asserts it reaches `1`, pinning both the value and the step that changes it.
+
+### Full matrix, same tree, control detached to `e027fe323`
+
+| run | control | candidate |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 6 fail / 4 skip | 800 / 6 / 4 |
+| `-Pguards` | 500 / 0 | 500 / 0 |
+| default suite | 15194 / 53 fail / 83 err / 23 skip | 15194 / 53 / 83 / 23 |
+
+Neither arm truncated: identical executed-class sets (157 trace-replay, 64 guards, 1926
+default) and identical `Tests run: 0,` counts (6 and 14). Trace-replay red sets are the same
+six classes and, comparing every assertion by full untruncated message, the **only**
+difference anywhere is the two S2 segment-physics lines improving — the S1 and S3K chains
+are line-for-line identical. Default-suite red sets are **byte-identical** under matched
+conditions.
+
+Two groups flip between runs **within each arm** and are not attributable to this change:
+`TestCheckpointStarpostGraphRewind.sonic1LamppostTwirlEndsAsOneCenteredBallNotADuplicate`
+and ten `TestS3kCompleteRunStateDecoder` tests erroring with "test requires ROM". The
+default suite was run twice per arm to establish that: control 53/83 then 52/83, candidate
+52/73 then 53/83.
