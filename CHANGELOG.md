@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A title-card release no longer fuses the level's first frame into the card's own.**
+  `Level_MainLoop`'s `WaitForVint` is a console frame of its own
+  (`docs/s2disasm/s2.asm:5088-5090`), so the iteration that leaves the title card is not
+  also the level's first gameplay iteration. Fusing them cost the destination one PLC
+  service at every stage-exit return: across Sonic 2's complete-emerald run the engine's
+  `s2_nemesis_plc` `remaining_work` was the ROM's value from the frame before, for as long
+  as the queue stayed busy -- ARZ1 recorded 25, 22, 19, 16 against the engine's 25, 25, 22,
+  19. The lag was invisible wherever the destination's queue was idle at its first row,
+  which is why only the two busy-queue returns showed it.
+  The gap-edge row recovery that this exposed is fixed with it: a stale stamp now counts its
+  unannounced rows back from the stamp itself, the row the frozen cursor is announcing,
+  rather than from `bk2FrameOffset + rowsConsumed - 1` -- a comparator fact standing in for
+  a clock fact, equal to the admission row only while every return consumed the
+  destination's row zero.
 - **S3K's AutoSpin trigger no longer rolls Tails while a flight or carry owner is driving
   him.** Both of `Obj_AutoSpin`'s main routines load Player 2 and then read
   `Tails_CPU_routine`, branching past the crossing check when the word is 4 -- horizontal at

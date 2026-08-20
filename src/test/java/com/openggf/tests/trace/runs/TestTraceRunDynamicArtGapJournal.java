@@ -55,77 +55,64 @@ class TestTraceRunDynamicArtGapJournal {
     }
 
     /**
-     * A stale gap stamp is re-rowed against the last movie row the engine
-     * actually ran, not against the row the frozen cursor is announcing.
+     * A stale gap stamp is re-rowed by counting the unannounced rows that
+     * passed between it and the admission, off the stamp itself.
      *
-     * <p>The two differ by exactly one across the ROM's title-card arm frame:
-     * a boundary that admits after the destination's row zero has run last ran
-     * that row, and one that admits on the arm frame itself last ran the row
-     * before it (docs/architecture/audits/trace/
-     * 2026-08-20-s2-title-card-mode-flip-phase.md). The unannounced-row count
-     * moves with the phase too, so the recovered row must not: the recorder
-     * stamps a gap edge with the row it is executing
-     * ("tools/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs":207-222)
-     * and that row is a property of the movie, not of when the engine happens
-     * to poll admission.
+     * <p>The stamp a frozen cursor re-announces is the destination's first
+     * row, and the admission stands on that row whether or not it has run yet,
+     * so both title-card release phases count back from the same base. The
+     * recovery used to take that base from
+     * {@code bk2FrameOffset + rowsConsumed - 1} instead, which equals the
+     * admission row only while every return consumes the destination's row
+     * zero; a return that consumes none put every recovered row in its gap one
+     * row early. Measured on the halfpipe round-trip's {@code ss -> seg2_ehz1}
+     * gap, where both phases report the identical unannounced counts
+     * (admission 5841, emit 5815) and only that derived base moved.
      */
     @Test
     void staleGapStampsRecoverTheSameRowOnEitherSideOfTheArmFrame() {
         int frozenRow = 9701;
 
-        // Admitted after the destination's row zero ran: last row run is that
-        // row, and one more unannounced row elapsed after the edge.
-        List<DynamicArtGapTransition> fused =
+        List<DynamicArtGapTransition> rowed =
                 TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
-                        List.of(staleEdge(frozenRow, 5839)),
-                        frozenRow, 5840, frozenRow);
+                        List.of(staleEdge(frozenRow, 5815)), frozenRow, 5841);
 
-        // Admitted on the arm frame, before row zero ran: last row run is the
-        // row before it, and that trailing unannounced row has not happened.
-        List<DynamicArtGapTransition> armFrame =
-                TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
-                        List.of(staleEdge(frozenRow, 5839)),
-                        frozenRow, 5839, frozenRow - 1);
-
-        assertEquals(frozenRow - 1, fused.get(0).edge().movieLogicalFrame(),
-                "an edge one unannounced row before a fused admission belongs "
-                        + "to the row before the frozen stamp");
-        assertEquals(fused.get(0).edge().movieLogicalFrame(),
-                armFrame.get(0).edge().movieLogicalFrame(),
-                "the recovered row is a property of the movie, not of the "
-                        + "admission phase");
+        assertEquals(frozenRow - 26, rowed.get(0).edge().movieLogicalFrame(),
+                "a stale stamp counts back the unannounced rows that passed "
+                        + "between its emit and the admission");
     }
 
     /**
-     * The reference is load-bearing in both directions: a one-row error either
-     * way moves every recovered gap edge by that much, which reads as a
-     * physics divergence rather than as a stamping fault.
+     * The unannounced-row count is the only thing the recovery reads, and it is
+     * load-bearing in both directions: a one-row error either way moves every
+     * recovered gap edge by that much, which reads as a physics divergence
+     * rather than as a stamping fault.
      */
     @Test
-    void aShiftedLastRunRowShiftsEveryRecoveredRowByTheSameAmount() {
+    void aShiftedUnannouncedCountShiftsEveryRecoveredRowByTheSameAmount() {
         int frozenRow = 9701;
         for (int shift : new int[] {-1, 1}) {
             List<DynamicArtGapTransition> shifted =
                     TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
                             List.of(staleEdge(frozenRow, 5839)),
-                            frozenRow, 5840, frozenRow + shift);
-            assertEquals(frozenRow - 1 + shift,
+                            frozenRow, 5840 + shift);
+            assertEquals(frozenRow - 1 - shift,
                     shifted.get(0).edge().movieLogicalFrame(),
-                    "recovered rows must track the last run row exactly, "
+                    "recovered rows must track the unannounced count exactly, "
                             + "shift " + shift);
         }
     }
 
     /**
      * A live stamp — one that is not the admission's own row — was taken while
-     * the cursor was still announcing, so it keeps its own row whatever the
-     * last run row was.
+     * the cursor was still announcing, so it is already the row it happened on
+     * and has nothing to count back.
      */
     @Test
-    void aLiveGapStampIgnoresTheLastRunRow() {
+    void aLiveGapStampKeepsItsOwnRow() {
         List<DynamicArtGapTransition> rowed =
                 TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
-                        List.of(staleEdge(9600, 5000)), 9701, 5840, 9701);
+                        List.of(staleEdge(9600, 5000)), 9701, 5840);
 
         assertEquals(9600, rowed.get(0).edge().movieLogicalFrame());
     }
