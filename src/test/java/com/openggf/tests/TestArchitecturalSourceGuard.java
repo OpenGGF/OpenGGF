@@ -109,7 +109,14 @@ class TestArchitecturalSourceGuard {
             // own the actual state machine) and does not belong in any other file.
             // 2026-08-19: 3005 -> 3065. Same recorded-drift note as the entries above;
             // 140 commits have touched GameLoop since the guard last ran anywhere.
-            GAME_LOOP_PATH, 3065
+            // 2026-08-20: 3065 -> 3071 for the level-to-level transition-fade row
+            // consumption. The logic itself was extracted --
+            // LevelIterationAdmissionController.consumeTransitionFreezeRow owns the
+            // ownership predicate, the V-blank service and the ROM citations -- and
+            // GameLoop keeps only the guarded call, which needs the freeze flag, the
+            // run-frame-driver check and the level's ObjectManager, none of which the
+            // controller can reach on its own.
+            GAME_LOOP_PATH, 3071
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

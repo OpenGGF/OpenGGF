@@ -1819,6 +1819,17 @@ public class GameLoop {
             }
         } else {
             updateNonGameplayAudio(doFrameStep);
+            // A level-to-level transition fade freezes gameplay but not V_int:
+            // the admission controller consumes the row when the compared span
+            // still owns it. See consumeTransitionFreezeRow for the ROM
+            // citations and why the ownership question is asked, not assumed.
+            if (freezeForNonRewindableTransition
+                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
+                levelIterationAdmission.consumeTransitionFreezeRow(
+                        playbackDebugManager,
+                        levelManager != null ? levelManager.getObjectManager() : null,
+                        LevelFrameContext.from(gameplayMode));
+            }
         }
 
         // Debug keys for level transitions (use request system for fade)

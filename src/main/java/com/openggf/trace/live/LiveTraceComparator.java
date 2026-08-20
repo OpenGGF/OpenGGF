@@ -182,6 +182,11 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
     }
 
     @Override
+    public boolean hasUnconsumedRecordedRows() {
+        return cursor < trace.frameCount();
+    }
+
+    @Override
     public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
         lastActionMask = frame.p1ActionMask();
         lastInputMask = frame.p1InputMask();

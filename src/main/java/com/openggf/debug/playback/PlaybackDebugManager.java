@@ -89,6 +89,17 @@ public final class PlaybackDebugManager {
         void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped);
 
         /**
+         * Whether the observer still has recorded rows it has not consumed for
+         * the span it is currently comparing. Read by the level-mode transition
+         * freeze to decide whether a frozen engine frame owns a recorded row --
+         * see {@code GameLoop.updateLevelMode}. Default false: an observer that
+         * cannot answer never grants ownership.
+         */
+        default boolean hasUnconsumedRecordedRows() {
+            return false;
+        }
+
+        /**
          * Called at the transition request site, before the gameplay context
          * can be replaced and regardless of where the request falls relative
          * to the ordinary end-of-frame callback.
@@ -307,6 +318,18 @@ public final class PlaybackDebugManager {
      */
     public synchronized void onCurrentGameplayTickExecuted() {
         pendingP1ActionPressMask = 0;
+    }
+
+    /**
+     * Whether the attached observer still owns unconsumed recorded rows for the
+     * span it is comparing. False when no session/observer is attached, so
+     * production play is unaffected.
+     */
+    public synchronized boolean observerHasUnconsumedRecordedRows() {
+        if (!enabled || movie == null || timeline == null || frameObserver == null) {
+            return false;
+        }
+        return frameObserver.hasUnconsumedRecordedRows();
     }
 
     public synchronized void onLevelFrameAdvanced() {

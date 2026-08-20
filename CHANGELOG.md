@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A level-to-level transition fade now consumes the recorded rows it owns.** Every game's
+  fade-out is `move.w #$15,d4` over a `dbf` around a V-blank wait -- S3K `Pal_FadeToBlack`
+  (`docs/skdisasm/sonic3k.asm:5042-5052`), S2 `Pal_FadeToBlack`
+  (`docs/s2disasm/s2.asm:3370-3382`), S1 `PaletteFadeOut`
+  (`docs/s1disasm/_inc/Palette Fading.asm:134-145`) -- so V_int keeps ticking for 22 frames
+  while gameplay is frozen. The engine's transition freeze advanced no playback cursor at
+  all, leaving those rows unconsumed and the source span short. It now consumes a row per
+  frozen frame, but only while the span being compared still holds rows the cursor has not
+  reached, so a recording whose fade falls in the gap between segments is not double-counted.
 - **Sonic 2's level title card now leaves its wait loop on the ROM's iteration.**
   `Level_TtlCard` re-loops on a two-part test evaluated in a single pass: it compares
   `(TitleCard_ZoneName+x_pos)` against that one object's `titlecard_x_target` and, only if
