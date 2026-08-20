@@ -2065,7 +2065,16 @@ abstract class AbstractRunChainTest {
                                         && TraceReplayRowPolicy
                                                 .carriesDeferredVblank(
                                                         bridge.trace(),
-                                                        localRow + 1));
+                                                        localRow + 1),
+                                // The emulator's own per-frame lag observation.
+                                // A lagged row's V-int took VBlank_Lag
+                                // (docs/s1disasm/sonic.asm:656-657) and reached
+                                // no ProcessPLC call (:712-746), so it owns a
+                                // V-int closure with no mode handler. Read from
+                                // the recorded flag, never inferred from
+                                // counter shape: inside a bridge the two
+                                // disagree on nearly every row.
+                                recordedRowIsLagVint(bridge.trace(), localRow));
                 boolean deferBoundaryCommit = false;
                 if (localRow + 1 < bridge.trace().frameCount()) {
                     TraceReplayRowPolicy nextRowPolicy =
@@ -4600,5 +4609,17 @@ abstract class AbstractRunChainTest {
             }
             return mask;
         }
+    }
+
+    /**
+     * Whether the recorded row observed an emulator lag frame, meaning its
+     * V-int ran no mode handler. Comparison-side admission only: the boolean
+     * selects a represented ROM loop and carries no gameplay value.
+     */
+    private static boolean recordedRowIsLagVint(
+            com.openggf.trace.TraceData trace, int localRow) {
+        com.openggf.trace.TraceEvent.LagState state =
+                trace.lagStateForFrame(trace.getFrame(localRow).frame());
+        return state != null && state.lagged();
     }
 }
