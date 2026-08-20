@@ -123,9 +123,14 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
         // ascent no longer leads the ROM's by one 2px step and the frame-1337
         // edge-phase lead is gone. The remaining errors are a LATER, opposite-
         // signed divergence (engine now behind), not the same defect.
+        //
+        // Re-pinned 18221 -> 18205 when Solid_SideAir began clearing the
+        // player's pushing bit unconditionally, as the ROM's Solid_NotPushing
+        // does. First non-camera mismatch, frame and field are unchanged;
+        // sixteen downstream errors on the same axis went away.
         assertTrue(
                 report.contains("segment 2 of s1-sonic-complete-withemeralds "
-                        + "diverged: 18221 physics comparator errors, first "
+                        + "diverged: 18205 physics comparator errors, first "
                         + "non-camera mismatch at frame 3182 field "
                         + "dynamic_art.edges rom=[1778, 1779] engine=[]"),
                 "segment 24 must still diverge identically from a cold start; "
