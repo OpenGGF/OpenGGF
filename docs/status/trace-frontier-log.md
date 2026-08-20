@@ -94865,3 +94865,25 @@ test. `TestS1ColdStartAttribution` green 2/2 in that same run.
 
 The adjacent `-216` prediction remains **unverified** — no fix landed, and the failed attempt
 says nothing about it either way.
+
+## Segment 4's stale animation: two facts that narrow the ROM side
+
+Added to the segment-4 characterisation. Both narrow where the write can be, and neither is a
+conclusion.
+
+**It is not a RAM carry.** Segment 2 ends at ROM anim `0x1C` for the player and `0x00` for the
+sidekick; segment 4 starts at `0x05` for **both**. Something explicitly writes the standing
+animation to both players across that boundary. Segment 3 is a special stage whose CSV carries no
+player-animation columns, so the recording cannot be read through it.
+
+**Neither the init nor the air mode does it.** `Sonic_Init` / `Sonic_Init_Continued`
+(sonic3k.asm:21902-21941) never touch `anim`, and `Sonic_Control` dispatches on `status & 6`,
+which at the recorded `status=0x02` selects the **air** mode — so `Sonic_Move`'s unconditional
+`move.b #5,anim(a0)` (:22453) is not the write firing here either.
+
+So the writer is **external to the player object and touches both characters**. First candidate
+to check: the `anim(a1)` family at sonic3k.asm:9070-9145, whose zero-inertia tails write exactly
+`move.b #5,anim(a1)` at :9129 and :9139. **A candidate, not a conclusion** — it has not been
+shown to execute here, and the remaining step is a PC-execute probe on the `move.b #5,anim` sites
+during the act-2 entry, which decides whether the fix belongs in the act-entry path, in the
+balance code's missing unconditional WAIT floor, or in an external transition routine.
