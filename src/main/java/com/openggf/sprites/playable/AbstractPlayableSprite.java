@@ -877,6 +877,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.crouching = false;
                 this.lookingUp = false;
                 this.balanceState = 0;
+                // The ROM holds no balance state; Sonic_Balance re-derives it every
+                // grounded standing frame from tilt/next_tilt, which the player tail
+                // copies out of Primary_Angle/Secondary_Angle (sonic3k.asm:21999-22000
+                // Sonic, :26243-26244 Tails). A level load zeroes those SST bytes with
+                // the rest of Object_RAM, so the first Sonic_Balance of a new act can
+                // never see the empty-tile sentinel 3 left by the previous act.
+                controller.getMovement().resetGroundAngleLatches();
                 this.highPriority = false;
                 this.priorityBucket = RenderPriority.PLAYER_DEFAULT;
                 this.forceInputRight = false;

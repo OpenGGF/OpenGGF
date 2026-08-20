@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The engine's `tilt`/`next_tilt` copies now survive no further than the ROM's do
+  across a level load.** `Sonic_Balance` chooses its edge branch from the SST bytes
+  `next_tilt`/`tilt` (`docs/skdisasm/sonic3k.asm:22538, 22568`), which the player tail
+  copies out of `Primary_Angle`/`Secondary_Angle` after the movement dispatch
+  (`:21999-22000` Sonic, `:26243-26244` Tails). Every level init zeroes the whole
+  player SST along with the rest of the object array — S3K `Level:` reaching
+  `clearRAM Object_RAM,...` (`:7504`, `:7619`) with `Player_1` as the first slot
+  (`sonic3k.constants.asm:303-304`), S2 `Level_ClrRam` (`docs/s2disasm/s2.asm:4806-4808`,
+  `s2.constants.asm:1096-1101`), S1 `Level_ClrRam`
+  (`docs/s1disasm/sonic.asm:2739-2740`, `_Variables.asm:43, 53`) — so a new act's first
+  balance check can never read the previous act's angles. The engine's latches were
+  written only on grounded dispatches and cleared by nothing, so the empty-tile sentinel
+  `3` captured on the last grounded frame before a giant ring survived the special stage
+  and the level load. On the first frame of a new act with no floor under the spawn, both
+  characters took the edge branch and were animated balancing where the ROM leaves them
+  in Wait. `AbstractPlayableSprite.resetState()` — which already models that SST clear for
+  `balanceState`, `topSolidBit` and the ground mode — now clears them too.
 - **The S1 title-card release step no longer consumes the level's first recorded
   frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
   `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),

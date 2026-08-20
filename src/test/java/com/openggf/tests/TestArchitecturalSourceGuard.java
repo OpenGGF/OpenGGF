@@ -72,7 +72,11 @@ class TestArchitecturalSourceGuard {
             // 2026-08-03: 3159 -> 3161 for explicit native player-SST presence
             // reset/restore state; accessors retain the existing compact precedent.
             // 2026-08-19: 3161 -> 3211 (50 commits since the 2026-08-03 ratchet).
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3211,
+            // 2026-08-20: 3211 -> 3212 for the one-line ground-angle-latch reset in
+            // resetState(). The level-load SST clear it models already lives here
+            // (balanceState, topSolidBit, runningMode); the state itself stays owned
+            // by PlayableSpriteMovement, so this is a delegating call, not new logic.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3212,
             // 2026-08-19: 2500 -> 2812. The 2500 entry carried no ratchet history and
             // 110 commits have touched LevelManager since it was written on 2026-07-02,
             // so 2500 stopped describing this file long before now. Recorded here as
