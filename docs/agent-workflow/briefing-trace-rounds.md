@@ -735,6 +735,13 @@ performs**, and the pixel was just the roll-height adjustment on the way out.
 The same histogram showed two animation axes first diverging **thousands of frames earlier**
 than the physics frontier everyone was watching.
 
+**Split the histogram by frame range before reading it.** A round applied this rule, aggregated
+the value pairs across a whole segment, saw a two-way mixture and called it a cascade — then
+found that rows 800-900 carry exactly one pair in one direction, and the mixture belonged
+entirely to rows after a *later* frame where position genuinely diverges. That is the same
+error as trusting a headline field, one level up: an aggregate over the wrong window answers a
+question you did not ask. A distribution is only evidence about the window it was taken over.
+
 So: before briefing or chasing a frontier, build the per-field histogram and read the *earliest*
 divergence per field, not the reported one. The headline tells you where the comparator stopped,
 not where the engine went wrong. And a report format that looks like a full error list but is a

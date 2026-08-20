@@ -92841,3 +92841,109 @@ problem — its value pairs are a two-way mixture (`0x02->0x1A` 62, `0x1A->0x02`
 A bidirectional mixture is a cascade signature, not one missing gate, so it should not be
 attacked the way this one was: find what first puts the sidekick into or out of HURT at 823
 before touching any animation code.
+
+## 2026-08-20 — row 823: not a cascade, a fitted override — and removing it is not the fix
+
+Branch `bugfix/ai-s3k-sidekick-hurt-823-r1` off `678c6a93f`. **Diagnosis only; nothing landed,
+probes removed.** Read the last section before changing anything here.
+
+### RETRACT: my own "bidirectional mixture means cascade" warning
+
+I briefed row 823 as a cascade because the 517 `sidekick_animation_id` errors are a two-way
+value mixture (`0x02->0x1A` 62, `0x1A->0x02` 56, `0x1A->0x00` 52, `0x02->0x00` 37, ...).
+**That was wrong, and the mistake was the same shape as reading a headline field.** I took the
+value-pair histogram over the whole segment without splitting it by frame.
+
+Split by frame, the origin is clean. Across rows **800-900 the only erroring fields are
+`sidekick_animation_id` and `sidekick_mapping_frame`**, every entry the single pair
+`rom=0x001A eng=0x0000`. Every physics field matches the recording exactly through the whole
+hurt: `sidekick_routine` does not err until **3389**, `sidekick_x`/`sidekick_y` not until
+**3339**, speeds and status not until **3350**. The mixture is a property of the rows *after*
+3339, where position genuinely diverges — not of the origin. Structurally this is row 203
+again: state correct, animation byte wrong.
+
+### What writes it, measured at the write
+
+A stack probe on `AbstractPlayableSprite.setAnimationId`, attributed to rows by the comparator
+cursor, on the damage frame:
+
+```
+anim[Tails]=0x1a <- publishRawAnimation <- AbstractPlayableSprite.applyHurt:2824
+anim[Tails]=0x0  <- ObjectTouchResponseController.applySidekickHurt:851
+  * applySidekickHurt obj=SpikedLogCollisionChild prevAnim=0x0 applied=true publishes=false
+```
+
+The engine applies the hurt correctly and publishes `$1A`, and then **its own sidekick touch
+path restores the previous byte**, because
+`AizSpikedLogObjectInstance.SpikedLogCollisionChild.sidekickTouchHurtPublishesAnimation()`
+returns false. It is the only object in the tree that opts out. It was added by `bae71cf8e`,
+*"fix: advance S3K AIZ sidekick hurt animation frontier"*.
+
+### Its stated ROM justification does not hold
+
+The override's comment claims *"ROM's spiked-log child reaches the generic touch-hurt owner
+with Tails' existing anim byte still live"*. The listing says otherwise:
+
+- `AIZSpikedLog_HurtChild` (`sonic3k.asm:60183-60195`) positions itself and calls
+  `Add_SpriteToCollisionResponseList`. It is an ordinary collision-response-list sprite with
+  **no bespoke touch owner**.
+- `HurtCharacter` (`:21065-21075`) sends the 1P sidekick — `a0 != Player_1`,
+  `Competition_mode == 0` — **straight to `loc_102E0`**, skipping only the ring-scatter block.
+- `loc_102E0` (`:21090-21110`) writes `routine = 4`, `y_vel = -$400`, `x_vel = -$200`
+  (halved under `Status_Underwater`), `ground_vel = 0`, and `move.b #$1A,anim(a0)` — on the
+  **common tail both players reach**.
+
+The chain fixture confirms all four writes land together at row 823.
+
+### Removing it is NOT the fix — rule 17 fired, and the pair is informative
+
+Deleting the override: segment 6 **7,565 -> 7,434** (-131), segment 4 unchanged at 250 — and
+`TestS3kAizTraceReplay` turns **red**, 5 errors, first at frame 10744:
+
+```
+tails_animation_id  expected=0x0000  actual=0x001A
+```
+
+**The opposite polarity.** So both ROM observations are real: the prior lane did see the ROM
+keep the walk byte. Removing the override does not restore ROM behaviour, it moves the error
+to the other fixture.
+
+### The discriminator, measured
+
+Both hits are spiked-log hurts — removing the spiked-log override is what moved AIZ 10744, so
+that contact is this object family. But the ROM does two different things:
+
+| | chain seg6 row 823 | AIZ full-run row 10744 |
+|---|---|---|
+| status at the damage frame | `0x02` | `0x42` — **`Status_Underwater`** (bit 6) |
+| knockback | `x=-0x200 y=-0x400` | `x=-0x100 y=-0x200` |
+| matches `Player_Hurt` branch | surface (`:21093-21094`) | **underwater** (`:21096-21099`) |
+| `routine = 4` lasts | hundreds of rows | **two rows**, back to 2 at 10746 |
+| `anim` | `0x1A` | stays `0x00` |
+
+The knockback magnitudes are exactly the ROM's two branches, so this is `HurtCharacter` in
+both cases and the underwater bit is not incidental. The chain's Tails does not reach water
+until row **876**, 53 rows after his damage frame, so the surface reading at 823 is not a
+sampling artefact. The prior lane's "two-frame hurt window" phrasing describes the AIZ case
+exactly.
+
+### What is NOT established — do not land either polarity until this is answered
+
+**Why the underwater/two-frame case leaves `anim` at `0x00`**, when `move.b #$1A,anim(a0)`
+sits on the common tail *after* the underwater branch rejoins at `loc_10312`. Something either
+prevents the write from being reached or overwrites it within the same frame, and I have not
+found it. Candidates not yet tested: an early return before `loc_102E0` that still writes
+routine/velocity elsewhere; a same-frame CPU or water-surface owner rewriting `anim` after
+`HurtCharacter` (the two-frame routine-4 and the return to routine 2 at 10746 both hint at a
+second owner); or a torn V-blank sample, which would be the least likely of the three because
+routine and both velocities are already updated in the same row.
+
+The cheap next step is the tool this segment has rewarded all day: a PC-execute probe on
+`0x21110`'s `move.b #$1A,anim(a0)` gated to `Player_2` in the AIZ window. One capture answers
+whether the ROM executes that write at 10744 at all. If it does, the defect is a missing
+same-frame overwrite; if it does not, there is an earlier branch nobody has read.
+
+Until then: the override is **fitted** — its cited justification is contradicted by the
+listing — but it is also **load-bearing**, and the pair must come out together. Its
+`TestSidekickTouchHurtAnimationOwnership` pins the fitted behaviour and would need to move
+with it.
