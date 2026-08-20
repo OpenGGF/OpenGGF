@@ -99144,3 +99144,63 @@ each passing in isolation in both arms.
 coordination. Segment 8's physics — 8960 errors, first at row 1973 `sidekick_y` rom
 `0x0146` engine `0x014B` — remains the larger frontier, along with the 18 unmatched
 `aiz_5` hardware completions in rows 7056-7155 that are present in the control too.
+
+## 2026-08-20 — LZ3 closed end to end: one frame of Obj3F explosion lifetime
+
+Round `s1-plc-admission-r2`, final. Two more read/log-only probes committed; guards green; nothing
+in `src/main` touched.
+
+### Why slot 33 is free in the ROM
+
+Census at the instant `Pri_SpawnAnimals` asks `FindFreeObj` for the first burst slot — five
+explosions alive on both sides, one gap in each, at a different place:
+
+| | ROM | engine |
+|---|---|---|
+| switch / capsule | 34 / 35 | 34 / 35 |
+| live explosions | 32, 36, 37, 38, 39 | 32, 33, 36, 37, 38 |
+| **free** | **33** | **39** |
+
+Explosion spawn frames are **identical** on both sides. The difference is entirely in deletion.
+
+### The measured lifetime, and the one instruction
+
+Every capsule explosion measures **exactly 40 frames** spawn to delete. The sixth spawns one frame
+before slot 32 frees, so it takes slot 39; the seventh reuses 32, slot 33 frees the same frame,
+and the capsule opens with 33 free. Take one frame off that lifetime and slot 32 is already free
+when the sixth spawns — the sixth takes 32, the seventh 33, slot 39 is never used, and the census
+is the engine's exactly.
+
+The instruction, from `sonic.lst`: Obj27's `ExItem_Main` ends `jsr (QueueSound2).l` and **falls
+through** into its animate routine, so it takes a predecrement on its own spawn frame. Obj3F's
+`Expl_Main` ends `jmp (QueueSound2).l` and **returns** — the following bytes are an unrelated
+animation script. Obj3F does **not** decrement on its spawn frame and lives one frame longer.
+
+The capsule loads `id_Explosion` = Obj3F. `ExplosionObjectInstance` models both ids together, and
+its javadoc states the opposite outright — that the init falls through into animate on the
+allocation frame, so the first update both seeds and applies the first predecrement. That is true
+for Obj27 and false for Obj3F. The arithmetic agrees with the probe: predecrement-on-spawn gives
+five underflows and a delete one frame short of the measured 40.
+
+### The full chain
+
+Obj3F predecrements a frame early → its slot frees a frame early → `FindFreeObj` hands the sixth
+explosion slot 32 instead of 39 → slot 39 is free at capsule-open instead of slot 33 → the first
+burst animal lands **above** the capsule instead of below → it executes in the same frame instead
+of the next → the eight species draws rotate by one → an animal already among the last released
+gets the game's slowest species → it leaves last, twelve frames late → the engine arms the
+end-of-act PLC twelve frames late → the recorded edge finds nothing pending and is dropped → the
+unrepresented-gap fallback returns the ordinal → the engine's ordinal axis lags the recording for
+the rest of the run → nothing is admitted again → segments 27-33 collapse, roughly 74,000 errors.
+
+### Deliberately not fixed
+
+The fix is small and precise — skip the spawn-frame predecrement on the Obj3F path, keep it for
+Obj27 — but it lives in **shared cross-game object code** whose javadoc makes an explicit
+three-game claim citing the S2 and S3K disassemblies. That claim is verified wrong for S1's Obj3F
+and **unverified for S2 and S3K**: S2's explosion is built through a different sub-object shape
+and no Obj3F analogue was found in the obvious place.
+
+Explosion lifetime affects every badnik death and every boss, so slot occupancy shifts across the
+whole run and segments currently green by slot-phase luck may move either way. It wants its own
+round with all three chains measured.
