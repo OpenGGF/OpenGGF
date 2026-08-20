@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 2's level title card now leaves its wait loop on the ROM's iteration.**
+  `Level_TtlCard` re-loops on a two-part test evaluated in a single pass: it compares
+  `(TitleCard_ZoneName+x_pos)` against that one object's `titlecard_x_target` and, only if
+  that matches, falls through to `tst.l (Plc_Buffer).w` (`docs/s2disasm/s2.asm:4919-4924`).
+  The engine tested every title-card piece rather than the zone name, and then spent a
+  further iteration in a separate DISPLAY state to discover the cue had drained. Both cost
+  a frame whenever the cue finishes before the card does: "ZONE" and the act number carry
+  `anim_frame_duration` `$1C` against the zone name's `$1B` (`Obj34_TitleCardData`,
+  `:27369-27371`), so they arrive one pass after the piece the ROM watches. The card
+  therefore held two passes too long on any entry whose art is quick to decompress -- ARZ
+  act 1 among them, where the zone's cue drains ten passes before the card lands.
 - **The level timer no longer restarts after a giant-ring special-stage return.**
   `Save_Level_Data2` copies the whole `Timer` longword to `Saved2_timer` at giant-ring
   entry (`docs/skdisasm/sonic3k.asm:61745`) and `Load_Starpost_Settings`'s `loc_2D2C2`
