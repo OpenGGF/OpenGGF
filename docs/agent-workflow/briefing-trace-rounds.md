@@ -1496,3 +1496,30 @@ inheriting a measurement or a coincidence.
 The round that caught this also did the right thing with its two suspects: it **tested** each as a
 one-variable run and eliminated both, rather than reporting a plausible closer. Two negatives cost
 minutes; a wrong attribution would have cost the next round its premise.
+
+## Fifty-second rule: writing down a caveat is not checking it
+
+A round built a whole-pixel anomaly detector, **stated its validity condition in its own report**
+— that it is only trustworthy where neighbouring rows are exact — and then, two rounds later, used
+it on rows where a second condition it had not thought to state was violated. The detector models
+an **airborne** character; the rows it flagged were grounded, where position comes from ground
+velocity through the terrain angle and the recorded horizontal speed is a derived copy that
+*equals* it on flat ground. That equality is exactly what makes the model look applicable.
+
+The result was a confident "six hundred rows early" that reached the frontier log and a status
+report. The real number is on the order of thirteen, and the one row that survives is the only
+airborne row in the set.
+
+Two things to take:
+
+- **A caveat you wrote is not a check you ran.** When you state a validity condition for an
+  instrument, write it into the instrument if you can — an assertion, a filter, a refusal to emit
+  — because the round where you are most confident is the round where you will skip re-reading
+  your own warning.
+- **Necessary is not sufficient.** "Exact on neighbouring rows" was a real condition and a true
+  one, and it was not the whole set. When an instrument has one stated precondition, ask what the
+  *other* ones are before trusting a result that depends on them.
+
+The round caught this itself, retracted a headline that had already been repeated onward, and
+asked for the log entry to be pulled. That is the outcome to aim for — but the cheaper outcome is
+the assertion inside the tool.

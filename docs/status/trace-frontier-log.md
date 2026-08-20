@@ -101020,6 +101020,13 @@ which the ROM's follow nudge would have applied.
 neighbouring rows of each. So `Tails_CPU_Control` is still running at 6678, and the ROM's
 `st (Ctrl_2_locked).w` has not happened by then.
 
+
+> **RETRACTED (see the correction entry below).** The row-count claims in this section are
+> wrong: the nudges they rest on were measured on **grounded** rows, where the detector's
+> airborne model does not apply. The boss defeat and capsule spawn are synchronised to the row;
+> only the capsule's *open* step is early, by roughly thirteen rows rather than six hundred — and
+> even that attribution is held open. Read the correction before using any number here.
+
 **The engine publishes the lock at least 685 rows early.**
 
 ### It is not the lock; it is the boss sequence
@@ -101050,3 +101057,61 @@ early because the boss sequence ahead of it does.
 state ~630 rows before the recording's. That is a boss-sequence investigation, not a sidekick
 or lock one, and it is a much larger divergence than the pixel that surfaced it — worth
 knowing before anyone spends another round on `sidekick_x`.
+
+## 2026-08-21 — RETRACTION: the AIZ2 boss is NOT running ~630 rows early
+
+Round off `origin/develop` `569f4887e`. **Found, not fixed — nothing landed but this entry,
+which corrects the previous one.** Row convention: 0-based indices into `aiz_5`'s
+`physics.csv`, `row = cursor - 46432`.
+
+### What was wrong
+
+The previous entry concluded the engine's AIZ2 end-boss sequence runs "roughly 630-670 rows,
+about eleven seconds, early". **That is retracted.** It rested on the claim that the ROM's
+`Tails_CPU_Control` was still running at row 6678, evidenced by whole-pixel follow nudges at
+rows 6654 and 6678.
+
+Those two rows are **grounded** (`sidekick_air == 0`). The detector that found them differences
+the recorded position against `previous + (x_speed << 8)`, which only models an **airborne**
+character — a grounded one moves by `ground_vel` projected through the terrain angle, and the
+recorded `x_speed` is a derived copy that happens to equal `g_speed` on flat ground, which is
+exactly what makes the model look applicable. The same entry already noted the detector has
+2881 hits segment-wide and is only valid where its neighbours are exact; "exact neighbours" is
+necessary but **not sufficient** — the row itself must also be airborne.
+
+Checked across every nudge quoted: rows 5923, 5924, 5925, 5926, 6654 and 6678 are all
+`air == 0`; **row 6000 is the only `air == 1` row among them.**
+
+### What survives
+
+The row-6000 finding stands. It is airborne, so the model applies, and it is independently
+corroborated: `loc_13D4A`'s `subq`/`addq #1,x_pos` exists (`sonic3k.asm:26717-26724`,
+`:26734-26741`), and the engine's CPU pass is measurably skipped from row 5994 with
+`followBranch = ctrl2_signed_lock_skip`.
+
+### The corrected timeline, all four anchors measured
+
+| event | ROM | engine |
+|---|---|---|
+| boss defeated | **5487** (`0x00085668`/`0x0008565E`/`0x00083E4C`/`0x00083F68` burst) | **5487** (probe on `state.defeated`) |
+| egg capsule spawned | **5671** (`0x00086540`, `0x00086770`, `0x00086810` first appear) | ~5671 (`$37` + `$7F` waits from defeat) |
+| capsule open / lock | `0x000867CA` 6006, `0x0008689C` 6007, `0x000868B6` 6008 | `onParentOpen` **5993**, lock **5994** |
+
+**The boss defeat and the capsule spawn are synchronised to the row**, and the engine's
+`defeatExplosionWaitTimer = $37` / `defeatPhaseTimer = $7F` land the capsule where the
+recording does. So the sequence is not running eleven seconds early; the boss fight and the
+post-defeat wait are right.
+
+What is early is the capsule's **open** step: row 5993 against a ROM burst at 6006-6008 — on
+the order of **thirteen rows**, not six hundred. Thirteen rows is enough to swallow the row-6000
+nudge and nothing more, which fits the observed symptom exactly: one pixel, one row.
+
+### Held open deliberately
+
+The 6006-6008 attribution is **consistent with** the capsule opening — three objects on
+consecutive frames immediately after the engine's own open row, matching the engine's
+explosion-controller/animals/children burst — but it is not proven to be `sub_865DE`. The
+nine `0x000868F2` objects at row 6620 are also a candidate for `sub_865DE`'s child creations.
+Pinning which of 6006 or 6620 runs `sub_865DE` is the remaining measurement, and the answer
+decides whether the capsule opens thirteen rows early or six hundred. **Do not carry either
+number forward until it is settled.**
