@@ -231,7 +231,26 @@ public abstract class SuperStateController {
     private void checkTransformationTrigger() {
         if (!usesAutomaticJumpTrigger()) return;
         if (!canTransform()) return;
-        if (player.getAir() && player.isJumping() && player.getYSpeed() >= -0x100 && player.getYSpeed() <= 0) {
+        // ROM Sonic_JumpHeight ends `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
+        // (docs/s2disasm/s2.asm:37432-37434). On a big-endian word `tst.b` reads
+        // the HIGH byte, so the gate is "y_vel's high byte is zero" -- the
+        // $0000..$00FF window just PAST the apex, already falling slowly. It is
+        // not a window around the apex: the whole of the rise, where y_vel is
+        // negative, has a high byte of $FF and never passes.
+        //
+        // The engine tested -$100 <= y_vel <= 0 instead, which fires on the way
+        // up. Across the complete-emerald run's ARZ1 segment that transformed
+        // Sonic on the recording's frame 4014 with y_vel = $FF10, five frames
+        // before the ROM's own transform at 4019 with y_vel = $0028 -- the
+        // first frame whose high byte is zero, gravity being +$38 per frame.
+        //
+        // FixBugs = 0: the `if fixBugs` block at s2.asm:37468-37475 that clears
+        // Status_Roll/RollJump and restores the standing radii is NOT assembled
+        // into the shipped ROM, so a roll-jump transform keeps its rolling state
+        // and its ball radii. Nothing here clears them, which is the accurate
+        // path; the fixed branch would reset both.
+        if (player.getAir() && player.isJumping()
+                && (player.getYSpeed() & 0xFF00) == 0) {
             startTransformation();
         }
     }
@@ -251,14 +270,26 @@ public abstract class SuperStateController {
     private void startTransformation() {
         state = SuperState.TRANSFORMING;
         player.setSuperSonic(true);
-        // ROM: move.b #$81,obj_control(a0) - freeze physics during transformation
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
         // ROM: move.b #$1F,anim(a0) - play transformation sparkle animation
         player.setForcedAnimationId(getTransformationAnimationId());
         onTransformationStarted();
+        // ROM writes obj_control = $81 here (s2.asm:37479) but Obj01 reads that
+        // byte at the TOP of its routine dispatch, so the write does not stop
+        // the rest of this frame. Sonic_CheckGoSuper is reached from
+        // Sonic_JumpHeight, the first call in Obj01_MdJump (s2.asm:37432), and
+        // Sonic_ChgJumpDir and ObjectMoveAndFall still run behind it on the
+        // same frame -- with the Super speeds this routine just installed. On
+        // the complete-emerald run's ARZ1 transform that frame carries x_vel
+        // $181 -> $121, a full doubled Super acceleration step of $60
+        // (s2.asm:37483 sets acceleration $30), and y_vel $28 -> $60 of
+        // gravity. Freezing here instead kept both at their pre-transform
+        // values. The freeze is applied at the next tick, below.
     }
 
     private void updateTransformation() {
+        // The frame after the write, which is where Obj01's dispatch reads it.
+        // Idempotent: TRANSFORMING is entered once per transformation.
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         if (updateTransformationAnimation()) {
             state = SuperState.SUPER;
             player.applyExternalPhysicsProfile(getSuperProfile());
