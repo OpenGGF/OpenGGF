@@ -95509,3 +95509,91 @@ full `-Ptrace-replay` suite before and after. Do not re-derive the PC table abov
 
 The camera cluster at rows 7698-7799 (45 errors) is still untouched and still unproven to
 share a cause.
+
+## 2026-08-20 — S2 segment 15 / S3K deferral trade: the S3K side is a duplicate title-card dispatch
+
+Base `18593a9a5`, worktree `bugfix/ai-s2-seg15-plc-r1`, JDK 21, `-Dmse=off
+-Ptrace-replay -Dsurefire.runOrder=alphabetical`, all three ROM paths explicit.
+**No runtime change landed** — every probe and every experiment below was reverted with
+`git reset --hard`. Documentation only.
+
+### Baseline re-measured in this tree
+
+- `TestS2CompleteEmeraldRunChain`: 9 axes; segment 15 = **7575** errors, first non-camera
+  mismatch frame 2 `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5; segment-16 walk
+  failure `cursor 89602, offset 89600`. Byte-identical to the standing figure.
+- `TestS3kReplayReferenceClosureIntegration` (a subclass of
+  `TestS3kAizZoneSliceTraceReplay` declared in
+  `src/test/java/com/openggf/tests/trace/TestTraceReplayReferenceClosureGuard.java`):
+  **green**.
+- Unconditional deferral (`deferOverlay = rowSuppressed && provider != null` in
+  `TraceSuppressedRowClosure.executeUnownedTitleCardWork`) reproduces the reported trade
+  exactly: segment 15 **7511** (-64), S3K closure **12 errors, first frame 26179
+  `queue.s3k_kos_module.busy` exp=true act=false**.
+
+### The S3K regression has its own owner, and it is not the S2 predicate
+
+Probes on the closure, on `Sonic3kTitleCardManager.update()` (with caller frames) and on
+`S3kKosModuleQueue.queue()`, keyed on the driver's `currentBk2Index`:
+
+- The deferral's **only** behavioural effect across the whole 26k-row trace is on rows at
+  bk2 cursor **27109 onward**, the rows where `Sonic3kTitleCardManager.isOverlayActive()`
+  is true. For a **fresh-level** card (`inLevelMode=false`) that predicate is
+  `state == EXIT`, so it is true exactly during the exit phase. Every other suppressed row
+  in the trace reports `active=false`, where the closure body does not run in either arm.
+- On those rows the manager is dispatched **twice per suppressed row**:
+
+```
+27109  tcUpdate  LevelFrameStep.executeHardwareTimedObjectScan
+                   < RecordingFrameDriver.stepNormalTitleCard
+27109  tcUpdate  TraceSuppressedRowClosure.executeUnownedTitleCardWork
+```
+
+  `stepNormalTitleCard` is the represented owner. `executeUnownedTitleCardWork` documents
+  itself as "title-card work **not owned** by a represented suppressed closure" — here it
+  *is* owned, and it dispatches the object a second time.
+- The duplicate halves the exit phase. Control: 7 active rows, 27109-27115. Deferred:
+  12 active rows, 27109-27120. Total `update()` calls are 355 in both arms — the extra
+  dispatches are exactly the shortening.
+- `S3kKosModuleQueue.queue()` submissions are **identical** in both arms (cursors 4177,
+  7243, 7424, 12147, 14940, 19960, 23878, 27050 with identical counts). Nothing about
+  *what* is queued differs; only the exit-phase cadence at the seam does.
+
+### Confirmed by controlled experiment, not by reading
+
+Leaving the S2 predicate untouched and skipping the unowned update **only** for
+`Sonic3kTitleCardManager` reproduces the regression byte-for-byte: 12 errors, first frame
+26179 `queue.s3k_kos_module.busy` exp=true act=false. So the entire S3K regression is
+attributable to removing the duplicate dispatch, and none of it to widening the S2
+predicate.
+
+### Verdict
+
+The brief's hypothesis holds and is now measured. `Obj_TitleCard`
+(docs/skdisasm/sonic3k.asm:62095) is an ordinary object dispatched once per object scan;
+two dispatches inside one represented iteration is wrong against the ROM regardless of
+which trace is being replayed. **`TestS3kReplayReferenceClosureIntegration` is green
+because of that duplicate**, which is compensating for the fresh-level exit phase needing
+12 suppressed rows where the recording wants roughly 7. That is an independent S3K defect
+present in the control arm today, exposed rather than caused by the deferral.
+
+The 64-error S2 signal is therefore real and the deferral is not coincidence — but it must
+not land until the S3K exit-phase cadence is fixed on its own terms, because landing it
+alone still trades S3K red for S2 red.
+
+### Not established
+
+- Why the extra dispatch keeps the module queue unprepared at cursor 27109. Submissions
+  are identical, so the difference is in preparation/service ordering within the row; the
+  likely path is that the extra `update()` changes
+  `shouldAdvanceVblankClockDuringLockedPhase()` for the row's later hardware service.
+  **This was not instrumented** and must not be repeated as a finding.
+- What the ROM's exit-phase duration actually is for this seam. The 7-versus-12 figures are
+  engine-side row counts, not a ROM-derived constant, and no constant should be fitted from
+  them.
+
+### Retracted
+
+The framing that S3K "relies on the unowned path to update an overlay nobody else updates"
+is false. The overlay has a represented owner on every one of these rows; the unowned path
+is a second dispatch on top of it.
