@@ -99144,3 +99144,84 @@ each passing in isolation in both arms.
 coordination. Segment 8's physics — 8960 errors, first at row 1973 `sidekick_y` rom
 `0x0146` engine `0x014B` — remains the larger frontier, along with the 18 unmatched
 `aiz_5` hardware completions in rows 7056-7155 that are present in the control too.
+
+## 2026-08-20 — S3K Sonic+Tails chain: segment 8 physics frontier 1973 -> 3673
+
+Command (both arms, JDK 21, all three ROM paths explicit):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test
+```
+
+Branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `b8a3df0f7`; same-tree control at
+`b8a3df0f7`. Row convention: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = cursor - 46432`.
+
+**Before:** `segment 8 ... 8960 physics comparator errors, first non-camera mismatch at
+frame 1973 field sidekick_y rom=0x0146 engine=0x014B`.
+
+**After:** `segment 8 ... 5020 physics comparator errors, first non-camera mismatch at
+frame 3673 field x_speed rom=-0200 engine=0x03F4`. The walk-failure axis is unchanged
+(`Unable to queue HCZ geyser KosM art`, its own lane).
+
+### Discriminators
+
+Instrumented per row against the recording, Tails' state at the seam:
+
+| row | rom y | engine y | rom x | engine x | rom y_sub | engine y_sub | engine height |
+|---|---|---|---|---|---|---|---|
+| 1971 | 0144 | 0144 | 37E6 | 37E6 | 6500 | 6500 | 30 |
+| 1972 | 0145 | 0145 | 37ED | 37ED | 6500 | 6500 | 30 |
+| 1973 | 0146 | **014B** | 37F4 | 37F4 | 6500 | 6500 | **28** |
+| 1974 | 0147 | 014C | 37FA | 37FA | 6500 | 6500 | 28 |
+
+x, y-subpixel and y-velocity (zero) agree on every row. The ROM continues its +1/frame
+ramp; the engine takes a single +6 step and then resumes +1/frame, holding the delta
+forever. The engine's collision height drops 30 -> 28 on exactly that row — Tails' y_radius
+going 15 -> 14, the roll radius.
+
+The recording says Tails never rolls: `sidekick_rolling` is 0 and `sidekick_animation_id`
+is 0x20 across the whole span, and `aux_state` reports `tails_object_control = 0x81` — an
+object is driving him.
+
+A stack watch on the height write named the caller:
+`AutoSpinObjectInstance.forceRoll <- enableSpin <- checkHorizontalCrossing <-
+checkPlayerCrossing <- update`.
+
+### Cause
+
+`Obj_AutoSpin`'s two main routines load Player 2 and then read `Tails_CPU_routine`,
+branching past the crossing check when it is 4 (`docs/skdisasm/sonic3k.asm:42362-42364`
+horizontal, `:42489-42491` vertical). Routine 4 is the `Tails_FlySwim_Unknown` entry of
+`Tails_CPU_Control_Index` (`:26368-26371`). The recording's `cpu_state` reports
+`cpu_routine = 4` on every row from 1960 to 1980, so the ROM skipped P2 and the engine did
+not.
+
+Note the ROM's skip target is only the P2 check — both routines fall into the same
+`Delete_Sprite_If_Not_In_Range` — and the crossing state initialised at `:42340-42348` is
+unconditional, so neither was changed.
+
+### Not a radius-difference bug
+
+The tempting reading is a character-radius mixup, since a rider is placed at
+`object_y - y_radius`. Sonic's `y_radius` is `$13` and Tails' is `$0F`
+(`sonic3k.asm:21904`, `:26103`) — a difference of 4, not the observed 5. The observed 5 is
+the ROM's own roll adjustment for a `$13` default dropping to the `$E` roll radius, which
+is the constant `forceRoll` applies; it is evidence the engine took the roll path at all,
+not evidence of a wrong constant. The fix is that the path should not have been taken.
+
+### Suite state
+
+`-Ptrace-replay`: 800 tests, 6 failures in **both** arms; identical failing sets by full
+message; identical 155-class name sets; equal `Tests run: 0,` counts, so neither truncated.
+`-Pguards` green. Default suite: 15194 both arms, 54F+67E (candidate) against 52F+67E
+(control); the differences are `Sonic2SpecialStageLagModelValidationTest` failing in both
+arms on a different bucket, plus the order-dependent
+`TestGameLoopSpecialStageRewindDebugBoundary` trio and `TestSonic3kButtonObjectInstance` —
+the trio re-verified passing in isolation in both arms at this base.
+
+### Next
+
+Segment 8's new frontier is row 3673, `x_speed` rom `-0200` engine `0x03F4` — the primary
+player now, not the sidekick. The 18 unmatched `aiz_5` hardware completions in rows
+7056-7155 remain, and are present in the control.

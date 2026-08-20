@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **S3K's AutoSpin trigger no longer rolls Tails while a flight or carry owner is driving
+  him.** Both of `Obj_AutoSpin`'s main routines load Player 2 and then read
+  `Tails_CPU_routine`, branching past the crossing check when the word is 4 -- horizontal at
+  `docs/skdisasm/sonic3k.asm:42362-42364`, vertical at `:42489-42491`. Routine 4 is the
+  `Tails_FlySwim_Unknown` entry of `Tails_CPU_Control_Index` (`:26368-26371`): something else
+  owns Tails, and the ROM leaves him to it. The engine checked Player 2 unconditionally, so
+  crossing an AutoSpin trigger force-rolled a carried Tails, dropping his collision height
+  from 30 to 28 and shifting his position -- a divergence that never healed, because his
+  carrier then advanced him relative to the wrong place. S2's `Obj48` reads the same word for
+  the same purpose (`docs/s2disasm/s2.asm:51316-51319`), which
+  `LauncherBallObjectInstance` already honours, so the state is now answered once by
+  `SidekickCpuController.isInRomFlySwimCpuRoutine()`. On the S3K Sonic-and-Tails run this
+  moves segment 8's first non-camera mismatch from row 1973 to row 3673 and drops its
+  comparator errors from 8960 to 5020.
+
 - **A plain level-to-level run boundary no longer admits its destination one-shot, and a
   segment no longer stops short of its own declared rows.** Two defects met at the S3K
   Sonic-and-Tails `aiz_5 -> hcz` seam. First, a segment was walked for a count of FRAMES

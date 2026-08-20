@@ -679,11 +679,29 @@ public class SidekickCpuController {
         return null;
     }
 
+    /** {@code Tails_CPU_routine} value for the fly/swim carry state. */
+    private static final int ROM_CPU_ROUTINE_FLY_SWIM = 0x04;
+
     public int getDiagnosticRomCpuRoutine() {
         if (state == State.DEAD_FALLING && deadFallingRomCpuRoutine >= 0) {
             return deadFallingRomCpuRoutine;
         }
         return romCpuRoutineForState(state);
+    }
+
+    /**
+     * Whether the ROM's {@code Tails_CPU_routine} currently holds 4 -- the
+     * {@code Tails_FlySwim_Unknown} entry of {@code Tails_CPU_Control_Index}
+     * (docs/skdisasm/sonic3k.asm:26368-26371), the state Tails is in while a
+     * carry/flight owner is driving him.
+     *
+     * <p>Several object routines read that word directly to decide whether
+     * Player 2 participates at all, rather than testing anything about the
+     * sidekick's own position or air state. It is a state of the CPU
+     * controller, so it is answered here rather than re-read at each site.
+     */
+    public boolean isInRomFlySwimCpuRoutine() {
+        return getDiagnosticRomCpuRoutine() == ROM_CPU_ROUTINE_FLY_SWIM;
     }
 
     public int getDiagnosticGeneratedHeldInput() {
