@@ -1316,3 +1316,25 @@ The same trap applies one level down: two arms that both assert a segment can st
 it. A round compared reach and axis lists carefully, and separately found the candidate made an
 already-red segment **worse by 901 errors** — a widening invisible to both the count and the list,
 caught only by diffing per-segment error counts across the segments both arms actually assert.
+
+## Forty-fifth rule: before believing a null result, verify the instrument is installed
+
+A round needed a held branch's fixture applied to make a defect observable. `git apply --3way`
+reported a conflict on one already-modified file and, in the same invocation, **silently created
+none of the 28 new files**. Two full arms were then measured with no fixture present. They came
+out byte-identical to base — which reads exactly like *"the defect does not bite"*, and the round
+nearly reported that as overturning the premise it had been sent to test.
+
+It was caught by counting the fixture files on disk and noticing the defect's signature string
+appeared nowhere in either log.
+
+This is the sharpest form of a pattern this document keeps returning to: **an experiment that
+could not have worked produces the same output as one that worked and found nothing.** The
+earlier instances were about builds that never ran; this one is about a build that ran perfectly
+on the wrong tree.
+
+**A null result is a claim about the instrument as much as about the subject.** Before reporting
+one, prove the instrument was live: count the files, grep for the signature the defect would
+produce, or run the arm you expect to *fail* and confirm it does. A partial `git apply` is
+especially dangerous because it does part of its job and reports a conflict you may reasonably
+attribute to a file you did not care about.
