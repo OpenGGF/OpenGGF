@@ -3235,7 +3235,9 @@ abstract class AbstractRunChainTest {
                         preEntry.segment(),
                         returnLevel.segment(),
                         returnLevel.trace().getFrame(0),
-                        resolvedReturnZone);
+                        resolvedReturnZone,
+                        returnLevel.trace().metadata().startX() & 0xFFFF,
+                        returnLevel.trace().metadata().startY() & 0xFFFF);
         TraceRunBoundaryComparator.ActualBoundary actual =
                 new TraceRunBoundaryComparator.ActualBoundary(
                         (int) sprite.getCentreX(),
@@ -3246,7 +3248,9 @@ abstract class AbstractRunChainTest {
                         GameServices.level().getCurrentAct(),
                         GameServices.level().getLevelGamestate().getRings(),
                         GameServices.gameState().getEmeraldCount(),
-                        emeraldCarryOverIsVerifiable(interior));
+                        emeraldCarryOverIsVerifiable(interior),
+                        GameServices.playbackDebug().getCursorFrame()
+                                - returnLevel.segment().bk2FrameOffset());
         FrameComparison comparison = TraceRunBoundaryComparator.compare(
                 exit.modeChangeBk2Frame(), expected, actual);
         List<com.openggf.trace.FieldComparison> errors =
