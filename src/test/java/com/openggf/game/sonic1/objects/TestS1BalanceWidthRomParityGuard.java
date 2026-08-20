@@ -144,6 +144,12 @@ class TestS1BalanceWidthRomParityGuard {
                         + "class already reads. Full-solid, so the byte is supplied at "
                         + "getOnScreenHalfWidth(). Trapdoor SolidObject d1 is #128/2+sonic_solid_width "
                         + "= $4B at :85"));
+        ROM_ACT_WID.put("Sonic1SpringObjectInstance", new Entry(dynamic("8 sideways / 16 upright and downward"), Disposition.DECLARES_OWN_WIDTH,
+                "41 Springs.asm:45,49-56",
+                "Spring_Main writes #32/2 for every spring and overwrites it with #16/2 only on the "
+                        + "btst #4 sideways branch that also selects Spring_LR; the downward branch "
+                        + "leaves it alone. Full-solid, so the byte is supplied at "
+                        + "getOnScreenHalfWidth(). Spring_LR d1 is #16/2+sonic_solid_width = $13 at :117"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -196,7 +202,6 @@ class TestS1BalanceWidthRomParityGuard {
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
                 new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
                 new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"),
-                new Deferred("Sonic1SpringObjectInstance", -1, "41 Springs.asm:45,56 (16 upright, 8 the smaller variant)"),
                 new Deferred("Sonic1EggPrisonButtonObjectInstance", 12, "3E Prison Capsule.asm:34,50 (subtype 1, switch)"),
                 new Deferred("Sonic1BossBlockInstance", -1, "75, 76 Boss - SYZ Main and Blocks.asm:756"),
                 new Deferred("FZPlasmaLauncher", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:781"),

@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The sideways spring balances at its ROM `obActWid` of 8, not the shared 16.**
+  `Spring_Main` writes `move.b #32/2,obActWid(a0)` for every spring and then
+  overwrites it with `move.b #16/2,obActWid(a0)` on the `btst #4` sideways branch
+  that also selects the `Spring_LR` routine
+  (`docs/s1disasm/_incObj/41 Springs.asm:45,49-56`); the downward branch leaves it
+  alone. `Spring_LR` makes the spring solid with a stood-on `d3`, so the player
+  stands on the top of a horizontal spring throughout GHZ, SLZ and SYZ — and with
+  the inherited 16 balanced only beyond 12px from centre on a surface reaching
+  19px, where the ROM balances beyond 4px. Upright and downward springs already
+  matched the default and are unchanged, as is `Spring_LR`'s separately authored
+  collision width `#16/2+sonic_solid_width` = `$13`.
+
+### Fixed
 - **The SBZ trapdoor balances at its ROM `obActWid` of 128, not the shared 16.**
   `Spin_Main` writes `move.b #256/2,obActWid(a0)` for every Obj69 on the shipped
   `FixBugs = 0` branch and overwrites it with `#32/2` = 16 only on the
