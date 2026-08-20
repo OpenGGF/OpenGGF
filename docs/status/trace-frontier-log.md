@@ -100378,3 +100378,37 @@ submissions. The distinguishing question is whether the recorded stream covers t
 not a zone, game or route — and answering it properly is the next round's design problem.
 Parked here rather than fitted with a gate under time pressure. The remaining `#101`/`#102`
 are still the submission-ordering question, unchanged.
+
+## 2026-08-20 — Resolving the 798-against-800, and a correction to the casualty count
+
+The two-test shortfall in the disqualifying arm is **Surefire rerun accounting, not
+suppressed tests**, and chasing it found a real error in the report it came from.
+
+Reconciliation, from the two logs:
+
+- Class-name sets are identical: 163 classes in each arm.
+- Per-class `Tests run:` counts are identical class for class, and sum to **800 in both
+  arms**. No class ran fewer tests in the candidate arm.
+- The candidate arm reruns exactly one test three times —
+  `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1.replayMatchesTrace`, reported as
+  `Run 1:` / `Run 2:` / `Run 3:`. The control arm has no reruns.
+- The candidate's failure listing has 39 lines, of which those 3 are rerun continuations of
+  one test: 39 − 3 + 1 = 37 distinct failing tests, exactly the summary's 6 failures + 31
+  errors. The listing reconciles.
+
+So nothing was skipped or silently dropped, and the cost is not larger than the 31 errors
+reported. The grand total differing from the per-class sum is attributable to the
+three-attempt rerun; the precise internal arithmetic Surefire uses is not asserted here.
+
+**Correction to the previous entry: five classes go red, not four.**
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` is green in the control (1 test, 0
+errors) and errors in the candidate. It was missed because the class-name extraction used
+for the diff mangles nested `$` class names — the row landed in the set as the bare package
+`com.openggf.tests.trace.s3k`, which read as noise rather than as a class. Its failure is
+`pending recorded hardware submissions at prefix end raw_frame=5264` listing
+`KOS_MODULE_QUEUE#0`/`#1` with the RedAct and Zone fingerprints, which is the same
+scope defect as the other four: a standalone fixture whose recorded window opens after the
+boot that now queues the card art.
+
+Measurement note for later rounds: extract failing classes in a way that preserves nested
+`$` names, or a casualty in a nested class will be under-counted the same way.

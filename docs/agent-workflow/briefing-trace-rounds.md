@@ -1452,3 +1452,26 @@ failing scenario uses before touching either.
 
 Corollary: duplicated logic makes every null result ambiguous. Where a round finds two copies of
 the same expression, that is worth reporting even when it is not the defect.
+
+## Fiftieth rule: preserve nested class names when diffing failure sets
+
+A round reported four newly-red classes. There were five. The fifth was a nested test class, and
+the round's class-name extraction mangled the `$` separator so the row arrived as a **bare package
+name** — which it read as parsing noise and dismissed. It had the entry in its own output.
+
+The same round chased an unexplained two-test shortfall between arms and found it was Surefire
+rerun accounting: one test attempted three times, reported as `Run 1:`/`Run 2:`/`Run 3:`, with
+per-class counts identical class-for-class and summing to the same total in both arms. Nothing was
+skipped — but chasing the number is what surfaced the missing class.
+
+Two habits follow:
+
+- **Extract failing classes in a way that preserves nested `$` names**, and treat a bare-package
+  row in a class diff as a **mangled nested class** rather than as noise. A tooling artefact that
+  looks like debris is the easiest kind of evidence to discard.
+- **Reconcile a failure listing against the summary before trusting either.** Counting the
+  listing's lines, subtracting rerun continuations, and confirming the result equals
+  failures-plus-errors is a cheap check that catches both over- and under-counting.
+
+The general form, which this document keeps meeting: an unexplained number is worth chasing even
+when the likely explanation is benign, because what it sits next to may not be.
