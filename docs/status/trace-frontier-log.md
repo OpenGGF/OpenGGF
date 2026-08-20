@@ -99784,3 +99784,37 @@ frame for the quadrant, each push sensor's distance, and who moves `x`:
    only. The routines that do write inertia are for the wrong quadrant, so a second ROM write is
    unaccounted for — and it matters, because the engine lands carrying ground speed the ROM does
    not have.
+
+## 2026-08-20 — Correction to candidate 1's blast radius, and the level art is starved rather than absent
+
+**Correction.** The parked candidate 1 recorded above was described as changing
+`GameLoop.doZoneAct`. It in fact changed **five** call sites — `doEnterBonusStage`,
+`doExitBonusStage`, `doExitLevelSelectToZone`, `doZoneAct` and `loadEndingDemoZone` —
+because the edit replaced every occurrence of an identical call line rather than the one
+intended. Two of those are on the caller-owned-return-card path that already works, so the
+change was both wider than described and probably wrong at those sites. Narrowed here to
+`doZoneAct` alone; re-measured, the run reaches the identical wall 3 (`duplicate or
+reordered hardware service boundary at raw_frame=7053: previous=PRE_MAIN_LOOP,
+current=VINT_SERVICE`), so the recorded conclusions are unaffected and only the regression
+surface described for the candidate was wrong.
+
+**The level art is starved, not absent.** Probing the base tree at the AIZ2→HCZ1 boundary:
+`requestTitleCardIfNeeded` reports `zone=1 act=0 queueFreshArt=true provider=true`, the
+handoff publishes (`publishFreshLevelRuntimeArtHandoff levelIndex=194`), and
+`Sonic3k.queueFreshLevelRuntimeArt` takes the `deferFreshLevelRuntimeArt` branch. The
+deferred publication in `S3kRuntimeArtCoordinator.afterTimingService` then attempts the
+batch at every `PRE_MAIN_LOOP` and bails on capacity — measured **713 times**, always
+`need=2 src0=0x3B9668`, silently, because that path returns rather than throwing.
+
+So the submission machinery for `#101`/`#102` exists, is correctly addressed, and is
+already trying; it is blocked by the same wedged FIFO. `submitFreshLevelRuntimeArt` uses
+`queueSequentialBatch(rom, sources, 0)`, which produces destination `0x0000` then `0x2360`
+— exactly the recorded pair. The level art is therefore part of this round rather than a
+separate one.
+
+**One new constraint the round must satisfy: submission order.** The recording's order is
+title card (`#97-#100`), then level art (`#101`/`#102`), then enemy art (`#103-#106`). The
+engine currently submits the enemy art first, so even an unwedged queue would attach the
+right fingerprints to the wrong ordinals. The ordering must come from the ROM routines that
+own each queue call — `Obj_TitleCardInit`, the `Level:` load-block art load, and
+`LoadEnemyArt` from `Obj_TitleCardWait2` — not from the recorded frame numbers.
