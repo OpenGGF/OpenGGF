@@ -100190,3 +100190,76 @@ Two groups flip between runs **within each arm** and are not attributable to thi
 and ten `TestS3kCompleteRunStateDecoder` tests erroring with "test requires ROM". The
 default suite was run twice per arm to establish that: control 53/83 then 52/83, candidate
 52/73 then 53/83.
+
+## 2026-08-20 — S2 segment 18 is the Super transformation, five frames early
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` at `30db1fdd6`;
+candidate `933ab5267` on `bugfix/ai-s2-chain-r10`.
+
+### What frame 4014 is
+
+Dumping every mismatching field across the window, the engine's `player_animation_id` is
+`$1F` at frame 4014 where the ROM's is `$02`. `$1F` is `SupSonAni_Transform`
+(`docs/s2disasm/s2.asm:38687`) — this is the segment straight after the seventh special
+stage, and it is the **Super Sonic transformation**. The ROM transforms at frame **4019**.
+Everything else at 4014 — position, sub-pixels, both velocities — is the engine having
+frozen five frames early.
+
+### The gate is the high byte
+
+`Sonic_JumpHeight` ends `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
+(`docs/s2disasm/s2.asm:37432-37434`). On a big-endian word `tst.b` reads the **high** byte,
+so the gate is `y_vel` in `$0000..$00FF` — just past the apex, already falling slowly. The
+whole of the rise has a high byte of `$FF` and never passes it.
+
+The engine tested `-$100 <= y_vel <= 0`, a window *around* the apex that fires on the way
+up. Recorded `y_vel` runs `$FF10, $FF48, $FF80, $FFB8, $FFF0, $0028` across frames
+4013-4018 at `+$38` of gravity per frame, so the engine fires at 4014 on `$FF10` and the ROM
+at 4019 on the first zero high byte, `$0028`.
+
+### The transform's own frame still runs
+
+`obj_control = $81` is written at `s2.asm:37479`, but Obj01 reads that byte at the top of
+its routine dispatch, so `Sonic_ChgJumpDir` and `ObjectMoveAndFall` still run behind
+`Sonic_JumpHeight` on the same frame — with the Super speeds the routine has just installed.
+The recording shows exactly that on 4019: `x_vel $181 -> $121`, one doubled Super
+acceleration step of `$60` (`s2.asm:37483` sets acceleration `$30`), and `y_vel $28 -> $60`
+of gravity. The engine's immediate freeze discarded both. The freeze now lands on the next
+tick, which is where the dispatch reads it.
+
+`FixBugs = 0`: the `if fixBugs` block at `s2.asm:37468-37475` that clears
+`Status_Roll` / `Status_RollJump` and restores the standing radii is not assembled into the
+shipped ROM, so a roll-jump transform keeps its rolling state and ball radii.
+
+### Measured
+
+| | control | candidate |
+|---|---|---|
+| axes | 13 | **13**, every other axis byte-identical |
+| segment 18 first error | frame 4014, `x` | frame **4019**, `x_sub` |
+| segment 18 errors | 14265 | **12580** |
+| `seg12_arz1 -> seg13_arz2` gap | 83 fields, deltas spread across 13 values | **44 fields**, a clean `edge_ordinal -12` / `transfer_id -6` skew plus four `-1` rows |
+
+The gate alone took 14265 to 12915 and moved the first error to 4019 on `x`; deferring the
+freeze took it to 12580 and moved `x` itself into agreement.
+
+### Full matrix, same tree, control detached to `30db1fdd6`
+
+| run | control | candidate |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 6 fail / 4 skip | 800 / 6 / 4 |
+| `-Pguards` | 500 / 0 | 500 / 0 |
+| default suite | 15194 / 52 fail / 83 err / 23 skip | 15194 / 52 / 83 / 23 |
+
+Neither arm truncated: identical executed-class sets (157 / 64 / 1926) and identical
+`Tests run: 0,` counts (6 and 14). Trace-replay red sets are the same six classes; comparing
+every assertion by full untruncated message the only differences anywhere are the two S2
+lines above, with the S1 and S3K chains identical. The default-suite red set is
+**byte-identical** on a second candidate run; the first differed only by
+`TestAudioPresentationProducer.warmedProducerAllocatesNoFramePacketOrConsumerArray` and the
+ten `TestS3kCompleteRunStateDecoder` "requires ROM" errors, both of which flip run to run.
+
+### Not taken this round
+
+Segment 15's frame 1725, `dynamic_art.edges rom=[2855, 2856, 2857] engine=[2855, 2856]` —
+the engine one edge short. Unchanged by this work and not investigated here.
