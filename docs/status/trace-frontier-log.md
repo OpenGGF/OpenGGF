@@ -93148,3 +93148,85 @@ the divergence at all. `mz3_2` does have a lag row at 88 before its row-102 erro
 suppression makes the engine service *ahead*, and both segments are reported *behind* (no active
 prepared entry where the ROM has one, plus an extra leading fingerprint). Direction and
 availability both rule it out. That line remains separate and was not touched.
+## 2026-08-20 — the push-release tail port: AIZ 10744 closes, and two absorbers surface
+
+Branch `bugfix/ai-s3k-hurt-anim-probe-r1` off `fb576336f`; the measured candidate is preserved
+on `bugfix/ai-s3k-hurt-anim-tail-candidate`. **Nothing landed** — the candidate is net +1 red
+class and must not be merged as it stands.
+
+### The three tails, read before touching shared code
+
+| | gate | exemptions | write |
+|---|---|---|---|
+| S1 `Solid_NoCollision` (`_incObj/sub SolidObject.asm:253-263`) | object's push bit (`btst #5,obStatus(a0)`) | **none** (`FixBugs=0` walk-jump bug) | `move.w #id_Run,obAnim(a1)` |
+| S2 `SolidObject_TestClearPush` (`s2.asm:35462-35486`) | object's per-player push bit | Roll only (Spindash/Death/Drown are `fixBugs`-only, so not taken) | `move.w #(Walk<<8)\|Run,anim(a1)` |
+| S3K `loc_1E0A2` (`sonic3k.asm:41517-41528`) | object's per-player push bit | Roll, Spindash | `move.w #1,anim(a1)` |
+
+The only cross-game difference is the exemption set, and `ObjectInteractionRules` already
+carries it (`solidPushReleaseSkipsWalkRunWhenRolling`,
+`solidPushReleaseSkipsWalkRunWhenSpindashing`). **No new rules-record field is needed.** All
+three gate on the OBJECT's bit, never the player's `Status_Push`, which their own tails clear
+one instruction later — and none of them exempts Hurt.
+
+### The engine defect, confirmed
+
+`ObjectSolidContactController` already gates every call site on
+`clearObjectPushingBit(player, instance)`, which *is* the native `btst`. The extra
+`!sprite.getPushing() && !previousCheckpointStillOwnsWalk && !persistentLatchStillOwnsWalk`
+early return inside `publishSolidPushReleaseAnimationWord` has no native counterpart.
+
+### Measured, in the required order
+
+1. Tail implemented with the `SpikedLogCollisionChild` override still in place →
+   `TestS3kAizTraceReplay` **green** (16/16).
+2. Override plus `TestSidekickTouchHurtAnimationOwnership` deleted together, and the
+   provider hook `TouchResponseProvider.sidekickTouchHurtPublishesAnimation` removed with
+   them → AIZ first error moved `10744 -> 10745`, which exposed a **second** engine-only
+   owner: `ScriptedVelocityAnimationProfile` re-derives `anim = Hurt` from `isHurt()` every
+   frame, so it immediately restored the byte the tail had just cleared. The native hurt
+   animation is a one-shot write and no hurt routine (S3K `loc_1569C`, S1 `Sonic_Hurt`,
+   S2 `Obj01_Hurt`) rewrites `anim`. Narrowing that branch to re-publish only a still-live
+   hurt byte took AIZ green with the override gone.
+3. Chain `s3k-sonic-tails-complete-emeralds`: segment 4 **250 (unchanged)**, segment 6
+   **7,565 -> 7,434**, first non-camera mismatch unchanged at frame 3339 `sidekick_x`
+   `rom=0x3205 engine=0x3207`.
+
+### Rule 17 fired twice; both absorbers named, one unresolved
+
+- **`TestS3kMgzTraceReplay`** went red at frame 31111, `player_animation_id`
+  `rom=0x001A engine=0x0000` — the opposite polarity. Root: the release came through
+  `processInlineObjectForPlayer`'s **engine-synthesised off-screen gate**
+  (`isSolidObjectOffscreenGateEnabled && !isWithinSolidContactBounds`), which has no native
+  counterpart — the ROM simply stops dispatching that slot, so nothing writes. Its comment
+  claimed the ROM "still enters `SolidObject_TestClearPush`" while citing `sub_1E0C2`, the
+  entry that *skips* the write; the comment contradicted itself. Restoring the composite
+  push-ownership check **only at that synthetic gate**, and leaving the genuine no-contact
+  and side paths unconditional per ROM, returned MGZ to green and kept AIZ green.
+- **`TestS2CompleteEmeraldRunPrefix`** is the unresolved one. Segment 7 (`ehz2`) diverges
+  with 392 errors, first non-camera mismatch at frame 5396,
+  `dynamic_art.edges rom=[] engine=[8564]` — an extra DPLC edge from an extra Walk publish.
+  Isolated by same-tree revert: green at `fb576336f`, red with the candidate, and still red
+  with the `ScriptedVelocityAnimationProfile` change reverted, so it belongs to the
+  `ObjectSolidContactController` change alone. A second engine site is firing a release the
+  ROM does not; it was not located.
+
+### Suite totals, both measured in this worktree at the same base
+
+- Control `fb576336f`: `-Ptrace-replay` **792 tests, 4 failures** — `TestS1CompleteEmeraldRunChain`,
+  `TestS2CompleteEmeraldRunChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`.
+- Candidate: **792 tests, 5 failures** — the same four plus `TestS2CompleteEmeraldRunPrefix`.
+
+Net **+1 red class**, so the candidate is not landable despite closing AIZ 10744 and taking
+131 errors off chain segment 6. Command:
+`mvn -Dmse=off -Ptrace-replay -DfailIfNoTests=false -Dsonic1.rom.path=... -Dsonic2.rom.path=...
+-Ds3k.rom.path=... -Dsurefire.forkCount=4 "-Dsurefire.argLine=-Xmx3g" test`.
+
+### Not established
+
+- Which engine site produces the extra S2 `ehz2` release at frame 5396.
+- Whether `previousCheckpointStillOwnsWalk` / `persistentLatchStillOwnsWalk` have a native
+  meaning at the synthetic off-screen gate or are themselves fitted; they were retained there
+  unchanged rather than justified.
+- `-Pguards` and the full non-trace suite were not run: the candidate was already net-red, so
+  the remaining sweeps would only have measured a change that cannot land.
