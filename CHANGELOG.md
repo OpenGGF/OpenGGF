@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The SBZ rotating junction and small door balance at their ROM `obActWid`.**
+  `Jun_Main` writes `move.b #96/2,obActWid(a0)` = 48 for the junction parent
+  (`docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:47-48`); the `#112/2` = 56
+  at `:43` belongs to the cover-up children, which are put into the display-only
+  routine 4 and never made solid, so 48 is the only value the balance test can
+  read. `ADoor_Main` writes `move.b #16/2,obActWid(a0)` = 8
+  (`2A SBZ Small Door.asm:20-21`) — half the shared default, so the inherited 16
+  made the door's balance window *wider* than the ROM's rather than narrower,
+  suppressing balance across `4 <= |dx| < 12` on a top surface that only reaches
+  `$11` either side. A headless drop probe confirmed the player lands and stands
+  on both objects at their sbz1 and sbz2 placements. Both collision widths are
+  unchanged.
+
+### Fixed
 - **The FZ boss and its plasma launcher balance at their ROM `obActWid`.**
   `BossFinal_Main` stores `BossFinal_ObjData2` row 0's `#64/2` = 32 into Eggman's
   own slot on REV01 (`docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders,

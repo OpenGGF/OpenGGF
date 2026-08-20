@@ -214,6 +214,18 @@ class TestS1BalanceWidthRomParityGuard {
                         + "and this was not, in either revision. DeleteObject zeroes the slot, so the "
                         + "byte stays 0. At 0 the Sonic_Balance window covers every position, so the "
                         + "ROM balances the whole time the player stands on it"));
+        ROM_ACT_WID.put("Sonic1JunctionObjectInstance", new Entry(px(48), Disposition.DECLARES_OWN_WIDTH,
+                "66 SBZ Rotating Junction.asm:32,43,47-48,60",
+                "parent only. The #112/2 = 56 at :43 belongs to the cover-up children, which Jun_Main "
+                        + "puts straight into routine 4 (Jun_Display, display-only) at :32 and never "
+                        + "makes solid, so 48 is the only value balance can read. Full-solid, so the "
+                        + "byte is supplied at getOnScreenHalfWidth(). Jun_Action d1 is "
+                        + "#74/2+sonic_solid_width at :60"));
+        ROM_ACT_WID.put("Sonic1SmallDoorObjectInstance", new Entry(px(8), Disposition.DECLARES_OWN_WIDTH,
+                "2A SBZ Small Door.asm:20-21,62",
+                "half the shared default, so the inherited 16 made the balance window WIDER than the "
+                        + "ROM's, not narrower. The class already held the byte as an unused ACT_WIDTH "
+                        + "constant. ADoor_Animate d1 is #12/2+sonic_solid_width = $11 at :62"));
 
         // --- Top-solid, routine passes obActWid straight through as d1 --------------
         ROM_ACT_WID.put("Sonic1PlatformObjectInstance", new Entry(px(32), Disposition.FALLBACK_MATCHES_ROM, "18 Platforms.asm:30,70"));
@@ -256,9 +268,7 @@ class TestS1BalanceWidthRomParityGuard {
         record Deferred(String type, int rom, String cite) { }
         for (Deferred deferred : List.of(
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
-                new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
-                new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
-                new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"))) {
+                new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"))) {
             ROM_ACT_WID.put(deferred.type(), new Entry(deferred.rom() < 0 ? dynamic("see citation") : px(deferred.rom()),
                     Disposition.RECORDED_UNASSESSED, deferred.cite()));
         }
