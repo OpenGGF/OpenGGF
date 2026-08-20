@@ -195,6 +195,17 @@ class TestS1BalanceWidthRomParityGuard {
                         + "straight to Spikes_Hurt, so standing on one damages the player every frame "
                         + "instead of idling. The exception is v_invinc, which skips Spikes_Hurt; no "
                         + "level was checked for an invincibility monitor in reach of a wide spike"));
+        ROM_ACT_WID.put("Sonic1LavaWallObjectInstance", new Entry(px(80), Disposition.RECORDED_UNREACHABLE,
+                "4E MZ Wall of Lava.asm:22-37,77-87; Sonic ReactToItem.asm:14-38,100",
+                "LWall_Main seeds a1 with movea.l a0,a1, so the parent's own slot takes the .make "
+                        + "block -- both obActWid = #160/2 and obColType = col_128x64|col_hurt. The "
+                        + "parent is the stood-on slot (LWall_Solid, routine 2), so standing on it is "
+                        + "standing on a hurt object. The boxes overlap rather than merely abut: "
+                        + "SolidObject seats the player at objY - d3 - y_radius = objY - 44, "
+                        + "ReactToItem gives him a box of objY-60..objY-28 (top edge at y - "
+                        + "(height-3), height 2*that), and col_128x64 is a 64x32 extent spanning "
+                        + "objY-32..objY+32, so 4px of overlap hurts him every frame. Same "
+                        + "v_invinc caveat as the spikes"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -267,7 +278,6 @@ class TestS1BalanceWidthRomParityGuard {
         // than a known defect. Closing one means reading its reachability first.
         record Deferred(String type, int rom, String cite) { }
         for (Deferred deferred : List.of(
-                new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"))) {
             ROM_ACT_WID.put(deferred.type(), new Entry(deferred.rom() < 0 ? dynamic("see citation") : px(deferred.rom()),
                     Disposition.RECORDED_UNASSESSED, deferred.cite()));

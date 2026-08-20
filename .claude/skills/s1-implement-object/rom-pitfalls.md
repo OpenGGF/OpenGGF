@@ -581,7 +581,7 @@ the balance test. It compiles, it looks like the blessed fix, it changes
 nothing, and it measures clean. On a top-solid object, override
 `getBalanceWidthPixels()`.
 
-**Tell one, eight instances: an unused constant, not a missing one.** In eight of the objects
+**Tell one, nine instances: an unused constant, not a missing one.** In nine of the objects
 found so far the correct ROM byte was already present in the class and simply
 never handed to the balance test: Obj1A's `ACTIVE_WIDTH = 0x64` had exactly one
 reference in the whole file, its own declaration; Obj53 modelled 68 as
@@ -592,7 +592,9 @@ three more: Obj3B GHZ purple rock held `ACT_WIDTH = 0x13` with one reference,
 `getTopLandingHalfWidth()`; Obj33 push block derived `activeWidth` from
 `PushB_Var` for its collision width and never passed it on; and Obj71 invisible
 barrier evaluated the ROM's own `((subtype & $F0) + $10) >> 1` into a live
-`halfWidth` field and did the same. The last two show the shape is not only
+`halfWidth` field and did the same. Round two added a ninth, Obj2A SBZ small
+door, whose `ACT_WIDTH = 8` sat one line above the solid params it was not
+feeding. The last two show the shape is not only
 constants -- a *derived field* hides just as well. When auditing an object for
 this, grep for its width constant or field and count the references.
 
@@ -676,6 +678,31 @@ it is not `SolidObject` or `PlatformObject`, it may not produce a stood-on
 object, and then no width is wrong. Recorded in the guard as
 `RECORDED_UNREACHABLE`, kept distinct from `RECORDED_UNASSESSED` so a later
 reader can tell "looked, cannot happen" from "nobody looked".
+
+**A defeated boss is exempt from the balance test entirely.** `Sonic_Balance`
+reads the stood-on object's `obStatus` and branches to `Sonic_LookUp` on bit 7
+before it ever reaches the width
+(`docs/s1disasm/_incObj/01 Sonic.asm:418-420`), and `Sonic ReactToItem.asm:268`
+sets that bit on a defeated boss. So no boss's post-defeat width is ever
+balance-observable, however carefully the ROM re-writes it -- the FZ boss's
+`BossFinal_Eggman_Fall` writes `#96/2` and `#64/2` that nothing can see. Model
+them for the render cull if you like; do not treat them as balance evidence.
+
+**`obActWid` can legitimately be zero, and zero is a *total* balance window, not
+an absent one.** The FZ plasma launcher's `BossPlasma_Main` writes
+`move.b #16/2,obWidth(a0)` where it meant `obActWid`, and unlike the neighbouring
+cylinders it was never repaired in either revision; `DeleteObject` zeroes a slot
+before `FindFreeObj` hands it out, so the byte stays 0 for the object's life.
+Substituting into `d1 = obActWid + dx`, `d2 = 2*obActWid - 4` gives `dx < 4` or
+`dx >= -4`, which leave no gap -- the ROM balances the whole time the player
+stands on it. When an object has no `obActWid` write at all, the answer is 0, and
+0 is a real value; do not reach for the shared default.
+
+**The default is not always too small.** Every early instance widened the balance
+window, which made "the inherited 16 is too narrow" an unexamined habit. The SBZ
+small door's `obActWid` is 8, so the inherited 16 made the window *wider* than the
+ROM's and suppressed balance across `4 <= |dx| < 12`. Check the direction before
+describing the symptom.
 
 ## P31 -- Only the horizontal spring locks the player's grounded controls
 
