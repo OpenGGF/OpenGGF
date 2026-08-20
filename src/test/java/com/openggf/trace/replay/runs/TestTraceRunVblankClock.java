@@ -49,7 +49,27 @@ class TestTraceRunVblankClock {
 
         assertEquals(0x500 + 31,
                 clock.uncomparedInteriorReturnTarget(
-                        0, source, returned).orElseThrow());
+                        0, source, returned, 1).orElseThrow());
+    }
+
+    @Test
+    void specialStageReturnTargetFollowsTheConsumedDestinationRowCount() {
+        TraceRunManifest.Segment source = level("ghz1", 100, 10, 1);
+        TraceRunManifest.Segment returned = level("ghz2", 140, 10, 2);
+        TraceRunVblankClock clock = new TraceRunVblankClock(
+                TracePlaybackProfile.SONIC_1);
+
+        clock.captureLevelSourceTail(0, source, 110, 0x500);
+
+        // One consumed row is the shape every committed uncompared return has;
+        // a second would carry its own tick rather than leaving the anchor to
+        // sit on a row the engine has already run past.
+        assertEquals(0x500 + 31,
+                clock.uncomparedInteriorReturnTarget(
+                        0, source, returned, 1).orElseThrow());
+        assertEquals(0x500 + 32,
+                clock.uncomparedInteriorReturnTarget(
+                        0, source, returned, 2).orElseThrow());
     }
 
     /**

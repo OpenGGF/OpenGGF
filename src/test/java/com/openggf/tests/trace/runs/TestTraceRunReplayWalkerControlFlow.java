@@ -694,11 +694,35 @@ class TestTraceRunReplayWalkerControlFlow {
                 "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
 
         assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                mz1Tail, mz2, 0));
+                mz1Tail, mz2, 1, 0));
         // The profile-owned masked-row term is subtracted, as it is on the
         // inter-level budget: Sonic 2's level+special-stage entry composition.
         assertEquals(2528, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                mz1Tail, mz2, 11));
+                mz1Tail, mz2, 1, 11));
+    }
+
+    @Test
+    void uncomparedInteriorReturnVblankBudgetRunsToTheLastConsumedDestinationRow() {
+        var mz1Tail = new TraceRunManifest.Segment(
+                "mz1_2", "level", "profile", 31086, 8684, 2, 0, null, null);
+        var mz2 = new TraceRunManifest.Segment(
+                "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
+
+        // One consumed row is the shape every committed uncompared return has,
+        // and is what the budget previously hardcoded -- so this value is the
+        // pre-existing one and the term changes nothing for those runs.
+        assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 1, 0));
+        // Each further consumed destination row carries its own tick, exactly as
+        // nextFramesConsumed does on interLevelVblankBudget.
+        assertEquals(2540, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 2, 0));
+        assertEquals(2542, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 4, 0));
+        // A return that consumed no destination row has no row to anchor on.
+        assertThrows(IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                        mz1Tail, mz2, 0, 0));
     }
 
     @Test

@@ -1476,21 +1476,56 @@ abstract class AbstractRunChainTest {
                 // executed row zero.
                 boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
+                    // Pre-seeked SS interior: its single title-card-exit fall-through
+                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
+                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
+                    // Computed BEFORE the anchor because the anchor now consumes it:
+                    // the budget runs to the last consumed destination row.
+                    int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    // The V-blank anchor below consumes framesConsumed, so it is
+                    // computed first. uncomparedInteriorReturnVblankBudget now carries
+                    // the consumed-row term its sibling interLevelVblankBudget always
+                    // had, instead of hardcoding a count of one -- which is what made
+                    // the anchor depend on the seam's row layout.
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
                         if (uncomparedInteriorSourceLevel == null) {
                             throw new AssertionError(
                                     "Uncompared interior return has no source-level clock anchor");
                         }
+                        // Scoped to the anchored games ON PURPOSE. The anchor and
+                        // attachReturnedLevelSegment's comparator base are one contract
+                        // and are coherent only at framesConsumed == 1: at 0 the
+                        // comparator rebases to frame 0 while the anchor still targets
+                        // row 0's value, every compared row is read one row early, and
+                        // the artefact is indistinguishable from a physics divergence
+                        // in the report. That is what masked four separate structural
+                        // attempts at the S2 seam.
+                        //
+                        // A game whose profile leaves alignUncomparedInteriorReturnVblank
+                        // false runs no anchor here, so it has no pairing to be
+                        // incoherent and no business being asserted against. S3K takes
+                        // GameModule's default TracePlaybackProfile.DISABLED
+                        // (GameModule.java:334-336) and reaches its aiz_2 return with
+                        // framesConsumed == 0 -- a legitimate second return shape, not a
+                        // defect. An earlier version of this assertion sat outside this
+                        // guard and aborted the whole S3K chain at segment 1 for exactly
+                        // that reason; it was reverted in 34e58af86. Do not widen it.
+                        assertEquals(1, framesConsumed,
+                                "Uncompared interior return must consume exactly the "
+                                        + "destination's frame 0 before the comparator "
+                                        + "attaches (cursor " + playback.getCursorFrame()
+                                        + ", offset " + returnOffset + ", segment "
+                                        + plans.get(i + 1).segment().dir() + "). The "
+                                        + "V-blank anchor targets row 0's value and the "
+                                        + "comparator bases at framesConsumed; at any "
+                                        + "other value the two disagree and every "
+                                        + "compared row is read off by one. For " + runDir);
                         alignUncomparedInteriorReturnVblank(
                                 uncomparedInteriorSourceLevel, plans.get(i + 1),
-                                uncomparedInteriorSourceVblank);
+                                uncomparedInteriorSourceVblank, framesConsumed);
                         uncomparedInteriorSourceLevel = null;
                     }
-                    // Pre-seeked SS interior: its single title-card-exit fall-through
-                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
-                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
-                    int framesConsumed = playback.getCursorFrame() - returnOffset;
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
                             loop.getCurrentGameMode(), framesConsumed, false,
@@ -3037,13 +3072,14 @@ abstract class AbstractRunChainTest {
     private void alignUncomparedInteriorReturnVblank(
             SegmentPlan sourceLevel,
             SegmentPlan returnLevel,
-            int sourceVblank) {
+            int sourceVblank,
+            int returnFramesConsumed) {
         var profile = GameServices.module().getTracePlaybackProfile();
         if (!profile.alignUncomparedInteriorReturnVblank()) {
             return;
         }
         int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                sourceLevel.segment(), returnLevel.segment(),
+                sourceLevel.segment(), returnLevel.segment(), returnFramesConsumed,
                 TraceRunVblankClock.specialStageReturnLoss(
                         profile, returnLevel.segment()));
         // Movie-clock pacing only: the target derives from the source engine
