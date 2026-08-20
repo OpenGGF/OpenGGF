@@ -3834,6 +3834,20 @@ public class ObjectManager {
                 planeSwitchers.remove(spawn);
             }
             instanceToSpawn.remove(removed);
+            // ROM parity: an object's per-player pushing bits live in its SST
+            // slot's status byte, and every game's delete routine zeroes the
+            // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
+            // S1 DeleteObject/DeleteChild (_incObj/sub DeleteObject.asm:10-20),
+            // S3K Delete_Current_Sprite/Delete_Referenced_Sprite
+            // (sonic3k.asm:36108-36125). So a solid that unloads and is later
+            // reloaded from the same layout entry comes back with its pushing
+            // bits CLEAR, and its first SolidObject_TestClearPush takes the
+            // `beq SolidObject_NoCollision` exit (s2.asm:35462-35466) without
+            // writing the Walk/Run animation word. The engine keys that bit on
+            // the persistent ObjectSpawn record, which outlives the instance, so
+            // without this the stale bit survives the unload and the reloaded
+            // object publishes a release the ROM never performs.
+            solidContacts.releaseObjectPushLatchForAllPlayers(removed);
             notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext

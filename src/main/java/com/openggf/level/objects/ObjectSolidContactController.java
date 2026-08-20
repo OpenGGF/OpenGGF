@@ -492,20 +492,31 @@ public final class ObjectSolidContactController {
         return true;
     }
 
+    // Engine-side push ownership for the synthetic off-screen release above.
+    // Not a native predicate: it decides whether that gate is standing in for a
+    // solid whose tail the ROM still runs.
+    private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+        if (sprite.getPushing()) {
+            return true;
+        }
+        if (checkpointPushingLastFrame && sprite.getPushingAtFrameStart()) {
+            return true;
+        }
+        return instance instanceof SolidObjectProvider provider
+                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
+    }
+
+    // Callers reach this only after clearObjectPushingBit(player, instance) has
+    // returned true, which is the native `btst d4,status(a0)` on the OBJECT's own
+    // per-player pushing bit. All three games gate the Walk/Run word on that bit
+    // and not on the player's own Status_Push, which their own tails clear
+    // immediately afterwards: S1 Solid_NoCollision (`btst #5,obStatus(a0)`,
+    // _incObj/sub SolidObject.asm:253-263), S2 SolidObject_TestClearPush
+    // (s2.asm:35462-35486), S3K loc_1E0A2 (sonic3k.asm:41517-41528).
     private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
-        publishSolidPushReleaseAnimationWord(
-                player, instance, false, checkpointPushingLastFrame);
-    }
-
-    private void publishSolidPushReleaseAnimationWord(
-            PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease) {
-        publishSolidPushReleaseAnimationWord(
-                player, instance, foldedSiblingNoCollisionRelease, checkpointPushingLastFrame);
-    }
-
-    private void publishSolidPushReleaseAnimationWord(
-            PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease,
-            boolean pushingAtPreviousCheckpoint) {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
@@ -537,28 +548,15 @@ public final class ObjectSolidContactController {
             return;
         }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
-        boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
-                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
-        boolean previousCheckpointStillOwnsWalk = pushingAtPreviousCheckpoint
-                && sprite.getPushingAtFrameStart();
-        boolean persistentLatchStillOwnsWalk = persistentNativeLatch;
-        if (!foldedSiblingNoCollisionRelease
-                && !sprite.getPushing()
-                && !previousCheckpointStillOwnsWalk
-                && !persistentLatchStillOwnsWalk) {
-            return;
-        }
         // Retail S1's FixBugs=0 Solid_NoCollision path executes
         // `move.w #id_Run,obAnim(a1)` before Solid_NotPushing. Because anim and
         // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
         // prev_anim=Run ($01), restarting Walk on the next player slot without
-        // changing the mapping already rendered this frame. Normal releases need
-        // the paired player/checkpoint state; this prevents a stale engine latch
-        // from restarting Roll or an unrelated Walk/Run cadence. A folded
-        // multi-piece standing-only release is already the exact native
-        // Solid_NoCollision owner and can publish without that global pair.
-        // Push-block states 4/6 preserve that same latch until their next state-0
-        // checkpoint consumes it.
+        // changing the mapping already rendered this frame. S1 exempts nothing
+        // here (its FixBugs=0 walk-jump bug), S2 exempts Roll only, and S3K
+        // exempts Roll and Spindash; Hurt is in none of the exemption lists, so
+        // a player hurt on the same frame a solid releases his pushing bit
+        // genuinely loses the hurt animation.
         // (_incObj/sub SolidObject.asm:251-263; sub SolidWall.asm:36-51).
         if (walkAnimationId >= 0) {
             sprite.setAnimationId(walkAnimationId);
@@ -1776,8 +1774,7 @@ public final class ObjectSolidContactController {
                         && result.aggregateContact() != null
                         && !result.aggregateContact().touchSide();
                 if (result.aggregateContact() == null || foldedSiblingNoCollisionRelease) {
-                    publishSolidPushReleaseAnimationWord(
-                            player, instance, foldedSiblingNoCollisionRelease);
+                    publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
@@ -1904,14 +1901,24 @@ public final class ObjectSolidContactController {
                 && !solidProfile.bypassesOffscreenSolidGate()
                 && !topOnlyBypassesOffscreenGate
                 && !instance.isWithinSolidContactBounds()) {
-            // ROM sub_1E0C2 (sonic3k.asm:41528-41532): off-screen / no-contact
-            // path clears the player's push status and the object's pushing-bit
-            // bookkeeping but does not touch ground_vel/x_vel. It still enters
-            // SolidObject_TestClearPush, whose paired Walk/Run word write is
-            // visible before the player animation slot runs. Matches both S2
-            // SolidObject_TestClearPush and S1 Solid_NotPushing.
+            // This gate is an ENGINE construct with no native counterpart: it
+            // stands in for a solid whose slot the ROM would simply stop
+            // dispatching. Every native no-contact branch of
+            // SolidObjectFull_Offset_1P reaches loc_1E0A2 and therefore the
+            // Walk/Run word (sonic3k.asm:41287-41316); an object that is not
+            // executed at all reaches nothing and writes nothing. So this path
+            // clears the push bookkeeping the way sub_1E0C2 would
+            // (sonic3k.asm:41528-41532), but its Walk/Run word needs the
+            // engine-side push ownership check below: this path conflates a
+            // solid that has merely left the contact window (still dispatched by
+            // the ROM, so its tail really does write) with one the ROM has
+            // stopped dispatching altogether (which writes nothing). Publishing
+            // unconditionally here overwrites a live routine-owned byte such as
+            // a hurt $1A.
             if (clearObjectPushingBit(player, instance)) {
-                publishSolidPushReleaseAnimationWord(player, instance);
+                if (offscreenReleaseStillOwnsWalkRunWord(player, instance)) {
+                    publishSolidPushReleaseAnimationWord(player, instance);
+                }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -2965,7 +2972,7 @@ public final class ObjectSolidContactController {
                         // pass. Supply that checkpoint ownership explicitly; unlike the
                         // inline resolver there is no SolidExecutionRegistry callback
                         // around this site to arm checkpointPushingLastFrame.
-                        publishSolidPushReleaseAnimationWord(player, instance, false, true);
+                        publishSolidPushReleaseAnimationWord(player, instance);
                     }
                     player.setPushing(false);
                     provider.setPlayerPushing(player, false);

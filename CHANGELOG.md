@@ -62,6 +62,37 @@ All notable changes to the OpenGGF project are documented in this file.
   player stands on throughout Green Hill (25 placements across ghz1/ghz2/ghz3).
   The separately authored collision width `#32/2+sonic_solid_width` = `$1B`
   (`:31`) is unchanged.
+- **The solid push-release tail is ported, and an object's pushing bit no longer
+  outlives the object.** All three games write the Walk/Run animation word from the
+  solid tail gated on the OBJECT's per-player pushing bit, never on the player's own
+  `Status_Push` which the same tails clear one instruction later: S1
+  `Solid_NoCollision` (`docs/s1disasm/_incObj/sub SolidObject.asm:253-263`) exempts
+  nothing on the shipped `FixBugs = 0` path, S2 `SolidObject_TestClearPush`
+  (`docs/s2disasm/s2.asm:35462-35486`) exempts Roll only because its Spindash, Death
+  and Drown tests are inside `if fixBugs` and `fixBugs = 0`, and S3K `loc_1E0A2`
+  (`docs/skdisasm/sonic3k.asm:41517-41528`) exempts Roll and Spindash. The engine
+  carried an extra early return that also required the player's own pushing state,
+  so a release the ROM performs was skipped. Removing it exposed two engine-only
+  owners of the same byte, both corrected here: `ScriptedVelocityAnimationProfile`
+  re-derived `anim = Hurt` from `isHurt()` every frame against a native one-shot
+  write that no hurt routine rewrites (S3K `loc_1569C`, S1 `Sonic_Hurt`, S2
+  `Obj01_Hurt`), and the engine-synthesised off-screen solid gate — which stands in
+  for a slot the ROM has simply stopped dispatching, and therefore has no native
+  tail at all — published the word unconditionally.
+- **An unloaded solid's pushing bit is cleared with its slot.** The per-player
+  pushing bits live in an object's SST slot status byte, and every game's delete
+  routine zeroes the whole slot: S2 `DeleteObject`/`DeleteObject2`
+  (`docs/s2disasm/s2.asm:30329-30345`), S1 `DeleteObject`/`DeleteChild`
+  (`docs/s1disasm/_incObj/sub DeleteObject.asm:10-20`), S3K
+  `Delete_Current_Sprite`/`Delete_Referenced_Sprite`
+  (`docs/skdisasm/sonic3k.asm:36108-36125`). A solid that unloads and is later
+  reloaded from the same layout entry therefore comes back with those bits clear and
+  its first `SolidObject_TestClearPush` takes the `beq SolidObject_NoCollision` exit
+  without writing the animation word. The engine keyed the bit on the persistent
+  `ObjectSpawn` record, which outlives the instance, so a monitor Tails had pushed
+  2,778 frames earlier published a release when it reloaded, adding a DPLC edge the
+  ROM never emits. Segment 6 of the S3K complete-emeralds chain drops from 7,565 to
+  7,434 comparator errors with segment 4 unchanged at 250.
 
 ### Fixed
 - **Landing does not overwrite a live spindash charge animation.** Both games with

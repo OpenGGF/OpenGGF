@@ -93230,3 +93230,120 @@ Net **+1 red class**, so the candidate is not landable despite closing AIZ 10744
   unchanged rather than justified.
 - `-Pguards` and the full non-trace suite were not run: the candidate was already net-red, so
   the remaining sweeps would only have measured a change that cannot land.
+## 2026-08-20 — the push-release tail lands: the third site was a pushing bit outliving its object
+
+Worktree `ai-s2-ehz2-walk-r1`, branch `bugfix/ai-s2-ehz2-walk-r1`, JDK 21, base
+`9487e3ef9` (develop; docs-only above `fb576336f`, so no `src/main` delta from the
+outgoing lane's control). Candidate inherited from
+`bugfix/ai-s3k-hurt-anim-tail-candidate` and rebased.
+
+### The open question is answered, and the brief's expectation held
+
+The extra `ehz2` Walk publish was **not** a ROM exemption and had nothing to do with
+Hurt. It came through a genuine native site firing off a latch the ROM does not have.
+
+`setAnimationId` stack probe, gated on an env var, printing `getCentreX()/getCentreY()`,
+run under the candidate and under a same-tree revert of `ObjectSolidContactController`
+alone, then diffed with line numbers normalised away. Exactly **one** record differed
+out of 880, and it is **Tails, not Sonic**:
+`ANIM name=Tails id=0 old=16 cx=3204 cy=518`, published from
+`publishSolidPushReleaseAnimationWord` <- `processInlineObjectForPlayer`'s
+`contact == null` branch — the ROM-faithful `SolidObject_TestClearPush` site, not a
+new path.
+
+A site probe named the object: `MonitorObjectInstance` (id `0x26`) at `(3632, 721)`,
+with Tails at `(3204, 518)` — 428 px away, airborne, `pushing=false`. A latch-lifecycle
+probe on that monitor's pushing bit for Tails gave the whole story:
+
+```
+LATCH SET f=2568..2644  inst=1694102613  key=505343709  inBounds=false
+LATCH CLR f=5422        inst=884868698   key=505343709  inBounds=false
+```
+
+**Different instance, same key, 2,778 frames apart, with no controller reset in
+between.** The monitor unloaded and was reloaded; `airUnseatLatchKeyFor` keys the
+object-side pushing bit on the persistent `ObjectSpawn` record, which outlives the
+instance. The reloaded object began life with the bit already set, and its first
+no-contact checkpoint published a release — one extra DPLC edge,
+`dynamic_art.edges rom=[] engine=[8564]` at frame 5396.
+
+### The ROM rule, and why it generalises
+
+The pushing bits are SST slot RAM, and every game's delete routine zeroes the whole
+slot: S2 `DeleteObject`/`DeleteObject2` (`s2.asm:30329-30345`), S1
+`DeleteObject`/`DeleteChild` (`_incObj/sub DeleteObject.asm:10-20`), S3K
+`Delete_Current_Sprite`/`Delete_Referenced_Sprite` (`sonic3k.asm:36108-36125`). A
+reloaded solid therefore has those bits clear and its first
+`SolidObject_TestClearPush` takes `beq SolidObject_NoCollision` (`s2.asm:35462-35466`)
+without writing the animation word. **No constant was introduced**, no game, zone,
+route or frame predicate, and no rules-record field. The fix is one call to the
+already-public `releaseObjectPushLatchForAllPlayers` at
+`ObjectManager.removeActiveObject`, which that method's own comment identifies as
+"the single point at which a spawn leaves `activeObjects`".
+
+### Measured — both arms in this worktree, same command, alphabetical run order
+
+`mvn -Dmse=off -Ptrace-replay -DfailIfNoTests=false -Dsurefire.runOrder=alphabetical
+-Dsonic1.rom.path=… -Dsonic2.rom.path=… -Ds3k.rom.path=… "-Dsurefire.argLine=-Xmx3g" test`,
+with `target/surefire-reports` deleted before each run.
+
+- Control (same-tree revert to `9487e3ef9`): **792 tests, 4 failures** —
+  `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`. `TestS2CompleteEmeraldRunPrefix`
+  green.
+- Candidate: **792 tests, 4 failures** — the same four classes.
+
+**Net zero red classes.** Diffing the failure *messages* per class, not the class
+list, the only difference anywhere is the gain:
+
+```
+- segment 6 of s3k-sonic-tails-complete-emeralds diverged: 7434 physics comparator errors …
++ segment 6 of s3k-sonic-tails-complete-emeralds diverged: 7565 physics comparator errors …
+```
+
+Segment 6 **7,565 -> 7,434** (-131), first non-camera mismatch unchanged at frame 3339
+`sidekick_x rom=0x3205 engine=0x3207`; segment 4 unchanged at **250**. Every other
+axis — S1 seg12/seg15, S2 seg15 and all six `dynamic-art-gap` axes including the two
+that touch `seg7_ehz2`, and Cpz2Seg10's 1,749 errors at frame 52 — is byte-identical
+between the arms. `TestS3kAizTraceReplay` (16/16) and `TestS3kMgzTraceReplay` are green,
+so AIZ 10744 stays closed and the MGZ absorber stays resolved.
+
+### The default suite caught what trace-replay could not
+
+The outgoing lane recorded that `-Pguards` and the non-trace suite "were not run:
+the candidate was already net-red". Running them found a genuine regression the
+trace suite cannot see. `TestScriptedVelocityAnimationProfile` errored with an NPE:
+`keepsHurtAnimationPriorityOverSlide` set `hurt` but never wrote the animation byte,
+so the narrowed re-publish branch correctly returned `null`. That test pinned the
+re-derivation the candidate deliberately removes.
+
+It was updated, not demoted. The hurt byte is a one-shot write on `HurtCharacter`'s
+tail (`sonic3k.asm:21321`) and the hurt routine never rewrites it, so the test now
+performs that write before asserting hurt still beats Slide — the same assertion,
+against ROM-correct preconditions — and a new sibling,
+`hurtDoesNotReclaimAnAnimationByteAnotherOwnerHasTaken`, pins the property the
+narrowing actually adds. That sibling was mutation-checked: restoring
+`return hurtAnimId;` makes it, and only it, fail with `expected: <null> but was: <11>`.
+This matches the file's own established idiom — `resolvesSlideAnimationWhenSlidingOnGround`
+and `groundedSlidePreservesObjectPublishedWalk` already assert `null` for
+"the already-published byte remains authoritative". Class count goes 30 -> 31 tests.
+
+- `-Pguards`: **500 tests, 0 failures**.
+- Default (non-trace) suite, control at `9487e3ef9`: 15,176 tests, 55 failures,
+  64 errors, **55 red classes**. Candidate before the test update: 15,175 / 55 / 65,
+  **56 red classes** — the diff was exactly `TestScriptedVelocityAnimationProfile`.
+
+### Not established
+
+- The **standing** bit is deliberately untouched. `DeleteObject` zeroes it too, so the
+  same staleness is possible there; it was left alone to keep the measured change
+  minimal, and no fixture currently shows it.
+- Whether `previousCheckpointStillOwnsWalk` / `persistentLatchStillOwnsWalk` have a
+  native meaning at the synthetic off-screen gate. They are retained there unchanged,
+  inherited from the candidate, and still unjustified.
+- The ordering discipline in the brief (tail first with the `SpikedLogCollisionChild`
+  override in place, then delete the override, its pinning test and the dead
+  `TouchResponseProvider` hook together) was executed by the previous lane and is
+  recorded in the 2026-08-20 entry above; this lane inherited the end state and did
+  not re-run step 1 in isolation.
