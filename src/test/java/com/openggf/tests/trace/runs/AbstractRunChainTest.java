@@ -1322,7 +1322,7 @@ abstract class AbstractRunChainTest {
                 // rebind onto the next level segment.
                 int rowsConsumed = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
-                        levelAtSegmentStart, hardwareTiming);
+                        levelAtSegmentStart);
                 runCoordinator.admitLevel(
                         null, playback.getCursorFrame(),
                         loop.getCurrentGameMode(), rowsConsumed, false,
@@ -1780,7 +1780,7 @@ abstract class AbstractRunChainTest {
                         observedSourceTailVblank(seg.segment(), playback);
                 int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
-                        levelAtSegmentStart, hardwareTiming);
+                        levelAtSegmentStart);
                 int rowsConsumed = admitLevelWhenReady(
                         gameplayMode, loop, playback, runCoordinator, exit, obs, next,
                         prepared, stepCap,
@@ -2864,30 +2864,7 @@ abstract class AbstractRunChainTest {
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
             Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
             int stepCap,
-            Object levelAtSegmentStart,
-            HardwareTimingCoordinator hardwareTiming) {
-        // The waits below step engine frames whose movie cursor can run past
-        // the source segment's last row and into the destination's BK2 range
-        // before the destination level loads -- and the load then re-seeks the
-        // cursor back to that offset. Hold hardware timing in its
-        // unrepresented gap for the whole crossing, exactly as the comparison
-        // delegate is detached below, so those frames neither consume nor drop
-        // destination completion edges.
-        hardwareTiming.beginSegmentBoundaryCrossing();
-        try {
-            return prepareAcrossLevelBoundaryInGap(
-                    loop, playback, probe, movie, currentLevel, nextLevel,
-                    stepCap, levelAtSegmentStart);
-        } finally {
-            hardwareTiming.endSegmentBoundaryCrossing();
-        }
-    }
-
-    private int prepareAcrossLevelBoundaryInGap(
-            GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
-            int stepCap,
-            Object levelAtSegmentStart) {
+        Object levelAtSegmentStart) {
         int sourceTailVblank =
                 observedSourceTailVblank(currentLevel.segment(), playback);
         probe.setDelegate(null);
