@@ -99501,3 +99501,86 @@ the trio re-verified passing in isolation in both arms at this base.
 Segment 8's new frontier is row 3673, `x_speed` rom `-0200` engine `0x03F4` — the primary
 player now, not the sidekick. The 18 unmatched `aiz_5` hardware completions in rows
 7056-7155 remain, and are present in the control.
+
+## 2026-08-20 — S3K segment 8 row 3673: the missed hit is one pixel, traced to the battleship clock
+
+Round off `origin/develop` `0f162943a`; same-tree control at `0f162943a`. **Found, not
+fixed — nothing landed but this entry.** Row convention: 0-based indices into `aiz_5`'s
+`physics.csv`, `row = cursor - 46432`.
+
+Frontier unchanged: `segment 8 ... 5020 physics comparator errors, first non-camera mismatch
+at frame 3673 field x_speed rom=-0200 engine=0x03F4`.
+
+### Two entries above this one are stale; do not act on them
+
+The earlier "The hazard, identified" entry lists two unverified candidates for an animation
+skew in `AizBombExplosionInstance` — the delay stage's `bmi` boundary and `loc_505B4`
+falling through to `loc_505E4`. **Both are already implemented and cited in the class**
+(`delayTimer--; if (delayTimer >= 0) return;` for delay+1 frames, and the fall-through into
+the animation on the transition frame). The animation-phase hypothesis is not the live gap.
+
+That entry also states the fragment positions "match the ROM's to the pixel". **They do
+not.** Every fragment is exactly one pixel right of the ROM's, y matching exactly.
+
+### The instructed rule-out, done
+
+The prior round could not see past `isOnScreenForTouch()` and
+`usePreviousCollisionResponseList`. Probed: at this seam `prevList=true`,
+`preUpdate=true`, `inTouchList=8`, matching the recording's eight `0x000505DC` fragments in
+`object_near`. No fragment is dropped by the on-screen gate or by `isSkipTouchThisFrame`,
+none is deflected by the shield path, and live and pre-update flags agree
+(`liveFlags=8b preFlags=8b`) for every collidable fragment. The gates are not the cause.
+
+### The cause, measured end to end
+
+`Touch_Sizes` index `$B` is `dc.b 8,8` (`sonic3k.asm:20725`), and the miss condition is
+`dx > playerWidth`. On the step that produces row 3673, measured:
+
+| | fragment x | dx | playerWidth | result |
+|---|---|---|---|---|
+| engine | 17376 (`0x43E0`) | **17** | 16 | miss |
+| ROM | 17375 (`0x43DF`) | **16** | 16 | hit |
+
+One pixel, on the boundary, flipping the comparison. Everything else agrees: player box
+`17351,489`, `w=8 h=8`, `ph=32`, and Sonic's own position matches the recording exactly
+(`romX=43cf engX=43cf`) on the divergent row.
+
+### Where the pixel comes from
+
+The fragments are spawned at `bomb x_pos + dx` from `AIZBombExplodeDat`
+(`sonic3k.asm:105432-105440`), so all eight inherit the bomb's x. The bomb's x is
+camera-relative — `$2E(a0) - (_unkEE98) + Camera_X_pos_copy`
+(`Translate_Camera2ObjX`, `:105462-105465`) — which the engine mirrors as
+`camera().getX() + (sourceSecondaryX - ship.getSecondaryCameraX())`.
+
+At the explosion the engine's camera is `0x4372`, **exactly** the recording's `camera_x` at
+row 3657. So the camera is not the error; the battleship's secondary camera X is. Comparing
+the bomb x implied by the recording's `object_appeared` fragments against the engine's, for
+every explosion in this window:
+
+| explosion row | ROM bomb x | engine bomb x | delta |
+|---|---|---|---|
+| 3470 | `0x42D8` | `0x42D8` | 0 |
+| 3527 | `0x439A` | `0x439A` | 0 |
+| 3592 | `0x42C0` | `0x42C1` | **+1** |
+| 3657 | `0x43E7` | `0x43E8` | **+1** |
+
+Not a constant offset — it develops. Over the 65 rows between 3527 and 3592 the ROM's
+secondary camera advances `0x22` where the engine advances `0x23`.
+
+### The lead
+
+`AizBattleshipInstance` holds `shipXFixed`, starts at `0x4020 << 16`, subtracts
+`SHIP_SPEED = 0x8800` (0.53125 px/frame) **once per `update`**, and publishes
+`shipXFixed >> 16`. Solving for the update count that lands each value:
+`0x4020 - ((n * 0x8800) >> 16)` gives the ROM's `0x3D77` at **n = 1282** and the engine's
+`0x3D76` at **n = 1284**. The engine has advanced the ship about two updates further by row
+3657.
+
+Segment 8's comparator reports **160 lagged frames**, which is the obvious supply of extra
+updates. Per CLAUDE.md's "Object clocks" note, the ROM object clock is `V_int_run_count`,
+and lag frames de-phase it from an executed-frame count. **Unverified:** whether the
+battleship's advance is gated on that clock in the ROM, and whether driving it from the
+clock the disassembly actually names closes the two updates. That is the next measurement,
+and it should be made before any change to `SHIP_SPEED` or to the shift — a speed constant
+tuned to land this fixture's pixel would be a fitted model.
