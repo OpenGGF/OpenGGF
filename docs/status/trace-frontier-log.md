@@ -99275,3 +99275,40 @@ reach its terminator. Not landed: a citation-backed change no measurement can re
 Whichever ROM mechanism makes Obj05 skip `anim_frame_duration` decrements on eight steps of
 this segment. It is not visible in the recorded columns; naming it needs either the
 disassembly path that can skip Obj05's execution or a capture carrying Obj05's SST.
+## 2026-08-20 — S3K HCZ geyser KosM throw is the aiz_5 ordinal skew, not object parity
+
+Command: `mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain`
+with all three ROM paths explicit. Base commit `b8a3df0f7` (branch
+`bugfix/ai-s3k-hcz-geyser-r1`). Fails with the same two axes as the base: the
+`[walk-failure]` `Unable to queue HCZ geyser KosM art` and segment 8's 8960 physics
+errors (first non-camera mismatch row 1973 `sidekick_y` rom `0x0146` engine `0x014B`).
+
+Measured at the throw, the four parents occupying the module FIFO are
+`KOS_MODULE_QUEUE#97..#100`, sources `0x36A7C6`, `0x36A968`, `0x36A6C4`, `0x36AD8A`
+(HCZ1's `LoadEnemyArt` `PLCKosM_HCZ1` set), all `ready=false prepared=false`. Their
+recorded counterparts are `#103..#106` in `hcz/hardware_timing.jsonl` (raw frames 36,
+42, 44, 47) with byte-identical submission fingerprints — the engine's KosM ordinal
+counter is six behind the recording, so no recorded completion edge can ever release
+them and the FIFO never drains.
+
+The six missing ordinals are the recording's `#97..#102`, completed in the tail of
+`aiz_5` (raw frames 7057-7155) — the AIZ2 to HCZ1 zone transition, the one segment pair
+in `run_manifest.json` with no `transitions` entry. Fingerprint inversion identifies
+four of them exactly as `Obj_TitleCardInit`'s queue set
+(`docs/skdisasm/sonic3k.asm:62121-62152`): `ArtKosM_TitleCardRedAct` `0xD6F28` to VRAM
+`0xA000` (`tiles_to_bytes($500)`), `ArtKosM_TitleCardS3KZone` `0x15C3A2` to `0xA200`
+(`$510`), `ArtKosM_TitleCardNum1` `0xD6D84` to `0xA7A0` (`$53D`), and
+`ArtKosM_HCZTitleCard` `0x39BEDA` to `0xA9A0` (`$54D`). The remaining `#101`/`#102`
+(frames 7136, 7155, preceded by three and five direct-queue completions) are multi-module
+loads with no matching constant in `Sonic3kConstants`, consistent with HCZ1 level art.
+These are the same 18 unmatched `aiz_5` completions already logged above; the geyser
+throw is strictly downstream of them.
+
+The geyser object itself is correct: its request is `src=0x390C02 clen=1933 dest=0xA000
+dlen=4096 mods=1`, which reproduces the recorded `#107` fingerprint
+(`sha256:804c9cc2...`, `hcz` raw frame 751) exactly. In the recording the FIFO is empty
+by then — `#103..#106` retired 700 frames earlier — so the ROM never faces contention
+here. `Queue_Kos_Module` (sonic3k.asm:2668-2685) has no capacity test at all and would
+walk past `Kos_module_queue`'s four slots into `_unkFF7C`, so the engine's throw is the
+right guard and should stay. No engine change landed; the fix belongs to the AIZ2 to
+HCZ1 transition's art ownership.
