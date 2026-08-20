@@ -95811,3 +95811,70 @@ The flag probe sits after the on-screen gate and the multi-region branch in
 reached that point; a fragment dropped by `isOnScreenForTouch()` or routed through
 `usePreviousCollisionResponseList` would not have printed. That is the next thing to rule out
 before acting on the animation-phase hypothesis.
+
+## 2026-08-20 — S2's title-card release has no arm frame; the block is gap-edge stamping
+
+Round `s2-modeflip-phase-r1` off `b9a9685db`, branch `bugfix/ai-s2-modeflip-phase-r1` @
+`da8fae6e4`. **The branch commit is deliberately red and must not be merged.** Full write-up
+with citations: [docs/architecture/audits/trace/2026-08-20-s2-title-card-mode-flip-phase.md](../architecture/audits/trace/2026-08-20-s2-title-card-mode-flip-phase.md).
+
+### Premise confirmed by probe
+
+A temporary probe in `GameLoopTitleCardLifecycle` over the S1 and S2 round-trip chains:
+
+```
+PROBE-RELEASE preludePasses=1 provider=Sonic1TitleCardManager result=SETUP_ONLY
+PROBE-RELEASE preludePasses=0 provider=TitleCardManager       result=GAMEPLAY_FRAME
+```
+
+S1's release ends its host step as a **setup step** — a standalone arm frame carrying no
+recorded row. S2's returns `GAMEPLAY_FRAME`, so the loop falls through into the destination's
+row 0 **in the same host step**. `AbstractRunChainTest` encoded that fusion directly, asserting
+`framesConsumed == 1` at the return comparator's attach. So the two games sit on opposite sides
+of one ROM instant; this is not a phase the comparator merely tolerates.
+
+**Gap in the "two of three agree" claim, flagged rather than glossed:** the S3K prefix chain
+reaches its return with no title-card release at all, so S3K's phase was *not* measured
+independently this round — it was taken from the comparator's existing citation and the
+`framesConsumed == 0` statement already in `AbstractRunChainTest`.
+
+### Re-phase prototype: green on physics, blocked on two residuals
+
+The prototype adds `TitleCardProvider.releasesAfterFinalLockedPass()` /
+`completeFinalLockedPass()`, implemented for S2 so the release runs at the **end of the 26th
+leave pass's frame** (`s2.asm:5060-5066` reads the background's cleared id in the same iteration
+that deleted it; `:5081-5085` clears the lock and the mode bit inline before `:5088-5091`).
+Every compared physics row of `s2-ehz-halfpipe-roundtrip` stays green across **both** returns
+with the V-blank anchor and comparator base re-keyed to `framesConsumed == 0`.
+
+Two residuals stopped it, both correctly left unresolved:
+
+1. **Every dynamic-art gap edge stamps one movie row late**, on both returns (expected
+   9675/9700, actual 9676/9701; every edge delta exactly +1).
+   `TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission` re-rows edges by counting back
+   from the admission instant's unannounced-row total, and admission is no longer on the fused
+   row. The reference needs to become "the last movie row the engine actually ran"
+   (`bk2FrameOffset + rowsConsumed - 1`) — which requires reading the recorder's own admission
+   convention in `tools/bizhawk-headless` first. **Not guessed:** the failure mode is a silent
+   one-row shift that reads as a physics divergence, which that code's own comment says masked
+   four earlier attempts at this seam.
+2. `TestTraceRunReplayWalkerControlFlow.uncomparedInteriorReturnVblankBudgetRunsToTheLastConsumedDestinationRow`
+   pins `uncomparedInteriorReturnVblankBudget`'s `returnFramesConsumed < 1` throw. The prototype
+   relaxes it to `< 0`; that contract wants deliberate re-derivation, not relaxation to make an
+   arm pass.
+
+`TestTitleCardObjectExecution` was re-phased and is green with **strictly more** pinned than
+before (the 26 passes counted after the releasing step; `Level_frame_counter` 0 at the arm frame
+then 1 after one more step). `-Pguards` 500/500. `TestTraceRunBoundaryComparator`'s mutation test
+untouched and green.
+
+### Step 3 stays blocked
+
+`comparePosition` must not collapse to `start_x`/`start_y` until all three games agree, and S2
+does not until the above settles.
+
+### Next lane
+
+Read `tools/bizhawk-headless`'s admission/`rowsConsumed` convention for gap-edge stamping, then
+re-key `rowsCountedBackFromAdmission` to the last-run row. That single change unblocks both the
+S2 re-phase and the step-3 simplification.
