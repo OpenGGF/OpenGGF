@@ -1355,3 +1355,24 @@ movie-row clock across a special stage.** It sat at the destination's `bk2_frame
 4673 special-stage iterations and every gap iteration. It cannot be used to time a gap, and a
 quantity that looks like a frame counter is worth checking against a second source before you
 build on it.
+
+## Forty-seventh rule: measure the quantity, do not reconstruct it
+
+One round produced both halves of this lesson within an hour.
+
+**Reconstructing when you could measure.** Investigating a one-pixel touch-box miss, the round
+derived the player's box edge as `centreX − 8` instead of reading the value its own probe had
+already captured. The derived number produced an overlap where there was none, and the correct
+explanation was written off as non-causal. The probe's actual box restored it.
+
+**Trusting a derived number that nearly fits.** The round before, a rider placement looked like a
+character-radius mixup: the two radii differ by 4 and the observed step was 5. Taking the 4 as
+confirmation would have produced a plausible fix changing the wrong constant. The 5 turned out to
+be the ROM's own roll adjustment, so the step was evidence a code path *ran*, not evidence of a
+wrong value — and the real fix changed no constant at all.
+
+The two look opposite and are the same rule. In both, a reconstructed quantity was allowed to
+compete with a measured one, and in both the reconstruction was wrong in a way that fitted the
+story. **If the instrument already carries the number, read it. If it does not, get it before
+building on a derivation** — especially when your derived value is close to the observation
+without matching it, which is the case rule 3 already warns absorbs an error somewhere else.
