@@ -570,6 +570,47 @@ byte genuinely serves both, supplying it at `getOnScreenHalfWidth()` fixes both
 and `getBalanceWidthPixels()` inherits it. Where a class already models its
 on-screen width from a different quantity, override the balance accessor alone.
 
+**The siting trap, and why it is invisible.** `obActWid` is one byte with three
+ROM consumers -- `BuildSprites`' horizontal on-screen cull, `Sonic_Balance`, and
+many objects' own solidity width -- so the normally correct home for it is
+`getOnScreenHalfWidth()`, which `getBalanceWidthPixels()` defaults to. **But on a
+top-solid object that override is a SILENT NO-OP for balance.**
+`getBalanceWidthPixels()` returns `getSolidParams().halfWidth()` for top-solid
+objects *before* consulting the on-screen accessor, so the value never reaches
+the balance test. It compiles, it looks like the blessed fix, it changes
+nothing, and it measures clean. On a top-solid object, override
+`getBalanceWidthPixels()`.
+
+**Tell one, five instances: an unused constant, not a missing one.** In five of the objects
+found so far the correct ROM byte was already present in the class and simply
+never handed to the balance test: Obj1A's `ACTIVE_WIDTH = 0x64` had exactly one
+reference in the whole file, its own declaration; Obj53 modelled 68 as
+`CFLO_ACT_WIDTH` for its cull while balance fell through to 32; Obj36 Spikes and
+Obj33 Push Block build their solid params as `actWidth + 0x0B`; Obj26 Monitor
+hardcodes `0x1A`, which *is* `15 + $B`. When auditing an object for this, grep
+for its width constant and count the references.
+
+**Tell two, one instance: the right byte is not always missing, it can be
+*substituted*.**
+Obj11 GHZ Bridge had no `obActWid` constant at all; it used `logCount * 8`,
+which is the ROM's *collision* half-width from `Bri_CheckOnBridge`
+(`11 GHZ Bridge.asm:122-126`), not `obActWid`. That is harder to spot than an
+idle constant, because there is nothing unused to grep for and the expression
+looks purposeful. When an object's width comes from a computation, check which
+ROM quantity the computation reproduces.
+
+The two counts are kept apart deliberately. Two named shapes with their own
+instances are more useful than six instances of a blurred one, and the second
+shape is the one a reviewer waves through: someone did derive the width from the
+ROM, just from the wrong quantity.
+
+**Enforced since `TestS1BalanceWidthRomParityGuard`.** Every S1
+`SolidObjectProvider` must have a ROM-cited entry there; omission fails. The
+top-solid fallback's premise -- that a platform caller passes `obActWid` through
+as `d1` -- holds for seven S1 objects and failed for four. All four are now fixed, so the
+guard is green; it is enforced rather than deleted because deleting it would
+mean seven overrides that only preserve behaviour those classes already get.
+
 **Cross-game.** The same shape is documented in `PlayableSpriteMovement` for the
 S2 CPZ/WFZ moving platform Obj19, whose subtype `width_pixels` is
 `$20`/`$18`/`$40`, and for SmashableGround (`docs/s2disasm/s2.asm:48703-48705`)

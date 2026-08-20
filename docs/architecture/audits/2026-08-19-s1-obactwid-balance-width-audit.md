@@ -109,6 +109,30 @@ FZ cylinder already override.
   subtype or a table; I confirmed the engine models the collision width from the
   same source but did not enumerate per-subtype values.
 
+## Correction, same day: the fallback fails for four, not two
+
+The two classes left unverified above were chased when the guard was written,
+and **both are mismatches**, so the top-solid fallback's premise holds for seven
+S1 objects and fails for four rather than two.
+
+- **Obj11 GHZ Bridge** — `Bri_Main` writes `#256/2` = **128** on the shipped
+  `FixBugs = 0` branch, the listing calling it "way too large, causing the bridge
+  to potentially screen-wrap… likely forgotten when the bridge was turned into
+  individual 16px log objects" (`11 GHZ Bridge.asm:32-39`). `Bri_SolidObject`
+  passes `bridge_children*8 + 8` (`:122-126`) and the engine models
+  `logCount * 8`. The player stands on the parent; the log children take `#16/2`
+  = 8 at `:94` and are not the stood-on object.
+- **Obj83 SBZ2 False Floor** — `FFloor_Solid` stores the remaining half-width
+  `d0` into `obActWid` and passes `d1 = sonic_solid_width + d0` to `SolidObject`
+  (`82, 83 SBZ Eggman Cutscene and Crumbling Floor.asm:265-280`). The engine's
+  solid params are correct at `0x0B + currentHalfWidth`, but `isTopSolidOnly()`
+  is true, so the fallback hands balance `d0 + $B` where the ROM wants `d0` —
+  and the width shrinks as the floor breaks, so it is a moving target.
+
+Both are now fixed — Obj11 at a constant 128, Obj83 tracking its live
+`currentHalfWidth` — so `TestS1BalanceWidthRomParityGuard` lands green with all
+four of the fallback's failures closed and no class silently absent.
+
 ## Recommendation
 
 Do not blanket-fix. Each row needs its ROM byte read at its own site, a decision

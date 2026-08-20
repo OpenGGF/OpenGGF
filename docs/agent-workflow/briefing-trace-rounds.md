@@ -699,3 +699,22 @@ So: for any single-class difference that survives the two-runs protocol, **rever
 the fix tree and re-run there** before believing it. Copy the file aside; never `git stash` in
 this repo. And note what this implies retroactively — a "both directions empty" cross-worktree
 diff is evidence about the core, not about the one or two classes drifting around it.
+
+## Twenty-second rule: rebasing a stacked branch duplicates append-only files
+
+When a branch is stacked on another that has since been merged **under a rebased hash**,
+rebasing the child replays the parent's commits — because the hashes differ, git cannot tell
+they are already applied. Code hunks resolve cleanly as already-applied. **Append-only files do
+not**: a CHANGELOG entry or a frontier-log append is a pure insertion at a moving offset, so it
+is reapplied and the file ends up with the same block twice, a few lines below the original.
+
+A round caught this in its own rebase — a duplicated "### Fixed" block in `CHANGELOG.md` — and
+fixed it by resetting and cherry-picking only its own commit rather than rebasing the stack.
+
+So: after rebasing a stacked branch onto a develop that already contains its parent's content,
+**diff the result against develop and check the file list before pushing**. A clean rebase is
+not evidence; the duplication produces no conflict. The tell is a file appearing in the diff
+that your change never touched.
+
+This applies to whoever merges as much as to whoever rebases — when merges rewrite hashes,
+every stacked child inherits this hazard.
