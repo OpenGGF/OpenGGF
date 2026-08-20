@@ -94405,3 +94405,67 @@ reading "cursor is correct entering segment 24, and short at its exit" as "the s
 frames", without checking the segment's end against its own `offset + row count`. One
 subtraction would have caught it. **Check a suspicious delta against both endpoints, not
 just the one you started from.**
+
+## 2026-08-20 -- the `-216`: the engine is in SPECIAL_STAGE at the boundary the ROM never leaves LEVEL at
+
+Branch `feature/ai-seg24-tail-r1` off `b142e026d`. **Found, not fixed.** Documentation only.
+
+### The observation
+
+Printing the engine's mode at the moment `prepareAcrossLevelBoundary` finishes its wait for
+`lz1_2 -> lz2`, chain entry against cold entry:
+
+| entry | mode at the boundary | cursor after wait | offset |
+|---|---|---|---|
+| full chain from segment 0 | **`SPECIAL_STAGE`** | 139337 | 139553 |
+| cold start at segment 24 | `TITLE_CARD` | **139553** | 139553 |
+| cold start at segment 23 | `TITLE_CARD` | **139553** | 139553 |
+
+That is the whole mechanism. `waitForModeToLeaveOrLevelActivate(loop, GameMode.LEVEL, ...)`
+returns as soon as the mode leaves `LEVEL`. In the chain the mode has **already left `LEVEL`
+into `SPECIAL_STAGE`**, so the wait is satisfied instantly, steps nothing, and the 217 gap
+frames are never consumed. Cold sits in `TITLE_CARD`, the wait runs, and the cursor lands
+exactly on 139553.
+
+The manifest has **no special-stage segment between 24 (`lz1_2`) and 25 (`lz2`)** and no
+transition record for that boundary. So the engine enters a special stage the recorded run
+does not take.
+
+### Restated
+
+The `-216` is **not** a cursor defect, not a shortfall inside segment 24, and not a
+boundary-handling defect. It is a **downstream symptom of segment 24's own divergence**: the
+diverged engine enters a special stage at the end of `lz1_2` that the ROM run never enters,
+and that mode change short-circuits the boundary wait.
+
+The retracted "shortfall inside segment 24" entry and this one both pointed *at* segment 24;
+only this one says what segment 24 does wrong.
+
+### Measured versus inferred, kept separate
+
+**Measured:** the mode at the boundary is `SPECIAL_STAGE` from the chain and `TITLE_CARD`
+from cold; the cursor consequence follows from the wait's exit condition; the manifest has no
+special stage there.
+
+**Not measured:** *why* the engine enters a special stage. The obvious candidate is a giant
+ring reached by a diverged player position -- segment 24 carries 18,722 comparator errors --
+combined with a carried ring count that a cold start does not have, since a cold boot at 24
+shows the **same** 18,722 errors and yet does **not** enter a special stage. So divergence
+alone is not sufficient; carried state is required. Which carried value it is has not been
+measured. Do not write "giant ring" into a fix without checking.
+
+### Attribution
+
+Still not implicated and not exonerated, and the reasoning is unchanged in strength. The
+proximate cause is segment 24's divergence plus carried state, and segment 24's divergence is
+entry-owned by direct cold-start measurement. That makes a bridge-change origin less likely
+but does not exclude it, because the carried state that differs has not been identified.
+
+### Consequence for the queue
+
+The `-216` and segments 23/24's frame-1 entry condition are **likely one chain of defects,
+not two items**. If segment 24 stops diverging, the engine should stop reaching whatever it
+reaches at the end of `lz1_2`, and the boundary should traverse its gap normally. The already
+well-posed item -- one skipped Nemesis PLC service on a chain segment's first frame, with a
+green standalone fixture proving the engine has the correct behaviour -- is therefore the
+right thing to fix next, and this axis is a candidate to close with it.
