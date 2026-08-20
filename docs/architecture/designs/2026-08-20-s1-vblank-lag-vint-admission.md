@@ -2,24 +2,51 @@
 
 ## Status
 
-Proposal. Not implemented, and no guard has been edited. This note answers one
-question: can the ROM's `VBlank_Lag` stall be expressed inside the existing
-[cross-game hardware-timing trace contract](2026-07-27-cross-game-hardware-timing-trace-contract.md)
-as withheld job readiness, or does it need a per-row recorded fact?
+Approved for implementation, scoped to presentation bridges. Supersedes this
+note's first two revisions, which proposed a new recorded stream and asserted
+that lag rows run their main loop. **Both were wrong and are corrected below**;
+the ROM basis and the disproof of readiness-shaped fixes are unchanged.
 
-**Answer: (b), a per-row recorded fact — and that fact turned out to already
-be recorded.** See the two RETRACTED sections below before implementing
-anything from this note: the required input is the existing aux
-`lag_state.lagged`, not a new stream, and lag rows do not run gameplay.
+The corrected change is small: **consume the already-recorded per-frame lag flag
+on presentation-bridge rows, selecting `PlcLifecyclePhase.LAG` for the row's
+V-int.** No new stream, no new event kind, no re-record, no contract extension,
+and no guard change.
 
-**Answer as originally written: (b), a per-row recorded fact.** Option (a) is dead on arithmetic
-rather than philosophy, and the note gives the disproof rather than asserting
-it. The form proposed is the narrowest one that works: a `vint_lag` row event
-with no ordinal, no fingerprint and no payload, consumed only by the V-int
-service scheduler.
+## Scope — read this before estimating the change's value
 
-Reviewed independently; that review corrected two things in the original
-framing, both incorporated below and marked where they land.
+**This closes the bridge frontier. It does not fix the S1 level reds.**
+
+An earlier revision claimed 33 reachable rows corpus-wide. That figure was never
+achievable. Measured, per red segment, whether any lagged row even precedes the
+first error:
+
+| segment | first error | lagged rows before it | first lag overall |
+|---|---|---|---|
+| `mz2_3` (seg 12) | 101 | **none** | 102 |
+| `mz3_2` (seg 15) | 102 | 88 | 88 |
+| `syz2` bridge | 70 | 60-67 (already suppressed) | 60 |
+
+- **`mz2_3` is unreachable at any fidelity.** Its first lag row is at 102,
+  *after* its error at 101. No lag model can explain a divergence that precedes
+  every lag frame in the segment.
+- **`mz3_2` has the wrong polarity for a service fix.** The engine is already
+  behind, and suppressing a service pushes it further behind. (See the caveat
+  in "Interaction with the preparation defect" — this argument is about
+  *service* and may not survive a *preparation* fix.)
+- **`syz2`/`syz3` rows 60-67 are already suppressed** by
+  `presentationRowIsCarriedLagClosure`.
+
+So the only new contribution anywhere in the corpus is **row 70 of `syz2` and
+`syz3`** — exactly the two rows the tear census named as the sole bridge rows
+where the harness fails to suppress a ROM stall.
+
+The correct claim is **"unblocks 16 invisible segments"**, not "fixes the S1
+reds". Segments 18-33 have never been replayed because the chain terminates at
+this bridge. Expect them to be dirty when they first become visible: new errors
+there are *newly visible*, not regressions.
+
+**Success criterion.** `syz2` going green proves nothing on its own. The number
+that matters is where the chain stops afterwards.
 
 ## ROM basis
 
@@ -31,277 +58,150 @@ framing, both incorporated below and marked where they land.
 		beq.s	VBlank_Lag				; if not, this is a lag frame, branch
 ```
 
-The selector is stored by the main loop immediately before it waits, and
-`VBlank` resets it to `id_VBlank_Lag` as soon as a real handler is dispatched
-(`sonic.asm:675`). So `v_vblank_routine == 0` at V-int entry means exactly one
-thing: *the 68K main loop had not yet reached its next wait when this V-int
-fired.*
+The main loop stores the selector immediately before waiting, and `VBlank`
+resets it to `id_VBlank_Lag` once a real handler dispatches (`:675`). So
+`v_vblank_routine == 0` at V-int entry means the 68K main loop had not reached
+its next wait when this V-int fired.
 
-`VBlank_Lag` (`sonic.asm:712-746`) performs no `ProcessPLC` call of any kind.
-Outside Labyrinth Zone it branches straight to `VBlank_Music`; inside LZ it
-performs a CRAM/H-blank palette transfer and then also branches to
-`VBlank_Music`. Both fall through to `VBlank_Exit` (`sonic.asm:684-687`):
+`VBlank_Lag` (`:712-746`) performs no `ProcessPLC` call. Outside Labyrinth Zone
+it branches to `VBlank_Music`; inside LZ it does a CRAM/H-blank palette transfer
+first. Both fall through to `VBlank_Exit` (`:684-687`), which still runs
+`addq.l #1,(v_vblank_count).w`. **A lag V-int advances the counter while
+decompressing zero tiles.**
 
-```
-		addq.l	#1,(v_vblank_count).w			; increment VBlank counter
-```
+Corpus evidence (`docs/status/trace-frontier-log.md`): across all 34 segments,
+37 stalls, all 37 on lag frames; 3,331 serviced rows, none on a lag frame.
 
-A lag V-int therefore **advances `v_vblank_count` while decompressing zero
-tiles**. Every handler that decompresses reaches it via `ProcessPLC_9Tiles`
-(`sonic.asm:781`, `:946`, `:970`) or `ProcessPLC_3Tiles` (`:867`);
-`VBlank_Lag` reaches neither.
+## Why readiness-shaped fixes cannot work
 
-Corpus evidence, established before this note and recorded in
-`docs/status/trace-frontier-log.md`: across all 34 segments of the S1
-complete-emeralds chain, 37 stalls, all 37 on lag frames; 3,331 serviced rows,
-none on a lag frame. Zero counterexamples either way.
+Three independent reasons; any one suffices.
 
-## Why (a) is impossible
+1. **The comparator asserts `remaining_work` per row.** A row that services 9
+   tiles where the ROM serviced 0 is wrong *on that row*, whatever its readiness
+   state. Readiness-withholding is invisible to the compared field.
+2. **The decode counter is not readiness-owned.** `ProcessPLC_9Tiles` (`:1431`)
+   arms the per-frame budget; `ProcessPLC`'s inner loop (`:1455-1490`) decrements
+   `v_plc_patternsleft` once per tile and nothing else writes it. Readiness
+   governs whether a **finished** entry retires; it cannot pause an
+   **unfinished** one. `VBlank_Lag` needs rows where `remaining_work` does not
+   change mid-entry, and no readiness edge produces one.
+3. **The queue chains off internal completion**, so holding readiness leaves the
+   downstream schedule permanently one frame early per stall.
 
-Three independent reasons. Any one is sufficient.
+A mid-job stall also has **no job identity**. Slicing each quantum into a
+pseudo-job to manufacture one invents a granularity the ROM lacks. **An
+(a)-shaped fix that goes green has fitted something.**
 
-**1. The comparator asserts `remaining_work` per row.** A row that services 9
-tiles when the ROM serviced 0 is already wrong *on that row*, whatever its
-readiness state. Readiness-withholding is invisible to the field being
-compared.
+## CORRECTED: lag rows do not run their main loop
 
-**2. The decode counter is not readiness-owned.** `ProcessPLC_9Tiles`
-(`sonic.asm:1431-1440`) arms `v_plc_framepatternsleft` to 9 at the top of each
-*serviced* V-int; `ProcessPLC`'s inner loop (`:1455-1490`) decrements
-`v_plc_patternsleft` — the queue head's remaining tile count, i.e. the compared
-`remaining_work` — once per decoded tile, and nothing else writes it. On
-completion it branches to `ProcessPLC_ShiftCue` (`:1494`) immediately,
-abandoning the frame budget; the next entry starts fresh on the next serviced
-V-int. Readiness release governs whether a **finished** entry retires. It
-cannot pause an **unfinished** one. Reproducing `VBlank_Lag` requires rows
-where `remaining_work` does not change mid-entry, and no readiness edge can
-produce such a row.
+An earlier revision asserted, from review rather than measurement, that these
+rows run gameplay with the counter advancing on both sides, and proposed a guard
+enforcing it. **Measured, that is false**, and such a guard would have asserted
+the opposite of the truth — a failure that presents as a physics bug.
 
-**3. The queue chains off internal completion, not released readiness.** So
-holding readiness leaves the whole downstream schedule permanently one frame
-early per stall — the error is deferred, not removed.
+On `lz4`'s listed rows (1, 3, 5, 7, 12, 17, 21, 23, 30, 39, 91, 97, 115, 117,
+123): `vblank_counter` +1, **`gameplay_frame_counter` +0**, `player_x`/`player_y`
+byte-identical to the previous row. A V-int elapsed and no gameplay pass
+happened. The special-stage precedent's `runGameplay = !lagged` has it right.
 
-And a mid-job stall has **no job identity**. Slicing each 9-tile quantum into a
-pseudo-job to manufacture one would invent a work granularity the ROM does not
-have: a row-keyed stream in a costume. **An (a)-shaped fix that goes green has
-fitted something.**
+## CORRECTED: the recorded input already exists
 
-The syz2 row 70 frontier illustrates all three:
+`aux_state.jsonl` already carries per-frame
+`{"event":"lag_state","lagged":...,"lagcount":N}`, and `metadata.json` already
+declares `lag_state_per_frame` in `aux_schema_extras`. Correlating `lagged`
+against frozen `gameplay_frame_counter`:
 
-| field | expected (ROM) | actual (engine) |
-|---|---|---|
-| `remaining_work` | 1 | 24 |
-| `queued_fingerprints` | 6 entries | 5 entries |
+| segment | transitions | lagged & frozen | clean | disagreements |
+|---|---|---|---|---|
+| `lz4` | 6,719 | 870 | 5,849 | **0** |
+| `lz2` | 8,640 | 162 | 8,478 | **0** |
+| `mz3_2` | 11,331 | 33 | 11,298 | **0** |
+| `ghz2_2` | 3,605 | 11 | 3,594 | **0** |
 
-The engine holds *fewer* entries and a *larger* head remainder — it has already
-retired an entry the ROM has not, and the two `remaining_work` values describe
-*different entries*. A queue-phase offset of ~23 tiles ≈ 2.5 frames at 9
-tiles/frame. Not a readiness disagreement about one job.
+30,295 ordinary-level transitions, zero disagreements either way. `syz2` row 70
+and `syz3` row 70 are both `lagged=true`.
 
-Note also that the existing `NEMESIS_PLC_QUEUE` kind is arming-granularity by
-design — per the class comment on
-`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`,
-S1's entry "releases only the `RunPLC` arming edge". It was never shaped to
-reach per-frame decode.
-
-## Where the contract line actually falls
-
-**Correction to the original framing of this note.** It framed the question as
-readiness-versus-stall and treated any per-row input as breaching the contract.
-That was wrong about the contract.
-
-The contract's governing principle is *"record the smallest scheduling outcome
-observable to the game, not the hardware cause that produced it."* Contract 1,
-main-loop admission, **already is** a per-row recorded fact consumed as
-scheduling admission. The completion schema itself carries `raw_frame`. So the
-non-goal against keying on frame index prohibits **engine code branching on
-frame numbers** — the fitted `if (frame == 4917)` failure that hard rule 3
-exists to stop — not row-anchored recorded events. Read the other way, the
-existing lag rows would already be illegal.
-
-This proposal is therefore an extension of contract 1/2 in the same category as
-what is already there, not a breach requiring a new authority. What is new is
-the *granularity of the regime fact*, not the kind of thing being recorded.
-
-## The proposed form
-
-A per-row V-int regime fact. **Not** a new `HardwareWorkKind`:
-
-```json
-{"event": "vint_lag", "raw_frame": 4917}
-```
-
-No ordinal, no fingerprint, no payload, because it is not a job and must never
-acquire a job's shape.
-
-Sampling: `v_vblank_routine == 0` at V-int entry, before dispatch — the
-discriminator the ROM itself uses. Recording the byte rather than a boolean is
-preferable: it is the actual RAM value, self-describing, and identifies which
-handler ran.
-
-Consumption: **only** the V-int service scheduler. On a flagged row the V-int
-takes the modelled `VBlank_Lag` branch — no PLC service — and counters still
-advance. The engine already owns every downstream piece:
-`Sonic1PlcService` services nothing under `PlcLifecyclePhase.LAG`
-(`src/main/java/com/openggf/game/sonic1/resources/Sonic1PlcService.java:165,183`),
-`DynamicArtDmaServiceModel:31` excludes it, and
-`TraceRunPresentationClosure:58` already runs a row under it. The phase is
-correctly implemented and correctly cited; nothing currently tells replay the
-V-int took the lag branch.
-
-## The rows are not signature-less at capture
-
-**Second correction to the original framing.** This note previously said the 33
-ordinary lag rows "carry no recorded signature at all". That is true of what
-was recorded and false of what is *observable*. The census looked at counter
-deltas in the existing recording, not at what the recorder could sample.
-
-S1 reads joypads only from real V-int handlers. Verified in the listing:
-`VBlank_Lag` (`sonic.asm:712-746`) contains no `ReadJoypads` call, while the
-handlers do — `VBlank_Levels` at `:818`, `VBlank_SpecialStage` at `:885`,
-`VBlank_TitleCards`/`VBlank_Ending` at `:916`, `VBlank_Continue` at `:981`, and
-the shared `VBlank_StandardTransfers` at `:1009`. So an emulator lag frame — no
-input poll — is a capture-time predicate for `VBlank_Lag` dispatch.
-
-Two refinements found while verifying this, neither fatal:
-
-- There is a **sixth** `ReadJoypads` call site, at `sonic.asm:617` in
-  `ErrorWaitForC`. It is the crash error handler and is unreachable in a valid
-  trace, so the predicate holds — but "every read sits at those five" is not
-  literally exhaustive and should not be repeated as such.
-- The reviewer hedged that a pause path might skip input and false-positive.
-  In S1 it does not: `VBlank_Paused` (`:805`) either branches to
-  `VBlank_SpecialStage` (`:885`) or falls through into `VBlank_Levels`
-  (`:818`), and both read joypads.
-
-The conclusion is unchanged and still correct: **record `v_vblank_routine`
-directly rather than the input-poll proxy.** The proxy's value is that it
-proves the rows are distinguishable at capture time; the ROM's own branch input
-is what should actually be stored.
-
-## RETRACTED: the rows do not run their main loop
-
-**This section replaces a claim this note previously made from review rather
-than measurement.** It asserted that the 33 rows ran their main loop with the
-counter advancing on both sides, and proposed a guard to enforce it. That is
-false, and the guard would have asserted the opposite of the truth.
-
-Measured on `lz4`'s listed rows (1, 3, 5, 7, 12, 17, 21, 23, 30, 39, 91, 97,
-115, 117, 123): `vblank_counter` +1, **`gameplay_frame_counter` +0**, and
-`player_x`/`player_y` byte-identical to the previous row. A V-int elapsed and
-no gameplay pass happened. These *are* no-gameplay lag rows.
-
-`TraceRunFrameDriver.presentationRowIsCarriedLagClosure`
-(`src/main/java/com/openggf/trace/replay/runs/TraceRunFrameDriver.java:228`)
-remains correct, correctly cited, and must not be touched.
-
-## RETRACTED: the recorded input already exists
-
-The proposal above — record `v_vblank_routine`, re-record the fixtures — is
-**unnecessary**. `aux_state.jsonl` already carries per-frame
-`{"event":"lag_state","lagged":...,"lagcount":N}` and `metadata.json` already
-declares `lag_state_per_frame` in `aux_schema_extras`.
-
-Correlating `lagged` against frozen `gameplay_frame_counter` over `lz4`, `lz2`,
-`mz3_2` and `ghz2_2`: **30,295 ordinary-level transitions, zero disagreements
-in either direction.** `syz2` row 70 and `syz3` row 70 are both `lagged=true` —
-the exact two rows the tear census named as the only bridge rows where the
-harness fails to suppress a ROM stall.
-
-So there is no new stream, no new event kind, no re-record and no contract
-extension. The mechanism is already implemented for one path:
-`TraceRunSpecialStageRows.syntheticLagPhase`
+So no re-record and no new stream. The mechanism is already implemented for one
+path: `TraceRunSpecialStageRows.syntheticLagPhase`
 (`src/main/java/com/openggf/trace/replay/runs/TraceRunSpecialStageRows.java:326-331`)
 maps `trace.getFrame(row).lag()` to `PlcLifecyclePhase.LAG` and sets
-`runGameplay = !lagged`. That is contract 1, main-loop admission, working
-correctly for special stages and never applied to level and presentation rows.
-**The change is a coverage gap, not a new authority.**
+`runGameplay = !lagged`. That is contract 1, main-loop admission, working for
+special stages and never applied to level and presentation rows. **A coverage
+gap, not a new authority.**
 
-**The trap in the corrected shape.** Frozen `gameplay_frame_counter` is a proxy
-that coincides with `lagged` only in ordinary level segments. Inside
-presentation bridges it collapses — `syz2` has 802 of 811 rows frozen while
-only 9 are lagged, because gameplay is structurally frozen there anyway.
-`lagged` is the authority; never derive lag from counter shape.
+### **The trap: `lagged` is the authority, never counter shape**
 
-The ROM basis, the disproof of (a), and the legitimate/illegitimate
-discriminators below all still stand. What changes is that the recorded input
-is one that already exists.
+Frozen `gameplay_frame_counter` coincides with `lagged` only in ordinary level
+segments. **Inside presentation bridges it collapses** — `syz2` has **802 of 811
+rows frozen while only 9 are lagged**, because gameplay is structurally frozen
+there anyway. Anyone deriving lag from counter shape gets a green level suite
+and a broken bridge, which is the worst possible signal.
+
+Related trap: the `lag_counter` column in `physics.csv` reads `0000` on every
+row sampled. The live value is aux `lagcount`. Do not build on the CSV column.
+
+## Why this does not need a guard change
+
+`TestS1S2PlcComparisonOnlyGuard` matches only the literal pattern
+`com\.openggf\.game\.sonic[12]\.resources\.Sonic[12]PlcService`.
+`TraceRunSpecialStageRows` sits **inside** the guarded tree
+(`com.openggf.trace.replay.runs`) and passes today because it names
+`com.openggf.game.resources.PlcLifecyclePhase` — a semantic ROM-loop enum — and
+never a PLC service.
+
+**This is a seam, not a loophole, and the distinction is the point:** the guard
+forbids trace code from **reaching a PLC service**; it does not forbid trace
+code from **declaring which ROM loop a row represents**. Declaring the loop is
+comparison-side structural classification. Reaching the service would let a
+trace schedule native readiness, which is what the guard exists to prevent.
+
+The level path already has the identical mechanism:
+`LevelFrameStep.serviceVBlankOnly` (`src/main/java/com/openggf/LevelFrameStep.java:117-124`)
+accepts only `LAG`, `NORMAL_PAUSE`, `SPECIAL_STAGE_PAUSE` and is already invoked
+with `LAG` from `GameLoop:1363`. Nothing new touches a PLC service.
+
+Guard baselined **7/0 green**. The registry stays closed: this is not a
+`HardwareWorkKind` and must never become one.
 
 ## What the port may and may not do
 
-May: select the modelled `VBlank_Lag` branch for the row's V-int; advance the
-V-int counters that `VBlank_Exit` advances; be restored by rewind with the row
-cursor.
+**May**: select `PlcLifecyclePhase.LAG` for a bridge row whose recorded
+`lagged` is true; advance the V-int counters `VBlank_Exit` advances; be restored
+by rewind with the row cursor.
 
-May not: carry or adjust `v_plc_patternsleft`, `v_plc_buffer_dest`, queue
-contents, fingerprints or any decode progress; create, retire, reorder or
-prepare a queue entry; **select a handler** — it can only ever say "no handler
-ran", never which one; suppress gameplay, main-loop admission, input latching
-or object dispatch; reach physics, aux or any gameplay owner; become a
-`HardwareWorkKind`.
+**May not**: carry or adjust `v_plc_patternsleft`, `v_plc_buffer_dest`, queue
+contents, fingerprints or decode progress; create, retire, reorder or prepare a
+queue entry; **select a handler** — it may only ever say "no handler ran";
+reach physics, aux or any gameplay owner; become a `HardwareWorkKind`; or be
+derived from counter shape rather than the recorded flag.
 
-## Guard changes
+## Interaction with the preparation defect
 
-No existing assertion needs to change, and two specifically must not:
+`ghz2_2` is root-caused separately: `RunPLC` (`sonic.asm:1378-1420`) is
+**main-loop code, not VBlank code**, and stores `v_plc_patternsleft` at `:1397`
+under `FixBugs=0`. A lag frame does not mean the 68000 was idle — the loop is
+mid-iteration and reaches `RunPLC` normally, which is why the ROM arms on a lag
+row. `Sonic1PlcService.hasPreparationBoundary` returns `false` for `LAG`, so an
+arm released on a lag row cannot become visible until the next non-lag row's
+preparation boundary, costing exactly one service.
 
-- `timingKindRegistryIsClosedToUndeclaredWork` — **keep closed.** This input is
-  not a `HardwareWorkKind`. The closed registry is what stops this being
-  smuggled in as a fourth completion kind.
-- `traceProductionSourcesDoNotDependOnNativePlcServices` and
-  `replayAndBootstrapSourcesDoNotReferenceNativePlcServices` — unchanged.
-  Replay already selects a `PlcLifecyclePhase` without naming a PLC service.
-  If an implementation needs either weakened, the implementation is wrong.
-- `TestHardwareTimingAuthorityGuard` — unchanged, because this must not route
-  through `HardwareTimingService` at all.
-
-**Two new guards required before this lands:**
-
-1. Confinement: the `vint_lag` fact reaches exactly one consumer, the V-int
-   service scheduler; its only output is the lag-branch selection; it cannot
-   reach physics, objects, input latching or main-loop admission.
-2. ~~Gameplay-admission isolation: a `vint_lag` row still runs its gameplay
-   frame.~~ **Retracted — measured false.** A lag row does *not* run its
-   gameplay frame. Any guard here must encode the measured direction, matching
-   `syntheticLagPhase`'s `runGameplay = !lagged`.
-
-## Sequencing — supersedes the note's original order
-
-Two things must happen **before** any stall stream is published:
-
-1. Fix the presentation-bridge row-application gap.
-2. Diagnose the three fixtures that diverged under the arm stream. An
-   unexplained divergence under one timing kind is the "constant absorbing an
-   error elsewhere" smell, and installing a second stream on top of it will
-   misattribute the reds.
+**These two are not independent.** The scope table's `mz3_2` argument is about
+*service* suppression; a *preparation* fix moves the engine the other way. Order
+the work so each result is attributable to one change, and re-measure the lag
+question against a corrected baseline rather than against today's.
 
 ## Telling a legitimate lag release from an illegitimate one
 
-1. **Does it change what the row does, or only which of two ROM-ported paths
-   the V-int takes?** Legitimate: the branch is selected and every compared
-   value is still produced by the engine's `ProcessPLC` port. Illegitimate: any
-   recorded number reaching `v_plc_patternsleft`, a fingerprint list or a queue
-   slot.
-2. **Is the recorded value the ROM's branch input, or a measurement of the
-   engine's error?** Legitimate: `v_vblank_routine`, cited to `:656-657`.
-   Illegitimate: a frame list, stall count or tile offset obtained by diffing a
-   fixture — hard rule 3's fitted model, which a green fixture cannot detect.
-3. **Does it only ever say "no handler ran"?** The input may suppress a
-   handler, never select one.
-4. **Does it leave gameplay admission alone?** If a `vint_lag` row stops
-   running its main loop, the design is wrong.
+1. **Does it change what the row does, or only which ROM-ported path the V-int
+   takes?** Legitimate: the branch is selected and every compared value is still
+   produced by the engine's `ProcessPLC` port.
+2. **Is the value the ROM's branch input, or a measurement of the engine's
+   error?** Legitimate: the recorded `lagged` flag. Illegitimate: a frame list,
+   stall count or tile offset obtained by diffing a fixture.
+3. **Does it only ever say "no handler ran"?** It may suppress a handler, never
+   select one.
+4. **Is it reading the flag, or inferring from counter shape?** Counter shape is
+   wrong in exactly the bridges this targets.
 5. **Would it hold for a BK2 nobody has recorded?** The recording carries the
-   ROM's own RAM value at the ROM's own branch point, so a new movie carries
-   its own answer.
-
-## Open items
-
-- Adopting this needs a **fixture re-record**: no existing recording carries
-  `v_vblank_routine`. Scope that against 16 of 34 segments currently never
-  replayed.
-- No committed S1/S2 fixture carries a `hardware_timing` stream; a probe logged
-  100 `NEMESIS_PLC_QUEUE` submissions with zero recorded edges across the
-  chain, so the recorded port is inactive for S1 regardless. An unmerged branch
-  (`bugfix/ai-s1-fixture-rebase-r1`) carries a `nemesis_plc_queue` stream and
-  was not merged because it is not green.
-- S2 has the same `VBlank`/lag structure. Deliberately not claimed here without
-  its own corpus evidence.
+   emulator's own per-frame lag observation, so a new movie carries its own
+   answer.
