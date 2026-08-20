@@ -448,20 +448,16 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             if (reusedResultsOwnerSlot) {
                 ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
                         new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_X,
-                                levelEndControlPollDeferred),
+                                AizAct2CameraResizeController.MAX_X),
                         retainedResultsOwnerSlot);
                 spawnChildAfterSlot(retainedResultsOwnerSlot,
                         () -> new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_Y,
-                                levelEndControlPollDeferred));
+                                AizAct2CameraResizeController.MAX_Y));
             } else {
                 spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_X,
-                        levelEndControlPollDeferred));
+                        AizAct2CameraResizeController.MAX_X));
                 spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_Y,
-                        levelEndControlPollDeferred));
+                        AizAct2CameraResizeController.MAX_Y));
             }
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from

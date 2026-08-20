@@ -96489,3 +96489,107 @@ Measurements, arm versus same-tree control at `372f66388`:
 - The exact split of the ROM's 72 cleared rows between the Kos stall and the
   post-loop level setup. Deriving it needs the `hardware_timing` module-queue
   readiness stream, not the physics rows.
+
+## 2026-08-20 — S3K chain segment 4 closed: all 45 errors are one pre-charged accumulator
+
+Branch `bugfix/ai-s3k-seg4-camera-r1` off `f32507873`, in its own worktree, with a
+separate control worktree checked out at the same base.
+
+### The brief's characterisation was incomplete in two ways
+
+Re-measured at base: segment 4 is **45** errors, confirming the figure. But:
+
+- It is **not** `camera_x` only. The comparator's own full-frame dump for segment 4 is
+  at frame **7698**, `camera_y` expected `0x02B8` actual `0x02BB`. The split is
+  `camera_y` for the frames where the ROM's `camera_y` moves (7698-7711) and
+  `camera_x` for the frames where the ROM's `camera_x` moves (7700-7730).
+  `recentMismatches` in the segment report is capped at five entries, so the report
+  shows only the tail of the `camera_x` run — which is where "camera_x at 7726-7730"
+  came from. Rows 7726-7730 are the *last* five errors, not the whole cluster.
+- It is **one** defect, not several. Engine value at frame N equals the ROM value at
+  frame N+1 for every one of the 45: a pure one-frame phase lead across both axes.
+
+The standalone harness `TestS3kSonicTailsAiz3SegmentTraceReplay` is **not** usable
+for this segment: from a cold start it reports 1778 errors with first error
+`frame 0 -- rings mismatch (expected=75, actual=0)`. The cluster is unreachable
+under that noise. All iteration used the chain.
+
+### What frame 7698 is
+
+Segment 4 (`aiz_3`) row 7698 is the AIZ2 end-of-act handoff. The recorded aux stream
+shows slot 10 (`0x00085C1A` = `Obj_EndSignControlDoStart`) removed on that frame and
+slots 27/29 appearing as `0x00084A48` (`Obj_IncLevEndXGradual`) and `0x00084AD2`
+(`Obj_IncLevEndYGradual`) — `Obj_EndSignControlDoStart` calling `Change_Act2Sizes`,
+which falls through to `Make_LevelSizeObj` / `Child1_Act2LevelSize`
+(`sonic3k.asm:180420-180425,180580-180614`). The 45 errors are the resulting
+camera pan.
+
+### Root cause, measured at the write site
+
+A probe on `AizAct2CameraResizeController.update` (reverted) printed, for the
+worker's first dispatch:
+
+```
+[PROBE-RESIZE] vbla=24692 boundary=0 first=true fresh=false acc=4000 air=false maxX=10e0 maxY=2b8 camX=10e0 camY=2b8
+[PROBE-RESIZE] vbla=24692 boundary=1 first=true fresh=false acc=8000 air=false maxX=10e0 maxY=2b8 camX=10e0 camY=2b8
+```
+
+`camX/camY = 10e0/2b8` is exactly the ROM's row-7698 camera, so the engine **does**
+dispatch both workers on the ROM's creation frame. The controller nevertheless
+carried three compensations for a creation-pass dispatch it was assumed to have
+missed:
+
+1. the constructor pre-charged `accumulator` to `$4000` (X) / `$8000` (Y);
+2. `updateMaxY` added a bare `+2` to `delta` on the first dispatch;
+3. both axes returned early, without accumulating, on the first dispatch while the
+   player was airborne.
+
+None of the three exists in the ROM. `Obj_IncLevEndXGradual` /
+`Obj_IncLevEndYGradual` (`sonic3k.asm:178159-178168,178215-178224`) unconditionally
+add `$4000`/`$8000` to `$30` and add the accumulated **high word** to the boundary;
+`CreateChild1_Normal` (`:176924-176936`) allocates through
+`AllocateObjectAfterCurrent` (`:37917`), which by construction only returns a slot
+*after* the creating object, so `Process_Sprites` always reaches the worker in the
+pass that created it. The creation frame is dispatch 1, and dispatch 1's carry
+(`$4000` / `$8000`) still yields integer step 0. Pre-charging made engine dispatch
+`k` behave as ROM dispatch `k+1` — the observed one-frame lead, exactly.
+
+The `+2` was standing in for the camera's own `Camera_max_Y_pos` easing toward
+`Camera_target_max_Y_pos`, which the engine already applies separately: the probe
+shows `maxY` moving `2b8 -> 2bd` (+5) on the creation frame, +3 from the worker's
+fitted step and +2 from the easing, where the ROM moves +2.
+
+### The two compensations are one defect, and removing only the first regresses
+
+Removing (1) and (2) alone took segment 4 to **0** but put `TestS3kAizTraceReplay`
+(`aiz1_to_hcz_fullrun`, previously green) at 2 errors, first
+`frame 8941 camera_y expected=0x02C1 actual=0x02C0`. That route enters the same
+handoff **airborne** (`player_air=1` at rows 8928-8942), so compensation (3) fired
+and swallowed the creation-frame accumulation that the ROM performs; with the
+pre-charge gone there was nothing left to replace it. Removing (3) as well — which
+the ROM requires anyway, `Obj_IncLevEndYGradual` has no airborne branch — takes both
+routes green. This is why the fix is all three or none.
+
+### Measurement
+
+Both arms `-Dmse=off`, `-Dsurefire.runOrder=alphabetical`, all three ROM paths,
+JDK 21 (`mvn -v` reports 21.0.11), separate worktrees, arms serial.
+
+| Arm | `-Ptrace-replay` | `-Pguards` | S3K chain seg 4 |
+|---|---|---|---|
+| control `f32507873` | 796 run, 5 failures, 4 skipped | 500 run, 0 failures | **45** |
+| fix | 796 run, 5 failures, 4 skipped | 500 run, 0 failures | **0** |
+
+Failure sets **identical by message**. Diffing every chain axis line across all
+three chains, the sole difference in either direction is the removal of
+`segment 4 of s3k-sonic-tails-complete-emeralds diverged: 45 physics comparator
+errors`. Segment 8 stays at 10375 with the same first mismatch
+(`frame 1973 sidekick_y rom=0x0146 engine=0x014B`), and the S3K chain's
+`[walk-failure] hardware timing raw_frame moved backward: previous=33, current=0`
+is unchanged on both arms. `TestS3kAizTraceReplay` and
+`TestS3kAizCompleteRunTraceReplay` pass on both arms.
+
+An intermediate arm carrying only fixes (1) and (2) also showed
+`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` failing;
+it is absent from the landed arm and cannot be reached by an S3K AIZ object.
+Recorded as order-dependent noise, not as attributed.
