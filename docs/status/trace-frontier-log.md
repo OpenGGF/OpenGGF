@@ -97019,3 +97019,46 @@ survive it. The naming collision itself is deliberately left in place; renaming 
   the first control default suite lost three forks (15086 tests, 1085 errors).
   Both were re-run. Comparing the *set of class names* caught each one; the
   failure totals alone looked like a plausible result.
+
+## S1 complete-emeralds seg12/seg15 `s1_nemesis_plc.prepared` -- found, not fixed (2026-08-20, `c94b3ed0a`)
+
+- Command: `mvn -Ptrace-replay -Dmse=off -Dtest=TestS1CompleteEmeraldRunChain
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... test`, in a
+  dedicated worktree on `bugfix/ai-s1-plc-prepared-r1` off `c94b3ed0a`. Single-class run, so `target/trace-reports/*_seg*_report.json`
+  is safely attributable.
+- Reproduced: 8 axes. Segment 12 (`mz2_3`) 3 errors, first non-camera mismatch
+  frame 101; segment 15 (`mz3_2`) 6 errors, frame 102; both
+  `queue.s1_nemesis_plc.prepared rom=true engine=false`.
+- One cause, not two, and it is not a missing engine job. The full row shows the
+  engine holding *both* queued descriptors with `remaining_work -1` while the
+  ROM has already popped the head: the ROM ran `RunPLC`
+  (docs/s1disasm/sonic.asm:3032) on that row and the engine deferred it to the
+  next one. The deferral is `TraceExecutionModel.isIterationHeldIntoNextRow`
+  (99746ffa9), which holds a row's loop-tail arm whenever the *next* recorded
+  row is a lag row.
+- The row shape does not decide the question. Recorded `load_queue_state` +
+  `lag_state` for this run:
+  - `mz2_3` rows 101/102: ROM arms on 101 (`remaining 3 -> 18`), row 102 lags.
+  - `mz3_2` rows 102/103 and 109/110: ROM arms on 102 and 109, rows 103 and 110 lag.
+  - `ghz2_2` rows 107/108: ROM does **not** arm on 107 (`prepared false,
+    remaining -1`), row 108 lags and carries the arm. This is the case
+    99746ffa9 was written for.
+  Same shape, both answers. Whether the overrunning iteration got past
+  `RunPLC` before its V-blank is a 68000 cost no frame-granularity field
+  carries.
+- Candidate measured and rejected (`dd0a428ce`, reverted by `c0df18e42`):
+  disabling the deferral gives 7 axes -- seg12 and seg15 green, seg3 red with
+  the exact mirror message `rom=false engine=true` at frame 107. Every other
+  axis is identical across the two arms. A coin flip, not a fix.
+- The sanctioned mechanism already exists and is simply unrecorded here.
+  `Sonic1PlcArmTiming` submits this arm as `HardwareWorkKind.NEMESIS_PLC_QUEUE`,
+  and `PlcFrameLifecycleCoordinator` skips the deferral entirely when
+  `ownsTimedLoopTailArm()` is true, letting the recorded edge decide. But
+  `src/test/resources/traces` has **no** `hardware_timing.jsonl` under `s1/` or
+  `s2/` at all -- only the 20 S3K runs have one. The recorder side is wired
+  (`S1PlcHardwareTimingObserver.cs`, used by `S1RunCaptureRunner` and
+  `S1TraceCaptureRunner`) but landed in `b74014545` on 2026-08-18, and
+  `s1-sonic-complete-withemeralds` was recorded 2026-08-04.
+- Next action: re-record `s1-sonic-complete-withemeralds` with the v5
+  `hardware_timing.jsonl` stream. That closes seg12, seg15 and seg3 together and
+  is the only thing that can; no predicate over recorded counters can.
