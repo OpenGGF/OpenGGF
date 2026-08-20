@@ -719,10 +719,18 @@ class TestTraceRunReplayWalkerControlFlow {
                 mz1Tail, mz2, 2, 0));
         assertEquals(2542, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
                 mz1Tail, mz2, 4, 0));
-        // A return that consumed no destination row has no row to anchor on.
+        // A return that consumed no destination row anchors on the row BEFORE
+        // the destination's frame 0 -- the value entering the first row its
+        // comparator will compare. That is the same value, from the same
+        // expression, that the inter-level budget gives at a consumed count of
+        // zero, which is what every level_advance admission passes.
+        assertEquals(2538, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 0, 0));
+        assertEquals(2538, TraceRunReplayWalker.interLevelVblankBudget(
+                mz1Tail, mz2, 0, 0));
         assertThrows(IllegalArgumentException.class,
                 () -> TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                        mz1Tail, mz2, 0, 0));
+                        mz1Tail, mz2, -1, 0));
     }
 
     @Test
