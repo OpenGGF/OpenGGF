@@ -98293,3 +98293,117 @@ followed:** the gate that holds `loc_62CC` is `$48`, cleared at the end of the t
 *slide* routine, not the 90-frame `$2E` wait — which is still 90 when the loop exits and paces
 nothing in this span. Anyone taking that line literally would model the wrong counter and land a
 90 that never fires.
+
+## 2026-08-20 — the S1 timing sidecars cost reach at `lz3 -> slz1`: not landed
+
+Round `s1-fixture-landing-r1`, branch `bugfix/ai-s1-fixture-landing-r1`, rebased onto
+`7c907611f`. Control is the **same worktree** detached to `7c907611f`. Both arms full
+profile, `-Dmse=off`, all three ROM paths explicit, arms serial.
+
+**The fixture is not landed.** It buys two segments and costs four.
+
+**The fixture does not cause the defect that costs the reach — it reveals it.** The
+mis-attribution described below has been in `TraceRunReplayWalker` all along and happens
+identically without the fixture; without a timing stream `hasHardwareTimingStream` is
+false, no coordinator is installed, and nothing is watching. Installing the stream is what
+turned a latent walker bug into an observed one. That is a point in the fixture's favour,
+and it is still why the fixture is being held back.
+
+**The fixture's own verification is unaffected by any of this and stands on its own
+evidence:** 28 sidecars, 242 rows with ordinals exactly 0-241, all 34 metadata files at
+`trace_schema: 5` differing only in `recording_date`, 68 physics/aux blobs identical by
+git blob id, the guidance/design-doc/known-discrepancies reconciliation, and the parked-run
+prefix closure. **The only open question is reach, and reach belongs to the walker.**
+
+### Measured, both arms on `7c907611f`
+
+| | control | candidate |
+|---|---|---|
+| `-Ptrace-replay` | 799 / 6F / 0E / 4S | **identical** |
+| class-name set | 155 | **identical** |
+| `Tests run: 0,` lines | 6 | 6 |
+| `-Pguards` | 500 / 0 | 500 / 0 |
+| default suite | 15194, 51F | 15194, 51F |
+| **S1 chain reach** | **segment 33** | **segment 27** |
+| S1 chain axis lines | 22 | 9 |
+
+**The axis count is not a comparable metric across these two arms and must not be read as
+an improvement.** The candidate reports fewer axis lines *because its walk stops earlier*.
+Reach is the comparable number, and reach goes backwards.
+
+### What the fixture buys
+
+Segments 12 and 15 go green — 3 errors at frame 101 and 6 at frame 102, both
+`queue.s1_nemesis_plc.prepared rom=true engine=false`. This reproduces the earlier
+measurement on `4e1c7e41c` and is the fixture working as intended.
+
+### What it costs
+
+- **Reach.** The control's walk ends at `segment 33 lost production ownership before
+  source closure (mode=TITLE_CARD, ... BK2 cursor=210396)`. The candidate aborts far
+  earlier on `hardware timing raw_frame moved backward: previous=262, current=0`. Segments
+  **27, 29, 31 and 32** are therefore never asserted, and **7 of the 10 dynamic-art-gap
+  axes** are never evaluated (`lz3 -> slz1` through `lz4 -> sbz3`).
+- **Segment 26 (`lz3`) is measurably worse**: 11437 errors in the control against 12338 in
+  the candidate, **+901**, with the same first non-camera mismatch in both (frame 2805,
+  `dynamic_art.edges rom=[1336, 1337] engine=[]`) — a widening, not a new front. `lz3` is
+  the segment immediately before the aborting boundary and the one whose recorded PLC
+  readiness the fixture newly drives, so the two are plausibly the same defect seen at
+  two intensities. **That link is a candidate, not a finding.** The +901 is measured
+  regardless.
+
+### Root cause of the abort: segment attribution, not the recorded stream
+
+Instrumented `beginRawFrame` / `handoffTo` / `enterUnrepresentedGap` and captured the
+backward call's stack. The boundary is `lz3` (26) -> `slz1` (27). Observed sequence:
+seven `enterGap`, then `handoffTo` slz1 (first edge raw 69), then `beginRawFrame` 0..262,
+then `beginRawFrame 0` against a latch of 262. Both blocks are slz1 rows. Stack of the
+backward call:
+
+```
+AbstractRunChainTest.prepareAcrossLevelBoundary:2914 -> waitForModeToLeaveOrLevelActivate
+  -> stepEngineFrame -> GameLoop.step -> PlaybackDebugManager.prepareCurrentFrame
+  -> TraceRunReplayWalker$BoundaryProbe.prepareFrame:1207
+  -> HardwareTimingCoordinator.beginPlaybackFrame:260 -> beginSegmentRow:291
+```
+
+`beginPlaybackFrame` (`TraceRunReplayWalker.java:245-265`) decides which segment a frame
+belongs to purely by cursor arithmetic — it scans segments last-to-first and takes the
+first whose `bk2FrameOffset() <= frame.frameIndex()`. It has no concept of "the drive is
+between segments". Across this boundary the shared cursor runs past slz1's offset
+(161359) during the transition choreography, so 263 choreography frames are attributed to
+segment 27 as rows 0-262 and pull the handoff forward with them.
+`prepareAcrossLevelBoundary` then does exactly what it should — `probe.setDelegate(null)`,
+`playback.scheduleSessionAtNextLevelLoad(movie, offset)` — which re-seeks the cursor to
+slz1's true first row, and the walk restarts at row 0.
+
+**The recorded stream is monotonic and the port is right to refuse.** The recorder emits
+no backward raw frame; the drive latched 263 destination rows before the destination had
+started and then legitimately rewound. The same mis-attribution happens without the
+fixture — `hasHardwareTimingStream` is false there, no coordinator is installed, and
+nothing observes it. **Do not relax the monotonicity check**; it is the only thing that
+made this visible.
+
+The fix is to stop inferring segment membership from cursor arithmetic and give the walker
+an explicit "the drive has entered segment N" signal. That is shared production run-walk
+code used by all three games' chains, and it forces a decision about where a destination
+segment begins — the same boundary-ownership question behind the old `-216` walk failure
+and the S3K 121-row gap. Attempting it inside a fixture landing could only be validated
+against this one boundary, which is how a fitted boundary rule gets written. **Left for
+its own round, with its own control.**
+
+### Also recorded
+
+`TestS1CompleteEmeraldVisualRun`'s parked-run closure fix stands and is unaffected by the
+rebase: the class is 2/2 in both arms. Its `stopAfterSegmentBody(11)` lane previously
+closed through `verifyRunComplete` and now closes through `verifyPrefixComplete` at that
+segment's last row; the two are equivalent today (no edges past the bound) but the
+narrowing is real for that lane in future.
+
+The ten `TestS3kCompleteRunStateDecoder` errors flagged as unattributed in the previous
+entry are **environment noise, now proven**: they appeared in the *candidate* on the old
+base and in the *control* on this one, always as
+`test requires -Ds3k.rom.path=<locked-on ROM>` — a ROM-property visibility failure in one
+fork, 10/10 green re-run alone. Both default arms are otherwise 15194 / 51 failures with
+identical class sets (1918) and `Tests run: 0,` counts (14). Not attributable to any
+change under test, in either direction.
