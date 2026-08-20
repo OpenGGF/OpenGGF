@@ -888,3 +888,24 @@ The general form, which now has three instances this session: **before believing
 would be a big result, check whether the run that produced it was healthy.** A truncated run
 reports fewer red and reads as an improvement; a native-extraction race reports thousands of
 errors and reads as a catastrophe; both are the environment, not the change.
+
+## Thirty-first rule: "no field reported" is a statement about which check fired
+
+A segment was described as **camera-only** in every brief for a full day. It wasn't: 205 of its
+250 errors were animation fields on both characters from row 0, with camera a separate cluster
+7,700 rows later. The chain prints the first non-camera **PHYSICS** mismatch, and animation
+fields belong to the ANIMATION group — so "no field printed" meant "no *physics* error", and was
+read as "only camera errors".
+
+Nothing was wrong with the report. The phrasing described *which check fired*, and it was
+inherited as a description of *what is wrong with the segment* — through several rounds and
+several briefs, mine included.
+
+This is the same family as diffing class names instead of failure messages, and as reading an
+absence off a truncated view: **an instrument's silence is scoped to what that instrument
+examines.** Before accepting a characterisation like "camera-only", "queue-only" or "no physics
+divergence", build the per-field histogram and confirm the claim covers every verification group,
+not just the one the headline is drawn from.
+
+The tell is a phrase that has been repeated across rounds without anyone re-measuring it. Those
+are exactly the claims that stop being checked.

@@ -94716,3 +94716,106 @@ unserviced body pass; the standalone path does not.
   landed, so the prediction in the previous entry is still open.
 
 No fix landed and no constant was introduced; this entry is measurement only.
+
+## 2026-08-20 — segment 4 characterised: it is NOT camera-only. Diagnosis only, nothing landed
+
+Branch `bugfix/ai-s3k-seg4-r7` off `1c73514c4`. **Diagnosis only; no production change.**
+Probes reverted, tree clean. Re-measured at this base: segment 4 **250**, segment 6 **absent
+(green)**, `run_boundary.position.x` 14007 vs 14008 unchanged.
+
+### The standing premise is stale and should stop being repeated
+
+Every brief since the 292-error era has described segment 4 as *"camera-only errors; no
+non-camera physics mismatch"*. At 250 that is **false**, and the phrasing is what hid it:
+the chain's failure line reports the first non-camera **PHYSICS** mismatch, and animation
+fields live in the ANIMATION verification group. "No first-error frame/field printed" was
+read as "only camera errors" when it actually meant "no *physics* error at all".
+
+Per-field histogram at `1c73514c4`, split by frame:
+
+```
+   52  first=0     sidekick_mapping_frame        rows    0-99  : 205 errors
+   52  first=0     sidekick_animation_id         rows 7600-7699:   2 errors
+   51  first=0     player_mapping_frame          rows 7700-7799:  43 errors
+   50  first=0     player_animation_id
+   31  first=7700  camera_x
+   14  first=7698  camera_y
+```
+
+**205 of the 250 errors are animation/mapping on BOTH characters, from row 0.** Camera is
+45 errors in a separate cluster ~7,700 rows later. There are **zero** position, speed,
+angle, air, rolling or ground-mode errors anywhere in the segment — the physics is exact.
+
+### What the two clusters are
+
+Segment 4 is `aiz_3` — **AIZ act 2's start**, 8,235 rows, entry at `(0x0240,0x03D0)`.
+
+At row 0 both characters are airborne and falling (`air=1`, `status=0x02`, `onobj=00`):
+
+| | ROM | engine |
+|---|---|---|
+| player `anim` / `mapping_frame` | `0x05` WAIT / `0xBA` (frozen) | `0x0C` BALANCE2 / `0xA1`->`0xA2` |
+| sidekick `anim` / `mapping_frame` | `0x05` WAIT / `0xAD` (frozen) | `0x06` BALANCE / `0x9A` |
+
+The engine has both characters playing a **ledge-balance** animation while falling through
+the air at the start of a fresh act.
+
+### It is a stale latch, and the probe was verified before that was claimed
+
+A stack probe on **all four** animation setters (`setAnimationId(int)`,
+`setAnimationId(AnimationId)`, and both `setForcedAnimationId` overloads) recorded
+**zero writes** across rows 0-12.
+
+An empty probe proves nothing on its own, so a heartbeat was added at the comparison site
+and the run reproduced: **12 heartbeats, `seg=4 engineAnim=12 engineMap=161->162`, and no
+animation write beside them.** The engine's BALANCE2 is therefore carried across the
+segment boundary and never re-evaluated; the mapping frame advances only because the
+BALANCE2 script keeps ticking.
+
+The ROM does **not** carry: segment 2 ends with ROM `anim=0x1C` (player) / `0x00`
+(sidekick), and segment 4's own aux records a fresh init on its first frame —
+`routine_change from 0x00 to 0x02` at frame 0, with `state_snapshot anim_id: 5`,
+`object_control 0x00`, `control_locked false`, `interact 0x0000`.
+
+### The ROM's default, which the engine appears to have inverted
+
+`Sonic_Move`'s no-direction tail writes the standing animation **unconditionally**, and
+only then decides whether balance overrides it:
+
+```
+Sonic_NotRight:
+        move.b  angle(a0),d0
+        ...
+        move.b  #5,anim(a0)     ; use standing animation
+        btst    #Status_OnObj,status(a0)
+        beq.w   Sonic_Balance
+```
+
+(sonic3k.asm:22446-22455). WAIT is the ROM's floor and balance is an override on top of it.
+The engine treats balance as a latched state instead, so nothing ever restores WAIT.
+
+### NOT ESTABLISHED — and this is why nothing was landed
+
+**Which ROM instruction writes `anim=5` on this particular frame is unresolved.**
+`Sonic_Init` (sonic3k.asm:21902-21931) does not write `anim` at all, and the sampled row
+already has `Status_InAir` set — so `Sonic_Move`, which runs from the grounded
+`Sonic_MdNormal`, should not be executing either. Both cannot be true of the same frame as
+sampled, which means the per-VBlank row does not show the instruction that did it.
+
+That is a PC-execute probe question (`event.onmemoryexecute` on the `move.b #5,anim(a0)`
+sites, gated to `a0 == v_player` in the entry window), not something to settle by reasoning
+from the row. **Writing a "reset animation on fresh act entry" fix now would be modelling
+the symptom rather than the ROM**, and the value 5 would be a fixture-derived constant with
+a citation that does not license it — the exact shape flagged in the skill's detector
+section.
+
+Also not established: whether the camera cluster at rows 7698-7799 shares a cause with the
+animation cluster or is independent. It was not investigated.
+
+### For the next round
+
+1. PC-execute probe the four candidate `move.b #5,anim` sites during AIZ2 entry to find the
+   real writer; that determines whether the fix belongs in the act-entry path, the balance
+   code's missing unconditional WAIT floor, or the init.
+2. Treat the camera cluster separately until proven otherwise.
+3. Do not re-derive the histogram composition above; it is measured at `1c73514c4`.
