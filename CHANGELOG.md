@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The AIZ giant ride vine releases a player who scrolls off screen.**
+  `AIZRideVineHandle_ProcessPlayer` tests the held player's `render_flags` before the
+  routine check and before it reads the buttons — `tst.b render_flags(a1) / bpl.w
+  AIZRideVineHandle_ReleasePlayer` (`docs/skdisasm/sonic3k.asm:46486-46496`) — so a rider
+  the display pass could not draw is dropped on the handle's next pass. The engine modelled
+  the forced eject, the hurt/dead release and the jump release, but not this one, and kept
+  dragging a CPU Tails along the hanging-frame table indefinitely once he left the render
+  box. The target is the plain `AIZRideVineHandle_ReleasePlayer`
+  (`docs/skdisasm/sonic3k.asm:46548-46552`), which clears only `object_control` and the grab
+  byte and arms the `$3C` regrab cooldown: no velocity, no `Status_InAir` and no animation,
+  so the player resumes normal physics from a standstill. The sibling grab object
+  `LbzRideGrappleInstance` already modelled the identical idiom for `sub_266B0`; only the
+  AIZ vine was missing it.
+
+### Fixed
 - **An object's standing bit now expires with its slot, as the delete routines do.**
   The object-side p1/p2 standing bits were keyed on the persistent `ObjectSpawn`, so they
   outlived the instance they described and a solid reloaded from the same layout entry

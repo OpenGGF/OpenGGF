@@ -3021,6 +3021,59 @@ period-vs-reload trap applies to every one of them.
 
 ---
 
+## A grab-and-hold object drops a rider whose `render_flags` bit 7 is clear
+
+**Symptom.** A player or CPU sidekick is captured by a grab object (vine handle, grapple,
+pulley, parachute) and never gets off. The recorded row shows the ROM's rider frozen where
+it was, `x_vel`/`y_vel` zero, and `y_vel` then accumulating the ordinary `0x38` gravity step
+per frame while `x_pos` does not move at all — a plain resumption of normal physics from a
+standstill — while the engine keeps writing the object's hold position and hold mapping
+frame. Because the object's frame table keeps running, the *animation* and *mapping_frame*
+divergences look like an animation defect rather than a lifetime one.
+
+**The ROM shape.** These objects test the held player's render flag at their own entry,
+*before* the routine check and *before* they read the buttons:
+
+```
+        tst.b   (a2)                    ; grab byte
+        beq.w   ..._CheckGrab
+        bmi.w   ..._ForcedRelease
+        tst.b   render_flags(a1)
+        bpl.w   ..._ReleasePlayer       ; rider not drawn last frame -> drop it
+        cmpi.b  #4,routine(a1)
+        bhs.w   ..._ReleasePlayer
+```
+
+`AIZRideVineHandle_ProcessPlayer` (`docs/skdisasm/sonic3k.asm:46486-46496`) and
+`sub_266B0` (LBZ ride grapple) are the same routine shape. Bit 7 is written by the
+*preceding* display pass, so the drop lands on the handle's next pass — natural one-frame
+visibility, not a latency to model.
+
+**The release target is the quiet one.** `AIZRideVineHandle_ReleasePlayer`
+(`docs/skdisasm/sonic3k.asm:46548-46552`) is
+`clr.b object_control(a1) / clr.b (a2) / move.b #$3C,2(a2) / rts`. It sits two lines below
+`AIZRideVineHandle_ForcedRelease`, which *does* write `x_vel=$300`, `y_vel=$200` and
+`Status_InAir` — reaching for the wrong one gives the rider a launch the ROM never
+performs. The off-screen release writes no velocity, no status and no animation.
+
+**What to check.** For any object that holds a player under `object_control`, enumerate
+*every* branch out of its hold routine, not just the ones the player can trigger. The
+engine had the forced eject, the hurt/dead release (standing in for `routine >= 4`) and the
+jump release, and was missing only the render-flag one — invisible until a route carried a
+CPU sidekick off the top of the screen while held. Use the existing playable-sprite
+contract `hasRenderFlagOnScreenState()` / `isRenderFlagOnScreen()`; do not invent a
+visibility test.
+
+**Corollary — check the sibling.** `LbzRideGrappleInstance.updateHeldPlayer` already
+modelled this exact predicate, with the same helper and the same ROM idiom, while
+`AizVineHandleLogic` did not. When a grab object is missing a release branch, diff it
+against every other grab object in the tree before deriving the branch from scratch.
+
+**Originating commit.** AIZ giant ride vine off-screen release; S3K complete-emeralds chain
+segment 6 `7,434 -> 1,955` errors, frontier f3339 -> f3887.
+
+---
+
 ## The touch pass sets a flag; the object's OWN pass performs the reaction
 
 **Symptom.** A ROM-correct knockback/reward is computed with the right magnitude and

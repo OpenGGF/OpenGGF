@@ -93960,3 +93960,157 @@ cold start, therefore it is carry-in" -- the precise opposite of the truth. The 
 been truncated by a `head -20` **and** the boot segment is never in it. The report file
 settled it. Same shape as the aggregated histogram and the class-name diff: the absence was
 in the view, not in the data.
+## 2026-08-20 — f3339: the AIZ ride-vine never let go of an off-screen Tails
+
+Branch `bugfix/ai-s3k-f3339-r1` off `8b5699630`. Fix landed. Chain segment 6
+**7,434 -> 1,955** errors (-5,479); first non-camera mismatch **f3339 -> f3887**
+(`sidekick_x_sub rom=0x7700 engine=0x7A00`). Segment 4 unchanged at 250.
+
+### The distribution first
+
+Per-field histogram of segment 6, instrumented in `LiveTraceComparator.absorbDivergentFields`
+and split by segment (the report itself is `errorCount` plus a five-entry ring buffer, so it
+cannot be parsed as an error list):
+
+```
+  760 sidekick_y             first f3339      141 sidekick_routine   first f3389
+  759 sidekick_x             first f3339       75 sidekick_angle     first f3885
+  758 sidekick_y_sub         first f3341       37 sidekick_ground_mode f4023
+  749 sidekick_x_sub         first f3350
+  747 sidekick_x_speed       first f3350
+  665 sidekick_status_byte   first f3350
+  653 sidekick_mapping_frame first f3340
+  538 sidekick_y_speed       first f3340
+  536 sidekick_g_speed       first f3455
+  465 sidekick_animation_id  first f3389
+  357 sidekick_rolling       first f3389
+  194 sidekick_air           first f3453
+```
+
+**All 7,434 errors are sidekick fields and all descend from one origin at f3339.** The
+older `sidekick_animation_id` row-823 and `player_animation_id` row-203 clusters carried in
+previous briefs are gone — closed by the 2026-08-20 landing-animation fix — so segment 6 had
+exactly one live frontier, not several.
+
+### Establishing the writer, not guessing the family
+
+A `setX`/`setY` stack probe on the sidekick sprite, attributed to rows by the comparator
+cursor, named the writer on the first try:
+
+```
+3338  WRITE setCentreXPreserveSubpixel=3207
+        AizVineHandleLogic.setPlayerHeldMode0(AizVineHandleLogic.java:333)
+        AizVineHandleLogic.updateGrabbedPlayer(:272)
+        AizGiantRideVineObjectInstance.updateHandle(:269)
+```
+
+Tails is holding an AIZ giant ride-vine handle. The fixture's own
+`sidekick_interact_object` aux family then pins the ROM transition exactly:
+
+| row | `tails_render_flags` | `tails_object_control` |
+|---|---|---|
+| 3337 | `0x84` | `0x03` |
+| **3338** | **`0x04`** | `0x03` |
+| **3339** | `0x04` | **`0x00`** |
+
+Tails scrolls out of the render box at row 3338 (camera `(0x3171,0x05B7)`, Tails
+`(0x3205,0x059D)` — 26px above the camera top), the display pass clears `render_flags`
+bit 7, and the handle's NEXT pass drops him.
+
+### The ROM predicate
+
+`AIZRideVineHandle_ProcessPlayer` (sonic3k.asm:46486-46496) tests the held player's
+render flag before the routine check and before it ever reads the buttons:
+
+```
+        tst.b   (a2)
+        beq.w   AIZRideVineHandle_CheckGrab
+        bmi.w   AIZRideVineHandle_ForcedRelease
+        tst.b   render_flags(a1)
+        bpl.w   AIZRideVineHandle_ReleasePlayer      <-- not modelled
+        cmpi.b  #4,routine(a1)
+        bhs.w   AIZRideVineHandle_ReleasePlayer
+```
+
+The target is the plain `AIZRideVineHandle_ReleasePlayer` (sonic3k.asm:46548-46552):
+`clr.b object_control(a1)` / `clr.b (a2)` / `move.b #$3C,2(a2)` / `rts`. Unlike
+`AIZRideVineHandle_ForcedRelease` two lines above it, it writes **no** velocity, **no**
+`Status_InAir` and **no** animation — which is precisely what the fixture records: Tails'
+`x_pos` freezes at `0x3205`, `x_vel`/`y_vel` stay 0, and `y_vel` then accumulates the
+ordinary `0x38` gravity step per frame from row 3340.
+
+The engine modelled the forced eject, the hurt/dead/debug release (standing in for the
+ROM's `routine >= 4`) and the jump release, but not the render-flag release. So the engine
+kept dragging Tails along the handle's hanging-frame table indefinitely — including through
+the mapping-frame change to `0x92` at row 3340 that the ROM never makes.
+
+### The fix
+
+Two clauses added to the existing release condition in
+`AizVineHandleLogic.updateGrabbedPlayer`, using the pre-existing playable-sprite contract
+`hasRenderFlagOnScreenState()` / `isRenderFlagOnScreen()`. **No constant was introduced**;
+the predicate is read out of the listing, and the release path it reaches was already
+implemented for the hurt/dead case.
+
+This is the "two paths that should agree, but don't" shape. The sibling grab object
+`LbzRideGrappleInstance.updateHeldPlayer` (:295-303) already models the identical ROM idiom
+for `sub_266B0`, with the same helper and the same comment. Only the AIZ vine was missing it.
+
+### Measured
+
+Base `8b5699630`, same command both arms, same worktree.
+
+| | control | with fix |
+|---|---|---|
+| chain segment 4 | 250 | **250**, unchanged |
+| chain segment 6 | 7,434 @ f3339 `sidekick_x` | **1,955 @ f3887** `sidekick_x_sub` |
+| `run_boundary.position.x` | 14007 vs 14008 | unchanged |
+
+### Both arms, measured
+
+Both profiles were subsequently run in **both arms** in this one worktree, the control
+reached by `git reset --hard 8b5699630` (never `git stash`), same command each time.
+
+`-Ptrace-replay`:
+
+| | control (8b5699630) | with fix |
+|---|---|---|
+| totals | 793 run, 4 failures, 4 skipped | **identical** |
+| red classes | S1 chain, S2 chain, S3K chain, CPZ2 seg10 | **identical set** |
+| s1 seg12 / seg15 / seg22 / seg23 / seg24 | 3 / 6 / 15564 @ f8115 `x_sub` / 54 / 18722 | **all identical** |
+| s2 seg15 | 7575 | **identical** |
+| s3k seg4 | 250 | **250** |
+| **s3k seg6** | **7,434 @ f3339 `sidekick_x`** | **1,955 @ f3887 `sidekick_x_sub`** |
+
+Every axis on every other segment is byte-identical between arms; segment 6 is the only
+thing that moves. This replaces the earlier "red set name-identical to develop" proxy with
+a measured control.
+
+Default (non-trace) suite — the important arm here, because `-Ptrace-replay` is 156 of
+1,919 classes and contains no object unit tests, and this fix is an object class:
+
+| | control | with fix |
+|---|---|---|
+| totals | 15,191 run, 56 failures, 64 errors, 18 skipped | 15,193 run, 55 failures, 64 errors, 18 skipped |
+| red classes | 55 | 54 |
+| **red only with the fix** | — | **none** |
+| red only in the control | `TestAudioPresentationProducer` | — |
+
+The single difference is in the *control's* favour to explain, not the fix's:
+`TestAudioPresentationProducer` fails on `"warmed present must reuse its frame view, PCM,
+and consumer storage" expected <0> but was <72>` — an allocation-count assertion in the
+known order-dependent audio bucket, and it is red **without** the change. Nothing is red
+only with the change, which is the property that matters.
+
+Method note: two of this round's Maven invocations collided in the same worktree (an
+orphaned backgrounded run plus its replacement), producing a `ClassNotFoundException` and a
+truncated log that looked like a real fork crash. It was neither. `nohup cmd &` inside a
+tool call does not reliably die with the call. Check `pgrep -af maven` before trusting a
+sweep whose log ends abruptly, and read the pid's `-Dmaven.multiModuleProjectDirectory` to
+tell your own collision from another worktree's harmless CPU contention.
+
+### The new frontier
+
+f3887, `sidekick_x_sub rom=0x7700 engine=0x7A00` — three sub-pixel units on the sidekick,
+still inside the vine sequence's aftermath (`sidekick_angle` first errors at f3885 in the
+pre-fix histogram, so this region was already the second cluster). Not instrumented.
