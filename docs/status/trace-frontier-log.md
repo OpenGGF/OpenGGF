@@ -98626,3 +98626,69 @@ observation reached from `GameLoopTitleCardLifecycle`.
 Why Tails' animation id is 0 for that single title-card iteration at the `ss_5` return and not at
 the other six returns. That is the whole of the nine-axis skew family and is the cheapest next
 target on this chain.
+
+## 2026-08-20 — one late PLC arm permanently desyncs S1's ordinal axis
+
+Round `s1-plc-admission-r2`, measured on `d7806a697` with the held sidecar fixture cherry-picked
+into a candidate worktree (not landed). Instrumented every `Sonic1PlcArmTiming` submit and
+unrepresented release plus the port's raw-frame and handoff; instrument verified installed.
+
+**The sidecar is not wrong.** 28 files, 242 rows, ordinals 0..241 contiguous with the six
+special-stage segments contributing none, structurally consistent across every act — level-load
+triple, signpost triple or boss six, then the shared end-of-act arm. Guards green on the
+fixture-only tree.
+
+**One arm, twelve frames late, poisons the remaining eight segments.** In `lz3` the engine's
+Nemesis arms are frame-exact against the recording for all fifteen recorded edges, and then the
+end-of-act arm is submitted at raw 12259 where the recording completes it at raw 12247. Each link
+measured:
+
+1. That edge arrives with `engine pending: <none>`, is demoted and dropped; the recording's
+   ordinal axis advances.
+2. The engine's late arm can never match, and is held until the segment's last row enters the
+   unrepresented gap, where `releaseArm` falls back to native readiness and
+   `releaseUnrepresentedIdentity` **returns the ordinal to the allocator**. The engine's axis does
+   not advance.
+3. The next segment's first arm is therefore allocated one ordinal behind the recording's. The
+   port's own message shows the pair with an **identical fingerprint** and different ordinals.
+4. Off by one for the rest of the run: every later edge has the right kind, boundary and
+   fingerprint and the wrong ordinal, so nothing is admitted again and the queue head never
+   completes. Segments 27 onward submit exactly one arm each, released only at their own closing
+   gap — which is the `queue.s1_nemesis_plc.prepared rom=true engine=false` first mismatch on the
+   first row of each.
+
+The `releaseUnrepresentedIdentity` path is correct for its designed case, a level-load arm the
+recorder never saw. It is wrong here because the recorder *did* count this arm; the two
+compensations disagree and the engine's axis silently drops one.
+
+### The transferable finding
+
+**Recorded admission has no recovery.** A single arm the engine makes a few frames late anywhere
+in a run permanently misaligns the ordinal axis and wedges the queue for every segment after it.
+Any long S3K chain has the same exposure: the cost of an art-trigger frame slip is not local to
+its segment, and today it is unbounded.
+
+### Two counterfactuals, both probe-only, neither landed
+
+**A.** Retaining the ordinal when the segment's recorded stream contains the fingerprint returns
+the next segment's first mismatch to develop's — proving the chain — and then that segment
+desyncs on **its own** late arm four frames out. Not a fix.
+
+**B.** Rebasing the ordinal cursor to the next segment's first recorded ordinal at handoff, only
+when the engine holds nothing pending, confines the damage to the segments that actually contain
+a late arm: roughly 74,000 errors to roughly 2,200, with segments 12, 15 and 32 green and the walk
+failure returning to develop's form. **Not proposed as landable**: it moves numbering only, but
+the timing-contract design doc says a skew that is not exactly a recorded span must not be
+absorbed, and this absorbs exactly such a skew. It would need the authority guard and a both-side
+proof before anyone writes it.
+
+### Corrections to the earlier measurement
+
+Segments 22-25 are red in both arms at identical counts and are not part of the effect. Both arms
+fail at segment 33 — develop on ownership, the sidecar arm on finishing in `LEVEL` rather than
+`TITLE_SCREEN` — so "completes every segment" buys less than it appears.
+
+### Not established
+
+Why the `lz3` arm is twelve frames late and the following segment's four. Both sit after their
+segment's first physics mismatch, which is suggestive and not evidence.
