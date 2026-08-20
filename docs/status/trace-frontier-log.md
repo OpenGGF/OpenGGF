@@ -93960,3 +93960,56 @@ cold start, therefore it is carry-in" -- the precise opposite of the truth. The 
 been truncated by a `head -20` **and** the boot segment is never in it. The report file
 settled it. Same shape as the aggregated histogram and the class-name diff: the absence was
 in the view, not in the data.
+
+## 2026-08-20 -- the `-216` cursor walk-failure settled: carry-in, the first on this frontier
+
+Branch `feature/ai-216-cursor-r1` off `5cc487d6b`. **Found, not fixed.**
+
+### It is at `lz1_2 -> lz2`, and the axis now says so
+
+The axis reported only how far the cursor moved, so locating it cost a bisect -- which is
+part of why it stayed undetermined. `prepareAcrossLevelBoundary` now names the boundary:
+
+    Destination playback cursor advanced -216 frames during level-load handoff
+    (lz1_2 -> lz2, destination offset 139553, cursor 139337)
+
+Segment 24 -> 25. The cursor arrives **216 frames short** of the destination offset.
+
+### Measured: it does NOT reproduce from a cold start
+
+Booting at segment 24 (and independently at 23) with none of the state the earlier segments
+would have left, the `lz1_2 -> lz2` handoff is **clean**.
+
+Verified positively rather than inferred from an absence, per the rule this frontier earned
+last round: an instrumented run confirms the **same** `prepareAcrossLevelBoundary` branch is
+entered for `lz1_2 -> lz2` from a cold start -- not a different route that skips the check --
+and it computes `firstGameplayFrame=0` against `offset=139553`, exactly on the destination.
+The check runs and passes; it is not bypassed.
+
+| start | `lz1_2 -> lz2` branch entered | `firstGameplayFrame` |
+|---|---|---|
+| full chain from segment 0 | yes | **-216** |
+| cold start at segment 24 | yes | **0** |
+| cold start at segment 23 | yes | **0** |
+
+### What this settles, and what it does not
+
+**Settled: the `-216` is arrival-state dependent.** It is *not* owned by the boundary's own
+entry conditions. That makes it the **first item on this frontier shown to depend on
+carry-in** -- the opposite result to segments 22, 23 and 24, from the same instrument, which
+is what makes the instrument worth having: it returns both answers.
+
+**Not settled: whether the bridge lag change caused it.** Arrival-state dependence is
+consistent with both "the change altered the state arriving here" and "it was always latent
+and only became reachable". 216 frames of missing cursor advance accumulate somewhere across
+segments 0-24, and the change is one contributor among many. Narrowing that is the next step
+and now has a method: bisect the boot segment downward from 24 until the handoff starts
+failing, which brackets where the 216 frames are lost.
+
+Guarded green by `TestS1ColdStartAttribution.coldStartCrossesTheLz1ToLz2HandoffCleanly`. If a
+cold start ever fails this handoff, the `-216` stops being carry-in and the diagnosis changes.
+
+### Frontier status after this round
+
+No item on the S1 tail is undetermined any more. Segments 22, 23 and 24 are entry-owned and
+not change-caused; the `-216` is carry-in with a stated method for narrowing it.

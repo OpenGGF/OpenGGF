@@ -43,6 +43,34 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
     /** Segment 22 (`syz3_2`); segments 23 and 24 are `lz1` and `lz1_2`. */
     private static final int START_SEGMENT = 22;
 
+    /**
+     * The {@code lz1_2 -> lz2} handoff, which the full chain fails with
+     * "Destination playback cursor advanced -216 frames", is <em>clean</em> from
+     * a cold start at segment 24: the same {@code prepareAcrossLevelBoundary}
+     * branch runs and lands the cursor exactly on the destination offset.
+     *
+     * <p>That makes the -216 the first item on this frontier shown to depend on
+     * <em>arrival</em> state rather than on its own entry conditions -- the
+     * opposite result to segments 22-24 above, from the same instrument. This
+     * guards that asymmetry: if a cold start ever starts failing this handoff
+     * too, the -216 stops being carry-in and the diagnosis changes.
+     */
+    @Test
+    void coldStartCrossesTheLz1ToLz2HandoffCleanly() throws Exception {
+        AssertionError failure = null;
+        try {
+            assertChainReplayFromSegment(RUN_DIR, 24);
+        } catch (AssertionError e) {
+            failure = e;
+        }
+        String report = failure == null ? "" : failure.getMessage();
+        assertTrue(
+                !report.contains("during level-load handoff (lz1_2 -> lz2"),
+                "lz1_2 -> lz2 must still hand off cleanly from a cold start; "
+                        + "if it does not, the -216 is no longer carry-in. "
+                        + "Report:\n" + report);
+    }
+
     @Test
     void segments22To24DivergeIdenticallyFromAColdStart() throws Exception {
         AssertionError failure = null;
