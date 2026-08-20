@@ -143,11 +143,14 @@ file is guidance you can weigh against the situation in front of you.
    or fingerprint, because it names no work: it selects between two ROM loops that both
    already exist in the engine. It predates the readiness shape and already ships in
    `TraceRunSpecialStageRows.syntheticLagPhase`. It may admit or suppress a loop; it may never
-   supply a *value*, and `lagcount` is comparison data like any other. It must not use physics/aux comparison data, carry gameplay values, call gameplay
-   owners, or create work the engine did not submit, and it must not key on a frame index,
-   zone, route, or game name. The test is whether the change only affects *when* real,
-   engine-created work becomes ready; anything deciding *what* happens is outside the
-   exception however well the ROM behaviour is cited. Guard tests must keep this exception
+   supply a *value*, and `lagcount` is comparison data like any other.
+
+   *Both shapes.* The exception must not use physics/aux comparison data, carry gameplay
+   values, call gameplay owners, or create work the engine did not submit, and it must not key
+   on a frame index, zone, route, or game name. The test is whether the change only affects
+   *when* real, engine-created work becomes ready, or *which* already-existing ROM loop a row
+   takes — never *what* work exists, and never what values it carries. Anything deciding
+   *what* happens is outside the exception however well the ROM behaviour is cited. Guard tests must keep this exception
    confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
    isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
    `hardware_timing.jsonl` stream records S3K module-queue readiness, S3K direct Kosinski
