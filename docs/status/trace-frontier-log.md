@@ -100412,3 +100412,42 @@ boot that now queues the card art.
 
 Measurement note for later rounds: extract failing classes in a way that preserves nested
 `$` names, or a casualty in a nested class will be under-counted the same way.
+
+## 2026-08-20 — The scope predicate works; the gated change costs chain reach
+
+**The predicate.** `LevelLoadContext.isQueueFreshLevelRuntimeArt()` discriminates exactly
+the two cases. Measured on the base tree at every skipped presentation in the newly-red
+fixtures: `zone=3 act=0 queueFreshRuntimeArt=false` (×28), `zone=2 act=0 false`,
+`zone=21 act=0 false` — while the chain's HCZ1 load measured `queueFreshArt=true`. It is an
+engine-side statement about the kind of load, not a trace fact and not a zone, game or route
+carve-out: the card's four archives are fresh-level runtime art by the same definition the
+flag already carries for `LoadLevelLoadBlock`'s art.
+
+Reworked accordingly: a dedicated `beginOmittedFreshLevelOwner` hook, called only when that
+flag is set, queueing the four archives through their own handle list and claiming them from
+the held-row dispatch. The first attempt reused `loadAllArt`, which also sets `artLoading`
+and the cached-zone fields — presentation state the omitted owner must not touch — so the
+queue-only path replaces it.
+
+**Fixtures recovered.** All five previously red classes are green again:
+`TestS3kCnzTraceReplay` 27/0/0, `TestS3kMgzF498AirRollPhysics` 1/0/0,
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` 1/0/0, and the two MGZ/AIZ classes
+clean in the same run.
+
+**But the chain fails earlier than the control, so it is still not landable.**
+
+| Arm | S3K chain outcome | Reached |
+|---|---|---|
+| control | `FAILURE`: `[walk-failure] Unable to queue HCZ geyser KosM art` + segment 8 physics | segment 9 (hcz) |
+| candidate | `ERROR`: `duplicate or reordered hardware service boundary at raw_frame=7053: previous=PRE_MAIN_LOOP, current=VINT_SERVICE` | aborts in segment 8 |
+
+That is wall 3 again, and the mode probe puts its source in `GameLoop.updateLevelMode` →
+`enterTitleCard` — a presented card, entered from level mode, whose loop then iterates
+without consuming recorded rows. So with the scope predicate correct, the chain reaches the
+presentation/handoff coupling instead of the geyser: the same wall recorded earlier, now
+arriving sooner because the omitted owner is alive when the loop hands over.
+
+Parked. The predicate is settled and worth keeping; the blocker is unchanged — the omitted
+owner and the presented card both want the same rows, and nothing resolves that until the
+handoff does. Full matrix not run: a reach regression on the target chain disqualifies the
+candidate without it.
