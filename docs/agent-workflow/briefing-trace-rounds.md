@@ -1095,3 +1095,33 @@ which path it took — check that report rather than assuming the optimisation a
 This pairs with the thirty-sixth rule: worktrees become cheap to create *and* the branch remains
 the artifact, so there is no reason either to hoard finished trees or to skimp on a proper
 control arm.
+
+## Fortieth rule: a comment narrating engine bookkeeping is the tell for a fitted constant
+
+Three compensations in one S3K camera controller — a pre-charged accumulator, a bare `delta += 2`,
+and an airborne first-dispatch early return — were all fitted, all wrong, and all had **passed
+review**. Together they were the entire remaining error count on a chain segment; removing them
+took it to zero.
+
+They survived because each carried a comment. The comments explained the number by narrating the
+*engine's* bookkeeping — a phrase of the shape "has already crossed the native creation-pass
+carry" — rather than citing a ROM routine. That reads as diligence. It is the opposite: a value
+justified by how the engine happens to arrive at a moment is a value fitted to the engine's
+current behaviour, and it will desync the first recording that arrives at that moment differently.
+
+**A constant is justified by a ROM citation or it is not justified.** When reviewing or writing
+one, ask what the comment cites. "Because `CreateChild1_Normal` allocates via
+`AllocateObjectAfterCurrent`, which by construction returns a slot after the creating object, so
+`Process_Sprites` always reaches the worker in the creating pass" is an argument. "Because the
+engine has already crossed the carry by this point" is a description of a symptom.
+
+Two corollaries earned alongside it:
+
+- **Compensations come in families.** Removing two of the three took the target segment to zero
+  and put a previously-green fixture at 2 errors, because a second route enters the same handoff
+  airborne and the third compensation then fired. Stopping at the first green would have shipped a
+  45→0 / 0→2 trade as a win. When you remove a fitted constant, look for its siblings before
+  measuring.
+- **The pattern propagates.** The same accumulator is ported at six other sites in this codebase,
+  at least one carrying a comment with the same premise. A single ROM argument usually settles
+  every instance in one direction — so when you kill one, audit the family.
