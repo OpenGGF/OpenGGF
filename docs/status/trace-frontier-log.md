@@ -100748,3 +100748,86 @@ bit on a side contact, not for a rider.
 The remaining question is which `SolidObject` branch the engine is taking for a player
 already riding the object, and it is an object-collision question rather than an animation
 or dynamic-art one. Nothing here was changed; the chain is unchanged at 13 axes.
+
+## 2026-08-21 — S3K segment 8 row 6000: the sidekick CPU is locked out hundreds of rows early
+
+Round off `origin/develop` `941ec1bfc`; same-tree control at `941ec1bfc`. **Found, not fixed
+— nothing landed but this entry.** Row convention: 0-based indices into `aiz_5`'s
+`physics.csv`, `row = cursor - 46432`.
+
+Frontier unchanged: `segment 8 ... 2288 physics comparator errors, first non-camera mismatch
+at frame 6000 field sidekick_x rom=0x4997 engine=0x4996`.
+
+### The mismatch is one whole pixel and nothing else
+
+Measured per row across 5992-6006, Tails' `x_sub`, `x_speed`, `y` and `air` are **identical**
+to the recording on every row, including 6000 and after. Only the x pixel differs, by one,
+from row 6000 onward:
+
+| row | rom x | eng x | x_sub (both) | x_speed (both) |
+|---|---|---|---|---|
+| 5999 | 4994 | 4994 | DD00 | 0150 |
+| 6000 | **4997** | **4996** | 4500 | 0168 |
+| 6001 | 4998 | 4997 | B900 | 0174 |
+
+Differencing the recording's own 32-bit `(x << 16) | x_sub` against
+`previous + (x_speed << 8)` isolates it further: row 6000 gains **exactly +0x10000** —
+one whole pixel with the subpixel untouched — where every neighbouring row is exact.
+
+### What writes that pixel
+
+`Tails_CPU_routine` is 6 throughout, whose handler is `loc_13D4A`. It compares Tails against
+the leader's **delayed** position — `d2` is read from `Pos_table` at
+`Pos_table_index - $44` (`sonic3k.asm:26683-26689`), not the live `Tails_CPU_target_X` the
+trace reports — and then applies a whole-pixel nudge:
+
+- `loc_13E0A` (`:26717-26724`): `subq.w #1,x_pos(a0)` when the delayed leader is left,
+  `ground_vel != 0`, `Status_Facing` set, and `object_control` bit 0 clear.
+- `loc_13E34` (`:26734-26741`): `addq.w #1,x_pos(a0)`, mirrored.
+
+Neither branch tests air state, and Tails' recorded `g_speed` is `0x0048` at row 6000 while
+`air` is 1 — so the ROM nudges an airborne Tails. Scanning the whole-pixel anomaly for rows
+5900-7030 finds the nudge firing at rows **5923, 5924, 5925, 5926, 6000, 6654 and 6678**, so
+the ROM's `Tails_CPU_Control` is still running as late as row 6678.
+
+### Why the engine does not
+
+The engine's CPU pass takes an early return on every one of these rows with
+`followBranch = ctrl2_signed_lock_skip` — `controller2SignedLocked` is set, so
+`updateNormal` returns before follow steering. The engine's nudge implementation itself is
+faithful (`SidekickCpuController` gates on `getGSpeed() != 0`, the direction and the
+object-control bit, citing the same ROM lines); it simply never runs.
+
+The lock is published by `Aiz2EndEggCapsuleInstance.onParentOpen`, which arms a one-frame
+delay and then calls `setController2SignedLocked(true)`, citing `sub_865DE`.
+
+**The lock is faithful in kind.** `sub_865DE` does `st (Ctrl_2_locked).w` — `$FF`, negative —
+and `loc_13830` (`:26195-26198`) reads:
+
+```
+tst.b (Ctrl_2_locked).w
+beq.s loc_1383A      ; zero      -> mirror raw Ctrl_2, then run Tails_CPU_Control
+bpl.s loc_13840      ; POSITIVE  -> skip the mirror, still run Tails_CPU_Control
+bra.s loc_1384A      ; NEGATIVE  -> skip Tails_CPU_Control entirely
+```
+
+so the **sign** selects between "skip only the raw mirror" and "skip the whole CPU". Other
+writers use `move.b #1` (positive) and therefore keep the CPU running; only `sub_865DE` uses
+`st`. The engine's `setController2SignedLocked` models exactly that distinction.
+
+**The defect is when it is published.** The ROM's CPU is demonstrably still running at row
+6678; the engine has been locked since at least 5996. Establishing when the ROM's capsule
+actually reaches `sub_865DE` — and therefore what drives `onParentOpen` too early — is the
+next measurement, and it should come before any change to the lock itself.
+
+### Two extraction errors, caught
+
+Recorded because both would have manufactured a false finding:
+
+1. A first pass concluded "the CPU pass stops running at row 5995". It did not — the probe
+   window was `n-16` lines while the per-row output was already ~14 lines, so the CPU lines
+   fell outside it. Re-attributing each probe line to the following row marker showed the
+   pass running every row.
+2. The whole-pixel anomaly detector finds **2881** hits across the segment, so it is not a
+   valid oracle on its own — a grounded character's motion does not come from `x_speed`. It
+   is only used above over a window where it is exact on every neighbouring row.
