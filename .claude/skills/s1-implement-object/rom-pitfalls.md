@@ -581,14 +581,20 @@ the balance test. It compiles, it looks like the blessed fix, it changes
 nothing, and it measures clean. On a top-solid object, override
 `getBalanceWidthPixels()`.
 
-**Tell one, five instances: an unused constant, not a missing one.** In five of the objects
+**Tell one, eight instances: an unused constant, not a missing one.** In eight of the objects
 found so far the correct ROM byte was already present in the class and simply
 never handed to the balance test: Obj1A's `ACTIVE_WIDTH = 0x64` had exactly one
 reference in the whole file, its own declaration; Obj53 modelled 68 as
 `CFLO_ACT_WIDTH` for its cull while balance fell through to 32; Obj36 Spikes and
 Obj33 Push Block build their solid params as `actWidth + 0x0B`; Obj26 Monitor
-hardcodes `0x1A`, which *is* `15 + $B`. When auditing an object for this, grep
-for its width constant and count the references.
+hardcodes `0x1A`, which *is* `15 + $B`. The 2026-08-20 reachability round added
+three more: Obj3B GHZ purple rock held `ACT_WIDTH = 0x13` with one reference,
+`getTopLandingHalfWidth()`; Obj33 push block derived `activeWidth` from
+`PushB_Var` for its collision width and never passed it on; and Obj71 invisible
+barrier evaluated the ROM's own `((subtype & $F0) + $10) >> 1` into a live
+`halfWidth` field and did the same. The last two show the shape is not only
+constants -- a *derived field* hides just as well. When auditing an object for
+this, grep for its width constant or field and count the references.
 
 **Tell two, one instance: the right byte is not always missing, it can be
 *substituted*.**
@@ -655,6 +661,21 @@ inside. A standing audit of every S1 `SolidObjectProvider` against its ROM byte
 is recorded in
 `docs/architecture/audits/2026-08-19-s1-obactwid-balance-width-audit.md`; the
 Obj30 case is not the only one.
+
+**Reachability is a separate question from the byte, and it has its own tell.**
+A wrong `obActWid` is only observable if the player can be grounded, standing
+still, with that object recorded as his stood-on object. Three of the audit's
+rows fail that test for reasons in the ROM rather than the level: Obj44 GHZ edge
+wall calls `EdgeWall_SolidWall`, a stripped-down solid routine that never sets
+`Status_OnObj` at all (`_incObj/sub SolidWall.asm:14-67`); Obj3E's prison switch
+clears the player's `Status_OnObj` on the same frame `SolidObject` sets it
+(`3E Prison Capsule.asm:88-109`); and Obj36's spikes hurt on contact from above
+for exactly the subtypes whose width differs, the standable sideways ones being
+`#32/2` = 16 already. **Check the solid routine's name before the width** -- if
+it is not `SolidObject` or `PlatformObject`, it may not produce a stood-on
+object, and then no width is wrong. Recorded in the guard as
+`RECORDED_UNREACHABLE`, kept distinct from `RECORDED_UNASSESSED` so a later
+reader can tell "looked, cannot happen" from "nobody looked".
 
 ## P31 -- Only the horizontal spring locks the player's grounded controls
 

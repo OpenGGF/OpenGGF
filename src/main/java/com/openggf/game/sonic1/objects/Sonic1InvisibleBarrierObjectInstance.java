@@ -92,6 +92,37 @@ public class Sonic1InvisibleBarrierObjectInstance extends AbstractObjectInstance
         return SolidObjectParams.of(solidHalfWidth, airHalfHeight, groundHalfHeight);
     }
 
+    /**
+     * The barrier's ROM {@code obActWid}, derived from the subtype's upper nibble.
+     *
+     * <p>{@code Invis_Main} computes it as
+     * {@code ((subtype & $F0) + $10) >> 1} and stores it
+     * (docs/s1disasm/_incObj/71 Invisible Solid Barriers.asm:22-27) -- the same
+     * expression this class already evaluates into {@link #halfWidth} for the
+     * collision width. The byte is anything from 8 to 120 depending on placement
+     * (sbz1 alone places subtypes $70 and $61, giving 64 and 56), so the shared
+     * default of 16 was right only by coincidence for a minority of them.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * that is the byte's home for a full-solid object: {@code Sonic_Balance}
+     * reads it off the stood-on object
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423) and {@code BuildSprites} uses it
+     * as the horizontal cull bound
+     * (docs/s1disasm/_inc/BuildSprites.asm:49-58). Obj71 only reaches
+     * {@code BuildSprites} in debug mode -- {@code Invis_Solid} gates its own
+     * work on {@code ChkObjectVisible}, which reads {@code obX} and {@code obY}
+     * against the camera and never touches {@code obActWid} ({@code :34-40};
+     * {@code _incObj/sub ChkObjectVisible.asm:9-23}) -- so the cull consumer is
+     * dormant in normal play and the balance consumer is the live one.
+     *
+     * <p>{@code Invis_Solid}'s separately padded
+     * {@code d1 = obActWid + sonic_solid_width} at {@code :43-45} is unchanged.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return halfWidth;
+    }
+
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // Obj71 calls SolidObject_NoRenderChk: it bypasses the normal render

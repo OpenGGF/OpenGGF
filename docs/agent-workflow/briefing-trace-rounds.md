@@ -767,3 +767,20 @@ Companion trap from the same session: `grep "Tests run:.*(Fail|Err)"` matches ev
 `Failures: 0` contains `Fail`. It reported 156 red classes out of 162. The correct filter is
 `Failures: [1-9]|Errors: [1-9]`, which gives 4. A filter that matches everything looks like a
 catastrophic regression and is indistinguishable, at a glance, from one.
+
+## Twenty-fifth rule: `-Dmse=off` or your `-D` properties never arrive
+
+Maven Silent Extension is enabled by default in this repo (`-Dmse=relaxed` via
+`.mvn/maven.config`), and it **silently swallows CLI `-D` properties**. A round found
+`-Dtest=X` running the entire 15,000-test suite because the filter never reached surefire, and
+the ROM-path properties never arriving either — producing 3,861 errors and 663 apparently-red
+classes that were pure artefact.
+
+This is the truncated-run trap in reverse: instead of measuring less than you think and reading
+it as a fix, you measure *everything* and read it as a catastrophe. Both mislead, and this one
+also silently ignores the class filter you believed you were running.
+
+**Always pass `-Dmse=off` when measuring.** Any round that quotes a red count from a run without
+it — with `-Dtest=` or with ROM paths — is quoting a number about a different command than the
+one it thinks it ran. The tell is a red count in the hundreds, or a `-Dtest=` run whose duration
+matches a full suite.

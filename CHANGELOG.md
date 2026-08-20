@@ -3,6 +3,67 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The 4x1 pushable block balances at `PushB_Var`'s 64, not the shared 16.**
+  `PushB_Main` indexes the subtype into `PushB_Var` and stores the first byte of
+  the pair straight into `obActWid` — `#32/2` = 16 for the 1x1 block, `#128/2` =
+  64 for the 4x1 (`docs/s1disasm/_incObj/33 MZ, LZ Pushable Blocks.asm:22-24,48-49`).
+  The engine already derived that byte for the collision width, which
+  `PushB_Action` forms by padding it without writing the padded value back, and
+  then handed the balance test the default instead — so on mz2's 4x1 block the
+  player balanced 48px inboard of the ROM's edges at both ends. The 1x1 block and
+  both collision widths are unchanged.
+
+### Fixed
+- **Invisible barriers balance at their subtype-derived ROM `obActWid`.**
+  `Invis_Main` computes the byte as `((subtype & $F0) + $10) >> 1` and stores it
+  (`docs/s1disasm/_incObj/71 Invisible Solid Barriers.asm:22-27`), giving anything
+  from 8 to 120 by placement — sbz1 alone places subtypes `$70` and `$61`, or 64
+  and 56. The engine already evaluated that expression for the collision width but
+  handed the balance test the shared default of 16, so on every barrier whose
+  subtype was not `$1x` the player balanced on the wrong edges of a surface he
+  stands on as ordinary floor. `Invis_Solid`'s separately padded
+  `d1 = obActWid + sonic_solid_width` is unchanged.
+
+### Fixed
+- **The sideways spring balances at its ROM `obActWid` of 8, not the shared 16.**
+  `Spring_Main` writes `move.b #32/2,obActWid(a0)` for every spring and then
+  overwrites it with `move.b #16/2,obActWid(a0)` on the `btst #4` sideways branch
+  that also selects the `Spring_LR` routine
+  (`docs/s1disasm/_incObj/41 Springs.asm:45,49-56`); the downward branch leaves it
+  alone. `Spring_LR` makes the spring solid with a stood-on `d3`, so the player
+  stands on the top of a horizontal spring throughout GHZ, SLZ and SYZ — and with
+  the inherited 16 balanced only beyond 12px from centre on a surface reaching
+  19px, where the ROM balances beyond 4px. Upright and downward springs already
+  matched the default and are unchanged, as is `Spring_LR`'s separately authored
+  collision width `#16/2+sonic_solid_width` = `$13`.
+
+### Fixed
+- **The SBZ trapdoor balances at its ROM `obActWid` of 128, not the shared 16.**
+  `Spin_Main` writes `move.b #256/2,obActWid(a0)` for every Obj69 on the shipped
+  `FixBugs = 0` branch and overwrites it with `#32/2` = 16 only on the
+  spinning-platform path
+  (`docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:28-31,46,49`),
+  so the trapdoor keeps 128. With the inherited 16 the player balanced anywhere
+  more than 12px from the trapdoor's centre, where the ROM's window of
+  `d1 < 4 || d1 >= 252` balances essentially nowhere on it — visible on every
+  closed trapdoor in sbz1 and sbz2. The spinner's ROM byte already equalled the
+  default and is unchanged, as are both variants' separately authored collision
+  widths.
+
+### Fixed
+- **The GHZ purple rock balances at its ROM `obActWid`, not the shared 16.**
+  `Rock_Main` writes `move.b #38/2,obActWid(a0)` = 19 on the shipped
+  `FixBugs = 0` branch (`docs/s1disasm/_incObj/3B GHZ Purple Rock.asm:20-27`);
+  the fixed branch would write `#48/2` = 24, the listing itself noting 19 "gets
+  culled too soon". `Sonic_Balance` reads that byte off the stood-on object
+  (`01 Sonic.asm:423`) and `BuildSprites` uses it as the horizontal cull bound
+  (`_inc/BuildSprites.asm:49-58`), so the inherited default of 16 put both the
+  balance edges and the render cull 3px inboard of the ROM's on an object the
+  player stands on throughout Green Hill (25 placements across ghz1/ghz2/ghz3).
+  The separately authored collision width `#32/2+sonic_solid_width` = `$1B`
+  (`:31`) is unchanged.
+
+### Fixed
 - **Landing does not overwrite a live spindash charge animation.** Both games with
   a spindash byte gate their landing `anim = Walk` store on it:
   S3K's `Player_TouchFloor_Check_Spindash` is `tst.b spin_dash_flag(a0) / bne /
