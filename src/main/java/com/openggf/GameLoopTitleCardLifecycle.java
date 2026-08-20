@@ -67,8 +67,16 @@ final class GameLoopTitleCardLifecycle {
             // Level_ClrRam does not clear it; this store is the sole reset and it
             // runs for a special-stage return exactly as for a fresh entry.
             spriteManager.setFrameCounter(0);
-            releaseResult.accept(destination.completeRelease(
-                    levelManager, exitTitleCard, preludePasses > 0));
+            // Level_TtlCardLoop's final pass waits on VintID_TitleCard
+            // (docs/s2disasm/s2.asm:5060-5066); on fall-through Level_MainLoop
+            // arms VintID_Level and waits again (:5088-5090). Those are two
+            // console frames with two different V-int handlers, so the level
+            // body's first pass does not belong to the card's host iteration.
+            // Reporting SETUP_ONLY hands this iteration back and runs the body
+            // on the next one, which is the shape every level_advance entry
+            // already has.
+            destination.completeRelease(levelManager, exitTitleCard, preludePasses > 0);
+            releaseResult.accept(LevelFrameResult.SETUP_ONLY);
             return true;
         }
 
