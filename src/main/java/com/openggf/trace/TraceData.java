@@ -948,9 +948,10 @@ public class TraceData {
      *
      * <p>{@code TraceRunSpecialStageRows.syntheticLagPhase} is the existing
      * precedent for that use; the presentation-bridge disposition in
-     * {@code TraceRunFrameDriver} is the second. Both consume only the boolean
-     * and only to select a {@link
-     * com.openggf.game.resources.PlcLifecyclePhase}. Anything reading
+     * {@code TraceRunFrameDriver} is the second. Both consume the boolean
+     * alone -- the special-stage path to gate main-loop admission and select a
+     * {@link com.openggf.game.resources.PlcLifecyclePhase}, the bridge path to
+     * select the suppressed-closure {@code Disposition}. Anything reading
      * {@code lagcount}, or deriving a value rather than an admission, is
      * outside the sanction.
      */
