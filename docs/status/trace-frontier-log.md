@@ -99204,3 +99204,74 @@ and no Obj3F analogue was found in the obvious place.
 Explosion lifetime affects every badnik death and every boss, so slot occupancy shifts across the
 whole run and segments currently green by slot-phase luck may move either way. It wants its own
 round with all three chains measured.
+
+## 2026-08-20 — S2 segment 15: the four extra edges are Obj05, in a single 20-frame window
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` at `134ef6b9f`.
+
+The in-segment comparator does carry `dynamic_art.edge[*].edge_ordinal` and `transfer_id`
+against the recorded rows, so the four extra edges are measurable inside segment 15 rather
+than only as the next gap's `+4 / +2`.
+
+### Localised to frames 5554-5573 of 7088
+
+Instrumenting the comparator's rebased ordinals, the delta is `0` from the segment's first
+edge at frame 5 until **frame 5559**, where it becomes `+2` and never returns; it settles at
+`+4` by frame 5573 and holds to the segment's last edge at 7087. (A transient `-1/-2`
+excursion at frames 1726-1734 self-corrects and changes no count.)
+
+Dumping both edge lists across the window, every extra edge belongs to owner
+**`tails-tails`** — Obj05, Tails' tails. Sonic and Tails match the recording frame for frame
+throughout.
+
+| | tails-tails submissions, frames 5546-5585 |
+|---|---|
+| ROM | 5546(12), 5565(13), 5569(9), 5573(10), 5575(9), 5584(10), 5585(9) |
+| engine | 5546(12), **5554(13)**, **5559(9)**, **5563(10)**, **5564(9)**, 5573(10), 5575(9), 5584(10), 5585(9) |
+
+Nine events against seven; each is a submitted/completed pair, so `+2` events is exactly the
+`+4` edges and `+2` transfers.
+
+### The engine matches the disassembly; the ROM does not
+
+An offline simulation of `Obj05_Main` + `Tails_Animate_Part2` written straight from
+`docs/s2disasm/s2.asm:41722-41776` and `:41265-41305`, driven only by recorded ROM inputs —
+the `sidekick_animation_id` column and `sidekick_status_byte` bit 5 for the `FixBugs = 0`
+pushing override (`s2.asm:41748-41751`) — reproduces the ROM's tails-tails submissions
+**119 of 121** across all 7088 frames. The two it misses and the four it invents are exactly
+the window above, and its event list is identical to the engine's, event for event.
+
+So the engine is faithful to the routine as written. The unmodelled mechanism is **outside**
+`Obj05_Main` and `Tails_Animate_Part2`.
+
+### What the ROM actually does there
+
+Measuring the ROM's own Swish cadence across the segment (consecutive ascending steps of
+`Obj05Ani_Swish`, duration byte 7): **71 of 79 steps are 8 frames apart**, as the script
+requires. Eight are not — gaps of 9, 11, 12, 13, 14 and 19 frames. The 19-frame step is
+frame 5546 to 5565, our window: the ROM's Obj05 advanced once where the script called for
+three, and its animation did not restart on Tails' anim changes at 5559 or 5564 either.
+
+The straightforward readings were checked and do not fit: a stall would leave the later
+events late, and they are frame-exact from 5573; a suppressed DMA would surface the *later*
+mapping frame at 5565, and the ROM surfaces `13`; `lag_counter` is `0000` across the whole
+window and `gameplay_frame_counter` advances 1:1. The recorded columns do not carry Obj05's
+own `anim` / `anim_frame` / `anim_frame_duration`, so the routine's internal state is not
+observable from this fixture.
+
+### Rejected, with the measurement
+
+Deferring `Obj05Ani_Flick`'s `$FD` terminator: `TAnim_End_FD` writes `anim(a0)` and falls
+into `TAnim_End`'s `rts` without reaching `TAnim_Next` (`s2.asm:41326-41330`), so the ROM
+writes no mapping frame on that frame and starts Swish from its first entry only on the
+next, whereas the engine switched and published frame 0 in the same frame. Implemented with
+an `animRestartPending` latch and a rewind-captured field. **Result: byte-identical per-gap
+deltas, all 13 axes unchanged.** An instrumented count of the branch shows it fires **0
+times in the entire chain** — Tails never holds LookUp for the 20 frames Flick needs to
+reach its terminator. Not landed: a citation-backed change no measurement can reach.
+
+### Open
+
+Whichever ROM mechanism makes Obj05 skip `anim_frame_duration` decrements on eight steps of
+this segment. It is not visible in the recorded columns; naming it needs either the
+disassembly path that can skip Obj05's execution or a capture carrying Obj05's SST.
