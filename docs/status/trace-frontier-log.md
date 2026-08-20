@@ -98527,3 +98527,38 @@ nothing, and the destination then starts at its own first row. Three existing co
 tests drove two-segment runs with `beginPlaybackFrame` alone, relying on the old inference;
 their drivers now declare entry. Every assertion in them is unchanged -- the subject of all
 three is ordinal seeding across the handoff, not membership.
+
+## 2026-08-20 — the S1 sidecars are still not landable, and the walker fix is what showed why
+
+Measured on `36d25ef93` (walker segment-ownership fix landed), fixture branch
+`bugfix/ai-s1-fixture-landing-r1` merged locally and discarded. Control is a separate worktree
+at the same commit.
+
+With the walker fix the fixture no longer aborts — the S1 walk now **completes every segment**
+and ends on `Complete movie must finish in the manifest-declared mode ==> expected: <TITLE_SCREEN>
+but was: <LEVEL>`. That was the bar set for landing, and it is met. **The per-segment comparison
+is what refuses it.**
+
+| segment | develop | with sidecars |
+|---|---|---|
+| 12 | 3 | **green** |
+| 15 | 6 | **green** |
+| 26 | 11437 | 12338 |
+| 27 | 3878 | 14233 |
+| 29 | 1456 | 20377 |
+| 31 | **1** | 33027 |
+| 32 | **12** | 11753 |
+| 28 / 30 / 33 | not asserted | 8606 / 16460 / 37978 |
+
+The fixture buys **9 errors** across segments 12 and 15 and costs roughly **74,000** across
+segments 26, 27, 29, 31 and 32 — segments that develop already asserts, two of which are
+essentially green today at 1 and 12 errors.
+
+**This cost was invisible until the walker fix landed.** Previous rounds measured the fixture on
+trees where the walk aborted at `lz3 -> slz1`, so segments 27 onward were never asserted in the
+candidate arm and the earlier "7 axes → 5" was true only of a walk that stopped before the damage.
+The instrument had to be repaired before the fixture could be judged.
+
+Open question for the next round, not established here: why recorded `NEMESIS_PLC_QUEUE`
+admission degrades segments the live path gets nearly right. Segment 31 at 1 error against 33027
+is the sharpest case and the cheapest to attribute.
