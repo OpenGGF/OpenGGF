@@ -969,8 +969,109 @@ abstract class AbstractRunChainTest {
                 runDir, new ReplayPrefixTarget(segmentIndex, committedRows));
     }
 
+    /**
+     * Boots the run <em>at</em> {@code startSegmentIndex} and walks forward from
+     * there, instead of walking to it from segment 0.
+     *
+     * <p>This is the control instrument for "is this axis newly visible, or did
+     * my change cause it?". When a change lets the chain reach segments it never
+     * reached before, the ordinary chain gives no control arm for those
+     * segments: the unchanged code terminates earlier and never executes them,
+     * so their axes cannot be attributed either way.
+     * {@link #assertChainReplayThroughSegmentRow} does not help -- it replays
+     * <em>through</em> a prefix and still walks from segment 0.
+     *
+     * <p>Booting at a segment is already an exercised path rather than a new
+     * one: segment 0 of every run boots at its own non-zero
+     * {@code bk2FrameOffset} (860 for {@code s1-sonic-complete-withemeralds}),
+     * and every boot-time input is taken from the boot segment's own plan.
+     *
+     * <p><strong>What it does and does not prove.</strong> A run started at
+     * segment K carries none of the engine state segments 0..K-1 would have
+     * left. An axis that reproduces identically from a cold start at K is
+     * therefore owned by K's own entry conditions and is not carry-in -- and,
+     * in particular, is not caused by whatever let the chain arrive there. An
+     * axis that does <em>not</em> reproduce is not thereby proven to be
+     * carry-in, because the cold start is a different starting state, not the
+     * chain's state minus one change.
+     */
+    protected DynamicArtGapJournalEvidence assertChainReplayFromSegment(
+            Path runDir, int startSegmentIndex) throws Exception {
+        if (startSegmentIndex < 0) {
+            throw new IllegalArgumentException(
+                    "start segment must be nonnegative: " + startSegmentIndex);
+        }
+        return assertChainReplay(runDir, null, startSegmentIndex);
+    }
+
+
+    /**
+     * Returns the run as it would read if it began at {@code startSegmentIndex}:
+     * that segment becomes segment 0, and every transition and dynamic-art gap
+     * that belongs to a dropped segment is dropped with it.
+     *
+     * <p>Re-basing the manifest rather than teaching the walk to start partway
+     * is deliberate. Every index in the replay -- segment indices, the
+     * coordinator's transcript, exit-boundary lookups, the gap journal's
+     * positional pairing of transitions to dynamic-art gaps -- is relative to
+     * the run it was given. Handing the machinery a run that genuinely starts
+     * here keeps all of that arithmetic correct by construction, and needs no
+     * change in {@code src/main}: the production coordinator still activates
+     * "segment 0" and still refuses anything else.
+     *
+     * <p>Transitions are re-based by subtracting the offset. Dynamic-art gap
+     * transitions carry no segment index and are paired to transitions
+     * positionally, so they are sliced by the same count.
+     */
+    private static TraceRunManifest rebaseRunFromSegment(
+            TraceRunManifest run, int startSegmentIndex, Path runDir) {
+        List<TraceRunManifest.Segment> segments = run.segments();
+        assertTrue(
+                startSegmentIndex < segments.size(),
+                "start segment " + startSegmentIndex + " outside run ("
+                        + segments.size() + " segments): " + runDir);
+        assertEquals(
+                "level", segments.get(startSegmentIndex).kind(),
+                "start segment " + startSegmentIndex
+                        + " must be a level to boot from: " + runDir);
+        int droppedTransitions = 0;
+        List<TraceRunManifest.Transition> transitions = new ArrayList<>();
+        for (TraceRunManifest.Transition t : run.transitions()) {
+            if (t.fromSegment() < startSegmentIndex) {
+                droppedTransitions++;
+                continue;
+            }
+            transitions.add(new TraceRunManifest.Transition(
+                    t.fromSegment() - startSegmentIndex,
+                    t.toSegment() - startSegmentIndex,
+                    t.entryKind(), t.modeChangeBk2Frame(),
+                    t.specialBonusEntryFlag(), t.savedXPos(), t.savedYPos(),
+                    t.lastStarPostHit(), t.ringsBefore(), t.ringsAfter(),
+                    t.emeraldsBefore(), t.emeraldsAfter(),
+                    t.gapAdmissionRuns()));
+        }
+        List<DynamicArtTransfer.GapTransition> gaps =
+                run.dynamicArtGapTransitions();
+        List<DynamicArtTransfer.GapTransition> rebasedGaps =
+                droppedTransitions >= gaps.size()
+                        ? List.of()
+                        : List.copyOf(gaps.subList(droppedTransitions, gaps.size()));
+        return new TraceRunManifest(
+                run.game(), run.runId(), run.sourceBk2(), run.romChecksum(),
+                List.copyOf(segments.subList(startSegmentIndex, segments.size())),
+                List.copyOf(transitions),
+                rebasedGaps,
+                run.expectedMovieEndMode());
+    }
+
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
+        return assertChainReplay(runDir, prefixTarget, 0);
+    }
+
+    private DynamicArtGapJournalEvidence assertChainReplay(
+            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex)
+            throws Exception {
         chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
@@ -978,6 +1079,9 @@ abstract class AbstractRunChainTest {
             run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
         } catch (IOException e) {
             throw new AssertionError("Failed to load run manifest: " + runDir, e);
+        }
+        if (startSegmentIndex > 0) {
+            run = rebaseRunFromSegment(run, startSegmentIndex, runDir);
         }
         List<SegmentPlan> plans;
         try {

@@ -828,3 +828,22 @@ you have staged anything during a revert, `git checkout --` will hand it straigh
 
 The general form: a restore command that reads from a mutable intermediate (the index) rather
 than a named commit will silently return whatever you last put there. Name the source.
+
+## Twenty-eighth rule: check whether the absence is in the data or only in your view
+
+Four times in one session a round nearly concluded something from a *missing* entry, and each
+time the entry was missing from the **view** rather than from the data: an aggregated histogram
+that hid a single-direction origin, a class-name diff that could not see a changed failure
+reason, a grep of one skill mirror that concluded a rule was unrecorded when it lived in another
+file, and an axis list truncated by the round's own `head -20` — where the item was *also* never
+in that list by design.
+
+The last one is the sharpest. A round read a cold-start axis list, saw no segment 0, and drafted
+"segment 22 does not reproduce from a cold start, therefore it is carry-in" — **the exact
+opposite of the truth**. Reading the report file settled it. A false attribution presented as a
+measured fact is worse than an open question, because it looks settled and nobody re-checks it.
+
+So before concluding anything from an absence, ask: could this be absent because of how I
+looked? Check the pipeline (`head`, `grep`, a filter), check whether the thing is excluded by
+design, and check a second source that would show it if it were there. **A negative result is
+scoped to where you looked**, and the cost of confirming the scope is one command.
