@@ -96038,3 +96038,123 @@ justification is not established here** — only that it no longer costs S3K.
   `shouldAdvanceVblankClockDuringLockedPhase()` for the row's later hardware
   service is **discarded, not confirmed**: the probe shows `vblankClock=true` on
   every single dispatch across the whole card, so that predicate never varies here.
+
+## 2026-08-20 — the S3K card seam is a phase-ordering defect, and the suppressed-row widening is ROM-justified
+
+Base `372f66388`, worktree `bugfix/ai-s3k-card-seam-r1`, JDK 21, `-Dmse=off`,
+all three ROM paths explicit. Same-tree control measured at the base commit for
+every arm below.
+
+### Established: the 16 errors at frame 26179 are a one-row-late fresh-level publish
+
+`TestS3kReplayReferenceClosureIntegration` replays `aiz_completerun`. Its seam is
+the AIZ2 → HCZ1 load at the end of the fixture, not a mid-level card:
+
+- Trace rows 26107-26178 hold `x=y=0`, `gfc=0`, camera at the old act `4A08,02B7`
+  — the ROM's cleared span, 72 rows. Row 26179 is the first row carrying the new
+  level: `x=0280 y=0020 cam=01E0,0000`, with `s3k_kos_module` busy/prepared and
+  `remaining_work=3`.
+- Instrumented engine timeline (probe reverted): row 26107 is the zone/act
+  transition boundary; 26108 initialises the card without dispatching it;
+  26109-26116 are 8 stalled dispatches on the Kos gate; 26117-26144 are 28
+  slide dispatches; 26145-26166 are the 22 DISPLAY rows; 26167-26180 are the 14
+  EXIT rows, and the last of those publishes the fresh-level boundary. **The
+  engine publishes at 26180; the ROM publishes at 26179.** Every flagged field
+  matches again from 26180, which is what a one-row-late publish looks like.
+
+### Established: the engine runs the whole card before the publish; the ROM runs only the slide-in
+
+This is why the seam is not an exit-length or a DISPLAY-length problem.
+
+- `loc_62CC` (`docs/skdisasm/sonic3k.asm:7737-7747`) loops on
+  `objoff_48` of the title-card SST. Only `Obj_TitleCardWait`'s `clr.w $48(a0)`
+  (`:62244-62247`) clears it, and that runs at the *end of the slide-in*.
+- The level's player and camera are published *after* that loop —
+  `Load_Sprites` / `DeformBgLayer` at `:7847-7853` — which is trace row 26179.
+- Only then, at `:7877-7878`, does the level routine write
+  `Palette_fade_timer = $16` **and overwrite the card's own `$2E` with `$16`**,
+  immediately before `LevelLoop` (`:7884`). So the ROM's 22-frame hold and its
+  12+observe exit run *inside LevelLoop, after the publish*.
+- The trace corroborates: `gfc` is still `0000` at the fixture's last row 26227,
+  48 rows past the publish, so `LevelLoop` has not started counting in-slice and
+  the ROM's hold and exit are not in this fixture at all.
+
+The engine instead spends its DISPLAY (22) + EXIT (14) = 36 rows *before* the
+publish, in the window where the ROM has the remainder of its Kos stall and its
+post-loop level setup. The two windows agreeing to within one row is a
+coincidence of this transition's setup length, not a shared structure.
+**Consequently the remaining row must not be trimmed from any phase.** The 22 is
+already the ROM's `$16` and the 12+observe exit is already derived; shortening
+either, or the slide, to make 26179 green would be a fitted constant wearing a
+ROM citation. The correct fix is to gate the fresh-level publish on the end of
+the slide-in loop and run the hold and exit after it — a restructure this round
+did not attempt, and one this fixture alone cannot validate, since it ends
+before the ROM's hold completes.
+
+### Rejected candidate: adding `Obj_TitleCardWait`'s observe dispatch
+
+Committed as `e166a8117` and reverted by `a872a1859`. The ROM gap is real —
+`Obj_TitleCardWait` (`:62220-62247`) does not advance on the dispatch that lands
+the last element, because each child that moved sets `st $34(a1)` (`:62318`,
+`:62367`, `:62409`) and the owner clears `$34` and returns whenever it is set,
+so routine 4 needs one further no-movement dispatch. The engine transitions
+`SLIDE_IN → DISPLAY` on the landing dispatch, one short.
+
+Measurement: `TestS3kReplayReferenceClosureIntegration` goes **16 errors at
+frame 26179 → 2642 errors, first error at frame 1238**
+(`queue.s3k_kos_direct.busy` rom=true engine=false), i.e. the AIZ1 entry card,
+long before the target seam. A genuinely ROM-correct dispatch making the replay
+two orders of magnitude worse is the phase-ordering defect above showing itself:
+every card length is currently load-bearing for a boundary the ROM does not put
+at the end of the card.
+
+### Landed: the suppressed-row deferral is widened to every provider (`23b675c9a`)
+
+The previous predicate deferred only held-level-counter owners and
+object-scan-dispatched in-level tails. The general form is provable and
+cross-game:
+
+- the title card is an ordinary object in all three games — S1 `id_TitleCard`
+  (`docs/s1disasm/sonic.asm:2811`), S2 `Obj34` (`docs/s2disasm/s2.asm:27307`),
+  S3K `Obj_TitleCard` (`docs/skdisasm/sonic3k.asm:62095`);
+- the only two loops that can own it reach their object scan once per completed
+  iteration — the fresh-level title loops (`sonic.asm:2814-2821`,
+  `s2.asm:4914-4924`, `sonic3k.asm:7737-7747`) and the main level loops
+  (`s2.asm:5088-5105`, `sonic3k.asm:7884-7898`);
+- a lag frame reaches neither. Each V-int handler zeroes its own routine selector
+  before dispatching (`sonic.asm:674-675`, `s2.asm:500-501`,
+  `sonic3k.asm:535-536`), and no path out of `VBlank_Lag` (`sonic.asm:712`),
+  `Vint_Lag` (`s2.asm:529`) or `VInt_0` (`sonic3k.asm:566`) runs an object scan.
+
+So no provider's overlay may advance from the unowned path on a suppressed row.
+The one owner that genuinely advances on a held level counter is dispatched by
+the represented closure, so standing down here loses nothing.
+`TitleCardProvider.inLevelTailDispatchedByObjectScan()` is removed with its S2
+override, the general predicate having subsumed it. The −64 is a consequence,
+not the justification.
+
+Measurements, arm versus same-tree control at `372f66388`:
+
+- Three complete-run chains, `-Ptrace-replay`, diffed by message: identical
+  except **S2 segment 15 7575 → 7511 (−64)**, first mismatch unchanged at frame 2
+  `queue.s2_nemesis_plc.remaining_work` rom=2 engine=5. All three walk-failures
+  and every S1 and S3K segment message are byte-identical.
+- `TestS3kReplayReferenceClosureIntegration`: 16 errors at frame 26179 in both
+  arms — unchanged.
+- `-Pguards`: 500 tests, 0 failures, 0 errors.
+- Default suite: 15194 tests, 56 failures / 67 errors / 18 skipped in **both**
+  arms; the 122 distinct failure messages are identical apart from one object
+  identity hash. **`TestCnzHoverFanObjectInstance` fails in neither arm in this
+  worktree**, so the previous round's delta does not reproduce here — consistent
+  with the order-dependence it was reported under, though this does not
+  positively exonerate it either.
+
+### Not established
+
+- Whether restructuring the publish gate to the end of the slide-in closes 26179.
+  It cannot be validated on `aiz_completerun` alone, which ends before the ROM's
+  post-publish hold completes; it needs a fixture that records past `LevelLoop`
+  entry on a fresh level.
+- The exact split of the ROM's 72 cleared rows between the Kos stall and the
+  post-loop level setup. Deriving it needs the `hardware_timing` module-queue
+  readiness stream, not the physics rows.
