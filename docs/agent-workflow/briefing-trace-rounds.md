@@ -1407,3 +1407,27 @@ Practical consequences:
   history, so an ordering defect can originate thousands of frames earlier than it surfaces.
 - **Do not reorder a pair by anything measured off a fixture.** The ordering must follow from the
   ROM's own allocation, or it is a fitted model that will desync the first different recording.
+
+## Forty-ninth rule: prove your edit is on the path before believing a null
+
+A round retracted a hypothesis on two null results — the change made no difference, twice, on two
+different fixtures. Both nulls were real measurements of **dead code**. The expression under test
+existed in two places: a private helper in one class, and the same arithmetic written out at seven
+call sites in the harness that actually runs. The edits went to the helper. The harness never
+called it.
+
+The retraction was accepted, briefed onward, and cost two further rounds before someone
+instrumented the live path and found the original hypothesis correct.
+
+This is the instrument-not-installed rule (forty-fifth) in its most deceptive form: the build
+succeeds, the tests run, the numbers are real, and the code you changed was never executed. A null
+from an edit is a claim about **reachability** first and behaviour second.
+
+**Before reporting that a change made no difference, prove the change ran.** Add a throwaway
+assertion, a log line, or a deliberate breakage to the edited path and confirm the run notices. If
+the same expression appears in more than one place — a helper and its inlined copies, a base class
+and an override, a production path and a test harness's own arithmetic — establish which one the
+failing scenario uses before touching either.
+
+Corollary: duplicated logic makes every null result ambiguous. Where a round finds two copies of
+the same expression, that is worth reporting even when it is not the defect.
