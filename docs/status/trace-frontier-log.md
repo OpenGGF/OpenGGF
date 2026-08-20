@@ -92308,3 +92308,97 @@ observation, unverified and offered only as a candidate: the update() on which
 `leavePass` exceeds `LEAVE_PLAYABLE_PASSES` returns before the state switch, so
 it runs no title-card pass; it transitions to `TEXT_WAIT`, not to the release,
 so it is probably not the seam's release row. No second defect found.
+
+## 2026-08-20 — f167: the standing bit selects the y formula, not just the trigger
+
+Branch `bugfix/ai-s3k-seg6-sidekick-r1` off `ec2621373`. Diagnosis only; nothing landed,
+probes removed. **The ROM half of this entry is measured. The engine half is explicitly
+unresolved and is flagged as such at the end -- do not build on it.**
+
+### The framing this replaces was mine, and it was wrong
+
+The previous entry handed off f167 as "the handover boundary", with the natural reading that
+slot 05 *releases* Tails when it stops being solid. It does not. Slot 05's P2 bit is already
+clear (`status = 0x89`) by f141, so `sub_205FC`'s `btst d6,status(a0)`
+(`docs/skdisasm/sonic3k.asm:44869-44870`) returns immediately and never touches Tails. Across
+f160-175 the fixture has him `air=0`, `status=09`, `stand_on_obj=08` unbroken. **No release,
+no airborne frame, no handover of the rider at all.**
+
+### What actually changes at f167
+
+A write hook on `Player_2`'s `y_pos` (`0xFFB04A + 0x14`), logging PC and `a0`:
+
+```
+trace=167  pc=0001AB6A a0slot=1    (Tails' own code)
+trace=167  pc=0001E490 a0slot=5    (slot 05 seats him)
+trace=167  pc=0001E490 a0slot=8    (slot 08 seats him)
+trace=168  pc=0001AB6A a0slot=1
+trace=168  pc=0001E278 a0slot=8    <- same object, DIFFERENT PC
+```
+
+Slot 08 does not stop writing Tails' y; it starts writing it from a **different routine**.
+
+| path | routine | formula | value |
+|---|---|---|---|
+| fresh landing | `RideObject_SetRide` / `loc_1E45A` (:42004-42019) | `surface - y_radius - 1` | `0x0468` |
+| continued ride | `SolidObjSloped2` / `loc_1E260` (:41744-41752) | `surface - y_radius` | `0x0469` |
+
+Derivation of the first: `d0 = surface - (y_pos(a1) + y_radius + 4)`, then
+`d2 = y_pos(a1) + d0 + 3`, so `y_pos(a1)` cancels and `y = surface - y_radius - 1`. The
+second writes `y_pos(a0) - slope[d0] - y_radius` directly. **The two differ by exactly one
+pixel, which is exactly the f167 divergence.**
+
+### The mechanism, and its relationship to the previous fix
+
+**The object's standing bit does not only gate the collapse trigger -- it also selects which
+y formula the solid helper uses.** While slot 05 keeps clearing slot 08's bit every frame
+(the ping-pong established in the 2026-08-20 entry above), slot 08 re-lands *fresh* every
+frame and Tails sits one pixel higher. The frame slot 05 stops being solid, the bit
+survives, slot 08 becomes a *continued* ride, and Tails drops that pixel.
+
+So f167 is the **second symptom of the defect closed earlier today**, not a new mechanism.
+One cause, two symptoms: the trigger and the surface formula.
+
+### Independent confirmation of the `+1` removal
+
+`byte_20CB6` (`sonic3k.asm:45449`) begins `dc.b $30`, so the parent's post-fragment `$38` is
+**48**. Slot 05 fragments at f119 and its action pointer reaches `loc_20620` at **f167** --
+exactly 48 dispatches. That validates the previous round's removal of the `+1` from
+`solidStayTimer` from a completely different direction, and pins the seat count at 48
+dispatches *including* the release dispatch, because `loc_205DE` runs `sub_205B6` before it
+decrements.
+
+### A measured, inert, ROM-correct cleanup — not landed
+
+`loc_205DE` (:44855-44859) runs `sub_205B6`, *then* decrements `$38` and, on zero, rewrites
+the action pointer and releases. So the release dispatch gets **one** solid pass and the
+object is non-solid from the next dispatch. The engine's `releaseSolidPassExposed` two-step
+gives it **two**. Collapsing that to a single step was implemented and measured:
+**byte-identical** -- segment 4 at 292, segment 6 at 8,941 first mismatching at f167.
+
+It is ROM-correct and alters no test on the whole corpus. Deliberately **not** landed with a
+fix, so that an inert behaviour change gets its own attribution rather than riding along.
+Whoever picks it up already has its entire risk measured.
+
+### The contradiction — the next lane must settle this first
+
+The engine has both formulas. Continued ride is at
+`ObjectSolidContactController:3980-3986` and computes
+`anchorY - slopeSample - playerYRadius`, matching `loc_1E260`. But it routes on the engine's
+own `riding` state rather than on the object's standing bit.
+
+**That model predicts the engine takes the continued-ride formula from f142, which would
+diverge 25 frames earlier than it actually does.** The prediction contradicts the
+measurement, so the routing story is incomplete and no fix should be built on it.
+
+**Next measurement, stated precisely:** instrument **which formula the engine applies** to
+Tails on each of f142-168 -- not which state it holds. Both branches are informative:
+
+- fresh-landing through f166 then continued-ride from f167 -> the question reduces to what
+  makes the engine's f167 different, i.e. one frame of slot 05's last seat;
+- continued-ride from f142 -> then f142-166 agree for some *other* reason and that
+  one-pixel coincidence has to be explained before anything is changed.
+
+Five diagnoses have now died on this object family, every one to a probe and several of them
+mine. The ROM mechanism above is measurement; the engine routing story is not, and the
+difference is deliberate.

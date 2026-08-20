@@ -3190,3 +3190,37 @@ never observe a clear that arrives afterwards.
 **So when porting any ROM routine that reads a field at its own entry, port the READ, not
 the event that last wrote the field.** They differ exactly when something else writes
 between the two, which is precisely the case the trace catches and code review does not.
+
+## The standing bit selects the surface formula, not just the trigger — and the two differ by a pixel
+
+A sloped solid seats a player through one of two routines, and **which one runs depends on
+the object's own standing bit**, the same bit any other solid can clear out from under it
+(see the single-rider entry above):
+
+| path | routine | formula |
+|---|---|---|
+| fresh landing | `RideObject_SetRide` / `loc_1E45A` (`docs/skdisasm/sonic3k.asm:42004-42019`) | `surface - y_radius - 1` |
+| continued ride | `SolidObjSloped2` / `loc_1E260` (`:41744-41752`) | `surface - y_radius` |
+
+The fresh-landing formula looks relative but is not: `d0 = surface - (y_pos(a1) + y_radius
++ 4)` then `d2 = y_pos(a1) + d0 + 3`, so `y_pos(a1)` cancels and it resolves to
+`surface - y_radius - 1`. The continued-ride path writes `y_pos(a0) - slope[d0] - y_radius`.
+**They are one pixel apart, permanently.**
+
+The consequence is easy to miss and hard to debug: a player standing still on an unchanging
+slope can move one pixel purely because the object *re-landed* them instead of *carrying*
+them, or vice versa. Measured instance: two overlapping AIZ collapsing platforms, where the
+lower slot clears the higher slot's bit every frame, so the higher slot re-lands the sidekick
+fresh every frame; the moment the lower one stops being solid the bit survives, the seat
+becomes a continued ride, and the sidekick drops a pixel with nothing else having changed.
+
+When porting a solid object, therefore:
+
+- **Route the two formulas on the object's standing bit as the ROM does**, not on an engine
+  "who is riding what" record. Those agree only while nothing else touches the bit.
+- **A one-pixel `y` on a stationary player is a routing symptom**, not a rounding one. Check
+  which of the two routines wrote the value before touching any arithmetic. A write hook on
+  the player's `y_pos` logging PC and `a0` names it immediately — same writer, different PC.
+
+**Originating commit.** `<pending: S3K f167 handover>` — see `docs/status/trace-frontier-log.md`,
+2026-08-20, for the PC evidence and the unresolved engine-routing contradiction.
