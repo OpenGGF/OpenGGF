@@ -102,18 +102,6 @@ public interface TitleCardProvider {
         return false;
     }
 
-    /**
-     * Whether this provider's active in-level tail is dispatched by the level
-     * object scan rather than by the V-blank handler.
-     *
-     * <p>Such a tail is an ordinary object routine, so it advances once per
-     * completed level main-loop iteration and not at all on a lag frame, where
-     * V_int runs but the main loop does not reach its object scan.
-     */
-    default boolean inLevelTailDispatchedByObjectScan() {
-        return false;
-    }
-
     /** Whether an in-level title owner still owns the native held-counter phase. */
     default boolean ownsHeldLevelCounter() {
         return false;

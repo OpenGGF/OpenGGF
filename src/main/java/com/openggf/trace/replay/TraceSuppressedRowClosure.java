@@ -50,22 +50,35 @@ public final class TraceSuppressedRowClosure {
             TitleCardProvider provider,
             Runnable startPendingInLevelTitleCard,
             Consumer<Boolean> applyInLevelTitleCardControlLock) {
-        // A suppressed row is a ROM lag frame: V_int ran, but Level_MainLoop
-        // did not complete an iteration, so RunObjects never dispatched. The
-        // in-level title-card tail routines are object routines reached only
-        // from that scan -- S2 Obj34_WaitAndGoAway (docs/s2disasm/s2.asm:27605)
-        // is armed just before Level_MainLoop (s2.asm:5066-5080) and ticks once
-        // per iteration -- so a held level counter must not advance them here.
-        // V_Int writes VintID_Lag back into Vint_routine before dispatching
-        // (s2.asm:500-501), and none of Vint_Lag's paths reach an object scan.
-        // A provider that DOES advance on the held counter is dispatched by the
-        // represented closure instead and is deferred here for that reason;
-        // an object-scan-dispatched tail is deferred because the ROM does not
-        // dispatch it at all on this row.
-        boolean deferOverlay = overlayDispatchedByRepresentedOwner
-                || (rowSuppressed && provider != null
-                        && (provider.advancesOnHeldLevelCounter()
-                                || provider.inLevelTailDispatchedByObjectScan()));
+        // A suppressed row is a ROM lag frame: V_int ran, but the loop that
+        // owns the title card did not complete an iteration, so its object
+        // scan never dispatched. That holds for every title-card phase in all
+        // three games, not just an in-level tail:
+        //
+        //   * the title card is an ordinary object in each game -- S1
+        //     id_TitleCard (docs/s1disasm/sonic.asm:2811), S2 Obj34
+        //     (docs/s2disasm/s2.asm:27307), S3K Obj_TitleCard
+        //     (docs/skdisasm/sonic3k.asm:62095) -- so it advances only from an
+        //     object scan;
+        //   * both loops that can be running reach that scan once per completed
+        //     iteration and never otherwise: the fresh-level title loops
+        //     (sonic.asm:2814-2821 ExecuteObjects, s2.asm:4914-4924 RunObjects,
+        //     sonic3k.asm:7737-7747 Process_Sprites) and the main level loops
+        //     (s2.asm:5088-5105, sonic3k.asm:7884-7898);
+        //   * a lag frame reaches neither. The V-int handler zeroes its own
+        //     routine selector before dispatching (sonic.asm:674-675,
+        //     s2.asm:500-501, sonic3k.asm:535-536), so a second V-int inside one
+        //     unfinished iteration takes routine 0 -- VBlank_Lag
+        //     (sonic.asm:712), Vint_Lag (s2.asm:529) and VInt_0
+        //     (sonic3k.asm:566) -- and no path out of any of the three reaches
+        //     an object scan.
+        //
+        // So no provider's overlay may advance from this path on a suppressed
+        // row. The one owner that genuinely does advance while the level
+        // counter is held is dispatched by the represented closure instead, so
+        // standing down here loses nothing.
+        boolean deferOverlay =
+                overlayDispatchedByRepresentedOwner || rowSuppressed;
         if (provider != null && provider.isOverlayActive() && !deferOverlay) {
             provider.update();
             if (provider.ownsInLevelPlayerControlLock()) {
