@@ -133,6 +133,10 @@ class TestS1BalanceWidthRomParityGuard {
         ROM_ACT_WID.put("Sonic1LabyrinthBlockObjectInstance", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "61 LZ Blocks.asm:42", "subtype table"));
         ROM_ACT_WID.put("Sonic1ElevatorObjectInstance", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "59 SLZ Elevators.asm:72", "subtype table"));
         ROM_ACT_WID.put("Sonic1GirderBlockObjectInstance", new Entry(px(96), Disposition.DECLARES_OWN_WIDTH, "70 SBZ Girder Block.asm:28"));
+        ROM_ACT_WID.put("Sonic1RockObjectInstance", new Entry(px(19), Disposition.DECLARES_OWN_WIDTH, "3B GHZ Purple Rock.asm:20-27",
+                "FixBugs = 0 branch (#38/2); the fixed branch would write #48/2 = 24. Full-solid, so "
+                        + "the byte is supplied at getOnScreenHalfWidth() and balance inherits it. "
+                        + "Rock_Solid d1 is #32/2+sonic_solid_width = $1B at :31"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -181,7 +185,6 @@ class TestS1BalanceWidthRomParityGuard {
                 new Deferred("Sonic1PushBlockObjectInstance", -1, "33 MZ, LZ Pushable Blocks.asm:23-24,48 (16 or 64)"),
                 new Deferred("Sonic1InvisibleBarrierObjectInstance", -1, "71 Invisible Solid Barriers.asm:26-27 (subtype-derived)"),
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
-                new Deferred("Sonic1RockObjectInstance", 19, "3B GHZ Purple Rock.asm:25 (FixBugs = 0 branch)"),
                 new Deferred("Sonic1EdgeWallObjectInstance", 8, "44 GHZ Edge Walls.asm:22"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
                 new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),

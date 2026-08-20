@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The GHZ purple rock balances at its ROM `obActWid`, not the shared 16.**
+  `Rock_Main` writes `move.b #38/2,obActWid(a0)` = 19 on the shipped
+  `FixBugs = 0` branch (`docs/s1disasm/_incObj/3B GHZ Purple Rock.asm:20-27`);
+  the fixed branch would write `#48/2` = 24, the listing itself noting 19 "gets
+  culled too soon". `Sonic_Balance` reads that byte off the stood-on object
+  (`01 Sonic.asm:423`) and `BuildSprites` uses it as the horizontal cull bound
+  (`_inc/BuildSprites.asm:49-58`), so the inherited default of 16 put both the
+  balance edges and the render cull 3px inboard of the ROM's on an object the
+  player stands on throughout Green Hill (25 placements across ghz1/ghz2/ghz3).
+  The separately authored collision width `#32/2+sonic_solid_width` = `$1B`
+  (`:31`) is unchanged.
+
+### Fixed
 - **Landing does not overwrite a live spindash charge animation.** Both games with
   a spindash byte gate their landing `anim = Walk` store on it:
   S3K's `Player_TouchFloor_Check_Spindash` is `tst.b spin_dash_flag(a0) / bne /
