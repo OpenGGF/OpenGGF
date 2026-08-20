@@ -16,6 +16,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 - **TraceTriageTool** — reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine value, likely owning subsystem, disasm search terms). Run after a failing `*TraceReplay` test produces a report:
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"`
 - **`docs/agent-workflow/runbooks/runbook-trace-divergence.md`** — step-by-step divergence runbook.
+- **`docs/agent-workflow/briefing-trace-rounds.md`** — the accumulated round rules, with a scannable index. Read the **measurement-hazard table** before reporting any number: every hazard in it produces output indistinguishable from a real result (phantom errors from a native-library failure, a failed compile that reads as a short test run, a backgrounded build reporting its wrapper's exit code, run-order swaps that look like "broke one, fixed one", truncated arms with plausible totals, and message diffs that compare equal on a shared prefix). It also carries the evidence rules — diff messages not class names, `bk2_frame_offset + row + 1` for a row's emulator frame, BizHawk reporting the PC *after* the storing instruction — and the fitted-constant tell.
 - **`docs/agent-workflow/documentation-obligation-checklist.md`** — commit trailers, changelog justification, and the `docs/status/trace-frontier-log.md` update obligation when a trace frontier moves.
 
 ## Core Mission Rules (apply to all trace work)

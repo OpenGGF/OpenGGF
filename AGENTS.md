@@ -317,6 +317,7 @@ Deeper reference, loaded when the work needs it:
 | [docs/architecture/per-game-rule-placement.md](docs/architecture/per-game-rule-placement.md) | Where a per-game behavioural difference belongs |
 | [docs/guide/contributing/headless-testing.md](docs/guide/contributing/headless-testing.md) | `HeadlessTestRunner`, singleton reset, test infrastructure |
 | [docs/agent-workflow/README.md](docs/agent-workflow/README.md) | Workflow CLIs, per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist |
+| [docs/agent-workflow/briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md) | Accumulated trace-round rules, indexed: how to brief a round, the evidence rules, and the **measurement-hazard table** — read that before reporting any suite number, because every hazard in it produces output indistinguishable from a real result |
 | [docs/status/known-discrepancies.md](docs/status/known-discrepancies.md) | Intentional divergences from the ROM, virtual pattern ID ranges, trace bootstrap contracts |
 | [AGENTS_S3K.md](AGENTS_S3K.md) | Sonic 3&K specifics |
 | [CONFIGURATION.md](CONFIGURATION.md) | `config.yaml` keys, bindings, debug flags |
