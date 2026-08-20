@@ -93733,3 +93733,40 @@ reused-fork churn, inside the ~2-class noise floor.
 - Whether segments 23 and 24 share one entry-condition defect. Both first diverge at frame
   1 on `queue.s1_nemesis_plc.remaining_work rom=17 engine=20` -- the same field, the same
   frame, the same numbers -- which reads as one defect seen twice rather than two.
+
+### Falsified in the same round: the held fixture does not revive the tail carry
+
+Recorded here rather than in its own entry because it belongs to the same lag question
+and the same head.
+
+The reopening proposed was: the tail carry at the `hasPreparationBoundary(LAG)` site
+measured **inert** on 2026-08-19 (entry at line 90502 -- carry-only 4 red, identical to
+control, all seven regressions attributable to the `PRE_MAIN_LOOP` traversal alone) only
+because no `hardware_timing` stream existed to make it observable. With the held fixture
+installed it might become load-bearing.
+
+**It does not.** Two arms at `0ddcdad67`, same worktree, **fixture installed in both**,
+the only variable being the carry. The sorted axis lists `diff` **empty** -- byte-identical,
+every error count included. Segment 3's +3 does not close.
+
+So the carry still needs the `PRE_MAIN_LOOP` traversal to be observable at all, and the
+traversal is precisely what breaks the replay port's per-row boundary-ordering invariant
+(line 90306). **That conflict is essential**, as concluded on 2026-08-19, now tested under
+the one condition that was previously missing. Do not add the traversal: its fingerprint is
+documented and reproducing it would only re-establish a known result.
+
+**Segment 3 is open with NO available fix.** That is its honest status -- not "next round's
+target". Anyone picking it up should expect to need a new mechanism, not to apply this one.
+
+**What this run does not answer.** Whether native replay *depends* on the `LAG` category
+error remains untested. The reopening it closes is narrower than that: the question is no
+longer "does the fixture change the carry's observability" (measured: no), only "does
+native replay depend on the category error" -- which still requires the traversal to probe,
+and therefore still cannot be asked as things stand.
+
+### Process note, because this log is what would have prevented it
+
+The lane that proposed the reopening had a mechanism that fit and went looking for the
+*site* rather than for prior work on the site. This frontier has now caught it that way
+twice. The 2026-08-19 entry already held the answer; reading it first would have cost
+minutes and saved two arms.
