@@ -46,8 +46,9 @@ final class GameLoopTitleCardLifecycle {
         }
 
         if (titleCard == null || titleCard.shouldReleaseControl()) {
+            int preludePasses = 0;
             if (titleCard != null) {
-                int preludePasses = titleCard.levelObjectPreludePassesAtRelease();
+                preludePasses = titleCard.levelObjectPreludePassesAtRelease();
                 for (int i = 0; i < preludePasses; i++) {
                     levelManager.suppressGlobalOscillationForTitleCardPass();
                     if (titleCard.shouldRunPlayerPreludeAtRelease()) {
@@ -66,7 +67,8 @@ final class GameLoopTitleCardLifecycle {
             // Level_ClrRam does not clear it; this store is the sole reset and it
             // runs for a special-stage return exactly as for a fresh entry.
             spriteManager.setFrameCounter(0);
-            releaseResult.accept(destination.completeRelease(levelManager, exitTitleCard));
+            releaseResult.accept(destination.completeRelease(
+                    levelManager, exitTitleCard, preludePasses > 0));
             return true;
         }
 

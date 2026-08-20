@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The S1 title-card release step no longer consumes the level's first recorded
+  frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
+  `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),
+  and that pass has no V-int of its own — the first `id_VBlank_Levels` service
+  belongs to `Level_MainLoop`'s own first iteration (`:2999-3003`). The engine ran
+  that prelude pass and the first main-loop iteration inside a single admitted
+  iteration, so the release fall-through spent the destination's recorded row 0 on
+  a step the ROM does not record. Every level the S1 complete-emeralds chain
+  entered therefore presented row 0 at row 1 and ran exactly one V-int of Nemesis
+  PLC service (3 units) behind until the queue drained. The release now reports
+  `SETUP_ONLY` whenever it ran a pre-`Level_MainLoop` object pass, which is the
+  existing vocabulary for "a pass, not a movie row". The predicate is
+  `TitleCardProvider.levelObjectPreludePassesAtRelease() > 0`, so S2 and S3K —
+  which declare zero such passes — are unaffected.
+
+### Fixed
 - **The AIZ ride-vine grab clears the whole `spin_dash_flag` byte, releasing a stale
   spin-tube speed lock.** `AIZRideVineHandle_CheckGrab` writes
   `move.b #0,spin_dash_flag(a1)` (`docs/skdisasm/sonic3k.asm:46743`) — a byte write, so it

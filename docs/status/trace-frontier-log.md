@@ -94887,3 +94887,76 @@ to check: the `anim(a1)` family at sonic3k.asm:9070-9145, whose zero-inertia tai
 shown to execute here, and the remaining step is a PC-execute probe on the `move.b #5,anim` sites
 during the act-2 entry, which decides whether the fix belongs in the act-entry path, in the
 balance code's missing unconditional WAIT floor, or in an external transition routine.
+
+## 2026-08-20 -- S1: the title-card release step stops eating the level's row 0
+
+Base `1a510ed00`, dedicated worktree, branch
+`bugfix/ai-s1-release-row-r1`.
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dsonic1.rom.path=$W/s1.gen" \
+  "-Dsonic2.rom.path=$W/s2.gen" "-Ds3k.rom.path=$W/s3k.gen" test
+```
+
+### The defect
+
+Segments 23 (`lz1`) and 24 (`lz1_2`) of `s1-sonic-complete-withemeralds` both led
+with `queue.s1_nemesis_plc.remaining_work rom=17 engine=20` at frame 1 -- exactly
+one V-int of Nemesis PLC service (3 units) behind, self-healing when the queue
+drained.
+
+`GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
+`Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`).
+That pass has no V-int of its own; the first `id_VBlank_Levels` service is
+`Level_MainLoop`'s own first iteration (`:2999-3003`). The engine ran the prelude
+pass *and* the first main-loop iteration inside one admitted iteration, via the
+title-card release fall-through in `GameLoop.prepareAdmittedIteration`, so one
+admitted iteration spent the destination's recorded row 0 on a step the ROM does
+not record. Recorded row 0 -- the first `Level_MainLoop` iteration -- was then
+presented at row 1.
+
+### The fix
+
+`PostTitleCardDestination.completeRelease` returns `SETUP_ONLY` when the release
+step ran a pre-`Level_MainLoop` object pass, which is the existing vocabulary for
+"a pass, not a movie row" (already used by the S3K sprite one-shot). The
+discriminator is `TitleCardProvider.levelObjectPreludePassesAtRelease() > 0`;
+only S1 declares a non-zero value, so S2 and S3K take the unchanged path.
+
+### Measured, both directions, same tree
+
+Full `-Ptrace-replay`: **795 tests, 4 failures, 0 errors, 4 skipped** before and
+after. The failure messages are byte-identical except for two lines:
+
+| Segment | Before | After |
+|---|---|---|
+| 23 `lz1` | 54 errors, frame 1, `queue.s1_nemesis_plc.remaining_work rom=17 engine=20` | 16 errors, frame 3124, `dynamic_art.edges rom=[1738, 1739] engine=[]` |
+| 24 `lz1_2` | 18722 errors, frame 1, same field | 18684 errors, frame 1337, `dynamic_art.edges rom=[] engine=[746, 747]` |
+
+The S2 and S3K complete-emerald chains and `TestS2Cpz2Seg10...` are unchanged
+line for line. `-Pguards`: 500 tests, 0 failures. Main suite: 15,194 tests,
+61 failures / 64 errors both before and after -- the same classes and methods,
+with only ambient churn in the flaky set (see the reused-fork global-state issue).
+
+`TestS1ColdStartAttribution` reproduces the new numbers exactly from a cold boot
+at segment 22, so the attribution the pin exists to record still holds; the pin's
+segment-23/24 values were updated as its own javadoc instructs.
+
+### The linked prediction did NOT close
+
+The `-216` cursor walk-failure at `lz1_2 -> lz2` is **unchanged**, byte for byte,
+before and after. Segment 24's frame-1 divergence is fixed but the segment still
+diverges (18,684 errors from frame 1337), so the prediction's premise -- "if
+segment 24 stops diverging" -- was never satisfied and this is not a refutation.
+It remains untested.
+
+### Left red, pre-existing, and now failing one assertion earlier
+
+`TestTitleCardObjectExecution` is red on `1a510ed00` in isolation for all three
+games (`Tests run: 3, Failures: 3`). `titleCardLegacyPath_s1Ghz1` asserted the
+release runs "the native level-object prelude **and** the first `Level_MainLoop`
+pass" as an object-frame delta of 2; with the release split off it observes 1.
+That is the intended semantic change, not a new regression -- but the test
+encodes the old single-iteration model in two assertions and was not rewritten
+here, because it cannot be taken green without also addressing its S2 and S3K
+failures.
