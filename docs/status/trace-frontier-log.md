@@ -92529,12 +92529,14 @@ byte-identical result.
 
 ## 2026-08-20 — standing-bit exclusivity: a real ROM invariant, and an inert fix
 
-Branch `bugfix/ai-s3k-standing-bit-exclusivity-r1` off `18490325c`. Landed, moves nothing.
-Read the blocker in the first section before trusting any S3K chain number measured today.
+Branch `bugfix/ai-s3k-standing-bit-exclusivity-r1`, rebased onto `34e58af86`. Landed, moves
+nothing. Every number below is stamped at `34e58af86`, a base where the chain walks to
+segment 6.
 
-### BLOCKER: the S3K complete-emeralds chain no longer reaches segment 4 or 6 on develop
+### A chain blocker, found mid-round and since reverted — keep the question it left
 
-Control run on a clean worktree at `18490325c`, no edits:
+For part of this round the S3K complete-emeralds chain aborted at segment 1's return
+boundary and never reached segment 4 or 6:
 
 ```
 AbstractRunChainTest.assertChainReplay:1510
@@ -92542,16 +92544,21 @@ Uncompared interior return must consume exactly the destination's frame 0 before
 comparator attaches (cursor 8817, offset 8817, segment aiz_2) ... expected: <1> but was: <0>
 ```
 
-At `24ddb7e95` the walk reached segment 6 and reported 292 / 8,941. At `18490325c` it aborts
-at **segment 1's return boundary**. It reproduces identically with and without this round's
-change, so it is not this change. **Segment 4's 292 and segment 6's f3245 are therefore
-unmeasurable on develop right now**, and every number quoted for them earlier today —
-including in the entry above this one — is stale until that boundary is fixed. Whatever
-landed between the two commits moved the stop point backwards; that range wants bisecting
-and this round did not do it.
+Cause: `de4d1d153` added that assertion to `AbstractRunChainTest.assertChainReplay`, which
+**every game's chain runs**, on evidence gathered from the S2 chain alone. Reverted as
+`34e58af86`; the chain walks again.
 
-All segment-6 measurements below were taken on a worktree at `24ddb7e95` + the f167 fix,
-which still reaches segment 6, and are labelled as such.
+**The revert is not a verdict on the assertion's premise.** The S2 finding stands — the
+V-blank anchor targets row 0 and the comparator bases at `framesConsumed`, so the two are
+coherent only at 1. What is now *also* established is that **S3K reaches an uncompared
+interior return with `framesConsumed == 0`**. That is either a real S3K defect the assertion
+would have caught, or a second legitimate return shape the contract does not describe. That
+question should be answered before the assertion returns, and nobody has answered it yet.
+
+Method note worth keeping: this round spent two measurement cycles treating the abort as its
+own regression, because the first control was taken against the previous base rather than
+against the base actually being edited. The failure reproduced with the change reverted, and
+one control run at the real base would have said so immediately.
 
 ### The ROM invariant, censused rather than assumed
 
@@ -92578,7 +92585,7 @@ per-game divergence** — which is why it belongs in the shared controller.
 ### The engine gap is larger than two objects
 
 `objectStandingBitSet` is a `Map<PlayableEntity, Set<Object>>` and **nothing ever removed an
-entry on seat**. It is append-only. Instrumented on the segment-6-reaching tree:
+entry on seat**. It is append-only. Instrumented on the complete-emeralds chain:
 
 - **506** seats occurred while the player held more than one owner;
 - the maximum simultaneous owner count for one player was **27**.
@@ -92591,28 +92598,32 @@ only the object the ride record names, gated on `isOnObject()`, which is literal
 ROM prologue does) **fires 54 times, 52 of them on the collapsing platform for Tails** — so
 the predicate works — and still leaves 506 multi-holds, because it removes one owner of
 twenty-seven. Enforcing the invariant needs the seat to evict *every* other owner, which is
-what landed.
+what landed. Multi-hold seats go **506 -> 0**, with 113 evictions.
 
 ### Result: the invariant now holds exactly, and nothing moves
 
-On the segment-6-reaching tree, with full eviction: multi-hold seats **506 -> 0**,
-113 evictions, and:
+Chain at `34e58af86`, control and change:
 
-- segment 4: **292**, unchanged.
-- segment 6: **8,940**, first non-camera mismatch **f3245**, unchanged.
+| | control | with eviction |
+|---|---|---|
+| segment 4 | 292 | 292 |
+| segment 6 | 8,940, first non-camera mismatch f3245 `sidekick_y rom=0x05C3 engine=0x05C4` | identical |
+| `run_boundary.position.x` | 14007 vs 14008 | identical |
 
-Blast radius at `18490325c`, same command both trees:
+Blast radius at `34e58af86`, same command both trees:
 
 | suite | control | with eviction |
 |---|---|---|
 | trace-replay | 792 run, 4 failures, 4 skipped | 792 run, 4 failures, 4 skipped — red set **name-identical** |
-| default | 15176 run, 56 failures, 73 errors | 15176 run, 54 failures, 70 errors |
+| default (run 1) | 15176 run, 55 failures, 73 errors, 22 skipped | 15176 run, 55 failures, 73 errors, 22 skipped |
+| default (run 2, change only) | — | 15176 run, 54 failures, 73 errors, 22 skipped |
 | guards | — | 500 run, 0 failures |
 
-**Zero classes are red only with the change** in either suite. Ten are red only at base
-(`TestTornadoObjectInstance` x5, `TestGameLoopSpecialStageEntryPresentation` x3,
-`TestModeTracePickerLaunchStatus`, `TestPlaybackDebugManagerOverlayOwnership`) — the known
-reused-fork ambient-state noise, attributable in neither direction.
+Two classes differed by one run each — `TestPlaybackDebugManagerOverlayOwnership`
+(change-only, run 1) and `TestModeTracePickerLaunchStatus` (base-only). Both are **unstable**:
+neither is red in the change tree's second run, and both have appeared as base-only in
+earlier runs today. Per the two-runs-per-tree rule they are attributable in neither
+direction. No class is reproducibly red only with the change.
 
 So this is a latent-site landing. It does not fix f3245 and no claim is made that it does.
 
@@ -92620,14 +92631,15 @@ So this is a latent-site landing. It does not fix f3245 and no claim is made tha
 
 The hypothesis that motivated the round was that exclusivity might be **upstream of several
 one-pixel signatures, including f3245**. It is not upstream of f3245: the invariant now
-holds exactly and f3245 is byte-for-byte where it was. Whatever f3245 is, standing-bit
-ownership is not it. That is a genuine narrowing for the next lane, and it is the main
-result here — the code change is the cheap part.
+holds exactly and f3245 is byte-for-byte where it was, measured at a base where the chain
+fully walks. Whatever f3245 is, standing-bit ownership is not it. That is a genuine
+narrowing for the next lane, and it is the main result here — the code change is the cheap
+part.
 
 ### Not done
 
-- The segment-1 boundary regression is unbisected.
-- f3245 remains uninstrumented. The `setY`-write-site probe from the previous round is the
-  tool; it took one build and a 31-second chain run.
+- The `framesConsumed == 0` question above, which gates restoring `de4d1d153`'s assertion.
+- f3245 remains uninstrumented. The `setY` write-site probe from the previous round is the
+  tool; it took one build and a ~31-second chain run.
 - `releaseSolidPassExposed`'s two-step -> one-step collapse is still unmeasured since the
   f167 fix landed adjacent to it.
