@@ -95023,10 +95023,18 @@ worktree at `0aafd1302`.
 
 - `TestS3kSonicTailsCompleteEmeraldRunChain`: **frontier moved.** The
   `run_boundary.position.x` walk-failure is gone. The chain now walks past the segment-8
-  boundary and runs ~5540 frames of `aiz_5` with **zero segment-8 physics errors** before
+  boundary and reaches ~5540 frames of `aiz_5` before
   failing deeper at *"segment 8 lost production ownership before source closure (mode=LEVEL,
   BK2 cursor=51972)"* — the new frontier. Segment 4 remains at 250 errors, unchanged.
   Axis count 2 at base and 2 on the candidate.
+
+  **CORRECTION (2026-08-20, round `s3k-seg8-ownership-r1`):** this entry originally said the
+  chain runs those ~5540 frames with *zero segment-8 physics errors*. That is **false** and was
+  read off the axis headline rather than the segment report. `..._seg8_report.json` records
+  **errorCount 24143**, first non-camera mismatch at frame 1973 (`sidekick_y` 0x0146 vs
+  0x014B). Only the "walks past the boundary" half of the claim survives. The axis count did
+  not change because the segment fails on its walk-failure axis either way — another instance
+  of a headline describing which check fired rather than what is wrong.
 - `TestS2CompleteEmeraldRunChain`, `TestS3kKnucklesSuperEmeraldRunChain`,
   `TestS3kMegaRunChain`, `TestS3kTailsFullChainRunChain`: axis headlines byte-identical to
   base. No `run_boundary.position` field appears in any candidate log.
@@ -95722,3 +95730,84 @@ alone still trades S3K red for S2 red.
 The framing that S3K "relies on the unowned path to update an overlay nobody else updates"
 is false. The overlay has a represented owner on every one of these rows; the unowned path
 is a second dispatch on top of it.
+## 2026-08-20 -- S3K segment 8 "lost production ownership": what it means, measured
+
+Worktree `bugfix/ai-s3k-seg8-ownership-r1` off `18593a9a5`. Command:
+`mvn -Ptrace-replay -Dmse=off -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`. (The default profile OOMs -- "Java
+heap space", zero tests run, no report. `-Ptrace-replay` is required for this class.)
+
+Result reproduces: 2 axes, `[walk-failure] segment 8 lost production ownership before source
+closure (mode=LEVEL, level=LevelIdentity[loadGeneration=7, progressionZone=0, romZone=0,
+act=1], BK2 cursor=51972)` and `[segment-physics] segment 4 ... 250 errors`.
+
+### What the assertion means
+
+`TraceRunPlaybackCoordinator.failSourceOwnership` fires from `afterStep`/`afterProduction`
+when the current segment still has recorded rows left but `ownsCurrentSegment` is false. For
+a `level` segment that predicate is `matchesLevel(segment, identity) && identity
+.loadGeneration() == currentLevelGeneration`, widened only by `inLevelAdvances`. The reported
+identity IS segment 8's own level (`act` is 0-based on the observation side; `romZone=0
+act=1` is AIZ act 2) -- **only `loadGeneration` differs**. The check therefore says exactly
+one thing: *the engine reloaded the level the segment owns, and the recording never did.*
+It is not a camera, boundary or admission problem.
+
+### Correction to the previous entry
+
+The `a78a7cec1` validation records "**zero** segment-8 physics errors". Measured here,
+`s3k-sonic-tails-complete-emeralds_seg8_report.json` reports **errorCount 24143**,
+`firstNonCameraPhysicsMismatch` = frame 1973 `sidekick_y` 0x0146 vs 0x014B. The walk gets
+past the boundary, which was the real claim; the error count was not zero.
+
+### The chain of causation, established
+
+- BK2 cursor 51972 = `aiz_5` row 5540 -- **mid-level**, ~1636 rows before the segment's own
+  end. Not a level end, act transition or boundary.
+- The **engine** ended early, not the source. A probe on `AbstractPlayableSprite.applyDeath`
+  (temporary, reverted) caught exactly one call in the whole chain:
+  `PROBE-DEATH cause=PIT cls=Sonic cpu=false x=19112 y=574`, via
+  `PlayableSpriteMovement.doLevelBoundary -> applyPitDeath`, then
+  `tickRestartCountdown -> LevelManager.requestRespawn` 60 frames later -- the unrecorded
+  load. Signature matches the one predicted for the AIZ2 -> HCZ1 reported death.
+- **First player-field divergence in segment 8 is trace frame 3673**, not 5539. At 3673 the
+  ROM hurts Sonic (`x_speed` -0x200, `y_speed` -0x400, `air` 1, `anim` 0x1A) while the engine
+  runs on unharmed (`g_speed` 0x3F4, `air` 0). Recorded rings stay 0x4E across the hit and
+  `interact_state` shows `status_secondary` 0x11 -> 0x00, so a shield absorbed it. The engine
+  keeps 78 rings for the rest of the segment (`rings expected=0 actual=78` from 4949 on).
+- Never knocked back, the engine's Sonic keeps running right past the recorded x range
+  (recorded Sonic loiters in 0x493E-0x49D0 at y 0x1FD for the next ~530 rows) and falls off
+  the ledge at x 0x4AA8, y 574 -> PIT death -> reload -> the ownership assertion.
+
+### The hazard, identified
+
+The recorder's `object_near` slots 8-15 at frame 3673 (`object_code` 0x000505A4 /
+0x000505DC, i.e. `Obj_AIZBombExplosion` and `Obj_AIZBombExplosionAnim`,
+`sonic3k.asm:105471,105489`) are the engine's `AizBombExplosionInstance`. Their **positions
+match** the ROM's to the pixel in the engine's own near-object dump (0x43E8/0x43E4/0x43F4/
+0x43DC/0x43F0/0x43E0). What differs is collidability: a probe inside
+`ObjectTouchResponseController` recorded every fragment that reached the flag test with
+`flags=0` while Sonic was at 0x43B0-0x43F0, except one leftover fragment from an earlier bomb
+160+px away. The only `flags=8b` HURT candidates never overlapped.
+
+The engine's gate itself is faithful. ROM `loc_505FC` is `moveq #4,d0; add.b anim(a0),d0;
+cmp.b mapping_frame(a0),d0; bls.s skip`, so the fragment is added to the collision-response
+list only while `mapping_frame < 4 + anim`; `AizBombExplosionInstance.getCollisionFlags`
+implements that, and its `ANIM_SCRIPTS` reproduce `Ani_AIZ2BombExplode_Script0/1`
+(`Levels/AIZ/Misc Object Data/Anim - Act 2 Bomb Explosion.asm`) exactly -- script 1's frames
+(6..$B) are never below its threshold of 5 in the ROM either.
+
+**So the surviving hypothesis is animation phase, not geometry and not the gate:** at the row
+the ROM lands the hit, the engine's fragment covering that spot has already advanced past
+`mapping_frame` 3 (probe showed `anim=0 step=3 map=04`). Two unverified candidates for the
+skew, both in `AizBombExplosionInstance`: the delay stage (`subq.w #1,$2E(a0); bmi` becomes
+active after delay+1 frames, the engine's `delayTimer--; if (delayTimer <= 0)` after delay),
+and the ROM running `loc_505E4`'s animation on the same frame it leaves the delay stage
+(`bra.s loc_505E4`) where the engine returns. Neither is measured yet.
+
+### Scope of the instruments
+
+The flag probe sits after the on-screen gate and the multi-region branch in
+`ObjectTouchResponseController`, so "every fragment had `flags=0`" covers only fragments that
+reached that point; a fragment dropped by `isOnScreenForTouch()` or routed through
+`usePreviousCollisionResponseList` would not have printed. That is the next thing to rule out
+before acting on the animation-phase hypothesis.
