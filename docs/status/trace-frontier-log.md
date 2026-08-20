@@ -97019,3 +97019,110 @@ survive it. The naming collision itself is deliberately left in place; renaming 
   the first control default suite lost three forks (15086 tests, 1085 errors).
   Both were re-run. Comparing the *set of class names* caught each one; the
   failure totals alone looked like a plausible result.
+
+## 2026-08-20 — S2 segment 15: the walk failure was the title card's loop-exit test, and it is fixed
+
+Base `c94b3ed0a`, branch `bugfix/ai-s2-seg15-admission-r1`, own worktree, JDK 21,
+`-Ptrace-replay -Dmse=off` with all three ROM paths explicit.
+
+### The two axes are two defects, and the shared "2" is a coincidence
+
+Baseline reproduced exactly: `[walk-failure] Segment 15 destination seg11_arz1 cursor
+advanced past its first recorded row without admission (cursor 89602, offset 89600)` and
+`[segment-physics] segment 15 ... 7511 errors, first non-camera mismatch at frame 2
+queue.s2_nemesis_plc.remaining_work rom=2 engine=5`.
+
+They are not one mechanism, and this round did not have to re-derive that: the entry of
+2026-08-19 (`1282065ee`) already tested it. Confirmed again here, from opposite directions —
+they sit at **different boundaries**. The physics axis is the `ss_6 -> seg10_cpz2` entry (a
+`stage_exit` return whose release iteration fuses two ROM frames, root-caused in that same
+entry and untouched here). The walk axis is the `seg10_cpz2 -> seg11_arz1` exit, a
+`level_advance`. The `rom=2` is a pattern count and the `89602-89600` is a row count; the
+two numbers have different units and different owners. **Coincidence — recorded so the next
+round does not wonder.**
+
+### Measured: where the two rows go
+
+A probe on `admitLevelWhenReady`'s walk logged mode and census lag per gap row; a second on
+`TitleCardManager.update` logged its state. Interleaving them gives the whole gap for the
+failing boundary and for the two `level_advance` boundaries that pass.
+
+| gap | census runs (non-lag first) | engine SLIDE_IN | DISPLAY | ZONE_TILE_UPLOAD | exit | LEVEL at |
+|---|---|---|---|---|---|---|
+| seg8_cpz1 (12, green) | 23,11,62,14,7,35,25 | 46 | 15 | 7 | 26 | row 177 = offset |
+| seg10_cpz2 (15, red) | 23,11,46,20,8,37,25 | 46 | 1 | 8 | 26 | row 172 = offset+2 |
+
+The exit sequence is 26 passes in both, and `zoneTileUploadVBlanks()` predicts the census's
+post-load admitted run exactly in both (7 and 8). The whole overshoot is in the card's wait
+loop: the engine spends 47 passes where the ROM spends 45.
+
+### Root cause, from the ROM
+
+`Level_TtlCard` (`docs/s2disasm/s2.asm:4914-4925`) re-loops on **one compound test in one
+pass**: `move.w (TitleCard_ZoneName+x_pos).w,d0 / cmp.w (TitleCard_ZoneName+
+titlecard_x_target).w,d0 / bne.s Level_TtlCard / tst.l (Plc_Buffer).w / bne.s
+Level_TtlCard`. Two engine departures, one pass each:
+
+1. **It named the wrong piece.** The engine tested `elements.stream().allMatch(isAtTarget)`;
+   the ROM reads the zone name and nothing else. `Obj34_TitleCardData` (`:27368-27374`)
+   gives "ZONE" and the act number `anim_frame_duration` `$1C` against the zone name's
+   `$1B`, so they land one pass later than the piece the loop watches.
+2. **It split the compound test across two passes.** Reaching the target entered a separate
+   `DISPLAY` state, which tested `Plc_Buffer` on the *next* pass. When the cue has already
+   drained — as ARZ act 1's has, ten passes before the card arrives — the ROM leaves on the
+   pass the zone name lands.
+
+CPZ act 2's cue is still busy when its card lands, so its loop is PLC-bound and both
+departures are invisible there. That is why segments 12 and 13 are green: the bug needs a
+zone whose art decompresses faster than its card slides.
+
+Both are now modelled: `updateSlideIn` tests the zone name and, in the same pass, the cue.
+
+### A cancellation worth naming before someone "fixes" it
+
+`Obj34_Wait` (`:27380-27387`) skips the move while the post-decrement duration is non-zero
+and moves on the pass that reaches zero, so `$1B` is **26** skips, not 27. Against that,
+`Obj34_Init` writes the zone-name child over the parent's own slot (`:27328-27346`), so
+`RunObjects` has already passed it and it misses the creation pass. The engine models
+neither: 27 skips from the first pass. 26-from-the-second and 27-from-the-first both put
+the last of the eighteen 16px steps on pass 45, so the piece the loop watches is right by
+two offsetting errors. A comment at the site says so. Correcting one without the other
+moves the card a frame.
+
+### Result — the S2 chain frontier moves from segment 15 to segment 18
+
+`TestS2CompleteEmeraldRunChain`, same command, both arms:
+
+| | control `c94b3ed0a` | candidate |
+|---|---|---|
+| walk-failure | segment 15 -> `seg11_arz1`, cursor 89602 | **gone** |
+| new frontier | — | segment 19 lost production ownership, BK2 cursor 109135 |
+| segment 15 physics | 7511 | 7511 (unchanged — the other defect) |
+| newly reached | — | seg11_arz1 **clean**, ss_7 **clean**, seg12_arz1 red at frame 1 |
+
+Segment 18 (`seg12_arz1`) opens `queue.s2_nemesis_plc.remaining_work rom=22 engine=25` at
+frame 1 — the same 3-pattern signature as segment 15's, and it follows `ss_7`, a
+special-stage return. That is the stage-exit fusion of `1282065ee` newly exposed, not a new
+defect: **it is now the S2 chain's frontier and the highest-value S2 target.** Four
+`dynamic-art-gap` axes appear with it, all in segments that previously never ran.
+
+### Arms
+
+- `-Ptrace-replay`, both arms: 799 tests, 5 failures each; **identical failing test set,
+  identical class-name set (163), identical `Tests run: 0,` count (6)**. Diffing the full
+  untruncated messages, every difference is inside `TestS2CompleteEmeraldRunChain` and is
+  the table above. S1 and S3K chains byte-identical.
+- `-Pguards`: 500 tests, 0 failures.
+- Default suite: 15196 tests in every complete run. Candidate 51F/67E against control
+  51F/64E under `-Dsurefire.runOrder=alphabetical`; the sole difference,
+  `TestGameLoopSpecialStageEntryPresentation`, fails in **three of the four** default-suite
+  runs taken here including the control's, so it is the standing ambient-state flake and
+  not this change. Under filesystem order the candidate additionally lost
+  `TestMgzEndBossKnuxInstance` and `TestGameLoopSpecialStageRewindGate`, both of which are
+  green in the same tree under alphabetical order — the documented per-worktree
+  `runOrder` victim selection.
+- Instrument note: the first two attempts at the trace-replay arms were backgrounded
+  without `setsid` and died with their shell at `testCompile`, both reporting exit **0**.
+  The truncation was caught by the class-name set (0 classes), not the totals. The first
+  candidate default run reported 13986/41F/**3139E**; a re-run in the same tree gave
+  15196/53F/71E. Quote no default-suite total that is not 15196.
