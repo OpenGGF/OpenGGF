@@ -239,9 +239,56 @@ public final class ObjectSolidContactController {
         if (key == null) {
             return;
         }
-        objectStandingBitSet
-                .computeIfAbsent(player, p -> new HashSet<>())
-                .add(key);
+        Set<Object> set = objectStandingBitSet.computeIfAbsent(player, p -> new HashSet<>());
+        evictPreviousStandingBitOwner(set, key);
+        set.add(key);
+    }
+
+    /**
+     * ROM: seating a player on an object clears the PREVIOUS owner's standing
+     * bit, so at most one object holds a given player's bit at a time. Every
+     * S3K seating helper carries the same prologue verbatim --
+     * {@code btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 /
+     * bclr d6,status(a3)} -- before {@code move.w a0,interact(a1)} and
+     * {@code bset d6,status(a0)}: {@code RideObject_SetRide}
+     * (docs/skdisasm/sonic3k.asm:42027-42039), {@code sub_337D8} (:69781-69812),
+     * {@code sub_33C34} (:70166-70186), {@code loc_422D6} (:87546-87558) and
+     * {@code sub_42636} (:87789-87795). S2's {@code RideObject_SetRide}
+     * (docs/s2disasm/s2.asm:35986-35998) is the same routine with a byte
+     * {@code interact} index, and S1 enforces the same invariant through
+     * {@code standonobject} -- {@code Plat_NoCheck}'s {@code bclr #3,obStatus(a2)}
+     * is annotated in the listing as "clear platform bit for the other platform"
+     * (docs/s1disasm/_incObj/sub PlatformObject &amp; SlopeObject.asm:68-80).
+     * This is therefore a universal correction, not a per-game divergence.
+     * <p>
+     * The remaining S3K writers of the bit uphold the same invariant by the
+     * other route -- {@code btst #Status_OnObj,status(a1) / bne} refuses to seat
+     * an already-seated player (:84607, :84719, :84821, :84933, :85216) -- so
+     * the one-object-per-player property holds across all ten ride sites.
+     * <p>
+     * Two S3K sites set {@code d6,status(a0)} WITHOUT it being a ride and are
+     * deliberately outside this model: the HCZ water-skim marker (:75416) and
+     * {@code sub_47F9C} (:94066) never write {@code Status_OnObj} and use the
+     * bit as a per-player object-local flag. Every caller of this method is one
+     * of this controller's own ride/landing paths, so no non-ride marker is
+     * recorded here and neither site reaches this eviction.
+     * <p>
+     * Eviction is per OBJECT, not per piece: {@code bclr d6,status(a3)} clears
+     * one object's status byte, so sibling pieces of the object being seated
+     * keep their engine piece-scoped bits.
+     */
+    private static void evictPreviousStandingBitOwner(Set<Object> set, Object newKey) {
+        if (set.isEmpty()) {
+            return;
+        }
+        Object newOwner = standingBitOwnerOf(newKey);
+        set.removeIf(existing ->
+                !java.util.Objects.equals(standingBitOwnerOf(existing), newOwner));
+    }
+
+    /** The object a standing-bit key belongs to, collapsing piece-scoped keys. */
+    private static Object standingBitOwnerOf(Object key) {
+        return key instanceof PieceStandingLatchKey piece ? piece.objectKey() : key;
     }
 
     private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {

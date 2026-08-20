@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **One player stands on exactly one object.** Seating a player clears the
+  previous owner's standing bit in all three games: S3K's five seating helpers
+  each carry `btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 /
+  bclr d6,status(a3)` verbatim (`docs/skdisasm/sonic3k.asm:42027-42039`,
+  `:69781-69812`, `:70166-70186`, `:87546-87558`, `:87789-87795`), its five
+  object-local seats refuse an already-seated player instead (`:84607`, `:84719`,
+  `:84821`, `:84933`, `:85216`), S2's `RideObject_SetRide` is the same routine
+  (`docs/s2disasm/s2.asm:35986-35998`), and S1's `Plat_NoCheck` does the same
+  through `standonobject` (`docs/s1disasm/_incObj/sub PlatformObject & SlopeObject.asm:68-80`).
+  The engine recorded standing bits in a per-player *set* that nothing ever
+  evicted, so ownership accumulated: measured on the S3K complete-emeralds
+  chain, a single player reached **27 simultaneous owners**, and 506 seats
+  occurred while more than one object held the bit. Seating now evicts every
+  other owner, taking those to zero. **This moves no frontier** — the chain,
+  the whole trace-replay suite and the default suite are unchanged — it removes
+  a latent divergence from a ROM invariant.
+
+### Fixed
 - **The S3K collapsing platform's release dispatch must not cancel the other
   player's solid pass.** ROM `loc_205DE` (docs/skdisasm/sonic3k.asm:44850-44859)
   runs `sub_205B6` -- one `SolidObjectTopSloped2` pass covering *both* players --

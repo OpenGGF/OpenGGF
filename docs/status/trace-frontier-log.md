@@ -92526,3 +92526,108 @@ The `releaseSolidPassExposed` two-step -> one-step collapse from the previous en
 landing for whoever wants it. Note that it is adjacent to this change: both concern the
 release dispatch's solid pass, so re-measure rather than trusting the earlier
 byte-identical result.
+
+## 2026-08-20 — standing-bit exclusivity: a real ROM invariant, and an inert fix
+
+Branch `bugfix/ai-s3k-standing-bit-exclusivity-r1` off `18490325c`. Landed, moves nothing.
+Read the blocker in the first section before trusting any S3K chain number measured today.
+
+### BLOCKER: the S3K complete-emeralds chain no longer reaches segment 4 or 6 on develop
+
+Control run on a clean worktree at `18490325c`, no edits:
+
+```
+AbstractRunChainTest.assertChainReplay:1510
+Uncompared interior return must consume exactly the destination's frame 0 before the
+comparator attaches (cursor 8817, offset 8817, segment aiz_2) ... expected: <1> but was: <0>
+```
+
+At `24ddb7e95` the walk reached segment 6 and reported 292 / 8,941. At `18490325c` it aborts
+at **segment 1's return boundary**. It reproduces identically with and without this round's
+change, so it is not this change. **Segment 4's 292 and segment 6's f3245 are therefore
+unmeasurable on develop right now**, and every number quoted for them earlier today —
+including in the entry above this one — is stale until that boundary is fixed. Whatever
+landed between the two commits moved the stop point backwards; that range wants bisecting
+and this round did not do it.
+
+All segment-6 measurements below were taken on a worktree at `24ddb7e95` + the f167 fix,
+which still reaches segment 6, and are labelled as such.
+
+### The ROM invariant, censused rather than assumed
+
+The first version of this reasoning was "there is only one `bset d6,status(a0)` in
+sonic3k.asm, so exclusivity is enforced by the setter". **That was wrong** — a too-narrow
+grep pattern. There are twelve, and they split three ways:
+
+| mechanism | sites | what it does |
+|---|---|---|
+| evict previous owner | `RideObject_SetRide` :42027-42039, `sub_337D8` :69781-69812, `sub_33C34` :70166-70186, `loc_422D6` :87546-87558, `sub_42636` :87789-87795 | `btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 / bclr d6,status(a3)` verbatim, then `move.w a0,interact(a1)` |
+| refuse to seat | :84607, :84719, :84821, :84933, :85216 | `btst #Status_OnObj,status(a1) / bne` returns if already seated |
+| **not a ride at all** | HCZ water skim :75416, `sub_47F9C` :94066 | sets the bit as a per-player object-local flag, never writes `Status_OnObj` |
+
+So the invariant holds across all ten ride sites by **two** different mechanisms, and is
+deliberately absent at two non-ride uses of the same bit. "One setter enforces it" would
+have produced a fix that wrongly cleared those two.
+
+Cross-game: S2's `RideObject_SetRide` (`s2.asm:35986-35998`) is the same routine with a byte
+`interact` index; S1 does it through `standonobject`, and the listing annotates its own
+`bclr #3,obStatus(a2)` as *"clear platform bit for the other platform"*
+(`_incObj/sub PlatformObject & SlopeObject.asm:68-80`). **Universal correction, not a
+per-game divergence** — which is why it belongs in the shared controller.
+
+### The engine gap is larger than two objects
+
+`objectStandingBitSet` is a `Map<PlayableEntity, Set<Object>>` and **nothing ever removed an
+entry on seat**. It is append-only. Instrumented on the segment-6-reaching tree:
+
+- **506** seats occurred while the player held more than one owner;
+- the maximum simultaneous owner count for one player was **27**.
+
+The previous round's observation — slot 05 and slot 08 both holding Tails' bit across
+f164-166 — was the visible two-object tip of an unbounded accumulation.
+
+That measurement also killed the first candidate fix. An `interact`-keyed eviction (remove
+only the object the ride record names, gated on `isOnObject()`, which is literally what the
+ROM prologue does) **fires 54 times, 52 of them on the collapsing platform for Tails** — so
+the predicate works — and still leaves 506 multi-holds, because it removes one owner of
+twenty-seven. Enforcing the invariant needs the seat to evict *every* other owner, which is
+what landed.
+
+### Result: the invariant now holds exactly, and nothing moves
+
+On the segment-6-reaching tree, with full eviction: multi-hold seats **506 -> 0**,
+113 evictions, and:
+
+- segment 4: **292**, unchanged.
+- segment 6: **8,940**, first non-camera mismatch **f3245**, unchanged.
+
+Blast radius at `18490325c`, same command both trees:
+
+| suite | control | with eviction |
+|---|---|---|
+| trace-replay | 792 run, 4 failures, 4 skipped | 792 run, 4 failures, 4 skipped — red set **name-identical** |
+| default | 15176 run, 56 failures, 73 errors | 15176 run, 54 failures, 70 errors |
+| guards | — | 500 run, 0 failures |
+
+**Zero classes are red only with the change** in either suite. Ten are red only at base
+(`TestTornadoObjectInstance` x5, `TestGameLoopSpecialStageEntryPresentation` x3,
+`TestModeTracePickerLaunchStatus`, `TestPlaybackDebugManagerOverlayOwnership`) — the known
+reused-fork ambient-state noise, attributable in neither direction.
+
+So this is a latent-site landing. It does not fix f3245 and no claim is made that it does.
+
+### What this rules out
+
+The hypothesis that motivated the round was that exclusivity might be **upstream of several
+one-pixel signatures, including f3245**. It is not upstream of f3245: the invariant now
+holds exactly and f3245 is byte-for-byte where it was. Whatever f3245 is, standing-bit
+ownership is not it. That is a genuine narrowing for the next lane, and it is the main
+result here — the code change is the cheap part.
+
+### Not done
+
+- The segment-1 boundary regression is unbisected.
+- f3245 remains uninstrumented. The `setY`-write-site probe from the previous round is the
+  tool; it took one build and a 31-second chain run.
+- `releaseSolidPassExposed`'s two-step -> one-step collapse is still unmeasured since the
+  f167 fix landed adjacent to it.
