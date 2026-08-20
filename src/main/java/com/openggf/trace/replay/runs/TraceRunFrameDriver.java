@@ -257,6 +257,43 @@ public final class TraceRunFrameDriver {
             boolean previousObservedVblankCounterAdvance,
             boolean destinationGameplayModeReached,
             boolean nextRowCarriesDeferredVblank) {
+        return selectDisposition(
+                coordinatorPhase, executionPolicy, rowPhase,
+                observedVblankCounterAdvance,
+                previousObservedVblankCounterAdvance,
+                destinationGameplayModeReached,
+                nextRowCarriesDeferredVblank,
+                false);
+    }
+
+    /**
+     * Adds the recorded per-frame lag observation as a second, independent
+     * reason to suppress a presentation row's mode handler.
+     *
+     * <p>{@code presentationRowIsCarriedLagClosure} models <em>no V-int
+     * elapsed for this row</em>, derived from counter shape. This models the
+     * other ROM case: a V-int <em>did</em> run and took the {@code VBlank_Lag}
+     * branch (docs/s1disasm/sonic.asm:656-657), which reaches no
+     * {@code ProcessPLC} call (:712-746) yet still advances
+     * {@code v_vblank_count} through {@code VBlank_Exit} (:684-687). Both
+     * produce a row that services no patterns, so both select the suppressed
+     * closure; neither subsumes the other.
+     *
+     * <p>The recorded flag is the authority and counter shape must never be
+     * used in its place. Inside a presentation bridge the two diverge sharply
+     * -- {@code syz2} holds 802 of 811 rows with a frozen gameplay counter
+     * while only 9 are lagged -- because bridge gameplay is structurally
+     * frozen regardless of lag.
+     */
+    public static Disposition selectDisposition(
+            TraceRunPlaybackCoordinator.Phase coordinatorPhase,
+            SegmentExecutionPolicy executionPolicy,
+            TraceExecutionPhase rowPhase,
+            boolean observedVblankCounterAdvance,
+            boolean previousObservedVblankCounterAdvance,
+            boolean destinationGameplayModeReached,
+            boolean nextRowCarriesDeferredVblank,
+            boolean recordedRowIsLagVint) {
         Objects.requireNonNull(coordinatorPhase, "coordinatorPhase");
         Objects.requireNonNull(executionPolicy, "executionPolicy");
         Objects.requireNonNull(rowPhase, "rowPhase");
@@ -273,7 +310,8 @@ public final class TraceRunFrameDriver {
                     // but the segment policy has already proven that the
                     // destination is native presentation rather than gameplay.
                     case FULL_LEVEL_FRAME -> Disposition.PRESENTATION_VBLANK;
-                    case VBLANK_ONLY -> presentationRowIsCarriedLagClosure(
+                    case VBLANK_ONLY -> recordedRowIsLagVint
+                            || presentationRowIsCarriedLagClosure(
                             observedVblankCounterAdvance,
                             previousObservedVblankCounterAdvance,
                             nextRowCarriesDeferredVblank)

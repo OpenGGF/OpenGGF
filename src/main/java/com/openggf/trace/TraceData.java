@@ -935,9 +935,25 @@ public class TraceData {
      * v3.11+ per-frame {@code lag_state} snapshots or when no event is present for
      * that frame.
      *
-     * <p><strong>Diagnostic only.</strong> Used to confirm whether the
-     * counter/oscillation "skip" frames coincide with emulator lag frames; the
-     * engine must NOT change its stepping from these values.
+     * <p><strong>Comparison-diagnostic by default, with one sanctioned
+     * scheduling use.</strong> Gameplay state must never be hydrated from this
+     * event, and no physics, object, camera or input value may be derived from
+     * it. What it may do is answer the main-loop admission question that the
+     * cross-game hardware-timing contract's first replay contract already
+     * assigns to the recorded lag outcome: whether the ROM's main loop ran for
+     * a represented row. A lagged row's V-int took {@code VBlank_Lag}
+     * (docs/s1disasm/sonic.asm:656-657), which reaches no {@code ProcessPLC}
+     * call (:712-746) while still advancing {@code v_vblank_count} (:684-687),
+     * so the row owns a V-int closure with no mode handler.
+     *
+     * <p>{@code TraceRunSpecialStageRows.syntheticLagPhase} is the existing
+     * precedent for that use; the presentation-bridge disposition in
+     * {@code TraceRunFrameDriver} is the second. Both consume the boolean
+     * alone -- the special-stage path to gate main-loop admission and select a
+     * {@link com.openggf.game.resources.PlcLifecyclePhase}, the bridge path to
+     * select the suppressed-closure {@code Disposition}. Anything reading
+     * {@code lagcount}, or deriving a value rather than an admission, is
+     * outside the sanction.
      */
     public TraceEvent.LagState lagStateForFrame(int frame) {
         List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());

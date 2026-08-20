@@ -810,3 +810,21 @@ Companion trap, from the same lane checking its own disarm: a `pgrep` for its wa
 **its own shell command containing the grep string**, reporting STILL ARMED when nothing was.
 The same shape as `Failures: 0` matching a grep for `Fail` — a filter that matches the searcher.
 Exclude your own command line, or match on the parent process rather than the pattern.
+
+## Twenty-seventh rule: `git checkout -- <path>` restores from the INDEX, not from HEAD
+
+A round mid-sweep restored its experiment tree with `git checkout -- src/`. The index still held
+the reverted control files, so the "experiment" arm started against **control code**. It caught
+this within seconds because `git status` showed staged `M` entries — but the failure is silent by
+construction, and it would have produced a perfectly plausible, entirely worthless result: two
+arms agreeing on everything, because they were the same code.
+
+That is the most dangerous shape a measurement can take. An empty both-way diff is exactly what a
+clean change looks like, so nothing about the output would have prompted a second look.
+
+When switching a worktree between control and experiment arms, use `git reset --hard <hash>` or
+`git restore --source=<hash>`, and check `git status` is clean **before** launching each arm. If
+you have staged anything during a revert, `git checkout --` will hand it straight back to you.
+
+The general form: a restore command that reads from a mutable intermediate (the index) rather
+than a named commit will silently return whatever you last put there. Name the source.
