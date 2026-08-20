@@ -99784,3 +99784,89 @@ frame for the quadrant, each push sensor's distance, and who moves `x`:
    only. The routines that do write inertia are for the wrong quadrant, so a second ROM write is
    unaccounted for — and it matters, because the engine lands carrying ground speed the ROM does
    not have.
+
+## 2026-08-20 — slz1 frame 4305 is the monitor's own side collision, arriving one object too late
+
+Round `s1-slz1-graze-r1`, on `bugfix/ai-s1-slz1-graze-r1` off `origin/develop` `4a14e9fcf`.
+Baseline reconfirmed in this worktree: `TestS1CompleteEmeraldRunChain` segment 27 (`slz1`)
+first non-camera mismatch `frame 4305 x rom=0x1BB0 engine=0x1BAF`, 3878 errors. Nothing
+landed; no engine code changed, probes reverted.
+
+**RETRACT the terrain-graze framing of the previous entry.** `Sonic_FloorUp` is not
+involved, the engine's push sensors are not at fault, and there is no unaccounted second
+ROM write. Two ordinary objects own the whole frame.
+
+### What actually happens at 4305
+
+The trace's own rows carry both objects (`object_near`, every frame of the window):
+slot 63 is Obj26 **Monitor** at `x=0x1B90, y=0x0271`; slot 65 is Obj5D **SLZ Fan** at
+`x=0x1B78, y=0x0250`.
+
+Sonic is not pushing terrain for six frames before the jump — he is pinned against the
+monitor's right solid edge. `Mon_Solid.normal` passes `#30/2+sonic_solid_width` = `$1A`
+(`docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:100`), so that edge is
+`0x1B90 + 0x1A = 0x1BAA`, which is exactly the `x` the trace holds from 4296 to 4304.
+
+Frame 4305, ROM, in slot order:
+
+1. Sonic moves. `x_speed` accelerates `-0x54 -> -0x6C` (air accel `0x18`); applied as a
+   32-bit add it takes `x_sub` `0x2300 -> 0xB700` with a borrow, so `x` becomes `0x1BA9`
+   — one pixel inside the monitor.
+2. **Slot 63, the monitor.** `Mon_SolidSides` returns a side hit with `d0 = -1`;
+   `.sonicleft` sees `x_vel < 0` and falls into **`.stopsonic`**
+   (`26, 2E Monitors and Power-Ups.asm:137-140`):
+   `sub.w d0,obX(a1)` (+1, back to `0x1BAA`), `move.w #0,obInertia(a1)`,
+   `move.w #0,obVelX(a1)`. **One routine writes both zeros** — that is the whole of the
+   brief's second open question. There is no inertia write to hunt for.
+3. **Slot 65, the fan.** `Fan_Action.movesonic` does `add.w d0,obX(a1)`
+   (`docs/s1disasm/_incObj/5D SLZ Fan.asm:82`), a pixel-only write that leaves `x_sub`
+   alone. Its vertical gate (`:58-63`) is `0 <= y + 0x60 - fanY < 0x70`, which first opens
+   at `y = 0x025E` — frame 4305 — and stays open for the rest of the rise. At `x = 0x1BAA`
+   the force is `+6`, giving `0x1BB0`.
+
+That reproduces the recorded row exactly: `x=0x1BB0`, `x_speed=0`, `g_speed=0`. The fan
+also explains why `x` keeps climbing 6, 6, 5, 5, 4 px per frame afterwards while `x_speed`
+is negative and growing — the recorded `x_sub` deltas match `x_speed*256` on every one of
+those frames, so the pixel movement is entirely the fan's.
+
+### Where the engine diverges — measured, not derived
+
+Throwaway probes in `ObjectSolidContactController.resolveContact` /
+`resolveMonitorContact`, `Sonic1FanObjectInstance`, `Sonic1MonitorObjectInstance` and
+`ObjectManager.executeObjectWithSolidContext`, run under the chain:
+
+```
+[SLZ1 EXEC] Sonic1FanObjectInstance     x=1b78 y=250
+[SLZ1FAN]   before pcx=1ba9 pcy=25e push=6
+[SLZ1 EXEC] Sonic1MonitorObjectInstance x=1b90 y=271
+[SLZ1]      resolveContact anchorX=1b90 pcx=1baf relXRaw=57 rightLimit=52 -> reject X
+```
+
+The engine's post-move `x` is `0x1BA9` and its `x_speed` is `0xFF94` = `-0x6C` — both
+identical to the ROM. **The engine executes the fan before the monitor.** The fan's `+6`
+lands first, the monitor then tests `0x1BAF`, `relXRaw = 57` exceeds `rightLimit = 52`,
+and the box test rejects before any side logic runs. No push sensor, no quadrant, and no
+`skipMonitorSide` gate is reached (`deferSideToPostMovement` is `false` on this pass).
+
+The ROM's order is the opposite and is not a preference: `ExecuteObjects` runs slots
+ascending and the trace records the monitor at slot **63**, the fan at slot **65**.
+
+### The defect, stated
+
+Object **execution order**, not collision geometry. Because the fan writes `obX` directly
+rather than through velocity, whichever of the two runs first decides whether the monitor
+ever sees the one pixel of penetration that triggers `.stopsonic`. The engine loses the
+1px eject and both speed clears; the `-0x6C` then survives into the air and integrates to
+the −33 px that puts Sonic at the signpost four frames late.
+
+The fix therefore belongs in slot assignment / exec ordering, so that these two objects run
+in ROM slot order for any recording — not in the monitor's box test, whose arithmetic is
+already correct, and not in a graze sensor, which is not on this path at all. Ordering the
+pair by anything measured off this fixture would be a fitted model; the ordering has to come
+from the slot the object actually occupies.
+
+**Next measurement:** why the engine's exec order places the `0x1B90` monitor after the
+`0x1B78` fan when the ROM's slots say otherwise — layout scan order alone would put the fan
+first (lower `x`), so the ROM's monitor slot 63 implies it was allocated earlier, likely into
+a freed slot. That is a slot-lifecycle question, and it should be answered before any
+reordering is attempted.
