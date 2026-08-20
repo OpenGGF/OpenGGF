@@ -99312,3 +99312,63 @@ here. `Queue_Kos_Module` (sonic3k.asm:2668-2685) has no capacity test at all and
 walk past `Kos_module_queue`'s four slots into `_unkFF7C`, so the engine's throw is the
 right guard and should stay. No engine change landed; the fix belongs to the AIZ2 to
 HCZ1 transition's art ownership.
+
+## 2026-08-20 — S2 segments 15 and 18 are one defect: a one-frame PLC service lag
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` at `55ac5aed3`.
+
+### Both queue axes are the same lag, and it is not Obj05
+
+Probing the queue comparator directly, the engine's `remaining_work` is the ROM's value
+from **the frame before**, for as long as the queue stays busy:
+
+| segment | recorded | engine |
+|---|---|---|
+| 18 (`seg12_arz1`) | 25, 22, 19, 16, 13, 10, 7, 4, 1 | 25, 25, 22, 19, 16, 13, 10, 7, 4 |
+| 15 (`seg10_cpz2`) | 5, 5, 2, 12, 9, 6, 3 | 5, 5, 5, 2, 12, 9, 6 |
+
+Not "one service short" in total — a one-frame phase lag that never closes. It is unrelated
+to the Obj05 question from the previous entry.
+
+The lag is only *visible* where the destination's queue is busy. Every EHZ segment records
+`remaining_work = -1` (idle) at its start, so the same lag at `ss_4 -> seg6_ehz2` and
+`ss_5 -> seg7_ehz2` costs nothing and those segments are green. `seg8_cpz1`, `seg9_cpz2`,
+`seg11_arz1` and `seg13_arz2` have busy queues and are green because they are level
+advances, not stage-exit returns.
+
+### The hand-back is unblocked, and removes it
+
+`80a9ac23c` was rejected in an earlier round because two harness layers hard-coded
+`framesConsumed >= 1`. **Neither fires any more** — the clock contract landed since makes a
+zero-consumed uncompared return admissible — so the candidate now runs to completion.
+Re-applied it as `091ce15ba`; only one of its three files still differs from today's tree.
+
+| | base | hand-back |
+|---|---|---|
+| segment 15 first error | frame 2, `queue…remaining_work` | frame **1725**, `dynamic_art.edges` |
+| segment 18 first error | frame 1, `queue…remaining_work` | frame **4014**, `x` |
+| errors | 7511 / 14289 | 7502 / 14265 |
+| axes | 13 | 16 |
+
+Both queue axes are gone. Reach improves by three orders of magnitude on segment 18.
+
+### RETRACT: `lastMovieRowRun` is not the residual
+
+Several rounds have carried the account that the hand-back's one-row-early gap edges come
+from `lastMovieRowRun`, derived as `bk2FrameOffset + rowsConsumed - 1`. **Dropping the
+`- 1` produces byte-identical output** — same 16 axes, same fields, same deltas. The
+stale-stamp recovery it feeds only fires for an edge carrying the admission's own row, and
+these edges do not; they pass through with their raw stamp. The rows are one early because
+the release iteration no longer runs the level body, so the cursor is one behind when the
+destination's art work happens. That is a different fix from the one this frontier has been
+carrying.
+
+### The cost, measured across the whole profile
+
+Full `-Ptrace-replay`: 800 run, **7 failures against the baseline's 6**. The extra one is
+`TestS2EhzHalfpipeRoundTripChain`, green on base, failing on 2 axes that are both one row
+early (`ss -> seg2_ehz1` expected 9675 actual 9674). The S1 chain is unchanged at 22 axes
+and the S3K chain is unchanged. Every added field anywhere is the same `-1`.
+
+So the candidate's entire remaining cost is one row on the gap stamp. It is parked rather
+than merged: it turns a green chain red, which is not a trade to take unasked.
