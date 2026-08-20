@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Invisible barriers balance at their subtype-derived ROM `obActWid`.**
+  `Invis_Main` computes the byte as `((subtype & $F0) + $10) >> 1` and stores it
+  (`docs/s1disasm/_incObj/71 Invisible Solid Barriers.asm:22-27`), giving anything
+  from 8 to 120 by placement — sbz1 alone places subtypes `$70` and `$61`, or 64
+  and 56. The engine already evaluated that expression for the collision width but
+  handed the balance test the shared default of 16, so on every barrier whose
+  subtype was not `$1x` the player balanced on the wrong edges of a surface he
+  stands on as ordinary floor. `Invis_Solid`'s separately padded
+  `d1 = obActWid + sonic_solid_width` is unchanged.
+
+### Fixed
 - **The sideways spring balances at its ROM `obActWid` of 8, not the shared 16.**
   `Spring_Main` writes `move.b #32/2,obActWid(a0)` for every spring and then
   overwrites it with `move.b #16/2,obActWid(a0)` on the `btst #4` sideways branch

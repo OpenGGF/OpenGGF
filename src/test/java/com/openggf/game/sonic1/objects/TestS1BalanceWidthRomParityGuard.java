@@ -150,6 +150,12 @@ class TestS1BalanceWidthRomParityGuard {
                         + "btst #4 sideways branch that also selects Spring_LR; the downward branch "
                         + "leaves it alone. Full-solid, so the byte is supplied at "
                         + "getOnScreenHalfWidth(). Spring_LR d1 is #16/2+sonic_solid_width = $13 at :117"));
+        ROM_ACT_WID.put("Sonic1InvisibleBarrierObjectInstance", new Entry(dynamic("((subtype & $F0) + $10) >> 1"), Disposition.DECLARES_OWN_WIDTH,
+                "71 Invisible Solid Barriers.asm:22-27",
+                "8 to 120 by placement; sbz1 alone places $70 and $61, giving 64 and 56. Full-solid, "
+                        + "so the byte is supplied at getOnScreenHalfWidth(); the cull consumer is "
+                        + "dormant because Invis_Solid gates on ChkObjectVisible, which never reads "
+                        + "obActWid. Invis_Solid d1 is obActWid+sonic_solid_width at :43-45"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -196,7 +202,6 @@ class TestS1BalanceWidthRomParityGuard {
         for (Deferred deferred : List.of(
                 new Deferred("Sonic1SpikeObjectInstance", -1, "36 Spikes.asm:23-28,46 (subtype table: 20/16/4/28/64/16)"),
                 new Deferred("Sonic1PushBlockObjectInstance", -1, "33 MZ, LZ Pushable Blocks.asm:23-24,48 (16 or 64)"),
-                new Deferred("Sonic1InvisibleBarrierObjectInstance", -1, "71 Invisible Solid Barriers.asm:26-27 (subtype-derived)"),
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
                 new Deferred("Sonic1EdgeWallObjectInstance", 8, "44 GHZ Edge Walls.asm:22"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
