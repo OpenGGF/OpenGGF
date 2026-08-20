@@ -100339,3 +100339,42 @@ segment shows a single slot's placement propagating 450 frames into a physics di
 **Not a candidate for a local fix.** Nothing here should be corrected by nudging the fan or the
 staircase into a different slot; the ordering has to fall out of the allocation history. Any
 slot number chosen to make frame 4305 land is a fitted model by construction.
+
+## 2026-08-20 — Omitted title-card art work: correct in principle, parked on the matrix
+
+Landed as `ad5f5b5dc` and reverted after measurement. `Obj_TitleCardInit`
+(sonic3k.asm:62121-62164) queues its four archives on the object's first dispatch, before
+anything is drawn, so the work belongs to the owner's creation rather than to its
+presentation. The omitted-presentation model kept the owner's later
+`Obj_TitleCardWait2` `LoadEnemyArt` handoff but not its entry art. Restoring it made the
+omitted owner queue the four archives and dispatch once per held row in the object-scan
+position.
+
+**It does what it was designed to do.** On the S3K complete-emeralds chain the engine now
+submits `#97`-`#100` as `0xD6F28`→`0xA000`, `0x15C3A2`→`0xA200`, `0xD6D84`→`0xA7A0`,
+`0x39BEDA`→`0xA9A0` — matching the recorded sources, destinations and fingerprints — and
+the unmatched set drops from six ordinals to two. The first unmatched decompression edge
+moves from raw frame 7056 to 7129, into the level-art span.
+
+**The matrix disqualifies it.** Same-tree control, `-Ptrace-replay`, both arms, neither
+truncated (6 `Tests run: 0,` lines each):
+
+| Arm | Tests | Failures | Errors |
+|---|---|---|---|
+| control | 800 | 6 | 0 |
+| candidate | 798 | 6 | 31 |
+
+Four previously green classes go red — `TestS3kCnzTraceReplay`, `TestS3kMgzTraceReplay`,
+`TestS3kMgzF498AirRollPhysics`, `TestS3kAizPrefixClosureContract` — with 26 of the new
+errors being `runtime-art queue is not idle: s3k_kos_module`, plus
+`pending recorded hardware submissions at prefix end` and two `S3K KosM module FIFO is
+full` from `queueStarPostBonusArt`.
+
+The diagnosis is scope, not principle: the change queues the card archives at **every**
+omitted presentation, including the standalone headless level boots those fixtures perform
+before their recorded window opens. The chain's `aiz_5 -> hcz` boundary needs the work; a
+standalone segment fixture's initial boot does not, and its recording carries no such
+submissions. The distinguishing question is whether the recorded stream covers this load —
+not a zone, game or route — and answering it properly is the next round's design problem.
+Parked here rather than fitted with a gate under time pressure. The remaining `#101`/`#102`
+are still the submission-ordering question, unchanged.
