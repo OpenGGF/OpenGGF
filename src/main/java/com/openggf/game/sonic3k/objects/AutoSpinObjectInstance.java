@@ -12,6 +12,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -113,9 +114,38 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
         checkPlayerCrossing(player, true);
 
         AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
-        if (nativeP2 != null) {
+        if (nativeP2 != null && !skipsNativeP2(nativeP2)) {
             checkPlayerCrossing(nativeP2, false);
         }
+    }
+
+    /**
+     * Whether Player 2 is not checked for a crossing this frame.
+     *
+     * <p>Both main routines load Player 2 and then read
+     * {@code Tails_CPU_routine} before the check, branching past it when the
+     * word is 4 -- horizontal at docs/skdisasm/sonic3k.asm:42362-42364,
+     * vertical at :42489-42491. Routine 4 is the {@code Tails_FlySwim_Unknown}
+     * entry of {@code Tails_CPU_Control_Index} (:26368-26371): a carry or
+     * flight owner is driving Tails, and the ROM leaves him to it rather than
+     * rolling him out from under it.
+     *
+     * <p>The skipped branch is only the P2 check; both routines fall into the
+     * same {@code Delete_Sprite_If_Not_In_Range}, so the object's own lifetime
+     * is unaffected. The crossing state initialised at :42340-42348 is likewise
+     * unconditional and is left alone.
+     *
+     * <p>S2's {@code Obj48} reads the same word for the same purpose
+     * (docs/s2disasm/s2.asm:51316-51319), which
+     * {@code LauncherBallObjectInstance} already honours -- this is the ROM's
+     * general "a flight owner has Tails" gate, not an AutoSpin special case.
+     */
+    private boolean skipsNativeP2(AbstractPlayableSprite nativeP2) {
+        if (!nativeP2.isCpuControlled()) {
+            return false;
+        }
+        SidekickCpuController controller = nativeP2.getCpuController();
+        return controller != null && controller.isInRomFlySwimCpuRoutine();
     }
 
     /**
