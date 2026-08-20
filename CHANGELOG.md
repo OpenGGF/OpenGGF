@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The S3K collapsing platform's release dispatch must not cancel the other
+  player's solid pass.** ROM `loc_205DE` (docs/skdisasm/sonic3k.asm:44850-44859)
+  runs `sub_205B6` -- one `SolidObjectTopSloped2` pass covering *both* players --
+  *before* it decrements `$38`, rewrites the action pointer and calls `sub_205FC`
+  for Player 1 and then Player 2. The engine splits that single pass into one
+  per-player solid callback, so Player 1's release promoted the platform to its
+  released state and cleared `releasePending` before Player 2's callback ran,
+  silently withdrawing the solid pass the ROM had already given Player 2 on that
+  dispatch. Losing that pass costs the sidekick his fresh-landing seat one
+  dispatch early, so the overlapping neighbouring platform becomes a *continued*
+  ride a frame early and the sidekick drops the one pixel between
+  `surface - y_radius - 1` (`loc_1E45A`, :42004-42019) and `surface - y_radius`
+  (`loc_1E260`, :41744-41752). Segment 6 of the S3K complete-emeralds chain moves
+  its first non-camera mismatch from frame 167 to frame 3245.
+
+### Fixed
 - **The S3K collapsing platform's collapse trigger is a fresh read, not a contact latch.**
   ROM `loc_205A6` (docs/skdisasm/sonic3k.asm:44826-44830) re-reads
   `status(a0) & standing_mask` at every dispatch entry, so `$3A` reflects the

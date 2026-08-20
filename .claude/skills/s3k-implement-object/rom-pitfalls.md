@@ -3224,3 +3224,51 @@ When porting a solid object, therefore:
 
 **Originating commit.** `<pending: S3K f167 handover>` — see `docs/status/trace-frontier-log.md`,
 2026-08-20, for the PC evidence and the unresolved engine-routing contradiction.
+
+## A per-player release must not withdraw the other player's solid pass from the same dispatch
+
+ROM object routines that release a rider do it **after** the dispatch's solid pass, and the
+solid pass covers both players in one call. `loc_205DE` (`docs/skdisasm/sonic3k.asm:44850-44859`)
+is the canonical shape:
+
+```
+loc_205DE:
+        bsr.w   sub_205B6          ; SolidObjectTopSloped2 -- BOTH players seated here
+        subq.b  #1,$38(a0)
+        bne.s   locret_2061E
+        move.l  #loc_20620,(a0)    ; object stops being solid from the NEXT dispatch
+        lea     (Player_1).w,a1
+        moveq   #p1_standing_bit,d6
+        bsr.s   sub_205FC          ; release P1
+        lea     (Player_2).w,a1
+        moveq   #p2_standing_bit,d6
+                                   ; falls through: release P2
+```
+
+The engine splits that one pass into a **per-player** solid callback. So an engine object
+that flips its own "no longer solid" state inside Player 1's release callback silently
+withdraws the pass Player 2 was entitled to on the same dispatch — the ROM had already
+seated them before the release was even considered.
+
+The symptom is not a missing collision. It is the *next* object in the batch taking a
+different path: the player it should have re-landed becomes a continued ride instead (see
+the standing-bit/formula entry above), and the sidekick moves one pixel a frame early. Nothing
+looks broken at the release site; the damage shows up in a different object.
+
+When porting any ROM routine of this shape:
+
+- **Keep the whole dispatch solid.** Mark the release dispatch with a flag set when the
+  release fires and cleared at the top of the next `update()`, and report solid while it is
+  set. The ROM's guarantee is per-*dispatch*, not per-*player*.
+- **Do not gate that on "was already riding".** `sub_205B6` is unconditional; a rider record
+  the engine happens not to hold is not a ROM predicate.
+- **Check the release's own guard mirrors `sub_205FC`'s `btst d6,status(a0)`.** A release
+  loop that runs for both players releases neither one that the object does not actually
+  hold the standing bit for.
+- **Suspect this whenever a two-player trace diverges on the frame an object stops being
+  solid, and the diverging player is the one the engine processes second.** Log the object's
+  per-player solid callbacks with identity, state and pending-release: the missing callback
+  is visible immediately.
+
+**Originating commit.** S3K complete-emeralds segment 6, first non-camera mismatch
+f167 -> f3245. See `docs/status/trace-frontier-log.md`, 2026-08-20.

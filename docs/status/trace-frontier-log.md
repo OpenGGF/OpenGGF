@@ -92402,3 +92402,127 @@ Tails on each of f142-168 -- not which state it holds. Both branches are informa
 Five diagnoses have now died on this object family, every one to a probe and several of them
 mine. The ROM mechanism above is measurement; the engine routing story is not, and the
 difference is deliberate.
+
+## 2026-08-20 — f167 settled: it was never a formula-routing defect
+
+Branch `bugfix/ai-s3k-f167-routing-r1` off `24ddb7e95`. Fix landed.
+
+### The handoff's blocker is REFUTED, and the refutation was one probe
+
+The previous entry recorded a blocker: the engine routes the y formula on its own
+`riding` state rather than on the object's standing bit, which "predicts the engine takes
+the continued-ride formula from f142", 25 frames before the measured divergence. It asked
+the next lane to settle that contradiction first.
+
+Settled: **the prediction is wrong, and the engine's routing was correct all along.** A
+write hook on `AbstractSprite.setY` logging the calling site, attributed to trace rows by
+the comparator cursor, shows Tails' y on rows 142-166 written **twice per row, both times
+by the fresh-landing snap** (`ObjectSolidContactController.resolveContactInternal:4460` via
+`resolveSlopedContact:3972`) -- once by slot 05 (`0x45b`) and once by slot 08 (`0x459`,
+top-left; `0x0468` centre, matching ROM). Neither write comes from the continued-ride site
+at `:3985`. The engine agrees with the ROM formula-for-formula across the whole window.
+
+So this was branch one of the two the handoff offered, and the question it reduces to is
+the one that brief named: *what makes the engine's f167 different?* Answer: **one frame of
+slot 05's last seat**, exactly as predicted.
+
+### What actually breaks, measured at the callback
+
+Instrumenting `onSolidContact` with object identity, player, `releasePending`, `state` and
+`objStandingBit`:
+
+```
+row 166:  slot05/Sonic  releasePending=false state=2 stayTimer=1
+          slot05/Tails  releasePending=false state=2 stayTimer=1   -> y 0x45b
+          slot08/Tails  releasePending=false state=0               -> y 0x459   (0x0468 centre, correct)
+row 167:  slot05/Sonic  releasePending=TRUE  state=2 stayTimer=0
+          slot08/Tails  releasePending=false state=0               -> y 0x45a   (0x0469 centre, WRONG)
+                        ^ slot05/Tails is GONE
+```
+
+Slot 05's Tails callback does not fire at all on f167. The release branch never runs for
+Tails; it runs for **Sonic**, first in the batch, and sets `state = 3` and
+`releasePending = false`. `solidForTransitionState` then evaluates `state >= 3` for Tails
+and returns `releasePending && alreadyRiding` = **false**. Player 1's release withdrew
+Player 2's solid pass mid-frame.
+
+ROM does not have that ordering available to get wrong. `loc_205DE`
+(`sonic3k.asm:44850-44859`) is `bsr.w sub_205B6` **first** -- one `SolidObjectTopSloped2`
+call covering both players -- and only then `subq.b #1,$38`, the action-pointer rewrite,
+and `sub_205FC` for P1 followed by P2. Both players are already seated before any release
+is considered. That is why the ROM write hook in the previous entry sees `pc=0001E490
+a0slot=5` on f167 and not on f168.
+
+Losing that seat one dispatch early is what flips slot 08 from a fresh landing to a
+continued ride a frame early, which is the one pixel. The standing-bit/formula mechanism
+the previous entry established is correct and is untouched; the engine simply arrived at
+the switch one dispatch too soon.
+
+### The fix
+
+`Sonic3kCollapsingPlatformObjectInstance` gains `releaseDispatchActive`, set when the
+release branch fires and cleared at the top of the next `update()`. While it is set,
+`solidForTransitionState` returns solid unconditionally, mirroring `sub_205B6` preceding
+both `sub_205FC` calls. No constant, no timer, no zone/route/frame predicate; the rule is
+the ROM's instruction order.
+
+Tails is still not released, matching the ROM: after Sonic's release clears
+`releasePending`, the release branch's own guard is false for Tails, so `sub_205FC`'s
+`btst d6,status(a0)` early-return is reproduced by the existing guard rather than by a new
+one.
+
+### Measurement
+
+Command (both trees, same command, `git rev-parse` pinned):
+
+```
+mvn -o -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -DfailIfNoTests=false \
+    -Ds1.rom.path=... -Ds2.rom.path=... -Ds3k.rom.path=... test
+```
+
+| tree | trace-replay | default suite | guards |
+|---|---|---|---|
+| base `24ddb7e95` | 792 run, 4 failures, 4 skipped | 15175 run, 54 failures, 73 errors, 22 skipped | -- |
+| with fix | 792 run, 4 failures, 4 skipped | 15175 run, 54 failures, 73 errors, 22 skipped | 499 run, 0 failures |
+
+The trace-replay red set is **name-identical** between the two trees, not merely
+equal in count: `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`,
+`TestS3kSonicTailsCompleteEmeraldRunChain`. In the default suite, **zero** classes are red
+only with the fix; six are red only at base (`TestTornadoObjectInstance` x5,
+`TestWfzTornadoThrusterRendering`), which is the known reused-fork ambient-state noise and
+is attributable in neither direction.
+
+Chain movement:
+
+- segment 4: **292 errors, unchanged**.
+- segment 6: 8,941 -> **8,940** errors; first non-camera mismatch **f167 -> f3245**,
+  `sidekick_y rom=0x05C3 engine=0x05C4`.
+- `run_boundary.position.x` expected 14007 actual 14008: unchanged, present at base.
+
+The error count barely moves because the f167 pixel cascades into a long tail that the
+later frontier still carries. The frontier moved 3,078 frames; that is the result, not the
+count.
+
+### The new frontier, and what is NOT established
+
+f3245 is the **same signature** -- sidekick y one pixel low, `0x05C3` vs `0x05C4`. It is
+plausibly the same platform family later in the act, and it is plausibly the residual of
+this same ordering seen elsewhere. **Neither was measured.** Do not brief it as a known
+cause; instrument it the same way, which now costs one build and a 36-second chain run.
+
+Also not established, and worth someone's attention because it is a genuine model gap this
+round surfaced without needing it: the engine's `hasObjectStandingBit` reported **true for
+both** slot 05 and slot 08 simultaneously for Tails across f164-166. In the ROM only one
+object can hold a player's standing bit, because `RideObject_SetRide` `bclr`s the previous
+owner's (`:42027-42031`). The engine's object-side standing bit is therefore not modelling
+the exclusive ping-pong. It did not have to be fixed to close f167, and it was deliberately
+left alone rather than folded in.
+
+### Not landed, still available
+
+The `releaseSolidPassExposed` two-step -> one-step collapse from the previous entry was
+**not** taken up. It remains measured byte-identical and remains a clean latent-site
+landing for whoever wants it. Note that it is adjacent to this change: both concern the
+release dispatch's solid pass, so re-measure rather than trusting the earlier
+byte-identical result.

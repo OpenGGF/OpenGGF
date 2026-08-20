@@ -163,6 +163,17 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // then releases the player. (ROM: loc_205DE countdown -> sub_205FC release)
     private int solidStayTimer;
     private boolean releasePending;
+    /**
+     * ROM {@code loc_205DE} (sonic3k.asm:44850-44859) runs {@code sub_205B6} --
+     * one {@code SolidObjectTopSloped2} pass covering BOTH players -- before it
+     * decrements {@code $38}, rewrites the action pointer and calls
+     * {@code sub_205FC} for Player 1 and then Player 2. The engine splits that
+     * single pass into one per-player solid callback, so Player 1's release can
+     * promote {@link #state} to 3 before Player 2's callback has run. Without
+     * this flag the second player silently loses the solid pass the ROM had
+     * already given them on that dispatch.
+     */
+    private boolean releaseDispatchActive;
     private boolean releaseSolidPassExposed;
 
     /** This dispatch is the native CreateFragments dispatch, which skips {@code sub_205B6}. */
@@ -257,6 +268,12 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     boolean solidForTransitionState(boolean alreadyRiding) {
         if (state >= 3) {
+            // ROM loc_205DE's sub_205B6 solid pass precedes both sub_205FC
+            // release calls, so every player still standing on this dispatch
+            // gets the pass regardless of which one the engine released first.
+            if (releaseDispatchActive) {
+                return true;
+            }
             // sub_205FC runs for Player 1 and Player 2 in one object dispatch.
             // Player 1 may promote the engine state before the separate P2
             // solid callback, so retain solidity only for an already-recorded
@@ -350,6 +367,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
             // matching point to clear ride state after the no-movement frame.
             state = 3;
             releaseSolidPassExposed = false;
+            releaseDispatchActive = true;
             player.setAir(true);
             player.setOnObject(false);
             publishReleaseAnimationState(player);
@@ -391,6 +409,8 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         transitionFrameSlopeSkip = false;
+        // A new dispatch: the previous dispatch's sub_205B6 pass is over.
+        releaseDispatchActive = false;
         switch (state) {
             case 0 -> {
                 // ROM loc_20594 (sonic3k.asm:44819-44824): the $38 countdown is
