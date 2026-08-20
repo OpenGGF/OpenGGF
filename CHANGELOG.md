@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A plain level-to-level run boundary no longer admits its destination one-shot, and a
+  segment no longer stops short of its own declared rows.** Two defects met at the S3K
+  Sonic-and-Tails `aiz_5 -> hcz` seam. First, a segment was walked for a count of FRAMES
+  while the cursor it must land is a count of ROWS; the two agree only while every step
+  consumes a row, and the transition freeze spends steps that consume none, so the walk
+  stopped short of the segment's declared end by however many such steps it spent. The
+  budgeted frames are still stepped, and the drive now steps on while the comparator says
+  it still has recorded rows -- additive, so no boundary that works today steps a frame
+  fewer. Second, the recorder leaves movie rows between adjacent segments, and the
+  destination is not admissible until the shared cursor reaches its first recorded row;
+  where a source's frame budget happened to exceed the rows it owed, the surplus carried
+  the cursor across that gap and the one-shot admission worked by luck. That boundary now
+  polls admission and steps while the coordinator legitimately denies -- the shape
+  `admitLevelWhenReady` already applies to boundaries carrying a transition record, and
+  what production does on every tick. The gap is crossed by stepping real engine frames,
+  never by seeking the cursor, which at a long gap (S2's `seg4_ehz1 -> seg5_ehz2` spans 171
+  rows) would step over recorded rows. The S3K chain now admits segment 9 and enters HCZ1.
+
 - **A level run segment no longer has to own the source level across rows the ROM spends
   loading the next one.** `TraceRunPlaybackCoordinator.ownsCurrentSegment` demanded the
   engine still report the source segment's zone/act on every recorded row up to the

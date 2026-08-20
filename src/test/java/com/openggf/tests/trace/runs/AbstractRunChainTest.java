@@ -769,7 +769,7 @@ abstract class AbstractRunChainTest {
          * caller can keep stepping while the coordinator legitimately denies.
          * Returns true only when the coordinator actually admitted.
          */
-        private boolean tryAdmitLevel(
+        boolean tryAdmitLevel(
                 TraceRunManifest.Transition boundary,
                 int observedBk2Frame,
                 GameMode mode,
@@ -1284,6 +1284,8 @@ abstract class AbstractRunChainTest {
                 int remainingFrames = TraceRunReplayWalker.remainingSegmentFrames(
                         seg.trace().frameCount(), activeComparator.cursor());
                 stepFrames(loop, remainingFrames);
+                topUpUnconsumedSegmentRows(
+                        loop, activeComparator, seg.trace().frameCount(), stepCap);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
                 dynamicArtSegments.enterGap();
@@ -1349,10 +1351,9 @@ abstract class AbstractRunChainTest {
                 int rowsConsumed = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                runCoordinator.admitLevel(
-                        null, playback.getCursorFrame(),
-                        loop.getCurrentGameMode(), rowsConsumed, false,
-                        runCoordinator.latestLoadReceipt());
+                admitPlainLevelBoundaryWhenReady(
+                        loop, playback, runCoordinator, next, rowsConsumed,
+                        stepCap);
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed,
                         i + 1);
@@ -3872,6 +3873,88 @@ abstract class AbstractRunChainTest {
             }
             return null;
         });
+    }
+
+    /**
+     * Steps on past a segment's frame budget while it still has recorded rows
+     * left to consume.
+     *
+     * <p>The budget above is a count of FRAMES; the cursor it is meant to land
+     * is a count of ROWS. They agree for a segment whose every step consumes one
+     * row, which is nearly every segment. They do not agree where the drive
+     * spends a step WITHOUT consuming a row -- the transition freeze's
+     * request-consume frame is one, and asking for the freeze is itself another
+     * -- so the walk stopped short of the segment's declared end by however many
+     * such frames it spent, and the shared cursor never reached the row the next
+     * segment is admitted from.
+     *
+     * <p>Strictly additive: the budgeted frames are still stepped first and this
+     * loop exits immediately for a segment whose rows are already consumed, so no
+     * boundary that works today steps a frame fewer. {@code
+     * hasUnconsumedRecordedRows} is the comparator's own answer about its own
+     * cursor -- the same predicate the freeze itself consults -- so no row count,
+     * tail length or segment identity is encoded here. The loop is bounded by
+     * the manifest-derived {@code stepCap} every other await in this class uses.
+     */
+    /**
+     * Admits the destination of a plain level-&gt;level boundary, stepping the
+     * engine while the coordinator legitimately denies -- the same shape
+     * {@link #admitLevelWhenReady} already applies to boundaries that carry a
+     * transition record, and the same thing production does, where
+     * {@code TraceSessionLauncher#runCoordinatorTick} polls
+     * {@code beforeAdmission} every tick and keeps stepping while it is denied.
+     *
+     * <p>This branch admitted one-shot, which is correct only when the
+     * destination is admissible the instant its level became active. The
+     * recorder leaves movie rows between adjacent segments -- every adjacent
+     * pair in the committed S3K Sonic-and-Tails manifest does -- and the
+     * destination is not admissible until the shared cursor reaches its first
+     * recorded row. Where the source's frame budget happened to exceed the rows
+     * it owed, the surplus frames carried the cursor across that gap and the
+     * one-shot admission worked by luck; where the budget matched the rows
+     * exactly, as at the S3K seg 8 -&gt; 9 seam, nothing crossed it and the
+     * destination was refused one row short.
+     *
+     * <p>The gap is crossed by stepping real engine frames, never by seeking the
+     * cursor: a seek would step over recorded rows at a boundary whose gap is
+     * long (S2's {@code seg4_ehz1 -> seg5_ehz2} spans 171 rows), and the engine
+     * must genuinely become admissible either way. Additive: a boundary that
+     * admits immediately exits on iteration zero having stepped nothing, and the
+     * loop is bounded by the manifest-derived {@code stepCap}.
+     */
+    private void admitPlainLevelBoundaryWhenReady(
+            GameLoop loop, PlaybackDebugManager playback,
+            HeadlessRunCoordinatorAdapter runCoordinator, SegmentPlan next,
+            int rowsConsumed, int stepCap) {
+        for (int step = 0; step < stepCap; step++) {
+            if (runCoordinator.tryAdmitLevel(
+                    null, playback.getCursorFrame(),
+                    loop.getCurrentGameMode(), rowsConsumed,
+                    runCoordinator.latestLoadReceipt())) {
+                return;
+            }
+            stepEngineFrame(loop);
+        }
+        runCoordinator.admitLevel(
+                null, playback.getCursorFrame(),
+                loop.getCurrentGameMode(), rowsConsumed, false,
+                runCoordinator.latestLoadReceipt());
+    }
+
+    private void topUpUnconsumedSegmentRows(
+            GameLoop loop, LiveTraceComparator comparator,
+            int segmentFrameCount, int stepCap) {
+        int steps = 0;
+        while (comparator.hasUnconsumedRecordedRows()) {
+            if (steps++ >= stepCap) {
+                throw new AssertionError(
+                        "segment did not consume its remaining recorded rows"
+                                + " within " + stepCap + " extra steps (cursor "
+                                + comparator.cursor() + " of "
+                                + segmentFrameCount + ")");
+            }
+            stepEngineFrame(loop);
+        }
     }
 
     private void stepFrames(GameLoop loop, int frameCount) {
