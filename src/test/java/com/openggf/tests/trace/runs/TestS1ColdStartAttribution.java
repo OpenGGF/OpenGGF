@@ -1,0 +1,85 @@
+package com.openggf.tests.trace.runs;
+
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Attribution control for the tail of {@code s1-sonic-complete-withemeralds}.
+ *
+ * <p>When a change lets the chain reach segments it never reached before, the
+ * ordinary chain gives no control arm for those segments: the unchanged code
+ * stops earlier and never executes them, so their divergences cannot be
+ * attributed either way. Segments 22, 23 and 24 became visible exactly that
+ * way, and were undetermined as a result.
+ *
+ * <p>This boots the run <em>at</em> segment 22 via
+ * {@link AbstractRunChainTest#assertChainReplayFromSegment}, carrying none of
+ * the state segments 0-21 would have left. All three segments diverge
+ * identically to the full chain -- same first-error frame, same field, same
+ * ROM and engine values, and the same error counts (15,564 / 54 / 18,722).
+ * They are therefore owned by their own entry conditions, are not carry-in,
+ * and are not caused by whatever let the chain arrive there.
+ *
+ * <p><b>This is a characterisation pin, in the shape of
+ * {@link TestS1CompleteEmeraldRunPrefix}'s ratcheting pins.</b> It asserts that
+ * the defects are still <em>present and unchanged from a cold start</em>, which
+ * is what makes them attributable. Fixing a defect will fail this test: update
+ * the pin, and never relax one to keep it quiet. It is not a claim that the
+ * divergences are acceptable.
+ */
+@RequiresRom(SonicGame.SONIC_1)
+class TestS1ColdStartAttribution extends AbstractRunChainTest {
+
+    private static final Path RUN_DIR = Path.of(
+            "src", "test", "resources", "traces", "s1", "runs",
+            "s1-sonic-complete-withemeralds");
+
+    /** Segment 22 (`syz3_2`); segments 23 and 24 are `lz1` and `lz1_2`. */
+    private static final int START_SEGMENT = 22;
+
+    @Test
+    void segments22To24DivergeIdenticallyFromAColdStart() throws Exception {
+        AssertionError failure = null;
+        try {
+            assertChainReplayFromSegment(RUN_DIR, START_SEGMENT);
+        } catch (AssertionError e) {
+            failure = e;
+        }
+        // Re-based: segment 22 boots as 0, so 23 and 24 are 1 and 2.
+        String report = failure == null ? "" : failure.getMessage();
+        // The boot segment's own comparison is written to its report but is
+        // NOT raised as a chain axis -- a real limitation of booting at a
+        // segment, and the reason this reads segment 0 from disk rather than
+        // from the failure message. Read the report, not the axis list.
+        String bootReport = Files.readString(Path.of(
+                "target", "trace-reports",
+                "s1-sonic-complete-withemeralds_seg0_report.json"));
+        assertTrue(
+                bootReport.contains("\"errorCount\" : 15564")
+                        && bootReport.contains("\"frame\" : 8115")
+                        && bootReport.contains("\"field\" : \"x_sub\""),
+                "segment 22 must still diverge identically from a cold start; "
+                        + "if it was fixed, update this pin. Report:\n"
+                        + bootReport);
+        assertTrue(
+                report.contains("segment 1 of s1-sonic-complete-withemeralds "
+                        + "diverged: 54 physics comparator errors, first "
+                        + "non-camera mismatch at frame 1 field "
+                        + "queue.s1_nemesis_plc.remaining_work rom=17 engine=20"),
+                "segment 23 must still diverge identically from a cold start; "
+                        + "if it was fixed, update this pin. Report:\n" + report);
+        assertTrue(
+                report.contains("segment 2 of s1-sonic-complete-withemeralds "
+                        + "diverged: 18722 physics comparator errors, first "
+                        + "non-camera mismatch at frame 1 field "
+                        + "queue.s1_nemesis_plc.remaining_work rom=17 engine=20"),
+                "segment 24 must still diverge identically from a cold start; "
+                        + "if it was fixed, update this pin. Report:\n" + report);
+    }
+}
