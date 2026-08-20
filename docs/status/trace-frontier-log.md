@@ -98407,3 +98407,123 @@ base and in the *control* on this one, always as
 fork, 10/10 green re-run alone. Both default arms are otherwise 15194 / 51 failures with
 identical class sets (1918) and `Tests run: 0,` counts (14). Not attributable to any
 change under test, in either direction.
+## 2026-08-20 -- Segment membership is the drive's to declare, not the cursor's to infer
+
+Branch `bugfix/ai-walker-boundary-ownership-r1`, based on `origin/develop` at `7c907611f`.
+Landed.
+
+### The defect
+
+`TraceRunReplayWalker.HardwareTimingCoordinator.beginPlaybackFrame` decided which segment a
+frame belonged to purely by cursor arithmetic -- scanning segments last-to-first and taking
+the first whose `bk2FrameOffset()` the cursor had passed. It had no notion of the drive
+being *between* segments.
+
+Across a transition the drive releases its row owner and the shared BK2 cursor keeps
+free-running through choreography frames the recording never covers; the drive re-seeks it
+to the destination's true first row only when the destination's load actually happens. So
+during a transition the cursor is not evidence of anything. At the S1 complete run's `lz3`
+-> `slz1` boundary it ran past `slz1`'s offset, 263 choreography frames were latched as the
+destination's rows 0-262, and the legitimate restart at row 0 was refused by the port:
+
+```
+hardware timing raw_frame moved backward: previous=262, current=0
+```
+
+The recorded stream is not backward and the port is not wrong. The drive latched 263 rows
+the destination had not started. The monotonicity assertion was not relaxed and the port was
+not made lenient.
+
+### The rule
+
+Membership is declared by the drive, at the points where it already enters or leaves a
+segment; the cursor only positions the row *within* the segment the drive says it is in.
+`enterSegment(index)` / `enterTransitionGap()` on the coordinator; a frame arriving while
+the drive is between segments is a gap however far the cursor has run. Advancing to a later
+segment can no longer happen as a side effect of a frame arriving.
+
+The declaration sites are the drive's own ownership boundaries, not new bookkeeping:
+
+- coordinator drive -- the destination admission receipt (`applyRunDestinationAdmission`),
+  which already performed the schedule handoff there;
+- advancer drive -- `applyRunAdvanceAfterProduction`, its counterpart;
+- chain walk -- the same places it attaches and releases its row owner
+  (`attachPreparedLevelSegment`, `attachReturnedLevelSegment`, `attachPreparedInterior`,
+  the special-stage interior and its presentation bridge, and the three
+  `probe.setDelegate(null)` transition sites).
+
+Nothing keys on a frame index, zone, route or game name, and no row count or offset is
+introduced. This is a statement about *which* already-recorded row a frame is, made by the
+component that knows -- it does not decide what happens on that row.
+
+### Validated across boundaries, not at one
+
+The rule needed no special case at any boundary kind. S1 level-to-level, special-stage
+return and bonus boundaries; S2's stage-exit and title-card seams; S3K's plain level-to-level
+seams -- all three chains reach exactly as far as before on `develop`, with byte-identical
+axis lines.
+
+The uncompared special-stage interior did need something the old scan supplied implicitly:
+the walk drives its rows itself with no comparator attached, so it now declares entry rather
+than being carried there by the cursor. Its presentation bridge does the same. Both are
+genuine ownership statements, not carve-outs.
+
+### Measured
+
+Same-tree control (detached to `origin/develop` inside the candidate worktree), all three
+ROM paths explicit, `-Dmse=off`, JDK 21.
+
+| Arm | `-Ptrace-replay` | Failing set | Axis lines |
+|---|---|---|---|
+| control | 799 run / 6 failures / 4 skipped | -- | -- |
+| candidate | 800 run / 6 failures / 4 skipped | identical | identical (diff 0) |
+
+The extra test is the new coordinator test below. 163 classes and 6 `Tests run: 0,` lines in
+both arms; chain reach identical on all three chains (`walk-failure` lines diff empty).
+
+`-Pguards`: 500 run, 0 failures. Default suite: 15,194 run, 53 failures / 67 errors in
+**both** arms with an identical failing set -- all pre-existing (the memory-noted ambient
+global-state flakiness), including
+`TestGameLoopTraceRunPostIteration.diagnosticsServiceExposesNoRegistrationOrCapableReference`,
+which fails on `7c907611f` in a clean worktree.
+
+### The instrument, and a correction to the brief that commissioned this
+
+The held branch `bugfix/ai-s1-fixture-landing-r1` carries the S1 complete-run timing
+sidecars. With them installed the defect is observable; without them no coordinator is
+installed at all, which is why the chain is unaffected either way on `develop`.
+
+| Arm (28 sidecars installed) | Result | Axis lines |
+|---|---|---|
+| without this fix | abort at `lz3` -> `slz1`, `raw_frame moved backward: previous=262, current=0` | 18 |
+| with this fix | walk completes every segment; only the terminal assertion remains (`Complete movie must finish in the manifest-declared mode ==> expected: <TITLE_SCREEN> but was: <LEVEL>`) | 46 |
+
+So the fixture reaches past segment 33 -- it reaches the end of the walk. The held branch is
+**not landed here**; only the number is reported.
+
+**A measurement hazard cost two full arms before that table was true.** `git apply --3way`
+of the held branch's diff reported failure on one already-modified file and, in the same
+invocation, silently did not create any of the 28 new `hardware_timing.jsonl` files. Both
+"fixture" arms then ran with no fixture and came out identical to base -- which reads
+exactly like "the defect does not bite". The instrument was only confirmed live by counting
+the sidecar files on disk and seeing `raw_frame` appear in the log at all. **Before believing
+a null result from an instrument, verify the instrument is installed.**
+
+### One real regression, found and fixed
+
+The advancer drive (`runAdvancer`, the older launcher seam) had no explicit entry signal and
+relied on the cursor-driven advance. `TestTraceSessionLauncherRunBranch.admissionLatches\
+ComparedLevelBonusLevelRowsAcrossStructuralHandoffs` caught it -- `expected: <[100, 200,
+300]> but was: <[100]>` -- reproducibly, in isolation, in a class with three unrelated
+pre-existing errors that could easily have absorbed it. Fixed by declaring at
+`applyRunAdvanceAfterProduction`, before any destination owner opens, mirroring the receipt
+path's ordering.
+
+### New coordinator test
+
+`cursorRunningPastTheNextOffsetInAGapLatchesNoDestinationRow` pins the defect's own shape: a
+cursor running across the whole destination range while the drive is in a gap latches
+nothing, and the destination then starts at its own first row. Three existing coordinator
+tests drove two-segment runs with `beginPlaybackFrame` alone, relying on the old inference;
+their drivers now declare entry. Every assertion in them is unchanged -- the subject of all
+three is ordinal seeding across the handoff, not membership.

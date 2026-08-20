@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A trace run's hardware-timing coordinator no longer infers which segment a frame belongs
+  to from the shared BK2 cursor.** `TraceRunReplayWalker.HardwareTimingCoordinator` scanned
+  its segments last-to-first and took the first whose `bk2FrameOffset` the cursor had passed.
+  Across a transition that is not an answer to ask the cursor: the drive releases its row
+  owner, the shared cursor free-runs through choreography frames the recording never covers,
+  and the drive re-seeks it to the destination's true first row only when the destination's
+  load actually happens. At the S1 complete run's `lz3` -> `slz1` boundary the cursor ran
+  past `slz1`'s offset during that choreography, so 263 transition frames were latched as
+  the destination's rows 0-262 -- rows the destination had not started -- and the legitimate
+  restart at row 0 was then refused by the hardware-timing port as a backward `raw_frame`.
+  Segment membership is now the drive's to declare: it says when it has entered a segment
+  and when it is between segments, and the coordinator latches rows only within the segment
+  the drive says it is in. Both run drives declare where they already enter a segment -- the
+  coordinator drive's destination admission receipt and the advancer drive's segment advance
+  -- and the chain walk declares at the same places it attaches and releases its row owner.
+  No frame index, zone, route or game name is consulted. The defect was latent on every
+  chain in all three games: without a recorded timing sidecar no coordinator is installed to
+  observe it.
 - **Sonic 1's giant-ring flag no longer survives the special stage it triggered.**
   `f_bigring` is a level variable: `Level_ClrRam` runs `clearRAM v_levelvariables`
   (`docs/s1disasm/sonic.asm:2742`) and `f_bigring` (`_Variables.asm:285`) sits inside
