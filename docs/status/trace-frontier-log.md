@@ -100693,3 +100693,58 @@ Both arms in the same worktree, candidate `93b6effd2` against control `333195abe
   self-contained unit tests that cannot reach `AbstractRunChainTest`. The candidate's count sits
   inside the control's own range; this is the known reused-fork ambient-state flakiness, not a
   regression, and it is recorded here rather than reported as one.
+
+## 2026-08-21 — S2 segment 15's missing edge is a spurious push against the object Sonic stands on
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` at `907c1069c`.
+
+### The edge shortfall is an animation symptom, not an art fault
+
+Dumping both edge lists across frames 1715-1745 of `seg10_cpz2`, the missing edge is Sonic's
+walk mapping frame **16**: the ROM submits `sonic mf15` at 1724 and `sonic mf16` at 1725,
+the engine submits only the mf15 pair. At 1732 the engine then submits an **extra**
+`sonic mf73` pair, and the ordinals resync by 1733 — which is why this reads as a transient.
+
+Comparing the compared animation fields frame by frame:
+
+| frame | 1724 | 1725-1731 | 1732 | 1733 | 1734+ |
+|---|---|---|---|---|---|
+| ROM `player_mapping_frame` | 15 | **16** | 16 | 15 | 16 |
+| engine | 15 | **15** | **73** | 15 | 16 |
+
+`anim` is `0` (Walk) on both sides throughout. `73` is `$49`, the second frame of
+`SonAni_Push`.
+
+### The cause is the push bit
+
+Probing the engine's walk handler across the window, `push` is **true** from 1725 to 1732.
+S2's walk special handler holds the already-published mapping while the timer runs and only
+selects `SAnim_Push` when the step expires (`docs/s2disasm/s2.asm:38449-38474`), which is
+exactly the shape observed: frame 15 held for eight frames, then `$49`.
+
+The recording contradicts it. `player_status_byte` is `0x49` for the whole window —
+`status.player.pushing` is bit 5, `0x20`, and it is **clear**. The ROM's inertia also keeps
+growing across the window (`-6, -12, -18 … -48`), which a ROM-side wall contact would have
+zeroed.
+
+### Where the engine raises it
+
+A stack probe at the `setPushing(true)` edge names the owner:
+
+```
+ObjectSolidContactController.processInlineObjectForPlayer
+  <- resolveCheckpointForPlayer <- resolveCheckpointBatch
+  <- processCompatibilityCheckpoint <- ObjectManager.processCompatibilitySolidCheckpoint
+```
+
+`groundWall=false`, so this is **not** a terrain ground-wall probe: it is object solid
+contact. Sonic is standing on object `$28` for the whole window
+(`player_stand_on_obj = 28`), walking left at well under a pixel per frame, and the engine
+raises the push bit against the object he is standing on. The ROM's `SolidObject` sets that
+bit on a side contact, not for a rider.
+
+### Not fixed
+
+The remaining question is which `SolidObject` branch the engine is taking for a player
+already riding the object, and it is an object-collision question rather than an animation
+or dynamic-art one. Nothing here was changed; the chain is unchanged at 13 axes.
