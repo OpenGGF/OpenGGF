@@ -747,3 +747,23 @@ divergence per field, not the reported one. The headline tells you where the com
 not where the engine went wrong. And a report format that looks like a full error list but is a
 ring buffer will quietly answer "no errors" — check what the file actually contains before
 trusting a parse of it.
+
+## Twenty-fourth rule: diff failure messages, not class names
+
+A red-set diff by class name **cannot detect a change that alters why an already-red class
+fails**. A lane's own clean sweep contained the evidence that its assertion broke another game's
+chain — that chain class was already red in both arms, so the diff reported "identical red sets"
+while the change had silently replaced the failure underneath it. The regression reached develop
+and blocked an entire game's measurement for an hour.
+
+This is strictly worse than the count-holds-while-membership-moves trap, because here the
+membership did not change either. Nothing about the shape of the result was wrong; the shape was
+simply not a fine enough instrument.
+
+**For any change to shared harness or comparator code, diff the first failure *message* per
+class, not the class list.** Two arms can agree on every class and disagree on every reason.
+
+Companion trap from the same session: `grep "Tests run:.*(Fail|Err)"` matches every line, because
+`Failures: 0` contains `Fail`. It reported 156 red classes out of 162. The correct filter is
+`Failures: [1-9]|Errors: [1-9]`, which gives 4. A filter that matches everything looks like a
+catastrophic regression and is indistinguishable, at a glance, from one.
