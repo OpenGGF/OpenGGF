@@ -47,6 +47,25 @@ public final class Sonic1RuntimeArtCoordinator implements RuntimeArtCoordinator 
         }
     }
 
+    /**
+     * Offers the held iteration's {@code RunPLC} the V-blank-only row the ROM
+     * ran it on. {@code Sonic1PlcService.prepare()} still arms only if its own
+     * submitted job is ready, so a row the recording gives no completion for
+     * leaves the queue exactly as it was.
+     */
+    @Override
+    public void runHeldIterationLoopTail() {
+        Sonic1PlcService service = boundService();
+        // Exactly the complement of the row-shape hold's exemption in
+        // PlcFrameLifecycleCoordinator#prepareAfterLoop: a service whose arm is
+        // its own recorded job runs its held tail here, and every other
+        // configuration still runs it from the closure's own claim. One
+        // mechanism per configuration, never both.
+        if (service != null && service.ownsTimedLoopTailArm()) {
+            service.prepare();
+        }
+    }
+
     @Override
     public void registerRewindAdapters(RewindRegistry registry) {
         Objects.requireNonNull(registry, "registry").register(armTiming);

@@ -29,6 +29,16 @@ All notable changes to the OpenGGF project are documented in this file.
   acceleration shortfall of `$18` cascaded through position, animation and
   dynamic-art edges for the remaining ~4,000 frames: 15,564 comparator errors
   down to 44, and no non-camera physics mismatch left in the segment.
+- **A Sonic 1 main-loop iteration that absorbs a lag V-blank now runs its own
+  `RunPLC` on the row that absorbed it.** `VBlank_Lag`
+  (`docs/s1disasm/sonic.asm:709`) fires inside an iteration that has not reached
+  the loop top's re-arm (`:3000`), so that iteration still reaches `RunPLC`
+  (`:3032`) before its row is sampled. A V-blank-only closure has no preparation
+  boundary of its own, so a hardware-timed PLC arm had no row to run on and
+  slipped to the next ordinary closure -- one row too late for that row's
+  V-blank to service the newly armed entry. `RuntimeArtCoordinator` now offers
+  the held tail its row; whether the arm becomes visible is still decided by the
+  arm's own submitted job, so a row with no recorded completion arms nothing.
 - **The level timer no longer restarts after a giant-ring special-stage return.**
   `Save_Level_Data2` copies the whole `Timer` longword to `Saved2_timer` at giant-ring
   entry (`docs/skdisasm/sonic3k.asm:61745`) and `Load_Starpost_Settings`'s `loc_2D2C2`
