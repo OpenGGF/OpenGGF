@@ -93770,3 +93770,69 @@ The lane that proposed the reopening had a mechanism that fit and went looking f
 *site* rather than for prior work on the site. This frontier has now caught it that way
 twice. The 2026-08-19 entry already held the answer; reading it first would have cost
 minutes and saved two arms.
+
+## 2026-08-20 -- S1 segments 23/24 localised: one skipped PLC service on a segment's first frame
+
+Branch `feature/ai-s1-seg2324-r1` off `03054d929`. **Found, not fixed** -- no engine change
+landed this round.
+
+Segments 23 and 24 are `lz1` and `lz1_2`: the same level, entered twice. Both first diverge
+at **frame 1** on `queue.s1_nemesis_plc.remaining_work rom=17 engine=20` -- same field, same
+frame, same values. They are one defect, not two.
+
+### Measured
+
+Reading the fixtures directly (`aux_state.jsonl`, `load_queue_state`/`s1_nemesis_plc`):
+
+| frame | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| ROM `remaining_work` | 20 | 17 | 14 | 11 | 8 | 5 | 2 |
+
+The ROM services **3 units per frame**. At frame 0 the engine agrees at 20; at frame 1 it is
+still 20, having serviced **none**. It is one frame of service late, not permanently behind.
+
+**The same table appears in `src/test/resources/traces/s1/lz1_completerun`** -- byte-identical
+across frames 0-6 -- and `TestS1Lz1CompleteRunTraceReplay` is **green**, in both arms of the
+2026-08-20 sweep. So the engine services LZ1's first frame correctly when the level is entered
+standalone, and fails to when the same level is entered as a chain segment. **The defect is in
+chain segment entry, not in LZ1 or in the PLC tables.**
+
+Consistent with a single skipped frame rather than a standing offset: segment 23 carries only
+54 errors over 3,396 frames, and its surviving late-run consequence is an offset of exactly
+one frame's service -- `dynamic_art.edge[*].transfer_id` rom=872 engine=869, **3 behind**, one
+frame's 3 units. (The 54 errors are consistent with a short catch-up window; the full
+per-frame error list was not enumerated, so "catches up and stays caught up" is inferred, not
+measured.)
+
+ROM side, for whoever fixes it: `PLC_LZ` is 12 entries and `PLC_LZ2` is 13, but `Nem_LzSonic`
+is inside `if Revision=0` (`_inc/Pattern Load Cues.asm:154-156`) and this ROM is REV01, so
+`PLC_LZ2` contributes 12. Do not "fix" the count to 13.
+
+### My bridge change is not the cause -- killed on mechanism, not on an absent control
+
+`recordedRowIsLagVint` is the only term `029cab6d9` adds, and it fires only on recorded lag
+rows. **`lz1` and `lz1_completerun` both record `lagged=false` on frames 0-6.** The term
+cannot fire where the divergence starts, so the change cannot produce this signature by the
+mechanism it introduces.
+
+### Correction to this log's own 2026-08-20 sweep entry
+
+That entry called segment 22 and the two dynamic-art-gap axes "genuinely newly visible" while
+correctly recording the `-216` walk-failure as undetermined. **The distinction was not earned:
+the control chain terminated at the `syz2` bridge, so it never reached segments 22, 23 or 24
+either, and "newly visible" rests there on exactly the absent control that was rejected one
+paragraph earlier.** For segments 23/24 the lag-row measurement above replaces that reasoning
+with a real one. For **segment 22 the claim is retracted and remains undetermined** -- no
+mechanism-level argument has been made for it.
+
+`assertChainReplayThroughSegmentRow(runDir, segmentIndex, committedRows)`
+(`AbstractRunChainTest:963`) exists and is currently uncalled, but it replays *through* a
+prefix rather than starting at one -- it still walks from segment 0, so it cannot supply the
+missing control for any of these. Building a start-at-segment instrument would settle segment
+22 and the `-216` together, and is probably worth more than either fix.
+
+### Next
+
+Find what a chain segment's first frame does that a standalone level's first frame does not,
+with respect to Nemesis PLC service. The engine already has the correct behaviour on the
+standalone path; this is a matter of the chain-entry path not reaching it.

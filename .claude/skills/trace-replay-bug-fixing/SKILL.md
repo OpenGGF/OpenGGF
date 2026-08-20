@@ -1803,6 +1803,29 @@ Contradictions between your own measurements are the cheapest bugs you will ever
 find and the most expensive to leave. Re-run the specific measurement before
 building on either number.
 
+### Restore from a named commit, never from the index
+
+`git checkout -- <path>` restores from the **index**, not from `HEAD` and not from any
+commit you named earlier. Setting up a control arm as `git checkout <base> -- <files>`
+stages the reverted files; the later `git checkout -- src/` that is meant to undo it
+reads that same staged revert straight back out. The tree looks restored, `git status`
+shows only a staged `M`, and the experiment arm runs the control's code.
+
+The failure is silent and the result is plausible: two arms agreeing on every class and
+every count, which reads exactly like a change with no regressions. It is the one
+outcome you are least likely to question.
+
+Use `git restore --source=<commit> --staged --worktree <path>`, or `git reset --hard`
+when the branch head is the state you want, and verify with `git diff HEAD --stat` plus a
+`grep` for a token the change introduces — not `git status`, which shows a staged revert
+as an ordinary modification.
+
+The general form is worth more than the git detail: **a restore that reads from a mutable
+intermediate returns whatever you last put there.** Name the source. This applies equally
+to a reused `target/` directory, a cached report under `target/trace-reports/`, and a
+stale surefire XML — each is an intermediate that answers with history rather than with
+the run you think you just made.
+
 ### The fixture is ground truth about the RECORDER, not about the ROM
 
 A compared field can be fiction. Not stale, not mis-scaled — describing something
