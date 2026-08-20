@@ -94630,3 +94630,89 @@ race on the shared `/tmp/lwjgl_farrell` native-extraction directory against a co
 run in another worktree. A clean re-run gave 15,193. A mass-error run whose failures are
 `NoClassDefFound`/`UnsatisfiedLink` on natives is an environment artefact; check for
 `libglfw` in the log before reading anything into the numbers.
+## 2026-08-20 -- S1 level-entry one-service lag: discriminator found, root cause localised
+
+Worktree `wt/ai-s1-entry-service-r1`, branch `bugfix/ai-s1-entry-service-r1`, base
+`7f35a48f6`. Command (all runs):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+    -Dtest=TestS1CompleteEmeraldRunChain -DfailIfNoTests=false \
+    -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... test
+```
+
+Baseline at that commit reproduces the previous entry exactly: 8 axes; segments 23/24 first
+non-camera mismatch at frame 1 `queue.s1_nemesis_plc.remaining_work rom=17 engine=20`
+(54 / 18722 errors), segment 12 at frame 101 and segment 15 at frame 102 on
+`queue.s1_nemesis_plc.prepared`, and the `lz1_2 -> lz2` `-216` cursor walk-failure.
+
+### The four "control" segments are blind, not controls
+
+Read from the committed fixtures' `load_queue_state` aux, first frame with `busy == true`:
+
+| segment | first busy frame | state there |
+|---|---|---|
+| `mz1`, `mz1_2`, `mz2_3`, `syz1` | 69 | rem 96, 2 queued |
+| `lz1`, `lz1_2` | 0 | rem 20, 5 queued |
+
+The four segments the previous entry used as controls enter with an **idle** PLC queue and
+stay idle until frame 69 (the title card's own art re-queue). A one-service lag cannot be
+observed against an empty queue. They do not disprove the delta hypothesis; they cannot see
+it. And two of them do diverge on the same queue family the moment work exists -- segment 12
+at frame 101 and segment 15 at frame 102, i.e. the same lag surfacing later.
+
+`lz1`/`lz1_2` are distinguished by carrying unfinished PLC work across the title-card
+boundary (LZ's 2nd-PLC set, added by `LevelDataLoad`, `_inc/LevelLayoutLoad.asm:48-56`,
+after the title-card loop drains).
+
+### Root cause, measured
+
+Probe on `Sonic1PlcService.serviceVBlank`/`servicePatterns`, on `LevelFrameStep.execute`'s
+`frame.claim(phase)`, and on the boundary path. At the `syz3_2 -> lz1` entry the host step
+that releases the title card shows:
+
+```
+PHASE PALETTE_FADE rem=32 queued=5 / SVC9 32 -> 23     (last of the 22 PalFadeIn_Alt rows)
+CIP-FADE-DONE
+BODY phase=ORDINARY_LEVEL claimWon=false               <-- level body, NO V-blank service
+  AFTER-TC settled=1 mode=LEVEL
+PHASE ORDINARY_LEVEL rem=23 queued=5 / SVC3 23 -> 20   <-- charged as recorded row 1
+BODY phase=ORDINARY_LEVEL claimWon=true
+ERR f=1 queue.s1_nemesis_plc.remaining_work rom=17 eng=20
+```
+
+`GameLoopTitleCardLifecycle.update` claims `PlcLifecyclePhase.LEVEL_TITLE_CARD` for the
+step's V-blank token unconditionally (`GameLoopTitleCardLifecycle.java:36`). On the release
+row the card then releases, `PostTitleCardDestination.completeRelease` returns
+`GAMEPLAY_FRAME` (measured: `setupOnly=false` at all 12 S1 releases in the run), and the
+level body runs on that same row -- but its `claim(ORDINARY_LEVEL)` loses, so the row runs a
+level main-loop pass with **no level V-int PLC service**. The queue stays exactly 3 units
+behind for the rest of the segment (until it drains and re-syncs at frame 31 in `lz1`).
+
+The ROM has no such row. `Level_TtlCardLoop` owns `id_VBlank_TitleCards` only while the loop
+runs (sonic.asm:2814-2842); the pre-main-loop tail is `Level_Delay`'s four `id_VBlank_Levels`
+rows plus `PalFadeIn_Alt`'s 22 `id_VBlank_PaletteFade` rows (sonic.asm:2957-2966,
+`_inc/Palette Fading.asm:43-51`); `Level_StartGame` is straight-line code, and the next V-int
+is `Level_MainLoop`'s `id_VBlank_Levels` (sonic.asm:2998-3001, 3 tiles via
+`VBlank_UpdateScreen`, sonic.asm:867). So the row that runs the first level body is a level
+V-int row, and the engine's title-card claim on it is spurious.
+
+### Two-path evidence
+
+`TestS1Lz1CompleteRunTraceReplay` (green, byte-identical rows) never reaches
+`PostTitleCardDestination.completeRelease` at all -- no `RELEASE` probe line -- and its first
+level body row wins its `ORDINARY_LEVEL` claim and services 23 -> 20 as recorded row 0. Same
+engine, same queue arithmetic, different row alignment. The chain path inserts the extra
+unserviced body pass; the standalone path does not.
+
+### Not established
+
+- Whether removing the spurious claim (letting the release row's level body own the V-int) is
+  safe for S2/S3K title cards: `GameLoopTitleCardLifecycle` is shared and was not modified or
+  measured. The claim sits before `titleCard.update()`, which is correct for locked rows, so
+  the fix needs the token handed to the level body on the release row specifically, not a
+  blanket move.
+- Whether closing this also closes the `lz1_2 -> lz2` `-216` axis. Untested: no fix was
+  landed, so the prediction in the previous entry is still open.
+
+No fix landed and no constant was introduced; this entry is measurement only.
