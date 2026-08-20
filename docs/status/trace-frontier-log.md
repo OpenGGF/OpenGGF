@@ -92947,3 +92947,90 @@ Until then: the override is **fitted** — its cited justification is contradict
 listing — but it is also **load-bearing**, and the pair must come out together. Its
 `TestSidekickTouchHurtAnimationOwnership` pins the fitted behaviour and would need to move
 with it.
+
+### 2026-08-20 (same round, continued) — the PC probe answers it: a push-release tail clobbers the hurt animation
+
+Probe: `tools/bizhawk/probes/aiz_tails_hurt_anim_10744_probe.lua` (sanctioned
+`probe_runtime.lua` contract, read/log only). AIZ full-run, `Level_frame_counter` window
+around `0x28C8` = trace row 10744, BizHawk frame 11254.
+
+**The ROM does execute the `$1A` write.** Hooking `HurtCharacter`'s
+`move.b #$1A,anim(a0)` at **0x10326** directly:
+
+```
+ROUTW    emu=11254 gfc=28C8 pc=0102E6  rout=02 anim=00 st=40 xv=00DB yv=002A inv=00
+HURTANIM emu=11254 gfc=28C8 a0=FFB04A  rout=04 anim=00 st=42 xv=FF00 yv=FE00 inv=00
+ANIMW    emu=11254 gfc=28C8 pc=01032C  rout=04 anim=00 st=42 xv=FF00 yv=FE00 inv=00
+ANIMW    emu=11254 gfc=28C8 pc=01E0C2  rout=04 anim=1A st=42 xv=FF00 yv=FE00 inv=78
+```
+
+`a0 = FFB04A` is Player_2. So it is reached, with `routine = 4`, the underwater knockback
+`-$100/-$200`, and `invulnerability_timer = $78`. **Then, in the same frame, PC `0x1E0C2`
+writes the anim byte again** — the log shows `anim=1A` as the pre-write value, and every
+later read is `00`.
+
+### What `0x1E0C2` is
+
+It is the instruction *after* `move.w #1,anim(a1)`, the tail of
+`SolidObjectFull_Offset_1P` (`sonic3k.asm:41517-41528`):
+
+```
+loc_1E0A2:
+        move.l  d6,d4
+        addq.b  #pushing_bit_delta,d4
+        btst    d4,status(a0)       ; did this player have THIS OBJECT's pushing bit?
+        beq.s   loc_1E0D0           ; no -> return
+        cmpi.b  #2,anim(a1)         ; Roll?     -> exempt
+        beq.s   sub_1E0C2
+        cmpi.b  #9,anim(a1)         ; Spindash? -> exempt
+        beq.s   sub_1E0C2
+        move.w  #1,anim(a1)         ; otherwise: anim = Walk, prev_anim = Run
+```
+
+`anim = $20` and `prev_anim = $21` are adjacent (`sonic3k.constants.asm:25-26`), so the
+**word** write stores `anim = 0x00` and `prev_anim = 0x01` — Walk, plus the unequal
+`prev_anim` that forces the animation to restart on the next `Animate` pass. That is exactly
+what the previous lane observed and described as *"Animate_Tails advances the prior script"*.
+
+**The exemption list is the whole answer.** The ROM protects Roll (`2`) and Spindash (`9`)
+from this clobber and **does not protect Hurt (`$1A`)**. So when a player is released from
+pushing a solid object on the same frame they are hurt, the shipped ROM really does throw the
+hurt animation away. The branch being taken is itself proof the object held Tails' pushing
+bit; no extra hook is needed to establish it.
+
+### Why the two fixtures differ — mechanism, not zone
+
+| | chain seg6 r823 | AIZ full-run r10744 |
+|---|---|---|
+| hurt reached, `$1A` written | yes | **yes** |
+| a solid object holds the player's pushing bit that frame | no | **yes** |
+| `loc_1E0A2` push-release tail runs | no | **yes** |
+| surviving `anim` | `0x1A` | `0x00` |
+
+One mechanism, two outcomes, and **nothing about the spiked log, the zone, or water is
+causal** — the underwater bit only explains the halved knockback, which is how the two hits
+were identified as the same routine. The `Status_Underwater` correlation in the previous
+section is real but incidental; do not build on it.
+
+### What this unblocks, and what it costs
+
+`SpikedLogCollisionChild.sidekickTouchHurtPublishesAnimation() == false` should be **deleted**
+along with `TestSidekickTouchHurtAnimationOwnership`'s pinning of it, because the animation
+loss is not a property of that object at all — it is the generic solid push-release tail. The
+previous lane attached a real observation to the wrong owner.
+
+The replacement is a genuine port, not a flag: the engine's solid push-release path must write
+`anim = Walk` / `prev_anim = Run` when it clears a player's pushing bit, **exempting only
+Roll and Spindash**. That is shared `ObjectSolidContactController` behaviour across all three
+games and needs its own blast-radius measurement — S1's `SolidObject` and S2's
+`SolidObject_Offset` tails must both be read before it lands, since this listing is S3K's.
+
+**Deliberately not implemented in this round.** The mechanism is established and cited; the
+implementation is a new shared-code task with an unmeasured radius, and this lane is at the
+end of its useful margin. Removing the override alone is still wrong on its own — it was
+measured at segment 6 `7,565 -> 7,434` with `TestS3kAizTraceReplay` going red — and only
+becomes right once the push-release tail exists to produce the AIZ `0x00` natively.
+
+Order for whoever takes it: implement the push-release tail first and confirm AIZ 10744 still
+reads `0x00` with the override still in place; then delete the override and its test; then
+re-measure both fixtures. Doing it in the other order reproduces tonight's red.
