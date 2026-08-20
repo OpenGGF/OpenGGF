@@ -94951,6 +94951,98 @@ transition tail. The gate now carries a movie-frame floor, which the probe contr
 as a narrowing of an already-semantic gate. A second run used a 90-frame window and closed
 at 19693, **82 frames before the recorded segment even starts** — widened to 320.
 
+## 2026-08-20 — the return-boundary pixel is a comparison against the wrong frame; S3K's phase is ROM-correct
+
+Branch `bugfix/ai-s3k-return-phase-r1` off `0aafd1302`, in a dedicated worktree.
+Same-tree control at base:
+`run_boundary.position.x expected 14007 actual 14008`, segment 4 at 250 errors.
+
+### The brief's premise was wrong: neither return path is defective
+
+The brief asked what S2 runs at the interior special-stage exit that S3K does not. Measured
+answer, from a probe on `awaitBoundary`'s step loop (temporary, reverted) recording mode,
+playback cursor, centre x and x_speed for every step up to the latch:
+
+| run | interior | latching step | cursor | x | x_speed |
+|---|---|---|---|---|---|
+| S2 | `ss_4` -> `seg6_ehz2` | mode flips to LEVEL | 46374 -> **46375** | 4736 -> **4735** | 0 -> **-12** |
+| S3K | `ss_4` -> `aiz_5` | mode flips to LEVEL | 46432 -> **46432** | 14008 -> **14008** | 0 -> **0** |
+
+S2's title-card release step falls through to LEVEL processing and runs one gameplay frame
+in the same `loop.step()`; S3K's does not, because its return reload arms
+`InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE`
+(`Sonic3kLevelInitProfile.initialProcessSpritesLifecycle`) and
+`PostTitleCardDestination.completeRelease` consumes it, returning `SETUP_ONLY`. S2's profile
+returns `NONE`. Both are faithful: the S3K ROM has an inline
+`Load_Sprites`/`Load_Rings`/`Process_Sprites`/`Render_Sprites` block at `loc_6468`
+(`docs/skdisasm/sonic3k.asm:7848-7856`) that S2 has no equivalent of.
+
+### What the recorders actually publish at the boundary
+
+Both recorders arm the destination segment on the first end-of-frame with the level game
+mode and player control unlocked, stamp that frame as BOTH the transition's
+`mode_change_bk2_frame` and the segment's `bk2_frame_offset`, and then do not record it —
+`S3KCompleteRunSegmenter.Step` step 8 ("Arm-and-return: the arm frame belongs to no
+segment") and `S2RunCaptureRunner`'s level arm gate ("Detection frame is never recorded").
+Row 0 is the frame AFTER it. The arm frame's own state is published as the segment
+metadata's `start_x`/`start_y`, which read `0x36B8` (14008) for `aiz_5` and `0x1280` (4736)
+for `seg6_ehz2` — exactly the restored pixels.
+
+That is the ROM's shape, not a recorder convention. Both level routines clear the control
+lock and the title-card game-mode bit inline with no vsync before the main loop's first
+wait — S3K `move.b #0,(Ctrl_1_locked).w` / `bclr #7,(Game_mode).w` ahead of `LevelLoop`'s
+`Wait_VSync` (`sonic3k.asm:7859, 7883, 7888-7891`), S2 `move.b #0,(Control_Locked).w` /
+`bclr #GameModeFlag_TitleCard,(Game_Mode).w` ahead of `Level_MainLoop`'s `WaitForVint`
+(`docs/s2disasm/s2.asm:5081, 5085, 5088-5091`). The frame ending on that wait has consumed
+no input and run no input-driven object pass; the first frame that reads a control word is
+the next one. Which is why row 0 of every return segment carries exactly one frame of
+acceleration away from the restored pixel (`x_sub == (x_speed << 8)`).
+
+**So `mode_change_bk2_frame` is the arm frame, and the engine sampled at the mode change is
+on it. The comparator was comparing that sample against row 0 — the next frame.** S2 passed
+only because its engine happens to reach the latch one frame later; the three phase-blind
+S3K siblings passed because their first frame cannot move the pixel.
+
+### Fix
+
+`TraceRunBoundaryComparator.comparePosition` now selects the recorded sample co-temporal
+with the snapshot: `start_x`/`start_y` when the engine has consumed no destination row,
+row 0 when it has consumed one. `ActualBoundary` carries `destinationRowsConsumed`, derived
+from the playback cursor's distance from `bk2_frame_offset` at both call sites
+(`AbstractRunChainTest.assertReturnBoundary`, `TraceSessionLauncher`). Keyed on the cursor
+alone — no game, zone, route or frame index — and both expectation sources are recorded
+fields, so nothing is back-derived from a fixture. This is NOT the reverted comparator
+normalisation of the previous lane, which subtracted a `MoveSprite2` add from row 0 and
+traded S3K's red for S2's.
+
+### Validation
+
+Per-class, one class per invocation, `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.argLine=-Xmx6g` with all three ROM paths, candidate against a same-tree control
+worktree at `0aafd1302`.
+
+- `TestS3kSonicTailsCompleteEmeraldRunChain`: **frontier moved.** The
+  `run_boundary.position.x` walk-failure is gone. The chain now walks past the segment-8
+  boundary and runs ~5540 frames of `aiz_5` with **zero segment-8 physics errors** before
+  failing deeper at *"segment 8 lost production ownership before source closure (mode=LEVEL,
+  BK2 cursor=51972)"* — the new frontier. Segment 4 remains at 250 errors, unchanged.
+  Axis count 2 at base and 2 on the candidate.
+- `TestS2CompleteEmeraldRunChain`, `TestS3kKnucklesSuperEmeraldRunChain`,
+  `TestS3kMegaRunChain`, `TestS3kTailsFullChainRunChain`: axis headlines byte-identical to
+  base. No `run_boundary.position` field appears in any candidate log.
+- `TestTraceRunBoundaryComparator` gains a test proving each sample fails against the other
+  frame's phase; 6 tests, 0 failures.
+
+### Open, and honest about it
+
+The remaining asymmetry is real and unfixed: S2's engine leaves the game mode at
+`TITLE_CARD` through the arm frame and only flips at the frame after it, while both ROMs
+clear the title-card mode bit *during* the arm frame. S2's engine therefore has no step
+corresponding to that ROM frame. It costs nothing observable today — the fix above compares
+each game at its own instant against a recorded sample of that instant — but a later round
+that re-phases S2's mode flip should collapse this back to `start_x`/`start_y`
+unconditionally.
+
 ## 2026-08-20 — giant ring: the flash-seed hypothesis is eliminated by measurement
 
 Branch `bugfix/ai-s3k-giantring-r1` off `1a510ed00`. **Diagnosis only, nothing landed.**

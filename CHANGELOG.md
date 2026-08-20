@@ -17,6 +17,26 @@ All notable changes to the OpenGGF project are documented in this file.
   existing vocabulary for "a pass, not a movie row". The predicate is
   `TitleCardProvider.levelObjectPreludePassesAtRelease() > 0`, so S2 and S3K —
   which declare zero such passes — are unaffected.
+- **The shared run return-boundary compared the engine against a recorded row from the
+  next frame.** A `stage_exit` transition's `mode_change_bk2_frame` names the frame both
+  recorders *arm* the destination segment on — the first end-of-frame carrying the level
+  game mode with player control already unlocked — and neither recorder writes a row for
+  it (`S3KCompleteRunSegmenter`: "Arm-and-return: the arm frame belongs to no segment";
+  `S2RunCaptureRunner`: "Detection frame is never recorded"). That frame's own state is
+  published as the segment metadata's `start_x`/`start_y`, and row 0 is the frame after
+  it. This is the ROM's own shape: both level routines clear the control lock and the
+  title-card game-mode bit inline with no vsync before the main loop's first wait — S3K
+  `move.b #0,(Ctrl_1_locked).w` / `bclr #7,(Game_mode).w` ahead of `LevelLoop`'s
+  `Wait_VSync` (`docs/skdisasm/sonic3k.asm:7859, 7883, 7888-7891`), S2
+  `move.b #0,(Control_Locked).w` / `bclr #GameModeFlag_TitleCard,(Game_Mode).w` ahead of
+  `Level_MainLoop`'s `WaitForVint` (`docs/s2disasm/s2.asm:5081, 5085, 5088-5091`) — so the
+  frame ending on that wait has consumed no input, and the first frame that reads a control
+  word is the next one. `TraceRunBoundaryComparator` compared the sampled engine position
+  against row 0 unconditionally, which is only co-temporal for a return sampled after that
+  first input frame has run. It now selects the recorded sample that shares the sampling
+  instant, keyed on how many destination rows the playback cursor has consumed — never on
+  game, zone, route or frame index. Only the position fields move; every other boundary
+  field is unchanged.
 
 ### Fixed
 - **The AIZ ride-vine grab clears the whole `spin_dash_flag` byte, releasing a stale

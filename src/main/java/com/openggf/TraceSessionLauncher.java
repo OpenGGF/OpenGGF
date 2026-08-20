@@ -2150,7 +2150,9 @@ public final class TraceSessionLauncher {
                 new TraceRunBoundaryComparator.ExpectedBoundary(
                         interior.entryBoundary(), interior.exitBoundary(),
                         preEntry.segment(), destination.segment(),
-                        destination.trace().getFrame(0), resolvedZone);
+                        destination.trace().getFrame(0), resolvedZone,
+                        destination.trace().metadata().startX() & 0xFFFF,
+                        destination.trace().metadata().startY() & 0xFFFF);
         TraceRunBoundaryComparator.ActualBoundary actual =
                 new TraceRunBoundaryComparator.ActualBoundary(
                         sprite != null ? (int) sprite.getCentreX() : null,
@@ -2162,7 +2164,9 @@ public final class TraceSessionLauncher {
                         GameServices.level().getLevelGamestate().getRings(),
                         GameServices.gameState().getEmeraldCount(),
                         !TraceRunReplayWalker.isUncomparedInterior(
-                                interior.segment()));
+                                interior.segment()),
+                        GameServices.playbackDebug().getCursorFrame()
+                                - destination.segment().bk2FrameOffset());
         ingestRunUndisplayedComparison(TraceRunBoundaryComparator.compare(
                 interior.exitBoundary().modeChangeBk2Frame(), expected, actual));
     }
