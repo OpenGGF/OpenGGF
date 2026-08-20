@@ -8,6 +8,67 @@ result about what makes these rounds succeed. Brief this way.
 Companion to [trace-replay-bug-fixing](../../.agents/skills/trace-replay-bug-fixing) — that
 skill is the procedure, this is how to hand the work over.
 
+## Index
+
+Forty-three rules and several worked sections, accumulated across many rounds. The narrative
+below is the argument for each; this table is for finding one mid-round. **The measurement
+hazards are the ones to re-read before reporting a number** — every single one produces output
+that looks like a real result.
+
+### Briefing and framing
+
+| Rule | In one line |
+|---|---|
+| The one that matters most | Supply the measured symptom, never your hypothesis |
+| 2 | The first-reported field is alphabetical, not causal |
+| 3 | Name the fitted-constant trap explicitly, in the brief |
+| 4 | Make "found-not-fixed" a full success, in writing |
+| 6 | Stamp every number with the commit it was measured at |
+| 7 | Tell the round you are probably wrong |
+| 31 | "No field reported" states which check fired, not what is wrong |
+
+### Evidence and inference
+
+| Rule | In one line |
+|---|---|
+| 5 | Verification instructions that have actually caught things |
+| 24 | Diff failure *messages*, never class names |
+| 28 | Check whether an absence is in the data or only in your view |
+| 29 | Check a suspicious delta against both endpoints |
+| 33 | BizHawk reports the PC *after* the storing instruction |
+| 32 | A row's emulator frame is `bk2_frame_offset + row + 1` |
+| 40 | A comment reasoning about which engine hook runs first — in either direction — is the tell for a fitted constant; they come in families |
+
+### Measurement hazards — all produce plausible output
+
+| Rule | Signature | What it looks like |
+|---|---|---|
+| 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
+| 26 | Self-report about process state | A suite *is* running when you were told none was |
+| 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
+| 30 | Mass errors | An environment artefact until proven otherwise |
+| 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
+| 35 | Failed compile | A small log that reads as a short test run; also `-Ptrace-replay` silently ignores a CLI `-Dsurefire.argLine=` |
+| 37 | Run-order swap | Equal totals, different members, all passing alone |
+| 38 | Backgrounded `mvn` dies with its shell | The wrapper's exit 0 with a log that just stops |
+| 41 | Truncated arm | Prove completeness by class-name set and `Tests run: 0,` lines, not by totals |
+| 42 | Truncated message diff | Two different failures compare equal on a shared prefix |
+| 43 | Too many concurrent rounds | OOMs, GLFW init failures and contended arms that report *fewer* red |
+
+### Operational
+
+| Rule | In one line |
+|---|---|
+| 36 | The branch is the artifact, the worktree is scratch — disposal is the lead's job, persistence is the round's |
+| 39 | Create round worktrees copy-on-write (`cow-git-worktree` skill) |
+
+Two attribution hazards that are not rules but bite the same way: `target/trace-reports/<runId>_seg<N>_report.json`
+is keyed on run id and re-based segment index only, so under `forkCount=4` two classes replaying
+one run overwrite each other's reports — only single-class runs are safe to quote from report
+files. And the default suite carries a large pre-existing red set plus order-dependent churn of
+about three classes between two runs of the same tree, so a small delta is noise unless you can
+attribute it.
+
 ## The one rule that matters most
 
 **Supply the measured symptom. Do not supply your hypothesis.**
@@ -1181,3 +1242,35 @@ The same round caught two contaminated arms in the same session by comparing the
 names** — a forked-VM crash that cost one arm a whole chain class, and a default-suite run that
 lost three forks. Both had plausible-looking totals. That is the forty-first rule paying for
 itself twice in one round.
+
+## Forty-third rule: concurrent rounds are a resource budget, not free parallelism
+
+Five rounds ran Maven suites concurrently on a 32-core machine with 30GB of RAM. Load average
+reached 34 and free memory reached 4GB, and the consequences were not slowness — they were
+measurement failures of exactly the kind this document keeps cataloguing:
+
+- the default profile OOMs on some chain classes even with memory to spare; under pressure it
+  can hit anything, and an OOM produces **"Java heap space", 0 tests run, no report**, which
+  reads as a test that silently did nothing rather than a build that died;
+- GLFW headless-init failures (`Failed to initialize`) appear under contention and land
+  unevenly across arms — one round had to reclassify a three-error delta that made its own change
+  look better, because the *control* arm was the contaminated one;
+- a contended suite that dies partway reports **fewer** failures than the baseline, which reads
+  as improvement.
+
+**Two to three concurrent suite-running rounds is the honest ceiling on a machine like this.**
+Beyond that you are not parallelising, you are queueing with extra steps, and degrading the one
+thing every round depends on.
+
+Practical scheduling, learned the same day:
+
+- Much of a round's work is **static** — reading the disassembly, enumerating sites, tracing an
+  engine path. That part never contends. Sequence a round so the static work happens first and
+  the sweep happens once, at the end, for whatever actually changed.
+- A round with an empty runtime diff **owes no sweep at all**: both arms are the same tree, so
+  the measurement can only re-measure the baseline. Say so rather than spending an hour on it.
+- Prefer the cheapest harness that reproduces the defect. A single chain class runs in 11-50
+  seconds where a full profile run costs minutes, and per-class runs are also the only ones safe
+  to quote report files from.
+- When the box is loaded, do not kill a round mid-measurement to reclaim it. That wastes the work
+  *and* produces the truncated logs you then have to tell apart from real results.
