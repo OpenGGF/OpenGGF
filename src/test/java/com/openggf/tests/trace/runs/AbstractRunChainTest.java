@@ -1491,6 +1491,32 @@ abstract class AbstractRunChainTest {
                     // frame consumed the return segment's frame 0 (framesConsumed == 1)
                     // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
                     int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    // The V-blank anchor above and this comparator base are ONE
+                    // contract, and they are coherent only at framesConsumed == 1.
+                    // alignUncomparedInteriorReturnVblank targets the value on the
+                    // destination's row 0 (uncomparedInteriorReturnVblankBudget
+                    // measures to returnOffset + 0, unlike its sibling
+                    // interLevelVblankBudget which carries the consumed-row term),
+                    // while attachReturnedLevelSegment bases the comparator at
+                    // framesConsumed -- see the COMPARATOR FRAME BASE contract there,
+                    // which fixes the value 1 for this transition kind. If a change to
+                    // the seam removes one pre-anchor cursor advance, framesConsumed
+                    // silently becomes 0: the comparator rebases to frame 0 while the
+                    // anchor still holds row 0's value, so every compared row is read
+                    // one row early and the clock reads +1 against it from the release
+                    // row onward. That artefact is indistinguishable from a physics
+                    // divergence in the report, and it masked four separate structural
+                    // attempts at this seam. Fail loudly here instead.
+                    assertEquals(1, framesConsumed,
+                            "Uncompared interior return must consume exactly the "
+                                    + "destination's frame 0 before the comparator "
+                                    + "attaches (cursor " + playback.getCursorFrame()
+                                    + ", offset " + returnOffset + ", segment "
+                                    + plans.get(i + 1).segment().dir() + "). The "
+                                    + "V-blank anchor targets row 0's value and the "
+                                    + "comparator bases at framesConsumed; at any other "
+                                    + "value the two disagree and every compared row is "
+                                    + "read off by one. For " + runDir);
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
                             loop.getCurrentGameMode(), framesConsumed, false,
