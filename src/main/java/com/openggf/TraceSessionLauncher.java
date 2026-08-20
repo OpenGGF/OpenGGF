@@ -2962,7 +2962,6 @@ public final class TraceSessionLauncher {
         boolean observedVblankCounterAdvance = true;
         boolean previousObservedVblankCounterAdvance = true;
         boolean nextRowCarriesDeferredVblank = false;
-        boolean recordedRowIsLagVint = false;
         boolean terminalRow = false;
         boolean deferBoundaryCommit = false;
         if (phase == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
@@ -2980,43 +2979,15 @@ public final class TraceSessionLauncher {
                             "presentation row " + localRow + " outside segment "
                                     + segmentIndex);
                 }
-                TraceReplayRowPolicy rowPolicy = TraceReplayRowPolicy.resolve(
-                        plan.trace(), localRow, movieRow);
-                rowPhase = rowPolicy.phase();
-                observedVblankCounterAdvance =
-                        rowPolicy.observedVblankCounterAdvance();
-                if (localRow > 0) {
-                    previousObservedVblankCounterAdvance =
-                            TraceReplayRowPolicy.resolve(
-                                    plan.trace(), localRow - 1, movieRow - 1)
-                                    .observedVblankCounterAdvance();
-                }
-                if (localRow + 1 < plan.trace().frameCount()) {
-                    TraceReplayRowPolicy nextRowPolicy =
-                            TraceReplayRowPolicy.resolve(
-                                    plan.trace(), localRow + 1, movieRow + 1);
-                    deferBoundaryCommit = TraceRunFrameDriver
-                            .shouldDeferBoundaryCommit(
-                                    rowPolicy.observedVblankCounterAdvance(),
-                                    nextRowPolicy
-                                            .observedVblankCounterAdvance());
-                }
-                nextRowCarriesDeferredVblank =
-                        localRow + 1 < plan.trace().frameCount()
-                                && TraceReplayRowPolicy.carriesDeferredVblank(
-                                        plan.trace(), localRow + 1);
-                // The emulator's own per-frame lag observation, already
-                // recorded as aux lag_state. A lagged row's V-int took
-                // VBlank_Lag (docs/s1disasm/sonic.asm:656-657) and serviced no
-                // PLC patterns, so the row owns a V-int closure with no mode
-                // handler. Read from the recorded flag rather than inferred
-                // from counter shape: inside a bridge the two disagree on
-                // almost every row, because bridge gameplay is frozen anyway.
-                com.openggf.trace.TraceEvent.LagState rowLagState =
-                        plan.trace().lagStateForFrame(
-                                plan.trace().getFrame(localRow).frame());
-                recordedRowIsLagVint = rowLagState != null
-                        && rowLagState.lagged();
+                // One implementation of the bridge-stepping contract, shared
+                // with the headless chain harness. terminalSegmentRow stays
+                // this caller's own: it comes from the manifest's segment row
+                // count here and from the loaded fixture's row count there.
+                return TraceRunFrameDriver.presentationBridgeStep(
+                        plan.trace(), localRow, movieRow, policy,
+                        loop != null
+                                && loop.getCurrentGameMode() == GameMode.LEVEL,
+                        localRow == plan.segment().traceFrameCount() - 1);
             }
             terminalRow = localRow == plan.segment().traceFrameCount() - 1;
         } else if (phase
@@ -3031,7 +3002,9 @@ public final class TraceSessionLauncher {
                         loop != null
                                 && loop.getCurrentGameMode() == GameMode.LEVEL,
                         nextRowCarriesDeferredVblank,
-                        recordedRowIsLagVint);
+                        // Only a presentation-bridge row can be a recorded lag
+                        // V-int, and that path returned above.
+                        false);
         boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
                 .shouldCommitDeferredBoundaryAfterClosure(
                         previousObservedVblankCounterAdvance,
