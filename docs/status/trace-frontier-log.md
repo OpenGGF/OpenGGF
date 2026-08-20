@@ -99745,3 +99745,42 @@ battleship's advance is gated on that clock in the ROM, and whether driving it f
 clock the disassembly actually names closes the two updates. That is the next measurement,
 and it should be made before any change to `SHIP_SPEED` or to the shift — a speed constant
 tuned to land this fixture's pixel would be a fitted model.
+
+## 2026-08-20 — slz1's drift is a missed airborne wall graze, and `x_sub` is excluded
+
+Round `s1-plc-admission-r2`, final. Every comparator field dumped for both sides across the onset
+window — matching and mismatching, rather than the first-reported field. Everything before frame
+4305 is identical on every field. Nothing landed; probe parked.
+
+Sonic pushes a wall facing left with `x` pinned for six frames, jumps, and rises alongside it.
+At 4305 the ROM zeroes `x_speed` and the engine does not. `y` and `y_speed` match on every frame
+of the arc, as do angle, air, rolling, ground mode, animation and rings.
+
+**`x_sub` matches exactly at 4305 on both sides and only diverges at 4306, as a consequence of
+the speed difference.** The sub-pixel is downstream, not the mechanism — an exclusion, not a
+hedge. The suspicion that this was an `x_sub` accumulation, which both this round's brief and its
+predecessor carried, is wrong, and "about a pixel every three to five frames" reads like a
+rounding leak while being nothing of the kind: one missed event followed by a persistent rate
+offset of about `0x6C`, which integrates to the −33 px that puts Sonic at the signpost four
+frames late.
+
+The ROM owner is `Sonic_FloorUp` (`_incObj/01 Sonic.asm:1706-1713`), the in-air upward-momentum
+quadrant, correct here since the vertical speed dominates: on a left-wall graze it aligns to the
+wall and clears horizontal speed. Its sub-pixel clear sits behind `FixBugs`, so the shipped ROM
+does not clear it — which is exactly why `x_sub` carries through unchanged on both sides.
+
+**The engine already has the mechanism**: its air-collision resolver dispatches this quadrant to a
+wall check that moves for the sensor result and then zeroes horizontal speed. So this is not a
+missing routine; at 4305 the engine's push sensors do not report the wall the ROM finds.
+
+Two things unexplained, both one probe away — instrument the air-collision path at that single
+frame for the quadrant, each push sensor's distance, and who moves `x`:
+
+1. The engine's `x` still moves +5 at 4305 with a negative horizontal speed and no apparent wall
+   hit; the ROM ejects +6. Until the path that produces that +5 is named, it is unknown whether
+   the sensor misses entirely or hits with a one-pixel-different overlap and the zeroing is lost
+   elsewhere. Those want different fixes.
+2. The ROM's ground speed also reads zero from 4305, and `Sonic_FloorUp` clears horizontal speed
+   only. The routines that do write inertia are for the wrong quadrant, so a second ROM write is
+   unaccounted for — and it matters, because the engine lands carrying ground speed the ROM does
+   not have.
