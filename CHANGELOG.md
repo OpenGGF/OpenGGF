@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 1's Orbinaut no longer frees its spikeballs' object slots when the player
+  destroys it.** The ROM tears an Orbinaut down two different ways, and they free the
+  balls' SST slots at different points in `ExecuteObjects`. Out of range, `Orb_ChkDel`
+  walks `orb_balldata` and has the *parent* `DeleteChild` every non-fired ball while it is
+  executing, then deletes itself (`docs/s1disasm/_incObj/60 Badnik - Orbinaut.asm:135-152`).
+  Destroyed by the player, `React_BadnikHit` overwrites the parent's `obID` with
+  `id_ExplosionItem` in place, so `Orb_ChkDel` never runs at all: each ball instead deletes
+  *itself* when the ascending pass reaches its own slot and `Orb_CircleSpikeball` sees the
+  parent is no longer an Orbinaut (`:155-159`). The engine ran the parent-side delete on
+  both paths, and on the kill path it ran outside the object pass entirely, so four slots
+  came free before the explosion had allocated anything. In `slz1` that handed the animal
+  slot 48 where the ROM gives it 106 -- the ROM's `FindFreeObj` still saw the balls -- and
+  the resulting one-slot shift propagated for the rest of the act, eventually putting the
+  SLZ fan ahead of a monitor in slot order so the monitor's side collision missed a
+  one-pixel overlap 2590 frames later. The child already modelled the ROM's self-delete;
+  the kill path now simply stops pre-empting it. `s1-sonic-complete-withemeralds` segment
+  27 (`slz1`) goes from 3878 comparator errors to green.
 - **S3K's AutoSpin trigger no longer rolls Tails while a flight or carry owner is driving
   him.** Both of `Obj_AutoSpin`'s main routines load Player 2 and then read
   `Tails_CPU_routine`, branching past the crossing check when the word is 4 -- horizontal at

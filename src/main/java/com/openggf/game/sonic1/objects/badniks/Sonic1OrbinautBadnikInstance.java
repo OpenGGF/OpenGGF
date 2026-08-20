@@ -55,6 +55,11 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
     private int angleStep;
     private int activeSpikes;
     private List<OrbSpikeObjectInstance> spikes;
+    /**
+     * True once React_BadnikHit replaced this Orbinaut, so teardown must leave the
+     * balls to self-delete at their own slots rather than freeing them here.
+     */
+    private boolean playerDestroyed;
     private boolean initialized;
 
     public Sonic1OrbinautBadnikInstance(ObjectSpawn spawn) {
@@ -220,13 +225,31 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
     @Override
     protected void destroyBadnik(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        destroySpikes();
+        // ROM has TWO distinct teardown branches and they free the balls'"'"' SST slots
+        // at different points in ExecuteObjects. Collapsing them into one eager
+        // parent-side delete moves every following FindFreeObj allocation:
+        //
+        //  - OUT OF RANGE (Orb_ChkDel, docs/s1disasm/_incObj/60 Badnik - Orbinaut.asm:135-152):
+        //    the PARENT walks orb_balldata and DeleteChild's each non-fired ball while
+        //    it is executing, then DeleteObject's itself. Slots free at the parent'"'"'s slot.
+        //  - DESTROYED BY THE PLAYER (React_BadnikHit): the parent'"'"'s obID becomes
+        //    id_ExplosionItem in place, so Orb_ChkDel never runs. Each ball instead
+        //    self-deletes when the ascending pass reaches ITS OWN slot and
+        //    Orb_CircleSpikeball sees the parent is no longer an Orbinaut
+        //    (:155-159). Slots free LATER, at each ball'"'"'s slot.
+        //
+        // The child already models the second branch (see OrbSpike.update'"'"'s
+        // parent.isDestroyed() check), so the kill path must simply not pre-empt it.
+        playerDestroyed = true;
         super.destroyBadnik(player);
     }
 
     @Override
     public void onUnload() {
-        destroySpikes();
+        // Only the Orb_ChkDel out-of-range branch deletes the balls from the parent.
+        if (!playerDestroyed) {
+            destroySpikes();
+        }
     }
 
     private void destroySpikes() {

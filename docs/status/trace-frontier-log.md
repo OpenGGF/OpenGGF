@@ -100054,3 +100054,75 @@ Both arms in the same worktree, candidate `93b6effd2` against control `333195abe
   self-contained unit tests that cannot reach `AbstractRunChainTest`. The candidate's count sits
   inside the control's own range; this is the known reused-fork ambient-state flakiness, not a
   regression, and it is recorded here rather than reported as one.
+
+## 2026-08-21 — `s1_slz1` goes GREEN: the Orbinaut freed its spikeballs' slots a pass too early
+
+Round `s1-slz1-graze-r1`, final. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**`s1-sonic-complete-withemeralds` segment 27 (`slz1`): 3878 comparator errors -> 0.**
+
+### Measured: the engine frees the slots outside the object pass
+
+Instrumenting `ObjectManager`'s allocate/release with the pass position (`currentExecSlot`,
+`-1` when not in the loop) at slz1 f1715:
+
+```
+[SLZ1A] destroySpikes parentSlot=41 spikes=48,49,50,51,
+[SLZ1A] releaseSlot 48 at execSlot=-1
+[SLZ1A] releaseSlot 49 at execSlot=-1
+[SLZ1A] releaseSlot 50 at execSlot=-1
+[SLZ1A] releaseSlot 51 at execSlot=-1
+[SLZ1A] alloc Sonic1AnimalsObjectInstance -> slot 48 at execSlot=9
+[SLZ1A] alloc Sonic1PointsObjectInstance  -> slot 49 at execSlot=16
+```
+
+`execSlot=-1` is the answer to the question this round was left with: the four ball slots are
+freed **outside `ExecuteObjects` altogether**, during the player's touch response, before the
+object pass starts. The explosion then allocates at exec index 9 (slot 41) into an already-free
+48. Exec index 16 is slot 48 — the animal's own first update allocating the points object — so
+the engine's internal ordering is otherwise faithful.
+
+### The ROM has two teardown branches and the engine collapsed them
+
+- **Out of range** — `Orb_ChkDel` (`docs/s1disasm/_incObj/60 Badnik - Orbinaut.asm:135-152`):
+  the *parent* walks `orb_balldata`, `DeleteChild`s each non-fired ball while it is executing,
+  then `DeleteObject`s itself. The balls' slots free at the parent's slot.
+- **Destroyed by the player** — `React_BadnikHit` overwrites the parent's `obID` with
+  `id_ExplosionItem` in place, so `Orb_ChkDel` never runs. Each ball self-deletes when the
+  ascending pass reaches **its own** slot and `Orb_CircleSpikeball` sees the parent is no longer
+  an Orbinaut (`:155-159`).
+
+`Sonic1OrbinautBadnikInstance` ran the parent-side delete on both, from `destroyBadnik` and from
+`onUnload`, with a comment citing `Orb_ChkDel` — correct for the branch it names, wrong for the
+one it was also being applied to. The child already implements the second branch
+(`OrbSpike.update`'s `parent.isDestroyed()` check), so the fix is to stop pre-empting it: a
+`playerDestroyed` flag set in `destroyBadnik`, and `onUnload` only deletes the balls without it.
+No slot number appears anywhere in the change.
+
+This is why the ROM's animal lands in slot 106 and the engine's in 48: at `ExItem_Animal`'s
+`FindFreeObj` the ROM still sees four live spikeballs below it.
+
+### Result
+
+| | before | after |
+|---|---|---|
+| segment 27 comparator errors | 3878 | **0** |
+| segment 27 first non-camera mismatch | f4305 `x rom=0x1BB0 engine=0x1BAF` | none |
+| segment 27 slot-diff divergent frames | 107 / 146 | 12 / 146 |
+| segment 27 first slot disagreement | f1715 | f3871 |
+| S1 chain axes | 22 | 21 |
+
+The residual 12 slot-divergent frames start at f3871, where the ROM spawns seven `0x53` objects
+at `0x1BA0,0x01E8` that the engine does not — an unrelated gap, and the next thing this segment's
+slot diff points at.
+
+### Verification
+
+Candidate against control `44bf8f2fc`, both arms in the same worktree.
+
+- `-Ptrace-replay`: **800 tests, 6 failures, 0 errors, 4 skipped in both arms**, identical
+  failing-test sets. Across all three chains the *only* changed `segment N ... diverged` line is
+  segment 27 disappearing; the other 13 are byte-identical. 163 `Running` lines in both arms;
+  the three `Tests run: 0,` lines are `TestS3kSlotsBonusTraceReplay`'s nested containers.
+- `-Pguards`: 500 tests, 0 failures.
+- Default suite: 15194 / 51 failures / 67 errors / 18 skipped — identical to the control's first
+  run, and one better than its second (the control disagrees with itself by one flaky victim).
