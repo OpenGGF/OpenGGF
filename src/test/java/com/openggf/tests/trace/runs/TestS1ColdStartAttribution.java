@@ -18,11 +18,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * attributed either way. Segments 22, 23 and 24 became visible exactly that
  * way, and were undetermined as a result.
  *
+ * <p>Segments 23 and 24 previously led with
+ * {@code queue.s1_nemesis_plc.remaining_work rom=17 engine=20} at frame 1 --
+ * the title-card release step consuming the destination's first recorded row.
+ * The release now reports {@code SETUP_ONLY} when it ran a
+ * pre-{@code Level_MainLoop} object pass, and both pins moved on to the next
+ * divergence in their segment.
+ *
  * <p>This boots the run <em>at</em> segment 22 via
  * {@link AbstractRunChainTest#assertChainReplayFromSegment}, carrying none of
  * the state segments 0-21 would have left. All three segments diverge
  * identically to the full chain -- same first-error frame, same field, same
- * ROM and engine values, and the same error counts (15,564 / 54 / 18,722).
+ * ROM and engine values, and the same error counts (15,564 / 16 / 18,684).
  * They are therefore owned by their own entry conditions, are not carry-in,
  * and are not caused by whatever let the chain arrive there.
  *
@@ -97,16 +104,16 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
                         + bootReport);
         assertTrue(
                 report.contains("segment 1 of s1-sonic-complete-withemeralds "
-                        + "diverged: 54 physics comparator errors, first "
-                        + "non-camera mismatch at frame 1 field "
-                        + "queue.s1_nemesis_plc.remaining_work rom=17 engine=20"),
+                        + "diverged: 16 physics comparator errors, first "
+                        + "non-camera mismatch at frame 3124 field "
+                        + "dynamic_art.edges rom=[1738, 1739] engine=[]"),
                 "segment 23 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n" + report);
         assertTrue(
                 report.contains("segment 2 of s1-sonic-complete-withemeralds "
-                        + "diverged: 18722 physics comparator errors, first "
-                        + "non-camera mismatch at frame 1 field "
-                        + "queue.s1_nemesis_plc.remaining_work rom=17 engine=20"),
+                        + "diverged: 18684 physics comparator errors, first "
+                        + "non-camera mismatch at frame 1337 field "
+                        + "dynamic_art.edges rom=[] engine=[746, 747]"),
                 "segment 24 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n" + report);
     }
