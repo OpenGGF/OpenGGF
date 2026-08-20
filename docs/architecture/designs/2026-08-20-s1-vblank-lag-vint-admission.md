@@ -7,7 +7,12 @@ question: can the ROM's `VBlank_Lag` stall be expressed inside the existing
 [cross-game hardware-timing trace contract](2026-07-27-cross-game-hardware-timing-trace-contract.md)
 as withheld job readiness, or does it need a per-row recorded fact?
 
-**Answer: (b), a per-row recorded fact.** Option (a) is dead on arithmetic
+**Answer: (b), a per-row recorded fact — and that fact turned out to already
+be recorded.** See the two RETRACTED sections below before implementing
+anything from this note: the required input is the existing aux
+`lag_state.lagged`, not a new stream, and lag rows do not run gameplay.
+
+**Answer as originally written: (b), a per-row recorded fact.** Option (a) is dead on arithmetic
 rather than philosophy, and the note gives the disproof rather than asserting
 it. The form proposed is the narrowest one that works: a `vint_lag` row event
 with no ordinal, no fingerprint and no payload, consumed only by the V-int
@@ -174,27 +179,53 @@ directly rather than the input-poll proxy.** The proxy's value is that it
 proves the rows are distinguishable at capture time; the ROM's own branch input
 is what should actually be stored.
 
-## The flag gates the V-int only — not gameplay admission
+## RETRACTED: the rows do not run their main loop
 
-This is the trap, and it deserves its own guard test.
+**This section replaces a claim this note previously made from review rather
+than measurement.** It asserted that the 33 rows ran their main loop with the
+counter advancing on both sides, and proposed a guard to enforce it. That is
+false, and the guard would have asserted the opposite of the truth.
 
-The 33 rows **ran their main loop**: the counter advances by 1 on both sides.
-They are not no-gameplay lag rows. A design that routes a `vint_lag` row into
-the existing "main loop did not run" path desyncs all 33 immediately, and would
-do so in a way that looks like a deeper physics bug.
+Measured on `lz4`'s listed rows (1, 3, 5, 7, 12, 17, 21, 23, 30, 39, 91, 97,
+115, 117, 123): `vblank_counter` +1, **`gameplay_frame_counter` +0**, and
+`player_x`/`player_y` byte-identical to the previous row. A V-int elapsed and
+no gameplay pass happened. These *are* no-gameplay lag rows.
 
-So the constraint is: the flag selects the V-int branch and nothing else.
-Gameplay admission stays with the existing counter model and the existing
-`presentationRowIsCarriedLagClosure` suppression
-(`src/main/java/com/openggf/trace/replay/runs/TraceRunFrameDriver.java:228`),
-which is correct, correctly cited, and must not be touched — it models "no
-V-int elapsed for this row", the opposite structural case to "a V-int ran and
-took the lag branch".
+`TraceRunFrameDriver.presentationRowIsCarriedLagClosure`
+(`src/main/java/com/openggf/trace/replay/runs/TraceRunFrameDriver.java:228`)
+remains correct, correctly cited, and must not be touched.
 
-**Not independently verified by this note:** the exact row-to-gameplay-frame
-relationship in the S1 recorder. The constraint above is taken from review and
-is the safe direction regardless, but an implementer must confirm against the
-recorder how a physical lag frame is represented before wiring anything.
+## RETRACTED: the recorded input already exists
+
+The proposal above — record `v_vblank_routine`, re-record the fixtures — is
+**unnecessary**. `aux_state.jsonl` already carries per-frame
+`{"event":"lag_state","lagged":...,"lagcount":N}` and `metadata.json` already
+declares `lag_state_per_frame` in `aux_schema_extras`.
+
+Correlating `lagged` against frozen `gameplay_frame_counter` over `lz4`, `lz2`,
+`mz3_2` and `ghz2_2`: **30,295 ordinary-level transitions, zero disagreements
+in either direction.** `syz2` row 70 and `syz3` row 70 are both `lagged=true` —
+the exact two rows the tear census named as the only bridge rows where the
+harness fails to suppress a ROM stall.
+
+So there is no new stream, no new event kind, no re-record and no contract
+extension. The mechanism is already implemented for one path:
+`TraceRunSpecialStageRows.syntheticLagPhase`
+(`src/main/java/com/openggf/trace/replay/runs/TraceRunSpecialStageRows.java:326-331`)
+maps `trace.getFrame(row).lag()` to `PlcLifecyclePhase.LAG` and sets
+`runGameplay = !lagged`. That is contract 1, main-loop admission, working
+correctly for special stages and never applied to level and presentation rows.
+**The change is a coverage gap, not a new authority.**
+
+**The trap in the corrected shape.** Frozen `gameplay_frame_counter` is a proxy
+that coincides with `lagged` only in ordinary level segments. Inside
+presentation bridges it collapses — `syz2` has 802 of 811 rows frozen while
+only 9 are lagged, because gameplay is structurally frozen there anyway.
+`lagged` is the authority; never derive lag from counter shape.
+
+The ROM basis, the disproof of (a), and the legitimate/illegitimate
+discriminators below all still stand. What changes is that the recorded input
+is one that already exists.
 
 ## What the port may and may not do
 
@@ -228,8 +259,10 @@ No existing assertion needs to change, and two specifically must not:
 1. Confinement: the `vint_lag` fact reaches exactly one consumer, the V-int
    service scheduler; its only output is the lag-branch selection; it cannot
    reach physics, objects, input latching or main-loop admission.
-2. Gameplay-admission isolation: a `vint_lag` row still runs its gameplay
-   frame. This is the correction above, encoded so it cannot regress silently.
+2. ~~Gameplay-admission isolation: a `vint_lag` row still runs its gameplay
+   frame.~~ **Retracted — measured false.** A lag row does *not* run its
+   gameplay frame. Any guard here must encode the measured direction, matching
+   `syntheticLagPhase`'s `runGameplay = !lagged`.
 
 ## Sequencing — supersedes the note's original order
 

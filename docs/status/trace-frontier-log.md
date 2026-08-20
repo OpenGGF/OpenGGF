@@ -93512,3 +93512,130 @@ the correct filter is `Failures: [1-9]|Errors: [1-9]`. A third, already known:
 running two suites concurrently gave 87 classes / 577 tests with 9 forked-VM
 crashes against a control's 162 / 792, which at face value reads as this branch
 fixing 75 classes. That comparison was discarded and re-run serially.
+## 2026-08-20 — the held arm fixture measured at current develop: item closed, two findings, one retraction
+
+Worktree `ai-s1-lag-sidecar-r1`, branch `feature/ai-s1-lag-sidecar-r1`, base `57cac0017`,
+JDK 21. **Measurement only — nothing landed, and the fixture was reverted in-tree.**
+
+### The presentation-bridge row-application gap is closed — proven, not inferred
+
+The gap was defined by three failure modes: `rowsConsumed must be 0 or 1`,
+`unmatched recorded hardware completions`, and `non-exportable pending hardware submission
+at segment end`. Installing the held fixture (`bugfix/ai-s1-fixture-rebase-r1`, 62 files:
+`hardware_timing.jsonl` plus `metadata.json` recording-date bumps) at current develop
+produces **none of them**.
+
+That is the distinction worth the run. "Cannot reproduce" and "installed the thing that
+used to trigger it and it does not happen" are different claims; this is the second.
+`51ef66b30` (readiness scope) and `65befd57d` (ordinal scope,
+`HardwareTimingService.releaseUnrepresentedIdentity`) closed it. The entries at lines
+87042 and 88788 describing the open gap are **superseded**; do not re-derive from them.
+
+### Control vs fixture
+
+Both runs same worktree, same base, same command, three ROM paths CRC-verified against the
+CLAUDE.md table. Only variable: the 62 fixture files. **No engine change in either run.**
+
+| | control | with fixture |
+|---|---|---|
+| axes | 3 | 2 |
+| bridge | `syz2` row 70 — `remaining_work` **1/24**, `queued_fingerprints` **6/5** | `syz2` row 70 — `prepared` **true/false**, `remaining_work` **1/-1** |
+| seg 3 `ghz2_2` | green | **7 errors**, first frame 109 `remaining_work` rom=11 engine=14 |
+| seg 12 `mz2_3` | 3 errors, frame 101 `prepared` true/false | **green** |
+| seg 15 `mz3_2` | 6 errors, frame 102 `prepared` true/false | **green** |
+
+**Scope caveat: this covered `TestS1CompleteEmeraldRunChain` only.** The table says nothing
+about any other class under the fixture. `-Ptrace-replay` was not run. A future reader must
+not take it as a sweep.
+
+### The promotion phase: both halves of the counterexample pair close, with no engine change
+
+`ghz2_2` f107 / `mz3_2` f102 was established as a constructed counterexample — identical
+engine state, identical execution path, differing ROM outcome, because whether the main-loop
+tail has run when the lag V-int lands depends on where in the body the 68000 was interrupted.
+A native fix greened one segment and reddened the other and was reverted.
+
+The fixture closes **segment 12 completely** and segment 15 completely, with no engine change
+at all. (An earlier round recorded segment 12 as 40 -> 37; at current develop it goes green.)
+Both halves, supplied by the recording, unreachable from frame state. This is the clearest
+demonstration on record of what recorded timing supplies that frame state cannot, and it is
+why diagnosing those `prepared` axes natively would re-derive an impossibility.
+
+### The fixture changes the bridge's shape rather than leaving it unfixed
+
+Control has a live entry mid-decode (`remaining_work` 24). With the fixture the engine has
+**no active entry at all** — `prepared` false, `remaining_work` -1, the absent sentinel —
+where the ROM has one tile left. Publishing now would trade two known reds for one new red
+and a *less* legible frontier. The misattribution risk is concrete, not theoretical, and it
+is why the fixture stays held.
+
+### New: segment 3 (`ghz2_2`) is one missed service, not drift
+
+```
+frame 109  rom=11  engine=14
+frame 111  rom= 5  engine= 8
+frame 112  rom= 2  engine= 5
+frame 113  rom=-1 prepared=false busy=false | engine=2 prepared=true busy=true
+```
+
+Constant **+3** against the 3-tile `ProcessPLC_3Tiles` level path = exactly **one missed
+service**. Polarity matters: the engine is **behind**, the opposite of the lag class (a
+missed lag suppression makes the engine run *ahead*), so it cannot be mistaken for one.
+`ghz2_2`'s stream carries an edge at `raw_frame` 108, ordinal 16, immediately before the
+divergence. Reads as the arm-cadence-within-a-drain item flagged separately at line 87700.
+**Shape named, not root-caused.**
+
+### Retraction: the 33 signature-less rows do NOT run their main loop
+
+The 2026-08-20 V-int admission design note asserted, from review rather than measurement,
+that these rows run gameplay with the counter advancing on both sides, and proposed a guard
+to enforce it. **That is false and the guard would have asserted the opposite of the truth.**
+
+Measured on `lz4`'s listed rows (1, 3, 5, 7, 12, 17, 21, 23, 30, 39, 91, 97, 115, 117, 123):
+`vblank_counter` +1, **`gameplay_frame_counter` +0**, and `player_x`/`player_y` byte-identical
+to the previous row. A V-int elapsed and no gameplay pass happened.
+
+### And the discriminator is already recorded
+
+`aux_state.jsonl` already carries per-frame `{"event":"lag_state","lagged":...,"lagcount":N}`,
+and `metadata.json` already declares `lag_state_per_frame` in `aux_schema_extras`. Correlating
+`lagged` against frozen `gameplay_frame_counter`:
+
+| segment | transitions | lagged & frozen | clean | disagreements |
+|---|---|---|---|---|
+| `lz4` | 6,719 | 870 | 5,849 | **0** |
+| `lz2` | 8,640 | 162 | 8,478 | **0** |
+| `mz3_2` | 11,331 | 33 | 11,298 | **0** |
+| `ghz2_2` | 3,605 | 11 | 3,594 | **0** |
+
+30,295 ordinary-level transitions, zero disagreements either way. At the frontier,
+`syz2` row 70 and `syz3` row 70 are both `lagged=true` — the exact two rows the tear census
+named as the only bridge rows where the harness fails to suppress a ROM stall.
+
+**Consequences.** No re-record, no new stream, no new event kind and no contract extension
+are required; the recorder has been capturing the discriminator all along and nothing
+consumes it on level rows. The mechanism is already implemented for one path:
+`TraceRunSpecialStageRows.syntheticLagPhase`
+(`src/main/java/com/openggf/trace/replay/runs/TraceRunSpecialStageRows.java:326-331`) maps
+`trace.getFrame(row).lag()` to `PlcLifecyclePhase.LAG` and sets `runGameplay = !lagged`.
+That is contract 1, main-loop admission, working correctly for special stages and never
+applied to level and presentation rows. The change is a coverage gap, not a new authority.
+
+**The trap in the new shape.** Frozen `gameplay_frame_counter` is a proxy that coincides with
+`lagged` only in ordinary level segments. Inside presentation bridges it collapses: `syz2`
+has 802 of 811 rows frozen while only 9 are lagged, because gameplay is structurally frozen
+there anyway. **`lagged` is the authority; never derive lag from counter shape** — doing so
+is right where it does not matter and wrong exactly in the bridges that do.
+
+### Not established
+
+- Whether applying `lag()` to level rows moves the chain. Suppressing service makes the
+  engine run *behind*, and `mz2_3`/`mz3_2` are already reported behind, so this could worsen
+  them. Unmeasured.
+- Why the `TraceRunSpecialStageRows` precedent was never extended.
+- Root cause of the segment 3 +3 offset.
+- The `lag_counter` column in `physics.csv` read `0000` on every row sampled; the live value
+  is aux `lagcount`. Do not build on the CSV column.
+
+Correlation script: `tools`-free standalone, preserved at
+`agent-scratch` task `s1-bridge-rowgap-20260820T072707Z-1399555-18367f8c/lag-correlation.py`.
