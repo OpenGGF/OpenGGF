@@ -98886,3 +98886,78 @@ not checked.
 2. ROM object-RAM slot IDs over 12240-12260, which would separate "the ROM's last animal left
    earlier" from "the ROM's last animal was invisible to the scan". `aux_state.jsonl` carries no
    object slots, so no committed S1 fixture can answer it today.
+## 2026-08-20 — S2 complete-emerald chain: the extra tails art edge was a missing landing publish
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` (all three ROM paths),
+base `d7806a697`, candidate `0d8b32df0` on `bugfix/ai-s2-chain-r5`.
+
+Chasing the extra `tails` mapping-frame-105 edge pair recorded in the entry above. The
+excursion is the **balance** animation, not a stale one: at that title-card iteration Tails
+has `animationId=6, animationFrameIndex=1, balanceState=1` while Sonic has already returned
+to Wait. The write comes from `checkTerrainEdgeBalance` — `onObject=false`, so the
+`Tails_Balance` / `ChkFloorEdge` branch (`docs/s2disasm/s2.asm:39726-39747`), not the
+on-object branch.
+
+Instrumented at the branch: `centerDist=15, nextTilt=255, tilt=3, x=10064, y=1012,
+leftDist=27, rightDist=0`. Four other evaluations at the *same position* in the same title
+card read `tilt=216` and do not balance. So the geometry is a genuine left ledge edge and
+the only thing selecting balance is the `tilt` byte reading the empty-floor sentinel `3`.
+
+**Root cause.** `airLandingPublishesTiltAngles` was true for S3K only. `Sonic_CheckFloor`
+hands `FindFloor` the shared `Primary_Angle` / `Secondary_Angle` bytes as its output pointer
+exactly as grounded `Player_AnglePos` does (`s2.asm:44035-44068`), and both character tails
+copy them into `next_tilt` / `tilt` unconditionally every frame — Obj01 `s2.asm:36252-36253`,
+Obj02 `s2.asm:38987-38988`. Without that publish an S2 landing leaves the first grounded
+frame consuming the bytes written by the last grounded dispatch *before* the jump, where a
+missed side probe had left the sentinel.
+
+### Measured, per gap, ss_5 onward
+
+| gap | base | candidate |
+|---|---|---|
+| `ss_5 -> seg7_ehz2` | `edge_count 16 vs 18`, ~40 fields | `edge_count` matches, 2 fields |
+| `seg7_ehz2 -> seg8_cpz1` | ordinal `+2`, transfer `+1` | no ordinal skew, 4 fields |
+| `seg8_cpz1 -> seg9_cpz2` | ordinal `+2`, transfer `+1` | no ordinal skew, 4 fields |
+| `seg9_cpz2 -> ss_6` | failing | **green** |
+| `ss_6 -> seg10_cpz2` | ordinal `+2` plus row drift | row drift only |
+| `seg10_cpz2 -> seg11_arz1` | ordinal `+6`, transfer `+3` | ordinal `+4`, transfer `+2` |
+
+14 axes to 13. The residual `+4 / +2` is a **second, independent generator: four extra edges
+created inside segment 15 (`seg10_cpz2`)**, which the first fix does not touch and which is
+now the whole of the remaining skew.
+
+### Rejected, with the measurement
+
+`6f22be419` (reverted by `4afaeb049`) clears the shared angle registers on level load. The
+clear is real — `Level_ClrRam` wipes `Primary_Angle` / `Secondary_Angle` (`s2.asm:4810`,
+`s2.constants.asm:1558,1560`) and `v_anglebuffer` / `v_anglebuffer2` (`sonic.asm:2742`,
+`_Variables.asm:232,234`) — but it changes nothing: the chain still failed on the same 14
+axes with `ss_5 -> seg7_ehz2` at `edge_count expected=16 actual=18`. The sentinel is written
+by a grounded dispatch inside the same title card, not carried across the boundary.
+
+A second rejected piece: publishing the landing probes' angles back into the shared registers
+from `captureTiltAnglesFromLandingProbes`. Ablation showed the rule flip alone produces the
+whole result, so the extra publish was dropped rather than landed unmeasured.
+
+### Regression, same tree, control detached to `d7806a697`
+
+| run | control | candidate |
+|---|---|---|
+| `-Ptrace-replay` | 800 run, 6 failures, 4 skipped | 800 / 6 / 4 |
+| default suite | 15194 run, 52 failures, 83 errors, 23 skipped | 15194 / 52 / 83 / 23 |
+| `-Pguards` | 500 run, 0 failures | 500 / 0 |
+
+Neither arm truncated: identical executed-class sets (157 trace-replay, 1926 default) and
+identical `Tests run: 0,` counts (6 and 14). The same six trace-replay classes fail in both
+arms. Comparing every assertion line by full untruncated message, the **only** difference
+anywhere is the S2 chain's `14 axis/axes` becoming `13`; the S1 chain's 22 axes are
+line-for-line identical, and the S3K chain fails identically at `segment 8 lost production
+ownership before source closure`.
+
+### Open, not established
+
+The four extra edges inside `seg10_cpz2`, and the `ss_6 -> seg10_cpz2` row drift
+(`movie_logical_frame` `+21, +20, +8, +2, +1`, converging) that survives the fix. That gap's
+destination is segment 15, the first red segment, at
+`queue.s2_nemesis_plc.remaining_work rom=2 engine=5` — worth testing whether the drift and
+the three-pattern deficit are the same event.

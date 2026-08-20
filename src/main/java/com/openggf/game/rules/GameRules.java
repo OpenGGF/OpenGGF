@@ -244,7 +244,14 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false,
+                    // Sonic_CheckFloor hands FindFloor the shared Primary_Angle /
+                    // Secondary_Angle bytes exactly as the grounded AnglePos path
+                    // does (s2.asm:44035-44068), and both character tails copy them
+                    // into next_tilt / tilt unconditionally every frame -- Obj01 at
+                    // s2.asm:36252-36253, Obj02 at s2.asm:38987-38988. A landing
+                    // frame therefore publishes fresh angles for either character,
+                    // the same shape S3K already models.
+                    true,
                     TailsTailPushDetection.STATUS_BIT_ONLY
             ),
             new CameraRules(
