@@ -97770,3 +97770,108 @@ destination's first row.
 frontier. Those two call sites are the whole surface, and the anchor's own comment warns the
 pairing is incoherent if only one side moves — so reworking the V-blank anchor and budget together
 for `framesConsumed == 0` is the next round, and whether it greens the seam is **not established**.
+
+## 2026-08-20 — The uncompared-return clock contract admits zero rows; the seam's real blocker is the gap journal
+
+Round `s2-return-clock-r1` off `6cbad2e64`, branch `bugfix/ai-s2-return-clock-r1`.
+Landed: the clock-contract rework alone (`336c8017e`), a strict no-op today. The
+title-card hand-back candidate is committed with its measurement (`4cce9a83b`)
+and reverted (`80ca79a45`).
+
+### The contract was never `>= 1`; the two budgets are the same expression
+
+`uncomparedInteriorReturnVblankBudget` rejected `returnFramesConsumed < 1` and
+`AbstractRunChainTest` asserted `framesConsumed == 1`. Neither is a property of
+the arithmetic. The budget counts `sourceFinalRow` → `destOffset + consumed - 1`;
+its sibling `interLevelVblankBudget` counts `sourceOffset + count` →
+`destOffset + consumed`. Both reduce to `destOffset + consumed - sourceFinalRow - 1`
+— identical for every input, now pinned by a unit assertion at `consumed == 0`.
+`interLevelVblankBudget` has always admitted zero; it is what all five
+`level_advance` admissions pass. So the `>= 1` rejection asserted the observed
+shape of the committed runs, nothing more.
+
+Both sides moved together, as the anchor's comment demanded: the comparator bases
+at destination row `framesConsumed` and the budget targets the counter entering
+that same row, which holds at every non-negative count. The chain assertion now
+states the invariant that actually keeps them paired — the organic cursor lies
+within the destination segment — instead of a count.
+
+### The candidate closes the seam, and is still blocked
+
+`SETUP_ONLY` at title-card release, on top of the contract: S2 chain segment 15's
+first mismatch moves from frame 2 (`queue.s2_nemesis_plc.remaining_work rom=2
+engine=5`) to frame 1725, and segment 18's from frame 1 (`rom=22 engine=25`) to
+frame 4014. **The queue divergence at the seam is gone.** Neither segment greens
+— errors move only 7511 → 7502 and 14289 → 14265 — so the seam is closed and the
+segments are red for later, unrelated reasons.
+
+It regresses `TestS2EhzHalfpipeRoundTripChain` green → red and adds three
+`dynamic-art-gap` axes (14 → 17), every edge one movie row early.
+
+### MEASURED — and this refutes candidate 1's explanation
+
+Paired probe at `nextSegmentArmed`, same run, arm vs same-tree control:
+
+```
+ctl  seg2_ehz1 lastRun=9701 armStamp=9701 armUnann=5841 gapStartUnann=5732
+               edges=[9701@5815, 9701@5815, 9701@5816, 9701@5816,
+                      9701@5831, 9701@5832, 9701@5839, 9701@5840]
+arm  seg2_ehz1 lastRun=9700 armStamp=9701 armUnann=5841 gapStartUnann=5732
+               edges=[identical]
+```
+
+Every quantity the engine's own dynamic-art clock produces is byte-identical:
+same admission stamp, same unannounced-row totals, same per-edge
+`unannouncedRowsAtEmit`. The engine did not lose a movie row. The only term that
+moved is `lastMovieRowRun`, and only because `AbstractRunChainTest:1711` and
+`TraceRunDynamicArtGapJournal.lastMovieRowRun` derive it as
+`bk2FrameOffset + rowsConsumed - 1` — a CLOCK fact ("the last movie row the
+engine actually ran") derived from a COMPARATOR fact ("destination rows the
+comparator will not compare"). Those coincide only while every return fuses the
+destination's row zero.
+
+Candidate 1 was rejected with the explanation that "the fused host iteration
+represents two ROM frames but is charged one movie row". Candidate 2 has no fused
+iteration at all and produces the **same three axes with the same one-row-early
+signature**, so that explanation is not what drives the residual. The common
+factor is the derivation above.
+
+### Confirmed by holding the term at its real value
+
+A temporary probe passing the engine's actual last-run row at the uncompared
+return: `TestS2EhzHalfpipeRoundTripChain` green again, and the S2 chain's axis
+SET identical to the control's 14 (diffed, not counted), with the segment-15/18
+improvements intact. **Diagnostic only, not a fix** — there is no engine-side
+counter of rows actually run today, and substituting the admission stamp would
+collapse `rowCountedBackFromAdmission`'s stale-stamp branch into its identity
+branch, deleting the mechanism that exists because the stamp is stale.
+
+### Frontier
+
+The clock contract is closed. The next round owns one question: what supplies
+"the last movie row the engine actually ran" at an arm, independently of the
+comparator's consumed count. With that in place the title-card hand-back is
+landable and closes the S2 stage-exit seam.
+
+### Measurement (all `-Dmse=off`, all three ROM paths explicit, JDK 21)
+
+Same-tree control at `6cbad2e64` in a sibling worktree, diffed by full message.
+
+| Arm | Control | Candidate (landed contract only) |
+|---|---|---|
+| `-Ptrace-replay` | 799 run, 7F 0E 4S | 799 run, 6F 0E 4S |
+| `-Pguards` | — | 500/500 green |
+| Default suite | 15194 run, 51F 73E 22S | 15194 run, 51F 71E 22S |
+
+The failure sets differ by one class: `TestS2Ehz1TraceReplay` is red on the
+control and green on the candidate. It extends `AbstractTraceReplayTest`, not
+`AbstractRunChainTest`, and touches neither budget, so the landed diff cannot
+reach it — recorded as the known Surefire run-order churn, not an improvement.
+Every chain class result is identical between the two arms.
+
+The default suite's failing-class sets differ by one class each way --
+`TestGameLoopSpecialStageEntryPresentation` red only on the control,
+`TestGameLoopAudioPresentationModes` red only on the candidate. Both are
+`GameLoop` presentation classes with no path to either budget, and the first is
+already on record churning between two runs of the same tree. Neither run was
+truncated: both report 15194 tests and the same 14 `Tests run: 0,` lines.

@@ -1615,33 +1615,49 @@ abstract class AbstractRunChainTest {
                                     "Uncompared interior return has no source-level clock anchor");
                         }
                         // Scoped to the anchored games ON PURPOSE. The anchor and
-                        // attachReturnedLevelSegment's comparator base are one contract
-                        // and are coherent only at framesConsumed == 1: at 0 the
-                        // comparator rebases to frame 0 while the anchor still targets
-                        // row 0's value, every compared row is read one row early, and
-                        // the artefact is indistinguishable from a physics divergence
-                        // in the report. That is what masked four separate structural
-                        // attempts at the S2 seam.
+                        // attachReturnedLevelSegment's comparator base are one
+                        // contract, and the thing that keeps them coherent is that
+                        // BOTH consume this same framesConsumed: the comparator bases
+                        // at destination row framesConsumed, and the budget targets
+                        // returnOffset + framesConsumed - 1, which is the counter
+                        // value entering that row. That holds at every non-negative
+                        // count, zero included -- a return that hands its host
+                        // iteration back rather than fusing the destination's frame 0
+                        // into it anchors on the row before frame 0, exactly as the
+                        // level_advance admissions do through the arithmetically
+                        // identical interLevelVblankBudget. What must NOT happen is a
+                        // count that names rows the engine never ran (see OPTION B
+                        // below, which re-anchors the cursor and is therefore excluded
+                        // from this branch), or a cursor that has left the destination
+                        // segment altogether -- either breaks the pairing by making
+                        // the comparator's base and the anchor's target disagree about
+                        // which row the engine is standing on.
                         //
                         // A game whose profile leaves alignUncomparedInteriorReturnVblank
-                        // false runs no anchor here, so it has no pairing to be
-                        // incoherent and no business being asserted against. S3K takes
-                        // GameModule's default TracePlaybackProfile.DISABLED
+                        // false runs no anchor here, so it has no pairing at all. S3K
+                        // takes GameModule's default TracePlaybackProfile.DISABLED
                         // (GameModule.java:334-336) and reaches its aiz_2 return with
-                        // framesConsumed == 0 -- a legitimate second return shape, not a
-                        // defect. An earlier version of this assertion sat outside this
-                        // guard and aborted the whole S3K chain at segment 1 for exactly
-                        // that reason; it was reverted in 34e58af86. Do not widen it.
-                        assertEquals(1, framesConsumed,
-                                "Uncompared interior return must consume exactly the "
-                                        + "destination's frame 0 before the comparator "
-                                        + "attaches (cursor " + playback.getCursorFrame()
-                                        + ", offset " + returnOffset + ", segment "
+                        // framesConsumed == 0 -- a legitimate second return shape, not
+                        // a defect. An earlier version of this assertion sat outside
+                        // this guard and aborted the whole S3K chain at segment 1 for
+                        // exactly that reason; it was reverted in 34e58af86. Do not
+                        // widen it.
+                        assertTrue(framesConsumed >= 0
+                                        && framesConsumed
+                                                <= plans.get(i + 1).segment().traceFrameCount(),
+                                "Uncompared interior return's organic cursor must lie "
+                                        + "within the destination segment before the "
+                                        + "comparator attaches (cursor "
+                                        + playback.getCursorFrame()
+                                        + ", offset " + returnOffset + ", recorded rows "
+                                        + plans.get(i + 1).segment().traceFrameCount()
+                                        + ", segment "
                                         + plans.get(i + 1).segment().dir() + "). The "
-                                        + "V-blank anchor targets row 0's value and the "
-                                        + "comparator bases at framesConsumed; at any "
-                                        + "other value the two disagree and every "
-                                        + "compared row is read off by one. For " + runDir);
+                                        + "comparator bases at framesConsumed and the "
+                                        + "V-blank anchor targets the counter entering "
+                                        + "that same row; outside the segment the two "
+                                        + "name different rows and every compared row "
+                                        + "is read off by one. For " + runDir);
                         alignUncomparedInteriorReturnVblank(
                                 uncomparedInteriorSourceLevel, plans.get(i + 1),
                                 uncomparedInteriorSourceVblank, framesConsumed);

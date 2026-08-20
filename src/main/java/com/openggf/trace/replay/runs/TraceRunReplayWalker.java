@@ -794,7 +794,7 @@ public final class TraceRunReplayWalker {
      * {@code returnOffset + returnFramesConsumed - 1}.
      *
      * <p>This term was previously hardcoded to a consumed count of one, which is
-     * what every uncompared return in the committed runs actually does, so the
+     * what every uncompared return in the committed runs actually did, so the
      * arithmetic is unchanged for all of them. Carrying it explicitly is what
      * makes the anchor independent of the seam's row layout: with the count
      * fixed, any change to the number of rows the seam consumes silently
@@ -802,6 +802,23 @@ public final class TraceRunReplayWalker {
      * resulting off-by-one row read was indistinguishable from a physics
      * divergence. Threading the real count is the precondition for judging such
      * a change at all.
+     *
+     * <p>A consumed count of zero is a legitimate return shape and is admitted
+     * here, exactly as {@link #interLevelVblankBudget} admits
+     * {@code nextFramesConsumed == 0}. The two budgets are the SAME expression:
+     * {@code interLevelVblankBudget} counts from one past the source's final row
+     * to {@code destOffset + consumed}, this one counts from the source's final
+     * row to {@code destOffset + consumed - 1}, and both reduce to
+     * {@code destOffset + consumed - sourceFinalRow - 1}. So the target is
+     * always "the counter value entering the first row the comparator will
+     * compare", whether or not a fall-through row was consumed first: at one
+     * consumed row that is the value ON destination row 0, at zero consumed rows
+     * it is the value on the row BEFORE destination row 0. The old
+     * {@code >= 1} rejection asserted the observed shape of the committed runs,
+     * not a property of the arithmetic, and a return that hands its host
+     * iteration back rather than fusing the destination's first row into it is
+     * the same boundary shape every {@code level_advance} admission already has
+     * (all of which pass a consumed count of zero).
      */
     public static int uncomparedInteriorReturnVblankBudget(
             TraceRunManifest.Segment sourceLevel,
@@ -814,9 +831,8 @@ public final class TraceRunReplayWalker {
         if (nonAdvancingMovieRows < 0) {
             throw new IllegalArgumentException("frame counts must be non-negative");
         }
-        if (returnFramesConsumed < 1) {
-            throw new IllegalArgumentException(
-                    "an uncompared return must consume at least the destination's first row");
+        if (returnFramesConsumed < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
         }
         int sourceFinalRow = sourceLevel.bk2FrameOffset()
                 + sourceLevel.traceFrameCount() - 1;
