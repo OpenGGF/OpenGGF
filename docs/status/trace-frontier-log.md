@@ -97208,3 +97208,99 @@ paired fade compensation regresses S2 by the same mechanism in the opposite dire
 **Quote the discriminator, not the cursor.** At a level-to-level seam the BK2 cursor is not a
 frame count and its deltas are not linear. The arbitrating measurement is the recorded row on
 which the engine reaches the pinned `player_y` — row 7031 of `aiz_5`, value `0342`.
+
+## 2026-08-20 — The `rowsConsumed` blocker is already closed; the held S1 fixture no longer destroys the chain diagnostic
+
+Branch `bugfix/ai-s1-rowsconsumed-r2`, worktree based on `origin/develop` at
+`215570dd6`. **Diagnosis only; no engine change is landed.** This entry
+supersedes the working order that had the `rowsConsumed` invariant as step 1.
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS1CompleteEmeraldRunChain" \
+  "-Dsonic1.rom.path=$W/s1.gen" "-Dsonic2.rom.path=$W/s2.gen" "-Ds3k.rom.path=$W/s3k.gen" test
+```
+
+### Steps 1 and 2 of the documented order are already in `develop`
+
+All three parts of the arm-scope change are present at `215570dd6`:
+`HardwareTimingService.recordedAuthorityRepresentsRow` /
+`admitUnrepresentedReadiness` / `releaseUnrepresentedIdentity`, the
+`SS_NormalExit` results-loop boundary traversal (`GameLoop:1525-1537`), and the
+row-authority predicate. The successor item the arm-scope entry named — the
+natively released arm must not hold a place in the shared numbering — is landed
+too, and `Sonic1PlcArmTiming.releaseArm:132` calls it.
+
+Measured on `215570dd6` with no fixture applied: `TestS1CompleteEmeraldVisualRun`
+is **2 / 0**, and the chain fails on **8 axes** with no `rowsConsumed`
+violation and no admission exception anywhere in the output. There is no
+`rowsConsumed must be 0 or 1` failure left to fix.
+
+### With the held fixture applied, the chain gets strictly better, not worse
+
+Applying the 62-file trace delta from `bugfix/ai-s1-rerecord-fixture-r1` onto
+`215570dd6`, same tree, one variable:
+
+| | axes | seg 12 | seg 15 | seg 3 |
+|---|---|---|---|---|
+| without the fixture | 8 | 3 errors, `s1_nemesis_plc.prepared` | 6 errors, same field | green |
+| with the fixture | **7** | **green** | **green** | 7 errors, `remaining_work rom=11 engine=14` f109 |
+
+Segments 22, 23, 24, both `dynamic-art-gap` axes and the `-216` walk-failure are
+**identical, byte for byte**. The `IllegalStateException: non-exportable pending
+hardware submission NEMESIS_PLC_QUEUE#7` that the earlier round measured at the
+first segment handoff **does not occur**. The detailed three-axis diagnostic
+every S1 round works from survives the fixture intact.
+
+So the recorded premise "landing the fixture first is measured harmful" was true
+when it was measured and is **no longer true**. It was a statement about a tree
+without arm scope.
+
+### The reviews' first gating condition is closed for free
+
+The fixture delta is **28 new `hardware_timing.jsonl` files, 34 `metadata.json`
+`recording_date` bumps, and 4 docs files** — and nothing else. No
+`physics*.csv*` or `aux_state*.jsonl*` file is touched at all, so the physics and
+aux comparison rows are byte-identical *by construction* rather than by
+comparison. Six segments (`ss` .. `ss_6`) take a metadata bump with no sidecar.
+The one-path-class check the reviews asked for is satisfied against the merge
+base `34c95928e`.
+
+### What is actually left: seven unconsumed `ghz2_2` edges
+
+`TestS1CompleteEmeraldVisualRun` is still red with the fixture, on seven
+unconsumed `NEMESIS_PLC_QUEUE` edges `#14`..`#20` — `ghz2_2`'s whole stream.
+Probing `HardwareTimingService.submit` across the run:
+
+- ordinal base is installed **once**, `want=0 existing=null applied=true`;
+- ordinals **0-6** match `ghz1/hardware_timing.jsonl` on fingerprint *and*
+  raw frame (69, 101, 107, 3354, 3374, 3386, 3525) — exact;
+- ordinals **7-13** match `ghz2/` the same way (68, 71, 74, 76, 78, 79, 81);
+- then the engine submits exactly **one** further arm, ordinal 14, fingerprint
+  `afaa752d…`, and releases it through the unrepresented path.
+
+`ghz2_2`'s recorded `#14` is `3224e355…`, which is *not* what the engine
+submitted there. The engine never submits into ordinals 14-20 at all.
+
+**Retracted before publication:** an earlier reading of this probe had `ghz1`'s
+submissions matching `ghz2_2`'s recorded stream and concluded the two segments'
+sidecars were swapped. They are not. `ghz1` and `ghz2_2` carry *identical*
+fingerprint sequences, as do `ghz2` and `ghz3`, because a fingerprint is
+content-only and these are the same acts with the same PLC list. Matching on
+fingerprint alone cannot identify a segment; the raw frames are what
+disambiguate, and they say the engine is correct for `ghz1` and `ghz2`.
+
+### The next question, stated precisely
+
+Why the engine's post-`ghz2` arm carries `afaa752d…` where the recording's first
+`ghz2_2` arm carries `3224e355…` (the GHZ act-2 PLC head), and why the six
+represented arms after it never happen. That is a descriptor question about
+which PLC list the return-into-act load submits, not a numbering question — the
+ordinal cursor is demonstrably right up to 13.
+
+### Consequence for the ordering
+
+The gate on landing the fixture is no longer "it destroys the diagnostic". On
+this measurement it repairs two segments and costs one. Whether it lands is
+still a separate decision under the reviews' remaining conditions — the 242-edge
+one-to-one accounting and the contract/status documentation reconciliation are
+untouched by this round.
