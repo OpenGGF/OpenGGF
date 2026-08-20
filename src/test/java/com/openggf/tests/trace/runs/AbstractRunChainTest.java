@@ -2875,8 +2875,14 @@ abstract class AbstractRunChainTest {
                     loop, GameMode.LEVEL, nextLevel, levelAtSegmentStart, stepCap);
             int firstGameplayFrame = playback.getCursorFrame() - offset;
             if (firstGameplayFrame < 0 || firstGameplayFrame > 1) {
+                // Name the boundary. Without it the axis says only how far the
+                // cursor moved, and locating it costs a bisect -- which is how
+                // this one stayed undetermined.
                 throw new AssertionError("Destination playback cursor advanced "
-                        + firstGameplayFrame + " frames during level-load handoff");
+                        + firstGameplayFrame + " frames during level-load handoff"
+                        + " (" + currentLevel.segment().dir() + " -> "
+                        + nextLevel.segment().dir() + ", destination offset "
+                        + offset + ", cursor " + playback.getCursorFrame() + ")");
             }
             completeInterLevelVblankBudget(
                     currentLevel, nextLevel, firstGameplayFrame, sourceTailVblank);
