@@ -95059,3 +95059,100 @@ A per-frame (not per-write) log over movie frames ~19770-19840 of: `Camera_X_pos
 
 Camera is the discriminator to trust: the trace definitely carries it and the probe can
 definitely read it, and unlike the counter its name is not doing any work.
+
+## S3K chain segment 4 (`aiz_3`) — the anchor is `offset + row + 1`, measured
+
+Command (per-frame anchor capture, run from a
+worktree on branch `bugfix/ai-s3k-seg4-anchor-r1` off
+`1c0e80734`):
+
+```
+BIZHAWK_HOME=<scratch>/bizhawk OGGF_OUT=<scratch>/anchor.txt \
+tools/bizhawk/run_bizhawk_lua.sh \
+  tools/bizhawk/probes/aiz2_entry_anchor_frame_probe.lua \
+  src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2 \
+  "<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+**Result: a single frame matches row 0 on every column at once, and it is 19776, not
+19775.** `k = +1`.
+
+| column | fixture row 0 | emu frame 19775 | emu frame **19776** |
+|---|---|---|---|
+| `camera_x`,`camera_y` | `01A0`,`0370` | `01A0`,`0370` | `01A0`,`0370` |
+| `gameplay_frame_counter` | `0001` | `0000` | `0001` |
+| `vblank_counter` | `4C35` | `4C34` | `4C35` |
+| `lag_counter` | `0000` | `0016` | `0000` |
+| `player_x`,`player_y` | `0240`,`03D0` | `0240`,`03D0` | `0240`,`03D0` |
+| `player_routine`/`status` | `02`/`02` | `02`/`00` | `02`/`02` |
+| `player_animation_id`/`mapping_frame` | `05`/`BA` | `00`/`00` | `05`/`BA` |
+| `sidekick_animation_id`/`mapping_frame` | `05`/`AD` | `00`/`00` | `05`/`AD` |
+
+`lag_counter` is the cleanest discriminator of the two frames — `0x16` versus `0`, not an
+off-by-one in a monotonic counter — and `camera`, both counters, both routines, both
+animations and both mapping frames agree on 19776 as well. Rows 1-6 continue to track
+frames 19777-19782 field for field.
+
+### The clock question, now measured rather than name-matched
+
+The recorder's `gameplay_frame_counter` column reads `ADDR_FRAMECOUNT = 0xFE04`
+(`tools/bizhawk/s3k_complete_run_recorder.lua:576`), which *is* `Level_frame_counter`, and
+its `vblank_counter` column reads `ADDR_VBLA_WORD = 0xFE0E` (`:584`), the `V_int_run_count`
+low word. The probe read those same two addresses, so this is no longer a name match. The
+previous entry's flagged "possibly coincidental corroboration" was in fact correct, and can
+be promoted.
+
+### Why `+1` is the recorder's contract, not a fixture defect
+
+The `+1` is not particular to this segment or this run — it is what the arm gate does. A
+segment arms and **returns without recording the arm frame**, so `bk2_frame_offset` is the
+arm frame and row 0 is the *next* BizHawk frame (`s3k_complete_run_recorder.lua`, arm-gate
+comment: "trace row 0 is frame F+1"). `tools/bizhawk-headless/docs/s3k-run-publication.md`
+§1.5 states the same thing and then, in the same sentence, adds "row *N* aligns to BK2
+frame `offset + N`". Both are true of different quantities, and conflating them is what
+produced the contradiction:
+
+- `bk2_frame_offset + N` is the **0-based BK2 input index** for row N. `bk2_input_mask`
+  (`tools/bizhawk/lib/oggf_trace_common.lua:67-80`) uses exactly that, with the explicit
+  comment that "direct `emu.framecount()` is one frame ahead in this recorder loop".
+- `bk2_frame_offset + N + 1` is the **`emu.framecount()`** at which row N's state is
+  sampled — the number a probe prints.
+
+Every contiguous succession in this run satisfies
+`offset(i+1) = offset(i) + rows(i) + 1` (28 of 28 non-special-stage boundaries), which is
+only consistent with the arm frame carrying no row. So the fixture is correctly anchored;
+the *probe* was reading `emu.framecount()` against the input index.
+
+**Probe-authoring rule this earns:** when comparing a BizHawk probe against a trace row,
+compare `emu.framecount()` to `bk2_frame_offset + row + 1`. Comparing it to
+`bk2_frame_offset + row` silently reads the arm frame, which is the pre-settle frame
+(`status = 0`, `anim = 0`, `lag_counter` still carrying the load's lag) and looks exactly
+like a real divergence.
+
+### What this retires, and what it does not
+
+The previous entry's writer PC list was gathered under the wrong anchor and **does not
+explain row 0**. Re-indexed (`row = frame - 19776`):
+
+| PC | who | emu frame | trace row |
+|---|---|---|---|
+| `0110B6` | Sonic | 19775 | **before row 0** (arm frame) |
+| `013AFA`, `014A3A` | Tails | 19775 | **before row 0** (arm frame) |
+| `022FCE`, `022FF8` | Sonic | 19826 | 50 |
+| `015618` | Tails | 19829 | 53 |
+| `014A3A` | Tails | 19830-19839 | 54-63 |
+| `0150B4` | Tails | 19840 | 64 |
+
+So the writes at `022FCE`/`022FF8`/`014A3A` land 50-64 rows into the segment and are not
+the origin of a row-0 mismatch. Row 0's `anim = 05` / `mapping_frame = BA` is produced
+during the arm frame's own execution, after the `0110B6` store of zero: a second capture
+(`aiz2_entry_sst_arrival_probe.lua`) shows, within emu frame 19775,
+`pc=012622` storing `prev_anim` with `d0 = 5` and `pc=01266E` storing `mapping_frame` with
+`d0 = 0xBA`, alongside the `status` store at `pc=00ED44` that sets the AIR bit. Naming
+those three routines against `skdisasm` is the next step and is **not** claimed here.
+
+**Status: found, not fixed.** Segment 4 still reports 250 errors. What changed is that the
+205 animation errors are now known to be a genuine engine divergence measured against a
+correctly-anchored fixture, with a fresh writer window (the arm frame `19775`, i.e. the
+frame *before* row 0) rather than the previously-suspected mid-segment PCs. No
+known-discrepancy entry is warranted: nothing about the fixture is wrong.
