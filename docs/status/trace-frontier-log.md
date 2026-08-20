@@ -93692,8 +93692,44 @@ outside it.
 stepping logic. A future change to one will silently no-op in the other, exactly as this
 one did until both were wired. Worth collapsing.
 
-### Not established at time of writing
+### The sweep, run by the incoming lane -- SWEPT, and it lands
 
-- Any evidence about other S1/S2/S3K trace classes under this change -- the
-  `-Ptrace-replay` sweep and the default suite had **not** been run. Landing is blocked on
-  both.
+All four arms run sequentially in one worktree, never concurrently, JDK 21, `-Dmse=off`,
+all three ROM paths explicit. Control is a **same-tree revert** of the four changed files
+to `8a6e88ea8` in this same worktree.
+
+| arm | suite | Tests run | Failures | Errors | red classes |
+|---|---|---|---|---|---|
+| control | `-Ptrace-replay` | 793 | 4 | 0 | 4 |
+| change | `-Ptrace-replay` | 793 | 4 | 0 | 4 |
+| control | default | 15,191 | 55 | 67 | 55 |
+| change | default | 15,191 | 55 | 67 | 55 |
+
+`-Pguards` re-run at this head: **500/0**.
+
+**Trace-replay: identical red class sets.** `TestS2CompleteEmeraldRunChain`,
+`TestS3kSonicTailsCompleteEmeraldRunChain` and
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` are red in both arms with
+**byte-identical failure messages** -- pre-existing, owned by other lanes, untouched by
+this change. The only diff in the whole sweep is `TestS1CompleteEmeraldRunChain`: control
+fails on 3 axes and terminates at `[walk-failure] structural presentation comparison
+failed for syz2 at row 70 ... remaining_work expected=1 actual=24`; the change removes
+that axis and reaches 8. Nothing else in 793 tests moved in either direction.
+
+**Default suite: identical totals, one class differing each way** -- `change` adds
+`TestAudioPresentationProducer.warmedProducerAllocatesNoFramePacketOrConsumerArray` (an
+allocation-count assertion), `control` adds
+`TestBubblerObjectInstance.makerBeginsFirstProductionDispatchBeforeRenderVisibilityRefresh`.
+Neither touches trace stepping, and 55/67 is unchanged: this is the known ambient
+reused-fork churn, inside the ~2-class noise floor.
+
+### Still not established
+
+- Whether the `-216` cursor walk-failure is **newly visible or caused**. This arm pair
+  cannot decide it: control never gets past `syz2` row 70, so it never reaches that
+  level-load handoff at all. Only a run that reaches the handoff without the change --
+  which does not exist -- would separate the two. Treat as **undetermined**, not "newly
+  visible", and take it first.
+- Whether segments 23 and 24 share one entry-condition defect. Both first diverge at frame
+  1 on `queue.s1_nemesis_plc.remaining_work rom=17 engine=20` -- the same field, the same
+  frame, the same numbers -- which reads as one defect seen twice rather than two.
