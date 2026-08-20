@@ -101256,3 +101256,72 @@ Why the engine's capsule-button trigger fires 14 rows early. Both sides agree on
 defeat (5487) and the capsule spawn (5671), and Sonic's physics match through 5999, so the
 14 rows are in the capsule's own descent-to-pressable behaviour, not in the fight or in
 Sonic's approach.
+
+## 2026-08-21 — The capsule's 14 rows are one pixel of capsule Y against an exclusive bound
+
+Round off `origin/develop` `395df959b`. **Found, not fixed — nothing landed but this entry.**
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+### The trigger instant, both sides
+
+The engine's button trigger fires on the step producing row **5992**, on **P1 (Sonic)**:
+
+```
+PROBE trigger by=P1 playerX=49c1 playerY=1a9 ySpeed=-544
+                   capX=49a9 buttonY=18e dx=24 dy=27
+```
+
+Sonic's `x=0x49C1`, `y=0x1A9` at row 5992 **match the recording exactly** — his approach is
+right. The capsule's x matches too: the recording's capsule (`0x00086540`, identified by its
+camera-relative ±1/frame sweep) is at `x=0x49A9` on that row, and the engine has `0x49A9`.
+
+The one field that differs is the capsule's **y**. The recording has `y=0x0169`, so the ROM's
+button sits at `0x0169 + BUTTON_Y_OFFSET(0x24) = 0x018D`. The engine's button is at `0x018E` —
+**one pixel lower**.
+
+### Why one pixel is worth fourteen rows
+
+The trigger's vertical test is `dy >= -0x1C && dy < -0x1C + 0x38`, i.e. `dy` in **[-28, 28)**.
+
+| | button y | `dy = player.y - buttonY` | in range? |
+|---|---|---|---|
+| engine | `0x018E` | 0x1A9 - 0x18E = **27** | yes, by one |
+| ROM | `0x018D` | 0x1A9 - 0x18D = **28** | **no**, excluded by one |
+
+The engine's capsule is one pixel low, `dy` lands on 27 instead of 28, and the **exclusive**
+upper bound is the difference between firing and not. The ROM does not fire until row 6007.
+
+### The pixel is drift, not a constant offset
+
+Comparing the capsule's y across the descent, the sign of the error **flips**:
+
+| row | ROM capsule y | engine capsule y |
+|---|---|---|
+| 5945 | `0x015D` | `0x015C` (one **higher**) |
+| 5992 | `0x0169` | `0x016A` (one **lower**) |
+
+`updateRoute8BeforeTrigger` steps y toward `cameraY + targetYOffset()` by `0x4000` of a 16.16
+longword per frame — a quarter pixel — with `ySubpixel` starting at 0 from
+`initializeRoute8FromCamera`. A descent that slow accumulates a rounding difference of ±1 over
+tens of frames unless the subpixel phase matches the ROM's exactly. So the defect is in the
+capsule's descent stepping, not in the trigger box and not in Sonic.
+
+### Do not land a capsule-Y change without the cancelling-pair check first
+
+Two reasons, both concrete:
+
+1. **The trigger actor may differ.** The engine fires on **P1 Sonic** (`dy` 27, rolling
+   upward). At the ROM's row 6007 Sonic is at `x=0x49DA` against a capsule at `x=0x499A` — 64
+   pixels apart, far outside the `dx` range — while Tails is at `x≈0x49A0`, five pixels from
+   it, and rising. **The ROM's presser is very likely Tails, not Sonic.** Correcting the
+   capsule's y by one pixel would stop Sonic's early press, but whether the engine then presses
+   at 6007 with Tails is unverified, and a fix that moves the press without matching the actor
+   is not a fix.
+2. Anything downstream currently tuned against a press at 5992 would shift by fourteen rows at
+   once.
+
+### Next
+
+Read `Obj_EggCapsule` routine 8's own descent stepping and reproduce its subpixel phase, then
+verify the press lands on row 6007 **and** on the same character. Verify against the chain,
+not the segment alone.
