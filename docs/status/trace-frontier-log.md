@@ -98037,3 +98037,122 @@ level-load span; it does not reach it.
   destination-side admission, or by the driver-owned gap. Nothing here measures that.
 - Whether the request-consume `finishPlaybackBoundary` frame should advance. It was left
   alone, as the brief's decomposition indicated, and remains unmeasured standalone.
+
+## 2026-08-20 — The 121 rows belong to the DESTINATION's `Level:` load, and so do the 22
+
+Row convention throughout: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = bk2_cursor - 46432`. Segment 8 (`aiz_5`) is 7175 rows, bk2 46432-53606.
+
+### Discriminator
+
+Measured on `44675e740` in a `bugfix/ai-s3k-unload-span-r1` worktree
+(`mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain`,
+all three ROM paths explicit), single class, `Tests run: 1, Failures: 1`:
+
+```
+segment 8 lost production ownership before source closure
+  (mode=LEVEL, level=LevelIdentity[loadGeneration=7, progressionZone=1, romZone=1, act=0],
+   BK2 cursor=53486)
+```
+
+`romZone=1, act=0` is **HCZ1** — the destination. `53486 - 46432 = 7054`, the exact
+first row of the unloaded span. The engine has finished loading the destination while
+the cursor still sits on segment 8's first post-unload row.
+
+### Whose rows: neither candidate 1 nor candidate 2. Both spans are `Level:`.
+
+`Level:` (`docs/skdisasm/sonic3k.asm:7504`) is the **destination's** load routine, and
+its first two acts are, in order:
+
+- `bsr.w Pal_FadeToBlack` (`:7521`)
+- `bsr.w Clear_DisplayData` then `move.w d0,(Level_frame_counter).w` (`:7534-7538`)
+
+That is exactly the recorded break. Rows 7032-7053 hold `gameplay_frame_counter`
+frozen at `1B63` with the source level still resident (`player_y=0342`); row 7054 is
+the first row with `gameplay_frame_counter=0000`, `player_x/y=0000`, `sidekick_present=0`.
+The transition from row 7053 to 7054 **is** `move.w d0,(Level_frame_counter).w`.
+
+So the whole 143-row tail after the last live gameplay row (7031) is one span owned by
+one routine: the destination's `Level:`. The fade is not the source segment's freeze —
+it is the first instruction block of the destination's load. The landed
+`consumeTransitionFreezeRow` lands on the right rows for the wrong owner.
+
+The same holds in all three games: S1 `Level:` opens with `PaletteFadeOut`, S2 `Level:`
+with `Pal_FadeToBlack`. This is why S2's `seg4_ehz1 -> seg5_ehz2` 171-row driver-owned
+gap already contains its fade: there the recorder cut the source at its last gameplay
+row, so the whole `Level:` span landed in the gap.
+
+### The difference is recorder placement, not ROM behaviour
+
+Manifest gaps, level -> level boundaries:
+
+| Run | gap rows |
+|---|---|
+| `s1-sonic-complete-withemeralds` | 228-236 |
+| `s2-sonic-tails-complete-emeralds` (`seg4_ehz1`) | 171 |
+| `s3k-sonic-tails-complete-emeralds` | **1**, x22 |
+
+The S3K `complete_run` recorder instead appends the span to the source segment
+(`aiz_5/metadata.json`: *"the act2->next-zone exit handoff (trailing 0x8C frames)"*).
+Every S3K level segment whose successor is a level carries such a tail; measured over
+this run's 46 level segments the tails are 43, 45, 47, 55, 61, 62 (x6), 86 (x2), 112,
+115, 116, 120, **121**, 124, 127 (x2), 128 (x3), 133, 141, 142 (x2), and 0 for every
+segment followed by a special or bonus stage. **The length is not a constant and is not
+derivable from frame-granularity state** — it is the destination's payload-dependent
+load cost, the same quantity the S1 admission comment already records as 34-40 un-timed
+rows per boundary.
+
+### Candidate 3 (driver-owned gap) is the semantic owner; candidate 1 is refuted
+
+- **Candidate 1, extend the source freeze:** refuted. From row 7054 the source level
+  does not exist. Extending `consumeTransitionFreezeRow` past 7053 would consume rows
+  under an ownership the ROM has already ended, and since the predicate is
+  `cursor < frameCount` it would eat *whatever remains* of the source file — right here
+  only because the recorder filed them here. That is a fitted result with no constant
+  in it.
+- **Candidate 2, destination-side admission:** structurally impossible. The destination
+  `hcz` begins at bk2 53608; all 121 rows lie at 53486-53606, below it.
+  `destinationRowsConsumedForAdmission()` is `max(0, cursor - destinationOffset)` and
+  returns 0 for every one of them. The destination has no rows of its own here.
+- **Candidate 3:** the rows are the same driver-owned-gap span S1 and S2 walk between
+  segments, mis-filed inside the source segment's file.
+
+### Why the fix is not simply widening the walk
+
+The engine's failure is that segment 8 never reaches `currentSegmentExhausted`, so the
+coordinator stays in `CURRENT_SEGMENT` and `afterStep`'s `ownsCurrentSegment` fails one
+step after the load (`runLevelLoadedDuringSourceProduction` masks only the iteration in
+which the load happened). A widened gap walk that consumes one row per engine frame
+still cannot cross 121 rows, because **the engine's level load is not frame-paced**: the
+ROM spends 143 V-blanks inside `Level:` and the engine spends about one. Any consumer
+that closes that distance in one frame is a count.
+
+The sanctioned mechanism is already recorded. `aiz_5/hardware_timing.jsonl` carries 18
+of its 44 completions inside the tail:
+
+```
+7056 pre_main_loop kos_decompression_queue 144    7129 ... 148
+7057 post_objects  kos_module_queue        97     7133 ... 149
+7058/7060/7062     kos_decompression_queue 145-147 7135 ... 150   7136 kos_module_queue 101
+7059/7061/7063     kos_module_queue        98-100  7139/7143/7147/7151/7154 ... 151-155
+                                                   7155 post_objects kos_module_queue 102
+```
+
+Zero completions fall in the fade window 7032-7053 — correct, `Pal_FadeToBlack` is a
+`dbf` over `Wait_VSync` and decompresses nothing — and the first is at 7056, two rows
+after the unload. These are HCZ1's art. Pacing the destination's Kosinski readiness from
+this stream is the hardware-timing contract's stated purpose (delaying readiness of a
+matching, production-submitted ROM-backed job) and writes no length down.
+
+**But the stream does not cover the whole span.** Rows 7064-7128 (65 rows) carry no
+completion at all, and the camera only reaches the destination's `01E0,0000` at row 7126
+with the player at `0280,0020`; rows 7156-7174 carry no completion either and instead
+show `lag_counter` climbing `0001 -> 0011`. So Kosinski pacing can account for roughly
+7056-7063 and 7129-7155, not the two quiet stretches. The un-paced remainder is layout /
+Nemesis-PLC load and the title-card delay, and no engine-visible clock currently spans it.
+
+**No change landed.** The next round's question is narrower and better posed: what paces
+rows 7064-7128 and 7156-7174, given that Kosinski readiness demonstrably paces the rest.
+
+Adjacent question left untouched as briefed: whether `finishPlaybackBoundary`'s
+request-consume frame should advance is not settled by this work.
