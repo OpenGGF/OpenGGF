@@ -98830,3 +98830,59 @@ candidate-only differences are all order-dependent classes unrelated to run coor
 (`TestS3kSnaleBlasterBadnik` reflection, `TestSonic3kButtonObjectInstance`,
 `TestGameLoopSpecialStageRewindDebugBoundary`), each passing in isolation in both arms.
 `TestS2EhzHalfpipeRoundTripChain` green on the candidate.
+
+## 2026-08-20 — LZ3's twelve-frame animal wait narrows to one animal and one bit
+
+Round `s1-plc-admission-r2`, continued. Nothing landed; probes reverted.
+
+**The straggler is a single animal.** Every spawn, prison release, slot and destroy instrumented
+across all five capsule acts. LZ3's completion is set by slot 41, initial-burst animal #3, species
+id 3 — the game's slowest at 1.25 px/frame. Spawned 11930, released 12068, destroyed 12258 at
+screen x 330. The engine's *second*-last death is 12246 and the ROM's completion is 12247, so ROM
+and engine agree on everything except this one animal, which the engine keeps alive twelve frames
+longer. It exits **rightward** where its base speed is negative, i.e. it took the direction-flip
+branch; without the flip it would have left about thirty frames earlier.
+
+### Eliminated, each by measurement or the disassembly
+
+- **Cull bounds.** `BuildSprites` (`_inc/BuildSprites.asm:48-57`) tests `obX-camX+obActWid`
+  negative and `obX-camX-obActWid >= 320` with `obActWid = 8`; the engine's predicate is
+  character-for-character the same, and observed deaths land at screen x −10/−11 and 329/330 as
+  that predicts. A 16 px hypothesis fitted the twelve frames arithmetically and the disassembly
+  killed it.
+- **The `FixBugs = 0` partial scan is correct and load-bearing.** It fires exactly once in the run
+  — `syz3_2`, where eight boss blocks crowd the low slots and push an animal to slot 67, outside
+  the scanned range, and the ROM completes there with that animal still alive. That act matches
+  the ROM exactly. It cannot explain LZ3, where the straggler is at slot 41 and every animal stays
+  within 32..60.
+- **Slot-occupancy permutation.** Crowding the arena shifts slot 41 to about 45, still far inside
+  the scan; hiding it would take roughly 23 extra live dynamic objects.
+- **Spawn machinery.** Count 27 (8 burst, 19 continuous), burst offsets and delays, continuous
+  cadence, the 150-frame window and the `Pri_Animals`-before-timer order all match the ROM; slot
+  41's release frame is exact.
+- **Species speeds.** `Anml_Variables`' pair confirmed in the destroy log. Only the species
+  *labels* are swapped against the disassembly's comments — cosmetic, deliberately left alone,
+  since the speeds are right and relabelling risks art selection.
+- **The 80-sprite cap.** `.drawFrame` falls through to `.setVisible`, so the rendered bit is set
+  even when the draw truncates; it cannot cause early deletion.
+
+### The one live candidate
+
+`Anml_ChkFloor`'s direction flip (`_incObj/28, 29 Animals and Points.asm:225-229`) tests **one bit
+of one clock on one frame** — the animal's landing frame. The engine reads the executed-frame
+counter; S1's `v_vblank_byte` is the low byte of the VBlank count, and lag frames de-phase the
+two. LZ3's arena — rising water and 27 live animals — is about the laggiest place in the game to
+read it, which makes it the expected place for a phase slip to surface **and** is why the round
+flagged it as a story that explains the zone selection a little too neatly.
+
+Directionally it over-shoots: flipping this animal's branch moves it about thirty frames, not
+twelve, so if this is the cause it works by making a *different* animal the last one. Checkable,
+not checked.
+
+### What would settle it, neither available from this fixture
+
+1. The ROM's `v_vblank_byte` at LZ3 frames ~12100-12110 against the engine's executed-frame
+   counter — a one-off BizHawk probe, not a trace axis. This is the cheap one.
+2. ROM object-RAM slot IDs over 12240-12260, which would separate "the ROM's last animal left
+   earlier" from "the ROM's last animal was invisible to the scan". `aux_state.jsonl` carries no
+   object slots, so no committed S1 fixture can answer it today.
