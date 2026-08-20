@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The trace driver no longer dispatches the title-card object twice in one
+  represented iteration.** `TraceSuppressedRowClosure.executeUnownedTitleCardWork`
+  runs title-card work *not* owned by a represented closure, but
+  `RecordingFrameDriver` called it on rows where its own `stepNormalTitleCard`
+  dispatches the same provider inside the row's object scan, and
+  `updateActiveTitleCardOverlay` did the same on ordinary rows. `Obj_TitleCard`
+  (`docs/skdisasm/sonic3k.asm:62095`) and S2 `Obj34` (`docs/s2disasm/s2.asm:27307`)
+  are ordinary objects reached once per object scan, so the second dispatch has no
+  ROM counterpart. The unowned path now stands down when the caller declares it
+  owns the dispatch itself.
 - **The S1 title-card release step no longer consumes the level's first recorded
   frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
   `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),
