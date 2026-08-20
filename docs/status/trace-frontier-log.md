@@ -95582,3 +95582,56 @@ the engine's `getPushing()` is already false at 1335 while the ROM's recorded bi
 1336. Either the reported status byte and the animation's pushing flag are different values a
 frame apart, or the comparison is not seeing it. If it is the former, the animation is consuming
 a lead-by-one flag and that alone explains segment 24.
+
+## 2026-08-20 — RETRACTION: segment 4's balance level is a live derivation, not a stale scalar
+
+- Worktree `ai-s3k-balancestate-r1`, branch
+  `bugfix/ai-s3k-balancestate-r1`, over `e05927184`.
+
+**RETRACT the previous entry's defect 2** — *"`balanceState` is never cleared except inside
+the ground standing tail … here it survives the giant ring, the whole special stage, and a
+full level load."* It survives none of them, and the fix built from that premise moves
+nothing.
+
+Measured with a `setBalanceState` write-site probe carrying a stack, plus probes on
+`resetState`, the `updateAnimation` write, and each candidate clear. At the segment 3 → 4
+(`ss_2` → `aiz_3`) boundary the recorded order is:
+
+```
+RESETSTATE Sonic bal=0 x=576 y=976
+SETBAL Sonic 0->2 x=576 y=976 | setBalanceForEdge:5316 checkTerrainEdgeBalance:5246
+      updateBalanceState:4929 computeCurrentFrameBalancing:4897 doGroundMove:2676
+      modeNormal:831 handleMovement SpriteManager.tickPlayablePhysics:1748
+SETBAL Sonic 0->2 x=576 y=976 | updateCrouchState:4442 modeNormal:843 ...
+ANIM  Sonic -> 0xc air=true bal=2 x=576 y=976
+```
+
+`resetState()` **does** run at this boundary — three times, once at exactly segment 4 row 0's
+`x=576,y=976` — and each time observes `bal=0`. The 2 is written *after* that reset, on
+segment 4's own first frame, by a live grounded `modeNormal` dispatch. Tails takes the
+identical path to `bal=1`. Nothing is retained from before the special stage.
+
+**The real defect is an incorrect live terrain edge-balance derivation on the entry frame**,
+not a lifetime problem. Note the contradiction inside one dispatch: `updateBalanceState`
+gates on `isOnFlatGround()` and finds an edge, while `AnglePos` later in the *same* dispatch
+finds no floor and leaves the player airborne (`air=true` in the `ANIM` line, matching the
+recorded `status=02`). The two floor probes disagree on the same frame. The ROM reaches this
+row through `Player_AnglePos` `loc_ED38` (no floor → `Status_InAir` + `prev_anim=1`) with
+`anim` already 5, so `Sonic_Balance`'s own `ChooseChkFloorEdge` probe never selects a level
+there. **Next round's question: why does the engine's balance floor probe find ground at
+`(0x0240,0x03D0)` that `AnglePos` does not?**
+
+**Also established — the animation write precedes the movement dispatch within a frame.** The
+`ANIM` line lands before the segment's first `handleMovement`. Any fix that clears state at
+movement-dispatch time is one dispatch too late for a row-0 error; two such candidates were
+built and measured, and both left the count unmoved.
+
+- Measurement, same tree, `TestS3kSonicTailsCompleteEmeraldRunChain`, `-Ptrace-replay
+  -Dmse=off` with all three ROM paths. Control at `e05927184` and both candidates all report
+  segment 4 diverging with **250 physics comparator errors** and the same
+  `run_boundary.position.x` expected `14007` / actual `14008` walk-failure. No arm regressed;
+  no arm improved. The predicted −205 did not occur.
+- The statelessness change on this branch (clear `balanceState` on any dispatch that did not
+  derive it) remains a faithful model of the ROM, but it has **no measured benefit** and has
+  not been run against the full `-Ptrace-replay` matrix, `-Pguards`, or the default suite.
+  Do not merge it on this evidence.
