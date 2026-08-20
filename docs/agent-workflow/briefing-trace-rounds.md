@@ -1295,3 +1295,24 @@ Practical scheduling, learned the same day:
   to quote report files from.
 - When the box is loaded, do not kill a round mid-measurement to reclaim it. That wastes the work
   *and* produces the truncated logs you then have to tell apart from real results.
+
+## Forty-fourth rule: an axis count is only comparable when both arms reach the same depth
+
+Two chain arms produced 22 axis lines and 9. The 9 was not better: the candidate's walk **aborted
+at segment 27** where the control reached segment 33, so four segments and seven gap axes were
+never asserted at all. Fewer reported failures, strictly less evidence.
+
+The same day produced the exact inverse. A fix took a chain from 2 axes to 3 — and that *was*
+progress: one axis was removed, and two appeared, one of which only became **evaluable** because
+the walk now completed far enough to evaluate it.
+
+So the count moves for three unrelated reasons — defects fixed, defects introduced, and depth
+changed — and a bare number cannot distinguish them. **Report reach and the axis list, not the
+count.** Name the deepest segment each arm asserts, and diff the lists by message. If the arms
+stop at different depths, say so in the same breath as any count you quote, because an
+unqualified number reads as progress to whoever finds it later.
+
+The same trap applies one level down: two arms that both assert a segment can still differ inside
+it. A round compared reach and axis lists carefully, and separately found the candidate made an
+already-red segment **worse by 901 errors** — a widening invisible to both the count and the list,
+caught only by diffing per-segment error counts across the segments both arms actually assert.
