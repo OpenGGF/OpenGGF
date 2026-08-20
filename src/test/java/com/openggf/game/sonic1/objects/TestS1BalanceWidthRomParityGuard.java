@@ -198,6 +198,22 @@ class TestS1BalanceWidthRomParityGuard {
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
+        ROM_ACT_WID.put("Sonic1FZBossInstance", new Entry(dynamic("32 combat / 48 defeat fall"), Disposition.DECLARES_OWN_WIDTH,
+                "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:56-58,96-101,355-371",
+                "BossFinal_ObjData2 row 0 lands in the parent's own slot via movea.l a0,a1. Both "
+                        + "sites are Revision conditionals, not FixBugs ones: REV00 writes obWidth. "
+                        + "Only the combat 32 is balance-observable -- reaching Eggman_Fall needs the "
+                        + "boss defeated, and Sonic_Balance skips a stood-on object whose obStatus "
+                        + "bit 7 is set (Sonic ReactToItem.asm:268; 01 Sonic.asm:418-420). The fall "
+                        + "value is still the live BuildSprites cull bound"));
+        ROM_ACT_WID.put("FZPlasmaLauncher", new Entry(px(0), Disposition.DECLARES_OWN_WIDTH,
+                "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:990-1001,1022-1027; sub DeleteObject.asm:10-19",
+                "zero, and that is the ROM's own omission rather than a gap here: BossPlasma_Main "
+                        + "writes obWidth where it meant obActWid -- the same fumble the listing flags "
+                        + "for the cylinders at :776-778, except the cylinders were repaired in REV01 "
+                        + "and this was not, in either revision. DeleteObject zeroes the slot, so the "
+                        + "byte stays 0. At 0 the Sonic_Balance window covers every position, so the "
+                        + "ROM balances the whole time the player stands on it"));
 
         // --- Top-solid, routine passes obActWid straight through as d1 --------------
         ROM_ACT_WID.put("Sonic1PlatformObjectInstance", new Entry(px(32), Disposition.FALLBACK_MATCHES_ROM, "18 Platforms.asm:30,70"));
@@ -242,11 +258,7 @@ class TestS1BalanceWidthRomParityGuard {
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
                 new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
-                new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"),
-                new Deferred("FZPlasmaLauncher", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:1022-1027 "
-                        + "(BossPlasma_Collision d1 = #16/2+sonic_solid_width; no obActWid write in the object -- "
-                        + "the :781 previously cited here is EggmanCylinder_Init's, a different object)"),
-                new Deferred("Sonic1FZBossInstance", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:357,370"))) {
+                new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"))) {
             ROM_ACT_WID.put(deferred.type(), new Entry(deferred.rom() < 0 ? dynamic("see citation") : px(deferred.rom()),
                     Disposition.RECORDED_UNASSESSED, deferred.cite()));
         }

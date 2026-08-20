@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The FZ boss and its plasma launcher balance at their ROM `obActWid`.**
+  `BossFinal_Main` stores `BossFinal_ObjData2` row 0's `#64/2` = 32 into Eggman's
+  own slot on REV01 (`docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders,
+  and Plasma Balls.asm:56-58,96-101`), and the defeat fall re-writes it to
+  `#96/2` = 48 and back (`:355-371`); both sites are `Revision` conditionals, so
+  REV00 writes `obWidth` instead. The launcher's byte is **zero** — and that is
+  the ROM's own omission, not a gap in the port: `BossPlasma_Main` writes
+  `obWidth` where it meant `obActWid` (`:990-1001`), the same fumble the listing
+  flags for the cylinders at `:776-778` except that this one was never repaired
+  in either revision, so the slot keeps the zero `DeleteObject` left in it. At
+  `obActWid = 0` the `Sonic_Balance` window `d1 < 4 || d1 >= 2*obActWid - 4`
+  covers every position, so the ROM balances the whole time the player stands on
+  the launcher where the engine's inherited 16 balanced only near its edges. Both
+  objects' separately authored solid boxes are unchanged.
+
+### Fixed
 - **The 4x1 pushable block balances at `PushB_Var`'s 64, not the shared 16.**
   `PushB_Main` indexes the subtype into `PushB_Var` and stores the first byte of
   the pair straight into `obActWid` — `#32/2` = 16 for the 1x1 block, `#128/2` =

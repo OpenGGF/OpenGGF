@@ -86,6 +86,17 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             SolidObjectParams.of(0x1B, 0x70, 0x71);
     private static final int COMBAT_TOP_LANDING_HALF_WIDTH = 0x20;
 
+    // BossFinal_ObjData2 row 0: the parent slot's width byte, #64/2 = 32. On
+    // REV01 BossFinal_Main stores it into obActWid; REV00 stores obWidth
+    // instead (85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:56-58,
+    // 96-101). The engine targets REV01, so the byte is live.
+    private static final int COMBAT_ACT_WIDTH = 0x20;
+
+    // BossFinal_Eggman_Fall re-writes it to #96/2 = 48 while Eggman falls, then
+    // back to #64/2 = 32 at the landing snap that advances to Eggman_Run
+    // (:355-371). Same Revision=0 obWidth split as above.
+    private static final int DEFEAT_FALL_ACT_WIDTH = 0x30;
+
     // Damage cooldown (objoff_35 in ROM)
     private int damageCooldown;
 
@@ -1043,6 +1054,40 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // later cylinder slots update the parent's y_pos. During the cylinder
         // attack, contact therefore observes the boss's frame-start position.
         return state.routineSecondary == STATE_CYLINDER_ATTACK;
+    }
+
+    /**
+     * Eggman's ROM {@code obActWid}, which the defeat fall re-writes.
+     *
+     * <p>Combat is {@code BossFinal_ObjData2} row 0's {@code #64/2} = 32,
+     * stored by {@code BossFinal_Main} into the parent's own slot via
+     * {@code movea.l a0,a1} (:76-101). {@code BossFinal_Eggman_Fall} then writes
+     * {@code #96/2} = 48 for the fall and {@code #64/2} = 32 again at the
+     * landing snap (:355-371). Both sites sit on a {@code Revision} conditional
+     * rather than a {@code FixBugs} one: {@code Revision = 0} writes
+     * {@code obWidth} instead, which the listing at {@code :776-778} calls the
+     * developers "fumbling obWidth and obActWidth, which wasn't completely fixed
+     * until REV01". The engine targets REV01, so {@code obActWid} is the byte
+     * that is written.
+     *
+     * <p>Only the combat 32 is observable through {@code Sonic_Balance}.
+     * Reaching {@code BossFinal_Eggman_Fall} requires the boss to be defeated,
+     * and {@code Sonic ReactToItem.asm:268} sets {@code obStatus} bit 7 on the
+     * defeated boss — which {@code Sonic_Balance} tests before it ever reads the
+     * width, branching to {@code Sonic_LookUp}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:418-420). The fall value is supplied
+     * anyway because this accessor is also {@code BuildSprites}' horizontal cull
+     * bound (docs/s1disasm/_inc/BuildSprites.asm:49-58), and the cull stays live
+     * after the defeat.
+     *
+     * <p>The phase split reuses {@code routineSecondary}, which the class
+     * already keeps; the solid boxes are authored separately and unchanged.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return state.routineSecondary == STATE_DEFEAT_FALL
+                ? DEFEAT_FALL_ACT_WIDTH
+                : COMBAT_ACT_WIDTH;
     }
 
     @Override
