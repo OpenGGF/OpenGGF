@@ -130,11 +130,20 @@ file is guidance you can weigh against the situation in front of you.
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
    [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
-   That contract is **cross-game**: recorded hardware timing may drive a **delay** in the
+   That contract is **cross-game** and has **two permitted shapes**; both are scheduling
+   outcomes, and neither may decide *what* happens.
+   *Readiness release.* Recorded hardware timing may drive a **delay** in the
    art-loading pipelines of all three games — S1 PLC, S2 DPLC, and S3K Kosinski queues. It
    may release only the readiness of a matching, prepared, production-submitted ROM-backed
    hardware job after kind, ordinal, stable submission fingerprint, and service boundary all
-   match. It must not use physics/aux comparison data, carry gameplay values, call gameplay
+   match.
+   *Per-row scheduling admission.* A recorded per-row outcome may select which ROM loop a row
+   represents — the lag contract, where `lag_state.lagged` admits the `VBlank_Lag` branch that
+   services no PLC while the frame counter still advances. This shape carries no job, ordinal
+   or fingerprint, because it names no work: it selects between two ROM loops that both
+   already exist in the engine. It predates the readiness shape and already ships in
+   `TraceRunSpecialStageRows.syntheticLagPhase`. It may admit or suppress a loop; it may never
+   supply a *value*, and `lagcount` is comparison data like any other. It must not use physics/aux comparison data, carry gameplay values, call gameplay
    owners, or create work the engine did not submit, and it must not key on a frame index,
    zone, route, or game name. The test is whether the change only affects *when* real,
    engine-created work becomes ready; anything deciding *what* happens is outside the
