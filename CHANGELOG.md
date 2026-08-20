@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Landing does not overwrite a live spindash charge animation.** Both games with
+  a spindash byte gate their landing `anim = Walk` store on it:
+  S3K's `Player_TouchFloor_Check_Spindash` is `tst.b spin_dash_flag(a0) / bne /
+  move.b #0,anim(a0)` (`docs/skdisasm/sonic3k.asm:24325-24329`), reached from all
+  five `Player_TouchFloor` exits and mirrored for Tails at `:29123-29127`; Sonic 2
+  does the same through its alias, `Sonic_ResetOnFloor` opening `tst.b
+  pinball_mode(a0) / bne.s Sonic_ResetOnFloor_Part3`
+  (`docs/s2disasm/s2.asm:38122-38125`). The engine implemented the gate for Sonic 2
+  only, so an S3K character who charged a spindash in the air had the charge
+  animation replaced by Walk on the landing frame and held Walk for as long as the
+  charge lasted — 48 frames in the measured case. Sonic 1 has no such byte and is
+  unaffected. Segment 6 of the S3K complete-emeralds chain drops from 7,663 to
+  7,565 comparator errors and segment 4 from 292 to 250.
+
+### Fixed
 - **Tails' catch-up flight cancels a spindash charge, as the ROM does.**
   `Tails_Catch_Up_Flying`'s `loc_13B50` writes `spin_dash_flag = 0` (twice) and
   `spin_dash_counter = 0` along with the rest of the recovery flight state

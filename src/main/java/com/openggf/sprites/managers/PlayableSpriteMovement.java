@@ -3763,14 +3763,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		if (movementRules != null
-				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
-				&& sprite.getSpindash()
-				&& sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
-				&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
-			// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
-			// forced-roll guard separate, but an actively charging Spindash animation
-			// still proves that the native byte is live, so ResetOnFloor skips Walk.
-			return;
+				&& movementRules.landingWalkWriteSkippedWhileSpindashing()
+				&& sprite.getSpindash()) {
+			if (movementRules.rollingJumpPinballGateRequiresSpindashFlag()) {
+				if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
+						&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
+					// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
+					// forced-roll guard separate, but an actively charging Spindash animation
+					// still proves that the native byte is live, so ResetOnFloor skips Walk.
+					return;
+				}
+			} else {
+				// S3K keeps a dedicated spin_dash_flag with no pinball aliasing, so
+				// Player_TouchFloor_Check_Spindash's `tst.b spin_dash_flag(a0)` is the
+				// whole predicate (sonic3k.asm:24325-24329; Tails :29123-29127). No
+				// animation condition: the ROM does not test anim here.
+				return;
+			}
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {

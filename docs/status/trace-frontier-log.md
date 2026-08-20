@@ -92745,3 +92745,99 @@ Still open and older than any of this: `sidekick_animation_id` from row 823 (647
 `player_animation_id` from row 203 (49 errors). These are the earliest divergences in the
 segment by a wide margin and nobody has looked at them. They may well be the real cascade
 origin that the physics frontier keeps walking away from.
+
+## 2026-08-20 — rows 203/2527: landing overwrote a live spindash charge animation
+
+Branch `bugfix/ai-s3k-anim-row203-r1` off `f96dda466`. Fix landed. Segment 6
+**7,663 -> 7,565**; segment 4 **292 -> 250** without being targeted.
+
+### Why this axis, and what the distribution said
+
+Rule 23's histogram put `player_animation_id` at row **203**, thousands of frames ahead of
+the physics frontier. Dumping every erroring frame rather than the first showed it is not a
+scatter at all:
+
+```
+player_animation_id  n=49
+  203:0x0009->0x0000
+  2527..2574:0x0009->0x0000     (48 consecutive frames)
+```
+
+One isolated frame and one 48-frame block, every one of them the same value pair. `0x09` is
+`SPINDASH` and `0x00` is `WALK` (`Sonic3kAnimationIds`), so this is not a scatter of
+animation noise — it is **one defect occurring twice**.
+
+Reading the rows either side gave the shape immediately. In both cases the ROM is airborne
+with `anim = 9` and the engine **agrees** (no errors on rows 190-202, none on 2521-2526);
+the divergence begins on the exact frame the player lands (`air` 1 -> 0), and ends when the
+ROM releases the spindash into a roll — one frame later at 204, forty-eight frames later at
+2575 with `g_speed = 0x800`. The engine's spindash physics never diverges: `player_g_speed`
+is not in the segment's error set at all. Only the animation byte was wrong.
+
+### The ROM rule, and it is not S3K-specific
+
+```
+Player_TouchFloor_Check_Spindash:
+        tst.b   spin_dash_flag(a0)
+        bne.s   loc_121D8
+        move.b  #0,anim(a0)
+```
+
+`sonic3k.asm:24325-24329`, reached from all five `Player_TouchFloor` landing exits
+(:24102, :24113, :24222, :24262, :24317), with the Tails mirror at
+`Tails_TouchFloor_Check_Spindash` :29123-29127 (called from :28938, :28949, :29018, :29058,
+:29113). **The landing Walk store is conditional on the spindash byte.**
+
+Sonic 2 has the same structure through its alias — `Sonic_ResetOnFloor` opens
+`tst.b pinball_mode(a0) / bne.s Sonic_ResetOnFloor_Part3`, skipping the Walk store
+(`s2.asm:38122-38125`). Sonic 1 has no spindash and no such byte.
+
+The engine already implemented this **for Sonic 2 only**, inside
+`setWalkAnimationAfterRollingLanding`, gated on `rollingJumpPinballGateRequiresSpindashFlag`
+— a rule that exists because S2 aliases `pinball_mode` to the spindash byte and the engine
+keeps Obj84's forced-roll guard separate. S3K, which has a dedicated `spin_dash_flag` and no
+aliasing, fell through and wrote Walk unconditionally.
+
+### The fix
+
+A new `PlayerMovementRules.landingWalkWriteSkippedWhileSpindashing` — true for S2 and S3K,
+false for S1 — with the S2 path left **byte-identical**: it keeps its extra
+"animation is currently the spindash animation" proxy, which exists to distinguish a live
+spindash from Obj84 pinball mode. S3K takes the ROM predicate as written, `getSpindash()`
+alone, with no animation condition, because `Player_TouchFloor_Check_Spindash` tests no
+animation.
+
+Deliberately **not** reused: `rollingJumpPinballGateRequiresSpindashFlag` has a second call
+site that clears `pinballMode` before the jump gate, so flipping it for S3K would have
+changed unrelated behaviour. A new precisely-named rule was cheaper than the blast radius of
+overloading the old one.
+
+### Measurement
+
+Base `f96dda466`, same command both trees.
+
+| | control | with fix |
+|---|---|---|
+| segment 4 | 292 | **250** |
+| segment 6 | 7,663, f3339 | **7,565**, f3339 unchanged |
+| `player_animation_id` errors | 49 | **0** |
+| trace-replay | 792 run, 4 failures, 4 skipped | identical, red set name-identical |
+| default | 15176 run, 55 failures, 73 errors, 22 skipped | **identical counts AND identical red set** |
+| guards | — | 500 run, 0 failures |
+
+Zero classes differ in either direction in the default suite — no adjudication needed this
+time.
+
+**Segment 4 improving by 42 without being targeted is the useful evidence here.** The fix
+was derived from the ROM listing, not from segment 6's rows, and it paid out in a segment
+whose rows were never inspected. That is what a structural rule looks like when it lands;
+a fitted one would have moved segment 6 alone.
+
+### Still open on this axis
+
+`sidekick_animation_id` remains at **517** errors from row 823 and is a genuinely different
+problem — its value pairs are a two-way mixture (`0x02->0x1A` 62, `0x1A->0x02` 56,
+`0x1A->0x00` 52, `0x02->0x00` 37, `0x02->0x20` 32, and a long tail), where `0x1A` is `HURT`.
+A bidirectional mixture is a cascade signature, not one missing gate, so it should not be
+attacked the way this one was: find what first puts the sidekick into or out of HURT at 823
+before touching any animation code.

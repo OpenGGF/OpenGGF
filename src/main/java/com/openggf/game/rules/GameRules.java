@@ -54,6 +54,8 @@ public record GameRules(
                     false,
                     // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
                     false
+            ,
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
@@ -198,6 +200,8 @@ public record GameRules(
                     true,
                     // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
                     false
+            ,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -341,6 +345,8 @@ public record GameRules(
                     // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
                     false,
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22235, :27448
+                    true
+            ,
                     true
             ),
             new PlayerCapabilityRules(
