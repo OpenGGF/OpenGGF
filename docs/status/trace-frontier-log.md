@@ -98961,3 +98961,59 @@ The four extra edges inside `seg10_cpz2`, and the `ss_6 -> seg10_cpz2` row drift
 destination is segment 15, the first red segment, at
 `queue.s2_nemesis_plc.remaining_work rom=2 engine=5` — worth testing whether the drift and
 the three-pattern deficit are the same event.
+
+## 2026-08-20 — S2 chain: the ss_6 row drift and the four extra edges are two things, not one
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` (all three ROM paths) at
+the merged head `134ef6b9f`. Baseline re-measured there and unchanged from the candidate arm:
+**13 axes** — 1 `walk-failure` (segment 19), 2 `segment-physics` (segment 15 at 7511 errors
+`remaining_work rom=2 engine=5`; segment 18 at 14289, `rom=22 engine=25`), 10
+`dynamic-art-gap`.
+
+### The two leads are separate events
+
+`ss_6 -> seg10_cpz2` carries **no ordinal or transfer-id skew at all** — 8 fields, every one
+of them `movie_logical_frame`, late by `+21, +21, +20, +20, +8, +8, +2, +1` and converging.
+Content, phase, owner, requests, mapping frames and gap indices all match. So the drift is
+fully absorbed before segment 15 opens and leaves the ledger byte-identical.
+
+`seg10_cpz2 -> seg11_arz1` then shows `edge_ordinal +4`, `transfer_id +2` with, again, every
+content field matching (plus four `movie_logical_frame -1`). The four extra edges are
+therefore created **inside** segment 15 and have no signature in the gap beyond the counters.
+
+That answers the question posed for this round in the negative: **the row drift into segment
+15 and the four extra edges inside it are not the same event.** The drift ends before the
+segment starts; the extra edges begin after it does.
+
+### Found, not fixed: an unmodelled third bonus countdown
+
+`Obj6F_TallyScore` drains **three** counters in parallel, not two: `Bonus_Countdown_1`,
+`Bonus_Countdown_2` and `Total_Bonus_Countdown` (`docs/s2disasm/s2.asm:28376-28396`). The
+third is set to `1000` when an emerald was collected and cleared otherwise
+(`docs/s2disasm/s2.asm:6782-6787`) and drains `10` per frame, so it floors the tally at **100
+frames**. `Sonic2SpecialStageProvider.createResultsScreen` models only the first two and its
+comment asserts the tally "lasts as long as the LONGER of them".
+
+Measured engine tally lengths across the run's seven stages are `101, 163, 162, 167, 196,
+221, 228` frames, so the 100-frame floor is never the longest except marginally at the first
+stage. **This is a real modelling gap and not the cause of anything measured here**, so it is
+recorded rather than landed. Engine results-screen phase structure for reference: SLIDE_IN
+19 frames, PRE_TALLY_DELAY 180, TALLY `max(c1, c2)`, WAIT 120.
+
+### Instrument hazards hit this round
+
+- A probe inserted between `@Override` and its method made the build fail while `mvn -q`
+  printed **nothing at all**. The empty probe output read exactly like "this code never runs"
+  and briefly retired a correct hypothesis. Re-run without `-q` before believing a silent
+  probe.
+- `DynamicArtLifecycleService.movieLogicalFrame` is **not** a live movie-row clock across a
+  special stage: it sat at the destination segment's `bk2_frame_offset` (82342) for all 4673
+  special-stage iterations and every gap iteration. Gap edges get their row from elsewhere,
+  so this field cannot be used to time a gap.
+
+### Still open
+
+Where the 21 rows go in the `ss_6` exit choreography, and what creates the four extra edges
+inside segment 15. Neither was reached; the mode timeline (SPECIAL_STAGE 4673 iterations,
+SPECIAL_STAGE_RESULTS 609, TITLE_CARD 94) is measured but has no recorded counterpart to
+compare against, because the gap is exactly the span the recording does not cover.
