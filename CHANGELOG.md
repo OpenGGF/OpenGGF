@@ -3,6 +3,31 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 1's fiery explosion (Obj3F) no longer loses a frame of life to Obj27's
+  init.** `ExplosionObjectInstance` modelled every explosion as taking its
+  animation predecrement on its own spawn frame, on the stated grounds that the
+  ROM init routine falls through into the animate routine. That is true of Obj27
+  -- S1's `ExItem_Main` ends `jsr (QueueSound2).l` with `ExItem_Animate` as the
+  next instruction (`docs/s1disasm/sonic.lst`: 9450 then 9456), as do S2's
+  `Obj27_Init` (`docs/s2disasm/s2.asm:46734-46737`) and S3K's equivalent
+  (`docs/skdisasm/sonic3k.asm:42202-42205`) -- and false of Obj3F, whose
+  `Expl_Main` ends `jmp (QueueSound2).l` and returns to the object loop
+  (`docs/s1disasm/sonic.lst`: 94C0). Obj3F's animate routine therefore does not
+  run until the following frame and the object lives 40 frames rather than 39,
+  measured on the shipped ROM by
+  `tools/bizhawk/probes/s1_lz3_explosion_lifetime_probe.lua`.
+
+  The missing frame freed the explosion's object slot early, which changed which
+  slot `FindFreeObj` handed the next allocation. In LZ3 that decided whether the
+  prison capsule's first burst animal landed above or below the capsule, and so
+  whether it executed in the same frame or the next -- rotating the eight
+  animals' species draws by one position with the RNG itself perfectly in phase.
+  The animal that should have been a penguin became the game's slowest species,
+  left last instead of mid-pack, and held `Pri_EndAct` open 12 frames too long,
+  arming the act-clear PLC at raw frame 12259 where the ROM arms at 12247. Obj3F
+  is reached only from S1's prison capsule, Walking Bomb badnik and Ball Hog
+  cannonball; every S2 and S3K explosion is Obj27 and is unchanged.
+
 - **A plain level-to-level run boundary no longer admits its destination one-shot, and a
   segment no longer stops short of its own declared rows.** Two defects met at the S3K
   Sonic-and-Tails `aiz_5 -> hcz` seam. First, a segment was walked for a count of FRAMES
