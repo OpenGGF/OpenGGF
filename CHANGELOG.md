@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The LBZ2 Knuckles miniboss box's gradual max-Y raise no longer runs a frame
+  behind the ROM, and no longer overwrites the camera's max-Y target.**
+  `loc_8CFC8` (`docs/skdisasm/sonic3k.asm:192565-192600`) creates its
+  `Child6_IncLevY` worker with `CreateChild6_Simple`
+  (`sonic3k.asm:177119-177140`), which allocates through
+  `AllocateObjectAfterCurrent` (`sonic3k.asm:37917-37930`) — by construction a
+  slot *after* the creating object, so the ascending `Process_Sprites` walk
+  (`sonic3k.asm:35965-35995`) reaches the worker later in the same pass,
+  including the pass that creates it. `LbzMinibossBoxKnuxInstance` called
+  `updateGradualMaxYRaise()` before the `switch` that arms it, skipping the
+  creation-frame dispatch and delaying every later one. It now runs after the
+  switch. Separately, `loc_8CFC8` writes `Camera_stored_max_Y_pos` and
+  `Camera_target_max_Y_pos` once at arm time with `$A80` and
+  `Obj_IncLevEndYGradual` (`sonic3k.asm:178215-178228`) then moves
+  `Camera_max_Y_pos` alone; the engine had been re-writing the target to the
+  interpolated boundary on every dispatch.
+- **`Sonic3kLBZEvents` no longer carries a dead flag that would have skipped the
+  act-2 gradual workers' creation-frame dispatch.**
+  `postTitleAct2WorkersCreatedThisPass` was never set to `true`, so it never
+  fired, but its comment taught the same wrong premise that produced three
+  fitted constants in `AizAct2CameraResizeController`. Removed, and the arming
+  site now cites `Make_LevelSizeObj` / `AllocateObjectAfterCurrent` instead.
 - **A suppressed trace row no longer advances any title-card overlay from the
   unowned closure.** The deferral in
   `TraceSuppressedRowClosure.executeUnownedTitleCardWork` previously named two
