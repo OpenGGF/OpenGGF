@@ -147,7 +147,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
                 boolean facingLeft = player.getDirection() == Direction.LEFT;
                 var splash = new SplashObjectInstance(
                         player.getCentreX(), waterY, renderer, facingLeft);
-                objectManager.addDynamicObject(splash);
+                addWaterSplashObject(splash);
                 return;
             }
         }
@@ -155,7 +155,27 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         // S1: use LZ splash art from ObjectRenderManager (Object 0x08)
         var s1Splash = new Sonic1SplashObjectInstance(
                 player.getCentreX(), waterY);
-        objectManager.addDynamicObject(s1Splash);
+        addWaterSplashObject(s1Splash);
+    }
+
+    /**
+     * Places the water-entry splash in the SST the game's ROM owns for it.
+     *
+     * <p>Games whose splash lives in a fixed SST outside the level-object pool
+     * never scan for a free slot, so allocating one from the dynamic pool would
+     * displace every later level object by one slot -- and SST order is
+     * execution order, so a displaced object's routine runs on the wrong side of
+     * its neighbours. {@code waterSplashFixedSlotIndex < 0} keeps the ordinary
+     * dynamic allocation for games that really do allocate.
+     */
+    private void addWaterSplashObject(ObjectInstance splash) {
+        PowerUpRules rules = fixedSlotRules();
+        int fixedSlot = rules != null ? rules.waterSplashFixedSlotIndex() : -1;
+        if (fixedSlot >= 0) {
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, splash, fixedSlot);
+            return;
+        }
+        objectManager.addDynamicObject(splash);
     }
 
     private PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {

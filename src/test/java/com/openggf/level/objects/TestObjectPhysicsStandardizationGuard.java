@@ -150,7 +150,11 @@ class TestObjectPhysicsStandardizationGuard {
 // 2026-07-02: 10 -> 11 for the CPZ2 Obj7A trace-frontier fix (fca42ed8d),
     // whose direct addDynamicObject insert is part of the trace-validated slot
     // cadence; migrating it to spawnChild would change allocation order.
-    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 11;
+    // 2026-08-20: 11 -> 10. The two water-splash spawn sites in
+    // DefaultPowerUpSpawner collapsed into one rules-driven helper when the S1
+    // splash moved to its ROM fixed SST (v_splash, slot 12) instead of
+    // consuming a level-object slot.
+    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {

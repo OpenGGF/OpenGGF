@@ -96209,3 +96209,101 @@ touches playable-sprite angle latches. Reported as unattributed noise, not as pr
    pass.** 33 lines ending mid-`testCompile`, no `Tests run:` line anywhere, and the
    harness reported the *shell's* exit 0. Detach with `setsid ... </dev/null` and poll for
    `BUILD SUCCESS|BUILD FAILURE` before reading any total.
+## 2026-08-20 - S1 segment 24: the water splash was stealing the LZ door's SST slot
+
+Round `s1-slot-alloc-r1`, scratch worktree, branch
+`bugfix/ai-s1-slot-alloc-r1` off `e4be52b98`. **Landed.**
+
+### The answer to "why are engine slots 34 and 38 free when the ROM has the door at 34"
+
+The premise was slightly off: 34 was not free at the moment that mattered. The fixture
+answers the whole question by itself -- `lz1_2`'s `aux_state.jsonl` carries
+`object_appeared` / `object_removed` / `slot_dump` events, so the ROM's own allocation
+history for this segment is directly readable and needs no `object_near` window at all.
+
+ROM, segment-24 frames:
+
+```
+350 appeared 34 0x28 x=03A6      382 removed  35 (0x29)
+350 appeared 35 0x29 x=03A6      394 appeared 35 0x32  button x=05F0
+353 appeared 37 0x26             404 removed  34 (0x28)
+353 appeared 38 0x2D             421 appeared 12 0x08  SPLASH  x=049A
+354 appeared 36 0x57             424 appeared 34 0x56  door   x=0608
+                                 424 appeared 45 0x64
+```
+
+Engine, same frames (temporary `SlotAllocator` allocate/release probe, since reverted):
+
+```
+351 alloc 34,35   354 alloc 37,38,39,40   355 alloc 36,41,42,43,44
+383 release 35    395 alloc 33,35         405 release 34
+421 alloc 34  <-- DefaultPowerUpSpawner.spawnSplash / AbstractPlayableSprite.onEnterWater
+425 alloc 45  <-- the door
+```
+
+Everything else matched the ROM exactly, including which chain children hold 36-44 and the
+`0x64` bubbler landing after the door. The single difference is frame 421: the ROM puts the
+water splash in **fixed SST slot 12**, the engine allocated it from the dynamic pool, where
+`FindFreeObj` semantics correctly handed it slot 34 -- the slot the ROM had just freed at
+404 and reserved, three frames later, for the door.
+
+`Sonic_Water` never calls `FindFreeObj`: it writes `move.b #id_Splash,(v_splash).w`
+(`docs/s1disasm/_incObj/01 Sonic.asm:274` on entry, `:299` on exit), and
+`v_splash equ v_objspace+object_size*12` (`docs/s1disasm/_Variables.asm:71`) sits below
+`v_lvlobjspace` (`= v_objspace+object_size*32`, `:85`), which is where `FindFreeObj` starts
+its scan (`docs/s1disasm/_incObj/sub FindFreeObj.asm:10-11`). A fixed SST cannot be
+allocated and cannot displace a level object.
+
+**The allocator itself was never wrong.** `SlotAllocator` already implements
+`FindFreeObj`/`FindNextFreeObj` as a first-empty linear scan, and every allocation in this
+window matched the ROM's. The defect was an object that should never have entered the pool.
+
+### The fix
+
+`PowerUpRules` already carried `shieldObjectFixedSlotIndex` (S1 = 6, `v_shieldobj`) and
+`invincibilityStarsFixedSlotIndex` (S1 = 8, `v_starsobj1`), routed through
+`ObjectLifetimeOps.addDynamicAtReservedSlot`. The splash simply was not on that list.
+Added `waterSplashFixedSlotIndex`: S1 = 12, S2 and S3K = -1 (unchanged dynamic
+allocation -- S2 reaches the fixed-dust path before this branch anyway). Both splash
+construction sites in `DefaultPowerUpSpawner` now go through one rules-driven helper. No
+game name, zone, frame or trace is consulted, and no constant was measured off a fixture.
+
+### Measured
+
+Same-tree control at `e4be52b98` in a second worktree; arms serial, `-Dmse=off`, all three
+ROM paths explicit, JDK 21.
+
+- Full `-Ptrace-replay`: control **796 tests, 4 failures, 0 errors, 4 skipped**; fix
+  **796 / 5 / 0 / 4**. The one extra is `TestS1ColdStartAttribution`'s characterisation
+  pin firing exactly as its javadoc says it should; updated in this commit, and the class
+  is green afterwards. Diffed by message: the S2 and S3K complete-emerald chains and
+  `TestS2Cpz2Seg10...` are byte-identical across arms.
+- **Segment 24 (`lz1_2`) moved from 18684 errors at frame 1337 to 18221 at frame 3182** --
+  1845 frames of frontier. The old headline (`dynamic_art.edges rom=[] engine=[746, 747]`,
+  engine *early*) is gone; the new one is `rom=[1778, 1779] engine=[]`, engine *late*, so
+  it is an opposite-signed and therefore different defect. Segments 12, 15, 22 and 23 are
+  unchanged to the digit, segment 23 (`lz1`) included -- confirming the brief's scoping
+  that its `fr_Walk13` hurt-landing divergence does not share this cause.
+- `-Pguards`: 500/500 after ratcheting `RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET`
+  11 -> 10 (the change *removes* a raw call site; the guard is a no-growth ratchet and
+  fails on a drop too).
+- Default suite: control 15194 tests / 55 failures / 67 errors; fix 15194 / 54 / 69.
+  Diffed by message: 4 names left, 5 arrived, all inside the known order-dependent
+  families (`TestGameLoop*Rewind*`, `Sonic2SpecialStageLagModelValidationTest`, an
+  identity-hash assertion) plus one green flip in `TestSonic3kButtonObjectInstance`. None
+  touch splash, power-up, or slot code. Every splash/water/shield rewind test plus the
+  updated pin, run together: 755 tests, 0 failures.
+
+### Not established
+
+- **Whether S1's other fixed SSTs are still mis-allocated.** The shield (6) and stars (8)
+  are already routed; `v_sonicbubbles` (13), `v_watersurface1/2` (30/31) and
+  `v_starsobj2-4` (9-11) were not audited. Any of them entering the dynamic pool would
+  produce exactly this defect somewhere else, and the fixture's `object_appeared` stream
+  makes each one cheap to check.
+- **Splash execution order.** At slot 12 the splash now runs in the dynamic *fallback*
+  pass, i.e. after every level object, where the ROM runs slot 12 before slot 32. It is a
+  render-and-sound object so nothing observed depends on this, but it is a real remaining
+  divergence and the same is true of the already-routed shield and stars.
+- What segment 24's new frame-3182 divergence is. It is engine-late `dynamic_art.edges`,
+  the same shape as segment 23's, and was not investigated.

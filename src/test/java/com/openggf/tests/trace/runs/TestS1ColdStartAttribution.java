@@ -109,11 +109,16 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
                         + "dynamic_art.edges rom=[1738, 1739] engine=[]"),
                 "segment 23 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n" + report);
+        // Updated when the water splash stopped consuming a level-object SST
+        // slot: the LZ door now loads into ROM slot 34 instead of 45, so its
+        // ascent no longer leads the ROM's by one 2px step and the frame-1337
+        // edge-phase lead is gone. The remaining errors are a LATER, opposite-
+        // signed divergence (engine now behind), not the same defect.
         assertTrue(
                 report.contains("segment 2 of s1-sonic-complete-withemeralds "
-                        + "diverged: 18684 physics comparator errors, first "
-                        + "non-camera mismatch at frame 1337 field "
-                        + "dynamic_art.edges rom=[] engine=[746, 747]"),
+                        + "diverged: 18221 physics comparator errors, first "
+                        + "non-camera mismatch at frame 3182 field "
+                        + "dynamic_art.edges rom=[1778, 1779] engine=[]"),
                 "segment 24 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n" + report);
     }
