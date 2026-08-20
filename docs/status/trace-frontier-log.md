@@ -98562,3 +98562,67 @@ The instrument had to be repaired before the fixture could be judged.
 Open question for the next round, not established here: why recorded `NEMESIS_PLC_QUEUE`
 admission degrades segments the live path gets nearly right. Segment 31 at 1 error against 33027
 is the sharpest case and the cheapest to attribute.
+
+## 2026-08-20 — S2 complete-emerald chain: the dynamic-art gap family has one generator
+
+`mvn -Ptrace-replay -Dmse=off -Dtest=TestS2CompleteEmeraldRunChain` (all three ROM paths),
+base `d7806a697`, ~11 s,.
+
+**14 axes**, not 3: 1 `walk-failure`, 2 `segment-physics`, **11 `dynamic-art-gap`**. Previous
+briefs quoted only the first three; the gap family was already there and had not been counted.
+
+- `[walk-failure]` segment 19 lost production ownership before source closure
+  (`mode=TITLE_CARD`, `romZone=15, act=1`, BK2 cursor 109135) — unchanged.
+- `[segment-physics]` segment 15 (`seg10_cpz2`): 7511 errors, frame 2,
+  `queue.s2_nemesis_plc.remaining_work rom=2 engine=5`.
+- `[segment-physics]` segment 18 (`seg12_arz1`): 14289 errors, frame 1,
+  `remaining_work rom=22 engine=25`.
+
+**The walker segment-ownership fix `d32ae2708` changed nothing on this chain.** A same-tree
+control detached to its first parent `65682ae7b` produces a byte-identical 14-axis failure,
+including both segment-physics error counts. Any premise that the walker fix moved this
+frontier is retracted.
+
+### Generator of the ordinal/transfer-id skew
+
+Nine of the eleven gap axes are one defect propagating. In the `ss_5 -> seg7_ehz2` gap the
+engine emits **18 edges against the recorded 16**. The two extra edges are a submitted/completed
+pair for owner `tails` at **mapping frame 105** (`romSourceAddress=0x6D2E0`,
+`sourceTileIndex=1150`, VRAM `0xF400`), on the movie row where the ROM emits Tails at mapping
+frame 1. The frame-1 pair the ROM makes still arrives, one row later; from `edge[14]` onward the
+engine's rows realign exactly with the recording.
+
+From the next gap on, every later gap carries `edge_ordinal +2` and `transfer_id +1` with
+content, phase, owner, requests and mapping frames all matching — pure bookkeeping skew inherited
+from those two edges. The skew grows to `+6 / +3` at `seg10_cpz2 -> seg11_arz1`, i.e. four more
+extra edges are created inside segment 15, the first red segment.
+
+Instrumented at the observation site (`DynamicArtDecisionOwner.observe`), the per-iteration
+mapping-frame sequence across that title card is:
+
+| | ... | | | | |
+|---|---|---|---|---|---|
+| ROM sonic | 1 x20 | 15 | 1 | 1 | 1 |
+| ROM tails | 1 x20 | 16 | 1 | 16 | 17 |
+| engine sonic | 1 x20 | 15 | 1 | 1 | 1 |
+| engine tails | 1 x20 | 16 | **105** | 1 | 16 |
+
+At the `105` iteration Tails is on `animationId=0, animationFrameIndex=0`; Sonic has already
+returned to 1. It is a **one-iteration animation excursion for Tails only**, and across the whole
+movie it happens **exactly once** — a stack-walk probe shows a single `owner=tails frame=105`
+observation reached from `GameLoopTitleCardLifecycle`.
+
+### Retracted here
+
+- **Not an extra host iteration.** Every observation on both sides of the `105` is inside
+  `GameLoopTitleCardLifecycle`, so the engine is not spending an extra title-card iteration; the
+  iteration count is the same and only Tails' animation value differs. The "one extra/lost
+  iteration at every stage-exit return" story does not explain this axis.
+- **Not a general stage-exit pattern.** `ss_4 -> seg6_ehz2` is the same shape (special stage ->
+  same act) and produces no extra edge; its only mismatch is `edge[0..1].movie_logical_frame +1`.
+
+### Open, not established
+
+Why Tails' animation id is 0 for that single title-card iteration at the `ss_5` return and not at
+the other six returns. That is the whole of the nine-axis skew family and is the cheapest next
+target on this chain.
