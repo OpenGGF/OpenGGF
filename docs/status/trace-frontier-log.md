@@ -100998,3 +100998,55 @@ boss) and `$1700` -> `$B` (Death Egg boss) at `:62124-62136`, and picks the zone
 archive on `SK_alone_flag`. Those narrowings are **pre-existing and shared with the
 presented path**, not introduced here, but a recording that reaches an LRZ or DEZ boss card
 would queue the wrong zone graphic on either path.
+
+## 2026-08-21 — The row-6000 pixel is the AIZ2 end-boss sequence running ~680 rows early
+
+Round off `origin/develop` `60ce6a2cb`; same-tree control at `60ce6a2cb`. **Found, not fixed —
+nothing landed but this entry.** Row convention: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = cursor - 46432`.
+
+Frontier unchanged: `segment 8 ... 2288 errors, first non-camera mismatch at frame 6000 field
+sidekick_x rom=0x4997 engine=0x4996`.
+
+### Both sides pinned
+
+**Engine.** Measured: `Aiz2EndEggCapsuleInstance.onParentOpen` fires on the step producing row
+**5993**, and `setController2SignedLocked(true)` is published on row **5994**. That is exactly
+where the sidekick CPU probe stops firing, and row 6000 is simply the first row after it on
+which the ROM's follow nudge would have applied.
+
+**ROM.** The `loc_13D4A` whole-pixel follow nudge is still firing at rows **6654** and
+**6678** — verified locally at both, with `previous + (x_speed << 8)` exact on all six
+neighbouring rows of each. So `Tails_CPU_Control` is still running at 6678, and the ROM's
+`st (Ctrl_2_locked).w` has not happened by then.
+
+**The engine publishes the lock at least 685 rows early.**
+
+### It is not the lock; it is the boss sequence
+
+The capsule does not open on a timer. `AbstractS3kFloatingEndEggCapsuleInstance` opens it from
+a **button trigger** (`buttonTriggerVIntRunCount`), then plays the explosion, spawns animals
+and calls `onParentOpen`. So the engine's capsule button was reached and pressed at row ~5992.
+
+In the recording at that row the boss is still alive: slot 7 holds object code
+`0x000694D4` with `status 0x80` continuously from row 5900, and only changes to `0x00069588`
+at row **6666**, with the nine-object `0x000868F2` explosion burst at **6620** and slot 4
+stepping `0x000863C0` -> `0x000863D6` at **6621**.
+
+So the AIZ2 end-boss defeat lands around rows 6620-6666 in the recording and the engine had
+already opened the capsule by 5993 — roughly **630-670 rows, about eleven seconds, early**.
+The one-pixel `sidekick_x` divergence is simply the first *compared field* that notices; the
+underlying divergence is the whole end-boss sequence running ahead.
+
+### What this means for the lock
+
+Nothing should change in `setController2SignedLocked` or in the capsule's lock publication.
+Both are faithful: the previous entry established that the ROM's `Ctrl_2_locked` sign
+distinction is modelled correctly, and this entry establishes that the lock is published one
+frame after the capsule opens, which is what `sub_865DE` does. The capsule simply opens too
+early because the boss sequence ahead of it does.
+
+**Not measured, and the next step:** why the engine's AIZ2 end boss reaches its capsule-button
+state ~630 rows before the recording's. That is a boss-sequence investigation, not a sidekick
+or lock one, and it is a much larger divergence than the pixel that surfaced it — worth
+knowing before anyone spends another round on `sidekick_x`.

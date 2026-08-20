@@ -1475,3 +1475,24 @@ Two habits follow:
 
 The general form, which this document keeps meeting: an unexplained number is worth chasing even
 when the likely explanation is benign, because what it sits next to may not be.
+
+## Fifty-first rule: a parked measurement measures the tree, not the diff
+
+A candidate was parked twice on the strength of a wall it hit. A later round re-measured it as an
+isolated diff on top of develop and the wall **did not occur** — the branch carrying the candidate
+also carried an unrelated engine commit, and the parked runs had measured their tree rather than
+their change. The candidate landed with no reach cost at all.
+
+This is easy to do and expensive to undo. A round accumulates commits — probes, reverted
+candidates, a fix for something adjacent — and its final measurement is taken where it stands. If
+the branch has drifted from the base in ways nobody enumerated, every conclusion drawn from that
+arm is about the union.
+
+**Measure a candidate as the diff you intend to land, applied to the base you intend to land it
+on.** When parking a candidate for a later round, record *what was in the tree when it was
+measured*, not just the branch and commit — the next round should be able to tell whether it is
+inheriting a measurement or a coincidence.
+
+The round that caught this also did the right thing with its two suspects: it **tested** each as a
+one-variable run and eliminated both, rather than reporting a plausible closer. Two negatives cost
+minutes; a wrong attribution would have cost the next round its premise.
