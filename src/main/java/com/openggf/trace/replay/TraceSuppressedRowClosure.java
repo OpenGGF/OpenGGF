@@ -25,6 +25,31 @@ public final class TraceSuppressedRowClosure {
             TitleCardProvider provider,
             Runnable startPendingInLevelTitleCard,
             Consumer<Boolean> applyInLevelTitleCardControlLock) {
+        executeUnownedTitleCardWork(rowSuppressed, false, provider,
+                startPendingInLevelTitleCard, applyInLevelTitleCardControlLock);
+    }
+
+    /**
+     * Runs title-card work not owned by a represented closure on this row.
+     *
+     * <p>{@code overlayDispatchedByRepresentedOwner} is the caller's statement
+     * that it already dispatches this provider itself during the same
+     * iteration -- the normal (fresh-level) title owner is such a caller. The
+     * title card is an ordinary object: {@code Obj_TitleCard}
+     * (docs/skdisasm/sonic3k.asm:62095) and S2 {@code Obj34}
+     * (docs/s2disasm/s2.asm:27307) are each reached once per object scan, so
+     * a second dispatch inside one represented iteration has no ROM
+     * counterpart.
+     * This overload therefore stands down entirely when the row's overlay
+     * already has a represented owner; the ownership question is asked of the
+     * caller that owns the dispatch, not of the provider's identity.
+     */
+    public static void executeUnownedTitleCardWork(
+            boolean rowSuppressed,
+            boolean overlayDispatchedByRepresentedOwner,
+            TitleCardProvider provider,
+            Runnable startPendingInLevelTitleCard,
+            Consumer<Boolean> applyInLevelTitleCardControlLock) {
         // A suppressed row is a ROM lag frame: V_int ran, but Level_MainLoop
         // did not complete an iteration, so RunObjects never dispatched. The
         // in-level title-card tail routines are object routines reached only
@@ -37,9 +62,10 @@ public final class TraceSuppressedRowClosure {
         // represented closure instead and is deferred here for that reason;
         // an object-scan-dispatched tail is deferred because the ROM does not
         // dispatch it at all on this row.
-        boolean deferOverlay = rowSuppressed && provider != null
-                && (provider.advancesOnHeldLevelCounter()
-                        || provider.inLevelTailDispatchedByObjectScan());
+        boolean deferOverlay = overlayDispatchedByRepresentedOwner
+                || (rowSuppressed && provider != null
+                        && (provider.advancesOnHeldLevelCounter()
+                                || provider.inLevelTailDispatchedByObjectScan()));
         if (provider != null && provider.isOverlayActive() && !deferOverlay) {
             provider.update();
             if (provider.ownsInLevelPlayerControlLock()) {
