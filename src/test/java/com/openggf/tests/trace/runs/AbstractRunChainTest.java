@@ -56,7 +56,6 @@ import com.openggf.trace.replay.runs.SpecialStageRecordedPassPacing;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceStructuralRowComparator;
-import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -2048,56 +2047,20 @@ abstract class AbstractRunChainTest {
             while (!structural.allRowsConsumed()) {
                 int localRow = structural.cursor();
                 int movieRow = playback.getCursorFrame();
-                var rowPolicy = TraceReplayRowPolicy.resolve(
-                        bridge.trace(), localRow, movieRow);
-                boolean previousObservedVblank = localRow == 0
-                        || TraceReplayRowPolicy.resolve(
-                                bridge.trace(), localRow - 1, movieRow - 1)
-                                .observedVblankCounterAdvance();
-                TraceRunFrameDriver.Disposition disposition =
-                        TraceRunFrameDriver.selectDisposition(
-                                TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT,
-                                bridge.executionPolicy(), rowPolicy.phase(),
-                                rowPolicy.observedVblankCounterAdvance(),
-                                previousObservedVblank,
+                // One implementation of the bridge-stepping contract,
+                // shared with TraceSessionLauncher. terminalSegmentRow stays
+                // this caller's own: it comes from the loaded fixture's row
+                // count here and from the manifest's segment row count there.
+                TraceRunFrameDriver.Step bridgeStep =
+                        TraceRunFrameDriver.presentationBridgeStep(
+                                bridge.trace(), localRow, movieRow,
+                                bridge.executionPolicy(),
                                 loop.getCurrentGameMode() == GameMode.LEVEL,
-                                localRow + 1 < bridge.trace().frameCount()
-                                        && TraceReplayRowPolicy
-                                                .carriesDeferredVblank(
-                                                        bridge.trace(),
-                                                        localRow + 1),
-                                // The emulator's own per-frame lag observation.
-                                // A lagged row's V-int took VBlank_Lag
-                                // (docs/s1disasm/sonic.asm:656-657) and reached
-                                // no ProcessPLC call (:712-746), so it owns a
-                                // V-int closure with no mode handler. Read from
-                                // the recorded flag, never inferred from
-                                // counter shape: inside a bridge the two
-                                // disagree on nearly every row.
-                                recordedRowIsLagVint(bridge.trace(), localRow));
-                boolean deferBoundaryCommit = false;
-                if (localRow + 1 < bridge.trace().frameCount()) {
-                    TraceReplayRowPolicy nextRowPolicy =
-                            TraceReplayRowPolicy.resolve(
-                                    bridge.trace(), localRow + 1, movieRow + 1);
-                    deferBoundaryCommit = TraceRunFrameDriver
-                            .shouldDeferBoundaryCommit(
-                                    rowPolicy.observedVblankCounterAdvance(),
-                                    nextRowPolicy
-                                            .observedVblankCounterAdvance());
-                }
+                                localRow
+                                        == bridge.trace().frameCount() - 1);
                 boolean[] hostStepRan = {false};
-                boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
-                        .shouldCommitDeferredBoundaryAfterClosure(
-                                previousObservedVblank,
-                                rowPolicy.observedVblankCounterAdvance());
                 physicalRows.execute(
-                        new TraceRunFrameDriver.Step(
-                                disposition, movieRow,
-                                localRow == bridge.trace().frameCount() - 1,
-                                deferBoundaryCommit,
-                                commitDeferredBoundaryAfterClosure,
-                                rowPolicy.observedVblankCounterAdvance()),
+                        bridgeStep,
                         new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
                             @Override
                             public void preparePhysicalRow(
@@ -4609,17 +4572,5 @@ abstract class AbstractRunChainTest {
             }
             return mask;
         }
-    }
-
-    /**
-     * Whether the recorded row observed an emulator lag frame, meaning its
-     * V-int ran no mode handler. Comparison-side admission only: the boolean
-     * selects a represented ROM loop and carries no gameplay value.
-     */
-    private static boolean recordedRowIsLagVint(
-            com.openggf.trace.TraceData trace, int localRow) {
-        com.openggf.trace.TraceEvent.LagState state =
-                trace.lagStateForFrame(trace.getFrame(localRow).frame());
-        return state != null && state.lagged();
     }
 }

@@ -93836,3 +93836,58 @@ missing control for any of these. Building a start-at-segment instrument would s
 Find what a chain segment's first frame does that a standalone level's first frame does not,
 with respect to Nemesis PLC service. The engine already has the correct behaviour on the
 standalone path; this is a matter of the chain-entry path not reaching it.
+
+## 2026-08-20 -- the duplicate bridge-stepping contract is collapsed to one implementation
+
+Branch `feature/ai-collapse-bridge-stepping-r1` off `8b5699630`, fix commit `84d7fec03`.
+A refactor whose success criterion is that **nothing moves**.
+
+`TraceSessionLauncher` and `AbstractRunChainTest` each carried their own copy of the
+presentation-bridge row stepping. The copies had already drifted once and silently: the lag
+V-int admission was wired into the launcher alone, and the chain -- which drives bridges
+through its own copy -- kept stepping as before, so the change measured **byte-identical to
+control** until the second copy was wired too. That is the failure mode this removes.
+
+The whole derivation now lives in `TraceRunFrameDriver.presentationBridgeStep`, which
+already owned the contract: row phase, this row's and the previous row's observed V-blank
+advance, the next row's deferred-V-blank carry, the recorded lag V-int, and both
+boundary-commit flags. Both sites call it.
+
+### One input deliberately not folded in
+
+`terminalSegmentRow` stays a caller argument. The launcher derives it from the **manifest's**
+`segment().traceFrameCount()`; the chain from the **loaded fixture's** `trace().frameCount()`.
+Measured across every run fixture in the tree -- **327 segments, zero disagreements** -- but
+they are not the same expression, and unifying them would be a behaviour change smuggled
+into a refactor. Folding them together is a separate change with its own evidence.
+
+### Measured -- four arms, control by same-tree revert to `origin/develop`
+
+| arm | suite | Tests run | Failures | Errors | red classes |
+|---|---|---|---|---|---|
+| control | `-Ptrace-replay` | 793 | 4 | 0 | 4 |
+| change | `-Ptrace-replay` | 793 | 4 | 0 | 4 |
+| control | default | 15,191 | 54 | 67 | 54 |
+| change | default | 15,191 | 54 | 67 | 54 |
+
+`-Pguards` **500/0**.
+
+**Trace-replay: the sorted axis lists diff to nothing.** Byte-identical, every axis, every
+error count, across all three chains. The S1 chain still reaches **segment 24** with its
+error counts unchanged (22: 15,564; 23: 54; 24: 18,722). The only textual difference
+anywhere is the stack-trace line numbers in the three chain headlines (`:960`->`:959`,
+`:1837`->`:1836`) -- the refactor removed one import line, shifting the file by one.
+
+**Default suite: identical red class sets, no diff in either direction.** 113 failure
+messages compared; two differ, both in classes red in *both* arms and neither reachable
+from bridge stepping:
+`TestTraceSessionLauncherProductionFailureCleanup` differs only by object identity hash, and
+`Sonic2SpecialStageLagModelValidationTest` names a different drifted bucket each run
+(`speedFactor=12` expected 3152/was 3151 vs `speedFactor=0` expected 126/was 127).
+
+### Noted in passing, not chased
+
+`Sonic2SpecialStageLagModelValidationTest` reporting a **different bucket on each run** means
+its failure is iteration- or accumulation-order dependent, not a fixed drift. Anyone fixing
+that test should establish which bucket actually drifts before matching either number --
+the reported bucket is not evidence about the defect.
