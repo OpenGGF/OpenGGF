@@ -96900,3 +96900,35 @@ on both arms, all three ROM paths explicit, JDK 21, arms serial.
   surface slightly: S2's stars now sit at 129, still run in the dynamic fallback
   pass, where the ROM runs `LevelOnly_Object_RAM` from its own dispatch site.
   Nothing observed depends on it; not fixed here, per the round's scope.
+
+## 2026-08-20 -- the cold-start pin's flake was a shared report file, not carried JVM state
+
+Round: `bugfix/ai-s1-coldstart-pin-r1` off `143f10903`, in a dedicated worktree.
+
+**Retracts** the "Not established" entry above.
+`-Ptrace-replay` does **not** run `forkCount=1`: it inherits the shared
+`surefire.forkCount` of `4` (`pom.xml:25`), so four JVMs run in parallel over one
+`target/trace-reports/`. Carried JVM state was not the mechanism.
+
+Chain segment reports are named `<runId>_seg<N>_report.json`, keyed on the run id and
+the **re-based** segment index and on nothing that separates one lane of a run from
+another. `TestS1CompleteEmeraldRunChain`'s real segment 0 (GHZ1, `errorCount: 0`,
+measured) and `TestS1ColdStartAttribution`'s segment-22 boot segment (`15564`) therefore
+write the same file, and the pin read whichever lane wrote last -- which is exactly the
+`errorCount: 0` it reported. Reproduced deterministically by replaying the chain's own
+captured seg0 artefact into that path during the pin's run: identical failure text.
+The same run reproduced green after the fix.
+
+Fix: `AbstractRunChainTest` records each segment's comparator summary in memory as it
+writes it; the pin reads `writtenSegmentReport(0)`. Pinned values unchanged
+(`15564` / frame `8115` / `x_sub`); files still written for triage.
+
+**Any report under `target/trace-reports/` for a run replayed by more than one class is
+subject to this collision** -- `s1-sonic-complete-withemeralds` alone is replayed by
+`TestS1CompleteEmeraldRunChain`, `TestS1CompleteEmeraldRunPrefix`,
+`TestS1CompleteEmeraldVisualRun` and `TestS1ColdStartAttribution`. Quote a report file
+only from a single-class run.
+
+Verification, same tree: `-Ptrace-replay` x2 -- `Tests run: 799, Failures: 5` both arms,
+identical red set by message and identical 157-class list, pin green 2/2 in profile
+(previously red 3/3 / 1/2). `-Pguards` 500/0. Default suite: no run-chain test red.

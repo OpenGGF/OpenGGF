@@ -174,6 +174,13 @@ abstract class AbstractRunChainTest {
     private final java.util.Set<Integer> assertedPhysicsSegmentIndices =
             new java.util.HashSet<>();
 
+    /**
+     * Comparator summary JSON written by this walk, by segment index -- the
+     * race-free source for {@link #writtenSegmentReport}.
+     */
+    private final Map<Integer, String> writtenSegmentReports =
+            new LinkedHashMap<>();
+
     protected record DynamicArtGapJournalEvidence(
             int transitionCountAfterFirstArm,
             long lastEdgeOrdinalAfterFirstArm,
@@ -4364,8 +4371,40 @@ abstract class AbstractRunChainTest {
             throws IOException {
         Files.createDirectories(REPORT_OUTPUT_DIR);
         Path jsonPath = REPORT_OUTPUT_DIR.resolve(runId + "_seg" + segmentIndex + "_report.json");
-        Files.writeString(jsonPath, buildComparatorSummaryJson(comparator));
+        String json = buildComparatorSummaryJson(comparator);
+        writtenSegmentReports.put(segmentIndex, json);
+        Files.writeString(jsonPath, json);
         assertTrue(Files.exists(jsonPath), "Chain segment report must be written: " + jsonPath);
+    }
+
+    /**
+     * The comparator summary this walk wrote for {@code segmentIndex}, as JSON.
+     *
+     * <p><b>Why a test must read this and not the file.</b> The report path is
+     * {@code <runId>_seg<N>_report.json} -- keyed on the run id and the
+     * <em>re-based</em> segment index, and on nothing that distinguishes one
+     * lane of that run from another. Every class replaying a run therefore
+     * writes the same names into the one shared {@code target/trace-reports/}
+     * directory: for {@code s1-sonic-complete-withemeralds}, the full chain's
+     * real segment 0 and a {@link #assertChainReplayFromSegment} boot segment
+     * both land on {@code _seg0_report.json}. The trace-replay profile runs
+     * {@code forkCount=4}, so those lanes run in PARALLEL JVMs and the last
+     * writer before a read wins.
+     *
+     * <p>That made {@code TestS1ColdStartAttribution} flaky in a way that read
+     * as a game result rather than an instrument fault: it saw the full chain's
+     * clean GHZ1 {@code errorCount: 0} where its own boot segment's 15564
+     * should have been, i.e. the pin reported the defect it exists to
+     * characterise as FIXED. The in-memory record is the walk's own, so it
+     * cannot be overwritten by another lane. The file is still written,
+     * unchanged, for triage.
+     */
+    protected String writtenSegmentReport(int segmentIndex) {
+        String json = writtenSegmentReports.get(segmentIndex);
+        assertTrue(json != null,
+                "no segment report was written for segment " + segmentIndex
+                        + "; written segments=" + writtenSegmentReports.keySet());
+        return json;
     }
 
     /**

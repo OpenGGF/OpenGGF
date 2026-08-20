@@ -4,7 +4,6 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,11 +89,14 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
         String report = failure == null ? "" : failure.getMessage();
         // The boot segment's own comparison is written to its report but is
         // NOT raised as a chain axis -- a real limitation of booting at a
-        // segment, and the reason this reads segment 0 from disk rather than
-        // from the failure message. Read the report, not the axis list.
-        String bootReport = Files.readString(Path.of(
-                "target", "trace-reports",
-                "s1-sonic-complete-withemeralds_seg0_report.json"));
+        // segment, and the reason this reads segment 0's report rather than
+        // the failure message. Read the report, not the axis list.
+        //
+        // It reads THIS walk's in-memory copy, not the file: the file name is
+        // keyed only on run id and re-based segment index, so the full chain's
+        // real segment 0 lands on the same path from a parallel fork and used
+        // to overwrite this one -- see AbstractRunChainTest#writtenSegmentReport.
+        String bootReport = writtenSegmentReport(0);
         assertTrue(
                 bootReport.contains("\"errorCount\" : 15564")
                         && bootReport.contains("\"frame\" : 8115")
