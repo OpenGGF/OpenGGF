@@ -947,26 +947,14 @@ public class Sonic3kTitleCardManager
     private void updateSlideIn() {
         int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
         boolean allAtTarget = true;
-        // Obj_TitleCardWait (docs/skdisasm/sonic3k.asm:62220-62247) does not
-        // advance on the dispatch that lands the last element: each child that
-        // actually moved this dispatch sets st $34(a1) on the owner
-        // (:62318, :62367, :62409), and the owner clears $34 and returns
-        // whenever it is set. So routine 4 needs one further dispatch with no
-        // child movement before it clears $48 and advances.
-        boolean anyMoved = false;
         for (int i = 0; i < count; i++) {
             if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) continue;
             if (!elemAtTarget[i]) {
-                int before = elemX[i];
-                int beforeY = elemY[i];
                 slideElement(i, true);
-                if (elemX[i] != before || elemY[i] != beforeY) {
-                    anyMoved = true;
-                }
                 if (!elemAtTarget[i]) allAtTarget = false;
             }
         }
-        if (allAtTarget && !anyMoved) {
+        if (allAtTarget) {
             state = Sonic3kTitleCardState.DISPLAY;
             stateTimer = 0;
             LOG.fine("S3K title card: DISPLAY");
