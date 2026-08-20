@@ -99372,3 +99372,52 @@ and the S3K chain is unchanged. Every added field anywhere is the same `-1`.
 
 So the candidate's entire remaining cost is one row on the gap stamp. It is parked rather
 than merged: it turns a green chain red, which is not a trade to take unasked.
+## 2026-08-20 — Why the engine skips the AIZ2→HCZ1 transition's KosM work
+
+Follow-up to the entry above, same commands and base. The missing `#97..#102` are missing
+because **the headless run omits the destination's title-card presentation**, and with it
+`Obj_TitleCardInit`'s four `Queue_Kos_Module` calls.
+
+Traced with per-call probes on the whole chain:
+
+- The AIZ2→HCZ1 transition is driven by `Aiz2BossEndSequenceController:208`
+  (`requestZoneAndAct(ZONE_HCZ, 0, true)`), which reaches
+  `GameLoop.doZoneAct` → `LevelManager.loadZoneAndActForFreshRuntime`. That load passes
+  `titleCardRequiredInHeadlessMode=false`, so `requestTitleCardIfNeeded`
+  (`LevelManager.java:3062-3126`) falls through to
+  `completeSkippedInitialTitleCardPresentation()`.
+- Every *other* title card in this run reaches the request path only through
+  `callerOwnedReturnCard=true` — they are all special-stage/bonus results returns. At the
+  one genuine zone advance, every escape (`headlessWholeRunHandoff`,
+  `isTitleCardRequiredInHeadlessMode`, `callerOwnedReturnCard`, `isLevelRoutineReentry`) is
+  false. Measured directly: `zone=1 act=0 headless=true wholeRunHandoff=false
+  requiredHeadless=false callerOwnedReturnCard=false routineReentry=false`, and no title
+  card is ever initialised for zone 1.
+- The timing window is not the problem. HCZ1 loads inside `aiz_5`'s recorded tail, and the
+  recording agrees: `aiz_5`'s only `zone_act_state` row is frame 7031 with
+  `actual_zone_id=1 actual_act=0 game_mode=0x8C` — bit 7 set, the ROM has left the AIZ2
+  loop, and rows 7032-7174 are the destination's load. `Obj_TitleCardInit`'s submissions
+  sit at 7057-7063 inside that window.
+
+Two candidate steps were measured and are parked, not landed (branch
+`bugfix/ai-s3k-hcz-geyser-r1`):
+
+1. `GameLoop.doZoneAct` loading through `loadZoneAndActWithTitleCard` — the existing API
+   whose Javadoc already describes this case. The card then runs and the chain fails
+   earlier and differently: `segment 8 lost production ownership before source closure
+   (mode=TITLE_CARD, level=[loadGeneration=7, progressionZone=1, romZone=1, act=0], BK2
+   cursor=53485)`. Cursor 53485 is `aiz_5` row 7053, inside the recording's own load
+   window.
+2. Additionally lifting `TraceRunPlaybackCoordinator.ownsCurrentSegment`'s
+   `observation.mode() == GameMode.LEVEL` conjunct off the existing
+   `pastRecordedLevelLoop` escape, whose Javadoc argues the same point for identity.
+   Ownership then holds and the run reaches a third wall in a third subsystem:
+   `duplicate or reordered hardware service boundary at raw_frame=7053:
+   previous=PRE_MAIN_LOOP, current=VINT_SERVICE`, from
+   `GameLoopTitleCardLifecycle.update` → `LevelFrameStep.executeHardwareTimedObjectScan`.
+
+Stopping there rather than stacking a third speculative change. Candidate 1 is
+directionally right — the recording proves the ROM presents the card and does the art work
+in those rows — but the walls behind it are real engine gaps in run coordination and in the
+title-card mode's hardware service ordering, not object parity. Neither candidate has been
+measured against the S1/S2 chains, which are the regression surface for both.
