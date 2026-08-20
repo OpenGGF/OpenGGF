@@ -94114,3 +94114,113 @@ tell your own collision from another worktree's harmless CPU contention.
 f3887, `sidekick_x_sub rom=0x7700 engine=0x7A00` — three sub-pixel units on the sidekick,
 still inside the vine sequence's aftermath (`sidekick_angle` first errors at f3885 in the
 pre-fix histogram, so this region was already the second cluster). Not instrumented.
+## 2026-08-20 — CPZ2 seg10 frame 52: the title-card tail was ticking on ROM lag frames
+
+Branch `bugfix/ai-s2-cpz2-seg10-r1` off `origin/develop` (`8b5699630`). Fix landed.
+
+### Correction to the brief's premise
+
+The brief called this segment "unexplored, worked by nobody". It is not: this thread
+has ~10 prior rounds on it (2026-08-19), which characterised the 1725-1733 push
+cluster and the 5554-7087 art cluster in depth and localised the latter to the Obj05
+twin-tails script cadence. What *was* unworked is the **earliest** cluster, at frames
+52-96, which every prior round stepped over on its way to the art cluster. That is
+what this round closed. The brief's numbers (1749 errors, frame 52,
+`queue.s2_nemesis_plc.busy`) re-measured exactly at `8b5699630`.
+
+### The cluster was a pure +2 row phase offset
+
+All 10 errors, one cause. The recorded ROM queue is idle over rows 7-53, then at row
+54 takes a 5-descriptor batch with `remaining_work` 68 draining at exactly 3 patterns
+per row (`ProcessDPLC2`, s2.asm:2224-2225) and popping a fingerprint at rows 77, 82,
+86, 92, finishing at 97. The engine does the identical thing — same four fingerprints,
+same `remaining_work` sequence, same drain rate, pops at 75, 80, 84, 90 — starting at
+row 52. Nothing about content differs; only when.
+
+### The clock, named on both sides
+
+`physics.csv` carries both counters. Over rows 0-60, `vblank_counter` advances on every
+row without exception, while `gameplay_frame_counter` (`Level_frame_counter`) fails to
+advance on **exactly two** rows, **1 and 8**. `lag_counter` reads 0 at both, so the
+lag counter is not the signal here; the gfc plateau is. Those two rows are ROM lag
+frames: V_int ran, `Level_MainLoop` did not complete an iteration.
+
+That closes the arithmetic exactly. The tail is 53 passes; 53 main-loop iterations span
+55 recorded rows when two of them are lag rows, so the ROM fires at row 54 and an
+engine that ticks once per row fires at row 52.
+
+### The owning routine, and the engine's model of it
+
+`Obj34_WaitAndGoAway` (docs/s2disasm/s2.asm:27605-27637) is armed at s2.asm:5066-5080
+with `routine = $16` and `anim_frame_duration = $2D`, immediately before
+`Level_StartGame`/`Level_MainLoop`, and runs from that loop's `RunObjects`
+(s2.asm:5098). It burns 45 passes decrementing the duration, then slides the zone-name
+piece by `$20` from `$120`, branching to `Obj34_LoadStandardWaterAndAnimalArt` on the
+pass where x first exceeds `$200` — x = `$220` on slide pass 8. **53 passes**, and the
+art load and the piece's `DeleteObject` happen on the same pass, which is why the
+fixture's `object_removed` for slot 2 (the zone-name piece) is also at row 54.
+
+`TitleCardManager.advanceZoneNamePieceTail` models this faithfully: instrumented, it
+runs exactly 53 passes with the identical x sequence `$140,$160,...,$200,$220`. The
+routine was never the defect.
+
+### Where it actually went wrong, proven by execution not by reading
+
+`TraceSuppressedRowClosure.executeUnownedTitleCardWork` computed
+`deferOverlay = rowSuppressed && provider.advancesOnHeldLevelCounter()`. S2 takes the
+`TitleCardProvider` default `false` for that predicate, so the guard was inverted for
+exactly the case that matters: a provider that does **not** advance on a held level
+counter was updated on suppressed rows regardless.
+
+Instrumented, the run logs exactly **two** `executeUnownedTitleCardWork` overlay
+updates in the whole segment, **both with `rowSuppressed=true`**, and they interleave
+with the tail probe at tail passes 2 and 9 — i.e. rows 1 and 8, the two gfc-plateau
+rows. Mechanism and execution agree.
+
+### The fix
+
+New `TitleCardProvider.inLevelTailDispatchedByObjectScan()` (default `false`,
+overridden by S2's `TitleCardManager` to `exitTailActive`), deferred by the
+suppressed-row closure alongside the existing held-counter case. No constant is
+introduced and no count is fitted: the 53 passes were already correct and unchanged,
+and the rule is "an object-scan-dispatched routine does not run on a frame whose
+object scan did not run". It holds for any BK2 — a recording with three lag frames in
+that window shifts by three.
+
+### A rejected broader variant, recorded so nobody retries it
+
+First attempt made the deferral unconditional (`deferOverlay = rowSuppressed`). That
+closes seg10 identically **and** improves `TestS2CompleteEmeraldRunChain` segment 15
+from 7575 to 7511 errors — but it regresses S3K:
+`TestS3kReplayReferenceClosureIntegration` goes green -> 12 errors, first error frame
+26179 `queue.s3k_kos_module.busy` exp=true act=false. S3K's
+`advancesOnHeldLevelCounter()` is `inLevelMode && heldLevelCounterDispatchOwned &&
+isOverlayActive()`, so an S3K in-level overlay without held-counter dispatch relies on
+the unowned path updating it on a suppressed row. Do not widen the predicate without
+giving S3K its own owner. The seg15 -64 is a real signal for whoever works that seam.
+
+### Measurements — all at `8b5699630`, `-Dmse=off`, `-Dsurefire.runOrder=alphabetical`,
+all three ROM paths passed explicitly, JDK 21
+
+| Run | Control (base) | With fix |
+|---|---|---|
+| `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` | 1749 errors, first frame 52 `queue.s2_nemesis_plc.busy` | **1739 errors, first frame 1725 `dynamic_art.outstanding_transfer_ids`** |
+| `-Ptrace-replay` (full) | 793 run, 4 failures, 4 skipped | 793 run, **4 failures**, 4 skipped — same four classes |
+| `-Pguards` | — | 500 run, 0 failures |
+| full `mvn test` | 15191 run, 54 failures, 67 errors | 15191 run, 54 failures, **64 errors**; failing-name set is a strict subset of control's, zero new names |
+
+Per-field histogram of the segment report before and after: the 10 `queue.*` errors go
+to **zero** and every other frame bucket is byte-identical (1500:58, 2000:1, 5500:562,
+6000:581, 6500:428, 7000:109). The fix removes exactly its own cluster and touches
+nothing else.
+
+The full-suite red set is the known ambient-global-state churn (order-dependent
+`ObjectServices.objectManager()` nulls); it moves in both directions between runs and
+was diffed by name, not by count, per the measurement rules.
+
+### Frontier after this round
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` first error is now **frame 1725**,
+`dynamic_art.outstanding_transfer_ids` — the push cluster already recorded as
+known-discrepancy 28, 58 errors — with the 1680-error art cluster from 5554 onward
+still the bulk and still owned by the Obj05 twin-tails cadence thread.

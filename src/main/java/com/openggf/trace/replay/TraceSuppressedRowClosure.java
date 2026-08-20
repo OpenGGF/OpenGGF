@@ -25,8 +25,21 @@ public final class TraceSuppressedRowClosure {
             TitleCardProvider provider,
             Runnable startPendingInLevelTitleCard,
             Consumer<Boolean> applyInLevelTitleCardControlLock) {
+        // A suppressed row is a ROM lag frame: V_int ran, but Level_MainLoop
+        // did not complete an iteration, so RunObjects never dispatched. The
+        // in-level title-card tail routines are object routines reached only
+        // from that scan -- S2 Obj34_WaitAndGoAway (docs/s2disasm/s2.asm:27605)
+        // is armed just before Level_MainLoop (s2.asm:5066-5080) and ticks once
+        // per iteration -- so a held level counter must not advance them here.
+        // V_Int writes VintID_Lag back into Vint_routine before dispatching
+        // (s2.asm:500-501), and none of Vint_Lag's paths reach an object scan.
+        // A provider that DOES advance on the held counter is dispatched by the
+        // represented closure instead and is deferred here for that reason;
+        // an object-scan-dispatched tail is deferred because the ROM does not
+        // dispatch it at all on this row.
         boolean deferOverlay = rowSuppressed && provider != null
-                && provider.advancesOnHeldLevelCounter();
+                && (provider.advancesOnHeldLevelCounter()
+                        || provider.inLevelTailDispatchedByObjectScan());
         if (provider != null && provider.isOverlayActive() && !deferOverlay) {
             provider.update();
             if (provider.ownsInLevelPlayerControlLock()) {
