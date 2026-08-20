@@ -97410,3 +97410,138 @@ defect: **it is now the S2 chain's frontier and the highest-value S2 target.** F
   The truncation was caught by the class-name set (0 classes), not the totals. The first
   candidate default run reported 13986/41F/**3139E**; a re-run in the same tree gave
   15196/53F/71E. Quote no default-suite total that is not 15196.
+
+## 2026-08-20 -- The level-to-level fade is 22 V-blanks in all three games, and it is not the per-game number
+
+Round `bugfix/ai-fade-length-r1` off `48fa9e3c7`, worktree `wt/fade-len-r1` with a
+same-commit control at `wt/fade-len-r1-ctl` (both `reflinked=7770 fallback=no`).
+A derivation, a rejected candidate, and two retractions; **no engine change is landed**.
+
+Command (all arms):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=<class> \
+  -Ds3k.rom.path=... -Dsonic1.rom.path=... -Dsonic2.rom.path=... test
+```
+
+### The derivation
+
+Every game reaches its next level through the same shape. The level main loop leaves
+on the frame that saw the exit -- that frame still ran and still incremented the level
+frame counter (S1 `sonic.asm:3045`, S2 `s2.asm:5095` `bne.w Level`, S3K
+`sonic3k.asm:7919` falling out of `LevelLoop`). The level-entry routine then clears the
+art queue with no V-blank wait and blocks in the palette fade:
+
+| Game | Routine | Site | Count |
+|---|---|---|---|
+| S1 | `PaletteFadeOut` | `docs/s1disasm/_inc/Palette Fading.asm:134-143` | `move.w #22-1,d4` + `dbf` over `WaitForVBlank` = **22** |
+| S2 | `Pal_FadeToBlack` | `docs/s2disasm/s2.asm:3370-3381` | `move.w #$15,d4` + `dbf` over `WaitForVint` = **22** |
+| S3K | `Pal_FadeToBlack` | `docs/skdisasm/sonic3k.asm:5042-5051` | `move.w #$15,d4` + `dbf` over `Wait_VSync` = **22** |
+
+The level frame counter is only cleared after the fade returns (S1 `sonic.asm:2915`,
+S2 `s2.asm:4773`, S3K `sonic3k.asm:7538`), so the recording must show the gameplay clock
+pinned for exactly 22 rows while the V-blank counter keeps ticking.
+
+**There is no per-game fade length. It is 22 everywhere**, so it needs no typed rules
+record and no provider -- the number is a shared constant of all three ROMs.
+
+### Retraction 1: the pinned block is 22 rows, not 23
+
+The entry above reports `aiz_5` rows 7031-7053 as "23 rows on which the ROM's gameplay
+clock is stopped". Read out of the committed fixture:
+
+```
+7030 f=1B76 gfc=1B62 vbl=CEE6 y=0336     live
+7031 f=1B77 gfc=1B63 vbl=CEE7 y=0342     live -- last increment
+7032 f=1B78 gfc=1B63 vbl=CEE8 y=0342     frozen  (fade wait 1)
+ ...                                     frozen
+7053 f=1B8D gfc=1B63 vbl=CEFD y=0342     frozen  (fade wait 22)
+7054 f=1B8E gfc=0000 vbl=CEFE y=0000     counter cleared; fade has returned
+```
+
+Row 7031 is the **last gameplay row**, not a frozen one. 7031-7053 is 23 samples but 22
+intervals, and the 22 frozen rows are 7032-7053 -- exactly `Pal_FadeToBlack`. The
+"23-row quantum" was an inclusive-count off-by-one, and the "S3K under by 2 / S2 over by
+2" story rests on it.
+
+### The engine's own span, measured
+
+A probe counting consecutive frames on which `isNonRewindableTransitionPending()` holds
+for a level-to-level transition (bonus and ending flags excluded) prints **21**, not 23,
+at the AIZ2 seam. `LevelIterationAdmissionController.finishPlaybackBoundary(false, ...)`
+does not advance the cursor, so the request-consume frame is a 22nd frozen frame that
+also consumes nothing: **22 engine frames, 0 rows consumed, against the ROM's 22 rows.**
+
+### The candidate, and the measurement that rejects it
+
+Mirror `updateBonusStageMode`'s exit-hold compensation into the level-fade branch and
+advance the request-consume frame's row, giving 22 consumed rows.
+
+| arm | S3K `TestS3kSonicTailsCompleteEmeraldRunChain` segment 8 |
+|---|---|
+| control `48fa9e3c7` | `BK2 cursor=53488` |
+| freeze branch only (21 rows) | `53509` |
+| full candidate (22 rows) | `53510` |
+| full candidate + `6c40da228` ordering fix | `53487` |
+
+Both halves add exactly the rows derived. The recorded transition row is 53486, so the
+ROM-correct 22 lands **one row over**, and the previous round's exact 53486 needed 21.
+
+### Retraction 2: the exact 53486 was itself two errors cancelling
+
+The previous entry landed 53486 with a 21-row compensation plus the ordering fix, and
+recorded it as corroboration. It is not. Its own table records the ordering-fix arm
+reaching the pinned `player_y=0342` at row **7032, one row late**. A fall one row late
+plus a fade one row short cancels to an exact cursor. Restoring the ROM's 22 exposes the
+residual: **the ordering fix on `6c40da228` is still one row late on the discriminator**,
+and it should not be landed on "it lands 53486 exactly" evidence.
+
+### Why S2 regresses, and it is not the fade length
+
+Same command, `TestS2CompleteEmeraldRunChain`: control fails at segment 15
+(`cursor 89602, offset 89600`); with the freeze-branch compensation it fails at segment 6
+(`Segment 6 destination seg5_ehz2 cursor advanced past its first recorded row without
+admission (cursor 32933, offset 32931)`). Decomposed by arm, the regression comes from
+the **freeze branch**, not from the request-consume row.
+
+The cause is segmentation, not the ROM. Read out of the committed fixtures:
+
+- S3K `aiz_5` (offset 46432, 7175 rows) **contains** its 22 frozen fade rows inline at
+  7032-7053, plus 122 post-fade load rows. The engine must consume them itself.
+- S2 `seg4_ehz1` (offset 31472, 1288 rows) ends on a **live gameplay row** --
+  `gfc` still incrementing, `player_y` still moving -- and `seg5_ehz2` starts at 32931,
+  leaving a **171-row inter-segment gap** that the run driver already owns. The fade rows
+  are in that gap. Consuming them again in the freeze branch double-counts.
+
+So the two games differ in *who owns the fade's rows in the recording*, not in how long
+the ROM fades. The correct shape is an ownership condition -- consume rows in the freeze
+only while the shared cursor is still inside the source segment's recorded rows -- not a
+per-game constant. That is left unimplemented and named as the next thing to build.
+
+**Kill condition for the ownership story:** if an S2 run whose source segment carries its
+fade rows inline still overshoots by the same amount, ownership is not what separates the
+two games and this explanation is wrong.
+
+### Correction to the correction: the bridge-flag candidate is NOT recommended
+
+An earlier section in this log corrected the bridge-flag candidate's verdict from "rejected" to
+"a 23-row improvement … should be reconsidered for landing once the fade length is derived."
+**That correction was itself built on the inclusive-count off-by-one above and is now void.**
+
+The pinned block is **22 rows, not 23** — `aiz_5` row 7031 is the last *live* row, and 7031-7053
+is 23 samples but 22 intervals, with the frozen rows 7032-7053 matching `Pal_FadeToBlack`
+exactly. The "S3K under by 2 / S2 over by 2" asymmetry rested on that same miscount.
+
+And the previous round's "lands 53486 exactly" was **itself two errors cancelling**: its own table
+records the ordering-fix arm reaching the pinned `player_y=0342` at row 7032, one row late, and a
+fall one row late plus a fade one row short (21 against the ROM's 22) cancels to an exact cursor.
+With the ROM's 22 the same arm lands 53487.
+
+So `bugfix/ai-s3k-bridge-flag-r1` (`6c40da228`) stays unlanded and is **not** recommended. It
+remains ROM-correct by the object-layout argument, but its supporting measurement is void and it
+is still one row late on the discriminator. **Something upstream in the AIZ2 fall or exit is one
+frame slow, and that is the visible frontier.**
+
+Three successive verdicts at this seam have now been produced by pairs of errors cancelling. Any
+future claim here should state the discriminator — the recorded row on which the engine reaches
+the pinned `player_y` — and its interval arithmetic explicitly, rather than a cursor value.
