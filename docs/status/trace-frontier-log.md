@@ -95509,3 +95509,76 @@ full `-Ptrace-replay` suite before and after. Do not re-derive the PC table abov
 
 The camera cluster at rows 7698-7799 (45 errors) is still untouched and still unproven to
 share a cause.
+
+## 2026-08-20 — S1 segments 23/24: `dynamic_art.edges` is a headline, not the defect
+
+Round `s1-dynart-edges-r1` off `f36b4cf40`. **Diagnosis only, zero commits, empty diff;
+probes reverted.** Control reproduces both briefed numbers exactly: segment 23 (`lz1`) 16
+errors at frame 3124, segment 24 (`lz1_2`) 18684 at frame 1337, both headlined
+`dynamic_art.edges`.
+
+### The brief's premise is retracted
+
+`dynamic_art.edges` is **not** the first divergence in either segment. It is the headline only
+because `firstNonCameraPhysicsMismatch` filters to verification group PHYSICS, and
+`player_mapping_frame` is group ANIMATION — the thirty-first rule, hit again. Full per-field
+dumps:
+
+- seg 23, all 16 errors: `3123 player_mapping_frame rom=0x08 engine=0x55`, then edges at
+  3124/3126/3197/3198, plus `3196 player_mapping_frame rom=0x08 engine=0x55`.
+- seg 24: `1336 player_mapping_frame rom=0x45 engine=0x08`, then edges at 1337/1338 and the
+  same pattern every 8 frames.
+
+Both segments are **Sonic animation-frame divergences**; every dynamic-art error is downstream.
+Confirmed mechanically from the fixture: across all 873 `lz1` and 3383 `lz1_2` edge events, an
+edge frame is *always* (mapping-frame change frame + 1) — the recorded edge is the VBlank DMA
+after `Sonic_LoadGfx` (`01 Sonic.asm:2393+`). One mapping-frame slip produces an edge on the
+wrong frame and shifts every later ordinal. Segment 24's 18684 is **one frame of phase lead**,
+not thousands of events: identical ordinals emitted one frame early across 2430 rows.
+
+The engine-late (seg 23) / engine-early (seg 24) symmetry is real, but it is on the *animation
+frame*, not on edge presence.
+
+### Mechanism, ROM-cited
+
+Both sit in `Sonic_Animate`'s `$FF` handler (`docs/s1disasm/_incObj/01 Sonic.asm:2176-2378`).
+`.walkrunroll` does `subq.b #1,obTimeFrame / bpl .delay` **before** testing the push bit, so a
+frame is held for `obTimeFrame+1` regardless of state changes; only the `anim != prev_anim`
+reset can release it early.
+
+**Segment 24** — Sonic releases a wall push at 1336. The engine's
+`PlayableSpriteAnimation.updateScriptedAnimation` sees the push-substituted animation id change,
+takes `resetScriptState()`, and bypasses its own timer gate; the ROM releases one frame later.
+The push-interval port itself is **correct** and this is not a delay-constant bug: across all
+158 push episodes in the run, sustained holds are 31/32 frames and track `(0x800-|inertia|)>>6`
+exactly. Both sides had `tick=31` here — the divergence is purely which side resets it.
+
+**Do not "fix" this with a constant.** Of the 158 episodes, **128 end on the frame the push bit
+clears (d=0) and 30 end one frame later (d=1)**. The engine implements d=0 unconditionally, and
+`lz1_2@1336` is a d=1. Any unconditional "+1" or "hold one extra frame" would turn 128 green
+episodes red to fix 30. The open question is the *discriminator*: which ROM site cleared bit 5
+relative to `Sonic_Animate` in that object pass. Candidates, all in `01 Sonic.asm`: 409
+(`.notright`, inertia 0), 645/711 (`Sonic_MoveLeft/Right` direction change — these `bclr #5`
+**and write `#id_Run,obPrevAni`**, a deliberate restart-next-Animate trick with no engine
+equivalent found), 1234 (jump), 1850 (`Sonic_ResetOnFloor`). Note there is no per-frame
+wall-collision clear — the S1 "pushing air" bug; that clear exists only behind `FixBugs` at
+2187 and must not be taken.
+
+**Segment 23** — Sonic is hurt (`obAnim` = id_Hurt) bouncing in LZ; the ROM shows `fr_Walk13`
+($08) for exactly one frame while `player_animation_id` stays $1A, and the engine never produces
+it. `SonAni_Hurt` is `dc.b 3 / fr_Injury / afEnd` and can never emit $08, so the ROM's $08 is an
+anim-change reset landing in the walk/run branch. Prime candidate is `Sonic_ResetOnFloor`
+(`:1820-1866`): under **FixBugs = 0** the `move.b #id_Walk,obAnim` sits inside the ball-flag
+branch, so a hurt landing in ball state writes id_Walk, Animate resets and publishes fr_Walk13,
+and the hurt state reasserts next frame. Same shape at 3196 into id_Death. This is a
+`FixBugs = 0` path and the engine must reproduce the un-fixed placement. Not closed:
+`player_routine` stays 04 across 3123, which did not reconcile with the landed branch of
+`Sonic_HurtStop`, and is the thing to check first.
+
+### Also open
+
+`status_byte` **is** compared (`TraceBinder.java:245`) and never mismatches in segment 24, yet
+the engine's `getPushing()` is already false at 1335 while the ROM's recorded bit 5 clears at
+1336. Either the reported status byte and the animation's pushing flag are different values a
+frame apart, or the comparison is not seeing it. If it is the former, the animation is consuming
+a lead-by-one flag and that alone explains segment 24.
