@@ -93088,3 +93088,63 @@ is inactive for S1) and directly by `TestS1S2PlcComparisonOnlyGuard`, whose asse
 control native PLC readiness". Landing either would require deleting a guard assertion that
 states the opposite architectural intent — an escalation, not collateral. No constant was
 introduced and no fixture was modified.
+
+## 2026-08-20 - S1 recorded `vblank_counter` tear census, and a retraction
+
+Branch `bugfix/ai-s1-syz2-bridge-r2`, base `8344f8c06`. Measurement only; no production change.
+Follow-up to the `VBlank_Lag` entry above, which this partially **corrects**.
+
+**RETRACTION.** That entry said the four passing bridges (`ghz2`, `ghz3`, `mz2`, `mz3`) are
+green "by coincidence" of a recorder tear, and implied the tear-derived suppression is a booby
+trap for any future fix. Both claims are wrong, and I had the suppressed row backwards.
+`TraceRunFrameDriver.presentationRowIsCarriedLagClosure` suppresses the row **after** a
+non-advancing sample (and a dv==0 row only when the next row is not deferred) — so at a tear it
+suppresses the **dv>=2** row (row 70), not the dv==0 row (row 69). Its javadoc already derives
+this from ROM structure and cites `VBlank_Lag` (`sonic.asm:709`) and `ProcessPLC_9Tiles`
+(`:1430-1440`): after a `disable_ints` span, `enable_ints` is reached with `v_vblank_routine`
+still 0, so the first `V_Int` back runs no mode handler. That is a correct, cited model, not
+luck.
+
+**Tear census, all 28 level segments (186,720 row transitions).** `dv` = recorded
+`vblank_counter` delta.
+
+| `dv` | rows | where |
+|---|---|---|
+| 1 | 186,670 | everywhere |
+| 0 | 46 | six 7-row frozen spans (rows 60-66 of every bridge) + four 1-row tears |
+| >=2 | 4 | `ghz2`/`ghz3`/`mz2`/`mz3` row 70, each paired to a row-69 tear |
+
+Every one of the 46 non-advancing rows lies inside the six presentation bridges. **Outside those
+six segments the counter advances by exactly 1 on every transition** — so ordinary level
+segments carry no tear signature of any kind.
+
+**The suppression never misfires.** Applying the predicate to every row of all six bridges: it
+fires on rows 60-67 in all six (the frozen span plus the first V-int back) and additionally row
+70 in the four tear bridges. Cross-checked against recorded PLC state, the count of rows where
+the harness suppresses service but the ROM actually serviced is **zero**. It is not
+load-bearing in a fragile way and it is not a trap; it is right everywhere it fires. The
+inverse check — rows the harness does not suppress where the ROM stalled — returns exactly
+`syz2` row 70 and `syz3` row 70, and nothing else in any bridge.
+
+**The real gap is 33 rows, corpus-wide.** Rows with `dv == 1`, `lag_state.lagged=true`, and a
+stalled PLC entry — an ordinary single-frame lag V-int, which by construction leaves the
+counter advancing by 1 on both sides and therefore has **no recorded signature at all**:
+
+`ghz3_2` 85, 6275 - `lz1_2` 15804 - `lz2` 1, 76 - `lz3` 10151, 10186, 10217 -
+`lz4` 1, 3, 5, 7, 12, 17, 21, 23, 30, 39, 91, 97, 115, 117, 123 - `mz2_3` 102 -
+`mz3_2` 88, 103, 110, 115 - `slz3` 5243 - `syz2` 70 - `syz3` 70 - `syz3_2` 9853
+
+Two are in bridges (the current frontier); 31 are in ordinary level segments, where service is
+the 3-tile `serviceLevelVBlank`. `lz4` alone holds 15 of them in its first 123 rows, all behind
+the present frontier.
+
+The distinction that matters for any future fix: the four tears are **severe** overruns where a
+whole sample row received no V-int, which the recorder does expose; these 33 are ordinary lag
+V-ints, which it cannot. A model built on the counter delta can never reach them.
+
+**Segments 12/15 are NOT this class — now disproven, not merely unproven.** `mz2_3`'s first lag
+frame of any kind is row 102, and its reported first error is row 101, so no lag frame precedes
+the divergence at all. `mz3_2` does have a lag row at 88 before its row-102 error, but a missed
+suppression makes the engine service *ahead*, and both segments are reported *behind* (no active
+prepared entry where the ROM has one, plus an extra leading fingerprint). Direction and
+availability both rule it out. That line remains separate and was not touched.
