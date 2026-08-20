@@ -1038,3 +1038,34 @@ Ask it to commit; do not resolve it by deleting.
 Two adjacent habits worth keeping: stop a round when you stand it down rather than letting
 finished rounds pool idle, and send the closing message *before* stopping it — messaging a
 stopped round resumes it.
+
+## Thirty-seventh rule: equalise run order before comparing failure sets across worktrees
+
+Two arms of a comparison were each run in their own worktree and both reported **5 failures**.
+The sets were not the same: the control failed one S1 trace class, the candidate failed a
+different one. Read as a count, nothing moved; read as a set, it looked exactly like "my change
+broke a test and fixed another". Both classes passed in isolation.
+
+The cause is already recorded elsewhere in this project: Surefire's default filesystem run order
+varies per worktree and survives `mvn clean`, so **which** order-dependent test fails is a
+property of the checkout, not of the change. `-Dsurefire.runOrder=alphabetical` on *both* arms
+produced identical sets.
+
+**The signature is a swap** — equal totals, different members, all of them passing alone. Note
+that isolated runs cannot settle it: an order-dependent failure passes in isolation by
+definition, so "it passes alone" is evidence of nothing. Equalise the run order and re-measure.
+
+Corollary for any cross-worktree comparison: the two trees differ in more than your diff.
+
+## Thirty-eighth rule: a backgrounded Maven that dies with its shell reports success
+
+A round backgrounded a `mvn` invocation whose launching shell then exited. The build died with
+it, leaving a 33-line log that ends mid-`testCompile` — no `Tests run:` line, no failure, no
+stack — while the harness reported the *shell's* exit status of 0. Skimmed, that is a pass.
+
+This is the same family as the failed-compile hazard (thirty-fifth rule) and it fails the same
+way: **the absence of test output reads as "nothing went wrong" rather than "nothing ran".**
+
+Detach properly (`setsid ... </dev/null`) and poll for an explicit `BUILD SUCCESS` or
+`BUILD FAILURE` line before reading any total. An exit code from a wrapper is not the build's
+verdict, and a log that simply stops is not a result.
