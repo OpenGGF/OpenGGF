@@ -937,3 +937,28 @@ retracted a writer list that, re-indexed, turned out to describe events fifty ro
 The general form: when a measurement and a fixture disagree about *when*, suspect the index
 convention before suspecting either instrument. Two off-by-one-related quantities with similar
 names, both documented, is the setup.
+
+## Thirty-third rule: BizHawk reports the PC *after* the storing instruction
+
+A probe hooking a memory write logs `M68K PC`, and that value is the address of the
+instruction **following** the one that performed the store. Read literally, every write-site
+result in a chain of rounds points one instruction downstream of the code that actually wrote
+the field.
+
+This was found only because a lane built an exact address-to-label mapping and noticed the
+field BizHawk named did not belong to the instruction at the reported PC — twice, independently,
+in the same capture. Without a real mapping the discrepancy is invisible: a PC a few bytes off
+still lands inside the right routine most of the time, so the label looks plausible and the
+error survives. It is the small, consistent kind of wrongness that a plausibility check cannot
+catch.
+
+**Build the mapping, don't bracket it.** For S3K, `docs/skdisasm/skbuilt.bin` is byte-identical
+to the locked-on ROM's entire S&K half, so `docs/skdisasm/sonic3k.lst` — the AS listing with an
+address column — gives an exact address→label lookup rather than a guess between two known
+labels. Verify the byte-identity yourself; it is what licenses the lookup. (This is label and
+offset discovery, which the disassembly tree is *for*; it is not a hard-rule-1 asset read.)
+
+Corollary, and the reason this rule is worth its length: a writer list derived from unadjusted
+PCs was published, briefed, and built on for two rounds before being retracted wholesale. State
+your PC→label method and your confidence whenever you report writers, so the next round can
+check the derivation instead of inheriting the conclusion.
