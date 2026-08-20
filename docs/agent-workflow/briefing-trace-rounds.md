@@ -1125,3 +1125,26 @@ Two corollaries earned alongside it:
 - **The pattern propagates.** The same accumulator is ported at six other sites in this codebase,
   at least one carrying a comment with the same premise. A single ROM argument usually settles
   every instance in one direction — so when you kill one, audit the family.
+
+## Forty-first rule: prove an arm was not truncated, don't infer it from its total
+
+Two arms reporting the same total is weak evidence that both ran completely. A contended or
+memory-starved arm dies partway, and if the classes it lost happened to be green, the total is
+unchanged. Every hazard in rules 30-38 shares this shape: the output of a run that did less looks
+like the output of a run that found less.
+
+Three checks that actually establish completeness, in increasing order of strength:
+
+1. **Compare the set of test classes run, by name.** A truncated arm shows a *short class list*,
+   not merely a lower failure count. `diff` the `-- in <class>` lines between arms; an empty diff
+   is worth more than matching totals.
+2. **Compare the `Tests run: 0,` lines themselves, not their count.** Equal counts can hide a
+   silent victim that happened to land symmetrically with a pre-existing empty class. Identical
+   *classes* reporting zero means those are genuinely empty or skipped, not casualties.
+3. **Grep for `forked VM terminated` and `Corrupted STDOUT`.** These name a fork death directly
+   and appear in neither a healthy run nor, importantly, in the totals.
+
+A round today ran its two default-suite arms concurrently — the most contended thing it did — and
+established soundness this way rather than by hoping: identical class sets, identical zero-run
+classes, no fork deaths. That is a defensible measurement taken under bad conditions. Matching
+totals alone would not have been.
