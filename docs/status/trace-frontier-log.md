@@ -94344,3 +94344,64 @@ differs on arrival at 24 is some other engine state, not yet identified.
 Confined to segment 24. Compare `lz1_2` executed row-for-row between a chain entry and a cold
 entry and find where the two diverge in frames consumed -- 435 of its rows are recorded lag
 frames, and lag rows are exactly where consumption and recording can disagree.
+
+## 2026-08-20 -- RETRACTION: the `-216` is an untraversed inter-segment gap, not a shortfall
+
+Branch `feature/ai-seg24-rows-r1` off `94ee21c1b`. **Found, not fixed.** Documentation only.
+
+### Retracting the previous entry's central claim
+
+The entry above ("the `-216` is lost INSIDE segment 24") concluded that **"segment 24
+consumes 216 fewer frames than its 16,294 recorded rows"**. **That is false.** Segment 24
+consumes every one of its rows. The cursor-delta table in that entry was correctly measured;
+the interpretation built on it was wrong, and it was wrong in the direction that sends the
+next reader hunting inside `lz1_2` for a frame-consumption leak that does not exist.
+
+### The arithmetic, which settles it
+
+    lz1_2  offset 123042  rows 16294   -> its last row is movie frame 139335,
+                                          leaving the cursor at 139336
+    lz2    offset 139553
+    inter-segment gap                  = 139553 - 139336 = 217 frames
+    reported cursor at the handoff     = 139337  (= 139336 + 1, the ordinary +1
+                                          seen at every other segment start)
+    139553 - 139337                    = 216
+
+So the cursor is **exactly where segment 24's rows end**. Nothing was lost inside the
+segment. The `-216` is the **217-frame gap between `lz1_2`'s last recorded row and `lz2`'s
+offset, which the chain never traverses** -- the movie frames the level load and title card
+occupy between the two segments.
+
+`lz1_2 -> lz2` carries **no transition record** (confirmed against the manifest), so it takes
+the plain level->level path in `prepareAcrossLevelBoundary`. That path schedules the session
+at the destination offset and waits; when the level load has already completed inside the
+source segment's own tail, the wait returns immediately and the gap frames are never
+consumed.
+
+This also explains the cold start cleanly, which the previous framing did not: booting at
+segment 24 the load has **not** already happened in a preceding tail, so the same branch runs,
+the gap is traversed, and `firstGameplayFrame` lands on 0.
+
+### What is measured, and what is still open
+
+**Measured:** the deficit is exactly the untraversed inter-segment gap; segment 24's own row
+consumption is complete and correct; the boundary has no transition record; the cold start
+traverses the gap and the chain entry does not.
+
+**Open:** *why* the destination level load completes inside `lz1_2`'s tail when entered from
+the chain but not when entered cold. That is a level-load timing question about the source
+segment's tail, not a cursor-arithmetic one.
+
+**Attribution, unchanged and still open in both directions.** `lz1_2 -> lz2` is a plain
+level->level boundary with no presentation bridge, so the bridge lag change's mechanism --
+which selects a disposition for presentation-bridge rows only -- has no path to this code.
+That is an argument, not a measurement, and it is weaker than the lag-flag kill condition
+used for segments 23/24. I am not claiming the change is cleared.
+
+### Method note
+
+The previous round's cursor-delta measurement was sound and its table stands. The error was
+reading "cursor is correct entering segment 24, and short at its exit" as "the segment lost
+frames", without checking the segment's end against its own `offset + row count`. One
+subtraction would have caught it. **Check a suspicious delta against both endpoints, not
+just the one you started from.**
