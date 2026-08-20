@@ -94,18 +94,21 @@ class TestTitleCardObjectExecution {
         Assumptions.assumeTrue(romFile != null, "Sonic 1 ROM not available — skipping test");
         runTitleCardAdvancementCheck(SonicGame.SONIC_1, romFile, 0, 0, false,
                 /* expectObjectAdvance */ false, /* expectLevelAdvance */ false,
-                /* expectedObjectDeltaAtRelease */ 2);
+                /* checkSonic1ReleaseHandoff */ true);
     }
 
     @Test
     void titleCardAdvancesObjectAndLevelFrameCounters_s2Ehz1() {
-        // S2: TitleCardProvider.shouldRunPlayerPhysics() == true → engine
-        // runs LevelFrameStep.execute every frame, matching ROM Level_TtlCard.
-        // Both ObjectManager and LevelManager frame counters advance.
+        // S2: the level's placed objects and the players are both created by
+        // the s2.asm:5003-5004 ObjectsManager / InitPlayers pair, which runs
+        // after the Level_TtlCard scroll-in loop at :4914-4925. The RunObjects
+        // that loop dispatches therefore sees only the Obj34 title-card pieces,
+        // so no level-object pass may run while the card is sliding in.
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 2 ROM not available — skipping test");
         runTitleCardAdvancementCheck(SonicGame.SONIC_2, romFile, 0, 0, false,
-                /* expectObjectAdvance */ true, /* expectLevelAdvance */ true, null);
+                /* expectObjectAdvance */ false, /* expectLevelAdvance */ false,
+                /* checkSonic1ReleaseHandoff */ false);
     }
 
     @Test
@@ -117,21 +120,23 @@ class TestTitleCardObjectExecution {
         // Preserve the fresh-AIZ intro's absent initial owner so enterTitleCard
         // below creates the one title-card owner exercised by this test.
         runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, false,
-                /* expectObjectAdvance */ false, /* expectLevelAdvance */ false, null);
+                /* expectObjectAdvance */ false, /* expectLevelAdvance */ false,
+                /* checkSonic1ReleaseHandoff */ false);
     }
 
     /**
      * Loads the requested ROM and level, switches the GameLoop into TITLE_CARD,
      * steps N frames, and asserts the per-game expected behaviour of the
-     * title-card branch: S2 advances both frame counters; S1 / S3K take the
-     * legacy minimal path and do not.
+     * title-card branch. None of the three advances a level-object pass during
+     * the card's locked slide-in; the per-game release handoffs are checked
+     * after the stepped window.
      */
     private void runTitleCardAdvancementCheck(SonicGame game, File romFile,
                                               int zone, int act,
                                               boolean skipIntros,
                                               boolean expectObjectsToAdvance,
                                               boolean expectLevelFrameCounterToAdvance,
-                                              Integer expectedObjectDeltaAtRelease) {
+                                              boolean checkSonic1ReleaseHandoff) {
         // 1. Load the requested ROM and configure the matching game module.
         Rom rom = new Rom();
         assertTrue(rom.open(romFile.getAbsolutePath()),
@@ -267,7 +272,12 @@ class TestTitleCardObjectExecution {
                     "the next ordinary iteration runs exactly one level frame");
             afterRelease = OscillationManager.snapshot();
             OscillationManager.restore(beforeRelease);
-            OscillationManager.update(levelFrameBeforeRelease);
+            // LevelManager publishes the phase for the pass that is about to
+            // consume it, so the ordinary frame keyed as
+            // levelFrameBeforeRelease + 1 -- the counter value asserted just
+            // above -- is the one this update models
+            // (LevelManager.advanceGlobalOscillationForNextPass()).
+            OscillationManager.update(levelFrameBeforeRelease + 1);
             OscillationSnapshot expectedAfterOneUpdate = OscillationManager.snapshot();
             OscillationManager.restore(afterRelease);
             assertOscillationEquals(expectedAfterOneUpdate, afterRelease,
@@ -296,7 +306,30 @@ class TestTitleCardObjectExecution {
                             + "on the legacy minimal path (game=" + game + ")");
         }
 
-        if (expectedObjectDeltaAtRelease != null) {
+        if (game == SonicGame.SONIC_2) {
+            // Run the rest of the card and count the level-object passes that
+            // land while it is still up. The ROM window is the single
+            // RunObjects at s2.asm:5006 plus the 25 iterations of the leave
+            // loop at :5060-5066 -- the pass counts of Obj34_LeftPartOut (5),
+            // Obj34_BottomPartOut (11) and Obj34_BackgroundOut (9) at
+            // :27518-27604 -- so 26 passes between InitPlayers and
+            // Level_MainLoop.
+            int passesWhileCardUp = objectDelta;
+            int guard = 2000;
+            while (loop.getCurrentGameMode() == GameMode.TITLE_CARD && guard-- > 0) {
+                passesWhileCardUp = objectManager.getFrameCounter() - objectFramesBefore;
+                loop.step();
+            }
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
+                    "S2 title card should release within the test guard");
+            assertEquals(26, passesWhileCardUp,
+                    "S2 must run exactly the ROM's 26 pre-Level_MainLoop level-object passes");
+            assertEquals(1, GameServices.sprites().getFrameCounter(),
+                    "Level_frame_counter is cleared at s2.asm:4772 and first incremented by "
+                            + "Level_MainLoop's addq at :5092, so the release iteration leaves it at 1");
+        }
+
+        if (checkSonic1ReleaseHandoff) {
             AbstractPlayableSprite player = fixture.sprite();
             player.setGSpeed((short) 0);
             player.setXSpeed((short) 0);
@@ -310,13 +343,28 @@ class TestTitleCardObjectExecution {
             }
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
                     "title card should release within the test guard");
-            assertEquals(expectedObjectDeltaAtRelease.intValue(),
-                    objectManager.getFrameCounter() - objectFramesBefore,
-                    "S1 release must run the native level-object prelude and the first Level_MainLoop pass");
-            assertEquals(2, GameServices.sprites().getFrameCounter() - spriteFramesBefore,
-                    "S1 release prelude must dispatch the player slot once before the first Level_MainLoop pass");
-            assertEquals(0x0C, player.getGSpeed(),
+            // Level_LoadObj's ExecuteObjects (sonic.asm:2896) has no
+            // WaitForVBlank of its own; id_VBlank_Levels is first set by
+            // Level_MainLoop (:2999-3003). The release iteration therefore owns
+            // the prelude pass alone, and the first Level_MainLoop pass belongs
+            // to the following iteration.
+            assertEquals(1, objectManager.getFrameCounter() - objectFramesBefore,
+                    "S1 release must run the native level-object prelude and nothing else");
+            assertEquals(0, GameServices.sprites().getFrameCounter(),
+                    "v_framecount is cleared at sonic.asm:2915, after the prelude pass, so the "
+                            + "prelude is not a Level_MainLoop row");
+            assertEquals(0, player.getGSpeed(),
                     "the locked release prelude must ignore a stale forced-input mask");
+            assertEquals(0, player.getXSubpixelRaw(),
+                    "the locked release prelude must not move the player");
+
+            loop.step();
+            assertEquals(2, objectManager.getFrameCounter() - objectFramesBefore,
+                    "the first Level_MainLoop iteration runs exactly one more object pass");
+            assertEquals(1, GameServices.sprites().getFrameCounter() - spriteFramesBefore,
+                    "Level_MainLoop's addq at sonic.asm:3002 makes this the first level frame");
+            assertEquals(0x0C, player.getGSpeed(),
+                    "the first unlocked Level_MainLoop pass consumes held Right");
             assertEquals(0x0B00, player.getXSubpixelRaw(),
                     "only the first unlocked Level_MainLoop pass may consume held Right, with slope projection");
         }
