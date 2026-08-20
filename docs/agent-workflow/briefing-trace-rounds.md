@@ -676,3 +676,26 @@ direction — including a flattering one. Compare runs of equal size, name the u
 say plainly that nothing outside the measured area is attributable. Banking two accidental green
 classes would have been the easiest thing in the world and would have poisoned the next round's
 baseline.
+
+## Twenty-first rule: only a same-tree revert separates the change from the checkout
+
+Every red-set comparison in this project has compared a fix worktree against a control
+worktree. That comparison carries a **per-run noise term of one to two classes**, drawn from a
+pool of at least four known-flaky classes, emitted independently of the code under test.
+
+A round measured a class red twice on the fix side and zero times on control, which is exactly
+the pattern the two-runs-per-tree protocol exists to catch — and held the fix rather than
+explain it away. It then ran the decisive control: **the same worktree with the change reverted
+in place**. The reverted run produced *two extras of its own*, sharing none with the applied
+runs, while the 53-class core stayed identical across all three. So a two-of-two appearance on
+one side is a draw from the pool, not evidence.
+
+Two-runs-per-tree catches a *single* flake. It does **not** catch this, because the same flake
+can land on the same side twice by chance. Only a same-tree revert holds the checkout, the
+symlinked resources and the machine's neighbours constant while varying the code — and it costs
+one suite run.
+
+So: for any single-class difference that survives the two-runs protocol, **revert in place in
+the fix tree and re-run there** before believing it. Copy the file aside; never `git stash` in
+this repo. And note what this implies retroactively — a "both directions empty" cross-worktree
+diff is evidence about the core, not about the one or two classes drifting around it.

@@ -20,6 +20,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The GHZ bridge balances on its ROM `obActWid` of 128, not its collision
+  half-width.** The player stands on the bridge *parent* — the child logs are
+  routine `$A` (`Bri_ChildLog`, display only) and `Bri_CheckOnBridge` in the
+  parent's routine sets `obRoutine = 4`
+  (`docs/s1disasm/_incObj/11 GHZ Bridge.asm:85,100,111-118`) — so
+  `Sonic_Balance` reads the parent's `#256/2` = 128 from the shipped
+  `FixBugs = 0` branch (`:32-39`), not the logs' `#16/2` = 8 at `:94`. The
+  engine inherited `getSolidParams().halfWidth()` = `logCount * 8`, which is
+  `Bri_CheckOnBridge`'s collision width (`:122-126`) and a different quantity.
+  With the ROM's 128 the balance window `[4, 2*128-4)` is wider than any
+  bridge, so the ROM never balances on one; the inherited value put a player
+  standing on the end log at `d1 = 0` and started the animation.
+
+### Fixed
 - **The collapsing floor balances on its ROM `obActWid` of 68, not its platform
   width.** `Sonic_Balance` reads the stood-on object's `obActWid`
   (`docs/s1disasm/_incObj/01 Sonic.asm:423`); `CFlo_Main` sets `#136/2` = 68
