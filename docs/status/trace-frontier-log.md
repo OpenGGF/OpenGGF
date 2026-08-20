@@ -99818,3 +99818,79 @@ engine currently submits the enemy art first, so even an unwedged queue would at
 right fingerprints to the wrong ordinals. The ordering must come from the ROM routines that
 own each queue call — `Obj_TitleCardInit`, the `Level:` load-block art load, and
 `LoadEnemyArt` from `Obj_TitleCardWait2` — not from the recorded frame numbers.
+
+## 2026-08-20 — The battleship clock is NOT the cause; the ship starts one frame early, twice compensated
+
+Round off `origin/develop` `49842ad85`; same-tree control at `49842ad85`. **Found, not fixed
+— nothing landed but this entry, and there is a specific reason not to land the obvious
+one-line fix.** Row convention: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = cursor - 46432`.
+
+### REFUTED — the clock hypothesis from the previous entry
+
+The previous entry's lead was that segment 8's 160 lagged frames de-phase the ship's advance
+from an executed-frame count. It does not:
+
+- `Obj_AIZBattleshipMain` opens `subi.l #$8800,(_unkEE98).w` (`sonic3k.asm:105285-105286`).
+  It is not gated on `Level_frame_counter`, `V_int_run_count` or anything else — it advances
+  once per object pass.
+- Across the ship's whole observed life the ROM's main loop ran exactly once per recorded
+  row: `Level_frame_counter` deltas are 57, 65, 65 over the row spans 3470→3527→3592→3657,
+  matching the row counts exactly, and no row in the window is paused.
+- All 20 rows in segment 8 where `Level_frame_counter` fails to advance (identically, the
+  rows with `lag_counter != 0`) are at rows **≤ 602**. The ship's first bomb drops at row
+  2797. There are no lag frames in its lifetime at all.
+
+Both ROM and engine advance the ship exactly one update per row. **A clock change would fix
+nothing.**
+
+### ESTABLISHED — a one-update fractional-phase lead
+
+The ROM's own secondary-camera deltas are exactly what one `-$8800` accumulator with a zero
+initial fraction produces: `0x1E` over 57 rows, then `0x22`, then `0x23` over 65 rows each
+(65 x `$8800` = `$228800`, so consecutive 65-row spans alternate as the fraction carries).
+The engine produces `0x1E`, `0x23`, `0x23` — the same rate, one step further along in the
+fraction. That is invisible while the fraction does not cross an integer boundary, which is
+why the explosions at rows 3470 and 3527 are pixel-exact and 3592 and 3657 are one out.
+
+### ESTABLISHED — the cause is the spawn frame
+
+Measured, engine: the battleship's first `-$8800` happens on the step producing row **2376**
+(`shipXFixedBefore=40200000`, the untouched `INITIAL_SHIP_X << 16`).
+
+Recorded, ROM: slot 4's object code is `0x0005034A` (`Obj_AIZBattleship`, the init routine)
+at row **2376** and `0x00050390` (`Obj_AIZBattleshipMain`) at row **2377**, with the two
+`0x00050458` propellers appearing at 2377. The init writes the Main pointer before falling
+through, so a code pointer still reading the init at end of frame 2376 means the slot was
+**allocated but not executed** that frame. `AIZ2SE_ShipRefresh` sets
+`_unkEE98 = $4020` / `clr.w (_unkEE98+2)` and then uses plain **`AllocateObject`**
+(`sonic3k.asm:104917-104928`) — not `AllocateObjectAfterCurrent` — so the new slot is not
+guaranteed to be reached by the current object pass, and here it was not. The ROM's first
+decrement is on row 2377; the engine's is on 2376.
+
+### Why the one-line fix must NOT be landed alone
+
+The engine carries **two compensating off-by-ones**, and removing either alone makes the
+run worse:
+
+- Bomb explosions land on **identical rows in 20 of 21** cases across segment 8 (ROM 2861,
+  2893, 2927, 2960, 2993, 3026, 3083, 3116, **3148**, 3182, 3215, 3248, 3305, 3338, 3370,
+  3404, 3438, 3470, 3527, 3592, 3657; engine identical except **3149** for the ninth).
+- They agree *because* the early start is cancelled downstream. The ROM's ship first executes
+  on row 2377 and drops its first bomb (`0x000504B4`) on row **2797** — execution 421, the
+  `$1A4` counter plus the `bcc` boundary — and that bomb lands on row 2861, a **64-row**
+  fall. The engine's ship reaches the same update index one row earlier, at 2796, yet its
+  explosion also lands on 2861: a **65-row** fall.
+
+So deferring the ship's first update fixes the accumulator and moves **all 21 explosions one
+row late**. The spawn-phase fix has to land together with the bomb drop/fall off-by-one, and
+that second one is **not measured yet** — the 421-update drop is derived from the class's own
+comment and the arithmetic above, not observed. Measuring the engine's actual bomb-drop row
+against the recorded `0x000504B4` rows is the next step, and both must be corrected in one
+change.
+
+### Not the answer
+
+Neither `SHIP_SPEED` nor the `>> 16` is wrong: the ROM's own deltas confirm the rate and the
+zero initial fraction. Any adjustment there would be a constant fitted to this fixture's
+pixel.
