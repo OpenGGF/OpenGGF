@@ -97712,3 +97712,61 @@ rows it does not consume, which the ownership condition owns.
   `-Dtest=TestS1CompleteEmeraldRunChain,TestS2*RunChain*,TestS3k*RunChain*` and
   `-Dtest=TestS3k*RunChain* -DforkCount=1`. All S2 and S3K chain failure
   messages are byte-identical between arms.
+
+## 2026-08-20 — S2 segment 18: the stage-exit fusion, measured, with two candidates rejected
+
+Round `s2-seg18-fusion-r1` off `d2fb207a3`, branch `bugfix/ai-s2-seg18-fusion-r1` @ `93981de25`.
+**Both candidates committed and reverted; the branch tree equals its base.** Frontier reproduced
+exactly: segment 18 (`seg12_arz1`) frame 1, `queue.s2_nemesis_plc.remaining_work rom=22
+engine=25`, 14289 errors; walk-failure "segment 19 lost production ownership" at BK2 cursor
+109135; segment 15 unchanged at frame 2, `rom=2 engine=5`, 7511 errors.
+
+### The fusion is now measured rather than cited
+
+Instrumenting `PlcLifecycleFrame.claim` and `Sonic2PlcService.serviceVBlank` at the seam: at
+every stage-exit return the last host iteration before the return prints
+`PLCCLAIM ORDINARY_LEVEL owner=LEVEL_TITLE_CARD` — the level body's claim loses to the card's and
+**no service runs on that iteration**. Full seam at `seg12_arz1`: the card takes `2 → -1`,
+`PREPARE` brings it to 28, the fused iteration services nothing, then the next iteration runs
+`28 → 25` and `25 → 22`. The ROM rows are 25, 22, 19 at 3 patterns per row. The engine is exactly
+one 3-pattern level service short at the seam and never recovers.
+
+**The decisive control:** the `level_advance` boundary into `seg11_arz1` has a byte-identical
+queue — row 0 = 25, same two fingerprints — and the identical `2 → -1` / `PREPARE → 28` tail, but
+**no fused iteration**. Its next host iteration is a clean `ORDINARY_LEVEL owner=null` `28 → 25`,
+matching row 0. Same queue, same values, differing only by entry kind.
+
+ROM: `Level_TtlCardLoop` waits on `VintID_TitleCard` (`s2.asm:5060-5066`); on fall-through
+`Level_MainLoop` waits on `VintID_Level` (`:5088-5090`). Two console frames, two handlers, six
+patterns against three.
+
+### Retracted from `1282065ee`'s write-up
+
+"All six stage_exit returns admit one row late" is wrong twice. There are **seven**, and they do
+not go through `admitLevelWhenReady` at all — that path is `level_advance`-only, and all five of
+its admissions log `rowsConsumed=0`. Stage-exit returns take the `uncomparedInterior` branch,
+where `framesConsumed` is derived from the cursor and is 1 at all seven.
+
+### Candidate 1 — a second represented V-blank at release — REJECTED
+
+Both named axes go away (segment 15's first mismatch moves to frame 1725, segment 18's to 4014),
+but the axis count goes 14 → 17 with three new `dynamic-art-gap` axes, and
+`TestS2EhzHalfpipeRoundTripChain` regresses green → red with the same signature. **The regression
+names the residual defect precisely:** the fused host iteration represents two ROM frames but is
+charged **one** movie row, so the second V-blank's dynamic-art edges stamp one row early.
+Ownership was half the problem; row accounting is the other half.
+
+### Candidate 2 — hand the iteration back at release — REJECTED, and this is the lead
+
+Returning `SETUP_ONLY` so the level body runs on the next host iteration **reaches the correct
+shape**: every stage-exit return then arrives at `cursor == offset` with `framesConsumed == 0`,
+byte-identical to the green `level_advance` boundaries. The chains stop diverging on the queue and
+instead abort on two harness layers hard-coded to the fused count — an `assertEquals(1,
+framesConsumed, …)` in `AbstractRunChainTest`, and `uncomparedInteriorReturnVblankBudget` in
+`TraceRunReplayWalker`, which throws that an uncompared return must consume at least the
+destination's first row.
+
+`1282065ee` rejected this direction, but that was measured **before** `977cadcc8` moved the
+frontier. Those two call sites are the whole surface, and the anchor's own comment warns the
+pairing is incoherent if only one side moves — so reworking the V-blank anchor and budget together
+for `framesConsumed == 0` is the next round, and whether it greens the seam is **not established**.
