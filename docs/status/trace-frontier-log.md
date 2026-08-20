@@ -94887,3 +94887,66 @@ to check: the `anim(a1)` family at sonic3k.asm:9070-9145, whose zero-inertia tai
 shown to execute here, and the remaining step is a PC-execute probe on the `move.b #5,anim` sites
 during the act-2 entry, which decides whether the fix belongs in the act-entry path, in the
 balance code's missing unconditional WAIT floor, or in an external transition routine.
+## 2026-08-20 — segment 4 PC probe: the writers are found, and one anchor does not reconcile
+
+Branch `bugfix/ai-s3k-seg4-r7` off `1cffa044e`. **Diagnosis only, nothing landed.** Probe
+added at `tools/bizhawk/probes/aiz2_entry_anim_writer_probe.lua` (observation-only, declarative
+`probe_runtime` contract, self-exits).
+
+### What the probe settles
+
+Write hooks on **each player's `anim` byte separately** (`Player_1+$20` = `0xFFB020`,
+`Player_2+$20` = `0xFFB06A`), gated on game mode `$0C` + zone 0 + act 1.
+
+**1. The SST really is cleared at the AIZ2 load — "RAM carry" is dead by direct
+observation, not just by inference.** At movie frame 19625 the only `anim` write is
+`pc=0060FA a0=FFF100 a1=FFB024 d0=0` — a RAM-clear loop walking the player block. Both
+players read `anim=00 prev=00 rtn=00 status=00` at that point.
+
+**2. The two characters do NOT share a writer.** This was worth checking separately and the
+answer is no:
+
+| | writer PCs observed in the entry window |
+|---|---|
+| Sonic | `0110B6`, `022FCE`, `022FF8` |
+| Tails | `013AFA`, `014A3A` (dominant), `014CDE`, `0150B4`, `015618`, `01563C` |
+
+`0x022FCE` / `0x022FF8` write **Sonic's** `anim` with `a0=FFB4A0` and `a1=FFB000` — i.e. an
+*object* at `FFB4A0` reaching into the player, which is the external-writer shape predicted
+from the trace side. Tails' dominant writer `0x014A3A` is inside Tails' own code. So the
+fix site for the two characters may genuinely differ, and a single "reset animation on act
+entry" change would have been wrong for at least one of them.
+
+### The contradiction, stated rather than resolved
+
+`bk2_frame_offset` for `aiz_3` is **19775**, so segment 4 row 0 should be movie frame 19775.
+At that frame the probe shows, for both players, `anim=00 rtn=02 status=00`, and the last
+write of the frame is `TAILS pc=014A3A d0=0` writing zero.
+
+**The trace's row 0 reads `anim=05`, `status=0x02`, `air=1`.** Those cannot both describe
+the same frame. Sonic's `anim` is not observed at `05` until movie frame **19826**
+(`pc=022FCE`, `lfc=0x33`), 51 frames later.
+
+Possible explanations, none of them measured yet:
+- the row-to-movie-frame mapping is not `bk2_frame_offset + row` for this segment;
+- the aux `vfc` field (which reads 1 at row 0) is `V_int_run_count`, not the
+  `Level_frame_counter` at `0xFE04` that the probe logs — the classic named-clock trap, and
+  the probe's `lfc=0001` at 19775 may be coincidence rather than confirmation;
+- the trace's `anim` column is not this RAM byte.
+
+**Nothing downstream of this should be built until it is settled**, which is why no fix was
+attempted. Anchor first: find a value both sides agree on at segment 4 row 0 (post-camera
+`Camera_X_pos` against recorded `camera_x` is the cheapest) and establish the true movie
+frame for row 0 before interpreting any of the writer PCs above as "the" writer.
+
+### Probe usage note
+
+The worktree symlinks only `docs/*disasm`, **not** `docs/BizHawk-2.11-linux-x64`, so
+`run_bizhawk_lua.sh` fails with `Missing: .../EmuHawk.exe` until the BizHawk directory is
+linked in. Link it, run, then remove the link — do not commit it.
+
+A first run used a stage gate of mode/zone/act alone and bound at movie frame **12061**
+(`lfc=0x0CAC`, deep inside AIZ act 1): the act byte already reads 1 during act 1's
+transition tail. The gate now carries a movie-frame floor, which the probe contract permits
+as a narrowing of an already-semantic gate. A second run used a 90-frame window and closed
+at 19693, **82 frames before the recorded segment even starts** — widened to 320.
