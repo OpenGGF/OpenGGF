@@ -94950,3 +94950,55 @@ A first run used a stage gate of mode/zone/act alone and bound at movie frame **
 transition tail. The gate now carries a movie-frame floor, which the probe contract permits
 as a narrowing of an already-semantic gate. A second run used a 90-frame window and closed
 at 19693, **82 frames before the recorded segment even starts** — widened to 320.
+
+## 2026-08-20 — giant ring: the flash-seed hypothesis is eliminated by measurement
+
+Branch `bugfix/ai-s3k-giantring-r1` off `1a510ed00`. **Diagnosis only, nothing landed.**
+Re-measured at base: `run_boundary.position.x` **expected 14007, actual 14008**; segment 4
+250; segment 6 green.
+
+### The return position is the FLASH object's x, and the ROM reads it live
+
+`SSEntryFlash_GoSS` calls `Save_Level_Data2` with `a0` on the **flash**
+(sonic3k.asm:128392), and `Save_Level_Data2` stores `move.w x_pos(a0),(Saved2_X_pos).w`
+(sonic3k.asm:61738-61739). So the flash's `x_pos` *is* the post-special-stage return
+position — that chain is confirmed, and it is what the walk-failure compares.
+
+The flash gets that x in `SSEntryFlash_Init`:
+
+```
+        movea.w parent3(a0),a1
+        move.w  x_pos(a1),x_pos(a0)     ; the RING'S LIVE x_pos
+        move.w  y_pos(a1),y_pos(a0)
+        move.b  subtype(a1),subtype(a0) ; "Copy positional data from parent ring"
+```
+
+(sonic3k.asm:128349-128352). The ROM copies the ring's **live** position at flash-init
+time. The engine instead seeds the flash from the ring's **static layout entry**,
+`new Sonic3kSSEntryFlashObjectInstance(this, spawn.x(), spawn.y())`. That is a real
+semantic difference at exactly the compared value, and it looked like the answer.
+
+### It is not the answer — measured, not argued
+
+Changing the seed to the ring's live `getX()`/`getY()` and re-running the chain:
+**`run_boundary.position.x` still 14007 vs 14008, segment 4 still 250, unchanged in every
+axis.** The engine's ring live `getX()` therefore already equals its `spawn.x()`, both
+14008, and the layout-vs-live distinction is unobservable for a static ring.
+
+**The change was reverted rather than landed.** It is arguably ROM-faithful on its own
+merits, but it alters nothing measurable here, and it was written to test a hypothesis that
+the measurement then killed; landing it would attach a fix-shaped commit to a non-fix.
+
+### What this leaves, and what the next lane should NOT redo
+
+- The ring's own spawn x is 14008 where the ROM's is 14007. Confirmed spawn-time, and the
+  flash/save chain downstream of it is now proven faithful end to end — **the whole
+  ring -> flash -> `Saved2_X_pos` -> return-position path is eliminated as the cause.**
+- Do not re-derive: the earlier lane's result that the pixel is independent of the segment
+  it sits in, that the save/restore machinery is identity across four boundaries, and that
+  neither the ROM ring routine nor the engine instance writes `x_pos`.
+- The remaining surface is **whatever produces the ring's `ObjectSpawn.x`** — the S3K object
+  placement decode for this specific entry. Three sibling rings decode exactly, so a
+  uniformly-wrong decode is already excluded; the question is what is different about this
+  one entry. That is where the next round should start, and it should start by reading the
+  layout bytes for all four rings rather than by reasoning from the difference of one.
