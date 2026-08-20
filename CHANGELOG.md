@@ -13,6 +13,21 @@ All notable changes to the OpenGGF project are documented in this file.
   are ordinary objects reached once per object scan, so the second dispatch has no
   ROM counterpart. The unowned path now stands down when the caller declares it
   owns the dispatch itself.
+- **AIZ2 bomb explosion fragments stopped being able to hurt the player four frames
+  early.** `AizBombExplosionInstance` ported three ROM timers with `<= 0` / `bpl`
+  semantics where the ROM uses `bmi` / `bcc`. `Obj_AIZBombExplosion`'s
+  `subq.w #1,$2E(a0) / bmi.s` wait lasts `delay+1` frames and its exit falls through
+  via `bra.s loc_505E4`, animating on that same frame
+  (`docs/skdisasm/sonic3k.asm:105471`); `Animate_SpriteIrregularDelay`'s
+  `subq.b #1,anim_frame_timer(a0) / bcc.s locret` holds a script entry whose delay
+  byte is `D` for `D+1` frames (`:36238`). With `Ani_AIZ2BombExplode_Script0` and
+  `loc_505FC`'s `mapping_frame < 4 + anim` gate, the ROM's collidable window is 15
+  frames from `delay+1`; the engine's was 12 from `delay`. The player therefore ran
+  through the AIZ2 battleship bombing untouched, overran the recorded route and died
+  in a pit the recording never enters. On the `s3k-sonic-tails-complete-emeralds`
+  chain, segment 8 goes from 24143 comparator errors and an incomplete walk to 10375
+  and a complete one, and the `segment 8 lost production ownership before source
+  closure` failure is gone.
 - **The S1 title-card release step no longer consumes the level's first recorded
   frame.** `GM_Level` runs `Level_LoadObj`'s `ExecuteObjects` pass once between
   `Level_TtlCardLoop` and `Level_MainLoop` (`docs/s1disasm/sonic.asm:2895-2897`),

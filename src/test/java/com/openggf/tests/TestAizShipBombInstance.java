@@ -140,6 +140,47 @@ public class TestAizShipBombInstance {
     }
 
     @Test
+    public void testExplosionFragmentCollidableWindowMatchesRomTiming() {
+        // ROM Obj_AIZBombExplosion (sonic3k.asm:105471) waits delay+1 frames
+        // (`subq.w #1,$2E(a0) / bmi`), then falls through to loc_505E4 and
+        // animates on that same frame. Ani_AIZ2BombExplode_Script0 is
+        // 1,3 2,4 3,5 4,5 5,5 and Animate_SpriteIrregularDelay's
+        // `subq.b #1,anim_frame_timer / bcc` holds a delay byte D for D+1
+        // frames, so mapping_frame 1/2/3 occupy 4+5+6 = 15 frames. loc_505FC
+        // drops the fragment from the collision-response list once
+        // mapping_frame reaches 4 + anim.
+        int delay = 6;
+        AizBombExplosionInstance explosion = new AizBombExplosionInstance(0x4390, 0x01FD, 0, delay);
+
+        for (int frame = 1; frame <= delay; frame++) {
+            explosion.update(frame, null);
+            assertEquals(0, explosion.getCollisionFlags(),
+                    "Fragment must stay inert for delay+1 frames, frame " + frame);
+        }
+        for (int frame = delay + 1; frame <= delay + 15; frame++) {
+            explosion.update(frame, null);
+            assertEquals(0x8B, explosion.getCollisionFlags(),
+                    "mapping_frame 1..3 is collidable, frame " + frame);
+        }
+        explosion.update(delay + 16, null);
+        assertEquals(0, explosion.getCollisionFlags(),
+                "mapping_frame 4 is not below 4 + anim, so loc_505FC skips the list add");
+    }
+
+    @Test
+    public void testExplosionFragmentSecondScriptIsNeverCollidable() {
+        // Ani_AIZ2BombExplode_Script1 runs frames 6..$B, all at or above its
+        // own threshold of 4 + anim = 5, so loc_505FC never adds it.
+        AizBombExplosionInstance explosion = new AizBombExplosionInstance(0x4390, 0x01FD, 1, 0);
+
+        for (int frame = 1; frame <= 40 && !explosion.isDestroyed(); frame++) {
+            explosion.update(frame, null);
+            assertEquals(0, explosion.getCollisionFlags(),
+                    "Script 1 fragments never enter the collision-response list, frame " + frame);
+        }
+    }
+
+    @Test
     public void testFrameStartTouchSnapshotClearsSameFrameSpawnGate() {
         AizBombExplosionInstance explosion = new AizBombExplosionInstance(0x4390, 0x01FD, 0, 0);
         explosion.setSkipTouchThisFrame(true);

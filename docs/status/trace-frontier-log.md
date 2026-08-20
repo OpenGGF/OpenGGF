@@ -96038,3 +96038,79 @@ justification is not established here** — only that it no longer costs S3K.
   `shouldAdvanceVblankClockDuringLockedPhase()` for the row's later hardware
   service is **discarded, not confirmed**: the probe shows `vblankClock=true` on
   every single dispatch across the whole card, so that predicate never varies here.
+## 2026-08-20 -- S3K segment 8: the AIZ2 bomb fragments expire four frames early
+
+Worktree `bugfix/ai-s3k-bomb-phase-r1` off `44f96a53a`. Command (both arms):
+`mvn -Ptrace-replay -Dmse=off -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`.
+
+### Kill condition first: the touch-path gates are not the cause
+
+The previous entry flagged that its flag probe sat *after* `isOnScreenForTouch()` and the
+multi-region branch, so it could not see a fragment dropped upstream. Measured with a probe
+at the very top of `processCollisionLoop`, over every `AizBombExplosionInstance` in
+`getActiveObjects()` for the whole of `aiz_5` (8071 fragment-frames):
+
+- `inTouchList=false`: **0** -- never dropped from `getTouchResponseObjects()`.
+- `isSkipTouchThisFrame()`: **0**.
+- `usePreviousCollisionResponseList`: **true on all 8071 rows**, so the
+  `requiresRenderFlagForTouch()` / `isOnScreenForTouch()` gate is short-circuited and never
+  runs. 496 fragment-frames were off-screen *and* carried `flags=0x8B`, and were still
+  considered.
+- `getPreUpdateCollisionFlags()` equalled `getCollisionFlags()` on every row.
+- The fragment declares no multi-touch regions.
+
+So the collision-flag test is the only gate that can exclude a fragment, and the previous
+round's finding survives its own stated limit.
+
+### The defect: `Animate_SpriteIrregularDelay` semantics, not the collidability gate
+
+Three off-by-ones, all in the same direction (engine too fast), all in
+`AizBombExplosionInstance`:
+
+1. `Obj_AIZBombExplosion` is `subq.w #1,$2E(a0) / bmi.s loc_505B4 / rts`
+   (`docs/skdisasm/sonic3k.asm:105471`). The stage ends on the frame the counter goes
+   **negative**, so it lasts `delay+1` frames. The engine ended it at `<= 0`.
+2. `loc_505B4` ends `bra.s loc_505E4`, so the fragment animates on the frame it becomes
+   active. The engine `return`ed instead.
+3. `Animate_SpriteIrregularDelay` (`sonic3k.asm:36238`) is
+   `subq.b #1,anim_frame_timer(a0) / bcc.s locret` -- **bcc, not bpl**, so a script entry
+   whose delay byte is `D` is held for `D+1` frames. The engine held it for `D`.
+
+`Ani_AIZ2BombExplode_Script0` is `1,3 2,4 3,5 4,5 5,5`, and `loc_505FC` adds the fragment to
+the collision-response list while `mapping_frame < 4 + anim`. The ROM window is therefore
+mapping_frame 1/2/3 for `4+5+6 = 15` frames starting at `delay+1`; the engine's was 12
+frames starting at `delay`. **The fragment stopped being collidable four frames too early**,
+which is exactly why the engine's Sonic ran through the bomb burst untouched.
+
+### Measured, same-tree control at `44f96a53a`
+
+| | base | with fix |
+|---|---|---|
+| segment 8 `errorCount` | **24143** | **10375** |
+| segment 8 report `complete` | `false` | **`true`** |
+| walk-failure | `segment 8 lost production ownership before source closure` | gone |
+| segment 4 | 250 errors | 250 errors (unchanged) |
+
+The chain now walks segment 8 to source closure and reaches a **new** frontier one axis
+later: `IllegalStateException: hardware timing raw_frame moved backward: previous=33,
+current=0` from `HardwareTimingReplayPort.beginRawFrame`. That is the next target, and it is
+downstream territory the walk had never entered.
+
+On the standalone `TestS3kSonicTailsAiz5SegmentTraceReplay` harness the hurt event is now
+present and the divergence spans collapse: base had `air`/`routine`/`status_byte`/
+`animation_id` wrong across frames 3673-3717 and `x_speed`/`g_speed` wrong across 3673-3789,
+plus a spurious *Tails* hurt at 3639-3642 that the recording does not contain. With the fix
+the Tails hurt is gone and Sonic's hurt fires at 3672 instead of 3673 -- one frame early,
+fully explained by the segment's pre-existing `+3` px `x` error (recorded x 0x43CB at 3672
+puts the player box edge exactly on the fragment box edge; +3 px tips it into overlap). That
+`x`/`x_sub` skew is a separate, older defect and was not touched.
+
+### Not established
+
+- Whether the residual 10375 segment-8 errors share a single cause. The first non-camera
+  mismatch is unchanged at frame **1973** `sidekick_y` 0x0146 vs 0x014B, which predates the
+  bomb sequence by 1700 frames and is untouched by this work.
+- The segment's `rings` divergence (recording 0x4E, engine 78 -- a shield absorbing the hit
+  in the recording) is not resolved by this change; the engine still holds the wrong ring
+  count from frame 603 of the standalone harness onward.
