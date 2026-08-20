@@ -94819,3 +94819,49 @@ animation cluster or is independent. It was not investigated.
    code's missing unconditional WAIT floor, or the init.
 2. Treat the camera cluster separately until proven otherwise.
 3. Do not re-derive the histogram composition above; it is measured at `1c73514c4`.
+
+## S1 level-entry service lag: the lost V-blank claim is ROM-correct
+
+Corrects the previous entry's model. The title-card release step is legitimately
+**multi-row**, and carries, in order: the final `Level_TtlCardLoop` row with its own
+`id_VBlank_TitleCards` V-int (sonic.asm:2814-2842) — visible in the probe as the top claim
+servicing 9 patterns before anything else on that step; the `Level_Delay` and `PalFadeIn_Alt`
+tail replayed synthetically by the level-init profile, 22 iterations (sonic.asm:2957-2966); and
+`Level_LoadObj`'s `ExecuteObjects` pass, which `GM_Level` runs once before `Level_MainLoop`
+(sonic.asm:2895-2897) — **a body pass with no V-int of its own**.
+
+So the observed `claimWon=false` on the level body is **not a defect**: it is a pre-main-loop
+object pass correctly failing to claim a V-blank it never had. **Do not implement the token
+handoff** — it would model a V-int the ROM does not run, on a lifecycle shared by all three
+games, and it would go green for a wrong reason.
+
+**The real defect is narrower and lives in the harness.** That entirely pre-main-loop step
+consumes the destination's recorded row 0, because its body pass calls `onLevelFrameAdvanced`.
+`framesConsumed` becomes 1, so recorded row 0 — `Level_MainLoop`'s first iteration, which
+services 3 patterns through `id_VBlank_Levels` (sonic.asm:2998-3001, `VBlank_UpdateScreen`
+:867) — is presented at row 1. Every measurement in the previous entry still holds; only the
+attribution of the lost claim changes. The green standalone lane agrees: it never charges a
+movie row to the release.
+
+**Attempted and reverted:** re-seeking the cursor to the offset after the title-card settle and
+returning 0. The chain then fails *earlier*, at segment 7, with a lost production ownership
+before source closure — `playback.startSession` mid-boundary restarts the session under the
+coordinator and is too blunt an instrument. Not measured further.
+
+**Better-shaped candidate, not yet attempted:** have the release row's
+`PostTitleCardDestination.completeRelease` return `SETUP_ONLY` rather than `GAMEPLAY_FRAME` for
+this case — the existing vocabulary for "a pass, not a movie row", already used by the S3K
+sprite one-shot.
+
+**The question that must be settled first, because it decides whether any of this is right:**
+does the engine already run S1's `freshMainPlayablePreludeFrames() == 1` pass elsewhere? If it
+does, the release-step body is a duplicate and the truth is different again. One grep, before
+any change.
+
+**Before-arm for whoever measures the after-arm**, at `7f35a48f6`, full `-Ptrace-replay`,
+alphabetical: 795 tests, 4 failures, 0 errors, 4 skipped, complete total printed, and zero
+native-loading errors despite three-lane contention. Red: the three chains and the CPZ2 segment
+test. `TestS1ColdStartAttribution` green 2/2 in that same run.
+
+The adjacent `-216` prediction remains **unverified** — no fix landed, and the failed attempt
+says nothing about it either way.
