@@ -117,7 +117,6 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
             leftRig.update(cameraX);
             rightRig.update(cameraX);
         }
-        updateGradualMaxYRaise();
         tickWallExplosions();
         tickChunkSwap();
         switch (phase) {
@@ -139,6 +138,12 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
                 }
             }
         }
+        // loc_8CFC8 creates the Child6_IncLevY worker with CreateChild6_Simple
+        // -> AllocateObjectAfterCurrent (sonic3k.asm:192565-192600,177119-177140,
+        // 37917-37930), which only ever returns a slot after this object. The
+        // ascending Process_Sprites walk therefore reaches the worker later in
+        // the same pass, including the pass that creates it.
+        updateGradualMaxYRaise();
     }
 
     private void initializeWhenCameraInRange() {
@@ -210,6 +215,12 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         }
         maxYRaiseActive = true;
         maxYAccumulator = 0;
+        // loc_8CFC8 writes Camera_stored_max_Y_pos and Camera_target_max_Y_pos
+        // once, here; Obj_IncLevEndYGradual then moves Camera_max_Y_pos alone.
+        var armCamera = services().camera();
+        if (armCamera != null) {
+            armCamera.setMaxYTarget((short) POST_DEFEAT_MAX_Y);
+        }
         for (int x : WALL_EXPLOSION_X) {
             wallExplosions.add(new S3kBossExplosionController(x, WALL_EXPLOSION_Y, 0, services().rng()));
         }
@@ -256,7 +267,6 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         int currentMax = camera.getMaxY() & 0xFFFF;
         if (currentMax >= POST_DEFEAT_MAX_Y) {
             camera.setMaxY((short) POST_DEFEAT_MAX_Y);
-            camera.setMaxYTarget((short) POST_DEFEAT_MAX_Y);
             maxYRaiseActive = false;
             return;
         }
@@ -264,7 +274,6 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         int delta = maxYAccumulator >>> 16;
         int nextMax = Math.min(POST_DEFEAT_MAX_Y, currentMax + delta);
         camera.setMaxY((short) nextMax);
-        camera.setMaxYTarget((short) nextMax);
     }
 
     private void tickWallExplosions() {
