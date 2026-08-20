@@ -1376,3 +1376,34 @@ compete with a measured one, and in both the reconstruction was wrong in a way t
 story. **If the instrument already carries the number, read it. If it does not, get it before
 building on a derivation** — especially when your derived value is close to the observation
 without matching it, which is the case rule 3 already warns absorbs an error somewhere else.
+
+## Forty-eighth rule: object execution order is observable behaviour
+
+Three separate rounds in one day, across two games and three subsystems, traced a divergence to
+**which slot an object occupies relative to another**:
+
+- An S1 capsule burst: the ROM's first animal landed in a slot *below* its spawner, so it executed
+  the following frame and took the last RNG draw instead of the first. The species assignment
+  rotated by one, an animal already among the last released became the slowest in the game, and
+  twelve frames later an art arm was late — ultimately ~74,000 comparator errors.
+- An S3K battleship: the ROM spawner uses plain `AllocateObject` rather than the after-current
+  form, so the new slot need not be reached by the current pass. The engine executed it one frame
+  earlier, leading a fractional accumulator by one update.
+- An S1 monitor and fan: the fan writes position **directly** rather than through velocity, so
+  whichever runs first decides whether the monitor ever sees a one-pixel penetration. The engine
+  runs them in the opposite order to the ROM.
+
+The general statement: **an object's slot determines whether it runs before or after its
+neighbours in the same frame, and that ordering is part of observable behaviour** — it decides RNG
+draw order among siblings, whether one object sees another's position write, and whether a
+spawned object gets an update on its creation frame. It is not an implementation detail, and a
+slot permutation is not cosmetic even when the same objects are present.
+
+Practical consequences:
+
+- When a divergence involves two objects that interact, **check execution order before checking
+  either object's logic**. In all three cases the individual routines were faithful.
+- `FindFreeObj`-style allocation makes slot assignment depend on the whole run's spawn and despawn
+  history, so an ordering defect can originate thousands of frames earlier than it surfaces.
+- **Do not reorder a pair by anything measured off a fixture.** The ordering must follow from the
+  ROM's own allocation, or it is a fitted model that will desync the first different recording.
