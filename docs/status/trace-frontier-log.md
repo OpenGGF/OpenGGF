@@ -93034,3 +93034,81 @@ becomes right once the push-release tail exists to produce the AIZ `0x00` native
 Order for whoever takes it: implement the push-release tail first and confirm AIZ 10744 still
 reads `0x00` with the override still in place; then delete the override and its test; then
 re-measure both fixtures. Doing it in the other order reproduces tonight's red.
+
+## 2026-08-20 -- The seam anchor gains its consumed-row term; the assertion returns, scoped
+
+Base `fb576336f`, branch `bugfix/ai-s2-seam-anchor-r1`. Two commits, no
+production behaviour change. Command throughout:
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical -Dtest=... test`.
+
+**(1) `uncomparedInteriorReturnVblankBudget` now carries `returnFramesConsumed`.**
+It measured to `returnOffset + 0`, hardcoding the assumption that a
+special-stage return consumes exactly one destination row; its sibling
+`interLevelVblankBudget` has always carried the term. The budget now runs to
+`returnOffset + returnFramesConsumed - 1`. Arithmetically identical for every
+committed run -- all six uncompared returns of
+`s2-sonic-tails-complete-emeralds` consume exactly one row -- so no constant was
+introduced and none was measured out of a fixture. What it buys is that the
+anchor no longer encodes the seam's row layout, which is the precondition for
+judging any production change to the seam at all.
+
+The production launcher call site deliberately passes a literal `1` rather than
+`receipt.rowsConsumed()`: that admission is reached by no test (zero firings in
+the chain; the visual harness self-pauses in the results screen before the
+return), so the receipt's count there has never been observed, and the new
+contract throws below 1. A comment at the site names the condition for
+finishing the job.
+
+**(2) The `framesConsumed == 1` assertion is back, inside the
+`alignUncomparedInteriorReturnVblank()` guard.** The version landed as
+`d651f3db5` sat outside it and aborted the whole S3K chain at segment 1; it was
+reverted as `34e58af86`. **That gate is now closed, and the answer is that the
+assertion was over-scoped, not wrong.** S3K has no `getTracePlaybackProfile()`
+override, so it takes `GameModule`'s default `TracePlaybackProfile.DISABLED`
+(`GameModule.java:334-336`), whose `alignUncomparedInteriorReturnVblank` is
+`false`; only `SONIC_1` and `SONIC_2` set it true. The anchor never runs for
+S3K, so its `aiz_2` return has no anchor/comparator-base pairing to be
+incoherent, and `framesConsumed == 0` there cannot produce the artefact the
+assertion catches.
+
+Mutation-verified in both directions. Re-seeking the cursor to `returnOffset`
+before the computation makes S2 fire with `cursor 10334, offset 10334, segment
+seg2_ehz1` -- exactly the cursor the refuted split produced against the
+control's 10335 -- while S3K under the SAME mutation does not fire at all and
+keeps its ordinary failures.
+
+**Measurement.** Eight chain/round-trip classes, zero forked-VM crashes, failure
+axes byte-identical to a clean control worktree at the same base. S1 is the case
+that mattered: `SONIC_1` also enables the anchor and was never exercised against
+the unguarded assertion; its axes are unchanged (syz2 row 70, seg12 3 errors
+frame 101, seg15 6 errors frame 102). S2 unchanged: seg11/seg12/seg13
+`errorCount 0`, seg15 `errorCount 7575` first non-camera mismatch frame 2
+`queue.s2_nemesis_plc.remaining_work` rom=2 engine=5.
+
+**Pre-existing and excluded, so the next lane does not chase them.**
+`TestTraceSessionLauncherRunBranch` fails three visual-run special-stage tests
+(`No active playback session` x2, `cannot open dynamic-art segment with pending
+production work`) identically in a clean control worktree -- unrelated to this
+work. `TestS3kMegaRunChain` errors with `duplicate or reordered hardware service
+boundary at raw_frame=0` in both arms. S3K `seg4` reads 250 errors at
+`fb576336f` against 292 at `ec2621373`; that is `develop` moving under the
+measurement, not this branch.
+
+**Documentation gap, logged rather than fixed.** `attachReturnedLevelSegment`'s
+COMPARATOR FRAME BASE contract enumerates four transition kinds and states `1`
+for "a level RETURN after a special-stage (uncompared) interior". S3K's `aiz_2`
+return is a fifth shape it does not describe, with base `0`, self-consistent
+while the anchor is off. Whether S3K's return SHOULD consume a row is an open
+S3K question this work does not touch.
+
+**Two measurement errors made and caught here, both worth the next lane's
+attention.** A red-set diff BY CLASS NAME cannot see a change that alters why an
+already-red class fails: the unguarded assertion replaced
+`TestS3kSonicTailsCompleteEmeraldRunChain`'s failure with its own, both arms
+still listed the same four red classes, and the diff read "identical". Compare
+the first failure MESSAGE per class. And `grep "Tests run:.*(Fail|Err)"` matches
+`Failures: 0` -- it reported 156 red of 162 classes where the true count was 4;
+the correct filter is `Failures: [1-9]|Errors: [1-9]`. A third, already known:
+running two suites concurrently gave 87 classes / 577 tests with 9 forked-VM
+crashes against a control's 162 / 792, which at face value reads as this branch
+fixing 75 classes. That comparison was discarded and re-run serially.
