@@ -95582,3 +95582,92 @@ the engine's `getPushing()` is already false at 1335 while the ROM's recorded bi
 1336. Either the reported status byte and the animation's pushing flag are different values a
 frame apart, or the comparison is not seeing it. If it is the former, the animation is consuming
 a lead-by-one flag and that alone explains segment 24.
+
+## 2026-08-20 — S1 segment 24 is an object-slot allocation defect, not an animation one
+
+Round `s1-push-release-r1` off `55c229920`, in a scratch worktree on branch
+`bugfix/ai-s1-push-release-r1`. **Diagnosis only, empty runtime diff; all
+probes reverted.** Control: `TestS1ColdStartAttribution` both pins green at base, so
+segment 24 still reports 18684 errors with first non-camera mismatch at frame 1337 field
+`dynamic_art.edges`.
+
+### The brief's d=0/d=1 framing is retracted
+
+The previous round found that of 158 push episodes, 128 release the push animation on the
+frame status bit 5 clears (d=0) and 30 release one frame later (d=1), and asked for the
+discriminator. **There is no animation-side discriminator to find.** The discriminator is
+*which ROM routine owns the clear*, and it falls out of pass order for free:
+
+- Sonic's own routines (`01 Sonic.asm:409`, `645`/`711`, `1234`, `1850`) clear bit 5 in the
+  player slot, **before** `Sonic_Animate` runs in that same slot. Animate sees it that
+  frame → d=0.
+- `sub SolidObject.asm:262-263` / `sub SolidWall.asm:52-53` clear bit 5 through `a1`
+  from the **object's** slot, which dispatches after the player slot. Animate cannot see it
+  until the next frame → d=1.
+
+The engine already reproduces this ordering exactly: instrumenting
+`AbstractPlayableSprite.setPushing` and `PlayableSpriteAnimation.updateScriptedAnimation`
+shows the object-owned clear landing after the animation call within the same frame.
+Adding any "+1" or "hold one extra frame" constant would have broken the 30 d=1 episodes
+the engine already gets right, not fixed them.
+
+### What segment 24 actually is
+
+Frame-1336 cast, all ROM values from the fixture:
+
+- Sonic stands on the LZ button (Obj32, ROM slot 35, `x=05F0 y=01FB`) and pushes the LZ
+  door (Obj56 `FBlock_LZSmallDoor_Open`, ROM slot 34, `x=0608`), holding right underwater.
+- The button's pressed state and `f_switch` bit 0 are written on frame **1314** — engine
+  and ROM agree, from the same object (`Sonic1ButtonObjectInstance`, engine slot 35).
+- The ROM door's first 2px step is frame **1315**; the engine door's is frame **1314**.
+
+The door is at ROM slot **34** and engine slot **45**. The button is at slot 35 in both.
+Because 34 < 35, the ROM dispatches the door *before* the button, so a press is invisible
+to the door until the next frame; because 45 > 35 the engine dispatches it after and the
+door moves on the press frame itself. From there the engine's door is one 2px step ahead
+for its whole ascent.
+
+That single step is the entire segment. `Solid_ChkCollision`'s vertical test is
+`d3 = player_y - obj_y + 4 + d2`, no contact when `d3 >= 2*d2`, with
+`d2 = obj_height + player_y_radius = 32 + 19 = 51`. Player y is `01E3` throughout:
+
+- ROM frame 1335, door y `01B6`: `d3 = 100 < 102` → contact, push held.
+- engine frame 1335, door y `01B4`: `d3 = 102 >= 102` → `Solid_NoCollision`, push cleared.
+- ROM frame 1336, door y `01B4`: `d3 = 102` → `Solid_NoCollision`, push cleared.
+
+The engine's half-height, the `+4`, the `>=` boundary and the `maxTop*2` total are all
+already exactly the ROM's — verified against the probe's own `anchorY`/`halfH`/`plYR`.
+The *only* wrong input is the door's y, and `instance.getPreUpdateY()` at that call already
+holds the ROM's value (`01B6`). Do **not** "fix" this by switching the door to
+`usesPreUpdatePositionForSolidContact`: `FBlock_Action` backs up only X before the movement
+jump and calls `SolidObject` with the post-move Y (`56 SYZ, SLZ Floating Blocks and LZ
+Doors.asm:129-150`), so post-move Y is correct. The value is right; the phase is wrong.
+
+The push release then propagates through `Solid_NoCollision`'s retail **walk-jump bug**
+(`sub SolidObject.asm:253-259`, live because `FixBugs = 0`): `move.w #id_Run,obAnim(a1)`
+writes `anim = $00` and `prev_anim = $01`, so the next `Sonic_Animate` sees
+`anim != prev_anim` and restarts the walk script at index 0 (`fr_Walk` `$08`). One frame
+early in the engine — mapping frame `$08` published on 1336 instead of 1337 — and every
+`dynamic_art.edges` ordinal after it is shifted by one frame. 2430 rows, one phase lead.
+
+### Where the fix belongs
+
+Object SST allocation, not push, animation, or solid geometry. At frame 1336 the engine's
+slot map leaves **34 and 38 empty** and runs the 0x57 chain's children out to 43/44; the
+door lands at 45 and the `0640` bubbler is displaced from ROM slot 45 to 46. LZ1's objpos
+list has the button (entry 11, `x=05F0`) *before* the door (entry 12, `x=0608`), so the
+ROM's door-at-34 does not come from placement order either — it comes from `FindFreeObj`
+finding 34 free at the moment the door loaded. Reproducing that needs the free-slot
+allocator and despawn/reuse history to match, which is chain-wide work well outside this
+frontier's surface.
+
+Nothing narrower is honest here. Deferring switch visibility by a frame inside the door,
+or in `Sonic1SwitchManager`, would be a fitted constant: it is only correct while the door
+sits at a lower slot than its button, and it would be wrong for a BK2 where it does not.
+
+### Not established
+
+Why the engine leaves slots 34 and 38 free. The chain-child count is the obvious suspect
+but was not measured against the ROM's chain slots — the fixture's `object_near` window is
+narrower than the engine's debug list, so the two slot maps are not directly comparable
+above slot 42.
