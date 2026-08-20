@@ -96698,3 +96698,67 @@ Integrity check worth reusing: both `-Ptrace-replay` arms ran **155 test classes
 by name**, with the same `796 run / 4 skipped` denominator. A truncated or memory-starved arm
 shows a short class list, not merely a lower failure count — so comparing the class *set* is a
 stronger check than comparing totals.
+
+
+## 2026-08-20 - S3K giant-ring return restores the level timer
+
+- **`s3k-sonic-tails-complete-emeralds` segment 8 (`aiz_5`) advances the HCZ
+  level load from 155 raw frames late to 2.** The chain's `[walk-failure]`
+  axis -- `hardware timing raw_frame moved backward: previous=33, current=0` --
+  is gone; the chain now stops at `segment 8 lost production ownership before
+  source closure (... BK2 cursor=53488)` against the recording's transition row
+  `aiz_5` 7054 / BK2 53486.
+- Root: the level timer was not part of the engine's `Saved2_*` snapshot.
+  `Save_Level_Data2` copies the whole `Timer` longword into `Saved2_timer` when
+  the giant ring's entry flash hands off (`sonic3k.asm:61745`), and
+  `Load_Starpost_Settings`'s `loc_2D2C2` restores it, then forces
+  `Timer_frame` to 59 and steps `Timer_second` back one (`:61803-61805`). The
+  ROM clears `Timer` only from `Obj_TitleCardWait` (`:62230`), which a giant-ring
+  return never reaches. The engine built a fresh `LevelTimer` on the return load,
+  so AIZ2's clock restarted at every special-stage detour.
+- Measured: at the `aiz_5` results init (row 6111, the row the ROM's
+  `Obj_LevelResults` appears in slot 4 in `aux_state`) the engine read 91
+  elapsed seconds and the ROM 169. That is `TimeBonus` index 3 (500) instead of
+  index 5 (300) (`:62556-62574`, `:62910-62918`), i.e. 20 extra tally frames.
+  The engine's 360-frame pre-tally, 90-frame `Wait2` and exit queue were already
+  ROM-exact: the recorded and engine result-child retirements ran the identical
+  `0,1,2,3,5,7,7,7,7,9,9,11` pattern, shifted by 21.
+- Effect downstream: with the timer restored, the ending pose, the forced walk
+  right, the cutscene-Knuckles spawn (ROM row 6667), his run-in/laugh/jump, the
+  button and the collapsing draw bridge are all frame-exact, and Sonic's
+  free-fall at `x=0x4AD8` accumulates `y` exactly as recorded. The previous
+  round's contributor 2 -- "the engine's Sonic stands on something and never
+  crosses the level bottom", suspected to be the sinking-ship solids at slots
+  36/37 -- was a downstream symptom of the 20-frame skew, not a separate defect.
+- **Remaining 2 frames, found and not fixed.** (a) `loc_2B452` acts one row
+  late: the ROM installs it at row 6961 and it ejects at 6976 (`$34 = $E`, 14
+  decrements from the next entry); the engine ejects at 6977 because
+  `AizDrawBridgeObjectInstance.collapseInitializedBeforeEntry` skips a second
+  entry. That flag is set from
+  `Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()`, which
+  `AizEndBossInstance` decides by comparing Player_1's live interact slot index
+  against the bridge's allocated Java slot -- engine bookkeeping with no cited
+  ROM predicate, and the recording says the button *does* precede the bridge
+  (`aux_state` frame 6961 unlocks `Ctrl_1_locked` and spawns the whole falling
+  family in the same frame). The same flag also picks
+  `Aiz2BossEndSequenceController`'s 1-vs-2 `postResultsControlRestoreDelay`, so
+  it is a family and wants its own round. (b) The engine creates the 12 result
+  children on row 6122; the ROM creates them on 6121.
+- Unchanged elsewhere: the other seven chain classes fail with byte-identical
+  messages across arms; `-Pguards` is 500 tests / 0 failures / 0 errors; the
+  default suite is 15194 tests in both arms with the same class set and no new
+  failure (candidate 45F/68E, control 46F/68E -- the extra control failure is
+  the known `TestModeTracePickerLaunchStatus` flake).
+- Commands, run serially, one Maven invocation per worktree: the candidate
+  worktree on `bugfix/ai-s3k-aiz2-exit-r1`, and a sibling control worktree
+  detached at `9738dbb65`:
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+  -Dtest='*RunChain,*RoundTripChain' -DfailIfNoTests=false
+  -Ds3k.rom.path=... -Dsonic1.rom.path=... -Dsonic2.rom.path=... test`;
+  `mvn -Pguards -Dmse=off ... test`; and the same properties with no profile for
+  the default suite.
+- Instrument note: the first control run of the chain command lost
+  `TestS2CompleteEmeraldRunChain` to a forked-VM crash (9 tests, 6 classes) and
+  the first control default suite lost three forks (15086 tests, 1085 errors).
+  Both were re-run. Comparing the *set of class names* caught each one; the
+  failure totals alone looked like a plausible result.
