@@ -74,7 +74,16 @@ class TestS1BalanceWidthRomParityGuard {
          * class is not silently absent; does not fail, because the divergence is
          * unconfirmed rather than established.
          */
-        RECORDED_UNASSESSED
+        RECORDED_UNASSESSED,
+        /**
+         * ROM {@code obActWid} differs from the shared 16 and the class inherits
+         * it, but the ROM makes a grounded, standing-still balance on the object
+         * unreachable, so the difference cannot be observed. Recorded with the
+         * routine that forecloses it rather than fixed, because an override here
+         * would be a change no movie can distinguish -- and the citation is what
+         * stops the row being re-opened every time the audit is re-read.
+         */
+        RECORDED_UNREACHABLE
     }
 
     /**
@@ -161,6 +170,31 @@ class TestS1BalanceWidthRomParityGuard {
                 "full-solid (isTopSolidOnly() is false), so the byte is supplied at "
                         + "getOnScreenHalfWidth(). PushB_Action pads d1 by sonic_solid_width without "
                         + "writing it back. mz2 places the one 4x1 block, subtype $81"));
+        ROM_ACT_WID.put("Sonic1BossBlockInstance", new Entry(px(16), Disposition.DEFAULT_IS_ROM_CORRECT,
+                "75, 76 Boss - SYZ Main and Blocks.asm:756"));
+
+        // --- Assessed: the ROM byte differs, but the balance cannot be reached --------
+        ROM_ACT_WID.put("Sonic1EdgeWallObjectInstance", new Entry(px(8), Disposition.RECORDED_UNREACHABLE,
+                "44 GHZ Edge Walls.asm:22; sub SolidWall.asm:14-67",
+                "Edge_Solid calls EdgeWall_SolidWall, not SolidObject. That routine sets only the "
+                        + "pushing bits and a ceiling stop; it never sets Status_OnObj on the player "
+                        + "and never records a stood-on object, so Sonic_Balance can never select "
+                        + "this object however wide its obActWid is"));
+        ROM_ACT_WID.put("Sonic1EggPrisonButtonObjectInstance", new Entry(px(12), Disposition.RECORDED_UNREACHABLE,
+                "3E Prison Capsule.asm:34,50,88-109",
+                "Pri_Switch calls SolidObject and then, on the same frame obSolid comes back set, "
+                        + "clears the player's Status_OnObj (bclr #3,(v_player+obStatus).w), sets the "
+                        + "in-air bit, clears obSolid and locks the controls. The standing state never "
+                        + "survives into a player frame, so the balance test never sees the switch"));
+        ROM_ACT_WID.put("Sonic1SpikeObjectInstance", new Entry(dynamic("Spikes_Config: 20/16/4/28/64/16 by subtype nibble"),
+                Disposition.RECORDED_UNREACHABLE, "36 Spikes.asm:22-28,89-121",
+                "the two subtypes the player can stand still on are the sideways ones ($1x, $5x), "
+                        + "whose Spikes_Config width is #32/2 = 16 and already matches the default. "
+                        + "Every subtype with a different width is upright, and on the shipped "
+                        + "FixBugs = 0 branch Spikes_Upright reads btst #3,obStatus and branches "
+                        + "straight to Spikes_Hurt, so standing on one damages the player every frame "
+                        + "instead of idling. The exception is v_invinc, which skips Spikes_Hurt; no "
+                        + "level was checked for an invincibility monitor in reach of a wide spike"));
         ROM_ACT_WID.put("Sonic1EggPrisonObjectInstance", new Entry(px(32), Disposition.DECLARES_OWN_WIDTH, "3E Prison Capsule.asm:33,50", "subtype 0, capsule"));
         ROM_ACT_WID.put("FZCylinder", new Entry(dynamic("see note"), Disposition.DECLARES_OWN_WIDTH, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:100",
                 "table-driven per cylinder"));
@@ -205,15 +239,13 @@ class TestS1BalanceWidthRomParityGuard {
         // than a known defect. Closing one means reading its reachability first.
         record Deferred(String type, int rom, String cite) { }
         for (Deferred deferred : List.of(
-                new Deferred("Sonic1SpikeObjectInstance", -1, "36 Spikes.asm:23-28,46 (subtype table: 20/16/4/28/64/16)"),
                 new Deferred("Sonic1LavaWallObjectInstance", 80, "4E MZ Wall of Lava.asm:37"),
-                new Deferred("Sonic1EdgeWallObjectInstance", 8, "44 GHZ Edge Walls.asm:22"),
                 new Deferred("Sonic1FlappingDoorObjectInstance", 40, "0C LZ Flapping Door.asm:24"),
                 new Deferred("Sonic1SmallDoorObjectInstance", 8, "2A SBZ Small Door.asm:21"),
                 new Deferred("Sonic1JunctionObjectInstance", 48, "66 SBZ Rotating Junction.asm:48 (parent; child #112/2 at :44)"),
-                new Deferred("Sonic1EggPrisonButtonObjectInstance", 12, "3E Prison Capsule.asm:34,50 (subtype 1, switch)"),
-                new Deferred("Sonic1BossBlockInstance", -1, "75, 76 Boss - SYZ Main and Blocks.asm:756"),
-                new Deferred("FZPlasmaLauncher", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:781"),
+                new Deferred("FZPlasmaLauncher", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:1022-1027 "
+                        + "(BossPlasma_Collision d1 = #16/2+sonic_solid_width; no obActWid write in the object -- "
+                        + "the :781 previously cited here is EggmanCylinder_Init's, a different object)"),
                 new Deferred("Sonic1FZBossInstance", -1, "85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:357,370"))) {
             ROM_ACT_WID.put(deferred.type(), new Entry(deferred.rom() < 0 ? dynamic("see citation") : px(deferred.rom()),
                     Disposition.RECORDED_UNASSESSED, deferred.cite()));
@@ -273,8 +305,8 @@ class TestS1BalanceWidthRomParityGuard {
                     // The ROM routine passes obActWid to the platform helper unchanged, so the
                     // top-solid fallback resolves to the ROM byte. Recorded, not runtime-verified.
                 }
-                case RECORDED_UNASSESSED -> {
-                    // Recorded, deliberately not failing. See the enum comment.
+                case RECORDED_UNASSESSED, RECORDED_UNREACHABLE -> {
+                    // Recorded, deliberately not failing. See the enum comments.
                 }
                 case KNOWN_MISMATCH -> problems.add(provider + ": KNOWN, UNFIXED. ROM obActWid "
                         + describe(entry.romActWid()) + " -- " + entry.citation()

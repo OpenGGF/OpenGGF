@@ -143,3 +143,107 @@ collapsing objects are the most valuable to take first: they are the ones that
 falsify the current default rather than merely fall through it, and any fix
 there should also revisit whether `getBalanceWidthPixels()`'s top-solid fallback
 should exist at all.
+
+## Reachability round, 2026-08-20
+
+The audit's own "Not established" section said reachability was never assessed.
+This round assessed it for the fifteen entries the guard carried as
+`RECORDED_UNASSESSED`. **Fifteen, not nine** — that number in the brief for this
+round was wrong, and the extra six are mostly boss children rather than level
+objects.
+
+Reachability here means: can the player be grounded, standing still, with the
+object recorded as his stood-on object? That is what `Sonic_Balance` needs
+(`_incObj/01 Sonic.asm:423`), and it is a stronger condition than the object
+merely being solid.
+
+### Reachable, and fixed this round
+
+Each is its own commit with its own assertion; none is a measured constant.
+
+| Object | ROM `obActWid` | site | why reachable |
+|---|---|---|---|
+| Obj3B GHZ Purple Rock | 19 (`#38/2`, `FixBugs=0`) | `getOnScreenHalfWidth()` | `Rock_Solid` `SolidObject` with stood-on `d3`; 25 placements across ghz1/ghz2/ghz3 |
+| Obj69 SBZ Trapdoor | 128 (`#256/2`, `FixBugs=0`) | `getOnScreenHalfWidth()` | solid whenever frame 0 shows; standing on a closed trapdoor is the object's purpose |
+| Obj41 sideways Spring | 8 (`#16/2`) | `getOnScreenHalfWidth()` | `Spring_LR` `SolidObject` `d3 = #30/2`; sideways springs across GHZ/SLZ/SYZ |
+| Obj71 Invisible Barrier | `((sub & $F0) + $10) >> 1` | `getOnScreenHalfWidth()` | `SolidObject_NoRenderChk`; the object exists to be walked on |
+| Obj33 Push Block 4x1 | 64 (`PushB_Var`) | `getOnScreenHalfWidth()` | `PushB_Action` `SolidObject` with stood-on `d3`; mz2 subtype `$81` |
+
+All five are full-solid, so the `getOnScreenHalfWidth()` siting is the ordinary
+one and `getBalanceWidthPixels()` inherits it; none needed the top-solid
+interception. Obj69 and Obj41 carry the byte per variant off a subtype bit the
+class already read, so neither adds a discriminator.
+
+### Assessed and unreachable — recorded, deliberately not fixed
+
+New guard disposition `RECORDED_UNREACHABLE`, distinct from "nobody looked".
+
+- **Obj44 GHZ Edge Wall** (`obActWid` 8). `Edge_Solid` calls
+  `EdgeWall_SolidWall`, not `SolidObject` (`44 GHZ Edge Walls.asm:35`;
+  `sub SolidWall.asm:14-67`). That routine sets only the pushing bits and a
+  ceiling stop. It never sets `Status_OnObj` and never records a stood-on
+  object, so the balance test cannot select an edge wall at any width. This is
+  the strongest ruling in the round: it is a property of the routine, not of any
+  level's geometry.
+- **Obj3E Prison Switch** (`obActWid` 12). `Pri_Switch` calls `SolidObject` and
+  then, on the same frame `obSolid` comes back set, clears the player's
+  `Status_OnObj`, sets the in-air bit, clears `obSolid` and locks the controls
+  (`3E Prison Capsule.asm:88-109`). The standing state never survives into a
+  player frame.
+- **Obj36 Spikes** (`Spikes_Config` 20/16/4/28/64/16). The only subtypes the
+  player can stand still on are the sideways ones, `$1x` and `$5x` — and their
+  configured width is `#32/2` = 16, which the shared default already matches.
+  Every subtype with a different width is upright, and on the shipped
+  `FixBugs = 0` branch `Spikes_Upright` reads `btst #3,obStatus` and branches
+  straight to `Spikes_Hurt` (`36 Spikes.asm:89-121`), damaging the player every
+  frame instead of letting him idle. So the divergent widths and the standable
+  subtypes are disjoint sets. **Caveat, and it is a real one:** `Spikes_Hurt`
+  begins `tst.b (v_invinc).w`, so an invincible player does stand still on a
+  wide upright spike. No level was checked for an invincibility monitor within
+  reach of one. If someone wants this closed rather than caveated, that is the
+  check to run.
+
+### No divergence at all
+
+- **Obj76 SYZ Boss Block** writes `move.b #32/2,obActWid(a1)`
+  (`75, 76 Boss - SYZ Main and Blocks.asm:756`) — 16, the shared default. It was
+  never a candidate; it is now `DEFAULT_IS_ROM_CORRECT`.
+
+### Still undetermined, and what would settle each
+
+Six remain `RECORDED_UNASSESSED`. All are solid with a stood-on `d3`, so the
+question is geometric or lifecycle, not mechanical.
+
+- **Obj4E MZ Lava Wall** (80). `LWall_Solid` is a real `SolidObject` with a
+  stood-on `d3` (`4E MZ Wall of Lava.asm:77-87`), but the children carry
+  `col_128x64|col_hurt` (`:36`). Settle by establishing whether the *parent*
+  slot — the stood-on one — carries a hurt collision type, and whether mz2's one
+  placement is ever approached from above.
+- **Obj0C LZ Flapping Door** (40) and **Obj2A SBZ Small Door** (8). Both are
+  solid only while closed and only from one side, with a 64-tall solid box in a
+  corridor. Standing on the *top* of the box is mechanically expressible; whether
+  the level geometry leaves headroom above either is the open question. Settle by
+  loading lz2/lz3/sbz3 and sbz1/sbz2 headless and probing for floor above each
+  placement.
+- **Obj66 SBZ Rotating Junction** (48 parent). The 56-wide child is routine 4,
+  display-only, so only the parent can be stood on. Settle the same way, on
+  sbz1's two placements.
+- **FZPlasmaLauncher** and **Sonic1FZBossInstance**. Both citations needed
+  correcting: the launcher's `:781` is `EggmanCylinder_Init`'s write for a
+  different object, and the launcher's own routine
+  (`BossPlasma_Collision`, `:1022-1027`) never writes `obActWid` at all. Eggman's
+  `:357,370` are `BossFinal_Eggman_Fall`'s post-defeat escape widths, not his
+  combat ones, and REV00 writes `obWidth` there instead of `obActWid`. For both,
+  the open question is what the slot's `obActWid` actually holds during the phase
+  the player can stand on it; settle by tracing slot provenance from the FZ
+  controller's child creation rather than by reading a width off a nearby line.
+
+### What this round did not establish
+
+- **No trace evidence for any of the five fixes.** They are ROM-versus-engine
+  corrections with unit assertions, exactly as the original audit's rows were.
+  The full-suite set-diff for them is recorded in the round's report, not here.
+- **The render-cull half is still unassessed**, as the original audit said. Four
+  of the five fixes move `getOnScreenHalfWidth()`, which is the cull consumer, so
+  they change it deliberately and in the ROM's direction — but no measurement
+  isolated the cull from the balance.
