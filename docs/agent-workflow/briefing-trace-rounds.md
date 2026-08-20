@@ -784,3 +784,29 @@ also silently ignores the class filter you believed you were running.
 it — with `-Dtest=` or with ROM paths — is quoting a number about a different command than the
 one it thinks it ran. The tell is a red count in the hundreds, or a `-Dtest=` run whose duration
 matches a full suite.
+
+## Twenty-sixth rule: never accept a self-report about process state
+
+Machine state is directly observable. `pgrep -af` plus `readlink /proc/<pid>/cwd` answers "who is
+running what, in which worktree" in one line, and it is never in doubt.
+
+Two coordination failures in one session came from a lane's self-report standing in for that
+check. A lane reported no suite running while a full suite was forking in its worktree; the
+report was relayed as fact, two suites contended through the symlinked shared resources, and the
+contended run died at 1,657 of ~1,919 classes. Its terminal line read **12,971 tests / 46
+failures** against a complete run's **15,185 / 55**, and a grep for the one class under
+investigation returned zero — which at face value reads as *"nine fewer red classes and the
+regression is gone"*. A truncated run masquerading as an improvement, for the second time that
+night.
+
+Two consequences:
+- **Before assigning or standing down a lane, check the machine yourself.** Never run two suites
+  concurrently, and confirm that before starting one, not after.
+- **A timer left armed after its owner stands down is the same hazard as a stale branch left on
+  the remote**: it fires into whatever is running next. Kill watchers explicitly and verify the
+  script is gone, rather than assuming the process exited with its round.
+
+Companion trap, from the same lane checking its own disarm: a `pgrep` for its watcher matched
+**its own shell command containing the grep string**, reporting STILL ARMED when nothing was.
+The same shape as `Failures: 0` matching a grep for `Fail` — a filter that matches the searcher.
+Exclude your own command line, or match on the parent process rather than the pattern.
