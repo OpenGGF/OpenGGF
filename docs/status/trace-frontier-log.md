@@ -99953,3 +99953,104 @@ segment shows a single slot's placement propagating 450 frames into a physics di
 **Not a candidate for a local fix.** Nothing here should be corrected by nudging the fan or the
 staircase into a different slot; the ordering has to fall out of the allocation history. Any
 slot number chosen to make frame 4305 land is a fitted model by construction.
+
+## 2026-08-20 — the slot-diff instrument already existed; slz1's first disagreement is frame 1715
+
+Round `s1-slz1-graze-r1`, continued. Branch `bugfix/ai-s1-slz1-graze-r1`.
+
+### Do not build it: `SlotOccupancyProbe` was already there
+
+`src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java` already diffs the recorder's
+`slot_dump` events against `ObjectManager.occupiedDynamicSlotIdsWithReservations()`, already
+folds parent-held child reservations in as a distinct state, already filters the torn
+mid-`ObjPosLoad` dumps by `vfc`, and is already off unless `OGGF_SLOT_PROBE=1`. Writing a second
+one would have been the waste.
+
+**The actual gap was reach.** It was wired into `AbstractTraceReplayTest` — the single-segment
+path — and not into `AbstractRunChainTest`. Every fixture that exists only as a chain segment,
+which is most complete-run material including this one, was therefore out of its range.
+
+Wiring, test-only and inert when the variable is unset: the five sites that assigned
+`productionComparator` now go through `installProductionComparator(comparator, trace,
+segmentIndex)`, which re-arms the probe on the segment's own trace so each segment writes
+`slot-occupancy-<runId>_seg<N>.txt`; `stepEngineFrame` samples the row index *before*
+`loop.step()` and observes after it, which is the single-segment path's phase and is correct
+whether or not the comparator advances its cursor inside the step.
+
+### The instrument discriminates, which is the only reason to trust it
+
+`slot_dump` is emitted only on frames where something was allocated — the worst case for a
+phase error — so a mis-phased probe would light up almost every sample. It does not:
+
+| segment | compared | divergent |
+|---|---|---|
+| 7 | 112 | 1 |
+| 11 | 65 | 1 |
+| 23 | 162 | 3 |
+| 0 | 167 | 17 |
+| 27 (`slz1`) | 146 | 107 |
+| 31 | 334 | 163 |
+
+Across the whole run the diffs are real occupancy disagreements — 6627 `rom=ID eng=ID`, 2375
+`rom=ID eng=-`, 1640 `rom=- eng=ID` — against only 32 of the soft reserved/unattributed kind.
+Physics results are byte-identical with the probe on and off (segment 27: 3878 errors, first
+non-camera mismatch frame 4305 `x rom=0x1BB0 engine=0x1BAF`, both arms).
+
+### slz1's first disagreement: frame 1715, and it did not recede
+
+**The 38 `slot_dump` comparisons before f1715 are all clean.** The engine reproduces the ROM's
+entire dynamic slot table exactly for the first 1715 frames of the act. The onset is genuine,
+self-contained in this segment, and 2590 frames ahead of the physics symptom at 4305.
+
+It is three slots wide and nothing else differs:
+
+```
+f1715 (3 slots): s48 rom=0x29 eng=0x28, s49 rom=- eng=0x29(Sonic1PointsObjectInstance), s106 rom=0x28 eng=-
+```
+
+ROM, all on frame 1715 (`object_appeared`): explosion `0x27` -> slot 41, points `0x29` -> slot
+48, animal `0x28` -> slot **106**. Engine: animal -> 48, points -> 49.
+
+The ROM's assignment is pure `ExecuteObjects` ordering. `ExItem_Animal`
+(`docs/s1disasm/_incObj/27, 3F Explosions.asm:19-26`) allocates the animal with `FindFreeObj`
+on the explosion's own first routine, and at that instant the lowest free slot is 106. Because
+106 is *above* the explosion's slot 41, the animal also runs later in the same ascending pass;
+by then lower slots have been freed by objects that self-deleted during that pass, so
+`Anml_Main`'s own `FindFreeObj` (`_incObj/28, 29 Animals and Points.asm:183-185`) hands the
+points object slot 48. The recorder confirms slot 49's `0x60` was removed on this very frame.
+
+The engine puts the animal in 48 — so at its animal allocation, 48 was already free. The engine
+is therefore allocating the animal after the frees that the ROM performs *after* the animal,
+i.e. the badnik -> explosion -> animal chain is not landing in the ROM's position within the
+ascending object pass.
+
+**This is the same object family as the capsule-burst case** where an animal's slot rotated the
+RNG draw order, and it is a third instance of rule 48. Whether the two share one cause is not
+established here and should not be assumed.
+
+### Next
+
+Establish where in the pass the engine allocates the animal relative to the ROM's
+`ExItem_Animal`, and why slot 48 is already free at that point. The instrument now reaches the
+chain, so the same question can be asked of any segment: the per-segment reports name the first
+disagreeing frame directly.
+
+No slot number should be chosen to make a frame land. The fan at 4305, the staircase block, and
+this animal are all downstream of allocation history, and the history is what has to match.
+
+### Verification of the wiring
+
+Both arms in the same worktree, candidate `93b6effd2` against control `333195abe`.
+
+- `-Ptrace-replay`: **800 tests, 6 failures, 0 errors, 4 skipped in both arms**, identical
+  failing-test sets, and all 14 `segment N ... diverged` lines byte-identical between arms.
+  The three `Tests run: 0,` lines are `TestS3kSlotsBonusTraceReplay`'s nested-class containers,
+  not truncation; 163 `Running` lines in both.
+- `-Pguards`: 500 tests, 0 failures.
+- Default suite: candidate 15194 / 52 failures / 67 errors / 18 skipped. **The control run twice
+  and disagreed with itself** — 51 then 52, with a different extra victim each time
+  (`TestCnzHoverFanObjectInstance.overlappingActiveFans...` in one,
+  `TestCheckpointStarpostGraphRewind.sonic1LamppostTwirl...` in the other). Both victims are
+  self-contained unit tests that cannot reach `AbstractRunChainTest`. The candidate's count sits
+  inside the control's own range; this is the known reused-fork ambient-state flakiness, not a
+  regression, and it is recorded here rather than reported as one.

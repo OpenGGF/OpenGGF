@@ -130,6 +130,18 @@ abstract class AbstractRunChainTest {
     private final List<String> chainAxisFailures = new ArrayList<>();
     private LiveTraceComparator productionComparator;
     /**
+     * Comparison-only ROM-vs-engine SST occupancy diff for the chain walk, armed
+     * per segment and off unless {@code OGGF_SLOT_PROBE=1}.
+     *
+     * <p>{@link com.openggf.tests.trace.SlotOccupancyProbe} was already wired into
+     * the single-segment replay path but not into the chain, so the recorder's
+     * {@code slot_dump} ground truth was unreachable for any fixture that only
+     * exists as a chain segment -- which is most complete-run material.
+     */
+    private com.openggf.tests.trace.SlotOccupancyProbe slotOccupancyProbe;
+    /** Names the slot-probe output file; set once the run manifest is known. */
+    private String slotProbeRunId = "run";
+    /**
      * The run's hardware-timing coordinator, so the walk can declare which
      * segment it owns at the same places it attaches and releases its row
      * owner. Membership is drive-owned; see
@@ -1260,7 +1272,8 @@ abstract class AbstractRunChainTest {
             playback.setFrameObserver(probe);
             probe.setDelegate(driver.comparator());
             declareHardwareTimingSegment(0);
-            productionComparator = driver.comparator();
+            slotProbeRunId = run.runId();
+            installProductionComparator(driver.comparator(), first.trace(), 0);
             runCoordinator.activateInitial(loop.getCurrentGameMode());
 
             // --- Step 3: walk every segment -------------------------------------
@@ -1926,6 +1939,9 @@ abstract class AbstractRunChainTest {
         } finally {
             activeRunCoordinator = null;
             productionComparator = null;
+            // Flush the final segment's slot diff; earlier segments were closed
+            // when the next one re-armed the probe.
+            closeSlotOccupancyProbe();
             try {
                 dynamicArtSegments.close();
             } catch (RuntimeException | Error closeFailure) {
@@ -2789,8 +2805,7 @@ abstract class AbstractRunChainTest {
         }
         probe.setDelegate(comparator); // null => special-stage advance-uncompared
         declareHardwareTimingSegment(segmentIndex);
-        productionComparator = comparator;
-        return comparator;
+        return installProductionComparator(comparator, interior.trace(), segmentIndex);
     }
 
     /**
@@ -2852,8 +2867,7 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
         probe.setDelegate(comparator);
-        productionComparator = comparator;
-        return comparator;
+        return installProductionComparator(comparator, level.trace(), segmentIndex);
     }
 
     /**
@@ -2913,8 +2927,7 @@ abstract class AbstractRunChainTest {
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
         declareHardwareTimingSegment(segmentIndex);
-        productionComparator = comparator;
-        return comparator;
+        return installProductionComparator(comparator, level.trace(), segmentIndex);
     }
 
     /**
@@ -3108,8 +3121,7 @@ abstract class AbstractRunChainTest {
                 rowsConsumed, fixture::sprite);
         probe.setDelegate(comparator);
         declareHardwareTimingSegment(segmentIndex);
-        productionComparator = comparator;
-        return comparator;
+        return installProductionComparator(comparator, nextLevel.trace(), segmentIndex);
     }
 
     /**
@@ -4389,6 +4401,29 @@ abstract class AbstractRunChainTest {
         }
     }
 
+    /**
+     * Installs {@code comparator} as the production comparator and re-arms the
+     * slot-occupancy probe on the segment's own trace, so each segment's diff
+     * lands in its own report keyed by segment index.
+     */
+    private LiveTraceComparator installProductionComparator(
+            LiveTraceComparator comparator, TraceData trace, int segmentIndex) {
+        productionComparator = comparator;
+        closeSlotOccupancyProbe();
+        if (trace != null) {
+            slotOccupancyProbe = com.openggf.tests.trace.SlotOccupancyProbe.createIfEnabled(
+                    trace, slotProbeRunId + "_seg" + segmentIndex);
+        }
+        return comparator;
+    }
+
+    private void closeSlotOccupancyProbe() {
+        if (slotOccupancyProbe != null) {
+            slotOccupancyProbe.close();
+            slotOccupancyProbe = null;
+        }
+    }
+
     /** Advances one engine frame through the same outer PLC/fade lifecycle as live play. */
     void stepEngineFrame(GameLoop loop) {
         stateMovieLogicalRow();
@@ -4398,7 +4433,21 @@ abstract class AbstractRunChainTest {
         if (coordinator != null) {
             coordinator.beforeProduction(loop.getCurrentGameMode());
         }
+        // Capture the row index BEFORE production: the single-segment path
+        // observes with the index of the frame just produced, and the comparator
+        // may or may not have advanced its cursor inside loop.step() depending on
+        // the phase. Sampling the index first is correct either way.
+        LiveTraceComparator preStepComparator = productionComparator;
+        int slotProbeRowIndex = slotOccupancyProbe != null && preStepComparator != null
+                ? preStepComparator.cursor()
+                : -1;
         loop.step();
+        if (slotProbeRowIndex >= 0) {
+            var slotProbeLevel = GameServices.levelOrNull();
+            if (slotProbeLevel != null) {
+                slotOccupancyProbe.observe(slotProbeRowIndex, slotProbeLevel.getObjectManager());
+            }
+        }
         LiveTraceComparator comparator = productionComparator;
         if (comparator != null) {
             comparator.consumePostProductionPlayableAnimationAction();
