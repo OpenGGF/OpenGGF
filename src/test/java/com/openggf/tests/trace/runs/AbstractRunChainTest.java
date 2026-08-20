@@ -129,6 +129,13 @@ abstract class AbstractRunChainTest {
      */
     private final List<String> chainAxisFailures = new ArrayList<>();
     private LiveTraceComparator productionComparator;
+    /**
+     * The run's hardware-timing coordinator, so the walk can declare which
+     * segment it owns at the same places it attaches and releases its row
+     * owner. Membership is drive-owned; see
+     * {@link HardwareTimingCoordinator#enterTransitionGap()}.
+     */
+    private HardwareTimingCoordinator activeHardwareTiming;
     private HeadlessRunCoordinatorAdapter activeRunCoordinator;
     /**
      * Segment indices whose comparator was attached by
@@ -1180,6 +1187,7 @@ abstract class AbstractRunChainTest {
                         TraceRunReplayWalker.hardwareTimingSegments(plans),
                         com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader
                                 .load(runDir));
+        activeHardwareTiming = hardwareTiming;
         GameplayModeContext gameplayMode =
                 SessionManager.getCurrentGameplayMode();
         gameplayMode.plcFrameLifecycle()
@@ -1251,6 +1259,7 @@ abstract class AbstractRunChainTest {
             // delegating comparison to whichever segment comparator is attached.
             playback.setFrameObserver(probe);
             probe.setDelegate(driver.comparator());
+            declareHardwareTimingSegment(0);
             productionComparator = driver.comparator();
             runCoordinator.activateInitial(loop.getCurrentGameMode());
 
@@ -1890,7 +1899,7 @@ abstract class AbstractRunChainTest {
                         exit, obs.observedBk2Frame(),
                         loop.getCurrentGameMode(), rowsConsumed);
                 activeComparator = attachPreparedInterior(
-                        probe, interior, fixture, rowsConsumed);
+                        probe, interior, fixture, rowsConsumed, i + 1);
                 activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
@@ -2030,6 +2039,12 @@ abstract class AbstractRunChainTest {
         TraceRunFrameDriver physicalRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(physicalRows);
         probe.setDelegate(null);
+        // An uncompared special stage has no comparator, but the walk still
+        // OWNS its rows -- it drives them itself below. Declaring entry here is
+        // what makes the interior a segment the coordinator is inside, so the
+        // bridge that follows is an ordinary next-segment entry rather than a
+        // jump over a segment nothing ever declared.
+        declareHardwareTimingSegment(specialIndex);
         productionComparator = null;
         try {
             // Reuse the plan's parse (loaded with the segment's declared
@@ -2154,6 +2169,10 @@ abstract class AbstractRunChainTest {
             dynamicArtGapJournal.gapOpened(special.segment().dir());
 
             int bridgeOffset = bridge.segment().bk2FrameOffset();
+            // The stage's rows are done and the bridge's have not started: the
+            // rows driven below are transition rows the recording does not
+            // cover, whatever the shared cursor reads.
+            declareHardwareTimingTransitionGap();
             while (playback.getCursorFrame() < bridgeOffset) {
                 if (playback.getCursorFrame() + 1 > bridgeOffset) {
                     throw new AssertionError(
@@ -2180,6 +2199,7 @@ abstract class AbstractRunChainTest {
                     GameServices.level().getObjectManager().getVblaCounter();
 
             dynamicArtSegments.beginSegment();
+            declareHardwareTimingSegment(bridgeIndex);
             dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir(),
                     bridge.segment().bk2FrameOffset() - 1);
 
@@ -2696,6 +2716,7 @@ abstract class AbstractRunChainTest {
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
             Bk2Movie movie, SegmentPlan interior, int stepCap) {
         probe.setDelegate(null);
+        declareHardwareTimingTransitionGap();
         productionComparator = null;
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
@@ -2746,7 +2767,7 @@ abstract class AbstractRunChainTest {
 
     private LiveTraceComparator attachPreparedInterior(
             BoundaryProbe probe, SegmentPlan interior,
-            LiveEngineFixture fixture, int rowsConsumed) {
+            LiveEngineFixture fixture, int rowsConsumed, int segmentIndex) {
         LiveTraceComparator comparator;
         if (TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
             if (rowsConsumed != 0) {
@@ -2766,6 +2787,7 @@ abstract class AbstractRunChainTest {
                     rowsConsumed, fixture::sprite);
         }
         probe.setDelegate(comparator); // null => special-stage advance-uncompared
+        declareHardwareTimingSegment(segmentIndex);
         productionComparator = comparator;
         return comparator;
     }
@@ -2889,6 +2911,7 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
+        declareHardwareTimingSegment(segmentIndex);
         productionComparator = comparator;
         return comparator;
     }
@@ -2908,6 +2931,7 @@ abstract class AbstractRunChainTest {
         int sourceTailVblank =
                 observedSourceTailVblank(currentLevel.segment(), playback);
         probe.setDelegate(null);
+        declareHardwareTimingTransitionGap();
         if (!isNewActiveLevelSegment(nextLevel, levelAtSegmentStart)) {
             int offset = nextLevel.segment().bk2FrameOffset();
             playback.scheduleSessionAtNextLevelLoad(movie, offset);
@@ -3082,8 +3106,28 @@ abstract class AbstractRunChainTest {
                 nextLevel.trace(), ToleranceConfig.DEFAULT,
                 rowsConsumed, fixture::sprite);
         probe.setDelegate(comparator);
+        declareHardwareTimingSegment(segmentIndex);
         productionComparator = comparator;
         return comparator;
+    }
+
+    /**
+     * Declares that the walk has entered {@code segmentIndex} -- called where
+     * the walk attaches that segment's row owner. The coordinator latches rows
+     * only for the segment the walk says it is in, so this is the single thing
+     * that admits a destination's rows.
+     */
+    private void declareHardwareTimingSegment(int segmentIndex) {
+        if (activeHardwareTiming != null) {
+            activeHardwareTiming.enterSegment(segmentIndex);
+        }
+    }
+
+    /** Declares that the walk has released its row owner and is between segments. */
+    private void declareHardwareTimingTransitionGap() {
+        if (activeHardwareTiming != null) {
+            activeHardwareTiming.enterTransitionGap();
+        }
     }
 
     private void completeInterLevelVblankBudget(

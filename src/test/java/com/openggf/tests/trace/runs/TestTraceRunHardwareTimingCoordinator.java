@@ -72,6 +72,9 @@ class TestTraceRunHardwareTimingCoordinator {
                                 new HardwareTimingSchedule(List.of(laterEdge)))));
 
         coordinator.beginPlaybackFrame(frame(10));
+        // Membership is the drive's to declare; the cursor reaching segment 1's
+        // offset is not an entry on its own.
+        coordinator.enterSegment(1);
         coordinator.beginPlaybackFrame(frame(11));
         HardwareWorkHandle production = service.submit(submission);
         service.service(POST_OBJECTS);
@@ -123,6 +126,7 @@ class TestTraceRunHardwareTimingCoordinator {
         coordinator.beginPlaybackFrame(frame(10));
         HardwareTimingSnapshot serviceBeforeHandoff = service.capture();
         var portBeforeHandoff = port.capture();
+        coordinator.enterSegment(1);
         coordinator.beginPlaybackFrame(frame(11));
         HardwareWorkHandle production = service.submit(submission);
         service.service(POST_OBJECTS);
@@ -142,6 +146,9 @@ class TestTraceRunHardwareTimingCoordinator {
                                 11, List.of(200),
                                 new HardwareTimingSchedule(List.of(laterEdge)))));
         coordinator.beginPlaybackFrame(frame(10));
+        // Membership is the drive's to declare; the cursor reaching segment 1's
+        // offset is not an entry on its own.
+        coordinator.enterSegment(1);
         coordinator.beginPlaybackFrame(frame(11));
         HardwareWorkHandle replayed = service.submit(submission);
         service.service(POST_OBJECTS);
@@ -186,6 +193,7 @@ class TestTraceRunHardwareTimingCoordinator {
         probe.shouldSkipGameplayTick(frame(10));
         assertFalse(service.isReady(exported));
 
+        coordinator.enterSegment(1);
         probe.shouldSkipGameplayTick(frame(11));
         assertTrue(service.isReady(exported));
         assertArrayEquals(new byte[] {0x31}, service.claim(exported));
@@ -216,12 +224,58 @@ class TestTraceRunHardwareTimingCoordinator {
                                 20, List.of(0), HardwareTimingSchedule.empty())));
 
         coordinator.beginPlaybackFrame(frame(10));
+        // Frame 11 falls in neither segment (segment 1 opens at 20); the drive
+        // never enters segment 1 here.
         coordinator.beginPlaybackFrame(frame(11));
         service.service(POST_OBJECTS);
         fixture.observer.onBoundary(POST_OBJECTS);
 
         assertFalse(service.isReady(handle));
         assertEquals(null, port.capture().rawFrameLatch());
+    }
+
+    @Test
+    void cursorRunningPastTheNextOffsetInAGapLatchesNoDestinationRow() {
+        // The defect this pins: across a transition the drive releases its row
+        // owner while the shared BK2 cursor keeps free-running through
+        // choreography frames the recording never covered. Those frames run
+        // past the destination's offset, and a coordinator that infers
+        // membership from cursor arithmetic latches them as the destination's
+        // rows 0.. -- rows the destination has not started. The drive then
+        // re-seeks the cursor to the destination's true first row and the walk
+        // legitimately restarts at row 0, which the port refuses as a backward
+        // raw_frame. Membership is the drive's to declare.
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareTimingReplayPort port =
+                new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(HardwareTimingSchedule.empty());
+        TimingFixture fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(
+                fixture,
+                List.of(
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                10, List.of(100, 101), HardwareTimingSchedule.empty()),
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                12, List.of(200, 201, 202),
+                                HardwareTimingSchedule.empty())));
+
+        coordinator.beginPlaybackFrame(frame(10));
+        coordinator.beginPlaybackFrame(frame(11));
+        coordinator.enterTransitionGap();
+        // Choreography: the cursor runs across the whole destination range.
+        coordinator.beginPlaybackFrame(frame(12));
+        coordinator.beginPlaybackFrame(frame(13));
+        coordinator.beginPlaybackFrame(frame(14));
+        assertEquals(List.of(100, 101), fixture.latchedRawFrames,
+                "no destination row may be latched before the drive enters it");
+
+        // The drive re-seeks to the destination's true first row and enters.
+        coordinator.enterSegment(1);
+        coordinator.beginPlaybackFrame(frame(12));
+        coordinator.beginPlaybackFrame(frame(13));
+        assertEquals(List.of(100, 101, 200, 201), fixture.latchedRawFrames,
+                "the destination starts at its own first row, moving forward");
     }
 
     @Test

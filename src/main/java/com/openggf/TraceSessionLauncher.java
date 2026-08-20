@@ -1561,6 +1561,14 @@ public final class TraceSessionLauncher {
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
         }
+        if (runHardwareTiming != null) {
+            // Releasing the row owner at a segment close puts the drive between
+            // segments: the shared cursor keeps running through the transition
+            // choreography and must not be read as membership of whatever
+            // segment its arithmetic lands in. The destination declares itself
+            // through its admission receipt (applyRunDestinationAdmission).
+            runHardwareTiming.enterTransitionGap();
+        }
         if (runSpecialRowDriver != null) {
             runSpecialRowDriver.verifyComplete();
             runSpecialLocalRow = runSpecialRowDriver.cursor();
@@ -1626,7 +1634,7 @@ public final class TraceSessionLauncher {
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
-            runHardwareTiming.handoffToSegment(receipt.segmentIndex());
+            runHardwareTiming.enterSegment(receipt.segmentIndex());
         }
         FrameComparison gapComparison = null;
         if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SPECIAL_LOCAL) {
@@ -2190,6 +2198,9 @@ public final class TraceSessionLauncher {
         }
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
+        }
+        if (runHardwareTiming != null) {
+            runHardwareTiming.enterTransitionGap();
         }
         runTerminalTail = plan;
         runTerminalRowAdvanced = false;
@@ -3139,6 +3150,13 @@ public final class TraceSessionLauncher {
     private void applyRunAdvanceAfterProduction(
             RunSegmentAdvancer.AdvanceAction action) {
         applyRunSegmentAdvance(action);
+        if (runHardwareTiming != null) {
+            // The advancer drive's counterpart to the coordinator drive's
+            // admission receipt: this is where it enters the next segment, so
+            // this is where it declares membership. Like the receipt path, the
+            // handoff completes before any destination owner opens below.
+            runHardwareTiming.enterSegment(action.nextSegmentIndex());
+        }
         armRunSpecialDynamicArtComparison(action.nextSegmentIndex());
         if (runDynamicArtSegments == null) {
             return;

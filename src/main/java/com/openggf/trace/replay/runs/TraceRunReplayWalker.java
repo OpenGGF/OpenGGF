@@ -192,6 +192,16 @@ public final class TraceRunReplayWalker {
         private final HardwareTimingInterstitialSpans interstitialSpans;
         private int currentSegment;
         private boolean closed;
+        /**
+         * Whether the DRIVE currently owns a segment's rows. Membership is the
+         * drive's to declare, never the cursor's to infer: across a transition
+         * the drive detaches its row owner and the shared BK2 cursor keeps
+         * free-running through choreography frames the recording never covered,
+         * then gets re-seeked to the destination's true first row when the
+         * destination's load actually happens. Segment 0 starts owned because
+         * the run's initial attach is what constructs this coordinator.
+         */
+        private boolean insideSegment = true;
 
         public HardwareTimingCoordinator(
                 TraceReplayFixture fixture,
@@ -244,26 +254,36 @@ public final class TraceRunReplayWalker {
          */
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
-            if (closed) {
+            if (closed || !insideSegment) {
                 fixture.enterHardwareTimingGap();
                 return;
             }
-            for (int segmentIndex = segments.size() - 1;
-                    segmentIndex >= 0;
-                    segmentIndex--) {
-                HardwareTimingSegment segment = segments.get(segmentIndex);
-                int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
-                if (traceIndex < 0) {
-                    continue;
-                }
-                if (traceIndex < segment.rawFrames().size()) {
-                    beginSegmentRow(segmentIndex, traceIndex);
-                } else {
-                    fixture.enterHardwareTimingGap();
-                }
-                return;
+            HardwareTimingSegment segment = segments.get(currentSegment);
+            int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
+            if (traceIndex >= 0 && traceIndex < segment.rawFrames().size()) {
+                beginSegmentRow(currentSegment, traceIndex);
+            } else {
+                fixture.enterHardwareTimingGap();
             }
-            fixture.enterHardwareTimingGap();
+        }
+
+        /**
+         * The drive has released its row owner: it is between segments. No
+         * frame belongs to any segment until {@link #enterSegment} declares the
+         * next one, however far the shared cursor runs meanwhile.
+         */
+        public void enterTransitionGap() {
+            insideSegment = false;
+        }
+
+        /**
+         * The drive has attached {@code segmentIndex}'s row owner, so its rows
+         * begin here. Performs the schedule handoff, which still enforces
+         * structural order.
+         */
+        public void enterSegment(int segmentIndex) {
+            handoffToSegment(segmentIndex);
+            insideSegment = true;
         }
 
         /**
@@ -288,6 +308,10 @@ public final class TraceRunReplayWalker {
                                 + segmentIndex);
             }
             handoffToSegment(segmentIndex);
+            // Latching a row IS the drive declaring it owns this segment: the
+            // special-stage row driver enters that way rather than through an
+            // attach.
+            insideSegment = true;
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
         }
@@ -312,6 +336,9 @@ public final class TraceRunReplayWalker {
                         segments.get(segmentIndex).schedule(),
                         interstitialSpans.spansAfterSegment(currentSegment));
                 currentSegment = segmentIndex;
+                // A drive that latches the next segment's rows directly (the
+                // special-stage row driver) has declared its entry by doing so.
+                insideSegment = true;
             }
         }
 
