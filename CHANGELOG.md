@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The in-level title-card tail no longer advances on a lag frame.** S2's
+  omitted-presentation exit tail is `Obj34_WaitAndGoAway`
+  (`docs/s2disasm/s2.asm:27605-27637`), an object routine reached only from
+  `Level_MainLoop`'s `RunObjects` (`s2.asm:5098`) and armed immediately before that
+  loop (`s2.asm:5066-5080`), so it ticks once per completed main-loop iteration. On a
+  lag frame `V_Int` stores `VintID_Lag` back into `Vint_routine` before dispatching
+  (`s2.asm:500-501`) and no `Vint_Lag` path runs an object scan, so the tail does not
+  advance. `TraceSuppressedRowClosure.executeUnownedTitleCardWork` advanced it anyway
+  on every suppressed row, so its 53 passes (45 `anim_frame_duration` decrements plus
+  8 `$20` slide steps from `$120` to past the `$200` off-screen limit) completed as
+  many rows early as the level had lag frames, firing
+  `Obj34_LoadStandardWaterAndAnimalArt`'s two `LoadPLC` calls too soon. Providers now
+  declare an object-scan-dispatched in-level tail through
+  `TitleCardProvider.inLevelTailDispatchedByObjectScan()`, which the suppressed-row
+  closure defers alongside the existing held-level-counter case.
+
+### Fixed
 - **An object's standing bit now expires with its slot, as the delete routines do.**
   The object-side p1/p2 standing bits were keyed on the persistent `ObjectSpawn`, so they
   outlived the instance they described and a solid reloaded from the same layout entry
