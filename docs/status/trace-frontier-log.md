@@ -95308,3 +95308,103 @@ That is the intended semantic change, not a new regression -- but the test
 encodes the old single-iteration model in two assertions and was not rewritten
 here, because it cannot be taken green without also addressing its S2 and S3K
 failures.
+## 2026-08-20 — segment 4: the three arm-frame PCs are named, and the engine-side cause is measured
+
+Branch `bugfix/ai-s3k-seg4-writers-r1` off `c7ac4b7c0`. **Diagnosis only, nothing landed;
+probes reverted, tree clean.** Control re-measured at this base: chain segment 4 **250**,
+`run_boundary.position.x` expected 14007 actual 14008 — both unchanged.
+
+### Step 1 — the arm-frame PCs, named with a listing rather than by eye
+
+Method, stated so it can be checked: `docs/skdisasm/skbuilt.bin` is **byte-identical to the
+locked-on ROM's whole S&K half** (`rom[0:0x200000] == skbuilt.bin`, 0 differing bytes), and
+`docs/skdisasm/sonic3k.lst` is the AS listing for that build, carrying an address column and
+the assembled bytes for every source line. Address lookup in that listing is therefore an
+exact PC->label map, not a bracket-and-guess. Confidence: high.
+
+The listing also settles the callback convention, twice over. BizHawk reported the *field*
+written alongside each PC, and in both cases the field belongs to the instruction **before**
+the reported PC — so **the reported PC is the address after the storing instruction**:
+
+| reported PC | storing instruction | label / line |
+|---|---|---|
+| `012622` | `01261E: move.b d0,prev_anim(a0)` | `Animate_Sonic` (`sonic3k.asm:24744`, listing 24744/1261E) |
+| `01266E` | `01266A: move.b d0,mapping_frame(a0)` | `Animate_Sonic` `loc_1266A` (listing 24770/1266A) |
+| `00ED44` | `00ED3E: bclr #Status_Push,status(a0)` | `Player_AnglePos` `loc_ED38` (listing 18841/ED3E) |
+
+`loc_ED38` is the leave-the-ground tail: `bset #Status_InAir` / `bclr #Status_Push` /
+`move.b #1,prev_anim(a0)`. That last store is what forces `Animate_Sonic` to restart the
+script on the following call, which is why row 0 shows `anim_frame = 0` and the *first*
+frame of the wait script.
+
+So the arm frame reads, in order: the ground path leaves `anim = 5`; `Player_AnglePos` finds
+no floor, sets `Status_InAir` and pokes `prev_anim = 1`; `Animate_Sonic` sees `5 != 1`,
+restarts, and writes `mapping_frame = $BA` — `AniSonic05` (`General/Sprites/Sonic/Anim -
+Sonic.asm:43`), the wait/stand animation, whose frame 0 is `$BA`. Row 0's
+`anim=05 / mapping_frame=BA / status=02` is fully explained.
+
+**Still not established:** which instruction writes `anim = 5` itself. It is already 5 when
+`Animate_Sonic` runs. It is *not* one of the mid-segment PCs and it is not
+`Player_AnglePos`. This no longer blocks the fix (see below), but it is unresolved.
+
+### Step 2 — the engine side, measured, and it is not what the previous round concluded
+
+**RETRACT: "it is a stale latch; zero animation writes across rows 0-12."** A write-site
+probe on both `setAnimationId` overloads, logging id + `air` + `balanceState` + `gspeed` +
+centre position with a stack, and a segment-index marker in `AbstractRunChainTest`'s segment
+loop, records this at the segment 3 -> 4 boundary:
+
+```
+MARK segment 3 ss_2
+ANIM Sonic  -> 0x0 air=true bal=0 gsp=-1 x=562 y=1003 | LevelPlayableArtInitializer.applyPlayableArt:281 ...
+ANIM Tails  -> 0x0 air=true bal=0 gsp=-1 x=571 y=1018 | LevelPlayableArtInitializer.applyPlayableArt:281 ...
+MARK segment 4 aiz_3
+ANIM Sonic  -> 0xc air=true bal=2 gsp=0 x=576 y=976 | PlayableSpriteAnimation.updateAnimation:186 ...
+ANIM Tails  -> 0x6 air=true bal=1 gsp=0 x=544 y=980 | PlayableSpriteAnimation.updateAnimation:186 ...
+```
+
+`x=576,y=976` is `(0x0240,0x03D0)` — segment 4 row 0 exactly. The BALANCE2/BALANCE values are
+**written on that frame**, from one shared call site, and each character's value comes from
+its own `balanceState`. There is no latch to break; there is a live wrong write.
+
+**Two independent defects produce it, both citable against the ROM:**
+
+1. **The engine selects an animation on airborne frames; the ROM does not.**
+   `PlayableSpriteAnimation.updateAnimation`
+   (`src/main/java/com/openggf/sprites/managers/PlayableSpriteAnimation.java:158-195`) resolves
+   the profile's desired id and writes it every frame, unconditionally. In the ROM, selection
+   lives in the *mode* routines: `Sonic_MdNormal`'s tail writes `#5,anim(a0)` and
+   `Sonic_Balance` may override it (`sonic3k.asm:22446-22455`, :22531+), while
+   `Sonic_MdAir` (`sonic3k.asm:22350-22362`) writes no `anim` at all — its callees only touch
+   it through the landing path. `Animate_Sonic` (`:24733`) maps `anim` to a script; it never
+   chooses one.
+
+2. **`balanceState` is never cleared except inside the ground standing tail.**
+   `PlayableSpriteMovement.updateBalanceState`
+   (`PlayableSpriteMovement.java:4870-4887`) opens with `setBalanceState(0)`, but it is only
+   reached from the grounded standing path, so an airborne frame leaves the previous value
+   standing. Here it survives the giant ring, the whole special stage, and a full level load —
+   `LevelPlayableArtInitializer` resets `anim` to 0 but nothing resets `balanceState`. The ROM
+   holds no balance state at all: `Sonic_Balance` recomputes from `tilt`/`next_tilt` plus a
+   fresh `ChooseChkFloorEdge` probe on every grounded standing frame and stores nothing.
+
+Either defect alone is enough to produce row 0's error; both are present. With `balanceState`
+correctly 0, `ScriptedVelocityAnimationProfile`'s `speed == 0` branch already returns
+`idleAnimId`, which for S3K is `WAIT = 0x05` — the ROM's value, with no fixture-derived
+constant anywhere in the fix.
+
+**The brief's caution that a single shared fix is probably wrong for one character does not
+hold here, and the probe shows why:** the write is one shared call site, but Sonic reached it
+with `bal=2` and Tails with `bal=1`, each from its own state, each producing its own wrong id
+(`0xC` and `0x6`). Correcting the shared mechanism is right for both *independently*, and the
+per-character stale values are the evidence.
+
+### For the next round
+
+Land defect 2 first — clearing `balanceState` whenever the grounded standing tail does not
+run is the smaller change and matches the ROM's statelessness. Defect 1 (gating selection on
+mode) is the more faithful fix but touches all three games' animation dispatch; measure the
+full `-Ptrace-replay` suite before and after. Do not re-derive the PC table above.
+
+The camera cluster at rows 7698-7799 (45 errors) is still untouched and still unproven to
+share a cause.
