@@ -1006,3 +1006,35 @@ reaches the fork produces a confident, wrong measurement rather than an error.)
 Both belong to the rule this document keeps re-deriving: **an experiment that could not have
 worked returns the same shape of nothing as an experiment that worked and found nothing.**
 Before believing a negative result, prove the instrument ran.
+
+## Thirty-sixth rule: the branch is the artifact, the worktree is scratch
+
+Rounds accumulate worktrees. In one day a session left 47GB across 60 of them, most belonging
+to rounds that had finished hours earlier — including several whose code was deliberately *not*
+merged, which is the case that makes naive cleanup feel unsafe.
+
+It isn't unsafe, because of where the work actually lives. **Once a round commits to a branch,
+its worktree holds nothing the branch does not.** Removing it is lossless and reversible: the
+branch keeps every commit, including work that was correctly refused a merge. So the disposal
+decision belongs to the lead, and it is cheap — no judgement about whether the work was any good
+is required, only whether it is committed.
+
+**The worker's obligation is therefore to persist, never to discard.** A round must not be asked
+to delete its own work as a condition of finishing — whether unmerged work is worth keeping is
+not the worker's call, and a round that reverted a candidate or had its premise retracted has
+often produced the most valuable output of the day. What a round owes at stand-down is:
+
+- every change committed to its branch, including candidates that were built and rejected —
+  commit them with the measurement that rejected them, so the next round does not rebuild them;
+- the branch name and commit hash in its report;
+- probes and temporary instrumentation reverted, so the branch shows the round's actual position;
+- nothing of value living only in the working tree.
+
+**The lead's obligation is to sweep after standing a round down**: confirm the branch carries
+the commits, then remove the worktree. Skip any tree with uncommitted changes — that is the one
+state where the worktree holds something unique, and it means the round did not finish cleanly.
+Ask it to commit; do not resolve it by deleting.
+
+Two adjacent habits worth keeping: stop a round when you stand it down rather than letting
+finished rounds pool idle, and send the closing message *before* stopping it — messaging a
+stopped round resumes it.
