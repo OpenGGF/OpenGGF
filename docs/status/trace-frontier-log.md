@@ -97062,3 +97062,47 @@ survive it. The naming collision itself is deliberately left in place; renaming 
 - Next action: re-record `s1-sonic-complete-withemeralds` with the v5
   `hardware_timing.jsonl` stream. That closes seg12, seg15 and seg3 together and
   is the only thing that can; no predicate over recorded counters can.
+
+## 2026-08-20 - S3K AIZ2 bridge/button dispatch order (REJECTED candidate)
+
+- Worktree `wt/s3k-bridge-flag-r1`, branch `bugfix/ai-s3k-bridge-flag-r1`
+  over `c94b3ed0a`; same-tree control worktree `wt/s3k-bridge-flag-r1-ctl` at
+  the same commit.
+- ROM fact established: the AIZ act 2 sprite list read from the user-supplied
+  ROM (pointer table `$1E3D98`, list `$1E4876`) holds `Obj_CutsceneButton`
+  (id `$83`, x=`$4B18`) at record 749, immediately before `Obj_AIZDrawBridge`
+  (id `$32`, x=`$4B48`) at record 750. `Obj_Load` allocates ascending free
+  slots in that order, so the button always holds the lower SST slot and
+  `AIZDrawBridge_WaitCollapseTrigger` observes `st (_unkFAA9).w` in the same
+  object scan (`sonic3k.asm:59622-59628`, `133936-133953`). The recording
+  agrees independently: `aux_state` slot 34 = `$00065C50`, slot 35 =
+  `$0002B452` on segment-8 frame 6961, with `loc_2B452` deleting at 6976
+  (install + `$E` + 1 = 15 frames).
+- Candidate replaced `Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()`
+  -- a Player_1 interact-slot vs Java-slot comparison with no ROM predicate --
+  by spawning the cutscene-override button before the bridge and deleting the
+  `collapseInitializedBeforeEntry` skip and `beginCollapseFromEarlierButtonSlot`
+  push entirely. Probe confirms button slot 4, bridge slot 5, collapse install
+  to eject = 15 frames (control: 16).
+- **Rejected on measurement.** `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `-Ptrace-replay -Dmse=off` with all three ROM paths: control
+  `BK2 cursor=53488` (recording 53486, 2 over); candidate `BK2 cursor=53465`
+  (21 under). The chain frontier moves backwards.
+- The compensations were absorbing a much larger, non-linear lever. Probe
+  arms, all with the ordering fix applied: `postResultsControlRestoreDelay`
+  1 -> 53465, 2 -> 53488; collapse interval 15 -> 53465, 16 -> 53560 (with
+  delay 2). A one-frame change at either site moves the segment close by 23 or
+  72 frames, so `BK2 cursor` is not a linear frame count at this seam and
+  cannot arbitrate one-frame fixes here. Identifying that amplifier is the
+  prerequisite for landing the ordering fix.
+- Separately derived and kept: the button's `Ctrl_1_locked` clear must NOT
+  release the engine's forced UP word in the same pass. Player_1 is SST slot 0
+  and consumed the word `AIZEndBoss_WaitForCutsceneKnuckles` wrote from slot 7
+  earlier in the same scan (`sonic3k.asm:133968-133970`, `138317-138323`).
+  The old flag conflated this player-vs-object ordering with the
+  button-vs-bridge object ordering; they are different questions.
+- `-Pguards`: 65 classes / 501 tests, 0 failures.
+  `TestAiz2BossEndSequenceObjects` 44 tests / 1 failure, the same pre-existing
+  `aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck` failure
+  the control reports (control 46 tests / 1 failure). S1 and S2 complete-run
+  chains are byte-identical by full failure message across both arms.
