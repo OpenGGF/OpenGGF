@@ -100256,3 +100256,86 @@ Two independent instances in one day — this one and an S1 round where plain `A
 placed an object above its spawner and so ran it in the same frame instead of the next — say
 the same thing: **which allocator a spawner uses determines whether the spawned object runs
 that frame, and that is observable behaviour, not an implementation detail.** Worth a rule.
+
+## 2026-08-20 — slz1's fan is three slots low, and the ROM's slot table is already in the fixture
+
+Round `s1-slz1-graze-r1`, continued. Same branch, `bugfix/ai-s1-slz1-graze-r1` off `4a14e9fcf`.
+No engine code changed; probes reverted. This answers the "why is the fan ordered before the
+monitor" question the previous entry left open, and stops at the point where the origin
+recedes past what one probe can settle.
+
+### The fixture already carries ROM slot-table ground truth
+
+`slz1/aux_state.jsonl.gz` holds 146 `slot_dump` events (the whole dynamic SST, slot -> object
+id), 612 `object_appeared` and 577 `object_removed` events for this segment alone. That is a
+per-slot ROM allocation history, and it makes slot-ordering questions directly measurable
+rather than inferable. It does not appear to have been used for this before.
+
+### Measured: the engine's slot for the fan is three too low
+
+`FindFreeObj` (`docs/s1disasm/_incObj/sub FindFreeObj.asm:10-21`) is lowest-free-slot, and the
+engine's `SlotAllocator.allocate()` models it exactly. So the slot a reload lands in is decided
+entirely by which slots are occupied at that instant.
+
+The fan at `0x1B78` is loaded twice in this act: slot 50 at frame 3802, unloaded, then reloaded
+as the camera scrolls back left. At the reload the ROM's `slot_dump` (frame 4191, `vfc` 4183)
+is **fully occupied from 32 to 64**, so the first free slot is 65:
+
+```
+32:5C 33:25 34:26 35:25 36:25 37:59 38:5A 39:59 40:25 41:5A 42:5A 43:25 44:5B
+45:25 46:59 47:5A 48:25 49:26 50:25 51:59 52:25 53:25 54:5B 55:5B 56:5B 57:25
+58:5D 59:25 60:25 61:25 62:26 63:26 64:25 65:5D <- the fan, this frame
+```
+
+The engine's allocator at the same player position (`px=1c8d py=103`) has **exactly one free
+slot below 65, and it is 62**:
+
+```
+[SLZ1 USED] 32..61 63..73
+```
+
+So the fan takes 62. Slot 63 — the monitor — is unchanged and correct in both.
+
+### The engine holds the same objects, in shifted slots
+
+Type counts over slots 32-65 match the ROM exactly (`5C`x1, `25`x15, `26`x4, `59`x4, `5A`x4,
+`5B`x4, `5D`x1 before the fan reloads). This is **not** a missing or extra object; it is a
+permutation. Matching by identity, the engine's block 56-61 is the ROM's 57-62 shifted down
+one — `Ring@1d98`, `Fan@1dc8`, `Ring@1dc8`, `Ring@1de0`, `Ring@1cf8`, `Monitor@1c10,0651` —
+and the two re-align at 63 (`Monitor@1b90`). The one-slot shift is what leaves 62 free.
+
+The shift starts at the SLZ staircase's slot block. The ROM's is parent 44 plus children
+54, 55, 56 (`object_appeared`: parent `0x5B@0x1E10,0x0270` at frame 3956, the three children at
+3957, matching `Stair_Main`'s four blocks — `docs/s1disasm/_incObj/5B SLZ Staircase.asm:36-46,66`
+— allocated on the parent's first `ExecuteObjects` pass via `FindNextFreeObj`). The engine's is
+parent 44 plus reserved children **53, 54, 55**; its single folded instance executes from the
+highest child, which is why `execOrder` shows it at 55.
+
+**One hypothesis killed by reading the code rather than assuming it:** that the engine reserves
+the children a frame early, at placement. It does not — `Sonic1StaircaseObjectInstance.update()`
+calls `reserveChildSlots()` on the parent's first update, which is the ROM's timing. The child
+block is one slot low because slot 53 was already free in the engine and not in the ROM.
+
+### Where the origin recedes to
+
+Slot 53 in the ROM is the ring `0x25@0x1E68,0x04A0`, placed on frame 3956 — the same frame as
+the staircase parent, before the children are allocated on 3957. The engine places that same
+ring at 52. Going back further, the ROM put `Ring@0x1DB0` in slot 52 at frame 3866 (skipping
+49-51, all occupied) while the engine put it in 49; and the ROM put `Monitor@0x1CF0,0x0151` in
+slot 49 at 3866-adjacent frame 3856, four frames after a ring vacated 49 at 3852, while the
+engine gave that monitor slot 50.
+
+So the earliest divergence measurable in this band is around **slots 49-53 between frames 3852
+and 3956** — roughly 350 frames before the fan's reload and 450 before the symptom at 4305 —
+and it is an allocation-ordering difference, not an object-lifetime one. Pinning its first
+frame needs a per-frame slot-table diff, not another single-frame probe.
+
+**Next measurement, and it is now cheap:** diff the engine's dynamic slot table against the
+fixture's `slot_dump`/`object_appeared`/`object_removed` stream frame by frame, and report the
+first frame at which they disagree. That instrument is worth building as a reusable harness
+rather than a throwaway probe — rule 48 says slot identity is observable behaviour, and this
+segment shows a single slot's placement propagating 450 frames into a physics divergence.
+
+**Not a candidate for a local fix.** Nothing here should be corrected by nudging the fan or the
+staircase into a different slot; the ordering has to fall out of the allocation history. Any
+slot number chosen to make frame 4305 land is a fitted model by construction.

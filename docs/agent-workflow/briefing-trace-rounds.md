@@ -1408,6 +1408,27 @@ Practical consequences:
 - **Do not reorder a pair by anything measured off a fixture.** The ordering must follow from the
   ROM's own allocation, or it is a fitted model that will desync the first different recording.
 
+**Sharpened by two later rounds.** The allocator names the guarantee, and the init's shape names
+how much happens on the creation frame:
+
+- `AllocateObjectAfterCurrent` returns a slot *ahead* of the current pass, so the object runs on
+  its creation frame — and if its init falls through into its first routine rather than returning,
+  that frame includes a routine step as well.
+- plain `AllocateObject` scans from the bottom and **may or may not** return a slot ahead of the
+  pass. This is the caveat that matters: the allocator tells you the placement is not guaranteed,
+  and only the recording tells you which way it went in a given run. One round settled it by
+  finding the object's code pointer still on its init routine at the end of its creation frame.
+
+Two engine defects at one seam cancelled because of this pair — an object started a frame early
+because its slot was assumed ahead of the pass, and a second started a frame late because its
+init's fall-through was not modelled. Fixing either alone moved every downstream event by a row.
+
+**The fixtures can answer these directly.** `aux_state.jsonl` carries `slot_dump`,
+`object_appeared` and `object_removed` events — the ROM's own slot table and allocation history.
+Slot-ordering questions are measurable against the recording rather than inferable, and a
+frame-by-frame diff of the engine's dynamic slot table against that stream is the instrument these
+questions want.
+
 ## Forty-ninth rule: prove your edit is on the path before believing a null
 
 A round retracted a hypothesis on two null results — the change made no difference, twice, on two
