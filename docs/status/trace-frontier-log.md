@@ -98692,3 +98692,66 @@ fail at segment 33 — develop on ownership, the sidecar arm on finishing in `LE
 
 Why the `lz3` arm is twelve frames late and the following segment's four. Both sit after their
 segment's first physics mismatch, which is suggestive and not evidence.
+
+## 2026-08-20 — S1's two late PLC arms have two different causes, neither in the PLC
+
+Round `s1-plc-admission-r2`, continued. Both arms attributed; nothing landed; probes reverted.
+
+**Trigger, not submission path, in both cases.** Every queue mutation instrumented with its
+caller: in `lz3` the engine calls `replaceQueued(plc=16)` and arms in the same frame, with the
+queue idle and nothing blocking for the preceding two thousand frames; in `lz2` the identical
+call lands on the recorded edge frame exactly. The event fires late; the path adds nothing.
+
+### `slz1`, four frames late — physics-downstream, confirmed
+
+Engine centre position dumped per row against the trace, corrected for the probe reading
+start-of-frame state. `dy` is **identically zero** across the whole window: the error is purely
+horizontal. `dx` is zero through row 4304, first reaches −1 at **4305** — the frame the comparator
+reports — and then accumulates monotonically to **−33** by 4577, roughly a pixel every three to
+five frames, continuously, in both airborne-rolling and grounded-running stretches. At ~5.5 px
+per frame that puts Sonic at the signpost about five frames late, and both the signpost arm and
+the end-of-act arm are four late. The arithmetic fits.
+
+So the comparator's reported single pixel is the **onset, not the size**. A sub-pixel
+x-accumulation difference is the obvious family — develop's `slz3` first mismatch is
+`x_sub rom=0xF500 engine=0x0000` — but that is not established and wants its own round.
+
+### `lz3`, twelve frames late — NOT physics-downstream
+
+Same measurement over the act end: **`dx` and `dy` are zero on every row**. Position is exact
+through the act end, so the positional model is refuted here.
+
+The caller probe localises it: `lz3`'s end-of-act arm comes from the **Egg Prison capsule**, not
+the signpost. Phases across all five Egg Prison acts in the run — capsule open, the 150-frame
+animal-spawn window, then the wait for the last animal to leave:
+
+| segment | zone | animal-departure wait | clear | recorded |
+|---|---|---|---|---|
+| 5 | ghz3_2 | 146 | 7992 | 7992 |
+| 14 | mz3_2 | 199 | 10806 | 10806 |
+| 21 | syz3_2 | 145 | 11479 | 11479 |
+| 28 | slz3 | 135 | 8949 | 8949 |
+| **25** | **lz3** | **178** | **12259** | **12247** |
+
+Everything to `END_ACT` is exact — the capsule opens on time and the spawn window is right. All
+twelve frames sit in the wait for the last animal to leave: engine 179 frames against the ROM's
+167.
+
+Bounded target: `Sonic1AnimalsObjectInstance`. Animals are per-zone species pairs, and are deleted
+only when the on-screen bounds test passes. Four zones' pairs clear on the exact ROM frame and
+LZ's pair takes twelve frames longer, so it is that pair's motion or the bounds test for it —
+**not water**, and not the RNG, which matches everywhere else.
+
+### Consequences
+
+The S3K exposure to unbounded ordinal desync is **real but latent**: both late arms are ordinary
+accuracy bugs of a kind any chain can carry, and it is the recorded-admission fragility that
+converts them into unbounded cost. A resynchronisation design is worth having and is not urgent.
+
+The sidecars' remaining cost has two owners, **both outside the timing port**. Fixing the LZ
+animal departure and the `slz1` horizontal drift collapses the roughly 74,000 errors without
+touching the contract, and makes the parked ordinal-rebase counterfactual unnecessary rather than
+merely unwise.
+
+**Not established:** the mechanism inside the animals object for LZ, and the mechanism behind the
+`slz1` horizontal shortfall. Symptom and location for both, not cause.
