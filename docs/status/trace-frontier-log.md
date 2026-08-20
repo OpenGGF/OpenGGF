@@ -99616,3 +99616,50 @@ segment 27 falls 14233 → 5212. Segments 28-33 still collapse, now owned by the
 drift** — `dx` accumulating 0 → −33 from rom frame 4305, which puts Sonic ~30 px behind and makes
 him reach the signpost about five frames late. That is the parked follow-up; the LZ3 animal-wait
 defect is closed.
+
+## 2026-08-20 — The window's payload is title card plus level art, and the row model is game-neutral
+
+**`#101`/`#102` identified.** Brute-force fingerprint inversion over the whole ROM,
+filtered to the module counts the recorded direct-queue completions imply (three for
+`#101`, five for `#102`):
+
+- `#101`: `src=0x3B9668 clen=3131 dest=0x0000 dlen=9056 mods=3`
+- `#102`: `src=0x3BAE7A clen=8779 dest=0x2360 dlen=18272 mods=5`
+
+The destinations are contiguous from VRAM `$0000`, and both addresses come straight out of
+`LevelLoadBlock` entry 2 (HCZ1) at `0x091F0C + 2*24`, read from the ROM: `art1=0x3B9668`
+(PLC index `$0E`), `art2=0x3BAE7A` (PLC index `$0F`). That is the
+`levartptrs $E, $F, $C, HCZ_8x8_Primary_KosM, HCZ1_8x8_Secondary_KosM, ...` row
+(sonic3k.asm:199435, s3.asm:115600). So they are HCZ1's primary and secondary 8x8 level
+art, and the window's full payload is **four title-card archives plus two level-art
+archives** — the six missing ordinals exactly. The engine already reads these same two
+pointers from the same ROM table; it decompresses them outside the hardware-timing port,
+so they produce no KosM submission.
+
+**The row model does not need a per-game shape.** Measured across every run fixture, by
+looking for a `zone_act_state` row with `Game_Mode` bit 7 set and rows remaining after it:
+
+| Game | Level segments | `zone_act_state` rows | Segments carrying a load tail |
+|---|---|---|---|
+| S1 | 30 | 0 | 0 |
+| S2 | 31 | 189,620 | 0 (bit 7 never set) |
+| S3K | — | — | ~110, tails of 65-164 rows |
+
+S1 emits no `zone_act_state` rows at all, so `levelLoopRowCount` returns `frameCount` for
+every S1 segment and `pastRecordedLevelLoop` is always false there. S2 emits them in
+quantity but never with bit 7 set, because its recorder cuts each segment before the ROM
+leaves the level loop. A model keyed on the recording's own bit 7 — which is what
+`levelLoopRowCount` already reads — is therefore inert for S1 and S2 **by data**, not by a
+game condition. That is the shape to write; a per-game carve-out would be both a rule-2
+violation and unnecessary.
+
+**Scope of the row-ownership round.** The tail is not a one-off at AIZ2→HCZ1: in
+`s3k-sonic-tails-complete-emeralds` alone, thirteen level segments carry a load tail whose
+destination is a real zone advance (zones 1,2,3,5,6,7,4,8,9,10,11,12,13), twelve of them
+after HCZ1. Every S3K bonus and special-stage boundary carries one too, and those are
+crossed today only because they have transition records and caller-owned return cards. So
+this is the gate for the rest of the S3K chain rather than a local repair, and the geyser
+throw plus the KosM ordinal skew are its acceptance test. The full matrix is the gate for
+landing it: shared trace-drive code can regress S1 and S2 through paths other than this
+predicate, so "inert by data" is a reason to expect a clean matrix, not a substitute for
+running one.
