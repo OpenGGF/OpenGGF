@@ -96593,3 +96593,108 @@ An intermediate arm carrying only fixes (1) and (2) also showed
 `TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` failing;
 it is absent from the landed arm and cannot be reached by an S3K AIZ object.
 Recorded as order-dependent noise, not as attributed.
+## 2026-08-20 -- S3K chain: the late HCZ load is a late AIZ2 exit, not a deferred load
+
+Worktree `ai-s3k-hcz-load-timing-r1`, branch `bugfix/ai-s3k-hcz-load-timing-r1`, over
+`91424a8c8`. Diagnosis only -- no runtime change is proposed or landed. Base reproduces
+the previous entry exactly: walk-failure `raw_frame moved backward: previous=33, current=0`,
+segment 4 45 errors, segment 8 10375 errors (first non-camera mismatch frame 1973
+`sidekick_y`).
+
+Command (~50 s, so the chain remains the iteration harness):
+
+```bash
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds1.rom.path=$PWD/s1.gen -Ds2.rom.path=$PWD/s2.gen -Ds3k.rom.path=$PWD/s3k.gen test
+```
+
+### The previous entry's open question is answered: candidate 2
+
+**The engine does not defer the HCZ load. It reaches the AIZ2 exit late, and everything
+downstream shifts.** Measured with temporary probes on `TraceRunReplayWalker`'s row latch,
+`S3kKosDecompressionQueue.queueInspected`, `LevelManager.loadLevel` and `TraceBinder`'s
+camera comparison (all reverted).
+
+- The engine's Kosinski ordinals **128-143 are submitted in lockstep with the recording**
+  (engine `#141` at `aiz_5` row 6111 versus a recorded completion at raw frame 6115;
+  `#142` 6117/6117; `#143` 6119/6119). Nothing is deferred up to that point.
+- `LevelManager.loadLevel(index=194, FULL)` -- the HCZ load -- fires at **segment 9 row 33**,
+  i.e. BK2 53641. The recording's load is at `aiz_5` row 7054 (BK2 53486), where
+  `gameplay_frame_counter`, `player_x/y` and `player_routine` all go to zero as `Level:`
+  clears `Object_RAM`. The engine's load is **155 raw frames late**, which is why ordinals
+  144-155 are still unsubmitted at the crossing.
+
+### Where the AIZ2 exit actually is, and what the engine does instead
+
+The recording's AIZ2 exit is the collapsing draw bridge on the sinking battleship:
+
+- `aux_state` slot 35 carries object code `0x0002B2E8` = `AIZDrawBridge_WaitCollapseTrigger`
+  (`sonic3k.asm:59614-59623`). At frame **6961** it sees `_unkFAA9`, installs `loc_2B452`
+  with `$34 = $E`, and spawns the falling pieces.
+- 15 frames later, at frame **6976**, `loc_2B452` (`sonic3k.asm:59769-59791`) clears both
+  standing bits, sets `Status_InAir`, writes `anim = $1B` and deletes itself. The trace
+  shows exactly that: slot 35 disappears, Sonic's status goes `0x08 -> 0x02`,
+  `on_object=False`, `anim_id=27`.
+- Sonic then free-falls at fixed `x = 0x4AD8` with `y_vel` accumulating `$38`/frame from
+  zero -- straight out of the level bottom past `Camera_max_Y_pos = $15A`
+  (`AIZ2_SonicResize6`, `sonic3k.asm:39140-39146`) -- and the HCZ load follows at row 7054.
+
+The engine reaches `_unkFAA9` (`Aiz2BossEndSequenceState.isButtonPressed()`) at row
+**6982**, 21 rows late; its own `COLLAPSE_DELAY = 0x0E` then runs faithfully and it ejects
+its riders at row ~6998 instead of 6976. Its Sonic never free-falls: from row 6998 his `y`
+drifts `0x1C0 -> 0x203` over 128 frames (~0.6 px/frame, not `$38`/frame gravity), i.e. he
+is standing on something again -- so the level bottom is never crossed and the load waits
+for the crossing.
+
+### The origin: the cutscene Knuckles is spawned 19 rows late
+
+`_unkFAA9` is published by `S3kCutsceneButtonObjectInstance` when the cutscene Knuckles
+enters its range. Probing that range test shows the engine's Knuckles walking an
+**identical trajectory offset by a constant 19-21 rows** -- the engine reaches the exact
+press position `(0x4B18, 0x0176)` at row 6981, the recording at 6961.
+
+Phase transitions (engine probe versus `aux_state` slot 5 routine changes):
+
+| Transition | ROM frame | Engine row | Delta |
+|---|---|---|---|
+| spawn (`loc_61FC2`) | 6667 (implied) | 6686 | +19 |
+| `routine 4` / RUN_IN | 6787 | 6806 | +19 |
+| `routine 6` / LAUGH_1 | 6829 | 6848 | +19 |
+| `routine 8` / JUMP | 6925 | 6944 | +19 |
+
+**Every phase duration is already ROM-exact** -- the `(2*60)-1` init wait is the literal
+`move.w #(2*60)-1,$2E(a0)` at `sonic3k.asm:128804`, the `$5F` laugh timer is
+`move.w #$5F,$2E(a0)` in `loc_6203C` (`sonic3k.asm:128840`), and the 41-frame run-in is
+`x_pos - 2` per frame down to `$4B3C` in `loc_62022` (`sonic3k.asm:128827-128835`). The entire shift is inherited from the
+spawn of `CutsceneKnucklesAiz2Instance` by `Aiz2BossEndSequenceController`, 19 rows after
+the recording's.
+
+### Not established
+
+- **Why the spawn is 19 rows late.** Not measured. It is upstream in the AIZ2 end-boss
+  sequence and is the next frontier.
+- **The second, larger contributor.** 19 rows of spawn skew cannot account for 155 raw
+  frames. After ejection the engine's Sonic does not free-fall; something re-catches him
+  (the sinking-ship solids at slots 36/37, or a spawned falling bridge segment, are the
+  obvious suspects). Whoever fixes the 19 must expect the load still to be ~130 frames
+  late until this is fixed too.
+- Nothing here touched `HardwareTimingReplayPort`, the unrepresented-gap question, or the
+  segment 4 (45) / segment 8 (10375) physics axes. No candidate fix was written, so no
+  two-arm measurement was owed or taken.
+
+### Correction to the segment 4 camera entry's default-suite line
+
+That entry reported the fix arm with three fewer errors than the control and labelled it
+unattributed noise. Sharpened by the same round afterwards: all three are
+`TestGameLoopSpecialStageEntryPresentation` `Runtime Failed to initialize`, and the arms differ
+**13 against 4** on `Failed to initialize` overall — a GLFW/headless-init failure mode, i.e. a
+**contention artefact concentrated in the control arm** while five rounds were running suites
+concurrently. It must be read as *the control arm was the contaminated one*, not as any
+improvement from the change. Nothing in that round's verdict rests on it: the only claim taken
+from the default suite is that no new failures appeared in the fix arm, and both
+`-Ptrace-replay` arms carry zero `Failed to initialize` and zero `liblwjgl` hits.
+
+Integrity check worth reusing: both `-Ptrace-replay` arms ran **155 test classes, identical set
+by name**, with the same `796 run / 4 skipped` denominator. A truncated or memory-starved arm
+shows a short class list, not merely a lower failure count — so comparing the class *set* is a
+stronger check than comparing totals.
