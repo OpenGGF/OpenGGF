@@ -98830,3 +98830,81 @@ candidate-only differences are all order-dependent classes unrelated to run coor
 (`TestS3kSnaleBlasterBadnik` reflection, `TestSonic3kButtonObjectInstance`,
 `TestGameLoopSpecialStageRewindDebugBoundary`), each passing in isolation in both arms.
 `TestS2EhzHalfpipeRoundTripChain` green on the candidate.
+
+## 2026-08-20 — S3K Sonic+Tails chain: segment 9 admitted; frontier moves into HCZ1 art
+
+Command (both arms, JDK 21, all three ROM paths explicit):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test
+```
+
+Branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `bdfca1687`; same-tree control at
+`bdfca1687`. Row convention: 0-based indices into `aiz_5`'s `physics.csv`,
+`row = cursor - 46432`.
+
+**Before:** FAIL, 2 axes — `coordinator denied segment 9 admission in phase TRANSITION_GAP`,
+plus segment 8's physics.
+
+**After:** FAIL, 2 axes — `java.lang.IllegalStateException: Unable to queue HCZ geyser KosM
+art` at `HCZWaterWallObjectInstance.queueArtIfNeeded` (`:489`, via `updateHorzArtLoad:267`),
+plus the same segment 8 physics axis. The walk now crosses the seam and runs HCZ1.
+
+### The three rows, attributed
+
+The denial was `sharedBk2Cursor = 53605` against segment 9's `bk2FrameOffset = 53608`.
+
+- **Two rows** were segment 8's own. The drive walks a segment for
+  `remainingSegmentFrames`, a count of FRAMES, but the cursor it must land is a count of
+  ROWS. Instrumented, exactly two steps inside segment 8 consumed no row — at local cursor
+  7032 and 7053, the first and last rows of the transition freeze block. The budget cannot
+  see them, so the walk ended at 53605 instead of 53607.
+- **One row** is the inter-segment gap. **No adjacent segment pair in this manifest is
+  contiguous** — all 62 pairs leave at least one movie row between `offset + count` and the
+  next `offset`. Level-to-level pairs leave one; special-stage returns leave 1470-2489.
+
+### Why the obvious fix is wrong — counter-example, measured
+
+Anchoring the cursor to the destination's first recorded row (what the sibling branch
+effectively achieves via `scheduleSessionAtNextLevelLoad`) **regresses S2**. Its
+`seg4_ehz1 -> seg5_ehz2` boundary takes the same already-loaded branch across a **171-row**
+gap, and it works today because the source's frame budget exceeds the rows it owes, so the
+surplus frames carry the cursor across. A seek there steps over recorded rows. An anchor
+attempt turned the green `TestS2CompleteEmeraldRunPrefix` red with
+`cannot anchor seg5_ehz2 ... the shared cursor is at 32783 but seg4_ehz1 declares rows
+through 32760`; it is committed with that measurement rather than kept.
+
+Equally, replacing the frame budget with "step until rows are consumed" is **not**
+behaviour-preserving — it removes the surplus stepping S2 depends on. The landed form is
+strictly additive: budget first, then top up while rows remain.
+
+### What landed
+
+Both in `AbstractRunChainTest`, test-harness only:
+
+1. `topUpUnconsumedSegmentRows` — after the frame budget, step while
+   `hasUnconsumedRecordedRows` (the comparator's own answer about its own cursor, the same
+   predicate the freeze consults), bounded by the manifest-derived `stepCap`.
+2. `admitPlainLevelBoundaryWhenReady` — poll admission and step while the coordinator
+   denies, the shape `admitLevelWhenReady` already applies to boundaries with a transition
+   record. Real engine frames, no seek.
+
+### Suite state
+
+`-Ptrace-replay`: 800 tests, 6 failures in **both** arms; identical failing-summary sets;
+identical 155-class name sets; equal `Tests run: 0,` counts, so neither arm truncated. (The
+S3K chain's summary line is unchanged at "2 axis/axes" — its underlying axes changed, which
+the full message shows.) S1 chain 22 axes and S2 chain 14 axes unchanged;
+`TestS2CompleteEmeraldRunPrefix` and `TestS2EhzHalfpipeRoundTripChain` green. `-Pguards`:
+green on both arms. Default suite: 15194 tests, 54F+67E (candidate) against 52F+67E
+(control); the differences are `Sonic2SpecialStageLagModelValidationTest` failing in both
+arms on a different bucket, and the order-dependent
+`TestGameLoopSpecialStageRewindDebugBoundary` trio and `TestSonic3kButtonObjectInstance`,
+each passing in isolation in both arms.
+
+### Next
+
+`HCZWaterWallObjectInstance.queueArtIfNeeded` throwing is engine parity work, not run
+coordination. Segment 8's physics — 8960 errors, first at row 1973 `sidekick_y` rom
+`0x0146` engine `0x014B` — remains the larger frontier, along with the 18 unmatched
+`aiz_5` hardware completions in rows 7056-7155 that are present in the control too.
