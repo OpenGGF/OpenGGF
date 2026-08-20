@@ -4,6 +4,10 @@ import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance;
@@ -188,9 +192,31 @@ public class Sonic2SuperStateController extends SuperStateController {
         // Spawn Super Sonic stars sparkle effect (Obj7E)
         if (starsObject == null) {
             starsObject = new SuperSonicStarsObjectInstance(player);
-            GameServices.level().getObjectManager().addDynamicObject(starsObject);
+            addStarsObject(starsObject);
         }
         LOGGER.info("Super Sonic activated (S2)");
+    }
+
+    /**
+     * Places the super-form stars in the SST the game's ROM owns for it.
+     *
+     * <p>{@code ObjID_SuperSonicStars} is written straight into the fixed
+     * {@code SuperSonicStars} SST and never runs {@code FindFreeObj}, so
+     * allocating one from the dynamic pool would consume a level-object slot the
+     * ROM never consumes and displace every later object -- and SST order is
+     * execution order. See {@link PowerUpRules#superStarsFixedSlotIndex()}.
+     * A negative index keeps ordinary dynamic allocation.
+     */
+    private void addStarsObject(SuperSonicStarsObjectInstance stars) {
+        ObjectManager objects = GameServices.level().getObjectManager();
+        GameRules rules = player != null ? player.getGameRules() : null;
+        PowerUpRules powerUp = rules != null ? rules.powerUp() : null;
+        int fixedSlot = powerUp != null ? powerUp.superStarsFixedSlotIndex() : -1;
+        if (fixedSlot >= 0) {
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objects, stars, fixedSlot);
+            return;
+        }
+        objects.addDynamicObject(stars);
     }
 
     @Override

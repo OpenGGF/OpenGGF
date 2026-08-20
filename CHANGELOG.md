@@ -32,6 +32,16 @@ All notable changes to the OpenGGF project are documented in this file.
   the same pass that created it and the creation frame is dispatch 1, whose carry
   still yields a zero integer step. The pre-charge therefore moved the whole
   end-of-act camera pan one frame early. All three compensations are removed.
+- **Sonic 2's Super Sonic stars stopped consuming a level-object slot.**
+  `Sonic2SuperStateController` allocated `Obj7E` through the dynamic pool, but the
+  ROM writes `ObjID_SuperSonicStars` straight into the fixed `SuperSonicStars` SST
+  (`docs/s2disasm/s2.asm:26209,37481`, second entry of `LevelOnly_Object_RAM`,
+  `docs/s2disasm/s2.constants.asm:1149-1155`) and never runs `FindFreeObj`. A pool
+  allocation there consumes a slot the ROM never consumes and displaces every later
+  level object, and SST order is execution order. Routed through the existing
+  `PowerUpRules` fixed-slot mechanism as `superStarsFixedSlotIndex` (S2 = 129,
+  S3K = 96 from `Super_stars`, `docs/skdisasm/sonic3k.asm:23504`; S1 has no super
+  form). Found while auditing S1's fixed SSTs, all of which were already correct.
 - **The trace driver no longer dispatches the title-card object twice in one
   represented iteration.** `TraceSuppressedRowClosure.executeUnownedTitleCardWork`
   runs title-card work *not* owned by a represented closure, but

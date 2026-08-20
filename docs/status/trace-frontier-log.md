@@ -96794,3 +96794,109 @@ wants its own round.
 
 Residual 1 is closed. The S2 re-phase and, behind it, the `comparePosition` collapse to
 `start_x`/`start_y` are unblocked as far as this seam is concerned.
+
+## 2026-08-20 - S1 fixed-SST audit: S1 is clean, S2's Super Sonic stars were not
+
+Round `s1-fixed-sst-audit-r1`, scratch worktree, branch
+`bugfix/ai-s1-fixed-sst-audit-r1` off `4637322cb`. Not pushed.
+
+### The complete S1 fixed-SST set, enumerated from `docs/s1disasm/_Variables.asm:45-87`
+
+`FindFreeObj` scans from `v_lvlobjspace` = slot 32 (`sub FindFreeObj.asm:10-11`), so
+every SST below 32 is unreachable by the allocator. `ObjectSlotLayout.SONIC_1` is
+`(32, 96)` and matches. In-level owners:
+
+| Slot(s) | Label | ROM writer | Engine owner | Pool? |
+|---|---|---|---|---|
+| 0 | `v_player` | level init | playable sprite | no |
+| 1 | `v_hud` | `sonic.asm:2875,3630` | HUD renderer, not an object | no |
+| 2-5 | `v_titlecard` +3 | `sonic.asm:2811,2831` | `TitleCardProvider` / coordinator | no |
+| 6 | `v_shieldobj` | `26, 2E Monitors...asm:320` | `PowerUpRules.shieldObjectFixedSlotIndex` = 6 | routed |
+| 8-11 | `v_starsobj1-4` | `26, 2E Monitors...asm:332-339` | one stars object at `invincibilityStarsFixedSlotIndex` = 8 | routed |
+| 12 | `v_splash` | `01 Sonic.asm:274,299` | `waterSplashFixedSlotIndex` = 12 | routed |
+| 13 | `v_sonicbubbles` | `01 Sonic.asm:256` | `Sonic1FixedAirCountdownManager`, a manager | no |
+| 23-29 | `v_endcard` +6 | `0D Signpost.asm:166` | `Sonic1FixedEndCardSlot.SLOT` = 23 | routed |
+| 30-31 | `v_watersurface1/2` | `sonic.asm:2890-2893` | `Sonic1WaterSurfaceManager`, a manager | no |
+
+**No remaining S1 fixed SST is allocated from the dynamic pool.** The defect class the
+previous round found with the water splash is retired for S1. Note that the ROM
+populates `v_starsobj2-4` (9-11) and the engine does not model them as separate
+objects; that under-populates low slots but cannot displace a level object, because
+the allocator never scans below 32.
+
+### Empirical confirmation
+
+`lz1_2`'s `aux_state.jsonl` `object_appeared` stream restricted to slots < 32 lists
+exactly 2-5 (`0x34`), 6 (`0x38`), 12 (`0x08`), 13 (`0x0A`) and 23-29 (`0x3A`) --
+the same set, with nothing unexpected. (30/31 predate frame 0 and `slot_dump` only
+covers >= 32, so they rest on the disassembly.)
+
+A temporary `SlotAllocator` allocate/release probe (reverted before commit) over the
+whole `lz1_2` segment, aligned to the ROM `object_appeared` stream for slots >= 32,
+gives 1248 ROM allocations against 1275 engine allocations at a 0.958 sequence match
+with **no sustained offset** -- the signature a stolen slot would produce. The 63
+differences are isolated single items, and the pre-divergence ones are all ROM-only
+`0x27` explosion / `0x37` ring-loss allocations plus one-frame skews, a separate
+question from fixed-SST ownership.
+
+### The one real finding, in S2
+
+S2 and S3K place their fixed SSTs *above* the dynamic pool as well as below it
+(`Reserved_Object_RAM` 0-15 below plus `LevelOnly_Object_RAM` 128-143 above for S2;
+`Level_object_RAM` 93+ for S3K) -- above rather than below, but equally outside it,
+so the same defect applies. Their shield/stars/dust entries were already routed
+(S2 134/136/132/133, S3K 100/102/98/99, which independent slot arithmetic from the
+constants files confirms), S2's reserved band runs through
+`Sonic2LevelEventManager.updateFixedInLevelObjectsBeforeDynamicObjects`, and S3K's
+wave splash through `InitialWaveSplashSstOwner`.
+
+`Sonic2SuperStateController` was the exception: it called
+`addDynamicObject(new SuperSonicStarsObjectInstance(...))`, while the ROM writes
+`ObjID_SuperSonicStars` into the fixed `SuperSonicStars` SST
+(`docs/s2disasm/s2.asm:26209,37481`; the ROM's own comment names `$FFFFD040`,
+= `Object_RAM` + `$40`*129). Added `PowerUpRules.superStarsFixedSlotIndex`
+(S1 = -1, S2 = 129, S3K = 96) and routed the call site through
+`ObjectLifetimeOps.addDynamicAtReservedSlot`.
+
+### Measured
+
+Same-tree control at `4637322cb`; `-Dmse=off`, `-Dsurefire.runOrder=alphabetical`
+on both arms, all three ROM paths explicit, JDK 21, arms serial.
+
+- `-Ptrace-replay`: **796 tests / 6 failures / 0 errors / 4 skipped on both arms.**
+  Control run three times (twice in a second worktree at `4637322cb`, once
+  same-tree from a detached checkout of `4637322cb`), fix run twice. The three
+  complete-run chains and the two S3K/S2 segment failures appear in every run.
+  The fix arm's *first* run reported 5, with
+  `TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart`
+  green; its second run reported 6 with that test red again, so the 5 was a flake
+  in the fix arm, not a control-side one. **No frontier moved in either
+  direction.**
+- `-Pguards`: 500/500, no budget ratchet needed (the removed raw call site is not in
+  the object package the `RAW_ADD_DYNAMIC_OBJECT_*` budget covers).
+- Default suite: **15196 tests / 52 failures / 64 errors / 18 skipped on both arms**,
+  arms run in parallel in separate worktrees. Diffed by message, the failure sets are
+  identical except for two known order-dependent items -- the
+  `Sonic2SpecialStageLagModelValidationTest` bucket that drifts
+  (`segmentType=3, speedFactor=12` vs `speedFactor=0`) and a
+  `TraceSessionLauncher` identity-hash string. Nothing power-up, super-form or
+  slot-related differs.
+
+### Not established
+
+- **`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` is
+  flaky under `-Ptrace-replay`.** It failed in all three control runs and in one of
+  two fix runs, always the same way: segment 22 came out with `errorCount: 0`, i.e.
+  *cleaner* than its pin expects. Run alone with `-Dtest=`, the class passes 2/2.
+  Both arms use `forkCount=1, reuseForks=true`, so the whole profile shares one JVM;
+  this looks like carried JVM state rather than anything this change touches, but
+  that is a hypothesis, not a measurement. Worth a round of its own -- a
+  characterisation pin that reports green about half the time cannot attribute
+  anything. The S1 chain's reported first-error frame varies with it (3181 vs 3123,
+  different segment states).
+- Whether S2's Super Sonic stars at slot 129 changes any recorded route. No S2
+  fixture in the suite went super in a way that moved a frontier either direction.
+- **Execution order for fixed slots remains diverged** and this change widens the
+  surface slightly: S2's stars now sit at 129, still run in the dynamic fallback
+  pass, where the ROM runs `LevelOnly_Object_RAM` from its own dispatch site.
+  Nothing observed depends on it; not fixed here, per the round's scope.
