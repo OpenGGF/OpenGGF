@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestAizShipBombInstance {
 
     private static final int BOMB_SCRIPT_X = 0x3F5C;
+    /** ROM AIZShipBomb_ReadyDrop: `addq.w #2,$30(a0)` (sonic3k.asm:105392). */
+    private static final int READY_DROP_STEP = 2;
     private static final int PORT_START_Y = 0x0A60;
     private static final int PORT_READY_Y = 0x0A80;
 
@@ -39,10 +41,20 @@ public class TestAizShipBombInstance {
 
         bomb.update(0, null);
 
-        assertEquals(PORT_START_Y, readIntField(bomb, "portYOffset"),
-                "Same-frame execution after allocation should only cover Obj_AIZShipBomb init; ReadyDrop starts next frame");
-        assertEquals(camera.getY(), bomb.getY(),
-                "The bomb should not descend in the port until the first Obj_AIZShipBombMain pass");
+        // Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and the very next
+        // line is the label Obj_AIZShipBombMain, with no rts between them
+        // (docs/skdisasm/sonic3k.asm:105367-105379). Main dispatches routine 0
+        // straight into AIZShipBomb_ReadyDrop (:105384, :105391), whose first
+        // instruction is `addq.w #2,$30(a0)`. The ship allocates the bomb with
+        // AllocateObjectAfterCurrent, so its slot is still ahead of the object
+        // pass and it runs on its creation frame -- init AND one ReadyDrop step.
+        // This previously asserted the opposite, which cost the bomb an extra
+        // frame in the air on every drop of the act.
+        assertEquals(PORT_START_Y + READY_DROP_STEP, readIntField(bomb, "portYOffset"),
+                "The creation-frame pass runs Obj_AIZShipBomb init AND falls through"
+                        + " into the first AIZShipBomb_ReadyDrop step");
+        assertTrue(bomb.getY() > camera.getY(),
+                "That first ReadyDrop step descends the bomb in the port");
     }
 
     @Test
@@ -101,6 +113,17 @@ public class TestAizShipBombInstance {
                 () -> new AizBattleshipInstance(
                         new ObjectSpawn(camera.getX(), baseSecondaryY, 0, 0, 0, false, 0),
                         baseSecondaryY));
+
+        // AIZ2SE_ShipRefresh takes the ship's slot with plain AllocateObject,
+        // not AllocateObjectAfterCurrent (docs/skdisasm/sonic3k.asm:104917-104928),
+        // so the pass that creates it need not reach it -- and in the recorded
+        // run it does not. The first call is therefore that unused creation
+        // pass; it must do nothing at all.
+        advanceShip(ship, 1);
+        assertEquals(0, readIntField(ship, "scriptIndex"),
+                "The creation pass spawns nothing");
+        assertEquals(0x4020 << 16, readIntField(ship, "shipXFixed"),
+                "The creation pass does not advance the secondary camera either");
 
         advanceShip(ship, 420);
         assertEquals(0, readIntField(ship, "scriptIndex"), "The initial $1A4 delay should not spawn a bomb until the counter underflows");
