@@ -847,3 +847,23 @@ So before concluding anything from an absence, ask: could this be absent because
 looked? Check the pipeline (`head`, `grep`, a filter), check whether the thing is excluded by
 design, and check a second source that would show it if it were there. **A negative result is
 scoped to where you looked**, and the cost of confirming the scope is one command.
+
+## Twenty-ninth rule: check a suspicious delta against both endpoints
+
+A round measured that a cursor entered a segment correct and arrived short at its exit, and read
+that as "the segment consumed fewer frames than its rows". It hadn't: the segment consumed every
+row. The shortfall was the **untraversed gap between that segment's last row and the next
+segment's offset** — the movie frames a level load occupies between them.
+
+One subtraction would have caught it: the segment's `offset + rowCount` against the reported
+cursor. They matched exactly. The delta was real and the interpretation was wrong, in the
+direction that sends the next reader hunting inside the segment for a leak that does not exist.
+
+So when a delta appears between two points, compute **both** endpoints from first principles
+before deciding which end moved. "Correct here, wrong there" has at least three readings — this
+end is right, that end is wrong, or the span between them is not what you think it is — and the
+third is the one that gets skipped.
+
+The tell that was available and missed: the round's own story left a loose thread unexplained
+(why a cold start behaved differently), and it did not pull it. **An explanation that leaves one
+of your own observations unaccounted for is not finished**, however well it fits the rest.
