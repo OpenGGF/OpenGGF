@@ -17,6 +17,25 @@ All notable changes to the OpenGGF project are documented in this file.
   rather than from `bk2FrameOffset + rowsConsumed - 1` -- a comparator fact standing in for
   a clock fact, equal to the admission row only while every return consumed the
   destination's row zero.
+- **The AIZ2 battleship and its bombs each got their creation frame wrong, in opposite
+  directions.** `AIZ2SE_ShipRefresh` takes the ship's slot with plain `AllocateObject`
+  (`docs/skdisasm/sonic3k.asm:104917-104928`), so the pass that creates it need not reach it
+  — and in the recorded run it does not: the trace shows slot 4 still holding
+  `Obj_AIZBattleship` at the end of its creation frame and `Obj_AIZBattleshipMain` only on
+  the frame after. The engine advanced the ship on its creation frame, leaving
+  `_unkEE98`'s `-$8800` accumulator one step ahead in its fraction for the rest of the act.
+  Conversely `Obj_AIZShipBomb`'s init falls straight through into `Obj_AIZShipBombMain` with
+  no `rts` (`:105367-105379`), dispatching routine 0 into `AIZShipBomb_ReadyDrop`
+  (`:105384,:105391`), and the ship allocates bombs with `AllocateObjectAfterCurrent` — so a
+  bomb does run on its creation frame, init *and* one `ReadyDrop` step. The engine ran init
+  alone and returned, spending an extra frame in the air.
+  The two cancelled: bomb explosions landed on the recording's rows in 20 of 21 cases while
+  every bomb was dropped a frame early, so fixing either alone made the run worse. Both now
+  land together — all 21 drops match the recording exactly, and the ship's secondary camera
+  no longer drifts a pixel, which is what let a bomb fragment's touch box reach Sonic. On the
+  S3K Sonic-and-Tails run this moves segment 8's first non-camera mismatch from row 3673 to
+  row 4909 and drops its comparator errors from 5020 to 4787.
+
 - **S3K's AutoSpin trigger no longer rolls Tails while a flight or carry owner is driving
   him.** Both of `Obj_AutoSpin`'s main routines load Player 2 and then read
   `Tails_CPU_routine`, branching past the crossing check when the word is 4 -- horizontal at

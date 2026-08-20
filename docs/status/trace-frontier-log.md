@@ -100190,3 +100190,69 @@ Two groups flip between runs **within each arm** and are not attributable to thi
 and ten `TestS3kCompleteRunStateDecoder` tests erroring with "test requires ROM". The
 default suite was run twice per arm to establish that: control 53/83 then 52/83, candidate
 52/73 then 53/83.
+
+## 2026-08-20 — S3K segment 8: both creation-frame off-by-ones land together; frontier 3673 -> 4909
+
+Round off `origin/develop` `f77ae5dbc`; same-tree control at `f77ae5dbc`. Row convention:
+0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+**Before:** `segment 8 ... 5020 physics comparator errors, first non-camera mismatch at frame
+3673 field x_speed rom=-0200 engine=0x03F4`.
+
+**After:** `segment 8 ... 4787 ... first non-camera mismatch at frame 4909 field
+sidekick_x_speed rom=-01A9 engine=0x0200`. Row 3673 now takes the hit. The walk-failure axis
+is unchanged (`Unable to queue HCZ geyser KosM art`, its own lane).
+
+### The second off-by-one, measured
+
+The previous entry derived the bomb-drop cadence from the class's comment. Measured now:
+the engine dropped its 21 bombs on rows 2796, 2829, 2862, 2895, 2928, 2961, 3018, 3051,
+3084, 3117, 3150, 3183, 3240, 3273, 3306, 3339, 3372, 3405, 3462, 3527, 3592 — **every one
+exactly one row before** the recording's `0x000504B4` rows (2797, 2830, ...). The drop
+cadence itself was correct: the engine's first drop is on ship update 421, as the ROM's is.
+The whole shift was inherited from the ship's creation-frame lead.
+
+The fall then absorbed it. The ROM's first bomb drops at 2797 and explodes at 2861, a
+**64-row** fall; the engine dropped at 2796 and still exploded at 2861, a **65-row** fall.
+`Obj_AIZShipBomb`'s init ends at `move.w #6,$32(a0)` and is followed immediately by the label
+`Obj_AIZShipBombMain` with no `rts` (`sonic3k.asm:105367-105379`), which dispatches routine 0
+into `AIZShipBomb_ReadyDrop` (`:105384`, `:105391`) and its `addq.w #2,$30(a0)`. The bomb's
+creation-frame pass is init **and** one ReadyDrop step; the engine ran init and returned.
+
+### Both together
+
+- `AizBattleshipInstance` now spends the pass that created it doing nothing, modelling a
+  plain-`AllocateObject` slot the creating pass did not reach.
+- `AizShipBombInstance` no longer returns after its init, modelling the fall-through that an
+  `AllocateObjectAfterCurrent` slot reaches on its own creation frame.
+
+Discriminator: all 21 bomb drops now match the recording's rows **exactly**.
+
+### Two committed tests pinned the wrong behaviour
+
+Both were corrected against the disassembly rather than renumbered:
+
+- `testSameFrameAllocationRunsInitBeforeReadyDrop` asserted `portYOffset == $A60` after the
+  bomb's first pass — "ReadyDrop starts next frame". The ROM's fall-through makes it `$A62`.
+- `testBattleshipBombScriptMatchesRomUnderflowCadence` drove 420 updates from construction.
+  Every one of its pinned counts (420, 1, 32, 1, 99, 32, 1) and every cadence claim is
+  unchanged; one leading call was added for the unused creation pass, plus new assertions
+  that that pass spawns nothing and does not advance the secondary camera.
+
+### Suite state
+
+`-Ptrace-replay`: 800 tests, 6 failures in **both** arms; identical failing sets by full
+message; identical 155-class name sets; equal `Tests run: 0,` counts. `-Pguards` green on
+both arms. Default suite: 15194 both arms, 54F+67E (candidate) against 64F+67E (control);
+every difference is the known order-dependent set — `TestS3kSnaleBlasterBadnik` (12) and
+`TestSonic3kButtonObjectInstance` control-only, the
+`TestGameLoopSpecialStageRewindDebugBoundary` trio candidate-only and re-verified passing in
+isolation in both arms. The `TestTornadoObjectInstance`/`TestWfzTornadoThrusterRendering`
+`NullPointer`s appear in both arms and differ only in surefire's summary formatting.
+
+### Generalises
+
+Two independent instances in one day — this one and an S1 round where plain `AllocateObject`
+placed an object above its spawner and so ran it in the same frame instead of the next — say
+the same thing: **which allocator a spawner uses determines whether the spawned object runs
+that frame, and that is observable behaviour, not an implementation detail.** Worth a rule.
