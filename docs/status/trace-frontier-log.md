@@ -99894,3 +99894,46 @@ change.
 Neither `SHIP_SPEED` nor the `>> 16` is wrong: the ROM's own deltas confirm the rate and the
 zero initial fraction. Any adjustment there would be a constant fitted to this fixture's
 pixel.
+## 2026-08-20 — Submission ordering derived from ROM control flow
+
+Derived from `sonic3k.asm` control flow only; no recorded frame number is used, so it holds
+for any movie.
+
+1. **Title card.** `Level:` installs `Obj_TitleCard` in slot 5 (7735) and enters the locked
+   loop `loc_62CC` (7736-7748): `Process_Kos_Queue`, `Wait_VSync`, `Process_Sprites`,
+   `Render_Sprites`, `Process_Nem_Queue_Init`, `Process_Kos_Module_Queue`, repeating while
+   `objoff_48` is non-zero or the Nem queue is busy. `Obj_TitleCardInit` (62121-62164) runs
+   in that loop's first `Process_Sprites`, queueing its four archives — RedAct `$500`,
+   S3K/SK Zone `$510`, Num1/Num2 `$53D`, zone gfx `$54D` — and setting `st $48(a0)`.
+   `Obj_TitleCardWait` clears it (`clr.w $48(a0)`), releasing the loop.
+2. **Level art.** `Level:` then calls `LoadLevelLoadBlock` (7761 → 9701-9744), which queues
+   the primary 8x8 archive at `d2 = 0` and the secondary at `d2 = d4` where
+   `d4 = (a1)` is the primary archive's uncompressed-size word, then **blocks** at
+   `loc_7870` until `Kos_modules_left` is zero.
+3. **Enemy art.** `Obj_TitleCardWait2` calls `LoadEnemyArt` (62298) later, as the card
+   leaves.
+
+So the order is **title card → level art → enemy art**, which is what the recording shows
+(`#97-#100`, `#101`/`#102`, `#103-#106`) but is established here independently of it. The
+engine currently submits enemy art first, so the ordering is a real constraint on the round.
+
+Two derived facts worth carrying:
+
+- The secondary destination is the primary's uncompressed-size word. The engine's
+  `queueSequentialBatch(rom, sources, 0)` derives the same value from
+  `descriptor.destinationLength() / PATTERN_BYTES`, so its shape is already ROM-correct;
+  the `0x0000` / `0x2360` pair is a confirmation rather than a fit.
+- `LoadLevelLoadBlock` blocks until its modules finish, and its loop body is
+  `Process_Kos_Queue`, `Wait_VSync`, `Process_Nem_Queue_Init`,
+  `Process_Kos_Module_Queue` — **no object pass**, unlike `loc_62CC`.
+
+That last point sharpens the row model and would have been easy to guess wrong. The
+transition window is not one uniform loop: it is the fade, then `loc_62CC` iterations that
+run objects, then `loc_7870` iterations that do not, and the two emit different boundary
+sets. Mapping them onto the port's contract — each iteration one recorded row, with
+`Process_Kos_Queue` at the top of iteration k+1 belonging to row k's tail as
+`HardwareServiceBoundary` already documents, giving `VINT_SERVICE` → `POST_OBJECTS` →
+`PRE_MAIN_LOOP` per row — is consistent with the wall-3 measurement, where the engine
+emitted `PRE_MAIN_LOOP` then `VINT_SERVICE` inside one latched row because the row never
+advanced. That mapping is the one inference here that is not pure ROM reading, and it
+should be confirmed against the recorded boundary sequence before it is relied on.
