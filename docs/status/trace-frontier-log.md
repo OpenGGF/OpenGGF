@@ -93034,3 +93034,57 @@ becomes right once the push-release tail exists to produce the AIZ `0x00` native
 Order for whoever takes it: implement the push-release tail first and confirm AIZ 10744 still
 reads `0x00` with the override still in place; then delete the override and its test; then
 re-measure both fixtures. Doing it in the other order reproduces tonight's red.
+
+## 2026-08-20 - S1 syz2 presentation bridge root-caused: unmodelled ROM `VBlank_Lag`
+
+Branch `bugfix/ai-s1-syz2-bridge-r2`, base `fb576336f`, clean tree — diagnosis only, no
+production change landed.
+
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical
+-Dtest=TestS1CompleteEmeraldRunChain -Dsonic1.rom.path=<s1.gen> test`. Result: FAIL on 3 axes,
+unchanged from the briefed state. The walk failure is `syz2` row 70:
+`queue.s1_nemesis_plc.remaining_work` expected 1 actual 24, and `queued_fingerprints` expected
+6 entries actual 5 — the ROM's list minus its leading entry. Segments 12 (`mz2_3`, 3 errors)
+and 15 (`mz3_2`, 6 errors) belong to the separate held S1-timing line and were not touched.
+
+**Root cause.** ROM `VBlank:` (`docs/s1disasm/sonic.asm:656-657`) tests `v_vblank_routine` and
+branches to `VBlank_Lag` (`:711-746`) when it is zero — the main loop had not yet reached
+`WaitForVBlank`. `VBlank_Lag` runs the sound driver only and calls **no** `ProcessPLC`, then
+falls through to `VBlank_Exit` (`:684`), which still does `addq.l #1,(v_vblank_count).w`. A lag
+V-int therefore **advances the vblank counter while decompressing zero tiles**. The engine has
+no model of this: `Sonic1PlcService.serviceVBlank` services 9 patterns on every bridge row.
+
+**Corpus validation.** Across all 34 segments of `s1-sonic-complete-withemeralds`, comparing
+consecutive rows whose active PLC entry is unchanged: 37 stalls, all 37 on
+`lag_state.lagged=true`; 3331 serviced rows, none on a lag frame. Zero counterexamples in
+either direction.
+
+**Measured engine stream at the bridge** (probe on `Sonic1PlcService.serviceVBlank`, reverted):
+the engine emits the ROM's sequence with row 70 deleted. ROM is `q=7 rem=-1 / q=6 rem=10 /
+q=6 rem=1 / q=6 rem=1 (stall) / q=5 rem=24`; the engine is identical but has no stall row. One
+missing suppression, one service ahead thereafter.
+
+**The four earlier bridges pass for the wrong reason.** `ghz2`, `ghz3`, `mz2`, `mz3`, `syz2`
+and `syz3` are byte-identical in recorded PLC state over rows 64-79. The first four pass only
+because their recorded `vblank_counter` column is **torn** at rows 69/70 (deltas
+`...,1,1,0,2,1,...`) while `syz2`/`syz3` sample cleanly (`...,1,1,1,1,1,...`). The harness
+turns a non-advancing recorded counter into a `PRESENTATION_SUPPRESSED_CLOSURE` row that claims
+`PlcLifecyclePhase.LAG` and services nothing (`TraceRunPresentationClosure.serviceLagClosure`),
+accidentally reproducing the ROM stall. That path models "no V-int ran"; the ROM condition is
+"a V-int ran and took the lag branch". They coincide only where the recorder tore.
+
+**Measurability established — the S2 seam trap does not apply here.** Unlike S2's
+`alignUncomparedInteriorReturnVblank` seam, this bridge runs real production stepping via
+`stepEngineFrame`, and the compared queue values are production-produced. A throwaway
+suppression probe moved the walk failure from `syz2` row 70 to `ghz2` row 71, proving a
+production change is visible at this boundary.
+
+**Not fixed, and why.** The remaining discriminator is whether the 68000 main loop reached
+`WaitForVBlank` before V-int — an execution-overrun condition with no frame-granularity
+predicate, so it is not natively derivable. Sourcing it from the recorded `lag_state` flag is
+barred by hard rule 4 (no committed S1 fixture carries a `hardware_timing` stream, so the port
+is inactive for S1) and directly by `TestS1S2PlcComparisonOnlyGuard`, whose assertions read
+"native PLC services must not depend on trace data" and "trace production sources must not
+control native PLC readiness". Landing either would require deleting a guard assertion that
+states the opposite architectural intent — an escalation, not collateral. No constant was
+introduced and no fixture was modified.
