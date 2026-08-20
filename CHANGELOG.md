@@ -17,6 +17,22 @@ All notable changes to the OpenGGF project are documented in this file.
   frame, with the Super speeds the routine has just installed -- a doubled `$60`
   acceleration step and a `$38` gravity step that the engine's immediate freeze was
   discarding.
+- **The AIZ end boss's bomb no longer falls on the frame that creates it.**
+  `AIZEndBossBomb_Init` plays `sfx_Projectile`, installs `AIZEndBossBomb_Main` as the object's
+  code pointer and leaves via `bra.w AIZEndBossBomb_SetAngleData`, which applies the angle's
+  position offset and velocities and ends in `rts`
+  (`docs/skdisasm/sonic3k.asm:138624-138634`, `:138876-138893`). It does **not** fall through
+  into `AIZEndBossBomb_Main`, so the bomb's `MoveSprite2` (`:138643`) first runs on the pass
+  after the one that created it — and the recording agrees, showing the object already reading
+  `AIZEndBossBomb_Main` on its creation frame while its y stays put until the next.
+  The engine moved it immediately, so every frame-start touch snapshot had the bomb one step
+  further down and its HURT landed on the sidekick a row early. The knockback then inverted as
+  a consequence, not as a second bug: `HurtCharacter` negates its `-$200` when the character is
+  not strictly left of the source (`:21102-21106`), and a row-early hit catches Tails at exactly
+  the bomb's x instead of two pixels left of it. On the S3K Sonic-and-Tails run this moves
+  segment 8's first non-camera mismatch from row 4909 to row 6000 and drops its comparator
+  errors from 4787 to 2288.
+
 - **A title-card release no longer fuses the level's first frame into the card's own.**
   `Level_MainLoop`'s `WaitForVint` is a console frame of its own
   (`docs/s2disasm/s2.asm:5088-5090`), so the iteration that leaves the title card is not

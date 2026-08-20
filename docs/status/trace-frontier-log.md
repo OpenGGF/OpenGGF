@@ -100523,3 +100523,73 @@ ten `TestS3kCompleteRunStateDecoder` "requires ROM" errors, both of which flip r
 
 Segment 15's frame 1725, `dynamic_art.edges rom=[2855, 2856, 2857] engine=[2855, 2856]` —
 the engine one edge short. Unchanged by this work and not investigated here.
+## 2026-08-20 — S3K segment 8 row 4909: the AIZ end boss bomb falls a frame early
+
+Round off `origin/develop` `62cb5c792`; same-tree control at `62cb5c792`. Row convention:
+0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+**Before:** `segment 8 ... 4787 errors, first non-camera mismatch at frame 4909 field
+sidekick_x_speed rom=-01A9 engine=0x0200`.
+
+**After:** `segment 8 ... 2288 ... first non-camera mismatch at frame 6000 field sidekick_x
+rom=0x4997 engine=0x4996`. The walk-failure axis is unchanged (HCZ geyser, its own lane).
+
+### Two symptoms, one defect
+
+Measured per row, Tails' state matches the recording exactly through row 4908 and then:
+
+| row | rom x_speed | eng x_speed | rom g_speed | eng g_speed | rom air | eng air |
+|---|---|---|---|---|---|---|
+| 4908 | FE4B | FE4B | FE4B | FE4B | false | false |
+| 4909 | FE57 | **0200** | FE57 | **0000** | false | **true** |
+| 4910 | FE00 | 0200 | 0000 | 0000 | true | true |
+
+The engine hurts Tails on 4909; the ROM on 4910. The engine's knockback is `+$200` where the
+ROM's is `-$200`, and his y arc is the recording's shifted one row earlier.
+
+**The sign is not a second bug.** `HurtCharacter` sets `x_vel = -$200` and then
+`cmp.w x_pos(a2),d0 / blo.s` — negating unless the character is *strictly* left of the source
+(`sonic3k.asm:21102-21106`). On the ROM's row Tails' post-move x is `0x489A` against the
+bomb's `0x489C`, so the negate is skipped and `-$200` stands. A row early he is at `0x489C`,
+exactly equal, and the ROM's own rule negates to `+$200` — precisely what the engine produced.
+The engine's sign logic is correct; it was answering about the wrong frame.
+
+### The frame
+
+The hazard is slot 18, object code `0x00069908`, descending 4px/frame at Tails' x. Recorded
+y: `0x01E7` at 4908 (its creation frame), `0x01EB` at 4909, `0x01EF` at 4910. Measured, the
+engine's `AizEndBossBombChild` runs its first update on the step producing row 4908 and
+leaves that frame at `0x01EB` — it moved on its creation frame.
+
+Touch state is snapshotted once per frame before any object updates
+(`LevelFrameStep:299` -> `ObjectManager.refreshTouchResponseSnapshot`), so the extra step went
+straight into the row-4909 snapshot: probe showed the bomb at `489c,1eb`, `w=12 h=12`, against
+player box `4894,1f5`, `pw=16 ph=24`, `overlap=true`, with `preUpdateState=true prevList=true
+useCurrent=false preY=1eb`.
+
+`AIZEndBossBomb_Init` (`:138624-138634`) plays the sfx, installs `AIZEndBossBomb_Main` and
+leaves via `bra.w AIZEndBossBomb_SetAngleData`, which applies the angle offsets and velocities
+and **`rts`** (`:138876-138893`). It does not fall through, so `MoveSprite2` (`:138643`) first
+runs on the following pass. The recording confirms it independently: the object's code pointer
+already reads `AIZEndBossBomb_Main` on its creation frame — init ran — while its y is unchanged.
+
+Note this is the **mirror** of the AIZ ship bomb corrected earlier today, whose init *does*
+fall through and which the engine was returning from too early. Same question, opposite answer:
+the allocator decides whether the object runs on its creation frame, and whether its init falls
+through decides how much it does.
+
+### Note on the class's own citation
+
+`AizEndBossBombChild`'s header cites `ROM: loc_698D2`, a label that **does not exist** in
+`docs/skdisasm/sonic3k.asm`. The routine was located instead through
+`AIZEndBossFlame_SpawnBomb` (`:138615-138617`). The stale citation is left as-is rather than
+rewritten blind, but it is not a usable reference.
+
+### Suite state
+
+`-Ptrace-replay`: 800 tests, 6 failures in **both** arms; identical failing sets; identical
+155-class name sets; equal `Tests run: 0,` counts. `-Pguards` green on both arms. Default
+suite: 15194 both arms, 54F+67E (candidate) against 63F+67E (control); every difference is the
+known order-dependent set — `TestS3kSnaleBlasterBadnik` (12) control-only and the
+`TestGameLoopSpecialStageRewindDebugBoundary` trio candidate-only, re-verified passing in
+isolation in both arms. The `TestTornadoObjectInstance` `NullPointer`s are in both arms.
