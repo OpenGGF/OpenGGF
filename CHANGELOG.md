@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The AIZ act-2 gradual camera-boundary workers no longer run a frame ahead of
+  the ROM.** `AizAct2CameraResizeController` pre-charged its `$30` accumulator
+  (`$4000`/`$8000`), added a hard `+2` to the max-Y step on its first dispatch,
+  and skipped that dispatch entirely while the player was airborne. None of that
+  has a ROM counterpart: `Obj_IncLevEndXGradual`/`Obj_IncLevEndYGradual`
+  (`docs/skdisasm/sonic3k.asm:178159`, `:178215`) always add their carry and read
+  the accumulated high word, and `CreateChild1_Normal` allocates each worker via
+  `AllocateObjectAfterCurrent` (`:37917`, `:176924`), which only returns an SST
+  slot *after* the creating object -- so `Process_Sprites` reaches the worker in
+  the same pass that created it and the creation frame is dispatch 1, whose carry
+  still yields a zero integer step. The pre-charge therefore moved the whole
+  end-of-act camera pan one frame early. All three compensations are removed.
 - **The trace driver no longer dispatches the title-card object twice in one
   represented iteration.** `TraceSuppressedRowClosure.executeUnownedTitleCardWork`
   runs title-card work *not* owned by a represented closure, but
