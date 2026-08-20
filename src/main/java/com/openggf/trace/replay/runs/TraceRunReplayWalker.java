@@ -192,6 +192,7 @@ public final class TraceRunReplayWalker {
         private final HardwareTimingInterstitialSpans interstitialSpans;
         private int currentSegment;
         private boolean closed;
+        private boolean crossingSegmentBoundary;
 
         public HardwareTimingCoordinator(
                 TraceReplayFixture fixture,
@@ -244,7 +245,7 @@ public final class TraceRunReplayWalker {
          */
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
-            if (closed) {
+            if (closed || crossingSegmentBoundary) {
                 fixture.enterHardwareTimingGap();
                 return;
             }
@@ -264,6 +265,38 @@ public final class TraceRunReplayWalker {
                 return;
             }
             fixture.enterHardwareTimingGap();
+        }
+
+        /**
+         * Declares that the driver has left the current segment and has not yet
+         * attached the next one.
+         *
+         * <p>The cursor-to-row mapping in {@link #beginPlaybackFrame} assumes
+         * the shared movie cursor only ever enters the next segment's BK2 range
+         * when that segment's recorded rows begin. A driver that crosses a
+         * level-to-level boundary with no transition record breaks that
+         * assumption: the engine's own title-card/level-load choreography keeps
+         * consuming movie frames past the source segment's last row, and the
+         * driver then re-seeks the cursor to the destination offset once the
+         * destination level actually loads. Those choreography frames are
+         * therefore not destination rows -- the destination's row 0 is run
+         * after them -- so latching them would both apply destination edges to
+         * frames the driver is about to replay and drop every destination edge
+         * they walked past.
+         *
+         * <p>While crossing, every playback frame takes the unrepresented-gap
+         * path: nothing is released, nothing is consumed, and no schedule
+         * handoff happens. The handoff instead occurs on the destination's
+         * first genuine row, which is where the source segment's unconsumed
+         * edges are verified.
+         */
+        public void beginSegmentBoundaryCrossing() {
+            crossingSegmentBoundary = true;
+        }
+
+        /** Ends a crossing opened by {@link #beginSegmentBoundaryCrossing}. */
+        public void endSegmentBoundaryCrossing() {
+            crossingSegmentBoundary = false;
         }
 
         /**
