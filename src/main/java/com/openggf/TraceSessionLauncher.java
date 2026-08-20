@@ -1974,10 +1974,23 @@ public final class TraceSessionLauncher {
             return;
         }
         int sourceIndex = entryBoundary.fromSegment();
+        // Deliberately a literal 1, NOT receipt.rowsConsumed(). The budget now
+        // carries the consumed-row term, but this production admission is not
+        // reached by any test today -- the chain harness runs its own anchor and
+        // never this one, and the visual harness self-pauses in the results
+        // screen well before the return -- so the count this receipt carries
+        // here has never been observed. One is the value the budget hardcoded
+        // before the term existed, so passing it preserves this path's behaviour
+        // exactly while the derivation itself becomes layout-independent.
+        // Substituting the receipt's real count is the correct end state and
+        // should be done once the path is reachable and the value measured;
+        // until then it would be an unverified behaviour change, and a count of
+        // 0 would now throw where it previously produced a silent answer.
         runVblankClock.uncomparedInteriorReturnTarget(
                 sourceIndex,
                 runSegments.get(sourceIndex).segment(),
-                destination).ifPresent(objects::initVblaCounter);
+                destination,
+                1).ifPresent(objects::initVblaCounter);
     }
 
     /**

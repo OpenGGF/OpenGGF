@@ -784,10 +784,29 @@ public final class TraceRunReplayWalker {
      * return choreography. The anchor is the final recorded row of the source
      * level; Sonic 1's special-stage path advances its global counter once for
      * every subsequent BK2 row through the destination level's first row.
+     *
+     * <p>{@code returnFramesConsumed} is the number of leading destination rows
+     * the transition fall-through has already executed before the anchor is
+     * applied, exactly as {@code nextFramesConsumed} is on
+     * {@link #interLevelVblankBudget}. The target is the counter value in effect
+     * on the LAST of those consumed rows -- equivalently, the value entering the
+     * first row the comparator will compare -- so the budget runs to
+     * {@code returnOffset + returnFramesConsumed - 1}.
+     *
+     * <p>This term was previously hardcoded to a consumed count of one, which is
+     * what every uncompared return in the committed runs actually does, so the
+     * arithmetic is unchanged for all of them. Carrying it explicitly is what
+     * makes the anchor independent of the seam's row layout: with the count
+     * fixed, any change to the number of rows the seam consumes silently
+     * re-based the comparator against an anchor that had not moved, and the
+     * resulting off-by-one row read was indistinguishable from a physics
+     * divergence. Threading the real count is the precondition for judging such
+     * a change at all.
      */
     public static int uncomparedInteriorReturnVblankBudget(
             TraceRunManifest.Segment sourceLevel,
             TraceRunManifest.Segment returnLevel,
+            int returnFramesConsumed,
             int nonAdvancingMovieRows) {
         if (sourceLevel.traceFrameCount() <= 0) {
             throw new IllegalArgumentException("source level must contain recorded frames");
@@ -795,9 +814,14 @@ public final class TraceRunReplayWalker {
         if (nonAdvancingMovieRows < 0) {
             throw new IllegalArgumentException("frame counts must be non-negative");
         }
+        if (returnFramesConsumed < 1) {
+            throw new IllegalArgumentException(
+                    "an uncompared return must consume at least the destination's first row");
+        }
         int sourceFinalRow = sourceLevel.bk2FrameOffset()
                 + sourceLevel.traceFrameCount() - 1;
-        int movieRows = returnLevel.bk2FrameOffset() - sourceFinalRow;
+        int targetRow = returnLevel.bk2FrameOffset() + returnFramesConsumed - 1;
+        int movieRows = targetRow - sourceFinalRow;
         if (movieRows < 0) {
             throw new IllegalArgumentException("interior return precedes source level tail");
         }

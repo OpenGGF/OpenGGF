@@ -1476,6 +1476,17 @@ abstract class AbstractRunChainTest {
                 // executed row zero.
                 boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
+                    // Pre-seeked SS interior: its single title-card-exit fall-through
+                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
+                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
+                    // Computed BEFORE the anchor because the anchor now consumes it:
+                    // the budget runs to the last consumed destination row.
+                    int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    // The V-blank anchor below consumes framesConsumed, so it is
+                    // computed first. uncomparedInteriorReturnVblankBudget now carries
+                    // the consumed-row term its sibling interLevelVblankBudget always
+                    // had, instead of hardcoding a count of one -- which is what made
+                    // the anchor depend on the seam's row layout.
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
                         if (uncomparedInteriorSourceLevel == null) {
@@ -1484,13 +1495,9 @@ abstract class AbstractRunChainTest {
                         }
                         alignUncomparedInteriorReturnVblank(
                                 uncomparedInteriorSourceLevel, plans.get(i + 1),
-                                uncomparedInteriorSourceVblank);
+                                uncomparedInteriorSourceVblank, framesConsumed);
                         uncomparedInteriorSourceLevel = null;
                     }
-                    // Pre-seeked SS interior: its single title-card-exit fall-through
-                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
-                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
-                    int framesConsumed = playback.getCursorFrame() - returnOffset;
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
                             loop.getCurrentGameMode(), framesConsumed, false,
@@ -3037,13 +3044,14 @@ abstract class AbstractRunChainTest {
     private void alignUncomparedInteriorReturnVblank(
             SegmentPlan sourceLevel,
             SegmentPlan returnLevel,
-            int sourceVblank) {
+            int sourceVblank,
+            int returnFramesConsumed) {
         var profile = GameServices.module().getTracePlaybackProfile();
         if (!profile.alignUncomparedInteriorReturnVblank()) {
             return;
         }
         int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                sourceLevel.segment(), returnLevel.segment(),
+                sourceLevel.segment(), returnLevel.segment(), returnFramesConsumed,
                 TraceRunVblankClock.specialStageReturnLoss(
                         profile, returnLevel.segment()));
         // Movie-clock pacing only: the target derives from the source engine
