@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **A suppressed trace row no longer advances any title-card overlay from the
+  unowned closure.** The deferral in
+  `TraceSuppressedRowClosure.executeUnownedTitleCardWork` previously named two
+  specific providers (held-level-counter owners and object-scan-dispatched
+  in-level tails); it now covers every provider, because the ROM case is general.
+  The title card is an ordinary object in all three games (S1 `id_TitleCard`
+  `docs/s1disasm/sonic.asm:2811`, S2 `Obj34` `docs/s2disasm/s2.asm:27307`, S3K
+  `Obj_TitleCard` `docs/skdisasm/sonic3k.asm:62095`), and both loops that can own
+  it reach their object scan only on a completed iteration — the fresh-level
+  title loops (`sonic.asm:2814-2821`, `s2.asm:4914-4924`,
+  `sonic3k.asm:7737-7747`) and the main level loops (`s2.asm:5088-5105`,
+  `sonic3k.asm:7884-7898`). A lag frame reaches neither: each V-int handler zeroes
+  its own routine selector before dispatching (`sonic.asm:674-675`,
+  `s2.asm:500-501`, `sonic3k.asm:535-536`), and no path out of `VBlank_Lag`
+  (`sonic.asm:712`), `Vint_Lag` (`s2.asm:529`) or `VInt_0` (`sonic3k.asm:566`)
+  runs an object scan. `TitleCardProvider.inLevelTailDispatchedByObjectScan()` is
+  removed with its S2 override, since the general predicate subsumes it.
 - **The trace driver no longer dispatches the title-card object twice in one
   represented iteration.** `TraceSuppressedRowClosure.executeUnownedTitleCardWork`
   runs title-card work *not* owned by a represented closure, but

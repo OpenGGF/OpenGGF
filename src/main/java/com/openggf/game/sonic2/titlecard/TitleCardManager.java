@@ -1230,21 +1230,6 @@ public class TitleCardManager implements TitleCardProvider {
      * returned to LEVEL. This creates the effect of the text floating over
      * the level while the player can already move.
      */
-    /**
-     * The omitted-presentation exit tail is {@code Obj34_WaitAndGoAway}
-     * (docs/s2disasm/s2.asm:27605-27637), an object routine reached only from
-     * {@code Level_MainLoop}'s {@code RunObjects} (s2.asm:5098). It is armed
-     * immediately before that loop (s2.asm:5066-5080) and ticks once per
-     * completed iteration, so it does not advance on a lag frame: {@code V_Int}
-     * stores {@code VintID_Lag} back into {@code Vint_routine} before
-     * dispatching (s2.asm:500-501) and no {@code Vint_Lag} path runs an object
-     * scan.
-     */
-    @Override
-    public boolean inLevelTailDispatchedByObjectScan() {
-        return exitTailActive;
-    }
-
     public boolean isOverlayActive() {
         return state == TitleCardState.TEXT_WAIT ||
                state == TitleCardState.TEXT_EXIT;
