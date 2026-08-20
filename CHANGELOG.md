@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Sonic 2's Super transformation now fires just past the apex, not on the way up.**
+  `Sonic_JumpHeight` ends `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
+  (`docs/s2disasm/s2.asm:37432-37434`). On a big-endian word `tst.b` reads the **high**
+  byte, so the gate is the `$0000..$00FF` window just past the apex, already falling
+  slowly -- the whole of the rise has a high byte of `$FF` and never passes. The engine
+  tested `-$100 <= y_vel <= 0`, which fires on the way up: across the complete-emerald
+  run's ARZ1 segment it transformed Sonic five frames early, at `y_vel = $FF10` rather
+  than at the ROM's `$0028`.
+  The frame the transform lands on is now spent as the ROM spends it, too. `obj_control`
+  is written at `s2.asm:37479` but Obj01 reads that byte at the top of its routine
+  dispatch, so `Sonic_ChgJumpDir` and `ObjectMoveAndFall` still run behind it on the same
+  frame, with the Super speeds the routine has just installed -- a doubled `$60`
+  acceleration step and a `$38` gravity step that the engine's immediate freeze was
+  discarding.
 - **A title-card release no longer fuses the level's first frame into the card's own.**
   `Level_MainLoop`'s `WaitForVint` is a console frame of its own
   (`docs/s2disasm/s2.asm:5088-5090`), so the iteration that leaves the title card is not
