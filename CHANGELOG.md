@@ -20,6 +20,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 
 ### Fixed
+- **The SBZ2 false floor balances on its ROM `obActWid`, which shrinks as the
+  floor crumbles.** `FFloor_Solid` computes the remaining half-width in `d0`,
+  stores it with `move.b d0,obActWid(a0)`, and only then passes
+  `d1 = sonic_solid_width + d0` to `SolidObject`
+  (`docs/s1disasm/_incObj/82, 83 SBZ Eggman Cutscene and Crumbling
+  Floor.asm:265-280`), so the two differ by exactly `$B`. The top-solid fallback
+  in `getBalanceWidthPixels()` handed the balance test `d0 + $B`. The override
+  returns the live `currentHalfWidth` rather than a constant: the value walks
+  from `0x80` down to zero across the fight, so a constant would match the ROM
+  at one width and be wrong at every other while still looking like a fix.
+
+### Fixed
 - **The GHZ bridge balances on its ROM `obActWid` of 128, not its collision
   half-width.** The player stands on the bridge *parent* — the child logs are
   routine `$A` (`Bri_ChildLog`, display only) and `Bri_CheckOnBridge` in the
