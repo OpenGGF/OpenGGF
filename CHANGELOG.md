@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The level timer no longer restarts after a giant-ring special-stage return.**
+  `Save_Level_Data2` copies the whole `Timer` longword to `Saved2_timer` at giant-ring
+  entry (`docs/skdisasm/sonic3k.asm:61745`) and `Load_Starpost_Settings`'s `loc_2D2C2`
+  restores it, forcing `Timer_frame=59` and `Timer_second-=1` (`:61803-61805`); the ROM
+  clears `Timer` only from `Obj_TitleCardWait` (`:62230`), which a giant-ring return never
+  reaches. `BigRingReturnState` carried no timer, so the act's clock restarted at every
+  special-stage detour. The wrong elapsed time selected the wrong `TimeBonus` entry, and the
+  200-point difference tallied at 10 points per frame delayed everything after the results
+  screen by 20 frames.
 - **A giant-ring special-stage return now restores the level timer instead of
   starting the act's clock again.** `Save_Level_Data2` copies the whole `Timer`
   longword to `Saved2_timer` when the entry flash hands off

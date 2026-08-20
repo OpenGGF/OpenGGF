@@ -1148,3 +1148,20 @@ A round today ran its two default-suite arms concurrently — the most contended
 established soundness this way rather than by hoping: identical class sets, identical zero-run
 classes, no fork deaths. That is a defensible measurement taken under bad conditions. Matching
 totals alone would not have been.
+
+## Forty-second rule: diff the whole failure message, not a truncated prefix
+
+A round diffing its two arms truncated each failure message to 200 characters to keep the output
+readable. Two genuinely different S3K failures compared **equal** under that truncation — they
+shared a prefix and differed only in the cursor value near the end.
+
+This is the same family as diffing class names instead of messages (the twenty-fourth rule), and
+it fails the same way: the comparison silently loses the distinguishing part and reports
+"identical", which is exactly the answer a round wants to hear about its control arm.
+
+Truncate for *display* if you must. Never truncate the thing you compare.
+
+The same round caught two contaminated arms in the same session by comparing the **set of class
+names** — a forked-VM crash that cost one arm a whole chain class, and a default-suite run that
+lost three forks. Both had plausible-looking totals. That is the forty-first rule paying for
+itself twice in one round.
