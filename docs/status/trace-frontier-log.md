@@ -100902,3 +100902,99 @@ Candidate against control `44bf8f2fc`, both arms in the same worktree.
 - `-Pguards`: 500 tests, 0 failures.
 - Default suite: 15194 / 51 failures / 67 errors / 18 skipped — identical to the control's first
   run, and one better than its second (the control disagrees with itself by one flaky victim).
+
+## 2026-08-21 — The handoff wall was the parked branch's own presentation change; the omitted owner lands
+
+Round `s3k-card-handoff-r1`, branch `bugfix/ai-s3k-card-handoff-r1` off `origin/develop`
+`60a8f02f1`. Same-tree control at the same commit.
+
+**RETRACT the brief's premise.** The round was scoped to "make the title-card loop's
+iterations consume one recorded row each, so the two owners hand over cleanly", on the
+finding that the scope-gated candidate aborts at `duplicate or reordered hardware service
+boundary at raw_frame=7053` instead of reaching the geyser. That wall is real, but it is
+**not** a property of the scope-gated candidate. It belongs to a different change that was
+in the tree alongside it.
+
+### The attribution, measured
+
+The parked measurement was taken at `9c165fac0`, whose branch carries engine commits that
+are not on `develop` and were not part of the title-card patch — including a `GameLoop`
+change (`20bef563b`) that swaps the cutscene-driven zone/act load from
+`loadZoneAndActForFreshRuntime` to `loadZoneAndActWithTitleCard`, i.e. that **presents**
+the card, and a `TraceRunPlaybackCoordinator` change lifting the `GameMode.LEVEL`
+requirement past the recorded level loop.
+
+Four runs of `TestS3kSonicTailsCompleteEmeraldRunChain`, one variable each:
+
+| Tree | Result | Reached |
+|---|---|---|
+| `9c165fac0` as parked | `ERROR` boundary at `raw_frame=7053` | aborts in segment 8 |
+| `develop` + only `9c165fac0`'s four-file src diff | `FAILURE` geyser | segment 9 |
+| ” + `13725e85f` reverted | `FAILURE` geyser | segment 9 |
+| ” + `dc2bac1e6` reverted | `FAILURE` geyser | segment 9 |
+| ” + the parked `GameLoop` presentation change | `FAILURE` geyser, ordinals lost again | segment 9 |
+
+So the wall needed the parked branch's other commits; neither of the two develop commits
+that looked like plausible closers (`13725e85f`'s title-card release fusion,
+`dc2bac1e6`'s battleship creation frames) is load-bearing here, and both were tested rather
+than assumed.
+
+**The presentation route is the wrong one, and its own run says so.** Adding just the
+parked `GameLoop` presentation change back on top of the candidate does not reproduce the
+7053 wall, but it does put `#97`-`#100` back in the unmatched set — now diagnosed by the
+port itself as `unconsumed hardware completion edge at segment end; production holds a
+matching unclaimed submission … so this is an admission failure rather than missing work`.
+Presenting the card submits the archives and then fails to admit them, because a presented
+card's rows are not consumed. Omitting the presentation while keeping the owner's art work
+submits *and* admits them. The two owners never have to hand over, because only one of them
+should be alive.
+
+### What landed
+
+`Obj_TitleCardInit`'s four `Queue_Kos_Module` calls (`sonic3k.asm:62108-62164`, verified in
+the disassembly: `$500` RedAct, `$510` zone, `$53D` act number, `$54D` zone graphic) run on
+the owner's first dispatch, before anything is drawn, and `Obj_TitleCardCreate` then gates
+on `tst.b (Kos_modules_left).w` (`:62168-62170`). Gated on
+`LevelLoadContext#isQueueFreshLevelRuntimeArt`, which is engine-side and names the kind of
+load, not a zone, game or route.
+
+Restructured from the parked shape so `LevelManager` does not grow: the sequencing sits on
+`TitleCardProvider#beginOmittedPresentation`, which runs the existing exit tail and then the
+entry art when the load owns it. `TestArchitecturalSourceGuard`'s size ratchet caught the
+parked shape at 2822 effective lines against a 2816 budget; the landed shape is net zero.
+
+### Matrix — both arms, same tree, same commit, neither truncated
+
+| Arm | `-Ptrace-replay` | `Tests run: 0,` | `-Pguards` |
+|---|---|---|---|
+| control | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E |
+| candidate | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E |
+
+Failing class sets are **identical**, extracted preserving nested `$` names:
+`TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`, `TestS3kAizTraceReplay`,
+`TestS3kReplayReferenceClosureIntegration`, `TestS3kSonicTailsCompleteEmeraldRunChain`.
+All three chains are inside that profile and are identical between arms.
+
+### The chain
+
+Reach is unchanged from the control — segment 9, `Unable to queue HCZ geyser KosM art`,
+segment 8 physics 4787 errors first non-camera mismatch frame 4909
+`sidekick_x_speed rom=-01A9 engine=0x0200`. The unmatched set moves:
+
+- control: first unmatched `KOS_MODULE_QUEUE#97` at `raw_frame=7057`, six ordinals short.
+- candidate: `#97`-`#100` matched; first unmatched is `KOS_DECOMPRESSION_QUEUE#148` at
+  7129 and `KOS_MODULE_QUEUE#101` at 7136 — the destination's own two level-art ordinals.
+
+Six to two, with no reach cost. The geyser throw is unchanged and still correct: four of six
+is not enough to unwedge the FIFO, exactly as the handover said. What remains is the
+submission-ordering question for `#101`/`#102`, which is now the whole of the gap.
+
+### Carried forward, not fixed
+
+The zone-graphic index is `(zoneIndex == 22) ? 13 : zoneIndex`, copied from the presented
+path's existing expression in the same class. The ROM also special-cases `$1600` -> 9 (LRZ
+boss) and `$1700` -> `$B` (Death Egg boss) at `:62124-62136`, and picks the zone-name
+archive on `SK_alone_flag`. Those narrowings are **pre-existing and shared with the
+presented path**, not introduced here, but a recording that reaches an LRZ or DEZ boss card
+would queue the wrong zone graphic on either path.

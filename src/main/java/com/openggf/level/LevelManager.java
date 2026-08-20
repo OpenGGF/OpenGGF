@@ -3065,7 +3065,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (!ctx.isShowTitleCard()) {
-            completeSkippedInitialTitleCardPresentation();
+            completeSkippedInitialTitleCardPresentation(ctx.isQueueFreshLevelRuntimeArt());
             return;
         }
         // GameLoop presents the bonus- and special-stage-results return cards
@@ -3123,7 +3123,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
 
-        completeSkippedInitialTitleCardPresentation();
+        completeSkippedInitialTitleCardPresentation(ctx.isQueueFreshLevelRuntimeArt());
     }
 
     /**
@@ -3137,11 +3137,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!transitions.consumeTitleCardRequest()) {
             return false;
         }
-        completeSkippedInitialTitleCardPresentation();
+        // A consumed request already ran the owner's init through the
+        // presentation path, so this boundary queues no entry art.
+        completeSkippedInitialTitleCardPresentation(false);
         return true;
     }
 
-    private void completeSkippedInitialTitleCardPresentation() {
+    private void completeSkippedInitialTitleCardPresentation(boolean ownsFreshArt) {
         initialPresentationOmitted = true;
         completeInitialTitleCardPresentation();
         // A headless fresh load omits presentation, but the title-card owner
@@ -3161,9 +3163,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // standard-water and per-zone animal art on the frame the zone-name
         // piece leaves the screen.
         // docs/s2disasm/s2.asm:4914-4925, 5066-5080, 27605-27637
+        // Obj_TitleCardInit's four Queue_Kos_Module calls happen on the owner's
+        // first dispatch, before anything is drawn, so they belong to a load
+        // that reached the game's own Level: routine rather than to the
+        // presentation a headless boundary omits.
+        // docs/skdisasm/sonic3k.asm:62108-62164
         var titleCardProvider = activeGameModule().getTitleCardProvider();
         if (titleCardProvider != null) {
-            titleCardProvider.beginOmittedPresentationExitTail(currentZone, apparentAct);
+            titleCardProvider.beginOmittedPresentation(currentZone, apparentAct, ownsFreshArt);
         }
     }
 
