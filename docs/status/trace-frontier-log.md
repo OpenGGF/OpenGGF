@@ -93943,10 +93943,48 @@ Base `8b5699630`, same command both arms, same worktree.
 | chain segment 6 | 7,434 @ f3339 `sidekick_x` | **1,955 @ f3887** `sidekick_x_sub` |
 | `run_boundary.position.x` | 14007 vs 14008 | unchanged |
 
+### Both arms, measured
+
+Both profiles were subsequently run in **both arms** in this one worktree, the control
+reached by `git reset --hard 8b5699630` (never `git stash`), same command each time.
+
+`-Ptrace-replay`:
+
+| | control (8b5699630) | with fix |
+|---|---|---|
+| totals | 793 run, 4 failures, 4 skipped | **identical** |
+| red classes | S1 chain, S2 chain, S3K chain, CPZ2 seg10 | **identical set** |
+| s1 seg12 / seg15 / seg22 / seg23 / seg24 | 3 / 6 / 15564 @ f8115 `x_sub` / 54 / 18722 | **all identical** |
+| s2 seg15 | 7575 | **identical** |
+| s3k seg4 | 250 | **250** |
+| **s3k seg6** | **7,434 @ f3339 `sidekick_x`** | **1,955 @ f3887 `sidekick_x_sub`** |
+
+Every axis on every other segment is byte-identical between arms; segment 6 is the only
+thing that moves. This replaces the earlier "red set name-identical to develop" proxy with
+a measured control.
+
+Default (non-trace) suite — the important arm here, because `-Ptrace-replay` is 156 of
+1,919 classes and contains no object unit tests, and this fix is an object class:
+
+| | control | with fix |
+|---|---|---|
+| totals | 15,191 run, 56 failures, 64 errors, 18 skipped | 15,193 run, 55 failures, 64 errors, 18 skipped |
+| red classes | 55 | 54 |
+| **red only with the fix** | — | **none** |
+| red only in the control | `TestAudioPresentationProducer` | — |
+
+The single difference is in the *control's* favour to explain, not the fix's:
+`TestAudioPresentationProducer` fails on `"warmed present must reuse its frame view, PCM,
+and consumer storage" expected <0> but was <72>` — an allocation-count assertion in the
+known order-dependent audio bucket, and it is red **without** the change. Nothing is red
+only with the change, which is the property that matters.
+
 Method note: two of this round's Maven invocations collided in the same worktree (an
 orphaned backgrounded run plus its replacement), producing a `ClassNotFoundException` and a
-truncated log that looked like a real fork crash. It was neither. Check `pgrep -af maven`
-before trusting a sweep whose log ends abruptly.
+truncated log that looked like a real fork crash. It was neither. `nohup cmd &` inside a
+tool call does not reliably die with the call. Check `pgrep -af maven` before trusting a
+sweep whose log ends abruptly, and read the pid's `-Dmaven.multiModuleProjectDirectory` to
+tell your own collision from another worktree's harmless CPU contention.
 
 ### The new frontier
 
