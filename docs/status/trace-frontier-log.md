@@ -95002,3 +95002,60 @@ the measurement then killed; landing it would attach a fix-shaped commit to a no
   uniformly-wrong decode is already excluded; the question is what is different about this
   one entry. That is where the next round should start, and it should start by reading the
   layout bytes for all four rings rather than by reasoning from the difference of one.
+## 2026-08-20 — segment 4 anchor: it is a frame-INDEXING question, not a field-semantics one
+
+Branch `bugfix/ai-s3k-seg4-anchor-r1` off `b6f9485cc`. **Diagnosis only, nothing landed.**
+
+### The trace's row 0, in full
+
+`aiz_3` row 0: `camera=(0x01A0,0x0370)`, `gameplay_frame_counter=0x0001`,
+`vblank_counter=0x4C35`, `lag_counter=0`, `player=(0x0240,0x03D0)`, `anim=0x05`,
+`mapping_frame=0xBA`.
+
+### Two of the three candidates are now eliminated from the recorder source
+
+The previous entry listed three possible explanations for the probe/trace disagreement.
+Reading the recorder settles two of them **without another capture**:
+
+- **The recorder reads the same byte the probe hooked.** `PLAYER_BASE = 0xB000` and
+  `OFF_ANIM_ID = 0x20` (`tools/bizhawk/s3k_complete_run_recorder.lua:528,538`), giving
+  `0xFFB020` — exactly the address the probe's write hook watched. So "the trace's `anim`
+  column is not this RAM byte" is **dead**.
+- **The recorder samples after the frame executes**, in `on_frame_end`, "after BizHawk's
+  `emu.frameadvance()` ticked the frame" (`:1602,5328`). So a row describes end-of-frame
+  state, which is the same convention the probe's last-write-of-frame reading approximates.
+
+**What remains is the frame index**: which movie frame row 0 actually describes. That is a
+live hazard in this codebase, not a hypothetical — the skill records a case where two
+capture runners disagreed on the entry frame and "a whole committed fixture was labelled a
+frame early".
+
+### The sharpened contradiction
+
+The recorded row 0 carries `gameplay_frame_counter = 1` **and** `anim = 0x05`
+simultaneously. In the probe capture, `Level_frame_counter` reads 1 at movie frame 19775
+with Sonic's `anim` ending that frame at `0x00`, and Sonic's `anim` does not reach `0x05`
+until movie frame **19826**, where the counter reads `0x33`. **Those two column values
+never co-occur anywhere in the captured window.**
+
+Note the clock caveat, because it is the whole point: the probe logs
+`Level_frame_counter` (`0xFE04`) while the trace column is named
+`gameplay_frame_counter`, and the fixture separately carries a `vblank_counter` of
+`0x4C35`. Whether the recorder's `gameplay_frame_counter` *is* `Level_frame_counter` was
+not verified, and until it is, "counter 1 in both" is a name match, not a measurement.
+
+### The one measurement that closes it
+
+A per-frame (not per-write) log over movie frames ~19770-19840 of: `Camera_X_pos`
+(`0xEE78`), `Camera_Y_pos` (`0xEE7C`), `Level_frame_counter`, the V-int run count, Sonic's
+`anim` and `mapping_frame`. Then find the frame matching row 0's
+`(0x01A0,0x0370)` / `0x4C35` / `0x05` / `0xBA` **together**.
+
+- If such a frame exists and is not 19775, the mapping is `bk2_frame_offset + row + k` and
+  the whole PC list from the previous entry re-indexes by `k`.
+- If no frame matches all of them, the columns are sampled at different points within the
+  frame and the fixture's row is a composite — which is a recorder-semantics finding, not
+  an engine defect, and belongs in known-discrepancies.
+
+Camera is the discriminator to trust: the trace definitely carries it and the probe can
+definitely read it, and unlike the counter its name is not doing any work.
