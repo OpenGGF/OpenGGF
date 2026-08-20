@@ -97545,3 +97545,136 @@ frame slow, and that is the visible frontier.**
 Three successive verdicts at this seam have now been produced by pairs of errors cancelling. Any
 future claim here should state the discriminator — the recorded row on which the engine reaches
 the pinned `player_y` — and its interval arithmetic explicitly, rather than a cursor value.
+
+## 2026-08-20 -- RETRACTION: the AIZ2 fall is not one row late; the bridge/button ordering fix is exact
+
+Round `bugfix/ai-s3k-aiz2-onerow-r1` off `d2fb207a3`, worktree
+`wt/s3k-aiz2-onerow-r1` with a same-commit control at `wt/s3k-aiz2-onerow-r1-ctl`
+(both `reflinked=7770 fallback=no`). Diagnosis only; **no engine change is landed**.
+
+Command (all arms):
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+  -Ds3k.rom.path=... -Dsonic1.rom.path=... -Dsonic2.rom.path=... test
+```
+
+### What is retracted
+
+The entry *"The level-to-level fade is 22 V-blanks in all three games"* closes with
+Retraction 2: that restoring the ROM's 22 fade rows exposes a residual, and that
+**the ordering fix on `6c40da228` is still one row late on the discriminator**
+(reaching the pinned `player_y=0342` at `aiz_5` row 7032 rather than 7031). The same
+"row 7032" appears in the seam-amplifier entry's arm table.
+
+**That residual does not exist.** With `6c40da228` applied, the engine reaches
+`player_y=0342` at row **7031** -- the recorded row, exactly -- and matches the
+recording on *every* row from 6620 through 7031 inclusive. The "row 7032" reading is
+a probe row-convention off-by-one: a probe sampling in the coordinator's `afterStep`
+reads a `sharedBk2Cursor` that has **already advanced past** the row the step just
+produced, so the row that step represents is `cursor - offset - 1`, not
+`cursor - offset`. This is the fourth off-by-one recorded at this seam.
+
+### The instrument, and the two things that arbitrate the convention
+
+A probe in `AbstractRunChainTest.HeadlessRunCoordinatorAdapter.afterStep`, gated on an
+`AIZ2_PROBE=<lo>:<hi>` cursor window, printing per admitted step the
+`sharedBk2Cursor`, `coordinator.currentSegmentIndex()`, `admittedStepOrdinal` and the
+focused sprite's `getCentreX()`/`getCentreY()`/`getAir()`/`getYSpeed()`. One variable
+per arm; the probe is non-perturbing -- the control fails at `BK2 cursor=53488` with
+and without it.
+
+Two independent facts fix the convention, and neither depends on the fall:
+
+1. Alignment by mass. Over segment 8's 7033 probed steps, `cursor - 46432 - 1` puts the
+   engine's `(player_x, player_y)` equal to the recording's on 6481 rows; the naive
+   `cursor - 46432` puts it equal on 1132. A convention that reproduces thousands of
+   rows is not a choice between two readings.
+2. The comparator, which has its own alignment, arbitrates the exact discriminator row.
+   The candidate's `seg8_report.json` `recentMismatches` ends at **frame 7031** with
+   `sidekick_x` `rom=0x4AA0 engine=0x4AA6` -- and `aiz_5` row 7031 does hold
+   `sidekick_x=0x4AA0`, so the comparator's frame index is the recorded row index. At
+   that same frame it flags **no** `y` and no `x`. The comparator was actively comparing
+   row 7031 and found the player's position exact. Under the `cursor - 46432` reading
+   the engine would have been at `y=0336` there and `y` would have been an ERROR.
+
+### Measured, both arms, one instrument
+
+`bk2_frame_offset` 46432, so `row = cursor - 46432 - 1`.
+
+| arm | fall start (first `player_y=01FE`) | first `player_y=0342` | mismatched rows in 6620-7031 | `seg8` errorCount / laggedFrames | reported cursor |
+|---|---|---|---|---|---|
+| recording | 6979 | **7031** | -- | -- | 53486 |
+| control `d2fb207a3` | 6980 (**1 late**) | 7054 | 52 | 9320 / 44 | 53488 |
+| `+ 6c40da228` | **6979** | **7031** | **0** | 8945 / 22 | 53465 |
+
+The control is late by exactly **one engine frame at the fall's start**, and because
+that frame lands on the far side of the recording's pinned-clock block it reads as 23
+rows at `player_y=0342`. That is the amplifier working as previously described. The
+ordering fix removes that frame outright: the whole post-defeat sequence -- forced
+walk, stop, cutscene Knuckles, button, `loc_2B452` collapse interval and the entire
+free fall -- is row-for-row identical to the recording.
+
+So the brief's question, *"something upstream in the AIZ2 fall or exit is one frame
+slow, find it"*, resolves as: the slow frame is in the **control**, it is the
+button/bridge dispatch order, and `6c40da228` already closes it. There is nothing
+further upstream to find.
+
+### What actually remains at this seam
+
+Exactly one thing, and it is the already-named ownership problem, not a physics or
+cutscene defect. With the ordering fix the engine finishes the fall on row 7031 and
+then spends its own exit fade consuming no rows: the probe shows the shared cursor
+pinned at 53464 for 22 further admitted steps while `player_y` holds `0342`. The
+candidate's `seg8` `laggedFrames` is **22** -- precisely `Pal_FadeToBlack`'s span --
+against the control's 44. `53486 - 53465 = 21`, and the 22nd row is the
+`finishPlaybackBoundary` request-consume frame already identified as consuming
+nothing.
+
+That gap is the ownership condition named at the end of the fade-length entry:
+consume rows in the freeze only while the shared cursor is still inside the source
+segment's recorded rows, so S3K's inline fade rows are consumed and S2's
+driver-owned inter-segment gap is not. Nothing in this round changes that
+conclusion; it removes the supposed second defect that was blocking it.
+
+### Consequence for `6c40da228`
+
+It should be reconsidered for landing on its own merits. It is ROM-correct by the
+object-layout argument already recorded, it is **frame-exact** on the discriminator,
+and it strictly dominates the control on the comparator's own numbers (375 fewer
+errors, half the lagged frames). It has never been rejected by a measurement that
+survived; it was rejected once on a cursor reading that is not a frame count, and
+once more on a residual that was an instrument artifact. Its `BK2 cursor=53465` is
+low **only** because its fade consumes no rows -- the same 22 rows the ownership
+condition owns.
+
+### Two unrelated divergences found in passing, neither temporal
+
+Both are inside `aiz_5` and both are present in the candidate arm with the fall exact:
+
+- Rows **6111-6619**: the player rests at `player_y=0x01FD` where the recording holds
+  `0x01FC` -- a static one-pixel settle position while standing motionless through the
+  capsule/results block. It self-resolves at row 6620 when the ROM also moves to
+  `0x01FD`. Not a timing error and not upstream of the fall.
+- Rows **3674-3719**: a landing/slope divergence -- at 3674 the engine is still at
+  `(43D3,01F9)` while the recording has moved to `(43CD,01F5)`; `x` reconverges by
+  3676, `y` runs 2-4px high and reconverges by 3720.
+
+### Not established
+
+- Whether the one-pixel rest offset at 6111-6619 or the 3674 landing has any bearing
+  on other traces; neither was investigated beyond locating it.
+- Nothing about S1 or S2 was measured this round. No engine change was made, so the
+  guard and default suites were not run.
+
+### Landed, after independent verification
+
+The candidate is landed with this entry. Verified in a third tree, same commit, one variable:
+control `seg8 errorCount 9320`, candidate **8945** — 375 fewer, reproducing the round's figure
+exactly. S1 and S2 chains byte-identical to the figures measured on develop the same hour;
+`-Pguards` 500/0.
+
+**This candidate was recorded as rejected twice, and both rejections were instrument artifacts** —
+once on a BK2 cursor that is not a frame count at this seam, once on a probe row convention that
+was off by one. Its lower reported cursor (53465 against the control's 53488) is only the fade
+rows it does not consume, which the ownership condition owns.

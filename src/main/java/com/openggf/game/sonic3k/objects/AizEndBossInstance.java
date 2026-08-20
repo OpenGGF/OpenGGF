@@ -25,7 +25,6 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -844,19 +843,19 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
             Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-            PlayableEntity mainPlayer = services().playerQuery().mainPlayerOrNull();
-            // The consolidated replacement normally occupies slot 8. Preserve
-            // the earlier native bridge dispatch when Player_1's live interact
-            // pointer identifies an owner below the replacement's allocated
-            // slot; an interact owner at or after it already matches the
-            // replacement's ordinary pass.
-            AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
-                    AizDrawBridgeObjectInstance::createCutsceneOverride);
-            Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(
-                    mainPlayer instanceof AbstractPlayableSprite sprite
-                            && sprite.getInteractSlotIndex() >= 0
-                            && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
+            // These two replacements stand in for AIZ2 layout objects, so they
+            // must reproduce the layout's relative SST order. The AIZ2 (zone 0,
+            // act 2) sprite list read from the user-supplied ROM through
+            // Sonic3kObjectPlacement holds Obj_CutsceneButton (id $83) at
+            // x=$4B18 immediately BEFORE Obj_AIZDrawBridge (id $32) at x=$4B48,
+            // and Obj_Load allocates ascending free slots in that order. The
+            // button therefore always occupies the lower slot and is reached
+            // first in every object scan, which is why the bridge's
+            // AIZDrawBridge_WaitCollapseTrigger observes the button's
+            // st (_unkFAA9).w on the same frame the button sets it
+            // (sonic3k.asm:59622-59628, 133936-133953).
             spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
+            spawnFreeChild(AizDrawBridgeObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
         } else {
             int newMaxX = targetMaxX + 0x158;
