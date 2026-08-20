@@ -253,6 +253,17 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // survives into the next act and Sonic_LevelBound's `tst.b (Current_Boss_ID).w`
         // (s2.asm:37245-37250) keeps withholding the +$40 right-boundary extension.
         currentBossId = 0;
+        // f_bigring is a level variable, cleared by the same level-load RAM wipe:
+        // S1 Level_ClrRam runs `clearRAM v_levelvariables` (docs/s1disasm/sonic.asm:2742)
+        // and f_bigring (_Variables.asm:285) lies inside v_levelvariables (:179) ..
+        // v_levelvariables_end (:301), the block commented "variables that are reset
+        // between levels". Nothing else in the ROM ever writes the byte back to zero --
+        // Obj7C's `move.b #1,(f_bigring).w` ("_incObj/4B, 7C Giant Ring and Flash.asm":123)
+        // is its only other write -- so without this the flag survives the special stage
+        // it triggered and every later act end reads it as still set. Got_ChkSS
+        // ("_incObj/3A Got Through Card.asm":199-201) then writes v_gamemode = id_Special
+        // on an act the player finished with fewer than ss_giantring_rings rings.
+        bigRingCollected = false;
     }
 
     public int getScore() {
