@@ -1153,6 +1153,13 @@ Use the skill for creating a round's worktree and its control arm. Use ordinary 
 the source and target are on different filesystems or the platform lacks reflinks, and reports
 which path it took — check that report rather than assuming the optimisation applied.
 
+**Pass `--from` an explicitly clean worktree.** Only clean, committed content is eligible to be
+shared, so a source with local modifications degrades toward a full checkout. A round reported
+`fallback=yes reason=copy-on-write-unavailable` on the same filesystem where an explicit clean
+source gave `reflinked=7770 backend=ficlone fallback=no` — same machine, same btrfs volume,
+minutes apart. If you see `fallback=yes` on a filesystem you expect to support reflinks, suspect
+the source before the platform.
+
 This pairs with the thirty-sixth rule: worktrees become cheap to create *and* the branch remains
 the artifact, so there is no reason either to hoard finished trees or to skimp on a proper
 control arm.
