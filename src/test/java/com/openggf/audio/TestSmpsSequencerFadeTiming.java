@@ -5,6 +5,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,25 @@ class TestSmpsSequencerFadeTiming {
     void sonic2KeepsSfxBlockedUntilRestoreFadeCompletes() {
         assertTrue(new Sonic2AudioProfile().blocksSfxDuringMusicRestoreFadeIn(),
                 "S2 gates SFX on 1upPlaying OR FadeInFlag");
+    }
+
+    @Test
+    void sonic2FadeClearsSpeedShoesAtRequestBoundary() {
+        SmpsSequencer sequencer = sequencer(
+                Sonic2SmpsSequencerConfig.CONFIG);
+        sequencer.initializeSpeedShoes(true);
+
+        sequencer.triggerFadeOut(0x28, 3);
+
+        assertFalse(sequencer.captureSnapshot().speedShoes());
+    }
+
+    private static SmpsSequencer sequencer(SmpsSequencerConfig config) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new MinimalMusicData(1), AudioTestFixtures.EMPTY_DAC,
+                new VirtualSynthesizer(), AudioManager.getInstance(), config);
+        sequencer.setSampleRate(60.0);
+        return sequencer;
     }
 
     private static final class MinimalMusicData extends AbstractSmpsData {

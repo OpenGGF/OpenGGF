@@ -105,6 +105,13 @@ public final class SmpsSequencerConfig {
         RESTORE_LIVE_STATE
     }
 
+    public enum FadeOutChannelPolicy {
+        /** S1/S2: halt DAC immediately, then fade FM and PSG. */
+        FADE_FM_AND_PSG,
+        /** S3K: halt DAC and every PSG track immediately, then fade FM only. */
+        HALT_DAC_AND_PSG_FADE_FM
+    }
+
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
     public enum FmVoiceWriteProfile {
         /** Sonic 1's 68k SetVoice routine. */
@@ -145,6 +152,9 @@ public final class SmpsSequencerConfig {
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
+    private final FadeOutChannelPolicy fadeOutChannelPolicy;
+    private final boolean fadeOutClearsSpeedShoes;
+    private final boolean fadeOutStopsSfxImmediately;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
@@ -184,6 +194,9 @@ public final class SmpsSequencerConfig {
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
+        this.fadeOutChannelPolicy = b.fadeOutChannelPolicy;
+        this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
+        this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
@@ -304,6 +317,18 @@ public final class SmpsSequencerConfig {
         return psgSfxReleaseMode;
     }
 
+    public FadeOutChannelPolicy getFadeOutChannelPolicy() {
+        return fadeOutChannelPolicy;
+    }
+
+    public boolean isFadeOutClearsSpeedShoes() {
+        return fadeOutClearsSpeedShoes;
+    }
+
+    public boolean isFadeOutStopsSfxImmediately() {
+        return fadeOutStopsSfxImmediately;
+    }
+
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
         return fmVoiceWriteProfile;
     }
@@ -389,6 +414,10 @@ public final class SmpsSequencerConfig {
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxReleaseMode psgSfxReleaseMode =
                 PsgSfxReleaseMode.RESTORE_LIVE_STATE;
+        private FadeOutChannelPolicy fadeOutChannelPolicy =
+                FadeOutChannelPolicy.FADE_FM_AND_PSG;
+        private boolean fadeOutClearsSpeedShoes;
+        private boolean fadeOutStopsSfxImmediately;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
@@ -420,6 +449,9 @@ public final class SmpsSequencerConfig {
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
+        public Builder fadeOutChannelPolicy(FadeOutChannelPolicy val) { fadeOutChannelPolicy = val; return this; }
+        public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
+        public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
@@ -443,6 +475,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
+            Objects.requireNonNull(fadeOutChannelPolicy, "fadeOutChannelPolicy");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }

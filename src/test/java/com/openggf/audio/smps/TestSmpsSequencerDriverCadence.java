@@ -413,6 +413,67 @@ class TestSmpsSequencerDriverCadence {
         assertEquals(false, track.resting);
     }
 
+    @Test
+    void fadeTerminalDoesNotApplyAnExtraVolumeStep() {
+        SmpsSequencer sequencer = sequencer(
+                1, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track fm = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.FM, 0);
+        sequencer.addTrack(fm);
+
+        sequencer.triggerFadeOut(1, 0);
+        sequencer.advanceBatch(1);
+
+        assertEquals(false, fm.active);
+        assertEquals(0, fm.volumeOffset,
+                "counter transition to zero stops before another fade step");
+    }
+
+    @Test
+    void s3kFadeImmediatelyHaltsDacAndPsgAndLeavesFmForSteppedFade() {
+        SmpsSequencer sequencer = sequencer(
+                1, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track fm = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.FM, 0);
+        SmpsSequencer.Track dac = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.DAC, 5);
+        SmpsSequencer.Track psg = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.PSG, 0);
+        sequencer.addTrack(fm);
+        sequencer.addTrack(dac);
+        sequencer.addTrack(psg);
+
+        sequencer.triggerFadeOut(0x28, 6);
+
+        assertEquals(true, fm.active);
+        assertEquals(false, dac.active);
+        assertEquals(false, psg.active);
+    }
+
+    @Test
+    void sonicOneFadeStopsActiveSfxAtTheRequestBoundary() {
+        com.openggf.audio.driver.SmpsDriver driver =
+                new com.openggf.audio.driver.SmpsDriver();
+        SmpsSequencer music = new SmpsSequencer(
+                new MinimalMusicData(new byte[] {(byte) 0x81, 4}, 1),
+                AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), Sonic1SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfx = new SmpsSequencer(
+                new MinimalMusicData(new byte[] {(byte) 0x81, 4}, 1),
+                AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), Sonic1SmpsSequencerConfig.CONFIG);
+        sfx.addTrack(new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.FM, 0));
+        driver.addSequencer(music, false);
+        driver.addSequencer(sfx, true);
+
+        music.triggerFadeOut(0x28, 3);
+
+        assertEquals(1, driver.captureSnapshot().sequencers().size());
+        assertEquals(false,
+                driver.captureSnapshot().sequencers().getFirst().sfx());
+    }
+
     private static void setInt(Object target, String fieldName, int value) {
         try {
             java.lang.reflect.Field field = target.getClass()

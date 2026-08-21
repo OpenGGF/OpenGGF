@@ -54,6 +54,9 @@ public final class Sonic3kSmpsSequencerConfig {
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.FULL_DRIVER_REPEAT_EVERY_SIXTH)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.NONE)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC)
+                .fadeOutChannelPolicy(
+                        SmpsSequencerConfig.FadeOutChannelPolicy
+                                .HALT_DAC_AND_PSG_FADE_FM)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)

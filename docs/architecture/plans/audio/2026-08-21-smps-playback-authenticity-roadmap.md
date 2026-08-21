@@ -127,6 +127,11 @@ shipped rest-vs-same-VInt behavior.
 Acceptance: ordered register-write tests around pause, fade start/end, first and
 repeated 1-up, and restore; short external references for transitions.
 
+Status: fade-out channel selection, speed-state clearing, initial SFX/DAC/PSG
+halts, terminal count, and service-scoped all-audio cleanup now match the
+shipped paths. Driver-level pause and the complete 1-up lifecycle remain in
+this phase.
+
 ### Phase 4 — SMPS bytecode and envelope quirks
 
 - Audit modulation, volume envelopes, PSG envelopes, note fill, ties/holds,
@@ -188,10 +193,8 @@ Cleanup is not allowed to lead the roadmap or broaden a parity change.
    playback behavior it exists to prove.
 6. Do not block a useful phase on unrelated complete-run evidence closure.
 
-## Immediate slice
+## Current slice
 
-Phase 1 begins with the cadence distinction because it affects nearly every
-sustained note in S2 and S3K: modulation, PSG envelopes, note fill, and tempo
-phase are currently updated on the wrong VInts. The implementation should be a
-small sequencer/config change with source-backed tests; it must not modify the
-native observer, trace schemas, or semantic evidence fixtures.
+Continue Phase 3 with the driver-level pause protocol and 1-up lifecycle. Keep
+the implementation at the sequencer/driver/config boundary and verify ordered
+chip writes; do not reopen native observer schemas or complete-run evidence.

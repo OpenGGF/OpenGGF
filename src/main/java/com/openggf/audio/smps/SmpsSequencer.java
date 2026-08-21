@@ -1422,7 +1422,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                         SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
         processFade();
         if (driver != null) {
-            driver.endSequencerService(service);
+            driver.endFadeSequencerService(service);
         }
     }
 
@@ -1459,8 +1459,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
-        // ROM: Decrement fade counter and apply volume change
+        // Shipped drivers decrement first and stop immediately when it reaches
+        // zero; the terminal count never applies one extra volume mutation.
         fadeState.steps--;
+        if (fadeState.steps == 0 && fadeState.fadeOut) {
+            for (Track t : tracks) {
+                t.active = false;
+                stopNote(t);
+            }
+            fadeState.active = false;
+            if (synth instanceof SmpsDriver driver) {
+                driver.requestFadeTerminalStopAll();
+            }
+            return;
+        }
         fadeState.delayCounter = fadeState.delayInit;
 
         int dir = fadeState.fadeOut ? 1 : -1;
@@ -3123,9 +3135,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.active = true;
         fadeState.fadeOut = true;
 
+        if (config.isFadeOutClearsSpeedShoes()) {
+            setSpeedShoes(false);
+        }
+        if (config.isFadeOutStopsSfxImmediately()
+                && synth instanceof SmpsDriver driver) {
+            driver.stopAllSfx();
+        }
+
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
         for (Track track : tracks) {
-            if (track.type == TrackType.DAC) {
+            if (track.type == TrackType.DAC
+                    || (track.type == TrackType.PSG
+                    && config.getFadeOutChannelPolicy()
+                    == SmpsSequencerConfig.FadeOutChannelPolicy
+                            .HALT_DAC_AND_PSG_FADE_FM)) {
                 track.active = false;
                 stopNote(track);
             }

@@ -48,6 +48,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private SmpsSequencer.Region region = SmpsSequencer.Region.NTSC;
     private int palFullUpdateCounter = 5;
     private int sfxPriorityLatch;
+    private boolean fadeTerminalStopAllPending;
+    private boolean fadeTerminalStopAllCompleted;
 
     private final List<SmpsSequencer> pendingRemovals = new ArrayList<>();
 
@@ -342,6 +344,20 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (event != null) {
             serviceObserver.onServiceEnd(event, captureSnapshot());
         }
+    }
+
+    /**
+     * Completes a fade service, including the shipped driver's terminal
+     * StopAllSound mutation inside the same observable service boundary.
+     */
+    public void endFadeSequencerService(
+            SmpsDriverServiceObserver.ServiceEvent event) {
+        if (fadeTerminalStopAllPending) {
+            fadeTerminalStopAllPending = false;
+            stopAll();
+            fadeTerminalStopAllCompleted = true;
+        }
+        endSequencerService(event);
     }
 
     private void forgetSequencerServiceIdentity(SmpsSequencer sequencer) {
@@ -1982,6 +1998,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
                 int sequencerFrames =
                         sequencer.advanceBatchAndCountDriverFrames(frames);
+                if (fadeTerminalStopAllCompleted) {
+                    fadeTerminalStopAllCompleted = false;
+                    return;
+                }
                 if (!sequencer.isSfx() || driverFrames < 0) {
                     driverFrames = sequencerFrames;
                 }
@@ -2000,6 +2020,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int i = 0; i < driverFrames; i++) {
             servicePalFullUpdateBoundary();
         }
+    }
+
+    public void requestFadeTerminalStopAll() {
+        fadeTerminalStopAllPending = true;
     }
 
     private boolean usesSfxFirstServiceOrder() {
@@ -2037,6 +2061,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : sequencers) {
                 if (sequencer.isSfx() == serviceSfx) {
                     sequencer.repeatDriverService();
+                    if (fadeTerminalStopAllCompleted) {
+                        fadeTerminalStopAllCompleted = false;
+                        return;
+                    }
                     if (sequencer.isComplete()) {
                         pendingRemovals.add(sequencer);
                     }

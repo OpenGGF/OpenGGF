@@ -1,5 +1,7 @@
 # Changelog
 
+- **SMPS fades now follow each retail driver's channel and terminal rules:** Sonic 1 stops active SFX when fading starts, Sonic 3&K halts DAC and PSG immediately while fading FM, Sonic 1/2 clear speed shoes, and all three stop on the shipped terminal count without an extra volume step.
+
 - **SMPS SFX release now matches each shipped driver:** Sonic 1 and Sonic 2 leave interrupted PSG music tracks resting until their next note and no longer inject a synthetic FM takeover reset; Sonic 3&K retains its same-VInt SFX-release/music-service path.
 
 - **SMPS ordinary music changes now retain SFX exactly where the shipped drivers do:** Sonic 1 atomically carries live normal/special SFX, channel locks, continuous state, and its priority latch into the replacement song, while Sonic 2 and Sonic 3&K continue to stop SFX before loading ordinary BGM.
@@ -3039,6 +3041,10 @@ All notable changes to the OpenGGF project are documented in this file.
   raw, uninterpolated DAC steps; the smoother alternatives remain opt-in.
   S3K modulation envelopes now apply retail `$85`–`$FF` bytes as signed pitch
   deltas instead of incorrectly freezing when an envelope crosses below zero.
+  Fade-out now uses each retail driver's channel set and terminal ordering:
+  Sonic 1 stops SFX at fade start, Sonic 3&K halts DAC and PSG immediately,
+  Sonic 1/2 clear speed shoes, and the final counter stops all audio without an
+  extra volume mutation.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

@@ -65,6 +65,7 @@ public final class Sonic2SmpsSequencerConfig {
                         SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .psgSfxReleaseMode(
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
+                .fadeOutClearsSpeedShoes(true)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }

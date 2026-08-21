@@ -83,6 +83,8 @@ public final class Sonic1SmpsSequencerConfig {
                 .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .psgSfxReleaseMode(
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
+                .fadeOutClearsSpeedShoes(true)
+                .fadeOutStopsSfxImmediately(true)
                 .build();
     }
 
