@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K capsule press timing diagnosed (2026-08-21):** the capsule's fourteen-row
+  early press is one pixel of capsule Y against an exclusive bound, caused by
+  subpixel drift in the capsule's descent rather than by the trigger. Held
+  unlanded: the engine also presses with the wrong character, so correcting the
+  pixel alone would produce a clean-looking count win that is still wrong.
+
 - **Solid-object push release (`bugfix/ai-solid-rider-push-r1`, merged 2026-08-21):**
   a solid object now releases the player's pushing flag even when a different
   solid raised it, matching the unconditional player-side clear in all three
