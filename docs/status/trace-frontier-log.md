@@ -106169,3 +106169,106 @@ session stands as written. The touch-scan half of it is separately settled — t
 staleness is confirmed and the engine already models it — so the chain's *first* link is now
 known not to be an engine defect, and whatever moves that bounce a dispatch early is still
 unattributed. That is the open question, and it is not the scan's frame position.
+
+## 2026-08-21 — Segment 8's 14 rows are one pixel of capsule y, and the wrong character presses the button
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `be9e7cdfe`.
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<repo>/s3k.gen test
+```
+
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+**Nothing was landed but this entry.**
+
+**Baseline re-measured on `be9e7cdfe`, unchanged from `887320904`:** segment 8 (`aiz_5`)
+2288 physics errors, first non-camera mismatch frame 6000 `sidekick_x` rom `0x4997`
+engine `0x4996`; segment 9 first error frame 0 `y`.
+
+**The open question from the previous entry — "why the engine's capsule-button trigger
+fires 14 rows early" — is answered, and the answer is a single pixel of the capsule's
+`y_pos`.** It is measured, not inferred.
+
+**The ROM's Sonic misses the button by one pixel, on two consecutive rows, in two different
+axes.** `Check_PlayerInRange` uses `word_867C2: dc.w -$1A,$34,-$1C,$38`
+(`sonic3k.asm:181776`) — the engine's trigger box is ROM-exact. Evaluating that box against
+the recording's own rows, with the button child at parent `y + $24`:
+
+| row | Sonic `dx` (needs < 26) | Sonic `dy` (needs < 28) | `y_vel` | in box? |
+|---|---|---|---|---|
+| 5991 | 22 ok | 31 **MISS** | -600 | no |
+| **5992** | **24 ok** | **28 MISS by 1** | -544 | **no** |
+| **5993** | **27 MISS by 2** | **25 ok** | -488 | **no** |
+| 5994 | 30 MISS | 22 ok | -432 | no |
+
+Sonic satisfies `dx` on rows ≤5992 and `dy` on rows ≥5993. **The two windows are adjacent
+and disjoint.** He threads between them and never presses the button at all. In the ROM the
+button is pressed by **Tails**, whose `dy` first enters the box at row **6006**; the parent
+flips `routine` `$08` → `$0A` at **6007** (recorded directly: `aux_state` slot 9, object
+code `0x00086540`), the one-frame parent/child dispatch offset the engine already models.
+
+**What the engine does instead, measured with a throwaway probe in
+`AbstractS3kFloatingEndEggCapsuleInstance.scanButtonTrigger` (reverted; baseline 2288 /
+frame 6000 unchanged with it in place):**
+
+| row 5992 | ROM | engine |
+|---|---|---|
+| capsule `x` | `0x49A9` | `0x49A9` — exact |
+| capsule `y` | `0x0169` | **`0x016A`** |
+| button `y` (`+$24`) | `0x018D` | `0x018E` |
+| Sonic `x` | `0x49C1` | `0x49C1` — exact |
+| Sonic `y` | `0x01A9` | `0x01A9` — exact |
+| Sonic `y_vel` | `-544` | `-544` — exact |
+| Sonic `dy` | 28 → **miss** | 27 → **hit** |
+
+Every input at that row is bit-exact except the capsule's own `y`, which is one pixel low.
+That one pixel puts `dy` at 27 against the ROM's `< $1C` bound, Sonic presses a button he
+never reaches in the ROM, and `sub_865DE` — `st (Ctrl_2_locked).w`, `sonic3k.asm:181560-181563`
+— runs at row 5992 instead of 6006. **6006 − 5992 = 14.** The whole 14-row lead is that pixel.
+The engine's open row 5993 and lock row 5994 follow from a 5992 trigger exactly as the ROM's
+6007 follows from 6006, so the previously recorded 14 is confirmed, from its cause this time.
+
+**The pixel is phase, not a constant.** Engine-minus-ROM capsule `y` across rows 5963-5992 is
+not a fixed offset — it is `-1` at 5966/5969/5971, `0` through the 5972-5982 flat, then `+1`
+at 5983/5985/5987/5988/5990/5991/5992. A ±1 that **flips sign** across a slow accumulation is
+a motion that began a frame early, which is the `Swing_UpAndDown` + `$4000`-per-frame descent
+of `loc_8662A` running one frame ahead.
+
+**This un-parks the capsule creation frame.** That item was parked as cosmetic and as a
+capture question, because the ROM's defeat-to-capsule residual is not observable in this
+recording (the boss body never enters the recorded near-list, so the `33` was arithmetic on
+the engine's own residual and is not an input — it stays dead). The parked item is now known
+to be **load-bearing**: a one-frame-early creation is exactly sufficient to produce the
+one-pixel `y` lead, and nothing else at row 5992 differs at all.
+
+**It also now has an acceptance target that needs no residual and is not a fitted constant,**
+because it is a predicate and an identity rather than a number to tune:
+
+> At `aiz_5` row 5992 the capsule's `y_pos` must be `0x0169`, so Sonic's `dy` is 28 and he
+> **misses** the ROM's `< $1C` bound; the button must then be pressed by **Tails** at row
+> 6006, and the parent's `routine` must reach `$0A` at row 6007.
+
+Any fix that gets the creation phase right satisfies all three; a fix that moves the lock by
+a tuned frame count satisfies none of them, because it would still have the wrong character
+pressing the button.
+
+**Excluded by this round, additive to the previous exclusions.** The trigger box constants,
+the button child's `+$24` offset, the parent/child one-frame dispatch offset, the capsule's
+horizontal `1`-px/frame step and its `x` at the trigger row, and Sonic's `x`/`y`/`y_vel`/`anim`
+are each measured exactly correct at the deciding row. The defect is not in the button scan.
+
+**One note on the AIZ2 override.** `Aiz2EndEggCapsuleInstance.defersButtonEligibilityCreatedByParentMotion()`
+defers eligibility created by the parent's **horizontal** step. The binding axis at row 5992
+is **vertical**, so that override cannot gate this case. It is not wrong; it is aimed
+elsewhere.
+
+**Fixture geography, again.** The standalone `TestS3kSonicTailsAiz5SegmentTraceReplay` and the
+chain's segment 8 read the *same* `aiz_5` directory and report different numbers: the
+standalone cold-loads the act and reports 2518 errors first at frame 0, because mid-run entry
+state is not restored (`rings` 36 vs 0, and `Water_level` `0x0528` from `StartingWaterHeights`
+against the ROM's already-raised `0x0618` — AIZ2 has water for Sonic/Tails,
+`sonic3k.asm:9751-9812`, and the recording's twelve underwater transitions all sit exactly on
+the `0x0618`/`0x0619` boundary). Only the chain figure, 2288 first at 6000, is the frontier.
+Quote the harness, not just the directory.
