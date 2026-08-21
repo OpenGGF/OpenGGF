@@ -222,6 +222,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
   this phase; active-segment cursor migration remains future work requiring
   separate approval.
 
+- **ROM-shaped object range primitives (2026-08-21):** shared helpers now model
+  Sonic 2's one-sided behind-screen sign test and the Sonic 1/2 player-relative
+  deletion window without folding in caller-owned rendering or lifetime
+  behaviour. Focused tests cover 16-bit wrap and boundary semantics; object
+  adoption remains explicit at each owning call site.
+
 - **Unrepresented-span hardware work now completes (2026-08-21):** trace replay
   releases production-submitted hardware work that was queued outside every
   recorded segment, where no recorded completion can exist. Work submitted
