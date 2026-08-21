@@ -114363,3 +114363,67 @@ defeat. At `FixBugs = 0` the guard is absent, which is the arm the engine must m
 concerns boss HP rather than the `-0x300`.
 
 The other three death arms remain coordinates only, segments and shared cause unestablished.
+
+## 2026-08-21 -- CORRECTION: the FZ side-hit is NOT absent. It is implemented and never fires
+
+Measured at `c5c06c542`. **This corrects the previous entry's closing section**, which said
+`Sonic1FZBossInstance` contains no `0x300` write. That is false and the error was mine.
+
+### How the wrong claim was produced
+
+`grep -n "0x300\|768\|setXSpeed\|Roll\|checkHit\|sideHit" <file> | head -15`. The `Roll`
+alternative matched fifteen `suppressCurrentRollAttack` lines first, `head` cut there, and the
+empty tail was read as "no `0x300` anywhere". **The grep was a fact about the pager, not about
+the file** -- the same hazard as the "six call sites turned out to be fifty" case, committed
+in a round that had just congratulated itself for reading an empty result correctly. Grep for
+the one token that matters, and open the method rather than trusting a filtered list.
+
+### What the engine actually has
+
+`Sonic1FZBossInstance.onSolidContact` implements the routine faithfully:
+`SolidObjectParams.of(0x2B, 0x14, 0x14)` -- the ROM's exact half-width and `40/2` heights;
+the `tst.w d4 / bgt` side gate including a reproduction of `SolidObject`'s `+4` vertical
+bias; `addq.w #7,(v_random).w` as a 16-bit add to the seed's high word; the
+`cmpi.b #id_Roll` test; and `int bounceVel = 0x300` sign-flipped on `renderFlags & 1` into
+`player.setXSpeed`.
+
+**So the defect is a gate that rejects, not a missing write.**
+
+### The measurement
+
+Probed all four rejection paths plus the apply, over the whole run:
+
+| outcome | count |
+|---|---|
+| `notRolling` | 25 |
+| **`SUPPRESSED`** | **18** |
+| `verticalExtent` | 1 |
+| `touchSide=false` | 0 |
+| **`APPLIED`** | **0** |
+
+**The bounce never fires anywhere in the run.** Every contact is at `x = 0x2525` -- the
+engine pinned at the solid edge, as the y-walk showed.
+
+The 25 `notRolling` rejections are at `y = 0x05AC` with `anim = 0x00`: the player standing on
+the ground beside the boss, which the ROM's `cmpi.b #id_Roll` would also reject. **Correct.**
+
+The 18 `SUPPRESSED` rejections run `y = 05A4, 059E, 0599, 0593, 058D, 0588, 0584, 0581` --
+the descending arc of the **second** jump, rows ~1158-1165. **So `suppressCurrentRollAttack`
+is what blocks the bounce in the row-1161 window**, and it is an engine-invented guard with
+no ROM counterpart: defect shape 5, an invented window replacing a ROM predicate.
+
+### What is NOT established, and a gap in my own probe
+
+**No contact was logged at row 841 at all** (`y = 0x0576`). That is the row this whole chain
+starts at, and the probe cannot say why, because **it does not cover the method's first early
+return** -- `if (state.routineSecondary != STATE_CYLINDER_ATTACK) return;` logs nothing. So
+row 841 is either "no solid contact detected" or "boss not in the cylinder-attack state", and
+those are different defects.
+
+That omission is the same shape as the finding above: I instrumented the gates I was thinking
+about and not the one I was not. **The next probe must log every exit including the state
+check**, and should distinguish them before anything is changed.
+
+So the fix is **not** yet writable: the row-1161 blocker is named (`suppressCurrentRollAttack`)
+but the row-841 origin is not, and 841 is the one that matters. The other three death arms
+remain coordinates only.
