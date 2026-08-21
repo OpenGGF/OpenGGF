@@ -113894,3 +113894,79 @@ Full survey, the already-correct population, the Obj1F stale-test verdict, and a
 frame", measured `true` on the first `update()` of all 54 bubbles the level-select
 segment creates):
 [2026-08-21-carried-render-flag-family.md](../architecture/audits/trace/2026-08-21-carried-render-flag-family.md).
+## 2026-08-21 -- S1 segment 33: the Final Zone re-load is the DEATH-RESTART path, on a run where nothing dies
+
+Follow-up to the previous entry, measured at `033270644`. Instrumented the chain test's
+**own** coordinator loop this time, not `TraceSessionLauncher`'s -- rule 127, and the reason
+the previous round could not see the generation move.
+
+### The generation source, and the normal pattern
+
+`AbstractRunChainTest.observation(...)` builds its identity from `levelLoads.generation()`,
+which is `LevelManager.getCompletedProductionLoadGeneration()`. Logging every change of
+`(mode, generation, zone, act)` gives the whole run's shape, and the first thing it shows is
+that **a title card with a generation bump is the ORDINARY segment entry** -- including for
+two segments of the same act, which each get their own. So "TITLE_CARD plus a new
+generation" is not by itself anomalous, and reading it as anomalous is what makes this abort
+look like the title-card stalls.
+
+The tail is where it diverges:
+
+```
+seg=31 TITLE_CARD gen=22 zone=5 act=2      seg=31 LEVEL gen=22
+seg=32 TITLE_CARD gen=23 zone=6 act=0      seg=32 LEVEL gen=23     <- Final Zone entry
+seg=33 TITLE_CARD gen=24 zone=6 act=0                              <- Final Zone AGAIN
+```
+
+(The probe's `seg` is `productionOwnerSegmentIndex`, which trails the source index by one at
+these boundaries; the identities are what matter.)
+
+### What performs the second load
+
+A stack trace at the `completedProductionLoadGeneration` increment names it outright:
+
+```
+GEN=24 zone=6 act=0
+  LevelManager.restartCurrentLevelAfterDeath(LevelManager.java:3322)
+  TraceSessionLauncher.runDeathRestartLoad(TraceSessionLauncher.java:2330)
+  GameLoop.doRespawn(GameLoop.java:4158)
+```
+
+against generation 23, which is the ordinary entry:
+
+```
+GEN=23 zone=6 act=0
+  LevelManager.loadZoneAndActForFreshRuntime -> GameLoop.doZoneAct
+  ... AbstractRunChainTest.prepareAcrossLevelBoundary
+```
+
+**So the Final Zone is re-loaded through the death-restart path.** And the previous round's
+controlled zero still stands: `AbstractPlayableSprite.setDead(true)` was never called
+anywhere in the run, while another probe wrote in the same run and directory. The engine
+reaches `doRespawn` without the player's dead flag ever transitioning.
+
+### The next measurement, and it is one probe
+
+`doRespawn` is reached from `LevelManager.requestRespawn()`, whose only caller is
+`PlayableSpriteMovement.tickRestartCountdown()` -- armed by `enterDeathRestartRoutine`,
+which distinguishes **three** causes:
+
+```
+boolean timeOver = !gameOver && isTimeOverFlagged();
+sprite.enterDeathRestartRoutine(gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+```
+
+`isTimeOverFlagged()` reads the level's `Time_over_flag` -- the ROM's HUD `TimeOver`
+routine, which kills the player and raises the flag at 9:59:59
+(`docs/s1disasm/_inc/HUD Update.asm:103-111`) and is owned by the level timer rather than by
+the player, which would explain a restart with no `setDead` transition.
+
+**Which of game-over, time-over, or an ordinary death arms it is NOT yet measured, and
+should not be guessed** -- a time-over story fits the no-death evidence neatly, which is
+exactly the condition rule 126 warns about. One probe at `enterDeathRestartRoutine`
+recording `gameOver`, `timeOver` and the level timer settles it, and the chain reproduces in
+15.8s.
+
+The ROM comparison is already in hand for whichever answer comes back: the recorded segment
+holds `player_routine` `02` and `player_present` 1 for all **5086** rows, and emits no
+`zone_act_state` transition at all, so the ROM neither dies nor re-loads here.
