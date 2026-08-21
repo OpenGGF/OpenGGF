@@ -102673,3 +102673,109 @@ the path would be the next fitted constant.
 
 Read the `$F4` handler in `off_845D8` and the waterfall child, and establish what invokes
 `AIZEndBoss_Reveal`. Only then is there a condition to give the engine.
+
+## 2026-08-21 — Landed: the CPZ pipe's loop-counter clobber, modelled
+
+Branch `bugfix/ai-s2-objectloop-budget-r1` off `origin/develop` (`389260bf9`).
+Landed: `d9aa72b7b` (the model) and `3c677fbd6` (collaborator extraction and the
+source-line budget that forced it).
+
+### The change
+
+`ObjectLoopSlotBudget` holds the ROM object-loop counter for one pass.
+`ObjectManager` clears it at the top of every walk, ends the walk when it is
+exhausted, and answers whether the walk reached the fixed-in-level slots.
+`SpriteManager`'s fixed-slot pass — Tails' tails and the fixed dust — is the tail
+of that same walk, so it now runs only when the walk got there.
+
+`CPZBossPipe.updateRetract` sets it, once per retract step, to
+`Sonic2ObjectIds.CPZ_BOSS`. That is not a duration and not a measured number: it
+is the boss's own object id, which `Obj5D_Pipe_Retract_ChkID` leaves in `d7`
+because it uses the loop counter as scratch for its id compare
+(`docs/s2disasm/s2.asm:62244-62253`). The site carries the `FixBugs = 0` comment
+the standing rule asks for — the flag, the branch the engine takes, and what the
+fixed branch would do instead (`cmpi.b #ObjID_CPZBoss,id(a1)`, leaving `d7`
+alone, so none of this happens under it).
+
+The counter is modelled as a live register rather than a bound, because that is
+what it is: `RunObjects` loads it once per frame and steps it with `dbf`, so a
+write shortens the rest of that frame's walk and nothing beyond it. Nothing is
+carried across frames and nothing is captured for rewind.
+
+### Matrix
+
+Candidate `3c677fbd6` against control `389260bf9`, both arms in the same
+worktree via `git reset --hard`, JDK 21, `-Dmse=off`, all three ROM paths
+explicit.
+
+| arm | control | candidate |
+|---|---|---|
+| `-Ptrace-replay` | 800 tests / 6 F / 4 skipped | 800 / 6 F / 4 skipped |
+| `-Pguards` | 500 / 0 | 500 / 0 |
+| default suite | 15,194 / 51 F / 64 E / 18 skipped | 15,194 / 51 F / 64 E / 18 skipped |
+
+Reach proven equal on every arm: the `in com.openggf...` class-name sets diff
+clean (1,926 classes in the default suite), the `Tests run: 0,` counts match
+(6 under `-Ptrace-replay`, 14 in the default suite), and the failing-method sets
+diff clean by full untruncated message — 114 methods in the default suite, 6
+under `-Ptrace-replay`.
+
+**No collateral.** This suspends every `LevelOnly_Object_RAM` occupant, not only
+Tails' tails — Super Sonic stars, both breathing-bubble objects, both dust
+objects, both shields and both invincibility-star groups — so it was looked for
+and it is not there. Stated explicitly because a null result on a shared
+object-pass change is worth recording: the next person to touch that pass should
+know the search was run. The likely reason is that the only site that fires is
+eleven frames in one act with the boss already dead, so a test would have to
+have a shield or dust live inside that window.
+
+### Movement
+
+| | control | candidate |
+|---|---|---|
+| `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` | 1681 errors | **370** |
+| chain segment 15 | 7415 errors | **2122** |
+| S2 chain axes | 13 | **12** |
+| S1 chain axes | 21 | 21 |
+| S3K chain axes | 3 | 3 |
+
+The 370 and 1681 are whole-report counts read from the report's `errors` array,
+**not** the physics-filtered "first non-camera mismatch". That distinction
+matters for anyone comparing these numbers with a segment's headline field,
+which is filtered to the physics group by design and can therefore sit behind an
+animation error.
+
+No per-segment count moved up anywhere on any chain, and every S1 and S3K
+per-segment line is byte-identical between arms.
+
+The axis that closed is `[dynamic-art-gap] seg11_arz1 -> ss_7` — eleven segments
+downstream of CPZ act 2. Eleven frames of suspended object updates were skewing
+the DPLC ordinal and transfer-id ledger far enough forward to break a transition
+gap two zones later; with the suspension modelled, the ledger lines up and the
+gap compares clean.
+
+### What is left in this segment
+
+Frame **2252**, the one-frame rider unseat across the Obj6B slot permutation
+(parked; its own entry above, and the `Obj6B` `on_screen` candidate there is
+still parked with its kill condition half-triggered), and frame **5662**, where
+the sidekick goes airborne in the engine and not in the ROM. 5662 is now the
+segment's real frontier.
+
+### A note on the source-line budget this needed
+
+`TestArchitecturalSourceGuard`'s `OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES`
+moved 3041 -> 3051. The loop counter is the facade's own loop bound and cannot
+live in the placement, touch-response or solid-contact collaborators the budget
+protects, so the state and arithmetic were extracted to `ObjectLoopSlotBudget`
+first and only the remainder taken.
+
+Checking that constant's whole history, as the review asked: it has been raised
+**seven times in fifty-five days** — 2735, 2747, 2821, 2823, 2880, 2914, 3041,
+3051 — a total of `+316` lines, and **never once lowered**. The largest raise,
+`+127` on 2026-08-19, records in its own comment that it was absorbing two
+months of drift accumulated while no CI job ran the guard. The raises cluster
+right after gaps in which the guard was not running, which is the shape of a
+ratchet that can only be discovered at raise time and will therefore always be
+raised. That is a property of the mechanism, not of any one raise, and it is
+recorded here as the finding rather than as a defence of this one.
