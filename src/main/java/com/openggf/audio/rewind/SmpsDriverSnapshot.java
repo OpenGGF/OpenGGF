@@ -15,6 +15,7 @@ import java.util.Objects;
 public record SmpsDriverSnapshot(
         SmpsSequencer.Region region,
         SmpsDriver.ReadMode readMode,
+        int palFullUpdateCounter,
         int continuousSfxId,
         boolean continuousSfxFlag,
         int contSfxLoopCnt,
@@ -26,6 +27,10 @@ public record SmpsDriverSnapshot(
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(readMode, "readMode");
+        if (palFullUpdateCounter < 0 || palFullUpdateCounter > 6) {
+            throw new IllegalArgumentException(
+                    "PAL full-update counter must be in [0, 6]");
+        }
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
@@ -43,6 +48,7 @@ public record SmpsDriverSnapshot(
         this(
                 region,
                 readMode,
+                5,
                 continuousSfxId,
                 continuousSfxFlag,
                 contSfxLoopCnt,
@@ -50,6 +56,29 @@ public record SmpsDriverSnapshot(
                 fmLockSequencerIds,
                 psgLockSequencerIds,
                 null);
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds,
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        this(
+                region,
+                readMode,
+                5,
+                continuousSfxId,
+                continuousSfxFlag,
+                contSfxLoopCnt,
+                sequencers,
+                fmLockSequencerIds,
+                psgLockSequencerIds,
+                synthSnapshot);
     }
 
     @Override

@@ -3022,7 +3022,8 @@ All notable changes to the OpenGGF project are documented in this file.
   modulation, envelopes, and note-fill running while extending note duration;
   tempo accumulators start and change with the correct game-specific phase,
   Sonic 2 performs its music-only PAL repeat every fifth VInt, and S3K speed
-  shoes use the shared SFX/music timeout cadence.
+  shoes use the shared SFX/music timeout cadence. Locked-on S3K also repeats
+  the complete music/SFX driver update on the shipped sixth PAL VInt cadence.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

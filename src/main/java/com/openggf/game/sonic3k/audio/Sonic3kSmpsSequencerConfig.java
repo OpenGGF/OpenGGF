@@ -51,7 +51,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
-                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.LEGACY_TEMPO_SCALE)
+                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.FULL_DRIVER_REPEAT_EVERY_SIXTH)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)

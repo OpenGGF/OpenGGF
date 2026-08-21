@@ -23,7 +23,9 @@ public final class SmpsSequencerConfig {
         NONE,
         /** Sonic 2: one extra music-only service every fifth PAL VInt. */
         EXTRA_MUSIC_EVERY_FIFTH,
-        /** Temporary compatibility until S3K's full-driver repeat is owned by SmpsDriver. */
+        /** Locked-on S&K: repeat the complete driver update every sixth PAL VInt. */
+        FULL_DRIVER_REPEAT_EVERY_SIXTH,
+        /** Legacy generic 1.2 tempo scaling for non-production/custom profiles. */
         LEGACY_TEMPO_SCALE
     }
 

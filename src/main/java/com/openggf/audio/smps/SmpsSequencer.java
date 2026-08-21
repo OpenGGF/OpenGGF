@@ -996,11 +996,38 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @param samples Number of samples to advance
      */
     public void advanceBatch(int samples) {
+        advanceBatchAndCountDriverFrames(samples);
+    }
+
+    /**
+     * Advance this sequencer and return the number of VInt service boundaries
+     * crossed. SmpsDriver uses this to keep game-wide scheduler state aligned.
+     */
+    public int advanceBatchAndCountDriverFrames(int samples) {
+        int driverFrames = 0;
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
             processTempoFrame();
+            driverFrames++;
         }
+        return driverFrames;
+    }
+
+    public double driverSamplePhase() {
+        return sampleCounter;
+    }
+
+    public void alignDriverSamplePhase(double samplePhase) {
+        if (samplePhase < 0 || samplePhase >= samplesPerFrame) {
+            throw new IllegalArgumentException(
+                    "driver sample phase is outside the VInt interval");
+        }
+        sampleCounter = samplePhase;
+    }
+
+    public void repeatDriverService() {
+        processTempoFrame();
     }
 
     /**

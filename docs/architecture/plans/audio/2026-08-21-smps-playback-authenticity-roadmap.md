@@ -78,8 +78,8 @@ This is the first implementation slice.
 - Replace generic PAL tempo multiplication with the actual per-driver policy:
   no S1 compensation, and S2's extra music update every fifth PAL VInt for
   eligible songs while SFX remains single-service.
-- **Pending after this first slice:** implement locked-on S&K's driver-global
-  PAL repeat at the shared driver boundary. The shipped `fix_sndbugs=0` path
+- Implement locked-on S&K's driver-global PAL repeat at the shared driver
+  boundary. The shipped `fix_sndbugs=0` path
   seeds 5, reloads 6, and tests before decrementing, so every sixth PAL VInt
   repeats the full update, including SFX, music, and the speed/fade tails. Do
   not approximate it with counters owned by independently admitted sequencers.
@@ -87,10 +87,10 @@ This is the first implementation slice.
 - Match S3K speed-shoes cadence, including the two timeout services per outer
   VInt that produce an extra music update every four VInts at value 8.
 
-Acceptance for this first slice: focused tests prove service count, duration
-progression, accumulator phase, and modulation/envelope activity for all three
-modes, and ROM presentation integrations remain green. The locked-on PAL
-driver loop is explicitly deferred to the next Phase 1 slice.
+Acceptance: focused tests prove service count, duration progression,
+accumulator phase, and modulation/envelope activity for all three modes,
+including the locked-on PAL driver loop; ROM presentation integrations remain
+green.
 
 ### Phase 2 — Request admission, priority, and takeover order
 

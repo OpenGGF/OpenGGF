@@ -46,6 +46,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private final SmpsSequencer[] psgLocks = new SmpsSequencer[4];
     private final Map<Object, Integer> psgLatches = new HashMap<>();
     private SmpsSequencer.Region region = SmpsSequencer.Region.NTSC;
+    private int palFullUpdateCounter = 5;
 
     private final List<SmpsSequencer> pendingRemovals = new ArrayList<>();
 
@@ -99,6 +100,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final SmpsSequencer.Region region;
         private final ReadMode readMode;
         private final int hybridChunkCountForTesting;
+        private final int palFullUpdateCounter;
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
@@ -121,6 +123,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 SmpsSequencer.Region region,
                 ReadMode readMode,
                 int hybridChunkCountForTesting,
+                int palFullUpdateCounter,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
@@ -141,6 +144,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.region = region;
             this.readMode = readMode;
             this.hybridChunkCountForTesting = hybridChunkCountForTesting;
+            this.palFullUpdateCounter = palFullUpdateCounter;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
@@ -561,6 +565,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         sequencer.commitSfxAdmissionInitialization();
         sequencer.setRegion(region);
+        alignSequencerServicePhase(sequencer);
         sequencer.setIsSfx(true);
 
         SmpsSequencer replaced = admission.replacedSequencer;
@@ -799,6 +804,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     public void setRegion(SmpsSequencer.Region region) {
+        if (this.region != region) {
+            palFullUpdateCounter = 5;
+        }
         this.region = region;
         synchronized (sequencersLock) {
             for (SmpsSequencer seq : sequencers) {
@@ -1141,6 +1149,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     region,
                     readMode,
                     hybridChunkCountForTesting,
+                    palFullUpdateCounter,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
@@ -1208,6 +1217,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             readMode = token.readMode;
             hybridChunkCountForTesting =
                     token.hybridChunkCountForTesting;
+            palFullUpdateCounter = token.palFullUpdateCounter;
             continuousSfxId = token.continuousSfxId;
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
@@ -1254,6 +1264,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return new SmpsDriverSnapshot(
                     region,
                     readMode,
+                    palFullUpdateCounter,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
@@ -1303,6 +1314,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
             region = snapshot.region();
             readMode = snapshot.readMode();
+            palFullUpdateCounter = snapshot.palFullUpdateCounter();
             continuousSfxId = snapshot.continuousSfxId();
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
@@ -1443,6 +1455,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return;
         }
         seq.setRegion(region);
+        alignSequencerServicePhase(seq);
         seq.setIsSfx(false); // Cache isSfx flag on the sequencer for O(1) lookup
         synchronized (sequencersLock) {
             // ROM behavior: re-triggering the same SFX replaces the old one.
@@ -1745,13 +1758,70 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void advanceSequencersBatch(int frames) {
         int size = sequencers.size();
+        SmpsSequencer driverClock = null;
+        for (int i = 0; i < size; i++) {
+            SmpsSequencer candidate = sequencers.get(i);
+            if (!candidate.isSfx()) {
+                driverClock = candidate;
+                break;
+            }
+        }
+        if (driverClock == null && size != 0) {
+            driverClock = sequencers.getFirst();
+        }
+        int driverFrames = 0;
         for (int i = 0; i < size; i++) {
             SmpsSequencer seq = sequencers.get(i);
-            seq.advanceBatch(frames);
+            int sequencerFrames =
+                    seq.advanceBatchAndCountDriverFrames(frames);
+            if (seq == driverClock) {
+                driverFrames = sequencerFrames;
+            }
             if (seq.isComplete()) {
                 pendingRemovals.add(seq);
             }
         }
+        for (int i = 0; i < driverFrames; i++) {
+            servicePalFullUpdateBoundary();
+        }
+    }
+
+    private void alignSequencerServicePhase(SmpsSequencer sequencer) {
+        if (!sequencers.isEmpty()) {
+            sequencer.alignDriverSamplePhase(
+                    sequencers.getFirst().driverSamplePhase());
+        }
+    }
+
+    private void servicePalFullUpdateBoundary() {
+        if (region != SmpsSequencer.Region.PAL
+                || !usesPalFullDriverRepeat()) {
+            return;
+        }
+        if (palFullUpdateCounter != 0) {
+            palFullUpdateCounter--;
+            return;
+        }
+
+        // Shipped locked-on fix_sndbugs=0 checks before decrementing. It
+        // reloads 6, repeats zUpdateEverything, then that repeated tail
+        // decrements the counter to 5.
+        palFullUpdateCounter = 6;
+        for (SmpsSequencer sequencer : sequencers) {
+            sequencer.repeatDriverService();
+        }
+        palFullUpdateCounter--;
+    }
+
+    private boolean usesPalFullDriverRepeat() {
+        for (SmpsSequencer sequencer : sequencers) {
+            if (sequencer.getConfig().getPalServicePolicy()
+                    == SmpsSequencerConfig.PalServicePolicy
+                            .FULL_DRIVER_REPEAT_EVERY_SIXTH) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void renderSingleSample(short[] buffer, int frameIndex) {
