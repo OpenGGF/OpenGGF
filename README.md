@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S1 ring sparkle lifetime (merged 2026-08-21):** the signpost's sparkles were
+  living sixteen frames instead of twenty-five, because a flat frame delay stood
+  in for the animation script's own duration byte and the routine's reload-on-
+  negative semantics. SLZ1's slot table now matches the ROM exactly for the whole
+  act -- zero divergent frames out of 146, from 107 when the work started.
+
 - **S3K level art ordering (`bugfix/ai-s3k-art-order-r1`, merged 2026-08-21):** the
   title-card deferral was releasing the module queue while it was empty, so the
   following frames' object art took every slot and the terrain art starved. The
