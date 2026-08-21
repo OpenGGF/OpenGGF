@@ -137,6 +137,7 @@ that looks like a real result.
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
+| 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3138,4 +3139,27 @@ arm, not of the routine — and a comment naming the routine will read as coveri
 in the call chain and check each for writes to the field. Here that established there was no
 second candidate rather than assuming it — and the same sweep is what proves an unmodelled arm
 exists, because an arm nobody enumerated cannot be ruled out by reading the arm that was.
+
+## One hundred and twenty-first rule: a probe log without a frame delimiter is ambiguous, and both readings fit the bytes
+
+A round concluded the engine's touch pass ran *after* the object pass — a shared-path ordering
+defect, the largest blast radius proposed that day — from a probe log reading
+`MOVE / SNAP / SCAN / BOUNCE`. That sequence groups equally well as **`[MOVE][SNAP][SCAN]`**, the
+object moving before its own scan, or as **`[MOVE] | [SNAP][SCAN]`** with a frame boundary in the
+middle. Both groupings fit the bytes exactly. The conclusion was wrong: the engine's phase is
+ROM-correct.
+
+The tie was broken by reasoning backwards from the failing comparison — *the value diverges at row
+411, so the bounce must be inside frame 411* — which **silently assumed engine frame == trace
+row**. It is off by one, and the entire conclusion turned on that. A one-point clock conversion
+(rule 101) hidden inside what looked like direct observation rather than inference.
+
+**Print an explicit per-frame marker beside the driver's own row index**, so the clock is converted
+by measurement rather than assumed. With that in place the same log is unambiguous.
+
+**Corollary, from the same round: two value-identical sequences offset by one row cannot be told
+apart by comparing values.** An earlier elimination — "the trajectory is in phase, so this is not a
+creation-frame error" — rested on exactly that comparison, and was structurally incapable of
+returning the answer it was asked for. When checking for a phase offset, anchor on a landmark that
+is measured, never on one assumed to line up.
 
