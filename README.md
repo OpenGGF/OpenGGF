@@ -232,7 +232,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   census are recorded against their actual load boundary, avoiding fitted
   clock conversions or treating destination-player state as a later frame.
   The latest S2 Super-state candidate is recorded as a partial fingerprint,
-  with its remaining discrepancies kept explicit instead of promoted to a fix.
+  with its remaining discrepancies kept explicit instead of promoted to a fix;
+  a second drain schedule is likewise documented as a non-ROM sidekick
+  transformation rather than accepted as a parity correction.
 
 - **Shared trace fixtures now rebind every playable power-up spawner (merged
   2026-08-21):** retained S1/S2 level managers no longer gate the replacement

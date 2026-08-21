@@ -109924,3 +109924,87 @@ not run: a candidate that fails its own gate does not earn one.
 
 The acceleration half is correct and ROM-cited, and should land with a rings fix
 rather than alone, since alone it reds the chain harder.
+
+## 2026-08-21 — all three Super defects located: a sidekick that transforms, a test read a frame too late, and activation installed at the wrong frame
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-transform-frame`, based
+on `a8edf5bdc`. Probe reverted; `src/` unchanged. Reporting before landing.
+
+### The second schedule is CONFIRMED, and it is structural
+
+A probe in `startTransformation()` printing the playback cursor (temporary,
+reverted) resolves it in two lines:
+
+```
+[super] START row=105709 who=Sonic rings=51 cls=Sonic2SuperStateController
+[super] START row=105725 who=Tails rings=51 cls=Sonic2SuperStateController
+```
+
+Segment 18's offset is 101691, so those are segment frames **4018** and
+**4034** — two transformations, 16 apart, each subsequently draining on its own
+61-frame cycle. That is the 4018/4034, 4079/4095, 4140/4156 pattern exactly
+(4018+61=4079, 4034+61=4095, and so on).
+
+**Tails gets a full `Sonic2SuperStateController` and transforms.**
+`LevelPlayableArtInitializer:254` calls `initSuperState(sidekick)` and
+`Sonic2GameModule.createSuperStateController` returns a
+`Sonic2SuperStateController` for any playable, with no character gate. S2 has no
+Super Tails — the transformation check is Sonic's `Obj01` routine
+(`Sonic_CheckGoSuper`, s2.asm:37455) and no Tails equivalent exists; Super Tails
+is S3K with super emeralds. The recording agrees independently: at segment-18
+frame 4035 `sidekick_animation_id` is rom `0x0002` against engine `0x001F`, the
+transformation animation.
+
+**This is not only the drain's problem.** The engine's Tails entering
+`AniIDSupSonAni_Transform` is what makes `sidekick_mapping_frame` diverge at
+4035 — and the sidekick's mapping frame is what drives the DPLC stream whose
+`transfer_id`/`edge_ordinal` deficit this lane started from, one frame later at
+4036. The art deficit is a grandchild of this defect. The interval arithmetic is
+a symptom, as suspected, and no interval should be touched.
+
+### The one-frame offset is the frame position of the test, not the test
+
+The test itself is already correct and ROM-cited: `checkTransformationTrigger`
+gates on `(y_speed & 0xFF00) == 0` per `tst.b y_vel(a0) / beq.s
+Sonic_CheckGoSuper` (s2.asm:37432-37434), and its comment records an earlier
+round moving it off a five-frame error onto that predicate.
+
+What is left is *when* it is read. `Sonic_JumpHeight` is the FIRST call in
+`Obj01_MdJump` (s2.asm:37432), so the ROM tests the `y_vel` left at the end of
+the PREVIOUS frame, before this frame's `Sonic_ChgJumpDir` and
+`ObjectMoveAndFall`. The engine calls `superState.update()` from
+`AbstractPlayableSprite` (:2669) after the frame's physics, so it tests the
+`y_vel` this frame's move just produced — one frame sooner.
+
+The fixture proves it rather than merely fitting it. Recorded
+`player_y_speed` is `0x0028` at row 4018 and `0x0060` at 4019, and the
+in-code comment states the ROM transforms "at 4019 with y_vel = $0028" — the
+value recorded at **4018**. The ROM's check at frame 4019 is reading frame
+4018's end-of-frame velocity. The engine reads 4018's velocity on frame 4018.
+Same predicate, same state, read one frame apart.
+
+### The group, now fully located
+
+| | defect | owner |
+|---|---|---|
+| A | the S2 sidekick is given a Super controller and transforms | `Sonic2GameModule.createSuperStateController` — a per-game rule, not a name check in shared code |
+| B | the activation test is evaluated after the frame's move instead of before it | where `SuperStateController.update()` sits in the playable's frame |
+| C | Super physics profile and drain counter installed at animation completion instead of on the transformation frame | `startTransformation` / `updateTransformation`, with the `< 0` drain test |
+
+C was built and measured last round: it fixes the acceleration half and reds the
+chain alone, because A and B are still there.
+
+### Updated fingerprint for the combined landing
+
+Unchanged, plus the transformation frame as a condition rather than an
+assumption:
+
+- the engine's Sonic transforms on segment-18 frame **4019**, not 4018;
+- **no** sidekick transformation occurs at all, so `sidekick_animation_id` stays
+  `0x0002` at 4035;
+- `rings` matches at 4019 and drains at 4080 and 4141 — one schedule, not two;
+- `x_speed` is `0x0121` at 4019.
+
+Nothing was fitted; no interval was adjusted. Not landed — the combined change
+needs the three-game matrix, both arms in one worktree, and that is the next
+round.
