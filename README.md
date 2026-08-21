@@ -214,6 +214,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **TurboSpiker launch-dispatch parity (2026-08-21):** the spike shell now sets
+  its velocity on the ROM's launch dispatch and begins moving on the next frame,
+  removing a persistent four-pixel lead and advancing the HCZ2 trace frontier
+  from frame 22243 to frame 22860.
+
+- **S3K vertical-wrap rule documented (2026-08-21, research only):** ROM analysis
+  establishes `$FFF` as the normal `Screen_Y_wrap_value`, with `$FFFF`, `$7FF`,
+  and `$3FF` selected by specific setup paths. It identifies three existing
+  engine divergences for later correction; no wrap-runtime change was included.
+
 - **S3K object-culling geometry (2026-08-21, research only):** ROM-backed
   analysis identifies five S3K culling/deletion predicates, only two of which
   correspond to the four previously catalogued S1/S2 families. It also records

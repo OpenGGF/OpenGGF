@@ -3044,3 +3044,14 @@ quantity at all*:
 That last shape passes any review that asks "does the cited routine exist, and is it reached?"
 Both answers are yes. The number still cannot come from there.
 
+**Addendum: an identical spelling with different semantics is worse than a different spelling.**
+S1 spells S2's `render_flags` as `obRender` — a different name, which at least prompts a second
+look. **S3K spells it `render_flags`, the same token as S2, and the bits underneath differ**: bit 7
+is set by the render pass *before* the sprite-budget check (so it means "passed the geometry test",
+not "was drawn"), the vertical wrap is a **variable** `Screen_Y_wrap_value` rather than S2's fixed
+11-bit mask, there is no `explicit_height` branch at all because S3K carries a real
+`height_pixels`, and the comparison is against the VBlank-latched camera copies. A search keyed on
+S2's vocabulary *finds* these sites and reports them as the same thing. Nothing prompts the check.
+
+Confirm the semantics per game even when the name matches — especially then.
+
