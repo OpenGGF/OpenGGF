@@ -103082,3 +103082,62 @@ The target is the animation divergence itself: why the player reaches mapping fr
 ROM reaches 8, at `lz1` f3123, `lz1_2` f3181 and `lz3` f2804. That is an animation-script question,
 and the anchoring method for reaching the site is the comparator's own cursor with `expX` checked
 against `engX` — no derived rows.
+
+## 2026-08-21 — the animation divergence: one shared trigger, and the ROM frame is always `fr_Walk13`
+
+Round `s1-slz1-graze-r1`, animation divergence. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change; probes reverted.** Both scoping questions answered by measurement.
+
+### Q1 — state or frame? Two of each, and the field names settle it
+
+Probing `absorbDivergentFields` for the full divergent-field list at each segment-leading site:
+
+```
+[FIELDS] frame=3123 errBefore=0 | player_mapping_frame(rom=0x0008 eng=0x0055)
+[FIELDS] frame=3181 errBefore=0 | player_mapping_frame(rom=0x0008 eng=0x0045)
+[FIELDS] frame=2804 errBefore=0 | player_animation_id(rom=0x0000 eng=0x001A) player_mapping_frame(rom=0x0008 eng=0x0055)
+```
+
+- `lz1` f3123 and `lz1_2` f3181: **animation id matches, frame differs** — a stepping/phase problem.
+- `lz3` f2804: **id differs too** (`id_Walk` vs `id_Hurt`) — a selection problem on top.
+
+### Q2 — one cause, not three coincidences
+
+Naming the constants from the disassembly (`docs/s1disasm/_anim/Sonic.asm`) rather than leaving
+them as numbers: `0x08` = **`fr_Walk13`**, `0x55` = **`fr_Injury`**, `0x45` = **`fr_Push1`**,
+animation `0x1A` = **`id_Hurt`**, `0x00` = **`id_Walk`**.
+
+| site | ROM | engine |
+|---|---|---|
+| `lz1` f3123 | `id_Hurt` + **`fr_Walk13`** | `id_Hurt` + `fr_Injury` |
+| `lz1_2` f3181 | `id_Walk` + **`fr_Walk13`** | `id_Walk` + `fr_Push1` |
+| `lz3` f2804 | `id_Walk` + **`fr_Walk13`** | `id_Hurt` + `fr_Injury` |
+
+**In all three the ROM publishes `fr_Walk13` and the engine holds the frame of the animation it
+was previously in.** Every site is a frame where the ROM enters (or passes through) the walk
+animation and immediately publishes an angle-derived walk frame; the engine carries the outgoing
+frame for one frame longer. One trigger, three occurrences — so this is one round's work, not
+three.
+
+### Mechanism candidate — NOT established
+
+`lz1` f3123 is the informative one: the ROM's recorded animation id is `id_Hurt` while its frame
+is a *walk* frame, which a single transition cannot produce. A sequence that would: Sonic lands
+at f3122 (`air` 0), `Sonic_HurtStop` sets `obAnim = id_Walk`, `Sonic_Animate` publishes
+`fr_Walk13`, and he is hurt again later in the same frame so `obAnim` returns to `id_Hurt` — the
+recorded row then carries the intermediate walk frame with the final hurt id. The ring loss
+landing at f3124 is consistent with a second hurt on f3123.
+
+**Kill condition:** if the ROM's f3123 row can be produced without a same-frame re-entry into
+`id_Hurt` — for instance if `SonAni_Hurt`'s own script contains `fr_Walk13` — this story is
+wrong and the divergence is ordinary script stepping inside one animation.
+
+That is the next thing to check, and it is one look at `SonAni_Hurt` plus the walk-frame
+selection path. Nothing here yet says which.
+
+### On the expected cancelling partner
+
+None found, and the shape argues against one: the divergence is **one frame at each site**, not a
+persisting offset, and physics never diverges because the engine rejoins the ROM's frame on the
+following row by itself. There is nothing to compensate for. Recorded so the next round does not
+go looking.
