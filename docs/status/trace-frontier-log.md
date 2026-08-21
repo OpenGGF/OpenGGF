@@ -111143,3 +111143,52 @@ The refutation is also confirmed independently from the CANNONBALL side: what th
 where the ROM has `0x20` is `0x20` itself (41.9%), nothing (14.9%), then `0x15` (9.7%), `0x78`
 (7.2%), `0x25` (6.9%). **`0x3F` is not a significant partner in either direction.** Two
 measurements from opposite ends agreeing is what makes this a refutation rather than a null.
+
+## 2026-08-21 — Projectile in WFZ is a LIFETIME defect: an invented 480px deletion margin where the ROM deletes on the render flag
+
+Measured on the verified `0fd7b7811` sweep; the cited engine source is **unchanged between
+`0fd7b7811` and `6da393111`**, so the citation is current. **Found, not fixed — named and
+stopped, per the round's terms.**
+
+**Verdict: LIFETIME, not spawn-condition.** The discriminator is run length, keyed on slot.
+In `SONIC_2_90` (WFZ), consecutive-sample runs of a slot holding `0x98`:
+
+| | runs | mean run | max | total slot-samples |
+|---|---|---|---|---|
+| ROM | **64** | **2.48** | 13 | 159 |
+| engine | **36** | **19.86** | 53 | 715 |
+
+**The engine creates FEWER distinct projectiles than the ROM (36 against 64) and holds each
+about eight times longer.** It is not over-creating; it is not deleting. That settles the owner
+question the round was gated on.
+
+**A false start worth recording.** My first persistence attempt keyed objects on
+`(slot, spawn)` and reported 713 of 714 objects living exactly one sample — apparently
+instant death. That is wrong: the `spawn` record is rebuilt as the object moves, so the key
+changes every frame and every sample looks like a new object. It is the same trap as the moving
+LZ blocks. **On a moving object, `spawn` is not an identity.** Re-keyed on slot alone, the
+answer inverted completely.
+
+**Mechanism, cited.** `Obj98_Main` deletes on the *render flag* — the object is removed as soon
+as it was not drawn:
+
+```
+Obj98_Main:
+        _btst   #render_flags.on_screen,render_flags(a0)
+        _beq.w  JmpTo65_DeleteObject
+```
+
+(`docs/s2disasm/s2.asm:74678-74679`, with `MarkObjGone` as the routine's tail). There is **no
+`fixBugs` conditional anywhere in `Obj98`**, so both arms are the same code.
+
+The engine's `WallTurretShotInstance.update()` cites that exact ROM line in its comment and then
+implements `if (!isOnScreen(480)) setDestroyed(true)`. `isOnScreen(margin)` is
+`cameraBounds.contains(x, y, margin)`, so a 480px margin is the camera box grown by 480 in every
+direction — roughly four times the 320x224 screen per axis, against the ROM's "was it drawn last
+frame". **480 appears nowhere in the ROM.** An eight-fold lifetime is what that margin buys.
+
+**This is a family, not a one-off.** The page's CANNONBALL row already records "an uncited
+`!isOnScreenX(256)` deletion `CBal` does not have". Same shape: an invented on-screen margin
+substituted for a ROM removal test, cited to the ROM line it replaces. Worth a sweep for other
+`isOnScreen(<literal>)` deletions whose comment cites a render-flag or `MarkObjGone` test — that
+is a grep, and it may account for more of the two-way table than any single object does.

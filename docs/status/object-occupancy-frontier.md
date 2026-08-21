@@ -165,8 +165,8 @@ three of them the engine holds **more** than the ROM.
 
 - **`Projectile` over-count is 602 of 617 in ONE fixture** — `SONIC_2_90`, WFZ act 1. And
   **54.3%** of those are slots where the ROM holds *nothing at all*, so it is over-creation or
-  late deletion, not misplacement. One object, one fixture, one direction: the most tractable
-  target now on this page.
+  late deletion, not misplacement. **Diagnosed 2026-08-21: it is a LIFETIME defect, not a
+  spawn-condition one** — see below. Owner is whoever owns object lifetime, not object spawning.
 - **`LeavesGenerator` over-count is 354 of 358 in chain segments 16/18/19.**
 
 **They do not share a cause.** Disjoint fixtures, and disjoint partner distributions —
