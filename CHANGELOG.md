@@ -1,5 +1,14 @@
 # Changelog
 
+- **ARZ's swinging platforms and pillars are solid on all four sides, as the ROM
+  has them:** `Obj82_Main` calls the full `SolidObject` routine, not one of the
+  top-only platform entries, so a contact whose horizontal penetration does not
+  exceed its vertical one resolves as a side collision that nudges the player
+  clear rather than seating them on top. The engine classified Obj82 as
+  top-solid-only, which skipped that decision entirely and turned a clipped
+  pillar corner during a fast fall into a landing — in ARZ2 that stopped Sonic
+  dead mid-descent and cost him the rest of the act.
+
 - **The Wing Fortress boss's defeat countdown and its camera hand-off are both
   ROM-accurate now:** the countdown started a frame early and the camera's
   max-Y write was deferred by a frame, and the two errors cancelled. The

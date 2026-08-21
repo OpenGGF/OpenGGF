@@ -543,7 +543,25 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        return true;  // Platform is only solid from the top
+        // Obj82_Main calls JmpTo23_SolidObject (docs/s2disasm/s2.asm:57221), and
+        // that thunk resolves to SolidObject (docs/s2disasm/s2.asm:35014) -- the
+        // full four-sided routine, not one of the top-only platform entries. So
+        // SolidObject_ChkBounds' axis choice applies: with d5 (horizontal distance
+        // to the nearer edge) and d1 (vertical distance), cmp.w d1,d5 / bhi
+        // SolidObject_TopBottom (docs/s2disasm/s2.asm:35407-35408) takes the TOP
+        // path only when the horizontal distance is STRICTLY greater; otherwise the
+        // contact resolves through SolidObject_LeftRight, which corrects x by
+        // sub.w d0,x_pos(a1) at SolidObject_AtEdge (docs/s2disasm/s2.asm:35438) and
+        // returns a side contact without landing.
+        //
+        // Reporting top-solid-only here skipped both side branches, so every
+        // contact reached the vertical landing check. In ARZ2 that turned a
+        // clipped corner on a pillar into a landing: at seg13_arz2 frame 344 the
+        // box is exactly the ROM's (relX 75, relY 5, d2 67, d4 134 against a
+        // half-width of width_pixels+$B) and the distances are absDistX 3,
+        // absDistY 5, so the ROM pushes Sonic +3px clear and keeps him falling at
+        // y_vel $0B60 while the engine seated him on the pillar.
+        return false;
     }
 
     @Override
