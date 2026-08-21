@@ -119,3 +119,37 @@ sites; convert the 3 `isOnScreenX` sites, which are already on the correct axis;
 remaining 30 in per-game batches. The 6 `isPersistent` and ~10 behaviour sites are **out of scope**
 and should not be touched by this programme — they are a different contract and a different
 question.
+
+## Stage 1 landed; stage 2 is blocked (2026-08-21, `72f4de020`)
+
+**Stage 1 — `ObjectRangeOps`, landed with no callers.** The ROM comparison above, modelled
+exactly: `$80`-block quantisation of both operands, camera offset a block first, 16-bit
+subtraction, unsigned compare against 640, X only. Guard test pins the bound, the coarse camera
+term, and the three properties a margin band cannot express. `MarkObjGone`'s respawn-bit clear
+and its two-player early-out are deliberately excluded so no caller inherits them silently.
+
+**Stage 2 — the render-flag predicate — is blocked, and no proxy was landed.**
+
+The engine has **no per-object draw outcome**, and that is a statement about role rather than
+about a grep. There is no renderer write-back of any kind: objects emit
+`appendRenderCommands(List<GLCommand>)` and nothing records whether an object emitted anything.
+The only "on screen" notion available to an object is
+`AbstractObjectInstance.isWithinRenderSpriteBounds(...)`, which the object computes **itself,
+from the camera, during its own update** — a current-frame bounds test. That is precisely the
+proxy a sibling lane declined to land on for `Obj82`'s swing gate, and landing it here would
+rebuild the same conflation one level up: a distance check wearing the name of a draw outcome.
+
+**What would unblock it:** recording, per object per frame, whether the object was actually
+drawn — a renderer write-back that does not exist today.
+
+**And a trap for whoever builds it.** Headless trace replay calls
+`GraphicsManager.getInstance().initHeadless()`, so a graphics manager exists — but whether the
+per-object render pass actually executes under trace replay determines whether such a flag is
+ever set in the one environment that measures these objects. **If the render pass does not run
+headlessly, the flag reads "never drawn" and the predicate deletes everything, on every trace.**
+That failure mode would look like a working implementation right up until the suite went red,
+so establish it *before* writing the write-back, not after.
+
+Because stage 2 is blocked, the conversion stages behind it are not started: the 2 render-flag
+sites cannot be converted, and the 3 X-axis sites and the remaining 30 wait on the merge-and-
+measure checkpoint as planned.
