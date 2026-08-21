@@ -38,11 +38,11 @@
 - Produces: `TraceReplayData`, the read-only comparison/bootstrap surface implemented by eager `TraceData` and the streaming cursor in Task 3.
 - Produces: `TraceRunSegmentDescriptor`, the whole-run-safe segment summary and cursor factory input.
 - Produces: `TraceReplayBootstrapSummary.from(TraceData)`, which evaluates whole-segment bootstrap scans while the planning payload is still available.
-- Produces: `SegmentPlan.descriptor()`; removes payload ownership from `SegmentPlan`.
+- Produces: `SegmentPlan.descriptor()` alongside the temporary legacy `trace()` component; Task 4 removes payload ownership after Task 5 has migrated every run consumer.
 
 - [ ] **Step 1: Write the failing descriptor ownership tests**
 
-Add tests proving that a planned segment exposes metadata, row count, timing/raw-frame mapping, compact lag outcomes, opening frame, terminal dynamic-art ledger, and source directory without exposing `TraceData`. The structural mutation the test catches is reintroducing an eager payload field into the run plan:
+Add tests proving that a planned segment exposes metadata, row count, timing/raw-frame mapping, compact lag outcomes, opening frame, terminal dynamic-art ledger, and source directory. Task 1 is a compile-safe migration step: the existing payload remains temporarily until the run consumers move in Task 5, and Task 4 owns the final no-payload assertion.
 
 ```java
 @Test
@@ -57,8 +57,8 @@ void plannedRunRetainsDescriptorsInsteadOfTraceData(@TempDir Path root) throws E
     assertEquals("s3k", plans.getFirst().descriptor().metadata().game());
     assertEquals(runDir.resolve(run.segments().getFirst().dir()),
             plans.getFirst().descriptor().segmentDirectory());
-    assertTrue(Arrays.stream(TraceRunReplayWalker.SegmentPlan.class.getRecordComponents())
-            .noneMatch(component -> component.getType() == TraceData.class));
+    assertSame(plans.getFirst().trace().metadata(),
+            plans.getFirst().descriptor().metadata());
 }
 ```
 
@@ -97,9 +97,9 @@ Make `TraceData implements TraceReplayData`. Define `TraceRunSegmentDescriptor` 
 
 Define `TraceReplayBootstrapSummary.from(TraceData)` in this task with the exact scalar/pre-trace values currently discovered by whole-segment scans: recording start, pre-level row count/presence, replay seed index, initial VBlank/V-int phase, level-loop row count, prior-input policy, complete-run/handoff predicates, release blockers, pre-trace object/player/CPU snapshots, and the first full-level/opening frames. Task 3 changes bootstrap consumers to read these stored values; the descriptor must not need to reopen a payload to answer them.
 
-- [ ] **Step 4: Change `SegmentPlan` to own only the descriptor**
+- [ ] **Step 4: Add the descriptor without breaking legacy consumers**
 
-Replace its `TraceData trace` component with `TraceRunSegmentDescriptor descriptor`; calculate execution policy during planning and update hardware-timing helpers to read descriptor fields. Do not add a compatibility `trace()` accessor.
+Add `TraceRunSegmentDescriptor descriptor` to `SegmentPlan` while retaining its existing `TraceData trace` component for compile-safe migration. Calculate execution policy during planning and update hardware-timing helpers to read descriptor fields. Do not add any new production consumer of `trace()`; Task 5 migrates the existing consumers and Task 4 removes the component.
 
 - [ ] **Step 5: Run focused tests and verify GREEN**
 
@@ -280,7 +280,7 @@ git add src/main/java/com/openggf/trace/replay/runs/TraceSegmentCursor.java \
 git commit -m "feat(traces): compare through an active segment cursor"
 ```
 
-### Task 4: Make planning one-segment-at-a-time and preserve run validation
+### Task 4: Remove legacy payload ownership and make planning one-segment-at-a-time
 
 **Files:**
 - Modify: `src/main/java/com/openggf/trace/TraceRunManifest.java`
@@ -290,12 +290,13 @@ git commit -m "feat(traces): compare through an active segment cursor"
 - Test: `src/test/java/com/openggf/trace/catalog/TestTraceRunLaunchValidation.java`
 
 **Interfaces:**
+- Consumes: Task 5's completed migration away from `SegmentPlan.trace()`; execute this task after Task 5.
 - Consumes: eager `TraceData` only inside one planning-loop iteration.
 - Produces: `TraceRunManifest.DynamicArtRunValidator`, an incremental run-wide lifecycle validator.
 
 - [ ] **Step 1: Write failing planning-lifetime tests**
 
-Inject a package-visible planning observer that receives `segmentOpened(index)` and `segmentReleased(index)`. Assert the sequence is `open 0, release 0, open 1, release 1...`, that a parser failure releases the active segment, and that the returned plan opens no cursor. Assert catalog validation uses descriptor metadata/row count.
+Inject a package-visible `SegmentPayloadLoader` ownership seam returning one eager validation payload at a time. Assert the sequence is `load 0, extract 0, load 1, extract 1...`, that a parser failure retains no completed payload, that `SegmentPlan` has no `TraceData` record component, and that the returned plan opens no cursor. Assert catalog validation uses descriptor metadata/row count. The loader is a real planning boundary, not a test-only cleanup hook.
 
 - [ ] **Step 2: Run planning tests and verify RED**
 
@@ -318,7 +319,7 @@ The validator owns the single `LifecycleIdentity`, gap index, and opening ledger
 
 - [ ] **Step 4: Rewrite planning as a scan/extract/release loop**
 
-For each segment: load and validate exactly as today, feed the incremental validator, build the immutable descriptor and special-stage summary, notify release in `finally`, and retain only the descriptor. Finish the dynamic-art validator before returning plans. `TraceCatalog` validates profiles and row counts from descriptors.
+For each segment: load and validate exactly as today, feed the incremental validator, build the immutable descriptor and special-stage summary, then drop the eager local before loading the next segment. Retain only the descriptor. Finish the dynamic-art validator before returning plans. Remove the legacy `TraceData` component/accessor from `SegmentPlan`; `TraceCatalog` validates profiles and row counts from descriptors.
 
 - [ ] **Step 5: Run planning/catalog tests and verify GREEN**
 
@@ -351,6 +352,7 @@ git commit -m "perf(traces): release segment payloads during run planning"
 **Interfaces:**
 - Consumes: `SegmentPlan.descriptor()` and `TraceSegmentCursor.open`.
 - Produces: one active cursor owned by each run drive, closed before the next segment opens.
+- Produces: no remaining run-control consumer of `SegmentPlan.trace()`, allowing Task 4 to remove it and release planning payloads.
 
 - [ ] **Step 1: Write failing lifecycle tests**
 
