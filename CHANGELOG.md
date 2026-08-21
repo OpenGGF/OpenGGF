@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The destination's terrain art is queued inside the title-card window, not past the segment
+  seam.** `Obj_TitleCardCreate` holds the card while `Kos_modules_left` is non-zero
+  (`docs/skdisasm/sonic3k.asm:62169-62171`); once it clears the ROM builds the card's pieces
+  (`:62212`), `Obj_TitleCardWait` clears `objoff_48` (`:62244`), `loc_62CC` exits and `Level:`
+  runs `LoadLevelLoadBlock` (`:7761`) — all while the card is still up. The engine published
+  that art from the destination level's own frames instead, so its parents were created after
+  the boundary and could never meet the completions recorded against the window: they stayed
+  pending for the remainder of the run, and every later module submission queued behind them.
+  Publishing at the owner's retirement — the engine's form of `Kos_modules_left` reaching zero
+  — restores it. On the Sonic 3 & Knuckles complete-emerald run the stuck pair clears (engine
+  `KOS_MODULE_QUEUE#101` was still pending at raw frames 750, 1022, 2469, 2957 and 3537; it is
+  now pending at none), unmatched hardware completions fall from 42 to 14, and the first
+  unmatched ordinals move from `#101`/`#148` to `#112`/`#165`.
+
 - **A solid object's four-pixel side-air branch now releases the player's push bit even when
   it never raised it.** `Solid_NotPushing` clears `status(a1)` bit 5 unconditionally
   (`docs/s1disasm/_incObj/sub SolidObject.asm:246-263`,
