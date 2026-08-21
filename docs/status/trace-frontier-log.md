@@ -113620,3 +113620,57 @@ most one frame and none of them the inflate climb:
 
 With 1 and 2 landed the inhale moves 1017 -> 1016 and every 1015 span shortens to
 one frame. Any two of the three give 1016; only all three give 1015.
+
+
+## 2026-08-21 -- S2 ARZ2 seg13, the generator's frame: the frontier moves 1015 -> 2175
+
+Command: `mvn -Dmse=off -DforkCount=1 -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=<s2 rom> test`,
+both arms pinned to `674cb1bad`. Control 13213 errors, first error frame 1015
+(`x_speed expected=0x0000 actual=-0031`); fix 9130 errors, first error frame 2175
+(`x_speed expected=0x01DE actual=0x018A`). Zero error entries before 2175, against
+3189 in the control. The 2175 divergence is present in the control's own report
+(`player_animation_id` expected `0x001F`, actual `0x0002`), so it is an unmasked
+pre-existing frontier, not a regression.
+
+**The RNG was in phase; the arithmetic around it was not.** The reference stream
+records no RNG state, so phase was established by reproducing the ROM's own
+observable draws. Re-implementing `GameRng` in Python from the engine's logged
+seed and searching draw offsets: skipping 6 draws reproduces the engine's burst
+exactly (count 2, timer 27, x offset -5) -- a positive control on the model --
+and skipping 4 reproduces the ROM's, on three independent recorded quantities at
+once: burst size 2 (`object_appeared` shows spawns at 903 and 933 and no third),
+timer 29 (gap 903 -> 933 is 30), and x offset -6 (row 903's appearance is an
+unrun `y=0x0649` row, so its `x=0x05F8` is the raw spawn x with no wobble
+ambiguity). Same values, two draw positions apart.
+
+**And those two draws were a consequence, not a cause.** At the start of row 903
+the engine stood at exactly the ROM's stream position; the two extra draws
+happened *during* row 903, from objects that in the ROM draw after the generator
+in the same frame. The generator firing a row late is the whole defect.
+
+**Why a row late.** `Level_MainLoop` (`s2.asm:5088-5111`) runs `RunObjects`
+(:5094) before `JmpTo_DeformBgLayer` (:5097) and calls `BuildSprites` (:5110)
+after that deform, so the object pass at frame N and `BuildSprites` at frame N-1
+see the *same* camera. Measured: the engine's object-time camera at row N equals
+the recorded `camera_x`/`camera_y` at row N-1, exactly, across rows 764-776. The
+generator carried the previous pass's own bounds evaluation instead, which is a
+camera older still, so its `render_flags` bit 7 came back on at row 771 where the
+ROM's came back at 770 -- 79 paused rows against the ROM's 78, and 691 + 133 + 1
++ 79 = 904 against 691 + 133 + 1 + 78 = 903.
+
+Walked, not sampled: the generator's whole firing series over its covered life.
+Rows 377, 378, 399, 429, 449 agree exactly in both arms (and the recorded x at
+377/378/429 is reproduced by the engine's spawn offset plus its child's first
+wobble step). The generator is removed at 452 and re-placed at 690; its first
+pass is 691, not 690, because `ObjectsManager` (:5111) runs after `RunObjects`.
+Row 691 agrees exactly and confirms two draws in phase: spawn offset +6 with the
+child's drawn angle 157 gives `1540 + Obj0A_WobbleData[29] = 1543`, the recorded
+`x=0x0607`. After the fix rows 903 and 933 agree too, and the engine's spurious
+third firing at 952 is gone.
+
+**Named, not worked.** The carried-flag shape is a family:
+`BubbleObjectInstance` and `BreathingBubbleInstance` use the identical
+`observedRomRenderOnScreen = romRenderOnScreen` carry, and
+`Sonic1CollapsingFloorObjectInstance`, `Sonic1CollapsingLedgeObjectInstance` and
+`IczSnowPileObjectInstance` carry an equivalent under a different name. Only the
+generator was changed here; the others need their own controls.

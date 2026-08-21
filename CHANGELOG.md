@@ -1,5 +1,16 @@
 # Changelog
 
+- **Aquatic Ruin's bubble makers start their next batch on the right frame:**
+  a bubble maker only counts down while the game has it on screen, and the game
+  decides that from the same camera position the maker itself sees when it runs.
+  The engine was judging it against the camera from a frame earlier, so a maker
+  that the camera had just brought back into view idled one extra frame before
+  restarting -- and then drew its random batch size, its spacing and its bubble's
+  sideways nudge a step further along the shared random sequence than the game
+  does, giving a batch of three where the original makes two. In Aquatic Ruin
+  Act 2 that is the last of the two frames by which Sonic's gulp of an air bubble
+  was late; the gulp now lands exactly where the original puts it.
+
 - **Sonic gulps an Aquatic Ruin air bubble at the moment the game does:** the
   bubble only counts as caught while Sonic's middle sits in a band reaching
   sixteen pixels below the bubble, and the very bottom pixel of that band counts.
