@@ -103348,3 +103348,95 @@ reproducer for them. The standalone HCZ error is its own frontier — an ordinal
 coverage problem shared, most likely, with a good number of the other 59 red segment classes.
 Whether those are one defect or many is exactly what a `-Ptrace-segments` baseline round
 would establish, and that now looks like the higher-value target of the two.
+
+## 2026-08-21 — `-Ptrace-segments` census: sixty red, and the errors are two defects, not one
+
+Round `s3k-segments-census-r1`, branch `bugfix/ai-s3k-hcz-fifo-r1` off `origin/develop`
+`9fd5122ef`. **Census only — nothing fixed, no engine change.** The sweep is the one taken at
+`b4f3eafc6`; `9fd5122ef` is docs-only against it (`git diff --stat b4f3eafc6..9fd5122ef -- src/`
+is empty), so it stands for the current tree.
+
+### Coverage: the profile is covered by nothing
+
+- `-Ptrace-segments` selects `**/tests/trace/s3k/sonictails/*.java` and
+  `**/tests/trace/s3k/*ZoneSliceTraceReplay.java` — **62 + 7 classes, 70 tests.**
+- It appears in **no** GitHub workflow. `.github/workflows/ci.yml` runs `-Pguards` and
+  `-Ptrace-replay`; `release.yml` runs `-Ptrace-replay`. So it has **never run in CI.**
+- It is not covered by the other arms either, measured rather than assumed: the string
+  `sonictails` appears 0 times in a full default-suite log, 0 times in a full `-Ptrace-replay`
+  log, and 177 times in the `-Ptrace-segments` log.
+
+Four profiles are defined but never run by CI (`trace-segments`, `trace-replay-r7`,
+`trace-diagnostics`, `benchmarks`). `trace-replay-r7` is deliberately gated expected-red;
+`trace-segments` is not gated by anything.
+
+### The census
+
+```
+mvn -Dmse=off -Ptrace-segments -Ds1.rom.path=… -Ds2.rom.path=… -Ds3k.rom.path=… test
+Tests run: 70, Failures: 52, Errors: 8, Skipped: 0   (no `Tests run: 0,` lines)
+```
+
+**60 red of 70, every one S3K.** By failure shape:
+
+| shape | count |
+|---|---|
+| physics divergence | 52 |
+| `unmatched recorded hardware completions` | 7 |
+| `S3K KosM module FIFO is full` | 1 |
+
+### The eight errors are two defects, and only one is the boot-coverage shape
+
+This is the grouping the round existed to settle, and the answer is **no, this is not one
+defect worth sixty classes.**
+
+- **7 × special stage, `Ss8`-`Ss14` (a contiguous block).** All 28 unmatched entries across
+  them report **`engine pending: <none>`** — the engine holds no matching work at any ordinal.
+  That is *missing work*, not a cursor skew.
+- **1 × `TestS3kSonicTailsHczSegmentTraceReplay`, FIFO-full.** Occupants are the enemy-art
+  batch at engine ordinals `#114`-`#117` against the fixture's recorded `#103`-`#106`, same
+  fingerprints — **this one is the boot-coverage skew**, and it is one class of eight.
+
+### The 52 physics failures, first error only
+
+First-error field (not opened, per scope):
+
+| field | n | | field | n |
+|---|---|---|---|---|
+| `rings` | **13** | | `y` / `x_sub` / `x_speed` / `tails_x_speed` / `g_speed` | 2 each |
+| `tails_x` | 5 | | `tails_mapping_frame` / `tails_g_speed` / `camera_x` | 1 each |
+| `camera_y` | 5 | | | |
+| `player_animation_id` | 4 | | | |
+| `y_speed` / `x` / `tails_y_speed` / `tails_y` | 3 each | | | |
+
+Error-count distribution: **25 above 1000**, 16 between 101 and 1000, 10 between 11 and 100,
+**1 with 2 errors**.
+
+`rings` leading as the first error in 13 of 52 is the one cluster worth noting — a quarter of
+the segments diverging first on ring count looks systematic rather than like thirteen
+frontiers. Not opened.
+
+Cheapest by error count, for whoever triages next: `TestS3kCnzZoneSliceTraceReplay` (2 errors,
+frame 30487, `tails_mapping_frame`), `TestS3kSonicTailsMhzSegmentTraceReplay` (12, frame 1276,
+`x`), `TestS3kSonicTailsDdzSegmentTraceReplay` (32, frame 0, `camera_y`).
+
+### Prior passes on the record: exactly one confirmed
+
+**`TestS3kSonicTailsHczSegmentTraceReplay`** — the 2026-08-15 entry records it moving to
+`PASS, 0 errors, 3519 frames compared`. It now errors. That is the only class in the red set
+with a documented prior pass that survives checking.
+
+**RETRACTED mid-round: an earlier count of twelve.** It came from scanning a 300-character
+window after each class name for `PASS|passed|0 errors`, and `0 errors` matches inside
+`5840 errors`. Re-run with `(?<![0-9])0 errors`, the twelve fall to three, and two of those
+three are a table row where the adjacent class `…Pachinko3BonusTraceReplay` carries the
+`PASS`. One survives. The other 59 red classes have **no recorded pass**, so they cannot be
+called regressions, and this census does not call them that.
+
+### What this decides
+
+Not one round. The error side is two unrelated defects (7 missing-work special stages, 1
+skew), and the physics side is 52 divergences whose only visible cluster is `rings`.
+Whether this profile joins the standard arms is a user decision; the facts are that it has
+never run in CI, is selected by no other profile, and has accumulated at least one confirmed
+regression while unobserved.

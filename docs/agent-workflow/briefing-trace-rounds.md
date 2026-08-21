@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-five rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -48,6 +48,7 @@ that looks like a real result.
 | 63 | Resolve a divergence's values to their disassembly names before hypothesising |
 | 64 | A profile no matrix runs is covered by nothing; know which ones yours omits |
 | 65 | A shared exception type is not a shared defect; instrument the throw's contents |
+| 66 | A substring match is not a value match; `0 errors` matches inside `5840 errors` |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1767,3 +1768,20 @@ and a different cause.
 **The instrument is the throw's contents, not its type.** Print what the failing structure
 actually held — the occupants, the ordinals, the fingerprints — and compare those. A type
 match narrows nothing: the same guard fires for every way of exceeding it.
+
+## Sixty-sixth rule: a substring match is not a value match
+
+Scraping logs and reports for a numeric result is a standard way to build a census, and it
+is a standard way to build a wrong one. `0 errors` matches inside `5840 errors`. `frame=3`
+matches inside `frame=3187`. A pattern that looks specific because it contains a number is
+usually the least specific pattern in the file.
+
+One census computed **twelve** prior passes this way; anchored properly the twelve became
+three, and two of those three were a table row where the `PASS` belonged to the adjacent
+class. **One survived.** The number that would have gone into the report was twelve, and it
+would have turned fifty-nine unmeasured classes into eleven fabricated regressions.
+
+**Practically.** Anchor numeric scrapes on both sides — a digit boundary before, a word
+boundary after — and check a sample by eye against the source. If a count comes out
+suspiciously convenient for the story you are telling, that is the moment to re-check the
+pattern rather than the moment to report it.
