@@ -192,3 +192,52 @@ the control's delete rows exactly and the level-select trace passes.
 `BubbleGeneratorObjectInstance` already carries the same guard as
 `romDisplayedLastPass` -- it was load-bearing there too, and it is the second
 half of any conversion in the remaining five.
+
+
+---
+
+## `hasPreUpdateSnapshot()` at `47f6014cb`: the contract was wrong, and there is no single ordering rule
+
+Commissioned as "look for the single ordering rule before writing two patches".
+There isn't one, and the reason is worth more than the rule would have been.
+
+**The contract is what was wrong, not the behaviour.** `preUpdateValid` means
+"a frame-start position snapshot exists". `ObjectManager` sets it deliberately on
+a mid-update child the moment that child is registered into a slot the frame has
+not reached yet (`ObjectManager.java:2696-2700`), precisely so the touch and
+solid helpers have a frame-start position for the pass the child is about to
+run. That is correct for its real job. The javadoc's claim -- "False on an
+object's first frame" -- was never true, and the ROM's answer is a different fact
+entirely: `BuildSprites` only rewrites `render_flags` bit 7 for objects that
+queued through `DisplaySprite` that frame, so an unexecuted object keeps its
+setup-seeded value. That is a per-object *execution* fact, not a snapshot fact.
+The javadoc is corrected in place; the behaviour is left alone.
+
+**The population is one caller, and it is unmeasurable here.**
+`hasPreUpdateSnapshot()` has exactly one caller in the tree,
+`WallTurretShotInstance:150`, and it was written on the doc's promise -- its own
+comment reasons that "a missing snapshot must not be read as 'not drawn'" because
+`ObjB8`'s `subObjData` row seeds `render_flags` with
+`1<<render_flags.on_screen` (`s2.asm:74763`). So the guard it relies on does not
+guard, and the shot is latently destroyable on its creation frame. It is not
+fixed here: neither the shot nor its parent `WallTurretObjectInstance` executes
+in either ARZ2 fixture -- a probe in each `update()` produced zero lines, with the
+parent probe as the positive control -- so there is nothing to measure the change
+against. Population brought rather than a fix, and it needs a fixture that fires
+a wall turret.
+
+**No single rule, and that closes nothing for free.** The correct mechanism is
+object-local and already exists twice: a flag set where the object's own routine
+reaches its `DisplaySprite` equivalent, consumed by
+`refreshPostCameraRenderState()` (`BubbleGeneratorObjectInstance` and
+`BubbleObjectInstance`, both as `romDisplayedLastPass`). Nothing shared needs
+changing, which also corrects my own speculation from the previous round: this
+does *not* close part of the remaining five, and each still needs its own
+conversion with both halves.
+
+**A separate population, not surveyed here.** The ten callers of
+`isPreUpdateWithinRenderSpriteBounds` do not go through `hasPreUpdateSnapshot()`
+at all -- they inherit its `preUpdateValid &&` prefix, which reads a missing
+snapshot as "off screen". Any of them judged on its own first pass with a
+setup-seeded bit has the same latent shape. That is a different question from
+this commission and wants its own round.

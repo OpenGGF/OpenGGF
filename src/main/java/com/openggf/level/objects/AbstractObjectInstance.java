@@ -983,16 +983,29 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * before the current object routine changes x_pos/y_pos.
      */
     /**
-     * Whether a frame-start snapshot exists for this object yet.
+     * Whether a frame-start position snapshot exists for this object yet.
      *
-     * <p>False on an object's first frame, before
-     * {@link #snapshotPreUpdatePosition()} has run. Callers modelling the ROM's
-     * {@code render_flags.on_screen} need this: that bit is normally rewritten
-     * every frame by {@code BuildSprites}, but on the frame an object is created
-     * it holds whatever value the object's setup data seeded it with, and
-     * several setup rows seed it SET. Without this distinction a
-     * delete-on-not-drawn caller reads the missing snapshot as "not drawn" and
-     * destroys the object on its first frame.
+     * <p><b>This is not a "has never executed" predicate, and must not be used
+     * as one.</b> It said so until 2026-08-21 and the claim was never true:
+     * {@link ObjectManager} calls {@link #snapshotPreUpdatePosition()} on a
+     * mid-update child the moment it is registered into a slot the frame has
+     * not reached yet, precisely so the touch and solid helpers have a
+     * frame-start position for the pass the child is about to run. Measured on
+     * the {@code arz2} level-select fixture, it is already {@code true} on the
+     * first {@code update()} of all 54 bubbles that segment creates.
+     *
+     * <p>Callers modelling the ROM's {@code render_flags} bit 7 want a
+     * different fact. {@code BuildSprites} only rewrites that bit for objects
+     * that queued themselves through {@code DisplaySprite} during the frame, so
+     * an object that has not executed keeps whatever its setup data seeded --
+     * and several setup rows seed it SET. That is a per-object execution fact,
+     * not a snapshot fact. Model it with an object-local flag set where the
+     * object's own routine reaches its {@code DisplaySprite} equivalent and
+     * consumed by {@link ObjectInstance#refreshPostCameraRenderState()}; see
+     * {@code BubbleGeneratorObjectInstance.romDisplayedLastPass} and
+     * {@code BubbleObjectInstance.romDisplayedLastPass} for the shape, and
+     * docs/architecture/audits/trace/2026-08-21-carried-render-flag-family.md
+     * for why the flag phase and that guard are only correct together.
      */
     protected boolean hasPreUpdateSnapshot() {
         return preUpdateValid;
