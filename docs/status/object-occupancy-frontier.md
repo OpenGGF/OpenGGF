@@ -50,7 +50,13 @@ does not rediscover them.
 
 | object | id | shortfall | status |
 |---|---|---|---|
-| **CANNONBALL** (S1) | `0x20` | 581 short / 0 over | **Two defects diagnosed, fix parked.** `explode()` destroys and spawns instead of rewriting `obID` in place; plus an uncited `!isOnScreenX(256)` deletion `CBal` does not have. Must land together. **Prediction, untested:** `0x20` short → ~0 with over staying ~0, **and** `0x3F` short 282 *and* over 275 both falling. Blocked on the convert-in-place capability — see [the design note](../architecture/designs/2026-08-21-object-convert-in-place.md). |
+| **CANNONBALL** (S1) | `0x20` | 581 short / 0 over | **Two defects diagnosed, fix parked.** `explode()` destroys and spawns instead of rewriting `obID` in place; plus an uncited `!isOnScreenX(256)` deletion `CBal` does not have. Must land together. **Prediction, PARTLY REFUTED at `0fd7b7811`:** the `0x20` half is still open, but the `0x3F` half is dead — EXPLOSION shows no conversion pairing with CANNONBALL (12 and 6 slots against 511/511 for the confirmed case), so fixing `0x20` should not be expected to move `0x3F`. See the two-way table's note. **And the 581 → 620 degradation is NOT recent:** `0x20`
+measures 620 identically at `cae3ede3c` and `0fd7b7811` (28/98 in `SONIC_1_50`/`51`, 51/196 in
+chain segments 8/9 and again in 30/31), so it shifted before `cae3ede3c` and has been stable
+since — a different story from the prediction, not the same one. Independent confirmation of the
+refutation from this side too: what the engine holds where the ROM has `0x20` is `0x20` itself
+(41.9%), nothing (14.9%), then `0x15`/`0x78`/`0x25` — **`0x3F` is not a significant partner in
+either direction.** Blocked on the convert-in-place capability — see [the design note](../architecture/designs/2026-08-21-object-convert-in-place.md). |
 
 ## One-way — the engine never makes them
 
@@ -155,14 +161,36 @@ three of them the engine holds **more** than the ROM.
 | S1 | FLOATING_BLOCK | `0x56` | 52 | 149 | 13 | `0fd7b7811` | 53 / 126 / 13 |
 | S2 | Bubbles | `0x24` | 193 | 66 | 2 | `0fd7b7811` | 240 / 45 / 2 (was listed one-way) |
 
+**Two of these are far more concentrated than the totals suggest**, measured at `0fd7b7811`:
+
+- **`Projectile` over-count is 602 of 617 in ONE fixture** — `SONIC_2_90`, WFZ act 1. And
+  **54.3%** of those are slots where the ROM holds *nothing at all*, so it is over-creation or
+  late deletion, not misplacement. One object, one fixture, one direction: the most tractable
+  target now on this page.
+- **`LeavesGenerator` over-count is 354 of 358 in chain segments 16/18/19.**
+
+**They do not share a cause.** Disjoint fixtures, and disjoint partner distributions —
+`Projectile`'s non-empty partners are `0xBD`/`0x19`, `LeavesGenerator`'s are `0x03`/`0x22`/`0x83`.
+**Nor are they recent regressions:** both are *identical* at `cae3ede3c` and `0fd7b7811`, so they
+degraded somewhere in the wider window before `cae3ede3c` and have been stable since. `EXPLOSION`
+did move across that last window (211/424 → 179/369) and is still in motion.
+
 † **Eggrobo is not a separate target.** 511 of its 523 over-counts are slots where the ROM has
 converted the object to `BossExplosion` in place — see the re-attribution section above. It
 lands with that work.
 
 `Eggrobo`, `Rexon2` and `LZ_CONVEYOR` have **no shortfall at all** and were invisible to every
-deficit-ranked list produced before metric #3. `EXPLOSION`'s two-way shape is expected to be a
-symptom of the CANNONBALL conversion defect rather than its own bug — that is the prediction
-above, and it is untested.
+deficit-ranked list produced before metric #3. **`EXPLOSION`'s two-way shape is NOT a symptom of the CANNONBALL
+conversion defect. Prediction tested and refuted at `0fd7b7811`, 2026-08-21.** If it were, the
+conversion would leave the signature that confirmed BossExplosion/Eggrobo: the engine holding
+the pre-conversion id where the ROM holds the post-conversion one, in matching counts. Measured:
+the ROM holds `0x3F` where the engine holds `0x20` on **12** slots, and the engine holds `0x3F`
+where the ROM holds `0x20` on **6** — against **511 and 511** for the confirmed case. There is
+no pairing. What the engine actually holds where the ROM has `0x3F` is `0x3F` itself (58.6%),
+nothing (22.6%), then a long tail with no dominant partner.
+
+**So EXPLOSION is its own defect and nobody has looked at it.** It does not land with the
+convert-in-place work, and it should not be sized into that programme.
 
 ## Scope limits
 
