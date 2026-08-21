@@ -101550,3 +101550,208 @@ Candidate against control `2204cb61d`, both arms in the same worktree.
 
 Segment 27's residual is now 10 slot-divergent frames, all one `0x25` the ROM holds in slot 41
 (then 40) between f4637 and f4736, unchanged by this round.
+## 2026-08-21 — S2 segment 15 frame 2252: a one-frame unseat across an Obj6B slot permutation
+
+Branch `bugfix/ai-s2-seg15-air-r1` off `origin/develop` (`c425b4945`).
+Diagnosis only; **nothing landed**.
+
+```
+mvn -Dmse=off -Ptrace-replay "-Dtest=TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay" \
+  "-Dsonic2.rom.path=$PWD/s2.gen" test
+```
+1681 errors, first error frame 2252 `air` expected 1 actual 0.
+
+### First: the owning class's javadoc is stale, and so is its frontier
+
+`TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`'s javadoc says the chain's
+segment 15 diverges at segment frame 210 and eventually dies of `SPIKE`,
+surfacing as "segment 15 lost production ownership before source closure ...
+BK2 cursor=83819". That is no longer true. Segment 15 now **closes**, the chain's
+only walk-failure axis is segment 19 (`cursor=109135`), and the chain and the
+standalone lane agree on the same first non-camera mismatch. The javadoc's
+account should not be used to aim a round.
+
+### Frame 2252 is worth exactly one error
+
+Of the 1681 errors, **one** is at frame 2252 and it is marked
+`"cascading": false`. The rest sit in a single later cluster:
+
+| frame band | errors |
+|---|---|
+| 2000-2499 | **1** (frame 2252, `air`) |
+| 5500-5999 | 1143 |
+| 6000-6999 | 1009 |
+| 7000+ | 109 |
+
+The first of that cluster is frame 5554 `dynamic_art.outstanding_transfer_ids`
+(rom `[]`, engine `[4048]`); the first *physics* member is frame 5662, where
+Tails goes airborne in the engine and not in the ROM (`tails_routine` 2 vs 4,
+`tails_animation_id` `$00` vs `$1A`, `tails_y_speed` 0 vs `-0400`) and stays
+skewed for ~150 frames. The main player's own physics is **exact over all 7088
+frames apart from frame 2252**. Anyone picking this segment up for volume should
+aim at 5554/5662, not at 2252.
+
+### What frame 2252 is
+
+Recorded, main player, frames 2251-2253 — nothing moves at all:
+
+```
+2251  x=1EF5 y=056C  x_vel=0 y_vel=0  status=49  stand_on_obj=23  anim=07 mf=0C
+2252  x=1EF5 y=056C  x_vel=0 y_vel=0  status=43  stand_on_obj=23  anim=07 mf=0C
+2253  x=1EF5 y=056C  x_vel=0 y_vel=0  status=49  stand_on_obj=24  anim=07 mf=0C
+```
+
+`$49 -> $43 -> $49` is `on_object` cleared and `in_air` set for exactly one
+frame, and `stand_on_obj` moves `$23 -> $24` on the frame after. Position,
+sub-pixels and velocity are identical throughout, so this is a status event, not
+motion.
+
+The recorded `object_near` rows name the cause. Four `Obj6B` CPZ square platforms
+sit at `y = $04F0, $0550, $0590, $05F0`, and between rows 2251 and 2252 their
+**slots permute** while the platforms stay put:
+
+```
+2251  slot 17 (1EF0,04F0)  slot 34 (1E90,054F)  slot 35 (1EF0,0590) st=09  slot 36 (1E90,05EF) st=03
+2252  slot 34 (1EEF,04F0)  slot 17 (1E90,0550)  slot 36 (1EEF,0590) st=03  slot 35 (1E90,05F0) st=01
+2253  ... unchanged ...                          slot 36 st=0B
+```
+
+The player stands on the platform at `y=$0590`. It is slot `$23` (35) before and
+slot `$24` (36) after — the same physical platform under a new slot. Slot 35's
+`p1_standing_bit` (bit 3) clears at 2252 and slot 36's is set only at **2253**.
+Confirming the geometry: `Obj6B_Properties` entry 2 is `16,16`
+(`docs/s2disasm/s2.asm:54382-54385`), and `platform_y - (y_radius+1) - 19`
+= `$0590 - 17 - 19` = `$056C`, the recorded player y exactly.
+
+### RETRACT, before it reached the report: "the engine permutes a frame early"
+
+The probe showed the engine's ridden instance already at the post-permutation
+`(0x1E90,0x05F0)` at its `frameCounter == 2251`, which reads as one frame early.
+It is not. `ObjectSolidContactController.frameCounter` runs one behind the
+comparator's frame index. Anchor, from the same probe run: the engine moves the
+player `7925 -> 7924` during its frame 2260, and the recording's `x` changes
+`$1EF5 -> $1EF4` at row **2261**; a whole-segment offset is impossible anyway,
+since 7088 frames compare clean. Engine `frameCounter` N is comparator frame
+N+1, so the permutation happens on the correct frame on both sides.
+
+### The actual difference, and the candidate mechanism
+
+The engine performs the identical permutation on the identical frame, and within
+that one frame it (a) fails the ride-bounds check against the recycled instance
+(`relX=128`, `maxRel=54`) and (b) immediately takes a fresh standing contact on
+the instance that inherited the `y=$0590` position. Net: never airborne.
+
+The ROM leaves a one-frame hole instead, and `Obj6B_Main` has a gate that would
+produce exactly that:
+
+```
+	_btst	#render_flags.on_screen,render_flags(a0)
+	_beq.s	+
+	...
+	jsrto	JmpTo14_SolidObject
++
+	move.w	objoff_34(a0),d0
+	jmpto	JmpTo4_MarkObjGone2
+```
+(`docs/s2disasm/s2.asm:54431-54443`)
+
+`Obj6B_Init` writes `move.b #1<<render_flags.level_fg,render_flags(a0)` — a whole-byte
+store, so `on_screen` is **clear** on the object's load frame (`:54405`); the bit
+is only set afterwards by `MarkObjGone2`. So a freshly loaded `Obj6B` **does not
+call `SolidObject` at all on its load frame**, which is precisely one frame of no
+solidity for a rider handed from one slot to another — and would leave the old
+slot's `bclr` unanswered until the next frame. This is a shared
+`MarkObjGone`/`on_screen` shape, not an `Obj6B` quirk.
+
+**Stated as a hypothesis, not a finding.** Nothing here shows that gate firing,
+and it does not yet explain which routine *sets* `in_air` on 2252 — the old
+slot's `PlatformObject`/`SolidObject` exit branch is the obvious candidate but
+its own standing bit is already recorded clear at 2252. **Kill condition:** if
+the recorded `render_flags` of the newly-slotted platform already has `on_screen`
+set on the permutation frame, or if the platform's `routine` is `$02` rather than
+`$00` on that frame (`object_near` records `routine`, and it reads `0x02`
+throughout — which is *evidence against* a fresh `Obj6B_Init` and should be
+resolved before anyone builds on this).
+
+### Not the collapsing-floor shape
+
+Checked and rejected as a vocabulary coincidence with the same day's S1
+collapsing-floor pair: there the ROM keeps a player supported one frame *longer*
+than the engine. Here the ROM keeps him supported one frame *less*, nothing is
+collapsing, and no terrain probe is involved — the whole event is an object-slot
+handover with both sides motionless.
+
+## 2026-08-21 — RETRACTION and cause: the capsule's pixel is a one-frame-early init, not a subpixel
+
+Round off `origin/develop` `461eb1860`. **Found, not fixed — nothing landed but this entry,
+which corrects the previous one.** Row convention: 0-based indices into `aiz_5`'s
+`physics.csv`, `row = cursor - 46432`.
+
+### Retracted: the "unwritten subpixel" conclusion
+
+The previous entry concluded the residual pixel came from `y_pos+2` carrying state the
+capsule's own **routine-4 motion** left behind, since `loc_86592` writes y with a word move.
+**Both halves are wrong.**
+
+1. **There is no routine-4 motion in this path.** `EggCapsule_Index`
+   (`sonic3k.asm:181514-181524`) maps routine 4 to `loc_8661E`, which this capsule never
+   reaches: routine 0's `loc_8657A` tests `btst #1,render_flags(a0)` and branches straight to
+   `loc_86592`, which sets **routine 8** (`:181528-181535`). The object goes 0 -> 8 on its
+   first executed frame.
+2. **The slot is zeroed before it is reused.** `AllocateObject` finds a slot whose code
+   longword is zero (`:37911-37914`) and `Delete_Current_Sprite` reaches
+   `Delete_Referenced_Sprite`, which clears `object_size - 2` bytes to zero a longword at a
+   time (`:36108-36122`). So `y_pos+2` is 0 when `loc_86592` runs, and the engine's
+   `ySubpixel = 0` is correct.
+
+Nothing was landed on that conclusion, but it was reported and merged as an entry.
+
+### Also ruled out: the camera
+
+The camera matches the recording **exactly** on every row across 5940-6010, measured at the
+comparator's own sampling point (`romCamX == engCamX`, `romCamY == engCamY` throughout;
+`camera_y` is a constant `0x015A`, so the capsule's `cameraY + $40` target never moves).
+
+An earlier probe reading the camera from inside the capsule's own object pass appeared to show
+the engine three pixels behind. That gap does not exist — it was the mid-frame sampling point,
+not the camera. Caught before it was reported.
+
+### The cause, measured
+
+| | row |
+|---|---|
+| engine's route-8 init (`initializeRoute8FromCamera`) | **5670** (`x=0x49EB, y=0x011A`) |
+| ROM's capsule codes first recorded | **5671** |
+
+**The engine's capsule starts one frame early.** With a quarter-pixel-per-frame approach plus
+the swing, a one-frame lead is a quarter pixel of accumulated head start — which rounds to ±1
+at different points of the descent and flips sign, exactly the observed one **higher** at row
+5945 and one **lower** at 5992. It also puts the ±1/frame x sweep one step ahead, which is the
+1-2 px x difference seen alongside.
+
+The arithmetic closes on the boss: defeat at row 5487 (measured on both sides), plus
+`defeatExplosionWaitTimer = 0x37` (55) and `defeatPhaseTimer = 0x7F` (127) and the defeat frame
+itself = **5670**. The ROM lands on 5671, so the engine's post-defeat wait is one frame short.
+
+### The class, named
+
+This is the **third** creation-frame defect in this segment today, after the AIZ2 battleship
+(ran on its creation frame when the ROM's slot was not reached) and the AIZ end-boss bomb (did
+not run on its creation frame when the ROM's init falls through). The shape to recognise:
+
+- **Symptom:** a ±1 positional error that *flips sign* over a slow accumulation, with every
+  constant, the camera and the subpixel all verified equal. A fixed offset is a wrong constant;
+  a sign-flipping one is a phase error.
+- **Cause:** an object starting one frame early or late, so its accumulator carries a
+  fractional head start no single field records.
+- **Where it hides:** nothing at the write site is wrong, so grepping for it fails. It is only
+  visible by comparing the object's **first executed frame** against the recording's first
+  sighting of its code.
+- **What makes it dangerous:** a range test with an exclusive bound turns the resulting pixel
+  into many rows of timing error, as `dy < 28` did here.
+
+### Next
+
+Read the ROM's post-defeat wait chain and find the missing frame between the boss's defeat and
+`loc_86592`. Both gates still required before landing: the press must land on row 6007 **and**
+on Tails.
