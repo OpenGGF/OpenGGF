@@ -102880,3 +102880,61 @@ one question at a time.
 
 When a capture pass is scoped, the test for adding a field is the same as everywhere else:
 it must let the engine be *checked*, never let the engine be *driven*. See hard rule 4.
+
+## 2026-08-21 — the missed S1 DPLC is a phase problem, not a guard: three hypotheses killed
+
+Round `s1-slz1-graze-r1`, DPLC suppression. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change; probes reverted.** The submission is not being refused — it is being decided
+against a different phase of the frame than the one the comparator samples.
+
+### The three guards exist, and none of them is the cause
+
+`DynamicArtLifecycleService.prepareS1` holds exactly the guard classes a skipped-not-failed
+submission suggests. All three were killed by measurement, not by reading:
+
+| candidate | measurement | verdict |
+|---|---|---|
+| single-slot `s1Preparation` overwritten before its V-blank flush | **0** `OVERWRITES pending` in 232,851 probe events across the whole chain | dead |
+| `checked.isEmpty()` early return | **6** chain-wide, every one `mf=0`, none within 1000 rows of any of the three sites | dead |
+| a lag frame swallowing the V-blank service | `lag_state` is `lagged=False` at all three sites (lz1's nearest lag is f3125, one frame *after*) | dead |
+
+`prepareS1` stages whenever it is reached, and `serviceProductionVBlank` flushes whatever is
+staged. Nothing in the submission path drops work.
+
+### What is actually happening
+
+`DynamicArtDecisionOwner.observe` is called from `PlayableSpriteAnimation.update`, with
+`sprite.getMappingFrame()`, immediately after `updateAnimation`. Instrumenting that call and
+anchoring by the **player's position** rather than by row arithmetic — lz1 f3123 is
+`x=0x0BA5, y=0x01CC`, f3124 is `x=0x0BA4, y=0x01CA`:
+
+```
+[ANIM] update mf=85 x=ba5 y=1cc      <- lz1 f3123; ROM's mapping_frame here is 8
+[ANIM] update mf=85 x=ba4 y=1ca      <- lz1 f3124; ROM's is 85
+```
+
+The value `observe()` receives on the frame in question is **85**, not 8. But the engine's
+*compared* mapping frame at that frame is **8**: `TraceBinder.compareAnimationByte` grades a
+mismatch as `Severity.ERROR`, segment 23 reports **0 warnings**, and `player_mapping_frame`
+never appears in its mismatch list — so the comparator's read agrees with the ROM.
+
+**Both reads are of the same nominal quantity, taken at different points in the frame.** The
+DPLC decision sees the pre-write value and stages nothing for frame 8; the comparator sees the
+post-write value and is satisfied. That is why the engine "reaches the mapping frame at the
+right time and does not submit", and why the same load succeeds hundreds of times elsewhere —
+it only fails where the frame is written after the observe point.
+
+Row arithmetic is worth a warning here: `movieLogicalFrame` is **not**
+`bk2_frame_offset + segment_frame`. Computing the site that way lands on rows whose state looks
+stable and consistent, which reads like a clean negative result. Anchor on a gameplay landmark.
+
+### Next
+
+Find the write that sets the player's mapping frame after `PlayableSpriteAnimation.update` has
+already run its `observe`. Every `setMappingFrame` on the animation path precedes the observe
+call, so the writer is outside it. Once named, the fix is to make the DPLC decision read the
+same phase the ROM's `Sonic_LoadGfx` does — a phase correction, not a new guard or an
+exception, and it must not be keyed on a frame, animation id or routine.
+
+Worth **29,571 comparator errors** across segments 23, 24 and 26 if the phase is corrected;
+those three lead with this identical missed transfer.

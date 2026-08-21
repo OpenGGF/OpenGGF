@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-one rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-two rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -56,6 +56,7 @@ that looks like a real result.
 | 30 | Mass errors | An environment artefact until proven otherwise |
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
+| 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
 | 35 | Failed compile | A small log that reads as a short test run; also `-Ptrace-replay` silently ignores a CLI `-Dsurefire.argLine=` |
 | 37 | Run-order swap | Equal totals, different members, all passing alone |
@@ -1694,3 +1695,22 @@ handler dispatches — before building on it.
 **Related.** An empty grep is a fact about the grep (rule 56's neighbour), and a caveat
 written down is not a caveat checked (rule 52). All three are the same failure: treating
 the boundary of what you looked at as the boundary of what exists.
+
+## Sixty-second rule: anchor a probe on a landmark, not on row arithmetic
+
+A movie's logical frame is not the segment frame plus the manifest's offset. Computing a
+site that way lands on the wrong rows — and the wrong rows do not look wrong. One round
+spent a stretch reading state that was stable and self-consistent across the window it
+had computed, with no staged work and no flushes, which reads exactly like a clean
+negative result. It was simply somewhere else.
+
+**Anchor on a gameplay landmark instead** — the player's position on the row you care
+about, an object appearing, a state transition the recording also records — and confirm
+the probe fires there before believing anything it says. This is the same failure as an
+uninstalled instrument (rule 45) and a partially-instrumented path: the null result looks
+like an answer.
+
+**Related, and the reason this rule is separate:** rule 54 covers sampling at the wrong
+*point in a frame*; this one covers sampling on the wrong *frame entirely*. Both produce
+internally consistent output. A probe that reports the same value across a whole window is
+evidence you may be looking at the wrong window, not evidence the value is stable.
