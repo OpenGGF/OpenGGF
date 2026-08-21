@@ -106169,3 +106169,42 @@ session stands as written. The touch-scan half of it is separately settled — t
 staleness is confirmed and the engine already models it — so the chain's *first* link is now
 known not to be an engine defect, and whatever moves that bounce a dispatch early is still
 unattributed. That is the open question, and it is not the scan's frame position.
+
+## The Octus hover seed is one short of the ROM, and correcting it alone is net-negative
+
+One of the two constants flagged as a suspected compensation is now attributed, and the
+attribution survives the collapse of the hypothesis that produced it.
+
+**The ROM.** `Obj4A_MoveUp` seeds `move.w #60,objoff_2C(a0)` on the frame the vertical
+velocity goes non-negative, then advances the routine and falls through to the bullet
+routine — so the hover routine does not run on that frame. `Obj4A_Hover` is
+`subq.w #1,objoff_2C(a0)` / `bmi`, which is post-decrement tested negative.
+
+**The engine.** `OctusBadnikInstance.updateMovingUp` sets the state, seeds the timer and
+fires the bullet on the same transition frame and returns, so its hover branch also does not
+run that frame; and `updateHovering` is `timer--; if (timer < 0)`, which is the ROM's shape
+exactly. The two countdowns are therefore identical in form, and the seed should be the
+ROM's own literal. It was 59, with a comment justifying the difference by a pre-decrement the
+ROM does not have, so the hover ran one dispatch short.
+
+**Corrected to 60, measured, and NOT landed.** Both arms in one worktree at `be9e7cdfe`,
+`-Ptrace-replay`, all three ROMs, `-Dmse=off`. Control 800 tests / 6 failures / 4 skipped;
+candidate 800 / 7 / 4. Reach equal: 163 `Running` lines and 6 `Tests run: 0,` lines on both
+arms, failing sets differing by exactly one addition and nothing else.
+
+The addition is `TestS2OozLevelSelectTraceReplay`, previously green, failing at frame 6639
+with `y_speed` expected `-0100` and actual `0` — the player does not receive the enemy
+bounce the recording records there. That is the same Octus kill this project's log has cited
+before. So the seed of 59 is compensating: with the ROM's own literal restored, the badnik no
+longer arrives where the recording kills it.
+
+**What this means.** The constant is wrong and the fix is correct in isolation, which is the
+now-familiar shape — a correct change that is net-negative until its partner lands. The
+partner is whatever makes this badnik's position at the kill frame depend on the hover
+running one dispatch short, and it is unlocated. Note that this compensation was originally
+predicted as fallout of a global touch-scan phase error; that hypothesis is dead — two
+independent oracles confirmed the ROM's staleness and that the engine already models it — so
+the partner is something else and must not be briefed as scan-related.
+
+The candidate stays on `bugfix/ai-octus-hover-60`, unmerged, and this entry lands without it.
+Do not re-attempt the seed alone: it is ROM-correct, it is cited, and it costs a green trace.
