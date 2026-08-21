@@ -105930,3 +105930,42 @@ live-model test is whether it fires *earlier*, which is what the four Jawz event
 (`ObjectManager.java:751` → `ObjectCollisionResponseList.java:134-138`) rather than incremental
 publication at each routine's `Add_SpriteToCollisionResponseList` tail, so ROM list *membership*
 can still differ even though positions match.
+
+## Resolution: the two oracle rounds do not disagree
+
+Two lanes worked the touch-scan question independently — my error, I respawned the round
+before confirming the first was live — and their commit subjects read as opposite verdicts,
+one confirming the staleness and one killing the hypothesis. They do not contradict each
+other. They answered different halves, and taken together they close the question.
+
+**The ROM half is confirmed twice over, independently.** Both rounds established the
+recorder's sampling phase first, from the recorder's own source, and both found end-of-frame
+rows. Both then derived the touch box from the disassembly rather than from what would make
+the answer come out. One reports the stale model reproducing the recorded defeat frame in
+fourteen of fourteen player-touch events with no early and no late fire; the other reports
+twenty-five of twenty-five in one game plus six of six in another. They name the *same four
+discriminating events* — the frames where a live-position scan would have fired exactly one
+frame early — having located them by different routes. That is replication, not agreement by
+construction.
+
+**The engine half kills the change.** The second round went on to check the premise that the
+engine differs, and it does not: the player scan already runs before the object pass, and the
+touch path already reads pre-update positions, in all three games. So the ROM's staleness is
+real and the engine already models it. **No shared-runtime ordering change is warranted**, and
+the round that was parked as the largest finding of the previous session is retired instead.
+That is the outcome worth having — it removes a risky change to every touched object in three
+games on evidence rather than on nerve.
+
+**Two consequences that must not be inherited.** The pair of one-off compensations flagged
+against this hypothesis — a hover duration one below its ROM literal, and a boss child's wait
+one above its literal with a comment about publishing before the player's scan — were
+predicted as fallout of a wrong global scan phase. That phase is not wrong, so both need
+separate attribution and must not be briefed as downstream of this.
+
+**And one citation from the previous session is challenged.** The second round could not find
+the landmark it was briefed with: the `frame` column in that fixture's `physics.csv` is
+hexadecimal, and neither the decimal row nor the hexadecimal row carries the described bounce,
+with that fixture's kills of the named badnik sitting elsewhere and belonging to the sidekick.
+The chain recorded last session traced a segment-relative frame; the two indexings have not
+been reconciled, and until they are, the frame number in that chain should be treated as
+unverified rather than as an anchor.
