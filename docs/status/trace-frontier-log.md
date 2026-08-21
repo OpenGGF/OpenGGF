@@ -110415,6 +110415,7 @@ moved. `-Pguards`: 500 tests, 0 failures.
 
 Nothing was fitted. No interval was adjusted.
 
+<<<<<<< HEAD
 ## 2026-08-21 — S1 bubble creation lag: RETRACTED, and the parked phase correction must not land
 
 **The premise was false. There is no air-bubble creation lag, and the parked
@@ -110966,3 +110967,81 @@ mvn -Dmse=off -Dsonic2.rom.path=s2.gen -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay test
 ```
 >>>>>>> bugfix/ai-s2-seg19-titlecard
+=======
+## 2026-08-21 — CLOSED, no engine defect: the S1 air-bubble "creation lag" is an artefact of the parked phase correction, and the S1 recorder samples POST-pass
+
+Worktree `wt/s1-bubble-lag-r2`, branch `feature/ai-s1-bubble-lag-r2`, pinned to
+`5a094e18f`. **Found, not fixed — because there is nothing to fix in `Obj64`.**
+
+The reported symptom was that the LZ bubble maker creates bubbles a pass later in the
+engine than in the ROM (`TestS1Lz2CompleteRunTraceReplay` frame 935, `obj_s2D_type`
+rom `0x64` engine `missing`), observed only once the parked `object_near` phase
+correction moved the compared read to what was believed to be the recorder's
+pre-pass sampling point.
+
+### The `s1_obj64_state` stream, wired up, says the maker is exact
+
+`DebugS1Lz2BubblesOccupancyProbe` already carried an unused ROM-vs-engine maker
+comparison over `s1_obj64_state` (`bub_timebase`/`bub_time`/`bub_bubbleflag`/
+`bub_minicount`/`bub_randomtime`/`bub_typelist`, i.e. `objoff_33/32/36/34/38/3C`).
+Run at the existing comparison phase over the whole of two complete runs it reports
+**no maker-state divergence, no Obj64 slot-set divergence and no Obj64 count
+divergence** on `lz1_completerun` or `lz2_completerun`. Every production draw, every
+delay reload and every child creation lands on the ROM's frame.
+
+The comparison is not a green that never ran: the same probe with the phase shifted
+by one (`-Dtrace.obj64Phase=1`) goes red at frame 3 on `bub_randomtime` and at frame
+12 on the Obj64 count, so the mechanism is live and discriminating.
+
+### Why the phase correction is the wrong direction — proved from the fixture alone
+
+Both S1 recorders call `on_frame_end()` at the top of their own
+`while true ... emu.frameadvance()` loop (`tools/bizhawk/s1_complete_run_recorder.lua:1360,
+1750-1784`; same shape at `s1_trace_recorder.lua:507,731-756`), so every stream is
+sampled **after** the frame's game loop and labelled with that frame's index.
+
+Two streams inside the fixture confirm it without reference to the engine. On
+`lz2_completerun` rows 0 and 1 both carry `vfc` (`Level_frame_counter`) `1`, and the
+maker at slot 36 holds `objoff_38 = 0x000A` on both; `lag_state` marks **frame 1**
+lagged. Post-pass labelling makes those agree — pass 1 completed no main loop, so it
+neither advanced the counter nor decremented the maker. Pre-pass labelling puts the
+missing decrement on pass 0 and contradicts `lag_state` by one. The same pattern
+recurs at rows 940/941 (`vfc` 920/920, `lag_state` frame 941).
+
+**The earlier "the recorder samples before the pass" proofs do not discriminate.**
+Pre-pass-N and post-pass-(N-1) are the same instant; the bubble-maker
+routine `0x00`→`0x0A` transition cited as evidence is consistent with both labellings.
+`vfc`-against-`lag_state` is the first check that separates them, and it separates them
+against the correction.
+
+### Consequence
+
+The ~12,800 errors the parked phase correction produced across
+`TestS1Lz2CompleteRunTraceReplay`, `TestS1Sbz3CompleteRunTraceReplay` and
+`TestS1Sbz2CompleteRunTraceReplay` are the correction introducing a one-frame skew,
+not coverage exposing a defect. It should not be landed, gated, or worked around by
+changing `Obj64`. Rule 107 was checked explicitly and does not apply: `Bub_Main`'s
+`bra.w Bub_BubbleMaker` fall-through (`_incObj/64 LZ Air Bubbles.asm:40-45`) is
+already modelled at `Sonic1BubblesObjectInstance.updateInit`, and `spawnFreeChild`
+places the child in its SST slot on the creating frame.
+
+### Named, not worked
+
+- `lz3_completerun` frame 3563: Obj64 count rom 6 / engine 7 — the engine holds one
+  bubble too many, the opposite direction, and maker state is clean up to it.
+- `lz1_completerun` frame 10950 and `lz3_completerun` frame 715: Obj64 occupies a slot
+  one lower in the engine than in the ROM (75/74, 63/62). Allocation, not timing;
+  counts agree.
+- Probe defect fixed in passing: the maker comparison compared the `tbl`
+  (`bub_typelist`) byte before the maker's first `.tryAgain` draw writes it
+  (`_incObj/64 LZ Air Bubbles.asm:173-175`), turning an unwritten `objoff_3C` into a
+  false `expected=E0 actual=00` on `lz1` and `lz3`.
+
+Command (per act, `zone=3`, `act` 0/1/2):
+
+```
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dtest=DebugS1Lz2BubblesOccupancyProbe \
+  -Dtrace.dir=src/test/resources/traces/s1/lz2_completerun -Dtrace.zone=3 -Dtrace.act=1 \
+  -Dtrace.obj64Phase=0 test
+```
+>>>>>>> feature/ai-s1-bubble-lag-r2
