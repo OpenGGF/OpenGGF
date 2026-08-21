@@ -130,6 +130,7 @@ that looks like a real result.
 | 111 | `-Dtest=` overrides patterns, not tag filters | A tag-excluded class runs nothing and still says BUILD SUCCESS |
 | 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
 | 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
+| 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2967,4 +2968,30 @@ shape matches.
 2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
    the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
    carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
+
+## One hundred and fourteenth rule: a true general principle can explain away the one piece of evidence pointing at the answer
+
+A chain stall reported a suppressed `PendingRecordedSubmissions [kind=KOS_MODULE_QUEUE...]`
+alongside its primary failure. It was dismissed — twice, and with an explicit warning not to send
+anyone to the timing port for it — on the reasoning that **a stalled run leaves submissions
+pending by construction**. That reasoning is *true in general*. It was also wrong here: the stall
+turned out to be a title card blocked on queued-art readiness, and the pending job was the queued
+art. Same defect, or directly implicated.
+
+**The failure mode is a correct principle used to discard the single most informative signal.**
+Before dismissing a secondary symptom as downstream, ask whether it names the same subsystem as
+anything in the primary failure — and if it does, the general argument does not apply until the
+primary is attributed.
+
+**Two related corrections from the same round, both worth their own habit:**
+
+1. **"Hangs at X" is not "X is broken".** The boundary the stall reported was a special-stage
+   exit; the exit had already completed correctly, three clean mode transitions, and the hang was
+   in the *title card after it*. Locating a stall at a boundary says where execution stopped, not
+   which side owns it.
+2. **Grepping for your probe's tag hides the compile error that says the probe is not there.**
+   A first probe failed to compile (a field placed between an `@Override` and its method); Maven
+   reported it, but the run was filtered to `grep PROBE_TC`, so it printed nothing — indis-
+   tinguishable from "this method is never called", and nearly recorded as a finding about the
+   code. Read the build result before reading the probe's output.
 
