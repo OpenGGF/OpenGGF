@@ -228,7 +228,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   bounded segment-cursor ownership design; and dynamic rewind identities have a
   reproduced removal-lifetime defect whose collision-list ownership blocks the
   proposed narrow prune. No runtime optimisation is included in this
-  documentation change.
+  documentation change. Independent review accepted the trace-ownership design
+  for implementation planning and rejected immediate rewind pruning.
 
 - **S2 Super transformation group (merged 2026-08-21):** three defects with three
   owners, landed together -- the sidekick was given a Super state controller in a
