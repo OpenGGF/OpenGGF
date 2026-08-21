@@ -112958,3 +112958,31 @@ Correct-and-unlanded until a trace can arbitrate it.
 `UnsatisfiedLinkError: Failed to locate library: liblwjgl.so` -- once in a fresh worktree, once in
 a used one where `target/test-tmp/lwjgl_*` had gone stale, where it poisoned 66 of 69 classes and
 read exactly like a catastrophic regression. `rm -rf target/test-tmp` before a sweep.
+
+## LBZ 7028 -> 4592: the Flybot767's two wait arms used two different predicates
+
+Measured at `078593625`, matched worktree pair.
+
+Commissioned as a by-role survey of the Jawz `$22` fudge; the survey itself is
+[docs/architecture/audits/2026-08-21-s3k-wait-offscreen-visibility-survey.md](../architecture/audits/2026-08-21-s3k-wait-offscreen-visibility-survey.md).
+Two of its three axes came back empty, which is the main result: the `$22` margin is a singleton
+plus its Mantis copy, and the live-vs-retained staging split is **not** a defect class -- the
+TurboSpiker's live release was measured against the ROM's own recorded code-pointer transition
+(`0x00085AD2` -> `0x00087BCA` on frame 16573, `routine` 0 -> 2 on 16574, HCZ slot 13) and matches
+exactly, because the object pass reads the camera as of the previous camera step.
+
+The third axis found one landable member. `Flybot767BadnikInstance` has two wait arms selected by
+`spawn.layoutIndex() >= 0`: the layout arm tested `isWithinRenderSpriteBounds`, the dynamic arm
+tested the inclusive `isOnScreen`. `Render_Sprites` (`sonic3k.asm:36336-36366`) has one predicate,
+with exclusive right and bottom edges, so the two arms disagreeing by a pixel was the defect.
+
+`TestS3kLbzZoneSliceTraceReplay` **7028 -> 4592 errors**; first error unchanged at frame 411
+(`y_speed` expected `0x0000` actual `-0100`), so this is not a frontier move -- it is 2436 fewer
+downstream errors behind an unmoved frontier. Attributed by isolation: the eleven-site bundle and
+this one file alone give the same 4592.
+
+Controls: `-Ptrace-segments` (70 classes) differs only in the LBZ row; `-Ptrace-replay` (800
+tests) messages identical; `-Pguards` 500/0; `TestS3kFlybot767Badnik` 13/0.
+
+Ten further sites carry the same wrong helper, are ROM-correct to change, and are **neutral on
+every trace** -- listed in the audit, deliberately not landed.

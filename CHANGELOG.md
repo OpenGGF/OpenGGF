@@ -1,5 +1,12 @@
 # Changelog
 
+- **A Flybot767 that was spawned rather than placed now wakes on the same rule
+  as one that was placed:** the drone waits behind an offscreen placeholder and
+  starts flying when the sprite renderer first draws it, and the renderer's
+  right and bottom edges are exclusive. One of the drone's two wait paths used a
+  test that was a pixel more generous, so the same badnik woke on a different
+  frame depending on how it had come into the world.
+
 - **An HCZ Jawz no longer wakes up a frame early:** the fish waits offscreen
   behind a $20-square placeholder and starts swimming on the dispatch after the
   ROM sees that placeholder drawn. The engine tested a box two pixels taller, so

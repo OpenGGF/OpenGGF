@@ -90,7 +90,13 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
                 waitingForOnscreen = false;
                 return;
             }
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            // Same predicate as the layout arm above: Render_Sprites
+            // (sonic3k.asm:36336-36366) sets the flag loc_85AD2 reads, and its
+            // right and bottom edges are exclusive (`bge #320`, `bhs 2*h+224`).
+            // The inclusive MarkObjGone test this used to call is a pixel more
+            // generous, so a dynamically created Flybot767 woke on a different
+            // frame from a layout-placed one.
+            if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN)) {
                 return;
             }
             // Obj_WaitOffscreen restores the saved operation pointer and
