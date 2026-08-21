@@ -214,6 +214,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Object culling-margin audit follow-up (2026-08-21, analysis only):** a
+  disassembly-backed review classified 18 S1/S2/shared literal-margin deletion
+  gates and found that none faithfully implemented its owning ROM predicate.
+  Sixteen S3K sites remain blocked on unresolved culling geometry. The audit now
+  distinguishes the four relevant ROM predicate families; no runtime code was
+  changed.
+
 - **Performance report validation (2026-08-21, design only):** the static
   performance survey now has measured follow-up evidence. The AIZ GPU diagnostic
   was rejected as a benchmark because it submitted zero fire-curtain commands;

@@ -131,6 +131,8 @@ that looks like a real result.
 | 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
 | 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
 | 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
+| 115 | A proxy that survives one question silently answers a different one | Three inversions in one family; measure the quantity directly |
+| 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2994,4 +2996,51 @@ primary is attributed.
    reported it, but the run was filtered to `grep PROBE_TC`, so it printed nothing — indis-
    tinguishable from "this method is never called", and nearly recorded as a finding about the
    code. Read the build result before reading the probe's output.
+
+## One hundred and fifteenth rule: a proxy that survives one question will silently answer a different one
+
+Three separate inversions in one object family, all from the same cause: a metric keyed on
+something that stands in for the quantity of interest.
+
+- Persistence keyed on `(slot, spawn)` reported 713 of 714 objects living one sample — apparent
+  wild over-creation. Re-keyed on slot: 36 objects held eight times too long. **Opposite owner.**
+- Run-count keyed on slot answered "how long does each live" correctly and was then read as
+  "how many are created" — which it cannot answer at all. The object turned out to have *both* a
+  lifetime defect and a creation deficit (ROM 77 shots, engine 48), and the long lifetimes were
+  masking the deficit.
+
+**The useful form is not "pick a better key".** It is that a proxy validated for one question
+carries no warranty for the next one, and the failure is silent — the number is well-formed either
+way. Each time, the fix was an instrument measuring the quantity **directly**: constructor calls
+counted against recorded `object_appeared` events, rather than runs inferred from occupancy.
+
+Before reading an existing metric to answer a new question, state what the metric actually counts
+and check that it is the thing the new question asks about.
+
+## One hundred and sixteenth rule: a classification keyed on one game's vocabulary under-reports every other game
+
+A sweep counted **2** render-flag deletion sites. Re-reading the same population site by site found
+at least **6**. The miss was vocabulary: the search used S2's spelling — `render_flags` /
+`on_screen` — and **S1 spells the same field `obRender`**. A site citing the *routine* rather than
+the flag test (`Obj28_Main` / `Obj28_ChkDel` reaching the flag indirectly) matched neither
+spelling and was invisible to both.
+
+This is rule 102's failure in a different coat: a category defined by one game's names silently
+becomes a category of *that game's sites*. Before reporting a cross-game population, name the
+field in each game's own disassembly and search all of them — and include the indirect form, where
+a site cites the routine that performs the test rather than the test itself.
+
+**Corollary, from the same re-classification: a failing citation usually fails on the QUANTITY,
+not the value.** Of 18 classifiable sites, zero were faithful — and none failed merely by having
+the wrong number. They failed because the cited routine computes a *different quantity* or *no
+quantity at all*:
+
+- a margin of 480 citing a routine that computes 640;
+- a margin of 128 citing a bottom-of-level camera test — different quantity **and** different axis;
+- a margin of 64 citing `Obj_DeleteBehindScreen`, which is a `bmi` on a coarse difference — a
+  **sign test containing no constant whatsoever**, and one that deletes only *behind* the camera
+  where the engine also deletes ahead of it.
+
+That last shape passes any review that asks "does the cited routine exist, and is it reached?"
+Both answers are yes. The number still cannot come from there.
 
