@@ -103141,3 +103141,86 @@ None found, and the shape argues against one: the divergence is **one frame at e
 persisting offset, and physics never diverges because the engine rejoins the ROM's frame on the
 following row by itself. There is nothing to compensate for. Recorded so the next round does not
 go looking.
+## 2026-08-21 — The seam trigger: the stuck pair clears, and the skew was one misplaced publish
+
+Round `s3k-seam-trigger-r1`, branch `bugfix/ai-s3k-seam-trigger-r1` off `origin/develop`
+`102652768`. Same-tree control at the same commit.
+
+### The change
+
+Publish the destination's fresh-level runtime art when the omitted title-card owner retires,
+which is this engine's form of `Kos_modules_left` reaching zero — the gate
+`Obj_TitleCardCreate` holds on (`:62169-62171`). The ROM then builds the pieces (`:62212`),
+`Obj_TitleCardWait` clears `objoff_48` (`:62244`), `loc_62CC` exits, and `Level:` runs
+`LoadLevelLoadBlock` (`:7761`), still inside the transition window. Publishing from the
+destination's own frames put the parents past the seam, where they could never meet the
+completions recorded against the window.
+
+**Three lines, and it did not need the Nemesis drain.** The preceding entry concluded that
+modelling `Nem_decomp_queue` was required to fix this. That was wrong, and the reason is
+worth keeping: **readiness is admission-gated, so the submission row does not have to be
+right for the retirement schedule to be right.** Submitting earlier inside the window and
+letting the parents sit pending is sufficient — the recorded completions release them on
+their own rows. The drain remains worth doing for submission-row accuracy, but it is a parity
+workstream, not what closes the chain's hardware-timing axis.
+
+The incompleteness is stated in the code rather than left to read as parity: the engine
+leaves the loop earlier within the window than the ROM does, because `loc_62CC`'s second hold
+(`:7747-7748`) is unmodelled. No constant here derives from the recorded gap.
+
+### Result
+
+| | control | candidate |
+|---|---|---|
+| first unmatched module ordinal | `#101` | **`#112`** |
+| first unmatched decompression | `#148` | **`#165`** |
+| total unmatched completions | 42 | **14** |
+| `engine pending: KOS_MODULE_QUEUE#101` occurrences | 16 | **0** |
+
+The stuck pair clears. It had been pending at raw frames 750, 1022, 2469, 2957 and 3537 —
+thousands of rows and several zones past the boundary — against expectations climbing to
+`#118`/`#171`, with every later module unmatched behind it. Eleven module and seventeen
+decompression ordinals close.
+
+### Matrix — both arms, same tree, same commit
+
+| Arm | `-Ptrace-replay` | `Tests run: 0,` | `-Pguards` | default |
+|---|---|---|---|---|
+| control | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E | 15194 / 53F / 73E / 22S |
+| candidate | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E | 15194 / 53F / 73E / 22S |
+
+Trace-replay failing class sets identical. Default suite differs by two classes each way
+(`TestBubblerObjectInstance`, `TestS3kIczCrushingColumnObject` vs `TestHeaderNameRomDetectors`,
+`TestS3kLbzFlameThrowerObject`), symmetric and with identical totals; both candidate-side ones
+pass in isolation, the usual order-dependent noise.
+
+**Segment 9 did not move.** Named rather than inferred: both arms report `complete: true`,
+59,070 errors, 0 warnings, 55 lagged frames, and the same first non-camera mismatch at frame
+0, `y rom=0x0020 engine=0x0021`. Byte-identical between arms.
+
+### The fourteen survivors, and a retraction about them
+
+They are seven decompression+module pairs, one frame apart, all inside HCZ:
+
+| raw frames | ordinals |
+|---|---|
+| 2469 / 2470 | `KOS_DECOMPRESSION_QUEUE#165` + `KOS_MODULE_QUEUE#112` |
+| 2767 / 2768 | `#166` + `#113` |
+| 2957-2967 | `#167`-`#170` + `#114`-`#117` |
+| 3537 / 3538 | `#171` + `#118` |
+
+These are the HCZ water-wall/geyser producer family named in the 2026-08-15 entry — ordinal
+112 "the fan's submission", 113 at 2768 "the second geyser's own art load", 114-117 at
+2957/2961/2963/2966 "the same producer".
+
+**RETRACT the inference that this producer passes standalone and fails only in the chain.**
+That would have made it a chain-entry problem. Measured instead, on both arms at this commit:
+`TestS3kSonicTailsHczSegmentTraceReplay` (which runs under `-Ptrace-segments`, not
+`-Ptrace-replay`, which is why it is absent from the matrix above) **errors identically on
+control and candidate** with `IllegalStateException: S3K KosM module FIFO is full`. The
+2026-08-15 "PASS, 0 errors, 3519 frames compared" was true at that commit and has since
+regressed.
+
+So the survivors are **one producer family with its own full-FIFO defect, present standalone
+and in the chain alike** — the same throw shape as the seam defect one level down, and a
+concrete frontier of its own. Not scattered across zones, so not evidence for the drain.

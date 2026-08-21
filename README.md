@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K level art seam trigger (`bugfix/ai-s3k-seam-trigger-r1`, merged 2026-08-21):**
+  the destination's terrain art now publishes when the title-card owner retires --
+  the engine's form of the ROM's own module-queue gate -- instead of from the
+  destination's frames past the seam. The two parents that had been stuck pending
+  for the rest of the run now retire on their recorded rows, closing eleven module
+  and seventeen decompression ordinals downstream; unmatched completions fall from
+  42 to 14.
+
 - **S1 ring sparkle lifetime (merged 2026-08-21):** the signpost's sparkles were
   living sixteen frames instead of twenty-five, because a flat frame delay stood
   in for the animation script's own duration byte and the routine's reload-on-

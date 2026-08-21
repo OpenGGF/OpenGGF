@@ -617,6 +617,26 @@ public class Sonic3kTitleCardManager
         omittedOwnerHandles.clear();
         omittedOwnerQueue = null;
         omittedFreshLevelOwnerActive = false;
+        // Retiring here is this engine's form of Kos_modules_left reaching
+        // zero, which is the gate Obj_TitleCardCreate holds on
+        // (docs/skdisasm/sonic3k.asm:62169-62171). Once it clears the ROM
+        // builds the card's pieces (:62212), Obj_TitleCardWait clears
+        // objoff_48 (:62244), loc_62CC exits and Level: runs
+        // LoadLevelLoadBlock (:7761) -- so the destination's terrain art is
+        // queued a few dispatches later, still inside the transition window.
+        // Publishing it from the destination's own frames instead put it past
+        // the segment seam, where the parents could never meet the completions
+        // recorded against the window and stayed pending for the rest of the
+        // run, blocking every later module behind them.
+        //
+        // Known-incomplete: loc_62CC also holds while Nem_decomp_queue is
+        // non-empty (:7747-7748), and S3K has no per-frame Nemesis drain
+        // (NemesisPlcServiceQueue has only S1/S2 consumers), so the engine
+        // leaves the loop earlier within the window than the ROM does. The
+        // parents simply wait pending until their recorded completions arrive,
+        // so the retirement schedule is unaffected; modelling that drain is
+        // what would make the submission row itself accurate.
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
     }
 
     @Override
