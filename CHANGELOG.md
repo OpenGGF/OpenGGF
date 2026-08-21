@@ -91,6 +91,24 @@ All notable changes to the OpenGGF project are documented in this file.
   S3K Sonic-and-Tails run this moves segment 8's first non-camera mismatch from row 3673 to
   row 4909 and drops its comparator errors from 5020 to 4787.
 
+- **Sonic 1's collapsing floors (Obj53) now collapse on the ROM's frame, and drop their
+  rider on the ROM's frame.** Three one-frame errors in `CFlo`, two of which were
+  cancelling. `CFlo_OnPlatform` is unconditional -- test the timer, and while it is
+  non-zero set the touched flag *and* decrement, every frame routine 4 runs
+  (`docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:203-208`) -- but the
+  engine skipped the first decrement on top of the frame `PlatformObject` already costs
+  by advancing the routine during routine 2, so the floor fragmented one frame late.
+  Correcting that alone regressed two green traces, because two further defects were
+  riding on the error: `.delayCollapse` (`:227-243`) keeps piece 0 carrying the rider
+  every frame while the flag is set, with `CFlo_WalkOff`'s `ExitPlatform` X band deciding
+  when he walks off -- the engine let the shared solid pass unseat him a frame earlier --
+  and when the timer does expire the ROM writes only `bclr #3,obStatus(a1)`, leaving the
+  rider grounded until his next control tick finds no support, where the engine set
+  `Status_InAir` immediately. The ROM's eight-frame count from the first routine-4 body
+  to fragmentation was confirmed on two independent recordings rather than one. Fixes the
+  seven-slot `FindFreeObj` divergence at both SLZ1 fragmentations
+  (`s1-sonic-complete-withemeralds` segment 27 slot diff 12 -> 10 frames) with
+  `slz1_completerun` and `mz3_completerun` staying green.
 - **Sonic 1's Orbinaut no longer frees its spikeballs' object slots when the player
   destroys it.** The ROM tears an Orbinaut down two different ways, and they free the
   balls' SST slots at different points in `ExecuteObjects`. Out of range, `Orb_ChkDel`

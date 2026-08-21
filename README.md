@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S1 collapsing floor (`bugfix/ai-s1-slz1-graze-r1`, merged 2026-08-21):** three
+  one-frame errors landed together, because two of them were compensating for the
+  first. The floor fragmented a frame late, the post-fragmentation carry lasted a
+  single frame instead of holding the rider until he walks off the ROM's X band,
+  and timer expiry forced the rider airborne instead of letting his next control
+  tick do it. All three SLZ1 and MZ3 anchors stay green and both fragmentations
+  now allocate the ROM's slots.
+
 - **S3K capsule press timing diagnosed (2026-08-21):** the capsule's fourteen-row
   early press is one pixel of capsule Y against an exclusive bound, caused by
   subpixel drift in the capsule's descent rather than by the trigger. Held

@@ -137,7 +137,6 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     // run (and decrement) the same frame the player lands -- one frame early,
     // making the collapse timer reach 0 (and the drop fire) one frame before ROM
     // (MZ3 f2173 vs ROM f2174). Skip the first routine-4 update to match ROM.
-    private boolean collapseEnteredThisFrame;
 
     // X-flip state (obRender bit 0). Can change dynamically for subtype bit 7 objects.
     private boolean hFlip;
@@ -251,13 +250,13 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      * Falls through to CFlo_WalkOff: ExitPlatform + MvSonicOnPtfm2 + RememberState.
      */
     private void updateCollapse(AbstractPlayableSprite player) {
-        if (collapseEnteredThisFrame) {
-            // ROM: PlatformObject set routine 4 during routine-2 execution, so
-            // CFlo_OnPlatform first runs (and decrements) only next frame.
-            collapseEnteredThisFrame = false;
-            collapseFlag = true;
-            return;
-        }
+        // ROM CFlo_OnPlatform is unconditional: test the timer, and while it is
+        // non-zero set the flag AND decrement, on every frame routine 4 runs
+        // (docs/s1disasm/_incObj/"1A, 53 Collapsing Ledges and Floors.asm":203-208).
+        // PlatformObject advancing obRoutine to 4 during routine 2 already costs the
+        // first frame, so skipping the first decrement as well collapsed the floor one
+        // frame late. Verified on two recordings: the ROM takes eight frames from the
+        // first routine-4 body to fragmentation in both.
         if (collapseDelay <= 0) {
             // loc_8458 (line 128): enters fragment code WITHOUT clearing collapse_flag.
             // The flag remains set so routine 6 runs WalkOff behavior (loc_8402).
@@ -318,7 +317,15 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             boolean playerRiding = objectManager != null && player != null
                     && objectManager.isAnyPlayerRiding(this);
 
-            if (!playerRiding) {
+            // ROM `.delayCollapse` runs CFlo_WalkOff -> ExitPlatform unconditionally,
+            // and ExitPlatform releases the rider on its X band alone; the routine then
+            // sees Status_OnObj clear and falls into `.startCollapse`. A rider whose ride
+            // link is already gone reaches the same place, because ExitPlatform returns
+            // immediately when the bit is clear. Both therefore take this branch --
+            // testing only the ride link left an out-of-band rider carried indefinitely,
+            // because the shared pass is deliberately held off while the flag is set.
+            boolean walkedOffBand = player != null && exitsPlatformByX(player.getCentreX(), x);
+            if (!playerRiding || walkedOffBand) {
                 // CFlo_FragmentPiece .delayCollapse calls CFlo_WalkOff even
                 // when this fragment is no longer the player's current support.
                 // ExitPlatform owns a global Status_OnObj clear: a later ROM
@@ -348,8 +355,17 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                 // goes airborne. Mirror `bclr #3` directly: clear onObject + set
                 // airborne (MZ3 f2174: ROM air 0->1 here).
                 objectManager.clearRidingObject(player);
+                // ROM does `bclr #3,obStatus(a1)` and nothing else: Status_InAir is not
+                // written here, so the rider is still grounded for the rest of this
+                // frame and only becomes airborne on his next control tick, when the
+                // ground check finds no support. Setting it here made him airborne a
+                // frame early once the collapse timing itself was corrected -- the
+                // immediate set was compensating for a fragmentation that ran late.
+                if (!player.getAir() && player.isOnObject()) {
+                    objectManager.solidContacts()
+                            .noteGroundedOnObjectClearedBeforePhysics(player, this);
+                }
                 player.setOnObject(false);
-                player.setAir(true);
                 // move.b #id_Run,obPrevAni(a1) - restart Sonic's animation
                 // loc_842E: clear flag
                 collapseFlag = false;
@@ -387,6 +403,12 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     // BuildSprites `.assumeHeight` band, used because CFlo_Main never sets
     // sprite_customheight_bit (docs/s1disasm/_inc/BuildSprites.asm:84-91).
     private static final int ASSUMED_HEIGHT = 32;
+
+    /** ExitPlatform's X band alone, without its airborne short-circuit. */
+    static boolean exitsPlatformByX(int playerX, int objectX) {
+        int relX = (short) (playerX - objectX + PLATFORM_HALF_WIDTH);
+        return relX < 0 || relX >= PLATFORM_HALF_WIDTH * 2;
+    }
 
     static boolean exitsPlatform(boolean playerAirborne, int playerX, int objectX) {
         if (playerAirborne) {
@@ -648,7 +670,21 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
      * and is a no-op for any rider already off the floor's solid band.
      */
     private boolean pendingNoResetFragment() {
-        return routine == 4 && collapseFlag && collapseDelay <= 0 && !fragmented;
+        // The fragmentation frame itself: routine 4 reaches Fragmentate_..._NoReset
+        // without ever running CFlo_WalkOff, so the rider is not unseated here.
+        if (routine == 4 && collapseFlag && collapseDelay <= 0 && !fragmented) {
+            return true;
+        }
+        // ROM CFlo_FragmentPiece `.delayCollapse`
+        // (docs/s1disasm/_incObj/"1A, 53 Collapsing Ledges and Floors.asm":227-243):
+        // while collapsible_flag is still set, piece 0 keeps carrying the rider every
+        // frame -- CFlo_WalkOff's ExitPlatform decides when he walks off, and the
+        // routine itself only clears Status_OnObj once the decremented timer hits
+        // zero. The engine's own `.delayCollapse` port already owns both of those
+        // exits, so the shared solid pass must not unseat him first: without this the
+        // hold lasted exactly the fragmentation frame and the rider dropped one frame
+        // early.
+        return routine == 6 && collapseFlag;
     }
 
     @Override
@@ -671,7 +707,6 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             // routine during routine-2 execution); mark the transition so the
             // routine-4 update skips this frame, matching that one-frame deferral.
             routine = 4;
-            collapseEnteredThisFrame = true;
         }
     }
 
@@ -691,7 +726,6 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             // ExitPlatform: move.b #2,obRoutine(a0). collapseFlag intentionally
             // survives; routine 2 consumes it on the next object execution.
             routine = 2;
-            collapseEnteredThisFrame = false;
         }
     }
 

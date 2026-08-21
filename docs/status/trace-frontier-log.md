@@ -101495,3 +101495,58 @@ enough that any starting phase reproduces *some* run.
 
 Trace the capsule's routine-4 motion to establish what it leaves in `y_pos+2`. Then both gates
 apply: the press must land on row 6007 **and** on Tails.
+## 2026-08-21 — Obj53's three one-frame errors, landed together
+
+Round `s1-slz1-graze-r1`, continued from the rejected candidate above. Branch
+`bugfix/ai-s1-slz1-graze-r1`. The previous entry's conclusion — that neither half could land
+alone — was right, and the count was one short: there were **three** one-frame errors, two of
+them compensating for the first.
+
+### The three
+
+1. **Fragmentation ran one frame late.** `CFlo_OnPlatform` (`:203-208`) is unconditional: test
+   the timer, and while non-zero set the flag *and* decrement, every frame routine 4 runs.
+   `updateCollapse` skipped the first decrement, on top of the frame `PlatformObject` already
+   costs by advancing the routine during routine 2. ROM count from the first routine-4 body to
+   fragmentation is **eight frames, confirmed on two recordings** (`slz1_completerun` f4045->f4053
+   and f4052->f4060; `mz3_completerun` f2138->f2146).
+2. **The post-fragmentation carry lasted one frame instead of many.** `.delayCollapse`
+   (`:227-243`) has piece 0 carry the rider every frame while `collapsible_flag` is set;
+   `CFlo_WalkOff`'s `ExitPlatform` releases him on its X band. The engine deferred the shared
+   pass's unseat only on the fragmentation frame itself, so the rider dropped at f4061 where the
+   ROM holds him. The deferral now covers routine 6 while the flag is set, and the object's own
+   `.delayCollapse` port owns both exits — which required its walk-off branch to fire on
+   `ExitPlatform`'s X band as well as on a missing ride link, or an out-of-band rider was
+   carried indefinitely (measured: `slz1_completerun` then failed f4062 the *other* way,
+   `air` expected 1, actual 0).
+3. **Timer expiry made the rider airborne a frame early.** ROM writes only
+   `bclr #3,obStatus(a1)`; `Status_InAir` is never set there, so the rider stays grounded for
+   the rest of the frame and goes airborne on his next control tick. The engine called
+   `setAir(true)` directly — with a comment citing MZ3 f2174, which it reached only because
+   fragmentation was late. With (1) fixed it fired at f2173.
+
+Errors (2) and (3) were invisible while (1) was present, and (1) was invisible on any recording
+where the player runs off the floor before it collapses — which is why the chain fixture wanted
+the skip gone and the complete-run fixtures did not.
+
+### Three anchors, all held
+
+| anchor | before | after |
+|---|---|---|
+| chain segment 27 (`slz1`) | green, slot diff 12 frames | **green, slot diff 10** — f3871 and f3875 gone |
+| `TestS1Slz1CompleteRunTraceReplay` | green | **green** |
+| `TestS1Mz3CompleteRunTraceReplay` | green | **green** |
+
+### Verification
+
+Candidate against control `2204cb61d`, both arms in the same worktree.
+
+- `-Ptrace-replay`: **800 tests, 6 failures, 0 errors, 4 skipped**, failing set identical to the
+  control, and every `segment N ... diverged` line on all three chains identical. 163 `Running`
+  lines; the three `Tests run: 0,` lines are `TestS3kSlotsBonusTraceReplay`'s nested containers.
+- `-Pguards`: 500 tests, 0 failures.
+- Default suite: 15194 / 51 failures / 67 errors / 18 skipped — failing set identical to the
+  control's.
+
+Segment 27's residual is now 10 slot-divergent frames, all one `0x25` the ROM holds in slot 41
+(then 40) between f4637 and f4736, unchanged by this round.
