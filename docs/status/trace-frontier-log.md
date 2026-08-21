@@ -102614,3 +102614,62 @@ Instrument the engine's Sonic DPLC submission at `lz1` f3123-3124 and establish 
 load is skipped when the same load succeeds hundreds of times elsewhere in the same act. The
 suppression is the thing to find; nothing here yet says what it is, and the fix must not be a
 frame-keyed exception.
+## 2026-08-21 — RETRACTION: the ROM's emerge is animation-driven too, not position-terminated
+
+Round off `origin/develop` `f814c9750`. **Found, not fixed — nothing landed but this entry,
+which corrects the previous one.**
+
+### Retracted
+
+The previous entry stated the emerge is "the one phase in the cycle not driven by the shared
+timer … `AIZEndBoss_Emerge` ends on the boss's own position/velocity, where the engine ends on
+an animation counter". **The second half is wrong.** The routine reads
+(`sonic3k.asm:138102-138110`):
+
+```
+AIZEndBoss_Emerge:
+        lea     AniRaw_AIZEndBoss_Emerge(pc),a1
+        jsr     (Animate_RawNoSSTMultiDelay).l
+        bclr    #6,$38(a0)
+        cmpi.b  #$2B,mapping_frame(a0)
+        bne.s   AIZEndBoss_EmergeReturn
+        bset    #6,$38(a0)
+```
+
+It is **animation-driven**, exactly like the engine. It touches no position or velocity, and it
+does not end the routine at all — it only sets `$38` bit 6 on the frames where `mapping_frame`
+is `$2B`, which the script alternates against `0` at zero delay
+(`AniRaw_AIZEndBoss_Emerge`, `:139094-139107`). That is a **flashing effect**, not a duration.
+
+The bad inference: `AIZEndBoss_StartEmerge` (`:138084-138085`) sets `routine = 2` without
+writing `$2E`, and I read "no timer write" as "terminated physically". **Absence of a timer
+write does not imply physical termination.** This is the third round in this investigation
+where reading one level deeper refuted an inference drawn from the surrounding structure —
+after the capsule's non-existent routine-4 motion and the `Ctrl_2_locked` sign.
+
+### What the duration actually depends on, so far as it is established
+
+`AIZEndBoss_Emerge` never invokes its own `$34` callback (`AIZEndBoss_Reveal`, set at
+`:138089`). Something else does. Candidates not yet read: the `$F4` script command that
+terminates the first 13-entry segment of `AniRaw_AIZEndBoss_Emerge` and is dispatched through
+`off_845D8` (`Animate_RawNoSSTMultiDelay`, `:177566-177590`), and the waterfall child spawned
+by `AIZEndBoss_StartEmerge` via `ChildObjDat_AIZEndBossWaterfall` (`:138097-138099`).
+
+### Answering the question directly: duration verified, trajectory not — and not even duration for the ROM
+
+- **Engine emerge duration: 33 frames — measured** (the `$7F` phase expiry at row 5261 to the
+  hover entry at 5294).
+- **ROM emerge duration: not verified.** The 66 frames quoted last round is arithmetic from the
+  implied 63 residual, which is itself arithmetic from the 184-frame total. **It is an
+  inference on an inference and should not be carried.**
+- **Trajectory: not verifiable from this recording** either way — the boss body never enters
+  the recorded near-list.
+
+So there is currently **no measured ROM-side quantity** for this phase. Deriving the
+termination path is a prerequisite for any change, exactly because a duration matched without
+the path would be the next fitted constant.
+
+### Next
+
+Read the `$F4` handler in `off_845D8` and the waterfall child, and establish what invokes
+`AIZEndBoss_Reveal`. Only then is there a condition to give the engine.

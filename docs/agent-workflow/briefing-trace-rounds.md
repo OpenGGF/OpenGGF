@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-one rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -44,6 +44,7 @@ that looks like a real result.
 | 58 | The count of cancelling errors is usually understated; two is rarely the whole set |
 | 59 | When the engine looks right and the recording looks broken, the engine is probably missing a ROM bug |
 | 60 | Right family, wrong mechanics is still wrong — test the mechanism's own prediction |
+| 61 | An absence in a routine is not a positive fact about it; read one level deeper |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1667,3 +1668,29 @@ the supposed truncation kept updating every frame.
 Test the mechanism, not the family. A family-level guess that survives because nobody
 checked its specific prediction will be carried into the fix, and the fix will be built
 around a mechanism that does not exist.
+
+## Sixty-first rule: an absence in a routine is not a positive fact about it
+
+Reasoning from what a routine *does not do* is the most reliable way to produce a
+confident wrong answer. One investigation produced three refutations of the same shape in
+a row:
+
+- A phase entry did not write the shared timer, so the phase was concluded to be
+  terminated physically. Reading the phase routine showed it is animation-driven like the
+  engine's and does not terminate itself at all — the code that looked like a termination
+  test is a flashing effect.
+- An object's field was not written by the routine that sets its position, so the value
+  was concluded to be inherited from an earlier motion. That earlier routine is never
+  reached, and the allocator hands out zeroed slots anyway.
+- An input value stayed constant across a window, which was consistent with a lock being
+  taken at one row — and equally consistent with a later lock and no release, so it
+  discriminated nothing.
+
+**The pattern.** "X does not do Y, therefore Z" is only sound when Z is the *only*
+alternative, and it almost never is. The fix is cheap: read one level deeper — the routine
+the absence points at, the index table that says which routine runs, the script the
+handler dispatches — before building on it.
+
+**Related.** An empty grep is a fact about the grep (rule 56's neighbour), and a caveat
+written down is not a caveat checked (rule 52). All three are the same failure: treating
+the boundary of what you looked at as the boundary of what exists.
