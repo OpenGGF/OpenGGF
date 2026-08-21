@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-nine rules and several worked sections, accumulated across many rounds. The narrative
+Eighty rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -72,6 +72,7 @@ that looks like a real result.
 | 77 | A target downstream of the segment's first error | Rounds spent on inherited lateness that no local fix can reach |
 | 78 | A probe aligned end-to-end on two monotone series | "N of N rows agree" — one comparison restated, reversing under a real reference |
 | 79 | A citation whose numbers were refreshed but whose claim was not re-read | A false statement wearing a freshly-audited look |
+| 80 | A derivation that explains everything | One unchecked premise, fitted so tightly it convinces — and points the wrong way |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2075,3 +2076,32 @@ line number resolves.
 so it attracts more trust than the stale one it replaced. If you fix a pointer without
 verifying the claim, say so explicitly in the commit — "line numbers refreshed, claim not
 re-checked" — so the next reader knows which half was done.
+
+## Eightieth rule: one false premise inside a tight derivation points it confidently wrong
+
+The most persuasive argument of one session was five independently measured facts and a single
+hypothesis explaining all of them at once — including *why* an existing behaviour was
+accidentally right, which is normally the mark of a real model. It predicted a result, the
+prediction was tested, and the two fixtures it targeted went from tens of thousands of errors
+to green and ten. It was also wrong: one of the five facts was an unchecked ordering claim, and
+the same hypothesis turned thirty-nine classes red across three games with none newly green.
+
+**Elegance is not evidence, and tightness is not either.** A derivation that fits every
+observation is more convincing when it contains a false premise, not less — the fit is achieved
+by the error. Treat "this explains everything" as a prompt to identify which premise has never
+been read at the source, not as a reason to land.
+
+**When a direct measurement and a model disagree, the measurement is telling you which premise
+to go and read.** In that round, six inversions of recorded ROM RAM contradicted a probe, and
+were right; later the same inversions contradicted the round's own ordering story, and were
+right again. Arithmetic on recorded state at events identified by content depends on no
+ordering model, which is exactly why it survives when the model does not.
+
+**Do not preserve a refuted derivation as narrative.** Record it as the retraction it is. A
+persuasive wrong argument left in the place people look first will be re-adopted, and it will
+be re-adopted *because* it reads well.
+
+**Footnote on control-arm discriminators.** "Does the control's own error array already contain
+this divergence?" separates a fix that revealed a frontier from one that caused it — but it
+degenerates when the control is green outright. An empty array is then the answer, not a failed
+search: nothing buried means the candidate caused it.
