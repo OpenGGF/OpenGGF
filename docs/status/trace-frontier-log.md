@@ -111099,3 +111099,34 @@ advice — establish persistence per object — is unchanged, and the bullet say
 acted on it can tell whether their conclusion still holds. **My BossExplosion round used only
 the density reading, so the retraction costs it nothing: 511 = 511 never rested on the phase
 premise.**
+
+## 2026-08-21 — The CANNONBALL/EXPLOSION prediction is refuted, and the Projectile/LeavesGenerator drift is neither shared nor recent
+
+Measured at **`0fd7b7811`** on the verified sweep from the entry above; no new run needed, both
+questions answered from data already in hand. **Nothing landed but page corrections.**
+
+**Prediction refuted.** The page predicted `EXPLOSION` (`0x3F`) two-way shape was a symptom of
+the CANNONBALL (`0x20`) conversion defect. A conversion leaves a signature — the engine holding
+the pre-conversion id where the ROM holds the post-conversion one, in matching counts, as
+BossExplosion/Eggrobo does at 511 and 511. Measured for this pair: **12** and **6**. There is no
+pairing. What the engine holds where the ROM has `0x3F` is `0x3F` itself (58.6%), nothing
+(22.6%), then a tail with no dominant partner. **EXPLOSION is its own defect, unexamined, and
+must not be sized into the convert-in-place programme.**
+
+That is the outcome worth having either way, and it cost one query — a stated-but-untested
+prediction sitting in a status page is exactly what gets read as established later.
+
+**The Projectile/LeavesGenerator "shared recent cause" premise is wrong twice.**
+
+1. **Not shared.** `Projectile`'s over-count is 602 of 617 in `SONIC_2_90` (WFZ act 1);
+   `LeavesGenerator`'s is 354 of 358 in chain segments 16/18/19. Disjoint fixtures, and disjoint
+   partner distributions (`0xBD`/`0x19` against `0x03`/`0x22`/`0x83`).
+2. **Not recent.** Both are *identical* at `cae3ede3c` and `0fd7b7811` — 602/602, 228/228,
+   80/80, 46/46. They degraded before `cae3ede3c` and have been stable since, so nothing that
+   landed in the last window caused them. `EXPLOSION` by contrast did move (211/424 → 179/369)
+   and is still in motion.
+
+**What the numbers actually recommend: `Projectile` in WFZ.** 602 of 617 over-counts in a single
+fixture, of which 54.3% are slots where the ROM holds nothing at all — over-creation or late
+deletion, not misplacement. One object, one fixture, one direction, and a concentration higher
+than anything else left on the page.
