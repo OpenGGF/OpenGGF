@@ -1,0 +1,262 @@
+package com.openggf.tests.trace.runs;
+
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
+import com.openggf.tests.trace.TraceV5RunFixture;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestTraceRunSegmentDescriptorPlanning {
+
+    @Test
+    void descriptorPlanMatchesEagerPlanSummaries(@TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        Path firstMetadata = runDir.resolve("seg00_aiz/metadata.json");
+        Files.writeString(firstMetadata, Files.readString(firstMetadata).replace(
+                "\"dynamic_art_transfer_state_per_frame\"",
+                "\"dynamic_art_transfer_state_per_frame\",\"lag_state_per_frame\""));
+        Path firstAux = runDir.resolve("seg00_aiz/aux_state.jsonl");
+        Files.writeString(firstAux, Files.readString(firstAux)
+                + "{\"frame\":0,\"event\":\"lag_state\",\"lagged\":false,\"lagcount\":0}\n"
+                + "{\"frame\":1,\"event\":\"lag_state\",\"lagged\":true,\"lagcount\":1}\n");
+        Files.writeString(runDir.resolve("seg01_gumball/hardware_timing.jsonl"), """
+                {"event":"hardware_work_completed","raw_frame":1,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":0,"submission_fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+                """);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        var eagerPlans = TraceRunReplayWalker.plan(run, runDir);
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
+
+        assertEquals(3, descriptors.size());
+        for (int index = 0; index < descriptors.size(); index++) {
+            var eager = eagerPlans.get(index);
+            var descriptor = descriptors.get(index);
+            assertEquals(eager.segment(), descriptor.segment());
+            assertEquals(runDir.resolve(eager.segment().dir()),
+                    descriptor.segmentDirectory());
+            assertEquals(eager.trace().metadata(), descriptor.metadata());
+            assertEquals(eager.segment().traceProfile(),
+                    descriptor.metadata().traceProfile());
+            assertEquals(2, descriptor.rowCount());
+            assertEquals(List.of(0, 1), descriptor.rawFrames());
+            assertEquals(eager.trace().getFrame(0), descriptor.openingFrame());
+            assertEquals(eager.trace().terminalDynamicArtLedger(),
+                    descriptor.terminalDynamicArtLedger());
+            assertEquals(eager.trace().hardwareTimingSchedule().hasRecordedInput(),
+                    descriptor.hardwareTimingSchedule().hasRecordedInput());
+            assertEquals(eager.trace().hardwareTimingSchedule().edges(),
+                    descriptor.hardwareTimingSchedule().edges());
+            assertEquals(eager.entryBoundary(), descriptor.entryBoundary());
+            assertEquals(eager.exitBoundary(), descriptor.exitBoundary());
+            assertEquals(eager.executionPolicy(), descriptor.executionPolicy());
+        }
+        assertFalse(descriptors.getFirst().laggedRows().get(0));
+        assertTrue(descriptors.getFirst().laggedRows().get(1));
+        assertTrue(descriptors.get(1).hardwareTimingSchedule().hasRecordedInput());
+        assertEquals(1,
+                descriptors.get(1).hardwareTimingSchedule().edges().size());
+    }
+
+    @Test
+    void descriptorPlanContainsNoEagerPayloadOwner(@TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
+
+        assertEquals(run.segments().size(), descriptors.size());
+        assertTrue(Arrays.stream(TraceRunSegmentDescriptor.class.getRecordComponents())
+                .noneMatch(component -> component.getType() == TraceData.class));
+        assertTrue(descriptors.stream().noneMatch(descriptor ->
+                Arrays.stream(descriptor.getClass().getDeclaredFields())
+                        .anyMatch(field -> TraceData.class.isAssignableFrom(
+                                field.getType()))));
+    }
+
+    @Test
+    void descriptorDefensivelyCopiesCompactMutableState(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+        TraceRunSegmentDescriptor planned =
+                TraceRunReplayWalker.planDescriptors(run, runDir).getFirst();
+        List<Integer> rawFrames = new ArrayList<>(planned.rawFrames());
+        BitSet laggedRows = new BitSet();
+        laggedRows.set(1);
+        Path segmentDirectory = Path.of(planned.segmentDirectory().toString());
+
+        TraceRunSegmentDescriptor copied = new TraceRunSegmentDescriptor(
+                planned.segment(), segmentDirectory, planned.metadata(),
+                planned.rowCount(), planned.openingFrame(), rawFrames,
+                laggedRows, planned.hardwareTimingSchedule(),
+                planned.terminalDynamicArtLedger(), planned.entryBoundary(),
+                planned.exitBoundary(), planned.executionPolicy());
+        rawFrames.clear();
+        laggedRows.clear();
+
+        assertEquals(List.of(0, 1), copied.rawFrames());
+        assertTrue(copied.laggedRows().get(1));
+        BitSet accessorResult = copied.laggedRows();
+        accessorResult.clear(1);
+        assertTrue(copied.laggedRows().get(1));
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.rawFrames().add(2));
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.terminalDynamicArtLedger().add(null));
+        assertNotSame(segmentDirectory, copied.segmentDirectory());
+    }
+
+    @Test
+    void descriptorRejectsInconsistentRowShape(@TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+        TraceRunSegmentDescriptor descriptor =
+                TraceRunReplayWalker.planDescriptors(run, runDir).getFirst();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithRowShape(descriptor, -1, List.of(), null));
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithRowShape(descriptor, 2, List.of(0),
+                        descriptor.openingFrame()));
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithRowShape(descriptor, 2, List.of(0, 1), null));
+    }
+
+    @Test
+    void specialStageDescriptorUsesMetadataOnlyOpeningAndCompactRowMappings(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        TraceRunSegmentDescriptor special =
+                TraceRunReplayWalker.planDescriptors(run, runDir).get(1);
+
+        assertEquals("s2_special_stage", special.metadata().traceProfile());
+        assertEquals(2, special.rowCount());
+        assertEquals(List.of(0, 1), special.rawFrames());
+        assertTrue(special.laggedRows().isEmpty());
+        assertNull(special.openingFrame());
+        assertEquals(TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL,
+                special.executionPolicy());
+        TraceFrame ordinaryOpening = TraceRunReplayWalker.plan(run, runDir)
+                .getFirst().trace().getFrame(0);
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithRowShape(special, 2, List.of(0, 1),
+                        ordinaryOpening));
+    }
+
+    @Test
+    void descriptorPlannerWrapsMalformedSegmentWithIndexAndProfile(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        Files.delete(runDir.resolve("seg01_gumball/physics.csv"));
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        IOException error = assertThrows(IOException.class,
+                () -> TraceRunReplayWalker.planDescriptors(run, runDir));
+
+        assertTrue(error.getMessage().startsWith(
+                "Segment 1 parser failed for profile 's3k_bonus_stage':"),
+                error.getMessage());
+    }
+
+    @Test
+    void descriptorPlannerRejectsManifestRowCountMismatchAtNamedSegment(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        replaceManifest(runDir,
+                "\"trace_profile\":\"s3k_bonus_stage\",\"bk2_frame_offset\":1900,\"trace_frame_count\":2",
+                "\"trace_profile\":\"s3k_bonus_stage\",\"bk2_frame_offset\":1900,\"trace_frame_count\":3");
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.planDescriptors(run, runDir));
+
+        assertEquals("Segment 1 row count mismatch: manifest=3, parsed=2",
+                error.getMessage());
+    }
+
+    @Test
+    void descriptorPlannerRejectsManifestProfileMismatchAtNamedSegment(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        replaceManifest(runDir,
+                "\"trace_profile\":\"s3k_bonus_stage\",\"bk2_frame_offset\":1900",
+                "\"trace_profile\":\"complete_run\",\"bk2_frame_offset\":1900");
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.planDescriptors(run, runDir));
+
+        assertEquals("Segment 1 profile mismatch: manifest='complete_run', "
+                        + "metadata='s3k_bonus_stage'",
+                error.getMessage());
+    }
+
+    @Test
+    void descriptorPlannerWrapsNonContiguousSpecialStageRowsWithProfile(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
+        Path physics = runDir.resolve("ss/physics.csv");
+        List<String> rows = new ArrayList<>(Files.readAllLines(physics));
+        rows.set(2, rows.get(2).replaceFirst("^1", "2"));
+        Files.write(physics, rows);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+
+        IOException error = assertThrows(IOException.class,
+                () -> TraceRunReplayWalker.planDescriptors(run, runDir));
+
+        assertTrue(error.getMessage().startsWith(
+                "Segment 1 parser failed for profile 's2_special_stage':"),
+                error.getMessage());
+        assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
+    }
+
+    private static TraceRunSegmentDescriptor copyWithRowShape(
+            TraceRunSegmentDescriptor descriptor,
+            int rowCount,
+            List<Integer> rawFrames,
+            TraceFrame openingFrame) {
+        return new TraceRunSegmentDescriptor(
+                descriptor.segment(), descriptor.segmentDirectory(),
+                descriptor.metadata(), rowCount, openingFrame, rawFrames,
+                descriptor.laggedRows(), descriptor.hardwareTimingSchedule(),
+                descriptor.terminalDynamicArtLedger(), descriptor.entryBoundary(),
+                descriptor.exitBoundary(), descriptor.executionPolicy());
+    }
+
+    private static void replaceManifest(
+            Path runDir, String target, String replacement) throws IOException {
+        Path manifest = runDir.resolve("run_manifest.json");
+        String json = Files.readString(manifest);
+        assertTrue(json.contains(target), "fixture manifest did not contain target");
+        Files.writeString(manifest, json.replace(target, replacement));
+    }
+}

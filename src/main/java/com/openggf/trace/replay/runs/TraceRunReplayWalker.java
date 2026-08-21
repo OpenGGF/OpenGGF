@@ -10,6 +10,7 @@ import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.timing.HardwareTimingInterstitialSpans;
@@ -18,6 +19,7 @@ import com.openggf.trace.timing.HardwareTimingSchedule;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -1037,35 +1039,10 @@ public final class TraceRunReplayWalker {
         for (int i = 0; i < segmentCount; i++) {
             TraceRunManifest.Segment segment = segments.get(i);
             Path segmentDir = runDir.resolve(segment.dir());
-            // A special_stage interior is gameplay-uncompared under SS-interior
-            // policy v1 (see isUncomparedInterior): attachInteriorComparator never
-            // builds a gameplay comparator from its frames, so its physics.csv --
-            // which uses a per-game special-stage schema structurally distinct
-            // from TraceFrame's primary-level columns -- need not parse there.
-            // Metadata loading still exposes its optional DPLC heartbeat.
-            try {
-                if (isUncomparedInterior(segment)) {
-                    specialStageRows[i] = TraceRunSpecialStageRows.load(
-                            segment.traceProfile(), segmentDir,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                    traces[i] = TraceData.loadMetadataOnly(
-                            segmentDir,
-                            com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                } else {
-                    traces[i] = TraceData.load(
-                            segmentDir,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                }
-            } catch (IOException | RuntimeException failure) {
-                throw new IOException(
-                        "Segment " + i + " parser failed for profile '"
-                                + segment.traceProfile() + "': "
-                                + (failure.getMessage() != null
-                                        ? failure.getMessage()
-                                        : failure.getClass().getSimpleName()),
-                        failure);
-            }
+            LoadedSegmentPayload payload = loadSegmentPayload(
+                    segment, segmentDir, i);
+            traces[i] = payload.trace();
+            specialStageRows[i] = payload.specialStageRows();
         }
         run.validateDynamicArtRun(java.util.Arrays.asList(traces));
 
@@ -1081,6 +1058,157 @@ public final class TraceRunReplayWalker {
                         pairing.entryBoundaries()[i], traces[i])));
         }
         return plans;
+    }
+
+    /**
+     * Scans and validates run segments sequentially into payload-independent
+     * descriptors. Actual replay continues to use the eager {@link #plan}
+     * path; this boundary is for whole-run validation and compact planning.
+     */
+    public static List<TraceRunSegmentDescriptor> planDescriptors(
+            TraceRunManifest run, Path runDir) throws IOException {
+        Objects.requireNonNull(run, "run");
+        Objects.requireNonNull(runDir, "runDir");
+        run.validate(runDir);
+        BoundaryPairing pairing = pairBoundaries(run);
+        TraceRunManifest.DynamicArtRunValidator dynamicArtValidator =
+                run.new DynamicArtRunValidator();
+        List<TraceRunSegmentDescriptor> descriptors =
+                new ArrayList<>(run.segments().size());
+
+        for (int segmentIndex = 0;
+                segmentIndex < run.segments().size();
+                segmentIndex++) {
+            TraceRunManifest.Segment segment =
+                    run.segments().get(segmentIndex);
+            Path segmentDirectory = runDir.resolve(segment.dir());
+            LoadedSegmentPayload payload = loadSegmentPayload(
+                    segment, segmentDirectory, segmentIndex);
+            TraceData trace = payload.trace();
+            TraceRunSpecialStageRows specialStageRows =
+                    payload.specialStageRows();
+
+            dynamicArtValidator.accept(segmentIndex, trace);
+            TraceMetadata metadata =
+                    specialStageRows != null
+                            ? specialStageRows.metadata()
+                            : trace.metadata();
+            int rowCount = specialStageRows != null
+                    ? specialStageRows.rowCount()
+                    : trace.frameCount();
+            validateDescriptorManifestFields(
+                    segmentIndex, segment, metadata, rowCount);
+
+            List<Integer> rawFrames = new ArrayList<>(rowCount);
+            BitSet laggedRows = new BitSet(rowCount);
+            if (specialStageRows != null) {
+                for (int row = 0; row < rowCount; row++) {
+                    rawFrames.add(row);
+                    if (!specialStageRows.admission(row).executeGameplay()) {
+                        laggedRows.set(row);
+                    }
+                }
+            } else {
+                for (int row = 0; row < rowCount; row++) {
+                    int rawFrame = trace.getFrame(row).frame();
+                    rawFrames.add(rawFrame);
+                    TraceEvent.LagState lagState =
+                            trace.lagStateForFrame(rawFrame);
+                    if (lagState != null && lagState.lagged()) {
+                        laggedRows.set(row);
+                    }
+                }
+            }
+
+            descriptors.add(new TraceRunSegmentDescriptor(
+                    segment,
+                    segmentDirectory,
+                    metadata,
+                    rowCount,
+                    trace.frameCount() > 0 ? trace.getFrame(0) : null,
+                    rawFrames,
+                    laggedRows,
+                    trace.hardwareTimingSchedule(),
+                    trace.terminalDynamicArtLedger(),
+                    pairing.entryBoundaries()[segmentIndex],
+                    pairing.exitBoundaries()[segmentIndex],
+                    segmentExecutionPolicy(
+                            segment,
+                            pairing.entryBoundaries()[segmentIndex],
+                            trace)));
+        }
+        dynamicArtValidator.finish();
+        return List.copyOf(descriptors);
+    }
+
+    private static LoadedSegmentPayload loadSegmentPayload(
+            TraceRunManifest.Segment segment,
+            Path segmentDirectory,
+            int segmentIndex) throws IOException {
+        // A special_stage interior is gameplay-uncompared under SS-interior
+        // policy v1 (see isUncomparedInterior): attachInteriorComparator never
+        // builds a gameplay comparator from its frames, so its physics.csv --
+        // which uses a per-game special-stage schema structurally distinct
+        // from TraceFrame's primary-level columns -- need not parse there.
+        // Metadata loading still exposes its optional DPLC heartbeat.
+        try {
+            if (isUncomparedInterior(segment)) {
+                TraceRunSpecialStageRows specialStageRows =
+                        TraceRunSpecialStageRows.load(
+                                segment.traceProfile(), segmentDirectory,
+                                segment.dynamicArtInitialLedgerDescriptors());
+                TraceData trace = TraceData.loadMetadataOnly(
+                        segmentDirectory,
+                        com.openggf.trace.StoredPhysicsFrameDomain
+                                .FrameEncoding.DECIMAL,
+                        segment.dynamicArtInitialLedgerDescriptors());
+                return new LoadedSegmentPayload(trace, specialStageRows);
+            }
+            return new LoadedSegmentPayload(
+                    TraceData.load(
+                            segmentDirectory,
+                            segment.dynamicArtInitialLedgerDescriptors()),
+                    null);
+        } catch (IOException | RuntimeException failure) {
+            throw new IOException(
+                    "Segment " + segmentIndex + " parser failed for profile '"
+                            + segment.traceProfile() + "': "
+                            + (failure.getMessage() != null
+                                    ? failure.getMessage()
+                                    : failure.getClass().getSimpleName()),
+                    failure);
+        }
+    }
+
+    private static void validateDescriptorManifestFields(
+            int segmentIndex,
+            TraceRunManifest.Segment segment,
+            TraceMetadata metadata,
+            int rowCount) {
+        boolean compatibleProfile = Objects.equals(
+                segment.traceProfile(), metadata.traceProfile())
+                || ("level".equals(segment.kind())
+                        && "complete_run".equals(segment.traceProfile())
+                        && metadata.traceProfile() == null);
+        if (!compatibleProfile) {
+            throw new IllegalArgumentException(
+                    "Segment " + segmentIndex
+                            + " profile mismatch: manifest='"
+                            + segment.traceProfile() + "', metadata='"
+                            + metadata.traceProfile() + "'");
+        }
+        if (rowCount != segment.traceFrameCount()) {
+            throw new IllegalArgumentException(
+                    "Segment " + segmentIndex
+                            + " row count mismatch: manifest="
+                            + segment.traceFrameCount() + ", parsed="
+                            + rowCount);
+        }
+    }
+
+    private record LoadedSegmentPayload(
+            TraceData trace,
+            TraceRunSpecialStageRows specialStageRows) {
     }
 
     /**
