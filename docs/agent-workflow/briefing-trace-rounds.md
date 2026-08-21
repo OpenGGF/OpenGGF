@@ -3186,7 +3186,14 @@ endings: the disassembly has CRLF, so `comm` was matching `Obj_Flybot767\r` agai
 `Obj_Flybot767`. **An empty survey result and a survey that cannot match anything look identical.**
 
 What made it distinguishable was that a member was already known, so "no members" was *checkable*
-rather than merely plausible. Construct every defect-class survey so the known member **must**
+rather than merely plausible.
+
+**And a MIXED-ending file is worse than a uniformly wrong one.** `docs/skdisasm/sonic3k.asm` is
+202,729 CRLF lines to 993 bare LF, so a `$`-anchored matcher over it returns roughly **0.5% of the
+file — non-empty**. An empty result at least announces itself; a partial one reads exactly like a
+complete one and passes every sanity check you would think to apply. The S1 and S2 trees are LF,
+skdisasm and `s3.asm` are not: check `file` on the tree you are sweeping before trusting any count
+or any zero from it. Construct every defect-class survey so the known member **must**
 appear in its output; if it does not, the survey is broken, not the class empty. This is rule 110's
 positive control applied to a survey rather than a probe.
 

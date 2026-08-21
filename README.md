@@ -223,7 +223,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   separate approval.
 
 - **ROM-shaped object range primitives (2026-08-21):** shared helpers now model
-  Sonic 2's one-sided behind-screen sign test and the Sonic 1/2 player-relative
+  Sonic 2's one-sided behind-screen sign test and the three-game player-relative
   deletion window without folding in caller-owned rendering or lifetime
   behaviour. Focused tests cover 16-bit wrap and boundary semantics; object
   adoption remains explicit at each owning call site.
