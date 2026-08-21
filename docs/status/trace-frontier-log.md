@@ -103224,3 +103224,58 @@ regressed.
 So the survivors are **one producer family with its own full-FIFO defect, present standalone
 and in the chain alike** — the same throw shape as the seam defect one level down, and a
 concrete frontier of its own. Not scattered across zones, so not evidence for the drain.
+
+## 2026-08-21 — the sequence at `lz1` f3123: the engine never leaves the hurt animation on landing
+
+Round `s1-slz1-graze-r1`, animation divergence continued. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change; probes reverted.** The hypothesis in the previous entry survived its kill
+check (`SonAni_Hurt` is `dc.b 3 / fr_Injury / afEnd` — one looping injury frame, no walk frame),
+and the sequence is now established on both sides.
+
+### ROM, from the recorded columns
+
+| frame | rings | air | routine | anim | mapping frame |
+|---|---|---|---|---|---|
+| 3056 | 29 | 1 | **4 `Sonic_Hurt`** | `id_Hurt` | `fr_Walk43` |
+| 3122 | 29 | **0** (lands, `status` 0x48 on-object) | 4 | `id_Hurt` | `fr_Injury` |
+| 3123 | 29 | 1 (knocked up, `y_speed` -0x200) | 4 | `id_Hurt` | **`fr_Walk13`** |
+| 3124 | **0** | 1 | 4 | `id_Hurt` | `fr_Injury` |
+
+The ROM spawns **1** lost ring at f3123 and **28** at f3124 — 29 in total, matching the ring
+count, so the ring-losing hurt is the one at f3123. The first entry into `Sonic_Hurt` at f3056
+costs no rings, so the row is a **second** hurt, landing on the frame after Sonic touches down.
+Two `0x36` Spikes sit at `0x0B50,0x01F0` and `0x0BE4,0x01F0`.
+
+`Sonic_HurtStop` (`_incObj/01 Sonic.asm:1943-1952`) is what makes f3123's row possible: on landing
+it sets `obAnim = id_Walk` and drops the routine back to `Sonic_Control`, so `Sonic_Animate`
+publishes an angle-derived walk frame — and the second hurt then restores `id_Hurt` before the row
+is sampled. That is the only way a row can carry the hurt id with a walk frame.
+
+### Engine, from a stack-traced setter probe at the site
+
+Anchored by position (`x=0x0BA5, y=0x01CC, air=true`):
+
+```
+[SEQ] anim -> 26 (was 26) x=ba5 y=1cc air=true via
+      PlayableSpriteController.publishRawAnimation
+      AbstractPlayableSprite.applyHurt
+      AbstractPlayableSprite.applyHurtOrDeath
+```
+
+26 is `id_Hurt`. **The second hurt fires in the engine too — and finds the animation already
+`id_Hurt`.** Every mapping-frame write in the window is `mf -> 85 (was 85)` from
+`updateScriptWithDelay` via `updateScriptedAnimation`: the engine simply keeps republishing
+`fr_Injury` from the hurt script.
+
+So the prediction that the engine "publishes after the id is restored" is wrong, and the second
+option is right in a sharper form: **the engine never performs the landing's `Sonic_HurtStop`
+transition to `id_Walk` at all**, so no walk frame is ever selected, and there is nothing for the
+second hurt to interrupt. The engine's nearest existing concept is
+`PlayableSpriteController.hurtRecoveryCompletedThisFrame`.
+
+### Next
+
+Establish why the engine's hurt-landing recovery does not set the walk animation on the frame
+Sonic touches down, and whether `hurtRecoveryCompletedThisFrame` is the right owner or is itself
+gated out here. The fix is an ordering/state correction in the hurt-landing path — not a frame,
+animation-id or routine exception.
