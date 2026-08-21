@@ -150,6 +150,7 @@ that looks like a real result.
 | 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
 | 131 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
 | 132 | A gate probe must cover the early returns you were not thinking about | The suspected branches log; the deciding one has no line at all |
+| 133 | A field can be the origin though a walk shows it not propagating | Propagation is a property of a path; ask what reads it |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3459,4 +3460,29 @@ by a different route.
 bounce in a window ~300 rows *downstream* of the origin, and that window is a *consequence* of the
 origin. Removing it might make the consequence behave while leaving the cause wrong — a green-ish
 result attributable to nothing. Fix the origin, then re-measure the consequence.
+
+## One hundred and thirty-third rule: a field can be the origin even when a walk of another field shows it not propagating
+
+A round dismissed the segment's lowest failing frame — an animation-id mismatch ~800 rows before
+the divergence under investigation — as "a separate, non-propagating divergence", because the
+position series matched exactly for those 800 rows. **True of position, and false as a conclusion.**
+That same field is what fails a gate at the origin row.
+
+The coupling ran through a predicate that reads **neither** the walked field **nor** the status bit
+everyone was watching: the ROM gates on the *animation id*, and the engine's `rolling` and `air`
+bits matched the ROM throughout. So a divergence that provably did not propagate through position
+still decided the outcome, by being read directly.
+
+**Propagation is a property of a path, not of a field.** Before dismissing an early mismatch as
+non-propagating, ask what reads it — not whether the series you happen to be walking moves.
+
+**Corollary: the same field diverging in BOTH directions is a selection defect, not a blip.**
+Engine `0x02` where the ROM has `0x00` at one row, engine `0x00` where the ROM has `0x02` at
+another, is a state machine choosing wrongly in both directions — which is a different and larger
+thing than a single stuck value.
+
+**And a predicate can be faithfully implemented and still reject wrongly, because its INPUT is
+wrong.** That is a third diagnosis distinct from an invented guard and from a missing mechanism,
+and it moves the owner upstream — here, out of a boss object entirely and into shared player code,
+inverting the blast radius the round had been scoped for.
 
