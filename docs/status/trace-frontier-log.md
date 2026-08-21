@@ -105503,3 +105503,84 @@ to 0 in the segment, 29 unchanged in the zone slice — and on the control rule 
 entry: a correct fix makes the submit-to-first-child-edge gap `+1` like the horizontal batch's.
 The candidate reaches the releasability boundary but not that gap, so it is still half a fix, and
 the remaining frame is the thing to find before landing either.
+
+## 2026-08-21 — The second frame is the camera, and the camera is seven pixels low from frame 1433
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `b30bdd292`.
+**Measurement only; probes reverted, tree clean.** Scored on the gap gate from two entries
+above, not on the segment's outcome.
+
+### The vertical geyser's whole timeline, on the edge clock
+
+Putting the object's phase transitions on the recording's raw-frame clock (the port's
+`rawFrameLatch`) rather than on `V_int_run_count`:
+
+```
+[EDGE] rf=2767 PRE_MAIN_LOOP  KOS_DECOMPRESSION_QUEUE#166
+[EDGE] rf=2768 POST_OBJECTS   KOS_MODULE_QUEUE#113      <- the geyser's own art
+[VPH]  rf=2764 PROXIMITY_CHECK->ART_LOAD
+[VPH]  rf=2769 ART_LOAD->RISE          first dispatch after the art completes
+[VPH]  rf=2824 RISE->ERUPTION          56 dispatches, ROM-exact
+[VPH]  rf=2884 ERUPTION->FALLING       40 dispatches, ROM-exact
+[VPH]  rf=2928 FALLING->CLEANUP        33 dispatches, not ROM-fixed
+[RELOAD] rf=2958                       30 dispatches, no lag
+```
+
+Note the raw-frame spans and the dispatch counts differ — 40 eruption dispatches span 60 raw
+frames — so **phase lengths must be counted in dispatches and the gate in raw frames**. Mixing
+them is how a phase that is ROM-exact can look twenty frames long.
+
+Every phase whose length the ROM fixes is exact. `ART_LOAD` ends on the first dispatch after the
+recording's own completion edge, which is the earliest it can. The only phase with a free length
+is `FALLING`, and the only free input to it is `render_flags` bit 7.
+
+### And bit 7 is decided by the camera, which is seven pixels low
+
+The fall exit is not the column falling out of view — `y` sits at 1076-1078 while the camera
+climbs 5-7px per frame, so the boundary moves and the object does not. The engine's camera is
+**seven pixels below the recording's throughout the window**:
+
+| frame | `camera_y` expected | engine | `y` expected | engine |
+|---:|---|---|---|---|
+| 2880 | `0x040E` | `0x0415` | `0x044E` | `0x0455` |
+| 2892 | `0x03CC` | `0x03D3` | `0x040C` | `0x0413` |
+| 2906 | `0x0382` | `0x0389` | `0x03C2` | `0x03C9` |
+
+The visibility test is `y < camera_bottom + height_pixels`, so a camera seven pixels lower keeps
+the column drawn about one frame longer — and one frame of camera at this scroll rate *is* six
+or seven pixels. **That is the second frame**, and with the bit-7 read it is the two.
+
+### Whose it is
+
+Not the geyser's, and not this object's owner. Tracing the divergence back through the report:
+
+| field | first diverges | expected → engine |
+|---|---:|---|
+| `y_speed` | **1433** | `0x0030` → `-00D0` |
+| `y` | 1434 | `0x07EC` → `0x07EB` |
+| `camera_x` / `x` | 1434 | one pixel |
+| `camera_y` | 2668 | one pixel, growing to seven |
+
+The player picks up upward speed at 1433 where the recording has him moving down, drifts, and
+the camera inherits it. Every geyser number in this round's investigation sits downstream of
+that. Frame 1433 is also this fixture's first error, which the earlier entries recorded and
+treated as unrelated background.
+
+### What that means for the parked candidate
+
+`parked/ai-s3k-geyser-postcamera-bit7-REJECTED` stays parked, and it is **neither superseded nor
+rejected** — it fixes one of the two frames, the one that is genuinely the object's, and the
+other cannot be fixed here at all. Landing it alone still makes a fixture pass with half the
+error present, so the do-not-land-alone note stands.
+
+**The gate cannot be satisfied in this fixture until 1433 is fixed.** A submit-to-first-child-edge
+gap of `-1` requires the camera to be where the recording has it, and no change to this object
+can put it there. Anyone taking the geyser again should confirm 1433 first rather than re-deriving
+this.
+
+### Next owner
+
+Frame 1433, `y_speed` `0x0030` against `-00D0` — a landing or bounce that the engine takes
+upward and the ROM takes downward, 1500 frames before anything in this round. It is the segment's
+first error, it is a player-physics defect rather than an art or timing one, and it is now known
+to be load-bearing for at least the HCZ geyser frontier.

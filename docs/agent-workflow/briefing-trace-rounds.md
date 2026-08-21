@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-six rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-seven rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -69,6 +69,7 @@ that looks like a real result.
 | 74 | A timing fix validated on one recording | ROM-derived, cited, improves its fixture, and one frame wrong |
 | 75 | "Nothing touches your path" vouched for comparability | Totals shift because the shared reporting surface moved |
 | 76 | A candidate judged on a derived column | A correct fix rejected by a fixture already failing the axis in bulk |
+| 77 | A target downstream of the segment's first error | Rounds spent on inherited lateness that no local fix can reach |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2002,3 +2003,27 @@ be true on one axis and meaningless on another.
 exercises it, and when a gate rejects a candidate, ask what that gate's own baseline looks
 like before accepting the verdict. Rule 74 still holds — a second recording is what kills a
 timing story — but only when the second recording is sound on the axis in question.
+
+## Seventy-seventh rule: check whether your target is downstream of the segment's first error
+
+Before spending a round on a divergence, find the segment's *earliest* error and ask whether
+your target could be a consequence of it. A defect fifteen hundred frames earlier can be
+load-bearing for the one in front of you while looking like unrelated background — and a
+frontier log will happily record both, in separate entries, without anyone noticing the
+dependency.
+
+One investigation spent several rounds on an object's queue timing, produced four
+characterisations, two retractions and two rejected candidates, and then found that the
+object's controlling input was the camera, that the camera was seven pixels low, and that
+the camera's divergence traced to the segment's own first error more than a thousand frames
+earlier — an error every entry in the thread, including the lead's, had recorded and treated
+as background. The object's lateness was inherited, not generated.
+
+**Practically.** When a round's target is not the segment's first error, say so explicitly
+and state why the earlier one cannot be its cause. If you cannot state that, fix the earlier
+one first. And when a fix's own gate cannot be satisfied until an upstream defect is
+corrected, record that as a fact rather than leaving it for the next owner to discover.
+
+**Related trap, same round.** Phase lengths counted in dispatches and gates measured in raw
+frames are different clocks; forty dispatches spanned sixty raw frames here, and mixing them
+makes a ROM-exact phase look twenty frames wrong.
