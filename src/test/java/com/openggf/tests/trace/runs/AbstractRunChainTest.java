@@ -35,6 +35,7 @@ import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.VerificationGroup;
 import com.openggf.trace.live.MismatchEntry;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.replay.TraceReplayDriver;
@@ -4694,6 +4695,31 @@ abstract class AbstractRunChainTest {
             mismatches.add(row);
         }
         summary.put("recentMismatches", mismatches);
+
+        // Additive: the flat errorCount above is untouched. Chain reports used to
+        // publish only that, so "does every verification group reach the total?"
+        // could not be answered from the artefact -- and on 2026-08-21 that cost
+        // two lanes a round and an escalation before a direct probe showed the
+        // counting was correct all along. An instrument that cannot be audited
+        // from its own output is a standing liability even when it is right, so
+        // the breakdown the standalone reports already carry is published here
+        // too, and the invariant is asserted rather than merely shown.
+        Map<String, Object> groups = new LinkedHashMap<>();
+        int groupSum = 0;
+        for (VerificationGroup group : VerificationGroup.values()) {
+            int count = comparator.errorCount(group);
+            groups.put(group.id(), Map.of("error_count", count));
+            groupSum += count;
+        }
+        summary.put("verification_groups", groups);
+        summary.put("bootstrapErrorCount", comparator.bootstrapErrorCount());
+        int accounted = groupSum + comparator.bootstrapErrorCount();
+        assertEquals(comparator.errorCount(), accounted,
+                "verification groups plus bootstrap must account for the flat error"
+                        + " count exactly; groups=" + groups
+                        + " bootstrap=" + comparator.bootstrapErrorCount()
+                        + " total=" + comparator.errorCount());
+
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         return mapper.writeValueAsString(summary);
     }
