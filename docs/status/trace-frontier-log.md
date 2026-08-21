@@ -102378,3 +102378,95 @@ The standing "roughly ten module and 16-33 decompression submissions behind" ske
 to this one seam (2 module / 8 decompression here, with byte-identical fingerprints). If the
 fix lands, that observation should disappear entirely; anything surviving is a second seam
 doing the same thing.
+
+## 2026-08-21 — The suspender is a documented `FixBugs = 0` bug: the CPZ boss pipe clobbers `RunObjects`' loop counter
+
+Branch `bugfix/ai-s2-seg15-art-r1` (continues the two entries above), off
+`origin/develop` at `49ebdcb89`. Diagnosis only; **nothing landed**.
+
+### The site
+
+`Obj5D_Pipe_Retract_ChkID`, on the shipped `FixBugs = 0` path
+(`docs/s2disasm/s2.asm:62244-62253`), with the disassembly's own comment:
+
+```
+    ; 'd7' should not be used here. This causes the 'RunObjects' routine
+    ; to either run too few objects or too many objects, causing all
+    ; sorts of errors.
+    moveq   #0,d7
+    move.b  #ObjID_CPZBoss,d7
+    cmp.b   id(a1),d7   ; is object a subtype of the CPZ Boss?
+```
+
+`d7` is `RunObjects`' own slot counter (`:29810-29822`, `:29840-29842`
+`dbf d7,RunObject`). The retract borrows it as a scratch register and leaves it
+holding `ObjID_CPZBoss` = `$5D` = **93**, so for the rest of that frame the object
+loop runs 93 more slots from wherever it stands instead of the remaining count.
+
+The pipe control object sits somewhere in slots 24-31 — every surviving `0x5D`
+in the recorded `object_near` rows across the window is in that range — so the
+loop ends at slot ≤ 124. `Tails_Tails` is slot **128** (`$80`,
+`s2.constants.asm:1145-1150`, `$FFFFD000`). It is not reached. The conclusion
+does not depend on pinning the control slot: every candidate gives the same
+answer.
+
+### It fires on exactly the eleven frames
+
+`Obj5D_Pipe_Retract` steps one segment per frame, `subi_.b #8,Obj5D_y_offset(a0)`
+(`:62271`). The recorded segment removals, by y:
+
+```
+5554 y=0517  5556 y=0507  5558 y=04F7  5560 y=04E7  5562 y=04D7  5564 y=04C7
+5555 y=050F  5557 y=04FF  5559 y=04EF  5561 y=04DF  5563 y=04CF
+```
+
+Eleven segments, `$0517` down to `$04C7` in 8-px steps, frames **5554-5564** —
+the suppression window, eleven for eleven, with no offset. (The slot-46 removal
+at 5553 and the slot-29/47 removals at 5565 are the pump head and boss parts, not
+retract steps.)
+
+Both ends fall out of the same routine. Before the retract, `routine` is not 8
+and the site is never reached. After the last segment, `Obj5D_y_offset` hits zero,
+`loc_2DFD8` does `st.b Obj5D_flag(a0)`, and from then on the entry test
+`tst.b Obj5D_flag(a0) / bne loc_2DFEE` (`:62220-62221`) jumps straight to
+`loc_2DFF0`, **skipping the search and therefore the clobber**. The loop runs to
+`$8F` again and Obj05 resumes — on 5565, which is where the recording resumes.
+
+### Why this is the answer and not another coincidence
+
+It is the same fact from the other side of the previous entry's discriminator.
+That entry established, from forced state, that Obj05 must have kept its
+animation bytes intact while never observing Tails' 5559 and 5564 animation
+changes — i.e. it did not execute. This is a ROM site that stops the object loop
+before slot `$80` without touching slot `$80`'s memory, on exactly those frames,
+and stops doing so on exactly the frame the recording resumes. Start, end, length
+and mechanism all come from one routine.
+
+### What the engine does instead
+
+`CPZBossPipe.updateRetract` (`src/main/java/com/openggf/game/sonic2/objects/bosses/CPZBossPipe.java:237-263`)
+models the retract as a walk down its own segment list. It is a faithful model of
+the *intended* behaviour and has no counterpart for the `d7` clobber, so the
+engine's object pass runs to completion on all eleven frames and Obj05 animates
+normally. The engine is not wrong about the pipe; it is missing a side effect the
+shipped ROM has and the disassembly documents.
+
+### Scope of a fix, and why it is its own round
+
+This is not a change inside the boss. Modelling it means giving the object update
+pass a per-frame remaining-slot budget that an object can overwrite, and having
+this one site set it to 93 — the ROM's number, from `ObjID_CPZBoss`, not a tuned
+one. That is shared-runtime surface every object in all three games passes
+through, so it needs the full matrix, and it wants a comment naming `FixBugs = 0`
+and which branch the engine takes, per the standing rule.
+
+Note also the disassembly's warning that this causes "all sorts of errors": once
+modelled, it will suspend **whatever else** lives above the truncation point on
+those frames, not only Obj05. `LevelOnly_Object_RAM` slots `$80-$8F` are
+Tails_Tails, SuperSonicStars, both breathing-bubble objects, both dust objects,
+both shields and both invincibility-star groups. Any of those active during a CPZ
+pipe retract would also stop. That is a feature of the ROM, not a risk to avoid,
+but it is why the change wants measuring rather than assuming.
+
+Value unchanged: the eleven-frame suspension is ~1,100 of segment 15's 1,681
+errors.
