@@ -76,6 +76,27 @@ All notable changes to the OpenGGF project are documented in this file.
   forty pixels too far and was inhaled as Sonic ran past. Segment 24 (`lz1_2`) goes from
   **7,176 errors, first error frame 14745, to zero**, and the chain from 19 axes to 14. No
   other segment's error count or first error moved.
+- **S2's CPZ staircase now reserves the three child object RAM slots the ROM allocates for its
+  steps.** `Obj78` runs as four SST slots — the parent plus three children taken with
+  `AllocateObjectAfterCurrent`, so each follows the previous
+  (`docs/s2disasm/s2.asm:55967-55995`, `moveq #3,d1`). The engine folds all four steps into one
+  instance and draws them from the parent, which is the same correct model
+  `Sonic1BridgeObjectInstance` uses — but it never reserved the other three slots, so every
+  later dynamic object took a lower slot number than the ROM gave it, and slot numbers feed the
+  `(v_vblank_byte + 127 - slot) & 3` cadence gates. The class documented the four-slot layout in
+  three separate comments while calling the reservation helper zero times.
+
+  Keyed by the stable placement `spawn` field rather than `getSpawn()`: `update` rebuilds a
+  dynamic spawn every frame the staircase moves, and reserving against that record would not
+  match the placement spawn used to free the reservation on unload — the identity mismatch that
+  previously leaked slots for the S1 staircase.
+
+  Measured with `SlotOccupancyProbe`: the raw ROM-vs-engine `0x78` occupancy deficit falls from
+  966 to 12, and all 12 sit on frames carrying three `RESERVED` slots, so it is zero once
+  reservations are credited. Divergent frames fall from 249 to 81 on CPZ2 and 111 to 75 on CPZ1.
+  Gate-neutral at 800/10F with `-Pguards` clean and zero classes changing colour — no committed
+  trace compares object occupancy, so the suite cannot observe this either way; it is landed on
+  the disassembly and the probe, with the gate as a non-regression check.
 
 - **S2's PointPokey cage now plays its CasinoBonus SFX on the ROM's 16-frame gate instead of
   three frames off it.** `ObjD6` reads `move.b (Vint_runcount+3).w,d0 / andi.w #$F,d0 / bne`

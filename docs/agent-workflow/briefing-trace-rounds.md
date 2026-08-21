@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-one rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-two rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -108,6 +108,7 @@ that looks like a real result.
 | 89 | A folded class documenting N ROM slots and reserving none | Every later object's slot index shifted; a deficit that is 100% structural |
 | 90 | "Not observable" asserted for a whole run | Rounds scoped around a gap that does not cover the rows in question |
 | 91 | Two threads merged because their symptoms match | An inherited framing that already cost the first thread its rounds |
+| 92 | A greppable tell quoted as a defect count | Fifteen candidates, one confirmed, four matching exactly with zero divergence |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2386,3 +2387,29 @@ hid it the first time: where a fixture compares no object identity or position, 
 matches the recording exactly" is fully consistent with the object leading by a frame. An
 irregular multi-pixel step in the object's own position series is the fingerprint that
 distinguishes them.
+
+## Ninety-second rule: a textual tell generates candidates; only a measurement confirms one
+
+A greppable signature is a way to build a candidate list, never a defect count. One tell —
+a class documenting the ROM's slot count while never reserving those slots — matched thirty
+classes. Six already called the helper. Nine created real child instances, which occupy slots
+themselves and need no reservation. Of the fifteen that survived, cross-referencing against
+measured deficits gave **one confirmed** structural defect, one plausible, one negligible, and
+**four with exactly zero measured divergence** despite matching the tell precisely.
+
+Left unmeasured, that tell would have justified fifteen rounds. That is the same
+"more, smaller, more tractable defects" bias this investigation has met five times, arriving
+in a new costume: a pattern that looks like evidence because it is objective and repeatable.
+
+**So pair every tell with a measurement before commissioning anything from it**, and report the
+candidate count and the confirmed count as different numbers.
+
+**A related discipline for predictions.** State the units. One round predicted a deficit would
+fall to zero, measured a residual of twelve, and the residual turned out to be zero in the
+units the log reports deficits in — the raw metric counts typed slots and cannot credit a
+reserved one. The prediction was right and stated in the wrong units, on an investigation where
+several conclusions had already turned on exactly that.
+
+**And be explicit when a clean gate is not evidence.** Where no committed comparison covers the
+quantity a change improves, the suite cannot see the improvement in either direction; the clean
+arms buy a non-regression check, not a confirmation. Say which one you have.

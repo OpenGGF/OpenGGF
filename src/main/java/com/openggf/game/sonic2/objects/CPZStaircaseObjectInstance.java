@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -45,6 +46,11 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
 
     // Constants from disassembly
+    /** Obj78 allocates parent + 3 children (s2.asm:55967-55995). */
+    private static final int CHILD_SLOT_COUNT = 3;
+
+    private boolean childSlotsReserved;
+
     private static final int NUM_PIECES = 4;
     private static final int PIECE_SPACING = 0x20;  // 32 pixels
     // Collision half-width from disassembly: width_pixels + 0x0B = 0x10 + 0x0B = 0x1B
@@ -260,6 +266,35 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
                 && nearestPieceIndex(playerEntity.getCentreX()) >= 2;
     }
 
+    /**
+     * Reserves the three child object RAM slots Obj78 allocates for its steps.
+     *
+     * <p>Obj78 runs as four SST slots: the parent plus three children, taken with
+     * {@code AllocateObjectAfterCurrent} so each follows the previous
+     * (docs/s2disasm/s2.asm:55967-55995 — {@code moveq #3,d1} then
+     * {@code Obj78_SubObjectLoop}). This engine folds all four steps into one
+     * instance and draws them from the parent, so the slots must still be reserved
+     * or every later dynamic object takes a lower slot number than the ROM gave it.
+     *
+     * <p>Keyed by the stable placement {@code spawn} field, deliberately not
+     * {@code getSpawn()}: {@code update} calls {@code updateDynamicSpawn} every
+     * frame the staircase moves, and reserving against that rebuilt record would
+     * not match the placement spawn {@code freeAllReservedChildSlots} uses on
+     * unload — the identity mismatch that leaked slots for the S1 staircase
+     * (see {@code Sonic1StaircaseObjectInstance}, the precedent this copies).
+     */
+    private void reserveChildSlots() {
+        if (childSlotsReserved) {
+            return;
+        }
+        childSlotsReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null || spawn == null) {
+            return;
+        }
+        svc.objectManager().allocateChildSlotsAfter(spawn, CHILD_SLOT_COUNT, getSlotIndex());
+    }
+
     private boolean isFacingAdjacentStepSide(PlayableEntity playerEntity, boolean requireLowerNeighbor) {
         if (playerEntity == null) {
             return false;
@@ -339,6 +374,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveChildSlots();
         boolean touchTop = contactTop;
         boolean touchBottom = contactBottom;
         contactTop = false;

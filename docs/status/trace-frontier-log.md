@@ -107944,3 +107944,138 @@ relaxed; after the update both arms' failing sets match.
 S2's `BubbleObjectInstance` and `BubbleGeneratorObjectInstance` also call `getWaterLevelY`.
 S2 CPZ water oscillates and ARZ water does not, so whether those are the same defect depends
 on which zone's objects they serve — a round of its own, with its own matrix.
+
+## 2026-08-21 — the folded-not-reserved sweep, and CPZStaircase landed
+
+Round `cpz-staircase-r11`, branch `bugfix/ai-cpz-staircase-reservation` off `2ee30833d`.
+
+### The sweep, reported before fixing anything
+
+The textual tell — a class describing N ROM child slots — matches **30 classes**; 6 already call
+the reservation helper. Of the remaining 24, **9 create real child instances** (so no
+reservation is needed; the children occupy slots themselves), leaving **15 candidates**.
+
+**The textual tell alone is a poor filter.** Cross-referencing the 15 against measured deficits:
+
+| candidate | id | raw deficit | per-frame shape | verdict |
+|---|---|---|---|---|
+| `CPZStaircaseObjectInstance` | `0x78` | 966 | exactly {3, 6} | **confirmed structural** |
+| `BadnikProjectileInstance` | `0x98` | 340 | {1, 2} | plausible, not proven |
+| `Sonic2HTZBossInstance` | `0x52` | 20 | {1, 2} | negligible |
+| `AsteronBadnikInstance` | `0xA4` | **0** | — | no divergence |
+| `ConveyorObjectInstance` | `0x6C` | **0** | — | no divergence |
+| `ARZRotPformsObjectInstance` | `0x83` | **0** | — | no divergence |
+| `MCZRotPformsObjectInstance` | `0x6A` | **0** | — | no divergence |
+
+Four classes match the tell exactly and show **zero** measured divergence. So the grep is a way
+to *generate* candidates and the probe is what *confirms* them — 15 candidates, one confirmed.
+Anyone working this list should measure first; the tell would otherwise have justified fifteen
+rounds.
+
+**They do share a precedent:** `Sonic1BridgeObjectInstance` and `Sonic1StaircaseObjectInstance`
+are the same fold done correctly, so any confirmed member is a mechanical copy rather than a
+design question.
+
+### CPZStaircase, with the prediction stated in advance
+
+Predicted before the change: **the raw `0x78` deficit goes from 966 to 0.**
+
+Landed: `reserveChildSlots()` on first update, `allocateChildSlotsAfter(spawn, 3, getSlotIndex())`
+— `AllocateObjectAfterCurrent` in the ROM (`s2.asm:55977`), so children follow the parent. Keyed
+by the **stable `spawn` field, not `getSpawn()`**: `update` calls `updateDynamicSpawn` every frame
+the staircase moves, and the S1 staircase's comment records that exact identity mismatch leaking
+reserved slots on unload.
+
+Measured: **966 → 12.** Not the predicted zero — and the residual is instructive rather than a
+miss. All 12 sit on 4 frames that each carry **3 `RESERVED` slots in range**, so in residual
+units (pool credited, the units this log reports deficits in) it is **0**. The raw metric counts
+typed slots only, so a reserved slot cannot satisfy a typed deficit; the prediction was right in
+the units that matter and I stated it in the wrong ones.
+
+Probe movement, which is the real measure:
+
+| fixture | divergent frames before | after |
+|---|---|---|
+| CPZ1 (`SONIC_2_10`) | 111 of 215 | **75 of 212** |
+| CPZ2 (`SONIC_2_11`) | 249 of 356 | **81 of 356** |
+
+CPZ2 falls 67%. Note CPZ1's comparable-sample count moved 215 → 212; a changed denominator is
+worth flagging, and it is small enough not to affect the direction.
+
+### Matrix
+
+| | control `2ee30833d` | with the reservation |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 10F / 0E / 4S | 800 / 10F / 0E / 4S |
+| `-Pguards` | 500 / 0F | 500 / 0F |
+
+157 classes both ways, red sets diffed both directions: **zero newly red, zero newly green.**
+
+**And that clean gate is not the evidence here.** No committed trace compares object occupancy,
+so the suite could not see this change either way — the improvement is visible only in a probe
+that decides no outcome. Reservations shift slot indices and slot indices feed the
+`(v_vblank_byte + 127 - slot) & 3` cadence gates, so the *absence* of movement is the reassuring
+part: nothing downstream was disturbed. Landed on the ROM citation and the probe, with the gate
+as a non-regression check rather than as confirmation.
+## 2026-08-21 — The neutral prediction failed: stage B is confirmed, stage A's inherited timer is 30 where the ROM's is 64
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `f0d0059eb`.
+Command as above. **The candidate was rejected and reverted. Nothing was landed but this
+entry, and the branch carries no rejected code.**
+
+**Prediction, stated before measuring:** segment 8 stays at 2288 errors, first non-camera
+error frame 6000 `sidekick_x`; both stages become ROM-derived; 63 never an input.
+
+**Result: the fixture moved, 2288 → 3779.** Stopped as agreed. First error stayed at frame
+6000 `sidekick_x` rom `0x4997` engine `0x4996`, but the count rose by 1491.
+
+**What the candidate did.** Stage B took the ROM literal `(2*60)-1` from `loc_85674`
+(`sonic3k.asm:179661`). Stage A stopped being a constant: `onDefeatStarted` no longer cleared
+`waitTimer`, matching `AIZEndBoss_StartDefeatCallback`, which installs `$34` and deliberately
+does not write `$2E` (`sonic3k.asm:138945-138951`); both stages became one countdown over the
+one timer in `Obj_Wait`'s shape. The two invented fields `defeatExplosionWaitTimer` `0x37` and
+`defeatPhaseTimer` `0x7F` were deleted.
+
+**Measured with the candidate in place:**
+
+| | row | length |
+|---|---|---|
+| defeat | 5486 | — |
+| stage A ends | 5517 | **31** frames (inherited `waitTimer` = **30**, +1) |
+| capsule spawns | 5637 | **120** frames |
+| | | total **151** |
+
+**Stage B is confirmed exactly right.** 120 frames, dead on the ROM literal, from a live
+measurement rather than from arithmetic. That half of the model is settled and should be kept
+whenever this is retried.
+
+**Stage A's mechanism is right and its inherited value is wrong.** The countdown behaves
+exactly as modelled — 30 inherited yields 31 frames — but the ROM's inherited `$2E` is **64**,
+not 30. Derivation, and it needs no boss-side capture: stage A runs rows 5488-5551 = 64 frames;
+on the defeat frame itself `AIZEndBoss_AttackWait` is `bsr AIZEndBoss_CheckHitOrDefeat` then
+`jmp (Obj_Wait).l`, and the defeat path returns through `BossDefeated_StopTimer`'s `rts` into
+that `jmp`, so `$2E` is decremented once on the defeat frame too; `Obj_Wait`'s shape then gives
+`(V-1) - 64 = -1`, so `V = 64`.
+
+**64 is not a ROM literal, and that is the point.** The boss's `$2E` write sites are `$1F`,
+`$2F`, `$3F`, `$7F`, `$8F`, `#2*60`, and `$BF`/`$FF` — 64 is none of them, so the ROM's boss is
+*mid-countdown* at the fatal hit. The engine's 30 is one frame into `$1F` = 31
+(`AIZEndBoss_StartHover`). **The two bosses are in different phases of the attack cycle when
+they die.** That is a pre-defeat state-machine divergence, upstream of everything measured so
+far, and it was completely invisible until the inheritance was modelled.
+
+**Why the old code hid it.** `0x37`+`0x7F` gives 56+128 = 184, and correct inheritance would
+give 64+120 = 184. The invented pair reproduced the right total for *this* fight while both
+halves were wrong, so the boss-phase divergence never showed. Removing the compensation
+exposes it: 31+120 = 151, and the capsule lands 34 frames early instead of 1.
+
+**So the ordering of work is now fixed, and it is not what either of us assumed.** The stages
+cannot be landed faithfully until the boss's pre-defeat attack cycle is in phase, because the
+faithful model is strictly worse than the compensating constants while it is not. The wait was
+never the frontier; neither, it turns out, is the defeat *frame* on its own.
+
+**Standing conclusions unaffected:** the post-defeat wait's *total* is still exactly 184 in the
+ROM, stage B is now positively confirmed, and the capsule's own acceptance target (setup row
+5671, first motion 5672, trigger from P2 at 6006) is untouched. The dead figures were not used:
+63 does not appear as an input anywhere above — it is named only to record that the required
+value is **64**, which is not 63 and not any ROM literal.
