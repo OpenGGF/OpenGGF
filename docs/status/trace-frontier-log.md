@@ -110224,7 +110224,10 @@ Nine slot-frames at the shield's edges, waiting on the sample point as before.
 ## 2026-08-21 — The phase correction works, and it takes the three opted-in classes from green to ~12,800 errors
 
 Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, on `71c4d9617`.
-**Built, measured, and NOT landed.** The patch is reconstructible; the tree is unchanged.
+**Built, measured, and NOT landed.** The tree is unchanged. The patch and both
+before/after runs are preserved for the next lane under
+`$AGENT_SCRATCH_ROOT/tasks/s1-objectnear-phase-correction-20260821T152921Z-3119720-b68c54ba`
+(`phase-correction.patch`, `dep-before.log`, `dep-after3.log`), retained to 2026-09-20.
 
 Implements option 1 from the entry above: phase-correct the existing `compareObjectNear`
 mechanism rather than add a parallel one.
