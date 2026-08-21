@@ -104657,3 +104657,65 @@ run to frame 12725 and are dominated by a dynamic-art ordinal skew — `rom=[569
 `eng=[5700, 5701]`, the engine **ahead** by two ordinals and one transfer, the opposite sign to
 the missed-transfer family closed earlier. Fixing f3838 would advance the frontier and remove
 roughly one error. Anyone planning by the 10,212 should know the mass is elsewhere.
+
+## 2026-08-21 — `lz3`'s ordinal skew: one extra submission, caused by entering the wind tunnel a frame early
+
+Round `s1-slz1-graze-r1`, `lz3` ordinal skew. Branch on `31ba7e105`. **No source change; probes reverted.**
+Both submission streams instrumented rather than inferred from ordinals, as scoped.
+
+### Which of the three: an extra submission, and the cause is an early entry
+
+The ROM makes **2850** player-DPLC transfers across `lz3`; the engine makes **2851**. Diffing the
+two streams as *sequences of mapping frames*, ignoring timing, gives a single insertion:
+
+```
+892a893
+> 62
+```
+
+Everything else is the identical sequence in the identical order. So it is **not** a reorder, and
+**not** the same stream arriving early — it is one extra submission. But the cause *is* timing:
+
+```
+  ROM f4029 mf=66     ENG f4029 mf=66      <- in step
+  ROM f4032 mf=60     ENG f4031 mf=60      <- tunnel entry, engine one frame EARLY
+  ROM f4040 mf=61     ENG f4039 mf=61
+  ROM f4048 mf=83     ENG f4047 mf=83
+  ROM f4056 mf=62     ENG f4055 mf=62
+  ROM f4064 mf=84     ENG f4063 mf=84
+  ROM f4072 mf=60     ENG f4071 mf=60
+  ROM f4080 mf=61     ENG f4079 mf=61
+  ROM f4088 mf=83     ENG f4087 mf=83
+  ROM f4096 mf=65     ENG f4095 mf=62      <- engine fits one more float step in
+                      ENG f4096 mf=65      <- then rejoins at the same absolute frame
+```
+
+Resolved through the disassembly's names: 60/61/83/62/84 are `fr_Float1`, `fr_Float2`,
+`fr_Float5`, `fr_Float3`, `fr_Float6` — exactly `SonAni_Float2`'s five-frame script, and 65/66
+are the frames either side of it. **The engine enters the LZ wind tunnel one frame before the ROM,
+runs the float cycle one frame ahead throughout, exits at the same absolute frame (f4096), and so
+fits one extra `fr_Float3` step into the same window.** That one step is the whole ordinal skew,
+and every later ordinal is two higher for the rest of the act.
+
+### The sign question: same subsystem, but not one mechanism
+
+Both `lz3` divergences are the **LZ wind tunnel**: the f3838 suction blip and this entry-phase
+skew. But the earlier missed-transfer family and this one are **not** the same defect running in
+two directions:
+
+- the family closed earlier was the engine **behind** because a submission was *never made* —
+  a missing `id_Walk` write meant the DPLC never saw the frame;
+- this is the engine **ahead** because an *extra* submission is made, from an entry that starts
+  one frame too soon.
+
+A missing write and an early gate are different defects that happen to share a producer. A fix
+aimed at either should not deepen the other — but neither is one lever for both.
+
+### Next
+
+Why the engine's wind-tunnel entry evaluates a frame before the ROM's. `LZWindTunnels` tests the
+player's `x` against the tunnel's left boundary, so the candidate is the same phase question the
+f3838 blip raised from the other side: whether the boundary is tested against the pre-move or
+post-move position, and where the pass sits relative to the player's own movement. Both `lz3`
+findings would fall out of that one ordering, which makes it worth answering before either is
+touched.
