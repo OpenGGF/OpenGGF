@@ -364,9 +364,10 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
-            // ROM LevEvents_CNZ calls SlotMachine before object execution
-            // (s2.asm:21494, 58827-58840), so PointPokey sees completion
-            // on the same frame the slot routine goes inactive.
+            // ROM LevEvents_CNZ (s2.asm:21511) calls SlotMachine (s2.asm:21512)
+            // before Level_MainLoop reaches jsr (RunObjects).l (s2.asm:5095), so
+            // PointPokey sees completion on the same frame the slot routine goes
+            // inactive. SlotMachine itself is at s2.asm:59305.
             cnzSlotMachineManager.update();
         }
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {

@@ -1736,8 +1736,11 @@ gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
 level loop did not run but the V-int was still serviced (lag skip, bonus-stage
 lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
 trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
-`ObjectManager.advanceVblaCounter()` exactly once. `TestVblaCounterVBlankInvariant`
-pins the single mutation statement and the per-row tick counts.
+`ObjectManager.advanceVblaCounter()` exactly once. **No guard test enforces this.**
+Earlier revisions of this note cited a `TestVblaCounterVBlankInvariant` pinning the
+single mutation statement and the per-row tick counts; no such class exists anywhere
+in `src/`, and the invariant is carried by the field javadoc alone. Anyone changing
+tick ownership should write the guard rather than assume it caught a missed site.
 
 Three row kinds diverge:
 

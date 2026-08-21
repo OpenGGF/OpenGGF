@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-seven rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-eight rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -70,6 +70,7 @@ that looks like a real result.
 | 75 | "Nothing touches your path" vouched for comparability | Totals shift because the shared reporting surface moved |
 | 76 | A candidate judged on a derived column | A correct fix rejected by a fixture already failing the axis in bulk |
 | 77 | A target downstream of the segment's first error | Rounds spent on inherited lateness that no local fix can reach |
+| 78 | A probe aligned end-to-end on two monotone series | "N of N rows agree" — one comparison restated, reversing under a real reference |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2027,3 +2028,30 @@ corrected, record that as a fact rather than leaving it for the next owner to di
 **Related trap, same round.** Phase lengths counted in dispatches and gates measured in raw
 frames are different clocks; forty dispatches spanned sixty raw frames here, and mixing them
 makes a ROM-exact phase look twenty frames wrong.
+
+## Seventy-eighth rule: a probe that cannot disagree is not evidence
+
+The strongest-looking measurement of one session was tautological. A probe compared an engine
+counter against a recording's counter column and reported the control arm off by one on
+**9469 of 9469 rows** and the candidate exact on 9469 of 9469. That reads as overwhelming, and
+it carries no information at all: the probe aligned the two series from their last row, and
+both series are arithmetic progressions of step one, so once the ends are anchored every row
+agrees by construction. The 9469 comparisons are one comparison restated, and what it measures
+is the difference between the two arms — which was the thing nobody disputed. The recorded
+column enters only as an additive constant; any monotone sequence would produce the same two
+numbers.
+
+**The tell is the cleanliness.** A real measurement against a real reference does not come out
+as "-1 on every row" and "0 on every row" on two arms. Perfect symmetry means the reference is
+not constraining anything.
+
+**What replaced it** is the shape to copy: the recording carries the ROM's own RAM for that
+subsystem on every row, and the ROM derives its values from the counter by pure byte
+arithmetic, so the recorded values **invert** to the seed the ROM used. Six inversions across
+two fixtures, each exact at one candidate value and wrong at the other. That is arithmetic on
+recorded ROM state at events identified by content, with no row alignment anywhere — which is
+exactly why it *can* disagree, and did: it reversed the verdict the tautological probe had
+produced.
+
+**Before quoting a probe, ask what result would have falsified it.** If you cannot describe
+the input that makes it report the other answer, it is not measuring what you think.

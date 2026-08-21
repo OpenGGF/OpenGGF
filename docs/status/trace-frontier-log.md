@@ -106235,3 +106235,175 @@ three hundred and ninety-eight already use the ROM's form — and an earlier att
 them automatically was discarded because the classifier mislabelled the one case that had
 been verified by hand. This boss is small enough to pair by reading, which is what that sweep
 concluded the rest of the population needs.
+## 2026-08-21 — V-int tick ownership: the fixture carries a ROM-state oracle, and it refutes the move
+
+Round `vint-tick-ownership-r2`, branch `bugfix/ai-vint-tick-oracle` off `be9e7cdfe`.
+**Found-not-fixed. Nothing landed, and the held candidate from r1 should NOT be landed.**
+
+Takes the open question left by the parked r1 write-up ("the move is right, the CNZ green
+was resting on the error"). That round implemented the ownership refactor, measured it at
+`800 / 6F → 800 / 9F` with all three additions in CNZ, and held it on the grounds that its
+red had an unlocated owner — "something else in the S2 CNZ slot path is off by one in the
+opposite direction". It named the discriminator as a BizHawk probe reading `Vint_runcount`
+at `SlotMachine` entry, "the ROM side is the half this round could not see".
+
+**That half is already in the fixture.** `aux_state.jsonl` carries a
+`cnz_slot_machine_state` event on **every one of the 9469 rows** of both CNZ fixtures,
+dumping the ROM's own `SlotMachineVariables` — `routine`, `timer`, `index`, `in_use`,
+`reward`, and per-slot `pos`/`speed`/`routine` — alongside a `vbc` field. `TraceEvent`
+parses it and **nothing compares it**; it is an unused ROM-state oracle. No emulator run
+is needed.
+
+### The oracle, and why it needs no assumption about recorder phase
+
+The ROM derives slot state from `Vint_runcount` by pure byte arithmetic, so the recorded
+state can be **inverted** to the seed the ROM actually used. Two independent instructions:
+
+- `SlotMachine_Routine3` (`s2.asm:59360-59375`): `slot1_speed = ((V+3 & 7) - 4) + $30`,
+  `slot2_speed` the same on `rol.b #4` of that byte, `slot3_speed` the same on `V+2`.
+- `SlotMachine_Routine4`: `slot_timer = (V+3 & $0F) + $0C`.
+
+Inverting the recorded values at each activation gives the seed the ROM consumed. This is
+arithmetic on recorded ROM RAM, not a comparator column, so it does not depend on where in
+the frame the recorder samples — the trap that made r1's `vblank_counter` probe ambiguous.
+
+| fixture | ROM row | recorded | inverts to | row's own `vbc` |
+|---|---|---|---|---|
+| cnz | 1522 | speeds `30,2F,33` | `0x0FBC` | `0x0FBC` |
+| cnz | 1528 | timer `0E` | `0x0FC2` | `0x0FC2` |
+| cnz2 | 4730 | speeds `33,32,2D` | `0x41E7` | `0x41E7` |
+| cnz2 | 4736 | timer `19` | `0x41ED` | `0x41ED` |
+| cnz2 | 5022 | speeds `2F,2C,2F` | `0x430B` | `0x430B` |
+| cnz2 | 5028 | timer `0D` | `0x4311` | `0x4311` |
+
+Six inversions, two instructions, two fixtures, every one exact, and every one exact at the
+row's own `vbc` and wrong at `vbc + 1`.
+
+### What the two arms actually read — measured, both arms, one worktree
+
+`CNZSlotMachineManager.update(int)` was instrumented to dump the full slot state before and
+after each call, and `PointPokeyObjectInstance`'s idle capture checkpoint to dump the
+in-pass counter and player position. Probe compiled and ran on both arms (18,946 lines per
+CNZ run).
+
+| activation | ROM (inverted) | control arm | candidate arm |
+|---|---|---|---|
+| cnz 1522 speeds | `30,2F,33` | `30,2F,33` ✔ | `31,2F,33` ✘ |
+| cnz 1528 timer | `0E` | `0E` ✔ | `0F` ✘ |
+| cnz2 4730 speeds | `33,32,2D` | `33,32,2D` ✔ | `2C,32,2D` ✘ |
+| cnz2 5022 speeds | `2F,2C,2F` | `2F,2C,2F` ✔ | `30,2C,2F` ✘ |
+
+**The control arm reproduces the ROM's byte exactly at every activation in both fixtures.
+The candidate reads one higher at every one.** The candidate's error is `+1` on the seed,
+which is the whole of its 19,603 / 29,397 errors.
+
+### Two things ruled out
+
+- **Not a late activation.** The `PointPokey` probe dates the capture to the object pass of
+  the same engine frame in **both** arms, at identical player positions
+  (`px=1227 py=1089` pre-solid, `TOP`, snapping to `1216,1120`), matching the fixture's own
+  `player_x/player_y` snap row. The capture frame does not move; only the value read on the
+  following pre-physics pass does.
+- **Not a compensating error in the slot port.** `CNZSlotMachineManager`'s routine sequence,
+  reel positions, timer decay and index walk track the ROM's recorded state row for row on
+  the control arm. There is nothing in the slot path absorbing a `-1`; r1's hypothesis that
+  "the green was resting on a seed one below the ROM" is **refuted** — on the seed, the
+  control is right and the candidate is wrong.
+
+**Retraction of the r1 entry's central claim.** Its probe compared the engine's read against
+the fixture's `vblank_counter` column and read control `-1` / candidate `0` as proof the
+candidate was ROM-exact. That column's own sampling phase was never established, so the
+comparison could not settle the question it was asked. The inversion above can, and it goes
+the other way. r1's two corrections stand and are worth keeping: **`TestVblaCounterVBlankInvariant`
+does not exist anywhere in `src/`** — the one-tick invariant is carried by the field javadoc
+alone — and the `s2.asm` line numbers cited in `Sonic2ZoneFeatureProvider.updatePrePhysics`
+have drifted off `LevEvents_CNZ`.
+
+### Why the r1 probe reads -1 / 0 whatever the ROM does
+
+The r1 entry's headline measurement is "control -1 on 9469 of 9469 rows, candidate 0 on
+9469 of 9469". It emitted 9473 probe lines against 9469 fixture rows and, in its own words,
+aligned them **from the last row**. Re-running that probe on both arms in this worktree:
+
+| | first probe `vbc` | last probe `vbc` | lines |
+|---|---|---|---|
+| control | `0x09C1` | `0x2EC5` | 9473 |
+| candidate | `0x09C1` | `0x2EC6` | 9473 |
+| fixture rows | `0x09CA` | `0x2EC6` | 9469 |
+
+The candidate's last value **is** the fixture's last value; the control's is one below it.
+Both the engine counter and the fixture column are arithmetic progressions of step 1, so
+once the ends are anchored every row agrees by construction. The "9469 of 9469" is one
+comparison restated 9469 times, and what it measures is the difference between the two arms
+— which is 1, and which nobody disputed. The fixture column enters only as an additive
+constant: any monotone `+1` sequence would have produced the same two numbers. **The probe
+carries no information about the ROM at all**, and it cannot come out any other way.
+
+This is the tautological-measurement family: a check whose result is fixed by its own
+construction. The inversion above avoids it because it compares a *computed value* — a byte
+the ROM wrote into RAM — at an event identified by its content, with no row alignment
+anywhere in the comparison.
+
+### The contradiction that is now the open question
+
+The disassembly argument for the move is still sound: `Vint_runcount` is incremented at
+`VintRet` (`s2.asm:508`), `Level_MainLoop` waits for that interrupt at the top of the
+iteration (`s2.asm:5088-5090`), and `LevEvents_CNZ` → `jsr (SlotMachine).l`
+(`s2.asm:21511-21512`) runs before `jsr (RunObjects).l` (`s2.asm:5095`). A pre-object-pass
+routine must see the already-incremented value.
+
+Yet the measurement says the engine's pre-physics read is correct **before** the move and
+one too high after it. Both cannot be true unless the engine's `vblaCounter` already sits
+one **above** the ROM's `Vint_runcount`, with the in-pass tick position silently correcting
+it for pre-pass readers. If that is so, the fix is a **pair** — move the tick *and* seed the
+counter one lower — and the pure reorder can never be right on its own.
+
+**Do not land the reorder alone; it is measured wrong at six of six ROM-derived points.**
+
+The next step is the same inversion applied to an **in-pass** reader: find a recorded ROM
+object field that is derived from `Vint_runcount` inside `RunObjects`, invert it, and compare
+against the engine's in-pass value. If the in-pass value is also `+1`, the counter's absolute
+phase is wrong and the seed is the fix. If it is exact, the ROM's pre-pass and in-pass reads
+genuinely differ and the ordering model needs rework. That one measurement decides which,
+and it is cheap — the technique is established above and needs no emulator.
+
+Worth doing regardless of this round: **compare `cnz_slot_machine_state`.** It is recorded
+on every row of both CNZ fixtures and read by nothing, and it would have caught this in the
+report rather than in a probe.
+
+### Round r2 addendum — the seeded-offset hunt, and two corrections landed
+
+Asked to look for a `±1` seeded near the CNZ slot site with a comment justifying the offset
+by dispatch phase. **The seed path has none.** `vintLowByte()` is `frameCounter & 0xFF` and
+`vintHighByte()` is `(frameCounter >>> 8) & 0xFF` — bare masks of the injected counter, no
+offset, no adjustment anywhere in `CNZSlotMachineManager`. There is nothing in the slot path
+that could be absorbing a one-low clock.
+
+The hunt did find two members of that family next door in `PointPokeyObjectInstance`:
+
+1. **`SFX_FRAME_OFFSET = 3`, fixed here.** Commented "Offset for SFX timing
+   (s2.asm: Vint_runcount+3)" and used as `((vIntRunCount + 3) & 0x0F) == 0`. The ROM
+   (`s2.asm:59207-59209`) is `move.b (Vint_runcount+3).w,d0 / andi.w #$F,d0 / bne` — the
+   `+3` is the **address** of the longword's low byte, not an addend. The engine's gate was
+   running three frames off the ROM's. Same shape as reading a `loc_` label as a line number:
+   an address offset used as arithmetic. Now `(vIntRunCount & 0x0F) == 0`, cited.
+   **Unobserved by any fixture** — the CasinoBonus SFX is not a compared field, so the green
+   CNZ traces are absence of evidence here, not evidence of absence.
+2. **`levelFrameCounter()` returns `getFrameCounter() + 1`, left alone.** The javadoc explains
+   why it reads `Level_frame_counter` rather than `V_int_run_count`, but says nothing about
+   the `+ 1`. It gates prize spawning on `& 1`, so it is a gameplay path. Not touched by this
+   round — flagged as the next thing to check in this family, because an unexplained `+1` on a
+   parity gate is exactly the shape being hunted.
+
+Two corrections landed with the round, independent of what happens to the tick move:
+
+- **`TestVblaCounterVBlankInvariant` does not exist.** It was cited in
+  `docs/status/known-discrepancies.md` as pinning the one-tick-per-serviced-V-blank invariant
+  and in the parked frontier entry. No such class is anywhere in `src/`. The
+  known-discrepancies note now says so explicitly and tells anyone changing tick ownership to
+  write the guard rather than trust it. A false citation in a hard-rules document is worse
+  than no citation, because it retires the question.
+- **`Sonic2ZoneFeatureProvider.updatePrePhysics`'s ROM citation was drifted.** It read
+  `s2.asm:21494, 58827-58840`, which now points at `LevEvents_MCZ2_Routine4` and `ObjD4`. The
+  claim was right and the numbers were not; corrected to `LevEvents_CNZ` at 21511, its
+  `jsr (SlotMachine).l` at 21512, `jsr (RunObjects).l` at 5095, and `SlotMachine` at 59305.

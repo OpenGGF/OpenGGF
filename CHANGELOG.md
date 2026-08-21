@@ -17,6 +17,16 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **S2's PointPokey cage now plays its CasinoBonus SFX on the ROM's 16-frame gate instead of
+  three frames off it.** `ObjD6` reads `move.b (Vint_runcount+3).w,d0 / andi.w #$F,d0 / bne`
+  (`docs/s2disasm/s2.asm:59207-59209`), i.e. the raw V-int run counter masked to 4 bits. The
+  engine carried a `SFX_FRAME_OFFSET = 3` constant, commented "Offset for SFX timing
+  (s2.asm: Vint_runcount+3)", and computed `((vIntRunCount + 3) & 0x0F) == 0` -- reading the
+  `+3` **address** of the longword's low byte as though it were an addend, the same mistake as
+  treating a `loc_` label as a line number. The constant is removed and the gate is now the
+  ROM's. No fixture observes this: the CasinoBonus SFX is not a compared field, so the CNZ
+  traces were and remain green either way, and this is landed on the disassembly's authority
+  rather than on a trace movement.
 - **The Obj61 LZ blocks now keep their solid standing/pushing bits on the live instance
   instead of a spawn that moves under them**, so `Solid_NoCollision` can find the object's
   own pushing bit and run `Solid_NotPushing`. `SolidObject` stores those bits in the block's
