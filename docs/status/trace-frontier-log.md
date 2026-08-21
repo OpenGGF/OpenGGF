@@ -106347,3 +106347,77 @@ where the bound sits. Both halves are true, and fixing the bound would be wrong.
 **Untouched by this round, as briefed:** the descent constants, the press predicate, the
 trigger box, the art selection, the sidekick follow-delay family, the post-defeat wait. The
 figures 63, 66 and 184 were not used as inputs.
+
+## 2026-08-21 — Retraction: the capsule y is exactly one frame early, and the ordering was never wrong
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `b766364dc`.
+Command as above. **Nothing was landed but this entry, and the entry above it is wrong.**
+
+**Retraction.** The previous entry concluded that the pixel entered at the parent/child
+intra-frame ordering, and that inserting one idle frame "makes the motion worse, so it is not
+a fix". Both halves are wrong, and both came from measuring the engine at the **pre-swing**
+sample point while the recording samples **post-swing**. Measured at the matching sample
+point:
+
+- The engine's post-swing capsule `y` at row `f-1` equals the recording's at row `f` for
+  **48 of 48 rows, with zero mismatches**. Every other shift from `-6` to `+6` is worse
+  (`+0`: 29/19, `+2`: 29/19, `-1`: 18/29). It is a clean, complete **one-frame lead**.
+- With one idle frame inserted before the motion, the post-swing capsule `y` matches the
+  recording on **62 of 62 rows, zero mismatches**, and the button trigger fires at row
+  **6006 from P2 (Tails)** with `dx=5 dy=26` — the ROM's presser, at the ROM's row. All three
+  parts of the acceptance target from two entries above are met.
+
+So the frontier move 6000 → 6110 and 2288 → 2215 errors was **not** a knife-edge flip. The
+capsule's motion becomes exactly right.
+
+**The ordering was never the defect, and it must not be "fixed".** The recording carries the
+button child directly — **slot 11, object code `0x00086770`** (= `loc_86770`). Its position is
+`parent + (0, $24)` on all 61 rows where both appear, `dx=0` and `dy=36` with no exceptions,
+confirming `BUTTON_Y_OFFSET` from the recording rather than by inference. Slot 11 > the
+parent's slot 9, so the child dispatches **after** the parent and reads the post-swing
+position — which is what the engine already does. Applying a vertical guard modelled on the
+horizontal one would make the engine read a stale `y` the ROM never reads, and would be
+wrong even though it would make this fixture pass.
+
+**`loc_8657A` is answered, and the second routine-zero entry is not reachable here.**
+`SetUp_ObjAttributes` ends with `addq.b #2,routine(a0)` (`sonic3k.asm:84045`), so `loc_8657A`
+leaves `routine` at 2. The `btst #1,render_flags(a0)` branch selects between two different
+capsules: bit clear falls to routine 2 = `loc_865D0`, the **grounded** capsule that waits on
+`$38` bit 1; bit set goes to `loc_86592`, which overwrites `routine` with 8 in the same entry
+and does the floating route's camera-relative setup. The AIZ2 capsule is the floating one —
+`AIZEndBoss_StartCapsuleSequence` → `Boss_LoadEggCapsuleAndAnimals` creates it with
+`CreateChild6_Simple` and then `bset #1,render_flags(a1)` (`sonic3k.asm:138250-138259`). So it
+takes `loc_86592` on its single routine-0 entry. **There is no second routine-zero frame to
+find, and nothing here to route to the badnik lane.**
+
+**And the extra frame is not a missing routine-zero dispatch either.** `CreateChild6_Simple`
+allocates with **`AllocateObjectAfterCurrent`** (`sonic3k.asm:136... /CreateChild6_Simple`),
+which returns a slot strictly after the parent's, so the ROM's capsule **does** execute
+`loc_8657A` on its own creation frame — setup, no motion. The engine's `routeInitPending` does
+exactly the same, and its capsule (slot 8) is created by the controller (slot 6), so it also
+runs setup on its creation frame. **Both model the setup frame correctly.** The engine is not
+skipping or duplicating a dispatch.
+
+**What is actually one frame early is the creation itself.** The engine runs `loc_8657A`-
+equivalent setup at row **5670** and first motion at **5671**; the exact match requires setup
+at **5671** and first motion at **5672**. That is upstream of the capsule entirely — it is
+when `AIZEndBoss_StartCapsuleSequence` fires.
+
+**This contradicts the standing exclusion.** The post-defeat wait was recorded as closed, and
+this round's briefing repeated it. But the capsule's creation frame is the *output* of that
+wait, and it is now measured to be exactly one frame early — not by arithmetic on the engine's
+own residual, and without using the dead 63/66/184 or the dead 33. The one-frame figure comes
+from an exact 62/62 positional match plus the correct character triggering on the correct row,
+which no fitted constant can produce. **The post-defeat wait should be re-opened**, with this
+as its acceptance target rather than any measured distance:
+
+> The capsule's setup frame must land on `aiz_5` row 5671, first motion on 5672. Confirm via
+> post-swing capsule `y` matching the recorded slot-9 series with zero mismatches, and the
+> button trigger firing from **P2** at row **6006**.
+
+**Method note, and it is the reason two entries were wrong.** This object is sampled at three
+different points inside one frame — after the `$4000` descent, after `Swing_UpAndDown`/
+`MoveSprite2`, and at the button child's own dispatch. Comparing any of them against the
+recording's single end-of-frame sample produces a different delta series, and two of the three
+produce a *plausible* one that is not a defect. Fix the sample point before reading a delta on
+a folded parent/child object.
