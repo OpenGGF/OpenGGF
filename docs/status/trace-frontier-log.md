@@ -103864,3 +103864,85 @@ recording window than this segment's proximity rows.
 * **The creation-frame class** (an object starting a frame early, every constant
   correct): fits exactly, minus the sign-flip symptom. The knockback is `-$200` /
   `-$400` on both sides, and the only difference is which frame it lands on.
+
+## 2026-08-21 — Ss8-Ss14 root cause: the layout set is chosen by stage index, not by the lap flag
+
+Round `s3k-ss-spheres-r1` continued, branch `bugfix/ai-s3k-ss-spheres-r1` off `origin/develop`
+`6fec44788`. **Found, not fixed — nothing landed but this entry.** The stall is a symptom; the
+start state is wrong.
+
+### The pre-stage rows, confirmed rather than assumed
+
+Both fixtures' `spheres_left` is pre-stage garbage until **row 134**, where the stage proper
+begins. `ss_8` reads `0x1000` at row 0 and `0` from row 22; `ss_2` reads `0` from row 0. Row
+134 is the first real value in each.
+
+### The start is wrong, and the green control proves it
+
+| fixture | `special_stage_index` | recorded start (row 134) | engine start | |
+|---|---|---:|---:|---|
+| `ss_2` (passes) | 1 | **127** | **127** | match |
+| `ss_8` (fails) | 0 | **67** | **102** | **35 too many** |
+
+The engine's starting count is exactly right on the first lap and wrong on the second, so this
+is not a counting or measurement artifact. It is also not "collection before row 200" — the
+recording's *first* real value is already 67.
+
+### Root cause, from the ROM
+
+`sub_85B0` (`sonic3k.asm:10809-10829`) selects the layout set from a **lap flag**, never from
+the stage index:
+
+```
+lea  (SStageLayoutPtrs).l,a2        ; default: the S3 layout pointers
+move.b (Chaos_emerald_count).w,d3
+tst.w  (SK_alone_flag).w
+beq.s  loc_85E4
+  lea (SSLayoutOffs_RAM).l,a2       ; S&K-alone: the decompressed S&K layouts
+  moveq #0,d2
+  bra.s loc_85F4
+loc_85E4:
+  move.b (SK_special_stage_flag).w,d2
+  beq.s  loc_85F4                   ; flag clear: keep the S3 layouts
+  lea (SSLayoutOffs_RAM).l,a2       ; flag set: the S&K layouts
+  move.b (Super_emerald_count).w,d3 ; ...and count Super Emeralds
+```
+
+The engine's `loadRomData` instead selects on the index alone:
+
+```java
+if (currentStage < 8) {                 // S3 layout table
+    layoutAddr = LAYOUT_S3_STAGE_1 + currentStage * LAYOUT_STAGE_SIZE;
+} else {                                // S&K layout table
+    skCompressed = dataLoader.getCompressedLayoutSet(0);
+    skStage = (currentStage - 8) % 8;
+}
+```
+
+The second lap's fixtures carry `special_stage_index` 0-6, the same range as the first lap —
+the lap is not in the index and never was. So the engine loads **S3 stage 0** where the ROM
+loads the **S&K** layout, and the recorded input is being replayed against the wrong grid.
+
+The engine already computes the lap: `resolveSuperEmeraldMode` sets `superEmeraldMode` from
+`hasAllEmeralds() && !hasAllSuperEmeralds()`, and already uses it to pick the Super or Chaos
+emerald archive. The same distinction is missing from the layout selection.
+
+### The stall is a symptom
+
+The player collecting four spheres and then stopping is what replaying recorded input against a
+different grid looks like: the first few frames happen to line up, then the player is off the
+intended path and never touches another sphere. There is nothing to investigate in the
+sphere/conversion path until the grid is right.
+
+### Not established
+
+Whether `superEmeraldMode` alone is the correct engine-side predicate, or whether the ROM's
+`SK_special_stage_flag` / `SK_alone_flag` pair needs modelling separately — the ROM branches on
+two flags and consults `Super_emerald_count` rather than `Chaos_emerald_count` on the S&K path.
+That is the design question a fix has to answer, and it should be answered from `sub_85B0`
+rather than from which choice turns `ss_8` green.
+
+Acceptance check unchanged: the parent retiring against `KOS_MODULE_QUEUE#366` fingerprint
+`329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c` at raw frame 5152 and its
+child against `#531` at 5151 — with a fix's matrix including `-Ptrace-segments`, since that is
+the arm these classes live in.
