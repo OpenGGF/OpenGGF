@@ -105805,3 +105805,108 @@ at the event frame and at the frame before, using the object's ROM touch radii. 
 model predicts the earlier box overlaps at the recorded event and the live one does not. One
 clean event where the two disagree settles it; two, in different games, settle it well. The
 recorder's own sampling phase has to be established first or the oracle is ambiguous.
+
+## 2026-08-21 — S1 segment 24 (`lz1_2`): the push-release the LZ block could not find
+
+Branch `bugfix/ai-s1-push-release` off `887320904`, in its own worktree.
+
+Continues the 2026-08-20 entry *"S1 segment 24 is an object-slot allocation defect"*.
+That round's frame-1337 lead is gone -- the LZ door now loads into ROM slot 34 -- and what
+surfaced behind it is the **same** `Solid_NoCollision` walk-jump-bug tail failing for a
+**different** object: Obj61, not the Obj56 door, and for an engine-side reason rather than a
+phase one.
+
+### Measured symptom
+
+`TestS1CompleteEmeraldRunChain`, segment 24 (`lz1_2`), 18,205 errors. The comparator's
+`FIRST ERROR` block puts the whole divergence on one field at trace frame **3181**:
+
+```
+player_mapping_frame expected=0x0008 actual=0x0045   (fr_Walk13 vs fr_Push1)
+```
+
+Every other field on that frame matches, `player_animation_id` included (both `id_Walk`,
+`$00`), and `bootstrapErrorCount` is 0 — so the leading error is **not** downstream of an
+earlier one in the segment. The reported "first non-camera mismatch at frame 3182 field
+`dynamic_art.edges`" is one frame later and is the DPLC transfer the changed mapping frame
+would have triggered; `firstNonCameraPhysicsMismatch` is filtered to PHYSICS and cannot see
+an ANIMATION-group field.
+
+### What the ROM does
+
+`Sonic_Animate` picks the animation *script* from `status` bit 5, not from the animation id
+(`btst #5,obStatus(a0) / bne .push`, `_incObj/"01 Sonic.asm":2283`), so `id_Walk` publishes
+`SonAni_Push` for as long as the pushing bit stands. The fixture settles who owns that bit:
+`physics.csv` `player_status_byte` goes `41 -> 61` at frame 3165 and `61 -> 41` at frame
+3180, and `aux_state.jsonl` shows slot 57, an Obj61 LZ block at x `0x0AA0`, taking `status`
+`0x00 -> 0x20 -> 0x00` on exactly those frames. It is a `LBlk_Rise` platform climbing past a
+stationary Sonic.
+
+The release is `Solid_ChkCollision`'s lower-edge exit. With the block's `LBlk_Var[1]` half
+height `$0C` and Sonic's `y_radius` `$13`, `d2 = $1F`, `d4 = $3E`, and
+`d3 = SonicY - ObjY + 4 + d2`: at block y `0x0312` that is `$3D` (collision), at `0x0310`
+it is `$3F >= $3E` and the routine falls to `Solid_NoCollision`. There, retail's
+`FixBugs = 0` arm executes `move.w #id_Run,obAnim(a1)` before `Solid_NotPushing`
+(`sub SolidObject.asm:253-263`). Because `obAnim` and `obPrevAni` are adjacent bytes that
+word write lands anim `$00` / prev_anim `$01`, and the mismatch forces
+`move.b #0,obAniFrame(a0)` on the next `Sonic_Animate` — which is why the recording resumes
+Walk at index 0, `fr_Walk13`, rather than wherever the push script had reached.
+
+### What the engine did
+
+A probe in `Sonic1LabyrinthBlockObjectInstance.update` reproduced the ROM's geometry
+**exactly** — same block-y series, and `solidContactResult` dropping to 0 at block y
+`0x310`, the ROM's own release frame — while `player.getPushing()` stayed `true` for the
+rest of the level. A second probe in `ObjectSolidContactController`'s `contact == null`
+branch printed `preserveLatch=false hasBit=false` on every one of those frames.
+
+`airUnseatLatchKeyFor` keys the standing/pushing latch on `ObjectInstance#getSpawn()`, and
+`ObjectSpawn` is a **record** — value equality on its coordinates. Obj61's moving subtypes
+call `updateDynamicSpawn(x, y)` every frame, so the key changes as the block travels: the
+bit was stored under y `0x329` and looked up under `0x327`. `clearObjectPushingBit` returned
+false forever, so neither `player.setPushing(false)` nor the walk-jump word write ran.
+
+This is the third of four writes in `Solid_NoCollision -> Solid_NotPushing` being
+unreachable rather than absent, which is why the port reads faithful and cites correctly.
+
+### The fix
+
+`Sonic1LabyrinthBlockObjectInstance` overrides `usesInstanceSolidStateLatchKey()` — the
+existing provider hook, opted into by the Obj56 floating blocks for the same reason since
+they move the same way. One method, no new mechanism, no constant.
+
+### Matrix, both arms in the same worktree
+
+| arm | `-Ptrace-replay` | `Running` | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`887320904`) | 800 tests, **6 failures**, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800 tests, **7 failures**, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets differ by exactly one:
+`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart`, whose own
+message reads *"segment 24 must still diverge identically from a cold start; if it was
+fixed, update this pin."* Its cold-started segment 24 reports the same 7,176 errors at the
+same frame 14745 as the full chain, so the attribution property it exists to hold is intact
+and only the pinned numbers moved. The pin is updated in this commit; nothing was relaxed.
+
+Chain effect, `TestS1CompleteEmeraldRunChain`:
+
+| | control | fix |
+|---|---:|---:|
+| segment 24 errors | 18,205 | **7,176** |
+| segment 24 first error | frame 3181, `player_mapping_frame` | frame **14745**, `x_speed` rom=-0299 engine=0x0000 |
+| chain axes | 19 | 19 |
+
+No other segment's count or first error changed, in either the chain or the standalone
+sweep.
+
+### Adjacent finding, not fixed
+
+The same spawn-keyed latch is exposed on **54 other `SolidObjectProvider`s that move** —
+they call `updateDynamicSpawn`/`rebuildDynamicSpawn` and do not override
+`usesInstanceSolidStateLatchKey()`. Across all three games; S1's include the LZ conveyor,
+the collapsing floors and ledges, the elevators, the moving and MZ brick blocks and the
+swinging platforms. Each is a candidate for the same silent failure of every
+`Solid_NoCollision` tail. Sweeping them is a round of its own, with its own matrix: the hook
+changes when a *release* fires, and this round is direct evidence that such a change can
+move a chain segment by eleven thousand frames.

@@ -17,6 +17,23 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **The Obj61 LZ blocks now keep their solid standing/pushing bits on the live instance
+  instead of a spawn that moves under them**, so `Solid_NoCollision` can find the object's
+  own pushing bit and run `Solid_NotPushing`. `SolidObject` stores those bits in the block's
+  SST `status(a0)` byte -- `bset #5,obStatus(a0)` in `Solid_AlignToSide`, `bclr` in
+  `Solid_NotPushing` (`docs/s1disasm/_incObj/sub SolidObject.asm:240-241, 253-263`) -- but the
+  engine keyed its latch on `ObjectInstance#getSpawn()`, and the moving `LBlk_Rise` /
+  `LBlk_Sink` / `LBlk_SideSink` / `LBlk_OnWater` subtypes rebuild that spawn record every
+  frame they travel. The bit was written under one position and looked up under the next, so
+  `clearObjectPushingBit` always missed: the player's push bit was never cleared and retail's
+  `FixBugs = 0` walk-jump-bug word write (`move.w #id_Run,obAnim(a1)`, which lands anim=$00
+  and prev_anim=$01 and therefore restarts Walk) never happened. In the S1 complete-emerald
+  chain's `lz1_2` the player kept publishing `fr_Push1` ($45) where the recording has
+  `fr_Walk13` ($08), fifteen frames after the rising block left his collision box, and every
+  later DPLC transfer inherited the skew. The Obj56 floating blocks already opted into the
+  same `usesInstanceSolidStateLatchKey()` hook for the same reason. Segment 24 of the chain
+  drops from 18,205 to 7,176 comparator errors and its frontier moves 11,564 frames later.
+
 - **The batched solid resolver now releases the player's push bit on a four-pixel side-air
   contact even when the object never raised it**, matching the inline resolver and the ROM.
   `Solid_NotPushing` clears `status(a1)`'s pushing bit unconditionally; only the object's own

@@ -237,6 +237,22 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // LBlk_Action calls SolidObject, which stores the standing/pushing bits
+        // in this block's own SST status(a0) byte (`bset #5,obStatus(a0)` in
+        // Solid_AlignToSide, `bclr #5,obStatus(a0)` in Solid_NotPushing --
+        // docs/s1disasm/_incObj/sub SolidObject.asm:240-241, 262-263). The
+        // moving subtypes (LBlk_Sink / LBlk_Rise / LBlk_SideSink / LBlk_OnWater)
+        // rebuild the engine's dynamic spawn every frame the block travels, so a
+        // spawn-keyed latch is written under one position and looked up under
+        // the next -- Solid_NoCollision then never finds the object's pushing
+        // bit, and its Solid_NotPushing tail (with retail's FixBugs=0
+        // `move.w #id_Run,obAnim(a1)`) never runs. Same reasoning as the Obj56
+        // floating blocks.
+        return true;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         // SolidObject provides all-sides solidity
         return false;
