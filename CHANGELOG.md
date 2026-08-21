@@ -14,8 +14,10 @@
 
 - **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
   the boot chant atomically stops music, overrides, and every SFX owner before
-  the PCM voice begins, and StopSEGA leaves the driver silent instead of
-  restoring voices the retail `fix_sndbugs=0` path discarded.
+  the PCM voice begins, streams its unsigned bytes through the region-clocked
+  YM2612 DAC core instead of a host-linear PCM shortcut, and StopSEGA leaves
+  the driver silent instead of restoring voices the retail `fix_sndbugs=0`
+  path discarded. Save/load retains the exact DAC latch and resampler state.
 
 - **1-up jingles now use each retail driver's SFX gate and priority restore:**
   all active effects stop when the jingle begins and new effects remain blocked

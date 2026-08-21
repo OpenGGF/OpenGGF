@@ -178,8 +178,10 @@ goldens at NTSC and PAL rates.
 Status: S2 DAC cadence, the authentic PSG/DAC defaults, and region-correct
 YM2612/PSG/Z80-derived clocks are complete. S3K's
 SEGA PCM command now atomically stops all SMPS/sample owners before exclusive
-PCM playback and StopSEGA restores none of them. Direct YM-DAC rendering and
-removal of non-native workarounds remain.
+PCM playback, streams the chant bytes through the region-clocked YM2612 DAC
+core, and StopSEGA restores none of the discarded owners. Rewind/save-load
+preserves the DAC latch and resampler state exactly. Removal of remaining
+non-native workarounds remains.
 
 ### Phase 6 — ROM loader and content hardening
 
@@ -217,7 +219,6 @@ Cleanup is not allowed to lead the roadmap or broaden a parity change.
 
 ## Current slice
 
-Continue Phase 3 with the driver-level pause protocol and remaining shipped
-1-up restoration behavior, then finish Phase 5's regional chip clocks and
-direct YM-DAC presentation. Keep verification at the sequencer/driver/chip
-boundary; do not reopen native observer schemas or complete-run evidence.
+Finish Phase 4's bounded bytecode/envelope audit, then harden the supported-ROM
+loaders in Phase 6. Keep verification at the sequencer/driver/chip boundary;
+do not reopen native observer schemas or complete-run evidence.

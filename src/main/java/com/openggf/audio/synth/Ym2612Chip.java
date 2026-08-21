@@ -2523,6 +2523,34 @@ public class Ym2612Chip {
 
         @Override
         public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    chipClock, z80Clock, internalRate, currentDacSampleId, dacLatchedValue, dacPos, dacStep,
+                    dacEnabled, dacHasLatched, dacInterpolate, dacHighpassEnabled, dacHighpass, resampleAccum,
+                    lastLeft, lastRight, prevLeft, prevRight, blipResampler, useBlipResampler, outputRate,
+                    resampleRatio, inverseResampleRatio, ssgEgActiveCount, status, mode, csmKeyFlag, addressLatch,
+                    chipType, busyCycles, timerACount, timerBCount, timerALoad, timerBLoad, timerAPeriod,
+                    timerBPeriod, lfoCnt, lfoTimer, lfoTimerOverflow, lfoAm, lfoPm, egCnt, egTimer,
+                    channel3SpecialMode, channels, mutes
+            };
+        }
     }
 
     record SfxAdmissionState(
@@ -2599,6 +2627,29 @@ public class Ym2612Chip {
 
         @Override
         public OperatorSnapshot[] ops() { return Arrays.copyOf(ops, ops.length); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof ChannelSnapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    fNum, block, kCode, slotFnum, slotBlock, slotKCode, fc, slotFc, blockFnum,
+                    slotBlockFnum, feedback, algo, ams, pms, pan, leftMask, rightMask, opOut, memValue, ops
+            };
+        }
     }
 
     public record OperatorSnapshot(

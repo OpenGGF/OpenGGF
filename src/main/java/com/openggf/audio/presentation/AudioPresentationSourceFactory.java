@@ -883,7 +883,7 @@ public final class AudioPresentationSourceFactory
         return SampleBackedVoice.rawSegaPcm(
                 voiceId, 0,
                 Objects.requireNonNull(registeredPcm, "registeredPcm"),
-                roundedOutputSampleRate());
+                roundedOutputSampleRate(), settings.region());
     }
 
     @Override

@@ -598,6 +598,30 @@ public class PsgChip {
 
         @Override
         public int[][] chanDelta() { return copy(chanDelta); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    inputClock, internalRate, regs, freqInc, freqCounter, polarity, chanOut, chanAmp, mutes,
+                    chanDelta, latch, zeroFreqInc, noiseShiftValue, noiseShiftWidth, noiseBitMask, outputRate,
+                    clocks, clockFrac, clocksPerSampleFixed, hqPsg, noiseShiftOnEveryToggle, blip
+            };
+        }
     }
 
     record SfxAdmissionState(

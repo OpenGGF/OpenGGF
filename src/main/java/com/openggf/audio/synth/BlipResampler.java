@@ -335,5 +335,31 @@ public class BlipResampler {
 
         /** Non-copying view for in-memory restore paths only. Do not mutate. */
         int[] historyTailRRef() { return historyTailR; }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Double.compare(ratio, other.ratio) == 0
+                    && head == other.head
+                    && inputIndex == other.inputIndex
+                    && Double.compare(outputPos, other.outputPos) == 0
+                    && Arrays.equals(historyTailL, other.historyTailL)
+                    && Arrays.equals(historyTailR, other.historyTailR);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Double.hashCode(ratio);
+            result = 31 * result + Arrays.hashCode(historyTailL);
+            result = 31 * result + Arrays.hashCode(historyTailR);
+            result = 31 * result + Integer.hashCode(head);
+            result = 31 * result + Long.hashCode(inputIndex);
+            return 31 * result + Double.hashCode(outputPos);
+        }
     }
 }

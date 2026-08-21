@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestVirtualSynthesizerSnapshot {
     @Test
@@ -26,6 +27,10 @@ class TestVirtualSynthesizerSnapshot {
 
         perturb(restored);
         restored.restoreSynthSnapshot(snapshot);
+        assertEquals(snapshot, restored.captureSynthSnapshot(),
+                "chip snapshots compare their state arrays by value");
+        assertEquals(snapshot.hashCode(),
+                restored.captureSynthSnapshot().hashCode());
         perturb(restored);
         short[] actual = new short[256];
         restored.renderFrames(actual, 0, actual.length / 2);

@@ -1460,7 +1460,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                             snapshot.sourceDescriptor(),
                             snapshot.sourcePositionQ32(),
                             snapshot.sourceStepQ32(), gainQ16,
-                            snapshot.looping(), snapshot.stopped())), sample);
+                            snapshot.looping(), snapshot.stopped(),
+                            snapshot.renderMode(), snapshot.synthSnapshot(),
+                            snapshot.lastDacSourceFrame())), sample);
         }
     }
 
@@ -1476,7 +1478,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                             snapshot.sourceDescriptor(),
                             snapshot.sourcePositionQ32(), sourceStepQ32,
                             snapshot.gainQ16(), snapshot.looping(),
-                            snapshot.stopped())), sample);
+                            snapshot.stopped(), snapshot.renderMode(),
+                            snapshot.synthSnapshot(),
+                            snapshot.lastDacSourceFrame())), sample);
         }
     }
 
@@ -1722,7 +1726,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     sample.voiceId(), sample.priority(), sample.assetId(),
                     music.musicId(), music.sourceDescriptor(),
                     sample.sourcePositionQ32(), sample.sourceStepQ32(),
-                    sample.gainQ16(), sample.looping(), sample.stopped());
+                    sample.gainQ16(), sample.looping(), sample.stopped(),
+                    sample.renderMode(), sample.synthSnapshot(),
+                    sample.lastDacSourceFrame());
         } else if (music != null
                 && snapshot instanceof PresentationVoiceSnapshot.Smps smps) {
             snapshot = new PresentationVoiceSnapshot.Smps(

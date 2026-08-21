@@ -126,7 +126,9 @@ public sealed interface AudioPresentationCommand
                                 snapshot.assetId(), musicId, sourceDescriptor,
                                 snapshot.sourcePositionQ32(),
                                 snapshot.sourceStepQ32(), snapshot.gainQ16(),
-                                snapshot.looping(), snapshot.stopped()));
+                                snapshot.looping(), snapshot.stopped(),
+                                snapshot.renderMode(), snapshot.synthSnapshot(),
+                                snapshot.lastDacSourceFrame()));
             } else if (voice instanceof SmpsCompositeVoice composite) {
                 PresentationVoiceSnapshot.Smps snapshot =
                         (PresentationVoiceSnapshot.Smps) composite.snapshot();
@@ -253,6 +255,8 @@ public sealed interface AudioPresentationCommand
                 sample.voiceId(), sample.priority(), sample.assetId(),
                 sample.musicId(), sample.sourceDescriptor(),
                 sample.sourcePositionQ32(), sample.sourceStepQ32(),
-                sample.gainQ16(), sample.looping(), sample.stopped());
+                sample.gainQ16(), sample.looping(), sample.stopped(),
+                sample.renderMode(), sample.synthSnapshot(),
+                sample.lastDacSourceFrame());
     }
 }
