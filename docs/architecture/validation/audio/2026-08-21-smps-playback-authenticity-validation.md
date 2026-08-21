@@ -79,6 +79,17 @@ The external comparison covers S1 GHZ's normal music path. It is intentionally
 not presented as evidence for SFX contention, pause, fade, speed, or 1-up; those
 remain explicit human checklist rows.
 
+The older S1 GHZ1 semantic gameplay-timeline runner was also probed, but it is
+not accepted as playback evidence for this delivery. Its OpenGGF reducer still
+turns an `AudioCommandTimeline.PlaySfx` submission into an admission after the
+current runtime has correctly blocked that SFX during the 1-up lifecycle, then
+later reconstructs a restored SFX owner from a driver-local ordinal rather than
+the original semantic request identity. The run therefore fails inside the
+observer before cross-producer comparison. No runtime or timeline workaround
+was retained: repairing that legacy semantic reducer would expand the paused
+evidence program and would not establish audibility. The human transition rows
+remain the bounded acceptance gate.
+
 ### Clean full-suite comparison
 
 Both sides started from empty `target/` directories, used Maven's serial
