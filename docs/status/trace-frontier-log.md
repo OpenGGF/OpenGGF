@@ -111735,3 +111735,43 @@ never reaches the stage exit, or it reaches it and the walker never observes the
 The `(no active objects within a screen-width of the player)` diagnostic argues for the first,
 but that is a hint, not a measurement. Instrument the boundary before assigning ownership --
 handing this to the walker's owner presumes the second.
+
+### Instrumented: the stall is the SPECIAL-STAGE EXIT, and the walker is not at fault
+
+Measured at `2973a0430` with an env-gated probe inside `awaitBoundary` (reverted). The two
+opposite defects behind the one message are now separated, and it is **neither** of the two
+candidates as posed.
+
+```
+PROBE_BOUNDARY steps=1     bk2=759   target=2126  kind=giant_ring  latched=false
+PROBE_BOUNDARY steps=2     bk2=760   target=2126  kind=giant_ring  latched=false   <- advances normally
+...
+PROBE_BOUNDARY steps=1     bk2=6221  target=6221  kind=stage_exit  latched=false   <- ALREADY at target
+PROBE_BOUNDARY steps=2000  bk2=6221  target=6221  kind=stage_exit  latched=false
+PROBE_BOUNDARY steps=40000 bk2=6221  target=6221  kind=stage_exit  latched=false
+```
+
+The preceding `giant_ring` boundary advances its cursor one frame per step and latches. At the
+`stage_exit` boundary the cursor is **already at 6221 on step 1** -- the engine *reached* the
+boundary -- and then never advances again across 42908 steps.
+
+So it is not "the engine never gets there", and not "the walker missed a latch after passing".
+`awaitBoundary`'s own contract already rules the second out: passing the boundary returns
+`NOT_OBSERVED` rather than throwing, so a throw with `last observed == mode_change_bk2_frame`
+means the cursor never moved. **The engine arrives and the BK2 cursor freezes on arrival.**
+
+`currentBk2Frame()` reads `GameServices.playbackDebug().getCursorFrame()`, so what is frozen is
+the movie playback cursor, not the walker's bookkeeping.
+
+**Which boundary this is.** From `run_manifest.json`: transition 1 of 48, `from_segment: 1`
+(`ss`) `to_segment: 2` (`aiz_2`), and segment 2's `bk2_frame_offset` is 6221. Segment 1 is a
+**special stage**, spanning bk2 2126 to 6221. So the engine plays the giant-ring entry
+correctly, plays the whole special stage through to its final frame, and then **hangs on the
+special-stage exit back into AIZ**.
+
+**Owner: the special-stage exit path, not the run-chain walker.** The walker is correctly
+waiting for a mode change that never settles.
+
+**Chain position, restated again:** the run stops at transition **1 of 48**, having completed
+segments 0 and 1 of 70. This is *not* comparable to the older "segment 9 of 63" -- that was a
+different and shorter fixture -- so it should not be read as a regression against it.
