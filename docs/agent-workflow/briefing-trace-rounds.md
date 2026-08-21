@@ -137,6 +137,7 @@ that looks like a real result.
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
 | 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
+| 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
@@ -146,6 +147,7 @@ that looks like a real result.
 | 125 | A probe that never compiled looks exactly like a predicate that never fires | No Tests-run line and no probe file; ask why the file is absent |
 | 126 | A uniquely-fitting event is not evidence it is *your* event | Rarity is not identity; put a clock on it before believing it |
 | 127 | A probe can fire in the right class and the wrong harness | Plausible output from a path the test does not use |
+| 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3325,4 +3327,27 @@ reachability is guaranteed by the error you are chasing. Prefer those.
 **And a controlled zero needs a witness in the same run.** The same round proved a death path was
 never taken by showing its probe wrote nothing *while another probe fired in the same run and the
 same directory* — which makes the zero a measurement rather than a sixth mode.
+
+## One hundred and twenty-eighth rule: `stand_on_obj` is a slot index, not an object id
+
+The S1 SST byte a lane read as an object id is a **slot index**. Taken as an id, `0x2A` names the
+SBZ Small Door — a real object, in a real file, and completely wrong. Resolved through the recorded
+`slot_dump`, slot 42 holds object `0x84`: the Final Zone cylinder.
+
+**The trap is that the wrong answer is plausible.** Both readings produce a valid object id, so
+nothing in the number announces the error, and a citation to the wrong object's file would have
+survived review — the shape of rule 113, arriving through a field's units rather than through a
+grep. Resolve any slot-valued field through `slot_dump` before naming an object from it.
+
+**Two further habits from the same round, both of which changed the answer:**
+
+1. **The comparator's first failing frame is not the origin.** The reported first error was an
+   animation mismatch ~800 rows before the divergence that mattered; `y` matched exactly until row
+   1161. Walking every row's comparison — matches as well as mismatches — is what separated the
+   lowest failing frame from the cause. A sample around the observed failure would have found
+   neither.
+2. **State what an unmeasured item actually is.** Three further deaths were reported as
+   "coordinates and nothing else, segments unestablished, shared cause unestablished" rather than
+   as a guess either way — so the next lane neither re-opens it blind nor inherits a conclusion
+   nobody reached.
 
