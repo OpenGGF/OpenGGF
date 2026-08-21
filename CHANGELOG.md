@@ -1,5 +1,16 @@
 # Changelog
 
+- **Sonic gulps an Aquatic Ruin air bubble at the moment the game does:** the
+  bubble only counts as caught while Sonic's middle sits in a band reaching
+  sixteen pixels below the bubble, and the very bottom pixel of that band counts.
+  The engine was treating that last pixel as a miss, and it was also floating the
+  bubble upward before testing the band rather than after, so the band it tested
+  was always a little higher than the one the game tests. On the jump into a
+  bubble in Aquatic Ruin Act 2 that put the gulp two frames late; it is now one,
+  and the frame that is left belongs to the bubble maker releasing that bubble a
+  frame early rather than to the catch itself. The bubbles also drift sideways on
+  the same step of their sway pattern as the original, instead of one step ahead.
+
 - **Trace catalog validation now uses compact run-segment descriptors:** the
   planner scans and validates one segment at a time, retaining 8,660,152 bytes
   after warmed forced-GC measurement on the 67-segment run instead of the eager
