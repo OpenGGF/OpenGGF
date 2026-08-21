@@ -2,8 +2,10 @@
 
 ## Status
 
-Proposed from measured evidence on 2026-08-21. No runtime change is authorised
-or included with this design.
+Phase-one descriptor planning and descriptor-backed catalog validation were
+implemented and measured on 2026-08-21. Actual replay still uses the eager
+`SegmentPlan` path. The active-segment cursor migration remains future work and
+requires separate approval.
 
 ## Problem
 
@@ -23,7 +25,22 @@ classes occupied 102,864 bytes (0.0094%).
 The ownership boundary, rather than parsing throughput, is therefore the
 measured problem.
 
-## Decision
+## Phase-one result
+
+`TraceRunReplayWalker.planDescriptors()` now performs the existing validation
+scan sequentially and publishes payload-independent summaries.
+`TraceCatalog.validateRunLaunch()` consumes those summaries, while
+`prepareRunLaunch()` and every replay caller retain the eager `plan()` path.
+
+On the real 67-segment Knuckles super-emerald run, separate forced-GC phases
+measured 1,087,680,816 retained bytes for eager planning and 8,664,344 bytes
+for descriptor planning. The descriptor graph retained 1,079,016,472 fewer
+bytes (99.20%) while representing the same 409,630 rows. This is a planning
+and catalog-validation result, not a replay-memory result: live, visual, and
+audio replay memory is unchanged until the cursor work below is authorised
+and implemented.
+
+## Full design decision
 
 Retain compact run and segment plans globally, but own physics and auxiliary
 payloads through one closeable, segment-local cursor while replay is driving
@@ -92,11 +109,11 @@ loop; it carries no gameplay value or work identity.
 
 ## Implementation boundary
 
-The implementation should introduce a payload-independent segment descriptor
-and a closeable segment cursor, then migrate consumers in this order:
+The implementation sequence introduces a payload-independent segment
+descriptor and then, under separate approval, a closeable segment cursor:
 
-1. extract planning summaries while preserving the current eager load as the
-   reference path;
+1. **Complete:** extract planning summaries and move catalog validation while
+   preserving the current eager replay load as the reference path;
 2. move `LiveTraceComparator` and row policy to the cursor window;
 3. move current-frame auxiliary and dynamic-art lookups to the cursor;
 4. change boundary/bootstrap consumers to immutable opening summaries; and
@@ -124,4 +141,6 @@ Run the same 67-segment fixture at the same commit-derived baseline and require:
   boundaries and failure exits.
 
 Raw evidence is retained under
-`$AGENT_SCRATCH_ROOT/tasks/performance-candidate-validation-20260821T161822Z-3319778-904a0080/trace-retention/`.
+`$AGENT_SCRATCH_ROOT/tasks/performance-candidate-validation-20260821T161822Z-3319778-904a0080/trace-retention/`
+and the phase-one benchmark and verification logs under
+`$AGENT_SCRATCH_ROOT/tasks/trace-segment-descriptor-benchmark-20260821T192520Z-4127426-d936ca5a/`.
