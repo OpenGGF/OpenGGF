@@ -109764,3 +109764,71 @@ Install the Super activation state — physics profile and drain counter — on 
 transformation frame, per `Sonic_CheckGoSuper`, rather than when the
 transformation animation completes. Fingerprint for the candidate: `rings`
 matches at 4019 and drains at 4080 and 4141; `x_speed` is `0x0121` at 4019.
+
+## 2026-08-21 — the Super transform-frame candidate satisfies half its fingerprint and is NOT landed
+
+Fix round for the S2 chain's segment 18. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s2-super-transform-frame`, pinned to `3110e61ff`. **Candidate
+reverted; `src/` is unchanged.**
+
+### The fingerprint, stated before measuring
+
+`rings` matches at segment-18 frame 4019 and drains at 4080 and 4141, and
+`x_speed` is `0x0121` at 4019. A count improvement without those is a wrong
+candidate.
+
+### The candidate
+
+One change at the root both defects share — install the Super activation state
+where `Sonic_CheckGoSuper` installs it, on the transformation frame, rather than
+at animation completion:
+
+- `startTransformation()` applies `getSuperProfile()` (ROM sets
+  `Sonic_top_speed $A00` / `Sonic_acceleration $30` / `Sonic_deceleration $100`
+  at s2.asm:37481-37483) and sets `ringDrainCounter = 0`, because
+  `Sonic_CheckGoSuper` never writes `Super_Sonic_frame_count`;
+- the `Sonic_Super` body is gated on the flag rather than on the state, so it
+  runs from the transformation frame and through the animation
+  (`Super_Sonic_flag` written at :37478, routine at :37506);
+- the drain test becomes `< 0` rather than `<= 0`, matching `subq.w #1` + `bpl`
+  (:37510-37511), which is what makes a reload of 60 produce the recording's
+  61-frame cadence.
+
+### Result: one half, and it reds the chain
+
+**Satisfied.** The acceleration half is fixed. `x_speed` no longer diverges at
+4019 at all; the first `x_sub` divergence moves from 4019 to 4049.
+
+**Failed.** `rings` part company at **4018**, one frame BEFORE the ROM's 4019,
+and the drains land at 4018, 4034, 4079, 4095, 4140, 4156 — pairs 16 frames
+apart with 61 between pair starts, i.e. **two drain schedules on one ring
+count**, not one.
+
+Chain totals moved the wrong way: 12 axes -> 13, segment 18 12580 -> 13133, and
+segment 19 62616 -> **206121** now diverging from its own frame 0 rather than
+frame 344.
+
+### What the failure exposed
+
+Two facts that were invisible while the engine drained no rings at all:
+
+1. **The engine's transformation frame is 4018, the ROM's is 4019.** With no
+   drain armed at the transform there was nothing to reveal the one-frame
+   offset; arm it and the ring counts part one frame early. This is a third
+   defect, upstream of both of the previous two.
+2. **A second drain schedule exists.** The 16-frame offset equals the
+   transformation animation's length, and two schedules 61 apart share the
+   global ring count. The obvious reading is a second `SuperStateController`
+   draining the same counter, but that was **not confirmed** and is not
+   asserted here.
+
+### Not landed, and no matrix run
+
+Held under the standing discriminator: a red with an unlocated owner holds. The
+one-frame transform offset has no located owner yet, and covering the rings half
+with a second change — an offset, an interval, a suppressed first drain — would
+be fitting the fixture rather than porting the ROM. The three-game matrix was
+not run: a candidate that fails its own gate does not earn one.
+
+The acceleration half is correct and ROM-cited, and should land with a rings fix
+rather than alone, since alone it reds the chain harder.
