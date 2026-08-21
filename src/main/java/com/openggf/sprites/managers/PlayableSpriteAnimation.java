@@ -135,7 +135,19 @@ public class PlayableSpriteAnimation {
         return groundMovementAnimationSuppressed;
     }
 
+    /**
+     * The {@code Level_frame_counter} value this tick is running on, latched so
+     * the walk/run publish path can evaluate a ROM gate that reads it -- S2's
+     * {@code SAnim_SuperWalk} tests {@code (Level_frame_counter+1) & 3}
+     * (docs/s2disasm/s2.asm:38534-38536). This is the level main-loop counter
+     * the animation update is already handed, NOT the object-visible
+     * {@code V_int_run_count}; {@code SpriteManager.setFrameCounter} exists to
+     * keep it aligned with the ROM's for exactly this class of gate.
+     */
+    private int levelFrameCounterThisTick;
+
     public void update(int frameCounter) {
+        levelFrameCounterThisTick = frameCounter;
         if (sprite != null && !sprite.isNativeSlotPresent()) {
             return;
         }
@@ -405,7 +417,7 @@ public class PlayableSpriteAnimation {
             updateWalkRunBeforeTimerAdvance(active, delay, slopeOffset, remaining);
             return;
         }
-        updateScriptWithDelay(active, delay, slopeOffset);
+        updateScriptWithDelay(active, delay, slopeOffset, true);
     }
 
     /**
@@ -453,7 +465,8 @@ public class PlayableSpriteAnimation {
             // AniRaw_Tails_Carry's 17 entries (27417-27419).
             int flatByte = script.flatByteAt(frameIndex);
             if (flatByte >= 0 && flatByte != 0xFF) {
-                sprite.setMappingFrame(flatByte + frameOffset);
+                sprite.setMappingFrame(
+                        applySuperAlternateFrame(flatByte + frameOffset));
                 if (remaining >= 0) {
                     sprite.setAnimationTick(remaining);
                     return;
@@ -476,7 +489,8 @@ public class PlayableSpriteAnimation {
             }
         }
 
-        sprite.setMappingFrame(script.frames().get(frameIndex) + frameOffset);
+        sprite.setMappingFrame(applySuperAlternateFrame(
+                script.frames().get(frameIndex) + frameOffset));
         if (remaining >= 0) {
             sprite.setAnimationTick(remaining);
             return;
@@ -593,6 +607,15 @@ public class PlayableSpriteAnimation {
             int delay,
             int frameOffset
     ) {
+        updateScriptWithDelay(script, delay, frameOffset, false);
+    }
+
+    private void updateScriptWithDelay(
+            SpriteAnimationScript script,
+            int delay,
+            int frameOffset,
+            boolean walkRunPath
+    ) {
         if (script == null || script.frames().isEmpty()) {
             return;
         }
@@ -615,8 +638,25 @@ public class PlayableSpriteAnimation {
             }
         }
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
-        sprite.setMappingFrame(mappingFrame);
+        sprite.setMappingFrame(walkRunPath
+                ? applySuperAlternateFrame(mappingFrame) : mappingFrame);
         sprite.setAnimationFrameIndex(frameIndex + 1);
+    }
+
+    /**
+     * Applies whatever alternate-frame step the active velocity profile
+     * declares for the Super state. Off unless a game installs one; S2 installs
+     * SAnim_SuperWalk's (s2.asm:38534-38539). Only the walk/run publish path
+     * calls this, because that is the only handler the ROM's block sits in --
+     * the roll, push and plain script paths reach mapping_frame without it.
+     */
+    private int applySuperAlternateFrame(int mappingFrame) {
+        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        if (profile == null) {
+            return mappingFrame;
+        }
+        return profile.applySuperAlternateFrame(
+                mappingFrame, sprite.isSuperSonic(), levelFrameCounterThisTick);
     }
 
     private boolean processEndAction(SpriteAnimationScript script) {
