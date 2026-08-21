@@ -113322,3 +113322,31 @@ One fix-arm sweep was **discarded, not quoted**: it reported 800/4/29 after the
 worktree was recompiled mid-run. Re-run untouched it reproduced the control
 exactly, confirming all 29 errors were the recompile and none were the change.
 That is the third measurement discarded for this reason today.
+
+## 2026-08-21 -- S3K Tails full chain: the interstitial ordinal span at the first special-stage return
+
+- Worktree a scratch worktree, branch
+  `bugfix/ai-s3k-kos-ordinal-span`, over `189acc824`. Investigation only; no
+  runtime change landed.
+- Command: `mvn -Dmse=off -Ptrace-replay-r7 -Dtest=TestS3kTailsFullChainRunChain
+  -Ds3k.rom.path=<root>/s3k.gen test`. Result: `Tests run: 1, Failures: 0,
+  Errors: 1`.
+- Frontier: the segment 1 (`ss`) -> segment 2 (`aiz_2`) handoff, in
+  `declareHardwareTimingSegment`, before any row of `aiz_2` is compared.
+  `IllegalStateException: recorded ordinal span does not begin at the production
+  cursor for KOS_DECOMPRESSION_QUEUE: production next=20, recorded span=16..31`.
+  The `camera_x` first error printed at trace frame 0 (expected `0x1300`,
+  actual `0x1308`, delta 8) is the comparator's own earlier note, not this
+  failure.
+- Established by submission fingerprint that this is *not* the open batch
+  identity-return gap: the engine's unrepresented batch is work the recorder
+  counted, at `kos_decompression_queue 21..24`, and the work the engine never
+  submits is the special-stage exit art at `16..20`. Written up in
+  `docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md`.
+- Also red on the same tree, independent of the chain:
+  `TestHardwareTimingService.anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow`
+  and
+  `TestHardwareTimingService.recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`
+  (`Tests run: 23, Failures: 1, Errors: 1`).
+  `TestHardwareTimingAuthorityGuard` 24/0/0 and
+  `TestHardwareTimingInterstitialStream` 11/0/0 are green.

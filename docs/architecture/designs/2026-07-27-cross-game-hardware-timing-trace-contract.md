@@ -174,6 +174,80 @@ ordinals in reverse once all of them are claimed -- is an open design question, 
 a settled one, and it is the first thing to examine if a later fixture shows an
 S3K KosM ordinal one ahead of the recording.
 
+#### 2026-08-21 measured: the predicted tell fired, and it is a different defect
+
+`s3k-tails-full-chain-all-emeralds` now fails at the first special-stage return
+with
+
+```
+IllegalStateException: recorded ordinal span does not begin at the production
+cursor for KOS_DECOMPRESSION_QUEUE: production next=20, recorded span=16..31
+```
+
+This is **not** the batch identity-return gap above. It was established by
+fingerprint, not by ordinal arithmetic, and the two hypotheses give opposite
+answers.
+
+The engine's four unrepresented KosM submissions across this interstitial are
+`KOS_MODULE_QUEUE#11..14` with `KOS_DECOMPRESSION_QUEUE#16..19` as their module
+children -- the shape the open gap predicts. But their submission fingerprints
+are `fbfc78d4 / 513a9a90 / d24be135 / 5dc423fa`, and the recording carries that
+exact batch twice: at `bk2_frame` 630-637 as the run's opening level load
+(interstitial ordinals `0..3`), and again at `bk2_frame` 6093-6100 as
+`kos_decompression_queue 21..24` / `kos_module_queue 15..18`. So the recorder
+*did* count this work. Nothing was borrowed and left unreturned, and returning
+these ordinals would move the cursor away from the numbers the recording gives
+them, not toward them.
+
+What the engine never submits is the batch the recording places *first* in the
+same interstitial, at `bk2_frame` 5562-5573: `kos_decompression_queue 16..20`
+(`589a478d / 41b5f251 / 7e6020e6 / dc855aca / f88214ef`) with
+`kos_module_queue 11..14`. Those nine fingerprints occur fifteen times each in
+`hardware_timing_interstitial.jsonl` -- once per special stage -- and zero times
+in any engine submission. They are the special-stage exit/results art load, which
+the engine does not model; segment `ss` ends at the special stage's own rows and
+segment `aiz_2` opens at `bk2_frame` 6221, so both batches fall in the gap
+between them.
+
+The defect is therefore structural to the interstitial index rather than to
+identity return. `HardwareTimingInterstitialSpans` states its premise in its own
+class comment -- *"Production replaying the run does not reproduce those
+submissions"* -- and a single `RecordedOrdinalSpan(first, last)` per boundary per
+kind can only express *skip this contiguous run*. At the pre-run interstitial the
+premise holds exactly and the mechanism works: production submits nothing there,
+and its ledger opens at `kos_decompression_queue#11` / `kos_module_queue#6`
+where the recording resumes. At a special-stage return the premise fails:
+production submits the level reload *inside* the recorded span, interleaved
+between recorded work it does not submit (`16..20` skipped, `21..24` submitted,
+`25..31` skipped). The assertion is correct and is reporting this honestly.
+
+Two ways out, and they are not equivalent:
+
+1. **Implement the missing loads.** If the engine submitted the special-stage
+   exit art, its ledger would reach `21..24` on its own and no contract change
+   would be needed for that block. This is ordinary engine work under rule 1,
+   with no new authority. It does not by itself prove the boundary is then
+   clean -- the trailing `25..31` block would still have to be either submitted
+   or expressible as a span -- but it removes the interleaving that makes the
+   current shape inexpressible.
+2. **Generalise the span to a set.** Permitting production submissions inside a
+   recorded interstitial requires deciding *which* recorded ordinals production's
+   own submissions correspond to, and the only available discriminator is the
+   recorded submission fingerprint. That is recorded data selecting production
+   numbering, which is a widening of what this contract permits, not a change of
+   how it is implemented. **It is a design decision for the user and is not taken
+   here.**
+
+The open gap in the preceding section remains open and unobserved: no fixture has
+yet shown an S3K KosM ordinal one ahead of the recording for the reason that
+section describes.
+
+Two tests in `TestHardwareTimingService` are red on `189acc824` independently of
+this: `anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow` and
+`recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`. Both sit
+on `releaseUnrepresentedIdentity`, so they are worth clearing before anyone
+builds on that method.
+
 ### Historical pre-v5 wire format (not live)
 
 The schema-1/schema-2 grammar, selectors, and recorder stamps described later
