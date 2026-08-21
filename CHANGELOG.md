@@ -1775,6 +1775,11 @@ All notable changes to the OpenGGF project are documented in this file.
   segment replaying clean on every axis. The chain test's own javadoc deferred
   this until the frontier cleared segment 1; it now stops in segment 11.
 
+### Changed
+
+- Trace reports assert on both builders that their per-group error counts account for the
+  published total, reading the published values rather than recomputing them.
+
 ## Unreleased
 - Fix(s3k): blue-sphere special-stage ring collection now plays the ROM's
   `sfx_RingRight` sound directly instead of using gameplay ring-channel alternation.

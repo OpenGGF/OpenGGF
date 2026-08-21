@@ -584,6 +584,11 @@ public abstract class AbstractTraceReplayTest {
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
+            // Asserted here rather than inside writeReport: the finally block below
+            // rewrites the report best-effort and only swallows RuntimeException, so
+            // an AssertionError thrown from there would replace the real divergence
+            // failure instead of adding to it.
+            TraceReportWriter.assertGroupAccountingHolds(report);
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {

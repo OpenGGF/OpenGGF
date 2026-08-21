@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-one rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-two rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -54,6 +54,7 @@ that looks like a real result.
 | 69 | Check that your two numbers are the same kind of measurement before differencing them |
 | 70 | Review the artifact, not the account of it; a rejected candidate never rides a merged branch |
 | 71 | Validate a classifier against a hand-verified control, or discard its output |
+| 72 | Prove a new assertion fires; never place one where a `finally` can swallow the real failure |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1902,3 +1903,21 @@ patching the heuristic — a heuristic that needed patching once will be wrong s
 have no control for. And say plainly when a population is sized but unclassified: "621
 sites, 223 candidates, 2 confirmed, the rest needs reading" is a result; a ranked list you
 cannot vouch for is not.
+
+## Seventy-second rule: prove an assertion fires before trusting it
+
+An accounting assertion that has never failed is indistinguishable from one that cannot
+fail. Before relying on a new invariant, break it deliberately — invert the comparison,
+add one to a term — and confirm it fires on a real run. One round did this and found its
+assertion live; without the check it would have been an instrument that reads green and
+tests nothing, which is the same failure as an uninstalled probe.
+
+**Where the assertion runs matters as much as what it says.** The tidy site for a check is
+often a `writeReport`-style method called from a `finally`. If that `finally` catches only
+`RuntimeException`, an `AssertionError` thrown there **replaces the exception from the try
+block** — so a broken invariant would delete the real failure and report itself instead.
+Put the check where it cannot displace the diagnosis it is meant to support, and say why
+in a comment.
+
+**Share the arithmetic, not a second copy of it.** An invariant that recomputes what a
+report publishes can drift from it; one that reads exactly the published values cannot.

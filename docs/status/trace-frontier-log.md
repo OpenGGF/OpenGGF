@@ -104464,3 +104464,36 @@ Two hazards for whoever does that reading, both flagged in the scoping and both 
 - **Cancelling partners.** An object one dispatch early everywhere may have had a neighbouring
   value fitted around it, so a correct fix can measure worse before it measures better. A fix
   round should expect a red arm that is progress.
+
+## 2026-08-21 — standalone reports assert the same group accounting as the chain reports
+
+No frontier moved. The chain reports gained a published per-group error breakdown with an
+assertion that the groups plus the bootstrap tally account for the flat `error_count` exactly;
+this round asserts the same invariant on the standalone path, where `DivergenceReport.toJson`
+had been publishing the breakdown for a long time without anything checking it added up.
+
+`DivergenceReport` now exposes `errorCountByVerificationGroups()` (the sum of exactly the
+per-group `error_count` values it publishes, with bootstrap folded into PHYSICS the way
+`appendVerificationGroupJson` folds it) and `publishedErrorCount()`. `TraceReportWriter`
+holds the shared assertion; the special-stage bases get it through
+`writeSpecialStageReport`, and `AbstractTraceReplayTest` calls it at report-build time
+rather than inside `writeReport` — `writeReport` also runs from a `finally` that only
+swallows `RuntimeException`, so an `AssertionError` raised there would replace the real
+divergence failure instead of adding to it.
+
+Measured at `5f09e7a3e`, both arms in their own worktree, `-Dmse=off`, all three ROM paths,
+JDK 21:
+
+- `-Ptrace-replay`: 800 tests, 6 failures in both arms, identical failing-class sets, and the
+  per-test failure text identical except for two stack-frame line numbers in
+  `AbstractTraceReplayTest` that moved because five lines were inserted above them. Neither
+  arm truncated (same `Tests run: 0,` class list, same denominator).
+- `-Pguards`: 500 tests, 0 failures.
+- Negative control: inverting the assertion to `publishedErrorCount() + 1` makes it fire on
+  the standalone path, so it is live and not vacuous.
+
+Default suite, 15194 tests: fix 54F/67E twice, control 53F/67E then 64F/67E. The control's
+own two runs differ by 13 classes, so the counts are not comparable directly. Three
+`TestGameLoopSpecialStageRewindDebugBoundary` methods are stable red in the fix worktree and
+stable green in the control worktree; reverting the patch **in the fix worktree** leaves all
+three red at 54F/67E, so they belong to that worktree's class order, not to this change.
