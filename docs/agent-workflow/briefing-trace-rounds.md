@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-six rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-eight rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -113,6 +113,8 @@ that looks like a real result.
 | 94 | A one-directional deficit metric | An over-count larger than the shortfall, invisible; the wrong defect named |
 | 95 | A `FixBugs` block read as a gate | Correct retail code reported as a defect; both arms did the work |
 | 96 | A reading that lets the round end | Findings and blockers both stop the check that would overturn them |
+| 97 | A control arm pinned to `origin/develop` | Two arms built from different trees, reported as reach-proven-equal |
+| 98 | A class measured with `-Dtest=` under a profile that would not select it | A green read as matrix coverage, from an arm that never ran the class |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2506,3 +2508,38 @@ whether you have ruled it out or merely not looked.
 was actually true is that using it would have defeated an engine invariant deliberately built to
 match the ROM's allocation order — the very property the investigation exists to measure. That
 is not a blocker, it is the shape of the correct fix arriving in a form nobody had scoped.
+
+## Ninety-seventh rule: pin both arms to a SHA, because the ref moves under you
+
+`origin/develop` is not a fixed point on this checkout. A lane pinning its control arm to that
+ref had it move **twice mid-run** while the lead merged other lanes' work, so the two arms were
+built from different trees while the report was about to claim reach proven equal. The added
+commits happened to be documentation-only, so no verdict was actually wrong — that is luck, not
+method.
+
+**Pin both arms to an explicit SHA and quote it in the report.** On a checkout with concurrent
+sessions this is the default, not a precaution for long runs.
+
+**The lead's merging is the mover.** Landing lanes' work promptly is right, and it is precisely
+what makes the ref unstable for everyone still measuring — so the fix belongs on the measuring
+side, not in slowing merges.
+
+## Ninety-eighth rule: `-Dtest=` silently overrides profile selection
+
+Running a single class with `-Dtest=` does not respect the profile's includes: the class runs
+even when the profile you passed would never have selected it. So a class can be measured green
+"under `-Ptrace-replay`" while living in a profile that arm never runs, and the result reads as
+covered when it is not.
+
+One round measured a landmark class that way and only discovered afterwards that the class
+belongs to a profile its matrix omitted entirely. Same family as the two-clocks trap: a selector
+that quietly widens what you think you measured.
+
+**Check which profile owns a class before quoting a per-class result as matrix coverage**, and
+name the profile you actually ran. If a landmark lives outside your matrix, either add its
+profile to the matrix or state plainly that the landmark is unmeasured by it.
+
+**And scope the claim to what moved.** In the same round the landmark closed in its standalone
+class while the chain that contains that zone never reaches it — the chain is blocked upstream
+by an entry-state divergence at its own frame zero. "The landmark is closed" is true of one
+class and false of the chain, and the distinction has to be in the sentence.
