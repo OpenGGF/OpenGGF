@@ -136,6 +136,7 @@ that looks like a real result.
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
+| 128 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
 | 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |

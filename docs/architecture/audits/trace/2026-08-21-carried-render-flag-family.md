@@ -241,3 +241,54 @@ at all -- they inherit its `preUpdateValid &&` prefix, which reads a missing
 snapshot as "off screen". Any of them judged on its own first pass with a
 setup-seeded bit has the same latent shape. That is a different question from
 this commission and wants its own round.
+
+
+---
+
+## The three Obj1F reds at `cf5373d00`: two were a missing frame-step call, one is a real orphan
+
+Commissioned as an inversion with a revert-first proof, and decided by the lead
+that replacements must assert through the object's real path rather than through
+reflection. The proof ran, and it changed the verdict on two of the three.
+
+**They were not encoding the old behaviour. They were never driven properly.**
+`3f0fd4a70` moved `Obj1F_FragmentFall`'s delete rule onto
+`isPreUpdateWithinRenderSpriteBounds`, which returns `preUpdateValid && ...`.
+A unit test that calls `platform.update(...)` directly never gets the frame-start
+snapshot `ObjectManager` supplies every frame, so `preUpdateValid` is false, the
+helper returns false, and the fragment is destroyed **unconditionally** whatever
+its position. Two of the three reds are that and nothing else. Adding
+`platform.snapshotPreUpdatePosition()` -- the object's own per-frame contract,
+already used a dozen times elsewhere in the same test class, so this is the real
+path and not more reflection -- makes both pass with their **original assertions
+unchanged**. No assertion was inverted; the harness was completed.
+
+**The revert-first proof, and what it says about each.** Reverting
+`CollapsingPlatformObjectInstance` to its pre-`3f0fd4a70` form in place (the file
+is otherwise untouched since, so the pre-image is exact) and rerunning:
+
+| test | vs pre-conversion class | vs current class | verdict |
+|---|---|---|---|
+| `...DeletesUsingFallingParentY` | **RED** | green | discriminates; repaired and kept |
+| `...UsesApproximateRenderHeight` | green | green | does **not** discriminate; repaired and kept, but it is not evidence for the conversion |
+| `...KeepsVerticalOnlyOffscreenParentForCpuSlotRefresh` | green | **RED** | a correct test of removed behaviour |
+
+Reporting the middle row matters as much as the first: a repaired test that passes
+against both trees proves nothing about the fix, and claiming the proof for it
+would be exactly the thing the proof exists to prevent.
+
+**The third stays red, with the reason written into the test.** It asserts the
+two-tick `verticalOnlyOffscreenTicks` grace that the conversion deleted on
+purpose. It cannot be repaired by supplying the snapshot, because it is green
+against the old class and red against the new one -- it is testing behaviour that
+no longer exists. A first attempt to rewrite it to the new contract failed on its
+own first tick, which is the tell that the expectation was being invented rather
+than derived. Deleting it would discard the only record of what the grace was
+for. It keeps its original assertions and carries a javadoc saying all of this.
+Red count for the class goes 2 failures + 1 error to 1 failure.
+
+**Generalisable.** A conversion that moves a decision onto manager-supplied
+per-frame state silently breaks every unit test that drives `update()` directly,
+and it breaks them in a way that reads exactly like a test encoding the old
+behaviour. Check whether the harness supplies the frame step before concluding
+that an assertion is stale.
