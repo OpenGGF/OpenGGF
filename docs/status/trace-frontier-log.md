@@ -102673,3 +102673,69 @@ the path would be the next fitted constant.
 
 Read the `$F4` handler in `off_845D8` and the waterfall child, and establish what invokes
 `AIZEndBoss_Reveal`. Only then is there a condition to give the engine.
+
+## 2026-08-21 — The emerge's termination condition, and it re-opens the total
+
+Round off `origin/develop` `389260bf9`. **Found, not fixed — nothing landed but this entry.**
+
+### The condition
+
+`AIZEndBoss_Emerge` never ends itself; its animation script does. The `$F4` byte that
+terminates `AniRaw_AIZEndBoss_Emerge` is a **script command**, dispatched by
+`Animate_RawNoSSTMultiDelay`'s `loc_845CC` through the `off_845D8` table
+(`sonic3k.asm:177587-177598`). `$F4` is `-12`; after `neg.b` the indexed jump
+`off_845D8-4(pc,d1.w)` lands on the third entry, `loc_84600`
+(`:177615-177620`):
+
+```
+loc_84600:
+        clr.b   anim_frame_timer(a0)
+        movea.l $34(a0),a1
+        jsr     (a1)
+        moveq   #-1,d2
+        rts
+```
+
+**So the condition is: the emerge ends when its animation script reaches `$F4`, which invokes
+the object's `$34` callback** — and `AIZEndBoss_StartEmerge` set that callback to
+`AIZEndBoss_Reveal` (`:138089`). It is a script terminator, not a timer and not a position.
+
+That is the structure the engine needs. The duration is then whatever the script takes, rather
+than a number anyone picks.
+
+### The duration that falls out — and it contradicts the inference chain
+
+`AniRaw_AIZEndBoss_Emerge` (`:139094-139108`) is **13 entries, every delay byte `0`**, then
+`$F4`. The frames alternate `$2B $2B $2B 0` three times over, then a final `0` — the flashing
+`$38` bit 6 drives, which is why the routine tests `mapping_frame == $2B`.
+
+With `Animate_RawNoSSTMultiDelay`'s `subq.b #1 / bpl`, a delay byte of `0` holds an entry for
+one frame. So the emerge runs **on the order of 13-14 frames** — the exact count depends on the
+`addq.w #2,d0`-before-read convention, which is not pinned here and should be before anyone
+uses a number.
+
+**The engine's measured emerge is 33 frames.** So the engine is roughly **twenty frames too
+long**, not thirty-three too short.
+
+### The total is re-opened, as instructed
+
+The previous entries inferred a ROM residual of 63 from the 184-frame defeat-to-capsule total,
+and from that a 66-frame ROM emerge. **A 13-14 frame emerge read out of the ROM's own script
+contradicts that**, and by the standing instruction the measured condition wins: the emerge is
+short, and the 63/66/184 chain is what must give.
+
+Consequences to carry forward:
+
+- **63 and 66 are dead.** Neither may be used. They were arithmetic from a total whose other
+  terms are now known to be wrong.
+- A ~20-frame-too-long engine emerge shifts the engine's later phases *later*, which makes its
+  residual *smaller* than the ROM's — directionally consistent with the measured 30, but the
+  magnitude no longer reconciles with 184, so at least one more term in that chain is wrong.
+- The two rejected post-defeat wait constants remain rejected; nothing here revives them.
+
+### Next
+
+Pin the entry-skip convention in `Animate_RawNoSSTMultiDelay` to get the exact script duration,
+then give the engine the **condition** — reveal on the script's `$F4` — rather than a frame
+count. Re-derive the defeat-to-capsule total afterwards from whatever the corrected phases
+produce; do not carry any number from the retracted chain into it.
