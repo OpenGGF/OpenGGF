@@ -107208,3 +107208,111 @@ Occupancy is still the right precondition for `object_state`, and it is still no
 comparison until the engine passes it. The order is: fix the missing-occupant bucket, re-measure
 with the probe (free), and only wire the comparison in when the count is small enough that the
 red set is reviewable. Landing it first would red 88 fixtures to report one already-known fact.
+
+## 2026-08-21 -- the Init-dispatch family LANDED; the HCZ landmark closes
+
+Branch `bugfix/ai-init-dispatch-pair`, base `3fbf0128c`. Six S3K badniks plus the S2 Octus
+now consume the ROM's routine-0 dispatch. Full rationale and ROM citations in `CHANGELOG.md`.
+
+### The landmark
+
+`TestS3kSonicTailsHczSegmentTraceReplay`: control **ERRORs** with
+`IllegalStateException: S3K KosM module FIFO is full`; fix arm is **green**. That tripwire
+throw was never an independent defect -- it was downstream of the MegaChopper dying a frame
+early. With the badnik killed on the ROM's frame the queue behaves.
+
+**It does not move the chain, and the entry above should not be read as saying so.** In
+`TestS3kSonicTailsCompleteEmeraldRunChain` the `hcz` segment diverges at **frame 0**
+(`y rom=0x0020 engine=0x0021`, 59070 errors) identically on both arms, so the chain never
+reaches frame 1434. The chain's `hcz` is blocked by a segment-entry hydration gap that is a
+frontier of its own.
+
+### Matrix
+
+Both arms in one worktree via `git reset --hard`, **both pinned to the same SHA**, all three
+ROMs.
+
+| profile | ctl | fix | classes | failing sets |
+|---|---|---|---|---|
+| `trace-replay` | 800 / 10F 0E | 800 / 10F 0E | IDENTICAL (157) | IDENTICAL, full messages |
+| `trace-replay-r7` | 108 / 85F 10E | 108 / 85F 10E | IDENTICAL (109) | IDENTICAL, 168 distinct full messages |
+| `guards` | 500 / 0F 0E | 500 / 0F 0E | IDENTICAL (64) | clean both |
+| `trace-segments` | 70 / 52F 8E | 70 / 52F **7E** | IDENTICAL (69) | one difference: the landmark class, red -> green |
+| `default` | 15194 / 53F 64E | 15194 / 52F 67E | IDENTICAL (1926) | differences all flakes, established below |
+
+`Tests run: 0,` counts identical on every profile.
+
+**Every default-profile difference was established as a flake by isolated re-run, not
+asserted.** `TestCompleteRunAudioCaptureStore`, `TestCompleteRunAudioComparator` and
+`TestModeTracePickerLaunchStatus` failed on the *control* arm and pass 96/96 in isolation on
+the control base. `TestGameLoopSpecialStageEntryPresentation` (3 methods) failed on the fix
+arm in one run and not the other, with only a test-only hook between the two fix arms, and
+passes 9/9 in isolation. This is the reused-fork/ambient-global-state flake family already
+recorded in this log.
+
+### Two process errors of mine, recorded because either would have produced a wrong verdict
+
+**A moving control base.** The first matrix reset the control arm to `origin/develop`, which
+moved twice mid-run (`3fbf0128c` -> `5e534431e` -> `f1b3b4757`) because of the concurrent
+session on this checkout. The added commits were docs-only so behaviour was unaffected, but
+the arms were being built from different trees while being reported as reach-proven-equal.
+**Pin both arms to an explicit SHA; never to a branch ref.**
+
+**A selector that silently widened the reach.** `-Dtest=<class>` overrides profile selection.
+The landmark class lives in `trace-segments`, a profile the first matrix did not run at all,
+and the `-Dtest=` measurement that found it green therefore came from *outside* the matrix
+without saying so. A green from `-Dtest=` is not evidence the class is covered by any profile
+you ran. Check the profile's own class list.
+
+### The Octus is NOT part of this family's justification
+
+Measured, four arms, one worktree, `TestS2OozLevelSelectTraceReplay`: control **green**;
+Init dispatch only **green**; ROM-correct hover seed 60 alone **red** at frame 6639; Init +
+seed 60 **red** at 6639 with an identical message. So the Init dispatch is measurement-neutral
+there and the seed carries the whole regression. `Obj4A_MoveUp` and `Obj4A_MoveDown` were
+also corrected and also do not restore the bounce.
+
+**Why it is neutral, which is the transferable part:** the Octus enters an *indefinite*
+`WAIT_FOR_PLAYER`, and an indefinite wait absorbs an extra init frame. **The Init dispatch can
+only shift phase for objects whose behaviour starts immediately.** That is the discriminator
+for which members of this family the fix can bite at all.
+
+The hover seed stays at the fitted **59** with a `KNOWN FITTED CONSTANT` comment naming the
+ROM literal, why it is wrong, and all three candidates eliminated as its partner. Its real
+partner is still unattributed; a 2026-07-01 entry records the engine's Octus entering
+`MOVING_DOWN` one object pass **late**, i.e. the opposite sign to the MegaChopper.
+
+### Still open, deliberately
+
+- **MonkeyDude is a partial member.** Its arm-root gate flips and continues in the same frame,
+  so it never consumed the `Obj_WaitOffscreen` release dispatch either. Both frames exist and
+  both must. Held for its own measurement rather than folded into this matrix.
+- **Bosses were never surveyed.** The survey covered `badniks/` only. `AizEndBossInstance`
+  models its routine index correctly (`ROUTINE_INIT`, one `case` per frame,
+  `AizEndBossInstance.java:63,207,350-359`), but that is one boss, not the directory.
+
+## 2026-08-21 -- harness assumption: one `update()` does not reach the object's routine
+
+**Its own finding, because more classes will meet it as the Init family completes.**
+
+Several unit tests construct an object and call `update()` once, expecting the object's
+routine to run. That assumption was already wrong before this round -- the landed
+`Obj_WaitOffscreen` release model consumes a dispatch without running the body -- and the
+routine-0 Init dispatch consumes a second one. So a freshly constructed gated badnik now needs
+**two** dispatches before its main routine runs, and a test that drives one sees nothing.
+
+Confirmed pre-existing at HEAD in a throwaway worktree, identical failures and messages:
+`TestRhinobotBadnikInstance.waitOffscreenUsesRomPlaceholderWidth:32`,
+`TestS3kBadnikChildGraphRewind.caterkillerJrHeadRestoresBodySegmentListToRestoredChildren:1344`,
+`TestS3kBadnikChildGraphRewind.mantisChildRelinksToRestoredParentAndParentSlot:1075`. The
+Mantis case is the tell: that class was never touched by this work and fails identically, which
+is what distinguishes a shared harness assumption from a per-class regression.
+
+**The correct remedy is a setup-only release hook, never an assertion change** -- the
+`ClamerObjectInstance:931` precedent, and the shape used here for
+`MegaChopperBadnikInstance.testReleaseOffscreenWait()` (which also clears the init dispatch),
+`SparkleBadnikInstance`, and `OctusBadnikInstance.testRunInitDispatch()`. The last of those is
+worth copying: `TestS2OozBadnikParity.octusInitializesFloorAnchorFromNegativeFloorDistance`
+asserted the floor anchor at construction, which `Obj4A_Init` puts on the routine-0 dispatch;
+running the dispatch in setup left every assertion, and the mocked `checkFloorDist` argument,
+untouched and green.

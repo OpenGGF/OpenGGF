@@ -141,6 +141,10 @@ class TestS2OozBadnikParity {
                     .thenReturn(new TerrainCheckResult(-6, (byte) 0, 0x123));
 
             OctusBadnikInstance octus = new OctusBadnikInstance(spawn(Sonic2ObjectIds.OCTUS, 0x240, 0x190));
+            // Obj4A_Init does the ObjCheckFloorDist anchor on its own routine-0
+            // dispatch (s2.asm:60380-60401), not at spawn. Setup only; the
+            // assertions below are unchanged.
+            octus.testRunInitDispatch(null);
 
             assertEquals(0x190 - 6, getInt(octus, "startY"));
             assertEquals(0x190 - 6, getInt(octus, "currentY"));

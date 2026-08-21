@@ -54,6 +54,11 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
     private boolean bodySpawned;
     /** ROM loc_85B02 restores the saved operation pointer exactly once. */
     private boolean waitOffscreenReleased;
+    /**
+     * routine 0. loc_85B02 returns without dispatching and leaves routine at 0, so
+     * the first dispatch after the gate releases runs CaterKillerJr_Init.
+     */
+    private boolean initPending = true;
 
     public CaterkillerJrHeadInstance(ObjectSpawn spawn) {
         super(spawn, "CaterKillerJr",
@@ -83,6 +88,24 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        if (initPending) {
+            // CaterKillerJr_Init (sonic3k.asm:183338-183356) calls
+            // SetUp_ObjAttributes (tail `addq.b #2,routine(a0)` / `rts`,
+            // sonic3k.asm:176901-176919), sets x_vel = -$100, then creates the
+            // body segments with CreateChild3_NormalRepeated. Unlike the other
+            // badniks in this family it DOES fall through to a second label,
+            // CaterKillerJr_StartSlowSwing, which overwrites routine with 4 and
+            // primes the swing ($39 = 3, $3E = y_vel = $80, $40 = 8, $38 bit 0
+            // clear) — but that label ends in `rts` too. So the field writes and
+            // the child creation all belong to the Init dispatch, while
+            // CaterKillerJr_SlowSwing (Swing_UpAndDown_Count + MoveSprite2) does
+            // not run until the following dispatch. The constructor already
+            // applies the x_vel and StartSlowSwing field writes.
+            initPending = false;
+            spawnBodySegments();
+            return;
+        }
+
         if (!bodySpawned) spawnBodySegments();
 
         boolean shouldMove = switch (phase) {
@@ -100,6 +123,9 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
         // Obj_WaitOffscreen replaces the operation before SetUp_ObjAttributes
         // writes collision_flags. The parked placeholder therefore cannot hurt
         // a player that reaches its coordinates while it is vertically hidden.
+        // It also stays zero for the whole Init dispatch, because the frame's
+        // touch scan runs at the player slot before this object's routine:
+        // bodySpawned only turns true partway through that dispatch.
         return bodySpawned ? super.getCollisionFlags() : 0;
     }
 

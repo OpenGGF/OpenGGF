@@ -2,6 +2,40 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
+### Fixed
+- **Six S3K badniks and the S2 Octus now consume the ROM's routine-0 Init dispatch.** In these
+  ROMs an object's routine 0 is its Init, and its tail is `addq.b #2,routine(a0)` followed by
+  `rts` (`docs/skdisasm/sonic3k.asm:176901-176919`) — it does **not** fall through to the main
+  routine. The ROM therefore burns one whole dispatch in which the object neither moves nor
+  runs its collision check, and the main behaviour begins on the following frame. The engine
+  has no notion of a routine counter for badniks, so consuming that dispatch is a per-class
+  convention, hand-rolled in two incompatible idioms; a survey of 29 S3K badnik classes found
+  23 implementing it and 6 not. Those 6 ran one frame ahead of the ROM for their entire lives.
+
+  Fixed in `MegaChopperBadnikInstance` (`sonic3k.asm:184253`), `BlastoidBadnikInstance`
+  (`:183586-183588`), `SparkleBadnikInstance` (`:186074-186076`), `RhinobotBadnikInstance`
+  (`:182389+`, whose Init work was hoisted into the constructor), `MonkeyDudeBadnikInstance`
+  (`:182710+`) and `CaterkillerJrHeadInstance` (`:183338-183356`). The Caterkiller is
+  deliberately modelled differently: its Init *does* fall through, into
+  `CaterKillerJr_StartSlowSwing`, which writes `routine = 4` and returns — so the field writes
+  and the child creation belong to the Init dispatch while the swing motion starts next frame.
+  Treating it like the other five would have introduced an error while removing one.
+
+  The S2 Octus's `Obj4A_Init` (`docs/s2disasm/s2.asm:60380-60401`) is a *falling* init: it runs
+  `ObjectMoveAndFall` and `ObjCheckFloorDist` on every dispatch and advances the routine only on
+  the frame it lands, then still returns. The engine did all of it instantaneously in the
+  constructor. Also corrected in the same routine: `Obj4A_MoveUp` branches to the hover
+  transition **without** calling `ObjectMove` and leaves `y_vel` at its incremented value
+  (`s2.asm:60450-60458`), and `Obj4A_MoveDown` compares against `octus_start_position` **before**
+  moving and never writes `y_pos` back to it (`s2.asm:60471-60483`); the engine moved first in
+  both and snapped the position in the second.
+
+  Closes `TestS3kSonicTailsHczSegmentTraceReplay`, which previously **errored** on an engine
+  KosM queue tripwire. That throw turns out to have been downstream of the early kill rather
+  than an independent defect: with the badnik dying on the ROM's frame, the queue behaves and
+  the class is green. Note this does not move the chain, whose `hcz` segment is blocked from
+  frame 0 by a separate entry-state divergence.
+
 ### Added
 - **The S2 tornado recordings' ROM object state is now compared instead of only parsed.**
   `s2_tornado_state` carries ObjB2's SST on every row of the SCZ and WFZ fixtures and was an
