@@ -114105,3 +114105,75 @@ Four death-restart arms fire in the run, at `centre=(0B8F,03F8)`, `(0581,0627)`,
 I have not established which segments the first three fall in, nor whether they share this
 cause, and I am not claiming they do -- if they do, the finding is much larger than one
 zone's boss platform, and if they do not, this line exists so nobody re-opens it blind.
+
+## 2026-08-21 -- S1 Final Zone: the origin is row 841 in X, not row 1161 in Y
+
+Measured at `8d1dfcca7`, printing **velocity alongside position rather than deriving one
+from the other**, and walking every row. That is what turned the previous entry's answer
+over.
+
+### Correction to the previous entry
+
+The previous entry reported the fall starting at **row 1161**, the first `y` divergence, and
+that figure is correct as stated -- `y` and `y_speed` match the ROM exactly through row
+1160. **But it is not the origin.** Walking `x` in the same pass shows the engine already
+~20px right of the ROM by row 1153, and the first `x` divergence is **row 841** -- 320 rows
+earlier.
+
+This is the "first reported error is not the cause" pattern one level down: I walked the
+series I was asked about, found its true first row, and the actual origin was in a
+*different field* that nobody had walked.
+
+### Row 841: a horizontal collision response, mid-jump
+
+```
+row 840  y=[0578/0578] ysp=[-0198/-0198] air=[1/1] roll=[1/1] x=[2523/2523] xsp=[0x01D2/0x01D2]
+row 841  y=[0576/0576] ysp=[-0160/-0160] air=[1/1] roll=[1/1] x=[2525/2525] xsp=[-0300/0x01DB]
+row 842  y=[0575/0575] ysp=[-0128/-0128] air=[1/1] roll=[1/1] x=[2522/2525] xsp=[-02D0/0x0000]
+```
+
+At row 841, airborne with `y` and `y_speed` **identical on both sides**, the ROM's
+`x_speed` reverses from `+0x01D2` to **`-0x0300`** -- a hard leftward rebound -- while the
+engine continues `+0x01DB` and then drops to **zero**. The ROM's Sonic bounces off something
+at `x = 0x2525` and travels left, decaying `-0300 -02D0 -02A2 -0275 -024A -0220`; the engine
+stops dead and stays pinned at `0x2525`.
+
+**Neither side's vertical motion is touched**, which is why a `y`-only walk cannot see this.
+
+### Row 1161 is a consequence, and it is none of the three candidates
+
+By row 1161 the accumulated `x` gap is ~21px (`0x24FD` against `0x2512`), and the engine
+then gets an interaction the ROM does not:
+
+```
+row 1160  y=[0598/0598] ysp=[-05A0/-05A0] roll=[1/1] xsp=[-00F4/-00F4]
+row 1161  y=[0593/058E] ysp=[-0568/-0700] roll=[1/0] xsp=[-00DC/0x0000]
+```
+
+The engine's `y_speed` goes **-05A0 -> -0700**: it *gains* 0x160 of upward velocity. That is
+**not** gravity applied twice (which would move it toward zero faster, not further negative)
+and **not** the same impulse applied twice (0x680 is not 0x160). It is a **fresh launch**,
+with `x_speed` zeroed and `rolling` cleared at the same instant -- the signature of an object
+contact, not of a jump.
+
+So of the three candidates -- extra impulse, doubled gravity, carry released differently --
+**none is the defect.** The row-1161 event is the engine, standing ~21px from where the ROM
+is, contacting something the ROM never touches. Slots 41-44 all hold cylinders (`0x84`), so
+being 21px out is easily enough to meet a different one.
+
+**Printing velocity beside position is what settled it.** From position alone the row-1161
+step is "the engine moved twice as far", which reads as doubled gravity immediately. The
+velocity says it gained upward speed, which gravity cannot do.
+
+### What the next round should ask
+
+**What does the ROM's Sonic bounce off at `x = 0x2525`, airborne, at row 841, that gives
+`x_speed = -0x300`?** The engine treats the same contact as a dead stop. `EggmanCylinder`
+calls `SolidObject` with a `64/2 + sonic_solid_width` half-width and `192/2` / `194/2`
+heights (`docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm`,
+`EggmanCylinder_UpdatePos` `.calcFloorFrame`), so a cylinder side-wall is the first thing to
+check -- but the `-0x300` rebound is not what a plain `SolidObject` wall push produces, and
+that discrepancy is the question rather than an answer.
+
+Unchanged from the previous entry: the other three death arms remain coordinates only, with
+segments and shared cause both unestablished.
