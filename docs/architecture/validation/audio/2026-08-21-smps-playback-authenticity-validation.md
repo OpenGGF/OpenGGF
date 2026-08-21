@@ -35,7 +35,7 @@ locked-on S3K ROM properties.
 
 ### Focused playback gates
 
-- Every changed or added test class: 40 classes, 482 tests, 0 failures,
+- Final merged changed-test selection: 44 classes, 567 tests, 0 failures,
   0 errors, 0 skips.
 - Broad audio regression selection: 80 classes, 687 tests, 0 failures,
   0 errors, 1 existing skip.
@@ -54,14 +54,14 @@ Both sides started from empty `target/` directories and the same upstream
 | Tree | Surefire summary | Unique failing/error methods |
 |---|---:|---:|
 | `develop` | 15,194 tests; 52 failures; 67 errors; 18 skips | 119 |
-| playback branch | 15,274 tests; 54 failures; 64 errors; 18 skips | 118 |
+| merged playback tree | 15,274 tests; 53 failures; 64 errors; 18 skips | 117 |
 
 The playback branch removes three real-provider special-stage errors by making
-that test's Sonic 2 ROM dependency explicit. Its two feature-only full-suite
-failures are in unchanged playback-overlay and CNZ hover-fan tests; both pass
-when rerun directly. The full suite is already order-sensitive on `develop`
-(repeated unchanged runs produce different failing method sets), so those two
-are not attributable to the audio implementation. No audio-focused test is
+that test's Sonic 2 ROM dependency explicit. Its sole feature-only full-suite
+failure is in an unchanged MHZ mushroom-parachute test and passes when rerun
+directly. The full suite is already order-sensitive on `develop` (repeated
+unchanged runs produce different failing method sets), so that failure is not
+attributable to the audio implementation. No changed or audio-focused test is
 red.
 
 ## Limits and follow-up
