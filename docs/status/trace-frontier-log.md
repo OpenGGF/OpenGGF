@@ -113795,3 +113795,78 @@ third firing at 952 is gone.
 `Sonic1CollapsingFloorObjectInstance`, `Sonic1CollapsingLedgeObjectInstance` and
 `IczSnowPileObjectInstance` carry an equivalent under a different name. Only the
 generator was changed here; the others need their own controls.
+
+## 2026-08-21 -- S1 chain segment 33 (Final Zone): a RE-ENTRY, not the title-card stall
+
+Measured at `b480ca4b8`. `TestS1CompleteEmeraldRunChain` reproduces in **15.8 s**, so this
+abort is cheap to iterate on:
+
+```
+segment 33 lost production ownership before source closure
+  (mode=TITLE_CARD, level=LevelIdentity[loadGeneration=24, progressionZone=6,
+   romZone=5, act=0], BK2 cursor=210396)
+```
+
+**Segment 33 is the Final Zone**, not Scrap Brain 3. The manifest dir names are
+RAM-detected: `lz4` (zone 1 act 4) is SBZ3 and `sbz3` (zone 5 act 3) is FZ.
+`TracePlaybackProfile.resolveRecordedLevel(5, 3)` maps to progression `(6, 0)`, which is
+exactly the reported identity.
+
+### It is not the title-card mechanism, and the check that settles it is cheap
+
+Two title-card stalls were fixed earlier the same day. **This is neither.** Probed at
+`failSourceOwnership` -- a site whose reachability is guaranteed by the abort message it
+produces, so its firing needs no separate control:
+
+```
+seg=33 kind=level mode=TITLE_CARD cursor=210396
+currentLevelGeneration=23 observedGeneration=24
+matchesLevel=true  segment(zoneId=5 act=3)  inLevelAdvances=[]
+```
+
+**`matchesLevel=true`** -- the identity is correct. The ownership predicate fails on its
+*first* conjunct, `observation.mode() == GameMode.LEVEL`, so identity and generation are
+never even consulted; the identity in the message is context, not cause. And the generation
+moved **23 -> 24**: the engine re-loaded the Final Zone it was already in, and is showing
+that reload's title card.
+
+**So this is a re-entry at the same identity on a new load generation** -- the shape the
+S2 ARZ2 abort turned out to be, where `TITLE_CARD` was a symptom of re-entry rather than
+the defect. Checking that before assuming the title card owns it cost one probe and ruled
+out the two prior mechanisms.
+
+### But unlike the S2 case, nothing dies
+
+- **The ROM never leaves normal gameplay.** `player_routine` is `02` for all **5086** rows
+  and `player_present` is 1 for all of them. No death, no hurt routine, no restart.
+- **Neither does the engine.** A probe on `AbstractPlayableSprite.setDead(true)` wrote
+  **nothing at all** across the whole run, while the `failSourceOwnership` probe in the
+  same run and same working directory did write -- so the file channel is proven and the
+  silence is a controlled zero, not an unproven one.
+
+The bottom kill plane is also not implicated: `limitbtm1/2` is `0x0510` for the whole
+segment, S1's kill threshold is `v_limitbtm2 + 224` = `0x05F0`, and the ROM's deepest point
+in the entire segment is `0x05B1` at row 207 -- 63px of margin, approached again around
+rows 1344-1360 and survived.
+
+**So the FZ reload has a cause that is neither a death nor a boundary kill.**
+
+### Where the next round should look, and the contradiction that points there
+
+Two of my own measurements disagreed, which is what located the gap. The observation
+reports generation 24 against the coordinator's 23, yet instrumenting
+`TraceSessionLauncher` showed:
+
+- `beforeRunLevelLoadPlaybackActivationIfActive` entered **30** times, its
+  `runLevelLoads().observeLoaded(level)` receipt empty **every** time, and
+- `runLevelLoadGeneration` **never changing** from the value assigned once at launch.
+
+Both cannot hold if the coordinator's observations come from that launcher. They do not:
+`AbstractRunChainTest` **builds its own coordinator and driver loop beside the launcher**
+and calls a different `completePostProduction` overload -- the property the
+`trace-replay-bug-fixing` skill already documents, and the reason a visual-only defect can
+stay green there. **My instrumentation was in a path this test does not use.**
+
+So the next round's first move is to instrument the chain test's *own* observation
+construction rather than the launcher's, and find what advances the generation there. The
+question to answer is narrow: **what re-loads the Final Zone, on a run where nothing dies?**
