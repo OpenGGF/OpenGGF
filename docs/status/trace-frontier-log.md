@@ -113195,7 +113195,6 @@ longer excluded by absence-of-arithmetic either. Whoever reads that window shoul
 keep it in view without going looking for it -- which is exactly the discipline
 that has now killed four obvious shapes in a row.
 
-<<<<<<< HEAD
 ## LBZ 7028 -> 4592: the Flybot767's two wait arms used two different predicates
 
 Measured at `078593625`, matched worktree pair.
@@ -113223,7 +113222,6 @@ tests) messages identical; `-Pguards` 500/0; `TestS3kFlybot767Badnik` 13/0.
 
 Ten further sites carry the same wrong helper, are ROM-correct to change, and are **neutral on
 every trace** -- listed in the audit, deliberately not landed.
-=======
 ## 2026-08-21 -- The +4 is in the ROM, explicitly: Tails-as-Player_1 spawns 4px lower
 
 Branch `bugfix/ai-s3k-transition-window-r7`, based on `develop` at `a83c0f55c`.
@@ -113324,4 +113322,3 @@ One fix-arm sweep was **discarded, not quoted**: it reported 800/4/29 after the
 worktree was recompiled mid-run. Re-run untouched it reproduced the control
 exactly, confirming all 29 errors were the recompile and none were the change.
 That is the third measurement discarded for this reason today.
->>>>>>> 30844f9d7
