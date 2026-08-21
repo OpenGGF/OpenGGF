@@ -111099,3 +111099,86 @@ advice — establish persistence per object — is unchanged, and the bullet say
 acted on it can tell whether their conclusion still holds. **My BossExplosion round used only
 the density reading, so the retraction costs it nothing: 511 = 511 never rested on the phase
 premise.**
+## 2026-08-21 -- SURVEY: the cross-object install gap needs a fourth question
+
+Commissioned as the last open piece of the rule-107/108 class boundary. Measured at
+`0fd7b7811`. **Headline first, as asked: rule 108's Q2 does not transfer, and it fails in the
+dangerous direction -- it calls cross-object installs members when most of them are not.**
+
+### Why Q2 does not transfer
+
+Q2 asks where the ROM writes the selector, and treats "not inside `Touch_Response`" as meaning
+the target's dispatch has already happened this frame. For a **same-object** install those two
+things are the same fact: a routine writing into its own `(a0)` is necessarily downstream of its
+own head read. For a **cross-object** install they come apart. The parent's write is never in
+`Touch_Response`, so Q2 says "member" every time, but whether the child's dispatch has already
+run this frame is not a property of the write site at all -- it is a property of **slot order**.
+
+**Q4, for cross-object installs only: is the target's slot before or after the writer's?**
+
+- target slot **after** the writer -> the ROM's write is seen by the target's dispatch on the
+  same frame. The engine updates children inside the parent's `update()`, so it agrees by
+  construction. **Not a member.**
+- target slot **before** the writer -> the target already ran this frame, so the ROM's write
+  first takes effect on N+1 while the engine runs it on N. **Member.**
+
+### And Q4 is not always answerable by reading
+
+Slot order is decided by which allocator created the child:
+
+| allocator | slot | verdict |
+|---|---|---|
+| `AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) | scans from `a0` forward -- **always after** the parent | settled by reading: not a member |
+| `AllocateObject` (`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) | scans from the **start** of the dynamic table, taking the first free slot | may be before *or* after the parent, depending on live table occupancy |
+
+So for plain-`AllocateObject` children, **membership is a runtime property, not a static one**,
+and can differ between two runs of the same object depending on what else is loaded. That is a
+strictly harder case than anything in the same-object population, where reading always settles
+it.
+
+### The population
+
+Swept by role, not by name: every assignment to a `routine`/`phase`/`step` selector through a
+receiver that is not this object's own state, then filtered by the receiver's **declared type**
+(a name-only method expansion was tried first and discarded -- it matched any method sharing a
+name, e.g. a map's `clear()`, and produced 1366 sites in 362 files with no signal).
+
+**42 raw sites -> 1 true cross-object install, 4 folded-record classes, the rest not objects.**
+
+| shape | members | verdict |
+|---|---|---|
+| A. parent writes a live child `ObjectInstance`'s selector | `TornadoObjectInstance:849` (`thrusterFollowerChild.routineSecondary = 2`) | **not a member** -- see below |
+| B. folded state records stepped inline by the parent | `HczMinibossInstance` (rockets), `IczMinibossInstance` (shards, orbs), `LbzMinibossBoxRig` (pieces) | Q4 applies but the engine has no dispatch at all; unmeasured |
+| C. not objects | `MGZTopPlatformObjectInstance` (`PlayerGrabState`), `LbzTubeElevatorInstance` (`PlayerTubeState`), `LostRingObjectInstance` (a spawn parameter), `Sonic1LevelEventManager` (rewind restore), `PlcTimingEvidenceTool` | ruled out |
+
+**Shape A resolves to a non-member by reading.** S2's `LoadChildObject` calls
+`AllocateObjectAfterCurrent` (`s2.asm:73012-73014`), so the Tornado's thruster child always sits
+after the parent and the ROM runs the installed routine that same frame -- which is what the
+engine does.
+
+`Sonic1BossFireInstance:118-119` was a **false positive and is retracted**: it seeds a
+brand-new object before that object is added, which is a spawn, not an in-place change on an
+occupied slot (rule 68, inverted).
+
+**The manager -> object direction is empty.** None of the four level-event managers writes an
+object's selector.
+
+### The actual frontier, and it is forward-looking
+
+Nine of S3K's ten child-creation helpers use `AllocateObjectAfterCurrent`, so the whole
+cross-object direction is **structurally safe by construction**. The exception is
+**`CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), which uses plain `AllocateObject`** --
+its children can land in a slot before the parent. Four ROM call sites:
+`sonic3k.asm:141453`, `:180637`, `:197138`, `:197382`.
+
+The first is `HCZEndBossBomb_ResetOrSpawn` (`:141448-141457`) -- **inside the primary
+AIZ -> HCZ release slice**, and **not implemented in the engine yet** (no `HczEndBossBomb` or
+`ExtraBomb` class exists). So this is not a defect to fix; it is a constraint to hand whoever
+implements it, before the same-frame assumption gets baked in.
+
+### Verdict
+
+The cross-object install gap contains **zero confirmed members and zero measurable candidates
+today**. It was worth surveying for the boundary rather than the population: the direction is
+safe by construction except through one allocator, and that one allocator makes membership
+runtime-dependent rather than readable.
