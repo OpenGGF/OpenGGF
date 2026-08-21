@@ -114044,3 +114044,64 @@ one-frame offset in the delete path; the two have to come out together.
 
 Detail appended to
 [2026-08-21-carried-render-flag-family.md](../architecture/audits/trace/2026-08-21-carried-render-flag-family.md).
+## 2026-08-21 -- S1 Final Zone: the fall starts at row 1161, on the FZ cylinder's launch
+
+Measured at `d9c4b047e`. **Where the divergence starts, walked rather than sampled**, per the
+stall hazard in a falling series.
+
+### The walk
+
+Instrumented every row's `y` comparison -- match or mismatch -- rather than only the
+divergent ones, so a repeated value could not hide an offset. The chain's last comparator
+covers **rows 0-1323** (1324 rows, exactly the abort cursor's offset into the segment) and
+carries **162** `y` mismatches. **`y` matches the ROM exactly for rows 0-1160.**
+
+```
+first y divergence   row 1161   exp=0x0593  act=0x058E   (engine 5px higher)
+                     row 1165   exp=0x057E  act=0x0573
+                     row 1175   exp=0x055B  act=0x053F   (28px and widening)
+```
+
+**The earlier `player_animation_id` first-error at row 354 is not the origin.** `y` matched
+for another 800 rows past it, so that one is a separate non-propagating divergence -- the
+comparator's lowest failing frame, not the cause, exactly as the skill warns.
+
+### What the ROM is doing there
+
+```
+row 1155  y=05AC ysp=0000 air=0 roll=0 anim=00 stand_on_obj=2A
+row 1156  y=05B1 ysp=F980 air=1 roll=1 anim=02 stand_on_obj=2A   <- launch
+row 1157  y=05AA ysp=F9B8
+...       ysp rises by 0x38 per row -- S1 gravity, free flight
+row 1161  y=0593 ysp=FA98                                        <- engine departs here
+```
+
+A single upward impulse of `y_speed = 0xF980` = **-0x680** at row 1156, then plain gravity.
+The engine reproduces the launch and the first five frames of flight **exactly**, then rises
+faster: from row 1160 (both `0x0598`) the ROM moves -5 and the engine -10.
+
+### The owner
+
+`stand_on_obj` is the raw SST byte, which in S1 is a **slot index, not an object id** -- so
+`0x2A` is slot 42. Resolved through the recorded `slot_dump`: **slot 42 holds object
+`0x84`**, and `0x84` is the Final Zone **cylinder**
+(`docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm`, included
+at `sonic.asm:4299`). Slots 41-44 are all `0x84`; 40 and 45-48 are `0x86`, the plasma balls;
+33 and 35-39 are `0x85`, the FZ main.
+
+So the fall that eventually crosses the kill plane begins in the **five frames after the FZ
+cylinder launches the player** -- the engine's post-launch rise is faster than the ROM's.
+Whether the defect is an extra impulse, a wrong gravity for that frame, or the cylinder's
+carry releasing differently is the next question, and it is now a one-object question in a
+named ROM file.
+
+**This is not the carried render-flag family** -- `Obj84` is a boss-arena platform, not an
+object carrying a previous pass's bounds evaluation.
+
+### The other three deaths: still unattributed, deliberately
+
+Four death-restart arms fire in the run, at `centre=(0B8F,03F8)`, `(0581,0627)`,
+`(0B64,0631)` and the Final Zone's `(2512,0611)`. **Only their coordinates are measured.**
+I have not established which segments the first three fall in, nor whether they share this
+cause, and I am not claiming they do -- if they do, the finding is much larger than one
+zone's boss platform, and if they do not, this line exists so nobody re-opens it blind.
