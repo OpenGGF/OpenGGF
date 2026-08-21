@@ -103009,3 +103009,76 @@ revive any of the retracted numbers (63, 66, or the 33): it speaks only to the s
 reload, which was never in doubt.
 
 Full context: [docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](../architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).
+
+## 2026-08-21 — the counting question, answered: nothing is uncounted. RETRACT the alarm
+
+Round `s1-slz1-graze-r1`, counting investigation. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change; probes reverted. Diagnosis only, as scoped.**
+
+### Answer: the errors are counted. The previous entry's alarm was wrong.
+
+Probing `absorbDivergentFields` directly rather than following the path by inference:
+
+```
+[ABSORB] frame=3123 sev=ERROR errorCountBefore=0
+```
+
+All **1263** `player_mapping_frame` divergences reach the absorber and increment `errorCount`.
+At segment 23's f3123 the running count is 0 before it, so that error **is** the segment's first,
+and it is counted. Segment 23's reported 16 errors are 2 mapping-frame errors (f3123, f3196)
+plus 14 dynamic-art fields. **No error is dropped anywhere.**
+
+### What actually misled me
+
+`firstNonCameraPhysicsMismatch` is filtered, by design and explicitly, to one verification group
+(`LiveTraceComparator`):
+
+```java
+if (firstNonCameraPhysicsMismatch == null
+        && sev == Severity.ERROR
+        && fc.verificationGroup() == VerificationGroup.PHYSICS
+        && !fc.fieldName().startsWith("camera_")) {
+```
+
+An `ANIMATION`-group error can never populate it. Segment 23's first error is `player_mapping_frame`
+at f3123; the field reports `dynamic_art.edges` at f3124 because that is the first *physics* error.
+`recentMismatches` holds only the last five entries, all from f3198, so it did not show it either.
+
+I read that absence as "the engine's mapping frame matches the ROM" and built two entries on it.
+The absence was a property of a physics-only summary field plus a five-entry window — never a
+fact about the engine.
+
+### Corrections to this round's earlier entries
+
+**Invalidated:**
+- The DPLC "phase problem" (already retracted): there is no late writer and no phase difference.
+- **This round's own alarm** that 1263 errors are uncounted, that reported counts understate
+  divergence, and that the triage table ranks a filtered quantity. **All wrong.** Counts are
+  correct and the table's error counts stand.
+
+**Still standing, independently measured:**
+- The engine's mapping frame is genuinely wrong at these frames — `expMf=8 engMf=85` with
+  `expX=ba5 engX=ba5` at the comparison point.
+- The missed DPLC transfer is a *symptom* of that animation divergence, not a submission defect.
+
+**One real repair to the triage table.** Its "1st phys" column is the first *physics* error, and an
+animation error can precede it. For the three segments that lead with a missed transfer, the true
+first error is one frame earlier and is `player_mapping_frame`:
+
+| segment | table said | actually first |
+|---|---|---|
+| 23 (`lz1`) | f3124 `dynamic_art.edges` | **f3123 `player_mapping_frame`** |
+| 24 (`lz1_2`) | f3182 `dynamic_art.edges` | **f3181 `player_mapping_frame`** |
+| 26 (`lz3`) | f2805 `dynamic_art.edges` | **f2804 `player_mapping_frame`** |
+
+Exactly three segments in the whole chain begin with an animation error, and they are these three
+— which is why the missed-transfer family looked like one art defect. The one-frame gap is the
+ROM's ordinary DPLC lag: the animation frame diverges, and the art load for it lands the frame
+after.
+
+### Next
+
+The target is the animation divergence itself: why the player reaches mapping frame 85 where the
+ROM reaches 8, at `lz1` f3123, `lz1_2` f3181 and `lz3` f2804. That is an animation-script question,
+and the anchoring method for reaching the site is the comparator's own cursor with `expX` checked
+against `engX` — no derived rows.
