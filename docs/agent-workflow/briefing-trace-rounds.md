@@ -20,7 +20,10 @@ that looks like a real result.
 | Rule | In one line |
 |---|---|
 | The one that matters most | Supply the measured symptom, never your hypothesis |
+| 1 | Supply the measured symptom, never your hypothesis |
 | 2 | The first-reported field is alphabetical, not causal |
+| 9 | A latent correction can be worth more as evidence than as a fix |
+| 17 | A compensation stack is load-bearing — remove it in one move |
 | 3 | Name the fitted-constant trap explicitly, in the brief |
 | 4 | Make "found-not-fixed" a full success, in writing |
 | 6 | Stamp every number with the commit it was measured at |
@@ -38,6 +41,16 @@ that looks like a real result.
 | 33 | BizHawk reports the PC *after* the storing instruction |
 | 32 | A row's emulator frame is `bk2_frame_offset + row + 1` |
 | 40 | A comment reasoning about which engine hook runs first — in either direction — is the tell for a fitted constant; they come in families |
+| 10 | The symptom's axis is not evidence about the cause's axis |
+| 11 | Build the disconfirming case by hand before trusting a ratio |
+| 12 | Some divergences are not frame-derivable; hunting a predicate is itself the error |
+| 13 | "A did not match B" has a third answer — the index is broken |
+| 14 | Closure ownership is the row after, never the row before |
+| 18 | An identical error fingerprint means the same lever, whatever the site |
+| 19 | Port the READ, not the event that last wrote the field |
+| 23 | The headline field is not the earliest divergence — read the histogram |
+| 47 | Measure the quantity, do not reconstruct it |
+| 48 | Object execution order is observable behaviour |
 | 53 | A sign-flipping single pixel is phase — a creation frame early or late — not a wrong constant |
 | 56 | `loc_XXXX` is a ROM address; citing it as a line number lands on plausible unrelated code |
 | 57 | A cited frame number can itself be an artefact of the defect it justifies |
@@ -65,6 +78,17 @@ that looks like a real result.
 | 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
 | 30 | Mass errors | An environment artefact until proven otherwise |
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
+| 8 | A check blind on the files at risk | A guard that passes because it never looked |
+| 15 | A profile's includes bounding a sweep | Classes silently outside the run, read as absent |
+| 16 | A control pinned to a moving ref | `origin/develop` shifts under the arm mid-round |
+| 20 | An unstable class used to attribute | Flapping read as the change's effect |
+| 21 | A cross-tree revert | The checkout's own differences attributed to the diff |
+| 22 | Rebasing a stacked branch | Append-only files duplicated silently |
+| 45 | A null from an instrument nobody installed | Absence of output read as absence of the thing |
+| 46 | A silent probe | A build that never compiled, reported as a clean run |
+| 49 | An edit assumed to be on the path | A null result from code that never ran |
+| 51 | A parked measurement quoted for a diff | A verdict about a whole tree, attributed to one patch |
+| 52 | A caveat written down but never checked | A limitation that reads as handled |
 | 73 | A tree reset or rebase with a live `target/` | Stale reports that read as current — right names, plausible numbers, another commit |
 | 74 | A timing fix validated on one recording | ROM-derived, cited, improves its fixture, and one frame wrong |
 | 75 | "Nothing touches your path" vouched for comparability | Totals shift because the shared reporting surface moved |
@@ -86,7 +110,9 @@ that looks like a real result.
 | 38 | Backgrounded `mvn` dies with its shell | The wrapper's exit 0 with a log that just stops |
 | 41 | Truncated arm | Prove completeness by class-name set and `Tests run: 0,` lines, not by totals |
 | 42 | Truncated message diff | Two different failures compare equal on a shared prefix |
+| 50 | A failing-set diff that drops nested `$` class names | Two different failures collapsing into one row |
 | 43 | Too many concurrent rounds | OOMs, GLFW init failures and contended arms that report *fewer* red |
+| 44 | An axis count across arms of different depth | A count comparison that was never like-for-like |
 
 ### Operational
 
