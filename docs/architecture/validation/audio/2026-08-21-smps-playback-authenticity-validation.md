@@ -21,6 +21,8 @@ and `fix_sndbugs = 0` paths and adds focused tests for:
 - S2 spindash request/transposition bugs and S3K modulation-envelope bugs;
 - region-correct chip clocks, reference PSG/DAC defaults, S2 DPCM cadence,
   and S3K's exclusive StopAll SEGA PCM path through the YM2612 DAC;
+- the native chip-mix output level, without the former shared synthetic
+  `-6 dB` headroom attenuation applied after otherwise matching YM2612 output;
 - exact retail song/SFX/envelope/DAC catalog framing for all three verified
   ROMs, with malformed or unreadable tables failing closed.
 
@@ -170,6 +172,27 @@ takeover, and request-transform tests also passed. Its JDK 21 `-Pci` full run
 reported 15,274 tests, 52 failures, 64 errors, and 19 skips across exactly the
 same 116 known failing/error methods recorded for this branch; no modified
 audio or trace test failed.
+
+### Blue Sphere output-level follow-up
+
+The remaining listening rejection was outside the S3K SFX lifecycle. A
+temporary diagnostic build of the pinned Genesis Plus GX core emitted FM5's
+per-sample output and key-on operator attenuation during the same reviewed BK2
+special-stage interval. OpenGGF matched the native FM5 envelope, including a
+completed pickup restarting at attenuation `1023` and the ROM effect's
+intentional carrier progression from `$05` to `$0A`. The shared
+`VirtualSynthesizer` then divided the complete YM2612+PSG mix by two before
+the 16-bit clamp; Genesis Plus GX does not perform that extra division.
+
+The pre-fix OpenGGF segment measured `-22.18 dB` RMS against the native
+`-16.34 dB` RMS. Removing only that synthetic headroom stage produced
+`-16.16 dB` RMS and retained the exact register, envelope, service-order, and
+selected-channel traces. `TestVirtualSynthesizerOutputLevel` independently
+guards the shared S1/S2/S3K boundary by comparing an isolated YM2612 render
+with the final synthesizer output; its RED was an exact `784 -> 392` halving.
+The fresh JDK 21 full suite ran 15,275 tests with 52 failures, 64 errors, and
+18 skips across the same 116 known baseline-red methods; the added test passed
+and no audio-focused test failed.
 
 Phase 7 cleanup remains deferred. The rejected semantic-observer worktree and
 its protected stashes are not part of this delivery.

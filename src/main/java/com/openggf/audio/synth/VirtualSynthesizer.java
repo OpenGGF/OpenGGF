@@ -24,9 +24,6 @@ public class VirtualSynthesizer implements Synthesizer {
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
     private boolean chipWriteObserverEnabled;
 
-    // Output headroom: reduce overall level so 6 FM channels + PSG don't clip 16-bit output.
-    private static final int MASTER_GAIN_SHIFT = 1; // -6 dB
-
     // Scratch buffers for render() to avoid per-call allocations.
     private int[] scratchLeft = new int[0];
     private int[] scratchRight = new int[0];
@@ -186,11 +183,6 @@ public class VirtualSynthesizer implements Synthesizer {
         for (int i = 0; i < frames; i++) {
             int l = scratchLeft[i];
             int r = scratchRight[i];
-
-            if (MASTER_GAIN_SHIFT > 0) {
-                l >>= MASTER_GAIN_SHIFT;
-                r >>= MASTER_GAIN_SHIFT;
-            }
 
             if (l > 32767) l = 32767; else if (l < -32768) l = -32768;
             if (r > 32767) r = 32767; else if (r < -32768) r = -32768;

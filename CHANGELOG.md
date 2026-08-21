@@ -1,5 +1,12 @@
 # Changelog
 
+- **YM2612 and PSG output now retain the retail mixer level in all three
+  games:** the shared synthesizer no longer halves the already-clipped chip
+  mix through a synthetic `-6 dB` headroom stage. A native Genesis Plus GX
+  capture exposed the exact loss during repeated Blue Sphere pickups; the
+  corrected OpenGGF segment is within 0.2 dB RMS of the native reference while
+  preserving the ROM's intentional two-note `$05` then `$0A` FM attenuation.
+
 - **Sonic 3&K special-stage audio now crosses the same driver boundaries as
   the retail game:** entry clears the level's speed-shoes tempo before loading
   special-stage music, ring pickups use the Z80 driver's alternating speaker
