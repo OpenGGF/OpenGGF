@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-two rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-three rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -65,6 +65,7 @@ that looks like a real result.
 | 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
 | 30 | Mass errors | An environment artefact until proven otherwise |
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
+| 73 | A tree reset or rebase with a live `target/` | Stale reports that read as current — right names, plausible numbers, another commit |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -1921,3 +1922,19 @@ in a comment.
 
 **Share the arithmetic, not a second copy of it.** An invariant that recomputes what a
 report publishes can drift from it; one that reads exactly the published values cannot.
+
+## Seventy-third rule: resetting the tree does not reset `target/`
+
+`git reset --hard`, `git checkout`, and rebasing all leave `target/` exactly as it was.
+A worktree that is now at a different commit still holds the previous commit's
+`surefire-reports/` and `trace-reports/`, and every one of those files reads as current:
+right paths, right names, plausible numbers, no marker of which tree produced them.
+
+This has bitten in three dresses so far — a guard tally read from a full default-suite run
+left behind by an earlier arm, a trace report quoted after a rebase, and a report directory
+that survived a reset between measurement arms. In each case the stale numbers were
+internally consistent and simply belonged to another commit.
+
+**Practically.** Delete the report directory before a measurement, not after; quote numbers
+only from a run you started in the tree you are in; and when a round reports a figure,
+state the commit it was measured at (rule 6) so a stale one is at least visible as stale.
