@@ -3,14 +3,11 @@ package com.openggf;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.graphics.FadeManager;
-import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -21,14 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_1)
 class TestTraceSessionSpecialStageTerminalExit {
-
-    @BeforeEach
-    void setUp() {
-        EngineServices.configure(
-                EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
-    }
 
     @AfterEach
     void tearDown() {
