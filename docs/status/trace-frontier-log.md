@@ -103279,3 +103279,72 @@ Establish why the engine's hurt-landing recovery does not set the walk animation
 Sonic touches down, and whether `hurtRecoveryCompletedThisFrame` is the right owner or is itself
 gated out here. The fix is an ordering/state correction in the hurt-landing path — not a frame,
 animation-id or routine exception.
+## 2026-08-21 — `-Ptrace-segments` is a standing blind spot, and the HCZ standalone throw is a different defect
+
+Round `s3k-hcz-fifo-r1`, branch `bugfix/ai-s3k-hcz-fifo-r1` off `origin/develop` `b4f3eafc6`.
+**Found, not fixed — nothing landed but this entry**, probes reverted.
+
+### The blind spot is real
+
+`-Ptrace-segments` is run by neither `-Ptrace-replay`, `-Pguards`, nor the default suite, so
+no round's matrix has ever covered it. Swept at `b4f3eafc6`:
+
+```
+mvn -Dmse=off -Ptrace-segments -Ds1.rom.path=… -Ds2.rom.path=… -Ds3k.rom.path=… test
+Tests run: 70, Failures: 52, Errors: 8, Skipped: 0   (no `Tests run: 0,` lines)
+```
+
+**Sixty of seventy red, and every one of them S3K.** The 8 errors are 7
+`unmatched recorded hardware completions` plus 1 `S3K KosM module FIFO is full`; the 52
+failures are physics divergences.
+
+**Not all of these are regressions, and I cannot say which are.** Many segment traces are
+long-standing expected-red frontiers, and there is no baseline in this profile to difference
+against. What *is* established is that at least one is a genuine regression:
+`TestS3kSonicTailsHczSegmentTraceReplay` is recorded in the 2026-08-15 entry as
+**PASS, 0 errors, 3519 frames compared**, and now errors. A test that is green only in a
+profile nobody runs is indistinguishable from a test that does not exist, and this profile
+has been accumulating silently. Establishing a baseline for it is worth its own round.
+
+### RETRACT: the standalone HCZ failure is not a reproducer for the chain's survivors
+
+The previous entry recommended taking the HCZ producer's full-FIFO defect next on the
+strength of a standalone reproducer. **The standalone throw is a different defect from the
+chain's fourteen survivors**, and the recommendation rested on their both being "HCZ" and
+both being a full-FIFO throw — which is precisely the coincidence the caution against reading
+a fix by its exception warned about.
+
+Instrumenting the throw with its FIFO occupants:
+
+```
+S3K KosM module FIFO is full (want 0xDB406->0x5A0; occupants
+  #114@0x36A7C6->0xA720[-] #115@0x36A968->0xA000[-]
+  #116@0x36A6C4->0xA9A0[-] #117@0x36AD8A->0xAB20[-])
+```
+
+The thrower is `Sonic3kSSEntryRingObjectInstance.retireRing` → `queueBadnikExplosionArt` —
+the special-stage entry ring, **not** the water-wall/geyser family that owns the chain's
+`#112`-`#118`. The four occupants are the **enemy art** batch (`LoadEnemyArt`'s four sources,
+the same ones seen at the AIZ2→HCZ1 seam), all `[-]` — never ready, permanently holding all
+four slots.
+
+They can never become ready because of an **ordinal cursor skew**. The `hcz` fixture's own
+stream opens at `kos_module_queue` ordinal **103** (raw frame 36), and carries the enemy art
+at `#103`-`#106` (raw frames 36/42/44/47). The engine submits that same art at `#114`-`#117`
+— eleven ordinals high — so kind+ordinal+fingerprint matching can never fire. The engine has
+made eleven module submissions during the standalone segment boot that the fixture's recorded
+stream does not cover, because that stream begins at the enemy art rather than at the boot.
+
+This is the same class as the scope-predicate problem from the title-card round: a standalone
+fixture whose recorded window opens after the boot it performs.
+
+**Measured identically on both arms at this commit**, so it predates the seam-trigger work and
+is not a consequence of it.
+
+### Consequence
+
+The chain's `#112`-`#118` survivors still need chain-side work; there is no cheap standalone
+reproducer for them. The standalone HCZ error is its own frontier — an ordinal-base/boot-
+coverage problem shared, most likely, with a good number of the other 59 red segment classes.
+Whether those are one defect or many is exactly what a `-Ptrace-segments` baseline round
+would establish, and that now looks like the higher-value target of the two.

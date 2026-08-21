@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-three rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -46,6 +46,8 @@ that looks like a real result.
 | 60 | Right family, wrong mechanics is still wrong — test the mechanism's own prediction |
 | 61 | An absence in a routine is not a positive fact about it; read one level deeper |
 | 63 | Resolve a divergence's values to their disassembly names before hypothesising |
+| 64 | A profile no matrix runs is covered by nothing; know which ones yours omits |
+| 65 | A shared exception type is not a shared defect; instrument the throw's contents |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1734,3 +1736,34 @@ with a frame that appears only in another is a two-writes-in-one-frame signature
 amount of staring at hex will suggest.
 
 **Do this before forming any hypothesis about a divergence**, not while writing it up.
+
+## Sixty-fourth rule: a profile no matrix runs is not covered by any matrix
+
+Every arm this project reports — the trace profile, the guard profile, the default suite —
+omits at least one Maven profile. Tests in an omitted profile are green in nobody's
+measurement: they can regress silently for weeks, and a report recording them as passing
+stays on the record as the last thing anyone knew.
+
+One sweep of such a profile found **sixty of seventy red**, including a class recorded as
+passing six days earlier with thousands of frames compared.
+
+**Practically.** Know which profiles your matrix does *not* run, and say so when you report
+one. "Identical on every arm" means identical on the arms you ran. Before treating an
+earlier pass as a baseline, check that the profile it came from is one anybody has run
+since.
+
+**And do not call an unmeasured profile's red a regression.** Without a baseline in that
+profile there is nothing to difference against; most may be long-standing frontiers. The
+honest report is a census — how many, of what kind — plus the specific cases where a prior
+pass is on the record.
+
+## Sixty-fifth rule: a shared exception type is not a shared defect
+
+Two failures throwing the same exception, in the same zone, from the same subsystem, are
+still two failures. One round recommended a target on exactly that resemblance, and
+instrumenting the throw with its own state showed a different thrower, a different owner,
+and a different cause.
+
+**The instrument is the throw's contents, not its type.** Print what the failing structure
+actually held — the occupants, the ordinals, the fingerprints — and compare those. A type
+match narrows nothing: the same guard fires for every way of exceeding it.
