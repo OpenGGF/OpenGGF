@@ -2,6 +2,7 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
@@ -128,6 +129,54 @@ class TestTraceRunSegmentDescriptorPlanning {
     }
 
     @Test
+    void descriptorGraphDefensivelyCopiesNestedMetadataAndBoundaryLists(
+            @TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+        TraceRunSegmentDescriptor planned =
+                TraceRunReplayWalker.planDescriptors(run, runDir).getFirst();
+        List<String> auxSchemaExtras = new ArrayList<>(List.of("aux-one"));
+        List<String> characters = new ArrayList<>(List.of("sonic", "tails"));
+        List<String> sidekicks = new ArrayList<>(List.of("tails"));
+        TraceMetadata metadata = copyMetadataWithLists(
+                planned.metadata(), auxSchemaExtras, characters, sidekicks);
+        List<Integer> gapAdmissionRuns = new ArrayList<>(List.of(3, 1));
+        TraceRunManifest.Transition basis = planned.exitBoundary();
+        TraceRunManifest.Transition exitBoundary = new TraceRunManifest.Transition(
+                basis.fromSegment(), basis.toSegment(), basis.entryKind(),
+                basis.modeChangeBk2Frame(), basis.specialBonusEntryFlag(),
+                basis.savedXPos(), basis.savedYPos(), basis.lastStarPostHit(),
+                basis.ringsBefore(), basis.ringsAfter(), basis.emeraldsBefore(),
+                basis.emeraldsAfter(), gapAdmissionRuns);
+
+        TraceRunSegmentDescriptor copied = new TraceRunSegmentDescriptor(
+                planned.segment(), planned.segmentDirectory(), metadata,
+                planned.rowCount(), planned.openingFrame(), planned.rawFrames(),
+                planned.laggedRows(), planned.hardwareTimingSchedule(),
+                planned.terminalDynamicArtLedger(), planned.entryBoundary(),
+                exitBoundary, planned.executionPolicy());
+        auxSchemaExtras.add("mutated");
+        characters.clear();
+        sidekicks.add("knuckles");
+        gapAdmissionRuns.add(7);
+
+        assertEquals(List.of("aux-one"), copied.metadata().auxSchemaExtras());
+        assertEquals(List.of("sonic", "tails"), copied.metadata().characters());
+        assertEquals(List.of("tails"), copied.metadata().sidekicks());
+        assertEquals(List.of(3, 1),
+                copied.exitBoundary().gapAdmissionRuns());
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.metadata().auxSchemaExtras().add("mutated"));
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.metadata().characters().clear());
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.metadata().sidekicks().add("knuckles"));
+        assertThrows(UnsupportedOperationException.class,
+                () -> copied.exitBoundary().gapAdmissionRuns().add(7));
+    }
+
+    @Test
     void descriptorRejectsInconsistentRowShape(@TempDir Path root) throws Exception {
         Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
         TraceRunManifest run = TraceRunManifest.load(
@@ -250,6 +299,27 @@ class TestTraceRunSegmentDescriptorPlanning {
                 descriptor.laggedRows(), descriptor.hardwareTimingSchedule(),
                 descriptor.terminalDynamicArtLedger(), descriptor.entryBoundary(),
                 descriptor.exitBoundary(), descriptor.executionPolicy());
+    }
+
+    private static TraceMetadata copyMetadataWithLists(
+            TraceMetadata base,
+            List<String> auxSchemaExtras,
+            List<String> characters,
+            List<String> sidekicks) {
+        return new TraceMetadata(
+                base.game(), base.zone(), base.zoneId(), base.act(),
+                base.bk2FrameOffset(), base.ringFloorCheckCounterPhase(),
+                base.traceFrameCount(), base.startXHex(), base.startYHex(),
+                base.recordingDate(), base.recorder(), base.recorderVersion(),
+                base.traceSchema(), base.traceProfile(), base.bizhawkVersion(),
+                base.genesisCore(), auxSchemaExtras, base.romZoneId(),
+                base.route(), base.sourceBk2(), base.romChecksum(), base.notes(),
+                characters, base.mainCharacter(), sidekicks,
+                base.preTraceOscFrames(), base.rngSeedHex(), base.traceType(),
+                base.inputSource(), base.creditsDemoIndex(),
+                base.creditsDemoSlug(), base.specialStageIndex(), base.runId(),
+                base.segmentIndex(), base.bonusStageType(), base.freshLoad(),
+                base.vIntRunCount());
     }
 
     private static void replaceManifest(

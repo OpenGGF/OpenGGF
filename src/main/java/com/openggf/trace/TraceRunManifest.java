@@ -153,6 +153,11 @@ public record TraceRunManifest(
         @JsonProperty("gap_admission_runs") List<Integer> gapAdmissionRuns
     ) {
 
+        public Transition {
+            gapAdmissionRuns = gapAdmissionRuns == null
+                    ? null : List.copyOf(gapAdmissionRuns);
+        }
+
         /**
          * Contract-1 main-loop admission census for this transition's movie
          * gap, run-length encoded, alternating, starting with a NON-lag run.
