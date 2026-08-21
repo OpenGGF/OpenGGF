@@ -112015,3 +112015,94 @@ The 32 here is the counter-example to the invented-margin class another lane is 
 it is `BuildSprites_ApproxYCheck`'s own constant, cited to the line that contains it,
 reached because a *different* cited `fixBugs = 0` arm leaves `explicit_height` clear. A
 margin is only legitimate when both of those are true.
+
+## 2026-08-21 — S2 ARZ2 frame 956: not an animation defect at all — the bubble was inhalable 59 frames before the ROM makes it so
+
+Worktree `wt/s2-anim956`, branch `bugfix/ai-s2-arz2-anim-956`, both arms pinned to
+`79c559005`. The frontier left by the Obj82 axis-choice entry.
+
+**It is not the within-frame-transient wall another lane hit today.** The divergence is a
+59-frame offset in a 27-row animation, plainly visible at frame granularity, with a
+mechanism whose ROM-derived duration is 60 frames. Different shape entirely.
+
+### What the field actually meant
+
+`player_animation_id` `0x0005` vs `0x0015` is `AniIDSonAni_Wait` against
+`AniIDSonAni_Bubble` (`docs/s2disasm/s2.constants.asm:1002,1018`). Sonic is stationary at
+`(0x0600, 0x063C)` underwater for ~100 rows; the ROM has him idle, the engine has him
+inhaling an air bubble. The ROM *does* inhale — at rows **1015-1041**, and again at
+1810-1828. So this is not a spurious inhale, it is **59 frames early**.
+
+### The ROM had bubbles in the box the whole time and declined them
+
+Replaying the recorded `object_near` census through `loc_1FB0C`'s box
+(`x_pos(a0) ± $10`, `y_pos(a0) < y_pos(a1) <= y_pos(a0) + $10`,
+`docs/s2disasm/s2.asm:45379-45392`) against the recorded player position, the ROM has an
+Obj24 **inside the collect box on rows 950-955 (slot 16) and 957-962 (slot 38)** and never
+inhales. So the box is not the discriminator: those bubbles simply are not inhalable.
+
+An engine probe (reverted) reports exactly two inhales in the whole segment, the first
+being `bubble=(5FA,63B) size=5 mapFrame=5 animTimer=24` — a position that matches ROM slot
+38 at row 957 to a pixel. **Engine and ROM agree on the bubble and disagree on whether it
+can be breathed.**
+
+### Cause: the ROM's only inhalable condition was unreachable in the engine
+
+`loc_1F924` runs AnimateSprite over `Ani_obj24` and then
+`cmpi.b #6,mapping_frame(a0) / bne / move.b #1,objoff_2E(a0)`
+(`docs/s2disasm/s2.asm:45231-45236`); `loc_1F956`'s `tst.b objoff_2E(a0) / beq`
+(`:45257-45258`) gates the collect on it. Of the `Ani_obj24` scripts
+(`:45478-45496`) only **script 2 — the large bubble — ever reaches frame 6**, and it climbs
+`2,3,4,5,6` at a duration byte of `$E`. Four steps at 15 frames each: **the ROM's inhalable
+delay is 60 frames, and it is not written down anywhere as a number** — it falls out of the
+animation script.
+
+The engine's condition was `mappingFrame >= 6 || bubbleSize >= 3`. Its first half was
+**dead code**: `mappingFrame` was seeded `min(bubbleSize, 5)` and only ever incremented
+while `< 5`, so it could never reach 6. The live half was a size test that is true the
+moment the bubble is constructed. `BubbleGeneratorObjectInstance` even computed the ROM
+subtype correctly and then **translated subtype 2 into "size 5"** solely to satisfy it,
+discarding the byte that selects the script. And the frame growth itself ran on an invented
+`animTimer >= 8`, not the ROM's `$E`.
+
+### Fix
+
+Port `Ani_obj24` and the `AnimateSprite` loop (`docs/s2disasm/s2.asm:22867-22884` —
+duration reload, `anim_frame` as the index into the frame list, `$FC` terminator), set
+`objoff_2E` when the frame reaches 6, gate the collect on that flag, and stop the generator
+mangling the subtype. Three invented constants removed (`>= 3`, `>= 8`, the 0-5 size
+scale); none added.
+
+### Measured, both arms at `79c559005`
+
+| | before | after |
+|---|---|---|
+| `DebugS2Arz2Seg13...` first error | **frame 956 `player_animation_id` `0x0005`/`0x0015`** | **frame 1015 `x_speed` `0x0000`/`-0x0031`** |
+| errors | 16726 | **15072** |
+| engine inhale row | 956 (**59 early**) | 1017 (**2 late**) |
+
+`com.openggf.tests.trace.s2.**`: 129 tests / 6 failures on **both** arms, identical class
+set, and the only first-error message that changes anywhere in the sweep is the target's.
+Object/guard sweep, **same-tree control**: 1546 tests, 20 failures / 16 errors on both
+arms, identical class set (the reused-fork ambient-state cluster, red in control).
+
+No break-on-purpose run was needed here: unlike the on-screen gate, this change moved the
+target's own message, which is the sensitivity demonstration.
+
+### Named, not worked
+
+- **Two frames of residue.** The engine now inhales at 1017 against the ROM's 1015. The
+  bubble is inhalable well before either, so this is a position/box question, not the
+  inflate climb — at `-$88` y_vel (≈0.53 px/frame) two frames is about one pixel of bubble
+  position. A different animal from what this entry closed.
+- **A ROM-correct reorder that moved nothing.** Routine 2 *is* `loc_1F924`, so AnimateSprite
+  runs before the water check, the wobble and the collect; the engine ran it at the end of
+  `update()`. It is now in the ROM's position, and the measurement above is identical with
+  and without that move — the bubble reaches frame 6 several passes before it enters the
+  box, so the ordering cannot be observed by this event. Kept because it is the ROM's order,
+  reported because it earned nothing.
+- **`appendRenderCommands` still clamps the mapping frame to 5** while the ROM's mappings
+  table and `Ani_obj24` script 2 both use frame 6. Rendering, not gameplay; not measured,
+  not touched.
+- The engine's `update()` still applies the rise before the collect where the ROM's
+  `ObjectMove` runs after it (`:45264`). Untouched.
