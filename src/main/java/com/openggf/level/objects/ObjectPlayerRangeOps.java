@@ -40,11 +40,33 @@ package com.openggf.level.objects;
  * {@code bcs}), the literal {@code #320+64} for the same {@code $180}, and
  * {@code tst.b obRender(a0) / bpl} where Sonic 2 spells the flag
  * {@code _btst #render_flags.on_screen}. Every quantity is identical.
- * <strong>Sonic 3&amp;K has no counterpart</strong>: its player-relative range
- * helpers ({@code Check_InTheirRange}, {@code Check_InMyRange},
- * {@code Check_PlayerInRange}) are table-driven, gate behaviour rather than
- * lifetime, and carry no shared constant
- * ({@code docs/architecture/research/2026-08-21-s3k-object-culling-geometry.md}).
+ * <p><strong>Sonic 3&amp;K has it too</strong>, in the same object and with the
+ * same selector: {@code Obj_Animal}'s {@code loc_2CAE4}
+ * ({@code docs/skdisasm/sonic3k.asm:61184-61194}), reached from
+ * {@code tst.b subtype(a0) / bne.s loc_2CAE4} at sonic3k.asm:61146 and :61178
+ * and unconditionally from :61219, deleting through {@code loc_2C9DA}
+ * ({@code jmp (Delete_Current_Sprite).l}, sonic3k.asm:61101). It is
+ * instruction-for-instruction the Sonic 2 routine: {@code bcs} near edge,
+ * {@code subi.w #$180}, {@code bpl} far edge, then
+ * {@code tst.b render_flags(a0) / bpl}. So this is a <strong>three-game</strong>
+ * predicate.
+ *
+ * <p>An earlier research round reported S3K as having no counterpart
+ * ({@code docs/architecture/research/2026-08-21-s3k-object-culling-geometry.md}),
+ * on the strength of S3K's table-driven player-range helpers
+ * ({@code Check_InTheirRange}, {@code Check_InMyRange},
+ * {@code Check_PlayerInRange}), which do gate behaviour rather than lifetime.
+ * That negative was produced against a CRLF disassembly and did not hold: a
+ * line-ending-tolerant sweep finds exactly three {@code sub.w (Player_N+x_pos)}
+ * sites in sonic3k.asm, and one of them is this predicate.
+ *
+ * <p>All three games also carry the same near-miss beside the predicate: a
+ * routine performing the identical {@code sub.w} against the player's x to set
+ * the horizontal flip rather than to decide lifetime — Sonic 2's
+ * {@code AnimalFaceSonic} ({@code docs/s2disasm/s2.asm:24883}) and Sonic 3&amp;K's
+ * {@code sub_2CCBA} ({@code docs/skdisasm/sonic3k.asm:61356-61364}). Reach this
+ * predicate through {@code Obj_Animal}'s dispatch, never through a search for
+ * the subtraction's shape.
  *
  * <p><strong>Deliberately not modelled here.</strong> The render-flag test that
  * follows the window, the {@code DisplaySprite} tail, and the
