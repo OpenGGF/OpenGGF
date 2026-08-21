@@ -985,8 +985,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     public void setRegion(SmpsSequencer.Region region) {
-        if (this.region != region) {
+        boolean changed = this.region != region;
+        if (changed) {
             palFullUpdateCounter = 5;
+            setChipClockProfile(region == SmpsSequencer.Region.PAL
+                    ? ChipClockProfile.PAL : ChipClockProfile.NTSC);
         }
         this.region = region;
         synchronized (sequencersLock) {

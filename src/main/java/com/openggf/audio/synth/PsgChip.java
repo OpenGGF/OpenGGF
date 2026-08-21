@@ -17,8 +17,8 @@ public class PsgChip {
         DISCRETE
     }
 
-    private static final double INPUT_CLOCK = 3579545.0; // NTSC PSG input clock (Hz)
-    private static final double INTERNAL_RATE = INPUT_CLOCK / 16.0;
+    private static final double NTSC_INPUT_CLOCK = 3_579_545.0;
+    private static final double DEFAULT_INTERNAL_RATE = NTSC_INPUT_CLOCK / 16.0;
     private static final double DEFAULT_SAMPLE_RATE = 44100.0;
 
     // Clock ratio for integer timing precision (matches GPGX PSG_MCYCLES_RATIO = 15*16)
@@ -75,7 +75,9 @@ public class PsgChip {
     private int noiseBitMask;
 
     private double outputRate = DEFAULT_SAMPLE_RATE;
-    private final BlipDeltaBuffer blip = new BlipDeltaBuffer(INTERNAL_RATE * CLOCK_RATIO, DEFAULT_SAMPLE_RATE);
+    private double inputClock = NTSC_INPUT_CLOCK;
+    private double internalRate = DEFAULT_INTERNAL_RATE;
+    private final BlipDeltaBuffer blip = new BlipDeltaBuffer(DEFAULT_INTERNAL_RATE * CLOCK_RATIO, DEFAULT_SAMPLE_RATE);
     private int clocks = 0;  // Integer for drift-free timing
     private long clockFrac = 0;
     private long clocksPerSampleFixed = 0;
@@ -100,10 +102,23 @@ public class PsgChip {
     public void setSampleRate(double sampleRate) {
         if (sampleRate > 0.0) {
             this.outputRate = sampleRate;
-            blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
-            double clocksPerSample = (INTERNAL_RATE * CLOCK_RATIO) / outputRate;
+            blip.reset(internalRate * CLOCK_RATIO, outputRate);
+            double clocksPerSample = (internalRate * CLOCK_RATIO) / outputRate;
             clocksPerSampleFixed = (long) (clocksPerSample * CLOCK_FRAC_UNIT + 0.5);
         }
+    }
+
+    void setInputClock(double newInputClock) {
+        if (newInputClock <= 0.0) {
+            throw new IllegalArgumentException("PSG input clock must be positive");
+        }
+        inputClock = newInputClock;
+        internalRate = inputClock / 16.0;
+        setSampleRate(outputRate);
+    }
+
+    double inputClockForTesting() {
+        return inputClock;
     }
 
     public void setChipType(ChipType type) {
@@ -141,6 +156,8 @@ public class PsgChip {
 
     public Snapshot captureSnapshot() {
         return new Snapshot(
+                inputClock,
+                internalRate,
                 regs,
                 freqInc,
                 freqCounter,
@@ -213,6 +230,8 @@ public class PsgChip {
     }
 
     public void restoreSnapshot(Snapshot snapshot) {
+        inputClock = snapshot.inputClock();
+        internalRate = snapshot.internalRate();
         copyInto(snapshot.regs(), regs);
         copyInto(snapshot.freqInc(), freqInc);
         copyInto(snapshot.freqCounter(), freqCounter);
@@ -291,7 +310,7 @@ public class PsgChip {
         latch = 3;
         noiseShiftValue = 1 << noiseShiftWidth;
         configure(DEFAULT_PREAMP, 0xFF);
-        blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
+        blip.reset(internalRate * CLOCK_RATIO, outputRate);
         clocks = 0;
         clockFrac = 0;
     }
@@ -523,6 +542,8 @@ public class PsgChip {
     }
 
     public record Snapshot(
+            double inputClock,
+            double internalRate,
             int[] regs,
             int[] freqInc,
             int[] freqCounter,

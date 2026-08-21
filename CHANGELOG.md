@@ -7,6 +7,11 @@
   frames continue clocking an already-started DAC sample without servicing
   music, SFX, envelopes, or modulation.
 
+- **PAL playback now clocks the actual YM2612 and PSG cores from the PAL Mega
+  Drive master clock:** pitch and DAC timing no longer retain NTSC oscillator
+  rates while only the frame scheduler changes. Rewind snapshots preserve the
+  selected chip-clock domain exactly.
+
 - **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
   the boot chant atomically stops music, overrides, and every SFX owner before
   the PCM voice begins, and StopSEGA leaves the driver silent instead of

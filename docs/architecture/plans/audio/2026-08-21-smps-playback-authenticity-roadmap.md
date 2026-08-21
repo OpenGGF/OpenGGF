@@ -175,10 +175,11 @@ The wider envelope, note-fill, tie, and coordination-flag audit remains.
 Acceptance: deterministic PCM/register fixtures and short external audio
 goldens at NTSC and PAL rates.
 
-Status: S2 DAC cadence and the authentic PSG/DAC defaults are complete. S3K's
+Status: S2 DAC cadence, the authentic PSG/DAC defaults, and region-correct
+YM2612/PSG/Z80-derived clocks are complete. S3K's
 SEGA PCM command now atomically stops all SMPS/sample owners before exclusive
 PCM playback and StopSEGA restores none of them. Direct YM-DAC rendering and
-region-correct chip clocks remain.
+removal of non-native workarounds remain.
 
 ### Phase 6 — ROM loader and content hardening
 

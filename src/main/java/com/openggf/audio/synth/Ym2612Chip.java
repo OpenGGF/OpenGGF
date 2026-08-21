@@ -12,12 +12,12 @@ import java.util.logging.Logger;
  */
 public class Ym2612Chip {
     private static final Logger LOG = Logger.getLogger(Ym2612Chip.class.getName());
-    private static final double CLOCK = 7670453.0;
+    private static final double NTSC_CLOCK = 7_670_453.0;
     private static final double DEFAULT_OUTPUT_RATE = 44100.0;
     // GPGX: Internal rate is CLOCK/144 (~53267 Hz)
-    private static final double INTERNAL_RATE = CLOCK / 144.0; // 53267.034...
+    private static final double DEFAULT_INTERNAL_RATE = NTSC_CLOCK / 144.0;
     // Resampling ratio for converting internal to output rate
-    private static final double DEFAULT_RESAMPLE_RATIO = INTERNAL_RATE / DEFAULT_OUTPUT_RATE; // ~1.208
+    private static final double DEFAULT_RESAMPLE_RATIO = DEFAULT_INTERNAL_RATE / DEFAULT_OUTPUT_RATE;
 
     // Constants from ym2612.c
     private static final int SIN_HBITS = 10;
@@ -416,7 +416,7 @@ public class Ym2612Chip {
     private static final double DAC_BASE_CYCLES = 295.0;
     private static final double DAC_LOOP_CYCLES = 26.0;
     private static final double DAC_LOOP_SAMPLES = 2.0;
-    private static final double Z80_CLOCK = 3579545.0;
+    private static final double NTSC_Z80_CLOCK = 3_579_545.0;
     private static final double DAC_GAIN = 64.0;
     private boolean dacInterpolate = false;
     private boolean dacHighpassEnabled = false;
@@ -430,7 +430,10 @@ public class Ym2612Chip {
     private int prevLeft = 0, prevRight = 0;
 
     // Band-limited resampler (replaces simple linear interpolation)
-    private BlipResampler blipResampler = new BlipResampler(INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
+    private double chipClock = NTSC_CLOCK;
+    private double z80Clock = NTSC_Z80_CLOCK;
+    private double internalRate = DEFAULT_INTERNAL_RATE;
+    private BlipResampler blipResampler = new BlipResampler(DEFAULT_INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
     private boolean useBlipResampler = true;  // Band-limited resampling via BlipResampler (GPGX-quality output)
     private double outputRate = DEFAULT_OUTPUT_RATE;
     private double resampleRatio = DEFAULT_RESAMPLE_RATIO;
@@ -450,7 +453,7 @@ public class Ym2612Chip {
     private static final int FM_STATUS_TIMERA_BIT_MASK = 0x01;
     private static final int FM_STATUS_TIMERB_BIT_MASK = 0x02;
     private static final int BUSY_CYCLES_DATA = 47;
-    private static final double YM_CYCLES_PER_SAMPLE = (CLOCK / 6.0) / INTERNAL_RATE;
+    private static final double YM_CYCLES_PER_SAMPLE = 24.0;
 
     private int timerACount;
     private int timerBCount;
@@ -742,7 +745,7 @@ public class Ym2612Chip {
     }
 
     public static double getInternalRate() {
-        return INTERNAL_RATE;
+        return DEFAULT_INTERNAL_RATE;
     }
 
     public static double getDefaultOutputRate() {
@@ -758,12 +761,26 @@ public class Ym2612Chip {
             return;
         }
         outputRate = newOutputRate;
-        resampleRatio = INTERNAL_RATE / outputRate;
+        resampleRatio = internalRate / outputRate;
         inverseResampleRatio = 1.0 / resampleRatio;
-        blipResampler.reset(INTERNAL_RATE, outputRate);  // Reuse existing buffers instead of allocating new
+        blipResampler.reset(internalRate, outputRate);
         resampleAccum = 0.0;
         lastLeft = lastRight = 0;
         prevLeft = prevRight = 0;
+    }
+
+    void setClockRates(double newChipClock, double newZ80Clock) {
+        if (newChipClock <= 0.0 || newZ80Clock <= 0.0) {
+            throw new IllegalArgumentException("chip clocks must be positive");
+        }
+        chipClock = newChipClock;
+        z80Clock = newZ80Clock;
+        internalRate = chipClock / 144.0;
+        setOutputSampleRate(outputRate);
+    }
+
+    double chipClockForTesting() {
+        return chipClock;
     }
 
     public void setUseBlipResampler(boolean use) {
@@ -784,6 +801,9 @@ public class Ym2612Chip {
             channelSnapshots[i] = captureChannel(channels[i]);
         }
         return new Snapshot(
+                chipClock,
+                z80Clock,
+                internalRate,
                 currentDacSampleId,
                 dacLatchedValue,
                 dacPos,
@@ -864,6 +884,9 @@ public class Ym2612Chip {
     }
 
     public void restoreSnapshot(Snapshot snapshot) {
+        chipClock = snapshot.chipClock();
+        z80Clock = snapshot.z80Clock();
+        internalRate = snapshot.internalRate();
         currentDacSampleId = snapshot.currentDacSampleId();
         currentDacSampleData = currentDacSampleId != -1 && dacData != null
                 ? dacData.sample(currentDacSampleId)
@@ -2030,10 +2053,10 @@ public class Ym2612Chip {
             double dacBaseCycles = dacData.baseCycles();
             double cyclesPerBlock = dacBaseCycles + (DAC_LOOP_CYCLES * (effectiveRate - 1));
             double cyclesPerSample = cyclesPerBlock / DAC_LOOP_SAMPLES;
-            double rateHz = Z80_CLOCK / cyclesPerSample;
+            double rateHz = z80Clock / cyclesPerSample;
             // DAC step is now relative to internal rate since renderDac() is called at
             // ~53kHz
-            this.dacStep = Math.max(0.0001, rateHz / INTERNAL_RATE);
+            this.dacStep = Math.max(0.0001, rateHz / internalRate);
         }
     }
 
@@ -2445,6 +2468,9 @@ public class Ym2612Chip {
     }
 
     public record Snapshot(
+            double chipClock,
+            double z80Clock,
+            double internalRate,
             int currentDacSampleId,
             int dacLatchedValue,
             double dacPos,
