@@ -111585,3 +111585,78 @@ failures, 0 errors, 4 skipped on both arms**, identical 155-class sets,
 identical `Tests run: 0,` counts (2), identical failing-method sets. Full
 untruncated failure text differs on **exactly two lines**, both S2 ARZ1 and both
 improvements. `-Pguards`: 500 tests, 0 failures.
+
+## 2026-08-21 -- ATTRIBUTED: the HCZ slice's 1519 errors start at a TurboSpiker hit, and HCZ1 is clean
+
+Commissioned to attribute `TestS3kHczZoneSliceTraceReplay`'s baseline and to establish whether
+its first error precedes the HCZ miniboss. Measured at `72f4de020`, single-class run so the
+report file is safe to quote. **Found, not fixed.**
+
+### The commissioned question: no, and this matters
+
+Act boundaries in `hcz_completerun`, from `zone_act_state`: **frame 9900** HCZ act 0 -> act 1,
+frame 10389 apparent act -> 1, frame 31335 -> zone 2 (MGZ). Errors by region:
+
+| region | errors |
+|---|---|
+| frames 0-9899 (HCZ1, the miniboss's act) | **0** |
+| frames 9900+ (HCZ2) | **1519** |
+
+The HCZ **miniboss is HCZ1's boss, and HCZ1 is entirely clean** -- 9900 frames, zero errors.
+The first error at 22243 is in HCZ2 and therefore **does not** precede the miniboss.
+
+**Consequence: the confirmed `HczMinibossInstance` member is verifiable after all.** The
+earlier entry declined to land it under rule 77 on the assumption that the baseline might sit
+upstream. It does not. A fix there can be judged by this trace: the pass/fail question is
+whether HCZ1 stays at zero errors and the first error stays at 22243.
+
+### Attributing frame 22243
+
+The headline field is not the dominant one (rule 23). `g_speed` is merely first at the first
+frame; across the 1519 the histogram leads with `y` (117), `tails_cpu_ctrl2_held` (80),
+`camera_y` (74). The errors also arrive in bursts -- the largest is 426 in frames 28500-28999 --
+so 1519 is not one smooth cascade.
+
+At frame 22243, simultaneously:
+
+```
+g_speed              exp 0x0330   act 0x0000
+x_speed              exp 0x051A   act -0x0200
+y_speed              exp 0x03A8   act -0x0400
+routine              exp 0x0002   act 0x0004
+rolling              exp 1        act 0
+player_animation_id  exp 0x0002   act 0x001A
+status_byte          exp 0x0006   act 0x0002
+```
+
+`x_vel = -$200` with `y_vel = -$400` and `routine = 4` is the ROM's **hurt-bounce signature**.
+The engine's player is hurt at 22243; the ROM's is still rolling at `g_speed = $330`.
+
+**What fired.** `object_near` rows put the cause four frames earlier. At frame 22239 slot 6's
+live code pointer changes in place from `loc_87D5E` (`TurboSpiker_SpikeChild_Attached`,
+`sonic3k.asm:184034`) to `loc_87DA4` (`TurboSpiker_SpikeChild_Move`, `:184059`), slot 4's
+parent routine advances `$06` -> `$08`, and slot 19 spawns `loc_87DC0`
+(`TurboSpiker_LaunchTrail_Main`, `:184071`). A **TurboSpiker launches its spike**. The engine
+implements this badnik as `TurboSpikerBadnikInstance`.
+
+### Why this is a touch-categorisation defect and not a position drift
+
+**Because there are zero errors before 22243, the engine matched the ROM on every compared
+field at 22242** -- same position, same speed, same `rolling`, same animation. So the engine was
+rolling, in the same place, at the same speed, and was hurt anyway.
+
+That names the ROM branch. `Touch_Enemy` (`sonic3k.asm:20877-20884`) tests
+`cmpi.b #2,anim(a0)` -- the rolling animation -- and branches to `.checkhurtenemy`, the path
+where the **player damages the enemy**; otherwise it falls through to `Touch_ChkHurt`, where the
+player is hurt. The recording's `player_animation_id` at 22243 is `0x0002`: exactly the value
+that routine tests for. The ROM took the hurt-the-enemy branch and the engine took the
+hurt-the-player one.
+
+### Scope, and what cannot be attributed yet
+
+Everything after 22243 is downstream of a player-trajectory desync and cannot be independently
+attributed until that hit is resolved (rule 77) -- including the 426-error burst at 28500-28999,
+which may be a second independent defect or may be inherited. **1519 is an upper bound on the
+work, not a count of defects.** The next round is `TurboSpikerBadnikInstance`'s touch
+categorisation for a rolling player, and it has a sharp acceptance test: HCZ1 stays at 0 errors
+and the first error moves past 22243.
