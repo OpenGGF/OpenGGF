@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-six rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-seven rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -103,6 +103,7 @@ that looks like a real result.
 | 84 | A duration in frames from an on-change stream | The sampler's period reported as the defect's duration |
 | 85 | An object aligned to the recording by its own coordinate | Perfect agreement that survives inserting an idle frame |
 | 86 | A ranking whose metric embeds a parsing choice | Relocation counted as absence; the wrong object at the top of the list |
+| 87 | A delta read at the wrong intra-frame write of a folded object | A plausible defect, and a guard that would make the fixture pass wrongly |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2266,3 +2267,28 @@ choice exists, prefer the metric that does not depend on it: in that round, a pe
 deficit* inside the ROM's own slot range is placement-invariant, where per-slot presence is
 not, and the two produce different top-of-list objects entirely. And when a ranking decides
 what gets commissioned, re-derive it under a second metric before anyone acts on it.
+
+## Eighty-seventh rule: fix the sample point before reading a delta on a folded parent/child object
+
+An object the engine folds from a ROM parent and its children is written at several points
+inside one frame. One capsule is written after its approach step, again after its swing step,
+and again at the child's own dispatch — three positions per frame, against a recording that
+samples once, at end of frame.
+
+Compare the wrong one and you get a delta series that looks like a defect and is not. That
+cost two consecutive entries here: one reported a sign-flipping delta, the next reported an
+intra-frame ordering error and proposed a guard. At the *matching* sample point the engine's
+value equals the recording's on every row with a clean one-frame lead, every other shift
+strictly worse — a completely different defect with a different owner, upstream of the object
+entirely.
+
+**Establish which write the recording sees before reading any delta.** Where the ROM keeps the
+child in its own slot, the slot index settles it: a child at a higher slot dispatches after the
+parent and therefore sees the post-motion position, so the engine reading post-motion is
+correct and a guard modelling "read the earlier value" would make the fixture pass and be
+wrong.
+
+**And re-test rejected candidates after fixing the sample point.** The same round had rejected
+an inserted-frame candidate for "making the motion worse"; at the right sample point that
+candidate matches on every row and fires the right actor on the right frame. The rejection was
+an artefact of the measurement, not a property of the candidate.
