@@ -103440,3 +103440,86 @@ skew), and the physics side is 52 divergences whose only visible cluster is `rin
 Whether this profile joins the standard arms is a user decision; the facts are that it has
 never run in CI, is selected by no other profile, and has accumulated at least one confirmed
 regression while unobserved.
+
+## 2026-08-21 — The rings cluster is accepted bootstrap debt, not a defect. Drop it.
+
+Round `s3k-rings-cluster-r1`, branch `bugfix/ai-s3k-rings-cluster-r1` off `origin/develop`
+`29cf68567`. **Nothing fixed, and nothing should be** — the cluster is a documented,
+deliberate consequence of hard rule 4.
+
+### Baseline
+
+The `-Ptrace-segments` sweep taken at `b4f3eafc6`:
+
+```
+mvn -Dmse=off -Ptrace-segments -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test
+Tests run: 70, Failures: 52, Errors: 8, Skipped: 0
+```
+
+`git diff --stat b4f3eafc6..29cf68567 -- src/` is empty, so it stands for the current tree.
+No re-run was taken at `29cf68567`; the provenance is src-identity, stated rather than assumed.
+
+### The thirteen share a shape — twelve of them
+
+| | frame | mismatch |
+|---|---|---|
+| `Aiz3`, `Aiz4`, `Hcz3`, `Hcz4`, `Hpz2`, `Hpz3`, `Icz2`, `Mhz3`, `Mhz4`, `Mhz5`, `Mhz6`, `Soz2` | **0** | `rings expected=N, actual=0` |
+| `PachinkoBonus` | **122** | `rings expected=262, actual=261` |
+
+Twelve are identical in field, frame and direction: frame zero, engine zero, ROM carrying an
+accumulated count (8, 75, 77, 85, 96, 117, 126, 150, 156, 177, 180, 201). **Every one of the
+twelve is a continuation segment** — each name carries a numeric suffix of 2 or more.
+
+`TestS3kSonicTailsPachinkoBonusTraceReplay` does **not** share the shape: a different frame, a
+different direction, off by one rather than by everything. It is a separate frontier and the
+only real one in the thirteen.
+
+### It generalises, and the correlation is total
+
+Across all 52 physics failures:
+
+| group | first error at frame 0 | first error later |
+|---|---|---|
+| continuation segments | **29** | **0** |
+| first-of-zone / other | 5 | 18 |
+
+**Every continuation segment in the profile fails at its first compared row, and none fails
+later.** Their fields are all carried runtime state: `rings` 12, `tails_x` 4, `camera_y` 4,
+`tails_y` 3, `y_speed` 2, `x_sub` 2, `x_speed` 1, `tails_y_speed` 1.
+
+### Why this is not a defect, and must not be "fixed"
+
+Already documented, in `known-discrepancies.md` under **S3K Complete-Run Segment
+Start-Position Bootstrap Debt**: these segments deliberately do not seed frame-zero player,
+sidekick, camera, object or CPU state, and drive from trace frame 0 with
+`ReplayStartState.DEFAULT`. Fixture metadata supplies only the start centre coordinates —
+confirmed by reading `aiz_3/metadata.json`, which carries `start_x`/`start_y` and **no** ring,
+camera, sidekick or speed field.
+
+That entry already names the same consequence for a sibling quantity:
+
+> Chaos and Super Emerald counts also start at zero, because the segment did not replay the
+> special stages that earned them. This is deliberate — seeding them from the run manifest's
+> `emeralds_before` would be trace hydration under hard rule 4.
+
+**Rings are the same class as emeralds**: run-level progression a mid-run segment never
+earned. Seeding them from the fixture would be exactly the hydration hard rule 4 forbids, and
+the profile's 29 continuation failures are the accepted debt showing up as red, not 29 defects.
+
+The documented consequence names emeralds only; the measurement above extends it to rings,
+camera, sidekick position and player sub-pixel/speed, with counts.
+
+### What this decides
+
+**Drop the rings cluster.** It is twelve instances of one accepted debt plus one unrelated
+frontier. There is no engine fix, and the census's biggest apparent cluster is structurally
+red by design.
+
+That also reframes the profile as a whole: a large share of its 60 red classes are red because
+a mid-run segment cannot reconstruct run-level state without hydrating, which is forbidden. Any
+decision about adding `-Ptrace-segments` to CI should account for that — it would be an arm
+whose redness is substantially expected, and its value would be in *movement* against a
+recorded baseline rather than in a green bar.
+
+The one genuine target the cluster contained is `PachinkoBonus` at frame 122, off by a single
+ring.
