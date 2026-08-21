@@ -105382,3 +105382,71 @@ unmatched-edge count on both recordings, not an error total:
 1. The bit-7 read, if a second consumer of `render_flags` bit 7 confirms the one-frame model.
 2. Whatever makes the zone slice skip three submissions entirely. That is upstream of this
    object — the engine never queues work the recording has — and is a different owner.
+
+## 2026-08-21 — Offered and rejected: the control accepts a +1 gap, the vertical batch is offered −1
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `eea145a0d`.
+**Measurement only; probes reverted, tree clean.** The question is answered against the
+horizontal batch as the control, as scoped: whatever the vertical batch is offered and rejects,
+why does the horizontal batch accept the equivalent?
+
+### Every module submission and every recorded edge, one segment
+
+```
+[SUBMIT] rf=1021 x4   (0x36a7c6 0x36a968 0x36a6c4 0x36ad8a)   <- horizontal reload
+[EDGE]   rf=1022 PRE_MAIN_LOOP  KOS_DECOMPRESSION_QUEUE#161
+[EDGE]   rf=1023 POST_OBJECTS   KOS_MODULE_QUEUE#108
+[EDGE]   rf=1027/1030/1034 ... #162 #163 #164 / #109 #110 #111      -> drains
+
+[EDGE]   rf=2957 PRE_MAIN_LOOP  KOS_DECOMPRESSION_QUEUE#167
+[SUBMIT] rf=2958 x4   (the same four sources)                  <- vertical reload
+[EDGE]   rf=2958 POST_OBJECTS   KOS_MODULE_QUEUE#114                -> stuck
+```
+
+**The rejection is not a fingerprint or an ordinal — it is order.** Same object, same routine,
+same four sources, and the difference between the batch that drains and the batch that never
+does is the sign of one gap:
+
+| batch | engine submits | first recorded child edge | gap |
+|---|---:|---:|---:|
+| horizontal `#108`-`#111` (control) | 1021 | `#161` at 1022 | **+1** |
+| vertical `#114`-`#117` | 2958 | `#167` at 2957 | **−1** |
+
+The head parent's **first decompression child** is expected one frame before the parent is
+submitted, so at 2957 there is nothing to release — `engine pending: <none>`. The parent's own
+edge at 2958 is same-frame and would be admissible under precede-or-equal; it never gets the
+chance, because `#114` is not prepared without `#167`. Every later edge then finds the engine
+still holding `#167`.
+
+### The two frames, located, as a relative quantity
+
+The control fixes the ROM's own phase: the ROM submits one frame *before* the first child edge.
+Applying that to the vertical batch puts the ROM's submission at **2956** against the engine's
+2958 — the two frames the brief described, now measured against a control in the same recording
+rather than inferred from a single fixture's rows.
+
+Both readings in the log are correct and they measure different things:
+
+- **Two frames** is the absolute error against the ROM's submission frame.
+- **One frame** is how far past the *releasability boundary* the engine sits, because the
+  boundary is the child edge at 2957 and precede-or-equal admits 2957 itself.
+
+That is why the rejected bit-7 candidate (`r9-rejected-candidate`, one frame earlier) clears the
+stall completely while still leaving the engine one frame behind the ROM's own submission.
+
+### What this rules out
+
+- **Not a submission-content defect.** The batch's sources, ordinals and fingerprints match; the
+  identical batch is accepted 1900 frames earlier. Nothing here is a different owner.
+- **Not occupancy.** Depth is 0 at both submissions, and the guard trips at 3536 only because
+  nothing retired in between.
+- **Not the countdown condition.** The condition fires a dispatch *early*, which moves the
+  submission the wrong way; correcting it puts the engine three frames past the ROM.
+
+### Next
+
+Find the second frame. The bit-7 read accounts for one and is already written up with its
+do-not-land-alone note. The remaining frame is upstream of the cleanup entry — the phases before
+it — and the control now dates it precisely: the vertical reload must submit at 2956, and any
+candidate can be scored by whether the submit-to-first-child-edge gap becomes +1 like the
+control's, on both recordings, rather than by an error total.
