@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-eight rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-nine rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -71,6 +71,7 @@ that looks like a real result.
 | 76 | A candidate judged on a derived column | A correct fix rejected by a fixture already failing the axis in bulk |
 | 77 | A target downstream of the segment's first error | Rounds spent on inherited lateness that no local fix can reach |
 | 78 | A probe aligned end-to-end on two monotone series | "N of N rows agree" — one comparison restated, reversing under a real reference |
+| 79 | A citation whose numbers were refreshed but whose claim was not re-read | A false statement wearing a freshly-audited look |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2055,3 +2056,22 @@ produced.
 
 **Before quoting a probe, ask what result would have falsified it.** If you cannot describe
 the input that makes it report the other answer, it is not measuring what you think.
+
+## Seventy-ninth rule: fixing a citation's line numbers is not checking its claim
+
+A source comment asserted that a routine ran before the object pass, citing two line numbers.
+The numbers had drifted, so a round replaced them with correct ones — and left the assertion
+standing. The assertion was false: that routine is not in the main loop at all, it is reached
+from a background-deform call *after* the object pass. Correcting the numbers made a wrong
+statement look freshly verified, and the next three rounds — including the lead's briefs —
+carried it as established.
+
+**A citation has two parts and they fail independently.** The pointer can rot while the claim
+stays true, and the claim can be false while the pointer is exact. When you touch a citation,
+read what is actually at the target and check that it supports the sentence, not just that the
+line number resolves.
+
+**The compounding version is worse.** A freshly corrected citation reads as recently audited,
+so it attracts more trust than the stale one it replaced. If you fix a pointer without
+verifying the claim, say so explicitly in the commit — "line numbers refreshed, claim not
+re-checked" — so the next reader knows which half was done.

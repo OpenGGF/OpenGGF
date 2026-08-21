@@ -106407,3 +106407,86 @@ Two corrections landed with the round, independent of what happens to the tick m
   `s2.asm:21494, 58827-58840`, which now points at `LevEvents_MCZ2_Routine4` and `ObjD4`. The
   claim was right and the numbers were not; corrected to `LevEvents_CNZ` at 21511, its
   `jsr (SlotMachine).l` at 21512, `jsr (RunObjects).l` at 5095, and `SlotMachine` at 59305.
+
+## 2026-08-21 — the ROM runs SlotMachine AFTER the object pass; the premise was wrong
+
+Round `vint-tick-ownership-r3`, branch `bugfix/ai-cnz-slot-placement` off `6031412f8`.
+**Found-not-fixed.** Answers the in-pass question and, in doing so, refutes the premise both
+earlier rounds and the engine's own source comment were built on.
+
+### The in-pass inversion, and the experiment that killed my own answer
+
+From the r2 sampling derivation the in-pass reader looked one **high**, which predicted the
+pair "tick move plus seed one lower". Built and measured it (r1's tick move applied unchanged
+plus both replay seeds in `TraceReplaySessionBootstrap` lowered by one):
+
+| | control | pair |
+|---|---|---|
+| `TestS2CnzLevelSelectTraceReplay` | green | **green** (was 19,603 under the reorder alone) |
+| `TestS2Cnz2LevelSelectTraceReplay` | green | 10 errors, first at 8506 (was 29,397) |
+| `-Ptrace-replay` | 800 / 6F | **798 / 47F** |
+| `-Pguards` | 500 / 0F | 500 / 1F |
+
+**39 newly red, zero newly green**, across all three games — same 157 classes ran, no
+truncation, no starvation. Thirty-nine classes in three games agreeing is not a slot-phase
+lottery, so the engine's in-pass value is **right** and the derivation that produced the pair
+is **wrong**. Reporting that inversion as fact would have been the round's real failure.
+
+### Where the derivation broke
+
+`LevelEvents` **is not in `Level_MainLoop` at all**, and `SlotMachine` does not run before
+object execution. The real chain:
+
+```
+Level_MainLoop      s2.asm:5088  bsr.w WaitForVint
+                    s2.asm:5095  jsr (RunObjects).l          <-- objects, incl. ObjD6
+                    s2.asm:5098  jsrto JmpTo_DeformBgLayer
+DeformBgLayer       s2.asm:15175 bsr.w RunDynamicLevelEvents
+RunDynamicLevelEvents s2.asm:20329 jsr DynamicLevelEventIndex(pc,d0.w)
+LevEvents_CNZ       s2.asm:21511
+                    s2.asm:21512 jsr (SlotMachine).l         <-- routine at 59305
+```
+
+**`SlotMachine` runs AFTER the object pass.** So ObjD6's capture and `SlotMachine_Routine3`
+execute in the *same* ROM frame and read the *same* `V_int_run_count` — which is exactly what
+the six r2 inversions said, and which no "LevEvents precedes RunObjects" model could produce.
+The inversions were right; the frame-ordering story wrapped around them was not.
+
+This also retires the r2 sampling-point derivation, which used the false ordering as `F5`. The
+inversions themselves stand — they are arithmetic on recorded ROM RAM and depend on no
+ordering model.
+
+### What is actually wrong
+
+`Sonic2ZoneFeatureProvider` calls `cnzSlotMachineManager.update()` from `updatePrePhysics`,
+**one pass too early**, so it reads the following frame's counter. That placement error is
+currently cancelled by the object-visible clock being read before its tick. Two compensating
+errors, and moving either one alone desyncs both fixtures:
+
+| change | cnz | cnz2 |
+|---|---|---|
+| tick move alone (r1) | 19,603 | 29,397 |
+| tick move + seed (r2 pair) | green | 10 |
+| **placement move alone** (to the existing `updateAfterObjectExecution` hook) | **22,879** | **green** |
+
+Each experiment fixes one fixture and breaks the other, which is the signature of a pair that
+has to move together and has at least one member still unlocated. `updateAfterObjectExecution`
+already exists and is wired (`LevelManager:1252`), so the call site is cheap to move; what is
+not yet modelled is the completion phase ObjD6 sees. The ROM checks
+`cmpi.b #$18,(SlotMachine_Routine).w` at `s2.asm:59205` **during** `RunObjects`, i.e. before
+that frame's `SlotMachine` — so with the placement corrected, `PointPokey` should observe the
+*previous* frame's completion. `cnz`'s first error under the placement move is frame 1691,
+one row after the ROM's slot goes inactive at 1690, which is exactly that handover. That is
+the next thing to model, and it is the third member of the group.
+
+**The source comment asserting the opposite ordering is retracted in this commit.** It is the
+same trap as the drifted citation corrected earlier today: I fixed that comment's line numbers
+and left its false claim standing, which made it *more* credible while still being wrong.
+Correcting the numbers on a citation without re-reading what it claims is its own failure mode.
+
+### Status
+
+The held reorder stays held on `bugfix/ai-vint-tick-ownership`. The r2 pair is **rejected** on
+39-red/0-green and is not on any branch. Nothing about the clock or the placement should move
+until all three members — clock read, call-site placement, and ObjD6's completion phase — are
+modelled together.
