@@ -109113,3 +109113,102 @@ Cluster 1 may share a cause with the queued splash-Y item: S1's `Sonic1SplashObj
 re-reads the water line every frame and cites `Spla_Display`, so its *position* is right; what
 differs is how long the object lives and how many exist. That is a different question from the
 S2/S3K snapshot issue and should not be assumed to be the same defect.
+## 2026-08-21 — the two-plus-one reading is DEAD: the engine's HCZ player exists 120 rows early and steps four times during the load
+
+Follow-up to the entry above, same lane. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s3k-handover-census`, based on `c28102846`.
+
+### First, a correction to the entry above
+
+That round reported the standalone `TestS3kSonicTailsHczSegmentTraceReplay` ran
+"under `-Ptrace-replay`". It ran, and its numbers are real, but the profile does
+not select it: `trace-replay` carries
+`<exclude>**/tests/trace/s3k/sonictails/*.java</exclude>`, and `-Dtest=`
+silently overrides profile selection. Briefing rule 98. The measurement stands;
+the coverage inference does not, and nobody should read that run as evidence
+that `trace-replay` exercises the `sonictails` package.
+
+### The kill condition ran, and it killed the reading
+
+The previous entry proposed that the engine's three-gravity-step lead was the
+two non-advancing `aiz_5` rows (7172, 7173) plus the uncovered movie frame
+53607, and wrote the falsifier: log the movie row of every gravity step the
+engine applies across the handover. A temporary probe in
+`AbstractRunChainTest.stepEngineFrame` (after `loop.step()`, printing the
+playback cursor, `vblaCounter` and the main playable's `y`/`y_sub`/`y_speed`;
+not landed) says:
+
+| movie row | engine state |
+|---|---|
+| 53410–53464 | AIZ2 (zone 0/1) player falling out of the act, `y` 0x1FD → 0x342 |
+| ~53465–53484 | destination level load |
+| **53485** | HCZ (zone 1/0) player **already exists**, `y` 0x0020, `y_speed` 0 |
+| **53487** | gravity step 1 — `y_speed` 0x38 |
+| **53559** | gravity step 2 — 0x70 |
+| **53608** | gravity step 3 — 0xA8 |
+| **53609** | gravity step 4 — 0xE0, and this is the state the comparator reads as segment 9 frame 0 |
+
+The engine steps on **none** of the three rows the reading named. It stands
+completely still on 53607, and on 7172/7173 (bk2 53604/53605) — `vblaCounter`
+advances on every row, physics on four of ~125. So the lead is not lag-row
+accounting, and the two-plus-one arithmetic in the entry above is a
+**coincidence**. Retracted.
+
+### What it actually is
+
+The ROM's destination player first appears on `aiz_5`'s final recorded row
+(bk2 53606, `y_speed` 0) and takes its first gravity step at `hcz` frame 0 —
+one step, `0x38`, which is the fixture's frame-0 row. The engine's destination
+player exists from about row **53485**, roughly 120 movie rows earlier, and is
+stepped four times before the comparison window opens.
+
+That is the ROM's own level-entry shape inverted. `AbstractRunChainTest`'s own
+gap doc states it: the ROM spends a level-advance gap inside the blocking
+`Level:` load path (docs/s2disasm/s2.asm:4757-4926), not in `Level_MainLoop`,
+and "the players do not even exist there until `InitPlayers`" (:4945). The
+engine suppresses the SOURCE level's body across that window, but the
+DESTINATION's players are alive inside it and their physics runs on a handful
+of its rows. The surplus is three steps because three of the four land before
+frame 0.
+
+Two things this also explains, which the position-only reading did not: the x
+axis is untouched because the recorded leftward air acceleration belongs to
+frames the ROM's player has not lived through yet, and the four steps are
+spread (53487, 53559, 53608, 53609) rather than consecutive, which no
+"N frames early" model produces.
+
+One caveat on row labels: the probe reads the playback cursor AFTER
+`loop.step()`, so every row index above may be one high. The step COUNT and the
+spacing are unaffected, and the substantive finding — four destination steps
+inside the load window, three of them before frame 0 — does not depend on the
+labelling.
+
+### The manifest census: a deliberate recorder decision, not a generation bug
+
+The previous entry flagged that no S3K transition carries `gap_admission_runs`
+and that all 22 zone-to-zone handovers have no transition record at all. Both
+are recorder-side and deliberate:
+
+- `S3KCompleteRunSegmenter.PushGiantRingTransition` documents it in as many
+  words — "plain level->level zone changes are boundaries with NO transition
+  record" — and the S3K segmenter pushes only `giant_ring`, `starpost_bonus`
+  and `stage_exit`.
+- `AttachGapAdmissionCensus` exists **only** in `S2RunCaptureRunner`; S1's and
+  S3K's runners have no equivalent. It run-length-encodes a `physicalLag` list
+  that is populated per frame *during emulation*, so it cannot be backfilled
+  from committed fixtures. Adding it to S3K is a **recording change** — new
+  captures of every affected run — not a code change, so per the commission
+  this thread stops here for a capture decision.
+
+It would not have fixed this segment in any case: `aiz_5` ends at bk2 53606 and
+`hcz` starts at 53608, so the gap between them is **one** movie row. A census
+over one row cannot account for four steps spread across 125 of them. The
+defect is on the engine side of the boundary, in which rows the destination
+level's players are alive and stepped.
+
+### Next
+
+The question is now narrow and engine-side: what keeps the destination
+players alive and occasionally stepping between the level load and the ROM's
+`InitPlayers`-equivalent, and why those particular rows. Nothing was fitted,
+nothing was landed in `src/`.
