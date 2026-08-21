@@ -102470,3 +102470,76 @@ but it is why the change wants measuring rather than assuming.
 
 Value unchanged: the eleven-frame suspension is ~1,100 of segment 15's 1,681
 errors.
+## 2026-08-21 — The residual gap is the boss's emerge phase, measured 33 frames too fast
+
+Round off `origin/develop` `49ebdcb89`. **Found, not fixed — nothing landed but this entry.**
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+### A failure mode for the reach check, recorded as one
+
+The rejected candidate of the previous round carried the walk **further** — from segment 8's
+close through to segment 9's `giant_ring` boundary — while raising segment 8's comparator
+errors from 2288 to 3779. **Reach and error count moved in opposite directions on the same
+change.** A reach gate alone would have scored it as progress and a count gate alone would have
+missed that it walked further. Neither is the verdict; both must be read together, and against
+the same arm.
+
+### The engine's fight timeline, measured
+
+Probing the boss's shared `waitTimer` at every phase entry and every hit:
+
+| row | event |
+|---|---|
+| 4677 | phase `120` (music) |
+| 4812 | hit, 7 left |
+| 4831 | phase `31` (`$1F`, hover) |
+| 4844 | hit, 6 left |
+| 4863 | phase `47` (`$2F`) |
+| 4885 | hit, 5 left |
+| 4911 | phase `143` (`$8F`) |
+| 4917 | hit, 4 left |
+| 5056 | phase `63` (`$3F`) |
+| 5133 | phase `127` (`$7F`, loop back to emerge) |
+| 5275 | hit, 3 left |
+| 5294 | phase `31` (`$1F`, hover) |
+| 5326 | phase `191` (`$BF`) |
+| 5352 | hit, 1 left |
+| **5487** | **final hit, `waitTimer = 30`** |
+
+Every value is one of the ROM's own phase constants. The final hit lands **161 frames into a
+191-frame `$BF` phase**, leaving the residual of 30 that the previous round measured.
+
+### Where the 33 frames are
+
+The `$7F` phase entered at row 5133 expires at 5261 (`127 + 1`). The next phase entry —
+hover — is at **5294**. So the engine's **emerge** occupies rows 5261-5294: **33 frames**.
+
+For the ROM's residual to be 63, its `$BF` phase must begin at `5487 - 128 = 5359`, which is
+**33 rows later** than the engine's 5326. Working back through the intervening `$1F`, the ROM's
+emerge would run **66 frames** where the engine's runs 33.
+
+So the engine's emerge is **too fast, by the whole of the discrepancy**. It is the one phase in
+the cycle not driven by the shared timer: `AIZEndBoss_StartEmerge` (`sonic3k.asm:138084-138085`)
+sets `routine = 2` without writing `$2E`, and `AIZEndBoss_Emerge` moves the boss without one
+either — the ROM ends it on the boss's own position/velocity. The engine ends it on an
+animation counter and sets `waitTimer = -1` while it runs.
+
+### What is measured and what is not
+
+**Measured:** the engine's whole phase timeline above, its 33-frame emerge, and its residual of
+30. **Implied, not observed:** the ROM's residual of 63 and therefore its 66-frame emerge —
+both derived from the 184-frame total, since the trace records neither `$2E` nor the boss's
+phase (the boss body never enters the recorded near-list; only its arms and flames do, at
+`0x00069622` / `0x00069738` / `0x0006923E`).
+
+Two independent routes now agree on **33**: the residual shortfall (63 − 30) and the measured
+gap between the `$7F` expiry and the hover entry. That agreement is why the emerge is the
+suspect — but it is agreement between one measurement and one inference, not two measurements.
+If the emerge turns out to run its ROM duration, believe the emerge and re-open the total.
+
+### Next
+
+Establish the ROM's emerge termination from `AIZEndBoss_Emerge`'s own position/velocity
+condition and give the engine the same, rather than an animation counter. Do not re-land the
+post-defeat handoff until the residual is right; a correct handoff on a wrong residual moves the
+capsule further out, as measured.
