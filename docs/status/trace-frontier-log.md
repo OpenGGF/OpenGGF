@@ -102993,3 +102993,19 @@ for the missed-transfer family is a count of the symptom rather than the cause.
 The site was found only by anchoring on the comparator's own cursor and cross-checking `expX`
 against `engX`. Every earlier attempt to reach it by deriving a movie row produced internally
 consistent output for the wrong window — the trap recorded in the previous entry, met twice.
+## 2026-08-21 — Parked AIZ2 capsule seam: sibling-port cross-reference
+
+Found during the timing-constant provenance sweep, without reference to this seam, and recorded
+here so it is not lost:
+
+`IczEndBossInstance.DEFEAT_CAPSULE_HANDOFF_WAIT = (2*60)-1` carries **the exact ROM expression
+`AizEndBossInstance`'s post-defeat wait lacks**, where AIZ instead has an uncited `0x7F`. The
+`#(2*60)-1` idiom appears **21 times** in `sonic3k.asm`, including at `loc_85674`
+(`:179664`) — the reload that hands the AIZ boss to `Obj_Wait`.
+
+A sibling boss port holding the idiom that this seam's port is missing is independent support
+for the diagnosis already in the log, reached from a different direction. It does **not**
+revive any of the retracted numbers (63, 66, or the 33): it speaks only to the second wait's
+reload, which was never in doubt.
+
+Full context: [docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](../architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).
