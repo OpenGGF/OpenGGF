@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and six rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and seven rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -123,6 +123,7 @@ that looks like a real result.
 | 104 | A true invariant enforced in the shared helper | Live-but-unwired objects at the callers that keep the reference |
 | 105 | A comment citing a ROM line and a number the code never produces | The defect, documented by its own author, with its acceptance test attached |
 | 106 | A green matrix quoted for a change nothing compares | Inertness inferred from a suite that measures no field the change touches |
+| 107 | A routine installed mid-frame and run in the same frame | One tick early, structurally; the fitted fix is a skipped tick |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2735,3 +2736,23 @@ slot or position at all. It was written up as **"no observable effect on compare
 
 That distinction matters later: an inert-looking change cited as evidence of inertness is how a
 real regression gets attributed to something else months afterwards.
+
+## One hundred and seventh rule: installing a routine costs the rest of that dispatch
+
+In the ROM, writing a new handler into an object's own slot does not make it run sooner. The
+dispatcher has already called the old handler for that slot this frame, so the newly installed
+routine first executes on the **following** frame. That single invariant is behind the
+offscreen-wait release pass, behind every routine-zero setup that advances and returns, and
+behind a boss whose post-defeat countdown starts a frame early in the engine.
+
+The engine's equivalent sites often change an object's routine during the player's touch scan
+and then dispatch the new routine later in the *same* frame, so its body runs on the frame that
+installed it — one tick early, every time, structurally rather than arithmetically.
+
+**Do not fix it with a skipped tick or an offset.** That is the fitted form. Model the ROM's
+rule: the new routine does not execute on the dispatch that installed it.
+
+**And the class is not confined to setup routines.** Two surveys in one investigation covered
+routine-zero init only; the same defect appears wherever a routine is installed mid-frame and
+run in the same frame, so the population is larger than either survey measured. That is the
+frontier, not the individual object it surfaced through.

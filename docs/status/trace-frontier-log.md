@@ -110288,3 +110288,66 @@ per-class opt-in, or fixing the creation lag first is not this lane's to make.
 
 The power-up slots were never opted in — the mechanism failed its own re-validation first — so
 the fixed-slot comparison is still unlanded, and cluster 3 is still unmeasured.
+
+## 2026-08-21 -- CONFIRMED: the boss defeat is detected one intra-frame slot early
+
+**Independent confirmation of another lane's one-inference-deep explanation. Found, not
+fixed** -- the capsule item belongs to that lane; this entry supplies the evidence it asked
+for, plus the fix shape.
+
+The question was narrow: does the ROM detect the AIZ2 end boss's defeat inside the **boss's
+own dispatch** while the engine detects it in the **player's touch scan**, and is the
+difference one intra-frame slot? **Yes, yes, and yes.**
+
+### ROM: detection is inside the boss's dispatch
+
+`AIZEndBoss_CheckHitOrDefeat` is reachable from exactly three places, all of them routine-table
+arms of `Obj_AIZEndBoss` itself:
+
+- `AIZEndBoss_Revealed` -> `bra.w AIZEndBoss_CheckHitOrDefeat` (`sonic3k.asm:138127`)
+- `AIZEndBoss_Hover` -> `bra.w`, after `Swing_UpAndDown`/`MoveSprite2`/`Obj_Wait` (`:138148`)
+- `AIZEndBoss_AttackWait` -> `bsr.w`, then `jmp (Obj_Wait)` (`:138189`)
+
+So the `collision_property` test runs at the boss's own slot, after its per-frame work. The
+property itself was written earlier the same frame, at the player/sidekick slots.
+
+### The one-frame cost, and why it is structural rather than arithmetic
+
+`AIZEndBoss_StartDefeatCallback` (`:138945-138951`) installs `Wait_FadeToLevelMusic` into
+`(a0)` and tail-jumps `BossDefeated_StopTimer`, which falls through into `BossDefeated` and
+sets `$2E = $3F` (`:180814-180822`). **`Process_Sprites` has already called the old handler for
+that slot this frame, so the newly installed wait routine does not execute until the next
+frame** -- its first `subq.w #1,$2E` is frame N+1. End of frame N: `$2E = 63`.
+
+The engine detects in `onPlayerAttack` (called from the touch controller, at the player scan),
+which runs `onDefeatStarted()` -> `state.routine = ROUTINE_DEFEATED`, `waitTimer = 0x3F`.
+Because S3K objects execute after player physics, `updateBossLogic` then dispatches
+`case ROUTINE_DEFEATED -> updateDefeated()` **later in that same frame**, and `updateDefeated`
+does `waitTimer--` unconditionally while a callback is armed. End of frame N: `waitTimer = 62`.
+
+**MEASURED, chain run, env-gated probe (reverted):**
+
+```
+DEFEAT_DETECTED at upd=977   (during the player scan preceding boss update 978)
+upd=978 enter waitTimer=63   <- decrements to 62, same frame as detection
+upd=979 enter waitTimer=62
+upd=980 enter waitTimer=61
+```
+
+The first tick lands on the detection frame. In the ROM it cannot. The span is one frame short,
+which is exactly the reported "same ticks span one row fewer".
+
+### The fix shape -- and it is the day's family again, in a boss
+
+Do **not** add a skipped tick or a +1; that is the fitted form and it would be a rule-3
+violation. The ROM's real invariant is general: **installing a new handler into `(a0)` costs
+the remainder of that dispatch -- the new routine first executes on the following frame.** That
+is the same invariant behind `Obj_WaitOffscreen`'s release pass (`loc_85B02` restores and
+`rts`es without re-entering) and behind every routine-0 Init that advances the routine and
+returns. The engine collapses it here exactly as it did in the six badniks landed earlier
+today. The faithful fix is to make the newly entered `ROUTINE_DEFEATED` not execute its body on
+the dispatch that installed it.
+
+**Consequence worth flagging:** this defect class is not confined to routine 0. Any site where
+the engine changes an object's routine during the player scan and then runs the new routine in
+the same frame has it. The badnik survey covered routine-0 Init only.
