@@ -106494,3 +106494,66 @@ routine-zero question, the follow-delay family, the descent constants, the press
 trigger box, the art selection, the parent/child ordering. The exclusive bound was not touched.
 The dead figures were not used as inputs — 63 appears above only as an explanation of why it is
 dead, and 184 only as the quantity shown to be *correct* in both.
+
+## 2026-08-21 — The neutral prediction failed: stage B is confirmed, stage A's inherited timer is 30 where the ROM's is 64
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `f0d0059eb`.
+Command as above. **The candidate was rejected and reverted. Nothing was landed but this
+entry, and the branch carries no rejected code.**
+
+**Prediction, stated before measuring:** segment 8 stays at 2288 errors, first non-camera
+error frame 6000 `sidekick_x`; both stages become ROM-derived; 63 never an input.
+
+**Result: the fixture moved, 2288 → 3779.** Stopped as agreed. First error stayed at frame
+6000 `sidekick_x` rom `0x4997` engine `0x4996`, but the count rose by 1491.
+
+**What the candidate did.** Stage B took the ROM literal `(2*60)-1` from `loc_85674`
+(`sonic3k.asm:179661`). Stage A stopped being a constant: `onDefeatStarted` no longer cleared
+`waitTimer`, matching `AIZEndBoss_StartDefeatCallback`, which installs `$34` and deliberately
+does not write `$2E` (`sonic3k.asm:138945-138951`); both stages became one countdown over the
+one timer in `Obj_Wait`'s shape. The two invented fields `defeatExplosionWaitTimer` `0x37` and
+`defeatPhaseTimer` `0x7F` were deleted.
+
+**Measured with the candidate in place:**
+
+| | row | length |
+|---|---|---|
+| defeat | 5486 | — |
+| stage A ends | 5517 | **31** frames (inherited `waitTimer` = **30**, +1) |
+| capsule spawns | 5637 | **120** frames |
+| | | total **151** |
+
+**Stage B is confirmed exactly right.** 120 frames, dead on the ROM literal, from a live
+measurement rather than from arithmetic. That half of the model is settled and should be kept
+whenever this is retried.
+
+**Stage A's mechanism is right and its inherited value is wrong.** The countdown behaves
+exactly as modelled — 30 inherited yields 31 frames — but the ROM's inherited `$2E` is **64**,
+not 30. Derivation, and it needs no boss-side capture: stage A runs rows 5488-5551 = 64 frames;
+on the defeat frame itself `AIZEndBoss_AttackWait` is `bsr AIZEndBoss_CheckHitOrDefeat` then
+`jmp (Obj_Wait).l`, and the defeat path returns through `BossDefeated_StopTimer`'s `rts` into
+that `jmp`, so `$2E` is decremented once on the defeat frame too; `Obj_Wait`'s shape then gives
+`(V-1) - 64 = -1`, so `V = 64`.
+
+**64 is not a ROM literal, and that is the point.** The boss's `$2E` write sites are `$1F`,
+`$2F`, `$3F`, `$7F`, `$8F`, `#2*60`, and `$BF`/`$FF` — 64 is none of them, so the ROM's boss is
+*mid-countdown* at the fatal hit. The engine's 30 is one frame into `$1F` = 31
+(`AIZEndBoss_StartHover`). **The two bosses are in different phases of the attack cycle when
+they die.** That is a pre-defeat state-machine divergence, upstream of everything measured so
+far, and it was completely invisible until the inheritance was modelled.
+
+**Why the old code hid it.** `0x37`+`0x7F` gives 56+128 = 184, and correct inheritance would
+give 64+120 = 184. The invented pair reproduced the right total for *this* fight while both
+halves were wrong, so the boss-phase divergence never showed. Removing the compensation
+exposes it: 31+120 = 151, and the capsule lands 34 frames early instead of 1.
+
+**So the ordering of work is now fixed, and it is not what either of us assumed.** The stages
+cannot be landed faithfully until the boss's pre-defeat attack cycle is in phase, because the
+faithful model is strictly worse than the compensating constants while it is not. The wait was
+never the frontier; neither, it turns out, is the defeat *frame* on its own.
+
+**Standing conclusions unaffected:** the post-defeat wait's *total* is still exactly 184 in the
+ROM, stage B is now positively confirmed, and the capsule's own acceptance target (setup row
+5671, first motion 5672, trigger from P2 at 6006) is untouched. The dead figures were not used:
+63 does not appear as an input anywhere above — it is named only to record that the required
+value is **64**, which is not 63 and not any ROM literal.
