@@ -659,9 +659,24 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsSequencer owner = admission.displacedOwners[action];
             track.active = false;
             forgetSfxClaim(owner, track);
-            owner.stopNote(track);
             int channel = track.channelId;
-            if (track.type == SmpsSequencer.TrackType.PSG
+            boolean retailFmHandoff = track.type
+                    != SmpsSequencer.TrackType.PSG
+                    && fmLocks[channel] == owner
+                    && sequencer.getConfig().getFmSfxTakeoverMode()
+                    == SmpsSequencerConfig.FmSfxTakeoverMode
+                            .KEY_OFF_CLEAR_SSG_EG;
+            if (!retailFmHandoff) {
+                owner.stopNote(track);
+            }
+            if (retailFmHandoff) {
+                // S3K fix_sndbugs=0 has one shared SFX RAM track per channel.
+                // A different SFX overwrites that track after the admission
+                // key-off; it never releases the channel to music in between.
+                rememberConflict(SfxContentionObserver.Bus.FM,
+                        channel, owner, sequencer);
+                fmLocks[channel] = sequencer;
+            } else if (track.type == SmpsSequencer.TrackType.PSG
                     && psgLocks[channel] == owner) {
                 rememberConflict(SfxContentionObserver.Bus.PSG,
                         channel, owner, sequencer);

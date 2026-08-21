@@ -114,6 +114,39 @@ class TestS3kBlueSpherePlaybackTrace {
                         + summaries);
     }
 
+    @Test
+    void replacingAnotherFm5SfxDoesNotRestoreMusicBeforeBlueSphereVoice()
+            throws Exception {
+        BoundedAudioPlaybackTrace chipTrace =
+                new BoundedAudioPlaybackTrace(100_000, 1);
+        audio.setChipWriteObserver(chipTrace);
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
+                .build();
+        SpecialStageProvider stage =
+                GameServices.module().getSpecialStageProvider();
+        assertNotNull(stage);
+        stage.initializeStage(0);
+        assertTrue(audio.playMusic(GameMusic.SPECIAL_STAGE));
+        capture = AudioManagerTestDiagnostics.attachPresentationCapture(
+                audio, audio.presentationFrameRate());
+        drainFrames(fixture, null, 30);
+
+        assertTrue(audio.playSfx(Sonic3kSfx.SPRING.id));
+        drainFrames(fixture, null, 2);
+        String marker = "spring-to-blue-sphere";
+        chipTrace.mark(marker);
+        assertTrue(audio.playSfx(Sonic3kSfx.BLUE_SPHERE.id));
+        drainFrames(fixture, null, 2);
+
+        List<Integer> levels = fm5CarrierLevels(
+                chipTrace.snapshot().eventsAfter(marker));
+        assertTrue(levels.size() >= 3, () -> "missing Blue Sphere voice: " + levels);
+        assertEquals(List.of(5, 5, 5), levels.subList(0, 3),
+                () -> "retail shared-SFX overwrite must not upload the music voice first: "
+                        + levels);
+    }
+
     private void drainFrames(
             HeadlessTestFixture fixture,
             BoundedAudioPlaybackTrace trace,

@@ -43,9 +43,11 @@ class TestS3kBlueSphereSfxParity {
             }
         });
 
-        admit(driver, data, loader);
+        SmpsSequencer sequencer = admit(driver, data, loader);
         driver.read(new short[24_000]);
         List<Integer> first = List.copyOf(fm5CarrierLevels);
+        assertEquals(-0x30, sequencer.trackAt(0).modCurrentDelta,
+                "Sound_65's $D0 modulation delta is sign-extended by zDoModulation");
 
         driver.read(new short[246]);
         fm5CarrierLevels.clear();
@@ -58,7 +60,7 @@ class TestS3kBlueSphereSfxParity {
                 "same-ID retrigger must not inherit the previous track's attenuation");
     }
 
-    private static void admit(
+    private static SmpsSequencer admit(
             SmpsDriver driver,
             AbstractSmpsData data,
             Sonic3kSmpsLoader loader) {
@@ -68,5 +70,6 @@ class TestS3kBlueSphereSfxParity {
                 driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(sequencer, true);
+        return sequencer;
     }
 }

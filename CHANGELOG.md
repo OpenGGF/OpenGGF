@@ -4,8 +4,9 @@
   the retail game:** entry clears the level's speed-shoes tempo before loading
   special-stage music, ring pickups use the Z80 driver's alternating speaker
   selection, and rapid Blue Sphere SFX replacements retain FM5 ownership
-  without injecting a full-channel `RR=FF` / `TL=7F` silence between notes or
-  at the ordinary track-stop boundary. A new bounded playback trace exercises
+  without transiently restoring the music voice when they replace another
+  FM5 SFX, or injecting a full-channel `RR=FF` / `TL=7F` silence between notes
+  or at the ordinary track-stop boundary. A new bounded playback trace exercises
   the real presentation/cache path at several retrigger phases and records
   ordered YM2612/PSG writes plus final stereo PCM fingerprints, without
   expanding the complete-run trace contract.

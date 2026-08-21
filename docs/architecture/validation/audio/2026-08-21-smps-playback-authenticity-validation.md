@@ -118,5 +118,31 @@ performed by the automation. Human A/B approval is tracked explicitly in the
 not reopen complete-game semantic tracing or broad backend cleanup without a
 named audible mismatch.
 
+The first Blue Sphere listening candidate (`5f5232441`) did not pass that
+human gate. Its same-ID retrigger trace proved the expected `$05`/`$0A` TL
+sequence but omitted the different-ID shared-track boundary used when a spring,
+bumper, goal, or other FM5 SFX precedes the pickup. The bounded presentation
+trace now covers that boundary and reproduced the defect before correction:
+the engine uploaded the interrupted music carrier TLs `[22,21,31]` before the
+Blue Sphere voice `[5,5,5]`. Retail `zPlaySound` overwrites the shared SFX RAM
+track after its admission key-off and never exposes music between the two SFX.
+The corrected handoff retains FM5 ownership across that replacement. Human
+listening remains pending and still blocks integration.
+
+The equivalent S1 and S2 loaders also overwrite their shared per-channel SFX
+track RAM without restoring music between the displaced and replacement SFX
+(`Sound_PlaySFX` / `zPlaySound`). Their engine profiles still use the older
+force-reset takeover policy, so this S3K candidate deliberately does not alter
+them. That mismatch is a separate source-backed follow-up with its own game
+tests; folding it into the Blue Sphere correction would broaden the listening
+surface without helping diagnose this report.
+
+The follow-up audio regression selection ran 179 tests with 0 failures, 0
+errors, and 0 skips. A clean full-suite comparison against current `develop`
+ran 15,283 candidate tests (52 failures, 64 errors, 18 skips) versus 15,280
+baseline tests (56 failures, 64 errors, 18 skips). The candidate introduced no
+new failing or error method and removed four baseline-red methods; all changed
+playback tests were green.
+
 Phase 7 cleanup remains deferred. The rejected semantic-observer worktree and
 its protected stashes are not part of this delivery.
