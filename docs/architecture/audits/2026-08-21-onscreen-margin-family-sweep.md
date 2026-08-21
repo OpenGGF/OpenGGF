@@ -189,3 +189,45 @@ exists in a non-rendering run — which is a design decision, not an implementat
 
 **Stage 2 and every conversion behind it stay blocked.** `ObjectRangeOps` (stage 1) is unaffected:
 it takes object x and camera x and reads nothing from the render path.
+
+## Stage 2 is UNBLOCKED — the predicate needs no renderer write-back (2026-08-21)
+
+`isPreUpdateWithinRenderSpriteBounds` transfers to `Obj98`, and the pattern is already
+established in this tree. All three conditions hold:
+
+**(a) The helper's shape matches `BuildSprites` exactly.** `containsRenderSpriteBounds` is
+`x >= left - xMargin && x < right + xMargin` with
+`y >= top - yMargin && y < bottom + yMargin` and an 11-bit vertical wrap. `BuildSprites`
+(`docs/s2disasm/s2.asm:30567-30576`) tests `(x - cam) + width_pixels >= 0` and
+`(x - cam) - width_pixels < screen_width`, then the Y band — and masks `#$7FF`, the wrap the
+helper models. This is an asymmetric per-axis edge test, **not** a symmetric margin: unlike
+`isOnScreen`, this helper was built for this predicate.
+
+**(b) `Obj98` is queued for `BuildSprites` on every surviving frame**, so its flag can never go
+stale. `Obj98_Main`'s tail is `MarkObjGone` (`s2.asm:74681`), which either reaches
+`DisplaySprite` — queueing the object — or deletes it. Either way the next frame's flag is
+fresh. This is the property the sibling lane established separately for its own object, and it
+had to be checked rather than assumed.
+
+**(c) Both margins are ROM-derived and pass the two-halves test.** For the wall turret shot,
+`xMargin` is `width_pixels` = 4, from the object's own attribute data; `yMargin` is **32**, and
+I can name the routine that computes it — `BuildSprites_ApproxYCheck` (`s2.asm:30609`) — and
+the branch that selects it — `btst #render_flags.explicit_height,d4 / beq.s
+BuildSprites_ApproxYCheck` (`s2.asm:30580-30581`), reached because `Obj98`'s attribute data
+leaves `explicit_height` clear.
+
+**The pattern is not novel.** `CollapsingPlatformObjectInstance:189-203` already does exactly
+this, with `APPROX_RENDER_Y_MARGIN = 32 // BuildSprites_ApproxYCheck assumed radius`, as do
+`GrounderWallInstance`, `GrounderRockProjectile`, `Sonic1SLZBossSpikeball` and two Knuckles
+cutscene objects. The render-flag sites in this family are the ones that **did not** use it.
+
+**One guard to check per site before converting.** `snapshotPreUpdatePosition()` begins
+`if (getSpawn() == null) return;`, leaving `preUpdateValid` false, and the helper returns
+`false` when it is. On a delete-on-not-drawn site that reads as "not drawn" and deletes
+immediately. `WallTurretShotInstance` carries a spawn (observed directly in probe output as
+`spawn=2341,357`), so it is safe; any other site must be checked the same way rather than
+assumed.
+
+**Consequence.** Stage 2 needs no renderer write-back, so the headless finding above — true and
+unchanged — is not a blocker for this path. It would only bind if someone later wanted a real
+draw-outcome flag for a predicate this helper cannot express.
