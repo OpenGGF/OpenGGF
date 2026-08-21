@@ -124,6 +124,7 @@ that looks like a real result.
 | 105 | A comment citing a ROM line and a number the code never produces | The defect, documented by its own author, with its acceptance test attached |
 | 106 | A green matrix quoted for a change nothing compares | Inertness inferred from a suite that measures no field the change touches |
 | 107 | A routine installed mid-frame and run in the same frame | One tick early, structurally; the fitted fix is a skipped tick |
+| 108 | The symptom is one frame; the class is one intra-frame slot | Q1 cuts most false positives by reading; survey by role |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2756,3 +2757,33 @@ rule: the new routine does not execute on the dispatch that installed it.
 routine-zero init only; the same defect appears wherever a routine is installed mid-frame and
 run in the same frame, so the population is larger than either survey measured. That is the
 frontier, not the individual object it surfaced through.
+
+## One hundred and eighth rule: the symptom is one frame; the class is one intra-frame slot
+
+Rule 107's class has a boundary, and finding it by symptom will not locate it. Creation lag,
+clear-ownership errors, allocator-class errors and slot mismatch **all emit an identical
+one-frame signature**, so symptom-matching produces false positives indefinitely — two arrived
+in one day, each costing a full investigation to exclude.
+
+Three questions, in order; a "no" at any one ends it:
+
+1. Is a **handler/selector for the object's own slot** being installed — a value the dispatcher
+   will jump through — as opposed to a state byte, a flag, or an allocation? If the dispatcher
+   re-reads the byte fresh every frame and the argument is about who *writes or clears* it, it
+   is not a member.
+2. In the ROM, is the write site reached **after** that object's dispatch already read its
+   selector this frame — a routine-table head read followed by a `bsr`/`bra` tail, or a callback
+   installed into `(a0)`? If the ROM writes it from `Touch_Response` while the object's slot has
+   not yet run, the ROM runs it same-frame too, and there is nothing to fix.
+3. In the engine, does the write happen **before** that object's own `update()` — touch scan,
+   solid pass, an earlier object? If engine and ROM write from the same relative position, no
+   member.
+
+**Q1 is the cheap cut** and disposes of most false positives by reading alone. An S2 Super Sonic
+freeze release (a state byte read at the top of the dispatch; the defect is which subsystem
+clears it) and an S1 air-bubble creation lag (an allocation-ordering error) both fail Q1 —
+neither is a member, and neither needed a measurement to exclude.
+
+**Survey this class by role, not by name, and expand one level through same-class calls.** Five
+distinct idioms model the invariant correctly with no shared searchable name, and one confirmed
+member is neither a boss nor a touch callback. A name grep reports a class that does not exist.
