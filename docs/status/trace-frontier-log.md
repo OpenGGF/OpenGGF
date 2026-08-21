@@ -106421,3 +106421,76 @@ different points inside one frame — after the `$4000` descent, after `Swing_Up
 recording's single end-of-frame sample produces a different delta series, and two of the three
 produce a *plausible* one that is not a defect. Fix the sample point before reading a delta on
 a folded parent/child object.
+
+## 2026-08-21 — The post-defeat wait is exonerated: its total is exact, the defeat FRAME is one early
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `f1b3b4757`.
+Command as above. **Nothing was landed but this entry.** One throwaway probe, reverted;
+baseline 2288 / frame 6000 unchanged with it in place.
+
+**Re-close the post-defeat wait.** It was re-opened on my evidence last round, and that
+evidence was right — the capsule's creation is one frame early — but it pointed at the wrong
+owner. The wait is exact.
+
+**The boss's routine pointer is observable after all, for the frames that matter.** Slot 7
+carries the AIZ end boss's `(a0)` per frame. Its transitions:
+
+| row | `object_code` | ROM routine |
+|---|---|---|
+| 5486 | `0x0006923E` | pre-defeat |
+| **5487** | `0x00085668` | **`Wait_FadeToLevelMusic`** — the fatal hit, `AIZEndBoss_StartDefeatCallback` |
+| **5551** | `0x0008488A` | **`Obj_Wait`** — `loc_85674` + `AIZEndBoss_StartDefeat`, same frame |
+| 5871 | `0x000694D4` | `AIZEndBoss_StartPostDefeatCutscene` (first row after a near-list gap) |
+
+Rows 5670-5870 are absent — the boss leaves the near-list — so the 5871 row is only when it
+was re-observed, **not** when it transitioned. That gap is what the earlier thread hit. It does
+not matter here, because the second stage's length is a ROM literal rather than a measurement:
+`loc_85674` sets `move.w #(2*60)-1,$2E(a0)` = 119 (`sonic3k.asm:179663`), and
+`AIZEndBoss_StartDefeat` never touches `$2E`, so `Obj_Wait` fires after 120 decrements —
+**5551 + 120 = row 5671**.
+
+That is the same 5671 the capsule's own 62/62 positional match produced two entries ago, from
+completely independent evidence. Two derivations, no shared input, no fitted constant.
+
+**The engine, measured:** `onDefeatStarted()` at row **5486**, capsule spawned at row **5670**
+(the spawn probe and the capsule's `INIT` probe report the same `vbc` `0xb5db`, confirming the
+capsule runs its setup on its creation frame, as `AllocateObjectAfterCurrent` requires).
+
+| | ROM | engine |
+|---|---|---|
+| defeat frame | **5487** | **5486** |
+| capsule frame | **5671** | **5670** |
+| wait length | **184** | **184** |
+
+**The wait total is exactly right. The whole error is that defeat detection fires one frame
+early.** Everything the earlier thread measured about the wait was correct, which is why its
+constants kept verifying and why no error count ever moved: the wait was never the defect.
+
+**Re-route to boss hit/defeat detection timing.** In the ROM the boss learns of its own defeat
+inside its own dispatch — `AIZEndBoss_CheckHitOrDefeat` tests `collision_property(a0)` and
+tail-calls `AIZEndBoss_StartDefeatCallback` (`sonic3k.asm:138915-138951`). The player's
+position matches the recording exactly through this whole window (segment 8's first error of
+any field is 6000), so the hit *geometry* is identical and only the frame on which the hit is
+*processed* differs. This is the same shape as the still-unattributed HCZ "bounce a dispatch
+early" question and may be the same defect.
+
+**A latent compensating pair, invisible in this recording.** The engine's two stages are
+`defeatExplosionWaitTimer = 0x37` → 56 frames and `defeatPhaseTimer = 0x7F` → 128 frames. The
+ROM's are **64** and **120**. The totals coincide at 184, so this fixture cannot see it, but
+the split is wrong in both halves:
+
+- Stage A is not a constant at all. It is `$2E`+1 where `$2E` is whatever the boss's previous
+  move-wait left — `AIZEndBoss_StartDefeatCallback` does not set it. It measures 63 here, which
+  is exactly why hardcoding **63** was correctly declared dead: it is fight-dependent, not a
+  ROM value.
+- Stage B is a ROM literal, `(2*60)-1` at `loc_85674`, and the engine's `0x7F` is not it.
+
+Two wrong halves summing to the right total is rule 3's "any BK2, not this BK2" in its purest
+form: a different fight length changes `$2E` at the hit, the totals stop cancelling, and the
+capsule moves. **Worth fixing on its own merits even though it will not move this frontier.**
+
+**Still closed, and not re-opened by this round:** the alternative entry point, the
+routine-zero question, the follow-delay family, the descent constants, the press predicate, the
+trigger box, the art selection, the parent/child ordering. The exclusive bound was not touched.
+The dead figures were not used as inputs — 63 appears above only as an explanation of why it is
+dead, and 184 only as the quantity shown to be *correct* in both.
