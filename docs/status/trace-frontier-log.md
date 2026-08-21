@@ -104167,3 +104167,77 @@ boot-coverage skew — the one case that supposedly *did* show that shape. **It 
 census's error side is not two defects of different kinds; it is seven missing-work special
 stages (now shown to be bootstrap debt) and one producer-timing defect.** Nothing in the census
 demonstrates a boot-coverage ordinal skew.
+
+## 2026-08-21 — The HCZ fingerprint lookup: the art is right and on time; the reload batch never retires
+
+Round `s3k-hcz-fp-r1`, branch `bugfix/ai-s3k-hcz-fp-r1` off `origin/develop` `3096fe52b`.
+**Found, not fixed.** Probes reverted, tree clean.
+
+### The lookup, answered exactly
+
+`#118`'s recorded fingerprint is
+`sha256:70da89e553f70fe647a00489dec5f2612854986b444b87a2e8d81ab0f821e431`. Printing engine
+submission fingerprints from `HardwareWorkHandle` on a chain run, where the same producer
+succeeds:
+
+```
+[FP] #12 src=0xDB406 dst=0xB400 fp=sha256:70da89e553f70fe647a00489dec5f2612854986b444b87a2e8d81ab0f821e431
+```
+
+**Exact match.** `#118` *is* the badnik explosion art the blocked submission wants. The
+recording does queue it in this segment, so the "producer should not fire here at all" branch is
+eliminated and the ROM-equivalent question it would have required does not arise.
+
+### DROP the 571-frame figure — the producer is not early
+
+The previous entry carried `≥571 frames early` as a lower bound derived from `#117`'s recorded
+row. Measured against the engine instead, it is wrong by two orders of magnitude:
+
+```
+[FP] BLOCKED rawFrame=3536 src=0xDB406 dst=0xB400 len=0x880 modules=1
+```
+
+The engine fires at **3536**; the recording's `#118` completes at **3538**. Two frames, and a
+completion necessarily trails its submission, so the producer's timing is at worst
+indistinguishable from correct. The bound was not a loose estimate of the error, it was an
+estimate of the wrong quantity — it measured the distance to the *previous* batch rather than to
+this submission's own completion.
+
+### The real defect: the batch is submitted on time and never retires
+
+Submission frames against recorded completions:
+
+| ordinal | engine submits | recorded completion |
+|---|---:|---:|
+| 112 | 2468 | 2470 |
+| 113 | 2764 | 2768 |
+| 114 | **2958** | 2958 |
+| 115 | **2958** | 2962 |
+| 116 | **2958** | 2964 |
+| 117 | **2958** | 2967 |
+
+`#112` and `#113` submit two to four frames ahead of their completions, which is the normal
+shape. The four reload parents are all submitted **together on frame 2958**, on time — and at
+frame 3536 all four are **still pending**, roughly 570 frames past the last of their recorded
+completions. The explosion art then arrives on schedule and finds a four-deep FIFO with no slot.
+
+So the failure is not a producer firing early, and not the FIFO, and not the explosion art. It
+is **the second reload batch failing to retire against its recorded completions.**
+
+### The discriminating fact for the next round
+
+The **first** reload batch is identical in content and does retire: `#108`-`#111` carry the same
+four fingerprints, submit by frame 1021, and drain — which is why the run reaches `#117` at all.
+So whatever stalls the second batch is not inherent to the reload, the art, or the producer.
+
+Two candidates, unmeasured: the parents' decompression children (recorded at 2957/2961/2963/2966)
+failing to match, or the module-queue state machine stalling on the head parent. The first is
+cheap to check by printing decompression-side matching over 2957-2967 and is where to start.
+
+### Correction carried
+
+The census entry called this an ordinal skew; the previous entry retracted that and called it a
+producer firing early. **Both are now wrong.** The engine's ordinals match the fixture exactly
+and its producers fire on time; the defect is retirement. Three characterisations of one failure,
+each replaced by measurement rather than argument — the constant across them is that every one
+was formed by reading a symptom's location instead of instrumenting its cause.
