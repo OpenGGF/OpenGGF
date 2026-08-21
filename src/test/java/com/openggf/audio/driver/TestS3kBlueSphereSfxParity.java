@@ -16,9 +16,43 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kBlueSphereSfxParity {
+
+    @Test
+    void admissionPreparesFm5OneVintBeforeTheFirstSfxService() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        AbstractSmpsData data = loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id);
+        SmpsDriver driver = new SmpsDriver();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add("%d:%02X:%02X".formatted(port, register, value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+
+        admit(driver, data, loader);
+        assertTrue(writes.contains("0:28:05"),
+                "admission keys off FM5 immediately");
+        writes.clear();
+
+        driver.read(new short[735 * 2]);
+        assertTrue(writes.isEmpty(),
+                "the admission VInt has already run before zPlaySound");
+
+        driver.read(new short[735 * 2]);
+        assertTrue(writes.containsAll(List.of(
+                        "1:81:FF", "1:85:FF", "1:89:FF", "1:8D:FF")),
+                "the following VInt executes cfSetVoice and starts the SFX");
+    }
 
     @Test
     void repeatedBlueSphereAdmissionsRestartTheExactVolumeSequence() {

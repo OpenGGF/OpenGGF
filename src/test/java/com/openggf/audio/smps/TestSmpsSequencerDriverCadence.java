@@ -398,6 +398,67 @@ class TestSmpsSequencerDriverCadence {
     }
 
     @Test
+    void sfxStartTimingMatchesEachShippedDriverLoop() {
+        assertEquals(SmpsSequencerConfig.SfxStartTiming.SAME_DRIVER_UPDATE,
+                Sonic1SmpsSequencerConfig.CONFIG.getSfxStartTiming());
+        assertEquals(SmpsSequencerConfig.SfxStartTiming.SAME_DRIVER_UPDATE,
+                Sonic2SmpsSequencerConfig.CONFIG.getSfxStartTiming());
+        assertEquals(SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE,
+                Sonic3kSmpsSequencerConfig.CONFIG.getSfxStartTiming());
+    }
+
+    @Test
+    void directAdvanceHonorsTheS3kDeferredFirstSfxService() {
+        SmpsSequencer sequencer = sequencer(
+                1, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track track = psgEnvelopeTrack();
+        sequencer.addTrack(track);
+        sequencer.beginSfxAdmission();
+
+        sequencer.advance(1);
+        assertEquals(0, track.envPos,
+                "zPlaySound runs after S3K's SFX loop, so admission does not service the new track");
+
+        sequencer.advance(1);
+        assertEquals(1, track.envPos,
+                "the next driver update performs the first SFX track service");
+    }
+
+    @Test
+    void s1AndS2AdmissionServicesTheNewSfxInTheSameDriverUpdate() {
+        for (SmpsSequencerConfig config : new SmpsSequencerConfig[] {
+                Sonic1SmpsSequencerConfig.CONFIG,
+                Sonic2SmpsSequencerConfig.CONFIG }) {
+            SmpsSequencer sequencer = sequencer(1, config);
+            SmpsSequencer.Track track = psgEnvelopeTrack();
+            sequencer.addTrack(track);
+            sequencer.beginSfxAdmission();
+
+            sequencer.advance(1);
+
+            assertEquals(1, track.envPos,
+                    "S1/S2 process the queue before their SFX track loops");
+        }
+    }
+
+    @Test
+    void rewindPreservesThePendingS3kFirstServiceBoundary() {
+        SmpsSequencer sequencer = sequencer(
+                1, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track track = psgEnvelopeTrack();
+        sequencer.addTrack(track);
+        sequencer.beginSfxAdmission();
+        SmpsSequencerSnapshot pending = sequencer.captureSnapshot();
+
+        sequencer.advance(1);
+        sequencer.restoreSnapshot(pending);
+        sequencer.advance(1);
+
+        assertEquals(0, sequencer.trackAt(0).envPos,
+                "rewind must not turn a pending S3K admission into a same-VInt service");
+    }
+
+    @Test
     void s3kPsgReleaseRemainsAvailableForSameVintMusicService() {
         SmpsSequencer sequencer = sequencer(
                 1, Sonic3kSmpsSequencerConfig.CONFIG);

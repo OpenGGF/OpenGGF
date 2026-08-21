@@ -1,5 +1,7 @@
 package com.openggf.tools.audio.playback;
 
+import com.openggf.audio.AudioRequestObserver;
+
 import java.util.Objects;
 
 /** One immutable, ordered observation from a bounded playback scenario. */
@@ -28,6 +30,33 @@ public sealed interface AudioPlaybackTraceEvent {
     record PsgWrite(int value) implements AudioPlaybackTraceEvent {
         public PsgWrite {
             requireByte(value, "PSG value");
+        }
+    }
+
+    record Ym2612KeyOn(int channel, int operator, int attenuation)
+            implements AudioPlaybackTraceEvent {
+        public Ym2612KeyOn {
+            if (channel < 0 || channel > 5) {
+                throw new IllegalArgumentException(
+                        "YM2612 channel must be between 0 and 5");
+            }
+            if (operator < 0 || operator > 3) {
+                throw new IllegalArgumentException(
+                        "YM2612 operator must be between 0 and 3");
+            }
+            if (attenuation < 0 || attenuation > 1023) {
+                throw new IllegalArgumentException(
+                        "YM2612 attenuation must be between 0 and 1023");
+            }
+        }
+    }
+
+    record AudioRequest(
+            AudioRequestObserver.RequestClass requestClass,
+            int rawSoundId) implements AudioPlaybackTraceEvent {
+        public AudioRequest {
+            Objects.requireNonNull(requestClass, "requestClass");
+            requireByte(rawSoundId, "raw sound id");
         }
     }
 

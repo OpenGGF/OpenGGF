@@ -147,6 +147,88 @@ class TestS3kBlueSpherePlaybackTrace {
                         + levels);
     }
 
+    @Test
+    void completedBlueSphereDoesNotChangeItsLaterPlaybackAtTheSameMusicPhase()
+            throws Exception {
+        AudioPlaybackTraceSnapshot fresh = captureAtCommonMusicPhase(false);
+        AudioPlaybackTraceSnapshot afterCompleted = captureAtCommonMusicPhase(true);
+
+        assertEquals(fm5Writes(fresh.events()), fm5Writes(afterCompleted.events()),
+                "a completed pickup must not alter the later pickup's FM5 program");
+        AudioPlaybackTraceComparator.Result comparison =
+                AudioPlaybackTraceComparator.compare(fresh, afterCompleted);
+        assertTrue(comparison.matches(), () ->
+                "a completed pickup leaked history into later audible playback: "
+                        + comparison.description()
+                        + "; fresh=" + fresh.pcmSummary()
+                        + "; replay=" + afterCompleted.pcmSummary());
+
+        List<Integer> levels = fm5CarrierLevels(afterCompleted.events());
+        assertTrue(levels.size() >= 6,
+                () -> "missing completed-replay carrier writes: " + levels
+                        + "; events=" + afterCompleted.events().size()
+                        + "; first=" + afterCompleted.events().stream()
+                                .limit(20).toList());
+        assertEquals(List.of(5, 5, 5, 10, 10, 10),
+                levels.subList(0, 6),
+                () -> "completed Blue Sphere must restart from its ROM TL sequence: "
+                        + levels);
+    }
+
+    private AudioPlaybackTraceSnapshot captureAtCommonMusicPhase(
+            boolean playEarlierPickup) throws Exception {
+        audio.setChipWriteObserver(null);
+        if (capture != null) {
+            capture.close();
+            capture = null;
+        }
+        audio.resetState();
+
+        BoundedAudioPlaybackTrace trace =
+                new BoundedAudioPlaybackTrace(100_000, 30_000);
+        audio.setChipWriteObserver(trace);
+
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
+                .build();
+        SpecialStageProvider stage =
+                GameServices.module().getSpecialStageProvider();
+        assertNotNull(stage);
+        stage.initializeStage(0);
+        assertTrue(audio.playMusic(GameMusic.SPECIAL_STAGE));
+        capture = AudioManagerTestDiagnostics.attachPresentationCapture(
+                audio, audio.presentationFrameRate());
+        drainFrames(fixture, null, 30);
+        if (playEarlierPickup) {
+            assertTrue(audio.playSfx(Sonic3kSfx.BLUE_SPHERE.id));
+        }
+        drainFrames(fixture, null, 100);
+
+        String marker = "target-blue-sphere";
+        trace.mark(marker);
+        assertTrue(audio.playSfx(Sonic3kSfx.BLUE_SPHERE.id));
+        drainFrames(fixture, trace, 30);
+        audio.setChipWriteObserver(null);
+        AudioPlaybackTraceSnapshot complete = trace.snapshot();
+        return new AudioPlaybackTraceSnapshot(
+                complete.eventsAfter(marker), complete.pcm());
+    }
+
+    private static List<AudioPlaybackTraceEvent.Ym2612Write> fm5Writes(
+            List<AudioPlaybackTraceEvent> events) {
+        return events.stream()
+                .filter(AudioPlaybackTraceEvent.Ym2612Write.class::isInstance)
+                .map(AudioPlaybackTraceEvent.Ym2612Write.class::cast)
+                .filter(write -> (write.port() == 1
+                        && write.register() >= 0x30
+                        && write.register() <= 0xB6
+                        && (write.register() & 0x03) == 1)
+                        || (write.port() == 0
+                        && write.register() == 0x28
+                        && (write.value() & 0x07) == 5))
+                .toList();
+    }
+
     private void drainFrames(
             HeadlessTestFixture fixture,
             BoundedAudioPlaybackTrace trace,

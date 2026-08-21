@@ -84,7 +84,7 @@ failed.
 | [ ] | Run locked-on PAL playback through at least two repeat boundaries | Driver-global sixth-VInt full repeat includes SFX, music, fade, and speed tails without dephasing | |
 | [ ] | Enter a Blue Sphere stage while speed shoes are active | Special-stage music starts at normal tempo; the outgoing level fade is unchanged | Retest pending after the entry-boundary fix |
 | [x] | Collect several special-stage rings | Retail Z80 `zRingSpeaker` alternates left and right output | User listening pass, 2026-08-21 |
-| [ ] | Collect isolated and rapidly adjacent Blue Spheres, including immediately after a spring or bumper | Both notes retain the intended `$05` then `$0A` carrier attenuation; cross-SFX replacement does not transiently upload the music voice; retriggers and ordinary completion inject neither a music restore nor `TL=7F` before the new voice | First user retest rejected commit `5f5232441`; the follow-up bounded trace reproduced the missing cross-ID FM5 handoff as `[22,21,31,5,5,5]` instead of retail `[5,5,5]`. Retest the next candidate. |
+| [ ] | Collect isolated and rapidly adjacent Blue Spheres, including immediately after a spring or bumper | Both notes retain the intended `$05` then `$0A` carrier attenuation; admission key-off/SSG-EG clear occurs before the following driver update's `RR=FF`/voice/key-on phase; cross-SFX replacement does not transiently upload the music voice; retriggers and ordinary completion inject neither a music restore nor `TL=7F` before the new voice | First user retest rejected commit `5f5232441`; later native bus tracing found that S3K queue admission follows the current update's SFX loop, while the engine serviced the new track immediately. Retest the deferred-first-service candidate. |
 
 ## Approval
 

@@ -1567,7 +1567,8 @@ class TestAudioDiagnosticObservers {
                 speedMultiplier, speedupTimeout, state.palUpdateCounter(), fade,
                 state.sampleRate(), state.samplesPerFrame(), 0.0,
                 tempoWeight, tempoAccumulator, state.dividingTiming(),
-                state.primed(), state.tracks()));
+                state.primed(), state.deferNextDriverService(),
+                state.tracks()));
     }
 
     private static SmpsDriverServiceObserver scopedServiceObserver(

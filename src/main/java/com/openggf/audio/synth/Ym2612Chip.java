@@ -1368,6 +1368,7 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
         }
         Operator sl = ch.ops[idx];
+        writeObserver.onYm2612KeyOn(channelIndex(ch), idx, sl.volume);
         // GPGX-style: use separate key flag instead of checking envelope state.
         // This properly gates key-on to only trigger on 0->1 transitions.
         if (!sl.key && csmKeyFlag == 0) {
@@ -1610,6 +1611,7 @@ public class Ym2612Chip {
 
         int leftSum = 0;
         int rightSum = 0;
+        int observedChannelMask = writeObserver.ym2612ChannelSampleMask() & 0x3F;
         for (int ch = 0; ch < 6; ch++) {
             Channel chan = channels[ch];
             int out = 0;
@@ -1617,6 +1619,10 @@ public class Ym2612Chip {
                 out = dacMixedOut;
             } else if (!mutes[ch]) {
                 out = renderChannel(ch, envLfo, pmLfo);
+            }
+
+            if ((observedChannelMask & (1 << ch)) != 0) {
+                writeObserver.onYm2612ChannelSample(ch, out);
             }
 
             if (chan.leftMask != 0)

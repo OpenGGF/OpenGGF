@@ -221,6 +221,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private int tempoAccumulator;
     private int dividingTiming = 1;
     private boolean primed;
+    private boolean deferNextDriverService;
 
     // Scratch buffer for read() to avoid per-sample allocations
     private final short[] scratchSample = new short[1];
@@ -500,7 +501,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.keyOffset = (byte) programView.fmKeyOffsetAt(i);
                 t.volumeOffset = programView.fmVolumeOffsetAt(i);
                 t.dividingTiming = dividingTiming;
-                loadVoice(t, 0); // default instrument
+                loadInitialVoice(t, 0);
                 tracks.add(t);
             }
         }
@@ -706,14 +707,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
                     // Channel released from SFX, restore instrument and volume
                     refreshInstrument(t);
+                    if (t.type == TrackType.FM
+                            && config.getFmSfxReleaseMode()
+                                    == SmpsSequencerConfig.FmSfxReleaseMode
+                                            .RESTORE_MUSIC_DIRECTLY) {
+                        // S3K fix_sndbugs=0 cfStopTrack keys off the retiring
+                        // SFX before zSendFMInstrument restores the music
+                        // voice. It does not key off again or rewrite the
+                        // interrupted music frequency after that upload.
+                        continue;
+                    }
                     if (t.type == TrackType.PSG) {
                         refreshVolume(t);
                     }
                     if (t.type == TrackType.FM) {
                         applyFmPanAmsFms(t);
-                        // Ensure channel is keyed-off after restore to prevent clicks/pops.
-                        // The music track's note was interrupted by SFX; it should remain
-                        // silent until the next note event naturally keys-on.
                         int hwCh = t.channelId;
                         int port = (hwCh < 3) ? 0 : 1;
                         int ch = hwCh % 3;
@@ -800,6 +808,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * Continuous extensions deliberately do not call this method.
      */
     public void beginSfxAdmission() {
+        deferNextDriverService = config.getSfxStartTiming()
+                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE;
         CoordFlagHandler handler = config.getCoordFlagHandler();
         if (handler != null) {
             handler.onSfxStart(smpsData.getId());
@@ -996,7 +1006,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
-            processTempoFrame();
+            processOrDeferDriverService();
         }
     }
 
@@ -1019,7 +1029,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
-            processTempoFrame();
+            processOrDeferDriverService();
             driverFrames++;
         }
         return driverFrames;
@@ -1038,6 +1048,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     public void repeatDriverService() {
+        processOrDeferDriverService();
+    }
+
+    private void processOrDeferDriverService() {
+        if (deferNextDriverService) {
+            deferNextDriverService = false;
+            return;
+        }
         processTempoFrame();
     }
 
@@ -2006,11 +2024,37 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
+        prepareVoiceSelection(t);
         if (selectVoice(t, voiceId) && !t.tieNext) {
             // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
             // Preserve the existing Z80 HOLD behavior rather than refreshing the
             // live channel mid-sustain.
             refreshInstrument(t);
+        }
+    }
+
+    private void loadInitialVoice(Track t, int voiceId) {
+        if (selectVoice(t, voiceId) && !t.tieNext) {
+            refreshInstrument(t);
+        }
+    }
+
+    private void prepareVoiceSelection(Track t) {
+        if (t.type != TrackType.FM
+                || config.getFmVoiceWriteProfile()
+                        != SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80) {
+            return;
+        }
+
+        // The shipped S3K driver (fix_sndbugs=0) runs zSetMaxRelRate at
+        // cfSetVoice before looking up and uploading the requested voice. S1
+        // and S2 do not have this pre-upload sequence. Preserve the native
+        // operator traversal (1, 2, 3, 4), which is observable on the YM bus.
+        int port = t.channelId < 3 ? 0 : 1;
+        int channel = t.channelId % 3;
+        for (int operator = 0; operator < 4; operator++) {
+            synth.writeFm(this, port,
+                    0x80 + operator * 4 + channel, 0xFF);
         }
     }
 
@@ -3364,6 +3408,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 tempoAccumulator,
                 dividingTiming,
                 primed,
+                deferNextDriverService,
                 trackSnapshots);
     }
 
@@ -3402,6 +3447,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         tempoAccumulator = snapshot.tempoAccumulator();
         dividingTiming = snapshot.dividingTiming();
         primed = snapshot.primed();
+        deferNextDriverService = snapshot.deferNextDriverService();
 
         tracks.clear();
         for (SmpsTrackSnapshot trackSnapshot : snapshot.tracks()) {

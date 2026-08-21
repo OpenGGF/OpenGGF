@@ -1,5 +1,6 @@
 package com.openggf.tools.audio.playback;
 
+import com.openggf.audio.AudioRequestObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -96,5 +97,76 @@ class TestBoundedAudioPlaybackTrace {
                 snapshot.eventsAfter("second"));
         assertThrows(IllegalArgumentException.class,
                 () -> snapshot.eventsAfter("absent"));
+    }
+
+    @Test
+    void recordsOnlyRequestedYmChannelSamplesInBoundedMarkerSegments() {
+        BoundedAudioPlaybackTrace trace =
+                new BoundedAudioPlaybackTrace(8, 1, 1 << 4, 4);
+        assertEquals(1 << 4, trace.ym2612ChannelSampleMask());
+
+        trace.mark("first");
+        trace.onYm2612ChannelSample(3, 900);
+        trace.onYm2612ChannelSample(4, 120);
+        trace.onYm2612ChannelSample(4, -240);
+        trace.onRequested(AudioRequestObserver.RequestClass.SFX, 0x65);
+        trace.onYm2612Write(1, 0x49, 5);
+        trace.mark("second");
+        trace.onYm2612ChannelSample(4, 60);
+
+        AudioPlaybackTraceSnapshot snapshot = trace.snapshot();
+        assertEquals(List.of(120, -240),
+                snapshot.ym2612ChannelSamplesAfter("first", 4));
+        assertEquals(List.of(
+                        new AudioPlaybackTraceSnapshot.Ym2612ChannelSample(
+                                4, 120),
+                        new AudioPlaybackTraceSnapshot.Ym2612ChannelSample(
+                                4, -240),
+                        new AudioPlaybackTraceSnapshot.Ym2612ChannelSample(
+                                4, 60)),
+                snapshot.ym2612ChannelSamples());
+        assertEquals(List.of(60),
+                snapshot.ym2612ChannelSamplesAfter("second", 4));
+        assertEquals(List.of(
+                        new AudioPlaybackTraceSnapshot.TimedYm2612Write(
+                                2, 1, 0x49, 5)),
+                snapshot.timedYm2612Writes());
+        assertEquals(List.of(
+                        new AudioPlaybackTraceSnapshot.TimedAudioRequest(
+                                2, AudioRequestObserver.RequestClass.SFX,
+                                0x65)),
+                snapshot.timedAudioRequests());
+        assertEquals(2, snapshot.ym2612ChannelSampleOffset("second"));
+        assertThrows(IllegalArgumentException.class,
+                () -> snapshot.ym2612ChannelSamplesAfter("first", 3));
+    }
+
+    @Test
+    void recordsOperatorAttenuationAtTheExactYmKeyOnBoundary() {
+        BoundedAudioPlaybackTrace trace = new BoundedAudioPlaybackTrace(8, 1);
+        trace.mark("pickup");
+
+        trace.onYm2612KeyOn(4, 0, 1023);
+        trace.onYm2612KeyOn(4, 1, 511);
+
+        assertEquals(List.of(
+                new AudioPlaybackTraceEvent.Marker("pickup"),
+                new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 0, 1023),
+                new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 1, 511)),
+                trace.snapshot().events());
+    }
+
+    @Test
+    void recordsTheNumericAudioRequestBeforeItsChipActivity() {
+        BoundedAudioPlaybackTrace trace = new BoundedAudioPlaybackTrace(8, 1);
+
+        trace.onRequested(AudioRequestObserver.RequestClass.SFX, 0x65);
+        trace.onYm2612KeyOn(4, 0, 511);
+
+        assertEquals(List.of(
+                new AudioPlaybackTraceEvent.AudioRequest(
+                        AudioRequestObserver.RequestClass.SFX, 0x65),
+                new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 0, 511)),
+                trace.snapshot().events());
     }
 }

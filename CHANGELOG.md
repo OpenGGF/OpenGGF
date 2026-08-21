@@ -6,10 +6,14 @@
   selection, and rapid Blue Sphere SFX replacements retain FM5 ownership
   without transiently restoring the music voice when they replace another
   FM5 SFX, or injecting a full-channel `RR=FF` / `TL=7F` silence between notes
-  or at the ordinary track-stop boundary. A new bounded playback trace exercises
-  the real presentation/cache path at several retrigger phases and records
-  ordered YM2612/PSG writes plus final stereo PCM fingerprints, without
-  expanding the complete-run trace contract.
+  or at the ordinary track-stop boundary. Newly admitted S3K SFX now wait for
+  the next driver update because retail queue processing follows that update's
+  SFX loop; S1 and S2 retain their same-update start because their queue logic
+  precedes their SFX loops. A new bounded playback trace exercises the real
+  presentation/cache path at several retrigger phases and records ordered
+  requests, YM2612/PSG writes, key-on envelope state, selected-channel samples,
+  and final stereo PCM fingerprints without expanding the complete-run trace
+  contract.
 
 - **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
   retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no

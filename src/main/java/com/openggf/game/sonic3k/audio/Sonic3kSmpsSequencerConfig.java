@@ -54,6 +54,8 @@ public final class Sonic3kSmpsSequencerConfig {
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.FULL_DRIVER_REPEAT_EVERY_SIXTH)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.NONE)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC)
+                .sfxStartTiming(
+                        SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE)
                 .fadeOutChannelPolicy(
                         SmpsSequencerConfig.FadeOutChannelPolicy
                                 .HALT_DAC_AND_PSG_FADE_FM)

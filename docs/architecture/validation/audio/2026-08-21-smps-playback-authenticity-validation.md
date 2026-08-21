@@ -129,6 +129,25 @@ track after its admission key-off and never exposes music between the two SFX.
 The corrected handoff retains FM5 ownership across that replacement. Human
 listening remains pending and still blocks integration.
 
+A subsequent native headless GPGX capture found the remaining timing mismatch.
+On retail S3K, `zUpdateEverything` services existing SFX before `zUpdateMusic`
+processes the sound queues, so admission performs the FM5 key-off/SSG-EG clear
+on one driver update and `cfSetVoice` performs its maximum-release writes,
+voice upload, and key-on on the next. The engine previously admitted and
+serviced the new track in one update. The finite special-stage replay now joins
+each Blue Sphere request to those two ordered YM bus phases, while the bounded
+chip observer retains key-on attenuation and one selected channel's samples for
+diagnosis rather than treating route-specific envelope values as constants.
+
+S1 and S2 were checked separately rather than inheriting the S3K delay. S1's
+`UpdateMusic` processes `PlaySoundID` before its music/SFX loops, and S2's
+`zUpdateEverything` cycles and plays the queue before `zUpdateMusic` and the
+SFX loops. Their fresh SFX therefore receives its first service in the same
+driver update. The typed `SfxStartTiming` policy and focused tests preserve
+that distinction, including direct/batched advancement and rewind state. S1
+and S2 also retain their own voice-write profiles and do not receive S3K's
+pre-upload `RR=FF` sequence.
+
 The equivalent S1 and S2 loaders also overwrite their shared per-channel SFX
 track RAM without restoring music between the displaced and replacement SFX
 (`Sound_PlaySFX` / `zPlaySound`). Their engine profiles still use the older
@@ -143,6 +162,14 @@ ran 15,283 candidate tests (52 failures, 64 errors, 18 skips) versus 15,280
 baseline tests (56 failures, 64 errors, 18 skips). The candidate introduced no
 new failing or error method and removed four baseline-red methods; all changed
 playback tests were green.
+
+The deferred-first-service follow-up ran 138 focused scheduler, admission,
+rewind, YM2612, bounded-playback, and real special-stage replay tests with no
+failures, errors, or skips. Ten additional S1/S2 ROM-backed catalog, onset,
+takeover, and request-transform tests also passed. Its JDK 21 `-Pci` full run
+reported 15,274 tests, 52 failures, 64 errors, and 19 skips across exactly the
+same 116 known failing/error methods recorded for this branch; no modified
+audio or trace test failed.
 
 Phase 7 cleanup remains deferred. The rejected semantic-observer worktree and
 its protected stashes are not part of this delivery.

@@ -864,6 +864,25 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 AudioDiagnosticObserverException.invoke(() ->
                         chipWriteObserver.onPsgWrite(value));
             }
+
+            @Override
+            public int ym2612ChannelSampleMask() {
+                return chipWriteObserver.ym2612ChannelSampleMask();
+            }
+
+            @Override
+            public void onYm2612ChannelSample(int channel, int output) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onYm2612ChannelSample(channel, output));
+            }
+
+            @Override
+            public void onYm2612KeyOn(
+                    int channel, int operator, int attenuation) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onYm2612KeyOn(
+                                channel, operator, attenuation));
+            }
         };
     }
 
