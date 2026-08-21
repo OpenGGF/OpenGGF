@@ -106636,3 +106636,493 @@ rows. Only then was the corruption reverted and the real numbers taken. Also lea
 passing: `warning_count` counts **spans, not rows** — the corrupted run reported "3 warnings"
 for a divergence on nearly every row, because the report collapses consecutive identical
 divergences. Do not read that field as a row count.
+## 2026-08-21 -- HCZ MegaChopper bounce attributed: the engine omits the Init dispatch
+
+**Verdict: `found-not-fixed`. Nothing behavioural landed, no sweep owed.** A dedicated
+worktree off `be9e7cdfe`, branch
+`bugfix/ai-bounce-dispatch-attrib`. All instrumentation was reverted before the commit;
+`git status` is clean apart from this entry.
+
+**Gate, stated before starting:** a write-for-write comparison of one frame's engine call
+sequence against the ROM's dispatch order. Error counts were explicitly not the gate.
+
+### The briefed framing was wrong: nothing writes `collision_property` early
+
+The round was briefed to find what writes `collision_property` a dispatch before the
+recording does. **Both the write and the read are faithful, and so is the touch predicate.**
+What is one dispatch early is the badnik's own motion.
+
+`Obj_ResetCollisionResponseList` is an *object*, held in `Reserved_object_3`
+(`sonic3k.asm:8112`, body at `:8467-8469`), and the S3K object RAM is
+`Player_1`(0), `Player_2`(1), `Reserved_object_3`(2), `Dynamic_object_RAM`(3+)
+(`sonic3k.constants.asm:303-308`). So the list is cleared at slot 2, after both players'
+`TouchResponse` calls and before every dynamic object republishes itself via
+`Sprite_CheckDeleteTouch` -> `Add_SpriteToCollisionResponseList` (`:179012-179019`,
+`:21200-21210`). `collision_property(a1)` is therefore written at slot 0/1 and read by
+`MegaChopper_CheckCapture` at slot 39 **in the same frame** -- exactly as the engine does
+it. The `bset #7,status(a0)` -> `MegaChopper_Defeated` -> `jsr EnemyDefeated` bounce also
+lands in that same frame (`:184238-184244`). There is no ROM latency here for the engine to
+have collapsed.
+
+### Correction to the landmark's frame numbers
+
+The previous entry's rows were 1-based line offsets, not the `frame` column. Reading the
+column itself: **frame 1433 `player_y_speed` = `0x0030`, frame 1434 = `0xFF40`**, and the
+badnik (slot 39, `object_code 0x00087F5C`) dies at **frame 1434**. The arithmetic the
+earlier entry derived is unchanged and still exact:
+`0x30 + 0x38 - 0x28 - 0x100 = 0xFF40`. The direction of the defect is unchanged: the engine
+bounces one frame early.
+
+### MEASURED: the touch predicate and both boxes are correct
+
+`Touch_Width`/`Touch_Height` (`sonic3k.asm:20674-20712`) are transcribed faithfully at
+`ObjectTouchResponseController.java:869-892`, carry-branch for carry-branch; the ROM's
+`cmp.w d4,d0 / bhi` and the engine's `dx > playerWidth` agree at the boundary, so equality
+touches on both sides. `ObjDat_MegaChopper` flags `0x57` give `sizeIndex 23`, and
+`Touch_Sizes` entry 23 is `8,8` (`sonic3k.asm:20713+`, 24th `dc.b` line) -- which is what
+the engine's ROM-loaded `TouchResponseTable` returns. Player box `centreX-8`, width `0x10`,
+`baseYRadius 16` -- all matching `Touch_NoInstaShield` (`:20641-20654`).
+
+With the recorded positions the ROM's two frames come out exact. The scan runs at slot 0,
+so it reads the badnik's end-of-previous-frame `x_pos`:
+
+| frame | badnik x (eof N-1) | player x (N) | playerX = px-8 | dx = objX-8-playerX | vs 0x10 | touch |
+|---|---|---|---|---|---|---|
+| 1433 | `0x1123` (4387) | `0x1112` (4370) | 4362 | **17** | `>` | no |
+| 1434 | `0x1122` (4386) | `0x1115` (4373) | 4365 | **13** | `<=` | **yes** |
+
+The `MegaChopper_CheckCapture` y-window (`+/-$10`, `:184424-184429`) passes from frame 1426
+onward, so it is not the discriminator; the closing **x** separation is.
+
+### MEASURED: the engine's badnik is exactly one frame ahead
+
+Engine scan-time `objX` at frame N is the pre-update snapshot, i.e. its end-of-frame N-1
+position (`ObjectManager.java:615-629` documents that contract; the capture is
+`AbstractObjectInstance.snapshotTouchResponseState`, `:344-355`). Reading the engine dump
+one frame over therefore gives its end-of-frame series directly:
+
+| N | engine eof(N) | recorded eof(N) | recorded eof(N+1) |
+|---|---|---|---|
+| 1428 | 4391 | 4392 | 4391 |
+| 1429 | 4390 | 4391 | 4390 |
+| 1430 | 4389 | 4390 | 4389 |
+| 1431 | 4387 | 4389 | 4387 |
+| 1432 | 4386 | 4387 | 4386 |
+
+`engine eof(N) == recorded eof(N+1)` on every row. The discriminator is not the monotone
+run but the **irregular 2px step**: the recording steps `4389 -> 4387` across 1431->1432,
+the engine across 1430->1431. A one-frame phase lead reproduces that; a one-pixel position
+error cannot. The trajectory is otherwise pixel-identical, so the badnik's motion is
+correct and only its phase is wrong. At frame 1433 the engine consequently presents
+`dx = 16` -- the exact boundary value, the first that passes -- and fires.
+
+### ROOT CAUSE: the engine has no `MegaChopper_Init` dispatch
+
+Every step ROM-cited, nothing fitted:
+
+1. `Obj_MegaChopper`'s first instruction is `jsr (Obj_WaitOffscreen).l` (`:184233`).
+2. On the release frame `Obj_WaitOffscreen`'s `loc_85B02` does `move.l $34(a0),(a0)` then
+   **`rts`** (`:180299-180301`). That `rts` returns to `Process_Sprites`, *not* into
+   `Obj_MegaChopper` -- the placeholder was entered by `Process_Sprites`' own `jsr (a1)`.
+   **The badnik body does not run on its release frame.** The engine matches this:
+   `MegaChopperBadnikInstance.java:118-133` clears the gate and returns.
+3. On the **first resumed** frame execution enters at `$34(a0)`, the instruction after that
+   `jsr`, with `routine = 0`, so the index dispatches `MegaChopper_Init` (`:184253-184263`).
+   Init calls `SetUp_ObjAttributes`, whose tail is `addq.b #2,routine(a0)` followed by `rts`
+   (`:176901-176916`), and Init itself then `rts`. **It does not fall through to
+   `MegaChopper_Swim`.** So this whole dispatch moves the badnik zero pixels and never
+   reaches `MegaChopper_CheckCapture`, which is reachable only from `MegaChopper_Swim`
+   (`:184266`).
+4. The engine's `update()` has no Init state at all: once the gate clears, the next frame
+   goes straight to `case SWIM -> updateSwim(...)`
+   (`MegaChopperBadnikInstance.java:135-142`).
+
+The engine therefore begins swimming, and capture-checking, exactly one dispatch earlier
+than the ROM, and stays one frame ahead for the badnik's entire life. Every downstream
+symptom at the landmark follows from that single missing dispatch.
+
+### Retired and retracted
+
+- **Retired:** the touch-scan frame position, and the `collision_property` write/read
+  ordering. Both are faithful; the earlier rounds that ruled out the scan position were
+  right, and this round adds that the *writer* is right too, which the brief had left open.
+- **Retired:** the S3K previous-list wholesale-copy membership candidate, for this landmark.
+  The MegaChopper is in the list on both frames; membership never differs here. The copy
+  may still matter elsewhere, but it is not this.
+- **Retracted:** the previous entry's frame numbers (1434/1435 -> 1433/1434), per the
+  `frame` column. The commit `be9e7cdfe` claim that the frame value equals the row index is
+  correct for 0-based data rows; the confusion was 1-based line offsets.
+
+### Why nothing was landed
+
+A previous round already measured the naive form of this fix: *"Adding `MegaChopper_Init`
+as its own dispatch made the complete-run **2 -> 5738** errors at frame 1802"* (entry
+2026-08-15). That result stands and is the reason this round stops at attribution. A
+correct Init dispatch changes the badnik's slot-occupancy phase for its whole life, and the
+2026-08-15 occupancy scoping established that S3K object occupancy already diverges from
+ROM on 2025 of 2387 sampled frames -- so an Init dispatch landed alone will move a
+population that is already wrong, and the complete-run compares no object identity, slot or
+position to arbitrate it. **The cancelling partner for this fix is the occupancy frontier,
+not another MegaChopper change.**
+
+### Reachability tripwire found on the way
+
+At `be9e7cdfe` `TestS3kSonicTailsHczSegmentTraceReplay` throws
+`IllegalStateException: S3K KosM module FIFO is full` on **trace frame 1433** -- the
+landmark frame itself. The ROM simply writes past its 4-entry array, so the throw is an
+engine tripwire rather than modelled behaviour, but it is also the thing that reports a
+stuck queue head, and raising `S3kKosModuleQueue.MAX_QUEUE_DEPTH` does not merely suppress
+a throw: it lets the engine *accept* modules it would otherwise reject. **Any number taken
+with the depth lifted is unattributable**, and the earlier reading of this landmark as
+"750 errors, first error frame 1433" was taken that way and is retracted.
+
+Everything up to and including frame 1432 is reachable on a stock engine, which is enough
+to attribute the defect without lifting anything.
+
+### CONFIRMED on a stock engine: the one-frame lead
+
+Re-measured with `MAX_QUEUE_DEPTH = 4` and read-only instrumentation only. The engine's
+end-of-frame x for 1425-1432 is byte-identical to the earlier lifted run, so that run's
+conclusion is independently reconfirmed for every frame it could legitimately observe.
+
+The discriminating window is earlier and much stronger. Recorded badnik x transitions land
+at frames **1398, 1401, 1404, 1406, 1408, 1410**; the engine's land at
+**1397, 1400, 1403, 1405, 1407, 1409** -- every one exactly one frame lower. The dwell
+lengths between transitions are `3, 3, 2, 2, 2, 1` on both sides: the same irregular
+fingerprint, shifted by one frame. A constant offset, a rounding difference or a different
+chase speed cannot reproduce that pattern; only a phase lead can.
+
+The badnik's own first frames corroborate the mechanism directly. The recording has
+`object_appeared` for slot 39 at frame **1389** at `x=0x1140` (4416), and the engine's
+first movement off 4416 is at frame **1390**. That is exactly what the cited dispatch
+structure predicts: the release frame runs no badnik body on either side, the ROM then
+spends 1390 in `MegaChopper_Init` moving nothing, and first swims at 1391 -- while the
+engine swims at 1390. One dispatch, one frame.
+
+Note for anyone re-checking this: the recorder logs no `object_state` rows for slot 39
+between the `object_appeared` at 1389 and the first state row at 1394, so there is no
+recorded x to compare across 1390-1393. The engine's apparent seven-frame dwell at 4415 is
+a near-tracking gap in the fixture, not a discrepancy; the two sides leave 4415 one frame
+apart (engine 1397, recording 1398), which is the same one-frame lead.
+
+### For whoever lands the fix
+
+`s3k-knuckles-complete-superemeralds/hcz` carries 1447 MegaChopper rows -- the same badnik
+in an independent recording with a different character and route. A deferred first step
+moves every instance of this badnik in every act, so that second recording is a required
+check, not an optional one.
+
+## 2026-08-21 -- the missing Init dispatch is a family, and the Octus is in it
+
+Read-only survey, no behaviour landed, no sweep owed. Follows the MegaChopper attribution
+above; prompted by a cross-link from the S2 Octus round (`f68915883`).
+
+### Structural in kind, not universal in incidence
+
+**There is no shared mechanism at all.** The engine has no notion of a ROM routine counter.
+`AbstractS3kBadnikInstance` has no routine counter, no INIT state and no init hook, and
+`AbstractBadnikInstance.update()`
+(`src/main/java/com/openggf/level/objects/AbstractBadnikInstance.java:56-63`) goes straight
+`updateMovement` -> `updateAnimation` -> `updateDynamicSpawn` with no init phase. So
+consuming the ROM's routine-0 dispatch is a **per-class convention**, hand-rolled in two
+mutually incompatible idioms: a `State.INIT` enum arm (8 classes) or an `initialized`
+boolean guard that returns (15 classes).
+
+The ROM side is near-universal: `SetUp_ObjAttributes` itself ends
+`addq.b #2,routine(a0)` / `rts` (`sonic3k.asm:176901-176919`), so essentially every badnik
+with a routine index burns a dispatch on routine 0 in which it does not move and does not
+run its collision check.
+
+Of 29 real S3K badnik classes, **23 model the Init frame and 6 do not**:
+
+| class | evidence | ROM Init that returns |
+|---|---|---|
+| `MegaChopperBadnikInstance.java:69` | `state = State.SWIM` | `sonic3k.asm:184253` |
+| `BlastoidBadnikInstance.java:119` | `state = State.DETECT`; wait-release modelled, routine 0 not | `:183586-183588` |
+| `SparkleBadnikInstance.java:45` | `state = State.WAIT`, no init flag | `:186074-186076` |
+| `RhinobotBadnikInstance.java:66-78` | all Init work in the constructor | `:182389+` |
+| `CaterkillerJrHeadInstance.java` | spawns body then falls through to swing same update | `:183338-183356` |
+| `MonkeyDudeBadnikInstance.java:97` | activates then continues into the state machine same frame | `:182710+` |
+
+The six cluster on two recognisable authoring mistakes: Init work hoisted into the
+constructor, or the `Obj_WaitOffscreen` release dispatch modelled carefully and then treated
+as *the* init frame. Those files' comments are visibly precise about the wait-offscreen
+latch and silent about routine 0, which is what makes it a single misconception rather than
+six coincidences.
+
+### The S2 Octus skips its Init dispatch too
+
+`Obj4A_Init` (`docs/s2disasm/s2.asm:60380-60401`) does its setup, `ObjectMoveAndFall` +
+`ObjCheckFloorDist`, advances the routine only once landed, and `rts` at `:60401`;
+`Obj4A_Main` begins on a later frame. The engine does all of that in the **constructor**
+(`src/main/java/com/openggf/game/sonic2/objects/badniks/OctusBadnikInstance.java:63-77`,
+including the `ObjCheckFloorDist` equivalent `snapToFloorLikeRom`), sets
+`state = State.WAIT_FOR_PLAYER` at `:68`, and dispatches that state on the very first
+update (`:97-106`). The residual Init work in `resolveInitialFacing:109-121` is explicitly
+non-consuming.
+
+So the omission crosses into another game module, which rules out an S3K-specific slip.
+
+### A prediction for the Octus, with its kill condition
+
+The Octus therefore carries **two independent one-frame defects**: the hover-countdown seed
+already attributed at `f68915883`, and this missing Init dispatch. That is the cancelling-pair
+shape -- correcting either alone should be expected to measure worse, which is exactly what
+the seed correction did (`TestS2OozLevelSelectTraceReplay` green -> frame 6639,
+`y_speed` expected `-0100` actual `0`, the player missing the enemy bounce).
+
+**Prediction:** the seed correction's partner is the Init dispatch, and the two must land
+together. **Kill condition:** if adding the Init dispatch to `OctusBadnikInstance` alongside
+the ROM-correct seed does not restore the bounce at 6639, the two are unrelated and this
+paragraph is wrong. Nothing here asserts a common cause with the MegaChopper beyond the
+shared omission; the two objects' routines are unrelated and only the missing dispatch is
+in common.
+
+**Not attempted this round, deliberately.** The right fix is probably a shared
+init-dispatch primitive on the badnik base rather than six more hand-rolled booleans, but
+that is a design call, and any of these changes moves every instance of the badnik in every
+act -- so each needs a full matrix and a second recording, as the MegaChopper entry above
+records.
+
+### Two process notes worth carrying
+
+**Re-verify a probe before trusting a null result.** Instrumentation in a worktree on this
+shared checkout was silently wiped mid-task by a concurrent session committing. A probe that
+prints nothing because it is no longer there looks exactly like a probe that prints nothing
+because the branch never executes.
+
+**Two clocks in one subsystem, one of them lag-adjusted.** The round above misreported a
+tripwire as throwing at "frame 1410" when it throws at trace frame **1433**; 1410 was
+`ObjectTouchResponseController`'s internal `currentFrameCounter`, which runs 23 behind the
+trace frame because of lag frames. Any frame number taken from inside the touch subsystem
+must be stated in the clock it came from before it is compared with a fixture row.
+## 2026-08-21 — S1 segment 24 (`lz1_2`) frame 14745: an LZ water-surface phase error, surfacing as a bubble Sonic should never have inhaled
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `be9e7cdfe`. Command:
+
+```
+mvn -Dmse=off -Dtest=TestS1CompleteEmeraldRunChain \
+    -Dsonic1.rom.path=<repo>/s1.gen test
+```
+
+Takes the frontier left by the 2026-08-21 entry *"the push-release the LZ block could not
+find"*. **Found, not fixed** — no source change is proposed here, and none was measured.
+
+### Measured symptom, re-derived in this tree
+
+Chain fails on 19 axes; segment 24 reports `errorCount` 7176 (`physics` 6742,
+`animation` 434), `laggedFrames` 435, `bootstrapErrorCount` 0, first error at trace frame
+**14745**. The report's `errors` array is empty and `recentMismatches` holds only the last
+five entries, all at frame 16293, so the distribution question was answered from the
+comparator's own `FIRST ERROR` full-frame dump rather than the report body.
+
+Frame 14745, every field:
+
+| field | ROM | engine |
+|---|---|---|
+| `x`, `y`, `x_sub`, `y_sub` | `0x1763`, `0x022E`, `0x9300`, `0x0800` | identical |
+| `x_speed` / `g_speed` | `-0x0299` | `0x0000` |
+| `y_speed` | `0x0070` | `0x0000` |
+| `player_animation_id` | `0x0000` (`id_Walk`) | `0x0015` (**`id_GetAir`**) |
+| `angle`, `air`, `rolling`, `rings`, `camera_*`, whole `dynamic_art` block | — | all MATCH |
+
+`bootstrapErrorCount` is 0 and the comparator's `FIRST ERROR` logger fires on the first
+ERROR of *any* field, camera included, so 14745 is not downstream of an earlier in-segment
+error. Position and sub-pixel match exactly on the divergence frame: the speeds are zeroed
+*on* 14745, not accumulated into it.
+
+### What it is
+
+`0x15` is `id_GetAir` (`docs/s1disasm/_anim/Sonic.asm:129`), and in S1 exactly one site writes
+it: the LZ air-bubble collect in `Obj64`, which does `clr.w obVelX / clr.w obVelY /
+clr.w obInertia`, `move.b #id_GetAir,obAnim(a1)` and `move.w #35,locktime(a1)`
+(`_incObj/64 LZ Air Bubbles.asm:101-109`). The engine inhaled a large bubble at 14745. The
+ROM did not — and the ROM's own record shows it inhaling **the same bubble at frame 14831**
+(`s1_obj64_state`, slot 59 entering routine `0x06` at y `0x0227`), 86 frames later.
+
+A probe over `Sonic1BubblesObjectInstance` (temporary, reverted, never committed) pinned the
+engine's collider: slot 46, `x=0x1753 y=0x022C`, `inhalable`, player at `0x1763,0x022E`.
+`Bub_ChkSonic` (`:256-283`) collides when `playerX <= bubbleX + 16`; `0x1753 + 16 = 0x1763`
+is *exactly* the player's `x_pos`. The engine's port of that boundary is correct — the bubble
+is simply in the wrong place. The ROM's large bubble at the same moment is slot 59 at
+y `0x0254`, forty pixels lower.
+
+### The chain, backwards
+
+Aligning the engine's per-frame `Obj64` census against the fixture's `s1_obj64_state`
+stream (offset `vfc = frame - 429`, cross-checked on the lag frame 14300 where the ROM
+double-lists all six slots and the engine executes none):
+
+| event | ROM frame | engine frame |
+|---|---:|---:|
+| bubble maker (slot 45, `x=0x1750 y=0x0278`) created | 14216 | 14216 |
+| maker's first production tick | 14222 | **14216** |
+| batch that matters begins | 14617 | **14589** |
+| large/inhalable bubble spawned | 14678 | **14601** |
+| Sonic inhales it | 14831 | **14745** |
+
+The large bubble rises at `move.w #-$88,obVelY` — `0x88/0x10000` px/frame — so 77 frames of
+head start is the forty pixels. The batch sizes differ too: ROM spawns five children
+(14617, 14643 ×2, 14657, 14678), engine two (14589, 14601), and the engine's second is the
+large one.
+
+The RNG is **not** out of phase. The maker's recorded state vector after its first
+production tick is byte-identical on both sides — `bub_time 0x00`, `bub_timebase 0x01`,
+`bub_minicount 0x01`, `bub_bubbleflag 0x0001`, `bub_randomtime 0x0017` — the engine simply
+reaches it six frames early. Every draw in `Bub_BubbleMaker` (`:150-232`) lands the same
+value; only the frame differs.
+
+### Why the first tick fires early
+
+`Bub_BubbleMaker` guards production with exactly three conditions, in this order:
+
+```
+move.w (v_waterpos1).w,d0 / cmp.w obY(a0),d0 / bhs.w .display   ; underwater?
+tst.b  obRender(a0)       / bpl.w .display                       ; on screen?
+subq.w #1,bub_randomtime(a0) / bpl.w .animate                    ; timer?
+```
+
+Two of the three are recorded and both **pass** on the ROM's blocked frames: `objoff_38`
+(`bub_randomtime`) is `0x0000` throughout 14217-14222, so the `subq.w`/`bpl` falls through;
+`render_flags` is `0x84` on those same frames, bit 7 set, so `bpl` is not taken. The third,
+`v_waterpos1`, is not in the fixture — no aux event carries it, and Sonic never crosses the
+surface in this segment, so no `mode_change` witnesses it either.
+
+(The `s1_obj64_state` stream samples *before* the frame executes: the maker reads routine
+`0x00`/render `0x00` at 14216, the frame the engine's own first `update` runs, and
+`0x0A`/`0x84` at 14217. So the post-spawn vector that first appears at 14223 was written by
+the tick at **14222**.)
+
+By elimination over the routine's own three gates, the water gate is what held the ROM's
+maker for six frames. The engine's probe gives its own side of that comparison directly:
+`waterY` is `0x0274` at 14216 and falls one pixel per frame, against a maker at
+`obY = 0x0278`. The engine's surface therefore crossed the maker at **~14212**; the ROM's
+crossed it at **14222**. **The engine's LZ water surface is roughly ten pixels — ten frames
+of its one-pixel-per-frame rise — ahead of the ROM's** in this stretch of `lz1_2`.
+
+### Ruled out
+
+- **Not the `Bub_ChkSonic` box.** The engine's `playerX <= bubbleRight` / `playerY <=
+  bubbleY + 0x10` boundaries reproduce `bhs`/`blo` exactly; the collision is correct for the
+  position the bubble is in. No constant here wants adjusting, and adjusting one would only
+  hide a forty-pixel error behind a two-pixel edge.
+- **Not RNG phase.** Post-tick maker state is identical on both sides; the intervals between
+  the early spawns (24, 31) match the ROM's (24, 30).
+- **Not `consumeInitialRenderGate()`.** The water gate is tested *before* the render gate in
+  both the ROM and the port, so the initial-render allowance never got a say: with a
+  ROM-accurate surface the engine would have failed the water gate at 14216 whatever that
+  flag held.
+- **Not downstream of an earlier segment-24 error.** `bootstrapErrorCount` 0, and the
+  all-field dump at 14745 matches on everything the divergence does not itself write.
+- **Not the leading field.** `x_speed` is the alphabetically-first divergent PHYSICS field;
+  `player_animation_id` in the ANIMATION group is the one that named the routine.
+
+### Next
+
+The open question is the S1 LZ water surface, not `Obj64`: why `v_waterpos1` leads the ROM
+by about ten frames around `lz1_2` frame 14212. That is a measurement this fixture cannot
+close — nothing records the ROM's water height, and Sonic stays underwater for the whole
+segment — so it wants either a capture carrying `v_waterpos1` or a second observable
+(a bubble bursting at the surface rather than in Sonic's mouth) before a fix is attempted.
+## 2026-08-21 — Segment 8's 14 rows are one pixel of capsule y, and the wrong character presses the button
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `be9e7cdfe`.
+Command:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<repo>/s3k.gen test
+```
+
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+**Nothing was landed but this entry.**
+
+**Baseline re-measured on `be9e7cdfe`, unchanged from `887320904`:** segment 8 (`aiz_5`)
+2288 physics errors, first non-camera mismatch frame 6000 `sidekick_x` rom `0x4997`
+engine `0x4996`; segment 9 first error frame 0 `y`.
+
+**The open question from the previous entry — "why the engine's capsule-button trigger
+fires 14 rows early" — is answered, and the answer is a single pixel of the capsule's
+`y_pos`.** It is measured, not inferred.
+
+**The ROM's Sonic misses the button by one pixel, on two consecutive rows, in two different
+axes.** `Check_PlayerInRange` uses `word_867C2: dc.w -$1A,$34,-$1C,$38`
+(`sonic3k.asm:181776`) — the engine's trigger box is ROM-exact. Evaluating that box against
+the recording's own rows, with the button child at parent `y + $24`:
+
+| row | Sonic `dx` (needs < 26) | Sonic `dy` (needs < 28) | `y_vel` | in box? |
+|---|---|---|---|---|
+| 5991 | 22 ok | 31 **MISS** | -600 | no |
+| **5992** | **24 ok** | **28 MISS by 1** | -544 | **no** |
+| **5993** | **27 MISS by 2** | **25 ok** | -488 | **no** |
+| 5994 | 30 MISS | 22 ok | -432 | no |
+
+Sonic satisfies `dx` on rows ≤5992 and `dy` on rows ≥5993. **The two windows are adjacent
+and disjoint.** He threads between them and never presses the button at all. In the ROM the
+button is pressed by **Tails**, whose `dy` first enters the box at row **6006**; the parent
+flips `routine` `$08` → `$0A` at **6007** (recorded directly: `aux_state` slot 9, object
+code `0x00086540`), the one-frame parent/child dispatch offset the engine already models.
+
+**What the engine does instead, measured with a throwaway probe in
+`AbstractS3kFloatingEndEggCapsuleInstance.scanButtonTrigger` (reverted; baseline 2288 /
+frame 6000 unchanged with it in place):**
+
+| row 5992 | ROM | engine |
+|---|---|---|
+| capsule `x` | `0x49A9` | `0x49A9` — exact |
+| capsule `y` | `0x0169` | **`0x016A`** |
+| button `y` (`+$24`) | `0x018D` | `0x018E` |
+| Sonic `x` | `0x49C1` | `0x49C1` — exact |
+| Sonic `y` | `0x01A9` | `0x01A9` — exact |
+| Sonic `y_vel` | `-544` | `-544` — exact |
+| Sonic `dy` | 28 → **miss** | 27 → **hit** |
+
+Every input at that row is bit-exact except the capsule's own `y`, which is one pixel low.
+That one pixel puts `dy` at 27 against the ROM's `< $1C` bound, Sonic presses a button he
+never reaches in the ROM, and `sub_865DE` — `st (Ctrl_2_locked).w`, `sonic3k.asm:181560-181563`
+— runs at row 5992 instead of 6006. **6006 − 5992 = 14.** The whole 14-row lead is that pixel.
+The engine's open row 5993 and lock row 5994 follow from a 5992 trigger exactly as the ROM's
+6007 follows from 6006, so the previously recorded 14 is confirmed, from its cause this time.
+
+**The pixel is phase, not a constant.** Engine-minus-ROM capsule `y` across rows 5963-5992 is
+not a fixed offset — it is `-1` at 5966/5969/5971, `0` through the 5972-5982 flat, then `+1`
+at 5983/5985/5987/5988/5990/5991/5992. A ±1 that **flips sign** across a slow accumulation is
+a motion that began a frame early, which is the `Swing_UpAndDown` + `$4000`-per-frame descent
+of `loc_8662A` running one frame ahead.
+
+**This un-parks the capsule creation frame.** That item was parked as cosmetic and as a
+capture question, because the ROM's defeat-to-capsule residual is not observable in this
+recording (the boss body never enters the recorded near-list, so the `33` was arithmetic on
+the engine's own residual and is not an input — it stays dead). The parked item is now known
+to be **load-bearing**: a one-frame-early creation is exactly sufficient to produce the
+one-pixel `y` lead, and nothing else at row 5992 differs at all.
+
+**It also now has an acceptance target that needs no residual and is not a fitted constant,**
+because it is a predicate and an identity rather than a number to tune:
+
+> At `aiz_5` row 5992 the capsule's `y_pos` must be `0x0169`, so Sonic's `dy` is 28 and he
+> **misses** the ROM's `< $1C` bound; the button must then be pressed by **Tails** at row
+> 6006, and the parent's `routine` must reach `$0A` at row 6007.
+
+Any fix that gets the creation phase right satisfies all three; a fix that moves the lock by
+a tuned frame count satisfies none of them, because it would still have the wrong character
+pressing the button.
+
+**Excluded by this round, additive to the previous exclusions.** The trigger box constants,
+the button child's `+$24` offset, the parent/child one-frame dispatch offset, the capsule's
+horizontal `1`-px/frame step and its `x` at the trigger row, and Sonic's `x`/`y`/`y_vel`/`anim`
+are each measured exactly correct at the deciding row. The defect is not in the button scan.
+
+**One note on the AIZ2 override.** `Aiz2EndEggCapsuleInstance.defersButtonEligibilityCreatedByParentMotion()`
+defers eligibility created by the parent's **horizontal** step. The binding axis at row 5992
+is **vertical**, so that override cannot gate this case. It is not wrong; it is aimed
+elsewhere.
+
+**Fixture geography, again.** The standalone `TestS3kSonicTailsAiz5SegmentTraceReplay` and the
+chain's segment 8 read the *same* `aiz_5` directory and report different numbers: the
+standalone cold-loads the act and reports 2518 errors first at frame 0, because mid-run entry
+state is not restored (`rings` 36 vs 0, and `Water_level` `0x0528` from `StartingWaterHeights`
+against the ROM's already-raised `0x0618` — AIZ2 has water for Sonic/Tails,
+`sonic3k.asm:9751-9812`, and the recording's twelve underwater transitions all sit exactly on
+the `0x0618`/`0x0619` boundary). Only the chain figure, 2288 first at 6000, is the frontier.
+Quote the harness, not just the directory.
