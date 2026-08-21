@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-nine rules and several worked sections, accumulated across many rounds. The narrative
+Seventy rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -52,6 +52,7 @@ that looks like a real result.
 | 67 | A ratchet only checked at raise time will always be raised; ask for its whole history |
 | 68 | An in-place routine change is not a spawn; look for a routine byte changing on an occupied slot |
 | 69 | Check that your two numbers are the same kind of measurement before differencing them |
+| 70 | Review the artifact, not the account of it; a rejected candidate never rides a merged branch |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1857,3 +1858,26 @@ same instant, same filter. If you cannot say that sentence about both, the diffe
 between them is not a finding. This applies hardest to numbers you did not measure
 yourself — a count quoted from a census or an earlier round carries its own scope, and it
 is usually not written down next to it.
+
+## Seventieth rule: review the artifact, not the account of it
+
+Two failures on one night, both from accepting a description in place of the thing:
+
+- A branch whose write-up **rejected** a candidate also **contained** it. The write-up was
+  read, the rejection agreed with, and the branch merged — putting a change known to cost a
+  thousand errors onto the mainline, where it also turned an unrelated green trace red with
+  a sign-flipped velocity several thousand frames away. Reading a commit's prose instead of
+  its diff is the same error as trusting a report instead of a probe.
+- A round was told its measurements were outside a known-bad window. They were not; the
+  claim was asserted without checking. The round re-measured anyway and its numbers held,
+  but the assurance had consumed someone else's correctness rather than the giver's.
+
+**Practically.** Before merging, diff the source portion of the change and read it — the
+commit message describes intent, not content. After merging anything that touches runtime,
+check a test the change does not claim to affect. And never tell someone their base is
+clean without looking; "I checked and it is" and "I expect it is" are different sentences
+and only one of them is worth anything.
+
+**Corollary for lanes.** A rejected candidate never goes on a branch that will be merged.
+Land the write-up; leave the code on a branch nobody takes, and cite its hash if provenance
+matters.
