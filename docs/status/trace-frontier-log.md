@@ -113970,3 +113970,57 @@ recording `gameOver`, `timeOver` and the level timer settles it, and the chain r
 The ROM comparison is already in hand for whichever answer comes back: the recorded segment
 holds `player_routine` `02` and `player_present` 1 for all **5086** rows, and emits no
 `zone_act_state` transition at all, so the ROM neither dies nor re-loads here.
+
+## 2026-08-21 -- S1 Final Zone restart: NONE of the three causes -- it is an ordinary death, past the bottom boundary
+
+Measured at `eb66617e2`, probing `PlayableSpriteMovement.enterDeathRestartRoutine` for all
+three branch inputs rather than reading off the likely one.
+
+**The answer is none of them.** Four arming events fire across the whole run and every one
+reads the same:
+
+```
+ARM gameOver=false timeOver=false lives=3 timeOverFlag=false centre=(0B8F,03F8) drowning=false cpu=false
+ARM gameOver=false timeOver=false lives=2 timeOverFlag=false centre=(0581,0627) drowning=false cpu=false
+ARM gameOver=false timeOver=false lives=5 timeOverFlag=false centre=(0B64,0631) drowning=false cpu=false
+ARM gameOver=false timeOver=false lives=5 timeOverFlag=false centre=(2512,0611) drowning=false cpu=false
+```
+
+`timeOverFlag` is false at every one, so **the time-over story is dead** -- and it was the
+one that fitted the no-death evidence best. Not game-over either: lives never reach zero.
+Every arm takes the ordinary-death branch and its `DEATH_RESTART_DELAY_FRAMES`.
+
+### The Final Zone arm is a bottom-boundary kill
+
+The fourth arm, `centre=(2512,0611)`, is the Final Zone one -- x `0x2512` sits in the same
+neighbourhood as the ROM's `0x2490` at the abort row.
+
+**`y = 0x0611` = 1553.** The segment's recorded `limitbtm1/2` is `0x0510` for its whole
+length and S1's kill threshold is `v_limitbtm2 + 224` = **`0x05F0` = 1520**, so the engine's
+Sonic is **33px past the bottom boundary**. The ROM's deepest point anywhere in those 5086
+rows is `0x05B1` = 1457 -- 63px *above* the plane.
+
+So the engine falls roughly **96px lower than the ROM ever does**, out of the level, and the
+boundary kill restarts the act. The arming site is `hasFallenPastDeathRestartRow()`, the
+corpse's fall past the restart row, which is consistent: the death precedes it and the fall
+carries it past.
+
+**The owner is therefore whatever the engine's Sonic falls through in the Final Zone that
+the ROM stands on** -- a terrain, platform or object question in FZ, not a timer, not a
+life counter, and not the harness.
+
+### An unresolved contradiction, recorded rather than papered over
+
+`AbstractPlayableSprite.setDead(true)` was probed across a full run in the previous round
+and **never fired**, with another probe writing in the same run and directory to prove the
+channel. Yet `handleMovement` reaches `applyDeathMovement` behind `if (sprite.getDead())`,
+and four deaths demonstrably occur. **So the `dead` flag becomes true through some path that
+is not `setDead(boolean)`** -- a direct field write, a rewind restore, or another mutator.
+
+That does not change the finding above, but it is a live inconsistency between two of my own
+measurements and the next lane should not assume `setDead` is the only way in. Finding the
+second mutation path is a five-minute grep and worth doing before anyone instruments the
+death flag again.
+
+**Four deaths, not one.** Only the Final Zone's aborts the chain; the other three land in
+segments that were already diverging. Whether they share this cause is unmeasured.
