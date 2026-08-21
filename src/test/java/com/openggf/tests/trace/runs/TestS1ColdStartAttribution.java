@@ -147,12 +147,22 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
         // bit under the moving spawn key, so Solid_NotPushing never ran. The
         // frontier moved 11,564 frames later, to frame 14745, and the leading
         // field is now a PHYSICS one.
+        //
+        // Re-pinned 7176 -> GREEN when Obj64 started reading v_waterpos1
+        // instead of v_waterpos2. Frame 14745 was the segment's FIRST error of
+        // any group -- nothing diverged in the preceding 14,744 frames -- and
+        // the whole 7,176 were its tail. The LZ bubble maker's underwater gate
+        // reads the swayed water height; against the unswayed one it opened six
+        // frames early, so the batch's large bubble spawned 77 frames early,
+        // rose forty pixels too far and was inhaled as Sonic ran past. Like the
+        // segment 23 pin above, this is now strictly stronger than the
+        // divergence it replaces: no divergence at all, rather than exactly
+        // 7,176.
         assertTrue(
-                report.contains("segment 2 of s1-sonic-complete-withemeralds "
-                        + "diverged: 7176 physics comparator errors, first "
-                        + "non-camera mismatch at frame 14745 field "
-                        + "x_speed rom=-0299 engine=0x0000"),
-                "segment 24 must still diverge identically from a cold start; "
-                        + "if it was fixed, update this pin. Report:\n" + report);
+                !report.contains("segment 2 of s1-sonic-complete-withemeralds "
+                        + "diverged:"),
+                "segment 24 must stay GREEN from a cold start; if it regressed, "
+                        + "do not re-pin it to a divergence without establishing "
+                        + "why. Report:\n" + report);
     }
 }
