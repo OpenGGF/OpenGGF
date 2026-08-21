@@ -105703,3 +105703,30 @@ early at 1433 → `y`/`x_speed` at 1434 → `camera_y` seven pixels low by 2900 
 fall drawn one frame too long → its cleanup entry late → its reload submitted past its releasing
 edge → the KosM depth tripwire and the segment's abort. One frame-order decision, eight
 consequences, and four rounds of this log spent on the last two of them.
+
+## Session close, 2026-08-21 — full `-Ptrace-replay` sweep at `4396870e9`
+
+All three ROMs, `-Dmse=off`, JDK 21. **800 tests, 6 failures, 0 errors, 4 skipped**, 163
+`Running` lines, 6 `Tests run: 0,` lines (nested containers, matching every arm measured
+tonight — no truncation).
+
+Chain axes, against the counts this session opened with:
+
+| chain | opened | closed |
+|---|---:|---:|
+| s1-sonic-complete-withemeralds | 22 | **19** |
+| s2-sonic-tails-complete-emeralds | 13 | **12** |
+| s3k-sonic-tails-complete-emeralds | 2 | 3 |
+
+The third rising is not a regression and should not be read as one: that chain's segment 9
+previously aborted a tenth of the way through and now runs end to end, so it is compared
+rather than skipped. This is the same reading the count-can-read-backwards rule warns about,
+applied to this log's own number.
+
+Standalone reds at close: the reference-closure integration (113), the CPZ2 emerald segment
+(370, down from 1681), and the AIZ standalone (37).
+
+Both remaining worktree-resident artefacts are preserved rather than tidied: the branch
+`parked/ai-s3k-geyser-postcamera-bit7-REJECTED`, whose entry above explains why it is
+neither superseded nor rejected, and one earlier lane's uncommitted diff saved outside the
+repository.
