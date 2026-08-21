@@ -74,7 +74,6 @@ identified by its content, with no dependence on row alignment or on any model o
 ordering. That is why it could settle a question two rounds of frame-ordering argument could
 not.
 
-<<<<<<< HEAD
 By that test the most promising unexamined candidates are `s2_tornado_state` (subsystem ROM
 state, directly analogous) and `object_state` (per-object SST fields at enormous volume, in
 the game with the most unfinished object work). `slot_dump` is occupancy, which the existing
@@ -86,7 +85,6 @@ oracle already covers by another route.
 2. `object_state` — largest payoff and largest cost; S3K object parity is the active frontier
    and this is per-object ROM state nothing checks.
 3. The reporting-only 14 — cheap to re-classify, since they are already parsed and surfaced.
-=======
 The per-stream verdicts below apply that test to all 22.
 
 ## Per-stream verdict for the 22 uncompared streams
@@ -156,7 +154,6 @@ on every row the whole time.
    Cheap, and they cover S1 and S3K rather than piling more coverage onto S2.
 3. `object_state` — **do not commission yet.** Not a cost problem but a precondition problem;
    the scoping section below sets out why.
->>>>>>> 10256be7c
 
 Wiring one in is not free: switching on the CNZ comparison immediately turned two green
 release-scope classes red by exposing 767 pre-existing divergences. That is the expected

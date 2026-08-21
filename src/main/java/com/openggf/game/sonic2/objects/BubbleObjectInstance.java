@@ -51,8 +51,30 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     private static final int COLLISION_HALF_WIDTH = 16;
     private static final int COLLISION_HALF_HEIGHT = 16;
 
-    // Animation frame for large breathable bubble (frame >= 6 can be breathed)
+    /**
+     * ROM {@code objoff_2E} condition: {@code loc_1F924} runs AnimateSprite and
+     * then {@code cmpi.b #6,mapping_frame(a0) / bne / move.b #1,objoff_2E(a0)}
+     * (docs/s2disasm/s2.asm:45231-45236). Mapping frame 6 is the only thing that
+     * makes a bubble inhalable, and only one animation script ever reaches it.
+     */
     private static final int BREATHABLE_FRAME_THRESHOLD = 6;
+
+    /**
+     * {@code Ani_obj24} (docs/s2disasm/s2.asm:45478-45496). Each entry is the
+     * ROM script: element 0 is the frame duration byte, the rest are mapping
+     * frames, and the script ends at the ROM's {@code $FC} (advance routine) --
+     * after which {@code mapping_frame} simply holds its last value.
+     * <p>
+     * Only script 2 -- the large bubble, the one the maker's
+     * {@code move.b #2,subtype(a1)} override produces -- runs up to frame 6, and
+     * it takes four frame steps at {@code $E} to get there. That climb is the
+     * ROM's entire inhalable delay; there is no timer anywhere that encodes it.
+     */
+    private static final int[][] ANI_OBJ24 = {
+            {0x0E, 0, 1, 2},          // 0: small
+            {0x0E, 1, 2, 3, 4},       // 1: medium
+            {0x0E, 2, 3, 4, 5, 6},    // 2: large / inhalable
+    };
 
     // Position as 16.16 fixed point
     private int posX16;
@@ -69,14 +91,25 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     private int displayX;
     private int displayY;
 
-    // Bubble size/type (determines frame and breathability)
-    private int bubbleSize;
+    /**
+     * ROM {@code anim(a0)}, written from {@code subtype} by
+     * {@code loc_1F90A} ({@code move.b d0,anim(a0)}, docs/s2disasm/s2.asm:45217).
+     * 0 = small, 1 = medium, 2 = large. This is the ROM's own subtype byte, not
+     * a size scale.
+     */
+    private int animId;
 
-    // Mapping frame for rendering
+    // Mapping frame for rendering (ROM mapping_frame(a0))
     private int mappingFrame;
 
-    // Animation timer for frame changes
+    /** ROM {@code anim_frame} -- index into the current script's frame list. */
+    private int animFrameIndex;
+
+    /** ROM {@code anim_frame_duration}. */
     private int animTimer;
+
+    /** ROM {@code objoff_2E} -- set once, when mapping_frame reaches 6. */
+    private boolean inhalable;
 
     // Whether this bubble has been breathed (collected)
     private boolean breathed;
@@ -91,7 +124,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
      *
      * @param x           X position (world coordinates)
      * @param y           Y position (world coordinates)
-     * @param bubbleSize  Size: 0=tiny, 1=small, 2=medium, 3-5=large (breathable)
+     * @param bubbleSize  ROM {@code subtype}: 0 = small, 1 = medium, 2 = large
      * @param wobbleAngle Initial wobble angle (0-255)
      */
     public BubbleObjectInstance(int x, int y, int bubbleSize, int wobbleAngle) {
@@ -108,15 +141,16 @@ public class BubbleObjectInstance extends AbstractObjectInstance
 
         this.wobbleAngle = wobbleAngle & 0xFF;
         this.wobbleAnglePendingRng = wobbleAnglePendingRng;
-        this.bubbleSize = bubbleSize;
+        this.animId = bubbleSize;
         this.breathed = false;
         this.romRenderOnScreen = true;
+        this.inhalable = false;
 
-        // Determine initial mapping frame based on size
-        // ROM: Obj24_ChooseBubble selects frame 0-5 based on random
-        // Frames 0-1: tiny bubbles, 2-3: small, 4-5: medium
-        // Large breathable bubbles use frames 6+ but we start at lower frames
-        this.mappingFrame = Math.min(bubbleSize, 5);
+        // ROM Obj24_Init only writes anim(a0); AnimateSprite establishes
+        // mapping_frame from the script on the bubble's first animation tick,
+        // and every script's first frame equals its own index.
+        this.animFrameIndex = 0;
+        this.mappingFrame = script()[1];
         this.animTimer = 0;
 
         // Initial display position
@@ -143,6 +177,15 @@ public class BubbleObjectInstance extends AbstractObjectInstance
             wobbleAngle = services().rng().nextByte();
             wobbleAnglePendingRng = false;
         }
+
+        // ROM routine 2 IS loc_1F924: AnimateSprite over Ani_obj24 and then the
+        // cmpi.b #6,mapping_frame test that sets objoff_2E
+        // (docs/s2disasm/s2.asm:45231-45236). It runs FIRST, before the water
+        // check, the wobble and the collect box at loc_1F956, so the pass that
+        // lifts mapping_frame to 6 is also the pass whose
+        // `tst.b objoff_2E(a0) / beq` (:45257-45258) can already see it. Running
+        // it at the end of update() instead delayed every inhale by one frame.
+        animateSprite();
 
         // Update wobble angle (ROM: addq.b #1,objoff_32(a0))
         wobbleAngle = (wobbleAngle + 1) & 0xFF;
@@ -190,21 +233,60 @@ public class BubbleObjectInstance extends AbstractObjectInstance
             checkPlayerCollision(player);
         }
 
-        // Update animation (bubble grows slightly over time for large bubbles)
-        animTimer++;
-        if (animTimer >= 8 && mappingFrame < 5 && bubbleSize >= 3) {
-            // Large bubbles grow to breathable size
-            mappingFrame++;
-            animTimer = 0;
-        }
+    }
+
+    /** The bubble's {@code Ani_obj24} script, clamped to the defined entries. */
+    private int[] script() {
+        return ANI_OBJ24[animId >= 0 && animId < ANI_OBJ24.length ? animId : 0];
     }
 
     /**
-     * Returns true if this bubble is large enough to be breathed.
+     * ROM {@code objoff_2E}. Set by {@code loc_1F924} when AnimateSprite has
+     * advanced {@code mapping_frame} to 6 (docs/s2disasm/s2.asm:45231-45236), and
+     * tested by {@code loc_1F956}'s {@code tst.b objoff_2E(a0) / beq} before the
+     * collect box runs at all (:45257-45259).
+     * <p>
+     * The previous engine condition was {@code mappingFrame >= 6 || bubbleSize >= 3}.
+     * Its first half was unreachable -- {@code mappingFrame} was seeded as
+     * {@code min(bubbleSize, 5)} and only ever grew while {@code < 5} -- so the
+     * live condition was a size test that is true the moment the bubble is
+     * created. That made every large bubble inhalable on spawn and skipped the
+     * ROM's entire inflate climb.
      */
     private boolean isBreathable() {
-        // ROM: cmpi.b #6,mapping_frame(a0) / blo.s Obj24_RisingNoCollision
-        return mappingFrame >= BREATHABLE_FRAME_THRESHOLD || bubbleSize >= 3;
+        return inhalable;
+    }
+
+    /**
+     * {@code AnimateSprite} over {@code Ani_obj24}
+     * (docs/s2disasm/s2.asm:45232). The duration byte is reloaded when the
+     * counter runs out and the frame index advances; the ROM's {@code $FC}
+     * terminator advances the routine to {@code loc_1F93E}, which no longer
+     * animates, so the engine simply holds the last frame.
+     */
+    private void animateSprite() {
+        int[] anim = script();
+        // Anim_Run: subq.b #1,anim_frame_duration / bpl Anim_Wait
+        // (docs/s2disasm/s2.asm:45xxx -> AnimateSprite, s2.asm:22867-22884).
+        if (--animTimer >= 0) {
+            return;
+        }
+        // move.b (a1),anim_frame_duration(a0) -- reload from the script head.
+        animTimer = anim[0];
+        // move.b 1(a1,d1.w),d0 with d1 = anim_frame: the frame list starts at
+        // script byte 1, so anim_frame indexes from there.
+        int idx = 1 + animFrameIndex;
+        if (idx >= anim.length) {
+            // The ROM's $FC terminator advances routine(a0) to loc_1F93E, which
+            // no longer animates, so mapping_frame holds its last value.
+            return;
+        }
+        mappingFrame = anim[idx];
+        // addq.b #1,anim_frame(a0)
+        animFrameIndex++;
+        if (mappingFrame >= BREATHABLE_FRAME_THRESHOLD) {
+            inhalable = true;
+        }
     }
 
     /**

@@ -1,5 +1,37 @@
 # Changelog
 
+- **ARZ's air bubbles have to inflate before Sonic can breathe them again:**
+  a large bubble only becomes inhalable once its animation has climbed to the
+  big-bubble frame, which is the delay the ROM builds out of the animation
+  script itself. The engine had been treating every large bubble as breathable
+  from the instant it left the generator, so Sonic could inhale one about a
+  second too early — and the generator was throwing away the very byte that
+  selects which animation the bubble runs.
+
+- **An off-screen ARZ swinging platform is now inert, as the ROM has it:**
+  `Obj82_Main` tests its own render flag and, when clear, skips both the solid
+  collision and the swing — and the swing routine holds the swing angle as well
+  as the position write, so a platform that leaves the screen mid-swing stays
+  where it was instead of settling back to centre. The engine ran both
+  unconditionally. Its culling window is the one the shipped ROM actually uses:
+  the retail build leaves the accurate-height flag clear, so the vertical test
+  assumes a 32-pixel radius rather than the pillar's real 48.
+- **The HCZ miniboss's post-defeat wait is ROM-sourced and no longer starts a
+  frame early:** the wait was seeded from the miniboss's unrelated *reopen*
+  delay plus one, and the defeated routine was dispatched on the frame that
+  installed it. The two errors cancelled exactly, so the timer never looked
+  wrong. It is now seeded from `BossDefeated`'s `$3F` and first decrements on
+  the following object pass, as in ROM.
+
+- **ARZ's swinging platforms and pillars are solid on all four sides, as the ROM
+  has them:** `Obj82_Main` calls the full `SolidObject` routine, not one of the
+  top-only platform entries, so a contact whose horizontal penetration does not
+  exceed its vertical one resolves as a side collision that nudges the player
+  clear rather than seating them on top. The engine classified Obj82 as
+  top-solid-only, which skipped that decision entirely and turned a clipped
+  pillar corner during a fast fall into a landing — in ARZ2 that stopped Sonic
+  dead mid-descent and cost him the rest of the act.
+
 - **The Wing Fortress boss's defeat countdown and its camera hand-off are both
   ROM-accurate now:** the countdown started a frame early and the camera's
   max-Y write was deferred by a frame, and the two errors cancelled. The
@@ -60,6 +92,46 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The WFZ wall-turret shot now deletes on the ROM's render flag rather than an invented
+  480-pixel camera margin.** `Obj98_Main` deletes when `render_flags.on_screen` is clear
+  (`docs/s2disasm/s2.asm:74678-74679`), and that bit is not a distance band: `BuildSprites`
+  clears it for every object it visits and re-sets it only past its two culling tests, so the
+  value the routine reads was written by the **previous** frame's `BuildSprites` from the
+  object's end-of-frame position. The gate now samples the pre-update position, using the
+  convention `CollapsingPlatformObjectInstance` and five other classes already follow. Both
+  margins are `BuildSprites`' own: `width_pixels` = 4 from `ObjB8`'s `subObjData` row
+  (`s2.asm:74763`), and 32 from `BuildSprites_ApproxYCheck`, reached because that same row
+  leaves `explicit_height` clear. The previous `480` appears nowhere in the ROM, and the comment
+  above it cited an expression that evaluates to 640 while calling it 480. On the occupancy
+  probe the engine's spurious wall-turret shots fall from **602 to 0** in the WFZ fixture, with
+  mean object lifetime dropping from 19.86 samples to 5.73 against the ROM's 2.52. A separate,
+  pre-existing creation deficit remains and is untouched by this change: the ROM fires 77 shots
+  in that fixture where the engine fires 48, identically before and after.
+
+- **S2 Super Sonic now gets his alternate bright frames, and the DPLC transfers that go with
+  them.** `SAnim_SuperWalk` writes the ordinary `mapping_frame = script byte + slope offset` and
+  then, on one frame in four, steps it into the Super variants
+  (`docs/s2disasm/s2.asm:38534-38539`): `move.b (Level_frame_counter+1).w,d1 / andi.b #3,d1 /
+  bne.s + / cmpi.b #$B5,mapping_frame(a0) / bhs.s + / addi.b #$20,mapping_frame(a0)`. The engine
+  read the correct Super script and omitted the step applied on top of it, so its mapping frame
+  was exactly `$20` low on every fourth frame.
+
+  The consequence was larger than one field. `LoadSonicDynPLC` reads `mapping_frame(a0)`
+  directly (`:38830-38831`), so every stepped frame the engine did not produce was an art
+  transfer it did not issue: on the complete-emerald chain's ARZ1 segment that deficit
+  accumulated from 1 at frame 4062 to 54 by the segment's last row, and the following
+  ARZ1->ARZ2 gap reported the same 54.
+
+  All three numbers are read out of the ROM block and none is chosen — the mask is the
+  `andi.b #3`, the ceiling is the `cmpi.b #$B5` (the Super run and push frames are already
+  bright), and the step is the `addi.b #$20`. They live on the S2 animation profile rather than
+  in shared animation code, which applies whatever step the active profile declares.
+
+  ARZ1 segment: 3395 comparator errors to 119, first divergence frame 4061 to 4213, and the gap
+  axis falls from an ordinal deficit of 54 to the same one-row `movie_logical_frame` stamp the
+  run's other eight gaps show. No mapping-frame mismatch with a magnitude of 32 remains anywhere
+  in the segment.
+
 - **S2's Super transformation freeze now ends when the palette fade ends, as the ROM ends it.**
   `Sonic_CheckGoSuper` writes `obj_control = $81` on the transformation frame (`s2.asm:37479`)
   and nothing in Sonic's own code clears it: there is no `clr.b obj_control(a0)` anywhere in

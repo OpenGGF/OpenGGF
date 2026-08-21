@@ -111039,3 +111039,1638 @@ mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dtest=DebugS1Lz2BubblesOccupancyProbe \
   -Dtrace.dir=src/test/resources/traces/s1/lz2_completerun -Dtrace.zone=3 -Dtrace.act=1 \
   -Dtrace.obj64Phase=0 test
 ```
+
+## 2026-08-21 — Occupancy rows re-measured at `0fd7b7811`: the page drifted, it never leaked, and one of my own numbers was a stale artefact
+
+Worktree `<wt>/occupancy-resweep`, branch `bugfix/ai-occupancy-rows-resweep`, on **`0fd7b7811`**,
+`target/` cleared first, arms pinned. Verified sweep: 94 reports, 15,283 full-map frames,
+`Tests run: 800`. FULL lines were confirmed present **before** anything was computed.
+
+**Why this round exists: I reported numbers from a stale artefact.** The earlier sweep used
+`-Dtest='A+B+C'`. `+` is not valid surefire syntax — the build fails before a single test runs.
+Reproduced: exit 1, zero `Tests run`, zero probe files. My run log was timestamped 15:28; the 94
+probe files I analysed were timestamped **12:55-12:57** and were already on disk. 94 files
+appeared and matched the count this page cites, which read as confirmation when it was
+coincidence. **Verify the artefact is yours before you compute from it — a plausible file count
+is not provenance.**
+
+**Also retracted: "FULL mode does not reach the forked JVM."** It does. Tested through Maven:
+30 diff lines, 30 full lines on one trace; 15,283 in the sweep. The earlier absence was the same
+artefact — nothing ran, so nothing was written, and I read a missing feature into it.
+
+**The leakage hypothesis is refuted; the page is game-filtered.** In-game-only computation
+reproduces it *exactly* for RexonHead (503/0/2), MZ_BOSS (279/0/2) and SBZ_SAW (181/0/4), and
+resolves CPZStaircase and BRIDGE to **0**, matching their "fixed" and "correct" verdicts. Four
+exact reproductions cannot come from an unfiltered ranking. Rule 102 stands as a caution for
+*new* rankings; this page was never contaminated and I was wrong to imply it might be.
+
+**What is actually wrong with it is drift.** Between `694745c09` and `0fd7b7811`:
+
+| row | was | now | |
+|---|---|---|---|
+| RING `0x25` | 566 / 6 / 22 | **58 / 2 / 5** | mostly gone |
+| CHAINED_STOMPER `0x31` | 314 / 0 / 4 | **7 / 0 / 1** | mostly gone |
+| CANNONBALL `0x20` | 581 / 0 / 5 | **620 / 0 / 6** | worse |
+| Projectile `0x98` | 340 / 373 | 317 / **617** | over much worse |
+| LeavesGenerator `0x2C` | 262 / 115 | 197 / **358** | over much worse |
+| EXPLOSION `0x3F` | 282 / 275 | 179 / **369** | |
+| Bubbles `0x24` | 240 / 45 (one-way) | 193 / **66** | now two-way |
+
+Every per-object row is now stamped with the SHA it was measured at.
+
+**My own BossExplosion round survives re-measurement.** 1,324 short / 22 over / 5 fixtures, and
+**511 = 511 reproduced identically** at `cae3ede3c` and `0fd7b7811` — the same slots counted
+under two names. Convert-in-place stands, and that reading rests on the disassembly rather than
+the probe.
+
+**But its framing was wrong and is corrected on the page.** I quoted "70.6% absent, 22.2%
+converted" — shares of the divergent *lines*. Against the object's actual occurrences, of
+14,488 ROM `0x58` slots the engine gets **84.8% exactly right**, with 10.9% absent and 3.5%
+converted. A factor of seven in how alarming it sounds. The first number will have lodged with
+anyone who read it, so it is corrected prominently rather than quietly.
+
+**The sampling-phase bullet is corrected in the same pass**, with the S1 lane's retraction. The
+old wording welded two claims together and only one died: there is no intra-frame offset between
+the object and physics streams, so that mechanism is gone; the ~14-frame sample gap genuinely
+does limit what one sample says about **duration**, and that survives as a *density* caveat,
+named as such so the phase reading cannot be re-derived from the sentence. The rings 4.06-sample
+figure is re-pointed as evidence for density, which is what it always was. The operational
+advice — establish persistence per object — is unchanged, and the bullet says so, so anyone who
+acted on it can tell whether their conclusion still holds. **My BossExplosion round used only
+the density reading, so the retraction costs it nothing: 511 = 511 never rested on the phase
+premise.**
+## 2026-08-21 -- SURVEY: the cross-object install gap needs a fourth question
+
+Commissioned as the last open piece of the rule-107/108 class boundary. Measured at
+`0fd7b7811`. **Headline first, as asked: rule 108's Q2 does not transfer, and it fails in the
+dangerous direction -- it calls cross-object installs members when most of them are not.**
+
+### Why Q2 does not transfer
+
+Q2 asks where the ROM writes the selector, and treats "not inside `Touch_Response`" as meaning
+the target's dispatch has already happened this frame. For a **same-object** install those two
+things are the same fact: a routine writing into its own `(a0)` is necessarily downstream of its
+own head read. For a **cross-object** install they come apart. The parent's write is never in
+`Touch_Response`, so Q2 says "member" every time, but whether the child's dispatch has already
+run this frame is not a property of the write site at all -- it is a property of **slot order**.
+
+**Q4, for cross-object installs only: is the target's slot before or after the writer's?**
+
+- target slot **after** the writer -> the ROM's write is seen by the target's dispatch on the
+  same frame. The engine updates children inside the parent's `update()`, so it agrees by
+  construction. **Not a member.**
+- target slot **before** the writer -> the target already ran this frame, so the ROM's write
+  first takes effect on N+1 while the engine runs it on N. **Member.**
+
+### And Q4 is not always answerable by reading
+
+Slot order is decided by which allocator created the child:
+
+| allocator | slot | verdict |
+|---|---|---|
+| `AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) | scans from `a0` forward -- **always after** the parent | settled by reading: not a member |
+| `AllocateObject` (`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) | scans from the **start** of the dynamic table, taking the first free slot | may be before *or* after the parent, depending on live table occupancy |
+
+So for plain-`AllocateObject` children, **membership is a runtime property, not a static one**,
+and can differ between two runs of the same object depending on what else is loaded. That is a
+strictly harder case than anything in the same-object population, where reading always settles
+it.
+
+### The population
+
+Swept by role, not by name: every assignment to a `routine`/`phase`/`step` selector through a
+receiver that is not this object's own state, then filtered by the receiver's **declared type**
+(a name-only method expansion was tried first and discarded -- it matched any method sharing a
+name, e.g. a map's `clear()`, and produced 1366 sites in 362 files with no signal).
+
+**42 raw sites -> 1 true cross-object install, 4 folded-record classes, the rest not objects.**
+
+| shape | members | verdict |
+|---|---|---|
+| A. parent writes a live child `ObjectInstance`'s selector | `TornadoObjectInstance:849` (`thrusterFollowerChild.routineSecondary = 2`) | **not a member** -- see below |
+| B. folded state records stepped inline by the parent | `HczMinibossInstance` (rockets), `IczMinibossInstance` (shards, orbs), `LbzMinibossBoxRig` (pieces) | Q4 applies but the engine has no dispatch at all; unmeasured |
+| C. not objects | `MGZTopPlatformObjectInstance` (`PlayerGrabState`), `LbzTubeElevatorInstance` (`PlayerTubeState`), `LostRingObjectInstance` (a spawn parameter), `Sonic1LevelEventManager` (rewind restore), `PlcTimingEvidenceTool` | ruled out |
+
+**Shape A resolves to a non-member by reading.** S2's `LoadChildObject` calls
+`AllocateObjectAfterCurrent` (`s2.asm:73012-73014`), so the Tornado's thruster child always sits
+after the parent and the ROM runs the installed routine that same frame -- which is what the
+engine does.
+
+`Sonic1BossFireInstance:118-119` was a **false positive and is retracted**: it seeds a
+brand-new object before that object is added, which is a spawn, not an in-place change on an
+occupied slot (rule 68, inverted).
+
+**The manager -> object direction is empty.** None of the four level-event managers writes an
+object's selector.
+
+### The actual frontier, and it is forward-looking
+
+Nine of S3K's ten child-creation helpers use `AllocateObjectAfterCurrent`, so the whole
+cross-object direction is **structurally safe by construction**. The exception is
+**`CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), which uses plain `AllocateObject`** --
+its children can land in a slot before the parent. Four ROM call sites:
+`sonic3k.asm:141453`, `:180637`, `:197138`, `:197382`.
+
+The first is `HCZEndBossBomb_ResetOrSpawn` (`:141448-141457`) -- **inside the primary
+AIZ -> HCZ release slice**, and **not implemented in the engine yet** (no `HczEndBossBomb` or
+`ExtraBomb` class exists). So this is not a defect to fix; it is a constraint to hand whoever
+implements it, before the same-frame assumption gets baked in.
+
+### Verdict
+
+The cross-object install gap contains **zero confirmed members and zero measurable candidates
+today**. It was worth surveying for the boundary rather than the population: the direction is
+safe by construction except through one allocator, and that one allocator makes membership
+runtime-dependent rather than readable.
+
+## 2026-08-21 — The CANNONBALL/EXPLOSION prediction is refuted, and the Projectile/LeavesGenerator drift is neither shared nor recent
+
+Measured at **`0fd7b7811`** on the verified sweep from the entry above; no new run needed, both
+questions answered from data already in hand. **Nothing landed but page corrections.**
+
+**Prediction refuted.** The page predicted `EXPLOSION` (`0x3F`) two-way shape was a symptom of
+the CANNONBALL (`0x20`) conversion defect. A conversion leaves a signature — the engine holding
+the pre-conversion id where the ROM holds the post-conversion one, in matching counts, as
+BossExplosion/Eggrobo does at 511 and 511. Measured for this pair: **12** and **6**. There is no
+pairing. What the engine holds where the ROM has `0x3F` is `0x3F` itself (58.6%), nothing
+(22.6%), then a tail with no dominant partner. **EXPLOSION is its own defect, unexamined, and
+must not be sized into the convert-in-place programme.**
+
+That is the outcome worth having either way, and it cost one query — a stated-but-untested
+prediction sitting in a status page is exactly what gets read as established later.
+
+**The Projectile/LeavesGenerator "shared recent cause" premise is wrong twice.**
+
+1. **Not shared.** `Projectile`'s over-count is 602 of 617 in `SONIC_2_90` (WFZ act 1);
+   `LeavesGenerator`'s is 354 of 358 in chain segments 16/18/19. Disjoint fixtures, and disjoint
+   partner distributions (`0xBD`/`0x19` against `0x03`/`0x22`/`0x83`).
+2. **Not recent.** Both are *identical* at `cae3ede3c` and `0fd7b7811` — 602/602, 228/228,
+   80/80, 46/46. They degraded before `cae3ede3c` and have been stable since, so nothing that
+   landed in the last window caused them. `EXPLOSION` by contrast did move (211/424 → 179/369)
+   and is still in motion.
+
+**What the numbers actually recommend: `Projectile` in WFZ.** 602 of 617 over-counts in a single
+fixture, of which 54.3% are slots where the ROM holds nothing at all — over-creation or late
+deletion, not misplacement. One object, one fixture, one direction, and a concentration higher
+than anything else left on the page.
+
+**Addendum, same measurement.** The CANNONBALL 581 → 620 degradation is *not* recent either:
+`0x20` measures **620 identically at `cae3ede3c` and `0fd7b7811`**, spread 28/98 across
+`SONIC_1_50`/`51` and 51/196 across chain segments 8/9 and again 30/31. So all three "worse"
+rows — CANNONBALL, Projectile, LeavesGenerator — shifted somewhere before `cae3ede3c` and have
+been stable since; none is attributable to a recent merge. The degradation and the refuted
+prediction are therefore different stories, which is what needed establishing before proposing
+anything.
+
+The refutation is also confirmed independently from the CANNONBALL side: what the engine holds
+where the ROM has `0x20` is `0x20` itself (41.9%), nothing (14.9%), then `0x15` (9.7%), `0x78`
+(7.2%), `0x25` (6.9%). **`0x3F` is not a significant partner in either direction.** Two
+measurements from opposite ends agreeing is what makes this a refutation rather than a null.
+
+## 2026-08-21 — Projectile in WFZ is a LIFETIME defect: an invented 480px deletion margin where the ROM deletes on the render flag
+
+Measured on the verified `0fd7b7811` sweep; the cited engine source is **unchanged between
+`0fd7b7811` and `6da393111`**, so the citation is current. **Found, not fixed — named and
+stopped, per the round's terms.**
+
+**Verdict: LIFETIME, not spawn-condition.** The discriminator is run length, keyed on slot.
+In `SONIC_2_90` (WFZ), consecutive-sample runs of a slot holding `0x98`:
+
+| | runs | mean run | max | total slot-samples |
+|---|---|---|---|---|
+| ROM | **64** | **2.48** | 13 | 159 |
+| engine | **36** | **19.86** | 53 | 715 |
+
+**The engine creates FEWER distinct projectiles than the ROM (36 against 64) and holds each
+about eight times longer.** It is not over-creating; it is not deleting. That settles the owner
+question the round was gated on.
+
+**A false start worth recording.** My first persistence attempt keyed objects on
+`(slot, spawn)` and reported 713 of 714 objects living exactly one sample — apparently
+instant death. That is wrong: the `spawn` record is rebuilt as the object moves, so the key
+changes every frame and every sample looks like a new object. It is the same trap as the moving
+LZ blocks. **On a moving object, `spawn` is not an identity.** Re-keyed on slot alone, the
+answer inverted completely.
+
+**Mechanism, cited.** `Obj98_Main` deletes on the *render flag* — the object is removed as soon
+as it was not drawn:
+
+```
+Obj98_Main:
+        _btst   #render_flags.on_screen,render_flags(a0)
+        _beq.w  JmpTo65_DeleteObject
+```
+
+(`docs/s2disasm/s2.asm:74678-74679`, with `MarkObjGone` as the routine's tail). There is **no
+`fixBugs` conditional anywhere in `Obj98`**, so both arms are the same code.
+
+The engine's `WallTurretShotInstance.update()` cites that exact ROM line in its comment and then
+implements `if (!isOnScreen(480)) setDestroyed(true)`. `isOnScreen(margin)` is
+`cameraBounds.contains(x, y, margin)`, so a 480px margin is the camera box grown by 480 in every
+direction — roughly four times the 320x224 screen per axis, against the ROM's "was it drawn last
+frame". **480 appears nowhere in the ROM.** An eight-fold lifetime is what that margin buys.
+
+**This is a family, not a one-off.** The page's CANNONBALL row already records "an uncited
+`!isOnScreenX(256)` deletion `CBal` does not have". Same shape: an invented on-screen margin
+substituted for a ROM removal test, cited to the ROM line it replaces. Worth a sweep for other
+`isOnScreen(<literal>)` deletions whose comment cites a render-flag or `MarkObjGone` test — that
+is a grep, and it may account for more of the two-way table than any single object does.
+## 2026-08-21 -- BATCH: the 9 same-object candidates, ROM half settled, engine half 1 of 9
+
+Measured at `080fdb520` / `2a62432cf`. **Found, not fixed.** Partial by design of the
+instrument, not abandoned -- the ROM half is fully settled, the engine half is not.
+
+### The ROM half is settled for all nine at once
+
+Rule 108's Q2 asks where the ROM writes the selector. For this whole batch the answer comes
+from **one routine per game**, not nine readings (rule 18 -- an identical fingerprint means the
+same lever):
+
+- S3K `Touch_Enemy`'s boss path (`sonic3k.asm:20908-20925`): negates the player's velocities,
+  backs `collision_flags` into `$25`, records the hitting player in `$1C`, zeroes
+  `collision_flags`, decrements `boss_hitcount2`, and on reaching zero does `bset #7,status(a1)`.
+- S2 `Touch_Enemy_Part2` (`s2.asm:85373-85382`): zeroes `collision_flags`, decrements
+  `collision_property`, and on reaching zero sets status bit 7.
+
+**Neither writes a routine.** The install is always in the boss's own dispatch, testing the
+status bit or the hit count. So Q2 is satisfied for all nine, and the only open question per
+class is the engine half: does its own dispatch consume the newly installed selector on the
+install frame?
+
+### The engine half, and the instrument's own failure mode
+
+A generic detector drove each boss to its final hit through `onPlayerAttack`, snapshotted every
+scalar on the object and its state, then dispatched one frame and compared.
+
+**The first version of that detector was wrong in the dangerous direction.** It reported
+`IczMinibossInstance` as moving nothing on the install frame, which reads as "models the
+invariant". It does not: `IczMinibossInstance.updateBossLogic` early-returns before its routine
+switch while `arenaGateComplete` is false, so in a bare fixture the defeated arm never executes
+at all. Nothing moved because nothing ran -- a null result from code that never ran (rule 45/49),
+one step from being recorded as a false exclusion.
+
+The fix is a **positive control**: dispatch a *second* frame too. If the arm is live, a countdown
+moves on at least one of the two. If neither frame moves anything, the arm never ran and the
+result is inconclusive rather than negative. Any future use of this instrument needs that
+control.
+
+### Per-class state
+
+| class | ROM half | engine half |
+|---|---|---|
+| `MhzMinibossInstance` | member | **CONFIRMED MEMBER, measured** -- install frame moved `defeatExplosionIntervalCounter` 2->1, `defeatHandoffQueued` false->true, and `destroyed` false->true |
+| `IczMinibossInstance` | member | inconclusive -- `arenaGateComplete` gate; needs a fixture that opens the arena |
+| `Sonic2ARZBossInstance` | member | not reached -- bare fixture never lands the final hit |
+| `HczMinibossInstance` | member | not reached (same) |
+| `MhzEndBossInstance` | member | not reached (same) |
+| `CnzMinibossInstance` | member | not reached (same) |
+| `AizMinibossInstance` | member | unconstructible -- needs `SonicConfigurationService` |
+| `LbzMinibossInstance` | member | unconstructible -- needs a `Rom` |
+| `MgzDrillingRobotnikInstance` | member | unconstructible -- needs runtime-art coordination |
+
+**1 of 9 confirmed by measurement.** The other eight are candidates whose ROM half is now
+settled and whose engine half is blocked on fixture depth, not on analysis. Four need a hit
+sequence the bare fixture does not produce; three need services; one needs its arena opened.
+
+### Reproducing
+
+The detector was a throwaway JUnit class, deleted before the commit. It reflectively finds an
+`ObjectSpawn` constructor, builds through `ObjectConstructionContext.construct` with a
+`TestObjectServices` carrying a `Camera` and a `GameStateManager`, loops
+`update(frame++, null); onPlayerAttack(null, null);` until `state.defeated` flips, then compares
+scalar snapshots across the install frame **and the frame after it**, ignoring
+`lastUpdatedVIntRunCount`. Run with
+`mvn -q -Dmse=off -Dtest=<ProbeClass> -DfailIfNoTests=false test`.
+
+### Not done
+
+No fix landed. `MhzMinibossInstance` is confirmed but **no trace covers it** -- MHZ is far past
+the current S3K chain frontier -- and the WFZ result stands as the warning: a correct member
+fix can be load-bearing, and there is no covering trace here to reveal a compensation if one
+exists. Landing it would be unverifiable in exactly the way that produced the WFZ regression.
+## 2026-08-21 — LANDED: S2 Obj82 is a full `SolidObject`, not a top-solid platform — the ARZ2 frame-344 landing was a misclassified side contact
+
+Worktree `wt/s2-obj82`, branch `bugfix/ai-s2-obj82-solid-box`, both arms pinned to
+`0fd7b7811`. Follows the segment-19 attribution entry above, which named this as its
+item 1.
+
+### The question, answered: neither alternative — the box is right, the axis choice is wrong
+
+The open question was whether the solid box is built from a position neither census
+reports, or whether the landing window is not the one `Obj82_Main` builds. **It is
+neither.** An env-gated probe (reverted, never committed) inside
+`ObjectSolidContactController.resolveContactInternal` prints, at `seg13_arz2` frame 344:
+
+```
+[probe-box]  obj=(3C0,520) relX=75 relY=5 halfW=39 maxTop=67 totalH=134 pcx=3E4 pcy=4DE ysp=B60 air=true
+[probe-axis] relX=75 relY=5 absDistX=3 classifyAbsX=3 absDistY=5 topOnly=true sideWouldWin=true
+```
+
+Hand-executing `SolidObject_cont` (`docs/s2disasm/s2.asm:35344-35375`) on the same inputs
+— `d1 = width_pixels + $B = 39`, `d2 = y_radius = 48` from the `fixBugs = 0`
+`Obj82_Properties` arm, Sonic at `(0x03E4, 0x04DE)` with `y_radius 19` — gives
+`d0 = 75`, `d2 = 48 + 19 = 67`, `d3 = -66 + 4 + 67 = 5`, `d4 = 134`. **Those are the
+engine's four numbers exactly.** The box is the ROM's box, built from the position both
+censuses report. My earlier "feet ~41 px above the platform top" note was arithmetic on a
+wrongly assumed `y_radius` of 8; the pillar's is `0x30`.
+
+What diverges is `SolidObject_ChkBounds`'s axis choice
+(`docs/s2disasm/s2.asm:35376-35408`). Continuing the same hand-execution:
+`d5 = 3` (distance to the nearer horizontal edge), `d1 = 5` (to the nearer vertical
+edge); `cmp.w d1,d5 / bhi.w SolidObject_TopBottom` needs the horizontal distance to be
+**strictly greater**, and 3 > 5 is false — so the ROM falls into
+`SolidObject_LeftRight`. `d1 = 5` is not `bls #4`, `d0 = -3` is negative so
+`SolidObject_InsideRight`, `x_vel` is positive so no `StopCharacter`, and
+`SolidObject_AtEdge` does `sub.w d0,x_pos(a1)` — **`x += 3`**. In air, so `SideAir`
+returns a side contact: no landing, no `y_vel` reset.
+
+That reproduces the recorded row exactly. Pure velocity integration from row 343
+(`0x03DF.B800 + 0x047C`) gives `0x03E4.3400`; the fixture records `x = 0x03E7`,
+`x_sub = 0x3400` — three integer pixels added with the sub-pixel untouched, which is
+what `sub.w d0,x_pos(a1)` does and nothing else in the frame does.
+
+### Cause
+
+`SwingingPformObjectInstance.isTopSolidOnly()` returned `true`. The engine's own
+`SolidObject_LeftRight` and `SolidObject_SideAir` ports are correct and already cited —
+they are simply gated behind `!topSolidOnly`, so every Obj82 contact reached the vertical
+landing check. `sideWouldWin=true` in the probe above is the engine's own predicate
+agreeing with the ROM on the same frame.
+
+`Obj82_Main` calls `JmpTo23_SolidObject` (`docs/s2disasm/s2.asm:57221`); `jmpTos`'
+`extractJmpToName` (`docs/s2disasm/s2.macrosetup.asm:300-333`) resolves that thunk to
+`SolidObject` (`docs/s2disasm/s2.asm:35014`) — the full four-sided routine. The class
+already knew this: `getSolidRoutineProfile()`'s own comment says "Obj82 is a SolidObject
+..., not a PlatformObject". `isTopSolidOnly()` contradicted it.
+
+Fix: return `false`, with the citation. No constant was tuned, no band widened or
+narrowed, and the `fixBugs = 0` property arm is untouched.
+
+### Measured, both arms at `0fd7b7811`
+
+| measurement | before | after |
+|---|---|---|
+| `DebugS2Arz2Seg13...` first error | **frame 344 `x` rom `0x03E7` engine `0x03E4`** | **frame 956 `player_animation_id` rom `0x0005` engine `0x0015`** |
+| `DebugS2Arz2Seg13...` errors | 17307 | 16726 |
+| chain segment 19 abort cursor | **109135** (row ~2382 of 6409) | **110798** (row ~4045 of 6409) |
+| chain segment 19 `errorCount` | 62616 (phys 58657 / anim 3959) | 101031 (phys 95281 / anim 5750) |
+| chain segment 19 first non-camera | frame 344 `x` | frame 957 `dynamic_art.edges` |
+| chain axes | 12 | 12, **identical axis set** |
+
+**The segment-19 error count goes UP, and that is not a regression.** The segment now
+survives 1663 more BK2 frames before the abort, so it compares 4045 rows instead of 2382.
+Per compared row the rate is flat (26.3 -> 25.0). This is precisely why the count is not
+the measure at an aborting segment; the abort *reason* is unchanged but the *reach* moved
+by 1663 frames and the first field moved 612 frames later and off position entirely.
+
+**Blast radius.** Across the whole `com.openggf.tests.trace.s2.**` sweep, 129 tests /
+6 failures on **both** arms, same six classes — and diffing the first-error message of
+every red class between arms, **the only message that changes anywhere in the sweep is
+the target class's**. All ARZ classes are green on the after arm, including
+`TestS2Arz2LevelSelectTraceReplay` (an ARZ2 trace) and
+`TestS2Arz1CompleteEmeraldsSegmentTraceReplay`.
+
+Object/guard sweep (`com.openggf.game.sonic2.**`, `com.openggf.level.objects.**`, rewind
+and trace guards): 1546 tests, 20 failures / 16 errors on **both** arms, identical class
+set. That population is red in the control — the known reused-fork ambient-state
+cluster — and is not attributable to this change; it is quoted as a control comparison,
+not as a clean result.
+
+### One test updated, and why it is not suppression
+
+`TestTopSolidRoutineProfileAdoption`'s shared helper asserted
+`provider.isTopSolidOnly()` for every object it checked, including Obj82. The assertion
+was encoding the defect. It has been **moved into the top-solid helper** (so the three
+genuinely top-solid objects still assert it) and Obj82 now asserts `assertFalse` with the
+ROM citation. The test gained an assertion rather than losing one; nothing was relaxed.
+
+### Item 4 from the previous entry, answered
+
+**The standalone segment drowns too** — the death probe fires exactly once on the cold
+load, `[probe-death] cause=DROWN-PRE cpu=false x=156f y=6da`, the same coordinates as the
+chain. So the drowning is intrinsic to ARZ2 and the chain carry contributes nothing to
+it.
+
+### Not this change, still open
+
+- **`Obj82_Main`'s on-screen gate is still missing.** The ROM wraps both
+  `JmpTo23_SolidObject` and the `loc_2A432` swing in
+  `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +`
+  (`docs/s2disasm/s2.asm:57205-57206`); `SwingingPformObjectInstance.update` calls
+  `resolveSolidNowAll()` unconditionally. Deliberately **not** folded into this commit:
+  it is not the frame-344 discriminator (the platform is on screen there) and it has no
+  measured behavioural delta on any current fixture, so it needs its own evidence.
+- The new frontier inside segment 19 is **frame 956-957**, and it is an animation and
+  dynamic-art shape (`player_animation_id` `0x0005` vs `0x0015`, then
+  `dynamic_art.edges` `[]` vs `[1368]`), not position. Different animal from what this
+  entry closed.
+
+## 2026-08-21 -- CONFIRMED: HczMiniboss is a member, and its constant is the compensating half
+
+Follow-up within the 9-candidate batch, measured at `6da393111`. **Found, not fixed.**
+
+`HczMinibossInstance` was the batch's flagged case: its own comment states the ROM's first
+decrement is necessarily the following object pass while the code decrements on the install
+frame. Measured rather than trusted, and it is a member -- but the interesting half is what
+sits next to it.
+
+### Measured engine half
+
+The bare batch fixture never lands the final hit, because `getCoreCollisionFlags()` returns 0
+until `isFightVisible()` (`state.routine >= ROUTINE_DESCEND`), which needs the camera inside the
+trigger window. Driven into `ROUTINE_WAIT` with `hitCount = 1`:
+
+```
+HCZ pre-hit      : routine=8  defeated=false handoffTimer=-1 coreFlags=15
+HCZ after touch  : routine=26 defeated=true  handoffTimer=64
+HCZ install frame: routine=26 defeated=true  handoffTimer=63
+HCZ frame N+1    : routine=26 defeated=true  handoffTimer=62
+```
+
+The touch callback installs `ROUTINE_DEFEATED` and seeds the timer; the install frame's own
+dispatch decrements it. **Member.**
+
+### The constant is the other half, and the two cancel exactly
+
+ROM `BossDefeated` is `move.w #$3F,$2E(a0)` = 63 (`sonic3k.asm:180821`). The engine seeds
+`DEFEAT_HANDOFF_WAIT = REOPEN_TIME + 1` = **64**.
+
+Seed 64 and tick on the install frame -> 63 at the end of the killing frame. Seed 63 and do not
+tick -> 63. **The compensation is exact: the timer holds the same value on every frame either
+way.** This is the WFZ shape a second time, and it was predicted before it was found.
+
+Worse, the `+1` does not even borrow from `BossDefeated`. `REOPEN_TIME` is the miniboss's
+*reopen* delay, a different ROM quantity that happens to share the value `$3F`. So the constant
+is fitted, and its provenance points at an unrelated routine -- a value that is close to the
+ROM's but not equal, absorbing an error elsewhere.
+
+### The comment is right for the wrong reason
+
+The comment at the install site says *"Touch_Enemy runs from Draw_And_Touch_Sprite after the
+boss routine dispatch"*. That is the same misreading caught earlier this round:
+`Draw_And_Touch_Sprite` only calls `Add_SpriteToCollisionResponseList`
+(`sonic3k.asm:178041-178044`); `TouchResponse` runs from the player's control routine. The
+comment's **conclusion** is correct and its **mechanism** is not, which is why it could sit next
+to a fitted constant without anyone noticing the two disagreed.
+
+### Why it is not fixed here
+
+The fix is both halves in one move: seed `$3F` cited to `BossDefeated`, and defer the first
+dispatch. Because the compensation is exact in the timer, the only observable change is that
+`updateDefeated()` -- and with it `defeatExplosionController.tick()` and its explosion child
+spawns -- no longer runs on the install frame.
+
+**No trace can currently adjudicate that.** `TestS3kHczZoneSliceTraceReplay` has a
+**pre-existing 1519-error baseline, first error frame 22243 `g_speed`**, and whether that
+precedes the miniboss is unestablished; under rule 77 a target downstream of a segment's first
+error cannot be judged by it. Having just been burned by an exact-cancelling stack on WFZ, an
+unverifiable landing is the wrong call, so this is recorded rather than committed.
+## 2026-08-21 — the Super alternate-frame step LANDED: ARZ1 3395 -> 119, and the gap ordinal followed the field
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-altframe`, both arms
+pinned to `0fd7b7811`, `target/` cleared before every measurement.
+
+### Landed
+
+`ScriptedVelocityAnimationProfile.applySuperAlternateFrame` applies whatever
+step the active profile declares; the S2 Sonic profile installs
+`setSuperAlternateFrameStep(3, 0x20, 0xB5)` with the s2.asm:38534-38539
+citation. Shared animation code contains no game name and no character test —
+only "the profile declares a step, the sprite is Super, the ROM's two gates
+pass". The step is applied on the walk/run publish path only, because that is
+the only handler the ROM's block sits in; roll, push and plain script paths
+reach `mapping_frame` without it.
+
+The gate reads the level frame counter the animation update is already handed,
+latched as `levelFrameCounterThisTick`, and the field's javadoc says explicitly
+that this is `Level_frame_counter` and NOT the object-visible
+`V_int_run_count`.
+
+### Fingerprint
+
+- `player_mapping_frame` matches on 4061, 4065, 4069 and the rest of the series
+  — **met**.
+- **Zero mapping-frame mismatches with magnitude 32 remain in the segment**
+  (17 mismatches remain, none of them `$20`). The step is fully applied, not
+  partially.
+- Segment 18: **3395 -> 119** comparator errors.
+
+**On your added condition, reported precisely rather than claimed.** The new
+first divergence is 4213, and 4213 - 4061 = 152, which IS divisible by 4 — so by
+arithmetic alone it is congruent to the old series. It is not a partial fix
+wearing a complete fingerprint, and the evidence is the values rather than the
+index: the remaining window is **17 CONSECUTIVE frames, 4213-4229**, not a
+four-frame series, and its mismatches are `SonAni_Roll` frames
+(`$3D,$41,$3E,$41,$3F,$41,$40,$41`) differing by 1 to 4 with the ROM sometimes
+LOWER than the engine. A misfiring `+$20` step cannot produce a delta of 4, a
+negative delta, or seventeen consecutive frames. It is a different defect, in
+the roll animation, previously buried under the Super mass.
+
+### The falsifier did NOT trigger
+
+The named risk was that the field would match while the art got worse, since the
+`+$20` frames are real `MapRUnc_Sonic` entries the engine had not been loading.
+The art followed the field: the segment's `dynamic_art.*` mass went with it,
+and the `seg12_arz1 -> seg13_arz2` gap axis fell from `edge[0].edge_ordinal`
+139754 vs 139700 (delta **54**) to `edge[8].movie_logical_frame` 106743 vs
+106742 (delta **1**) — the same one-row stamp phase the run's other eight gaps
+show. The 54-ordinal deficit is gone, which confirms the shared-owner finding
+positively rather than by elimination.
+
+### Matrix
+
+Both arms in one worktree from the pinned SHA, `target/` cleared before each.
+`-Ptrace-replay -Dsurefire.forkCount=1`, all three ROMs: **798 tests, 10
+failures, 0 errors, 4 skipped on both arms**, identical 155-class sets,
+identical `Tests run: 0,` counts (2), identical failing-method sets. Full
+untruncated failure text differs on **exactly two lines**, both S2 ARZ1 and both
+improvements. `-Pguards`: 500 tests, 0 failures.
+
+## 2026-08-21 -- ATTRIBUTED: the HCZ slice's 1519 errors start at a TurboSpiker hit, and HCZ1 is clean
+
+Commissioned to attribute `TestS3kHczZoneSliceTraceReplay`'s baseline and to establish whether
+its first error precedes the HCZ miniboss. Measured at `72f4de020`, single-class run so the
+report file is safe to quote. **Found, not fixed.**
+
+### The commissioned question: no, and this matters
+
+Act boundaries in `hcz_completerun`, from `zone_act_state`: **frame 9900** HCZ act 0 -> act 1,
+frame 10389 apparent act -> 1, frame 31335 -> zone 2 (MGZ). Errors by region:
+
+| region | errors |
+|---|---|
+| frames 0-9899 (HCZ1, the miniboss's act) | **0** |
+| frames 9900+ (HCZ2) | **1519** |
+
+The HCZ **miniboss is HCZ1's boss, and HCZ1 is entirely clean** -- 9900 frames, zero errors.
+The first error at 22243 is in HCZ2 and therefore **does not** precede the miniboss.
+
+**Consequence: the confirmed `HczMinibossInstance` member is verifiable after all.** The
+earlier entry declined to land it under rule 77 on the assumption that the baseline might sit
+upstream. It does not. A fix there can be judged by this trace: the pass/fail question is
+whether HCZ1 stays at zero errors and the first error stays at 22243.
+
+### Attributing frame 22243
+
+The headline field is not the dominant one (rule 23). `g_speed` is merely first at the first
+frame; across the 1519 the histogram leads with `y` (117), `tails_cpu_ctrl2_held` (80),
+`camera_y` (74). The errors also arrive in bursts -- the largest is 426 in frames 28500-28999 --
+so 1519 is not one smooth cascade.
+
+At frame 22243, simultaneously:
+
+```
+g_speed              exp 0x0330   act 0x0000
+x_speed              exp 0x051A   act -0x0200
+y_speed              exp 0x03A8   act -0x0400
+routine              exp 0x0002   act 0x0004
+rolling              exp 1        act 0
+player_animation_id  exp 0x0002   act 0x001A
+status_byte          exp 0x0006   act 0x0002
+```
+
+`x_vel = -$200` with `y_vel = -$400` and `routine = 4` is the ROM's **hurt-bounce signature**.
+The engine's player is hurt at 22243; the ROM's is still rolling at `g_speed = $330`.
+
+**What fired.** `object_near` rows put the cause four frames earlier. At frame 22239 slot 6's
+live code pointer changes in place from `loc_87D5E` (`TurboSpiker_SpikeChild_Attached`,
+`sonic3k.asm:184034`) to `loc_87DA4` (`TurboSpiker_SpikeChild_Move`, `:184059`), slot 4's
+parent routine advances `$06` -> `$08`, and slot 19 spawns `loc_87DC0`
+(`TurboSpiker_LaunchTrail_Main`, `:184071`). A **TurboSpiker launches its spike**. The engine
+implements this badnik as `TurboSpikerBadnikInstance`.
+
+### Why this is a touch-categorisation defect and not a position drift
+
+**Because there are zero errors before 22243, the engine matched the ROM on every compared
+field at 22242** -- same position, same speed, same `rolling`, same animation. So the engine was
+rolling, in the same place, at the same speed, and was hurt anyway.
+
+That names the ROM branch. `Touch_Enemy` (`sonic3k.asm:20877-20884`) tests
+`cmpi.b #2,anim(a0)` -- the rolling animation -- and branches to `.checkhurtenemy`, the path
+where the **player damages the enemy**; otherwise it falls through to `Touch_ChkHurt`, where the
+player is hurt. The recording's `player_animation_id` at 22243 is `0x0002`: exactly the value
+that routine tests for. The ROM took the hurt-the-enemy branch and the engine took the
+hurt-the-player one.
+
+### Scope, and what cannot be attributed yet
+
+Everything after 22243 is downstream of a player-trajectory desync and cannot be independently
+attributed until that hit is resolved (rule 77) -- including the 426-error burst at 28500-28999,
+which may be a second independent defect or may be inherited. **1519 is an upper bound on the
+work, not a count of defects.** The next round is `TurboSpikerBadnikInstance`'s touch
+categorisation for a rolling player, and it has a sharp acceptance test: HCZ1 stays at 0 errors
+and the first error moves past 22243.
+## 2026-08-21 — the 4213 roll window is a 3-entry phase, and the ROM's own script index jumps where the engine's does not
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-arz1-roll`, pinned to
+`c9f7b7ffe`, `target/` cleared before measuring. Probe reverted, `src/`
+unchanged. Characterised, not fixed.
+
+### It is a phase, exactly as predicted, and the phase is 3
+
+`SonAni_Roll` is `$FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF` (s2.asm:38695) — an
+eight-entry cycle `3D,41,3E,41,3F,41,40,41`. Over the whole 17-frame window both
+sides are walking that one script, one entry per frame, and every "delta" is
+just two different indices into it:
+
+| | 4213 | 4214 | 4215 | 4216 | 4217 | 4218 | 4219 | 4220 |
+|---|---|---|---|---|---|---|---|---|
+| rom | 3D | 41 | 3E | 41 | 3F | 41 | 40 | 41 |
+| eng | 41 | 40 | 41 | 3D | 41 | 3E | 41 | 3F |
+| rom idx | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| eng idx | 5 | 6 | 7 | 0 | 1 | 2 | 3 | 4 |
+
+The engine is a constant **three entries behind** for all 17 frames, and both
+advance one per frame — `inertia` is `0x0388` throughout, so `SAnim_Roll`'s
+duration term is `(-|inertia| + $400) >> 8` = 0 (s2.asm:38612-38618) and every
+frame steps. No drift, no accumulation: one fixed phase, established at the
+window's first frame. The deltas of 1 to 4 with sign changes that made this look
+unlike the `+$20` defect are exactly what two indices into a
+`3D,41,3E,41,3F,41,40,41` cycle produce.
+
+### The origin is a ROM index jump the engine does not make
+
+Reading the fixture's own column back from a known-good stretch:
+
+```
+4204 3F   4208 3D   4212 3F
+4205 41   4209 41   4213 3D   <-- index 4 to index 0
+4206 40   4210 3E
+4207 41   4211 41
+```
+
+The ROM runs the cycle cleanly to index 4 at frame 4212 and then reads **index
+0** at 4213, skipping indices 5, 6 and 7 — the three entries the engine is
+behind by. So this is not the engine losing three frames; it is the ROM's
+`anim_frame` jumping, and the engine continuing its cycle undisturbed.
+
+What makes that hard: `player_animation_id` is `02` on **every** row of the
+window and either side of it, `player_rolling` is 1 throughout, `inertia` is
+constant, and `y_speed` steps by exactly `0x38` across 4212 -> 4213, so no lag
+frame and no missed gameplay frame is involved. `Sonic_Animate` resets
+`anim_frame` only when `anim != prev_anim` (s2.asm:38386-38390), and by the
+recorded `anim` column that test cannot have fired.
+
+Ruled out on the way: it is not a script switch. `SAnim_Roll` chooses
+`SonAni_Roll2` above inertia `$600` and `SonAni_Roll` below (s2.asm:38606-38610),
+`inertia` is `0x0388` so the choice never changes — and the two scripts are
+byte-identical anyway (s2.asm:38695, :38697), so a switch could not move the
+frame. It is also not the Super `+$20` step: that lives in `SAnim_SuperWalk` and
+the roll path never reaches it, which is why nothing here is `$20` apart.
+
+### The exact open question for the next round
+
+**What writes `anim_frame` at ROM frame 4213 while `anim` stays `02`?** It is a
+write from outside `Sonic_Animate`'s own reset path, and finding it is the whole
+fix — the engine needs to make the same write, not to be nudged three entries.
+
+Explicitly not to be done: adding a three-entry offset, or resetting the
+engine's index at a frame index. Both would close this fixture and desync the
+first different recording — the phase is a symptom of a write, and the write is
+what has to be ported.
+
+This is the last mass in segment 18: 119 errors, all of it this window and the
+art edges that follow the mapping frames through `LoadSonicDynPLC`.
+
+## 2026-08-21 — the anim_frame writer at 4213: four candidates discarded, including the one that fit perfectly
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-animframe-write`, pinned to
+`99ae394df`. No measurement run was needed beyond reading the fixture's own
+columns; `src/` unchanged. **The writer was not found.** This is the negative
+result, with the eliminations that constrain the next attempt.
+
+### Discarded, with reasons
+
+**1. `s2.asm:13634` — the offered candidate. `ObjCF`, an ending cutscene
+object.** The enclosing label is `loc_A4B6`, and the surrounding code reads
+`Ending_Routine`, sets `CutScene+objoff_34` and loads `ObjCF_MapUnc_ADA2`. The
+`clr.b anim_frame(a0)` is the object clearing **its own** SST, not the player's,
+and it belongs to a routine that does not run in ARZ1. Exactly the class of
+false lead the brief warned about.
+
+**2. `Sonic_RevertToNormal` (s2.asm:37533) — discarded on EXECUTION evidence,
+not on fit.** This one fit perfectly: `move.b #AniIDSonAni_Run,prev_anim(a0)`,
+whose own comment reads *"Force Sonic's animation to restart"* — a `prev_anim`
+write outside `Sonic_Animate`, which would make the next `anim != prev_anim`
+test fire and reset `anim_frame` to 0, producing exactly the observed index
+jump. It did not run. The fixture's `rings` column is **constant at `0x2F`
+across 4205-4219**, so neither `Sonic_Super`'s ring-zero revert
+(`tst.w (Ring_count).w / beq`) nor a drain-to-zero fired anywhere near 4213.
+Mechanism fit is not execution evidence, and this is the fourth time today a
+candidate that fit did not fire. Not inside a `FixBugs` block either — checked
+before discarding, so the retail-arm question does not arise.
+
+**3. A `SonAni_Roll2` switch.** `AniIDSonAni_Roll2` is **never written anywhere
+in s2.asm** — every `anim` write in the roll family is `AniIDSonAni_Roll`
+(:37114, :37136, :37324, :37392, :37595, :40140, :40162). `SonAni_Roll2` is
+reachable only through `SAnim_Roll`'s `inertia >= $600` selection, and `inertia`
+is `0x0388` throughout. Dead twice over.
+
+**4. `s2.asm:26741` — `Obj0E_FlashingStar_Move`.** Its own SST again.
+
+### The constraint that makes this hard, stated for the next attempt
+
+`prev_anim` is written in exactly two places: `Sonic_Animate` itself
+(`move.b d0,prev_anim(a0)`, s2.asm:38388) and `Sonic_RevertToNormal` (:37533).
+The revert did not run. So **`Sonic_Animate`'s own `anim != prev_anim` reset
+cannot account for the jump** given the recorded columns — which means the
+write is either a direct `anim_frame` store from a routine not yet found, or an
+`anim` value written and restored inside a single frame so the end-of-frame
+column never shows it. The second only works if the intermediate script's first
+frame is also `$3D`, which restricts it to the roll family, and the roll family
+has exactly one reachable id.
+
+### What I did NOT establish
+
+I did not establish that the writer is something the engine does not model —
+that would be the bigger finding and I am not claiming it. What I established is
+that it is not any of the four owners above, and that the obvious path through
+`prev_anim` is closed. The remaining `anim_frame` writers in the file
+(:28023, :30428-30494, :41276-41320, :44947, :46343, :49913, :57701-57809,
+:69279, :69635) are unsurveyed; each needs its `a0` traced to the player before
+it is a candidate at all.
+
+Nothing was fitted, and the three-entry offset remains ruled out.
+
+## 2026-08-21 -- HAZARD: `-Dtest=` overrides patterns but NOT tag exclusions, and the chain frontier restated
+
+Measured at `2973a0430`. Two things in one entry: a measurement hazard that produces a clean
+green from a class that never ran, and a correction of two stale frontier numbers.
+
+### The hazard, with the mechanism corrected
+
+`TestS3kTailsFullChainRunChain` under `-Ptrace-replay -Dtest=TestS3kTailsFullChainRunChain`
+reports:
+
+```
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+**A clean green from a class that never ran.** Under `-Ptrace-replay-r7` with the identical
+`-Dtest=`, the same class runs and fails in 15s.
+
+The first explanation offered for this -- "the class is only in the r7 profile's `<include>`
+list" -- was **wrong**, and the real mechanism is worth more. `trace-replay` *does* include it
+by pattern (`**/tests/trace/**/*.java`) and does *not* exclude it by pattern; the two run-chain
+classes named in that profile's `<exclude>` list are the Knuckles super-emerald and Mega runs.
+What drops it is a **JUnit tag**: the class carries `@Tag("trace-scope-r7")` and `trace-replay`
+sets `<excludedGroups>performance-measurement,trace-scope-r7</excludedGroups>` (pom.xml:259).
+
+**So the rule is sharper than "`-Dtest=` overrides profile selection" (rule 98):**
+
+> `-Dtest=` overrides a profile's `<include>` and `<exclude>` **patterns**, but **not** its
+> `<excludedGroups>` tag filter.
+
+Both halves were measured in this round against the same profile. `TestS3kHczZoneSliceTraceReplay`
+is **pattern**-excluded from `trace-replay` (`**/tests/trace/s3k/*ZoneSliceTraceReplay.java`),
+and `-Ptrace-replay -Dtest=TestS3kHczZoneSliceTraceReplay` **ran it anyway** -- 2 tests. The
+Tails chain is **tag**-excluded from the same profile, and the same flag shape ran nothing.
+Identical invocation shape, opposite outcomes, and only the exclusion *kind* differs.
+
+**What it looks like from outside:** `BUILD SUCCESS`. Not a skip, not a filter warning -- a
+zero-test success that is indistinguishable from a passing run unless you read
+`Tests run:`. Check the tag before concluding a `-Dtest=` run means anything, and treat
+`Tests run: 0` as a failed measurement rather than a result.
+
+Tag-to-profile map at this SHA: `trace-scope-r7` is excluded by `trace-replay` and selected by
+`trace-replay-r7`; `trace-scope-r6` is excluded by `trace-replay-r7` (pom.xml:452).
+
+### The chain frontier, restated and stamped
+
+**Both previously recorded positions are stale.** This log's "the chain fails at segment 9 of
+63" and a lane note of "5 of 63" no longer describe it, and the current failure is a **different
+shape** -- not a physics divergence at a segment at all. Measured at `2973a0430`:
+
+```
+TestS3kTailsFullChainRunChain.tailsFullChainAllEmeraldsRoundTrip
+BoundaryStepCapExceededException: awaitBoundary exceeded step cap 42908
+  for entry_kind 'stage_exit' (mode_change_bk2_frame=6221, last observed bk2 frame=6221)
+  cursor frozen or mode change never observed
+  (no active objects within a screen-width of the player)
+```
+
+The run **stalls at a `stage_exit` boundary at bk2 frame 6221**, burning the full 42908-step
+cap. Last observed frame equals the mode-change frame exactly, so this is a stall, not a drift.
+Note the run is 70 segments, not 63 -- the older counts were against a shorter fixture.
+
+The class is *designed* to be red: its javadoc records it as a frontier harness added to say
+where the route diverges, not as a regression.
+
+**The suppressed `PendingRecordedSubmissionsException` is downstream of the stall, not a second
+defect.** A run that never completes leaves recorded hardware submissions pending by
+construction; reading it as independent sends someone to the timing port for nothing.
+
+**Two opposite defects share that one message** and it is unresolved which applies: the engine
+never reaches the stage exit, or it reaches it and the walker never observes the mode change.
+The `(no active objects within a screen-width of the player)` diagnostic argues for the first,
+but that is a hint, not a measurement. Instrument the boundary before assigning ownership --
+handing this to the walker's owner presumes the second.
+
+### Instrumented: the stall is the SPECIAL-STAGE EXIT, and the walker is not at fault
+
+Measured at `2973a0430` with an env-gated probe inside `awaitBoundary` (reverted). The two
+opposite defects behind the one message are now separated, and it is **neither** of the two
+candidates as posed.
+
+```
+PROBE_BOUNDARY steps=1     bk2=759   target=2126  kind=giant_ring  latched=false
+PROBE_BOUNDARY steps=2     bk2=760   target=2126  kind=giant_ring  latched=false   <- advances normally
+...
+PROBE_BOUNDARY steps=1     bk2=6221  target=6221  kind=stage_exit  latched=false   <- ALREADY at target
+PROBE_BOUNDARY steps=2000  bk2=6221  target=6221  kind=stage_exit  latched=false
+PROBE_BOUNDARY steps=40000 bk2=6221  target=6221  kind=stage_exit  latched=false
+```
+
+The preceding `giant_ring` boundary advances its cursor one frame per step and latches. At the
+`stage_exit` boundary the cursor is **already at 6221 on step 1** -- the engine *reached* the
+boundary -- and then never advances again across 42908 steps.
+
+So it is not "the engine never gets there", and not "the walker missed a latch after passing".
+`awaitBoundary`'s own contract already rules the second out: passing the boundary returns
+`NOT_OBSERVED` rather than throwing, so a throw with `last observed == mode_change_bk2_frame`
+means the cursor never moved. **The engine arrives and the BK2 cursor freezes on arrival.**
+
+`currentBk2Frame()` reads `GameServices.playbackDebug().getCursorFrame()`, so what is frozen is
+the movie playback cursor, not the walker's bookkeeping.
+
+**Which boundary this is.** From `run_manifest.json`: transition 1 of 48, `from_segment: 1`
+(`ss`) `to_segment: 2` (`aiz_2`), and segment 2's `bk2_frame_offset` is 6221. Segment 1 is a
+**special stage**, spanning bk2 2126 to 6221. So the engine plays the giant-ring entry
+correctly, plays the whole special stage through to its final frame, and then **hangs on the
+special-stage exit back into AIZ**.
+
+**Owner: the special-stage exit path, not the run-chain walker.** The walker is correctly
+waiting for a mode change that never settles.
+
+**Chain position, restated again:** the run stops at transition **1 of 48**, having completed
+segments 0 and 1 of 70. This is *not* comparable to the older "segment 9 of 63" -- that was a
+different and shorter fixture -- so it should not be read as a regression against it.
+### Addendum — the survey is now exhaustive: no routine in s2.asm writes the PLAYER's anim_frame outside Sonic_Animate
+
+Every remaining `anim_frame` writer in the file, mapped to its enclosing
+routine:
+
+| line | routine | whose SST |
+|---|---|---|
+| 28023 | `loc_142CC` | its own object |
+| 30428, 30460, 30494 | `AnimateSprite`, `Anim_End_FF`, `Anim_End_FB` | the **generic** object animator; Obj01 does not use it — Sonic has his own `Sonic_Animate` |
+| 41276, 41311 | `Tails_Animate_Part2`, `TAnim_End_FF` | Obj02, the sidekick |
+| 44947 | `loc_1F5D6` | its own object |
+| 46345 | `Obj04_Display` | its own object |
+| 49913 | `Obj33_FlameOff` | its own object |
+| 57704, 57802 | `loc_2A86A`, `loc_2A966` | their own objects |
+| 69279, 69635 | `SSPlayer_Jump`, `SSPlayer_Animate` | the **Special Stage** player, not in ARZ1 |
+
+Together with the four discarded above, that is every `anim_frame` write in
+`s2.asm`. **None of them targets the main character's SST.** The search for an
+external writer is closed, not merely unfinished.
+
+### What that forces, and where the evidence runs out
+
+If no routine outside `Sonic_Animate` writes the player's `anim_frame`, the
+reset at 4213 came from `Sonic_Animate`'s own `anim != prev_anim` path
+(s2.asm:38386-38390) — which means `anim` and `prev_anim` DID differ at the
+moment that test ran, even though the recorded `player_animation_id` column
+reads `02` on 4212, 4213 and 4214 alike.
+
+That is a transient inside a single frame, and **a frame-granularity fixture
+cannot show it**. The recorded column samples once per frame; a value written
+and restored between two samples is invisible by construction. So this is not a candidate I failed to check — it is the limit of what this recording can
+answer.
+
+What would resolve it, for whoever picks it up: a per-frame aux column carrying
+`prev_anim` alongside `anim`, or a sub-frame probe at the `Sonic_Animate` entry.
+Both are recorder-side. Until one exists, the writer cannot be identified from
+committed data, and no fix should be attempted on inference alone — the fitted
+answers stay ruled out, and a three-entry offset would be exactly that.
+## 2026-08-21 — S2 Obj82's on-screen gate: landed as a correctness fix with a proven-live branch and a deliberately negative measurement
+
+Worktree `wt/s2-obj82-gate`, branch `bugfix/ai-s2-obj82-onscreen-gate`, both arms pinned
+to `bd65ab870`. The second commit promised by the entry above, kept separate from the
+axis-choice fix on purpose because it is not that defect and has no measured payoff.
+
+### The predicate, derived rather than chosen
+
+`Obj82_Main`'s `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +`
+(`docs/s2disasm/s2.asm:57205-57206`) skips past **both** `JmpTo23_SolidObject` and
+`loc_2A432`. `loc_2A432` (`docs/s2disasm/s2.asm:57340-57365`) holds the `objoff_3E`
+angle counter *and* the `CalcSine` `y_pos` write, so the freeze covers the angle: an
+off-screen platform mid-decay holds its offset instead of returning to `objoff_30`.
+`Obj82_Types` runs before the gate and is unaffected.
+
+The flag itself is `BuildSprites`' output from the previous frame. It clears the bit for
+every queued object (`docs/s2disasm/s2.asm:30560`) and re-sets it only past both culling
+tests (`:30627`), and `MarkObjGone2` (`:30237-30254`) either `DisplaySprite`s or
+`DeleteObject`s, so a live Obj82 is queued every frame and the flag never goes stale.
+
+**The vertical window is the ROM's own constant, not a margin.** Retail `Obj82_Init`
+takes the `fixBugs = 0` arm, `move.b #1<<render_flags.level_fg,render_flags(a0)`
+(`docs/s2disasm/s2.asm:57169-57174`) — the disassembly's own comment there reads *"Same
+as Obj2B, this should use the accurate height flag"*. Without `explicit_height`,
+`BuildSprites` takes `BuildSprites_ApproxYCheck`, which compares against
+`spriteScreenPositionY(0-32)` / `spriteScreenPositionY(screen_height+32)`
+(`:30604-30610`) and "assume[s] Y radius to be 32 pixels" — **regardless of the pillar's
+real `y_radius` of `$30`**. So the engine overrides `getOnScreenHalfHeight()` to 32 with
+`usesCustomRenderHeight()` left false, and `getOnScreenHalfWidth()` to the
+`Obj82_Properties` `width_pixels` that `BuildSprites`' horizontal cull actually reads
+(`:30568-30578`). Both numbers are read out of the routine that owns them.
+
+The gate is evaluated with `isPreUpdateWithinRenderSpriteBounds`, not `isOnScreen()`,
+because the ROM flag describes where the object was when the *previous* frame's
+`BuildSprites` ran — i.e. after that frame's `loc_2A432` — which is the engine's
+frame-start position.
+
+### The branch is live, and the measurement is a real negative
+
+Across four ARZ fixtures the gate evaluates 10,856 times: **9311 closed, 1461 open**, and
+**382 of the closed passes carry a non-zero swing angle** — exactly the case where the ROM
+freezes the decay and the engine previously kept decaying. This is not dead code.
+
+And yet: `com.openggf.tests.trace.s2.**` is **129 tests / 6 failures on both arms with
+every red class's first-error message byte-identical**. The object/guard sweep
+(`sonic2.**`, `level.objects.**`, rewind and trace guards) is 1546 tests, 20 failures /
+16 errors, identical class set — that population is the known reused-fork ambient-state
+cluster and is red in the control.
+
+**Break-on-purpose, because "identical" is worthless if the suite cannot see this path.**
+Inverting the gate (freeze when *on* screen) takes the sweep from 6 failures to **7**,
+adds a new red class at **26390 errors, first error frame 225 `y_speed`**, and drags the
+ARZ2 segment's first error back to **frame 344 `x`**. The suite is demonstrably sensitive
+to this code path, so the negative result above is a fact about current coverage, not a
+blind spot.
+
+### What this is, stated plainly
+
+A correctness fix with a proven-live branch and **no measured behavioural payoff on any
+committed fixture**. The observable it would produce — a platform re-entering the screen
+up to 4 px off centre (`CalcSine($40) * $400 >> 16` = 4) after the player rode and left
+it — needs a recording where an Obj82 leaves the screen mid-decay and the player meets it
+again. No committed trace does that. Landed because the predicate is derived from the ROM
+routine that owns it rather than fitted, not because anything went green.
+
+### Related
+
+The 32 here is the counter-example to the invented-margin class another lane is sweeping:
+it is `BuildSprites_ApproxYCheck`'s own constant, cited to the line that contains it,
+reached because a *different* cited `fixBugs = 0` arm leaves `explicit_height` clear. A
+margin is only legitimate when both of those are true.
+## 2026-08-21 — RETRACTION: the survey was not exhaustive, and no transient is needed. Two idioms it structurally could not see
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-animframe-idiom`, pinned to
+`5d96541ce`. `src/` unchanged.
+
+The brief said that if a name survey comes back empty the survey shape is
+probably wrong rather than the writer absent. It came back empty. **The shape
+was wrong**, and two claims from the entry above are retracted.
+
+### Retraction 1 — "no routine writes the player's anim_frame outside Sonic_Animate"
+
+That was a fact about the grep, not about the ROM. The field layout is
+`anim_frame = $1B`, `anim = $1C`, `prev_anim = $1D`,
+`anim_frame_duration = $1E` (s2.constants.asm:32-35) — **adjacent bytes**. So a
+`move.w` to `anim` writes `anim` AND `prev_anim` in one instruction, and
+`Sonic_Animate` resets `anim_frame` whenever those two differ
+(s2.asm:38386-38390). About twenty sites use exactly that idiom, and the
+disassembly states the intent outright at s2.asm:35481:
+
+```
+move.w #(AniIDSonAni_Walk<<8)|(AniIDSonAni_Run<<0),anim(a1) ; use walking animation (and force it to restart)
+```
+
+A survey for `anim_frame(aN)` cannot see any of them. Neither can it see writes
+made through an absolute address rather than a register offset — and there are
+two of those on the player, one of which is a **third `prev_anim` writer**:
+
+```
+26033: move.b #AniIDSonAni_Run,(MainCharacter+prev_anim).w ; force Sonic's animation to restart
+88684: move.b #AniIDSonAni_Roll,(MainCharacter+anim).w
+```
+
+So the previous entry's derived constraint — *"`prev_anim` is written in exactly
+two places"* — is **false**. It is written in three, and the third is on the
+player by absolute address.
+
+### Retraction 2 — "the cause is a transient a frame-granularity fixture cannot show"
+
+Also wrong, and this one would have cost the next round most. No transient is
+required. A single `move.w #(2<<8)|(0<<0),anim(...)` sets `anim` to `$02` and
+`prev_anim` to `$00` at once: the recorded `player_animation_id` column reads
+`02` before and after, exactly as observed, while the unequal pair forces the
+reset. The mechanism is fully visible in one frame. It looked invisible only
+because **`prev_anim` is not a recorded column** — which is a gap in what the
+fixture carries, not a limit of frame granularity.
+
+Nobody should be asked for a sub-frame probe on the strength of the previous
+entry. A `prev_anim` aux column would still settle it outright, but the
+mechanism no longer needs one to be understood.
+
+### The two new candidates, both discarded on execution evidence
+
+- **`Debug_ExitDebugMode` (s2.asm:88684).** Its `AniIDSonAni_Roll` write sits
+  behind `cmpi.b #GameModeID_SpecialStage,(Game_Mode).w / bne`, and the
+  disassembly calls it a "useless leftover ... for S1's special stage". It
+  cannot run in ARZ1 gameplay.
+- **`swap_players` / `process_swap_table` (s2.asm:26014-26033).** This one both
+  forces the restart AND clears `Sonic_LastLoadedDPLC`, which would produce the
+  art-edge behaviour too — a strong fit. It did not run: the routine's whole
+  purpose is to **swap the main character's and sidekick's positions**, and the
+  fixture shows the player's `x`/`y` continuing smoothly across 4212 -> 4213
+  with no discontinuity of any kind.
+
+### Where this leaves it
+
+The right survey shape is now established and the population is much larger than
+the one I reported: byte writes by register offset, byte writes by absolute
+address, and word writes to `anim` that carry `prev_anim` with them. Six
+candidates are eliminated with reasons across the two rounds. The remaining
+word-write sites still need their `a1`/`a0` traced to the player — the two
+checked so far (s2.asm:49065, an `AllocateObjectAfterCurrent` clone, and
+`Obj55_Wave` at 68983) are other objects' own SSTs.
+
+Nothing fitted; the three-entry offset stays ruled out.
+
+## 2026-08-21 -- RETRACTED: 22243 is not a touch-categorisation defect
+
+Measured at `0fa9ae60b`, while starting the commissioned TurboSpiker fix. **The previous
+entry's mechanism for frame 22243 is withdrawn before anything was built on it.**
+
+### What was claimed, and why it was wrong
+
+The attribution said the ROM routes a rolling player to `Touch_Enemy`'s `.checkhurtenemy`
+branch -- the player damages the badnik -- while the engine took the hurt path, citing
+`cmpi.b #2,anim(a0)` (`sonic3k.asm:20877-20884`) and the recording's
+`player_animation_id = 0x0002`.
+
+**That branch does not govern this object.** `Touch_ChkValue` (`sonic3k.asm:20773-20779`)
+dispatches on `collision_flags & $C0`: `00` -> `Touch_Enemy`, `01` -> monitor,
+`10` -> `Touch_ChkHurt` ("harmful"), `11` -> `Touch_Special`. The spike child's ROM ObjData is
+`TurboSpiker_SpikeChildObjData` = `dc.b 8, $10, 3, $9E` (`sonic3k.asm:184173-184175`), so
+`$9E & $C0 = $80` -- **harmful**, which goes to `Touch_ChkHurt` and never reaches the rolling
+test at all.
+
+The rolling-player reasoning was read off the wrong branch of the dispatcher.
+
+### And the engine's constant is already correct
+
+`TurboSpikerBadnikInstance.SHELL_COLLISION_FLAGS = 0x9E` **matches the ROM byte exactly.**
+There is no categorisation defect to fix. Had this been implemented as commissioned, it would
+have changed a correct value to an incorrect one and been validated against a fixture that
+cannot see object collision flags.
+
+### What the evidence actually supports
+
+`Touch_ChkHurt` (`sonic3k.asm:20952+`) spares the player only for shields, invincibility, or
+`double_jump_flag == 1` (Insta-Shield / Tails flying / Knuckles gliding). The recording has the
+player **rolling** (`anim = 2`), none of which apply. So a ROM player who overlapped that spike
+**would** have been hurt, and the recording shows they were not.
+
+**Therefore the ROM's spike did not overlap the player, and the engine's did.** That makes 22243
+a spike **position or launch-timing** defect, not a touch defect -- and object positions are not
+among the compared fields, which is why it stayed invisible until it produced a hurt.
+
+### The next step is directly adjudicable
+
+The `object_near` stream records the spike's own coordinates each frame -- at 22239 slot 6 sits
+at `x=0x32F2, y=0x04B0` with the parent at `x=0x32F6, y=0x04B0`, and the launch sets
+`x_vel = +/-$100`, `y_vel = -$400` (`TurboSpiker_SpikeChild_SetVelocity`,
+`sonic3k.asm:184048-184056`). So the recording already contains the answer: compare the engine's
+spike position and launch frame against those rows. That is a comparison the fixture supports
+today, against a stream nothing currently compares.
+
+**Acceptance is unchanged and still sharp**: HCZ1 stays at 0 and the first error moves past
+22243. Nothing landed for TurboSpiker.
+
+## 2026-08-21 — the gap stamp is NOT a recorder artefact, and it is not one family either
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-gap-stamp`, pinned to
+`1f3985576`, `target/` cleared. `src/` unchanged. Precondition answered; nothing
+proposed.
+
+### The measurement
+
+Every `run_gap.*.movie_logical_frame` comparison in the run, as
+engine-minus-recording, grouped by what the gap's SOURCE segment is:
+
+| gap | source | fields | engine - rom |
+|---|---|---:|---|
+| `seg4_ehz1 -> seg5_ehz2` | level | 4 | **-1** |
+| `seg7_ehz2 -> seg8_cpz1` | level | 4 | **-1** |
+| `seg8_cpz1 -> seg9_cpz2` | level | 4 | **-1** |
+| `seg10_cpz2 -> seg11_arz1` | level | 4 | **-1** |
+| `seg12_arz1 -> seg13_arz2` | level | 4 | **-1** |
+| `ss_4 -> seg6_ehz2` | special stage | 2 | **+1** |
+| `ss_5 -> seg7_ehz2` | special stage | 2 | **+1** |
+| `ss_7 -> seg12_arz1` | special stage | 4 | **+1, +2** |
+| `ss_6 -> seg10_cpz2` | special stage | 8 | **+1, +2, +8, +20, +21** |
+
+### Answer to the precondition: it is not the recorder
+
+A recorder artefact of the shape "the stamp is recorded a row later than the
+thing it stamps" biases **one direction everywhere** — the recorder samples the
+same way at every gap, so it cannot produce `-1` at five level-to-level gaps and
+`+1` at four special-stage-to-level ones. **The sign flips with the source
+segment type**, which no uniform sampling offset can do. So this is engine-side,
+and it does not join the roll window's recorder item.
+
+### And the premise that it is one family is wrong
+
+Treating it as one systemic stamp question with one owner was the right call to
+make before measuring, and the measurement declines it. There are two:
+
+- **Level-to-level: a clean, uniform one-row lag.** Five gaps, four fields each,
+  `-1` every time with no exceptions and no spread. That is a phase, and it has
+  the shape of a single owner.
+- **Special-stage-to-level: not a phase at all.** `+1, +2, +8, +20, +21` is a
+  spread, not an offset, and a spread cannot be a stamp being written one row
+  late. `AbstractRunChainTest.stateMovieLogicalRow` already documents why this
+  family would differ: "a chain runs a different number of iterations than the
+  movie has rows — the pre-segment prefix runs none, **a special-stage segment
+  runs more than one per row** — so the counter is not the movie clock". The
+  engine running several production iterations per movie row on the special-stage
+  side is exactly what turns an offset into a spread.
+
+The two need separate rounds. Folding them would repeat the mistake this
+measurement just avoided, one level up.
+
+### Not proposed
+
+No fix, per the constraint. The level-to-level `-1` is the tractable half and
+has one owner; the special-stage spread should not be touched until it is
+established whether it is the same stamp at all or an iteration-count question
+wearing the same field name.
+## 2026-08-21 — the prev_anim column: a one-field addition, but it DOES need a re-capture
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-prevanim-column`, pinned to
+`eaa8e83b8`. `src/` and `tools/` unchanged — stopping at the cost decision, as
+instructed.
+
+### Question 1: is it a one-field addition? YES
+
+`tools/bizhawk-headless/src/Recording/S2Ram.cs:95-98` defines the animation
+block as:
+
+```
+OffMappingFrame   = 0x1A
+OffAnimFrame      = 0x1B
+OffAnimId         = 0x1C
+OffAnimFrameTimer = 0x1E
+```
+
+**`0x1D` — `prev_anim` — is the only byte in that block the map omits**, with
+its neighbours present on both sides. Adding it is one constant.
+
+The emission side is equally small, and the pattern already exists next door:
+`S2SpecialStageCsvWriter.cs:167` already writes `OffAnimFrame`. The S2 **level**
+CSV writer emits neither — the recorded columns are `player_animation_id` and
+`player_mapping_frame` only, with no `anim_frame` and no `prev_anim`.
+
+Worth taking both while the file is open. `anim_frame` not being recorded is
+what forced this lane to infer the index from mapping frames across two rounds;
+recording it would have shown the 4213 reset directly.
+
+### Question 2: can committed fixtures be extended, or is a re-capture needed? RE-CAPTURE
+
+They cannot be extended. The values exist only inside the emulator as it runs;
+no committed artifact contains `prev_anim` in any form, so there is nothing to
+derive it from. Every affected `physics.csv.gz` has to be regenerated.
+
+**Stopping here — this is the cost decision.** Two things that shape it:
+
+- **No human re-play is needed.** The movie is committed:
+  `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2`.
+  Regeneration is a mechanical re-run of the headless recorder over that BK2 plus
+  the ROM, not a new recording session. The cost is compute and fixture churn in
+  git, not human time.
+- **It may not need the whole corpus.** To answer the 4213 question only
+  `seg12_arz1` (4889 rows) has to carry the column. That reduces a corpus-wide
+  regeneration to one segment **if** the physics parser tolerates a column being
+  absent from other fixtures — which I did NOT establish, and which is the one
+  check to run before choosing scope. If the parser is strict about columns, the
+  corpus-wide regeneration is unavoidable and the cost is much larger.
+
+### Not done, per the ordering
+
+The traced-register survey over the correct population is untouched, deliberately
+— if the column lands, the writer is identified by reading it at 4212 and 4213
+rather than by tracing twenty word-write sites. The eight-gap family stays
+parked.
+
+## 2026-08-21 — the level-to-level -1: two stamping paths, one overwriting the other (candidate, NOT established)
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-gap-stamp-level`, pinned to
+`c2ccb6a9b`. `src/` unchanged. **Partial result — read the code, did not measure
+it executing.**
+
+### What the engine stamps, and from where
+
+There are **two** stamping paths, and they disagree about what the row is:
+
+- `stateMovieLogicalRow(TraceRunFrameDriver.Step step)` (AbstractRunChainTest
+  :2444-2448) stamps `step.movieRow()` — the driver's own authoritative row.
+- `stateMovieLogicalRow()` (:2464-2472) stamps
+  `GameServices.playbackDebug().getCursorFrame()` — the shared playback cursor.
+
+`stepEngineFrame` calls the **no-arg** one at its top, so every engine step
+restates the row from the cursor. In the transition-gap driver the row's work is
+run by `stepEngineFrame(loop)` (:4342) while the cursor is advanced by a
+*separate* callback, `advancePhysicalRow` -> `playback.onLevelFrameAdvanced()`
+(:4363-4365), gated by `shouldAdvancePhysicalRow` on
+`playback.getCursorFrame() == movieRow` (:4358).
+
+So the driver states the correct row and `stepEngineFrame` immediately restates
+it from a cursor whose advance is owned by a different callback. If that
+callback has not yet run for the row being played, every art edge produced
+during the step is stamped one row low — which is the measured uniform `-1`.
+
+### Why this is a CANDIDATE and not the cause
+
+I did not establish the ordering. `shouldAdvancePhysicalRow` returning true when
+`cursor == movieRow` can be read as the cursor already sitting on the row during
+its own step, in which case the cursor-derived stamp is correct and this
+candidate is wrong. Reading the two predicates is not enough to say which, and
+this lane has spent two rounds today on candidates that fit and did not fire.
+
+**The measurement that settles it**, for whoever runs it: probe
+`playback.getCursorFrame()` and `step.movieRow()` together at the top of
+`stepEngineFrame` on the `seg7_ehz2 -> seg8_cpz1` gap rows. If the cursor is
+`movieRow - 1` there, the candidate is confirmed and the fix is that the
+driver-authoritative stamp must not be overwritten by the cursor-derived one. If
+the cursor equals `movieRow`, the candidate dies and the `-1` is somewhere else.
+
+### One thing worth noting for the parked half
+
+The same mechanism would explain the special-stage spread without any extra
+cause: the row driver there runs several engine steps per movie row, so the
+overwrite lands repeatedly against a cursor that lags by a varying amount, which
+turns a fixed offset into `+1, +2, +8, +20, +21`. Noted only — the special-stage
+family stays parked, and this is a reason to check the two together rather than
+to work it now.
+
+## 2026-08-21 -- ATTRIBUTED: the chain stall is the title card's art wait, NOT the special-stage exit
+
+Measured at `36f7566ab`. **Found, not fixed, and it corrects two claims I made in the previous
+two entries.** Per the standing instruction, this is named and stopped rather than fixed: the
+title card is waiting on art readiness that never arrives, which is a bring-up / timing-port
+question, not a boundary fix.
+
+### The measured chain, end to end
+
+Env-gated probes inside `awaitBoundary`, `GameLoopTitleCardLifecycle` and
+`Sonic3kTitleCardManager` (all reverted):
+
+```
+PROBE_MODE steps=1     bk2=6221 target=6221 kind=stage_exit mode=SPECIAL_STAGE
+PROBE_MODE steps=4000  bk2=6221 target=6221 kind=stage_exit mode=SPECIAL_STAGE_RESULTS
+PROBE_MODE steps=8000+ bk2=6221 target=6221 kind=stage_exit mode=TITLE_CARD   <- and stays
+PROBE_TC   calls=16000 state=SLIDE_IN inLevelMode=false freshLevelTransitionMode=false
+PROBE_UPD  calls=28000 state=SLIDE_IN artLoading=true
+```
+
+1. The special stage plays to its final frame and **exits correctly**: `SPECIAL_STAGE` ->
+   `SPECIAL_STAGE_RESULTS` -> `TITLE_CARD`.
+2. The AIZ re-entry title card enters `SLIDE_IN` with `artLoading = true`.
+3. `Sonic3kTitleCardManager.update()` **is** called every frame, and early-returns every frame
+   because `finishQueuedArtIfReady()` never becomes true (`:808-818`).
+4. The state therefore never leaves `SLIDE_IN`, so `shouldReleaseControl()` -- which requires
+   `EXIT` or `COMPLETE` (`:844-850`) -- never returns true.
+5. Mode never returns to `LEVEL`, so the `stage_exit` latch, which requires
+   `hooks.currentMode() == GameMode.LEVEL`, never fires.
+6. The BK2 cursor stays at 6221 and `awaitBoundary` burns its 42908-step cap.
+
+### Correction 1: the owner is not the special-stage exit
+
+The previous entry concluded "the engine hangs on the special-stage exit back into AIZ. Owner:
+the special-stage exit path." **That is wrong.** The exit works -- it completes three mode
+transitions correctly. The hang is in the **title card that follows it**, waiting on art.
+
+The earlier reasoning was sound as far as it went (the cursor freezes on arrival, and the walker
+is genuinely not at fault), but "the engine hangs at the exit boundary" was read as "the exit
+code is broken" when the exit had in fact already finished its work.
+
+### Correction 2: the pending hardware submission is NOT downstream
+
+The previous two entries said the suppressed
+`PendingRecordedSubmissionsException: [kind=KOS_MODULE_QUEUE...]` was downstream of the stall by
+construction, and warned against sending anyone to the timing port for it. **Withdraw that.**
+The title card is blocked precisely on queued-art readiness, and the pending submission is a
+`KOS_MODULE_QUEUE` job. These are the same defect, or the pending job is directly implicated in
+it. The timing port is now a legitimate place to look, and the earlier warning pointed away from
+the most likely owner.
+
+The reasoning that produced it -- "a run that never completes leaves submissions pending by
+construction" -- is true in general and was still the wrong call here, because it explained the
+observation away instead of checking whether the pending job was the thing being waited on.
+
+### Cross-reference
+
+A lane earlier in this session landed *"the S1 title card never releases -- a stall, not a longer
+span"*. Same fingerprint in a different game: a title card that never releases control, stalling
+rather than merely running long. Worth reading before starting the S3K one (rule 18).
+
+### Where this stops
+
+Under the standing instruction, this is a bring-up question rather than a boundary fix: the
+engine submits a Kosinski module-queue job whose recorded readiness never releases it, on the
+special-stage-return path. Whether that is a missing/misfingerprinted submission, or art the
+engine never queues correctly on this path, is the next question and it belongs to whoever owns
+S3K runtime art and the hardware-timing port. **Named and stopped.**
+
+### Instrument hazard hit in this round
+
+The first version of the title-card probe **did not compile** -- inserting a field between an
+`@Override` and its method. Maven reported the compile error, but the run was filtered to
+`grep PROBE_TC`, so it printed nothing and looked exactly like "the method is never called" --
+which was almost recorded as a finding about the code (rule 46). Always confirm the build
+succeeded before reading an absence of probe output as evidence.
+## 2026-08-21 — parser check: TOLERANT (measured). And the writer change is not contained
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-prevanim-recorder`, pinned to
+`37b7e5ab0`. Probe deleted. **No recorder change landed** — see the second half.
+
+### The parser check, answered as a measurement with a positive control
+
+A full copy of `seg12_arz1` was doctored by appending a `player_prev_anim`
+column to the physics header and a value to all 4889 rows, and an unmodified
+copy kept as a control. Both were loaded through `TraceData.load`:
+
+| fixture | result |
+|---|---|
+| control (unmodified copy) | `LOADED ok frames=4889` |
+| doctored (one extra unknown column) | `LOADED ok frames=4889` |
+
+**The parser tolerates a column present in one fixture and absent from others.**
+The control matters: an earlier attempt failed with `incomplete load queue state
+at frame 0`, which was a missing `aux_state.jsonl.gz` in a partial copy, not a
+column problem — without the control that would have read as strictness.
+
+**Scope of the claim, stated precisely:** this exercises `TraceData.load`, the
+parse. It does not exercise a full replay comparison against a doctored fixture.
+Anyone regenerating a single segment should run one real replay against it as a
+confirmation, which is nearly free at that point.
+
+**Consequence for the cost decision: regeneration can be ONE segment**, not the
+corpus.
+
+### The writer change is wider than it looks — not landed
+
+`S2TraceCsvWriter.Header` is not S2's. It is:
+
+```
+public const string Header = S1TraceCsvWriter.Header;   // S2TraceCsvWriter.cs:20
+```
+
+One shared constant, written by at least four runners across two games —
+`S1CreditsDemoCaptureRunner:384`, `S1TraceCaptureRunner:180`,
+`S1RunCaptureRunner:488` and `S2RunCaptureRunner:595`. Appending two columns to
+it changes **S1's** recorded format as well as S2's.
+
+And S1 cannot simply emit them. `S1Ram` defines `OffMappingFrame = 0x1A` and
+`OffAnimId = 0x1C` and has **neither an anim_frame nor a prev_anim offset**
+(:72-73). S1's SST layout would have to be established against `s1disasm` rather
+than assumed from S2's `$1B`/`$1D`, because the two games do not share a layout
+by default.
+
+So the authorised change — "one RAM constant and a writer change, additive,
+affects no committed fixture" — is really: decouple or extend a header shared by
+two games and four-plus runners, plus new S1 offsets verified against a
+different disassembly. That is a different size of change and it alters S1
+capture output, which other lanes depend on. **Stopped rather than widening it
+unilaterally.**
+
+Two shapes for whoever decides: give S2 its own header constant and append there
+(contained to S2, but forks a shared structure), or add the fields to both games
+with each game's own verified offsets (wider, and keeps the shared header
+honest).
+
+## 2026-08-21 — S2 ARZ2 frame 956: not an animation defect at all — the bubble was inhalable 59 frames before the ROM makes it so
+
+Worktree `wt/s2-anim956`, branch `bugfix/ai-s2-arz2-anim-956`, both arms pinned to
+`79c559005`. The frontier left by the Obj82 axis-choice entry.
+
+**It is not the within-frame-transient wall another lane hit today.** The divergence is a
+59-frame offset in a 27-row animation, plainly visible at frame granularity, with a
+mechanism whose ROM-derived duration is 60 frames. Different shape entirely.
+
+### What the field actually meant
+
+`player_animation_id` `0x0005` vs `0x0015` is `AniIDSonAni_Wait` against
+`AniIDSonAni_Bubble` (`docs/s2disasm/s2.constants.asm:1002,1018`). Sonic is stationary at
+`(0x0600, 0x063C)` underwater for ~100 rows; the ROM has him idle, the engine has him
+inhaling an air bubble. The ROM *does* inhale — at rows **1015-1041**, and again at
+1810-1828. So this is not a spurious inhale, it is **59 frames early**.
+
+### The ROM had bubbles in the box the whole time and declined them
+
+Replaying the recorded `object_near` census through `loc_1FB0C`'s box
+(`x_pos(a0) ± $10`, `y_pos(a0) < y_pos(a1) <= y_pos(a0) + $10`,
+`docs/s2disasm/s2.asm:45379-45392`) against the recorded player position, the ROM has an
+Obj24 **inside the collect box on rows 950-955 (slot 16) and 957-962 (slot 38)** and never
+inhales. So the box is not the discriminator: those bubbles simply are not inhalable.
+
+An engine probe (reverted) reports exactly two inhales in the whole segment, the first
+being `bubble=(5FA,63B) size=5 mapFrame=5 animTimer=24` — a position that matches ROM slot
+38 at row 957 to a pixel. **Engine and ROM agree on the bubble and disagree on whether it
+can be breathed.**
+
+### Cause: the ROM's only inhalable condition was unreachable in the engine
+
+`loc_1F924` runs AnimateSprite over `Ani_obj24` and then
+`cmpi.b #6,mapping_frame(a0) / bne / move.b #1,objoff_2E(a0)`
+(`docs/s2disasm/s2.asm:45231-45236`); `loc_1F956`'s `tst.b objoff_2E(a0) / beq`
+(`:45257-45258`) gates the collect on it. Of the `Ani_obj24` scripts
+(`:45478-45496`) only **script 2 — the large bubble — ever reaches frame 6**, and it climbs
+`2,3,4,5,6` at a duration byte of `$E`. Four steps at 15 frames each: **the ROM's inhalable
+delay is 60 frames, and it is not written down anywhere as a number** — it falls out of the
+animation script.
+
+The engine's condition was `mappingFrame >= 6 || bubbleSize >= 3`. Its first half was
+**dead code**: `mappingFrame` was seeded `min(bubbleSize, 5)` and only ever incremented
+while `< 5`, so it could never reach 6. The live half was a size test that is true the
+moment the bubble is constructed. `BubbleGeneratorObjectInstance` even computed the ROM
+subtype correctly and then **translated subtype 2 into "size 5"** solely to satisfy it,
+discarding the byte that selects the script. And the frame growth itself ran on an invented
+`animTimer >= 8`, not the ROM's `$E`.
+
+### Fix
+
+Port `Ani_obj24` and the `AnimateSprite` loop (`docs/s2disasm/s2.asm:22867-22884` —
+duration reload, `anim_frame` as the index into the frame list, `$FC` terminator), set
+`objoff_2E` when the frame reaches 6, gate the collect on that flag, and stop the generator
+mangling the subtype. Three invented constants removed (`>= 3`, `>= 8`, the 0-5 size
+scale); none added.
+
+### Measured, both arms at `79c559005`
+
+| | before | after |
+|---|---|---|
+| `DebugS2Arz2Seg13...` first error | **frame 956 `player_animation_id` `0x0005`/`0x0015`** | **frame 1015 `x_speed` `0x0000`/`-0x0031`** |
+| errors | 16726 | **15072** |
+| engine inhale row | 956 (**59 early**) | 1017 (**2 late**) |
+
+`com.openggf.tests.trace.s2.**`: 129 tests / 6 failures on **both** arms, identical class
+set, and the only first-error message that changes anywhere in the sweep is the target's.
+Object/guard sweep, **same-tree control**: 1546 tests, 20 failures / 16 errors on both
+arms, identical class set (the reused-fork ambient-state cluster, red in control).
+
+No break-on-purpose run was needed here: unlike the on-screen gate, this change moved the
+target's own message, which is the sensitivity demonstration.
+
+### Named, not worked
+
+- **Two frames of residue.** The engine now inhales at 1017 against the ROM's 1015. The
+  bubble is inhalable well before either, so this is a position/box question, not the
+  inflate climb — at `-$88` y_vel (≈0.53 px/frame) two frames is about one pixel of bubble
+  position. A different animal from what this entry closed.
+- **A ROM-correct reorder that moved nothing.** Routine 2 *is* `loc_1F924`, so AnimateSprite
+  runs before the water check, the wobble and the collect; the engine ran it at the end of
+  `update()`. It is now in the ROM's position, and the measurement above is identical with
+  and without that move — the bubble reaches frame 6 several passes before it enters the
+  box, so the ordering cannot be observed by this event. Kept because it is the ROM's order,
+  reported because it earned nothing.
+- **`appendRenderCommands` still clamps the mapping frame to 5** while the ROM's mappings
+  table and `Ani_obj24` script 2 both use frame 6. Rendering, not gameplay; not measured,
+  not touched.
+- The engine's `update()` still applies the rise before the collect where the ROM's
+  `ObjectMove` runs after it (`:45264`). Untouched.
+
+## 2026-08-21 -- MEASURED: the spike agrees with the recording; it is not position or launch timing
+
+Measured at `0bd7aa23f`, against the acceptance test that the engine's spike position and launch
+frame agree with the `object_near` rows. **They do.** So this eliminates the position/timing
+hypothesis -- the second of my own hypotheses for frame 22243 to fall to measurement -- and
+narrows the defect to the touch test itself. **Found, not fixed; nothing landed.**
+
+### The recorded track
+
+| frame | parent | spike | note |
+|---|---|---|---|
+| 22222 | `0x32F6,0x04B0` r=`02` | `0x32FA` | walking left, spike at parent+4 |
+| 22223 | `0x32F6` r=**`06`** | `0x32F2` | turn: routine 2->6, spike flips to parent-4 |
+| 22224-22238 | stationary | `0x32F2` | windup, 15 frames |
+| **22239** | r=**`08`** | `0x32F2,0x04B0` -> `TurboSpiker_SpikeChild_Move` | **launch**, trail spawns slot 19 |
+| 22240+ | +2/frame | -1 x, -4 y per frame | `x_vel = -$100`, `y_vel = -$400` |
+
+### The engine, measured with an env-gated probe (reverted)
+
+```
+PROBE_SPIKE LAUNCH parent x=0x32f6 y=0x4b0 facingLeft=false player=(0x32d9,0x483)
+PROBE_SPIKE LAUNCH shell  x=0x32f2 y=0x4b0 xVel=-256 yVel=-1024
+```
+
+Every quantity in the acceptance test matches:
+
+- **parent launch position** `0x32F6,0x04B0` == recorded
+- **spike launch position** `0x32F2,0x04B0` == recorded
+- **velocities** `-256 = -$100`, `-1024 = -$400` == `TurboSpiker_SpikeChild_SetVelocity`
+  (`sonic3k.asm:184048-184056`)
+- **launch frame** -- the player is at `(0x32D9,0x0483)` at the moment of launch, which is
+  *exactly* the recorded player position at frame **22239** (physics.csv). Using a compared
+  field as the clock avoids converting the engine's own frame counter, which is not the trace
+  frame.
+
+The windup length also matches: ROM `TurboSpiker_ChargeWindup` is
+`subq.w #1,$2E / bmi` from `$2E = $0F` (`:183968-183971`), launching on the 16th dispatch; the
+engine's `TURN_DELAY = 0x0F` with the same decrement shape, and `enterLaunchPrep()` returns
+rather than falling through, so it does not lose a frame.
+
+### What that leaves
+
+Spike position, spike velocity, launch frame and player position all agree with the recording,
+and the engine's touch size table is read from ROM (`TOUCH_SIZES_ADDR = 0x00FF62`,
+`Sonic3kGameModule.createTouchResponseTable`). The engine is nonetheless hurt at 22243 and the
+ROM is not.
+
+**So the defect is in the touch test, not in where or when the spike is.** The next round should
+compare the actual box arithmetic: `Touch_Width`/`Touch_Height` (`sonic3k.asm:20674-20700`) index
+`Touch_Sizes` by `collision_flags & $3F` **doubled** (`add.w d0,d0`), so `$9E` gives size 30 and
+byte offset 60 -- an easy off-by-two-times error to make, and one this entry deliberately does
+not assert a value for, because the table parse was not independently verified. Verify the entry
+against the ROM bytes rather than by counting rows in the listing, then compare the player's own
+touch radii for the rolling state.
+
+### Hypotheses eliminated so far for frame 22243
+
+1. **Touch categorisation** (retracted earlier): the spike is `$9E` -> harmful -> `Touch_ChkHurt`,
+   the engine's constant already matches the ROM byte.
+2. **Spike position / launch timing** (this entry): all four quantities match the recording.
+
+Both were mine, both were confidently held, and both cost a measurement rather than a landing.
+The remaining surface is small and specific.
+
+## 2026-08-21 -- BOX CHECK: both boxes are ROM-correct; the remaining lead is the sample point
+
+Measured at `161bd1e92`. **The box check does not close frame 22243, so per instruction this
+hands over the eliminations rather than opening a fourth hypothesis.** Nothing landed.
+
+### The object's box is correct, verified from ROM bytes
+
+Read from the ROM file itself at `TOUCH_SIZES_ADDR = 0x00FF62`, not by counting rows in the
+listing:
+
+| size index | width | height |
+|---|---|---|
+| `$1A` (26) -- the TurboSpiker parent, `ObjDat_TurboSpiker` flags `$1A` | 12 | 12 |
+| **`$1E` (30) -- the spike, `$9E & $3F`** | **4** | **8** |
+
+This confirms the value the previous entry deliberately withheld, and confirms the doubling in
+`Touch_Width` (`add.w d0,d0`) was read correctly: size 30 is byte offset 60. The engine reads the
+same table through `TouchResponseTable(romReader, TOUCH_SIZES_ADDR, TOUCH_SIZES_COUNT)` with
+`TOUCH_SIZES_COUNT = 58`, so index 30 is in range and is not falling back to entry 0.
+**No defect here.**
+
+### The player's box, read exactly
+
+`Touch_NoInstaShield` (`sonic3k.asm:20641-20653`):
+
+```
+d2 = x_pos - 8              ; left boundary
+d4 = $10                    ; collision WIDTH = 16, a CONSTANT
+d5 = y_radius - 3           ; collision half-height
+d3 = y_pos - d5             ; top boundary
+d5 = d5 * 2                 ; collision height
+```
+
+Two things worth having written down: the player's touch **width is a fixed 16 and is not
+derived from `x_radius`**, and the height is `y_radius - 3`, doubled -- there is no ducking
+reduction, as the ROM's own comment notes. Radii are ROM-verified: standing `y_radius = $13`
+(19), rolling `$E` (14) (`:21904`, `:23261`), so a rolling player's half-height is 11.
+
+Neither `TurboSpikerBadnikInstance` nor its shell child overrides
+`usesCurrentTouchResponseState()` or `snapshotTouchResponseState()`, so both take the default --
+the **pre-update snapshot**, which is the ROM-correct choice, because the player's slot runs
+before the spike's.
+
+### The remaining lead -- DERIVED, NOT MEASURED
+
+With every ROM constant now verified, the arithmetic at frame 22243 turns on **which intra-frame
+position of the spike the touch test sees**:
+
+- player `y = 0x0490` (1168), rolling half-height 11 -> top boundary 1157, height 22
+- spike box half-height 8
+
+| spike sampled at | `obj_y - height` | minus player top | vs height 22 | result |
+|---|---|---|---|---|
+| frame 22243 position, `y = 0x04A0` (1184) | 1176 | 19 | 19 <= 22 | **overlap** |
+| frame 22242 position, `y = 0x04A4` (1188) | 1180 | 23 | 23 > 22 | **no overlap** |
+
+So hit versus no-hit is exactly one intra-frame sample point of the spike, **with a one-pixel
+margin**. That margin is why this is written as a lead and not a finding: a one-pixel result
+derived by hand from five ROM constants is precisely the kind of chain where a single wrong
+assumption flips the answer, and it has not been measured in the engine.
+
+**The check for the next lane** is therefore not "is the sample point wrong in principle" -- the
+overrides say it should be right -- but whether the pre-update snapshot is actually applied to
+this **dynamically spawned, self-positioning** child, which keeps its own `currentX`/`currentY`
+and overrides `getX()`/`getY()` to return them. Instrument the position the touch test actually
+reads for the shell on frame 22243 and compare it against `0x04A4` and `0x04A0`. That is one
+measurement and it either closes this or eliminates a third hypothesis.
+
+### Eliminated so far for frame 22243, all by measurement
+
+1. **Touch categorisation** -- the spike is `$9E` -> harmful; the engine's constant already
+   matches the ROM byte.
+2. **Spike position / launch timing** -- parent and spike launch positions, both velocities, and
+   the launch frame all match the recording.
+3. **Both touch boxes** -- object box ROM-verified `(4, 8)` and read by the engine from ROM; the
+   player box formula documented and its radii ROM-verified.

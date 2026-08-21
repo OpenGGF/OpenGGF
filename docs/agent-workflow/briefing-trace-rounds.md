@@ -125,6 +125,12 @@ that looks like a real result.
 | 106 | A green matrix quoted for a change nothing compares | Inertness inferred from a suite that measures no field the change touches |
 | 107 | A routine installed mid-frame and run in the same frame | One tick early, structurally; the fitted fix is a skipped tick |
 | 108 | The symptom is one frame; the class is one intra-frame slot | Q1 cuts most false positives by reading; survey by role |
+| 109 | On a moving object, `spawn` is not an identity | Re-key on slot; an inverted verdict looks clean |
+| 110 | A batch instrument needs a positive control | "Nothing moved" also means the arm never ran |
+| 111 | `-Dtest=` overrides patterns, not tag filters | A tag-excluded class runs nothing and still says BUILD SUCCESS |
+| 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
+| 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
+| 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2786,6 +2792,39 @@ Three questions, in order; a "no" at any one ends it:
    solid pass, an earlier object? If engine and ROM write from the same relative position, no
    member.
 
+**Q2 does not transfer to cross-object installs, and it fails in the dangerous direction.** Q2
+treats "not inside `Touch_Response`" as meaning the target's dispatch already happened. For a
+*same-object* install those are the same fact — a routine writing into its own `(a0)` is
+necessarily downstream of its own head read. For a *cross-object* install they come apart: a
+parent's write is never in `Touch_Response`, so Q2 answers "member" every time, while whether the
+child already ran is not a property of the write site at all.
+
+4. **Cross-object only: is the target's slot before or after the writer's?** After → the ROM sees
+   the install same-frame, and the engine updating children inside the parent agrees by
+   construction, so **not a member**. Before → **member**.
+
+**And Q4 is not always answerable by reading.** Slot order is the allocator's:
+`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) scans forward from
+`a0` and is therefore *always after* the parent — settled by reading. Plain `AllocateObject`
+(`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) scans from the start of the dynamic table for
+the first free slot, so the child may land before *or* after depending on live occupancy.
+For those children **membership is a runtime property that reading cannot settle**, and it can
+differ between two runs of the same object. That is strictly harder than the same-object
+population, where reading always settles it.
+
+**The cross-object direction is otherwise structurally empty.** Swept by role: 42 raw sites → one
+true cross-object install, which resolves to a non-member by reading (S2's `LoadChildObject` calls
+`AllocateObjectAfterCurrent`, `s2.asm:73012-73014`). No level-event manager writes an object's
+selector. Nine of S3K's ten `CreateChild*` helpers use `AllocateObjectAfterCurrent`; the exception
+is `CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), plain `AllocateObject`, whose four call
+sites include `HCZEndBossBomb_ResetOrSpawn` (`:141453`) — inside the AIZ→HCZ slice and **not yet
+implemented**. That is a constraint to hand the implementer, not a defect to fix.
+
+**A by-role sweep has its own failure mode when the "role" is a bare method name.** Expanding by
+method name matched anything sharing it — a map's `clear()` among them — and produced 1366 sites
+across 362 files with no signal. Filtering by the *receiver's declared type* is what made it
+tractable.
+
 **Q1 is the cheap cut** and disposes of most false positives by reading alone. An S2 Super Sonic
 freeze release (a state byte read at the top of the dispatch; the defect is which subsystem
 clears it) and an S1 air-bubble creation lag (an allocation-ordering error) both fail Q1 —
@@ -2808,3 +2847,151 @@ arms — control `0 errors, 3 warnings` on a pre-existing `tornado.status_byte` 
 arm `1 error, 3 warnings`. A pass/fail comparison of that class reads "red before, red after, no
 effect" and lands a regression. Only the message separates them (rule 24). A class red in the
 control **for an unrelated reason** is the case that defeats arm-vs-arm status comparison.
+
+## One hundred and ninth rule: on a moving object, `spawn` is not an identity
+
+Keying a persistence measurement on `(slot, spawn)` reported **713 of 714 objects living exactly
+one sample** — apparent instant death, i.e. wild over-creation. Re-keyed on **slot alone**, the
+verdict inverted completely: 36 distinct objects against the ROM's 64, each held roughly eight
+times longer. Under-deletion, the opposite owner.
+
+The `spawn` record is **rebuilt as the object moves**, so the key changes every frame and every
+sample looks like a new object. Any metric keyed on it measures motion, not lifetime.
+
+**This is the second inversion of its kind.** A latch keyed on a moving spawn rather than the
+instance produced the same class of error in an S1 Labyrinth block. Whenever a measurement or a
+latch needs object identity, ask what the key does when the object moves — and prefer the slot,
+the instance, or an explicit id.
+
+The tell is a persistence or occupancy result that is *implausibly* one-sided (every object dies
+instantly; nothing is ever reused). Before reporting the owner it implies, re-key and re-measure:
+an inverted verdict arrives with a clean-looking number behind it and nothing else marks it wrong.
+
+## One hundred and tenth rule: a batch instrument needs a positive control, or it converts unreachable code into exclusions
+
+A detector that reports "nothing moved on the install frame" reads exactly like *models the
+invariant correctly*. It is equally the signature of **the arm never having run at all**. One
+candidate in a batch of nine looked clean for the second reason: `updateBossLogic` early-returns
+before its routine switch while an arena gate is false, so the defeated arm never executed.
+Nothing moved because nothing ran.
+
+**The control: dispatch a second frame as well.** If the arm is live, a countdown moves on at
+least one of the two. If neither moves, the arm never ran and the verdict is **inconclusive, not
+negative**.
+
+Without that control, a batch instrument silently converts unreachable code into exclusions — and
+does so under the authority of a method already treated as reliable, which is what makes it worse
+than an obviously broken probe. It was caught only by going to read *why* a result looked clean
+instead of banking it.
+
+**Related, on scope:** the same batch settled its ROM half from **one routine per game**
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20908-20925`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+rather than nine readings — neither writes a routine, so the install is in each boss's own
+dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
+rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
+context. "Measure eight candidates" and "build real level fixtures for eight bosses" are different
+commissions, and a batch that starts as the first can quietly become the second.
+
+**And a confirmed member with no covering trace should not be landed.** The one confirmed class
+sits far past the current chain frontier. A correct member fix can be load-bearing (see WFZ); with
+no covering trace there is nothing to reveal a compensation if one exists, so a green unit test is
+not proof. Confirmed-and-unlanded is an honest state, not a stalled one.
+
+## One hundred and eleventh rule: `-Dtest=` overrides a profile's PATTERNS, not its tag filter
+
+Rule 98 says `-Dtest=` silently overrides profile selection. That is true of a profile's
+include/exclude **patterns** and false of its `<excludedGroups>` **tag** filter.
+
+Measured against the same profile in one round: `TestS3kHczZoneSliceTraceReplay` is *pattern*-
+excluded from `trace-replay` and `-Dtest=` **ran it anyway** (2 tests); a chain class dropped by
+`@Tag("trace-scope-r7")` against that profile's `<excludedGroups>` (`pom.xml:259`) ran **nothing**
+under the identical flag shape. Same invocation, opposite outcomes, and the only difference is the
+kind of exclusion.
+
+**From outside, both look like `BUILD SUCCESS`.** A class that never ran and a class that ran
+clean are indistinguishable in the exit status — so check `Tests run:` for the class you targeted,
+by name, before quoting any result from a `-Dtest=` invocation.
+
+The tag mechanism is also easy to misdiagnose: a class can be present in a profile's include
+patterns, absent from its exclude patterns, and still never run. Read the `<excludedGroups>` and
+the class's `@Tag`s before concluding a profile covers it.
+
+## One hundred and twelfth rule: adjacent SST bytes make a word write invisible to a byte-field survey
+
+`anim_frame = $1B`, `anim = $1C`, `prev_anim = $1D` (`s2.constants.asm:32-35`) are **adjacent
+bytes**. So `move.w #(AniIDSonAni_Walk<<8)|(AniIDSonAni_Run<<0),anim(a1)` writes `anim` *and*
+`prev_anim` in one instruction — and since `Sonic_Animate` resets `anim_frame` whenever those two
+differ, that word write resets the animation frame without ever naming it. The disassembly states
+the intent outright (`s2.asm:35481`, "use walking animation (and force it to restart)"), and about
+twenty sites use the idiom.
+
+A survey for `anim_frame(aN)` sees **none of them** — nor writes by absolute address
+(`move.b #AniIDSonAni_Run,(MainCharacter+prev_anim).w`, `:26033`), of which two hit the player.
+An "exhaustive" survey on that grep missed roughly two thirds of the real population and produced
+a confident false constraint: *"`prev_anim` is written in exactly two places"* — it is three.
+
+**Two consequences worth carrying separately:**
+
+1. **A field's population is every instruction that changes its bytes, not every instruction that
+   names it.** Before calling a field survey exhaustive, check the field's neighbours in the SST
+   and search for word and longword writes at the enclosing offsets, plus absolute-address forms.
+2. **"Invisible at frame granularity" is a strong claim; check the column list first.** The same
+   round concluded a within-frame transient must be responsible and that only a sub-frame probe
+   could resolve it. False: a single word write leaves `anim` reading `02` on both sides while the
+   pair is unequal, fully visible in one frame. It looked invisible only because **`prev_anim` is
+   not a recorded column** — a gap in what the fixture carries, not a limit of the sampling rate.
+   The fix is a column, not a recorder redesign.
+
+## One hundred and thirteenth rule: a citation can be wrong *and* agree with the right answer
+
+The worst citation is not one that is visibly wrong. It is one that yields the correct number by
+coincidence, because then no output can ever reveal it.
+
+Deriving an object's culling margins, the first `subObjData` hit matching the shape was **`ObjA6`,
+the CPZ Spiny** — which also uses `Obj98` and shares a mappings label. Its row
+(`on_screen|level_fg, 5, 4, $98`) carries the **same `width_pixels` 4 and the same
+`collision_flags` $98** as the intended object's, differing only in priority. Citing the Spiny for
+the wall turret shot would have produced the right margins with a wrong citation, and every number
+in the output would have agreed.
+
+**The only defence is reaching the row through the object that actually loads it** — follow the
+`Init` routine to its `LoadSubObject` call and read *that* row — never the first grep hit whose
+shape matches.
+
+**Two corollaries from the same derivation:**
+
+1. **Do not take a ROM fact from an engine javadoc.** The margin rested on `explicit_height` being
+   clear, taken from the engine class's own javadoc rather than the disassembly — the exact
+   failure the surrounding audit was written about, committed while writing it. Re-derived at
+   source: `LoadSubObject_Part3` (`s2.asm:72715-72726`) applies mappings, art_tile, render_flags,
+   priority, width_pixels and collision_flags, and **never writes `y_radius`**.
+2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
+   the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
+   carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
+
+## One hundred and fourteenth rule: a true general principle can explain away the one piece of evidence pointing at the answer
+
+A chain stall reported a suppressed `PendingRecordedSubmissions [kind=KOS_MODULE_QUEUE...]`
+alongside its primary failure. It was dismissed — twice, and with an explicit warning not to send
+anyone to the timing port for it — on the reasoning that **a stalled run leaves submissions
+pending by construction**. That reasoning is *true in general*. It was also wrong here: the stall
+turned out to be a title card blocked on queued-art readiness, and the pending job was the queued
+art. Same defect, or directly implicated.
+
+**The failure mode is a correct principle used to discard the single most informative signal.**
+Before dismissing a secondary symptom as downstream, ask whether it names the same subsystem as
+anything in the primary failure — and if it does, the general argument does not apply until the
+primary is attributed.
+
+**Two related corrections from the same round, both worth their own habit:**
+
+1. **"Hangs at X" is not "X is broken".** The boundary the stall reported was a special-stage
+   exit; the exit had already completed correctly, three clean mode transitions, and the hang was
+   in the *title card after it*. Locating a stall at a boundary says where execution stopped, not
+   which side owns it.
+2. **Grepping for your probe's tag hides the compile error that says the probe is not there.**
+   A first probe failed to compile (a field placed between an `@Override` and its method); Maven
+   reported it, but the run was filtered to `grep PROBE_TC`, so it printed nothing — indis-
+   tinguishable from "this method is never called", and nearly recorded as a finding about the
+   code. Read the build result before reading the probe's output.
+

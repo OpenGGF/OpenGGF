@@ -982,6 +982,22 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * can use this when their solid helper observes the render flag produced
      * before the current object routine changes x_pos/y_pos.
      */
+    /**
+     * Whether a frame-start snapshot exists for this object yet.
+     *
+     * <p>False on an object's first frame, before
+     * {@link #snapshotPreUpdatePosition()} has run. Callers modelling the ROM's
+     * {@code render_flags.on_screen} need this: that bit is normally rewritten
+     * every frame by {@code BuildSprites}, but on the frame an object is created
+     * it holds whatever value the object's setup data seeded it with, and
+     * several setup rows seed it SET. Without this distinction a
+     * delete-on-not-drawn caller reads the missing snapshot as "not drawn" and
+     * destroys the object on its first frame.
+     */
+    protected boolean hasPreUpdateSnapshot() {
+        return preUpdateValid;
+    }
+
     protected boolean isPreUpdateWithinRenderSpriteBounds(int xMargin, int yMargin) {
         return preUpdateValid && cameraBounds.containsRenderSpriteBounds(
                 preUpdateX, preUpdateY, xMargin, yMargin);

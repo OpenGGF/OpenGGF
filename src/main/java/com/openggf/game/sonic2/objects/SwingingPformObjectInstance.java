@@ -175,6 +175,38 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
                 subtype, behaviorType, widthPixels, yRadius, mappingFrame, swingEnabled));
     }
 
+    /**
+     * {@code width_pixels(a0)} from {@code Obj82_Properties}
+     * (docs/s2disasm/s2.asm:57180-57182), which is what
+     * {@code BuildSprites}' horizontal cull compares against
+     * {@code x_pos - Camera_X_pos_copy} (docs/s2disasm/s2.asm:30568-30578).
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return widthPixels;
+    }
+
+    /**
+     * Retail Obj82 does NOT set {@code render_flags.explicit_height}: the
+     * shipped build takes the {@code fixBugs = 0} arm of Obj82_Init's
+     * conditional, {@code move.b #1<<render_flags.level_fg,render_flags(a0)}
+     * (docs/s2disasm/s2.asm:57169-57174) -- the disassembly's own comment there
+     * reads "Same as Obj2B, this should use the accurate height flag". Without
+     * that bit {@code BuildSprites} takes {@code BuildSprites_ApproxYCheck},
+     * which compares against {@code spriteScreenPositionY(0-32)} and
+     * {@code spriteScreenPositionY(screen_height+32)}
+     * (docs/s2disasm/s2.asm:30604-30610) -- it "assume[s] Y radius to be 32
+     * pixels" regardless of the pillar's real {@code y_radius} of $30.
+     * <p>
+     * So 32 here is the ROM's own culling constant, not a margin chosen to fit
+     * anything, and {@link #usesCustomRenderHeight()} stays false because the
+     * ROM leaves the accurate-height bit clear.
+     */
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 32;
+    }
+
     @Override
     public int getX() {
         return x;
@@ -193,7 +225,23 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
         // Update behavior based on type (Obj82_Types jump table).
         // ROM Obj82_Main: jsr Obj82_Types (docs/s2disasm/s2.asm:57140).
+        // This runs unconditionally -- it sits BEFORE the on-screen gate below.
         updateBehavior(player);
+
+        // ROM Obj82_Main gates everything after Obj82_Types on the render flag:
+        //   _btst #render_flags.on_screen,render_flags(a0)
+        //   _beq.s +                       (docs/s2disasm/s2.asm:57205-57206)
+        // and the '+' label lands past BOTH JmpTo23_SolidObject and loc_2A432,
+        // so an object whose flag is clear is neither solid nor swinging that
+        // frame. loc_2A432 (docs/s2disasm/s2.asm:57340-57365) holds the
+        // objoff_3E angle counter as well as the CalcSine y_pos write, so the
+        // freeze covers the angle: an off-screen platform mid-decay stays at its
+        // current offset instead of returning to objoff_30.
+        if (!isPreUpdateWithinRenderSpriteBounds(
+                getOnScreenHalfWidth(), getOnScreenHalfHeight())) {
+            updateDynamicSpawn(x, y);
+            return;
+        }
 
         // Carry any riding player BEFORE the swing CalcSine writes the new y_pos.
         // ROM Obj82_Main runs JmpTo23_SolidObject (rider carry,
@@ -543,7 +591,25 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        return true;  // Platform is only solid from the top
+        // Obj82_Main calls JmpTo23_SolidObject (docs/s2disasm/s2.asm:57221), and
+        // that thunk resolves to SolidObject (docs/s2disasm/s2.asm:35014) -- the
+        // full four-sided routine, not one of the top-only platform entries. So
+        // SolidObject_ChkBounds' axis choice applies: with d5 (horizontal distance
+        // to the nearer edge) and d1 (vertical distance), cmp.w d1,d5 / bhi
+        // SolidObject_TopBottom (docs/s2disasm/s2.asm:35407-35408) takes the TOP
+        // path only when the horizontal distance is STRICTLY greater; otherwise the
+        // contact resolves through SolidObject_LeftRight, which corrects x by
+        // sub.w d0,x_pos(a1) at SolidObject_AtEdge (docs/s2disasm/s2.asm:35438) and
+        // returns a side contact without landing.
+        //
+        // Reporting top-solid-only here skipped both side branches, so every
+        // contact reached the vertical landing check. In ARZ2 that turned a
+        // clipped corner on a pillar into a landing: at seg13_arz2 frame 344 the
+        // box is exactly the ROM's (relX 75, relY 5, d2 67, d4 134 against a
+        // half-width of width_pixels+$B) and the distances are absDistX 3,
+        // absDistY 5, so the ROM pushes Sonic +3px clear and keeps him falling at
+        // y_vel $0B60 while the engine seated him on the pillar.
+        return false;
     }
 
     @Override
