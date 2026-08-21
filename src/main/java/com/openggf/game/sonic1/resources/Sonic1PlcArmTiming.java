@@ -133,7 +133,16 @@ public final class Sonic1PlcArmTiming
             outstanding = null;
             return true;
         }
+        boolean unrepresented = timing.wasSubmittedUnrepresented(outstanding);
         timing.claim(outstanding);
+        if (unrepresented) {
+            // Readiness may have been admitted by the ledger's own native pass
+            // for work submitted outside the stream's rows rather than by the
+            // gap branch above, but the ordinal invariant is the same either
+            // way: the recorder never counted this arm, so it must not hold a
+            // place in the shared numbering.
+            timing.releaseUnrepresentedIdentity(outstanding);
+        }
         outstanding = null;
         return true;
     }

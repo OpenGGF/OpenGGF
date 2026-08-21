@@ -112674,3 +112674,80 @@ measurement and it either closes this or eliminates a third hypothesis.
    the launch frame all match the recording.
 3. **Both touch boxes** -- object box ROM-verified `(4, 8)` and read by the engine from ROM; the
    player box formula documented and its radii ROM-verified.
+
+## 2026-08-21 -- The S3K chain's first transition: art queued where the recording cannot speak
+
+Branch `bugfix/ai-s3k-titlecard-artwait-r1`, based on `origin/develop` at `1a5fb6f89`.
+
+### The stall, attributed by measurement
+
+`TestS3kTailsFullChainRunChain` burned its full 42908-step cap at transition 1 of 48
+(bk2 frame 6221). A previous lane established that the special stage exits correctly
+and that the AIZ re-entry title card then enters `SLIDE_IN` with `artLoading = true`,
+early-returning out of `finishQueuedArtIfReady()` every frame.
+
+Two probes, one on `S3kKosModuleQueue`'s submission and one on the title card's
+readiness wait, settled which side owns it:
+
+```
+PROBE_KOS submit KOS_MODULE_QUEUE#10 representsRow=true  policy=RECORDED
+PROBE_KOS submit KOS_MODULE_QUEUE#11 representsRow=false policy=RECORDED   <- title card
+PROBE_KOS submit KOS_MODULE_QUEUE#12..14 representsRow=false
+PROBE_TC block#0 .. block#38400 waiting KOS_MODULE_QUEUE#11 representsRow=false
+```
+
+Every one of the 38400 blocked frames has `recordedAuthorityRepresentsRow() == false`.
+The title card's own Kosinski modules are submitted **outside the rows the recording
+describes**, and the recorder discards anything observed outside a segment's rows, so
+no completion edge for them can ever exist. The engine waits for a match that cannot
+arrive, and the ROM's own art wait -- `Process_Kos_Module_Queue` services one module
+per call (`docs/skdisasm/sonic3k.asm:2726-2790`) -- never drains.
+
+This confirms rule 114 from the other side: the suppressed
+`PendingRecordedSubmissions [kind=KOS_MODULE_QUEUE ...]` was not downstream noise. It
+named the blocking job itself -- ordinal 11 in the suppressed list is the exact handle
+the title card blocks on.
+
+### Same defect as the S1 title card, one level up
+
+`51ef66b30` fixed exactly this for S1: `Sonic1PlcArmTiming.releaseArm` waited on a
+readiness only a recorded edge could supply for an arm submitted in an unrepresented
+span, deadlocking the S1 title card. The fix there was a fallback at that one gate.
+S3K reaches the same wall through a different kind, so the rule belongs in the ledger
+rather than in each consumer.
+
+`HardwareTimingService` now records which submissions were made while row authority was
+deactivated and services *those* on the native work budget -- activating and advancing
+the load-time profile and releasing in FIFO order, exactly as a live run would. Work
+submitted inside coverage is untouched and still blocks on its recorded edge, so a
+genuine mismatch is still a hard failure. Membership is a property of the submission,
+not of the moment of release, so leaving coverage later does not release work the
+recorder did count.
+
+Releasing on the work budget rather than instantly matters: an earlier attempt that
+admitted readiness at the consumer's gate hit
+`IllegalStateException: hardware work is not prepared: KOS_MODULE_QUEUE#11`, because
+a KosM parent is only prepared once its modules have been decompressed across frames.
+
+### Where the frontier moved to
+
+The stall is gone and no submissions remain pending at the end of the run. The chain now
+fails on a real comparison:
+
+```
+Shared return-boundary comparison failed:
+run_boundary.position.y, expected=1220, actual=1216, delta=4, group=PHYSICS
+```
+
+Transition 1 of 48 now completes; a 4px `position.y` difference at the return boundary is
+the next target and is **not** worked here.
+
+### Named, not worked
+
+The S1 arm gate returns the ordinal an unrepresented submission borrowed
+(`releaseUnrepresentedIdentity`), so the recorder's numbering stays shared. The four S3K
+KosM modules cannot use that API as it stands: it accepts only the most recently allocated
+ordinal with no other pending job of the kind, and these are claimed 11,12,13,14 in
+ascending order. No ordinal or fingerprint mismatch appears on this fixture afterwards, so
+nothing is being papered over here -- but a batch-shaped identity return is an open gap,
+not a settled question.
