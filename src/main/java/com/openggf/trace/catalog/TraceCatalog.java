@@ -9,6 +9,7 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -52,6 +53,25 @@ public final class TraceCatalog {
         List<TraceRunReplayWalker.SegmentPlan> plan(
                 TraceRunManifest manifest, Path runDir) throws IOException;
     }
+
+    @FunctionalInterface
+    interface RunDescriptorPlanner {
+        List<TraceRunSegmentDescriptor> plan(
+                TraceRunManifest manifest, Path runDir) throws IOException;
+    }
+
+    record RunPlannerPair(
+            RunDescriptorPlanner descriptorPlanner,
+            RunSegmentPlanner segmentPlanner) {
+        RunPlannerPair {
+            descriptorPlanner = Objects.requireNonNull(
+                    descriptorPlanner, "descriptorPlanner");
+            segmentPlanner = Objects.requireNonNull(segmentPlanner, "segmentPlanner");
+        }
+    }
+
+    private static final RunPlannerPair DEFAULT_RUN_PLANNERS = new RunPlannerPair(
+            TraceRunReplayWalker::planDescriptors, TraceRunReplayWalker::plan);
     private static final List<String> VALID_GAME_IDS = List.of("s1", "s2", "s3k");
     private static final Comparator<String> GAME_ORDER =
             Comparator.comparingInt(VALID_GAME_IDS::indexOf);
@@ -111,12 +131,78 @@ public final class TraceCatalog {
      * the catalog entry visible instead of silently filtering it out.
      */
     public static RunLaunchValidation validateRunLaunch(TraceEntry entry) {
+        return validateRunLaunch(
+                entry,
+                path -> new Bk2MovieLoader().load(path),
+                DEFAULT_RUN_PLANNERS);
+    }
+
+    static RunLaunchValidation validateRunLaunch(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunPlannerPair planners) {
         Objects.requireNonNull(entry, "entry");
+        Objects.requireNonNull(movieLoader, "movieLoader");
+        Objects.requireNonNull(planners, "planners");
         try {
-            prepareRunLaunch(entry);
+            validateRunLaunchPayloads(entry, movieLoader, planners);
             return RunLaunchValidation.valid();
         } catch (IOException | RuntimeException e) {
             return RunLaunchValidation.invalid(diagnosticMessage(e));
+        }
+    }
+
+    private static void validateRunLaunchPayloads(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunPlannerPair planners) throws IOException {
+        if (!entry.isRun()) {
+            throw new IllegalArgumentException("Catalog entry is not a trace run");
+        }
+        TraceRunManifest manifest = entry.runManifest();
+        TraceRunManifest.Segment first = manifest.segments().getFirst();
+        if (!"level".equals(first.kind())) {
+            throw new IllegalArgumentException(
+                    "Visual run segment 0 must be level, got " + first.kind());
+        }
+        Bk2Movie movie;
+        try {
+            movie = movieLoader.load(entry.bk2Path());
+        } catch (IOException | RuntimeException e) {
+            throw new IOException(
+                    "Run BK2 parser failed: " + diagnosticMessage(e), e);
+        }
+        List<TraceRunSegmentDescriptor> descriptors =
+                planners.descriptorPlanner().plan(manifest, entry.runDir());
+        for (int i = 0; i < manifest.segments().size(); i++) {
+            TraceRunManifest.Segment segment = manifest.segments().get(i);
+            int end;
+            try {
+                end = Math.addExact(
+                        segment.bk2FrameOffset(), segment.traceFrameCount());
+            } catch (ArithmeticException e) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " BK2 range overflows", e);
+            }
+            if (segment.bk2FrameOffset() < 0 || end > movie.getFrameCount()) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " BK2 range ["
+                                + segment.bk2FrameOffset() + ", " + end
+                                + ") exceeds movie row count " + movie.getFrameCount());
+            }
+            TraceRunSegmentDescriptor descriptor = descriptors.get(i);
+            if (!profilesCompatible(segment, descriptor.metadata())) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " profile mismatch: manifest='"
+                                + segment.traceProfile() + "', metadata='"
+                                + descriptor.metadata().traceProfile() + "'");
+            }
+            if (descriptor.rowCount() != segment.traceFrameCount()) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " row count mismatch: manifest="
+                                + segment.traceFrameCount() + ", parsed="
+                                + descriptor.rowCount());
+            }
         }
     }
 
@@ -125,7 +211,15 @@ public final class TraceCatalog {
         return prepareRunLaunch(
                 entry,
                 path -> new Bk2MovieLoader().load(path),
-                TraceRunReplayWalker::plan);
+                DEFAULT_RUN_PLANNERS);
+    }
+
+    static PreparedRunLaunch prepareRunLaunch(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunPlannerPair planners) throws IOException {
+        Objects.requireNonNull(planners, "planners");
+        return prepareRunLaunch(entry, movieLoader, planners.segmentPlanner());
     }
 
     static PreparedRunLaunch prepareRunLaunch(

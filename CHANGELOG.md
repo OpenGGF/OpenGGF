@@ -1,5 +1,12 @@
 # Changelog
 
+- **Trace catalog validation now uses compact run-segment descriptors:** the
+  planner scans and validates one segment at a time, retaining 8,660,152 bytes
+  after warmed forced-GC measurement on the 67-segment run instead of the eager
+  plan's 1,087,200,800 bytes (99.20% lower). Actual replay deliberately remains
+  on the eager plan in this phase, so replay memory and behaviour are unchanged;
+  active-segment cursor ownership remains separately approved future work.
+
 - **A Flybot767 spawned by an LBZ alarm no longer wakes a frame early:** the
   drone waits behind an offscreen placeholder, and the game only lets it start
   flying once the sprite renderer has already drawn that placeholder on an
@@ -33,7 +40,6 @@
   swam two pixels ahead of the ROM for the rest of its life -- enough to be
   destroyed a frame before it should be, which robbed a rolling jump of its
   upward speed a frame early.
-
 - **A TurboSpiker's spike no longer hits a frame early:** the ROM's launch step
   writes the moving routine into the shell's own code pointer and ends there, so
   the shell sets its velocities on the launch frame and does not travel until the

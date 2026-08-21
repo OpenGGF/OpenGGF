@@ -99,6 +99,30 @@ closeable segment-local cursor, documented in
 `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`.
 Confidence: **confirmed and measured**.
 
+Phase-one implementation now scans one segment at a time into immutable
+descriptors and routes catalog launch validation through those descriptors.
+An opt-in forced-GC comparison on the same 67-segment run, from the Task 3
+working tree based at `b89a732e4`, measured 1,087,200,800 retained bytes for
+the eager plan and 8,660,152 retained bytes for the descriptor plan: a
+1,078,540,648-byte (99.20%) reduction. Both planners first completed unmeasured
+whole-run warmups and released those graphs before either measured arm, so
+persistent parser/cache initialization is outside both deltas. Both plans
+represented 67 segments and
+409,630 rows/raw-frame mappings. This establishes the planning boundary and
+benefits catalog validation now; actual replay still owns the eager
+`SegmentPlan` graph, so its retained heap is unchanged in this phase. Moving
+replay to a closeable active-segment cursor remains separately approved future
+work.
+
+The benchmark passed 1/1 and the descriptor-plus-six-catalog functional set
+passed 49/49. Of 151 requested authority/replay controls, 148 passed and three
+pre-existing `TestTraceSessionLauncherRunBranch` methods errored; each error
+reproduced in a fresh isolated one-test fork, and both that test class and
+`TraceSessionLauncher` are byte-identical to base `c046e0298`. The descriptor
+change therefore introduces no observed control regression, but this evidence
+must not be restated as an all-green control run. Raw logs are under
+`$AGENT_SCRATCH_ROOT/tasks/trace-segment-descriptor-benchmark-20260821T192520Z-4127426-d936ca5a/`.
+
 ### Dynamic rewind identities: retention reproduced, pruning not promoted
 
 A temporary red test showed that adding then removing one dynamic object left
@@ -294,9 +318,10 @@ tests do not execute this GLFW/vsync pacing path and cannot validate it.
 
 ## Corrected priority
 
-1. **Implement bounded trace-segment ownership from its separate design.** The
-   retained-heap cost is material and attributed, but this is the larger change
-   and its cross-boundary oracle must remain exact.
+1. **Complete bounded trace-segment ownership only as a separately approved
+   replay migration.** Compact descriptor planning and catalog validation are
+   implemented and measured; the active-segment cursor remains the larger
+   change and its cross-boundary oracle must remain exact.
 2. **Resolve dynamic rewind identity ownership before pruning.** Add the
    previous/partial collision-list and destroyed-child cleanup tests, then
    choose an identity retirement owner that covers every reference holder and
