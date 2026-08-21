@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K level art ordering (`bugfix/ai-s3k-art-order-r1`, merged 2026-08-21):** the
+  title-card deferral was releasing the module queue while it was empty, so the
+  following frames' object art took every slot and the terrain art starved. The
+  ordering and the starvation were one defect, not two. Level art now publishes
+  behind the ROM's own precondition -- whether the module queue still holds
+  parents -- and the AIZ2 to HCZ1 boundary no longer wedges: the HCZ1 segment
+  runs end to end instead of aborting a tenth of the way in.
+
 - **S1 collapsing floor (`bugfix/ai-s1-slz1-graze-r1`, merged 2026-08-21):** three
   one-frame errors landed together, because two of them were compensating for the
   first. The floor fragmented a frame late, the post-fragmentation carry lasted a

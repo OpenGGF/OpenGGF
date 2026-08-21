@@ -76,8 +76,16 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     /**
      * Defers a fresh-level terrain submission until the current loop tail has
-     * serviced PRE_MAIN_LOOP. The ROM publishes the new KosM parents after
-     * that service, so their first module begins on the following iteration.
+     * serviced PRE_MAIN_LOOP.
+     *
+     * <p>Used only when the caller is still ahead of the ROM's
+     * {@code Kos_modules_left} gate; see
+     * {@link #freshLevelArtWaitsForModuleQueue}. Once that gate is clear,
+     * {@code LoadLevelLoadBlock} queues both parents at the call and only then
+     * blocks (docs/skdisasm/sonic3k.asm:9727, 9734, 9736-9743), so deferring
+     * there would invert the ROM's order against everything that queues later:
+     * the deferred batch releases its slots and the following frames' object
+     * art takes them, starving the terrain art behind a full FIFO.
      */
     public void deferFreshLevelRuntimeArt(
             Rom rom, int primarySource, int secondarySource) {
@@ -94,6 +102,23 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
      * held transition boundary; the first child is then exposed by the next
      * loop's VBlank services.
      */
+    /**
+     * Whether the module queue is still draining a previous producer's
+     * parents, which is the ROM's own precondition for reaching
+     * {@code LoadLevelLoadBlock} at all.
+     *
+     * <p>{@code Obj_TitleCardCreate} holds the card's routine on
+     * {@code tst.b (Kos_modules_left).w} (docs/skdisasm/sonic3k.asm:62169-62171)
+     * until the archives {@code Obj_TitleCardInit} queued have finished, and
+     * only then does the locked loop release and {@code Level:} run
+     * {@code LoadLevelLoadBlock} (:7761). So a caller arriving while modules
+     * are still outstanding is ahead of the ROM's control flow, not short of
+     * FIFO capacity.
+     */
+    public boolean freshLevelArtWaitsForModuleQueue() {
+        return moduleQueue.hasPendingPhysicalModules();
+    }
+
     public void submitFreshLevelRuntimeArt(
             Rom rom, int primarySource, int secondarySource) {
         Objects.requireNonNull(rom, "rom");

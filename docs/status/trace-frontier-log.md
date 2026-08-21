@@ -101755,3 +101755,99 @@ not run on its creation frame when the ROM's init falls through). The shape to r
 Read the ROM's post-defeat wait chain and find the missing frame between the boss's defeat and
 `loc_86592`. Both gates still required before landing: the press must land on row 6007 **and**
 on Tails.
+## 2026-08-21 — The level art was starved by its own deferral; the FIFO unwedges and HCZ1 runs
+
+Round `s3k-art-order-r1`, branch `bugfix/ai-s3k-art-order-r1` off `origin/develop`
+`569f4887e`. Same-tree control at the same commit.
+
+**The submission ordering and the starvation are one defect, not two.** The previous entry
+recorded the level art as "starved, not absent" — the batch retrying every `PRE_MAIN_LOOP`
+and bailing on capacity 713 times — and separately recorded that the engine submits enemy
+art before level art. Measured here: the second causes the first.
+
+### The window, measured on the base tree
+
+Probe on every KosM parent submission at the AIZ2→HCZ1 boundary, printing engine ordinal,
+source, destination, FIFO depth and producer:
+
+```
+#97..#100  title card archives      depth 1→4   beginOmittedFreshLevelOwner
+           omitted title-card owner RETIRED     (all four ready and claimed)
+           DEFER level art primary=0x3B9668 secondary=0x3BAE7A  depth=0
+#101..#104 enemy/object art         depth 1→4   processEnemyKosArt
+           ATTEMPT level art need=2 depth=4     ×713, silently
+```
+
+The deferral happens **with the FIFO empty**. It releases the slots it has, the following
+level frames' object art takes all four, and the deferred batch never fits again. Nothing
+about capacity is wrong; the ordering is.
+
+### What the ROM does
+
+- `Obj_TitleCardCreate` holds the card on `tst.b (Kos_modules_left).w` (`:62169-62171`)
+  until `Obj_TitleCardInit`'s archives have drained. **Reaching `LoadLevelLoadBlock` at all
+  means the queue is already clear.**
+- `LoadLevelLoadBlock` (`:9701-9744`) queues the primary at `:9727` and the secondary at
+  `:9734` — both **at the call** — and only then blocks at `loc_7870` (`:9736-9743`,
+  `Process_Kos_Queue` / `Wait_VSync` / `Process_Nem_Queue_Init` /
+  `Process_Kos_Module_Queue` / `tst.b (Kos_modules_left).w` / `bne`) until they finish.
+  `Level:` calls it at `:7761`.
+- `LoadEnemyArt` runs later still, from `Obj_TitleCardWait2` (`:62298`).
+
+So nothing in `Level:` defers the terrain queueing, and the object art cannot precede it.
+Note `loc_7870` is a **label** (ROM address `$7870`), not a line number — an earlier entry's
+"7870-7880" citation read it as one, and the line range is `:9736-9743`.
+
+### What landed
+
+Submit at the call, gated on the ROM's own precondition rather than on capacity: if the
+module queue still holds parents, the caller is **ahead of the `Kos_modules_left` gate** and
+defers; otherwise it submits. Two of the three lines are the gate.
+
+That distinction is load-bearing and was found by measurement, not foresight. An
+unconditional submit gives the identical chain result but errors
+`TestSonic3kLevelLoading.headlessFreshRuntimeLoadArmsHandoffWithoutRetainingRenderedTitleCard`
+with `S3K fresh-level KosM batch cannot fit in the module FIFO`. Instrumenting the throw
+with its occupants showed them to be exactly the four title-card archives
+(`#0@0xD6F28->0xA000 #1@0x15C3A2->0xA200 #2@0xD6D84->0xA7A0 #3@0x39BEDA->0xA9A0`) — that
+fixture never runs a loop that drains them, so it reaches the publish ahead of the ROM's
+gate. A capacity check would have papered over it with a fitted heuristic; the ROM gate
+describes the same case correctly and keeps the fixture green.
+
+### Result
+
+Engine ordinals at the boundary are now exactly the recorded ones — `#101` `0x3B9668` →
+`0x0000` and `#102` `0x3BAE7A` → `0x2360`, the pair `queueSequentialBatch` already derived
+from `descriptor.destinationLength()`.
+
+| | control | candidate |
+|---|---|---|
+| chain walk-failure | `Unable to queue HCZ geyser KosM art` | segment 9 exit boundary `giant_ring` not observed |
+| segment 8 physics | 4787 errors, first non-camera frame **4909** | 2288 errors, first non-camera frame **6000** |
+| segment 9 report | `complete: false`, last mismatch frame **743** | `complete: true`, last mismatch frame **3573** |
+
+**The module FIFO no longer wedges.** Segment 9 runs end to end instead of aborting at
+~frame 743; its higher raw error count is more rows compared, not worse behaviour, and its
+frame-0 `y` mismatch (`0x0020` vs `0x0021`) is unchanged in both arms. Segment 8's new
+frontier at row 6000 is the AIZ2 end boss already recorded in the preceding entry.
+
+### Matrix — both arms, same tree, same commit, neither truncated
+
+| Arm | `-Ptrace-replay` | `Tests run: 0,` | `-Pguards` | default |
+|---|---|---|---|---|
+| control | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E | 15194 / 52F / 73E |
+| candidate | 800 / 6F / 0E / 4S | 6 | 500 / 0F / 0E | 15194 / 51F / 73E |
+
+Trace-replay failing class sets identical, extracted preserving nested `$` names. The
+default suite has **no** candidate-only failing class; the control has one of its own
+(`TestS3kLbzFlameThrowerObject`), the usual order-dependent noise.
+
+### Still open
+
+`#101`/`#102` are submitted with the right ordinals but are still **unmatched** against the
+recorded stream, which expects them at `raw_frame` 7136 and 7155 with decompression children
+across 7129-7155 while the engine reports `engine pending: <none>` there. The parents retire
+sooner than the recording retires them. That is the `loc_7870` blocking loop's row model —
+one `Process_Kos_Module_Queue` service per row across the ~120-row window — and it is a
+retirement-schedule question, now cleanly separated from the submission question this entry
+closes.
