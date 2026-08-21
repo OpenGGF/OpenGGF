@@ -135,6 +135,8 @@ that looks like a real result.
 | 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
+| 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
+| 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
