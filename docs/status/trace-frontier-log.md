@@ -111039,3 +111039,63 @@ mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dtest=DebugS1Lz2BubblesOccupancyProbe \
   -Dtrace.dir=src/test/resources/traces/s1/lz2_completerun -Dtrace.zone=3 -Dtrace.act=1 \
   -Dtrace.obj64Phase=0 test
 ```
+
+## 2026-08-21 — Occupancy rows re-measured at `0fd7b7811`: the page drifted, it never leaked, and one of my own numbers was a stale artefact
+
+Worktree `<wt>/occupancy-resweep`, branch `bugfix/ai-occupancy-rows-resweep`, on **`0fd7b7811`**,
+`target/` cleared first, arms pinned. Verified sweep: 94 reports, 15,283 full-map frames,
+`Tests run: 800`. FULL lines were confirmed present **before** anything was computed.
+
+**Why this round exists: I reported numbers from a stale artefact.** The earlier sweep used
+`-Dtest='A+B+C'`. `+` is not valid surefire syntax — the build fails before a single test runs.
+Reproduced: exit 1, zero `Tests run`, zero probe files. My run log was timestamped 15:28; the 94
+probe files I analysed were timestamped **12:55-12:57** and were already on disk. 94 files
+appeared and matched the count this page cites, which read as confirmation when it was
+coincidence. **Verify the artefact is yours before you compute from it — a plausible file count
+is not provenance.**
+
+**Also retracted: "FULL mode does not reach the forked JVM."** It does. Tested through Maven:
+30 diff lines, 30 full lines on one trace; 15,283 in the sweep. The earlier absence was the same
+artefact — nothing ran, so nothing was written, and I read a missing feature into it.
+
+**The leakage hypothesis is refuted; the page is game-filtered.** In-game-only computation
+reproduces it *exactly* for RexonHead (503/0/2), MZ_BOSS (279/0/2) and SBZ_SAW (181/0/4), and
+resolves CPZStaircase and BRIDGE to **0**, matching their "fixed" and "correct" verdicts. Four
+exact reproductions cannot come from an unfiltered ranking. Rule 102 stands as a caution for
+*new* rankings; this page was never contaminated and I was wrong to imply it might be.
+
+**What is actually wrong with it is drift.** Between `694745c09` and `0fd7b7811`:
+
+| row | was | now | |
+|---|---|---|---|
+| RING `0x25` | 566 / 6 / 22 | **58 / 2 / 5** | mostly gone |
+| CHAINED_STOMPER `0x31` | 314 / 0 / 4 | **7 / 0 / 1** | mostly gone |
+| CANNONBALL `0x20` | 581 / 0 / 5 | **620 / 0 / 6** | worse |
+| Projectile `0x98` | 340 / 373 | 317 / **617** | over much worse |
+| LeavesGenerator `0x2C` | 262 / 115 | 197 / **358** | over much worse |
+| EXPLOSION `0x3F` | 282 / 275 | 179 / **369** | |
+| Bubbles `0x24` | 240 / 45 (one-way) | 193 / **66** | now two-way |
+
+Every per-object row is now stamped with the SHA it was measured at.
+
+**My own BossExplosion round survives re-measurement.** 1,324 short / 22 over / 5 fixtures, and
+**511 = 511 reproduced identically** at `cae3ede3c` and `0fd7b7811` — the same slots counted
+under two names. Convert-in-place stands, and that reading rests on the disassembly rather than
+the probe.
+
+**But its framing was wrong and is corrected on the page.** I quoted "70.6% absent, 22.2%
+converted" — shares of the divergent *lines*. Against the object's actual occurrences, of
+14,488 ROM `0x58` slots the engine gets **84.8% exactly right**, with 10.9% absent and 3.5%
+converted. A factor of seven in how alarming it sounds. The first number will have lodged with
+anyone who read it, so it is corrected prominently rather than quietly.
+
+**The sampling-phase bullet is corrected in the same pass**, with the S1 lane's retraction. The
+old wording welded two claims together and only one died: there is no intra-frame offset between
+the object and physics streams, so that mechanism is gone; the ~14-frame sample gap genuinely
+does limit what one sample says about **duration**, and that survives as a *density* caveat,
+named as such so the phase reading cannot be re-derived from the sentence. The rings 4.06-sample
+figure is re-pointed as evidence for density, which is what it always was. The operational
+advice — establish persistence per object — is unchanged, and the bullet says so, so anyone who
+acted on it can tell whether their conclusion still holds. **My BossExplosion round used only
+the density reading, so the retraction costs it nothing: 511 = 511 never rested on the phase
+premise.**
