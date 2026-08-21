@@ -134,6 +134,7 @@ that looks like a real result.
 | 115 | A proxy that survives one question silently answers a different one | Three inversions in one family; measure the quantity directly |
 | 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
+| 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3076,4 +3077,18 @@ disassembly is a fact about that disassembly.
 independent derivation of the S3K wrap period. It is not — it is S1's, reached only from S1 code,
 and does not participate in the S3K period at all. The S3K period is modelled **twice**, not three
 times. The ownership argument survived; the scope of the work did not.
+
+## One hundred and eighteenth rule: a stale native temp directory reports as a catastrophic regression
+
+A segments sweep in a reused worktree reported **`Tests run: 69, Failures: 3, Errors: 66`** — 66
+of 69 classes poisoned by a stale `target/test-tmp/lwjgl_*`. That is indistinguishable from a
+catastrophic regression until you read a stack trace, and it has now bitten three times in one
+session, twice mid-sweep and once as a single `Errors: 1` on a *freshly created* worktree's first
+run of a class touching the key-name resolver.
+
+**Before any sweep: `rm -rf target/test-tmp` alongside `target/surefire-reports`.** Before quoting
+any `Errors:` count: `grep` the log for `UnsatisfiedLinkError`. An errors count that includes
+native-load failures is a fact about the environment, not about the code — and unlike a stale
+report it appears in a run that genuinely executed, so the usual "did it actually run" check
+passes.
 
