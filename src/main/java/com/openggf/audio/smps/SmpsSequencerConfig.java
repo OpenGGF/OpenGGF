@@ -100,6 +100,14 @@ public final class SmpsSequencerConfig {
         REGISTER_SEQUENCE
     }
 
+    /** Hardware writes performed when an ordinary FM SFX track ends. */
+    public enum FmSfxReleaseMode {
+        /** Legacy behavior: force maximum release/TL before restoring music. */
+        FORCE_SILENCE_THEN_RESTORE,
+        /** S3K fix_sndbugs=0 cfStopTrack: key off, then restore music directly. */
+        RESTORE_MUSIC_DIRECTLY
+    }
+
     public enum PsgSfxReleaseMode {
         /** S1/S2: restored music track stays at rest until its next note. */
         REST_UNTIL_NEXT_NOTE,
@@ -212,6 +220,7 @@ public final class SmpsSequencerConfig {
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final FmSfxReleaseMode fmSfxReleaseMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
     private final FadeOutChannelPolicy fadeOutChannelPolicy;
     private final MusicOverrideSpeedPolicy musicOverrideSpeedPolicy;
@@ -262,6 +271,7 @@ public final class SmpsSequencerConfig {
         this.relativePointers = b.relativePointers;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
         this.fadeOutChannelPolicy = b.fadeOutChannelPolicy;
         this.musicOverrideSpeedPolicy = b.musicOverrideSpeedPolicy;
@@ -388,6 +398,10 @@ public final class SmpsSequencerConfig {
 
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
         return fmSfxTakeoverMode;
+    }
+
+    public FmSfxReleaseMode getFmSfxReleaseMode() {
+        return fmSfxReleaseMode;
     }
 
     public PsgSfxReleaseMode getPsgSfxReleaseMode() {
@@ -521,6 +535,8 @@ public final class SmpsSequencerConfig {
         private boolean relativePointers = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private FmSfxReleaseMode fmSfxReleaseMode =
+                FmSfxReleaseMode.FORCE_SILENCE_THEN_RESTORE;
         private PsgSfxReleaseMode psgSfxReleaseMode =
                 PsgSfxReleaseMode.RESTORE_LIVE_STATE;
         private FadeOutChannelPolicy fadeOutChannelPolicy =
@@ -572,6 +588,7 @@ public final class SmpsSequencerConfig {
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
         public Builder fadeOutChannelPolicy(FadeOutChannelPolicy val) { fadeOutChannelPolicy = val; return this; }
         public Builder musicOverrideSpeedPolicy(MusicOverrideSpeedPolicy val) { musicOverrideSpeedPolicy = val; return this; }
@@ -606,6 +623,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(sfxPriorityPolicy, "sfxPriorityPolicy");
             Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
             Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
             Objects.requireNonNull(fadeOutChannelPolicy, "fadeOutChannelPolicy");
             Objects.requireNonNull(musicOverrideSpeedPolicy, "musicOverrideSpeedPolicy");

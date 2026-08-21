@@ -84,7 +84,7 @@ failed.
 | [ ] | Run locked-on PAL playback through at least two repeat boundaries | Driver-global sixth-VInt full repeat includes SFX, music, fade, and speed tails without dephasing | |
 | [ ] | Enter a Blue Sphere stage while speed shoes are active | Special-stage music starts at normal tempo; the outgoing level fade is unchanged | Retest pending after the entry-boundary fix |
 | [x] | Collect several special-stage rings | Retail Z80 `zRingSpeaker` alternates left and right output | User listening pass, 2026-08-21 |
-| [ ] | Collect isolated and rapidly adjacent Blue Spheres | Both notes retain the intended `$05` then `$0A` carrier attenuation; retriggers do not acquire an injected `TL=7F` envelope start | User reported intermittent over-attenuation before replacement-handoff fix; retest pending |
+| [ ] | Collect isolated and rapidly adjacent Blue Spheres | Both notes retain the intended `$05` then `$0A` carrier attenuation; retriggers and ordinary track completion do not inject a `TL=7F` release absent from retail `cfStopTrack` | Bounded real-presentation trace now covers 1/2/4/8/12-frame retriggers and found the remaining ordinary-release write; user retest pending |
 
 ## Approval
 

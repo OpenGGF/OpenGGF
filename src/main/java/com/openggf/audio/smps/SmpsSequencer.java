@@ -581,12 +581,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * Used by the driver when releasing SFX locks so stray tones don't linger
      * if there is no music track to immediately rewrite the channel.
      * <p>
-     * For FM channels, this matches ROM behavior (zSetMaxRelRate + zFMSilenceChannel):
+     * For FM channels, this matches explicit ROM silence paths
+     * (zSetMaxRelRate + zFMSilenceChannel):
      * - Set D1L/RR to 0xFF for all operators (fastest release)
      * - Set TL to 0x7F for all operators (max attenuation)
      * - Key off
-     * This ensures the envelope is fully silenced before music refreshes the channel,
-     * preventing corrupted first samples when music resumes.
+     * Ordinary S3K {@code cfStopTrack} does not use this path; its config
+     * restores the overridden music voice directly after key-off.
      */
     public void forceSilence(TrackType type, int channelId) {
         if (type == TrackType.FM) {

@@ -466,6 +466,7 @@ final class SmpsAssetCatalog {
                 .relativePointers(source.isRelativePointers())
                 .direct68kDriver(source.isDirect68kDriver())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .fmSfxReleaseMode(source.getFmSfxReleaseMode())
                 .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
                 .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
                 .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())

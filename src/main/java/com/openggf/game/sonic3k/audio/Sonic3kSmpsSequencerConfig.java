@@ -78,6 +78,12 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fmSfxTakeoverMode(
                         SmpsSequencerConfig.FmSfxTakeoverMode
                                 .KEY_OFF_CLEAR_SSG_EG)
+                // fix_sndbugs=0 cfStopTrack keys the SFX off and restores the
+                // overridden music voice. Only explicit silence/stop-all
+                // paths call zFMSilenceChannel and write TL $7F.
+                .fmSfxReleaseMode(
+                        SmpsSequencerConfig.FmSfxReleaseMode
+                                .RESTORE_MUSIC_DIRECTLY)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)
                 .noteOnPrevent(SmpsSequencerConfig.NoteOnPrevent.HOLD)

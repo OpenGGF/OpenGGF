@@ -2390,8 +2390,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         boolean isSfx = isSfx(seq);
         for (int i = 0; i < 6; i++) {
             if (fmLocks[i] == seq) {
-                // If this was an SFX, ensure the channel is silenced before handing it back.
-                if (isSfx) {
+                if (isSfx && seq.getConfig().getFmSfxReleaseMode()
+                        == SmpsSequencerConfig.FmSfxReleaseMode
+                                .FORCE_SILENCE_THEN_RESTORE) {
                     seq.forceSilence(SmpsSequencer.TrackType.FM, i);
                 }
                 fmLocks[i] = null;
