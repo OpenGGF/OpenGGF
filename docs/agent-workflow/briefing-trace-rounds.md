@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-five rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -68,6 +68,7 @@ that looks like a real result.
 | 73 | A tree reset or rebase with a live `target/` | Stale reports that read as current — right names, plausible numbers, another commit |
 | 74 | A timing fix validated on one recording | ROM-derived, cited, improves its fixture, and one frame wrong |
 | 75 | "Nothing touches your path" vouched for comparability | Totals shift because the shared reporting surface moved |
+| 76 | A candidate judged on a derived column | A correct fix rejected by a fixture already failing the axis in bulk |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -1981,3 +1982,23 @@ inherit numbers measured on an older base, re-measure the control rather than ca
 figure — a control is cheap and a mis-attributed regression costs a round. And when the
 reporting surface itself has changed, say so in the report, because the next person will
 difference your number against one taken on the other side of it.
+
+## Seventy-sixth rule: judge a change on the contract it touches, not on a derived column
+
+A candidate that changes hardware-timing behaviour should be measured against the
+hardware-timing contract — the count of unmatched recorded edges — not against a physics
+column that happens to move. One round rejected a genuine candidate because a derived
+`busy` column shifted by a frame in a second fixture; measuring the contract itself showed
+the candidate eliminated **every** unmatched edge in the first fixture and changed the
+second's not at all.
+
+**And check the gate's own standing before granting it authority.** That second fixture was
+already unmatched on twenty-nine hardware edges, three of them submissions the engine never
+makes at all. A fixture that fails a contract in bulk cannot arbitrate a one-frame change to
+that contract on the strength of one derived reading. "This fixture is the harder gate" can
+be true on one axis and meaningless on another.
+
+**Practically.** Name the axis a change acts on, measure that axis on every fixture that
+exercises it, and when a gate rejects a candidate, ask what that gate's own baseline looks
+like before accepting the verdict. Rule 74 still holds — a second recording is what kills a
+timing story — but only when the second recording is sound on the axis in question.

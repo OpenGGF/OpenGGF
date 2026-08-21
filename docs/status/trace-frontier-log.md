@@ -105315,3 +105315,70 @@ equal**: submission happens during the object pass and the edge applies later in
 frame, which is why the horizontal reload submits on the same frame as its edge and drains.
 The conclusions in those entries stand — every case they judged is late by a whole frame — but
 the rule as written misjudges every same-frame submission.
+
+## 2026-08-21 — The stall named exactly, and a correction to this round's own rejection
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `f8b456dba`.
+**Measurement only; probes reverted, tree clean.** Printing the port's already-recorded
+`unmatchedCompletions` at the moment each one is dropped turns the whole question into one
+line of output.
+
+### The segment stall, exactly
+
+```
+raw_frame=2957 PRE_MAIN_LOOP  expected KOS_DECOMPRESSION_QUEUE#167 ...; engine pending: <none>
+raw_frame=2958 POST_OBJECTS   expected KOS_MODULE_QUEUE#114 ...; engine job is not prepared
+raw_frame=2961 PRE_MAIN_LOOP  expected KOS_DECOMPRESSION_QUEUE#168 ...; engine pending: #167
+raw_frame=2962 POST_OBJECTS   expected KOS_MODULE_QUEUE#115 ...; engine pending: #114
+```
+
+Eight unmatched edges, and the first one carries the cause: at 2957 the recording expects the
+head parent's **first decompression child** `#167`, and the engine has **nothing pending at
+all** — the parent has not been submitted yet, so the child it would create does not exist. One
+frame later the parent arrives, its releasing edge is gone, `#114` is never prepared, and every
+subsequent edge finds the engine still holding `#167`. The batch cannot retire, the depth stays
+at four, and the explosion art trips the guard at 3536.
+
+So the stall is a submission that misses its release window by one frame, and the window is a
+*child* edge one boundary earlier than the parent edge everyone has been quoting.
+
+### RETRACT the rejection recorded two entries above
+
+That entry rejected the post-camera `render_flags` bit 7 candidate because it moved
+`TestS3kHczZoneSliceTraceReplay`'s first error onto a recorded
+`queue.s3k_kos_direct.busy` edge. Measuring the hardware-timing contract itself, rather than
+one comparison column, on the same two fixtures:
+
+| fixture | develop | with the candidate |
+|---|---:|---:|
+| HCZ segment | **8** unmatched edges | **0** |
+| HCZ zone slice | **29** unmatched edges | **29** |
+
+The candidate eliminates every unmatched hardware edge in the segment and changes the zone
+slice's hardware contract **not at all**. And the zone slice is not a clean gate on this axis:
+its 29 include pairs like `raw_frame=27686 KOS_DECOMPRESSION_QUEUE#114 ... engine pending:
+<none>` followed by `raw_frame=27687 KOS_MODULE_QUEUE#76 ... engine pending: <none>` — whole
+submissions the engine never makes, three separate times.
+
+A fixture already unmatched on 29 hardware edges cannot carry verdict authority over a
+hardware-timing change on the strength of one derived comparison column. The rejection applied
+the right discriminator — authority, not annoyance — to the wrong reading of what that column
+is. It stands as a caution and not as a verdict.
+
+### What is still not established
+
+That the candidate is *right*, only that the fixture used to reject it cannot reject it. It
+still moves the zone slice's busy column by a frame, and the ROM reading behind it (bit 7 is
+set by `Render_Sprites` after `ScreenEvents`, so the value an object reads is one frame old)
+has not been checked against a second object that consumes the bit. The candidate is kept out
+of any branch per the standing rule and is recoverable from the local tag
+`r9-rejected-candidate` in the round's worktree.
+
+### Next
+
+Two candidates, and the measurement that separates them is the same in both cases — the
+unmatched-edge count on both recordings, not an error total:
+
+1. The bit-7 read, if a second consumer of `render_flags` bit 7 confirms the one-frame model.
+2. Whatever makes the zone slice skip three submissions entirely. That is upstream of this
+   object — the engine never queues work the recording has — and is a different owner.
