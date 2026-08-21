@@ -219,7 +219,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   running, matching the ROM's inert id-byte rewrite instead of stacking two or
   three engine objects into one physical SST slot.
 
-- **Retail SMPS playback cadence and lifecycle parity (ready 2026-08-21):**
+- **Retail SMPS playback cadence and lifecycle parity (merged 2026-08-21):**
   Sonic 1, Sonic 2, and locked-on Sonic 3&K now use their shipped tempo/PAL
   service rules, SFX takeover and priority behavior, pause/fade/1-up lifecycle,
   bytecode quirks, regional chip clocks, and ROM-backed audio catalogs. S3K's
