@@ -114024,3 +114024,23 @@ death flag again.
 
 **Four deaths, not one.** Only the Final Zone's aborts the chain; the other three land in
 segments that were already diverging. Whether they share this cause is unmeasured.
+
+
+## 2026-08-21 -- S2 ARZ2 level select: the bubble's flag phase, measured from the delete
+
+Command: `mvn -Dmse=off -DforkCount=1 -Dtest=TestS2Arz2LevelSelectTraceReplay -Dsonic2.rom.path=<s2 rom> test`,
+both arms at `64baf3d3e`. Control passes; the post-camera-hook conversion of
+`BubbleObjectInstance` gives 83 errors from frame 1314 (`obj_s2E_slot`, an
+allocation moving to slot `0x11`). **Nothing landed; the frontier did not move.**
+
+Scored from the consumer this time. Engine bubble deletes, logged with their
+driver row, against the recording's 66 `object_removed` events for type `0x24`:
+the control lands 51 of 54 on a recorded removal frame, the hook 16 of 54. The
+hook moves ~35 deletes one frame early and the recording wants them where the
+control has them -- even though a direct measurement confirms the hook's camera
+phase is the ROM's (`object pass at row N = camera(N-1)`, `hook at row N =
+camera(N)`, against recorded `camera_x`). The stale flag is cancelling a second
+one-frame offset in the delete path; the two have to come out together.
+
+Detail appended to
+[2026-08-21-carried-render-flag-family.md](../architecture/audits/trace/2026-08-21-carried-render-flag-family.md).

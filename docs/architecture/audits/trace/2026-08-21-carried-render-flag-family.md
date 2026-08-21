@@ -107,3 +107,62 @@ Both are regressions and neither landed. Two things this pins down:
    early-published flag and something else are cancelling; the next round on this
    class should find the partner before republishing the flag, and remove both in
    one move.
+
+
+---
+
+## Follow-up at `64baf3d3e`: measured from the consumer, and the flag is not the whole story
+
+The previous section guessed at a compensating pair from the shape of the
+regression. This measures it from the delete itself, against the recording,
+which is the ground truth the earlier attempts never consulted.
+
+### The engine's two camera phases are exactly what the ROM argument assumes
+
+Logged `cameraBounds` at both publication points on `arz2` (level select) and
+compared with the recorded `camera_x`:
+
+| row | object pass | post-camera hook | recorded `camera_x` |
+|---|---|---|---|
+| 399 | -- | 1047 | 1047 |
+| 400 | 1047 | 1048 | 1048 |
+| 401 | -- | 1050 | 1050 |
+
+The object pass at row N sees `camera(N-1)`; the hook at row N sees
+`camera(N)`. So the hook reproduces the ROM's own pair -- `BuildSprites` runs
+after `DeformBgLayer` within frame N (`s2.asm:5094-5110`), judging the
+post-`ObjectMove` position against `camera(N)`, and the pass that reads the flag
+at N+1 sees that same camera. The engine wiring is not the problem and the
+citation is not wrong.
+
+### And the recorded removals say the opposite
+
+`Obj24` bubbles delete on a clear `render_flags` bit 7 at `loc_1F988`
+(`s2.asm:45265-45266`; `_btst`/`_beq` assemble to `tst.b`/`bpl`, so it is the
+same bit-7 test). Every engine delete was logged with its driver row and scored
+against the recording's 66 `object_removed` events for type `0x24`:
+
+| arm | deletes landing on a recorded `0x24` removal frame | fixture |
+|---|---|---|
+| control (publishes inside `update()`) | **51 of 54** | passes |
+| post-camera hook | **16 of 54** | 83 errors |
+
+The hook moves roughly 35 of the 54 deletes exactly one frame earlier, and the
+recording wants them where the control already has them. Three control frames
+(738, 842, 1711) are the pre-existing mismatch and are not this change's.
+
+### What that leaves
+
+The stale flag is cancelling a second one-frame offset somewhere else in the
+bubble's delete path -- the pair the fixture's green depends on. It is not the
+slot reaper: destroyed objects are removed inside the same object-execution loop
+that ran them. Publishing the flag correctly therefore has to land together with
+whatever that second offset is, in one move; it has now failed twice from two
+different sanctioned mechanisms, which is evidence about the pair rather than
+about the mechanism.
+
+**This does not reach the generator fix.** That object is stationary, its
+consumer is a countdown rather than a delete, and it was confirmed against three
+independent recorded quantities. But it does mean the family cannot be converted
+on the phase argument alone: each class needs its consumer scored against a
+recorded stream before its flag is moved, exactly as the delete was here.
