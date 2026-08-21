@@ -108818,3 +108818,118 @@ a comparison there would be the way to make the shield and splash objects verifi
 
 The snapshot-versus-tracking splash Y (S2/S3K `SpindashDustController.triggerSplash` freezes
 `splashY` where `Obj08_MdSplash` re-reads `Water_Level_1` every frame), behind this.
+## 2026-08-21 — S3K chain segment 9 (`hcz`) frame 0 is a three-gravity-step lead at the handover, not the start-position debt
+
+- Worktree `wt/s3k-hcz-seg9`, branch
+  `bugfix/ai-s3k-hcz-seg9-entry`, pinned to `53d5dfa77`. Nothing was changed in
+  `src/`; this entry is the measurement.
+- Command:
+  `mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Ds3k.rom.path=<s3k.gen> -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`.
+  Result: 1 test, 1 failure, on three axes — `[walk-failure]` segment 9 (`hcz`)
+  exit boundary (`giant_ring`) never observed; `[segment-physics]` segment 8
+  2288 errors, first non-camera mismatch frame 6000 `sidekick_x` rom `0x4997`
+  engine `0x4996`; `[segment-physics]` segment 9 **59070** errors, first
+  non-camera mismatch frame 0 `y` rom `0x0020` engine `0x0021`.
+- **Run it under a trace profile.** Without one, surefire's `-Xmx1g` OOMs
+  (`Java heap space`) before any segment report is written, which looks like an
+  infrastructure failure rather than a frontier.
+
+### The headline field is one of six, and none of them is a position seed
+
+Segment 9 report: `errorCount` 59070, `bootstrapErrorCount` **0**,
+`laggedFrames` 55, `complete` true, physics 50664 / animation 8406; the last
+retained mismatch is at frame 3573 of 3574, so this is a whole-segment
+divergence, not a one-frame blip. The full frame-0 comparison has exactly six
+diverging fields; every `x` field, camera, rings, angle, routine, status byte
+and both animation ids MATCH:
+
+| field | rom | engine |
+|---|---|---|
+| `y` | `0x0020` | `0x0021` |
+| `y_sub` | `0x0000` | `0x5000` |
+| `y_speed` | `0x0038` | `0x00E0` |
+| `sidekick_y` | `0x0024` | `0x0025` |
+| `sidekick_y_sub` | `0x0000` | `0x5000` |
+| `sidekick_y_speed` | `0x0038` | `0x00E0` |
+
+The engine's frame-0 y-triple is **bit-exact the fixture's own frame-3 row**,
+for the player and the sidekick both (`hcz/physics.csv.gz` row 3: player
+`0021/5000/00E0`, sidekick `0025/5000/00E0`). `0x38` is one gravity step;
+`0xE0` is four. The engine has taken three more destination-level gravity
+steps than the ROM had taken when the comparator's frame 0 is sampled.
+
+The x axis is NOT advanced: the engine sits on the ROM's frame-0 `x`
+(`0x0280`, sub `0`, speed `0`) while ROM row 3 is `027F/7000/FFB8`. So this is
+not "the engine entered HCZ three frames early" wholesale — the ROM's x_speed
+walks `0000, FFE8, FFD0, FFB8`, a constant `-0x18`/frame, and the engine is
+applying none of it. (`0x18` is the S3K air acceleration; that the recorded
+player is accelerating left in the air is consistent with held input, and is a
+separate open question from the y phase.)
+
+### Ruled out: the S3K complete-run start-position bootstrap debt
+
+The debt entry in `known-discrepancies.md` covers segments that arm from
+metadata start coordinates. That is not this:
+
+- `hcz/metadata.json` `start_x` `0x0280` / `start_y` `0x0020` equals the
+  fixture's own frame-0 row exactly, so the seed is right.
+- `bootstrapErrorCount` is 0.
+- The standalone `TestS3kSonicTailsHczSegmentTraceReplay`, on this same SHA, is
+  clean at frame 0 — 744 errors, first error frame **1433** `y_speed`
+  (`0x0030` vs `-00D0`). (It then errors out with `S3K KosM module FIFO is
+  full` from `Sonic3kSSEntryRingObjectInstance.retireRing`, which is the defect
+  another lane closed; irrelevant to frame 0.)
+
+Same fixture, same seed, clean standalone, diverged in the chain: the defect is
+in the chain's `aiz_5` → `hcz` handover.
+
+### What the fixture says the ROM did at that handover
+
+Segments are contiguous in movie frames: `aiz_5` is offset 46432 × 7175 rows
+(bk2 46432..53606), `hcz` is offset 53608. In the whole 7175-row `aiz_5`
+segment there are **exactly two** rows whose recorded `vblank_counter` does not
+advance — rows 7172 and 7173, both `CF73`, with `lag_counter` pinned at `0x10`
+after climbing one per row from 7156. Its final row 7174 (`CF74`) is the first
+to show the destination player at all (`air` 1, `player_animation_id` `0x1B`,
+`sidekick_present` 1, `y_speed` `0000`). `hcz` frame 0 is `CF76`; bk2 53607
+(`CF75`) is covered by no segment.
+
+Two stalled rows plus one uncovered movie frame is three, and the engine's lead
+is three gravity steps. **That correspondence is arithmetic, not a traced
+causal chain** — which rows the engine actually stepped was not instrumented.
+The kill condition for the next round is direct: log the movie row of every
+gravity step the engine applies to the HCZ player over bk2 53550..53608. If it
+steps on 7172, 7173 and 53607 where the ROM did not, confirmed; if it does not,
+the lead comes from somewhere else and this reading dies.
+
+### The manifest has no record of this handover at all
+
+`AbstractRunChainTest.expandGapAdmissionCensus` reads
+`TraceRunManifest.Transition.gapAdmissionRuns()` (`gap_admission_runs`, an
+alternating non-lag/lag run-length census) to decide which gap rows the engine
+runs and which it plays as lag; an absent census expands to no rows, "which
+leaves the gap walk exactly as it behaved before any census existed".
+
+- The S3K run manifest emits **no `gap_admission_runs` on any of its 40
+  transitions**. The only manifest in the repo carrying the key is
+  `traces/s2/runs/s2-sonic-tails-complete-emeralds` (e.g. `stage_exit`:
+  `[23, 11, 53, 14, 8, 39, 25]`).
+- Worse for this segment, there is **no transition record for 8 → 9 at all**.
+  The 40 records are `stage_exit` (20), `giant_ring` (14) and
+  `starpost_bonus` (6) — special-stage and bonus boundaries only. All 22
+  zone→zone handovers of the 63-segment run are unrecorded: `aiz_5`→`hcz`,
+  `hcz_4`→`mgz`, `mgz`→`cnz`, `cnz`→`icz`, `icz_2`→`lbz`, `lbz`→`mhz`, the
+  seven `mhz_*`→`dez23_*`, `mhz_9`→`fbz`, `fbz`→`soz`, `soz_2`→`lrz`,
+  `lrz`→`hpz22`, `hpz22_2`→`hpz`, `hpz_3`→`ssz`, `ssz`→`dez23_8`,
+  `dez23_8`→`zone0c`, `zone0c`→`ddz`.
+
+So the chain has no admission census for the one handover in question, and none
+for any zone advance in the run. That is a recorder/manifest gap, and closing it
+is a capture-side round, not a physics fix.
+
+### Status
+
+Found, not fixed. Segment 9 stays red at frame 0; the standalone segment's own
+frontier is unaffected by it. The chain will not display another lane's
+`TestS3kSonicTailsHczSegmentTraceReplay` green until the handover phase is
+closed.
