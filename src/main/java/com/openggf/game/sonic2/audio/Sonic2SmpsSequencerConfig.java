@@ -60,6 +60,9 @@ public final class Sonic2SmpsSequencerConfig {
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
+                .sfxRequestTransformPolicy(
+                        SmpsSequencerConfig.SfxRequestTransformPolicy
+                                .SONIC2_SPINDASH_REV)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
                 .fmSfxTakeoverMode(
                         SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)

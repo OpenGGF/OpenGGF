@@ -17,6 +17,8 @@ public record SmpsDriverSnapshot(
         SmpsDriver.ReadMode readMode,
         int palFullUpdateCounter,
         int sfxPriorityLatch,
+        int spindashRevPlayingCounter,
+        int spindashRevFrequencyIndex,
         int continuousSfxId,
         boolean continuousSfxFlag,
         int contSfxLoopCnt,
@@ -36,6 +38,16 @@ public record SmpsDriverSnapshot(
             throw new IllegalArgumentException(
                     "SFX priority latch must fit one unsigned byte");
         }
+        if (spindashRevPlayingCounter < 0
+                || spindashRevPlayingCounter > 0x3C) {
+            throw new IllegalArgumentException(
+                    "spindash-rev timeout must fit [0, 0x3C]");
+        }
+        if (spindashRevFrequencyIndex < 0
+                || spindashRevFrequencyIndex > 0x0B) {
+            throw new IllegalArgumentException(
+                    "spindash-rev index must fit [0, 0x0B]");
+        }
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
@@ -54,6 +66,8 @@ public record SmpsDriverSnapshot(
                 region,
                 readMode,
                 5,
+                0,
+                0,
                 0,
                 continuousSfxId,
                 continuousSfxFlag,
@@ -78,6 +92,8 @@ public record SmpsDriverSnapshot(
                 region,
                 readMode,
                 5,
+                0,
+                0,
                 0,
                 continuousSfxId,
                 continuousSfxFlag,

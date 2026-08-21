@@ -3053,7 +3053,9 @@ All notable changes to the OpenGGF project are documented in this file.
   extra volume mutation.
   Sonic 3&K 1-up overrides now run at normal speed and restore the displaced
   song's saved speed state, matching `zTempoSpeedupSave` instead of inheriting
-  the live multiplier into the jingle.
+  the live multiplier into the jingle. Sonic 2 spindash-rev requests now use
+  the sound driver's 0–11 semitone ladder and 0x3C-service reset instead of a
+  pitch derived from the gameplay charge counter.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

@@ -48,6 +48,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private SmpsSequencer.Region region = SmpsSequencer.Region.NTSC;
     private int palFullUpdateCounter = 5;
     private int sfxPriorityLatch;
+    private int spindashRevPlayingCounter;
+    private int spindashRevFrequencyIndex;
     private boolean fadeTerminalStopAllPending;
     private boolean fadeTerminalStopAllCompleted;
 
@@ -105,6 +107,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final int hybridChunkCountForTesting;
         private final int palFullUpdateCounter;
         private final int sfxPriorityLatch;
+        private final int spindashRevPlayingCounter;
+        private final int spindashRevFrequencyIndex;
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
@@ -129,6 +133,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 int hybridChunkCountForTesting,
                 int palFullUpdateCounter,
                 int sfxPriorityLatch,
+                int spindashRevPlayingCounter,
+                int spindashRevFrequencyIndex,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
@@ -151,6 +157,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.hybridChunkCountForTesting = hybridChunkCountForTesting;
             this.palFullUpdateCounter = palFullUpdateCounter;
             this.sfxPriorityLatch = sfxPriorityLatch;
+            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
+            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
@@ -184,6 +192,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final long nextServiceSequencerOrdinal;
         private final int continuousSfxId;
         private final int sfxPriorityLatch;
+        private final int spindashRevPlayingCounter;
+        private final int spindashRevFrequencyIndex;
         private final boolean continuousSfxFlag;
         private final int continuousLoopCount;
         private final DacData dacData;
@@ -206,6 +216,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 long nextAdmissionOrdinal, long nextServiceOrdinal,
                 long nextServiceSequencerOrdinal,
                 int sfxPriorityLatch,
+                int spindashRevPlayingCounter,
+                int spindashRevFrequencyIndex,
                 int continuousSfxId, boolean continuousSfxFlag,
                 int continuousLoopCount, DacData dacData,
                 VirtualSynthesizer.SfxAdmissionState synthState) {
@@ -232,6 +244,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.nextServiceOrdinal = nextServiceOrdinal;
             this.nextServiceSequencerOrdinal = nextServiceSequencerOrdinal;
             this.sfxPriorityLatch = sfxPriorityLatch;
+            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
+            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
@@ -244,6 +258,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 long nextServiceOrdinal,
                 long nextServiceSequencerOrdinal,
                 int sfxPriorityLatch,
+                int spindashRevPlayingCounter,
+                int spindashRevFrequencyIndex,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int continuousLoopCount) {
@@ -270,6 +286,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.nextServiceOrdinal = nextServiceOrdinal;
             this.nextServiceSequencerOrdinal = nextServiceSequencerOrdinal;
             this.sfxPriorityLatch = sfxPriorityLatch;
+            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
+            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
@@ -608,6 +626,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (sfxContentionObserver != SfxContentionObserver.NONE) {
             trackSfxAdmission(sequencer);
         }
+        applySfxRequestTransform(sequencer);
         sequencer.commitSfxAdmissionInitialization();
         if (admission.priorityAfter()
                 != SmpsRequestAdmissionPolicy.NO_PRIORITY) {
@@ -678,6 +697,29 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxFlag = false;
             continuousSfxId = admission.continuousSfxId();
             contSfxLoopCnt = admission.trackCount();
+        }
+    }
+
+    private void applySfxRequestTransform(SmpsSequencer sequencer) {
+        if (sequencer.getConfig().getSfxRequestTransformPolicy()
+                != SmpsSequencerConfig.SfxRequestTransformPolicy
+                        .SONIC2_SPINDASH_REV) {
+            return;
+        }
+        // Sonic 2's shipped fixBugs=0 driver owns this independently of the
+        // gameplay charge counter. E0 restarts a 0x3C-service timeout and
+        // advances a saturating 0..11 semitone index before track playback.
+        if (sequencer.getSmpsData().getId() != 0xE0) {
+            return;
+        }
+        int index = spindashRevPlayingCounter == 0
+                ? 0 : Math.min(11, spindashRevFrequencyIndex + 1);
+        spindashRevFrequencyIndex = index;
+        spindashRevPlayingCounter = 0x3C;
+        for (int trackIndex = 0;
+                trackIndex < sequencer.trackCount(); trackIndex++) {
+            SmpsSequencer.Track track = sequencer.trackAt(trackIndex);
+            track.keyOffset = (byte) (track.keyOffset + index);
         }
     }
 
@@ -997,6 +1039,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 return new SfxAdmissionMutationState(
                         nextSfxAdmissionOrdinal, nextServiceOrdinal,
                         nextServiceSequencerOrdinal, sfxPriorityLatch,
+                        spindashRevPlayingCounter,
+                        spindashRevFrequencyIndex,
                         continuousSfxId,
                         continuousSfxFlag, contSfxLoopCnt);
             }
@@ -1093,6 +1137,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     nextSfxAdmissionOrdinal,
                     nextServiceOrdinal, nextServiceSequencerOrdinal,
                     sfxPriorityLatch,
+                    spindashRevPlayingCounter,
+                    spindashRevFrequencyIndex,
                     continuousSfxId,
                     continuousSfxFlag, contSfxLoopCnt,
                     captureLiveDacDataReference(),
@@ -1112,6 +1158,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 nextServiceSequencerOrdinal =
                         state.nextServiceSequencerOrdinal;
                 sfxPriorityLatch = state.sfxPriorityLatch;
+                spindashRevPlayingCounter =
+                        state.spindashRevPlayingCounter;
+                spindashRevFrequencyIndex =
+                        state.spindashRevFrequencyIndex;
                 continuousSfxId = state.continuousSfxId;
                 continuousSfxFlag = state.continuousSfxFlag;
                 contSfxLoopCnt = state.continuousLoopCount;
@@ -1188,6 +1238,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             nextServiceSequencerOrdinal = state.nextServiceSequencerOrdinal;
             continuousSfxId = state.continuousSfxId;
             sfxPriorityLatch = state.sfxPriorityLatch;
+            spindashRevPlayingCounter = state.spindashRevPlayingCounter;
+            spindashRevFrequencyIndex = state.spindashRevFrequencyIndex;
             continuousSfxFlag = state.continuousSfxFlag;
             contSfxLoopCnt = state.continuousLoopCount;
         }
@@ -1294,6 +1346,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     hybridChunkCountForTesting,
                     palFullUpdateCounter,
                     sfxPriorityLatch,
+                    spindashRevPlayingCounter,
+                    spindashRevFrequencyIndex,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
@@ -1363,6 +1417,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     token.hybridChunkCountForTesting;
             palFullUpdateCounter = token.palFullUpdateCounter;
             sfxPriorityLatch = token.sfxPriorityLatch;
+            spindashRevPlayingCounter = token.spindashRevPlayingCounter;
+            spindashRevFrequencyIndex = token.spindashRevFrequencyIndex;
             continuousSfxId = token.continuousSfxId;
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
@@ -1411,6 +1467,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     readMode,
                     palFullUpdateCounter,
                     sfxPriorityLatch,
+                    spindashRevPlayingCounter,
+                    spindashRevFrequencyIndex,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
@@ -1477,6 +1535,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 targetSnapshot.region(), targetSnapshot.readMode(),
                 targetSnapshot.palFullUpdateCounter(),
                 sourceSnapshot.sfxPriorityLatch(),
+                sourceSnapshot.spindashRevPlayingCounter(),
+                sourceSnapshot.spindashRevFrequencyIndex(),
                 sourceSnapshot.continuousSfxId(),
                 sourceSnapshot.continuousSfxFlag(),
                 sourceSnapshot.contSfxLoopCnt(), combined,
@@ -1542,6 +1602,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             readMode = snapshot.readMode();
             palFullUpdateCounter = snapshot.palFullUpdateCounter();
             sfxPriorityLatch = snapshot.sfxPriorityLatch();
+            spindashRevPlayingCounter =
+                    snapshot.spindashRevPlayingCounter();
+            spindashRevFrequencyIndex =
+                    snapshot.spindashRevFrequencyIndex();
             continuousSfxId = snapshot.continuousSfxId();
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
@@ -2018,6 +2082,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         driverFrames = Math.max(0, driverFrames);
         for (int i = 0; i < driverFrames; i++) {
+            if (spindashRevPlayingCounter > 0) {
+                spindashRevPlayingCounter--;
+            }
             servicePalFullUpdateBoundary();
         }
     }
