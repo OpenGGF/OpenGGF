@@ -112089,3 +112089,60 @@ checked so far (s2.asm:49065, an `AllocateObjectAfterCurrent` clone, and
 `Obj55_Wave` at 68983) are other objects' own SSTs.
 
 Nothing fitted; the three-entry offset stays ruled out.
+
+## 2026-08-21 — the prev_anim column: a one-field addition, but it DOES need a re-capture
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-prevanim-column`, pinned to
+`eaa8e83b8`. `src/` and `tools/` unchanged — stopping at the cost decision, as
+instructed.
+
+### Question 1: is it a one-field addition? YES
+
+`tools/bizhawk-headless/src/Recording/S2Ram.cs:95-98` defines the animation
+block as:
+
+```
+OffMappingFrame   = 0x1A
+OffAnimFrame      = 0x1B
+OffAnimId         = 0x1C
+OffAnimFrameTimer = 0x1E
+```
+
+**`0x1D` — `prev_anim` — is the only byte in that block the map omits**, with
+its neighbours present on both sides. Adding it is one constant.
+
+The emission side is equally small, and the pattern already exists next door:
+`S2SpecialStageCsvWriter.cs:167` already writes `OffAnimFrame`. The S2 **level**
+CSV writer emits neither — the recorded columns are `player_animation_id` and
+`player_mapping_frame` only, with no `anim_frame` and no `prev_anim`.
+
+Worth taking both while the file is open. `anim_frame` not being recorded is
+what forced this lane to infer the index from mapping frames across two rounds;
+recording it would have shown the 4213 reset directly.
+
+### Question 2: can committed fixtures be extended, or is a re-capture needed? RE-CAPTURE
+
+They cannot be extended. The values exist only inside the emulator as it runs;
+no committed artifact contains `prev_anim` in any form, so there is nothing to
+derive it from. Every affected `physics.csv.gz` has to be regenerated.
+
+**Stopping here — this is the cost decision.** Two things that shape it:
+
+- **No human re-play is needed.** The movie is committed:
+  `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2`.
+  Regeneration is a mechanical re-run of the headless recorder over that BK2 plus
+  the ROM, not a new recording session. The cost is compute and fixture churn in
+  git, not human time.
+- **It may not need the whole corpus.** To answer the 4213 question only
+  `seg12_arz1` (4889 rows) has to carry the column. That reduces a corpus-wide
+  regeneration to one segment **if** the physics parser tolerates a column being
+  absent from other fixtures — which I did NOT establish, and which is the one
+  check to run before choosing scope. If the parser is strict about columns, the
+  corpus-wide regeneration is unavoidable and the cost is much larger.
+
+### Not done, per the ordering
+
+The traced-register survey over the correct population is untouched, deliberately
+— if the column lands, the writer is identified by reading it at 4212 and 4213
+rather than by tracing twenty word-write sites. The eight-gap family stays
+parked.
