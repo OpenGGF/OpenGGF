@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-one rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -107,6 +107,7 @@ that looks like a real result.
 | 88 | A probe's text report parsed as data | Correct code at the top of a defect ranking, twice recommended |
 | 89 | A folded class documenting N ROM slots and reserving none | Every later object's slot index shifted; a deficit that is 100% structural |
 | 90 | "Not observable" asserted for a whole run | Rounds scoped around a gap that does not cover the rows in question |
+| 91 | Two threads merged because their symptoms match | An inherited framing that already cost the first thread its rounds |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2366,3 +2367,22 @@ wait stages are individually wrong and sum to the correct total, so no error cou
 fixture can see it; the first stage is not a constant in the ROM at all but inherited state,
 so a different fight length breaks the cancellation. A sum that matches is not evidence its
 terms do.
+
+## Ninety-first rule: "a dispatch early" is a symptom class, not a diagnosis
+
+Two objects in the same game process a hit one dispatch before the recording does, and they
+have different causes. One skips the ROM's routine-zero dispatch because the engine models no
+routine counter for it; the other has a correct routine machine and arrives at the boundary
+early for its own reasons. Naming the shape narrows nothing.
+
+**So do not merge two threads because their symptoms match**, and do not inherit the earlier
+thread's framing with them. In this case the inherited framing — "the consumer is faithful, so
+the question is when the flag was written" — was itself the thing that cost the first thread
+several rounds: the write and the read are inherently same-frame, because the response list is
+cleared between them by a dedicated object, so there was never any latency to collapse.
+
+**Test the object's own phase against the recording instead.** And beware the corollary that
+hid it the first time: where a fixture compares no object identity or position, "the player
+matches the recording exactly" is fully consistent with the object leading by a frame. An
+irregular multi-pixel step in the object's own position series is the fingerprint that
+distinguishes them.

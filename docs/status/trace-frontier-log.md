@@ -107747,3 +107747,42 @@ routine-zero question, the follow-delay family, the descent constants, the press
 trigger box, the art selection, the parent/child ordering. The exclusive bound was not touched.
 The dead figures were not used as inputs — 63 appears above only as an explanation of why it is
 dead, and 184 only as the quantity shown to be *correct* in both.
+
+## The two dispatch-early cases are not one defect, and the framing that says they are is the trap
+
+Judgement from the lane holding the badnik family, checked against the boss class without
+widening its round — that class is in neither of its matrix arms, so reading it disturbed
+nothing.
+
+**Different mechanism, same shape.** The six badniks skip the ROM's routine-zero dispatch
+because the engine has no routine counter for them at all. The AIZ2 end boss is the opposite:
+it has a real one — a declared init routine, a switch on the routine index, and nothing after
+the switch, so exactly one routine runs per frame and the init dispatch is properly consumed.
+Whatever fires its defeat a frame early, it is not that omission. So the two threads stay
+separate.
+
+**One-dispatch-early is a symptom class, not a diagnosis.** It now has at least two distinct
+causes, which means naming it does not narrow anything by itself.
+
+**The framing to avoid, from the lane that already paid for it.** "The consumer is faithful,
+so the question is when the property was written" is exactly the brief that lane was handed
+for its badnik, and it was wrong: the property's write and read are inherently same-frame,
+because the response list is cleared by an object at slot 2 after both players' touch scan, so
+there is no latency to collapse. The real cause was that the object arrived at the touch
+boundary a frame early. A round spending itself on write timing here would repeat that.
+
+**Test the boss's own phase, not the property.** And note the trap that hid it last time: the
+segment compares no object identity or position, so "the player's position matches the
+recording exactly" is fully consistent with the boss leading by a frame and nobody being able
+to see it. The badnik case was provable only from an irregular multi-pixel step in the
+object's own position series — the same fingerprint test applies here.
+
+**One ROM lead, labelled as a quick read rather than a finding.** That routine guards on the
+collision flags being zero *before* testing the property, and takes the defeat arm when the
+property is zero — a different consumption pattern from the badnik's read-nonzero-then-clear.
+That points at when the boss stops being collidable rather than at when the property was
+written, and is worth ten minutes before anything else.
+
+**A survey gap on the record:** the init-dispatch survey covered badniks only. Bosses were
+never examined, so the family may extend there; widening it is cheap and would close the
+question properly.
