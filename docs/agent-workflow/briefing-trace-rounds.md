@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-one rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -73,6 +73,7 @@ that looks like a real result.
 | 78 | A probe aligned end-to-end on two monotone series | "N of N rows agree" — one comparison restated, reversing under a real reference |
 | 79 | A citation whose numbers were refreshed but whose claim was not re-read | A false statement wearing a freshly-audited look |
 | 80 | A derivation that explains everything | One unchecked premise, fitted so tightly it convinces — and points the wrong way |
+| 81 | A new comparison that has never been seen to fail | Green from a code path the suite never enters |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2105,3 +2106,28 @@ be re-adopted *because* it reads well.
 this divergence?" separates a fix that revealed a frontier from one that caused it — but it
 degenerates when the control is green outright. An empty array is then the answer, not a failed
 search: nothing buried means the candidate caused it.
+
+## Eighty-first rule: break every new comparison on purpose before trusting its green
+
+A new comparison that has never been seen to fail is worth nothing, and there is no way to
+tell a passing comparison from an unreached one by reading it.
+
+One round wired a new per-row comparison into the obvious home — the live comparator — and
+both affected classes stayed green. The green was worthless: the replay tests drive the
+binder's compare directly from their own base class, so the live comparator's copy never
+executed. What exposed it was deliberately corrupting the engine-side value and re-running:
+the test still passed, and an unconditional print then confirmed the enclosing method was
+never entered.
+
+**Do this to every new comparison, instrument and assertion.** Corrupt one side, watch it go
+red, then restore. If it does not fail, you have not written a comparison — you have written a
+line of code.
+
+**And check where the code under test actually calls from.** The tidiest home for a check is
+often not on the path a given suite takes; two harness entry points that look equivalent can
+differ in whether they run your code at all.
+
+This is the third door into the same room as the tautological probe and the uninstalled
+instrument: output that looks like a result and carries no information. The other two were
+caught by asking what would falsify them; this one was caught by making it fail on purpose,
+which is the cheaper check.
