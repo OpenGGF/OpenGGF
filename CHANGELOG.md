@@ -1,5 +1,16 @@
 # Changelog
 
+- **A Flybot767 spawned by an LBZ alarm no longer wakes a frame early:** the
+  drone waits behind an offscreen placeholder, and the game only lets it start
+  flying once the sprite renderer has already drawn that placeholder on an
+  earlier frame -- a drone can never see its own first drawing. A spawned drone
+  was instead checking whether it was on screen right there in the frame it was
+  created, so it skipped the frame the game spends waiting and flew one frame
+  ahead of itself ever after. In the Sonic and Tails run through Launch Base
+  Zone that meant the drone reached Sonic a frame early and the bounce from
+  destroying it landed a frame early too. Placed drones already waited properly;
+  now both do.
+
 - **A Flybot767 that was spawned rather than placed now wakes on the same rule
   as one that was placed:** the drone waits behind an offscreen placeholder and
   starts flying when the sprite renderer first draws it, and the renderer's

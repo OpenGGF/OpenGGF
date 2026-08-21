@@ -62,14 +62,12 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private int animTimer;
     private boolean inLoop;
     private boolean waitingForOnscreen = true;
-    private boolean layoutWaitUsesRetainedRenderFlag;
     private boolean placeholderRenderedOnscreen;
     private boolean publishedTouchResponseListEntryThisFrame;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
                 Sonic3kObjectArtKeys.FLYBOT_767, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
-        layoutWaitUsesRetainedRenderFlag = spawn.layoutIndex() >= 0;
     }
 
     @Override
@@ -79,28 +77,23 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             return;
         }
         if (waitingForOnscreen) {
-            if (layoutWaitUsesRetainedRenderFlag) {
-                if (!placeholderRenderedOnscreen) {
-                    return;
-                }
-                // loc_85AD2 observes the sign bit published by the preceding
-                // Render_Sprites pass, restores the saved continuation, and
-                // returns before Obj_Flybot767 dispatch resumes.
-                placeholderRenderedOnscreen = false;
-                waitingForOnscreen = false;
+            // loc_85AD2 (sonic3k.asm:180279-180281) opens with
+            // `tst.b render_flags(a0) / bmi loc_85B02`, and bit 7 is published by
+            // a PRECEDING Render_Sprites pass (sonic3k.asm:36336-36366), never by
+            // the pass doing the test. A freshly allocated placeholder therefore
+            // always spends its first pass drawing, and can only observe the flag
+            // from the next pass onwards. Both spawn routes read the same
+            // published flag so they wake on the same phase: the dynamic route
+            // used to test the render bounds live, in its own creation frame, and
+            // so skipped the frame the ROM spends waiting for the flag.
+            if (!placeholderRenderedOnscreen) {
                 return;
             }
-            // Same predicate as the layout arm above: Render_Sprites
-            // (sonic3k.asm:36336-36366) sets the flag loc_85AD2 reads, and its
-            // right and bottom edges are exclusive (`bge #320`, `bhs 2*h+224`).
-            // The inclusive MarkObjGone test this used to call is a pixel more
-            // generous, so a dynamically created Flybot767 woke on a different
-            // frame from a layout-placed one.
-            if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN)) {
-                return;
-            }
-            // Obj_WaitOffscreen restores the saved operation pointer and
-            // returns; Obj_Flybot767 routine dispatch resumes next pass.
+            // loc_85B02 (sonic3k.asm:180300-180302) restores the saved
+            // continuation into (a0) and `rts` -- the restored routine does NOT
+            // run on the frame that restores it, so Obj_Flybot767 dispatch
+            // resumes on the following pass.
+            placeholderRenderedOnscreen = false;
             waitingForOnscreen = false;
             return;
         }
@@ -128,7 +121,10 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
 
     @Override
     public void refreshPostCameraRenderState() {
-        if (waitingForOnscreen && layoutWaitUsesRetainedRenderFlag) {
+        if (waitingForOnscreen) {
+            // The Render_Sprites pass that publishes render_flags bit 7 for the
+            // next Obj_WaitOffscreen dispatch, for layout- and alarm-allocated
+            // placeholders alike.
             placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
                     WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
         }

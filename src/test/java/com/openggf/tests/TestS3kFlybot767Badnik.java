@@ -127,8 +127,13 @@ class TestS3kFlybot767Badnik {
         AbstractObjectInstance flybot = createFlybotAt(0x0406, 0x05CC);
         AbstractPlayableSprite player = playerAt(0x0346, 0x062C);
 
-        for (int frame = 308; frame <= 410; frame++) {
+        // The ROM allocates the Obj_WaitOffscreen placeholder during row 307; that
+        // pass draws it, row 308's pass observes the published flag and restores,
+        // and the first Obj_Flybot767 pass is row 309 (aux object_appeared for slot
+        // 7 records 0x00085AD2 at 307 and 0x0008C96C at 308).
+        for (int frame = 307; frame <= 410; frame++) {
             flybot.update(frame, player);
+            flybot.refreshPostCameraRenderState();
         }
 
         assertEquals("DIVE", readEnumName(flybot, "state"),
@@ -226,15 +231,48 @@ class TestS3kFlybot767Badnik {
     }
 
     @Test
-    void rewindRestoresWhetherWaitOffscreenUsesTheLayoutRenderFlag() {
+    void alarmSpawnedWaitDoesNotRestoreInItsOwnCreationFrame() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0800, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+
+        // loc_85AD2 reads render_flags bit 7, which only a PRECEDING Render_Sprites
+        // pass can have set, so the creation-frame pass can only draw.
+        flybot.update(0, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "the creation-frame pass draws the placeholder; it cannot observe its own flag");
+        assertTrue(readBoolean(flybot, "waitingForOnscreen"),
+                "Obj_WaitOffscreen has not reached loc_85B02 yet");
+
+        flybot.refreshPostCameraRenderState();
+        flybot.update(1, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "loc_85B02 restores the saved operation and rts -- it does not run it");
+        assertFalse(readBoolean(flybot, "waitingForOnscreen"));
+
+        flybot.update(2, player);
+        assertEquals("CHASE", readEnumName(flybot, "state"),
+                "Obj_Flybot767 dispatch resumes on the pass after the restore");
+    }
+
+    @Test
+    void alarmSpawnedAndLayoutWaitsWakeOnTheSamePhase() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x0300, 0);
+        AbstractObjectInstance dynamic = createFlybotAt(0x0800, 0x0120);
         AbstractObjectInstance placed = createPlacedFlybotAt(0x0800, 0x0120);
-        AbstractObjectInstance recreatedShell = createFlybotAt(0x0800, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
 
-        assertFalse(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"));
-        recreatedShell.restoreRewindState(placed.captureRewindState());
+        for (int frame = 0; frame <= 2; frame++) {
+            dynamic.update(frame, player);
+            dynamic.refreshPostCameraRenderState();
+            placed.update(frame, player);
+            placed.refreshPostCameraRenderState();
+        }
 
-        assertTrue(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"),
-                "the layout-vs-dynamic wait contract is durable rewind state");
+        assertEquals(readEnumName(placed, "state"), readEnumName(dynamic, "state"),
+                "both spawn routes read the same published render flag, so they wake together");
+        assertEquals(placed.getX(), dynamic.getX());
+        assertEquals(placed.getY(), dynamic.getY());
     }
 
     @Test

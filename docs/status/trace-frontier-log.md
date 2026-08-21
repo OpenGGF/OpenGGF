@@ -113431,3 +113431,47 @@ have returned the answer it was asked for.
 
 Full write-up (revised in place):
 [2026-08-21-lbz-frame-411-touch-pass-phase.md](../architecture/audits/trace/2026-08-21-lbz-frame-411-touch-pass-phase.md).
+
+## 2026-08-21 - LBZ frame 411 closed: the Flybot767 dynamic wait arm rejoins the layout arm's phase
+
+**Fix.** `Flybot767BadnikInstance` now gates both spawn routes on
+`placeholderRenderedOnscreen`, the flag `refreshPostCameraRenderState` publishes
+from the preceding render pass. `loc_85AD2` (`docs/skdisasm/sonic3k.asm:180279-180281`)
+opens with `tst.b render_flags(a0) / bmi loc_85B02`, and bit 7 is set by a
+PRECEDING `Render_Sprites` pass (`sonic3k.asm:36336-36366`), never by the pass
+doing the test, so a freshly allocated placeholder always spends its first pass
+drawing. `loc_85B02` (`sonic3k.asm:180300-180302`) then restores the saved
+continuation and `rts` without running it. The dynamic arm previously tested the
+render bounds live in its own creation frame and skipped that wait. The
+now-unused `layoutWaitUsesRetainedRenderFlag` field and its rewind test are
+removed; two tests replace it.
+
+**Acceptance, measured with a frame-delimited probe carrying the driver's row.**
+`CREATE` and the first `WAIT` (`rendered=false`, draw-only) both land on row 307,
+the row the ROM allocates the placeholder; the restoring `WAIT`
+(`rendered=true`) on row 308; the first `Obj_Flybot767` movement pass on row
+**309**. Aux `object_appeared` for slot 7 records `0x00085AD2` at 307 and
+`0x0008C96C` at 308, so engine and ROM now agree on all three.
+
+**Frontier.** `TestS3kLbzZoneSliceTraceReplay` moves from `frame 411 -- y_speed`
+(4592 errors) to `frame 23533 -- x_speed mismatch (expected=0x016F,
+actual=0x0200)` (4585 errors). It moves for the right reason: rows 411 and 412
+now both match, so the kill and its `Touch_KillEnemy` bounce land on 412 as
+recorded.
+
+**Controls, both arms in the same worktree at `4ac911690`,
+`target/surefire-reports` and `target/test-tmp` cleared before each run,
+`UnsatisfiedLinkError` grep clean in both.** `-Ptrace-segments` **70 tests,
+52 failures, 7 errors in BOTH arms**, red set identical (59 classes), set diff
+empty both ways. The 7 errors are pre-existing S3K special-stage
+`unmatched recorded hardware completions`, unrelated and unchanged. Across all
+70 classes exactly one first-error changed, the LBZ one above.
+
+**No evidence the fix generalises.** None of the other `Obj_WaitOffscreen`
+callers moved, so this stays a single-object change rather than a survey. Worth
+noting the CHANGELOG already carries an HCZ Jawz entry of the same shape (woke a
+frame early behind a `$20`-square placeholder), so the defect class has now been
+seen at least twice.
+
+Full write-up:
+[2026-08-21-lbz-frame-411-touch-pass-phase.md](../architecture/audits/trace/2026-08-21-lbz-frame-411-touch-pass-phase.md).
