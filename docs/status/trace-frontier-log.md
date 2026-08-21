@@ -107786,3 +107786,24 @@ written, and is worth ten minutes before anything else.
 **A survey gap on the record:** the init-dispatch survey covered badniks only. Bosses were
 never examined, so the family may extend there; widening it is cheap and would close the
 question properly.
+
+## Sizing the boss survey gap, and what the sizing does not say
+
+The init-dispatch survey covered `badniks/` only. Sizing the uncovered directory before anyone
+commissions the work: forty-eight files, forty-four of them object classes, and **five**
+reference an init-routine notion by name — a declared init constant or a pending-init flag.
+
+**What that does not mean.** It is a fact about the search, not about the code. The badnik
+survey found the dispatch modelled in two mutually incompatible idioms, one of which is a state
+enum with an init arm and neither of which is named consistently; a third group did their setup
+in the constructor, which models the frame correctly only if nothing else runs that frame. So
+the thirty-nine classes without those tokens are unclassified, not unmodelled, and quoting five
+of forty-four as a defect count would be wrong in the direction that makes the work look
+larger and more tractable than it is — the direction this investigation's parsing errors have
+leaned five times.
+
+**What it does establish** is that the gap is worth a round: the boss directory is comparable in
+size to the badnik one, no equivalent survey exists for it, and one boss has already been shown
+to model its routine machine correctly while its defeat still fires a dispatch early. Whoever
+takes it should classify by reading the routine machine, as the badnik survey did, rather than
+by grepping for a name.
