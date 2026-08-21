@@ -135,6 +135,7 @@ that looks like a real result.
 | 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
+| 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3091,4 +3092,29 @@ any `Errors:` count: `grep` the log for `UnsatisfiedLinkError`. An errors count 
 native-load failures is a fact about the environment, not about the code — and unlike a stale
 report it appears in a run that genuinely executed, so the usual "did it actually run" check
 passes.
+
+## One hundred and nineteenth rule: "no arithmetic exists between them" is an argument, not a measurement
+
+A round traced a 4px divergence through five steps — layout record, a verbatim copy, a save, a
+restore, the observed value — found **no arithmetic anywhere in the chain**, and concluded the
+value at the far end must therefore be wrong at the near end. Every individual reading was
+correct. The conclusion was false: measuring the near end directly showed it matched the layout
+record after all, and the write that produces the +4 lives in a window **covered by no recorded
+rows**, which is precisely why reading the code could not find it.
+
+**An exhaustive read of a chain bounds where a change can be *in that chain*. It says nothing
+about surfaces the chain does not pass through** — and the one surface nobody enumerated was the
+one with no rows to enumerate it from. The inference then sent the next round after a shared
+object loader that had nothing to do with it.
+
+**The fix is to measure both ends before reasoning about the middle.** Here the near end was
+directly available: a per-frame `object_state` stream carried the object's live position under its
+own ROM code pointer, and reading it killed three hypotheses at once — loader arithmetic, an
+alternative placement source, and the object's own code moving itself.
+
+**Corollary: an exclusion is only as good as the argument that produced it.** A coincidence
+dismissed earlier on the grounds that "no radius arithmetic exists on the restore path" is no
+longer excluded once a discrete write is known to exist somewhere in that window. The dismissal's
+premise was the same false generalisation. Revisit what an argument ruled out when the argument
+itself is corrected — without treating the revival as evidence.
 
