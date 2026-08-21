@@ -109,6 +109,11 @@ green.
 Acceptance: bounded contention tests cover free and occupied channels, lower /
 equal / higher priority, same-frame writes, and exact restore timing.
 
+Status: complete for the bounded engine playback path. S1/S2 use the global
+priority latch, ownership is claimed at admission, service order is per-driver,
+ordinary BGM replacement is game-authentic, and PSG release follows the
+shipped rest-vs-same-VInt behavior.
+
 ### Phase 3 — Pause, fade, speed, and 1-up lifecycle
 
 - Implement driver-level pause mute/restore rather than only pausing the host

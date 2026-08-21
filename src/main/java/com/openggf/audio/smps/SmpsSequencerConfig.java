@@ -98,6 +98,13 @@ public final class SmpsSequencerConfig {
         REGISTER_SEQUENCE
     }
 
+    public enum PsgSfxReleaseMode {
+        /** S1/S2: restored music track stays at rest until its next note. */
+        REST_UNTIL_NEXT_NOTE,
+        /** S3K/custom: restore the live music PSG state immediately. */
+        RESTORE_LIVE_STATE
+    }
+
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
     public enum FmVoiceWriteProfile {
         /** Sonic 1's 68k SetVoice routine. */
@@ -137,6 +144,7 @@ public final class SmpsSequencerConfig {
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final PsgSfxReleaseMode psgSfxReleaseMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
@@ -175,6 +183,7 @@ public final class SmpsSequencerConfig {
         this.relativePointers = b.relativePointers;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.psgSfxReleaseMode = b.psgSfxReleaseMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
@@ -291,6 +300,10 @@ public final class SmpsSequencerConfig {
         return fmSfxTakeoverMode;
     }
 
+    public PsgSfxReleaseMode getPsgSfxReleaseMode() {
+        return psgSfxReleaseMode;
+    }
+
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
         return fmVoiceWriteProfile;
     }
@@ -374,6 +387,8 @@ public final class SmpsSequencerConfig {
         private boolean relativePointers = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private PsgSfxReleaseMode psgSfxReleaseMode =
+                PsgSfxReleaseMode.RESTORE_LIVE_STATE;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
@@ -404,6 +419,7 @@ public final class SmpsSequencerConfig {
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
@@ -426,6 +442,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(sfxPriorityPolicy, "sfxPriorityPolicy");
             Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }

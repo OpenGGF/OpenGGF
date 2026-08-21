@@ -1,5 +1,7 @@
 # Changelog
 
+- **SMPS SFX release now matches each shipped driver:** Sonic 1 and Sonic 2 leave interrupted PSG music tracks resting until their next note and no longer inject a synthetic FM takeover reset; Sonic 3&K retains its same-VInt SFX-release/music-service path.
+
 - **SMPS ordinary music changes now retain SFX exactly where the shipped drivers do:** Sonic 1 atomically carries live normal/special SFX, channel locks, continuous state, and its priority latch into the replacement song, while Sonic 2 and Sonic 3&K continue to stop SFX before loading ordinary BGM.
 
 All notable changes to the OpenGGF project are documented in this file.

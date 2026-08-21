@@ -61,6 +61,10 @@ public final class Sonic2SmpsSequencerConfig {
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                .psgSfxReleaseMode(
+                        SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }

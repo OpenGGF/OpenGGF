@@ -6,6 +6,7 @@ import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -369,6 +370,47 @@ class TestSmpsSequencerDriverCadence {
 
         assertEquals(1, directTrack.envPos);
         assertEquals(directTrack.envPos, batchedTrack.envPos);
+    }
+
+    @Test
+    void s1AndS2PsgReleaseRestsMusicUntilItsNextNote() {
+        for (SmpsSequencerConfig config : new SmpsSequencerConfig[] {
+                Sonic1SmpsSequencerConfig.CONFIG,
+                Sonic2SmpsSequencerConfig.CONFIG }) {
+            SmpsSequencer sequencer = sequencer(1, config);
+            SmpsSequencer.Track track = new SmpsSequencer.Track(
+                    0, SmpsSequencer.TrackType.PSG, 0);
+            track.note = 0x91;
+            track.resting = false;
+            sequencer.addTrack(track);
+
+            sequencer.setChannelOverridden(
+                    SmpsSequencer.TrackType.PSG, 0, true);
+            sequencer.setChannelOverridden(
+                    SmpsSequencer.TrackType.PSG, 0, false);
+
+            assertEquals(true, track.resting);
+        }
+        assertEquals(SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE,
+                Sonic2SmpsSequencerConfig.CONFIG.getFmSfxTakeoverMode());
+    }
+
+    @Test
+    void s3kPsgReleaseRemainsAvailableForSameVintMusicService() {
+        SmpsSequencer sequencer = sequencer(
+                1, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track track = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.PSG, 0);
+        track.note = 0x91;
+        track.resting = false;
+        sequencer.addTrack(track);
+
+        sequencer.setChannelOverridden(
+                SmpsSequencer.TrackType.PSG, 0, true);
+        sequencer.setChannelOverridden(
+                SmpsSequencer.TrackType.PSG, 0, false);
+
+        assertEquals(false, track.resting);
     }
 
     private static void setInt(Object target, String fieldName, int value) {

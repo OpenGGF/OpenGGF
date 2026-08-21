@@ -693,6 +693,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     if (!t.active)
                         continue;
 
+                    if (t.type == TrackType.PSG
+                            && config.getPsgSfxReleaseMode()
+                            == SmpsSequencerConfig.PsgSfxReleaseMode
+                                    .REST_UNTIL_NEXT_NOTE) {
+                        // Shipped S1/S2 stop the restored PSG music track. The
+                        // next note, not SFX cleanup, makes it audible again.
+                        t.resting = true;
+                        continue;
+                    }
+
                     // Channel released from SFX, restore instrument and volume
                     refreshInstrument(t);
                     if (t.type == TrackType.PSG) {
