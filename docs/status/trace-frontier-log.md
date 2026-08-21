@@ -106208,3 +106208,30 @@ the partner is something else and must not be briefed as scan-related.
 
 The candidate stays on `bugfix/ai-octus-hover-60`, unmerged, and this entry lands without it.
 Do not re-attempt the seed alone: it is ROM-correct, it is cited, and it costs a green trace.
+
+## The second flagged constant, and a smell worth its own round
+
+The other constant flagged alongside the Octus seed is the MGZ drilling boss's air-attack
+wait. `loc_6C646` writes `move.w #$1F,$2E(a0)` and the engine writes `0x20`, with a comment
+justifying the extra frame by the phase at which the folded child positions are published
+relative to the player's touch scan. That justification now needs re-examining rather than
+inheriting: it was written against a model of the scan's frame position, and that model is
+settled — the ROM does test against the previous frame's object positions and the engine
+already reproduces that, confirmed by two independent read-only oracles. So whatever the
+extra frame is compensating for, it is not the scan.
+
+**Not attributed here, and deliberately so.** Establishing it needs the consumption site for
+that particular phase, and this class is not uniform: across its wait sites it uses at least
+three different countdown shapes — `waitTimer--` then a test for `< 0`, a guarded
+`waitTimer > 0` then a test for `== 0`, and `--waitTimer` tested both `< 0` and `>= 0`. Only
+the first matches the ROM's `subq`/`bmi`. A single object mixing three semantics is where a
+wrong one hides, and picking the wrong pairing would make the seed look right or wrong for
+the wrong reason.
+
+That survey is the round: pair each of this boss's waits to the ROM routine that owns it and
+name the shape each should have, before touching any value. The engine-wide population of
+this shape is already sized — six hundred and twenty-one decrement-and-test sites, of which
+three hundred and ninety-eight already use the ROM's form — and an earlier attempt to pair
+them automatically was discarded because the classifier mislabelled the one case that had
+been verified by hand. This boss is small enough to pair by reading, which is what that sweep
+concluded the rest of the population needs.
