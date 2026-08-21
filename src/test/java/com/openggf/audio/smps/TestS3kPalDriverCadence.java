@@ -3,9 +3,13 @@ package com.openggf.audio.smps;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -84,9 +88,51 @@ class TestS3kPalDriverCadence {
                 restored.captureSnapshot().palFullUpdateCounter());
     }
 
+    @Test
+    void repeatedFullUpdateReleasesSfxBeforeRepeatedMusicService() {
+        SmpsDriver driver = new SmpsDriver(50.0);
+        driver.setRegion(SmpsSequencer.Region.PAL);
+        SmpsSequencer music = sequencer(driver, false, 0x81);
+        music.addTrack(envelopeTrack(0));
+        driver.addSequencer(music, false);
+        driver.read(new short[10]);
+
+        SmpsSequencer sfx = sequencer(
+                driver, true, 0xA0, new byte[] { (byte) 0xF2 });
+        SmpsSequencer.Track sfxTrack = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.FM, 2);
+        sfxTrack.duration = 2;
+        sfxTrack.pos = 0;
+        sfx.addTrack(sfxTrack);
+        driver.addSequencer(sfx, true);
+        List<String> services = new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                services.add(event.sequencer().source().id()
+                        + ":" + event.kind());
+            }
+        });
+
+        driver.read(new short[2]);
+
+        assertEquals(List.of(
+                "160:SEQUENCER_TICK",
+                "129:SEQUENCER_TICK",
+                "160:SEQUENCER_TICK",
+                "160:COMPLETION_CLEANUP",
+                "129:SEQUENCER_TICK"), services);
+    }
+
     private static SmpsSequencer sequencer(
             SmpsDriver driver, boolean sfx, int id) {
-        MinimalData data = new MinimalData();
+        return sequencer(driver, sfx, id,
+                new byte[] { (byte) 0x81, 4 });
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver, boolean sfx, int id, byte[] program) {
+        MinimalData data = new MinimalData(program);
         data.setId(id);
         SmpsSequencer sequencer = new SmpsSequencer(
                 data,
@@ -98,6 +144,9 @@ class TestS3kPalDriverCadence {
                         .palServicePolicy(
                                 SmpsSequencerConfig.PalServicePolicy
                                         .FULL_DRIVER_REPEAT_EVERY_SIXTH)
+                        .driverServiceOrder(
+                                SmpsSequencerConfig.DriverServiceOrder
+                                        .SFX_THEN_MUSIC)
                         .build());
         sequencer.setSampleRate(driver.getOutputSampleRate());
         sequencer.setSfxMode(sfx);
@@ -114,8 +163,8 @@ class TestS3kPalDriverCadence {
     }
 
     private static final class MinimalData extends AbstractSmpsData {
-        private MinimalData() {
-            super(new byte[] { (byte) 0x81, 4 }, 0);
+        private MinimalData(byte[] program) {
+            super(program, 0);
             tempo = 0;
         }
 

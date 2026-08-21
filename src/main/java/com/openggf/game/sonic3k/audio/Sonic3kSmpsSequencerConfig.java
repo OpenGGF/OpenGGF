@@ -53,6 +53,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.FULL_DRIVER_REPEAT_EVERY_SIXTH)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.NONE)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)

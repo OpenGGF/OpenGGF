@@ -3026,7 +3026,8 @@ All notable changes to the OpenGGF project are documented in this file.
   the complete music/SFX driver update on the shipped sixth PAL VInt cadence.
   Sonic 1 and Sonic 2 now gate complete SFX requests through their rewindable
   global priority latch and establish channel takeover at admission; S3K
-  remains correctly priority-free.
+  remains correctly priority-free and services SFX before music so completed
+  effects release their channels before the same VInt's music update.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

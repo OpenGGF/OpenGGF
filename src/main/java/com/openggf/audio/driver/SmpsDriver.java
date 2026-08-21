@@ -1890,33 +1890,44 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private void advanceSequencersBatch(int frames) {
-        int size = sequencers.size();
-        SmpsSequencer driverClock = null;
-        for (int i = 0; i < size; i++) {
-            SmpsSequencer candidate = sequencers.get(i);
-            if (!candidate.isSfx()) {
-                driverClock = candidate;
-                break;
+        boolean sfxFirst = usesSfxFirstServiceOrder();
+        int driverFrames = -1;
+        for (int pass = 0; pass < 2; pass++) {
+            boolean serviceSfx = sfxFirst == (pass == 0);
+            int passSize = sequencers.size();
+            for (int i = 0; i < passSize; i++) {
+                SmpsSequencer sequencer = sequencers.get(i);
+                if (sequencer.isSfx() != serviceSfx) {
+                    continue;
+                }
+                int sequencerFrames =
+                        sequencer.advanceBatchAndCountDriverFrames(frames);
+                if (!sequencer.isSfx() || driverFrames < 0) {
+                    driverFrames = sequencerFrames;
+                }
+                if (sequencer.isComplete()) {
+                    pendingRemovals.add(sequencer);
+                }
+            }
+            if (sfxFirst && serviceSfx) {
+                // Locked-on S&K runs zUpdateSFXTracks before zUpdateMusic.
+                // A stopped SFX restores its channel in that first pass, so
+                // the same VInt's music service can use it immediately.
+                removeCompletedSequencers();
             }
         }
-        if (driverClock == null && size != 0) {
-            driverClock = sequencers.getFirst();
-        }
-        int driverFrames = 0;
-        for (int i = 0; i < size; i++) {
-            SmpsSequencer seq = sequencers.get(i);
-            int sequencerFrames =
-                    seq.advanceBatchAndCountDriverFrames(frames);
-            if (seq == driverClock) {
-                driverFrames = sequencerFrames;
-            }
-            if (seq.isComplete()) {
-                pendingRemovals.add(seq);
-            }
-        }
+        driverFrames = Math.max(0, driverFrames);
         for (int i = 0; i < driverFrames; i++) {
             servicePalFullUpdateBoundary();
         }
+    }
+
+    private boolean usesSfxFirstServiceOrder() {
+        for (SmpsSequencer sequencer : sequencers) {
+            return sequencer.getConfig().getDriverServiceOrder()
+                    == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
+        }
+        return false;
     }
 
     private void alignSequencerServicePhase(SmpsSequencer sequencer) {
@@ -1940,8 +1951,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         // reloads 6, repeats zUpdateEverything, then that repeated tail
         // decrements the counter to 5.
         palFullUpdateCounter = 6;
-        for (SmpsSequencer sequencer : sequencers) {
-            sequencer.repeatDriverService();
+        boolean sfxFirst = usesSfxFirstServiceOrder();
+        for (int pass = 0; pass < 2; pass++) {
+            boolean serviceSfx = sfxFirst == (pass == 0);
+            for (SmpsSequencer sequencer : sequencers) {
+                if (sequencer.isSfx() == serviceSfx) {
+                    sequencer.repeatDriverService();
+                    if (sequencer.isComplete()) {
+                        pendingRemovals.add(sequencer);
+                    }
+                }
+            }
+            if (sfxFirst && serviceSfx) {
+                // The repeated zUpdateEverything keeps the same SFX-first
+                // release boundary as the ordinary locked-on S&K VInt.
+                removeCompletedSequencers();
+            }
         }
         palFullUpdateCounter--;
     }

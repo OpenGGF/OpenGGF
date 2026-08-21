@@ -44,6 +44,12 @@ public final class SmpsSequencerConfig {
         NONE
     }
 
+    /** Order of the shared driver's music and SFX track services per VInt. */
+    public enum DriverServiceOrder {
+        MUSIC_THEN_SFX,
+        SFX_THEN_MUSIC
+    }
+
     /** How carrier operators are determined for volume scaling. */
     public enum VolMode {
         /** S1/S2: carrier mask derived from algorithm number via ALGO_OUT_MASK table. */
@@ -123,6 +129,7 @@ public final class SmpsSequencerConfig {
     private final PalServicePolicy palServicePolicy;
     private final TempoPhasePolicy tempoPhasePolicy;
     private final SfxPriorityPolicy sfxPriorityPolicy;
+    private final DriverServiceOrder driverServiceOrder;
     private final Map<Integer, Integer> coordFlagParamOverrides;
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
@@ -156,6 +163,7 @@ public final class SmpsSequencerConfig {
         this.palServicePolicy = b.palServicePolicy;
         this.tempoPhasePolicy = b.tempoPhasePolicy;
         this.sfxPriorityPolicy = b.sfxPriorityPolicy;
+        this.driverServiceOrder = b.driverServiceOrder;
         this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
                 ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
                 : Collections.emptyMap();
@@ -226,6 +234,10 @@ public final class SmpsSequencerConfig {
 
     public SfxPriorityPolicy getSfxPriorityPolicy() {
         return sfxPriorityPolicy;
+    }
+
+    public DriverServiceOrder getDriverServiceOrder() {
+        return driverServiceOrder;
     }
 
     /**
@@ -353,6 +365,8 @@ public final class SmpsSequencerConfig {
         private PalServicePolicy palServicePolicy = PalServicePolicy.LEGACY_TEMPO_SCALE;
         private TempoPhasePolicy tempoPhasePolicy = TempoPhasePolicy.PRESERVE;
         private SfxPriorityPolicy sfxPriorityPolicy = SfxPriorityPolicy.NONE;
+        private DriverServiceOrder driverServiceOrder =
+                DriverServiceOrder.MUSIC_THEN_SFX;
         private Map<Integer, Integer> coordFlagParamOverrides = null;
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
@@ -382,6 +396,7 @@ public final class SmpsSequencerConfig {
         public Builder palServicePolicy(PalServicePolicy val) { palServicePolicy = val; return this; }
         public Builder tempoPhasePolicy(TempoPhasePolicy val) { tempoPhasePolicy = val; return this; }
         public Builder sfxPriorityPolicy(SfxPriorityPolicy val) { sfxPriorityPolicy = val; return this; }
+        public Builder driverServiceOrder(DriverServiceOrder val) { driverServiceOrder = val; return this; }
         public Builder coordFlagParamOverrides(Map<Integer, Integer> val) { coordFlagParamOverrides = val; return this; }
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
@@ -409,6 +424,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(palServicePolicy, "palServicePolicy");
             Objects.requireNonNull(tempoPhasePolicy, "tempoPhasePolicy");
             Objects.requireNonNull(sfxPriorityPolicy, "sfxPriorityPolicy");
+            Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);

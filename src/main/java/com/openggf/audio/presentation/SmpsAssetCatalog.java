@@ -456,6 +456,7 @@ final class SmpsAssetCatalog {
                 .palServicePolicy(source.getPalServicePolicy())
                 .tempoPhasePolicy(source.getTempoPhasePolicy())
                 .sfxPriorityPolicy(source.getSfxPriorityPolicy())
+                .driverServiceOrder(source.getDriverServiceOrder())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
