@@ -3055,7 +3055,9 @@ All notable changes to the OpenGGF project are documented in this file.
   song's saved speed state, matching `zTempoSpeedupSave` instead of inheriting
   the live multiplier into the jingle. Sonic 2 spindash-rev requests now use
   the sound driver's 0–11 semitone ladder and 0x3C-service reset instead of a
-  pitch derived from the gameplay charge counter.
+  pitch derived from the gameplay charge counter. Restoring Sonic 3&K's
+  displaced song now starts the shipped 0x40-step FM-only fade instead of
+  making every channel audible immediately.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

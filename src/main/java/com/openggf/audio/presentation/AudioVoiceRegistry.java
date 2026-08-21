@@ -768,6 +768,18 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         mutateVoicesAtomically(() -> {
             applyMusicControls(restored, speedShoesEnabled, speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
+            if (restored.voice() instanceof SmpsCompositeVoice composite) {
+                SmpsSequencer restoredMusic =
+                        composite.driver().firstMusicSequencer();
+                if (restoredMusic != null
+                        && restoredMusic.getConfig()
+                                .getMusicOverrideRestorePolicy()
+                                == SmpsSequencerConfig
+                                        .MusicOverrideRestorePolicy
+                                        .FM_FADE_IN) {
+                    restoredMusic.triggerFadeIn();
+                }
+            }
             if (current != null) {
                 current.stop();
             }

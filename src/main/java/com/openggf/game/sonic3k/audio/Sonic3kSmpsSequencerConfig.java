@@ -60,6 +60,11 @@ public final class Sonic3kSmpsSequencerConfig {
                 .musicOverrideSpeedPolicy(
                         SmpsSequencerConfig.MusicOverrideSpeedPolicy
                                 .NORMAL_DURING_OVERRIDE)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .FM_FADE_IN)
+                .fadeInChannelPolicy(
+                        SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)

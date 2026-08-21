@@ -469,6 +469,8 @@ final class SmpsAssetCatalog {
                 .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
                 .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
                 .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
+                .musicOverrideRestorePolicy(source.getMusicOverrideRestorePolicy())
+                .fadeInChannelPolicy(source.getFadeInChannelPolicy())
                 .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
                 .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())

@@ -1354,6 +1354,11 @@ class TestAudioVoiceRegistry {
         AudioVoiceRegistry registry = registry(
                 instantiation, new ArrayList<>());
         SmpsDriver base = musicDriver(new SmpsSequencerConfig.Builder()
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .FM_FADE_IN)
+                .fadeInSteps(0x40)
+                .fadeInDelay(2)
                 .build());
         SmpsDriver oneUp = musicDriver(new SmpsSequencerConfig.Builder()
                 .musicOverrideSpeedPolicy(
@@ -1381,6 +1386,9 @@ class TestAudioVoiceRegistry {
 
         assertTrue(base.firstMusicSequencer().isSpeedShoes());
         assertEquals(8, base.firstMusicSequencer().getSpeedMultiplier());
+        assertTrue(base.firstMusicSequencer().captureSnapshot().fade().active());
+        assertEquals(0x40,
+                base.firstMusicSequencer().captureSnapshot().fade().steps());
     }
 
     /**

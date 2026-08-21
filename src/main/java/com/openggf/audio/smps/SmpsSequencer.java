@@ -3095,7 +3095,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.steps = steps;
         fadeState.delayInit = delay;
         fadeState.addFm = 1;
-        fadeState.addPsg = 1;
+        fadeState.addPsg = config.getFadeInChannelPolicy()
+                == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY ? 0 : 1;
         // ROM: FadeInDelay is NOT initialized, so first step happens immediately
         fadeState.delayCounter = 0;
         fadeState.active = true;
@@ -3108,6 +3109,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (track.type == TrackType.DAC) {
                 track.dacMuted = true;
                 stopNote(track);
+                continue;
+            }
+            if (track.type == TrackType.PSG
+                    && config.getFadeInChannelPolicy()
+                            == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY) {
                 continue;
             }
             track.volumeOffset += steps;
