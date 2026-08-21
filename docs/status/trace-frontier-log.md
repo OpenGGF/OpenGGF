@@ -111791,3 +111791,78 @@ that it is not any of the four owners above, and that the obvious path through
 it is a candidate at all.
 
 Nothing was fitted, and the three-entry offset remains ruled out.
+
+## 2026-08-21 — RETRACTION: the survey was not exhaustive, and no transient is needed. Two idioms it structurally could not see
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-animframe-idiom`, pinned to
+`5d96541ce`. `src/` unchanged.
+
+The brief said that if a name survey comes back empty the survey shape is
+probably wrong rather than the writer absent. It came back empty. **The shape
+was wrong**, and two claims from the entry above are retracted.
+
+### Retraction 1 — "no routine writes the player's anim_frame outside Sonic_Animate"
+
+That was a fact about the grep, not about the ROM. The field layout is
+`anim_frame = $1B`, `anim = $1C`, `prev_anim = $1D`,
+`anim_frame_duration = $1E` (s2.constants.asm:32-35) — **adjacent bytes**. So a
+`move.w` to `anim` writes `anim` AND `prev_anim` in one instruction, and
+`Sonic_Animate` resets `anim_frame` whenever those two differ
+(s2.asm:38386-38390). About twenty sites use exactly that idiom, and the
+disassembly states the intent outright at s2.asm:35481:
+
+```
+move.w #(AniIDSonAni_Walk<<8)|(AniIDSonAni_Run<<0),anim(a1) ; use walking animation (and force it to restart)
+```
+
+A survey for `anim_frame(aN)` cannot see any of them. Neither can it see writes
+made through an absolute address rather than a register offset — and there are
+two of those on the player, one of which is a **third `prev_anim` writer**:
+
+```
+26033: move.b #AniIDSonAni_Run,(MainCharacter+prev_anim).w ; force Sonic's animation to restart
+88684: move.b #AniIDSonAni_Roll,(MainCharacter+anim).w
+```
+
+So the previous entry's derived constraint — *"`prev_anim` is written in exactly
+two places"* — is **false**. It is written in three, and the third is on the
+player by absolute address.
+
+### Retraction 2 — "the cause is a transient a frame-granularity fixture cannot show"
+
+Also wrong, and this one would have cost the next round most. No transient is
+required. A single `move.w #(2<<8)|(0<<0),anim(...)` sets `anim` to `$02` and
+`prev_anim` to `$00` at once: the recorded `player_animation_id` column reads
+`02` before and after, exactly as observed, while the unequal pair forces the
+reset. The mechanism is fully visible in one frame. It looked invisible only
+because **`prev_anim` is not a recorded column** — which is a gap in what the
+fixture carries, not a limit of frame granularity.
+
+Nobody should be asked for a sub-frame probe on the strength of the previous
+entry. A `prev_anim` aux column would still settle it outright, but the
+mechanism no longer needs one to be understood.
+
+### The two new candidates, both discarded on execution evidence
+
+- **`Debug_ExitDebugMode` (s2.asm:88684).** Its `AniIDSonAni_Roll` write sits
+  behind `cmpi.b #GameModeID_SpecialStage,(Game_Mode).w / bne`, and the
+  disassembly calls it a "useless leftover ... for S1's special stage". It
+  cannot run in ARZ1 gameplay.
+- **`swap_players` / `process_swap_table` (s2.asm:26014-26033).** This one both
+  forces the restart AND clears `Sonic_LastLoadedDPLC`, which would produce the
+  art-edge behaviour too — a strong fit. It did not run: the routine's whole
+  purpose is to **swap the main character's and sidekick's positions**, and the
+  fixture shows the player's `x`/`y` continuing smoothly across 4212 -> 4213
+  with no discontinuity of any kind.
+
+### Where this leaves it
+
+The right survey shape is now established and the population is much larger than
+the one I reported: byte writes by register offset, byte writes by absolute
+address, and word writes to `anim` that carry `prev_anim` with them. Six
+candidates are eliminated with reasons across the two rounds. The remaining
+word-write sites still need their `a1`/`a0` traced to the player — the two
+checked so far (s2.asm:49065, an `AllocateObjectAfterCurrent` clone, and
+`Obj55_Wave` at 68983) are other objects' own SSTs.
+
+Nothing fitted; the three-entry offset stays ruled out.
