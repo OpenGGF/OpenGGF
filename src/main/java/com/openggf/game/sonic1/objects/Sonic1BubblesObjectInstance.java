@@ -892,7 +892,10 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
             // v_waterpos1 is v_waterpos2 plus `(v_oscillate+2) >> 1`
             // (docs/s1disasm/_inc/LZWaterFeatures.asm:23-28), which is what
             // getGameplayWaterLevelY returns; getWaterLevelY is v_waterpos2
-            // alone and runs up to eight pixels low.
+            // alone and runs up to fifteen pixels low. The oscillator byte
+            // overshoots its $10 middle value before the direction flips, so it
+            // spans 0..31 across the recorded lz1_2 stream and the shifted term
+            // spans 0..15.
             return waterSystem.getGameplayWaterLevelY(zoneId, actId);
         }
         return Integer.MAX_VALUE;

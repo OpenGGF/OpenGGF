@@ -107892,7 +107892,7 @@ frame the swayed height clears the maker, not the frame the unswayed one does.
 
 Neither of the two shapes this project has landed this week. The sway term is
 `(unsigned byte) >> 1`, so it is **never negative**: the engine's water read was always at or
-below the ROM's, by 0 to 8 pixels, tracking a table rather than drifting. Not a fixed constant
+below the ROM's, by 0 to 15 pixels, tracking a table rather than drifting. Not a fixed constant
 (it varies frame to frame over a 126-frame period) and not a sign-flipping accumulation (it
 never changes sign). A missing term, not a wrong number — which is why the fix adds no
 constant.
@@ -108597,3 +108597,116 @@ worth copying: `TestS2OozBadnikParity.octusInitializesFloorAnchorFromNegativeFlo
 asserted the floor anchor at construction, which `Obj4A_Init` puts on the routine-0 dispatch;
 running the dispatch in setup left every assertion, and the mocked `checkFloorDist` argument,
 untouched and green.
+## 2026-08-21 — The CPZ splash reads a line the ROM never computes; and the splash site is unreachable under trace replay
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `893ea686b`.
+
+Takes the second of the two things flagged at the end of the sweep entry above.
+
+### Correction to the two entries above
+
+Both state the S1 sway term spans **0 to 8** pixels. It spans **0 to 15**. The oscillator
+byte overshoots its `$10` middle value before `OscillateNumDo` flips the direction, so over
+the 16,294 recorded `lz1_2` frames `v_oscillate+2` spans **0..31** and `(byte) >> 1` spans
+**0..15** (histogram peaks at both ends: 2593 frames at 0, 2587 at 15). The Obj64 fix is
+unaffected — it adds the term, whatever its range — but the magnitude was understated by
+half in the code comment, the CHANGELOG and the frontier entry, and all three are corrected
+in this commit. The error came from reading the `$10` in `OscillateNumDo`'s settings table as
+a cap; it is the middle value the routine compares against, not a limit on the value.
+
+### Step 1: does the caller run in the affected zone?
+
+Yes. `player_status_byte` bit 6 in the `cpz2` fixture crosses eight times — frames 6132,
+6175, 6201, 7035, 7055, 7122, 7178, 7195 — and a probe on
+`AbstractPlayableSprite.spawnSplash()` fires **12** times during that trace (7 Sonic,
+5 Tails). This is CPZ act 2, `zone=13 act=1`.
+
+### Step 2: which value does the ROM read at that site?
+
+`Water_Level_1` — the swayed one. S2's splash is the fixed dust object's display mode:
+
+```
+Obj08_MdSplash:
+	move.w	(Water_Level_1).w,y_pos(a0)
+```
+(`docs/s2disasm/s2.asm:42758`), matching S1's `Spla_Display`
+(`docs/s1disasm/_incObj/08 LZ Water Splash.asm:29`).
+
+`getGameplayWaterLevelY` is that value in all three games. `getVisualWaterLevelY` is only
+equal to it in S1 (both offsets return the same expression) and S3K (which overrides neither
+offset, and whose ROM has no sway term at all). **S2/CPZ is the one place they differ**,
+because `Sonic2WaterDataProvider.getVisualWaterLevelOffset` returns `oscillation - 8` rather
+than the ROM's `oscillation >> 1`.
+
+Measured at the twelve splash moments, not argued — `base / gameplay / visual`:
+
+```
+1808 1823 1831   1755 1755 1747   1704 1708 1704   1696 1702 1700
+1661 1674 1679   1635 1650 1658   1296 1302 1301   1296 1299 1294
+1296 1297 1291   1296 1308 1312   1296 1300 1296   1296 1310 1316
+```
+
+The two disagree on **all twelve**, from −8 to +8 pixels, and the sign is not fixed: with the
+byte spanning 0..31, `oscillation - 8` runs −8..+23 while `oscillation >> 1` runs 0..15. The
+engine's splash line is not the ROM's, and for byte values above 16 it is not even inside the
+ROM's range. This is a value the ROM never computes, read by object-positioning code.
+
+### Step 3: the change
+
+`DefaultPowerUpSpawner.spawnSplash` now reads `getGameplayWaterLevelY`. Rendering is
+untouched: whether `oscillation - 8` is right for drawing the surface is its javadoc's claim
+and is out of scope here. Blast radius is provably CPZ-only — S1's two offsets are the same
+expression, S3K overrides neither, and S2 returns 0 for ARZ on both.
+
+### But the site is unreachable under trace replay, and that is the bigger finding
+
+The probe that counted the twelve splashes also printed the spawner, and it was `NULL` every
+time. It is not unwired globally — `setPowerUpSpawner` is called exactly twice, once for
+Sonic and once for Tails — but the identity hashes do not match:
+
+| | given a spawner | crossing the water |
+|---|---|---|
+| Sonic | `1840940155` | `183995527` |
+| Tails | `1008612116` | `1728057672` |
+
+The rebind ran against a roster that was then replaced, which is precisely the swap
+`LevelManager.refreshPlayablePowerUpSpawners`'s own javadoc describes — except here the live
+playables end up on the far side of it. Consequences beyond the splash: the same
+`powerUpSpawner == null` guard fronts shield object spawning
+(`AbstractPlayableSprite.java:1326`) and the insta-shield (`:3900`), so under trace replay
+those objects are never created and occupy no slots.
+
+**This makes the fix above unverifiable by fixture and makes the matrix below uninformative
+about it**: the site cannot be reached from any trace test, so "identical failing sets" was
+guaranteed before it was measured. It is landed on the strength of the cited ROM line and the
+measured disagreement, not on a green. Whether the roster swap should be fixed — and what it
+does to slot occupancy across the S2/S3K suite once shields start spawning — is a round of
+its own.
+
+### Second divergence at the same site, not fixed
+
+`Obj08_MdSplash` re-reads `Water_Level_1` into `y_pos` **every frame** the splash animation
+runs, so the ROM's splash tracks the surface. S1's `Sonic1SplashObjectInstance.update` does
+the same and cites it. The S2/S3K path does not: `SpindashDustController.triggerSplash`
+snapshots `splashY` once at the trigger frame. That diverges whenever the surface moves
+during the splash — by sway in CPZ, and by the level rising in CPZ2 and HCZ. Separate defect,
+separate round; it needs a per-frame water read in the dust controller and affects two games.
+
+### Matrix, both arms in the same worktree
+
+The first control was contaminated — the patch was applied while it was still running — so it
+was discarded, the tree reset with `git reset --hard`, and both arms re-run from clean.
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`893ea686b`, clean tree) | 800 tests, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800 tests, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages. As
+noted above, that is the expected result for an unreachable site and should not be read as
+evidence for the change.
+
+### The uncalled accessor
+
+`ZoneFeatureProvider.getWaterLevel` is untouched by this round — the splash never used it,
+and nothing else does either.

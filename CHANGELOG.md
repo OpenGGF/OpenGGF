@@ -94,14 +94,34 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **The CPZ water splash was positioned on a line the ROM never computes.** S2's splash is
+  the fixed dust object's display mode, `Obj08_MdSplash: move.w (Water_Level_1).w,y_pos(a0)`
+  (`docs/s2disasm/s2.asm:42758`), matching S1's `Spla_Display`
+  (`docs/s1disasm/_incObj/08 LZ Water Splash.asm:29`). `DefaultPowerUpSpawner.spawnSplash`
+  read `getVisualWaterLevelY`, which equals `Water_Level_1` in S1 and S3K but not in S2/CPZ,
+  where `Sonic2WaterDataProvider.getVisualWaterLevelOffset` returns `oscillation - 8` instead
+  of the ROM's `oscillation >> 1`. It now reads `getGameplayWaterLevelY`, which is
+  `Water_Level_1` in all three games. Rendering is untouched.
+
+  Measured at the twelve splash triggers of the `cpz2` fixture, the two accessors disagree on
+  all twelve, from -8 to +8 pixels; with the oscillator byte spanning 0..31, `oscillation - 8`
+  runs -8..+23 against the ROM's 0..15. Blast radius is CPZ-only: S1's two offsets are the
+  same expression, S3K overrides neither, and S2 returns 0 for ARZ on both.
+
+  Landed on the cited ROM line and the measured disagreement rather than on a fixture: the
+  call site is unreachable under trace replay, because the live playables never receive a
+  `PowerUpSpawner`. See `docs/status/trace-frontier-log.md` for that finding.
+
 - **The S1 LZ air bubbles read the water height without its surface sway.** Every water
   read in `Obj64` is `move.w (v_waterpos1).w,d0` -- `Bub_ChkWater`
   (`docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:66`), `Bub_BblMaker`'s underwater gate
   (`:154`) and the shared display tail (`:241`) -- and `v_waterpos1` is `v_waterpos2` plus
   `(v_oscillate+2) >> 1` (`docs/s1disasm/_inc/LZWaterFeatures.asm:23-28`).
   `Sonic1BubblesObjectInstance.getWaterLevel()` returned `WaterSystem.getWaterLevelY`, which
-  is `v_waterpos2` alone, so it ran up to eight pixels shallow -- always in the same
-  direction, since the sway term is never negative. It now returns
+  is `v_waterpos2` alone, so it ran up to fifteen pixels shallow -- always in the same
+  direction, since the sway term is never negative. (The oscillator byte overshoots its
+  `$10` middle value before the direction flips: it spans 0..31 over the 16,294 recorded
+  `lz1_2` frames, so the shifted term spans 0..15.) It now returns
   `getGameplayWaterLevelY`, the value that method's own javadoc already documents as
   `v_waterpos1`; the sibling `BreathingBubbleInstance` (Obj0A) had it right.
 

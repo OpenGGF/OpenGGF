@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-nine rules and several worked sections, accumulated across many rounds. The narrative
+One hundred rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -116,6 +116,7 @@ that looks like a real result.
 | 97 | A control arm pinned to `origin/develop` | Two arms built from different trees, reported as reach-proven-equal |
 | 98 | A class measured with `-Dtest=` under a profile that would not select it | A green read as matrix coverage, from an arm that never ran the class |
 | 99 | A `jmp` target read as a one-line helper | A fall-through past an end-of-function banner, hiding the write everyone was hunting |
+| 100 | A directory sized by grepping one idiom's name | Five idioms, one greppable; the correct group understated by half |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2573,3 +2574,28 @@ claim from "not a ROM value", and only the first survives someone finding the si
 transition was retracted by the same discovery: the inherited value was never load-bearing,
 because the routine overwrites it. A round scoped on that claim would have been chasing
 something that does not exist.
+
+## One hundredth rule: a survey by name finds one idiom out of five
+
+Sizing a directory by grepping for a named construct measures how many classes use *that name*,
+and this codebase names the same contract five different ways. A survey of one directory found
+eleven classes modelling a ROM dispatch through a declared constant, an enum case named for the
+ROM routine, a pending-flag guard, a plain boolean latch, and an unnamed branch in an else-if
+chain. Only the first is greppable — which is why a name-based sizing reported five.
+
+That understated the **correct** group by more than half, so the danger runs in both directions:
+quoting such a ratio as a defect count overstates the work, and quoting it as coverage
+understates the code that is already right.
+
+**Classify by reading the mechanism, and say which idioms you looked for.** Almost the entire
+cost of that survey was discovering that four of the five are invisible to a search for the
+fifth.
+
+**And the best statement of a contract is often a comment, not a name.** The clearest expression
+of that dispatch rule in the whole tree is a sentence in one class's comment describing what the
+ROM installs and when it next runs — unreachable by any search for the concept.
+
+**Leave the unread as candidates.** Four classes in that survey have a zero state that is a wait
+or a gate — the shape a folded setup frame leaves behind — and were recorded as unclassified
+rather than as findings, because the engine lacking an init state is not evidence the ROM has
+one until the ROM's own table is read.
