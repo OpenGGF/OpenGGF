@@ -67,9 +67,9 @@ class TestAudioVoiceRegistry {
     void iterationOrderIsMusicThenSmpsThenRawPcmThenSampleSfxByVoiceId() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(raw(sample(5, 0, "raw")));
         registry.apply(new ReplaceMusic(music(20, 0x81, "music")));
         registry.apply(new AddSmpsSfx(source(10, 0xB0)));
-        registry.apply(raw(sample(5, 0, "raw")));
         registry.apply(start(sample(50, 1, "late")));
         registry.apply(start(sample(40, 1, "early")));
 
@@ -223,9 +223,9 @@ class TestAudioVoiceRegistry {
     void sampleOverflowCannotEvictMusicRawPcmOrSmpsComposite() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(raw(sample(202, 0, "raw")));
         registry.apply(new ReplaceMusic(music(200, 0x81, "music")));
         registry.apply(new AddSmpsSfx(source(201, 0xB0)));
-        registry.apply(raw(sample(202, 0, "raw")));
         for (int index = 0; index < 32; index++) {
             registry.apply(start(sample(index, 1, "sample-" + index)));
         }
@@ -254,11 +254,70 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void segaPcmStopsMusicOverridesAndEverySfxOwner() {
+        AudioVoiceRegistry registry = registry(
+                new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(new ReplaceMusic(music(10, 0x81, "music")));
+        registry.apply(new PushMusicOverride(music(11, 0x82, "jingle")));
+        registry.apply(new AddSmpsSfx(source(12, 0xB0)));
+        registry.apply(start(sample(13, 1, "sample")));
+
+        PresentationVoice[] displaced = new PresentationVoice[
+                registry.orderedVoiceCount()];
+        for (int index = 0; index < displaced.length; index++) {
+            displaced[index] = registry.orderedVoiceAt(index);
+        }
+
+        registry.apply(raw(sample(14, 0, "sega-pcm")));
+
+        assertEquals(List.of(14L), orderedIds(registry));
+        for (PresentationVoice voice : displaced) {
+            assertTrue(voice.isComplete(),
+                    "SEGA PCM StopAll must stop every displaced voice");
+        }
+
+        registry.apply(new StopRawPcm());
+
+        assertEquals(0, registry.orderedVoiceCount(),
+                "StopSEGA does not restore the displaced song or SFX");
+    }
+
+    @Test
+    void failedSegaPcmStopAllRetainsEveryOwnerAndRetriesAtomically() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        FailingMutationDriver driver = populatedFailingMutationDriver();
+        instantiation.enqueueMusicDriver(driver);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, new SmpsDriver()))));
+        registry.apply(start(longSample(2, 1, "sample")));
+        Object before = JSON.valueToTree(registry.snapshot());
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(raw(longSample(3, 0, "sega-pcm")),
+                () -> true, registry::apply);
+        driver.failNextStopAll();
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(before, JSON.valueToTree(registry.snapshot()));
+        assertEquals(List.of(1L, 2L), orderedIds(registry));
+        assertEquals(1, queue.size());
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(List.of(3L), orderedIds(registry));
+        assertEquals(0, queue.size());
+    }
+
+    @Test
     void stopAllSfxPreservesMusic() {
         AudioVoiceRegistry registry = registry(new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(raw(sample(51, 0, "raw")));
         MusicVoiceEntry music = music(50, 0x81, "music");
         registry.apply(new ReplaceMusic(music));
-        registry.apply(raw(sample(51, 0, "raw")));
         registry.apply(start(sample(52, 1, "sample")));
         registry.apply(new AddSmpsSfx(source(53, 0xB0)));
 
@@ -374,8 +433,8 @@ class TestAudioVoiceRegistry {
     @Test
     void snapshotRestorePreservesStructureAndDurableCursors() {
         AudioVoiceRegistry original = registry(new RecordingInstantiation(), new ArrayList<>());
-        original.apply(new ReplaceMusic(music(1, 0x81, "music")));
         original.apply(raw(longSample(2, 2, "raw")));
+        original.apply(new ReplaceMusic(music(1, 0x81, "music")));
         original.apply(start(longSample(3, 3, "sample")));
         mixFrames(original, 3);
         AudioPresentationSnapshot snapshot = original.snapshot();
@@ -395,8 +454,8 @@ class TestAudioVoiceRegistry {
     void failedSnapshotDependencyResolutionDoesNotDestroyLiveRegistry() {
         AudioVoiceRegistry registry =
                 registry(new RecordingInstantiation(), new ArrayList<>());
-        registry.apply(new ReplaceMusic(music(1, 0x81, "music")));
         registry.apply(raw(longSample(2, 2, "raw")));
+        registry.apply(new ReplaceMusic(music(1, 0x81, "music")));
         mixFrames(registry, 3);
         AudioPresentationSnapshot before = registry.snapshot();
         SmpsCoordFlagRuntimeState.Snapshot beforeCoord =
@@ -478,12 +537,12 @@ class TestAudioVoiceRegistry {
     void restoreIntoEmptyRegistryRecreatesEveryDedicatedAndSampleSlot() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
+        original.apply(raw(longSample(13, 0, "raw")));
         SmpsCompositeVoice music = composite(10, 0x81, new SmpsDriver());
         original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                 0x81, AudioSourceDescriptor.baseMusic(0x81), music)));
         original.apply(new PushMusicOverride(music(11, 0x82, "override")));
         original.apply(new AddSmpsSfx(source(12, 0xB0)));
-        original.apply(raw(longSample(13, 0, "raw")));
         original.apply(start(longSample(14, 1, "sample")));
         AudioPresentationSnapshot snapshot = original.snapshot();
         FixtureResolver resolver = new FixtureResolver();
@@ -1785,9 +1844,9 @@ class TestAudioVoiceRegistry {
     private static AudioVoiceRegistry fullRegistry(
             RecordingInstantiation instantiation) {
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(raw(longSample(102, 0, "raw")));
         registry.apply(new ReplaceMusic(music(100, 0x81, "music")));
         registry.apply(new AddSmpsSfx(source(101, 0xB0)));
-        registry.apply(raw(longSample(102, 0, "raw")));
         for (int index = 0; index < 32; index++) {
             registry.apply(start(longSample(index, 1, "sample-" + index)));
         }

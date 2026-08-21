@@ -130,8 +130,9 @@ repeated 1-up, and restore; short external references for transitions.
 Status: fade-out channel selection, speed-state clearing, initial SFX/DAC/PSG
 halts, terminal count, and service-scoped all-audio cleanup now match the
 shipped paths. S3K 1-up now runs at normal speed and restores the displaced
-song's saved speed state. Driver-level pause, S3K's native restore fade, and
-the remaining shipped 1-up restoration bugs remain in this phase.
+song's saved speed state, then applies the native FM-only restore fade.
+Driver-level pause and the remaining shipped S1/S2 1-up restoration bugs
+remain in this phase.
 
 ### Phase 4 — SMPS bytecode and envelope quirks
 
@@ -163,6 +164,11 @@ The wider envelope, note-fill, tie, and coordination-flag audit remains.
 
 Acceptance: deterministic PCM/register fixtures and short external audio
 goldens at NTSC and PAL rates.
+
+Status: S2 DAC cadence and the authentic PSG/DAC defaults are complete. S3K's
+SEGA PCM command now atomically stops all SMPS/sample owners before exclusive
+PCM playback and StopSEGA restores none of them. Direct YM-DAC rendering and
+region-correct chip clocks remain.
 
 ### Phase 6 — ROM loader and content hardening
 
@@ -200,6 +206,7 @@ Cleanup is not allowed to lead the roadmap or broaden a parity change.
 
 ## Current slice
 
-Continue Phase 3 with the driver-level pause protocol and 1-up lifecycle. Keep
-the implementation at the sequencer/driver/config boundary and verify ordered
-chip writes; do not reopen native observer schemas or complete-run evidence.
+Continue Phase 3 with the driver-level pause protocol and remaining shipped
+1-up restoration behavior, then finish Phase 5's regional chip clocks and
+direct YM-DAC presentation. Keep verification at the sequencer/driver/chip
+boundary; do not reopen native observer schemas or complete-run evidence.

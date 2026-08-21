@@ -1,5 +1,10 @@
 # Changelog
 
+- **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
+  the boot chant atomically stops music, overrides, and every SFX owner before
+  the PCM voice begins, and StopSEGA leaves the driver silent instead of
+  restoring voices the retail `fix_sndbugs=0` path discarded.
+
 - **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
 
 - **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.

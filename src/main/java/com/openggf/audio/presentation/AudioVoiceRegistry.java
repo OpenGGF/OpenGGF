@@ -1233,9 +1233,13 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
-            if (rawPcm != null && rawPcm != voice) {
-                stopVoicesAtomically(rawPcm);
-            }
+            /*
+             * The shipped S&K fix_sndbugs=0 zPlaySEGAPCM path calls
+             * zStopAll before disabling interrupts and writing the DAC
+             * directly. It does not mix this sample with suspended SMPS
+             * owners, and StopSEGA does not restore them afterwards.
+             */
+            stopAndRemoveAllVoices();
             rawPcm = voice;
             noteVoiceId(voice);
             published = true;
@@ -1594,6 +1598,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideStack[index] = null;
         }
         overrideCount = 0;
+        pendingRestore = false;
         standaloneSmps = null;
         rawPcm = null;
         for (int index = 0; index < sampleSfxCount; index++) {

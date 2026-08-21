@@ -167,6 +167,10 @@ class TestAudioManagerPresentationModes {
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
         AudioVoiceRegistry registry = registry(audio);
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                SampleBackedVoice.oneShot(4, 0,
+                        registeredPcm(audio, "raw"),
+                        48_000, 1.0f, 1.0f)));
         registry.apply(new AudioPresentationCommand.ReplaceMusic(
                 music(audio, 1, 0x81, "base")));
         registry.apply(new AudioPresentationCommand.PushMusicOverride(
@@ -174,10 +178,6 @@ class TestAudioManagerPresentationModes {
         registry.apply(AudioPresentationCommand.StartSampleSfx.fromVoice(
                 SampleBackedVoice.oneShot(3, 1,
                         registeredPcm(audio, "sample"),
-                        48_000, 1.0f, 1.0f)));
-        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                SampleBackedVoice.oneShot(4, 0,
-                        registeredPcm(audio, "raw"),
                         48_000, 1.0f, 1.0f)));
         audio.beginReverseAudioPresentation();
 
@@ -458,12 +458,6 @@ class TestAudioManagerPresentationModes {
                                 registeredPcm(audio, "queued-sample"),
                                 48_000, 1.0f, 1.0f)),
                 () -> true, registry::apply);
-        commands.submit(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                        SampleBackedVoice.oneShot(6, 0,
-                                registeredPcm(audio, "queued-raw"),
-                                48_000, 1.0f, 1.0f)),
-                () -> true, registry::apply);
-
         audio.afterRewindRestore(7, policy);
 
         assertEquals(0, commands.size(),
@@ -478,6 +472,10 @@ class TestAudioManagerPresentationModes {
     private static void populateReleaseState(AudioManager audio)
             throws Exception {
         AudioVoiceRegistry registry = registry(audio);
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                SampleBackedVoice.oneShot(4, 0,
+                        registeredPcm(audio, "raw"),
+                        48_000, 1.0f, 1.0f)));
         registry.apply(new AudioPresentationCommand.ReplaceMusic(
                 music(audio, 1, 0x81, "base")));
         registry.apply(new AudioPresentationCommand.PushMusicOverride(
@@ -485,10 +483,6 @@ class TestAudioManagerPresentationModes {
         registry.apply(AudioPresentationCommand.StartSampleSfx.fromVoice(
                 SampleBackedVoice.oneShot(3, 1,
                         registeredPcm(audio, "sample"),
-                        48_000, 1.0f, 1.0f)));
-        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                SampleBackedVoice.oneShot(4, 0,
-                        registeredPcm(audio, "raw"),
                         48_000, 1.0f, 1.0f)));
         audio.setRewindHistoryArmed(true);
         audio.presentFrame(PresentationMode.FORWARD);
