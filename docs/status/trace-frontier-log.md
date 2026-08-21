@@ -108165,3 +108165,86 @@ construction.
   read a value the ROM never computes. `DefaultPowerUpSpawner:125` is the one shared,
   non-rendering caller of that accessor and would hit this in CPZ. Establishing whether it
   runs there, and what the ROM does at that site, is a round of its own.
+
+## 2026-08-21 — BadnikProjectile is not a deficit at all, and the occupancy bucket end to end
+
+Round `badnik-projectile-r12`, branch `bugfix/ai-occupancy-arc` off `55a313ff4`. Measurement
+only, no code. The occupancy work has reached its natural pause: the structural seam is
+exhausted and what remains is behavioural.
+
+*(Housekeeping: the previous worktree was deleted by a concurrent session mid-round. All
+commits and branches survived — they live in the shared `.git` — and `55a313ff4` carries the
+staircase fix. Nothing was lost, but it is why this round runs from a new worktree.)*
+
+### BadnikProjectile — measured before fixing, and it fails twice over
+
+**It is not a folded class.** `AquisBadnikInstance`, `CoconutsBadnikInstance` and
+`NebulaBadnikInstance` all do `new BadnikProjectileInstance(...)` — real child instances that
+occupy slots themselves, so no reservation is wanted. My sweep's fold filter missed it because
+the regex looked for names containing `Child|Segment|Body|Head|Rocket|Beam|Shard|...` and
+`BadnikProjectileInstance` matches none of them. **A false positive in my own second filter**,
+after I had just reported the first filter's false-positive rate.
+
+**And it is not a deficit.** Measured both directions across every S2 fixture:
+
+| `0x98` | entries | frames |
+|---|---|---|
+| engine **short** | 340 | 305 |
+| engine **over** | **373** | 124 |
+
+The over-count is *larger* than the shortfall, and my per-type deficit metric counted only the
+first. Calling it "a 340 deficit" was wrong in kind: it is a two-way timing divergence, and by
+total the engine holds *more* projectiles than the ROM, not fewer.
+
+### The metric hid this everywhere — so here is the axis that replaces it
+
+Re-measured both directions, the head splits cleanly, and **the split cuts across both of my
+earlier family claims**:
+
+| shape | S1 | S2 |
+|---|---|---|
+| **one-way** (engine never makes them) | `CANNONBALL` 581/0, `RING` 566/6, `CHAINED_STOMPER` 314/0, `MZ_BOSS` 279/0 | `BossExplosion` **1725/17**, `CPZStaircase` 966/0 *(fixed)*, `RexonHead` 503/0 |
+| **two-way** (made at the wrong times) | `EXPLOSION` 282/**275** | `Projectile` 340/**373**, `EggPrison` 301/96, `LeavesGenerator` 262/115 |
+
+So "burst-spawned effects" does **not** hold together as a family: `BossExplosion` is one-way
+and genuinely absent, while `EXPLOSION` and `Projectile` are two-way and merely mistimed.
+**One-way versus two-way is the organising axis**, it is cheap to compute, and it says which
+question to ask — "why are these never made?" against "why are these made at the wrong time?".
+
+### CANNONBALL — the rate-versus-lifetime question, partly answered
+
+One-way (581 short, 0 over), so it is a genuine absence. The count pairs on divergent frames:
+
+`rom 6 eng 4`, `rom 5 eng 3`, `rom 8 eng 6`, `rom 3 eng 1`, `rom 7 eng 5`, `rom 4 eng 2` — a
+**dominant offset of 2 across totals from 3 to 8**, plus a tail where the engine has none at all
+(`rom 6 eng 0`, `rom 3 eng 0`).
+
+A constant offset that does not scale with the total argues **against a pure rate error**, which
+would scale. It is consistent with a fixed shortfall — a per-Ball-Hog limit, or two hogs each
+failing to hold one. That is as far as counts go: separating it properly needs the ROM's
+deletion condition read against the engine's, which is the next round's first step and was not
+done here.
+
+### The occupancy bucket, end to end
+
+| stage | claim | measured |
+|---|---|---|
+| start | "S3K object-slot occupancy diverges from ROM everywhere" | 11,964 presence-divergent frames, 88 of 94 fixtures |
+| corrected | **not S3K-specific** — S1 45/48 fixtures, S2 33/36 | entry retitled and rescoped |
+| head v1 | `RING` first, "dynamically spawned transients" | built on **per-slot presence**, which counts relocation as absence |
+| head v2 | `BRIDGE` first, "composite objects under-allocated" | built on a parse that **dropped `RESERVED` slots** |
+| head v3 | `CANNONBALL`/`BossExplosion`, composite half retracted | `BRIDGE` 1,969 → **19** once reservations were credited |
+| rehabilitated | composite claim real; `BRIDGE` was the member already correct | `CPZStaircase` 966, per-frame shape exactly {3, 6} |
+| **landed** | reserve the staircase's three child slots | 966 → 12 raw, **0 residual**; CPZ2 divergent frames 249 → 81 |
+| now | one-way vs two-way replaces both family claims | `Projectile` is 340 short / **373 over** |
+
+**Six measurement-shape errors, all mine, all self-caught, and four of the first five leaned
+toward more and smaller defects than the truth.** Frame-gap grouping under a 14-frame sampler;
+durations computed in frames; per-slot presence counting relocation as absence; annotation
+tokens parsed as slots; a value-domain regex dropping `RESERVED`; and now a one-way metric
+hiding a larger over-count. Two commissioned targets — `RING` and `BRIDGE` — turned out to be
+correct code, and both were caught before a fix was written.
+
+**That is the argument for measuring before commissioning, and it is the arc's real content:**
+one structural fix landed, two false targets retired, one game-scope correction, and a metric
+that had to be rebuilt three times before it described the thing it was named after.

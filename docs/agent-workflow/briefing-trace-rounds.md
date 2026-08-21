@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-three rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-four rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -110,6 +110,7 @@ that looks like a real result.
 | 91 | Two threads merged because their symptoms match | An inherited framing that already cost the first thread its rounds |
 | 92 | A greppable tell quoted as a defect count | Fifteen candidates, one confirmed, four matching exactly with zero divergence |
 | 93 | A correction that changes no value anywhere | An unverifiable edit to verified code, indistinguishable from a wrong one |
+| 94 | A one-directional deficit metric | An over-count larger than the shortfall, invisible; the wrong defect named |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2435,3 +2436,26 @@ deliberately reading the base value for reasons that survive reading (a checkpoi
 height must not bake in a frame's sway); the second game's only such object is in the excluded
 zone; and the third game has no sway term at all, so its reads are exact by construction. One
 defect in three games, and the population is now known rather than suspected.
+
+## Ninety-fourth rule: measure both directions, or the metric names the wrong defect
+
+A one-directional metric answers a question you did not ask. One investigation ranked objects
+by how many the recording held and the engine did not — and when a candidate was finally
+measured both ways, it was **340 short on 305 frames and 373 over on 124**. The over-count was
+larger than the shortfall, so "a 340 deficit" was wrong in kind, not degree: the engine holds
+*more* of that object than the ROM, and what looked like an allocation shortfall is a two-way
+timing divergence.
+
+Measured both ways, the population split cleanly and **replaced two earlier family claims at
+once**: some objects are never made, others are made at the wrong time, and the two need
+different questions. The families that had been proposed — composite versus burst-spawned —
+cut across that line, with one burst effect genuinely absent and another merely mistimed.
+
+**So report both directions from the first measurement**, and treat a one-way total as a lower
+bound on nothing in particular until you have the other.
+
+**And re-check your own filters after they have been wrong once.** The same round's second
+filter produced a false positive — a class excluded from "creates real children" because its
+name matched none of the expected child-name patterns — one round after the first filter's
+false-positive rate had been reported. A filter that has failed once is not more trustworthy
+for having been noticed.
