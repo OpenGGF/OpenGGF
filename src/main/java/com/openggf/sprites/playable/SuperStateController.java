@@ -340,7 +340,15 @@ public abstract class SuperStateController {
             state = SuperState.SUPER;
             swapToSuperAnimProfile();
             onSuperActivated();
-            // ROM: clr.b obj_control(a0) - unfreeze after transformation complete
+            // The freeze is released HERE and nowhere else: one mechanism for
+            // one event. What ends the transformation is whatever
+            // updateTransformationAnimation reports, and for S2 that is the
+            // Super palette fade reaching Palette_frame $30, which is the pass
+            // on which the ROM executes
+            //   move.b #0,(MainCharacter+obj_control).w
+            // (docs/s2disasm/s2.asm:3139). There is no `clr.b obj_control(a0)`
+            // in s2.asm to cite -- an earlier comment here cited exactly that,
+            // and the instruction does not exist.
             ObjectControlState.none().applyTo(player);
             player.setForcedAnimationId(-1);
         }
