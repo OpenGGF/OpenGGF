@@ -696,10 +696,13 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
                 mapping.put(noteId, new DacData.DacEntry(sampleId, rate));
             }
 
-            return new DacData(samples, mapping, 288); // S2 baseCycles = 288
+            // Shipped fixBugs=0 zWriteToDAC is explicitly counted as 295 Z80
+            // cycles per two decoded samples. The fixed driver does not alter
+            // this playback-loop budget.
+            return new DacData(samples, mapping, 295);
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load DAC Data", e);
-            return new DacData(new HashMap<>(), new HashMap<>(), 288);
+            return new DacData(new HashMap<>(), new HashMap<>(), 295);
         }
     }
 }

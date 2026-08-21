@@ -3029,7 +3029,8 @@ All notable changes to the OpenGGF project are documented in this file.
   remains correctly priority-free and services SFX before music so completed
   effects release their channels before the same VInt's music update.
   Sonic 2 also retains the shipped bugged `$90` spindash-release FM5
-  transpose instead of silently substituting the bug-fixed `$10` value.
+  transpose instead of silently substituting the bug-fixed `$10` value, and
+  schedules DPCM at the driver's documented 295-cycle two-sample cadence.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

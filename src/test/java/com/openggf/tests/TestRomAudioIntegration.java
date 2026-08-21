@@ -62,6 +62,12 @@ public class TestRomAudioIntegration {
     }
 
     @Test
+    public void sonic2DacUsesTheShippedTwoSampleCycleBudget() {
+        assertEquals(295, loader.loadDacData().baseCycles(),
+                "zWriteToDAC costs 295 Z80 cycles per two decoded samples");
+    }
+
+    @Test
     public void testChemicalPlantNoiseChannelEmitsVolume() {
         AbstractSmpsData data = loader.loadMusic(0x8C); // Chemical Plant
         assertNotNull(data, "Chemical Plant should load");
@@ -282,4 +288,3 @@ public class TestRomAudioIntegration {
         assertEquals(0x87, game.getMusicId(19), "Death Egg Music ID");
     }
 }
-
