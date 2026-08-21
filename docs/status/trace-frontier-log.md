@@ -107278,3 +107278,77 @@ samples, cannot be settled from these fixtures: `slot_dump` frames are ~14 apart
 comparison by one dump compares two genuinely different moments (tested: 0 of 14 divergent frames
 match at ±1 dump). Anyone taking a head item should establish that first for their object — it is
 the same phase question that cost this session three rounds elsewhere.
+## 2026-08-21 — Where segment 8's capsule pixel enters: an intra-frame ordering, not a creation frame
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `277b22f44`
+(`be9e7cdfe` + the previous entry). Command as in the entry above. Row convention: 0-based
+indices into `aiz_5`'s `physics.csv`. **Nothing was landed but this entry.** Three throwaway
+probes, each reverted; the baseline was 2288 / frame 6000 with each of them in place.
+
+**A correction to the previous entry, owed to a bad alignment.** That entry aligned the
+engine's capsule rows to trace rows *by the capsule's own x*, which is circular. Re-aligned
+independently, by `vIntRunCount` against the comparator's own `vbc` calibration:
+
+- **The capsule's `x` matches the recording exactly on every compared row — 49 of 49 —
+  and matches at no other shift.**
+- The `y` delta is `{0:38, +1:11}` measured after the descent step, and `{-1:3, 0:29, +1:16}`
+  measured after the swing step. It does not hold a constant sign, and the previously
+  reported "flips sign" was reading two different intra-frame sample points as one series.
+
+**`x` cannot settle the creation frame here, and that is a property of this scene.** During
+the capsule's initial phase the camera advances +1/frame and `$3A(a0)` is `+1`
+(`loc_86592`, `sonic3k.asm:181534`), so capsule and camera move in lockstep and a one-frame
+shift in creation is invisible in `x`. Confirmed directly: with one idle frame inserted before
+the motion, `x` still matched 63 of 63. Any future round that reads this object's `x` as a
+clock will get a false confirmation.
+
+**Ruled out as the origin, each by measurement:**
+
+1. **The swing constants.** `Swing_Setup1` (`sonic3k.asm:136834`) sets `$3E`=`$C0` (max),
+   `y_vel`=`$C0`, `$40`=`$10` (accel), `bclr #0,$38`. The engine's `SWING_MAX_SPEED` `0xC0`,
+   `SWING_ACCELERATION` `0x10`, initial `yVelocity` `0xC0`, `swingDescending` false match
+   one-for-one, and `Swing_UpAndDown`'s exclusive `bgt`/`blt` bounds (`sonic3k.asm:177856-177881`)
+   match the engine's `<=`/`>=` flip tests including the add-back on the flip frame.
+2. **An uninitialised `y_sub`.** The ROM's `move.w d0,y_pos(a0)` writes only the word, so the
+   sub-pixel could carry over from the recycled slot. Searched the full 16-bit range at `0x100`
+   granularity for a constant sub-pixel offset reproducing all 49 recorded `y` values:
+   **zero fits.**
+3. **A whole-frame lead in the `y` accumulator.** Shifting the engine's `y` series by +1 makes
+   the match *worse*, 38 → 34.
+
+**Where it does enter: the parent/child intra-frame ordering.** At the deciding row 5992 the
+engine's capsule `y` is `0x0169` after the descent step — exactly the recorded value — and
+`0x016A` after the swing step. The button scan reads the **post-swing** value, so it sees
+`0x016A`, and that is the pixel from the previous entry. In the ROM the button is a separate
+child slot: `loc_86770` runs `Refresh_ChildPosition` at the child's own dispatch
+(`sonic3k.asm:181745`), while the parent's `Swing_UpAndDown`/`MoveSprite2` closes the parent's
+routine (`loc_86698`, `sonic3k.asm:181686-181687`). The engine folds both into one object and
+already guards that boundary for the parent's **horizontal** step — `solidBodyX` and
+`defersButtonEligibilityCreatedByParentMotion()` — but **there is no equivalent for the
+vertical swing step**, which is the axis that decides this row.
+
+This does not fully explain the motion: neither sample point reproduces the recording across
+the window (11 of 49 mismatched pre-swing, 19 of 48 post-swing), so a residual sub-pixel
+swing-phase difference remains on top of the ordering. The ordering explains the deciding
+pixel; it does not explain every pixel.
+
+**The creation frame is probably not the defect, so do not route this to the routine-zero
+lane yet.** Inserting one idle frame before the capsule's motion moves the frontier
+**6000 → 6110** and drops segment 8 from **2288 to 2215** errors — but it makes the capsule's
+`y` *worse*, 11 mismatched rows becoming 21, and introduces a `-1` side the baseline never had.
+A genuinely missing setup frame would have improved the motion, not degraded it; this moves the
+frontier only by flipping the knife-edge predicate. **It is not a fix and must not be landed.**
+One ROM path is still unexamined: `loc_8657A` advances to routine 8 only when
+`btst #1,render_flags(a0)` is set, and otherwise creates `ChildObjDat_86B5C` and returns with
+`routine` still 0 (`sonic3k.asm:181527-181532`) — a genuine second routine-0 entry whose
+condition nobody has checked against this scene.
+
+**The exclusive bound is involved, and this is its third appearance on this object.** The ROM's
+`dy` at row 5992 is exactly `28` = `$1C`, against `Check_PlayerInRange`'s exclusive
+`< $1C` (`word_867C2`, `sonic3k.asm:181776`). One pixel of `y` therefore buys fourteen rows.
+But the pixel is real — an ordering error in what the child reads — not merely an artifact of
+where the bound sits. Both halves are true, and fixing the bound would be wrong.
+
+**Untouched by this round, as briefed:** the descent constants, the press predicate, the
+trigger box, the art selection, the sidekick follow-delay family, the post-defeat wait. The
+figures 63, 66 and 184 were not used as inputs.

@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-four rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -77,6 +77,7 @@ that looks like a real result.
 | 82 | A stream whose every byte is comparable | Blocked anyway — rows not attributable to an engine object |
 | 83 | A stream promoted from untyped to typed | Untyped-keyed formatters and probes stop firing, silently |
 | 84 | A duration in frames from an on-change stream | The sampler's period reported as the defect's duration |
+| 85 | An object aligned to the recording by its own coordinate | Perfect agreement that survives inserting an idle frame |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2192,3 +2193,25 @@ phenomenon's.
 a value at a different point in the frame than the recorder samples it: shifting by one sample
 compares two moments a sampling-interval apart, which tests nothing. Anyone acting on such a
 divergence must establish phase for their own object first.
+
+## Eighty-fifth rule: an object that tracks the camera cannot be clocked by its own position
+
+Aligning an engine object's rows to recorded rows by that object's own coordinate is circular,
+and it fails hardest exactly where it looks most convincing.
+
+One round aligned a descending object by its x, found the x matching the recording on every
+row, and read that as confirmation the object's timing was right. It is not: during that phase
+the camera advances one pixel per frame and the object's own step is one pixel per frame, so
+the two move in lockstep and **a one-frame creation shift is invisible in x**. The round
+confirmed it by inserting an idle frame — the x still matched on every row. Any later round
+reading that coordinate as a clock gets a false green.
+
+**Align on something the object does not control.** A frame counter the recording carries, or
+a quantity driven by an independent system. Then re-test whatever you concluded: the same round
+re-aligned on the run counter and found its earlier "the delta flips sign" was two intra-frame
+sample points read as one series — the delta oscillates rather than flipping, which is a
+different defect with a different owner.
+
+**Corollary.** When a candidate fix moves a knife-edge predicate the right way while making the
+underlying quantity *worse*, it is not the fix. A genuinely missing setup frame improves the
+motion; only a coincidence improves the count.
