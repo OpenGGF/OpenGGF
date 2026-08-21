@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-four rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -67,6 +67,7 @@ that looks like a real result.
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
 | 73 | A tree reset or rebase with a live `target/` | Stale reports that read as current — right names, plausible numbers, another commit |
 | 74 | A timing fix validated on one recording | ROM-derived, cited, improves its fixture, and one frame wrong |
+| 75 | "Nothing touches your path" vouched for comparability | Totals shift because the shared reporting surface moved |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -1963,3 +1964,20 @@ When the two disagree, do not average them and do not pick the one that improves
 differs between the recordings other than time — occupancy, ordering, state the object
 lands in — because a disagreement between two recordings of the same behaviour is evidence
 that the axis you are adjusting is the wrong axis.
+
+## Seventy-fifth rule: "nothing touches your path" is not "your numbers are comparable"
+
+Two different assurances, and only one of them is usually true. A change to a subsystem you
+are not measuring can still move every number you quote, because the *reporting* surface —
+the comparator, the report writer, the fields a segment publishes — is shared by everything.
+
+One round was told nothing in a window touched its path, checked, and found that true: six
+source files had changed and none was in its subsystem. Three of them were the comparator's
+reporting surface. So absolute totals measured before that window might not reproduce on the
+newer base for reasons unrelated to anyone's fix.
+
+**Practically.** When you vouch for someone's base, say which claim you are making. When you
+inherit numbers measured on an older base, re-measure the control rather than carrying the
+figure — a control is cheap and a mis-attributed regression costs a round. And when the
+reporting surface itself has changed, say so in the report, because the next person will
+difference your number against one taken on the other side of it.
