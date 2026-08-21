@@ -214,6 +214,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S1 LZ bubble water level (merged 2026-08-21):** every water test in the LZ air
+  bubbles object reads the swayed water height, and the engine was reading the base
+  height without the surface oscillation -- up to eight pixels low on a 126-frame
+  cycle. Reading the value the ROM reads takes the S1 chain's `lz1_2` segment from
+  7,176 comparator errors to zero and the chain from nineteen failing axes to
+  fourteen.
+
 - **S1 Labyrinth block solid latch (merged 2026-08-21):** the moving LZ blocks keyed
   their solid-state latch on a spawn record that is recreated every frame they
   travel, so the ROM's clear-pushing tail was unreachable and the player kept

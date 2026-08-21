@@ -107807,3 +107807,140 @@ size to the badnik one, no equivalent survey exists for it, and one boss has alr
 to model its routine machine correctly while its defeat still fires a dispatch early. Whoever
 takes it should classify by reading the routine machine, as the badnik survey did, rather than
 by grepping for a name.
+## 2026-08-21 — S1 segment 24 (`lz1_2`) GREEN: Obj64 was reading the water height without its surface sway
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `3fbf0128c`. Command:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=<repo>/s1.gen \
+    -Dsonic2.rom.path=<repo>/s2.gen -Ds3k.rom.path=<repo>/s3k.gen test
+```
+
+Closes the entry above (*"an LZ water-surface phase error"*). **It is not a phase error, and
+the oscillation clock is not involved** — that entry's closing inference is retracted below.
+
+### Re-measured baseline
+
+On `3fbf0128c`, unchanged from `be9e7cdfe`: segment 24 `errorCount` 7176 (physics 6742,
+animation 434), `laggedFrames` 435, `bootstrapErrorCount` 0, first error frame 14745; chain
+19 axes.
+
+### The full error set, not the headline field
+
+The run-chain harness writes no `errors` array — `AbstractRunChainTest` publishes only
+`recentMismatches`, a five-deep tail (`:4686-4697`) — so every error was dumped through a
+temporary `LiveTraceComparator` hook (reverted, never committed) and split per segment:
+
+| frame band | errors |
+|---|---:|
+| 0 – 14,499 | **0** |
+| 14,500 – 14,999 | 2768 |
+| 15,000 – 15,499 | 2524 |
+| 15,500 – 15,999 | 1425 |
+| 16,000 – 16,293 | 459 |
+
+The first error in the segment, of any group, is at frame **14745**, and its four fields are
+`x_speed`, `y_speed`, `g_speed`, `player_animation_id`. Nothing diverges in the preceding
+14,744 frames. So 14745 is not downstream of anything: it is the origin, and all 7,176 are
+its tail. Not a self-healing blip.
+
+### Retraction: the sway matches, exactly
+
+The previous entry inferred a ~10-frame lead in the LZ surface. `v_oscillate` is recorded
+per frame and was never compared by anything, so it was compared here directly against
+`OscillationManager.snapshotRomFormatBytes()`:
+
+| frame | engine `v_oscillate+2` word | ROM | sway `(hi byte)>>1` |
+|---|---|---|---|
+| 14216 | `1454FF96` | `1454FF96` | 10 = 10 |
+| 14222 | `11AEFF8A` | `11AEFF8A` | 8 = 8 |
+| 14589 | `09B00060` | `09B00060` | 4 = 4 |
+| 14678 | `1EFEFFEA` | `1EFEFFEA` | 15 = 15 |
+| 14745 | `09B0FF9E` | `09B0FF9E` | 4 = 4 |
+
+Across all 15,859 comparable frames the water oscillator's byte differs on **30**, none of
+them after frame 12,553 — the nearest is 2,192 frames before the divergence. `OscillateNumDo`'s phase is right. This is **not**
+a member of the V-int-counter group, and nothing here needed that lane's answer.
+
+### What it actually is
+
+`LZWaterFeatures` writes `v_waterpos1 = v_waterpos2 + ((v_oscillate+2) >> 1)`
+(`docs/s1disasm/_inc/LZWaterFeatures.asm:23-28`). Obj64 reads `v_waterpos1` in all three of
+its water tests — `Bub_ChkWater` (`_incObj/64 LZ Air Bubbles.asm:66`), `Bub_BblMaker`'s
+underwater gate (`:154`), the shared display tail (`:241`).
+
+`Sonic1BubblesObjectInstance.getWaterLevel()` returned `WaterSystem.getWaterLevelY`, which is
+`v_waterpos2` **alone**. `WaterSystem` already exposes the swayed value as
+`getGameplayWaterLevelY` and its javadoc names it `v_waterpos1` in so many words
+(`WaterSystem.java:504-520`); the sibling `BreathingBubbleInstance` (Obj0A) already used it.
+
+Probed engine water at the maker (`obY = 0x0278`), from a `WaterSystem` dump keyed on the
+trace frame:
+
+| frame | `v_waterpos2` | + sway = `v_waterpos1` | maker gate on `v_waterpos2` | on `v_waterpos1` |
+|---|---|---|---|---|
+| 14216 | `0x275` | `0x27F` | **open** | shut |
+| 14220 | `0x271` | `0x27A` | open | shut |
+| 14222 | `0x26F` | `0x277` | open | **open** |
+
+The ROM's recorded maker state vector says the same thing from the other side: `objoff_38`
+(`bub_randomtime`) is `0x0000` and `render_flags` is `0x84` throughout 14217-14222, so those
+two gates both pass, and production nevertheless first fires on the tick at **14222** — the
+frame the swayed height clears the maker, not the frame the unswayed one does.
+
+### Sign
+
+Neither of the two shapes this project has landed this week. The sway term is
+`(unsigned byte) >> 1`, so it is **never negative**: the engine's water read was always at or
+below the ROM's, by 0 to 8 pixels, tracking a table rather than drifting. Not a fixed constant
+(it varies frame to frame over a 126-frame period) and not a sign-flipping accumulation (it
+never changes sign). A missing term, not a wrong number — which is why the fix adds no
+constant.
+
+### The chain
+
+The six-frame gate lead put the maker's whole batch early; its large/inhalable child spawned
+at 14601 instead of 14678, rose the 40 px that 77 frames of `move.w #-$88,obVelY` buys, and
+its `Bub_ChkSonic` box landed exactly on Sonic (`0x1753 + 16 == 0x1763`) at 14745. The ROM
+inhales the same bubble at 14831.
+
+### The fix
+
+`Sonic1BubblesObjectInstance.getWaterLevel()` returns `getGameplayWaterLevelY` instead of
+`getWaterLevelY`. One expression, an existing documented API, no new mechanism and no
+constant.
+
+### Matrix, both arms in the same worktree
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`3fbf0128c`, clean tree, measured before the patch) | 800 tests, **10 failures**, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800 tests, **10 failures**, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets **identical** on full untruncated messages.
+
+`TestS1CompleteEmeraldRunChain`:
+
+| | control | fix |
+|---|---:|---:|
+| segment 24 errors | 7176 | **0** |
+| segment 24 first error | frame 14745 `x_speed` | none |
+| chain axes | 19 | **14** |
+
+Segment 24 leaves the axis list entirely; segments 12, 15, 25, 26, 29, 31 and 32 keep their
+exact counts and first errors, and no axis is new. The four other axes that went with it are
+the `lz1_2 -> lz2` and downstream dynamic-art-gap comparisons that were skewed by the
+segment's divergence.
+
+`TestS1ColdStartAttribution.segments22To24DivergeIdenticallyFromAColdStart` failed on the fix
+arm before its pin was updated, exactly as its own message directs (*"if it was fixed, update
+this pin"*). Its cold-started segment 24 is green too, so the pin is re-shaped to the same
+strictly-stronger form the segment 23 pin above already uses — `!report.contains("segment 2
+... diverged:")` — asserting no divergence at all rather than exactly 7,176. Nothing was
+relaxed; after the update both arms' failing sets match.
+
+### Adjacent finding, not fixed
+
+S2's `BubbleObjectInstance` and `BubbleGeneratorObjectInstance` also call `getWaterLevelY`.
+S2 CPZ water oscillates and ARZ water does not, so whether those are the same defect depends
+on which zone's objects they serve — a round of its own, with its own matrix.

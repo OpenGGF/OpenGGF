@@ -60,6 +60,23 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **The S1 LZ air bubbles read the water height without its surface sway.** Every water
+  read in `Obj64` is `move.w (v_waterpos1).w,d0` -- `Bub_ChkWater`
+  (`docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:66`), `Bub_BblMaker`'s underwater gate
+  (`:154`) and the shared display tail (`:241`) -- and `v_waterpos1` is `v_waterpos2` plus
+  `(v_oscillate+2) >> 1` (`docs/s1disasm/_inc/LZWaterFeatures.asm:23-28`).
+  `Sonic1BubblesObjectInstance.getWaterLevel()` returned `WaterSystem.getWaterLevelY`, which
+  is `v_waterpos2` alone, so it ran up to eight pixels shallow -- always in the same
+  direction, since the sway term is never negative. It now returns
+  `getGameplayWaterLevelY`, the value that method's own javadoc already documents as
+  `v_waterpos1`; the sibling `BreathingBubbleInstance` (Obj0A) had it right.
+
+  On the `s1-sonic-complete-withemeralds` chain this took the bubble maker's underwater gate
+  open six frames early, so its batch's large inhalable bubble spawned 77 frames early, rose
+  forty pixels too far and was inhaled as Sonic ran past. Segment 24 (`lz1_2`) goes from
+  **7,176 errors, first error frame 14745, to zero**, and the chain from 19 axes to 14. No
+  other segment's error count or first error moved.
+
 - **S2's PointPokey cage now plays its CasinoBonus SFX on the ROM's 16-frame gate instead of
   three frames off it.** `ObjD6` reads `move.b (Vint_runcount+3).w,d0 / andi.w #$F,d0 / bne`
   (`docs/s2disasm/s2.asm:59207-59209`), i.e. the raw V-int run counter masked to 4 bits. The
