@@ -102739,3 +102739,68 @@ Pin the entry-skip convention in `Animate_RawNoSSTMultiDelay` to get the exact s
 then give the engine the **condition** — reveal on the script's `$F4` — rather than a frame
 count. Re-derive the defeat-to-capsule total afterwards from whatever the corrected phases
 produce; do not carry any number from the retracted chain into it.
+
+## 2026-08-21 — RETRACTION: the emerge is correct; the missing 33 frames are after the defeat
+
+Round off `origin/develop` `5b40c74c6`. **Found, not fixed — nothing landed but this entry,
+which corrects the previous one. No engine change is needed for the emerge.**
+
+### The convention, pinned and unambiguous
+
+`Animate_RawNoSSTMultiDelay` (`sonic3k.asm:177566-177579`) is
+`subq.b #1,anim_frame_timer / bpl` to return, then `addq.w #2,d0` on `anim_frame`
+**before** reading the entry. So entry 0 is never read by the animator — the first advance
+lands on entry 1 — and an entry whose delay byte is `D` occupies `D + 1` frames. There is no
+ambiguity to declare.
+
+Applying it:
+
+- `AniRaw_AIZEndBoss_Emerge` (`:139094-139108`): 13 entries, all delay `0`, so the `$F4` at
+  byte offset 26 is reached on frame 13. **Emerge = 13 frames.**
+- `AniRaw_AIZEndBoss_Revealed` (`:139109-139115`): `$1B,0` (skipped), then `$1B,4`, `$1C,5`,
+  `$1D,6`, `0,0` — `5 + 6 + 7 + 1 = 19`, with `$F4` firing on frame 20.
+  **Revealed = 20 frames.**
+
+### Retracted: "the engine's emerge is ~20 frames too long"
+
+The previous entry measured a 33-frame gap between the `$7F` expiry (row 5261) and the hover
+entry (5294) and attributed it all to the emerge. **That gap is emerge + revealed**, and
+`13 + 20 = 33` — it matches the ROM exactly. The engine already carries
+`EMERGE_FLICKER_DURATION = 13` with the right citation.
+
+**The engine's fight timeline is ROM-correct throughout**, including the phase entries that
+follow: `5294 + 32` (from `$1F` = 31) lands the `$BF` phase on **5326**, which is what was
+measured. So the residual of **30** at the final hit is correct, not short.
+
+That also retracts the 33-frame shortfall as a fight-phase problem. It was never in the fight.
+
+### Where the 33 frames actually are
+
+With a correct residual of 30 and the ROM's `(2*60)-1` reload, the defeat-to-capsule total is
+`30 + 1 + 120 = 151` frames, putting the capsule at `5487 + 151 = 5638`. The rejected candidate
+of two rounds ago produced **5637** — so that candidate was structurally right and landed where
+the ROM's two known waits say it should.
+
+The recording puts the capsule at **5671**. `184 - 151 = 33`.
+
+**So the post-defeat chain is missing an element worth about 33 frames**, and the two fitted
+constants (`0x37` + `0x7F` = 184) were standing in for it. Unread candidates, both visible in
+the defeat path: the debris child `AIZEndBoss_StartDefeat` creates via
+`ChildObjDat_AIZEndBossDebris` (`:138245-138246`), and the `Wait_Draw` /
+`AIZEndBossChild_StartDefeatBreakOff` `$1F` sequence the boss's children run
+(`:138995-139001`) — a child that must finish before the parent proceeds would supply exactly
+this shape.
+
+### Numbers, marked
+
+**Measured:** the engine's phase entries and its residual of 30; the capsule at 5670 (engine)
+and 5671 (recording); the rejected candidate's 5637. **Derived from the ROM's own scripts:**
+emerge 13, revealed 20, `Obj_Wait` 120. **Derived arithmetic:** the 151 total and therefore the
+33-frame gap. Nothing here uses 63, 66 or 184 as an input; 184 appears only as the measured
+defeat-to-capsule distance it always was.
+
+### Next
+
+Read the debris child and the children's break-off sequence for what gates the parent's
+progress after `AIZEndBoss_StartDefeat`. The candidate from two rounds ago can then be re-landed
+with that element added — it was rejected for landing 34 rows early, and this says why.
