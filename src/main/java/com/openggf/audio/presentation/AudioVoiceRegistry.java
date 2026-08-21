@@ -117,6 +117,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private boolean completionSweepRequired;
     private boolean sfxBlocked;
     private boolean pendingRestore;
+    private boolean smpsPaused;
     private boolean speedShoesEnabled;
     private int speedMultiplier = 1;
     private int fmMuteMask;
@@ -249,13 +250,37 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     /** Applies the active retail SMPS driver's pause transition atomically. */
     public void pauseSmpsDrivers() {
         assertOwnerBoundary();
+        if (smpsPaused) {
+            return;
+        }
         mutateActiveSmpsDrivers(SmpsDriver::pauseAudio);
+        smpsPaused = true;
     }
 
     /** Applies the active retail SMPS driver's resume transition atomically. */
     public void resumeSmpsDrivers() {
         assertOwnerBoundary();
+        if (!smpsPaused) {
+            return;
+        }
         mutateActiveSmpsDrivers(SmpsDriver::resumeAudio);
+        smpsPaused = false;
+    }
+
+    /** Runs continuously clocked chip state while paused, without a VInt. */
+    public void advancePausedSmpsHardware(int stereoFrames) {
+        assertOwnerBoundary();
+        if (!smpsPaused || stereoFrames == 0) {
+            return;
+        }
+        PresentationVoice musicVoice = activeMusic == null
+                ? null : activeMusic.voice();
+        if (musicVoice instanceof SmpsCompositeVoice composite) {
+            composite.driver().advancePausedHardware(stereoFrames);
+        }
+        if (standaloneSmps != null && standaloneSmps != musicVoice) {
+            standaloneSmps.driver().advancePausedHardware(stereoFrames);
+        }
     }
 
     private void mutateActiveSmpsDrivers(
@@ -642,6 +667,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         psgSoloMask = 0;
         sfxBlocked = false;
         pendingRestore = false;
+        smpsPaused = false;
         speedShoesEnabled = false;
         speedMultiplier = 1;
         ringLeft = true;

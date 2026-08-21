@@ -5,11 +5,13 @@ import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.DacData;
 import com.openggf.audio.synth.ChipWriteObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -78,6 +80,42 @@ class TestSmpsPauseProtocol {
         assertEquals(26, s2.size(),
                 "S2 reloads the 25-byte voice register sequence on resume");
         assertTrue(s2.contains("ym:0:b4:c0"));
+    }
+
+    @Test
+    void pausedHardwareAdvanceMovesDacWithoutServicingTracks() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new OneFmTrackData(), AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                        .pausePolicy(SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF)
+                        .build());
+        driver.addSequencer(sequencer, false);
+        driver.setDacData(new DacData(
+                Map.of(1, new byte[4096]),
+                Map.of(0x81, new DacData.DacEntry(1, 4)), 295));
+        driver.playDac(null, 0x81);
+        driver.writeFm(null, 0, 0x2B, 0x80);
+        var beforeSequencer = sequencer.captureSnapshot();
+        double beforeDacPosition = driver.captureSynthSnapshot().ym().dacPos();
+
+        driver.advancePausedHardware(800);
+
+        assertTrue(driver.captureSynthSnapshot().ym().dacPos()
+                        > beforeDacPosition,
+                "the independent DAC loop continues while the driver is paused");
+        var afterSequencer = sequencer.captureSnapshot();
+        assertEquals(beforeSequencer.sampleCounter(),
+                afterSequencer.sampleCounter());
+        assertEquals(beforeSequencer.tempoAccumulator(),
+                afterSequencer.tempoAccumulator());
+        assertEquals(beforeSequencer.tracks().getFirst().pos(),
+                afterSequencer.tracks().getFirst().pos());
+        assertEquals(beforeSequencer.tracks().getFirst().duration(),
+                afterSequencer.tracks().getFirst().duration());
+        assertEquals(beforeSequencer.tracks().getFirst().modStepCounter(),
+                afterSequencer.tracks().getFirst().modStepCounter(),
+                "pause must not service music, SFX, envelopes or modulation");
     }
 
     private static List<String> pauseWrites(

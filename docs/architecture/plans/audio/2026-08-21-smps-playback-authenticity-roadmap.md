@@ -132,7 +132,9 @@ halts, terminal count, and service-scoped all-audio cleanup now match the
 shipped paths. S3K 1-up now runs at normal speed and restores the displaced
 song's saved speed state, then applies the native FM-only restore fade.
 Driver-level pause now uses typed S1/S2/S3K chip-write and restore policies at
-the existing host pause boundary. The remaining shipped S1/S2 1-up
+the existing host pause boundary. Continuously clocked chip state, including
+an already-started DAC sample, advances during silent paused frames without a
+driver VInt. The remaining shipped S1/S2 1-up
 restoration bugs remain in this phase; S3K's intentionally invalid
 `fix_sndbugs=0` resume-memory overrun remains a separately bounded follow-up.
 

@@ -1967,6 +1967,23 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    /**
+     * Advances the continuously clocked chips without running a driver VInt.
+     * The shipped pause paths stop track service, but their YM2612 DAC loop
+     * remains active (and S3K deliberately leaves FM6/DAC unmuted).
+     */
+    public void advancePausedHardware(int stereoFrames) {
+        if (stereoFrames < 0) {
+            throw new IllegalArgumentException(
+                    "paused hardware frame count must be non-negative");
+        }
+        synchronized (sequencersLock) {
+            for (int frame = 0; frame < stereoFrames; frame++) {
+                super.render(scratchFrameBuf);
+            }
+        }
+    }
+
     private SmpsSequencerConfig.PausePolicy pausePolicy() {
         synchronized (sequencersLock) {
             for (SmpsSequencer sequencer : sequencers) {

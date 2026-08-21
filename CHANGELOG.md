@@ -3,7 +3,9 @@
 - **Pausing now executes each retail SMPS driver's chip protocol:** Sonic 1
   pans and keys off all FM channels, Sonic 2 runs its destructive FM silencer
   and reloads active voices on resume, and Sonic 3&K leaves FM6/DAC running
-  while muting FM1-5 and reproducing the shipped redundant PSG silence.
+  while muting FM1-5 and reproducing the shipped redundant PSG silence. Paused
+  frames continue clocking an already-started DAC sample without servicing
+  music, SFX, envelopes, or modulation.
 
 - **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
   the boot chant atomically stops music, overrides, and every SFX owner before

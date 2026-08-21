@@ -7,6 +7,7 @@ import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -383,7 +384,7 @@ class TestUnifiedAudioPresentationIntegration {
                 writes.add("psg:" + value);
             }
         });
-        playPrimedSmpsMusic(SMPS_MUSIC);
+        SmpsCompositeVoice music = playPrimedSmpsMusic(SMPS_MUSIC);
         writes.clear();
 
         audio.pause();
@@ -396,6 +397,19 @@ class TestUnifiedAudioPresentationIntegration {
                 "ym:0:40:4", "ym:0:40:5", "ym:0:40:6",
                 "psg:159", "psg:191", "psg:223", "psg:255"),
                 writes);
+        writes.clear();
+        audio.pause();
+        assertTrue(writes.isEmpty(),
+                "a repeated host pause must not replay the driver transition");
+
+        assertEquals(1,
+                music.driver().captureSynthSnapshot().ym()
+                        .currentDacSampleId());
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(-1,
+                music.driver().captureSynthSnapshot().ym()
+                        .currentDacSampleId(),
+                "the independent DAC loop must advance during paused frames");
     }
 
     // ---------------------------------------------------------------
@@ -673,15 +687,18 @@ class TestUnifiedAudioPresentationIntegration {
         assertEquals(musicId, presentationSnapshot().activeMusic().musicId());
     }
 
-    private void playPrimedSmpsMusic(int musicId) {
+    private SmpsCompositeVoice playPrimedSmpsMusic(int musicId) {
         audio.playMusic(musicId);
         // Admission is production work performed at the presentation boundary.
         // SILENT is the drain that admits without rendering, so the stub asset
         // is not swept as complete before its synthesis can be primed.
         audio.presentFrame(PresentationMode.SILENT);
-        assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
+        SmpsCompositeVoice voice = AudioManagerTestDiagnostics
+                .primeAdmittedSmpsMusic(audio);
+        assertNotNull(voice,
                 "the presentation must admit the SMPS music voice for "
                         + Integer.toHexString(musicId));
+        return voice;
     }
 
     private short[] presentForward() {

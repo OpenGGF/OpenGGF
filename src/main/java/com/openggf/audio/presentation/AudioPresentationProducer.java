@@ -149,6 +149,7 @@ public final class AudioPresentationProducer {
                 }
             } else if (mode == PresentationMode.SILENT) {
                 commands.applyPending(commandApplier);
+                registry.advancePausedSmpsHardware(stereoFrames);
                 Arrays.fill(silence, 0, stereoFrames * CHANNELS, (short) 0);
                 pcm = silence;
             } else {
