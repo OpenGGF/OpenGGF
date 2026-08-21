@@ -113870,3 +113870,27 @@ stay green there. **My instrumentation was in a path this test does not use.**
 So the next round's first move is to instrument the chain test's *own* observation
 construction rather than the launcher's, and find what advances the generation there. The
 question to answer is narrow: **what re-loads the Final Zone, on a run where nothing dies?**
+
+## 2026-08-21 -- S2 ARZ2, the carried-render-flag family: surveyed, nothing landed
+
+Command: `mvn -Dmse=off -DforkCount=1 -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay,TestS2Arz2LevelSelectTraceReplay -Dsonic2.rom.path=<s2 rom> test`,
+both arms at `b480ca4b8`. Control: segment 9130 errors, first error 2175; level
+select passes. **The frontier did not move and no code change landed.**
+
+Two ROM-cited conversions of `BubbleObjectInstance` off its self-published
+`render_flags` bit 7 were built and both regressed
+`TestS2Arz2LevelSelectTraceReplay`, which the control passes:
+`isPreUpdateWithinRenderSpriteBounds` gives 230 errors from frame 670
+(`obj_s34_slot` 0x34 against 0x33) and the sanctioned
+`refreshPostCameraRenderState` hook gives 83 from frame 1314 (`obj_s2E_slot`).
+Both leave the ARZ2 segment byte-identical, because that fixture compares no
+field bubble lifetime reaches -- a shadow probe found 28 rows where the two
+evaluations disagree, so the path is live and the models differ. A green fixture
+breaking under a ROM-correct change is a compensating pair; find the partner
+before republishing the flag.
+
+Full survey, the already-correct population, the Obj1F stale-test verdict, and a
+`hasPreUpdateSnapshot()` contract defect (documented "false on an object's first
+frame", measured `true` on the first `update()` of all 54 bubbles the level-select
+segment creates):
+[2026-08-21-carried-render-flag-family.md](../architecture/audits/trace/2026-08-21-carried-render-flag-family.md).
