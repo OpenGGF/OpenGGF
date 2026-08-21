@@ -143,6 +143,7 @@ that looks like a real result.
 | 124 | A stall in the reference series makes two offsets match identically | Classify only where it is strictly monotonic; walk, do not sample |
 | 125 | A probe that never compiled looks exactly like a predicate that never fires | No Tests-run line and no probe file; ask why the file is absent |
 | 126 | A uniquely-fitting event is not evidence it is *your* event | Rarity is not identity; put a clock on it before believing it |
+| 127 | A probe can fire in the right class and the wrong harness | Plausible output from a path the test does not use |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3298,3 +3299,28 @@ The wider form, worth carrying beyond probes: **a hypothesis that explains the s
 has no competitors is still only a hypothesis about mechanism, never about incidence.**
 Mechanism and incidence are separate measurements, and the second one is usually the cheap
 one.
+
+## One hundred and twenty-seventh rule: a probe can fire in the right class and still be in the wrong harness
+
+Two measurements from one round disagreed: an observation reported a load generation of 24 against
+a coordinator holding 23, while instrumentation on the session launcher showed its generation
+**never changing** across thirty entries. Both cannot hold if the coordinator's observations come
+from that launcher.
+
+They don't. **The run-chain test builds its own coordinator and driver loop beside the launcher** —
+the same property that lets a visual-only defect stay green there. The probe compiled, ran, and
+printed; it was simply in a path that test does not use.
+
+**This is a sixth silent-probe mode and the least visible of them.** The other five end in no
+output (never compiled, never reached the fork, filtered away, stale natives, a branch that never
+runs). This one produces *plausible output from the wrong place*, so it fails no sanity check and
+positively supports a wrong conclusion.
+
+**Before trusting a probe's numbers, establish that the harness under test executes the path the
+probe sits in.** A probe at a site the failure message itself names is self-validating — its
+reachability is guaranteed by the error you are chasing. Prefer those.
+
+**And a controlled zero needs a witness in the same run.** The same round proved a death path was
+never taken by showing its probe wrote nothing *while another probe fired in the same run and the
+same directory* — which makes the zero a measurement rather than a sixth mode.
+
