@@ -242,6 +242,30 @@ The open gap in the preceding section remains open and unobserved: no fixture ha
 yet shown an S3K KosM ordinal one ahead of the recording for the reason that
 section describes.
 
+Two further facts, measured by bypassing the span check locally so the run could
+continue past the handoff (diagnostic only, never committed; the physics
+divergence such a run reports is an artefact of the bypass and is not a frontier):
+
+- **Both S3K Kosinski kinds are skewed, not just the reported one.** With the
+  check relaxed, the handoff reports `KOS_MODULE_QUEUE cursor=15 span=11..20` as
+  well as `KOS_DECOMPRESSION_QUEUE cursor=20 span=16..31` -- 4 short and 5 short
+  respectively, the exit-art batch in each kind. `KOS_DECOMPRESSION_QUEUE` is
+  merely the kind the `values()` iteration reaches first.
+- **Implementing the exit art alone would not close the boundary.** Past the
+  handoff the engine's next submissions are `kos_decompression_queue 32,33,34`
+  (`c3e8ddd3 / 2bed3f7b / 055a7ca7`) and `kos_module_queue 21,22,23`
+  (`65c8c371 / 5c387ee7 / 4728f00c`) -- the same fingerprints it submits at
+  `decomp#11..13` / `module#6..8` at the start of the run, i.e. the segment's own
+  in-segment art. The engine therefore never submits the recording's trailing
+  interstitial block, `kos_decompression_queue 25..31` / `kos_module_queue 19..20`
+  (`149e63bc / 912aa214 / ae73908a / 77708e82 / 78b85320 / 4c509876 / 7b1b550d`
+  and `925beedb / d713465c`). That block is the same one the recording places at
+  `decomp 4..10` / `module 4..5` in the pre-run interstitial, which the engine
+  also does not submit -- there it is absorbed by the initial ordinal base
+  instead. So the interstitial contains *two* unmodelled blocks with the engine's
+  level reload between them, and the skip/submit/skip shape survives implementing
+  only the first. Option 1 closes this boundary only if both blocks are modelled.
+
 Two tests in `TestHardwareTimingService` are red on `189acc824` independently of
 this: `anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow` and
 `recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`. Both sit

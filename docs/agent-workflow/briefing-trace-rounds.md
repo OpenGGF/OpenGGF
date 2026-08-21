@@ -138,6 +138,7 @@ that looks like a real result.
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
+| 121 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3163,3 +3164,15 @@ creation-frame error" — rested on exactly that comparison, and was structurall
 returning the answer it was asked for. When checking for a phase offset, anchor on a landmark that
 is measured, never on one assumed to line up.
 
+
+### 2026-08-21 -- a third way a probe fails silently: `-DargLine` never reaches the fork
+
+The pom pins surefire's `<argLine>` to `${surefire.argLine}`, so a CLI
+`-DargLine=-Dmyprobe=1` is discarded and the property never reaches the forked
+JVM. A `System.getProperty`-gated probe then prints nothing, which is
+indistinguishable from a branch that never ran -- the same failure mode as a
+probe that did not compile behind a filtered grep, and as an `echo COMPILE_OK`
+printed unconditionally above the real `ERROR` lines. All three happened on one
+day. Gate diagnostic probes on an environment variable instead: forks inherit the
+environment, and `ORDINAL_PROBE=1 mvn ...` works under every profile. Whichever
+gate is used, count the probe's own output lines before reading the result.
