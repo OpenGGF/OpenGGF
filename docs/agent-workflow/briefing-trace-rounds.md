@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-one rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -53,6 +53,7 @@ that looks like a real result.
 | 68 | An in-place routine change is not a spawn; look for a routine byte changing on an occupied slot |
 | 69 | Check that your two numbers are the same kind of measurement before differencing them |
 | 70 | Review the artifact, not the account of it; a rejected candidate never rides a merged branch |
+| 71 | Validate a classifier against a hand-verified control, or discard its output |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1881,3 +1882,23 @@ and only one of them is worth anything.
 **Corollary for lanes.** A rejected candidate never goes on a branch that will be merged.
 Land the write-up; leave the code on a branch nobody takes, and cite its hash if provenance
 matters.
+
+## Seventy-first rule: validate a classifier against a case you already know
+
+A sweep that pairs engine sites to ROM instructions automatically is a classifier, and a
+classifier's output is worthless until it has been checked against an answer established by
+hand. One built for a countdown sweep classified a fifth of its population, **missed the
+site that motivated the sweep entirely**, and — on a second attempt — confidently
+mislabelled the one case that had been hand-verified the round before, because it took the
+first label in a comment window rather than the routine the code belonged to.
+
+That error was only visible because a known answer existed to check against. With no
+control case, the output would have been a ranked list: plausible, specific, partly wrong,
+and impossible to distinguish from a correct one.
+
+**Practically.** Before running a sweep, hand-verify one or two members and hold them back
+as controls. If the classifier disagrees with a control, discard its output rather than
+patching the heuristic — a heuristic that needed patching once will be wrong somewhere you
+have no control for. And say plainly when a population is sized but unclassified: "621
+sites, 223 candidates, 2 confirmed, the rest needs reading" is a result; a ranked list you
+cannot vouch for is not.

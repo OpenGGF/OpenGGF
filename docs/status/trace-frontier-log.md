@@ -104391,3 +104391,76 @@ columns cannot answer it**, because they carry no submission timestamps and no p
 for this slot. Comparing the engine's vertical phase transitions against the ROM's requires
 either an aux column that is not in this capture or a ROM-side trace, so it is parked with the
 capture questions rather than pursued against the fixture.
+
+## 2026-08-21 — Countdown fire-condition sweep: population sized, automatic classification failed
+
+Round `s3k-countdown-sweep-r1`, branch `bugfix/ai-countdown-sweep-r1` off `origin/develop`
+`6b0d30b1c`. **Sweep only, no fixes**, per scope.
+
+### The pattern
+
+The ROM's countdown idiom is `subq #1,<counter>` followed by `bmi`, firing when the counter goes
+**negative** — the `N+1`th dispatch. An engine countdown written `timer--; if (timer <= 0)` fires
+on the `N`th, one dispatch early, while the *constant* it counts from is correct. The number a
+reviewer checks is right, which is why it survives review.
+
+### Population, measured
+
+Scanning `src/main` for a decrement paired with a test of the same variable within three lines,
+plus the inline `if (--x …)` forms — **621 sites**:
+
+| engine test | count | matches ROM `bmi`? |
+|---|---:|---|
+| `< 0` | **398** | yes — fires on going negative |
+| `<= 0` | 120 | no — fires at zero |
+| `== 0` | 103 | no — fires at zero |
+
+**398 of 621 already use the `< 0` form.** The codebase mostly gets this right, which is worth
+saying as loudly as the defects: this is not a systematic mistranslation, it is a minority
+pattern. The **223** fire-at-zero sites are the candidate set — 86 S3K, 85 S2, 32 S1, 20 shared.
+
+### The automatic classification failed, and its output must not be used
+
+The intent was to pair each candidate with its cited ROM instruction and rank by whether that
+instruction is `bmi`. Two attempts:
+
+1. **By line citation** (`sonic3k.asm:NNNN` within 25 lines): classified 41 of 223, and **missed
+   the site that motivated the sweep** — `HCZWaterWallObjectInstance` cites routine *names*, not
+   line numbers.
+2. **By label resolution** (resolve the first ROM label named nearby): classified more, and got a
+   known answer **wrong**. Line 360 — the horizontal cleanup, which the previous entry established
+   calls `HCZGeyser_CleanupDelay` (`subq`/`bmi`) — was marked `beq/bne-likely-ok`, because the
+   heuristic grabbed the first label in the comment window
+   (`HCZWaterWall_Horizontal_SpawnSpray`) rather than the routine the countdown belongs to.
+
+A classifier that confidently mislabels the one case independently verified is not a measurement.
+Its verdict columns are discarded rather than published, and no ranked list is offered on that
+basis. **There is no reliable greppable pairing**: engine comments cite the caller, a neighbouring
+routine, or a routine name that does not resolve, and picking among them needs a reader.
+
+### Verified by hand — two sites, both genuine
+
+Both from the previous entry's ROM reading rather than from the classifier:
+
+| site | path | ROM | engine |
+|---|---|---|---|
+| `HCZWaterWallObjectInstance:360` | horizontal cleanup, timer `#150` (`:64988`) | `HCZGeyser_CleanupDelay` `subq.w #1,$30(a0)` / `bmi` (`:64996-64998`) | `timer--; if (timer <= 0)` |
+| `HCZWaterWallObjectInstance:640` | vertical cleanup, timer `#$1E` (`:65303`) | same routine | same |
+
+Both fire one dispatch early. Both constants are correct.
+
+### What this round does not establish
+
+**How many of the 223 are real.** That is the number the round was asked for and it is not
+delivered — the population is sized, the method to classify it failed, and two members are
+confirmed by hand. Classifying the rest requires reading each site's owning ROM routine, which is
+223 readings, not a grep.
+
+Two hazards for whoever does that reading, both flagged in the scoping and both real here:
+
+- **`== 0` is often correct.** Several candidates count *up* to a limit, or test before
+  decrementing, or model a ROM `beq` rather than a `bmi`. The 31 sites the label pass called
+  `beq/bne-likely-ok` are unverified, but the category is genuine.
+- **Cancelling partners.** An object one dispatch early everywhere may have had a neighbouring
+  value fitted around it, so a correct fix can measure worse before it measures better. A fix
+  round should expect a red arm that is progress.
