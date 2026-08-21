@@ -110154,3 +110154,137 @@ lane, and both times the losing claim had exactly one conversion buried in it: a
 quoted from a counter running 23 behind the trace row, and a counter value attributed to the
 row just compared rather than the row its update produces. **When two measurements disagree,
 count the conversions between raw fixture and claim before arguing the substance.**
+## 2026-08-21 — The fixed-slot comparison already exists, is opt-in, and its engine side has the phase error
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, on `20ded5ffd`.
+**No code change.** A working parallel implementation was built to the point of proving the
+approach, then reverted, because the mechanism it duplicates was found mid-build.
+
+### What is already there
+
+`TraceBinder.compareObjectNear(frame, expectedObjects, actualObjects)` compares the recorded
+`object_near` rows against engine objects and emits `obj_sXX_*` fields. It is **opt-in per
+test class** via `AbstractTraceReplayTest.compareObjectNearEvents()` (default `false`), and
+each class that opts in narrows it further with `shouldCompareObjectNearEvent`. Three classes
+use it today — `TestS1Lz2CompleteRunTraceReplay`, `TestS1Sbz2CompleteRunTraceReplay`,
+`TestS1Sbz3CompleteRunTraceReplay` — and LZ2's filter is
+`"0x64".equalsIgnoreCase(near.objectType())`, i.e. the air bubbles only.
+
+So the comparison I was asked to write is this comparison, restricted to different slots. A
+second one alongside it would be a duplicate mechanism, which is the shape this project spent
+a round regretting yesterday.
+
+### And its engine side carries exactly the phase error just ruled on
+
+`AbstractTraceReplayTest:1418` supplies the engine side as
+`captureEngineNearbyObjects(sprite)` → `TraceReplayDiagnostics.buildNearbyObjects(om, sprite,
+160, false)`, called from the comparison loop — **after** the object pass. That is the
+post-pass phase, one later than the recorded row.
+
+It does not currently show, because every class that opts in filters to object types that do
+not delete themselves mid-pass. It would show the moment the filter admits the power-up slots:
+a systematic one-frame shortfall on every self-deleting object, of which the S1 splash is one.
+
+### The tension this creates with the decided sample point
+
+The ruling was: give occupancy its own pre-object-pass snapshot, and **do not move the
+existing comparison's sample point**. Those cannot both hold here, because the existing
+comparison *is* the fixed-slot comparison — its engine-side capture is the sample point in
+question. Two ways out, and the choice is the owner's:
+
+1. **Phase-correct `captureEngineNearbyObjects`** to a pre-pass snapshot and opt the power-up
+   slots in. Reuses the mechanism; changes the sample point of a comparison three classes
+   already depend on, so those three need re-validating.
+2. **Add a parallel fixed-slot comparison** with its own snapshot, leaving `compareObjectNear`
+   untouched. Honours the instruction literally; leaves two mechanisms comparing recorded
+   `object_near` rows against engine objects at two different phases, which is a trap for
+   whoever meets them next.
+
+I built option 2 far enough to know it works — a `FixedSlotOccupancy` record captured at the
+head of every `objectManager.update` call from `LevelManager`, with the slot set derived from
+`PowerUpRules` (per-game data, not a carve-out) and restricted to player-attached objects so
+the recorder's near-filter cannot drop them — and reverted it rather than land a duplicate
+mechanism on my own judgement.
+
+### Two further things the implementation surfaced
+
+- **`ObjectManager.java` is exactly at its source budget** (3051 of 3051), so the snapshot
+  cannot live on the facade at all: a field plus one accessor took it to 3060, and even a
+  single capture call plus a delegating getter reached 3055. Whatever lands must own its state
+  elsewhere. `LevelManager` has no equivalent total-line guard and holds the object-pass call
+  sites, so it is the practical home.
+- **`buildNearbyObjects` filters by a 160-pixel radius.** Player-attached power-up objects sit
+  on the player and pass it, but any future fixed slot that does not would be silently dropped
+  from the engine side while the recorder still emitted its row.
+
+### Cluster 3 still not re-measured
+
+Nine slot-frames at the shield's edges, waiting on the sample point as before.
+
+## 2026-08-21 — The phase correction works, and it takes the three opted-in classes from green to ~12,800 errors
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, on `71c4d9617`.
+**Built, measured, and NOT landed.** The patch is reconstructible; the tree is unchanged.
+
+Implements option 1 from the entry above: phase-correct the existing `compareObjectNear`
+mechanism rather than add a parallel one.
+
+### What was built
+
+- `LevelManager` gained a comparison-only `preObjectPassObserver`, invoked immediately before
+  each of its three `objectManager.update(...)` call sites. Nothing on `ObjectManager`, whose
+  source budget is exactly full.
+- `AbstractTraceReplayTest` installs an observer that captures
+  `TraceReplayDiagnostics.buildNearbyObjects(...)` at that instant;
+  `captureEngineNearbyObjects` now returns that snapshot instead of reading live at comparison
+  time.
+- `buildNearbyObjects` gained an `alwaysIncludeSlots` set, exempt from **both** the 160-pixel
+  radius and the spawn-backed requirement — reserved-SST occupants carry no `ObjectSpawn` and
+  were being dropped entirely, and the radius exemption closes the silent-false-green the
+  owner asked about. The slot set comes from the per-game `PowerUpRules` record, so it is data
+  rather than a game carve-out.
+
+Two NPEs surfaced while wiring it and are worth recording, because they are the same fact
+twice: `ObjectInstance.getX()`/`getY()` and `AbstractObjectInstance.getPreUpdateX()`/`getPreUpdateY()`
+all default to the spawn record, which a reserved-SST occupant does not have. Anything that
+starts including those objects must supply positions another way.
+
+### The mechanism is live at its new point
+
+The observer fires **9503 times against 9503 compared frames** on
+`TestS1Sbz2CompleteRunTraceReplay` — exactly one pass per compared frame, so the snapshot is
+neither stale nor taken from a second pass. That is the corrupt-one-side check in its useful
+direction: the numbers below are a result about the phase change, not an artefact of a hook
+that never ran.
+
+### What it costs: three green classes, ~12,800 errors
+
+| class | before | after | first error |
+|---|---|---|---|
+| `TestS1Lz2CompleteRunTraceReplay` | green | **6712 errors** | frame 935, `obj_s2D_type` rom `0x64`, engine `missing` |
+| `TestS1Sbz3CompleteRunTraceReplay` | green | **5937 errors** | frame 898, `obj_s22_type` rom `0x64`, engine `missing` |
+| `TestS1Sbz2CompleteRunTraceReplay` | green | **176 errors** | frame 1395, `obj_extra_s48_x` rom `absent`, engine `0x0955` |
+
+**These are not the movement that was anticipated.** The expectation was the phase error
+showing on object types that delete themselves mid-pass. Two of the three lead instead with
+the opposite shape: the ROM holds an `Obj64` at a slot where the engine holds *nothing*, which
+is a **creation** that the engine performs a pass later than the ROM. The post-pass read
+masked it precisely because it sampled after the creation had happened.
+
+So the three classes were green on a phase-shifted read, and at the recorder's own phase they
+carry a real, previously invisible divergence — an object-creation lag in S1's air bubbles,
+the same object family whose maker this lane has already been inside twice today.
+
+### Why it is not landed
+
+Landing takes three green classes to ~12,800 errors, which is past "named" and into a new
+frontier. The phase correction is right — two independent ROM-side proofs say the recorder
+samples before the pass (the splash's routine-`$04` row, which could not exist post-pass, and
+the bubble maker's routine `0x00`→`0x0A` transition) — and it is *because* it is right that it
+exposes this. The choice between landing it red, gating the phase correction behind the
+per-class opt-in, or fixing the creation lag first is not this lane's to make.
+
+### Not reached
+
+The power-up slots were never opted in — the mechanism failed its own re-validation first — so
+the fixed-slot comparison is still unlanded, and cluster 3 is still unmeasured.
