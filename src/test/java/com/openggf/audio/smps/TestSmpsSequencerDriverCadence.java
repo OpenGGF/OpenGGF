@@ -393,6 +393,8 @@ class TestSmpsSequencerDriverCadence {
         }
         assertEquals(SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE,
                 Sonic2SmpsSequencerConfig.CONFIG.getFmSfxTakeoverMode());
+        assertEquals(SmpsSequencerConfig.FmSfxTakeoverMode.KEY_OFF_CLEAR_SSG_EG,
+                Sonic3kSmpsSequencerConfig.CONFIG.getFmSfxTakeoverMode());
     }
 
     @Test

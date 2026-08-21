@@ -1,5 +1,11 @@
 # Changelog
 
+- **Sonic 3&K special-stage audio now crosses the same driver boundaries as
+  the retail game:** entry clears the level's speed-shoes tempo before loading
+  special-stage music, ring pickups use the Z80 driver's alternating speaker
+  selection, and rapid Blue Sphere SFX replacements retain FM5 ownership
+  without injecting a full-channel `RR=FF` / `TL=7F` silence between notes.
+
 - **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
   retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
   longer inherit that destructive policy from shared presentation code. Direct
@@ -2045,8 +2051,8 @@ All notable changes to the OpenGGF project are documented in this file.
   published total, reading the published values rather than recomputing them.
 
 ## Unreleased
-- Fix(s3k): blue-sphere special-stage ring collection now plays the ROM's
-  `sfx_RingRight` sound directly instead of using gameplay ring-channel alternation.
+- Fix(s3k): blue-sphere special-stage ring collection now submits the ROM's
+  `sfx_RingRight` request through the driver-owned left/right alternation.
 - Fix(s2): the Egg Prison's break delay now runs the 30 passes the ROM runs, not
   29. `loc_3F2FC` is `subq.w #1,objoff_34(a0)` / `bpl.s return_3F352`
   (s2disasm/s2.asm:84909-84910), and `bpl` branches on zero as well as on

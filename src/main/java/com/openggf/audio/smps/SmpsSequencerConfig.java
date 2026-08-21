@@ -94,6 +94,8 @@ public final class SmpsSequencerConfig {
     public enum FmSfxTakeoverMode {
         /** Legacy engine behavior: clear internal chip state and inject a key-off. */
         FORCE_RESET,
+        /** S3K fix_sndbugs=0: key off and clear all four SSG-EG registers. */
+        KEY_OFF_CLEAR_SSG_EG,
         /** Shipped-driver behavior: let the SFX bytecode perform all visible writes. */
         REGISTER_SEQUENCE
     }

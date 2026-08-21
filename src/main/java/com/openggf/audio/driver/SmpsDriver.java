@@ -635,11 +635,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         sequencer.setRegion(region);
         alignSequencerServicePhase(sequencer);
         sequencer.setIsSfx(true);
+        applyAdmissionFmPreparation(sequencer);
 
         SmpsSequencer replaced = admission.replacedSequencer;
         if (replaced != null) {
             rememberReplacementConflicts(replaced, sequencer);
             sequencers.remove(replaced);
+            handoffRetailFmReplacementLocks(replaced, sequencer);
             releaseLocks(replaced);
             sfxSequencers.remove(replaced);
             sfxSequencersById.remove(replaced.getSmpsData().getId(), replaced);
@@ -697,6 +699,56 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxFlag = false;
             continuousSfxId = admission.continuousSfxId();
             contSfxLoopCnt = admission.trackCount();
+        }
+    }
+
+    private void handoffRetailFmReplacementLocks(
+            SmpsSequencer replaced, SmpsSequencer replacement) {
+        if (replacement.getConfig().getFmSfxTakeoverMode()
+                != SmpsSequencerConfig.FmSfxTakeoverMode
+                        .KEY_OFF_CLEAR_SSG_EG) {
+            return;
+        }
+        for (int index = 0; index < replacement.trackCount(); index++) {
+            SmpsSequencer.Track track = replacement.trackAt(index);
+            if (!track.active
+                    || (track.type != SmpsSequencer.TrackType.FM
+                    && track.type != SmpsSequencer.TrackType.DAC)) {
+                continue;
+            }
+            int channel = track.channelId;
+            if (fmLocks[channel] == replaced) {
+                // S3K fix_sndbugs=0 overwrites the shared SFX track after
+                // zKeyOffIfActive/zFMClearSSGEGOps. It does not run the old
+                // track through zFMSilenceChannel (RR=FF, TL=7F) first.
+                fmLocks[channel] = replacement;
+            }
+        }
+    }
+
+    private void applyAdmissionFmPreparation(SmpsSequencer sequencer) {
+        if (sequencer.getConfig().getFmSfxTakeoverMode()
+                != SmpsSequencerConfig.FmSfxTakeoverMode
+                        .KEY_OFF_CLEAR_SSG_EG) {
+            return;
+        }
+        int preparedMask = 0;
+        int[] operatorOffsets = { 0, 8, 4, 12 };
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.type != SmpsSequencer.TrackType.FM
+                    || (preparedMask & (1 << track.channelId)) != 0) {
+                continue;
+            }
+            preparedMask |= 1 << track.channelId;
+            int port = track.channelId < 3 ? 0 : 1;
+            int channel = track.channelId % 3;
+            int keyChannel = port == 0 ? channel : channel + 4;
+            super.writeFm(null, 0, 0x28, keyChannel);
+            for (int operatorOffset : operatorOffsets) {
+                super.writeFm(null, port,
+                        0x90 + operatorOffset + channel, 0);
+            }
         }
     }
 
