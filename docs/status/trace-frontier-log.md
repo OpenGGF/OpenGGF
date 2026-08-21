@@ -112958,3 +112958,56 @@ Correct-and-unlanded until a trace can arbitrate it.
 `UnsatisfiedLinkError: Failed to locate library: liblwjgl.so` -- once in a fresh worktree, once in
 a used one where `target/test-tmp/lwjgl_*` had gone stale, where it poisoned 66 of 69 classes and
 read exactly like a catastrophic regression. `rm -rf target/test-tmp` before a sweep.
+## 2026-08-21 -- The entry ring is where the ROM puts it: candidate 1 is dead
+
+Branch `bugfix/ai-s3k-ring-layout-r4`, based on `develop` at `f589cca5e`.
+One measurement, read through the ROM-loading pipeline rather than from a
+disassembly listing (hard rule 1).
+
+### The measurement
+
+`Sonic3kObjectPlacement.load(zone, act)` over the real ROM, filtered to object
+id `$85` (`Sonic3kObjectIds.SS_ENTRY_RING`):
+
+```
+zone=0 act=0  x=7112   y=1216  rawYWord=0x4c0  subtype=1   <- the ring in question
+zone=0 act=1  x=576    y=976   rawYWord=0x3d0  subtype=3
+zone=0 act=1  x=6584   y=1104  rawYWord=0x450  subtype=4
+zone=0 act=1  x=14008  y=1488  rawYWord=0x5d0  subtype=5
+zone=1 act=0  x=5184   y=1472  rawYWord=0x5c0  subtype=1
+zone=1 act=0  x=12608  y=1208  rawYWord=0x4b8  subtype=2
+zone=1 act=1  x=9920   y=1600  rawYWord=0x640  subtype=3
+zone=1 act=1  x=14272  y=1216  rawYWord=0x4c0  subtype=4
+```
+
+**Candidate 1 is dead.** The ROM layout places the AIZ ring at x=7112 with a raw
+Y word of `0x4C0` = **1216**, exactly the value the engine spawns it at. The
+decode is unambiguous: the S3K record's Y word is `R0FF YYYY YYYY YYYY`
+(`Sonic3kObjectPlacement`'s format doc), and `0x4C0` has bit 15 clear and bits
+13-14 clear, so no flag bit is being absorbed into the position and
+`yWord & 0x0FFF` is exact. The ring is not placed 4px high; it is placed where
+the ROM puts it.
+
+A free corroboration from the same dump: **1220 is not any ring's y** in either
+zone. The recorded return value corresponds to no entry-ring placement in the
+ROM at all, which is what we would expect if the +4 happens after the restore
+rather than being carried in the saved position.
+
+### What survives
+
+**Candidate 2.** The ring's y is correct at 1216, the save/restore round trip is
+faithful, and the ROM player nonetheless stands at 1220 on the arm frame -- 4px
+*below* where it was placed. So something moves the player down by 4 between
+`Load_Starpost_Settings`' `loc_2D2C2` writing `Saved2_Y_pos` into
+`Player_1+y_pos` (`sonic3k.asm:61800`) and the frame the recorder arms, and the
+engine does not do it.
+
+That is a different instrument -- it needs the player's y sampled across the
+restore and the first level frames, not a layout read -- and it is deliberately
+**not** chased in this round. Four families are now eliminated: art pipeline,
+comparator, save/restore, and object placement.
+
+A ground settle is the obvious shape (4px is a plausible floor snap, and the
+direction is down), but "obvious shape" is how the last two leads got their
+plausibility, and both were wrong. The next round should measure before
+explaining.
