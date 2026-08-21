@@ -108933,3 +108933,42 @@ Found, not fixed. Segment 9 stays red at frame 0; the standalone segment's own
 frontier is unaffected by it. The chain will not display another lane's
 `TestS3kSonicTailsHczSegmentTraceReplay` green until the handover phase is
 closed.
+
+## The defeat-frame reading is withdrawn: a single-point clock conversion, not a measurement
+
+Two lanes measured the same rows in the same vehicle and disagreed by one frame. The
+disagreement is resolved in favour of the lane that never converted between clocks, and the
+other has withdrawn its own number without being asked to.
+
+**What the withdrawn reading rested on.** A probe printed the engine's V-int counter at the
+defeat, and that counter was converted to a trace row by a **single-point calibration** — one
+counter value observed beside one trace frame in the comparator's own diagnostics, then
+subtracted. That assumes the counter advances exactly one per trace row across four hundred and
+sixty frames, which was never validated over that span; one extra or missing tick anywhere in it
+produces precisely the one-row error in dispute. An attempted cross-check against the camera did
+not settle it either, because an object reading the camera mid-frame may see the previous row's
+value — the intra-frame sample-point trap, met for the second time in the same thread.
+
+**What the surviving reading rests on.** Contact separation against the ROM's own threshold on
+the two candidate frames — collision flags to size index to half-width plus attacker radius —
+and seven earlier hit frames matched to the recording's own status-bit edges, frame for frame,
+with the eighth absent because the ROM sets a different bit on the fatal hit. No conversion
+anywhere, all of it in the recording's coordinate system.
+
+**So the engine's fatal hit is on the recording's row and there is no defeat-detection defect.**
+
+**What this costs.** Everything downstream of the withdrawn row is unmeasured, not wrong: the
+capsule-one-frame-early claim, the nine-link causal chain, and the idle-frame simulation. The
+lane that produced them flagged a specific reason the simulation may not mean what it said —
+inserting an idle frame delays the capsule's seeding, which takes its horizontal origin from a
+moving camera and its vertical from a stationary one, so it shifts the horizontal origin by a
+pixel while leaving the vertical unchanged, and that simulation's match was keyed on the
+horizontal series.
+
+**The sharper question the disagreement exposes.** The engine's post-defeat wait was measured as
+a difference of counter values, which is conversion-independent, while the ROM's wait is a count
+of rows. Those are the same quantity only if the counter and rows run one to one — the very
+assumption in doubt. If the counter drifts against rows anywhere in that window, the defeat and
+the capsule are displaced by different amounts. Measuring whether the engine's counter advances
+exactly one per trace row across the fight is now the round, and it is worth more than either
+row reading.

@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and one rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -117,6 +117,7 @@ that looks like a real result.
 | 98 | A class measured with `-Dtest=` under a profile that would not select it | A green read as matrix coverage, from an arm that never ran the class |
 | 99 | A `jmp` target read as a one-line helper | A fall-through past an end-of-function banner, hiding the write everyone was hunting |
 | 100 | A directory sized by grepping one idiom's name | Five idioms, one greppable; the correct group understated by half |
+| 101 | A clock conversion calibrated at one point | A one-row error in a nine-link causal chain, invisible and load-bearing |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2599,3 +2600,28 @@ ROM installs and when it next runs — unreachable by any search for the concept
 or a gate — the shape a folded setup frame leaves behind — and were recorded as unclassified
 rather than as findings, because the engine lacking an init state is not evidence the ROM has
 one until the ROM's own table is read.
+
+## One hundred and first rule: a single-point clock conversion is not a measurement
+
+Converting a value in one clock to a row in another — an engine counter to a trace row, a
+dispatch index to a frame — by observing the two together **once** and subtracting assumes the
+two advance in lockstep everywhere between. Over hundreds of frames that assumption is doing all
+the work, and a single extra or missing tick anywhere in the span produces exactly the one-row
+error you are trying to resolve.
+
+One lane's defeat-frame reading rested on such a conversion, calibrated at a single point four
+hundred and sixty frames away from the measurement, and validated only inside a sixty-frame
+window — by an alignment that lane had itself already shown to be degenerate. A second lane
+measured the same event with no conversion at all: contact separation against the ROM's own
+threshold, plus seven earlier events matched to the recording's own edges, entirely in the
+recording's coordinate system. The second is strictly better evidence, and the first lane
+withdrew its number rather than defend it.
+
+**Prefer a conversion-free method.** Where the recording carries the quantity, compare in the
+recording's coordinates. Where it does not, validate the conversion **across the whole span you
+are using it over**, not at one point — and say in the report where it was validated.
+
+**And notice when a quantity you trust is conversion-dependent.** In the same thread a wait
+measured as a difference of counter values was being compared against a ROM wait measured in
+rows; those are the same number only if the two clocks run one to one, which was the assumption
+under dispute. A drift between them would displace two downstream events by different amounts.
