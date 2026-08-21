@@ -110414,3 +110414,52 @@ moved. `-Pguards`: 500 tests, 0 failures.
    ARZ1 group — the shared origin refuted earlier does not re-establish here.
 
 Nothing was fitted. No interval was adjusted.
+
+## 2026-08-21 — S1 bubble creation lag: RETRACTED, and the parked phase correction must not land
+
+**The premise was false. There is no air-bubble creation lag, and the parked
+object-near phase-correction patch is itself a defect — do not land it.** On the
+evidence below it would *manufacture* ~12,800 comparator errors rather than
+expose them.
+
+Gate: a matched (creation frame, destination SST slot, parent maker slot) triple
+from both sides, engine measured at the allocation site, difference traceable to
+a named routine. Measured at `40c3df936`, LZ2, `-Dmse=off`.
+
+- ROM row 935, slot 45: type `0x64`, routine `0x00`, subtype `0x02`,
+  x `0x023F`, y `0x03F8`, maker slot 56 @`0240,03F8`.
+- Engine after step 935, slot 45: identical on every field, **including every
+  RNG-derived one**.
+- Control: engine sonic `02C8,03CE` cam `0238`; `physics.csv` frame 935 the
+  same. Frame indices align on player state.
+
+**The sampling-phase claim is false at the source.**
+`tools/bizhawk-headless/src/Recording/S1TraceCaptureRunner.cs:200-256` formats
+`physicsLine` and calls `auxEngine.ProcessFrame(...)` from one and the same
+post-`host.Advance()` state, and `S1AuxEventEngine.ProcessFrameCore` reads live
+host RAM — no snapshot, no M68K callback. One instant, both subsystems.
+
+**Both cited "pre-pass proofs" are the ROM's own loop order, not sampling
+phase.** `docs/s1disasm/sonic.asm:2998-3030`: `Level_MainLoop` runs
+`ExecuteObjects`, and `ObjPosLoad` runs *later in the same iteration*, with the
+emulator frame boundary in the following `WaitForVBlank`. So a post-pass sample
+legitimately shows (a) an object `ObjPosLoad` just wrote still at routine `0x00`,
+and (b) an object parked on its delete routine — `Bub_BurstDelete` is routine 8
+(`64 LZ Air Bubbles.asm:142-143`), reached by `AnimateSprite` at the end of a
+pass and executed the next one. Neither needs pre-pass sampling.
+
+**What does hold, and is worth keeping.** `Obj64` uses `FindFreeObj`, not
+`FindNextFreeObj` (`64 LZ Air Bubbles.asm:194`; `sub FindFreeObj.asm:10-21`), so
+slot-vs-parent ordering decides same-frame execution. The recording shows *both*
+arms: maker slot 32 → slot 45 gives a child already at routine `0x02` in its
+first row (frames 923, 927); maker slot 56 → slot 45 gives routine `0x00`
+(frame 935). The engine reproduces both arms exactly —
+`ObjectManager.addDynamicObjectInternal` (`ObjectManager.java:2246-2270`) already
+models it.
+
+Ruled out: creation lag, slot mismatch, maker cadence skew, allocator-class
+error. **Not** the routine-install class either.
+
+Nothing landed. The retained patch at
+`$AGENT_SCRATCH_ROOT/tasks/s1-objectnear-phase-correction-*` is kept as evidence
+of a refuted premise, **not** as pending work.
