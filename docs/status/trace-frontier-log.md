@@ -105805,3 +105805,77 @@ at the event frame and at the frame before, using the object's ROM touch radii. 
 model predicts the earlier box overlaps at the recorded event and the live one does not. One
 clean event where the two disagree settles it; two, in different games, settle it well. The
 recorder's own sampling phase has to be established first or the oracle is ambiguous.
+
+## 2026-08-21 - Touch-scan staleness confirmed by a read-only recording oracle
+
+- Worktree: `<worktrees>/touch-scan-oracle`, branch
+  `bugfix/ai-touch-scan-oracle`, based on `origin/develop` `887320904`.
+  Read-only round: no engine source was changed.
+- **Recorder sampling phase (established first).** Trace row N is written from
+  RAM *after* a complete `host.Advance()` for the frame that consumed BK2 input
+  row `offset + N`
+  (`tools/bizhawk-headless/src/Recording/S1TraceCaptureRunner.cs:199-240`; the
+  S3K runner and `S3KAuxEventEngine` sample at the same point). Both the
+  `physics.csv` player coordinates and the aux `object_state` per-slot `x`/`y`
+  are therefore end-of-frame values for the same instant. The only asymmetry
+  between them is intra-frame execution order, which is exactly what the
+  oracle measures.
+- **What the ROM does.** `TouchResponse` is reached from the player slots' own
+  routines, so it runs before any other object is dispatched that frame, and
+  `Touch_Loop` reads each candidate's live `x_pos`/`y_pos`
+  (`docs/skdisasm/sonic3k.asm:20610-20712`). The scan on frame N therefore sees
+  the player's frame-N position against every other object's
+  end-of-frame-(N-1) position -- recorded row N against recorded row N-1.
+- **Box, taken from the disassembly.** All six badnik types that produced
+  recorded defeats (Jawz, Blastoid, MegaChopper, Iwamodoki, Mushmeanie, Rockn)
+  set `collision_flags = $D7` through `SetUp_ObjAttributes`
+  (`docs/skdisasm/sonic3k.asm:176901-176912`, plus each `ObjDat_*`), so
+  `$D7 & $3F = $17` selects `Touch_Sizes[$17] = (8,8)`
+  (`docs/skdisasm/sonic3k.asm:20713-20770`). The player half-extents come from
+  `Touch_NoInstaShield`: x is `x_pos +/- 8` with `d4 = $10`, y is
+  `y_pos +/- (y_radius - 3)`. Working the unsigned `bcc`/`bcs` edges through
+  gives an inclusive overlap test of `|dx| <= 8 + W` and
+  `|dy| <= (y_radius - 3) + H`.
+- **Method.** Recorded defeats were located as slots whose aux `object_state`
+  code becomes `Obj_Explosion` (`0x0001E5E0`) after three frames of a stable
+  badnik code, across every S3K `*_completerun` fixture. For each event at
+  frame F the overlap was evaluated from the recording alone two ways -- stale
+  (`player_F` vs `object_{F-1}`) and live (`player_F` vs `object_F`) -- and,
+  decisively, at F-1 as well.
+- **Result: the stale-position model is confirmed; the live-position model is
+  dead.** Of 14 genuine player-touch defeats, the stale model reproduces the
+  recorded frame in 14/14, with no early and no late fire. The live model
+  fires one frame early in 5 of them:
+
+  | fixture | frame | slot | badnik | live first hit | stale first hit |
+  |---|---|---|---|---|---|
+  | `hcz_completerun` | 14034 | 22 | Jawz | 14033 | 14034 |
+  | `hcz_completerun` | 20393 | 11 | Jawz | 20392 | 20393 |
+  | `hcz_completerun` | 21540 | 27 | Jawz | 21539 | 21540 |
+  | `hcz_completerun` | 22861 | 14 | Jawz | 22860 | 22861 |
+  | `mhz_completerun` | 9569 | 22 | Mushmeanie | 9568 | 9569 |
+
+  The clearest is `hcz_completerun` f21540: at f21539 the live separation is
+  `dx = -15` (inside the inclusive `16` bound) while the stale separation is
+  `dx = -17` (outside), so that verdict does not rest on the inclusive edge.
+  The other four sit on `|dx| = 16` exactly, which the `cmp.w d4,d0` / `bhi`
+  pair does count as a hit.
+- **Ruled out.** The Insta-Shield path cannot explain the five events: its
+  `$30 x $30` box (`|dx| <= 32`) would have fired three to five frames before
+  the recorded defeat under *both* models, so the recordings themselves exclude
+  it without needing `double_jump_flag`, which the trace does not record. The
+  `0x000839EA` cluster that dominates a naive `status` bit-7 scan is
+  `Obj_SignpostSparkleMain`, not a touch response, and was discarded. The LRZ
+  Iwamodoki and SOZ Rockn events set bit 7 with no player overlap under either
+  model -- they are self-detonations, not touches, and are excluded from the 14.
+- **Not established: the S2 replication.** 156 candidate S2 badnik-to-`Obj27`
+  defeats were catalogued across 17 fixtures, but S2 loads `collision_flags`
+  from a subtype-indexed table (`LoadSubObject` / `SubObjData_Index`,
+  `docs/s2disasm/s2.asm:72707-72740`) and the aux `object_near` row records no
+  `subtype`, so the ROM touch box cannot be resolved per instance from the
+  recording. S2's `Touch_Loop` walks `Dynamic_Object_RAM` directly from the
+  player's own routine (`docs/s2disasm/s2.asm:85044-85090`), so the same
+  ordering argument applies there, but it is argued, not measured. Adding
+  `subtype` to `object_near` would make the S2 oracle runnable.
+- **Found, not fixed.** No ordering change was implemented and no engine file
+  was touched.
