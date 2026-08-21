@@ -103946,3 +103946,83 @@ Acceptance check unchanged: the parent retiring against `KOS_MODULE_QUEUE#366` f
 `329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c` at raw frame 5152 and its
 child against `#531` at 5151 — with a fix's matrix including `-Ptrace-segments`, since that is
 the arm these classes live in.
+## 2026-08-21 — Where the gunk's frame enters: found, and the obvious fix rejected by measurement
+
+Branch `bugfix/ai-s2-seg15-sidekick-r1`, off `origin/develop` at `845fb2d1a`.
+The candidate below is committed **as a rejected candidate**; nothing is proposed
+for merge.
+
+### The origin is datable after all, and it is not an allocation
+
+The previous entry said the recording never dates this gunk's birth because slot
+31 has no `object_appeared`. That was right about `object_appeared` and wrong
+about the conclusion: the slot is **reused in place**, and the reuse is visible.
+
+```
+5600-5632  slot 31  0x5D  routine 0x10  x 2AA6 -> 2AD5, y 0486 -> 048B   (Obj5D_Container)
+5633       slot 31  0x5D  routine 0x0C  x 2AD6,        y 048B            (Obj5D_Gunk)
+```
+
+The container does not spawn the drop. `Obj5D_Container_Extend` rewrites its OWN
+`routine(a0)` to `$C`, sets `routine_secondary` to 0 and `collision_flags` to
+`$87`, then `bra`s to `Obj5D_Container_Floor_End` and finishes the frame as the
+container (`docs/s2disasm/s2.asm:62720-62733`). `RunObject` re-reads that byte on
+the **next** frame, so `Obj5D_Gunk_Init` — and the `ObjectMoveAndFall` it falls
+through into — first run on 5634.
+
+### The arithmetic closes it on both sides
+
+Gravity is `$38` = 56 and `ObjectMoveAndFall` moves before it accelerates, so the
+sub-pixel total runs 0, 56, 168, 336 and `y_pos` first increments on the **fourth**
+frame after the first step.
+
+| | first step | predicted first y increment | observed |
+|---|---|---|---|
+| ROM | 5634 | 5637 | 5637 |
+| engine | 5633 | 5636 | 5636 |
+
+Both sequences match their own prediction, and the prediction comes from the ROM
+instruction rather than from the sequences. That is the one frame, and it is a
+**dispatch deferral on an in-place routine change**, not an allocator choice and
+not ordering.
+
+### The candidate, and the measurement that rejected it
+
+`CPZBossGunk` overriding `skipsSameFrameUpdateAfterSpawn()` to `!isDroplet`, so
+the engine's stand-in child inherits the deferral while the splash droplets —
+real allocations, and already moved off their spawn offset by the end of the
+frame they appear on — keep running immediately.
+
+```
+TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay
+  before:  370 errors
+  after:  1377 errors
+```
+
+**Rejected.** And rejected for a reason worth recording: the whole
+frames-5554-onward tails-tails cluster **comes back**, with the identical
+pre-fix signature (`5554 dynamic_art.outstanding_transfer_ids` rom `[]` engine
+`[4048]`). That cluster is the CPZ pipe retract's object-loop truncation, eighty
+frames EARLIER than anything this candidate touches.
+
+So deferring the drop by one frame moves something the pipe retract depends on.
+Two candidates, neither established here: the boss drops gunk repeatedly through
+the fight, so deferring every drop can shift the boss state machine and move the
+retract in time; or the deferral's allocation path lands the drop in a different
+slot, moving the pipe's own slot and with it where `+93` from it falls relative
+to slot 128. Distinguishing them needs the art probe re-run on the candidate,
+which this round did not do.
+
+### What that implies about the right fix
+
+The ROM does not allocate anything here — one SST slot changes what it is. The
+engine models the conversion as a child object, which already diverges (a new
+slot for something the ROM keeps in place), and the existing spawn seam cannot
+express "defer execution without touching allocation". A faithful fix probably
+has to convert the container instance in place, reusing its slot and identity,
+rather than deferring a child. That is a larger change than this round should
+make on a rejected measurement.
+
+**For whoever takes it:** do not re-try the one-line override. It is ROM-correct
+in isolation and it costs a thousand errors elsewhere, which is the more
+interesting fact about it.

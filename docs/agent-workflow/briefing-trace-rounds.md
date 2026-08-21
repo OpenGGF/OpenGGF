@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-seven rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-eight rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -50,6 +50,7 @@ that looks like a real result.
 | 65 | A shared exception type is not a shared defect; instrument the throw's contents |
 | 66 | A substring match is not a value match; `0 errors` matches inside `5840 errors` |
 | 67 | A ratchet only checked at raise time will always be raised; ask for its whole history |
+| 68 | An in-place routine change is not a spawn; look for a routine byte changing on an occupied slot |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1809,3 +1810,27 @@ proxy.** A line budget usually stands in for something real — that a particula
 logic stays out of a particular class — and that property can be asserted directly, at
 which point it neither drifts nor needs raising. A proxy that can only be discovered at
 raise time is a proxy that will be discovered at raise time.
+
+## Sixty-eighth rule: an in-place routine change is not a spawn
+
+A ROM object can rewrite its own routine byte and become a different object in the same
+slot, keeping its identity, its position and its neighbours' view of it. The dispatcher
+re-reads that byte on the next pass, so the new behaviour's first frame is the *following*
+one — a deferral that involves no allocation at all.
+
+Engines that model this as "the old object spawns a new child" inherit two problems. The
+child lands in a different slot, which moves everything that depends on slot order; and the
+spawn call decides allocation and same-frame execution together, so there is no way to
+express "defer execution without touching allocation". A one-line override of the
+same-frame flag is ROM-correct in isolation and can be badly wrong in aggregate: one such
+override fixed its target frame and cost a thousand errors elsewhere, resurrecting an
+unrelated cluster eighty frames earlier because a neighbouring object's slot moved.
+
+**Recognising it.** Look for a routine or state byte changing on a slot that has no
+creation event in the recording — the slot was already occupied, so nothing appears, and a
+search for a spawn finds nothing while the transition is plainly visible in the slot's own
+columns.
+
+**Fixing it** means converting in place, reusing the slot and identity, rather than
+spawning. That is a structural change; do not attempt it as a side effect of a frame-timing
+round.

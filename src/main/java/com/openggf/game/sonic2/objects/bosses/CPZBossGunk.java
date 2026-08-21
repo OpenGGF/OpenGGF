@@ -85,6 +85,31 @@ public class CPZBossGunk extends AbstractObjectInstance implements TouchResponse
         this(spawn, null, false);
     }
 
+    /**
+     * The mega mack drop is not allocated in the ROM at all: {@code Obj5D_Container_Extend}
+     * rewrites its OWN {@code routine(a0)} to {@code $C} (Obj5D_Gunk) and
+     * {@code routine_secondary} to 0, then {@code bra}s to
+     * {@code Obj5D_Container_Floor_End} and finishes the frame as the container
+     * (docs/s2disasm/s2.asm:62720-62733). {@code RunObject} re-reads that byte on the NEXT
+     * frame, so {@code Obj5D_Gunk_Init} -- and the {@code ObjectMoveAndFall} it falls
+     * through into -- first run one frame after the conversion.
+     *
+     * <p>The engine stands the conversion up as a child object, so the child has to inherit
+     * that deferral or the whole fall runs a frame early. The arithmetic pins it: gravity is
+     * {@code $38} = 56 and {@code ObjectMoveAndFall} moves before it accelerates, so the
+     * sub-pixel total goes 0, 56, 168, 336 and {@code y_pos} first increments on the fourth
+     * frame after the first step. The recording converts the slot on frame 5633 and first
+     * increments y on 5637 -- four frames, i.e. a first step on 5634, not 5633.
+     *
+     * <p>The splash droplets are the opposite case and must NOT defer: they are real
+     * allocations from {@code Obj5D_Gunk_Droplets} and the recording has them already moved
+     * off their spawn offset by the end of the frame they appear on.
+     */
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return !isDroplet;
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
