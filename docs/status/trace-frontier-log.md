@@ -107600,3 +107600,78 @@ reservation count, and I never computed that until this round.
 composite/burst targets. Before either, **check the reserved-slot question first** for that
 object — several families use `allocateChildSlots`/`allocateChildSlotsAfter`, and the same fold
 may already be modelled correctly.
+
+## 2026-08-21 — CANNONBALL is a real deficit; CPZStaircase is 100% a missing reservation
+
+Round `s1-cannonball-r10`, branch `bugfix/ai-s1-cannonball` off `d9a1e5a94`. Diagnosis only,
+no code. Two results: the commissioned object, and the S1/S2 asymmetry, which turned out to
+matter more.
+
+**Reading the numbers:** every per-type figure below is a *residual after crediting the
+reserved pool greedily*, so each is a **lower bound** — a large residual is strong evidence of
+a real deficit, a small one is weak.
+
+### CANNONBALL (S1 `0x20`) — precondition passes, deficit is real, family claim does not apply
+
+**Reserved-slot precondition, applied first: passes.** Neither `Sonic1BallHogBadnikInstance`
+nor `Sonic1CannonballInstance` uses `allocateChildSlots`, and the 581 figure is already net of
+the pool. Not a reservation artefact.
+
+**ROM rule.** Ball Hog (`Obj1E`) launches **one** cannonball per animation cycle, gated by
+`hog_launched` — set on launch, cleared at `.clearLaunchFlag`
+(`docs/s1disasm/_incObj/"1E, 20 Badnik - Ball Hog and Cannonball.asm":64-85`). Allocation is
+`FindFreeObj`, aborting when object RAM is full.
+
+**So it is neither composite nor burst — it is a periodic single spawner, a third shape.** The
+burst-spawn family is *not* confirmed by it, and saying so is the point: `CANNONBALL` sits
+outside both halves of the family claim.
+
+Per-frame deficit is **variable** — 1 on 82 frames, 2 on 124, 3 on 43, up to 6 — with no fixed
+value. That is the signature of a behavioural difference (the engine launches fewer, or deletes
+them sooner), not a structural fold. 581 is a lower bound, so this is a genuine target; which
+of launch-rate or lifetime is the cause is the next question and was not settled here.
+
+### CPZStaircase (S2 `0x78`) — the asymmetry check, and it is the bigger finding
+
+You asked whether S2's small reserved pool means the seam is unused there or cleared. **Neither:
+the seam exists and is used in S2** — `MCZDrawbridge`, `Crawlton` and `Grabber` all call it. It
+is not a structural absence.
+
+But applying my own precondition to `CPZStaircase` found the gap in the specific rather than the
+general. The ROM's `Obj78_SubObjectLoop` runs `moveq #3,d1` — **parent plus three children, four
+SST slots** (`docs/s2disasm/s2.asm:55967-55995`). The engine's `CPZStaircaseObjectInstance`
+*documents this correctly* in three separate comments — "Obj78 runs as four separate SST slots:
+the parent plus three children allocated after it" — and calls `allocateChildSlots` **zero
+times.** It folds four ROM slots into one instance and reserves none of the other three.
+
+The per-frame deficit confirms it exactly:
+
+| per-frame `0x78` deficit | frames |
+|---|---|
+| exactly 3 | 240 |
+| exactly 6 | 41 |
+| anything else | **0** |
+
+Three is one staircase's unreserved children; six is two staircases. `240x3 + 41x6 = 966`,
+which is the entire raw `0x78` deficit. **100% of it is the missing reservation** — no
+behavioural component at all.
+
+### This partially rehabilitates the composite family
+
+The composite half was retracted last round because its largest S1 member (`BRIDGE`) turned out
+to be modelled correctly. `CPZStaircase` is the same shape — a multi-slot composite folded to
+one instance — with the reservation **absent**. So the composite claim is real; `BRIDGE` was
+simply the member that had already been fixed. The distinction that matters is not
+composite-versus-burst but **folded-and-reserved versus folded-and-not-reserved**, and the
+second is a bounded, mechanical defect with a known-good precedent to copy.
+
+### Recommendation
+
+**`CPZStaircase` first, not `CANNONBALL`.** It is fully attributed, structural, has an exact
+expected value (3 per staircase), an existing correct precedent in `Sonic1BridgeObjectInstance`,
+and a prediction that can be checked before landing: the raw `0x78` deficit should go to zero.
+`CANNONBALL` is a real but behavioural target and a harder round.
+
+**And sweep for the same shape before doing either.** The tell is a class whose comments
+describe N ROM slots while the file never calls `allocateChildSlots` — `CPZStaircase` documented
+its own defect three times. That sweep is cheap and may find several.

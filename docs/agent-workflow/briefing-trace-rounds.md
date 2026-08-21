@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-eight rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-nine rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -105,6 +105,7 @@ that looks like a real result.
 | 86 | A ranking whose metric embeds a parsing choice | Relocation counted as absence; the wrong object at the top of the list |
 | 87 | A delta read at the wrong intra-frame write of a folded object | A plausible defect, and a guard that would make the fixture pass wrongly |
 | 88 | A probe's text report parsed as data | Correct code at the top of a defect ranking, twice recommended |
+| 89 | A folded class documenting N ROM slots and reserving none | Every later object's slot index shifted; a deficit that is 100% structural |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2317,3 +2318,25 @@ cross-check was never computed until the round that found the error.
 
 **Better still, do not parse a rendering at all** where the instrument can emit structured
 output or where the quantity can be recomputed from the source data.
+
+## Eighty-ninth rule: a class that documents N ROM slots and reserves none is the searchable defect
+
+Where the engine folds a ROM parent and its children into one instance, the fold is only
+faithful if it still **reserves** the children's slots — because slot numbers feed cadence
+gates elsewhere, and a fold that quietly compacts them shifts every later object's index.
+
+The axis that matters is therefore not composite-versus-burst but **folded-and-reserved
+versus folded-and-not-reserved**, and the second has a tell you can grep for: a class whose
+comments describe the ROM's slot count while the file never calls the reservation helper. One
+such class documented "parent plus three children allocated after it" in *three separate
+comments* and reserved nothing. Its per-frame deficit was three on two hundred and forty
+frames and six on forty-one — one staircase and two — accounting for one hundred per cent of
+its raw deficit with no behavioural component at all.
+
+**Sweep for the shape before working any single member.** It is findable by reading a class's
+own documentation against its own code, which makes it cheap, and a correct precedent already
+exists to copy.
+
+**And check the reservation question before commissioning any occupancy target.** Two
+candidates in this investigation reached the top of a defect ranking while being correct code;
+a third was fully explained by this defect and was not the object anyone had commissioned.
