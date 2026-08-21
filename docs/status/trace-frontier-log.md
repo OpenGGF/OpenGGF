@@ -108381,3 +108381,64 @@ the `FixedSstObjectInstaller` misreading leaned the other way — I nearly repor
 blocker** and closed the round as impossible. Seventh wrong-leaning reading of the
 investigation, and the first that would have *under*-reported. The bias is toward the
 conclusion that ends the round, whichever direction that happens to point.
+
+## 2026-08-21 — `BossDefeated`'s fall-through: stage A is `$3F` after all, and 63 was never dead
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `55a313ff4`.
+Command as above. **This round lands a change, and it retracts the previous two entries'
+central claim.**
+
+**Prediction, stated before measuring:** stage A 56 → 64 and stage B 128 → 120, total unchanged
+at 184, so the fixture is exactly neutral at 2288 / frame 6000 `sidekick_x`.
+**Measured: exactly that.** Segment 8 2288 errors, first non-camera frame 6000 `sidekick_x`
+rom `0x4997` engine `0x4996`; segment 9 unchanged at 59070 / frame 0.
+
+**The retraction.** Two entries above claimed stage A "is not a constant at all — it is the
+timer the previous move-wait left". That is wrong. `AIZEndBoss_StartDefeatCallback` ends with
+`jmp (BossDefeated_StopTimer).l` (`sonic3k.asm:138951`), and that label is a **single
+instruction** —
+
+```
+BossDefeated_StopTimer:
+        clr.b   (Update_HUD_timer).w
+BossDefeated:
+        move.w  #$3F,$2E(a0)
+```
+
+— which **falls through** into `BossDefeated` (`sonic3k.asm:180814-180821`). The defeat path
+does write `$2E`, and stage A is a fixed **`$3F`** = 63. The write is easy to miss because the
+routine being jumped to is named for stopping a *different* timer, and because the fall-through
+crosses a `; End of function` banner.
+
+**Everything reconciles, with no residual.** Defeat at row 5487 sets `$2E` = 63;
+`Wait_FadeToLevelMusic` runs 5488-5551 = 64 frames and expires exactly at the observed 5551;
+`loc_85674` installs 119; `Obj_Wait` runs 120 and creates the capsule at 5671 — the row the
+capsule's own 62/62 positional match demanded. The 33-frame gap that the forward chain could
+not explain, and that has haunted this thread as a "dead figure", was this fall-through the
+whole time.
+
+**So the dead figures are re-examined and one is alive.** **63 is not dead — it is
+`move.w #$3F,$2E(a0)`, a ROM literal with a write site.** It was declared dead because rounds
+that looked for the write site could not find it, which made every appearance of 63 look
+fitted. It was never fitted; it was hidden. 184 remains correct as a total. Only 66 has no
+account here, and this round does not speak to it.
+
+**Also retracted: "the two bosses are in different phases when they die."** They are not. The
+engine's routine-byte series matches the recording at every observable transition — 4798 rt 2,
+4811 rt 4, 4831 rt 6, 5133/5134 rt `$C`, 5274 rt 4, 5294 rt 6 — and the engine's routine-8 and
+routine-10 entries at rows 5056 and 5120 fall inside a slot-7 near-list gap (rows 5036-5133), so
+they are unobservable, not divergent. Rule 90 applied to my own claim. The boss's inherited
+`$2E` was never load-bearing, because `BossDefeated` overwrites it.
+
+**What landed.** Both stages now run as one countdown over the existing `$2E`/`$34` analogue
+(`waitTimer`/`waitCallback`) in `Obj_Wait`'s `subq`/`bmi` shape, seeded with
+`BOSS_DEFEATED_WAIT` = `$3F` and `FADE_TO_LEVEL_MUSIC_WAIT` = `(2*60)-1`. The invented
+`defeatExplosionWaitTimer` `0x37` and `defeatPhaseTimer` `0x7F` are deleted. 56+128 and 64+120
+both total 184, which is why no committed fixture could ever see the error and why correcting
+either half alone made the capsule land dozens of frames off — the compensating pair is now
+resolved rather than merely diagnosed.
+
+**Still open, unchanged by this round:** the capsule and the defeat detection are still one
+frame early (engine 5486 against the ROM's 5487), which is routed to the badnik lane, and the
+frame-6000 `sidekick_x` frontier is untouched. Stage B's 120 frames were independently
+confirmed by live measurement last round and are unchanged here.

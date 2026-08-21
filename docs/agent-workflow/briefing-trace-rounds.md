@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-eight rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-nine rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -115,6 +115,7 @@ that looks like a real result.
 | 96 | A reading that lets the round end | Findings and blockers both stop the check that would overturn them |
 | 97 | A control arm pinned to `origin/develop` | Two arms built from different trees, reported as reach-proven-equal |
 | 98 | A class measured with `-Dtest=` under a profile that would not select it | A green read as matrix coverage, from an arm that never ran the class |
+| 99 | A `jmp` target read as a one-line helper | A fall-through past an end-of-function banner, hiding the write everyone was hunting |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2550,3 +2551,25 @@ profile to the matrix or state plainly that the landmark is unmeasured by it.
 class while the chain that contains that zone never reaches it — the chain is blocked upstream
 by an entry-state divergence at its own frame zero. "The landmark is closed" is true of one
 class and false of the chain, and the distinction has to be in the sentence.
+
+## Ninety-ninth rule: a jump target may fall through past an "End of function" banner
+
+A `jmp` to a label that looks like a one-line helper can fall straight into the next routine.
+One such target was a single instruction clearing an unrelated timer, and it fell through — past
+a comment banner marking the end of the function — into a routine whose first instruction writes
+the very field three rounds had been trying to account for.
+
+**Read past the end of the routine you jumped to.** Banners and blank lines are formatting, not
+control flow, and a disassembly's own section markers do not stop execution.
+
+**And a figure "declared dead" may be hidden rather than fitted.** That value had been ruled a
+fitted constant precisely because nobody could find a write site for it, so every appearance
+looked invented. It is a ROM literal with a real write, and the rounds that killed it were
+right about the evidence they had and wrong about the conclusion. When a constant is declared
+dead for want of a source, record *that* as the reason — "no write site found" is a different
+claim from "not a ROM value", and only the first survives someone finding the site.
+
+**Corollary, from the same round.** The claim that two objects were in different phases at a
+transition was retracted by the same discovery: the inherited value was never load-bearing,
+because the routine overwrites it. A round scoped on that claim would have been chasing
+something that does not exist.
