@@ -113108,3 +113108,89 @@ shapes were both wrong. It is equally possible that the engine's ring is right
 and the ROM's ring is genuinely elsewhere for a reason not yet visible -- a
 different layout list for the return leg, or a respawn-table entry overriding the
 placement. Read the loader before believing the offset.
+
+## 2026-08-21 -- CORRECTION: the ROM's ring is at 1216 too, and the +4 is a discrete write
+
+Branch `bugfix/ai-s3k-ring-source-r6`, based on `develop` at `5ec0bde99`.
+
+### This overturns a conclusion in the merged write-up above
+
+The previous round concluded that "the ROM's runtime ring `y_pos` must be 1220
+while its layout record says 1216", and sent the next round to look for a +4 in
+the object loader. **That was an inference, not a measurement, and it is wrong.**
+
+The commission was to establish the *source* before hunting arithmetic. Doing so
+killed the loader hypothesis outright, and killed the inference that produced it.
+
+### The measurement: the ROM's live ring, from the recording
+
+Segment `aiz`'s `aux_state.jsonl.gz` carries `object_state` per frame per slot,
+with each object's ROM `object_code`, `x` and `y`. Every object the ROM has live
+at `x = 0x1BC8` (7112) across the whole approach:
+
+```
+frame 841   object_appeared  slot 17                      y=0x04C0
+frame 1273  object_appeared  slot 45                      y=0x04C0
+frame 1281  object_state     slot 45  code 0x00085AD2     y=0x04C0  subtype 01
+frame 1283  object_state     slot 45  code 0x00061682     y=0x04C0  subtype 01
+frame 1325  object_state     slot 10  code 0x000617BE     y=0x04C0  subtype 01
+frame 1328  object_state     slot 45  code 0x0001ABB6     y=0x04C0  subtype 01
+frame 1334  object_state     slot 10  code 0x0008488A     y=0x04C0  subtype 01
+```
+
+`0x61682` is `Obj_SSEntryRing` and `0x617BE` is `Obj_SSEntryFlash` (the
+`loc_61708`/`loc_6170A`/`loc_61820` labels sit inside that range). **Not one
+object at that x is ever at `0x04C4`.** The ring is at `0x04C0` = 1216 and the
+flash it spawns is at `0x04C0` = 1216 -- identical to the layout record and
+identical to what the engine spawns and saves.
+
+### What that eliminates
+
+- **The loader adds 4** -- dead. The ROM's live object matches its layout record
+  exactly, so nothing is added between the 6-byte record and first execution.
+- **A different placement source on the return leg** -- dead. Same ring, same x,
+  same y, same subtype, and the record's bit 15 is clear so it is not
+  respawn-tracked in the first place.
+- **The ring's own code moving it** -- dead by measurement now as well as by
+  reading; it holds `0x04C0` for every frame it is live.
+
+The obvious shape was wrong for the *fourth* consecutive time, and this one was
+carried by my own previous round.
+
+### So where the +4 actually is
+
+The chain is now fully measured on both ends and they disagree:
+
+- ROM flash `y_pos` at `Save_Level_Data2` time: **1216** (measured, above)
+- ROM `Player_1+y_pos` at the recorder's arm frame: **1220** (measured, `start_y
+  = 0x04C4`), at rest with `y_speed = 0`
+
+`Save_Level_Data2` stores `y_pos(a0)` (`sonic3k.asm:61739`) and `loc_2D2C2`
+restores it straight into `Player_1+y_pos` (`sonic3k.asm:61800`), both plain word
+copies. The restore's caller `loc_1BE46` (`sonic3k.asm:38148-38153`) then loads
+x and y into `d1`/`d0` and branches to `Get_LevelSizeStart`'s `loc_1BF74`, which
+**only writes the camera** -- `Camera_X_pos`, `Camera_Y_pos` and their P2 twins,
+after subtracting `$A0` and `$60`. It never writes back to `Player_1+y_pos`.
+
+So a **discrete +4 write** to the player's y happens somewhere in the transition
+window, after the restore and before the arm frame. Not gravity -- `y_speed` is 0
+at the arm frame. Not a settle -- the player is `air = 1` and never touches a
+floor. A single adjustment, by something not yet read.
+
+That window is **not covered by any recorded rows**, which is why the previous
+round could not see it and inferred the wrong end of the chain instead.
+
+### Named, not modelled, and one coincidence put back on the table honestly
+
+The unread surface is now the level-load sequence between `Load_Starpost_Settings`
+and the first level frame. That is a new commission, not a round-ending change.
+
+One thing to hand over without overselling it: the destination segment's
+`state_snapshot` at row 0 reports `y_radius = 15`, Tails' value, against Sonic's
+19 -- and the gap is 4. An earlier round killed that coincidence on the grounds
+that no radius arithmetic exists on the restore path, which is still true. But the
+argument that killed it was "there is no arithmetic anywhere", and we now know a
++4 write *must* exist somewhere in the window. So it is not revived, and it is no
+longer excluded by absence-of-arithmetic either. Whoever reads that window should
+keep it in view without going looking for it -- which is exactly the discipline
+that has now killed four obvious shapes in a row.
