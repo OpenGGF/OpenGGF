@@ -102938,3 +102938,58 @@ exception, and it must not be keyed on a frame, animation id or routine.
 
 Worth **29,571 comparator errors** across segments 23, 24 and 26 if the phase is corrected;
 those three lead with this identical missed transfer.
+
+## 2026-08-21 — RETRACT the DPLC "phase problem": the engine's mapping frame is genuinely wrong, and the error is not counted
+
+Round `s1-slz1-graze-r1`, continued. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change; probes reverted.** This retracts the previous entry's conclusion.
+
+### Retraction
+
+The previous entry concluded the missed S1 DPLC submission was a phase problem — the art
+decision reading the pre-write mapping frame while the comparator read the post-write one.
+**That is wrong.** Two measurements kill it:
+
+1. A stack-trace probe on `AbstractPlayableSprite.setMappingFrame`, filtered to the site's
+   position box, fires **once** in the entire chain and it is `mf 11 -> 6`. **Nothing writes
+   mapping frame 8 there at any point in the frame**, so there is no late writer and no phase
+   difference to correct.
+2. Probing at the comparison point itself — no row arithmetic, expected against actual as
+   `binder.compareFrame` receives them:
+
+```
+[CMP] cursor=3123 expMf=8 engMf=85 expX=ba5 engX=ba5 divergentCount=1 isError=true
+```
+
+The X positions are identical, so the rows are aligned. The engine's mapping frame at that
+frame simply **is** 85 where the ROM's is 8.
+
+So the missing art transfer is not a submission defect at all. `observe()` stages correctly for
+the frame the engine actually has; the engine reaches a different animation frame from the ROM,
+and the absent DPLC load is a **symptom** of that.
+
+### The part that matters beyond this thread
+
+Across the S1 complete-emerald chain there are **1263** frames where the engine's
+`player_mapping_frame` disagrees with the ROM's at the comparison point, and
+`FrameComparison.hasErrorInField("player_mapping_frame")` is **`true` on all 1263**. Segment 23
+nonetheless reports `errorCount 16 / warnings 0`, with its first non-camera mismatch at f3124 in
+`dynamic_art.edges` — the mapping-frame error at f3123 is not among them, and at that frame it
+is the *only* divergent field (`divergentCount=1`).
+
+**Not established:** why a field the comparison marks ERROR does not reach the segment's error
+count. `divergentFields()` applies no scope filter, `TraceVerificationScope` defaults to `ALL`,
+and `absorbDivergentFields` counts any ERROR regardless of verification group — so the drop is
+somewhere between `compareFrame` returning and the segment totals being formed, and I did not
+find it before stopping.
+
+That question comes first. If animation-group errors are genuinely uncounted, the S1 chain's
+reported error counts understate the real divergence, every triage ranking built on them
+(including this round's table) is measuring a filtered quantity, and the "29,571 errors" figure
+for the missed-transfer family is a count of the symptom rather than the cause.
+
+### Method note
+
+The site was found only by anchoring on the comparator's own cursor and cross-checking `expX`
+against `engX`. Every earlier attempt to reach it by deriving a movie row produced internally
+consistent output for the wrong window — the trap recorded in the previous entry, met twice.
