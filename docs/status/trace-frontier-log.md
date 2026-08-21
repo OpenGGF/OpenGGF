@@ -108442,3 +108442,51 @@ resolved rather than merely diagnosed.
 frame early (engine 5486 against the ROM's 5487), which is routed to the badnik lane, and the
 frame-6000 `sidekick_x` frontier is untouched. Stage B's 120 frames were independently
 confirmed by live measurement last round and are unchanged here.
+
+## 2026-08-21 — Segment 8's frontier is downstream of the defeat-detection frame; not taken
+
+Worktree `<wt>/s3k-aiz5-sidekick`, branch `bugfix/ai-s3k-aiz5-sidekick-x`, on `ba2630287`
+(`498f0e34e` in this branch). Command as above. **Nothing landed; one throwaway probe,
+reverted. This round deliberately stops rather than taking a defect routed elsewhere.**
+
+**Gate, stated before starting:** either find a cause of the frame-6000 `sidekick_x`
+divergence independent of the defeat-detection frame, or *prove* it is downstream — proof
+requiring three things at once, not a moved error count: the capsule's **post-swing** y
+matching the recorded slot-9 series with zero mismatches, the button trigger moving to row
+6006 from **P2**, and the first error moving past 6000.
+
+**All three met.** Simulating the ROM's defeat frame (5487) instead of the engine's (5486) —
+a one-line throwaway adding a frame to the defeat wait, which reproduces a one-frame-later
+defeat for everything downstream of it:
+
+| gate condition | result |
+|---|---|
+| capsule post-swing `y` vs recorded slot-9 | **62 / 62, zero mismatches** |
+| button trigger | row **6006**, from **P2**, `dx=5 dy=26` — the ROM's presser at the ROM's row |
+| segment 8 first error | **6000 → 6111**, errors 2288 → **2215** |
+
+**So the frame-6000 `sidekick_x` divergence has no cause of its own.** It is the last visible
+consequence of the defeat being detected one frame early, through the chain this thread has
+now established end to end:
+
+> defeat detected at 5486 instead of 5487 → capsule created at 5670 instead of 5671 → its
+> `Swing_UpAndDown`/descent runs a frame ahead → at row 5992 the capsule's `y` is one pixel
+> low → Sonic's `dy` is 27 against `Check_PlayerInRange`'s exclusive `< $1C` instead of the
+> 28 that makes him miss → the button is pressed by **Sonic at 5992** instead of **Tails at
+> 6006** → `sub_865DE`'s `st (Ctrl_2_locked).w` runs 14 rows early → Tails' CPU steering stops
+> 14 rows early → `sidekick_x` is one pixel behind at frame 6000.
+
+Every link is measured, and the whole chain collapses when the first link moves by one frame.
+
+**Not taken.** The defeat-detection frame is routed to the badnik lane as a possible shared
+defect with their dispatch-early case. Taking it from here would duplicate that work and risk
+two lanes landing different fixes for one cause.
+
+**The next frontier behind it, for whoever fixes the detection frame:** segment 8 first error
+becomes **frame 6111, field `y`, rom `0x01FC` engine `0x01FD`**, at 2215 errors. That is the
+figure to expect, not a regression.
+
+**Everything else in this segment is closed behind this:** the post-defeat wait (both stages
+now ROM-derived and landed), the capsule descent constants, the swing setup, the press
+predicate, the trigger box, the parent/child ordering, the boss's pre-defeat phase, the
+routine-zero question, the alternative entry point, and the sidekick follow-delay family.
