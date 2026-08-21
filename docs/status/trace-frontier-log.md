@@ -102858,3 +102858,25 @@ capsule, given that the residual, the reload and `Obj_Wait` are all accounted fo
 likely answer is that no such element exists and the ROM's residual simply is not 30 — which
 would mean the engine's fight enters its phases on different rows than the ROM's, and that is
 **not decidable from this recording**.
+
+## Parked: questions the current recordings cannot answer
+
+These are not blocked rounds. Each is a question whose answer is not present in the
+recorded data at all, so no amount of reading or instrumenting the engine will settle it.
+They need a recorder change or a different movie, which is a capture decision rather than
+a trace round. Collected here so a future capture pass can be scoped in one go rather than
+one question at a time.
+
+- **S3K AIZ end boss: do the engine's and the ROM's fights enter their phases on the same
+  rows?** The boss body never enters the recorded near-list -- only its arms and flames do
+  -- so no ROM phase entry row is observable, and the engine's residual cannot be checked
+  against the ROM's. Everything downstream of that residual (the post-defeat shortfall)
+  is arithmetic on an unverified input and is marked as such. Would need the boss body's
+  routine and shared timer in the capture.
+- **S3K capsule: which character presses, and from what position?** Settled indirectly for
+  this recording by evaluating the engine's predicate against the recorded capsule
+  position, but the capsule's own y and the presser identity are not recorded directly.
+- **S1 `ss_6` exit span, and the Obj05 SST question** (carried from earlier rounds).
+
+When a capture pass is scoped, the test for adding a field is the same as everywhere else:
+it must let the engine be *checked*, never let the engine be *driven*. See hard rule 4.
