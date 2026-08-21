@@ -110762,3 +110762,93 @@ that citation made an invented 30-frame duration look derived. **Cited
 instructions need checking for existence, not only for what they do.** Two of
 this lane's five defects were found by reading a comment and then failing to
 find what it cited.
+
+## 2026-08-21 -- FIXED: the WFZ defeat was two errors that cancelled
+
+Follow-up to the rule-107/108 routine-install survey. Branch
+`bugfix/ai-routine-install-land`, measured at `2f64e2f03`. JDK 21, `-Dmse=off`.
+
+### The finding
+
+`Sonic2WFZBossInstance` was a confirmed member of the routine-install class: the defeat
+countdown started at 238 where the ROM ends the killing frame at 239. Correcting it **made
+`TestS2WfzLevelSelectTraceReplay` worse**, which is the strongest available evidence that
+something downstream was absorbing the frame.
+
+It was. `ObjC5_End` writes `Camera_Max_Y_pos` *and* `Camera_Max_Y_pos_target` immediately, in
+the boss's own slot (docs/s2disasm/s2.asm:81519-81526). The engine called
+`Camera.setMaxYAfterNextUpdate`, which defers the write by a frame -- an API whose **only
+caller in the entire tree was this one site**. The early countdown and the late camera write
+cancelled, and the trace was green on two wrongs.
+
+| arm | result |
+|---|---|
+| control (`2f64e2f03`) | 0 errors, 3 warnings (pre-existing `tornado.status_byte` gate) |
+| countdown fix alone | **1 error** -- frame 12886 `camera_y` expected=0x0448 actual=0x0442 |
+| both corrections together | 0 errors, same 3 warnings |
+
+The fixture's own `camera_y` column shows the ROM's ratchet starting at frame 12886 and
+stepping 6px/frame (0x442 -> 0x448 -> 0x44E ...), so the single error was the ratchet starting
+one frame late.
+
+### ROM half, both parts
+
+`ObjC5_LaserCase` reads `routine_secondary(a0)` **once** at the head and `jsr`s the case
+(:81246-81251); only then `bra.w ObjC5_HandleHits`, whose `ObjC5_NoHitPointsLeft` writes
+`objoff_30 = $EF` and `routine_secondary = $1E` (:82045-82053). `ObjC5_CaseDefeated` is
+`subq.w #1,objoff_30(a0) / bmi.s ObjC5_End` (:81509-81515), so the end fires 240 dispatches
+after the install and the killing frame ends at 239.
+
+The install is modelled as a **tail latch** in the boss's own dispatch, not by the base
+class's `defeatDeferralAppliesToThisBoss()`: that mechanism *skips* the dispatch, whereas
+ObjC5 runs the previously selected case on the killing frame and installs afterwards. Rewriting
+it into the faithful shape was also what killed the first hypothesis -- the dropped case frame
+produced the **same single error at the same frame in the same field**, so it was retracted
+rather than kept as a maybe.
+
+### A candidate that was wrong, recorded as wrong
+
+The upstream defect was predicted to be `usesCurrentTouchResponseState()`: WFZ does not
+override it, so its touch is evaluated against pre-update positions. **That was not it.**
+`TouchResponse` runs from the player's own object code in every one of these games, so it
+already sees end-of-previous-frame positions in ROM too -- the default is correct here. The
+compensation was a camera API, not a touch-state flag. No family sweep was needed, because
+`setMaxYAfterNextUpdate` had exactly one caller.
+
+### Near-miss worth more than a clean account: two dispatches versus one
+
+While deriving the S3K half of the LBZ fix, `Draw_And_Touch_Sprite` was briefly read as
+*performing* the touch. It does not -- it only calls `Add_SpriteToCollisionResponseList` and
+jumps to `Draw_Sprite` (docs/skdisasm/sonic3k.asm:178041-178044). Had that reading survived,
+the touch would have appeared to land at the boss's own slot *after* `sub_73FE2`, making the
+install cost **two** dispatches instead of one, and the resulting "fix" would have been a
+two-frame deferral fitted to nothing.
+
+The actual call sites: `TouchResponse` runs from `Sonic_Control` / `Tails_Control` /
+`Knuckles_Control` (docs/skdisasm/sonic3k.asm:21947, :26159, :30389) and from Sonic's and
+Tails' object code in S2 (docs/s2disasm/s2.asm:38998) -- the player slots, before the object
+slots, in both games.
+
+**This makes rule 108's Q2 a lookup rather than a piece of reasoning.** Find where the ROM
+writes the selector: inside `Touch_Response` / `Touch_Enemy` -> not a member, the ROM runs it
+same-frame too; inside the object's own routine or its tail -> member. Every confirmed member
+has it in the tail: `bsr.w sub_73FE2` (LBZ), `bra.w ObjC5_HandleHits` (WFZ),
+`AIZEndBoss_CheckHitOrDefeat` (AIZ2). It also explains why ordinary badniks are not members
+and never will be.
+
+### Measurement hazards hit in this round
+
+- **`TestS2WfzLevelSelectTraceReplay` is red in BOTH arms** -- control on a pre-existing
+  warning gate, treatment on a real error. A pass/fail comparison of the class would have read
+  "red before, red after, no effect" and landed a regression. Only the message separates them
+  (rule 24).
+- **A parallel `-Dtest='TestS2*TraceReplay'` sweep reported 32 errors at ~0.002s elapsed**, all
+  `NoClassDefFoundError: GlfwKeyNameResolver$Holder`. Environment, not code (rule 43). Run
+  alone, one of the "errors" is a 0-error/237-warning gate failure. The sweep arm was discarded,
+  not quoted.
+
+### Left alone
+
+`Camera.setMaxYAfterNextUpdate` now has zero callers. It is deliberately not removed here --
+that touches the camera rewind snapshot record, and the WFZ commit needs to stay droppable.
+The 9 unmeasured routine-install candidates and the cross-object install gap remain parked.

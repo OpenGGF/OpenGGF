@@ -1,5 +1,12 @@
 # Changelog
 
+- **The Wing Fortress boss's defeat countdown and its camera hand-off are both
+  ROM-accurate now:** the countdown started a frame early and the camera's
+  max-Y write was deferred by a frame, and the two errors cancelled. The
+  countdown now starts where `ObjC5_NoHitPointsLeft` sets it, after the frame's
+  own case has run, and the camera max-Y and its target are written immediately
+  as `ObjC5_End` does. Neither correction is right without the other.
+
 - **The LBZ end boss's defeat countdown no longer starts a frame early:** the
   ROM installs its post-defeat handler after the boss's routine arm has already
   run for the frame, so the handler's first wait decrement belongs to the next
