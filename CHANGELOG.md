@@ -1,5 +1,13 @@
 # Changelog
 
+- **ARZ's air bubbles have to inflate before Sonic can breathe them again:**
+  a large bubble only becomes inhalable once its animation has climbed to the
+  big-bubble frame, which is the delay the ROM builds out of the animation
+  script itself. The engine had been treating every large bubble as breathable
+  from the instant it left the generator, so Sonic could inhale one about a
+  second too early — and the generator was throwing away the very byte that
+  selects which animation the bubble runs.
+
 - **An off-screen ARZ swinging platform is now inert, as the ROM has it:**
   `Obj82_Main` tests its own render flag and, when clear, skips both the solid
   collision and the swing — and the swing routine holds the swing angle as well

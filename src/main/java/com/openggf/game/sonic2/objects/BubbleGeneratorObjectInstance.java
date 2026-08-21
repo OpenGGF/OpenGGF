@@ -261,13 +261,14 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             }
         }
 
-        // Create bubble with appropriate size
-        // Subtype 0 = tiny, 1 = small, 2 = large (breathable)
-        int bubbleSize = bubbleSubtype;
-        if (bubbleSubtype == 2) {
-            bubbleSize = 5; // Large breathable bubble needs size >= 3
-        }
-        int finalBubbleSize = bubbleSize;
+        // ROM loc_1FA2A writes the byte_1FAF0 type list entry (or the large
+        // override's #2) straight into subtype(a1), and Obj24_Init copies that
+        // to anim(a0) (docs/s2disasm/s2.asm:45217). Pass the ROM subtype through
+        // unchanged: the old translation of subtype 2 to a size of 5 existed only
+        // to satisfy BubbleObjectInstance's since-removed `bubbleSize >= 3`
+        // breathable test, and it discarded the very byte that selects the
+        // Ani_obj24 script.
+        int finalBubbleSize = bubbleSubtype;
 
         spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, 0, true));
 
