@@ -137,6 +137,7 @@ that looks like a real result.
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
+| 121 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3139,3 +3140,15 @@ in the call chain and check each for writes to the field. Here that established 
 second candidate rather than assuming it — and the same sweep is what proves an unmodelled arm
 exists, because an arm nobody enumerated cannot be ruled out by reading the arm that was.
 
+
+### 2026-08-21 -- a third way a probe fails silently: `-DargLine` never reaches the fork
+
+The pom pins surefire's `<argLine>` to `${surefire.argLine}`, so a CLI
+`-DargLine=-Dmyprobe=1` is discarded and the property never reaches the forked
+JVM. A `System.getProperty`-gated probe then prints nothing, which is
+indistinguishable from a branch that never ran -- the same failure mode as a
+probe that did not compile behind a filtered grep, and as an `echo COMPILE_OK`
+printed unconditionally above the real `ERROR` lines. All three happened on one
+day. Gate diagnostic probes on an environment variable instead: forks inherit the
+environment, and `ORDINAL_PROBE=1 mvn ...` works under every profile. Whichever
+gate is used, count the probe's own output lines before reading the result.
