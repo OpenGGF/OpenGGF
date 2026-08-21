@@ -126,6 +126,7 @@ that looks like a real result.
 | 107 | A routine installed mid-frame and run in the same frame | One tick early, structurally; the fitted fix is a skipped tick |
 | 108 | The symptom is one frame; the class is one intra-frame slot | Q1 cuts most false positives by reading; survey by role |
 | 109 | On a moving object, `spawn` is not an identity | Re-key on slot; an inverted verdict looks clean |
+| 110 | A batch instrument needs a positive control | "Nothing moved" also means the arm never ran |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2861,3 +2862,33 @@ the instance, or an explicit id.
 The tell is a persistence or occupancy result that is *implausibly* one-sided (every object dies
 instantly; nothing is ever reused). Before reporting the owner it implies, re-key and re-measure:
 an inverted verdict arrives with a clean-looking number behind it and nothing else marks it wrong.
+
+## One hundred and tenth rule: a batch instrument needs a positive control, or it converts unreachable code into exclusions
+
+A detector that reports "nothing moved on the install frame" reads exactly like *models the
+invariant correctly*. It is equally the signature of **the arm never having run at all**. One
+candidate in a batch of nine looked clean for the second reason: `updateBossLogic` early-returns
+before its routine switch while an arena gate is false, so the defeated arm never executed.
+Nothing moved because nothing ran.
+
+**The control: dispatch a second frame as well.** If the arm is live, a countdown moves on at
+least one of the two. If neither moves, the arm never ran and the verdict is **inconclusive, not
+negative**.
+
+Without that control, a batch instrument silently converts unreachable code into exclusions — and
+does so under the authority of a method already treated as reliable, which is what makes it worse
+than an obviously broken probe. It was caught only by going to read *why* a result looked clean
+instead of banking it.
+
+**Related, on scope:** the same batch settled its ROM half from **one routine per game**
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20908-20925`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+rather than nine readings — neither writes a routine, so the install is in each boss's own
+dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
+rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
+context. "Measure eight candidates" and "build real level fixtures for eight bosses" are different
+commissions, and a batch that starts as the first can quietly become the second.
+
+**And a confirmed member with no covering trace should not be landed.** The one confirmed class
+sits far past the current chain frontier. A correct member fix can be load-bearing (see WFZ); with
+no covering trace there is nothing to reveal a compensation if one exists, so a green unit test is
+not proof. Confirmed-and-unlanded is an honest state, not a stalled one.
