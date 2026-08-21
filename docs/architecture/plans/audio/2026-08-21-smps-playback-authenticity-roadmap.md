@@ -129,8 +129,9 @@ repeated 1-up, and restore; short external references for transitions.
 
 Status: fade-out channel selection, speed-state clearing, initial SFX/DAC/PSG
 halts, terminal count, and service-scoped all-audio cleanup now match the
-shipped paths. Driver-level pause and the complete 1-up lifecycle remain in
-this phase.
+shipped paths. S3K 1-up now runs at normal speed and restores the displaced
+song's saved speed state. Driver-level pause, S3K's native restore fade, and
+the remaining shipped 1-up restoration bugs remain in this phase.
 
 ### Phase 4 — SMPS bytecode and envelope quirks
 

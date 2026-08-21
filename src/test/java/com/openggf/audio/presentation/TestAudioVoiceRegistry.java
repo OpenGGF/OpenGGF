@@ -1348,6 +1348,41 @@ class TestAudioVoiceRegistry {
                 "only the soloed PSG channel stays audible");
     }
 
+    @Test
+    void s3kOneUpRunsAtNormalSpeedThenRestoresSavedSpeedState() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(
+                instantiation, new ArrayList<>());
+        SmpsDriver base = musicDriver(new SmpsSequencerConfig.Builder()
+                .build());
+        SmpsDriver oneUp = musicDriver(new SmpsSequencerConfig.Builder()
+                .musicOverrideSpeedPolicy(
+                        SmpsSequencerConfig.MusicOverrideSpeedPolicy
+                                .NORMAL_DURING_OVERRIDE)
+                .build());
+        instantiation.enqueueMusicDriver(base);
+        instantiation.enqueueMusicDriver(oneUp);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, base))));
+        registry.apply(new SetSpeedShoes(true));
+        registry.apply(new SetSpeedMultiplier(8));
+        assertTrue(base.firstMusicSequencer().isSpeedShoes());
+        assertEquals(8, base.firstMusicSequencer().getSpeedMultiplier());
+
+        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(2, 0x82, oneUp))));
+
+        assertFalse(oneUp.firstMusicSequencer().isSpeedShoes());
+        assertEquals(1, oneUp.firstMusicSequencer().getSpeedMultiplier());
+
+        registry.apply(new RestoreMusicOverride());
+
+        assertTrue(base.firstMusicSequencer().isSpeedShoes());
+        assertEquals(8, base.firstMusicSequencer().getSpeedMultiplier());
+    }
+
     /**
      * Every real rewind restore targets a registry that is already holding
      * live, dirtied voices — never a fresh one. Restoring into that registry
@@ -1813,6 +1848,17 @@ class TestAudioVoiceRegistry {
         driver.addSequencer(new SmpsSequencer(
                 data, dacData(), driver, AudioManager.getInstance(),
                 new SmpsSequencerConfig.Builder().build()), false);
+        return driver;
+    }
+
+    private static SmpsDriver musicDriver(SmpsSequencerConfig config) {
+        SmpsDriver driver = new SmpsDriver();
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("music-override-speed");
+        data.setId(0x81);
+        driver.addSequencer(new SmpsSequencer(
+                data, dacData(), driver, AudioManager.getInstance(), config),
+                false);
         return driver;
     }
 

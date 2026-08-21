@@ -57,6 +57,9 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fadeOutChannelPolicy(
                         SmpsSequencerConfig.FadeOutChannelPolicy
                                 .HALT_DAC_AND_PSG_FADE_FM)
+                .musicOverrideSpeedPolicy(
+                        SmpsSequencerConfig.MusicOverrideSpeedPolicy
+                                .NORMAL_DURING_OVERRIDE)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)

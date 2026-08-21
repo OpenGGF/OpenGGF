@@ -468,6 +468,7 @@ final class SmpsAssetCatalog {
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
                 .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
                 .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
+                .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
                 .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())

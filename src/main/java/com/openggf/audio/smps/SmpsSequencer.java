@@ -3271,6 +3271,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return speedMultiplier;
     }
 
+    public boolean isSpeedShoes() {
+        return speedShoes;
+    }
+
     public DebugState debugState() {
         DebugState state = new DebugState();
         state.tempoWeight = tempoWeight;

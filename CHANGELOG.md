@@ -1,5 +1,7 @@
 # Changelog
 
+- **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
+
 - **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.
 
 - **SMPS fades now follow each retail driver's channel and terminal rules:** Sonic 1 stops active SFX when fading starts, Sonic 3&K halts DAC and PSG immediately while fading FM, Sonic 1/2 clear speed shoes, and all three stop on the shipped terminal count without an extra volume step.
@@ -3049,6 +3051,9 @@ All notable changes to the OpenGGF project are documented in this file.
   Sonic 1 stops SFX at fade start, Sonic 3&K halts DAC and PSG immediately,
   Sonic 1/2 clear speed shoes, and the final counter stops all audio without an
   extra volume mutation.
+  Sonic 3&K 1-up overrides now run at normal speed and restore the displaced
+  song's saved speed state, matching `zTempoSpeedupSave` instead of inheriting
+  the live multiplier into the jingle.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

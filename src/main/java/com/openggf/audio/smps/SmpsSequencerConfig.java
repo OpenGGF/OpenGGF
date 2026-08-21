@@ -112,6 +112,13 @@ public final class SmpsSequencerConfig {
         HALT_DAC_AND_PSG_FADE_FM
     }
 
+    public enum MusicOverrideSpeedPolicy {
+        /** S1/S2: the 1-up load observes the live speed-tempo flag. */
+        INHERIT_CURRENT,
+        /** S3K: save the speed timeout and run the 1-up at normal speed. */
+        NORMAL_DURING_OVERRIDE
+    }
+
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
     public enum FmVoiceWriteProfile {
         /** Sonic 1's 68k SetVoice routine. */
@@ -153,6 +160,7 @@ public final class SmpsSequencerConfig {
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
     private final FadeOutChannelPolicy fadeOutChannelPolicy;
+    private final MusicOverrideSpeedPolicy musicOverrideSpeedPolicy;
     private final boolean fadeOutClearsSpeedShoes;
     private final boolean fadeOutStopsSfxImmediately;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
@@ -195,6 +203,7 @@ public final class SmpsSequencerConfig {
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
         this.fadeOutChannelPolicy = b.fadeOutChannelPolicy;
+        this.musicOverrideSpeedPolicy = b.musicOverrideSpeedPolicy;
         this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
@@ -383,6 +392,10 @@ public final class SmpsSequencerConfig {
         return fadeInDelay;
     }
 
+    public MusicOverrideSpeedPolicy getMusicOverrideSpeedPolicy() {
+        return musicOverrideSpeedPolicy;
+    }
+
     // -----------------------------------------------------------------------
     // Builder
     // -----------------------------------------------------------------------
@@ -416,6 +429,8 @@ public final class SmpsSequencerConfig {
                 PsgSfxReleaseMode.RESTORE_LIVE_STATE;
         private FadeOutChannelPolicy fadeOutChannelPolicy =
                 FadeOutChannelPolicy.FADE_FM_AND_PSG;
+        private MusicOverrideSpeedPolicy musicOverrideSpeedPolicy =
+                MusicOverrideSpeedPolicy.INHERIT_CURRENT;
         private boolean fadeOutClearsSpeedShoes;
         private boolean fadeOutStopsSfxImmediately;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
@@ -450,6 +465,7 @@ public final class SmpsSequencerConfig {
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
         public Builder fadeOutChannelPolicy(FadeOutChannelPolicy val) { fadeOutChannelPolicy = val; return this; }
+        public Builder musicOverrideSpeedPolicy(MusicOverrideSpeedPolicy val) { musicOverrideSpeedPolicy = val; return this; }
         public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
@@ -476,6 +492,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
             Objects.requireNonNull(fadeOutChannelPolicy, "fadeOutChannelPolicy");
+            Objects.requireNonNull(musicOverrideSpeedPolicy, "musicOverrideSpeedPolicy");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }

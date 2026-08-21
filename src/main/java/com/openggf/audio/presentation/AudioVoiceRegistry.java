@@ -35,6 +35,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.VoiceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -721,7 +722,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
-            applyMusicControls(music, speedShoesEnabled, speedMultiplier,
+            SmpsSequencer override = music.voice()
+                    instanceof SmpsCompositeVoice composite
+                    ? composite.driver().firstMusicSequencer() : null;
+            boolean normalSpeed = override != null
+                    && override.getConfig().getMusicOverrideSpeedPolicy()
+                    == SmpsSequencerConfig.MusicOverrideSpeedPolicy
+                            .NORMAL_DURING_OVERRIDE;
+            applyMusicControls(music,
+                    normalSpeed ? false : speedShoesEnabled,
+                    normalSpeed ? 1 : speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
             if (activeMusic != null
                     && activeMusic.musicId() == music.musicId()) {
