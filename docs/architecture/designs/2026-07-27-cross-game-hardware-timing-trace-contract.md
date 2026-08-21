@@ -104,6 +104,76 @@ looks like elapsed hardware cost is usually a counted ROM wait loop in the
 wrong place (see the `plc-system` skill's S1 `segment_start - 26` load-pair
 invariant).
 
+### 2026-08-21 unrepresented spans: readiness falls back to the native budget
+
+The readiness shape has a boundary the original text did not state, and both S1
+and S3K deadlocked on it before it was written down.
+
+`HardwareTimingReplayPort.enterUnrepresentedGap` contracts that production
+hardware work may continue while row authority is deactivated, but that no
+recorded completion edge may be applied until the next `beginRawFrame`. The
+recorder discards anything observed outside a segment's rows, so **no completion
+edge can ever exist for work submitted in such a span**. A recorded-admission
+kind that waits for one there waits forever. Measured twice, in two games:
+
+- S1: 214 consecutive blocks deadlocked the title card, which loops until the
+  PLC buffer empties (`docs/s1disasm/sonic.asm:2840-2841`). Fixed at the
+  consumer gate by `51ef66b30`.
+- S3K: 38400 consecutive blocks deadlocked the AIZ special-stage-return title
+  card, waiting on `KOS_MODULE_QUEUE#11` with `recordedAuthorityRepresentsRow()`
+  false on every one of them. The ROM's own art wait drains through
+  `Process_Kos_Module_Queue`, one module per call
+  (`docs/skdisasm/sonic3k.asm:2726-2790`).
+
+Two games reaching the same wall through two different kinds made this a
+property of the port rather than of either consumer, so the rule now lives in
+`HardwareTimingService` and applies to **every** recorded kind:
+
+1. **Membership is fixed at submission.** The service records which handles were
+   submitted while row authority was deactivated. It is not a property of the
+   moment of release, so work submitted inside coverage still blocks on its
+   recorded edge even if the run later leaves coverage, and leaving coverage can
+   never release work the recorder did count.
+2. **Release still costs ROM service frames.** Unrepresented work is serviced on
+   the native work budget -- the load-time profile is activated and advanced and
+   the job is released in FIFO order, exactly as a live run would do it. It is
+   *not* admitted instantly. This is load-bearing rather than tidy: an
+   implementation that admitted readiness directly at the consumer's gate raised
+   `IllegalStateException: hardware work is not prepared: KOS_MODULE_QUEUE#11`,
+   because a KosM parent is only prepared once its modules have decompressed
+   across frames. An edge still cannot force preparation or decoder progress.
+3. **Inside coverage nothing changes.** An unmatched job still blocks and still
+   raises, so a genuine kind/ordinal/fingerprint/boundary mismatch remains a
+   hard failure.
+
+This stays inside the readiness-release shape hard rule 4 permits: it changes
+only *when* real, engine-created work becomes ready. It creates no work, carries
+no value, calls no gameplay owner, and keys on no frame index, zone, route or
+game name. `TestHardwareTimingAuthorityGuard` covers it.
+
+#### Open gap: identity return is single-ordinal, and the S3K case is a batch
+
+An unrepresented submission still allocates an ordinal, and ordinals are the only
+counter the engine and the recording share. `releaseUnrepresentedIdentity` returns
+that borrowed ordinal after production claims the result, and
+`Sonic1PlcArmTiming.releaseArm` calls it whenever its job was submitted
+unrepresented -- whichever path admitted readiness.
+
+**It does not generalise to a batch.** The method accepts only the most recently
+allocated ordinal of its kind, and only when no other job of that kind is pending;
+both guards exist so that no handle is left numbered on a stale axis. The S3K
+title card submits four KosM modules and claims them **11, 12, 13, 14 ascending**,
+so none of them can use it as written. Those four therefore keep the ordinals they
+borrowed.
+
+Nothing is being papered over on the fixture that surfaced this: after the release,
+`s3k-tails-full-chain-all-emeralds` shows no ordinal or fingerprint mismatch and no
+pending submissions at end of run. But that is evidence from one recording, and the
+bar is any BK2. A batch-shaped identity return -- returning a contiguous run of
+ordinals in reverse once all of them are claimed -- is an open design question, not
+a settled one, and it is the first thing to examine if a later fixture shows an
+S3K KosM ordinal one ahead of the recording.
+
 ### Historical pre-v5 wire format (not live)
 
 The schema-1/schema-2 grammar, selectors, and recorder stamps described later
@@ -474,6 +544,14 @@ is authoritative over final readiness:
   decoder progress;
 - release makes the engine readiness owner change naturally;
 - the ROM-modeled consumer performs every downstream mutation.
+
+One exception, and only one: a job **submitted while row authority was
+deactivated** has no edge to wait for, because the recorder discards anything
+observed outside a segment's rows. Such a job is serviced on the native work
+budget instead -- profile activated and advanced, released in FIFO order, still
+requiring preparation. Membership is fixed at submission, so this never releases
+work the recording does describe. See the 2026-08-21 status entry above for the
+two deadlocks that established it and for the open ordinal-return gap.
 
 The timing adapter is a dedicated input port. It cannot read physics or aux
 comparison data and never calls a title-card, results, level-load, ring,
