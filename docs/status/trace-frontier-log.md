@@ -112675,7 +112675,6 @@ measurement and it either closes this or eliminates a third hypothesis.
 3. **Both touch boxes** -- object box ROM-verified `(4, 8)` and read by the engine from ROM; the
    player box formula documented and its radii ROM-verified.
 
-<<<<<<< HEAD
 ### RESOLVED 2026-08-21 -- the sample point was right; the shell's trajectory was one frame early
 
 Measured at `1a5fb6f89`, in a detached worktree off `origin/develop`, with a probe on the touch
@@ -112706,7 +112705,6 @@ HCZ1 stays clean, and the engine's shell now sits on the recorded `object_near` 
 of the flight. Controls at the same SHA, same tree pair:
 `TestS3kSonicTailsHczSegmentTraceReplay` pass/pass, `Hcz2` 3437/3437, `Hcz3` 643/643,
 `Hcz4` 454 -> 450.
-=======
 ## 2026-08-21 -- The S3K chain's first transition: art queued where the recording cannot speak
 
 Branch `bugfix/ai-s3k-titlecard-artwait-r1`, based on `origin/develop` at `1a5fb6f89`.
@@ -112783,4 +112781,3 @@ ordinal with no other pending job of the kind, and these are claimed 11,12,13,14
 ascending order. No ordinal or fingerprint mismatch appears on this fixture afterwards, so
 nothing is being papered over here -- but a batch-shaped identity return is an open gap,
 not a settled question.
->>>>>>> 91585825c
