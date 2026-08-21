@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Forty-three rules and several worked sections, accumulated across many rounds. The narrative
+Fifty-eight rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -38,6 +38,10 @@ that looks like a real result.
 | 33 | BizHawk reports the PC *after* the storing instruction |
 | 32 | A row's emulator frame is `bk2_frame_offset + row + 1` |
 | 40 | A comment reasoning about which engine hook runs first — in either direction — is the tell for a fitted constant; they come in families |
+| 53 | A sign-flipping single pixel is phase — a creation frame early or late — not a wrong constant |
+| 56 | `loc_XXXX` is a ROM address; citing it as a line number lands on plausible unrelated code |
+| 57 | A cited frame number can itself be an artefact of the defect it justifies |
+| 58 | The count of cancelling errors is usually understated; two is rarely the whole set |
 
 ### Measurement hazards — all produce plausible output
 
@@ -48,6 +52,8 @@ that looks like a real result.
 | 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
 | 30 | Mass errors | An environment artefact until proven otherwise |
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
+| 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
+| 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
 | 35 | Failed compile | A small log that reads as a short test run; also `-Ptrace-replay` silently ignores a CLI `-Dsurefire.argLine=` |
 | 37 | Run-order swap | Equal totals, different members, all passing alone |
 | 38 | Backgrounded `mvn` dies with its shell | The wrapper's exit 0 with a log that just stops |
@@ -1523,3 +1529,100 @@ Two things to take:
 The round caught this itself, retracted a headline that had already been repeated onward, and
 asked for the log entry to be pulled. That is the outcome to aim for — but the cheaper outcome is
 the assertion inside the tool.
+
+## Fifty-third rule: a sign-flipping single pixel is phase, not a constant
+
+**Signature.** A position or value differs from the recording by exactly one, and the
+sign of the difference *changes* across the run — one high early, one low later — while
+every constant in the owning routine has been read out of the disassembly and matches.
+
+**What it means.** A fixed offset is a wrong constant. A difference that flips sign over
+a slow accumulation is a *phase* error: the object started its motion a frame early or
+late, or began from a different fractional position, and a sub-pixel-per-frame step turns
+that head start into a rounding difference that lands on different frames at different
+points in the motion.
+
+**Why grep does not find it.** Nothing at any write site is wrong. Every constant is
+correct, the comparison sense is correct, the ordering of the steps is correct. It is
+only visible by comparing the object's *first executed frame* against the recording's
+first sighting of that object's code — and note that an appearance event may fire on a
+code-pointer change rather than only on creation, so the recording's first sighting needs
+its own care.
+
+**Why it is worth chasing.** A range test with an exclusive bound converts one pixel into
+many frames of timing error. One investigation hit the same bound twice, excluding a
+different actor on each of two rows by a single pixel.
+
+**Before concluding "carried state".** Establish which routine actually runs. An index
+table costs one command to read, and a routine that looks like the owner may never be
+reached. Check also whether the allocator hands out zeroed slots and whether deletion
+clears the object — if both hold, an "uninitialised field carrying prior state"
+explanation is dead on arrival.
+
+## Fifty-fourth rule: sample where the comparator samples
+
+**Signature.** A probe shows a clean, consistent, plausible discrepancy — a fixed pixel
+gap, or a state that changes a frame before it should.
+
+**The trap.** A value read from inside an object's update pass, or from a controller
+whose own frame counter advances at a different point in the loop, is being sampled at a
+different instant from the comparator's. The result is uniformly wrong, internally
+consistent, and reads exactly like a finding.
+
+**How to kill it.** Anchor against something independent whose correspondence is already
+known — a position the recording also records, or a frame whose value both sides agree
+on — and check whether the offset applies to that too. A whole-run offset is also
+impossible when a long stretch of the same run compares clean, which is itself a cheap
+disproof.
+
+Two rounds in one hour produced two of these, both caught before landing. Either sample
+at the comparator's point, or state in the report that you did not.
+
+## Fifty-fifth rule: an error count can read backwards
+
+**Signature.** A change makes a segment's raw error count go *up*, and it is an
+improvement; or the count goes down because less was compared.
+
+**Why.** A segment that aborts early compares few rows. Fix the abort and it runs to the
+end, comparing many more rows and reporting more errors while behaving better. The
+converse also happens: a regression that truncates a run reports fewer errors.
+
+**What to check before claiming either direction.** Whether the report says the run
+completed, and where the last compared frame is. A count is only a comparison between two
+runs that reached the same depth — the same requirement as an axis count, applied to a
+single segment.
+
+## Fifty-sixth rule: a label is an address, not a line number
+
+A disassembly label of the form `loc_7870` names ROM address `$7870`. Citing it as
+`file.asm:7870` lands on whatever happens to be at that *line*, which in a large
+disassembly is unrelated code that looks plausible — the two ranges overlap, so nothing
+about the citation looks wrong.
+
+Verify a citation by reading what is at the line, not by checking that the number matches
+the label. The same pass that caught this also caught an inherited off-by-one line
+citation, so citations copied from existing comments deserve the same check as new ones.
+
+## Fifty-seventh rule: a cited frame number can be an artefact of the defect
+
+A comment justifying a branch by naming a specific frame is evidence that someone observed
+something at that frame. It is not evidence that the branch is right, and the frame itself
+may only ever have been reached *because* of a defect elsewhere.
+
+One round found a compensating call whose comment cited a frame that moved by one as soon
+as an unrelated one-frame error was fixed — the cited observation was real and the
+conclusion drawn from it was wrong. Treat a frame-justified branch as suspect on sight,
+and re-derive what the ROM does at that point rather than trusting the citation's framing.
+
+## Fifty-eighth rule: the count of cancelling errors is usually understated
+
+Two known cancelling errors are rarely the whole set. One round established a pair,
+landed neither half alone because each turned green fixtures red, and then found a
+*third* one-frame error compensating for the first — with a fourth requirement surfacing
+only once the second was extended, found by measuring the intermediate broken state
+rather than reasoning past it.
+
+**Practically.** When you establish that two errors cancel, do not assume the pair is
+closed. Land them together, verify against every anchor, and expect the intermediate
+states between fixes to be informative rather than merely broken. Compensating code reads
+as cited and faithful, because it was written to make a real observation come out right.
