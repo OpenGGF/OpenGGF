@@ -127,6 +127,7 @@ that looks like a real result.
 | 108 | The symptom is one frame; the class is one intra-frame slot | Q1 cuts most false positives by reading; survey by role |
 | 109 | On a moving object, `spawn` is not an identity | Re-key on slot; an inverted verdict looks clean |
 | 110 | A batch instrument needs a positive control | "Nothing moved" also means the arm never ran |
+| 111 | `-Dtest=` overrides patterns, not tag filters | A tag-excluded class runs nothing and still says BUILD SUCCESS |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2892,3 +2893,22 @@ commissions, and a batch that starts as the first can quietly become the second.
 sits far past the current chain frontier. A correct member fix can be load-bearing (see WFZ); with
 no covering trace there is nothing to reveal a compensation if one exists, so a green unit test is
 not proof. Confirmed-and-unlanded is an honest state, not a stalled one.
+
+## One hundred and eleventh rule: `-Dtest=` overrides a profile's PATTERNS, not its tag filter
+
+Rule 98 says `-Dtest=` silently overrides profile selection. That is true of a profile's
+include/exclude **patterns** and false of its `<excludedGroups>` **tag** filter.
+
+Measured against the same profile in one round: `TestS3kHczZoneSliceTraceReplay` is *pattern*-
+excluded from `trace-replay` and `-Dtest=` **ran it anyway** (2 tests); a chain class dropped by
+`@Tag("trace-scope-r7")` against that profile's `<excludedGroups>` (`pom.xml:259`) ran **nothing**
+under the identical flag shape. Same invocation, opposite outcomes, and the only difference is the
+kind of exclusion.
+
+**From outside, both look like `BUILD SUCCESS`.** A class that never ran and a class that ran
+clean are indistinguishable in the exit status — so check `Tests run:` for the class you targeted,
+by name, before quoting any result from a `-Dtest=` invocation.
+
+The tag mechanism is also easy to misdiagnose: a class can be present in a profile's include
+patterns, absent from its exclude patterns, and still never run. Read the `<excludedGroups>` and
+the class's `@Tag`s before concluding a profile covers it.
