@@ -54,15 +54,13 @@ Both sides started from empty `target/` directories and the same upstream
 | Tree | Surefire summary | Unique failing/error methods |
 |---|---:|---:|
 | `develop` | 15,194 tests; 52 failures; 67 errors; 18 skips | 119 |
-| merged playback tree | 15,274 tests; 53 failures; 64 errors; 18 skips | 117 |
+| final merged playback tree | 15,274 tests; 52 failures; 64 errors; 18 skips | 116 |
 
 The playback branch removes three real-provider special-stage errors by making
-that test's Sonic 2 ROM dependency explicit. Its sole feature-only full-suite
-failure is in an unchanged MHZ mushroom-parachute test and passes when rerun
-directly. The full suite is already order-sensitive on `develop` (repeated
-unchanged runs produce different failing method sets), so that failure is not
-attributable to the audio implementation. No changed or audio-focused test is
-red.
+that test's Sonic 2 ROM dependency explicit. The final method-set comparison
+has no failure or error absent from the clean baseline. The full suite remains
+red from its pre-existing failures, but no baseline failure worsened and no
+changed or audio-focused test is red.
 
 ## Limits and follow-up
 
