@@ -104582,3 +104582,78 @@ reached it). Both arms re-run on the new tip:
 (3041 -> 3051), not `AbstractPlayableSprite`'s, which is still 3212 — so the ratchet that put this
 write in `PlayableSpriteMovement` rather than in `completeHurtLandingRecovery()` is unchanged.
 
+
+## 2026-08-21 — `lz3` f3838 is the LZ wind tunnel's suction, one frame late and self-healing
+
+Round `s1-slz1-graze-r1`, `lz3` triage. Rebased onto `31ba7e105`. **No source change; probes reverted.**
+
+### It is not the conveyor
+
+`Obj63 LabyrinthConvey` sits in slots 39/40 but is not involved. The only object near the player
+is `Obj0A DrownCount`. The owner is `LZWindTunnels` in `docs/s1disasm/_inc/LZWaterFeatures.asm`,
+which accounts for every recorded value at once:
+
+| recorded | ROM write |
+|---|---|
+| `x` advancing 8/frame while `x_speed` is `0x0400` (4/frame) | `addq.w #4,obX(a1)` on top of the velocity |
+| `x_speed` constant `0x0400` | `move.w #$400,obVelX(a1)` |
+| `y_speed` ~0, `y` only stepping | `move.w #0,obVelY(a1)` |
+| `anim = id_Float2`, frames `fr_Float1/2/5` | `move.b #id_Float2,obAnim(a1)` |
+| `air = 1` while apparently carried | `bset #1,obStatus(a1)` |
+| **the +2 `y` step** | **`add.w d0,obY(a1)`**, the "suction" |
+
+### One write of two pixels, and the reason is `FixBugs = 0`
+
+The suction gate is `subi.w #128,d0 / cmp.w (a2),d0`, and under `FixBugs = 0` `d0` is **not**
+re-read from `obX` — the disassembly says so in its own bugfix comment. What `d0` holds is:
+`move.w obX(a1),d0`, then `move.b (v_vblank_byte).w,d0` replaces only the **low byte**, then
+`andi.b #$3F,d0`. On the frame that byte reaches zero the ROM plays the waterfall sound with
+`move.w #sfx_Waterfall,d0` — a **word** move that replaces the whole register.
+
+So on the 64-frame sound tick `d0` stops being a position at all and becomes the SFX id, and
+`(sfxId - 128) < left` is trivially true. Measured on the fixture:
+
+```
+f3837  vbl&3F=63  curveCheck=0x0D3F   no suction
+f3838  vbl&3F= 0  curveCheck=0x00D0   <- SFX id; suction fires, y 0x0653 -> 0x0655
+f3839  vbl&3F= 1  curveCheck=0x0D01   no suction
+```
+
+That answers the question directly: **one write of two pixels**, gated to once per 64 frames —
+not a per-frame carry, which is why there are no intermediate values.
+
+### The engine models all of it, including the bug
+
+`Sonic1LZWaterEvents.updateWindTunnels()` reconstructs the clobbered `d0` exactly, low byte and
+whole-word SFX case, and its vblank phase matches:
+
+```
+[LZ3] px=d33 vbla&3F=63 curveCheck=0xd3f fires=false
+[LZ3] px=d3b vbla&3F=0  curveCheck=0xd0  fires=true      <- same frame as the ROM
+```
+
+So the horizontal push is right, the animation is right, the air bit is right, the gate is right,
+and the suction fires on the correct frame.
+
+### The actual divergence: one frame late, and it heals itself
+
+At the comparison point:
+
+```
+cursor=3837  expY=0x653  engY=0x653
+cursor=3838  expY=0x655  engY=0x653   <- the reported error
+cursor=3839  expY=0x655  engY=0x655   <- healed
+cursor=3840  expY=0x655  engY=0x655
+```
+
+`x` matches on every frame. The engine's suction write lands in time for f3839's sample and not
+f3838's, so the wind-tunnel pass sits one frame later in the engine's frame than the ROM's
+`LZWaterFeatures` does relative to the recorder's sample.
+
+### Scoping caveat — the frontier number is misleading here
+
+**This is a one-frame, self-healing blip that merely sorts first.** Segment 26's 10,212 errors
+run to frame 12725 and are dominated by a dynamic-art ordinal skew — `rom=[5698, 5699]` against
+`eng=[5700, 5701]`, the engine **ahead** by two ordinals and one transfer, the opposite sign to
+the missed-transfer family closed earlier. Fixing f3838 would advance the frontier and remove
+roughly one error. Anyone planning by the 10,212 should know the mass is elsewhere.
