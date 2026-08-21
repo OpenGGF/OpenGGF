@@ -17,6 +17,16 @@ All notable changes to the OpenGGF project are documented in this file.
   now pending at none), unmatched hardware completions fall from 42 to 14, and the first
   unmatched ordinals move from `#101`/`#148` to `#112`/`#165`.
 
+- **The CPZ act 2 boss's retracting pipe now cuts the object pass short, as the shipped ROM
+  does.** `Obj5D_Pipe_Retract_ChkID` borrows `d7` — `RunObjects`' own object-loop counter —
+  as a scratch register for its id compare, leaving it holding `ObjID_CPZBoss` = `$5D` = 93
+  (`docs/s2disasm/s2.asm:62244-62253`, under `fixBugs = 0`; the disassembly's own comment
+  says it "causes the 'RunObjects' routine to either run too few objects or too many
+  objects"). From the pipe's slot the walk then ends inside the dynamic window and never
+  reaches `LevelOnly_Object_RAM`, so Tails' tails and the fixed dust are not dispatched at
+  all on the eleven frames the pipe spends retracting. The engine ran them every frame, and
+  Tails' tails animated eleven frames of DPLC the ROM never queues — 1,311 of segment 15's
+  1,681 comparator errors.
 - **A solid object's four-pixel side-air branch now releases the player's push bit even when
   it never raised it.** `Solid_NotPushing` clears `status(a1)` bit 5 unconditionally
   (`docs/s1disasm/_incObj/sub SolidObject.asm:246-263`,

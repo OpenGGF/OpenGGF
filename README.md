@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S2 object-loop slot budget (`bugfix/ai-s2-objectloop-budget-r1`, merged
+  2026-08-21):** the CPZ pipe retract borrows the object loop's own slot counter as
+  scratch and leaves the boss's id in it, a shipped-ROM bug the disassembly warns
+  about, so the update pass stops short of the high level-only object band for
+  eleven frames. Modelling it drops the affected segment from 1681 to 370 errors
+  standalone and 7415 to 2122 on the chain, and closes an S2 chain axis eleven
+  segments downstream that was breaking on the skewed art ledger.
+
 - **S3K level art seam trigger (`bugfix/ai-s3k-seam-trigger-r1`, merged 2026-08-21):**
   the destination's terrain art now publishes when the title-card owner retires --
   the engine's form of the ROM's own module-queue gate -- instead of from the

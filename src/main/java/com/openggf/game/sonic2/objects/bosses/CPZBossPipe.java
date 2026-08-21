@@ -241,6 +241,34 @@ public class CPZBossPipe extends AbstractObjectInstance implements RewindRecreat
         }
 
         if (!retractFlag) {
+            // FixBugs = 0 (docs/s2disasm/s2.asm:27 `fixBugs = 0`): the shipped ROM
+            // takes the `else` arm of Obj5D_Pipe_Retract_ChkID
+            // (docs/s2disasm/s2.asm:62244-62253), which borrows d7 -- RunObjects'
+            // OWN object-loop counter -- as a scratch register for the id compare:
+            //
+            //     moveq   #0,d7
+            //     move.b  #ObjID_CPZBoss,d7
+            //     cmp.b   id(a1),d7
+            //
+            // The disassembly's own comment says so: "'d7' should not be used
+            // here. This causes the 'RunObjects' routine to either run too few
+            // objects or too many objects, causing all sorts of errors." The
+            // fixBugs arm uses `cmpi.b #ObjID_CPZBoss,id(a1)` instead and leaves
+            // d7 alone, so under it none of this happens. The engine models the
+            // shipped arm, because the traces record shipped-ROM behaviour.
+            //
+            // The value left in the counter is the boss's own object id --
+            // ObjID_CPZBoss = $5D = 93 (docs/s2disasm/s2.constants.asm, the Obj5D
+            // pointer-table entry at docs/s2disasm/s2.asm:30009). It is a number
+            // that happens to be lying in the compare, not a duration: nothing
+            // here is tuned or measured.
+            //
+            // The search is only reached while Obj5D_flag is clear; once the
+            // retract finishes, loc_2DFD8 sets it and the entry test at
+            // docs/s2disasm/s2.asm:62220-62221 jumps past the search -- and so
+            // past this write -- on every later frame.
+            services().objectManager().overrideRemainingObjectLoopSlots(
+                    this, Sonic2ObjectIds.CPZ_BOSS);
             // Signal segments to retract one by one
             for (int i = segments.size() - 1; i >= 0; i--) {
                 CPZBossPipeSegment seg = segments.get(i);

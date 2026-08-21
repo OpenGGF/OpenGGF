@@ -62,7 +62,13 @@ class TestArchitecturalSourceGuard {
     // job ran this guard (the gap the -Pguards gate closes). The growth is spread
     // across the existing orchestration surface; placement, touch-response and
     // solid-contact logic remain in their extracted collaborators.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3041;
+    // 2026-08-21: 3041 -> 3051. The ROM object-loop counter is the facade's own
+    // loop bound, so it cannot go in the placement, touch-response or
+    // solid-contact collaborators this budget exists to protect. Its state and
+    // arithmetic were extracted to ObjectLoopSlotBudget; what stayed is the two
+    // entry points, the per-pass reset and the walk's exit test, at their
+    // smallest honest size. See CPZBossPipe for the ROM site that drives it.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3051;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
