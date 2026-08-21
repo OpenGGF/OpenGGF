@@ -106490,3 +106490,76 @@ The held reorder stays held on `bugfix/ai-vint-tick-ownership`. The r2 pair is *
 39-red/0-green and is not on any branch. Nothing about the clock or the placement should move
 until all three members — clock read, call-site placement, and ObjD6's completion phase — are
 modelled together.
+
+## 2026-08-21 — the recorded CNZ slot state is now compared, and it was hiding 767 divergences
+
+Round `cnz-slot-comparator-r4`, branch `bugfix/ai-cnz-slot-comparator` off `24a33685e`.
+Commissioned after r3: the recording carried this subsystem's ROM state on every row of both
+fixtures and nothing read it.
+
+### What landed
+
+- `TraceEvent.CnzSlotMachineState` — `cnz_slot_machine_state` promoted from an untyped
+  member of `KNOWN_GENERIC_NATIVE_EVENTS` to a parsed record.
+- `TraceData.cnzSlotMachineStateForFrame(int)`.
+- `CNZSlotMachineManager.Snapshot` / `snapshot()` — read-only, ROM field layout.
+- `TraceBinder.compareCnzSlotMachine(...)` — 13 exact-byte fields per row: `in_use`,
+  `routine`, `timer`, `index`, and per reel `speed` / `pos` / `routine`. `reward` is
+  deliberately excluded: the ROM decrements `SlotMachine_Reward` as prizes spawn
+  (`s2.asm:59190`) while the engine's field holds the once-computed payout, so they are
+  different quantities sharing a name.
+- Called from `AbstractTraceReplayTest`, beside `compareLoadQueuesIfAdvertised`.
+
+### Two traps on the way in, both caught by falsification rather than by reading
+
+**The comparison was wired into a class the replay tests never execute.** The obvious home is
+`LiveTraceComparator`, and it is wrong: `*TraceReplay` drives `binder.compareFrame(...)`
+directly from `AbstractTraceReplayTest`. Wired there, both CNZ classes stayed **green** — and
+that green meant nothing, because the code never ran.
+
+**A green comparison proves nothing until you have seen it fail.** The way this was caught was
+to deliberately corrupt the engine snapshot (`routine + 1`) and re-run: the test still passed,
+which is what exposed the dead path. An unconditional print then showed the enclosing method
+was never entered at all. *Before trusting any new comparison, break it on purpose and watch
+it go red.* A comparison that cannot fail is the same family as a probe that cannot disagree —
+the previous rounds' lesson arriving through a different door.
+
+### What it found
+
+| fixture | divergent field-rows | level-start roll | slot session(s) | elsewhere |
+|---|---|---|---|---|
+| `cnz` | 237 | 8 | 229 | 0 |
+| `cnz2` | 530 | 8 | 516 | 6 |
+
+Every one predates this round; nothing regressed. The distribution is the useful part: the
+divergences sit almost entirely inside the slot machine's own active windows, so the owner is
+the unresolved three-member ordering group from r3 rather than anything diffuse. The six
+outliers are `slotN_routine` on `cnz2` rows 8405 and 10936; 8405 sits beside the frame 8506
+residual left by the rejected tick-plus-seed pair, and neither is investigated.
+
+### Matrix
+
+| | control `24a33685e` | with the comparison |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 6F / 0E / 4S | 800 / **8F** / 0E / 4S |
+| `-Pguards` | 500 / 0F | 500 / 0F |
+
+157 classes ran both ways, no truncation, red sets diffed both directions. **Newly red: exactly
+`TestS2CnzLevelSelectTraceReplay` and `TestS2Cnz2LevelSelectTraceReplay`. Newly green: none.**
+The blast radius is precisely the two fixtures that carry the event, which is the whole of the
+recorded coverage being switched on.
+
+Fields are emitted at `Severity.WARNING`, not `ERROR`. Warnings are release-blocking in this
+harness, so both classes are red either way — the severity is not buying a green. It records
+that this frontier has never been triaged, and it is new coverage rather than a relaxed
+tolerance: nothing red became green. `docs/status/known-discrepancies.md` carries the
+mechanism and the promotion condition, and both classes carry a deliberate-red javadoc.
+
+### The general point
+
+A recorded column that nothing compares is a measurement the project has already paid to
+capture and is throwing away. This one cost three rounds and two rejected candidates to work
+around, and it would have named the site in a report on the first run. **Worth a sweep:** the
+same aux streams carry `s2_tornado_state`, `slot_dump`, `cursor_state` and `state_snapshot`
+under the same untyped-generic path, none of them compared. Whether each is an oracle or just
+telemetry is a per-stream question, but nobody has asked it.

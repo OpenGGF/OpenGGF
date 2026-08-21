@@ -6,6 +6,9 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
+import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
+import com.openggf.level.LevelManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -547,6 +550,8 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
                             trace, binder, comparisonExpected.frame());
+                    compareCnzSlotMachineIfRecorded(
+                            trace, binder, comparisonExpected.frame());
                     compareDynamicArtIfAdvertised(
                             trace, binder, expected.frame());
                     recordUnmatchedHardwareCompletions(
@@ -972,6 +977,38 @@ public abstract class AbstractTraceReplayTest {
         }
         binder.compareRecordedHardwareCompletions(
                 frame, fixture.drainUnmatchedRecordedHardwareCompletions());
+    }
+
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's whenever the fixture carries the event and this session has a
+     * CNZ slot manager. A no-op on every other fixture and game.
+     *
+     * <p>The recording has always carried this block on every row of both CNZ
+     * captures and nothing read it. It is the instrument that makes a clock or
+     * call-ordering error at the slot site show up as a field mismatch on the
+     * frame it happens, instead of surfacing thousands of rows later as a ring
+     * or speed divergence: see the 2026-08-21 tick-ownership entries in
+     * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
+     */
+    private static void compareCnzSlotMachineIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.CnzSlotMachineState expected =
+                trace.cnzSlotMachineStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null
+                || !(levelManager.getZoneFeatureProvider()
+                        instanceof Sonic2ZoneFeatureProvider provider)) {
+            return;
+        }
+        CNZSlotMachineManager manager = provider.getSlotMachineManager();
+        if (manager == null) {
+            return;
+        }
+        binder.compareCnzSlotMachine(frame, expected, manager.snapshot());
     }
 
     private static void compareLoadQueuesIfAdvertised(

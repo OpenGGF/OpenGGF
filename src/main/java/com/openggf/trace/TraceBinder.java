@@ -663,6 +663,81 @@ public class TraceBinder {
         return frame.input() == bk2Input;
     }
 
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's. Comparison-only: nothing here writes engine state.
+     *
+     * <p>Every field is an exact ROM byte, so any mismatch is a real
+     * divergence with no tolerance -- reported at WARNING for now, see
+     * {@link #putSlotField}. The reel speeds and the roll timer are the
+     * load-bearing ones:
+     * the ROM computes them from {@code V_int_run_count} by byte arithmetic
+     * (s2.asm:59360-59375), so they pin the exact counter {@code SlotMachine}
+     * consumed and make a clock or call-ordering error at this site visible on
+     * the frame it happens instead of thousands of rows later.
+     *
+     * <p>{@code reward} is deliberately not compared. The ROM's
+     * {@code SlotMachine_Reward} is decremented as prizes spawn
+     * (s2.asm:59190) while the engine's field holds the once-computed payout,
+     * so the two are different quantities despite the shared name.
+     */
+    /**
+     * Emits one slot field at WARNING rather than ERROR.
+     *
+     * <p>Deliberate and temporary. This comparison is brand-new coverage of a
+     * block the recording has always carried and nothing ever read, so its
+     * frontier has never been triaged: turning it on at ERROR would take two
+     * currently-green release-scope classes red for divergences that predate
+     * the comparison and that no round has owned. Warnings keep every one of
+     * them visible in the report, which is the whole point of wiring it in,
+     * without converting an untriaged unknown into a release blocker.
+     *
+     * <p>Promote to ERROR once the CNZ slot divergences are down to zero --
+     * measured at 237 on cnz and 530 on cnz2 when this landed. Nothing that is
+     * red today becomes green because of this choice; it adds coverage that did
+     * not exist rather than relaxing coverage that did.
+     */
+    private void putSlotField(
+            Map<String, FieldComparison> fields, String name, int expected, int actual) {
+        boolean match = expected == actual;
+        fields.put(name, new FieldComparison(
+                name,
+                String.format("0x%04X", expected & 0xFFFF),
+                String.format("0x%04X", actual & 0xFFFF),
+                match ? Severity.MATCH : Severity.WARNING,
+                actual - expected));
+    }
+
+    public void compareCnzSlotMachine(
+            int frame,
+            TraceEvent.CnzSlotMachineState expected,
+            com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager.Snapshot actual) {
+        if (expected == null || actual == null) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        putSlotField(fields, "cnz_slot.in_use",
+                expected.inUse() ? 1 : 0, actual.inUse() ? 1 : 0);
+        putSlotField(fields, "cnz_slot.routine", expected.routine(), actual.routine());
+        putSlotField(fields, "cnz_slot.timer", expected.timer(), actual.timer());
+        putSlotField(fields, "cnz_slot.index", expected.index(), actual.index());
+        for (int i = 0; i < 3; i++) {
+            int slot = i + 1;
+            putSlotField(fields, "cnz_slot.slot" + slot + "_speed",
+                    expected.slotSpeed().get(i), actual.slotSpeed().get(i));
+            putSlotField(fields, "cnz_slot.slot" + slot + "_pos",
+                    expected.slotPos().get(i), actual.slotPos().get(i));
+            putSlotField(fields, "cnz_slot.slot" + slot + "_routine",
+                    expected.slotRoutine().get(i), actual.slotRoutine().get(i));
+        }
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
     private FieldComparison compareNumeric(String name, int expected, int actual,
             int warn, int error, boolean signChangeIsError) {
         int delta = Math.abs(expected - actual);
