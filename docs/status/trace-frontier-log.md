@@ -112199,3 +112199,54 @@ No fix, per the constraint. The level-to-level `-1` is the tractable half and
 has one owner; the special-stage spread should not be touched until it is
 established whether it is the same stamp at all or an iteration-count question
 wearing the same field name.
+
+## 2026-08-21 — the level-to-level -1: two stamping paths, one overwriting the other (candidate, NOT established)
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-gap-stamp-level`, pinned to
+`c2ccb6a9b`. `src/` unchanged. **Partial result — read the code, did not measure
+it executing.**
+
+### What the engine stamps, and from where
+
+There are **two** stamping paths, and they disagree about what the row is:
+
+- `stateMovieLogicalRow(TraceRunFrameDriver.Step step)` (AbstractRunChainTest
+  :2444-2448) stamps `step.movieRow()` — the driver's own authoritative row.
+- `stateMovieLogicalRow()` (:2464-2472) stamps
+  `GameServices.playbackDebug().getCursorFrame()` — the shared playback cursor.
+
+`stepEngineFrame` calls the **no-arg** one at its top, so every engine step
+restates the row from the cursor. In the transition-gap driver the row's work is
+run by `stepEngineFrame(loop)` (:4342) while the cursor is advanced by a
+*separate* callback, `advancePhysicalRow` -> `playback.onLevelFrameAdvanced()`
+(:4363-4365), gated by `shouldAdvancePhysicalRow` on
+`playback.getCursorFrame() == movieRow` (:4358).
+
+So the driver states the correct row and `stepEngineFrame` immediately restates
+it from a cursor whose advance is owned by a different callback. If that
+callback has not yet run for the row being played, every art edge produced
+during the step is stamped one row low — which is the measured uniform `-1`.
+
+### Why this is a CANDIDATE and not the cause
+
+I did not establish the ordering. `shouldAdvancePhysicalRow` returning true when
+`cursor == movieRow` can be read as the cursor already sitting on the row during
+its own step, in which case the cursor-derived stamp is correct and this
+candidate is wrong. Reading the two predicates is not enough to say which, and
+this lane has spent two rounds today on candidates that fit and did not fire.
+
+**The measurement that settles it**, for whoever runs it: probe
+`playback.getCursorFrame()` and `step.movieRow()` together at the top of
+`stepEngineFrame` on the `seg7_ehz2 -> seg8_cpz1` gap rows. If the cursor is
+`movieRow - 1` there, the candidate is confirmed and the fix is that the
+driver-authoritative stamp must not be overwritten by the cursor-derived one. If
+the cursor equals `movieRow`, the candidate dies and the `-1` is somewhere else.
+
+### One thing worth noting for the parked half
+
+The same mechanism would explain the special-stage spread without any extra
+cause: the row driver there runs several engine steps per movie row, so the
+overwrite lands repeatedly against a cursor that lags by a varying amount, which
+turns a fixed offset into `+1, +2, +8, +20, +21`. Noted only — the special-stage
+family stays parked, and this is a reason to check the two together rather than
+to work it now.
