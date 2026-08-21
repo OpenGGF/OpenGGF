@@ -111348,3 +111348,119 @@ No fix landed. `MhzMinibossInstance` is confirmed but **no trace covers it** -- 
 the current S3K chain frontier -- and the WFZ result stands as the warning: a correct member
 fix can be load-bearing, and there is no covering trace here to reveal a compensation if one
 exists. Landing it would be unverifiable in exactly the way that produced the WFZ regression.
+## 2026-08-21 — LANDED: S2 Obj82 is a full `SolidObject`, not a top-solid platform — the ARZ2 frame-344 landing was a misclassified side contact
+
+Worktree `wt/s2-obj82`, branch `bugfix/ai-s2-obj82-solid-box`, both arms pinned to
+`0fd7b7811`. Follows the segment-19 attribution entry above, which named this as its
+item 1.
+
+### The question, answered: neither alternative — the box is right, the axis choice is wrong
+
+The open question was whether the solid box is built from a position neither census
+reports, or whether the landing window is not the one `Obj82_Main` builds. **It is
+neither.** An env-gated probe (reverted, never committed) inside
+`ObjectSolidContactController.resolveContactInternal` prints, at `seg13_arz2` frame 344:
+
+```
+[probe-box]  obj=(3C0,520) relX=75 relY=5 halfW=39 maxTop=67 totalH=134 pcx=3E4 pcy=4DE ysp=B60 air=true
+[probe-axis] relX=75 relY=5 absDistX=3 classifyAbsX=3 absDistY=5 topOnly=true sideWouldWin=true
+```
+
+Hand-executing `SolidObject_cont` (`docs/s2disasm/s2.asm:35344-35375`) on the same inputs
+— `d1 = width_pixels + $B = 39`, `d2 = y_radius = 48` from the `fixBugs = 0`
+`Obj82_Properties` arm, Sonic at `(0x03E4, 0x04DE)` with `y_radius 19` — gives
+`d0 = 75`, `d2 = 48 + 19 = 67`, `d3 = -66 + 4 + 67 = 5`, `d4 = 134`. **Those are the
+engine's four numbers exactly.** The box is the ROM's box, built from the position both
+censuses report. My earlier "feet ~41 px above the platform top" note was arithmetic on a
+wrongly assumed `y_radius` of 8; the pillar's is `0x30`.
+
+What diverges is `SolidObject_ChkBounds`'s axis choice
+(`docs/s2disasm/s2.asm:35376-35408`). Continuing the same hand-execution:
+`d5 = 3` (distance to the nearer horizontal edge), `d1 = 5` (to the nearer vertical
+edge); `cmp.w d1,d5 / bhi.w SolidObject_TopBottom` needs the horizontal distance to be
+**strictly greater**, and 3 > 5 is false — so the ROM falls into
+`SolidObject_LeftRight`. `d1 = 5` is not `bls #4`, `d0 = -3` is negative so
+`SolidObject_InsideRight`, `x_vel` is positive so no `StopCharacter`, and
+`SolidObject_AtEdge` does `sub.w d0,x_pos(a1)` — **`x += 3`**. In air, so `SideAir`
+returns a side contact: no landing, no `y_vel` reset.
+
+That reproduces the recorded row exactly. Pure velocity integration from row 343
+(`0x03DF.B800 + 0x047C`) gives `0x03E4.3400`; the fixture records `x = 0x03E7`,
+`x_sub = 0x3400` — three integer pixels added with the sub-pixel untouched, which is
+what `sub.w d0,x_pos(a1)` does and nothing else in the frame does.
+
+### Cause
+
+`SwingingPformObjectInstance.isTopSolidOnly()` returned `true`. The engine's own
+`SolidObject_LeftRight` and `SolidObject_SideAir` ports are correct and already cited —
+they are simply gated behind `!topSolidOnly`, so every Obj82 contact reached the vertical
+landing check. `sideWouldWin=true` in the probe above is the engine's own predicate
+agreeing with the ROM on the same frame.
+
+`Obj82_Main` calls `JmpTo23_SolidObject` (`docs/s2disasm/s2.asm:57221`); `jmpTos`'
+`extractJmpToName` (`docs/s2disasm/s2.macrosetup.asm:300-333`) resolves that thunk to
+`SolidObject` (`docs/s2disasm/s2.asm:35014`) — the full four-sided routine. The class
+already knew this: `getSolidRoutineProfile()`'s own comment says "Obj82 is a SolidObject
+..., not a PlatformObject". `isTopSolidOnly()` contradicted it.
+
+Fix: return `false`, with the citation. No constant was tuned, no band widened or
+narrowed, and the `fixBugs = 0` property arm is untouched.
+
+### Measured, both arms at `0fd7b7811`
+
+| measurement | before | after |
+|---|---|---|
+| `DebugS2Arz2Seg13...` first error | **frame 344 `x` rom `0x03E7` engine `0x03E4`** | **frame 956 `player_animation_id` rom `0x0005` engine `0x0015`** |
+| `DebugS2Arz2Seg13...` errors | 17307 | 16726 |
+| chain segment 19 abort cursor | **109135** (row ~2382 of 6409) | **110798** (row ~4045 of 6409) |
+| chain segment 19 `errorCount` | 62616 (phys 58657 / anim 3959) | 101031 (phys 95281 / anim 5750) |
+| chain segment 19 first non-camera | frame 344 `x` | frame 957 `dynamic_art.edges` |
+| chain axes | 12 | 12, **identical axis set** |
+
+**The segment-19 error count goes UP, and that is not a regression.** The segment now
+survives 1663 more BK2 frames before the abort, so it compares 4045 rows instead of 2382.
+Per compared row the rate is flat (26.3 -> 25.0). This is precisely why the count is not
+the measure at an aborting segment; the abort *reason* is unchanged but the *reach* moved
+by 1663 frames and the first field moved 612 frames later and off position entirely.
+
+**Blast radius.** Across the whole `com.openggf.tests.trace.s2.**` sweep, 129 tests /
+6 failures on **both** arms, same six classes — and diffing the first-error message of
+every red class between arms, **the only message that changes anywhere in the sweep is
+the target class's**. All ARZ classes are green on the after arm, including
+`TestS2Arz2LevelSelectTraceReplay` (an ARZ2 trace) and
+`TestS2Arz1CompleteEmeraldsSegmentTraceReplay`.
+
+Object/guard sweep (`com.openggf.game.sonic2.**`, `com.openggf.level.objects.**`, rewind
+and trace guards): 1546 tests, 20 failures / 16 errors on **both** arms, identical class
+set. That population is red in the control — the known reused-fork ambient-state
+cluster — and is not attributable to this change; it is quoted as a control comparison,
+not as a clean result.
+
+### One test updated, and why it is not suppression
+
+`TestTopSolidRoutineProfileAdoption`'s shared helper asserted
+`provider.isTopSolidOnly()` for every object it checked, including Obj82. The assertion
+was encoding the defect. It has been **moved into the top-solid helper** (so the three
+genuinely top-solid objects still assert it) and Obj82 now asserts `assertFalse` with the
+ROM citation. The test gained an assertion rather than losing one; nothing was relaxed.
+
+### Item 4 from the previous entry, answered
+
+**The standalone segment drowns too** — the death probe fires exactly once on the cold
+load, `[probe-death] cause=DROWN-PRE cpu=false x=156f y=6da`, the same coordinates as the
+chain. So the drowning is intrinsic to ARZ2 and the chain carry contributes nothing to
+it.
+
+### Not this change, still open
+
+- **`Obj82_Main`'s on-screen gate is still missing.** The ROM wraps both
+  `JmpTo23_SolidObject` and the `loc_2A432` swing in
+  `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +`
+  (`docs/s2disasm/s2.asm:57205-57206`); `SwingingPformObjectInstance.update` calls
+  `resolveSolidNowAll()` unconditionally. Deliberately **not** folded into this commit:
+  it is not the frame-344 discriminator (the platform is on screen there) and it has no
+  measured behavioural delta on any current fixture, so it needs its own evidence.
+- The new frontier inside segment 19 is **frame 956-957**, and it is an animation and
+  dynamic-art shape (`player_animation_id` `0x0005` vs `0x0015`, then
+  `dynamic_art.edges` `[]` vs `[1368]`), not position. Different animal from what this
+  entry closed.
