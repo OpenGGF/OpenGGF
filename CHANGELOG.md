@@ -3054,6 +3054,13 @@ All notable changes to the OpenGGF project are documented in this file.
   sum, so the results choreography ran for as many extra frames as the second
   player had rings -- 67 on the emerald run's first special stage (91 + 76 against
   `max(91, 76, 1000/10)`). Score awarded is unchanged; only the cadence is.
+- Fix: supported retail SMPS catalogs now fail closed instead of guessing past
+  malformed ROM framing. Sonic 2 accepts only little-endian Saxman payload
+  lengths and its four exact uncompressed-song boundaries, Sonic 1 requires
+  every PSG envelope's `$80` hold terminator, and Sonic 3&K loads exactly the
+  eight modulation and `$27` volume-envelope pointers. ROM-backed sweeps cover
+  every declared S1/S2/S3K song and SFX plus each DAC catalog; unreadable DAC
+  tables no longer become empty playable catalogs.
 - Fix: SMPS music tracks now retain the shipped driver-service cadence instead
   of skipping whole VInts at tempo holds. Sonic 2 and Sonic 3 & Knuckles keep
   modulation, envelopes, and note-fill running while extending note duration;

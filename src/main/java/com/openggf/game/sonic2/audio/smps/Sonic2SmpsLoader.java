@@ -391,13 +391,9 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
             // SMPS Z80 data uses little-endian Saxman size headers.
             int b1 = rom.readByte(offset) & 0xFF;
             int b2 = rom.readByte(offset + 1) & 0xFF;
-            int sizeLe = (b1) | (b2 << 8);
-            int sizeBe = (b1 << 8) | b2; // fallback only if LE is zero/invalid
             int maxAvail = (int) Math.max(0L, rom.getSize() - offset - 2L);
-
-            int compressedSize = (sizeLe > 0 && sizeLe <= maxAvail)
-                    ? sizeLe
-                    : (sizeBe > 0 && sizeBe <= maxAvail ? sizeBe : maxAvail);
+            int compressedSize = requireSaxmanPayloadLength(
+                    b1, b2, maxAvail);
 
             byte[] compressed = readCompressed(offset, compressedSize, maxAvail);
             if (compressed == null) {
@@ -449,48 +445,36 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
      * Credits.
      */
     private int calculateUncompressedSize(int offset) {
-        // Explicit sizes for uncompressed tracks (calculated from Sonic Retro ROM
-        // pointer table). These are the exact distances between consecutive
-        // uncompressed song pointers; consolidated as named constants in
-        // Sonic2SmpsConstants so musicMap and this switch share one source.
-        switch (offset) {
+        return requireUncompressedMusicSize(offset);
+    }
+
+    static int requireUncompressedMusicSize(int offset) {
+        // Shipped FixDriverBugs=0 has four uncompressed playlist entries.
+        // Refuse unknown offsets instead of reading an arbitrary 0x200-byte
+        // tail and allowing a malformed mapping to masquerade as a song.
+        return switch (offset) {
             case UNCOMPRESSED_EXTRA_LIFE_ADDR:
-                return UNCOMPRESSED_EXTRA_LIFE_SIZE;
+                yield UNCOMPRESSED_EXTRA_LIFE_SIZE;
             case UNCOMPRESSED_GAME_OVER_ADDR:
-                return UNCOMPRESSED_GAME_OVER_SIZE;
+                yield UNCOMPRESSED_GAME_OVER_SIZE;
             case UNCOMPRESSED_GOT_EMERALD_ADDR:
-                return UNCOMPRESSED_GOT_EMERALD_SIZE;
+                yield UNCOMPRESSED_GOT_EMERALD_SIZE;
             case UNCOMPRESSED_CREDITS_ADDR:
-                return UNCOMPRESSED_CREDITS_SIZE;
+                yield UNCOMPRESSED_CREDITS_SIZE;
             default:
-                // Fallback: find next offset or use reasonable max
-                int nextOffset = Integer.MAX_VALUE;
-                for (int romOffset : musicMap.values()) {
-                    if (romOffset > offset && romOffset < nextOffset) {
-                        nextOffset = romOffset;
-                    }
-                }
-                if (nextOffset != Integer.MAX_VALUE) {
-                    int size = nextOffset - offset;
-                    LOGGER.fine("Calculated uncompressed size: " + size + " bytes (next offset: "
-                            + Integer.toHexString(nextOffset) + ")");
-                    return size;
-                }
-                return 0x200; // 512 bytes fallback
-        }
+                throw new IllegalArgumentException(
+                        "unknown uncompressed Sonic 2 music offset 0x"
+                                + Integer.toHexString(offset));
+        };
     }
 
     private AbstractSmpsData loadSfxSmps(int offset, int z80Addr) {
         try {
             int b1 = rom.readByte(offset) & 0xFF;
             int b2 = rom.readByte(offset + 1) & 0xFF;
-            int sizeLe = (b1) | (b2 << 8);
-            int sizeBe = (b1 << 8) | b2; // fallback only if LE is zero/invalid
             int maxAvail = (int) Math.max(0L, rom.getSize() - offset - 2L);
-
-            int compressedSize = (sizeLe > 0 && sizeLe <= maxAvail)
-                    ? sizeLe
-                    : (sizeBe > 0 && sizeBe <= maxAvail ? sizeBe : maxAvail);
+            int compressedSize = requireSaxmanPayloadLength(
+                    b1, b2, maxAvail);
 
             byte[] compressed = readCompressed(offset, compressedSize, maxAvail);
             if (compressed == null) {
@@ -505,6 +489,18 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
             LOGGER.log(Level.SEVERE, "Failed to load SMPS at " + Integer.toHexString(offset), e);
             return null;
         }
+    }
+
+    static int requireSaxmanPayloadLength(
+            int lowByte, int highByte, int availableBytes) {
+        int payloadLength = (lowByte & 0xFF) | ((highByte & 0xFF) << 8);
+        if (payloadLength <= 0 || payloadLength > availableBytes) {
+            throw new IllegalArgumentException(
+                    "invalid little-endian Saxman payload length "
+                            + payloadLength + " for " + availableBytes
+                            + " available bytes");
+        }
+        return payloadLength;
     }
 
     private int computeRawSfxLength(int tableIndex, int romOffset) throws IOException {
@@ -702,7 +698,7 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
             return new DacData(samples, mapping, 295);
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load DAC Data", e);
-            return new DacData(new HashMap<>(), new HashMap<>(), 295);
+            return null;
         }
     }
 }

@@ -242,7 +242,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
         if (z80Driver == null) {
             LOGGER.warning("Z80 driver not loaded, cannot load DAC data.");
-            return new DacData(samples, mapping, 297);
+            return null;
         }
 
         try {
@@ -336,7 +336,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return new DacData(samples, mapping, 297); // S3K baseCycles = 297
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load S3K DAC data", e);
-            return new DacData(samples, mapping, 297);
+            return null;
         }
     }
 
@@ -715,8 +715,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         }
 
         // Read PSG envelope pointers (2 bytes each, LE)
-        int maxEnvelopes = 40; // generous upper bound
-        for (int i = 1; i <= maxEnvelopes; i++) {
+        for (int i = 1;
+                i <= Sonic3kSmpsConstants.Z80_PSG_ENVELOPE_COUNT;
+                i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
                 break;
@@ -761,9 +762,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return;
         }
 
-        // Pointers.txt: "Mod. Pointer List: 130E (W, 3C)" => 0x3C word entries.
-        int maxEnvelopes = 0x3C;
-        for (int i = 1; i <= maxEnvelopes; i++) {
+        for (int i = 1;
+                i <= Sonic3kSmpsConstants.Z80_MOD_ENVELOPE_COUNT;
+                i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
                 break;

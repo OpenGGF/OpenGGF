@@ -92,6 +92,10 @@ accumulator phase, and modulation/envelope activity for all three modes,
 including the locked-on PAL driver loop; ROM presentation integrations remain
 green.
 
+Status: complete. S1, S2, and locked-on S3K now use their shipped duration,
+tempo-phase, PAL-service, and speed-up schedules. The locked-on PAL repeat is
+owned by the shared driver state rather than by individual sequencers.
+
 ### Phase 2 — Request admission, priority, and takeover order
 
 - Implement the single global SFX priority latch used by S1 and S2, including
@@ -157,9 +161,13 @@ separately bounded follow-up.
 Acceptance: command-level chip-write fixtures and representative real ROM
 songs/SFX that execute each path.
 
-Status: S3K signed modulation-envelope deltas and the retail bogus-`BC`
+Status: complete for every bytecode family reached by the supported retail
+catalog. S3K signed modulation-envelope deltas and the retail bogus-`BC`
 operand reads for `$82`/`$84` are implemented from the decompressed ROM driver.
-The wider envelope, note-fill, tie, and coordination-flag audit remains.
+The source audit also verified the supported volume-envelope command inventory,
+note-fill, tie/hold, transposition, and coordination-flag paths. Generic command
+forms not referenced by any supported retail stream remain deliberately
+unsupported instead of being assigned guessed behavior.
 
 ### Phase 5 — Chip, DAC, PCM, and regional behavior
 
@@ -175,13 +183,14 @@ The wider envelope, note-fill, tie, and coordination-flag audit remains.
 Acceptance: deterministic PCM/register fixtures and short external audio
 goldens at NTSC and PAL rates.
 
-Status: S2 DAC cadence, the authentic PSG/DAC defaults, and region-correct
+Status: complete for the production chip path. S2 DAC cadence, the authentic PSG/DAC defaults, and region-correct
 YM2612/PSG/Z80-derived clocks are complete. S3K's
 SEGA PCM command now atomically stops all SMPS/sample owners before exclusive
 PCM playback, streams the chant bytes through the region-clocked YM2612 DAC
 core, and StopSEGA restores none of the discarded owners. Rewind/save-load
-preserves the DAC latch and resampler state exactly. Removal of remaining
-non-native workarounds remains.
+preserves the DAC latch and resampler state exactly. Optional smoothing remains
+available only behind explicit non-authentic configuration; the retail defaults
+and production presentation path contain no fallback mixer for SEGA PCM.
 
 ### Phase 6 — ROM loader and content hardening
 
@@ -193,6 +202,13 @@ non-native workarounds remains.
 
 Acceptance: all supported content IDs resolve from each verified ROM, malformed
 tables fail closed, and representative playback remains byte-stable.
+
+Status: complete. ROM-backed catalog sweeps resolve every declared S1, S2, and
+S3K music/SFX entry and DAC catalog. S2 accepts only the shipped little-endian
+Saxman framing and the four exact uncompressed-song boundaries; S1 PSG
+envelopes require their retail hold terminator; S3K reads the exact eight
+modulation and `$27` volume-envelope pointers rather than walking beyond the
+tables. Unreadable DAC catalogs fail closed instead of publishing empty data.
 
 ### Phase 7 — Cleanup after parity
 
@@ -219,6 +235,8 @@ Cleanup is not allowed to lead the roadmap or broaden a parity change.
 
 ## Current slice
 
-Finish Phase 4's bounded bytecode/envelope audit, then harden the supported-ROM
-loaders in Phase 6. Keep verification at the sequencer/driver/chip boundary;
-do not reopen native observer schemas or complete-run evidence.
+The bounded playback-authenticity implementation is complete through Phase 6.
+Final delivery is limited to JDK 21 regression comparison, integration, and the
+manual listening checklist. Phase 7 remains intentionally deferred cleanup; it
+is not a prerequisite for authentic playback and must not reopen native
+observer schemas or complete-run evidence.
