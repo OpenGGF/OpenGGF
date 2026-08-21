@@ -108818,3 +108818,82 @@ a comparison there would be the way to make the shield and splash objects verifi
 
 The snapshot-versus-tracking splash Y (S2/S3K `SpindashDustController.triggerSplash` freezes
 `splashY` where `Obj08_MdSplash` re-reads `Water_Level_1` every frame), behind this.
+
+## 2026-08-21 -- MonkeyDude completes the Init family; and two traps found on the way
+
+Branch `bugfix/ai-monkeydude-wait-release`, base `f172f5033`. One behavioural line: a `return`
+after the arm-root gate flips.
+
+### The ROM shape, established before the engine was touched
+
+`Obj_MonkeyDude` (`sonic3k.asm:182697-182703`) is `jsr Obj_WaitOffscreen`, then the routine
+index, then `jmp Sprite_CheckDeleteTouch`. Two dispatches precede any wait countdown:
+
+1. **The release frame.** `Obj_WaitOffscreen`'s `loc_85B02` does `move.l $34(a0),(a0)` then
+   **`rts`** (`:180299-180301`), returning to `Process_Sprites` -- it does *not* re-enter
+   `Obj_MonkeyDude`. No routine runs.
+2. **The Init frame.** Routine 0 dispatches `MonkeyDude_Init` (`:182711-182728`), which sets
+   `$2E = 60-1` and `$34 = MonkeyDude_StartActive` and leaves via
+   `jmp CreateChild4_LinkListRepeated`. It **returns**; it does not fall into
+   `MonkeyDude_Wait`, which is where the countdown runs (`MonkeyDude_Wait` -> `loc_85652` ->
+   `Animate_Raw` -> `Obj_Wait`, `:182734`, `:179643-179645`).
+
+The engine flipped `armRootActivated` and continued into the Init work in the same frame,
+collapsing the two. Fixed by returning on the release frame.
+
+### Matrix -- and why "neutral" is the honest word, not "safe"
+
+Both arms one worktree, both pinned to explicit SHAs, all three ROMs.
+
+| profile | ctl | fix | verdict |
+|---|---|---|---|
+| `trace-replay` | 800 / 10F 0E | 800 / 10F 0E | classes, failing set and **full messages** IDENTICAL |
+| `trace-segments` | 70 / 52F 7E | 70 / 52F 7E | IDENTICAL |
+| `trace-replay-r7` | 108 / 85F 10E | 108 / 85F 10E | IDENTICAL |
+| `guards` | 500 / 0F 0E | 500 / 0F 0E | IDENTICAL |
+| `default` | 15194 / 53F 64E | 15194 / 52F 67E | only the two known flake families |
+
+`Tests run: 0,` counts identical everywhere. The default differences are
+`TestGameLoopSpecialStageEntryPresentation` (3) and `TestModeTracePickerLaunchStatus`, the same
+order-dependent flakes established by isolated re-run earlier today.
+
+**A clean matrix and an unexercised change look identical from the outside, so this was
+measured rather than assumed.** A temporary probe in the constructor counts **60 MonkeyDude
+spawns in `TestS3kAizTraceReplay` alone**. The badnik is exercised heavily and the comparison
+still does not move.
+
+**Why that is expected here.** These classes compare player and sidekick physics fields; they
+compare **no object identity, slot or position** (`compareObjectNearEvents()` defaults false).
+A badnik whose whole timeline shifts one frame is therefore invisible unless it touches the
+player. So neutrality means *no observable effect on compared fields*, **not** *no effect*.
+Landed on ROM fidelity and on completing the family, not on the strength of a green matrix.
+
+### Trap 1: two vehicles for the same rows, in two profiles, disagreeing by 5000 frames
+
+`TestS3kSonicTailsAiz5SegmentTraceReplay` (owned by `trace-segments`, `pom.xml:357`) fails with
+**2518 errors from frame 0**; by row 5455 its AIZ2 boss sits at x=19008/y~416 with five hits
+left, against the recording's 18744/467, and it never defeats. The **chain**
+(`TestS3kSonicTailsCompleteEmeraldRunChain`, owned by `trace-replay`, which at `pom.xml:311`
+explicitly *excludes* the segment directory) drives the same rows as segment 8 with the boss
+pixel-exact. Anything measured in the segment class about rows near the boss fight is measuring
+a run that desynced five thousand frames earlier. **Check which vehicle a landmark came from
+before inheriting it.**
+
+### Trap 2: a dead constant contradicting its neighbour three lines away
+
+`AizEndBossInstance` carries `COLLISION_SIZE = 0x10` with a ROM citation, returned by
+`getCollisionSizeIndex()`. **Neither has any reader for this class:** the class overrides
+`getCollisionFlags()` to return `COLLISION_FLAGS_ACTIVE = 0x16`, and
+`ObjectTouchResponseController` derives `sizeIndex = flags & 0x3F` from that. The live box is
+correctly 32x32 (`Touch_Sizes[22]`). This was nearly reported as the cause of a one-frame-early
+boss defeat before checking for readers -- the same shape as the `TOTAL_ZONE_COUNT` case.
+**Grep for readers before believing a constant is load-bearing.**
+
+### Prefer the measurement with the fewest conversions
+
+Twice today a contact-level reading taken straight off the fixture -- separations in pixels,
+hit frames against recorded status-bit edges -- held against a well-argued claim from another
+lane, and both times the losing claim had exactly one conversion buried in it: a frame number
+quoted from a counter running 23 behind the trace row, and a counter value attributed to the
+row just compared rather than the row its update produces. **When two measurements disagree,
+count the conversions between raw fixture and claim before arguing the substance.**

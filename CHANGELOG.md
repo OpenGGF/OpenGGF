@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **MonkeyDude now consumes the `Obj_WaitOffscreen` release dispatch as well as its Init
+  dispatch.** It was the one partial member of the routine-0 Init family: its arm-root gate
+  flipped and fell straight through into the same frame's work, collapsing two ROM dispatches
+  into one. `Obj_WaitOffscreen`'s release path `loc_85B02` restores the saved operation into
+  `(a0)` and `rts`es back to `Process_Sprites` (`docs/skdisasm/sonic3k.asm:180299-180301`); it
+  does not re-enter `Obj_MonkeyDude`, so the release frame runs no routine and routine 0 is
+  dispatched on the following frame. `MonkeyDude_Init` (`:182711-182728`) then returns via
+  `CreateChild4_LinkListRepeated` rather than falling into `MonkeyDude_Wait`, which is where
+  the `$2E = 60-1` countdown actually runs (`MonkeyDude_Wait` -> `loc_85652` -> `Animate_Raw`
+  -> `Obj_Wait`). Both frames exist in the ROM and both are now consumed.
+
+  **Measurement-neutral, and exercised rather than merely untouched:** a probe counts 60
+  MonkeyDude spawns in `TestS3kAizTraceReplay` alone, and every trace profile is byte-identical
+  across the arms including full failure messages. See the frontier log for why neutrality is
+  the expected result here rather than evidence of no effect.
+
 - **Six S3K badniks and the S2 Octus now consume the ROM's routine-0 Init dispatch.** In these
   ROMs an object's routine 0 is its Init, and its tail is `addq.b #2,routine(a0)` followed by
   `rts` (`docs/skdisasm/sonic3k.asm:176901-176919`) — it does **not** fall through to the main
