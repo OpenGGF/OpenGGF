@@ -1,5 +1,13 @@
 # Changelog
 
+- **An HCZ Jawz no longer wakes up a frame early:** the fish waits offscreen
+  behind a $20-square placeholder and starts swimming on the dispatch after the
+  ROM sees that placeholder drawn. The engine tested a box two pixels taller, so
+  wherever the camera was scrolling vertically the fish woke one frame early and
+  swam two pixels ahead of the ROM for the rest of its life -- enough to be
+  destroyed a frame before it should be, which robbed a rolling jump of its
+  upward speed a frame early.
+
 - **A TurboSpiker's spike no longer hits a frame early:** the ROM's launch step
   writes the moving routine into the shell's own code pointer and ends there, so
   the shell sets its velocities on the launch frame and does not travel until the

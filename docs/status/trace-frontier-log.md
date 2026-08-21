@@ -112903,3 +112903,58 @@ comparator never tests against them, and the value is a different saved block.
 Rule 115 again: a proxy validated for one question (is a saved position
 present?) silently answering another (what was saved?). It separated nothing and
 is recorded here so the next lane does not reach for it.
+
+## HCZ2 frame 22860 -- the Jawz released its offscreen wait one frame early
+
+Measured at `be2caf983` (baseline re-measured in this tree: 531 errors, first error frame 22860,
+`y_speed` expected `-0530` actual `-0430`).
+
+**Symptom.** The player's rolling jump loses `$100` of upward speed one frame early. Recorded
+`y_speed` runs `FA98` (22859) -> `FAD0` (22860) -> `FC08` (22861): a plain `+$38` gravity step,
+then a step of `+$138`. The extra `$100` is `EnemyDefeated`'s ascending-player case, applied when
+the player destroys a Jawz. The engine applied it at 22860, the ROM at 22861.
+
+**Instrument.** Probes on the touch loop's `objX`/`objY` site, on `JawzBadnikInstance`'s move,
+init and wait-release paths, and on its defeat path -- each carrying the player's centre, matched
+against the recorded `player_x`/`player_y` rows (exact at every frame from 22848 to 22861).
+
+**Measured.** The touch sample point is ROM-correct: the engine reads the Jawz's
+end-of-previous-frame position. The Jawz's *trajectory* was one frame ahead -- at every frame the
+engine's touch read the Jawz x that the recording carries for that same frame, where the ROM's
+touch reads the previous frame's. Traced back to activation, against the recorded slot-14 rows:
+
+| | ROM (recorded) | engine (before) |
+|---|---|---|
+| `loc_85B02` restores the saved operation | 22697 | 22696 |
+| `Obj_Jawz` init runs (`routine` 0 -> 2, `Jawz_Main` installed) | 22698 | 22697 |
+| first `MoveSprite2` (x `3430` -> `3432`) | 22699 | 22698 |
+
+**Cause.** `JawzBadnikInstance` tested the placeholder's visibility with a y margin of `$22`.
+`Obj_WaitOffscreen` seeds the placeholder at `width_pixels = height_pixels = $20`
+(`sonic3k.asm:180271-180276`), and that is what `Render_Sprites` tests when it sets the render
+flag `loc_85AD2` reads on its next dispatch. The camera was scrolling up two pixels per frame
+here, so the two extra pixels bought exactly one frame of early release. A fitted constant, and
+the class comment said so in as many words.
+
+**Result.** `$22 -> $20`: 531 errors -> **526**, first error 22860 -> **29095**, which is the
+`rings` divergence this class's javadoc already documents. The engine's Jawz now sits on the
+recorded slot-14 x at every frame (`3570`/`3572`/`3574`/`3576` at 22858-22861) and the defeat
+lands on frame 22861 with `y_speed` `FB08` -> `FC08`, as recorded.
+
+**Controls, same command, both arms.** `-Ptrace-segments` (70 classes: all `sonictails` chain
+segments and all zone slices): 52 failures / 7 errors in both, per-class messages byte-identical
+apart from the target class. `-Ptrace-replay` (800 tests): 10 failures in both, messages
+identical. `-Pguards`: 500/0.
+
+**Second site, confirmed and NOT landed.** `MantisBadnikInstance` carries the same `$22` y margin
+(`MantisBadnikInstance.java:42-43`) with the same ROM citation. Changing it is **neutral** across
+the whole `-Ptrace-segments` sweep -- no trace arbitrates it -- and it turns
+`TestS3kMgzPulleyAndMantis.mantisRunsRestoredRoutineOutsideStrictViewportAndDetectsP2` red: that
+test places the Mantis at `y = $100` against a viewport bottom of 224, exactly on the ROM's `$20`
+boundary, so it is only visible under the fudged `$22`. Its stated intent is about the *x* margin.
+Correct-and-unlanded until a trace can arbitrate it.
+
+**Measurement hazard.** Two runs in this round died as `Errors:` rather than failures with
+`UnsatisfiedLinkError: Failed to locate library: liblwjgl.so` -- once in a fresh worktree, once in
+a used one where `target/test-tmp/lwjgl_*` had gone stale, where it poisoned 66 of 69 classes and
+read exactly like a catastrophic regression. `rm -rf target/test-tmp` before a sweep.
