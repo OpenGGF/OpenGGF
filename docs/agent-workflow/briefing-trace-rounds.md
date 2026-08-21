@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-three rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-four rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -76,6 +76,7 @@ that looks like a real result.
 | 81 | A new comparison that has never been seen to fail | Green from a code path the suite never enters |
 | 82 | A stream whose every byte is comparable | Blocked anyway — rows not attributable to an engine object |
 | 83 | A stream promoted from untyped to typed | Untyped-keyed formatters and probes stop firing, silently |
+| 84 | A duration in frames from an on-change stream | The sampler's period reported as the defect's duration |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2165,3 +2166,29 @@ branch producing byte-identical output. Say in the write-up which consumers you 
 **Related counting trap, same round.** A warning count in this harness counts *spans*, not
 rows: a deliberately corrupted run diverging on nearly every row of a fixture reported three
 warnings. Do not read such a count as a row count when sizing a divergence.
+
+## Eighty-fourth rule: a duration measured in frames from a sparsely sampled stream measures the sampler
+
+Some recorded streams are emitted **on change**, not every frame. A statistic computed in
+frames over such a stream describes the sampling interval, not the phenomenon.
+
+One round reported that 87% of divergence episodes lasted exactly one frame, and had begun
+building a mechanism on it — "the engine spawns one frame late" — before withdrawing the
+statistic outright. The stream's median spacing is fourteen frames, so almost every episode is
+a single isolated sample and any frame-length rule reports one. Recomputed in *sample* units it
+is about half, with the rest spanning up to sixty-two consecutive dumps, and the true durations
+are unknown, bounded only by the gap to the next sample.
+
+The same round's episode counts were overstated about 2.6x by a grouping rule that started a new
+episode after a two-frame gap — which, against fourteen-frame spacing, shattered single episodes
+into dozens.
+
+**Practically.** Establish a stream's emission policy before computing anything over its time
+axis, and express results in the stream's own units. Where the answer needs real durations, say
+that the stream cannot supply them rather than reporting the sampler's period as the
+phenomenon's.
+
+**And the phase corollary.** With sparse sampling you also cannot rule out that the engine holds
+a value at a different point in the frame than the recorder samples it: shifting by one sample
+compares two moments a sampling-interval apart, which tests nothing. Anyone acting on such a
+divergence must establish phase for their own object first.

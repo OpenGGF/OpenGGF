@@ -107208,3 +107208,73 @@ Occupancy is still the right precondition for `object_state`, and it is still no
 comparison until the engine passes it. The order is: fix the missing-occupant bucket, re-measure
 with the probe (free), and only wire the comparison in when the count is small enough that the
 red set is reviewable. Landing it first would red 88 fixtures to report one already-known fact.
+
+## 2026-08-21 — missing-occupant bucket diagnosed: a moderate head over a long tail
+
+Round `occupancy-diagnosis-r7`, branch `bugfix/ai-s3k-occupancy` off `3fbf0128c`. Diagnosis
+only, no fix, no code written — the probe reports from the previous round were re-analysed.
+
+### The question: concentration or long tail?
+
+**Both, and neither cleanly — a moderate head over a substantial tail.**
+
+| | distinct ROM ids | top 3 | top 10 | top 20 | top 40 |
+|---|---|---|---|---|---|
+| s1 | 88 | 32.5% | 50.9% | 67.2% | 86.3% |
+| s2 | 131 | 25.4% | 48.5% | 63.0% | 80.3% |
+
+Three ids carry a quarter to a third; ten carry half; reaching 80% takes forty. So a handful of
+bounded rounds will *not* clear the bucket, but the first three per game are worth their own
+round each, and each gets a free re-measurement afterwards.
+
+### The head, named
+
+| game | id | object | episodes | fixtures |
+|---|---|---|---|---|
+| s1 | `0x25` | `RING` | 330 | **23** |
+| s1 | `0x3F` | `EXPLOSION` | 205 | 14 |
+| s1 | `0x15` | `SWINGING_PLATFORM` | 147 | 7 |
+| s2 | `0x58` | `BossExplosion` | 403 | 6 |
+| s2 | `0x2C` | `LeavesGenerator` | 168 | 5 |
+| s2 | `0x3A` | `Results` | 128 | **21** |
+
+**The pattern worth acting on:** five of these six are *dynamically spawned transients* — rings
+scattered on a hit, explosions, a leaf generator, the results sequence — not placed level
+furniture. The engine holds fewer of them than the ROM. That is a coherent family and a much
+better target than "5,545 missing objects".
+
+Breadth differs and implies different work: `RING` and `Results` appear across 23 and 21
+fixtures (a shared spawn-path defect), while `BossExplosion` and `LeavesGenerator` sit in 6 and
+5 (zone- or fight-local).
+
+### Two corrections to this round's own first pass
+
+Both were wrong in the same direction and both would have misdirected the next round.
+
+**Episode counts were overstated ~2.6x.** The first pass grouped divergent frames into episodes
+with a "more than 2 frames apart starts a new episode" rule. `slot_dump` is emitted on change,
+not per frame, and its **median spacing is 14 frames**, so that rule split single episodes into
+dozens. Counting consecutive *samples* instead: s1 5,545 → **2,101**, s2 6,530 → **2,749**.
+
+**"87% of episodes last exactly one frame" is withdrawn.** That statistic measured sample
+sparsity, not defect duration — with dumps 14 frames apart, almost every episode is one isolated
+sample and the frame-length rule reported "1". Recomputed in sample units, only ~49% are a single
+sample and the rest span up to 62 consecutive dumps. **Durations are unknown and bounded only by
+the gap to the next dump.** The withdrawn number had a mechanism attached — "the engine spawns
+one frame late" — which would have sent a lane chasing spawn phase; it is not supported.
+
+The general shape: *when a stream is sampled sparsely and irregularly, any duration statistic
+computed in frames measures the sampler.* Compute in samples, and say durations are unknown.
+
+### Scope limits
+
+**S3K is excluded from the family analysis.** Its recorded id is the truncated low byte of a
+32-bit code pointer, not an identity, so grouping S3K entries "by object" would be grouping by
+an artefact. Its 30,411 missing entries are real as *presence*; they cannot be attributed.
+
+**The sampling-phase alternative could not be tested and is not ruled out.** Whether the engine
+genuinely lacks these objects, or holds them at a different point in the frame than the recorder
+samples, cannot be settled from these fixtures: `slot_dump` frames are ~14 apart, so shifting the
+comparison by one dump compares two genuinely different moments (tested: 0 of 14 divergent frames
+match at ±1 dump). Anyone taking a head item should establish that first for their object — it is
+the same phase question that cost this session three rounds elsewhere.
