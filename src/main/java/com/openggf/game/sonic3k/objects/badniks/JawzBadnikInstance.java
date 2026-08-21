@@ -40,11 +40,15 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     private static final int FRAME_B = 1;
     private static final int ANIM_RESET_DELAY = 0;
 
-    // Obj_WaitOffscreen's $20 placeholder is rendered after the camera step.
-    // The retained engine sample spans the two-pixel vertical camera advance
-    // between the object pass and Render_Sprites on this route.
+    // Obj_WaitOffscreen seeds the placeholder with width_pixels = height_pixels
+    // = $20 (sonic3k.asm:180271-180276) and that is what Render_Sprites tests
+    // when it sets render_flags bit 7, which loc_85AD2 reads on its next
+    // dispatch (:180279-180280, :180303-180305). Both margins are therefore the
+    // ROM's $20. An earlier $22 y-margin released the wait one frame early
+    // wherever the camera was scrolling vertically -- the two pixels were the
+    // camera's own per-frame advance, not a ROM quantity.
     private static final int WAIT_PLACEHOLDER_X_MARGIN = 0x20;
-    private static final int WAIT_PLACEHOLDER_Y_SWEEP_MARGIN = 0x22;
+    private static final int WAIT_PLACEHOLDER_Y_MARGIN = 0x20;
 
     private boolean initialized;
     private boolean waitingForOnscreen = true;
@@ -99,7 +103,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
             // recomputing it early in the following update
             // (sonic3k.asm:180266-180298, 36318-36365).
             placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
-                    WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_SWEEP_MARGIN);
+                    WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN);
         }
     }
 
