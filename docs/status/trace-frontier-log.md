@@ -102169,3 +102169,212 @@ Candidate against control `8b1120208`, both arms in the same worktree. All three
   lifetime to special-stage initialisation is not established, and the likeliest explanation is
   shared-state ordering rather than a real dependency. It is an improvement either way, and
   nothing regressed.
+## 2026-08-21 — The post-defeat waits modelled faithfully REGRESS; the residual itself is wrong
+
+Round off `origin/develop` `757fd472c`. Candidate implemented, measured, **rejected** and
+reverted (`e86ce288a` then `0b51145e0`); baseline restored and re-verified at 2288 / row 6000.
+
+### The pre-check, done before landing
+
+Comparing every writer of the ROM's shared `$2E(a0)` against the engine's shared `waitTimer`:
+
+- **The per-phase countdowns are faithful.** The engine's
+  `if (waitTimer > 0) waitTimer--; else if (waitTimer == 0) { waitTimer = -1; fire; }` is the
+  `subq.w #1 / bmi` shape, and leaving `-1` behind is what the ROM's counter holds after it
+  goes negative. Five of the six `waitTimer = -1` sites are exactly this.
+- **All of the ROM's fight-phase constants are present and equal**: `2*60`, `$1F`, `$2F`,
+  `$3F`, `$7F`, `$8F`, `$BF`/`$FF` (`sonic3k.asm:138026,138132,138156,138168,138175,138183`)
+  against `WAIT_BEFORE_MUSIC`, `HOVER_TIME`, `FIRE_TIME_SONIC`, `RETREAT_WAIT`,
+  `REPOSITION_TIME`, `FIRE_SIGNAL_WAIT`, `POST_DEFEAT_SONIC`/`KNUX`.
+- **The one non-faithful write is `onDefeatStarted`**, which clears the shared timer at exactly
+  the transition where `AIZEndBoss_StartDefeatCallback` (`:138945-138951`) preserves it.
+
+### The candidate, and the measurement that rejected it
+
+Implemented the ROM's shape: stop clearing the timer at the defeat, run the residual down
+(`Wait_FadeToLevelMusic`), reload `(2*60)-1` and run that down (`Obj_Wait`), then create the
+capsule. One literal, taken from `loc_85674`.
+
+| | capsule init row | segment 8 errors |
+|---|---|---|
+| before | 5670 (ROM 5671) | 2288 |
+| candidate | **5637** | **3779** |
+
+The engine's residual `waitTimer` at the defeat is **30**, so the fade wait runs 31 frames and
+the capsule lands 34 rows early. Row 6000 is unchanged. The candidate also carried the walk
+*further* — to segment 9's `giant_ring` boundary — while making segment 8 worse, which is
+exactly why a row or reach gate alone cannot judge a fix here.
+
+### A third compensating relationship
+
+`0x37 + 0x7F` is 56 + 128 = **184**, the ROM's correct total from defeat to capsule. Two wrong
+waits reproduced the right total *from a wrong residual*. That is why the faithful model
+regresses where the fitted pair does not, and it is the answer to "don't let the remainder pull
+the values": the remainder is not one frame, it is **33**, and the previously observed
+one-frame gap was the fitted pair's residue rather than a small modelling error.
+
+### The real defect is upstream
+
+For the ROM's 184-frame total, its residual must be **63** with the `(2*60)-1` reload — and 63
+is `$3F`, `AIZEndBoss_StartAttackWait`'s value (`:138175`). **That 63 is implied from the
+measured total, not observed**, and its coincidence with `$3F` is suggestive only; the trace
+does not record `$2E`. What is measured is that the engine's fight leaves **30** where the ROM
+must leave 63.
+
+So the fight's own phase state at the moment of the final hit differs between engine and ROM,
+even though every phase constant matches. Finding why is the prerequisite; re-landing the
+handoff before then only moves the capsule further out.
+
+## 2026-08-21 — The 5554 stall: Obj05 did not execute for eleven frames, and the removal run brackets it exactly
+
+Branch `bugfix/ai-s2-seg15-art-r1` (continues the previous entry), off
+`origin/develop` at `c1afc02ba`. Diagnosis only; **nothing landed**.
+
+### First, a correction to the previous entry's own framing
+
+That entry said the ROM "holds Obj05's mapping frame at `$0C` from 5546 to 5564,
+19 frames on a script whose step is 8", and the follow-up framing was that the
+slot-removal lead "misses the start by seven frames". Both take the last
+*successful* edge as the start of the stall. It is not. `Obj05Ani_Swish` loads a
+duration of 7 at 5546, which decrements across 5547-5553 and would fall below
+zero — and therefore step — on **5554**. The last frame Obj05 must have run
+normally is 5553; the first frame it cannot have run is 5554.
+
+So the suppression window is **5554-5564**, eleven frames. The `object_removed`
+run for the twenty-four `0x5D` objects is **5553-5565**. The removal run brackets
+the suppression window by exactly one frame at each end. There is no seven-frame
+miss; the two line up at both ends, which is what the follow-up asked for.
+
+### Four models tested against the recording; one survives
+
+The recording's four tails-tails edges after the stall are
+**13@5565, 9@5569, 10@5573, 9@5575**. Any model has to produce all four.
+
+| model | prediction | verdict |
+|---|---|---|
+| Obj05 **did not execute** 5554-5564, state intact | duration is already 0, so 5565 steps Swish `$0C -> $0D`; `Obj05_parent_prev_anim` never saw the 5559 (`05->07`) or 5564 (`07->05`) transitions, so at 5565 Tails' anim is `05` and prev is `05` — no restart. Then 5569 `05->07` restarts Flick → 9; Flick steps → 10 at 5573; 5575 `07->05` restarts Swish → 9 | **all four** |
+| Obj05 deleted and re-created | `Obj05_Init` (`s2.asm:41712-41720`) leaves `anim`/`prev_anim`/`objoff_30` alone but `DeleteObject` clears the slot, so prev_anim is 0 → 5565 restarts to frame **9** | ✗ (needs 13) |
+| Obj05 ran, `anim_frame_duration` clobbered high each frame | it would still update `Obj05_parent_prev_anim` at 5559 and 5564 and restart → 5565 shows **9** | ✗ |
+| recorder stopped sampling | `tails` and `tails-tails` submissions share one instrumentation point, `rom_callback_pc = 119294` (`return_1D1FE`), and `tails` edges are recorded at 5559 and 5564 — the hook was live throughout | ✗ |
+
+The surviving model's discriminator is worth stating on its own: **13 at 5565 can
+only happen if Obj05 never observed Tails' 5559 and 5564 animation changes.**
+Every model in which Obj05 executes updates `Obj05_parent_prev_anim`, forces a
+restart, and lands on frame 9. That is the strongest evidence available here, and
+it is about state the recording forces rather than about the absence of edges.
+
+### Why the obvious suppressors are not it
+
+`RunObjects` (`s2.asm:29806-29822`) reaches `Tails_Tails` — which is
+`LevelOnly_Object_RAM`, slot `$80` (`s2.constants.asm:1145-1150`, `$FFFFD000`) —
+only when `Game_Mode == GameModeID_Level` and `Two_player_mode` is clear.
+
+* **Game mode.** Recorded `zone_act_state.game_mode` is **12** on every row
+  5540-5580. Not it.
+* **Player death.** `RunObjectsWhenPlayerIsDead` (`:29852-29860`) still runs the
+  last `$10` slots normally, so `Tails_Tails` executes on that path too. Not it.
+* **`Teleport_flag`.** It would stop the whole loop, and Sonic's own DPLC edges
+  continue at 5559 and 5564. Not it.
+* **`id` zeroed and restored.** `Tails_Tails+id` is written in exactly one place,
+  `Obj02_Init` (`:38944-38945`), which requires Tails to re-initialise; Tails'
+  recorded `routine` is `0x02` on every row in the window. Not it.
+
+### Where that leaves it
+
+Established: the recording's Obj05 did not execute for frames 5554-5564 while
+keeping its animation state, and the twenty-four-object tear-down brackets that
+window at both ends. Not established: what suspends it. The static reading above
+exhausts the gates in `RunObjects` itself, so the next place to look is the
+tear-down side — what deletes one `0x5D` per frame from slot 47 downward, and
+whether it touches slot `$80` or the loop bound — rather than anything in
+`Obj05`.
+
+Worth keeping in view: this is not a small correctness detail. The 5554 cluster
+is ~1,100 of segment 15's 1,681 errors, and all of it hangs off this eleven-frame
+suspension.
+## 2026-08-21 — The seam gap is the card loop's *second* release condition, which S3K does not model
+
+Round `s3k-seam-attrib-r1`, branch `bugfix/ai-s3k-seam-attrib-r1` off `origin/develop`
+`102652768`. **Found, not fixed — nothing landed but this entry.** No engine change, no
+probes left in the tree.
+
+### Settling the shape question first
+
+Asked whether the engine is late because it reaches the load at the wrong point in an
+otherwise correct walk, or because the destination's load is not attempted until the
+destination's numbering begins. **It is the second, and the walk is fine.** The engine walks
+every row of the window — the per-row probe in the preceding entry fires on 7040-7175 and
+the title card's own archives retire inside it — but the load is driven by
+`Sonic3kObjectArtProvider.processRuntimeArtQueue` → `advanceTitleCardTeardown` →
+`consumeTitleCardTeardownLease` → `completeOmittedPresentationFreshLevelRuntimeArtHandoff`,
+which runs on the destination's level frames. The load is attached to the seam crossing, not
+to the loop's release.
+
+### The release condition, read from the loop
+
+`loc_62CC` (`sonic3k.asm:7737-7749`) repeats while **either** of two conditions holds:
+
+```
+tst.w (Dynamic_object_RAM+(object_size*5)+objoff_48).w
+bne.s loc_62CC
+tst.l (Nem_decomp_queue).w
+bne.s loc_62CC
+```
+
+The first is the card's own flag, and it clears quickly: `Obj_TitleCardInit` sets
+`st $48(a0)` (`:62164`); `Obj_TitleCardCreate` returns without advancing while
+`Kos_modules_left` is non-zero (`:62169-62171`); once it advances it builds the pieces and
+bumps the routine (`:62212`); `Obj_TitleCardWait` then clears `$48(a0)` at `loc_2D84C`
+(`:62244`), one dispatch later unless `$34(a0)` is set. The card's archives finish at row
+7063, so **`objoff_48` clears around row 7065.** The `move.w #90,$2E(a0)` wait is *not* this
+gap — `$2E` is consumed by `Obj_TitleCardWait2` (`:62248-62252`), which runs after the
+release.
+
+That leaves the second condition as the only loop-resident thing that can span the remaining
+rows, and it is populated: `Level:` clears the Nemesis queue at `:7515` and then calls
+`Load_PLC`/`Load_PLC_2` four times (`:7582`, `:7593`, `:7595`, `:7615`) — all **before** the
+loop. So the loop holds until the Nemesis PLC art has decompressed.
+
+### Why the engine cannot hold there
+
+S3K has no per-frame Nemesis decompression queue. The shared `NemesisPlcServiceQueue`
+(with `isBusy()`) has exactly two consumers, `Sonic1PlcService` and `Sonic2PlcService`;
+S3K's `Sonic3kPlcLoader` parses and **applies** its PLCs, its own javadoc describing
+`Load_PLC` as "appends entries to the decompression queue" while the class decompresses
+them. So the engine's `Nem_decomp_queue` is effectively always zero, the second condition
+can never hold, and `Level:` has no reason to stay in the loop past ~7065.
+
+This is the already-known S3K dynamic-art/PLC parity gap (CLAUDE.md's
+`maxChunkPatternIndex > patternCount` note) surfacing as a seam defect.
+
+### What is NOT established
+
+**The attribution of rows 7064-7128 to Nemesis decompression is ROM-derived inference, not
+a measurement.** The recorded contract carries no Nemesis kind at all — `hardware_timing.jsonl`
+for `aiz_5` holds only `kos_decompression_queue` (28) and `kos_module_queue` (16), and the
+window is *silent* across 7064-7128:
+
+```
+7056..7063  kos 144-147 / kosm 97-100     (title card)
+7064..7128  — nothing recorded —
+7129..7155  kos 148-155 / kosm 101-102    (level art)
+```
+
+The silence is consistent with the Nemesis queue owning those rows and with nothing else in
+the loop being able to, but it does not prove it. The 65 rows are the **check**, not the
+input: no constant here is derived from them.
+
+### Kill condition for the next round
+
+Model S3K's Nemesis PLC queue as a per-frame drain and let `loc_62CC`'s second condition
+hold the loop. The release row then falls out of the queue's own service rate. **If it does
+not land near 7129, that disagreement is the finding** — it would mean something other than
+the Nemesis queue owns the gap, and the inference above is wrong. Deriving a service rate
+backwards from 7129 would be fitting and must not be done.
+
+### Consequence to check if it lands
+
+The standing "roughly ten module and 16-33 decompression submissions behind" skew is pinned
+to this one seam (2 module / 8 decompression here, with byte-identical fingerprints). If the
+fix lands, that observation should disappear entirely; anything surviving is a second seam
+doing the same thing.
