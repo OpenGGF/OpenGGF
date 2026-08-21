@@ -106073,3 +106073,63 @@ swinging platforms. Each is a candidate for the same silent failure of every
 `Solid_NoCollision` tail. Sweeping them is a round of its own, with its own matrix: the hook
 changes when a *release* fires, and this round is direct evidence that such a change can
 move a chain segment by eleven thousand frames.
+## 2026-08-21 — Segment 8 frame 6000, re-derived independently: the 6007 lock confirmed by a second signature, and the follow-delay family excluded
+
+Worktree `<wt>/s3k-aiz2-sidekick-r1`, branch
+`bugfix/ai-s3k-aiz2-sidekick-f6000`, on `887320904`. Command:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain \
+    -Ds3k.rom.path=<repo>/s3k.gen test
+```
+
+This round was briefed as if frame 6000 were **upstream** of the parked AIZ2 capsule thread and
+had never been worked. Both halves of that are wrong: the entry above
+("The number") already owns this divergence, and frame 6000 is **downstream** of the capsule
+open, not upstream. The round re-derived that entry's conclusion from scratch without knowing
+it existed, which makes most of what follows corroboration rather than news. Recorded because
+two pieces are additive and one correction is owed.
+
+**Baseline (`887320904`, own worktree).** Three axes, unchanged: segment 8 (`aiz_5`) 2288
+physics errors first non-camera mismatch frame 6000 `sidekick_x` rom `0x4997` engine `0x4996`;
+segment 9 first error frame 0 `y`; `hcz` exit boundary never observed. Segments 0/2/4/6 report
+`errorCount` 0.
+
+**Rule 77 settled for this segment.** The comparator's own
+`[LiveTraceComparator] FIRST ERROR` line for segment 8 is at frame 6000, and that logger fires
+on the first ERROR of *any* field including camera. So frame 6000 is not downstream of an
+earlier in-segment error; the full-frame dump at 6000 shows every other compared field, `x_sub`
+included, matching exactly.
+
+**Additive 1 — a second, independent witness for the ROM's 6007 lock.** The entry above proves
+`sub_865DE` runs on row 6007 from its five-and-nine child-creation burst. The recorded capsule
+slot carries the same fact directly: `loc_8666A` advances `routine(a0)` to
+`byte_866A2[Current_zone]` = `$0A` and calls `bsr.w sub_865DE` in the *same* instruction pair
+(`sonic3k.asm:181628-181634`), so the routine byte and the lock are simultaneous by
+construction. In `aux_state`, the capsule (slot 9, type `0x00086540`) goes routine `0x08` →
+`0x0A` at **row 6007** — no child counting required. It also shows the same slot entering
+routine `0x08` at 5945.
+
+**Additive 2 — the follow-delay family is excluded, so the defect cannot be in the CPU
+constants.** Reconstructing the ROM's own nudge decision — `d2 = Pos_table[index-$44].x`, minus
+`$20` when the leader is off-object with `ground_vel < $400` (`loc_13DA6`,
+`sonic3k.asm:26683-26694`), compared against Tails' pre-move `x_pos`, sign selecting
+`loc_13E0A`/`loc_13E34` — reproduces the recorded per-frame whole-pixel residual on **4922 of
+5261** rows of `aiz_5` where `cpu_routine` is 6 and the idle timer is 0, at a delay of **16**
+recorded frames, which is the engine's existing `ROM_FOLLOW_DELAY_FRAMES`. In the failing window
+5988-6029 that lag yields exactly one positive `d2` (`+1`, at 6000) and non-positive everywhere
+else — matching the recording's single `+1` residual. Lag 15 predicts a run of twenty-five
+consecutive nudges that did not happen; lags 17 and 18 predict none at all, including at 6000.
+So "the engine samples the leader at the wrong delay" and "the `$20` lead offset is wrong" are
+both refuted, and the whole one-frame-sampling family with them.
+
+**Correction owed to this round's own first number.** Instrumenting `SidekickCpuController`
+(throwaway probe, reverted; baseline unchanged with it in place) put the last normal
+follow-steering pass at engine frame 5974 and the `controller2SignedLocked` early return from
+5975, which mapped to trace 5995 and a 12-frame gap. The mapping was an inferred offset from the
+sidekick's own `x` sequence, and the established 5993 open / 5994 lock — measured against row
+markers rather than inferred — supersedes it. **The number is 14 rows, not 12.**
+
+**Frontier unmoved, and the next question is unchanged:** why the engine's capsule-button
+trigger fires 14 rows early. Nothing was landed; a change that moved the lock by a frame count
+would be a fitted constant.
