@@ -115,9 +115,20 @@ public class BubbleObjectInstance extends AbstractObjectInstance
     private boolean breathed;
 
     // ROM render_flags bit 7 as observed by Obj24 after ObjectMove. Obj24_Init
-    // starts with render_flags=$84, so a just-allocated offscreen bubble survives
-    // one execution before the next Render_Sprites result can delete it.
+    // starts with render_flags=$84 (docs/s2disasm/s2.asm:45209), so a
+    // just-allocated offscreen bubble survives one execution before the next
+    // Render_Sprites result can delete it.
     private boolean romRenderOnScreen;
+
+    /**
+     * Whether the previous pass reached {@code DisplaySprite} at {@code loc_1F988}
+     * (docs/s2disasm/s2.asm:45265-45267). {@code BuildSprites} only rewrites
+     * {@code render_flags} bit 7 for objects that queued themselves that frame,
+     * so a bubble that has not executed yet -- allocated during one object pass
+     * but first run on the next -- has never been queued and keeps
+     * {@code Obj24_Init}'s {@code $84} until its own first pass draws it.
+     */
+    private boolean romDisplayedLastPass;
 
     /**
      * Creates a rising bubble at the specified position.
@@ -244,10 +255,36 @@ public class BubbleObjectInstance extends AbstractObjectInstance
             displayY = posY16 >> 16;
         }
 
-        // ROM tests render_flags bit 7 and calls DisplaySprite only after
-        // ObjectMove (:45265-45267), so the flag Render_Sprites refreshes is
-        // taken from the post-move position.
-        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        // ROM loc_1F988 reaches DisplaySprite only on a pass that survived the
+        // render_flags test (:45265-45267); that queueing is what lets the next
+        // BuildSprites rewrite the bit.
+        romDisplayedLastPass = true;
+    }
+
+    /**
+     * {@code BuildSprites} runs after {@code RunObjects} and after
+     * {@code DeformBgLayer} has scrolled the camera and republished
+     * {@code Camera_X_pos_copy} (docs/s2disasm/s2.asm:5094-5110, 15174-15179),
+     * so the verdict a pass reads was taken against that frame's camera at the
+     * object's post-{@code ObjectMove} position. Publishing from inside
+     * {@code update()} instead used the camera the object pass still held, one
+     * deform older.
+     * <p>
+     * The guard is the other half: {@code BuildSprites} only rewrites the bit
+     * for objects in the sprite queue, so a bubble allocated during one object
+     * pass and first run on the next must keep {@code Obj24_Init}'s {@code $84}
+     * through the frame it has not executed in. Without it the hook judges a
+     * bubble that has never drawn, and every off-screen bubble dies one pass
+     * early.
+     */
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!romDisplayedLastPass) {
+            return;
+        }
+        romDisplayedLastPass = false;
+        romRenderOnScreen = isWithinRenderSpriteBounds(
+                getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /** The bubble's {@code Ani_obj24} script, clamped to the defined entries. */

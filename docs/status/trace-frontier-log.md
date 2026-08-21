@@ -114044,3 +114044,41 @@ one-frame offset in the delete path; the two have to come out together.
 
 Detail appended to
 [2026-08-21-carried-render-flag-family.md](../architecture/audits/trace/2026-08-21-carried-render-flag-family.md).
+
+
+## 2026-08-21 -- S2 ARZ bubble: the compensating pair, located and removed
+
+Command: `mvn -Dmse=off -DforkCount=1 -Dtest=TestS2Arz2LevelSelectTraceReplay,DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=<s2 rom> test`,
+both arms at `d8386e181`. Level select passes in both; the segment stays at 9130
+errors, first error 2175. **Behaviour-identical on every fixture that can see
+it, and that is the reported result** -- the change removes a compensating pair,
+it does not move a frontier.
+
+**Located from the delete, not from the publisher.** Probing what the bounds test
+actually rejected at each of the 54 deletes showed every one failing by
+*hundreds* of pixels -- `pos=(1532,1608)` against `cam=[900,1102,1220,1326]` --
+not by a marginal crossing under camera motion. So the frame a bubble dies on is
+not decided by which camera judged it; it is decided by how many passes it
+survives after being created. That reframed the whole thing: the earlier hook
+conversion killed every off-screen bubble one pass early because
+`refreshPostCameraRenderState` runs over `dynamicObjects` at step 7 including
+bubbles allocated during that frame's object pass but not yet executed, and its
+verdict overwrote `Obj24_Init`'s seeded `render_flags = $84`
+(`s2.asm:45209`).
+
+**The pair.** `BuildSprites` only rewrites bit 7 for objects that queued
+themselves via `DisplaySprite` that frame, and `Obj24` reaches `DisplaySprite`
+only at `loc_1F988` on a pass that survived the flag test
+(`s2.asm:45265-45267`). So an object that has not executed keeps its setup value.
+Publishing from inside `update()` was wrong by one camera deform
+(`DeformBgLayer` scrolls and republishes `Camera_X_pos_copy` at
+`s2.asm:15174-15179`, between `RunObjects` at `:5094` and `BuildSprites` at
+`:5110`); the missing queue guard was wrong by one pass in the other direction;
+and the two cancelled. Landing either alone regressed the level-select trace --
+230 errors via the pre-update helper, 83 via the hook. Landed together they
+reproduce the control exactly: the 54 delete rows are identical to the control's,
+which are themselves 51 of 54 on a recorded `object_removed` frame.
+
+This is the guard the generator fix already carries as `romDisplayedLastPass`;
+the bubble is the second member. Any other class moved onto the post-camera hook
+needs it, and the audit's remaining five should be read that way.
