@@ -109248,3 +109248,76 @@ asks that the position be confirmed independently before anyone acts on it.
 is one frame early", which is dead, but "the defeat is detected in the wrong intra-frame
 position". The later links are untouched in shape, and the frontier-moving simulation remains a
 vehicle-level fact independent of the explanation.
+## 2026-08-21 — the aliveness is wrong and the suppression is not even running: the destination player is spawned live at the top of a load the ROM spends inert
+
+Third round of this lane. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s3k-handover-census`, based on `45756f882`. Probe reverted; nothing
+landed in `src/`.
+
+### The two decisions, separated
+
+The commission asked which of the two is wrong — the source-body suppression or
+the destination players' aliveness — since they may not both be. Measured
+answer: **the aliveness. The suppression is not wrong because it never runs.**
+
+A stack-dumping probe in `stepEngineFrame` reports
+`disposition=null` on **every** row of the handover window. There is no
+`TraceRunFrameDriver` installed on this path, so
+`TraceSessionLauncher.suppressesRunNativeLevelBody` — which requires
+`isRunFrameDriverActive()` — is false on every row, and the level body runs
+unsuppressed throughout. That follows from the manifest finding two entries
+above: with no transition record for 8 -> 9, `exit == null`, and
+`assertChainReplay` takes the **plain level->level** branch
+(`stepFrames` -> `prepareAcrossLevelBoundary` ->
+`admitPlainLevelBoundaryWhenReady`), which never opens a shared transition gap
+at all. Every gap-census, `SHARED_GAP` and `suppressedRowOwesVint` mechanism
+documented in that class is dormant here.
+
+The step call sites confirm the branch:
+
+| step row | driven from |
+|---|---|
+| 53485, 53487, 53559 | `stepFrames:3954` <- `assertChainReplay:1291` — segment 8's OWN recorded rows |
+| 53608 | `admitPlainLevelBoundaryWhenReady:3928` <- `assertChainReplay:1357` |
+| 53609+ | `awaitBoundary` <- `assertChainReplay:1864` — segment 9's own walk |
+
+Three of the four surplus steps are driven while segment 8 is still consuming
+its own recorded frames, which is why segment 8 reports HCZ state at its row
+7126.
+
+### Why those particular rows: they are the load's stage boundaries
+
+`mode` is `LEVEL` on every row of the window — the title-card theory is dead
+too; the mode never leaves `LEVEL`. Yet the player's `y_speed` changes on four
+rows out of ~125. Lining the engine's rows up against the ROM's own `aiz_5`
+tail (row + 46432 = bk2) settles what those rows are:
+
+| ROM | what the ROM has | engine | what the engine does |
+|---|---|---|---|
+| 7054 / bk2 53486 | level RAM cleared: `player_x` 0, routine 0, status 0, `sidekick_present` 0 | 53485 | HCZ player **exists**, `y` 0x0020, `y_speed` 0 |
+| — | — | **53487** | physics step 1 (`y_speed` 0x38) |
+| 7126 / bk2 53558 | `player_x` 0x0280, `y` 0x0020 seeded, but routine 0, status 0, air 0, anim 0 — **inert** | **53559** | physics step 2 (0x70) |
+| 7174 / bk2 53606 | player becomes **live**: status 0x02, air 1, anim 0x1B, sidekick present — `y_speed` still 0 | **53608** | physics step 3 (0xA8) |
+| `hcz` frame 0 / bk2 53608 | first and only physics step, `y_speed` 0 -> 0x38 | 53609 | physics step 4 (0xE0) — read as frame 0 |
+
+The engine's four steps land one to two rows after each of the ROM's three load
+milestones plus one at frame 0. The 72-row and 48-row waits between them are
+present in both. **The engine's load timing is right.** What differs is the
+object's state during the load: the ROM's player is inert through the whole
+window and runs physics exactly once, at frame 0; the engine's is live from the
+first milestone and runs physics on every row the load unblocks.
+
+This is the ROM's own shape and the engine already names it —
+`AbstractLevelInitProfile.spawnPlayerStep` is documented as
+"S2: InitPlayers, S3K: SpawnLevelMainSprites_SpawnPlayers", the ROM's LAST load
+phase. The destination player is nonetheless present and steppable from the
+load's first milestone, ~120 rows earlier. That is where the next round starts.
+
+### The fingerprint any candidate must match
+
+Not "fewer errors" and not "the frontier moved". A correct fix removes the steps
+at **53487, 53559 and 53608** and leaves exactly one, at the destination's frame
+0. A candidate that changes the count without matching that pattern is wrong
+even if the count improves. Re-run the probe, do not read the frontier.
+
+Nothing was fitted. Nothing was landed.
