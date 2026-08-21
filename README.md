@@ -214,6 +214,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Unrepresented-span hardware work now completes (2026-08-21):** trace replay
+  releases production-submitted hardware work that was queued outside every
+  recorded segment, where no recorded completion can exist. Work submitted
+  inside represented rows still requires an exact timing-ledger match; the
+  change unblocks the S3K title-card return from a special stage without giving
+  trace comparison authority over what work exists.
+
 - **TurboSpiker launch-dispatch parity (2026-08-21):** the spike shell now sets
   its velocity on the ROM's launch dispatch and begins moving on the next frame,
   removing a persistent four-pixel lead and advancing the HCZ2 trace frontier

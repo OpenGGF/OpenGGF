@@ -133,6 +133,7 @@ that looks like a real result.
 | 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
 | 115 | A proxy that survives one question silently answers a different one | Three inversions in one family; measure the quantity directly |
 | 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
+| 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3054,4 +3055,25 @@ not "was drawn"), the vertical wrap is a **variable** `Screen_Y_wrap_value` rath
 S2's vocabulary *finds* these sites and reports them as the same thing. Nothing prompts the check.
 
 Confirm the semantics per game even when the name matches — especially then.
+
+## One hundred and seventeenth rule: a constant in a shared class is not a constant of every game
+
+A hardcoded `VERTICAL_WRAP_BG_MASK = 0x3FF` in the engine's shared `Camera` class was reported as
+a candidate invented constant: no `$3FF` write to any BG wrap variable exists in `sonic3k.asm`, and
+the only `$3FF` in that family is a *foreground* value for an unrelated bonus stage.
+
+It is genuine and ROM-owned — **Sonic 1's**: `andi.w #$3FF,(v_bgscreenposy).w ; wrap background
+Y-position` (`docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:241`, and again at `:266`).
+Correct value, accurate comment; only the *citation* was missing. It has exactly one caller, and
+that caller is Sonic 1 Labyrinth Zone code.
+
+**The constant lived in a shared class, so it was searched for in the wrong game's disassembly.**
+Check the callers before deciding which ROM a shared-class constant belongs to — the enclosing
+class says nothing about it. This is the empty-grep failure in a new place: absence in one game's
+disassembly is a fact about that disassembly.
+
+**And the retraction shrank a pending fix.** The same constant had been reported as a third
+independent derivation of the S3K wrap period. It is not — it is S1's, reached only from S1 code,
+and does not participate in the S3K period at all. The S3K period is modelled **twice**, not three
+times. The ownership argument survived; the scope of the work did not.
 

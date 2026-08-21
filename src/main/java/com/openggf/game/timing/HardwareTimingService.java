@@ -4,10 +4,13 @@ import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Session-owned FIFO for deterministic preparation and observable hardware readiness.
@@ -23,6 +26,24 @@ public final class HardwareTimingService
     private final EnumMap<HardwareWorkKind, Long> nextOrdinals =
             new EnumMap<>(HardwareWorkKind.class);
     private final List<HardwareTimingJob> jobs = new ArrayList<>();
+    /**
+     * Handles submitted while recorded row authority was deactivated. The
+     * recorder discards anything observed outside a segment's rows, so no
+     * recorded completion edge for these can ever arrive; they are released on
+     * the same native work budget a live run would give them. Membership is a
+     * property of the submission, not of the moment of release, so work
+     * submitted inside coverage keeps waiting for its recorded edge even when
+     * the run later leaves coverage.
+     */
+    private final Set<HardwareWorkHandle> unrepresentedSubmissions =
+            new LinkedHashSet<>();
+    /**
+     * Every handle ever submitted unrepresented, including claimed ones. The
+     * ordinal an unrepresented submission borrowed is returned after the claim,
+     * so the fact has to outlive the pending entry.
+     */
+    private final Set<HardwareWorkHandle> wasSubmittedUnrepresented =
+            new LinkedHashSet<>();
 
     private final EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
             admissionPolicies = liveAdmissionPolicies();
@@ -59,6 +80,10 @@ public final class HardwareTimingService
                 HardwareSubmissionFingerprint.compute(submission));
         nextOrdinals.put(submission.kind(), ordinal + 1);
         jobs.add(new HardwareTimingJob(submission, handle));
+        if (!recordedAuthorityRepresentsRow()) {
+            unrepresentedSubmissions.add(handle);
+            wasSubmittedUnrepresented.add(handle);
+        }
         hasSubmitted = true;
         return handle;
     }
@@ -66,13 +91,28 @@ public final class HardwareTimingService
     public void service(HardwareServiceBoundary boundary) {
         Objects.requireNonNull(boundary, "boundary");
         for (HardwareWorkKind kind : HardwareWorkKind.values()) {
-            if (admissionPolicyFor(kind) == HardwareReadinessAdmissionPolicy.LIVE) {
-                activateAndAdvanceHead(boundary, kind);
+            boolean live = admissionPolicyFor(kind)
+                    == HardwareReadinessAdmissionPolicy.LIVE;
+            if (live) {
+                activateAndAdvanceHead(boundary, kind, job -> true);
+            } else {
+                // HardwareTimingReplayPort.enterUnrepresentedGap contracts that
+                // production hardware work may continue while row authority is
+                // deactivated, but no recorded edge may be applied. Work
+                // submitted in such a span has no edge to wait for, so it is
+                // serviced and released on the native work budget instead --
+                // the same rule the S1 Nemesis PLC arm gate applies
+                // (Sonic1PlcArmTiming.releaseArm), moved to the ledger so every
+                // recorded kind obeys it and so the release still costs the ROM
+                // service frames rather than completing instantly.
+                activateAndAdvanceHead(boundary, kind, this::isUnrepresented);
             }
             serviceBoundaryDrivenHead(boundary, kind);
             scheduler.service(boundary, jobsOfKind(kind));
-            if (admissionPolicyFor(kind) == HardwareReadinessAdmissionPolicy.LIVE) {
-                releasePreparedInFifoOrder(kind);
+            if (live) {
+                releasePreparedInFifoOrder(kind, job -> true);
+            } else {
+                releasePreparedInFifoOrder(kind, this::isUnrepresented);
             }
         }
         lastServicedBoundary = boundary;
@@ -100,7 +140,8 @@ public final class HardwareTimingService
      * is, matching the hardware-timing exception's scope.
      */
     public void admitUnrepresentedReadiness(HardwareWorkHandle handle) {
-        if (recordedAuthorityRepresentsRow()) {
+        if (recordedAuthorityRepresentsRow()
+                && !unrepresentedSubmissions.contains(handle)) {
             throw new IllegalStateException(
                     "native readiness is only available while recorded row"
                             + " authority is deactivated: " + handle);
@@ -140,7 +181,8 @@ public final class HardwareTimingService
      * silently renumbering a live submission.
      */
     public void releaseUnrepresentedIdentity(HardwareWorkHandle handle) {
-        if (recordedAuthorityRepresentsRow()) {
+        if (recordedAuthorityRepresentsRow()
+                && !wasSubmittedUnrepresented.contains(handle)) {
             throw new IllegalStateException(
                     "an unrepresented identity is only returned while recorded row"
                             + " authority is deactivated: " + handle);
@@ -181,6 +223,7 @@ public final class HardwareTimingService
                             .toList());
         }
         jobs.remove(job);
+        wasSubmittedUnrepresented.remove(handle);
         nextOrdinals.put(kind, handle.ordinal());
     }
 
@@ -196,7 +239,9 @@ public final class HardwareTimingService
 
     public byte[] claim(HardwareWorkHandle handle) {
         HardwareTimingJob job = requireKnown(handle);
-        return job.claim();
+        byte[] payload = job.claim();
+        unrepresentedSubmissions.remove(handle);
+        return payload;
     }
 
     /**
@@ -231,8 +276,20 @@ public final class HardwareTimingService
         job.capturePreparedPayload();
         if (admissionPolicyFor(handle.kind())
                 == HardwareReadinessAdmissionPolicy.LIVE) {
-            releasePreparedInFifoOrder(handle.kind());
+            releasePreparedInFifoOrder(handle.kind(), job2 -> true);
+        } else {
+            releasePreparedInFifoOrder(handle.kind(), this::isUnrepresented);
         }
+    }
+
+    /**
+     * Whether this handle's submission fell outside the recorded stream's rows.
+     * The recorder never counted it, so its borrowed ordinal has to be returned
+     * once production claims the result -- see
+     * {@link #releaseUnrepresentedIdentity}.
+     */
+    public boolean wasSubmittedUnrepresented(HardwareWorkHandle handle) {
+        return wasSubmittedUnrepresented.contains(handle);
     }
 
     /** Returns a pending preparation to its production-owned coordinator. */
@@ -376,7 +433,8 @@ public final class HardwareTimingService
                 admissionPolicies,
                 recordedAdmissionActive,
                 hasSubmitted,
-                lastServicedBoundary);
+                lastServicedBoundary,
+                Set.copyOf(unrepresentedSubmissions));
     }
 
     @Override
@@ -395,12 +453,18 @@ public final class HardwareTimingService
         recordedAdmissionActive = snapshot.recordedAdmissionActive();
         hasSubmitted = snapshot.hasSubmitted();
         lastServicedBoundary = snapshot.lastServicedBoundary();
+        unrepresentedSubmissions.clear();
+        unrepresentedSubmissions.addAll(snapshot.unrepresentedSubmissions());
+        wasSubmittedUnrepresented.retainAll(unrepresentedSubmissions);
+        wasSubmittedUnrepresented.addAll(unrepresentedSubmissions);
     }
 
     @Override
     public void resetForMissingSnapshot() {
         nextOrdinals.clear();
         jobs.clear();
+        unrepresentedSubmissions.clear();
+        wasSubmittedUnrepresented.clear();
         admissionPolicies.clear();
         admissionPolicies.putAll(liveAdmissionPolicies());
         recordedAdmissionActive = false;
@@ -408,9 +472,14 @@ public final class HardwareTimingService
         lastServicedBoundary = null;
     }
 
-    private void releasePreparedInFifoOrder(HardwareWorkKind kind) {
+    private boolean isUnrepresented(HardwareTimingJob job) {
+        return unrepresentedSubmissions.contains(job.handle());
+    }
+
+    private void releasePreparedInFifoOrder(
+            HardwareWorkKind kind, Predicate<HardwareTimingJob> scope) {
         for (HardwareTimingJob job : jobs) {
-            if (job.handle().kind() != kind) {
+            if (job.handle().kind() != kind || !scope.test(job)) {
                 continue;
             }
             if (job.isClaimed() || job.isReady()) {
@@ -431,9 +500,11 @@ public final class HardwareTimingService
     }
 
     private void activateAndAdvanceHead(
-            HardwareServiceBoundary boundary, HardwareWorkKind kind) {
+            HardwareServiceBoundary boundary, HardwareWorkKind kind,
+            Predicate<HardwareTimingJob> scope) {
         for (HardwareTimingJob job : jobs) {
-            if (job.handle().kind() != kind || job.isPhysicallyRetired()) {
+            if (job.handle().kind() != kind || job.isPhysicallyRetired()
+                    || !scope.test(job)) {
                 continue;
             }
             if (!job.isProfileActive()) {

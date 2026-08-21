@@ -6,6 +6,21 @@
   next one. The engine launched and moved in the same dispatch, which put the
   spike four pixels high for its entire flight and cost a hit in HCZ2 one frame
   before the ROM takes one.
+- **The Sonic 3 & Knuckles title card no longer hangs forever on art it is
+  waiting for:** returning to Angel Island from a special stage, the title
+  card queues its own Kosinski art and then waits for that art to arrive
+  before it will slide in and hand control back. Under trace replay that wait
+  never ended, because the art was queued in a stretch of the run the
+  recording does not describe — and the recorder throws away everything it
+  sees outside a segment's rows, so the completion the engine was waiting for
+  could never be written down in the first place. The timing ledger now
+  recognises work submitted in such a stretch and runs it on the same
+  hardware work budget a normal play session would give it, instead of
+  holding it against a recorded completion that cannot exist. Work queued
+  while the recording *is* watching is unaffected and still has to match, so
+  a genuine mismatch is still a hard failure. This is the same rule the Sonic
+  1 pattern-load-cue arm gate already applied, moved into the shared ledger
+  so every recorded kind obeys it.
 
 - **ARZ's air bubbles have to inflate before Sonic can breathe them again:**
   a large bubble only becomes inhalable once its animation has climbed to the
