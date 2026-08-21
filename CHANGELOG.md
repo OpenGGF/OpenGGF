@@ -1,9 +1,10 @@
 # Changelog
 
 - **Trace catalog validation now uses compact run-segment descriptors:** the
-  planner scans and validates one segment at a time, retaining 8,664,344 bytes
-  after forced GC on the measured 67-segment run instead of the eager plan's
-  1,087,680,816 bytes (99.20% lower). Actual replay deliberately remains on
+  planner scans and validates one segment at a time, retaining 8,660,152 bytes
+  after warmed forced-GC measurement on the 67-segment run instead of the eager
+  plan's 1,087,200,800 bytes (99.20% lower). Actual replay deliberately remains
+  on
   the eager plan in this phase, so replay memory and behaviour are unchanged;
   active-segment cursor ownership remains separately approved future work.
 

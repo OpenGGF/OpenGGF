@@ -1,7 +1,5 @@
 package com.openggf.tests.trace.runs;
 
-import com.openggf.trace.TraceData;
-import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
@@ -15,7 +13,6 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.Reference;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +50,8 @@ class TestTraceRunDescriptorPlanningPerformance {
 
         assertEquals(EXPECTED_SEGMENTS, manifest.segments().size(),
                 "benchmark must keep using the measured 67-segment fixture");
+        assertDescriptorComponentShape();
+        warmAndReleasePlannerState(manifest, entry.runDir());
 
         EagerMeasurement eager = measureEager(manifest, entry.runDir());
         DescriptorMeasurement descriptor =
@@ -61,7 +60,6 @@ class TestTraceRunDescriptorPlanningPerformance {
         assertEquals(eager.segmentCount(), descriptor.segmentCount());
         assertEquals(eager.rowCount(), descriptor.rowCount());
         assertEquals(descriptor.rowCount(), descriptor.rawFrameCount());
-        assertDescriptorShapeHasNoEagerPayloadOwner();
         assertTrue(descriptor.retainedBytes() < eager.retainedBytes(),
                 () -> "descriptor retained heap " + descriptor.retainedBytes()
                         + " must be below eager retained heap "
@@ -80,6 +78,30 @@ class TestTraceRunDescriptorPlanningPerformance {
                 descriptor.segmentCount(), eager.retainedBytes(),
                 descriptor.retainedBytes(), reductionBytes,
                 reductionPercent, descriptor.rawFrameCount());
+    }
+
+    private static void warmAndReleasePlannerState(
+            TraceRunManifest manifest, Path runDir) throws IOException {
+        warmEagerPlanner(manifest, runDir);
+        forcedGcHeapBytes();
+        warmDescriptorPlanner(manifest, runDir);
+        forcedGcHeapBytes();
+    }
+
+    private static void warmEagerPlanner(
+            TraceRunManifest manifest, Path runDir) throws IOException {
+        List<TraceRunReplayWalker.SegmentPlan> plans =
+                TraceRunReplayWalker.plan(manifest, runDir);
+        assertEquals(EXPECTED_SEGMENTS, plans.size());
+        Reference.reachabilityFence(plans);
+    }
+
+    private static void warmDescriptorPlanner(
+            TraceRunManifest manifest, Path runDir) throws IOException {
+        List<TraceRunSegmentDescriptor> descriptors =
+                TraceRunReplayWalker.planDescriptors(manifest, runDir);
+        assertEquals(EXPECTED_SEGMENTS, descriptors.size());
+        Reference.reachabilityFence(descriptors);
     }
 
     private static EagerMeasurement measureEager(
@@ -117,28 +139,28 @@ class TestTraceRunDescriptorPlanningPerformance {
         return result;
     }
 
-    private static void assertDescriptorShapeHasNoEagerPayloadOwner() {
-        List<Class<?>> forbiddenOwners = List.of(
-                TraceData.class, TraceRunSpecialStageRows.class);
-        assertTrue(Arrays.stream(
+    private static void assertDescriptorComponentShape() {
+        List<String> approvedComponents = List.of(
+                "segment:com.openggf.trace.TraceRunManifest$Segment",
+                "segmentDirectory:java.nio.file.Path",
+                "metadata:com.openggf.trace.TraceMetadata",
+                "rowCount:int",
+                "openingFrame:com.openggf.trace.TraceFrame",
+                "rawFrames:java.util.List<java.lang.Integer>",
+                "laggedRows:java.util.BitSet",
+                "hardwareTimingSchedule:com.openggf.trace.timing.HardwareTimingSchedule",
+                "terminalDynamicArtLedger:java.util.List<com.openggf.trace.DynamicArtTransfer$Descriptor>",
+                "entryBoundary:com.openggf.trace.TraceRunManifest$Transition",
+                "exitBoundary:com.openggf.trace.TraceRunManifest$Transition",
+                "executionPolicy:com.openggf.trace.replay.runs.TraceRunReplayWalker$SegmentExecutionPolicy");
+        List<String> actualComponents = java.util.Arrays.stream(
                         TraceRunSegmentDescriptor.class.getRecordComponents())
-                .noneMatch(component -> forbiddenOwners.stream()
-                        .anyMatch(owner -> owner.isAssignableFrom(
-                                component.getType()))));
-        assertTrue(Arrays.stream(TraceRunSegmentDescriptor.class.getDeclaredFields())
-                .noneMatch(field -> forbiddenOwners.stream()
-                        .anyMatch(owner -> owner.isAssignableFrom(
-                                field.getType()))));
-        assertEquals(1, Arrays.stream(
-                        TraceRunSegmentDescriptor.class.getRecordComponents())
-                .filter(component -> component.getType() == TraceFrame.class)
-                .count(), "only the compact opening-row summary may retain a frame");
-        assertTrue(Arrays.stream(
-                        TraceRunSegmentDescriptor.class.getRecordComponents())
-                .filter(component -> component.getType() != TraceFrame.class)
-                .noneMatch(component -> component.getGenericType().getTypeName()
-                        .contains(TraceFrame.class.getName())),
-                "descriptor collections must not retain raw TraceFrame payloads");
+                .map(component -> component.getName() + ":"
+                        + component.getGenericType().getTypeName())
+                .toList();
+
+        assertEquals(approvedComponents, actualComponents,
+                "descriptor API must remain within the approved payload-independent shape");
     }
 
     private static long forcedGcHeapBytes() {

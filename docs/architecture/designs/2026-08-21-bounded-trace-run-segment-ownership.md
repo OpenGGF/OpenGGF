@@ -32,9 +32,11 @@ scan sequentially and publishes payload-independent summaries.
 `TraceCatalog.validateRunLaunch()` consumes those summaries, while
 `prepareRunLaunch()` and every replay caller retain the eager `plan()` path.
 
-On the real 67-segment Knuckles super-emerald run, separate forced-GC phases
-measured 1,087,680,816 retained bytes for eager planning and 8,664,344 bytes
-for descriptor planning. The descriptor graph retained 1,079,016,472 fewer
+On the real 67-segment Knuckles super-emerald run, both planners first ran
+unmeasured whole-run warmups whose graphs were released before separate
+forced-GC measurement phases. The warmed measurement reported 1,087,200,800
+retained bytes for eager planning and 8,660,152 bytes for descriptor planning.
+The descriptor graph retained 1,078,540,648 fewer
 bytes (99.20%) while representing the same 409,630 rows. This is a planning
 and catalog-validation result, not a replay-memory result: live, visual, and
 audio replay memory is unchanged until the cursor work below is authorised

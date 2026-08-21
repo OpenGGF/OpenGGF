@@ -210,7 +210,13 @@ Under `-Dopenggf.trace.segmentDescriptorBenchmark=true`, locate the measured 67-
 TRACE_SEGMENT_DESCRIPTOR_BENCH segments=<n> eager_retained_bytes=<n> descriptor_retained_bytes=<n> reduction_bytes=<n> reduction_percent=<n> descriptor_raw_frames=<n>
 ```
 
-The ordinary test assertions are host-stable: segment counts and row counts match, the descriptor graph has no eager payload owner, and descriptor retained bytes are below eager retained bytes. Report exact heap numbers without setting a brittle fixed-byte threshold.
+The ordinary test assertions are host-stable: segment counts and row counts
+match, the descriptor record components match the exact approved
+payload-independent raw/generic API, and descriptor retained bytes are below
+eager retained bytes. Warm both planners across the whole run, release and
+force-GC both warmup graphs, then measure each arm against its own forced-GC
+baseline. Report exact heap numbers without setting a brittle fixed-byte
+threshold.
 
 - [x] **Step 2: Run focused measurement and functional suites**
 

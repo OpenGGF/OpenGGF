@@ -216,10 +216,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 - **Compact trace-run catalog validation (2026-08-21):** run manifests now
   validate through immutable descriptors produced one segment at a time. On
-  the real 67-segment Knuckles super-emerald run, retained planning heap fell
-  from 1,087,680,816 to 8,664,344 bytes (99.20%) with identical segment and row
-  counts. Actual replay remains eager and behaviourally unchanged in this
-  phase; active-segment cursor migration remains future work requiring
+  the real 67-segment Knuckles super-emerald run, warmed retained planning heap
+  fell from 1,087,200,800 to 8,660,152 bytes (99.20%) with identical segment
+  and row counts. Actual replay remains eager and behaviourally unchanged in
+  this phase; active-segment cursor migration remains future work requiring
   separate approval.
 
 - **Unrepresented-span hardware work now completes (2026-08-21):** trace replay

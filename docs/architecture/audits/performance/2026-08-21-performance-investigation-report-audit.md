@@ -102,9 +102,12 @@ Confidence: **confirmed and measured**.
 Phase-one implementation now scans one segment at a time into immutable
 descriptors and routes catalog launch validation through those descriptors.
 An opt-in forced-GC comparison on the same 67-segment run, from the Task 3
-working tree based at `c046e0298`, measured 1,087,680,816 retained bytes for
-the eager plan and 8,664,344 retained bytes for the descriptor plan: a
-1,079,016,472-byte (99.20%) reduction. Both plans represented 67 segments and
+working tree based at `b89a732e4`, measured 1,087,200,800 retained bytes for
+the eager plan and 8,660,152 retained bytes for the descriptor plan: a
+1,078,540,648-byte (99.20%) reduction. Both planners first completed unmeasured
+whole-run warmups and released those graphs before either measured arm, so
+persistent parser/cache initialization is outside both deltas. Both plans
+represented 67 segments and
 409,630 rows/raw-frame mappings. This establishes the planning boundary and
 benefits catalog validation now; actual replay still owns the eager
 `SegmentPlan` graph, so its retained heap is unchanged in this phase. Moving
