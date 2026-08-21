@@ -112140,3 +112140,62 @@ today, against a stream nothing currently compares.
 
 **Acceptance is unchanged and still sharp**: HCZ1 stays at 0 and the first error moves past
 22243. Nothing landed for TurboSpiker.
+
+## 2026-08-21 — the gap stamp is NOT a recorder artefact, and it is not one family either
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-gap-stamp`, pinned to
+`1f3985576`, `target/` cleared. `src/` unchanged. Precondition answered; nothing
+proposed.
+
+### The measurement
+
+Every `run_gap.*.movie_logical_frame` comparison in the run, as
+engine-minus-recording, grouped by what the gap's SOURCE segment is:
+
+| gap | source | fields | engine - rom |
+|---|---|---:|---|
+| `seg4_ehz1 -> seg5_ehz2` | level | 4 | **-1** |
+| `seg7_ehz2 -> seg8_cpz1` | level | 4 | **-1** |
+| `seg8_cpz1 -> seg9_cpz2` | level | 4 | **-1** |
+| `seg10_cpz2 -> seg11_arz1` | level | 4 | **-1** |
+| `seg12_arz1 -> seg13_arz2` | level | 4 | **-1** |
+| `ss_4 -> seg6_ehz2` | special stage | 2 | **+1** |
+| `ss_5 -> seg7_ehz2` | special stage | 2 | **+1** |
+| `ss_7 -> seg12_arz1` | special stage | 4 | **+1, +2** |
+| `ss_6 -> seg10_cpz2` | special stage | 8 | **+1, +2, +8, +20, +21** |
+
+### Answer to the precondition: it is not the recorder
+
+A recorder artefact of the shape "the stamp is recorded a row later than the
+thing it stamps" biases **one direction everywhere** — the recorder samples the
+same way at every gap, so it cannot produce `-1` at five level-to-level gaps and
+`+1` at four special-stage-to-level ones. **The sign flips with the source
+segment type**, which no uniform sampling offset can do. So this is engine-side,
+and it does not join the roll window's recorder item.
+
+### And the premise that it is one family is wrong
+
+Treating it as one systemic stamp question with one owner was the right call to
+make before measuring, and the measurement declines it. There are two:
+
+- **Level-to-level: a clean, uniform one-row lag.** Five gaps, four fields each,
+  `-1` every time with no exceptions and no spread. That is a phase, and it has
+  the shape of a single owner.
+- **Special-stage-to-level: not a phase at all.** `+1, +2, +8, +20, +21` is a
+  spread, not an offset, and a spread cannot be a stamp being written one row
+  late. `AbstractRunChainTest.stateMovieLogicalRow` already documents why this
+  family would differ: "a chain runs a different number of iterations than the
+  movie has rows — the pre-segment prefix runs none, **a special-stage segment
+  runs more than one per row** — so the counter is not the movie clock". The
+  engine running several production iterations per movie row on the special-stage
+  side is exactly what turns an offset into a spread.
+
+The two need separate rounds. Folding them would repeat the mistake this
+measurement just avoided, one level up.
+
+### Not proposed
+
+No fix, per the constraint. The level-to-level `-1` is the tractable half and
+has one owner; the special-stage spread should not be touched until it is
+established whether it is the same stamp at all or an iteration-count question
+wearing the same field name.
