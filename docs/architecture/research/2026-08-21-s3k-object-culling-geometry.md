@@ -245,6 +245,18 @@ if d1 >= (224 + 2*d2)       -> not drawn ; UNSIGNED (bhs)
 **S1/S2 counterpart: predicate 2**, but only structurally. The X half matches S2's shape;
 the Y half does not, for reasons 1, 2 and 4 above.
 
+> **Correction, 2026-08-21 (`3180f705d`).** `docs/skdisasm/sonic3k.asm` is **CRLF**
+> (202,729 CRLF lines to 993 bare LF) while `s1disasm` and `s2disasm` are LF, so a
+> `$`-anchored matcher sees a fraction of this file and returns a partial result that reads
+> like a complete one. Both negatives in the section below were re-run line-ending-tolerantly
+> with a known positive required to appear first. **Predicate 3's absence holds** and is now
+> measured. **Predicate 4's absence does not**: S3K has it, as `Obj_Animal`'s `loc_2CAE4`
+> (sonic3k.asm:61184-61194), instruction-for-instruction the S2 routine and reached by the
+> same `tst.b subtype` selector. Details in
+> [the family sweep](../audits/2026-08-21-onscreen-margin-family-sweep.md). **Every other
+> figure in this document was produced by the contaminated method and should be re-measured
+> before it is relied on.**
+
 ## What S1/S2 has that S3K does not
 
 - **Predicate 3, `Obj_DeleteBehindScreen`'s bare sign test.** I searched every
@@ -273,7 +285,7 @@ the Y half does not, for reasons 1, 2 and 4 above.
 | 1. `out_of_range` / `MarkObjGone`, coarse X, `$280` | **S3K-1** | Exact match, 61 sites. `ObjectRangeOps` is directly reusable. |
 | 2. `BuildSprites` render cull | **S3K-5** (`Render_Sprites`) | X half matches; Y half does **not** — no `explicit_height`, variable wrap mask, separate childsprite rule. |
 | 3. `Obj_DeleteBehindScreen` bare `bmi` | **none** | Absent from S3K. |
-| 4. `Obj28_ChkDel` player-relative `$180` | **none** | S3K's player-range helpers are table-driven with no shared constant. |
+| 4. `Obj28_ChkDel` player-relative `$180` | **`Obj_Animal` `loc_2CAE4`** (sonic3k.asm:61184) | **Corrected**: exact match, same selector. The table-driven player-range helpers are a separate, behaviour-gating family. |
 | — | **S3K-2** (coarse Y, `$200`) | No S1/S2 counterpart. |
 | — | **S3K-3** (coarse X + fine asymmetric Y) | No S1/S2 counterpart. |
 | — | **S3K-4** (`+$400` bias, `$680`) | No S1/S2 counterpart; a one-site variant of S3K-1. |

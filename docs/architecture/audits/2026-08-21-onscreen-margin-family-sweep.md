@@ -377,3 +377,128 @@ different reason; and slot-keying again made run count read as creation count wh
 reuse. The lesson is not "choose a better key" — it is that **a proxy which survives one question
 will silently answer a different one**. Each time, the fix was an instrument measuring the
 quantity directly: constructor calls against recorded `object_appeared` events, not runs.
+
+## Predicates 3 and 4 landed as inert primitives (2026-08-21, `3180f705d`)
+
+Both stage-1 shapes now exist alongside `ObjectRangeOps`, with **no callers**, as
+`ObjectBehindScreenOps` and `ObjectPlayerRangeOps`. Conversions remain gated behind
+per-site adjudication.
+
+| primitive | ROM routine | quantisation | signedness | axis | bound |
+|---|---|---|---|---|---|
+| `ObjectRangeOps` (1) | `out_of_range` / `MarkObjGone` | $80 both operands | unsigned `bhi` | X | 640 |
+| `ObjectBehindScreenOps` (3) | `Obj_DeleteBehindScreen` (`s2.asm:72983-72992`) | $80 both operands | **signed `bmi`** | X | **none** |
+| `ObjectPlayerRangeOps` (4) | `Obj28_ChkDel` (`s2.asm:24720-24730`) | **none — pixel-accurate** | **both: unsigned near, signed far** | X | $180 far edge only |
+
+### Predicate 4's shape was described backwards, and the description was the dangerous part
+
+This audit, and the commission built on it, described predicate 4 as "a one-sided `$180`
+window, then the render flag". The constant, the axis and the reference are all right, and
+the shape is **inverted**:
+
+```
+move.w x_pos(a0),d0 / sub.w (MainCharacter+x_pos).w,d0
+bcs.s +            ; UNSIGNED borrow: behind the player -> display, never delete
+subi.w #$180,d0
+bpl.s +            ; SIGNED: 384 or more ahead -> display, never delete
+_btst #render_flags.on_screen,render_flags(a0) / _beq.w DeleteObject
++ bra.w DisplaySprite
+```
+
+It is not a deletion window. It is the window in which deletion is **permitted**: outside
+`[playerX, playerX + 384)` the object survives **unconditionally**, and only the near-ahead
+band is deletable at all. A conversion written from the prose would have deleted objects the
+ROM keeps — and would have reviewed clean, because the constant and the axis matched.
+
+Two further details that prose normalises away, both modelled: the routine uses **two
+different signednesses**, `bcs` unsigned on the near edge and `bpl` signed on the far; and
+the **near edge has no constant behind it at all** — it is the player's own x.
+
+### Which games have which, stated rather than implied
+
+| predicate | S1 | S2 | S3K |
+|---|---|---|---|
+| 3 — bare sign test | **instruction only** | yes | **no** |
+| 4 — player-relative window | yes | yes | **yes** |
+
+**Predicate 3 is S2-only as a predicate.** S1's `out_of_range` macro
+(`docs/s1disasm/Macros.asm:278-293`) does emit a `bmi` on the same difference when passed its
+third argument, but *before* the unsigned `bhi` and branching to the **same `exit` label**, so
+it can never select a different outcome; the macro's own comment calls it "(albeit redundant)".
+Its three call sites are `_incObj/54 MZ Invisible Lava Tag.asm:41`,
+`_incObj/5E SLZ Seesaw.asm:14` and
+`_incObj/7A, 7B Boss - SLZ Main and Spike Balls.asm:517`. S1 has the instruction, not the
+predicate.
+
+**Predicate 4 is a three-game predicate**, which is two more games than either the commission
+or the S3K research round had it. S1 is `Anml_End_ChkDel`
+(`docs/s1disasm/_incObj/28, 29 Animals and Points.asm:300-311`, `loc_9224`), spelling `bcs` as
+`blo`, `$180` as `#320+64`, and the flag as `tst.b obRender(a0) / bpl`. S3K is `Obj_Animal`'s
+`loc_2CAE4` (`docs/skdisasm/sonic3k.asm:61184-61194`), instruction-for-instruction the S2
+routine, reached by the *same* selector (`tst.b subtype(a0) / bne.s loc_2CAE4`,
+sonic3k.asm:61146 and :61178, plus an unconditional `bra.w` at :61219) and deleting through
+`loc_2C9DA` (`jmp (Delete_Current_Sprite).l`, sonic3k.asm:61101).
+
+### The S3K negatives were CRLF-contaminated — one fell, one now stands as measured
+
+`docs/skdisasm/sonic3k.asm` is **CRLF** (and mixed: 202,729 CRLF lines to 993 bare LF);
+`s1disasm` and `s2disasm` are LF. A `$`-anchored matcher over skdisasm therefore sees a
+*fraction* of the file rather than none of it — a partial result that looks like a real one.
+Both S3K negatives in
+[the culling-geometry research](../research/2026-08-21-s3k-object-culling-geometry.md) were
+re-run line-ending-tolerantly, each with a **known positive that must appear** before the
+negative counts for anything:
+
+| sweep | known positive | sign-test / player-relative result |
+|---|---|---|
+| coarse-camera subtracts | 73 in sonic3k.asm (69 X, 4 Y) and 57 in s3.asm, **all** reaching a `cmpi` bound. The research's 61 counted only the exact five-instruction form, and its 4 Y-axis sites match exactly | **0** sign branches |
+| all `andi.w #$FF80` sites | 84 of 91 reach a compare first | 2 reach a sign branch: `sonic3k.asm:37568` and `:37588` — the object manager's **vertical-scan clamp**, not a per-object delete (S3-half copies at `s3.asm:30931`, `:30951`) |
+| `sub.w (Player_N+x_pos)` | — | **3 sites**, one of which **is predicate 4** |
+
+So **predicate 3's absence from S3K stands, and is now measured rather than inherited.**
+**Predicate 4's absence was wrong**, and the sweep that produced it is exactly the shape the
+CRLF hazard describes.
+
+The three player-x sites also reproduce the S1/S2 near-miss: `sonic3k.asm:61356` (`sub_2CCBA`)
+performs the identical subtraction against the player's x to set the horizontal flip, as S2's
+`AnimalFaceSonic` (`s2.asm:24883`) does. In all three games the predicate must be reached
+through `Obj_Animal`'s dispatch, never through a search for the subtraction's shape.
+
+### A third comparison on the same operands: the S1 Roller
+
+`_incObj/43 Badnik - Roller.asm:55-74` copy-pastes `RememberState` inside a `FixBugs` block and,
+on the **`FixBugs = 0` arm the engine must model**, compares with **`bgt`** — a *signed* compare
+against `$280` — where every other site uses unsigned `bhi`. The disassembly's own comment says
+the consequence: Rollers cannot despawn when going too far offscreen to the left, which can
+cause occasional double spawning.
+
+That is a third comparison on the same two coarse operands, and **neither `ObjectRangeOps` nor
+`ObjectBehindScreenOps` is correct for that object.** Anyone converting a Roller site needs a
+third shape, or must leave it alone.
+
+### Verification
+
+Each primitive's test was **broken on purpose** and shown to fail: replacing predicate 3's `bmi`
+with the unsigned 640 compare fails two tests; dropping predicate 4's `bcs` near edge fails two;
+moving `$180` to `$181` fails four.
+
+One break stayed **green, correctly**. Predicate 3's `andi.w #$FF80` on the object is
+**unobservable**: `Camera_X_pos_coarse` is $80-aligned by construction, so `(x & $FF80) >= coarse`
+and `x >= coarse` always agree, and the quantisation only bites where there is a non-zero bound
+to clear. The mask is modelled anyway because it is what the ROM executes, and both the javadoc
+and a test say no behaviour rests on it — so a later reader neither treats its inertness as
+missing coverage nor deletes it as dead code. Forcing that break red would have meant asserting
+something the ROM does not do.
+
+Guards 500/0/0, no `UnsatisfiedLinkError`.
+
+### Still not established
+
+- Whether either predicate is exercised by any trace fixture. Both primitives are inert, so
+  nothing could move, and no covering trace was sought. "Guards green" is not coverage evidence
+  for these.
+- Predicate 4's 16-bit wrap edge (an extreme separation re-enters the window through `bpl`) is
+  modelled and pinned as faithfulness; no object has been observed reaching a $8000 separation.
+- The remaining S3K negatives and counts in the culling-geometry research have **not** been
+  re-run CRLF-tolerantly. Only the two named above were. Every other figure in that document was
+  produced by the same contaminated method and should be re-measured before it is relied on.

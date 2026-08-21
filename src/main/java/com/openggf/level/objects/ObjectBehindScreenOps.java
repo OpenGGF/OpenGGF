@@ -48,8 +48,13 @@ package com.openggf.level.objects;
  * exiting to its own delete label, which is also the {@code bhi}'s target.
  * Sonic 1 therefore has the
  * <em>instruction</em> but not the predicate. Sonic 3&amp;K does not have it at
- * all: every coarse subtract in {@code sonic3k.asm} is followed by a
- * {@code cmpi.w} against an explicit bound
+ * all: every coarse subtract is followed by a compare against an explicit
+ * bound. That negative was re-measured with a line-ending-tolerant sweep after
+ * {@code skdisasm} was found to be CRLF — of 91 {@code andi.w #$FF80} sites in
+ * {@code sonic3k.asm}, 84 reach a compare first and the two that reach a sign
+ * branch are the object manager's vertical-scan clamp
+ * ({@code sonic3k.asm:37568}, {@code :37588}), not a per-object deletion; the
+ * S3-half copies at {@code s3.asm:30931} and {@code :30951} are the same code
  * ({@code docs/architecture/research/2026-08-21-s3k-object-culling-geometry.md}).
  *
  * <p><strong>Deliberately not modelled here.</strong> The routine's
