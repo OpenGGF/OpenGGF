@@ -138,6 +138,7 @@ that looks like a real result.
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
 | 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
+| 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
@@ -148,6 +149,7 @@ that looks like a real result.
 | 126 | A uniquely-fitting event is not evidence it is *your* event | Rarity is not identity; put a clock on it before believing it |
 | 127 | A probe can fire in the right class and the wrong harness | Plausible output from a path the test does not use |
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
+| 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3350,4 +3352,28 @@ grep. Resolve any slot-valued field through `slot_dump` before naming an object 
    "coordinates and nothing else, segments unestablished, shared cause unestablished" rather than
    as a guess either way — so the next lane neither re-opens it blind nor inherits a conclusion
    nobody reached.
+
+## One hundred and twenty-ninth rule: the origin may be in a field nobody walked
+
+A round walked `y` across a whole segment, found its genuine first divergence at row 1161, and
+reported it as the origin. It was not. The same probe carried `x`, and the engine was already ~20px
+right of the ROM by row 1153, with the **first `x` divergence 320 rows earlier at row 841** — a
+horizontal collision response taken mid-jump, with `y` and `y_speed` **identical on both sides**.
+
+This is "the first reported error is not the cause" one level down: the walk was correct, the
+series was correct, and **the origin was in a different field nobody had walked**. A `y`-only walk
+cannot see a divergence that touches no vertical motion, however carefully it is done.
+
+**Carry the neighbouring fields in the same probe.** The cost is one column; the alternative is a
+second run you will not know you need.
+
+**And print the VELOCITY beside the POSITION.** From position alone, the row-1161 divergence reads
+as "the engine moved twice as far", which suggests doubled gravity immediately — the obvious shape,
+teed up. The velocity shows the engine *gaining* upward speed, which gravity cannot do, and that
+single line refuted the candidate before any work went into it. Position says what happened;
+velocity says what did it.
+
+**Corollary — read the routine before assigning a role.** The same round had the launch backwards:
+the impulse it attributed to the boss platform is S1's own jump velocity, so the event is the player
+jumping off, not the object launching him. Reading the routine corrected an actor, not just a value.
 
