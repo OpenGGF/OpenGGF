@@ -785,7 +785,8 @@ public class AudioManager implements MusicRestoreSink {
             byte[] pcm = sourceRom.readBytes(
                     spec.address(), spec.length());
             mirrorShadowCommand(() ->
-                    shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
+                    shadowResolver.submitRawPcm(pcm, spec.sampleRate(),
+                            source.profile().getSegaPcmPlaybackPolicy()));
         } catch (Exception e) {
             AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);

@@ -10,13 +10,13 @@ import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +45,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@RequiresRom(SonicGame.SONIC_2)
 class TestGameLoopSpecialStageEntryPresentation {
 
     private GameLoop loop;
@@ -59,7 +60,6 @@ class TestGameLoopSpecialStageEntryPresentation {
         // context, which aborts the whole forked JVM rather than failing a test.
         GraphicsManager.getInstance().resetState();
         GraphicsManager.getInstance().initHeadless();
-        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         loop = new GameLoop(new InputHandler());
         fade = mock(FadeManager.class);
         audio = mock(AudioManager.class);

@@ -14,6 +14,11 @@ public interface GameAudioProfile {
         STOP_ALL
     }
 
+    enum SegaPcmPlaybackPolicy {
+        MIX_WITH_ACTIVE,
+        EXCLUSIVE_STOP_ALL
+    }
+
     default String presentationGameId() {
         return "base";
     }
@@ -119,6 +124,11 @@ public interface GameAudioProfile {
     /** How an ordinary (non-1-up) BGM load treats already-active SFX. */
     default OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
         return OrdinaryMusicSfxPolicy.STOP_ALL;
+    }
+
+    /** How the game's SEGA PCM command interacts with active SMPS voices. */
+    default SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
+        return SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE;
     }
 
     /**

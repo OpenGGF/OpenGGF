@@ -173,13 +173,21 @@ public final class AudioPresentationCommandResolver {
     }
 
     public void submitRawPcm(byte[] pcm, int sourceRate) {
+        submitRawPcm(pcm, sourceRate,
+                GameAudioProfile.SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE);
+    }
+
+    public void submitRawPcm(
+            byte[] pcm,
+            int sourceRate,
+            GameAudioProfile.SegaPcmPlaybackPolicy policy) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
                 + source.length + ":" + HexFormat.of().formatHex(source);
         DecodedPcm registered = factory.registerUnsigned8Mono(
                 assetId, source, sourceRate);
         enqueue(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                factory.segaPcm(allocateVoiceId(), registered)));
+                factory.segaPcm(allocateVoiceId(), registered), policy));
     }
 
     public void stopRawPcm() {

@@ -2052,7 +2052,9 @@ class TestAudioVoiceRegistry {
     }
 
     private static ReplaceRawPcm raw(SampleBackedVoice voice) {
-        return ReplaceRawPcm.fromVoice(voice);
+        return ReplaceRawPcm.fromVoice(voice,
+                com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy
+                        .EXCLUSIVE_STOP_ALL);
     }
 
     private static DecodedPcm pcm(String asset, int... samples) {

@@ -563,11 +563,10 @@ class TestAudioDiagnosticObservers {
                 .filter(event -> event.kind()
                         == SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX)
                 .toList();
-        assertEquals(3, stopSfx.size(),
-                "both live music drivers and the standalone SFX driver"
-                        + " mutate once without a registry"
-                        + " event masquerading as a driver stop");
-        assertEquals(3, stopSfx.stream().map(LifecycleEvent::driver)
+        assertEquals(2, stopSfx.size(),
+                "the 1-up admission already stopped the standalone SFX; only"
+                        + " the saved and overriding music drivers remain");
+        assertEquals(2, stopSfx.stream().map(LifecycleEvent::driver)
                 .distinct().count());
         assertTrue(stopSfx.stream().allMatch(event -> event.scope()
                 == SmpsDriverServiceObserver.LifecycleScope.DRIVER));

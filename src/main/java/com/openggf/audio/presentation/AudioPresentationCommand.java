@@ -1,5 +1,7 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy;
+
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 
@@ -190,14 +192,25 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceRawPcm(SampleVoiceDescriptor voice)
+    record ReplaceRawPcm(
+            SampleVoiceDescriptor voice,
+            SegaPcmPlaybackPolicy policy)
             implements AudioPresentationCommand {
         public ReplaceRawPcm {
             Objects.requireNonNull(voice, "voice");
+            Objects.requireNonNull(policy, "policy");
         }
 
         public static ReplaceRawPcm fromVoice(SampleBackedVoice voice) {
-            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice));
+            return fromVoice(voice,
+                    SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE);
+        }
+
+        public static ReplaceRawPcm fromVoice(
+                SampleBackedVoice voice,
+                SegaPcmPlaybackPolicy policy) {
+            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice),
+                    policy);
         }
     }
 

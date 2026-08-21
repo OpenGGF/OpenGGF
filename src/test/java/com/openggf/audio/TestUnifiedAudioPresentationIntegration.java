@@ -948,5 +948,8 @@ class TestUnifiedAudioPresentationIntegration {
             return Map.of(GameMusic.SPECIAL_STAGE, SPECIAL_STAGE_MUSIC);
         }
         @Override public SegaPcmSpec getSegaPcmSpec() { return spec; }
+        @Override public SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
+            return SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL;
+        }
     }
 }

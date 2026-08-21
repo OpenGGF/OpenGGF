@@ -1,5 +1,11 @@
 # Changelog
 
+- **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
+  retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
+  longer inherit that destructive policy from shared presentation code. Direct
+  SMPS test playback and S1 parity capture also advance through real driver
+  service boundaries instead of relying on the removed synthetic priming tick.
+
 - **Pausing now executes each retail SMPS driver's chip protocol:** Sonic 1
   pans and keys off all FM channels, Sonic 2 runs its destructive FM silencer
   and reloads active voices on resume, and Sonic 3&K leaves FM6/DAC running

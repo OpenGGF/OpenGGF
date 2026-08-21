@@ -105,7 +105,9 @@ class TestAudioPresentationSourceParity {
         DecodedPcm rawPcm = fixture.factory.registerUnsigned8Mono(
                 "sega", new byte[] {(byte) 0xFF, 0}, SAMPLE_RATE);
         registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                fixture.factory.segaPcm(4, rawPcm)));
+                fixture.factory.segaPcm(4, rawPcm),
+                com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy
+                        .EXCLUSIVE_STOP_ALL));
 
         assertEquals(0, composite.driver().captureSnapshot()
                 .sequencers().size(),

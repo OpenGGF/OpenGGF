@@ -844,7 +844,9 @@ class TestAudioPresentationCommandResolver {
 
         SmpsCompositeVoice current =
                 (SmpsCompositeVoice) registry.orderedVoiceAt(0);
-        assertEquals(2, current.driver().captureSnapshot().sequencers().size());
+        assertEquals(1, current.driver().captureSnapshot().sequencers().size(),
+                "the music override blocks the later SFX request just as the"
+                        + " shipped 1-up path does");
     }
 
     @Test

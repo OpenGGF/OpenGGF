@@ -1,5 +1,7 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy;
+
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.PreparedSfxAdmission;
@@ -196,7 +198,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof StartSampleSfx start) {
             admitSampleSfx(start.voice());
         } else if (command instanceof ReplaceRawPcm replace) {
-            replaceRawPcm(replace.voice());
+            replaceRawPcm(replace.voice(), replace.policy());
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.pcm(
                             SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_ENTER));
@@ -1308,18 +1310,23 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         sampleSfxCount++;
     }
 
-    private void replaceRawPcm(SampleVoiceDescriptor descriptor) {
+    private void replaceRawPcm(
+            SampleVoiceDescriptor descriptor,
+            SegaPcmPlaybackPolicy policy) {
         SampleBackedVoice voice = materializeSample(descriptor);
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
-            /*
-             * The shipped S&K fix_sndbugs=0 zPlaySEGAPCM path calls
-             * zStopAll before disabling interrupts and writing the DAC
-             * directly. It does not mix this sample with suspended SMPS
-             * owners, and StopSEGA does not restore them afterwards.
-             */
-            stopAndRemoveAllVoices();
+            if (policy == SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL) {
+                /*
+                 * The shipped S&K fix_sndbugs=0 zPlaySEGAPCM path calls
+                 * zStopAll before disabling interrupts and writing the DAC
+                 * directly. StopSEGA does not restore displaced owners.
+                 */
+                stopAndRemoveAllVoices();
+            } else if (rawPcm != null && rawPcm != voice) {
+                stopVoicesAtomically(rawPcm);
+            }
             rawPcm = voice;
             noteVoiceId(voice);
             published = true;
