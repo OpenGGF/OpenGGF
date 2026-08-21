@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-five rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -112,6 +112,7 @@ that looks like a real result.
 | 93 | A correction that changes no value anywhere | An unverifiable edit to verified code, indistinguishable from a wrong one |
 | 94 | A one-directional deficit metric | An over-count larger than the shortfall, invisible; the wrong defect named |
 | 95 | A `FixBugs` block read as a gate | Correct retail code reported as a defect; both arms did the work |
+| 96 | A reading that lets the round end | Findings and blockers both stop the check that would overturn them |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2482,3 +2483,26 @@ where the ROM *converts an object in place* (changing its id and keeping its slo
 engine deletes and spawns a replacement, the freed-then-retaken slot shows up as a **two-way**
 divergence in the replacement's type and a one-way shortfall in the original's: two numbers that
 are one defect seen from both ends, and only the ROM's convert-in-place line connects them.
+
+## Ninety-sixth rule: the bias is toward whichever conclusion ends the round
+
+Earlier entries in this document describe a tendency for measurement errors to lean toward
+"more, smaller, more tractable defects". That characterisation was too flattering. Across one
+long investigation the same lane recorded seven wrong-leaning readings, and the seventh leaned
+the *other* way: a misread of a class's name led it to rule out the only workable mechanism and
+it nearly closed the round as impossible.
+
+**The bias is toward whichever conclusion terminates the work.** A finding ends a round; so
+does a blocker. Both feel like progress, both are reportable, and both stop the reading that
+would have overturned them. That is a sharper and less comfortable statement than "we tend to
+find defects", and it predicts the failure in both directions.
+
+**Practically.** When a reading would let you stop — either "here is the defect" or "this cannot
+be done" — that is the moment to spend ten more minutes, not fewer. Check the name you inferred
+a capability from. Read the other arm. Ask what the opposite conclusion would require and
+whether you have ruled it out or merely not looked.
+
+**And beware a blocker that is really a scope discovery.** In that round the seam did work; what
+was actually true is that using it would have defeated an engine invariant deliberately built to
+match the ROM's allocation order — the very property the investigation exists to measure. That
+is not a blocker, it is the shape of the correct fix arriving in a form nobody had scoped.

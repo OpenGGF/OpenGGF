@@ -108312,3 +108312,72 @@ occupies, and removing the invented deletion (B) changes how many cannonballs ar
 convert. Land them together with the prediction stated in advance — `0x20` short should fall
 toward zero **and** `0x3F`'s over-count should fall with it — and measure both directions, since
 A moves an object between slots rather than adding or removing one.
+
+## 2026-08-21 — the cannonball pair is a shared-capability round, not an object round
+
+Round `s1-cannonball-convert-r14`, branch `bugfix/ai-s1-cannonball-convert` off `c08d52622`.
+**Not landed.** The two defects are confirmed and the mechanism is settled, but the conversion
+cannot be modelled inside the object without either damaging a fidelity invariant or
+duplicating a shared class. **The prediction was therefore never tested — it still stands
+untested.**
+
+### Why free-then-reserve is ruled out, and this is the useful part
+
+The obvious seam is `ObjectManager.createDynamicObjectAtSlot`, which does work on dynamic slots
+(`FixedSstObjectInstaller.create` checks `isDynamicSlot` and calls the normal registrar — the
+"FixedSst" name misled me into writing it off as the wrong pool first time round). It requires
+the slot to be free, so the sequence would be destroy-then-create-at-the-same-slot.
+
+**That sequence cannot work, and must not be made to.** `setDestroyed` only sets a flag; the
+slot is released by the manager's sweep, and `releaseSlot` **defers** the free while the object
+pass is running:
+
+```java
+if (updating && isManagedDynamicSlot(slotIndex)) {
+    slotsFreedDuringObjectPass.set(slotIndex);
+}
+```
+
+That deferral exists so a slot freed mid-pass is not reused by a later object in the same pass —
+which is ROM `FindFreeObj` fidelity, and is precisely the slot-ordering property this whole
+occupancy investigation has been measuring. Defeating it to convert one badnik would corrupt
+the thing being fixed.
+
+**So the spikeball fold is the only compatible mechanism** — the instance is never destroyed,
+keeps its slot, and reports the new id through `getLiveObjectId()`. That is also the most
+literal reading of the ROM, which never frees the SST record at all.
+
+### But the cannonball is not the spikeball
+
+`Sonic1SLZBossSpikeball` folds trivially: its exploding state reports `0x3F` and needs no
+borrowed behaviour. The cannonball must actually *become* an Explosion, and
+`ExplosionObjectInstance` carries a per-game initial `anim_frame_duration` resolved from the
+`GameModule`, an init fall-through rule keyed on the object id, `RELOAD_DURATION = 7`,
+`FINAL_MAPPING_FRAME = 5` expiry, and its own renderer path. Re-implementing that inside a
+badnik would duplicate a shared model and drift from it the first time that class is corrected.
+
+**The right shape is a shared capability:** let an instance convert in place into another
+modelled object while retaining its slot, so any ROM object that rewrites `obID(a0)` — and
+`grep` finds these across S1 alone in the Buzz Bomber missile, the swinging platforms and the
+SLZ elevators — can reuse the modelled target rather than copying it. That is an
+`ObjectManager`/lifetime change with rewind-recreate implications, and it is its own round.
+
+### What is confirmed and ready for that round
+
+- **Defect A**: `explode()` destroys and spawns instead of converting in place, against
+  `_move.b #id_Explosion,obID(a0)` — and its own javadoc quotes the correct behaviour.
+- **Defect B**: an uncited `if (!isOnScreenX(256))` deletion; `CBal` has no horizontal
+  off-screen check. Two lines to remove, but it must land with A, which is why it is not landed
+  alone.
+- **The prediction, still untested**: `0x20` short 581 → toward 0 with over staying near 0, and
+  `0x3F` short 282 **and** over 275 both falling, since the explosion should occupy the
+  cannonball's own slot. Both directions, because A moves an object between slots and a one-way
+  metric would read that as no change.
+
+### Two self-corrections in this round, in opposite directions
+
+The `FixBugs` near-miss last round leaned toward finding a defect that was not there. This round
+the `FixedSstObjectInstaller` misreading leaned the other way — I nearly reported a **false
+blocker** and closed the round as impossible. Seventh wrong-leaning reading of the
+investigation, and the first that would have *under*-reported. The bias is toward the
+conclusion that ends the round, whichever direction that happens to point.
