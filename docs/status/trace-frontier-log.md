@@ -113195,6 +113195,7 @@ longer excluded by absence-of-arithmetic either. Whoever reads that window shoul
 keep it in view without going looking for it -- which is exactly the discipline
 that has now killed four obvious shapes in a row.
 
+<<<<<<< HEAD
 ## LBZ 7028 -> 4592: the Flybot767's two wait arms used two different predicates
 
 Measured at `078593625`, matched worktree pair.
@@ -113222,3 +113223,105 @@ tests) messages identical; `-Pguards` 500/0; `TestS3kFlybot767Badnik` 13/0.
 
 Ten further sites carry the same wrong helper, are ROM-correct to change, and are **neutral on
 every trace** -- listed in the audit, deliberately not landed.
+=======
+## 2026-08-21 -- The +4 is in the ROM, explicitly: Tails-as-Player_1 spawns 4px lower
+
+Branch `bugfix/ai-s3k-transition-window-r7`, based on `develop` at `a83c0f55c`.
+
+### The write
+
+```
+loc_6B42:                                  ; Player_mode == 2, Tails alone
+        move.l  #Obj_Tails,(Player_1).w
+        move.l  #Obj_DashDust,(Dust_P2).w
+        addi.w  #4,(Player_1+y_pos).w      ; docs/skdisasm/sonic3k.asm:8388
+        move.w  #0,(Tails_CPU_routine).w
+```
+
+`SpawnLevelMainSprites_SpawnPlayers` raises Tails' own `y_pos` by 4 when he is
+Player_1. That is the discrete write the previous round proved had to exist. It
+is unconditional, and the routine carries **no `FixBugs` conditional on either
+arm**, so there is no bug-fixed variant to choose between.
+
+### The whole span was read before the first candidate was believed
+
+From `Get_LevelSizeStart` to `LevelLoop` the chain is `DeformBgLayer`,
+`LoadLevelLoadBlock`, `LoadLevelLoadBlock2`, `j_LevelSetup`, `Animate_Init`,
+`LoadSolids`, `Handle_Onscreen_Water_Height`, `SpawnLevelMainSprites`,
+`Load_Sprites`, `Load_Rings`, `Process_Sprites`, `Render_Sprites`. Every one was
+checked for `y_pos` writes: `SpawnLevelMainSprites_SpawnPowerup`, `j_LevelSetup`,
+`Animate_Init`, `LoadSolids` and `LoadLevelLoadBlock` contain none. **`:8388` is
+the only write to the player's y in the entire span**, so a fifth obvious shape
+never formed -- there was no second candidate. That absence was established, not
+assumed.
+
+### Two +4 writes on two branches, and the engine implemented one
+
+The engine already modelled the twin. `GameLoop`'s special-stage-return
+replication does `sidekick.setY(playable.getY() + 4)` with a comment citing
+`SpawnLevelMainSprites_SpawnPlayers` -- and that is `:8367`, the **Player_2** arm,
+where Tails is the sidekick. The routine has two `+4` writes on two branches.
+Asking "does the engine model this ROM behaviour" answers **yes** and is wrong,
+because the question is per-branch, and the existing citation points at the very
+routine containing both, which makes it read as covered.
+
+### The radius, resolved
+
+Tails needs the offset in either role because his `y_radius` is `$F` against
+Sonic's `$13` (`sonic3k.asm:26102`, `:21904`). So the coincidence twice reported
+dead was never a coincidence -- but the mechanism is this explicit `addi.w`, not
+radius arithmetic, and the exclusion as written remains literally true. It was
+found by reading the sequence, not by hunting a 4.
+
+### Known gap, named rather than left implicit
+
+**The ROM applies `:8388` on every level load for Tails-as-Player_1, not only on
+a special-stage return.** The engine only fakes the re-init at the return site,
+so that is the site that is wrong today and the only one changed here. The
+general level-load case is a separate defect with a wider blast radius and needs
+its own commission and controls. It is recorded here so it exists as a known gap
+rather than an implicit one.
+
+### The guard demanded an extraction, and was right to
+
+Adding the branch to `GameLoop.enterTitleCardFromResults` tripped two ratchets in
+`TestArchitecturalSourceGuard`: the class at 3073 effective lines against a 3071
+budget, and the dispatcher at 121 lines against 102. Rather than raise either
+budget, both arms of the ROM routine moved into a focused collaborator,
+`com.openggf.game.SpecialStageReturnSpawn`, which models
+`SpawnLevelMainSprites_SpawnPlayers` and nothing else. Guards then pass 500/0 and
+the dispatcher is smaller than before the change. The guard asked for the thing
+that was independently correct -- one ROM routine now has one owner instead of
+being inlined in a mode dispatcher.
+
+### Where the frontier goes next, as predicted in advance
+
+With the `+4` applied the chain clears the return boundary and fails at
+`declareHardwareTimingSegment`: *"recorded ordinal span does not begin at the
+production cursor"*. That is the **batch-shaped identity return** recorded as an
+open design gap in
+[the hardware-timing contract](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
+-- four S3K KosM modules borrowing ordinals 11-14 that `releaseUnrepresentedIdentity`
+cannot return because it accepts only the most recently allocated ordinal with
+nothing else of the kind pending. The tell written down there was "an S3K KosM
+ordinal one ahead of the recording in a later fixture". This is that fixture, and
+the next commission is already specified by it.
+
+The failing kind is reported as `KOS_DECOMPRESSION_QUEUE` rather than
+`KOS_MODULE_QUEUE`; both are S3K Kosinski kinds sharing the one ledger, so this
+is the same batch-shaped gap seen through the direct FIFO. Confirming which kind
+borrowed the uncounted ordinals is the first step of that commission, not an
+assumption to carry into it.
+
+### Verification
+
+`-Ptrace-replay` **800 / 10 failures / 0 errors / 4 skipped** in both arms at
+`a83c0f55c`, set diff empty both ways, and every one of the ten common reds
+byte-identical in message. `-Pguards` **500 / 0**. The chain class was confirmed
+by name (`Tests run: 1`) under `-Ptrace-replay-r7`, where it is tag-gated.
+
+One fix-arm sweep was **discarded, not quoted**: it reported 800/4/29 after the
+worktree was recompiled mid-run. Re-run untouched it reproduced the control
+exactly, confirming all 29 errors were the recompile and none were the change.
+That is the third measurement discarded for this reason today.
+>>>>>>> 30844f9d7

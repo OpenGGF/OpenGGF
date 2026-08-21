@@ -1,11 +1,22 @@
 # Changelog
 
+<<<<<<< HEAD
 - **A Flybot767 that was spawned rather than placed now wakes on the same rule
   as one that was placed:** the drone waits behind an offscreen placeholder and
   starts flying when the sprite renderer first draws it, and the renderer's
   right and bottom edges are exclusive. One of the drone's two wait paths used a
   test that was a pixel more generous, so the same badnik woke on a different
   frame depending on how it had come into the world.
+=======
+- **Tails now returns from a special stage standing where Sonic 3 & Knuckles puts
+  him:** when Tails is played on his own, the game drops him four pixels lower at
+  the moment it places him in the level, because he is a shorter character than
+  Sonic and his middle has to sit lower for his feet to land in the same place.
+  The engine already did this for Tails when he follows Sonic around, but not
+  when he is the one being played — so a Tails-only game came back from a special
+  stage hovering four pixels above where it should, from the very first frame.
+  Both cases now come from one place in the code rather than two.
+>>>>>>> 30844f9d7
 
 - **An HCZ Jawz no longer wakes up a frame early:** the fish waits offscreen
   behind a $20-square placeholder and starts swimming on the dispatch after the
