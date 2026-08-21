@@ -2,9 +2,11 @@
 
 Measured at develop `887320904`, all three ROMs, `-Dmse=off`, JDK 21. Two consecutive runs
 in the same worktree gave an identical partition and identical totals (70 tests, 52 failures,
-8 errors). The runs shared a worktree, so this is stability across repeats rather than across
-checkouts — Surefire's filesystem run order varies between checkouts in this repo and can
-select order-dependent victims.
+8 errors). A third run in a *different* worktree, freshly created off the same commit, produced the
+identical sixty-one-class red set and identical totals. That closes the caveat this file
+carried on first writing: Surefire's filesystem run order varies between checkouts in this
+repo and can select order-dependent victims, so cross-checkout agreement was the evidence
+needed before anything could be gated on this partition. It holds.
 
 **This file is a decision input, not a wired gate.** Nothing consumes it yet. It exists so a
 choice about putting this profile in CI can be made against the actual partition rather than
