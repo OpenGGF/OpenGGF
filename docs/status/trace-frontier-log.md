@@ -113513,3 +113513,39 @@ such that the known member MUST appear in its output.
 
 Full write-up:
 [2026-08-21-s3k-wait-offscreen-wake-phase-survey.md](../architecture/audits/trace/2026-08-21-s3k-wait-offscreen-wake-phase-survey.md).
+
+## 2026-08-21 - LBZ frame 23533 attributed: a Ribot child two rows ahead, not a speed cap
+
+**Command.** `mvn -Dmse=off -Ptrace-replay "-Dtest=TestS3kLbzZoneSliceTraceReplay"
+"-Ds3k.rom.path=<repo>/s3k.gen" test`, dedicated worktree, measured at
+`2e15b6251`. `target/surefire-reports` and `target/test-tmp` cleared before every
+run; `UnsatisfiedLinkError` grep clean. `Tests run: 1, Failures: 1, Errors: 0,
+Skipped: 0` for the class by name; `4585 errors, first error frame 23533 --
+x_speed mismatch (expected=0x016F, actual=0x0200)`. Attributed, not fixed;
+frontier unmoved.
+
+**Not a cap.** At row 23533 the engine is in the hurt state and the ROM is not:
+rings 0 vs 21, routine 04 vs 02, anim 0x1A vs 0x02, vel (0x0200,-0x400) vs
+(0x016F,-0x18). Those are the S3K hurt knockback values, and the ROM writes them
+at 23534, where aux `object_appeared` also creates 21 `Obj_LostRings`
+(`0x0001A64A`). Same class as LBZ 411 -- an event one row early.
+
+**Owner.** `HURT by=RibotChild at=(1270,063C)`. ROM slot 20, `0x0008C370` =
+`loc_8C370` (`sonic3k.asm:191313`), a `parent3` child of `Obj_Ribot`
+(`sonic3k.asm:191259`), created at frame 23436. Frame-delimited probe with the
+driver's row shows the engine's end-of-row-N equals the ROM's end-of-row-N+2 --
+the child leads by **two rows**. The touch phase is correct: SCAN precedes MOVE
+every frame, so the scan consumes the end-of-previous-row position.
+
+**Masked, not fresh.** The pre-fix report at `fd7739bdf^` already carries 9 error
+spans starting at 23533 with identical values, so the frame-411 error was hiding
+it and the wake-phase fix neither caused nor moved it. The first check said "not
+present" only because the walker looked for a `frame` key where the report stores
+`start_frame`/`end_frame` -- rule 123 one level down.
+
+**Next.** Why two rows: a creation-frame error at 23436 that persisted, or a
+per-frame double-step. Distinguishable by walking the position series back to
+23436 and finding where the lead is acquired. No limit should be adjusted.
+
+Full write-up:
+[2026-08-21-lbz-frame-23533-ribot-child-lead.md](../architecture/audits/trace/2026-08-21-lbz-frame-23533-ribot-child-lead.md).
