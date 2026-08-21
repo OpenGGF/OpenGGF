@@ -105805,3 +105805,55 @@ at the event frame and at the frame before, using the object's ROM touch radii. 
 model predicts the earlier box overlaps at the recorded event and the live one does not. One
 clean event where the two disagree settles it; two, in different games, settle it well. The
 recorder's own sampling phase has to be established first or the oracle is ambiguous.
+
+### Touch-scan stale-position oracle — ROM half confirmed, engine half dead
+
+**Round:** `bugfix/ai-touch-oracle-r2` off `887320904`, read-only; no engine change made or
+proposed. Full working: [docs/architecture/audits/2026-08-21-touch-scan-stale-position-oracle.md](../architecture/audits/2026-08-21-touch-scan-stale-position-oracle.md).
+
+**Sampling phase established first.** Both fixtures are `native-bizhawk-headless` v3.0, whose
+loop reads RAM at the top of each iteration, after the previous `frameadvance` — all rows are
+end-of-frame state (`tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md:344-346`).
+Confirmed against the data: row *N*'s `player_y_speed` already carries the `Touch_EnemyNormal`
+bounce, because `jsr (TouchResponse).l` is the tail of the player routine
+(`sonic3k.asm:22022`).
+
+**Command / fixtures.** No Maven run. `src/test/resources/traces/s3k/hcz_completerun`
+(31482 rows) and `src/test/resources/traces/s1/ghz1_completerun` (5597 rows), read directly.
+Kill events located as `object_code`/`type` transitions to `Obj_Explosion`
+(`0x0001E5E0` S3K, `0x27` S1) in the same slot.
+
+**Result — ROM.** Stale model (player row *N* vs object row *N-1*) predicts the recorded kill
+frame in 25/25 S3K pairs and 6/6 S1 events, and never predicts an earlier one. Four Jawz events
+discriminate: frames 14034, 20393, 21540 and 22861, where a live-position scan overlaps one
+frame early (14033/20392/21539/22860) and the ROM did not kill until the next frame. Jawz is
+`collision_flags $D7` → `Touch_Special`, consumed by its own routine the same frame, so an
+early touch would have shown an early explosion. The S1 events corroborate but do not
+discriminate — those badniks barely move in the approach window.
+
+**Result — engine. The premise is wrong and the change is retired.** The engine already runs
+the player scan before `ExecuteObjects` and already reads frame-start positions:
+`LevelFrameStep.java:299` snapshots, `:302` runs player physics (touch inside, at
+`SpriteManager.java:1813`), `:318-320` runs objects; `ObjectTouchResponseController.java:485-486`
+reads `getPreUpdateX()/getPreUpdateY()`. `objectsExecuteAfterPlayerPhysics` is true for all
+three games (`GameRules.java:121, 276, 425`). No shared-runtime ordering change is warranted in
+any of the three games.
+
+**Consequence for the two compensations.** The hover duration of 59 against the ROM's 60, and
+the boss child's wait one above its ROM literal, were predicted as fallout of a wrong global
+scan phase. That phase is not wrong, so those two need separate attribution; do not brief them
+as downstream of this.
+
+**Retracted mid-round.** The briefed landmark — "HCZ Mega Chopper defeat bounce at frame 1433,
+`y_speed` takes a `-0x100` bounce" — does not exist. `physics.csv`'s `frame` column is
+hexadecimal, and neither decimal row 1433 nor row 0x1433 (= 5171) of `hcz_completerun` carries a
+bounce; the trace's Mega Chopper kills are at rows 5041 and 5044, both by Tails, both with the
+player's `y_speed` unchanged. Events were re-derived from the fixture instead. A first pass also
+reported "live model: no overlap" at every kill frame; that was an artefact — the slot already
+holds the explosion code on row *N*, so the live model is simply unevaluable there. The honest
+live-model test is whether it fires *earlier*, which is what the four Jawz events measure.
+
+**Residual, unmeasured.** S3K's previous-list is an end-of-frame wholesale copy
+(`ObjectManager.java:751` → `ObjectCollisionResponseList.java:134-138`) rather than incremental
+publication at each routine's `Add_SpriteToCollisionResponseList` tail, so ROM list *membership*
+can still differ even though positions match.
