@@ -46,6 +46,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The S1 water splash could occupy its reserved SST slot two and three times over.** Sonic 1
+  loads the splash with `move.b #id_Splash,(v_splash).w`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:274,299`) -- a single id byte into one dedicated SST.
+  When a splash is already running there the byte already holds `id_Splash`, so the write is
+  inert: the existing object keeps its routine and animation and is neither restarted nor
+  duplicated. `DefaultPowerUpSpawner` instead built a new `Sonic1SplashObjectInstance` on every
+  water crossing and gave each one slot index 12, so a player bobbing across the surface
+  stacked two or three objects in a slot that physically holds one.
+
+  The `lz1_completerun` recording settles it: slot 12 holds a single object at routine `$02`
+  for frames 11934-11948 and only then advances to `$04` (`Spla_Delete`). Measured against that
+  fixture the engine's spawner-slot divergence falls from 95 slot-frames to 83, with the
+  over-occupancy cluster (14 slot-frames) eliminated entirely.
+
+  Scoped to the splash deliberately: the other reserved-slot callers hand the object back to a
+  caller that keeps the reference, so dropping it there leaves a live but unwired instance --
+  a broader version of this guard raised
+  `LightningShieldObjectInstance: services not available` on S3K MGZ.
+
 - **Six S3K badniks and the S2 Octus now consume the ROM's routine-0 Init dispatch.** In these
   ROMs an object's routine 0 is its Init, and its tail is `addq.b #2,routine(a0)` followed by
   `rts` (`docs/skdisasm/sonic3k.asm:176901-176919`) — it does **not** fall through to the main

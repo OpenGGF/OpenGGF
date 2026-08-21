@@ -179,10 +179,50 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         PowerUpRules rules = fixedSlotRules();
         int fixedSlot = rules != null ? rules.waterSplashFixedSlotIndex() : -1;
         if (fixedSlot >= 0) {
+            // Sonic 1 loads the splash with `move.b #id_Splash,(v_splash).w`
+            // (docs/s1disasm/_incObj/01 Sonic.asm:274,299) -- a single id byte
+            // into one dedicated SST. When a splash is already running there
+            // the byte already holds id_Splash, so the write is inert: the
+            // existing object keeps its routine and animation, and is neither
+            // restarted nor duplicated. Sonic bobbing across the surface
+            // therefore produces one splash, not one per crossing.
+            //
+            // The lz1_completerun recording shows exactly that -- slot 12 holds
+            // a single object at routine $02 for frames 11934-11948 and only
+            // then advances to $04 (Spla_Delete). Without this the engine added
+            // a second and third instance carrying slot index 12, which no ROM
+            // SST can hold.
+            //
+            // Scoped to the splash deliberately. The other reserved-slot
+            // callers (shield, invincibility stars, the end card, the AIZ
+            // miniboss) hand the object back to a caller that keeps and uses
+            // the reference, so silently dropping it there leaves a live but
+            // unwired instance; their ROM write semantics have not been
+            // established here.
+            if (liveObjectInSlot(fixedSlot)) {
+                return;
+            }
             ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, splash, fixedSlot);
             return;
         }
         objectManager.addDynamicObject(splash);
+    }
+
+    /**
+     * True when a live (non-destroyed) object already occupies {@code slot}.
+     * Fixed SST occupants are constructed programmatically and carry no
+     * {@link com.openggf.level.objects.ObjectSpawn}, so this cannot reuse the
+     * spawn-backed dynamic-slot occupancy scan.
+     */
+    private boolean liveObjectInSlot(int slot) {
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && !instance.isDestroyed()
+                    && aoi.getSlotIndex() == slot) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {

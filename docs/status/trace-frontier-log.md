@@ -109644,3 +109644,215 @@ art pipeline rather than physics.
    likely cause, but no gameplay consequence proven.
 3. **Segment 15 (`seg10_cpz2`).** 2,122 errors, self-contained, propagates
    nowhere. Real, and the cheapest to work in isolation.
+
+## UNVERIFIED: the BossExplosion re-attribution rests on stale probe output
+
+Raised by the lane that produced it, against its own merged entry. **Do not act on the
+BossExplosion figures in the entry above until they are re-measured.**
+
+The sweep that produced them used an invalid separator in its per-class selector, so the build
+failed before any test ran: reproduced deliberately, it exits non-zero with no tests executed
+and writes no probe output at all. The ninety-four probe files that were then analysed had been
+sitting in the directory for two and a half hours, from a run of unknown commit provenance. The
+file count matching the expected number read as confirmation and was coincidence.
+
+So the shortfall and over-count figures, the relocation share, the single-episode reading and
+the exactly-equal pairing are all unattested. The **disassembly** half of the conclusion does
+not depend on the probe — the ROM rewrites a live object's id in place at a cited instruction —
+so convert-in-place remains the mechanism on that evidence alone. But the numeric pairing that
+made it persuasive does depend on it, and the parked capability's value must not be sized on it
+until re-measured.
+
+**Two retractions travel with it.** The claim that the probe's full mode does not reach the
+forked process is withdrawn: tested through the build on a single trace it emits full lines
+normally, and the earlier reading was the same artefact — no tests ran, nothing was written, and
+an absence was read as a feature failure.
+
+And the leakage hypothesis is **refuted rather than confirmed**: computing each row of the
+occupancy page in-game-only reproduces the page exactly for four rows and closely for six more,
+despite several of those ids carrying hundreds of raw lines in other games. A filter that was
+not there could not produce four exact matches. The page is game-filtered, rule 102 stands as a
+caution for future rankings, and the suggestion that the current page might be contaminated is
+withdrawn.
+
+One methodological limit is worth keeping from the audit: the probe emits divergent slots only,
+so reservations that are working are invisible to a diff-line reading and only the full engine
+map shows the whole reserved pool. Rows whose objects reserve child slots cannot be reproduced
+without it.
+
+## 2026-08-21 — Cluster 2 closed: the splash could hold its reserved slot three times over; clusters 1 and 3 survive
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `7e14c4fc9`.
+
+### What the ROM does
+
+`move.b #id_Splash,(v_splash).w` (`docs/s1disasm/_incObj/01 Sonic.asm:274, 299`) writes a
+single id byte into one dedicated SST. It is not an allocation and there is no `FindFreeObj`.
+When a splash is already running there the byte already holds `id_Splash`, so the write is
+**inert** — the object keeps its routine and animation, is not restarted, and no second object
+can exist.
+
+The fixture shows precisely that across a run of repeated surface crossings: `lz1_completerun`
+slot 12 holds one object at routine `$02` for frames 11934-11948, then advances to `$04`
+(`Spla_Delete`) at 11949. The routine never returns to 0, so it is one continuous splash and
+not a sequence of restarts — which is what decided *skip* over *evict and replace*.
+
+### The fix, and the wider version that was wrong
+
+`DefaultPowerUpSpawner.addWaterSplashObject` now skips the add when a live object already
+occupies the reserved slot.
+
+The first attempt put that guard in the shared `ObjectLifetimeOps.addDynamicAtReservedSlot`,
+on the reasoning that a reserved SST holds one object in every game. The matrix rejected it:
+**3 new errors and a guard failure**, and both were informative.
+
+- `LightningShieldObjectInstance: services not available — object must be created through
+  ObjectManager` on `TestS3kMgzTraceReplay`. The other reserved-slot callers — shield,
+  invincibility stars, the S1 end card, the AIZ miniboss — hand the object **back** to a caller
+  that keeps and uses the reference. Silently dropping the add there leaves a live but unwired
+  instance whose `services()` was never set. `spawnSplash` discards its return, which is why
+  the splash path alone is safe.
+- `TestArchitecturalSourceGuard.objectManagerFacadeStaysWithinExtractedCollaboratorBudget`:
+  `ObjectManager.java` at 3064 effective lines against a budget of 3051. The predicate did not
+  belong there either.
+
+Both are recorded because the general claim ("a reserved SST holds one object") is *true* and
+still produced a wrong change: what varies is whether the caller keeps the reference, and the
+ROM write semantics of the other four sites were never established. The guard is therefore
+scoped to the one site whose ROM line was read.
+
+### Measured effect
+
+`TestS1Lz1CompleteRunTraceReplay`, engine occupancy at the spawner slots against the fixture:
+
+| | before | after |
+|---|---:|---:|
+| slot 12, rom=1 eng=0 | 70 | **72** |
+| slot 12, rom=1 eng=3 | 12 | **0** |
+| slot 12, rom=1 eng=2 | 2 | **0** |
+| slot 6, rom=1 eng=0 | 7 | 7 |
+| slot 6, rom=0 eng=1 | 2 | 2 |
+| slot 12, rom=0 eng=1 | 2 | 2 |
+| **total** | **95** | **83** |
+
+The over-occupancy cluster is gone. Note the honest cost: `rom=1 eng=0` rises by 2, because on
+frames 11935 and 11948 the engine's *first* splash had already expired and the suppressed
+duplicate was the only one alive. That is not a new defect — it is cluster 1 (lifetime) showing
+through where cluster 2 was masking it.
+
+### Matrix, both arms in the same worktree
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`7e14c4fc9`, clean tree) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| broad guard (rejected) | 800, 10 failures, **3 errors**, 4 skipped | 163 | 6 | **500/1F** |
+| scoped fix | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages.
+
+### Clusters 1 and 3 survive — for the owner, before the comparison lands
+
+- **Cluster 1, splash lifetime: 72 slot-frames.** The ROM holds `id_Splash` for 462 frames
+  across the run, the engine for about 390. Concentrated early (131-148) with a tail at
+  11935/11948. This is a *lifetime and spawn-count* question and is **not** the queued S2/S3K
+  snapshot-versus-tracking item, which is about the splash's Y while it lives: S1's
+  `Sonic1SplashObjectInstance.update` already re-reads the water line every frame and cites
+  `Spla_Display`. Same object, different property — worth not conflating.
+- **Cluster 3, shield edges: 9 slot-frames.** Two frames where the engine has a shield object
+  and the ROM does not (850, 851) and seven the other way (3892, 4018, 4101, ...). Edge phase
+  at the shield's start and end, not a lifetime gap.
+
+83 slot-frames out of 22,902. Whether the comparison lands green, or lands with these two
+named, is the owner's call.
+## 2026-08-21 — S2 segment 18 is the Super Sonic transformation frame, and the art deficit is 17 frames downstream of it
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-chain-frontier`, based on
+`7b05eac00`. Comparator hook reverted; nothing changed in `src/`.
+
+### The shared-origin hypothesis is refuted as stated
+
+The previous entry proposed that the -8/-16 art-transfer deficit appearing in
+three reports at the ARZ1->ARZ2 boundary might be one cause. It is one cause,
+but **the art pipeline is not it**. A `System.err` hook at
+`LiveTraceComparator`'s `mismatches.push` (property-gated, reverted) dumped all
+77,318 errors. Grouped by segment:
+
+| segment rows | dir | errors | frame range |
+|---:|---|---:|---|
+| 4889 | `seg12_arz1` (18) | 12580 | **4019..4888** |
+| 6409 | `seg13_arz2` (19) | 62616 | 344..2381 |
+| 7088 | `seg10_cpz2` (15) | 2122 | 2252..6723 |
+
+Segment 18 is clean for its first 4019 rows of 4889. At frame **4019** exactly
+three fields diverge, and they hold the same constant values for the next
+sixteen frames:
+
+```
+f=4019 x_sub   rom=0x7100 eng=0xB900
+f=4019 x_speed rom=0x0121 eng=0x0169
+f=4019 rings   rom=50     eng=51
+```
+
+Nothing else diverges until 4035 (`sidekick_animation_id`,
+`sidekick_mapping_frame`, `dynamic_art.edges`), and the `transfer_id` /
+`edge_ordinal` drift starts at **4036-4037**. So the art deficit is seventeen
+frames downstream of the origin, not the origin.
+
+### What frame 4019 is
+
+The fixture says it outright. At ROM row `0x0FB3` the player's
+`player_animation_id` changes `02` -> **`1F`**, position and speeds latch, and
+`rings` steps `0x33` -> `0x32`. Segment 18 is `seg12_arz1`, the segment
+immediately after `ss_7` — the seventh special stage. **Frame 4019 is the Super
+Sonic transformation**, and `AniIDSupSonAni_Transform` is `$1F`
+(docs/s2disasm/s2.asm:37484).
+
+Two ROM-cited defects, both in `SuperStateController`, both one root — Super
+activation is installed a frame late:
+
+**1. The ring drain misses the transformation frame.** `Sonic_CheckGoSuper`
+(s2.asm:37460-37490) never writes `Super_Sonic_frame_count`, so the first
+`Sonic_Super` pass runs `subq.w #1` on a zero counter (:37510), falls through
+`bpl`, and drains a ring **on the transformation frame itself**, then reloads 60
+(:37512). The recording matches exactly: drains at 4019, 4080, 4141 — every 61
+frames. The engine sets `ringDrainCounter = getRingDrainInterval()` in
+`updateTransformation()`, which runs only once the transformation ANIMATION
+completes, so its first drain lands far later (measured: engine still 51 at
+4080, drains around 4108). The counts part company at 4019 and never re-converge.
+
+**2. The transform frame does not carry the Super acceleration.**
+`Sonic_CheckGoSuper` sets `Sonic_acceleration = $30` (:37483) on the transform
+frame, and `Sonic_ChgJumpDir`/`ObjectMoveAndFall` run behind it on that same
+frame with the new value — a doubled step of `$60`, `x_vel $181 -> $121`.
+Measured engine: `0x0169`, which is `0x0181 - 0x18`, an ordinary doubled step.
+The engine applies `getSuperProfile()` in `updateTransformation()`, one frame
+late. **`SuperStateController.startTransformation` documents this exact
+sequence in its own comment**, including the `$181 -> $121` figure and the
+`s2.asm:37483` citation, and the code does not do it.
+
+### The deficit accumulates; it is not a missed batch
+
+The lead question was gradual drift versus one dropped batch. Gradual, and it
+does not even start negative: at 4036 the engine is one AHEAD (`edge_ordinal`
+8067 vs rom 8066), then falls behind steadily — rom 8121 vs eng 8097 (-24) by
+4061 — and lands at -16 / -8 at the segment's last row. A single missed batch
+would show one step and a flat delta. This is an animation-driven DPLC stream
+whose driver diverged: `sidekick_mapping_frame` and `sidekick_animation_id`
+part company at 4035 (rom Tails `0x02`, engine `0x1F`) one frame before the art
+does.
+
+### Segment 19 is untouched, as instructed
+
+Its 62,616 errors are from an aborted segment and were not worked. Its own first
+mismatch is at frame **344**, not frame 0 — worth stating, because it separates
+this from the entry-state family: nothing arrived broken at its first row. If
+segment 18's transformation is the cause, 19 should stop aborting when it is
+fixed; if it still aborts on `mode=TITLE_CARD, romZone=15, act=1`, that is a
+second defect.
+
+### Proposed, not landed
+
+Install the Super activation state — physics profile and drain counter — on the
+transformation frame, per `Sonic_CheckGoSuper`, rather than when the
+transformation animation completes. Fingerprint for the candidate: `rings`
+matches at 4019 and drains at 4080 and 4141; `x_speed` is `0x0121` at 4019.

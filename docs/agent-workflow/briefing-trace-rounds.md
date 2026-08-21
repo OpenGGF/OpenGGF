@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and two rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -119,6 +119,9 @@ that looks like a real result.
 | 100 | A directory sized by grepping one idiom's name | Five idioms, one greppable; the correct group understated by half |
 | 101 | A clock conversion calibrated at one point | A one-row error in a nine-link causal chain, invisible and load-bearing |
 | 102 | A cross-game ranking grouped by raw object id | Two names for one defect, in two tables, as both a shortfall and an over-count |
+| 103 | Artefacts analysed after a build that never ran | The previous run's files, right names, right count, wrong commit |
+| 104 | A true invariant enforced in the shared helper | Live-but-unwired objects at the callers that keep the reference |
+| 105 | A comment citing a ROM line and a number the code never produces | The defect, documented by its own author, with its acceptance test attached |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2650,3 +2653,64 @@ id, so it reads as both at once.
 **Practically.** Filter to the game before ranking; cross-tabulate the top shortfalls against the
 top over-counts before commissioning either; and treat an exact match between two such counts as
 a single finding until shown otherwise.
+
+## One hundred and third rule: a failed run leaves the previous run's output in place
+
+A build that fails before executing anything writes nothing — and deletes nothing. The
+artefacts from whatever ran there last are still on disk, with the right names, in the right
+directory, in the expected quantity.
+
+One sweep used an invalid separator in its per-class selector, so the build failed with no
+tests executed. The round then analysed ninety-four probe files that had been written two and a
+half hours earlier by a run of unknown provenance, and the fact that the file count matched
+expectation read as confirmation. Every figure it derived — including an exact numeric pairing
+that made its conclusion persuasive — is unattested.
+
+**Before analysing any artefact, prove the run that was supposed to produce it actually ran.**
+Check the build's exit status, check for the tests-run lines, and check the artefacts' modification
+times against the run you just started. A count that matches expectation is not evidence of
+freshness.
+
+**And a missing artefact is not a feature failure.** The same round concluded the probe's full
+mode did not reach the forked process; it emits normally, and the absence was the same
+non-existent run. Absence of output has two causes and the boring one is far more common.
+
+## One hundred and fourth rule: a true general claim can still produce a wrong general change
+
+"A reserved slot holds exactly one object, in every game" is true, and putting the guard that
+enforces it in the shared helper was wrong. Four of the five callers hand the created object
+back to a caller that keeps and uses the reference, so suppressing the add leaves a live but
+unwired instance — the matrix returned errors and a guard failure. The fifth discards its
+return value, which is the only reason the narrow fix is safe there.
+
+**What varies between call sites is the contract, not the invariant.** Before generalising a
+correction, check what each caller does with the result, not just whether the rule applies to
+it. The round that hit this had established the ROM's write semantics for exactly one of the
+five sites and generalised from that one.
+
+**And a general change carries a general cost.** The same attempt pushed a facade past its
+source-size budget, which was the second signal that the predicate did not belong there.
+
+**Corollary, from the same round:** when a masking defect is removed, an underlying one can get
+*worse* on the count. Suppressing the duplicate object raised one cluster's shortfall by two
+frames, because on those frames the duplicate had been the only live object. That is the
+masked defect showing through, not a regression, and the report should say which.
+
+## One hundred and fifth rule: a class that documents the behaviour it does not implement
+
+Five times in one investigation, the clearest statement of a defect was a comment in the very
+class carrying it. A staircase documented the ROM's four slots in three separate comments and
+reserved none. A cannonball's javadoc quoted the ROM's convert-in-place while the code deleted
+and respawned. A boss's init profile named the ROM's last load phase while running it first. And
+a Super-state controller documented the transformation frame's acceleration change — with the
+ROM line cited and the exact velocity transition spelled out — while producing a different
+number.
+
+**So grep the comments, not just the code.** A comment that states a ROM behaviour precisely,
+including a numeric transition, is a claim that can be checked against what the code does; where
+they disagree, the comment is usually right and was written by someone who read the disassembly
+and then implemented something else.
+
+**The strongest form of the tell is a cited number.** A comment naming a value the code cannot
+produce is a defect with its own acceptance test attached — the value is the fingerprint, and it
+cannot be satisfied by tuning something else.

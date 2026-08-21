@@ -214,6 +214,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S1's reserved water-splash slot no longer duplicates occupants (merged
+  2026-08-21):** repeated surface crossings leave the live slot-12 splash
+  running, matching the ROM's inert id-byte rewrite instead of stacking two or
+  three engine objects into one physical SST slot.
+
 - **Retail SMPS playback cadence and lifecycle parity (ready 2026-08-21):**
   Sonic 1, Sonic 2, and locked-on Sonic 3&K now use their shipped tempo/PAL
   service rules, SFX takeover and priority behavior, pause/fade/1-up lifecycle,
