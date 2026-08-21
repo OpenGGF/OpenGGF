@@ -104782,3 +104782,74 @@ pass, and the edge is applied at `PRE_MAIN_LOOP`, later in the same frame.
 This does not change either entry's conclusion — the vertical batch at 2958 against an edge at
 2957 is late under the corrected rule too — but the rule as written would misjudge any
 same-frame case, and it is stated in two places.
+
+## 2026-08-21 — the wind-tunnel ordering is CORRECT; the suction is a clock offset, the entry is not
+
+Round `s1-slz1-graze-r1`, `lz3` ordering. Branch on `fdb4a4d3e`. **No source change; probes reverted.**
+**The premise of a combined fix is disproved: these are two defects, and the ordering is not either of them.**
+
+### The ordering, derived from the ROM's frame rather than from what lines up
+
+```
+Level_MainLoop:                        (docs/s1disasm/sonic.asm:2998-3006)
+        bsr.w   MoveSonicInDemo
+        bsr.w   LZWaterFeatures        <- here
+        jsr     (ExecuteObjects).l     <- Sonic's own routine, i.e. his move
+```
+
+`LZWaterFeatures` runs **before** `ExecuteObjects`, so the tunnel's boundary test reads Sonic's
+**pre-move** position and its writes land before his movement adds velocity on top.
+
+**The engine agrees.** `Sonic1ZoneFeatureProvider.updatePrePhysics` calls `updateWindTunnels()`
+before the physics step, and anchoring on the comparator's own cursor confirms it frame by frame —
+at every cursor the tunnel pass sees the *previous* cursor's x:
+
+```
+cursor=3837 expX=d33 engX=d33 | tunnelSawX=d2b
+cursor=3838 expX=d3b engX=d3b | tunnelSawX=d33
+cursor=3839 expX=d43 engX=d43 | tunnelSawX=d3b
+```
+
+So the pre-move/post-move question is settled and the answer is that both are already right.
+It explains neither observation.
+
+### What the suction blip actually is: the engine's VBlank byte is one frame behind
+
+Same probe, same anchor:
+
+| cursor | ROM `vbl&3F` | engine `vbla&3F` | suction |
+|---|---|---|---|
+| 3837 | 62 | 62 | — |
+| 3838 | **0** | 63 | ROM fires; engine does not |
+| 3839 | 1 | **0** | engine fires here instead |
+
+The engine's ROM-visible VBlank byte runs **one behind** the recorded `vblank_counter`, constantly
+— at cursor 3832 the ROM is 58 and the engine 57. It is not drift and not a lag artefact:
+across the whole of `lz3` the recorded vblank counter advances by exactly 1 every frame and the
+lag counter never changes at all.
+
+That one offset fully explains the f3838 blip. The gate is `vbl&3F == 0`, so a clock one frame
+behind fires the once-per-64-frames suction one frame late, the +2 lands on 3839, and the
+divergence heals immediately — exactly what was measured.
+
+**The link between the recorded column and the ROM's gate variable is empirical, not assumed:**
+the ROM's `y` steps +2 on precisely the frame its `vblank_counter & 0x3F` reaches zero.
+
+### But it does not explain the entry, so they are two defects
+
+The tunnel *entry* is gated on the x/y boundary box alone — no VBlank term — so a clock offset
+cannot move it. And the ordinal skew is a genuine **sequence insertion** (one extra `fr_Float3`
+in an otherwise identical order), which no pure time offset can produce.
+
+Per the round's own terms, that is a finding rather than a partial success: **the ordering
+question was worth settling and the answer rules itself out**, the suction reduces to a clock
+phase error, and the entry-frame divergence behind the ordinal skew remains unexplained.
+
+### Next
+
+Two separate questions, and neither should be bundled with the other:
+1. Why the engine's ROM-visible VBlank byte sits one frame behind the recorded counter. This is
+   a clock, so it is shared by everything that reads it — a change here is far wider than LZ and
+   wants its own round and its own matrix.
+2. Why the engine enters the wind tunnel one frame before the ROM, given both test the same
+   pre-move position against the same boundary.
