@@ -84,6 +84,8 @@ class TestMusicOverrideRestore {
         restore();
         assertEquals(LEVEL_MUSIC, activeMusicId());
         assertNothingSaved();
+        assertEquals(false, snapshot().sfxBlocked(),
+                "restoring a non-SMPS fallback must release the 1-up SFX gate");
     }
 
     /**

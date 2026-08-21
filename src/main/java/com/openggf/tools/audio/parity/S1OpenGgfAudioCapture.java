@@ -327,7 +327,10 @@ public final class S1OpenGgfAudioCapture {
                 throw new NoSuchElementException();
             }
             if (ordinal == 0) {
-                sequencer.read(new short[0], 0);
+                // The reference epoch's first record follows one real S1 VInt
+                // service. Direct sample reads deliberately do not fabricate
+                // that service, so advance the driver boundary explicitly.
+                sequencer.advanceBatch(NTSC_SAMPLES);
             } else {
                 sequencer.advanceBatch(NTSC_SAMPLES);
                 advancedSamples += NTSC_SAMPLES;

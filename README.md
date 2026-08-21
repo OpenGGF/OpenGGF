@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Retail SMPS playback cadence and lifecycle parity (ready 2026-08-21):**
+  Sonic 1, Sonic 2, and locked-on Sonic 3&K now use their shipped tempo/PAL
+  service rules, SFX takeover and priority behavior, pause/fade/1-up lifecycle,
+  bytecode quirks, regional chip clocks, and ROM-backed audio catalogs. S3K's
+  SEGA PCM path is exclusive and YM-DAC-backed without imposing its StopAll
+  policy on S1/S2. The work is intentionally bounded to audible playback and
+  chip behavior; complete-run semantic observer expansion remains out of scope.
+
 - **Trace frontier reports now distinguish atomic level-load handover debt
   (merged 2026-08-21):** the S2 chain's segment-19 stop and the S3K handover
   census are recorded against their actual load boundary, avoiding fitted

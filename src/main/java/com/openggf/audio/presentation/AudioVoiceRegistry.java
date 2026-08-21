@@ -1,5 +1,7 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy;
+
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.PreparedSfxAdmission;
@@ -35,6 +37,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.VoiceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,6 +119,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private boolean completionSweepRequired;
     private boolean sfxBlocked;
     private boolean pendingRestore;
+    private boolean smpsPaused;
     private boolean speedShoesEnabled;
     private int speedMultiplier = 1;
     private int fmMuteMask;
@@ -173,7 +177,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         Objects.requireNonNull(command, "command");
 
         if (command instanceof ReplaceMusic replace) {
-            replaceMusic(replace.music());
+            replaceMusic(replace.music(), replace.sfxPolicy());
         } else if (command instanceof PushMusicOverride push) {
             pushMusicOverride(push.music());
             sfxInstantiation.observeLifecycle(
@@ -194,7 +198,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof StartSampleSfx start) {
             admitSampleSfx(start.voice());
         } else if (command instanceof ReplaceRawPcm replace) {
-            replaceRawPcm(replace.voice());
+            replaceRawPcm(replace.voice(), replace.policy());
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.pcm(
                             SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_ENTER));
@@ -243,6 +247,56 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     @Override
     public int orderedVoiceCount() {
         return orderedVoiceCount;
+    }
+
+    /** Applies the active retail SMPS driver's pause transition atomically. */
+    public void pauseSmpsDrivers() {
+        assertOwnerBoundary();
+        if (smpsPaused) {
+            return;
+        }
+        mutateActiveSmpsDrivers(SmpsDriver::pauseAudio);
+        smpsPaused = true;
+    }
+
+    /** Applies the active retail SMPS driver's resume transition atomically. */
+    public void resumeSmpsDrivers() {
+        assertOwnerBoundary();
+        if (!smpsPaused) {
+            return;
+        }
+        mutateActiveSmpsDrivers(SmpsDriver::resumeAudio);
+        smpsPaused = false;
+    }
+
+    /** Runs continuously clocked chip state while paused, without a VInt. */
+    public void advancePausedSmpsHardware(int stereoFrames) {
+        assertOwnerBoundary();
+        if (!smpsPaused || stereoFrames == 0) {
+            return;
+        }
+        PresentationVoice musicVoice = activeMusic == null
+                ? null : activeMusic.voice();
+        if (musicVoice instanceof SmpsCompositeVoice composite) {
+            composite.driver().advancePausedHardware(stereoFrames);
+        }
+        if (standaloneSmps != null && standaloneSmps != musicVoice) {
+            standaloneSmps.driver().advancePausedHardware(stereoFrames);
+        }
+    }
+
+    private void mutateActiveSmpsDrivers(
+            java.util.function.Consumer<SmpsDriver> mutation) {
+        PresentationVoice musicVoice = activeMusic == null
+                ? null : activeMusic.voice();
+        mutateVoicesAtomically(() -> {
+            if (musicVoice instanceof SmpsCompositeVoice composite) {
+                mutation.accept(composite.driver());
+            }
+            if (standaloneSmps != null && standaloneSmps != musicVoice) {
+                mutation.accept(standaloneSmps.driver());
+            }
+        }, musicVoice, standaloneSmps);
     }
 
     @Override
@@ -615,6 +669,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         psgSoloMask = 0;
         sfxBlocked = false;
         pendingRestore = false;
+        smpsPaused = false;
         speedShoesEnabled = false;
         speedMultiplier = 1;
         ringLeft = true;
@@ -679,13 +734,22 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
-    private void replaceMusic(MusicVoiceEntry entry) {
+    private void replaceMusic(
+            MusicVoiceEntry entry,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy) {
         MusicSlot music = materializeMusic(entry);
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
             applyMusicControls(music, speedShoesEnabled, speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
+            if (sfxPolicy
+                    == com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE
+                    && activeMusic != null
+                    && activeMusic.voice() instanceof SmpsCompositeVoice previous
+                    && music.voice() instanceof SmpsCompositeVoice replacement) {
+                replacement.driver().adoptActiveSfxFrom(previous.driver());
+            }
             stopMusic();
             activeMusic = music;
             noteVoiceId(music.voice());
@@ -712,7 +776,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
-            applyMusicControls(music, speedShoesEnabled, speedMultiplier,
+            SmpsSequencer override = music.voice()
+                    instanceof SmpsCompositeVoice composite
+                    ? composite.driver().firstMusicSequencer() : null;
+            boolean normalSpeed = override != null
+                    && override.getConfig().getMusicOverrideSpeedPolicy()
+                    == SmpsSequencerConfig.MusicOverrideSpeedPolicy
+                            .NORMAL_DURING_OVERRIDE;
+            applyMusicControls(music,
+                    normalSpeed ? false : speedShoesEnabled,
+                    normalSpeed ? 1 : speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
             if (activeMusic != null
                     && activeMusic.musicId() == music.musicId()) {
@@ -722,10 +795,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 published = true;
                 return;
             }
+            stopAllSfxForMusicOverride();
             if (activeMusic != null) {
                 overrideStack[overrideCount++] = activeMusic;
             }
             activeMusic = music;
+            sfxBlocked = true;
             noteVoiceId(music.voice());
             published = true;
         } catch (RuntimeException failure) {
@@ -749,6 +824,44 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         mutateVoicesAtomically(() -> {
             applyMusicControls(restored, speedShoesEnabled, speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
+            if (restored.voice() instanceof SmpsCompositeVoice composite) {
+                SmpsSequencer restoredMusic =
+                        composite.driver().firstMusicSequencer();
+                if (restoredMusic != null
+                        && restoredMusic.getConfig()
+                                .getMusicOverrideDacRestorePolicy()
+                                == SmpsSequencerConfig
+                                        .MusicOverrideDacRestorePolicy
+                                        .PRESERVE_OVERRIDE_DAC_MODE
+                        && current instanceof SmpsCompositeVoice displaced) {
+                    boolean dacEnabled = displaced.driver()
+                            .captureSynthSnapshot().ym().dacEnabled();
+                    composite.driver().writeFm(
+                            null, 0, 0x2B, dacEnabled ? 0x80 : 0x00);
+                }
+                if (restoredMusic != null
+                        && restoredMusic.getConfig()
+                                .getMusicOverrideRestorePolicy()
+                                == SmpsSequencerConfig
+                                        .MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN) {
+                    if (restoredMusic.getConfig()
+                            .getMusicOverrideSfxReleasePolicy()
+                            == SmpsSequencerConfig
+                                    .MusicOverrideSfxReleasePolicy
+                                    .AFTER_FADE_IN) {
+                        composite.driver().bindMusicFadeCompleteCallback(
+                                () -> sfxBlocked = false);
+                    } else {
+                        sfxBlocked = false;
+                    }
+                    restoredMusic.triggerFadeIn();
+                } else {
+                    sfxBlocked = false;
+                }
+            } else {
+                sfxBlocked = false;
+            }
             if (current != null) {
                 current.stop();
             }
@@ -1197,12 +1310,21 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         sampleSfxCount++;
     }
 
-    private void replaceRawPcm(SampleVoiceDescriptor descriptor) {
+    private void replaceRawPcm(
+            SampleVoiceDescriptor descriptor,
+            SegaPcmPlaybackPolicy policy) {
         SampleBackedVoice voice = materializeSample(descriptor);
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
-            if (rawPcm != null && rawPcm != voice) {
+            if (policy == SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL) {
+                /*
+                 * The shipped S&K fix_sndbugs=0 zPlaySEGAPCM path calls
+                 * zStopAll before disabling interrupts and writing the DAC
+                 * directly. StopSEGA does not restore displaced owners.
+                 */
+                stopAndRemoveAllVoices();
+            } else if (rawPcm != null && rawPcm != voice) {
                 stopVoicesAtomically(rawPcm);
             }
             rawPcm = voice;
@@ -1252,12 +1374,20 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private void stopAllSfx() {
+        stopAllSfx(false);
+    }
+
+    private void stopAllSfxForMusicOverride() {
+        stopAllSfx(true);
+    }
+
+    private void stopAllSfx(boolean musicOverride) {
         PresentationVoice[] voices = allOwnedVoices();
         boolean stoppedRawPcm = rawPcm != null;
         mutateVoicesAtomically(() -> {
-            stopOwnedSfx(activeMusic);
+            stopOwnedSfx(activeMusic, musicOverride);
             for (int index = 0; index < overrideCount; index++) {
-                stopOwnedSfx(overrideStack[index]);
+                stopOwnedSfx(overrideStack[index], false);
             }
             if (standaloneSmps != null) {
                 standaloneSmps.driver().stopAllSfx();
@@ -1304,10 +1434,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return java.util.Arrays.copyOf(voices, count);
     }
 
-    private static void stopOwnedSfx(MusicSlot music) {
+    private static void stopOwnedSfx(
+            MusicSlot music, boolean musicOverride) {
         if (music != null
                 && music.voice() instanceof SmpsCompositeVoice composite) {
-            composite.driver().stopAllSfx();
+            if (musicOverride) {
+                composite.driver().stopAllSfxForMusicOverride();
+            } else {
+                composite.driver().stopAllSfx();
+            }
         }
     }
 
@@ -1332,7 +1467,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                             snapshot.sourceDescriptor(),
                             snapshot.sourcePositionQ32(),
                             snapshot.sourceStepQ32(), gainQ16,
-                            snapshot.looping(), snapshot.stopped())), sample);
+                            snapshot.looping(), snapshot.stopped(),
+                            snapshot.renderMode(), snapshot.synthSnapshot(),
+                            snapshot.lastDacSourceFrame())), sample);
         }
     }
 
@@ -1348,7 +1485,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                             snapshot.sourceDescriptor(),
                             snapshot.sourcePositionQ32(), sourceStepQ32,
                             snapshot.gainQ16(), snapshot.looping(),
-                            snapshot.stopped())), sample);
+                            snapshot.stopped(), snapshot.renderMode(),
+                            snapshot.synthSnapshot(),
+                            snapshot.lastDacSourceFrame())), sample);
         }
     }
 
@@ -1563,6 +1702,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideStack[index] = null;
         }
         overrideCount = 0;
+        pendingRestore = false;
         standaloneSmps = null;
         rawPcm = null;
         for (int index = 0; index < sampleSfxCount; index++) {
@@ -1593,7 +1733,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     sample.voiceId(), sample.priority(), sample.assetId(),
                     music.musicId(), music.sourceDescriptor(),
                     sample.sourcePositionQ32(), sample.sourceStepQ32(),
-                    sample.gainQ16(), sample.looping(), sample.stopped());
+                    sample.gainQ16(), sample.looping(), sample.stopped(),
+                    sample.renderMode(), sample.synthSnapshot(),
+                    sample.lastDacSourceFrame());
         } else if (music != null
                 && snapshot instanceof PresentationVoiceSnapshot.Smps smps) {
             snapshot = new PresentationVoiceSnapshot.Smps(

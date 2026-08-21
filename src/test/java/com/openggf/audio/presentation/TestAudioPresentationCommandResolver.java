@@ -92,6 +92,25 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
+    void ordinaryMusicCommandCarriesTheCapturedGameSfxPolicy() {
+        Fixture fixture = fixture();
+        fixture.sources.baseMusic = music(0x81);
+        fixture.sources.ordinaryMusicSfxPolicy =
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                        .PRESERVE_ACTIVE;
+
+        fixture.resolver.submit(new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+
+        ReplaceMusic command = assertInstanceOf(
+                ReplaceMusic.class, drain(fixture.queue).getFirst());
+        assertEquals(
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                        .PRESERVE_ACTIVE,
+                command.sfxPolicy());
+    }
+
+    @Test
     void resolvesBaseNameBaseIdDonorFallbackAndAlternatingRingSfx() {
         Fixture fixture = fixture();
         fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
@@ -825,7 +844,9 @@ class TestAudioPresentationCommandResolver {
 
         SmpsCompositeVoice current =
                 (SmpsCompositeVoice) registry.orderedVoiceAt(0);
-        assertEquals(2, current.driver().captureSnapshot().sequencers().size());
+        assertEquals(1, current.driver().captureSnapshot().sequencers().size(),
+                "the music override blocks the later SFX request just as the"
+                        + " shipped 1-up path does");
     }
 
     @Test
@@ -1047,6 +1068,9 @@ class TestAudioPresentationCommandResolver {
         int basePriority = 0x70;
         boolean baseSpecial;
         boolean baseContinuous;
+        com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                ordinaryMusicSfxPolicy =
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL;
         Runnable afterBaseSfxLoad;
         Runnable afterDonorSfxLoad;
 
@@ -1135,7 +1159,8 @@ class TestAudioPresentationCommandResolver {
                         }
                     };
             return new AudioPresentationCommandResolver.SourceAccess(
-                    gameId, generation, loader, dac, config, policy);
+                    gameId, generation, loader, dac, config, policy,
+                    ordinaryMusicSfxPolicy);
         }
 
         @Override

@@ -17,6 +17,8 @@ public final class PreparedSfxAdmission {
     private final int affectedPsgMask;
     private final int continuousSfxId;
     private final int trackCount;
+    private final int priorityBefore;
+    private final int priorityAfter;
     final SmpsSequencer replacedSequencer;
     final SmpsSequencer[] displacedOwners;
     final SmpsSequencer.Track[] displacedTracks;
@@ -30,6 +32,8 @@ public final class PreparedSfxAdmission {
             int affectedPsgMask,
             int continuousSfxId,
             int trackCount,
+            int priorityBefore,
+            int priorityAfter,
             SmpsSequencer replacedSequencer,
             SmpsSequencer[] displacedOwners,
             SmpsSequencer.Track[] displacedTracks) {
@@ -40,6 +44,8 @@ public final class PreparedSfxAdmission {
         this.affectedPsgMask = affectedPsgMask;
         this.continuousSfxId = continuousSfxId;
         this.trackCount = trackCount;
+        this.priorityBefore = priorityBefore;
+        this.priorityAfter = priorityAfter;
         this.replacedSequencer = replacedSequencer;
         this.displacedOwners = displacedOwners;
         this.displacedTracks = displacedTracks;
@@ -71,6 +77,14 @@ public final class PreparedSfxAdmission {
 
     public int trackCount() {
         return trackCount;
+    }
+
+    int priorityBefore() {
+        return priorityBefore;
+    }
+
+    int priorityAfter() {
+        return priorityAfter;
     }
 
     void claimCommit() {

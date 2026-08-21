@@ -2,6 +2,7 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.ChangeMusicTempo;
@@ -66,7 +67,8 @@ public final class AudioPresentationCommandResolver {
             SmpsLoader loader,
             DacData dac,
             SmpsSequencerConfig config,
-            SfxPolicy sfxPolicy) {
+            SfxPolicy sfxPolicy,
+            GameAudioProfile.OrdinaryMusicSfxPolicy ordinaryMusicSfxPolicy) {
         public SourceAccess {
             requireGameId(gameId);
             if (dependencyGeneration < 0) {
@@ -74,6 +76,15 @@ public final class AudioPresentationCommandResolver {
                         "dependencyGeneration must be non-negative");
             }
             Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+            Objects.requireNonNull(ordinaryMusicSfxPolicy,
+                    "ordinaryMusicSfxPolicy");
+        }
+
+        public SourceAccess(String gameId, long dependencyGeneration,
+                            SmpsLoader loader, DacData dac,
+                            SmpsSequencerConfig config, SfxPolicy sfxPolicy) {
+            this(gameId, dependencyGeneration, loader, dac, config, sfxPolicy,
+                    GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
         }
     }
 
@@ -162,13 +173,21 @@ public final class AudioPresentationCommandResolver {
     }
 
     public void submitRawPcm(byte[] pcm, int sourceRate) {
+        submitRawPcm(pcm, sourceRate,
+                GameAudioProfile.SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE);
+    }
+
+    public void submitRawPcm(
+            byte[] pcm,
+            int sourceRate,
+            GameAudioProfile.SegaPcmPlaybackPolicy policy) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
                 + source.length + ":" + HexFormat.of().formatHex(source);
         DecodedPcm registered = factory.registerUnsigned8Mono(
                 assetId, source, sourceRate);
         enqueue(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                factory.segaPcm(allocateVoiceId(), registered)));
+                factory.segaPcm(allocateVoiceId(), registered), policy));
     }
 
     public void stopRawPcm() {
@@ -183,11 +202,13 @@ public final class AudioPresentationCommandResolver {
         }
         AudioPresentationCommand resolved;
         try {
+            SourceAccess[] selectedSource = new SourceAccess[1];
             AudioPresentationCommand.MusicVoiceEntry voice =
                     switch (command.route()) {
                         case BASE_SMPS -> {
                             SourceAccess source = sources.sourceFor(
                                     SmpsAssetKey.Route.BASE_MUSIC, null);
+                            selectedSource[0] = source;
                             yield resolveSmpsMusic(
                                     SmpsAssetKey.Route.BASE_MUSIC,
                                     source, command.musicId(),
@@ -199,6 +220,7 @@ public final class AudioPresentationCommandResolver {
                                     command.donorGameId());
                             SourceAccess source = sources.sourceFor(
                                     SmpsAssetKey.Route.DONOR_MUSIC, gameId);
+                            selectedSource[0] = source;
                             yield resolveSmpsMusic(
                                     SmpsAssetKey.Route.DONOR_MUSIC,
                                     source, command.musicId(),
@@ -216,7 +238,9 @@ public final class AudioPresentationCommandResolver {
                     };
             resolved = command.override()
                     ? new PushMusicOverride(voice)
-                    : new ReplaceMusic(voice);
+                    : new ReplaceMusic(voice, selectedSource[0] != null
+                            ? selectedSource[0].ordinaryMusicSfxPolicy()
+                            : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
         } catch (IOException | RuntimeException failure) {
             AudioDiagnosticObserverException.rethrowIfPresent(failure);
             warn("Rejected music " + command.musicId()

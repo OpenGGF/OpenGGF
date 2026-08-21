@@ -468,7 +468,7 @@ public final class AudioPresentationSourceFactory
             SmpsAssetCatalog.ProgramEntry source,
             SmpsDriver driver) {
         SmpsSequencer sequencer = newSequencer(source, driver);
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.program());
         driver.addSequencer(sequencer, false);
@@ -488,7 +488,7 @@ public final class AudioPresentationSourceFactory
         SmpsSequencer sequencer = newLegacySequencer(source, driver);
         sequencer.setSourceDescriptor(
                 describeLegacyMusic(descriptor, source.data()));
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.data());
         driver.addSequencer(sequencer, false);
@@ -738,6 +738,15 @@ public final class AudioPresentationSourceFactory
         AdmissionResult result = Objects.requireNonNull(
                 sfxAdmissionPolicy.evaluate(context),
                 "SFX admission policy returned no result");
+        if (result.accepted() && currentOwner != null
+                && currentOwner.usesGlobalSfxPriority()) {
+            result = currentOwner.evaluateSfxRequest(
+                    source.resolvedSoundId(), source.priority(),
+                    source.specialSfx(), false);
+            context = new SmpsAdmissionContext(
+                    requestedId, source.resolvedSoundId(), source.priority(),
+                    result.priorityBefore(), source.specialSfx(), false);
+        }
         return new Admission(context, result);
     }
 
@@ -874,7 +883,7 @@ public final class AudioPresentationSourceFactory
         return SampleBackedVoice.rawSegaPcm(
                 voiceId, 0,
                 Objects.requireNonNull(registeredPcm, "registeredPcm"),
-                roundedOutputSampleRate());
+                roundedOutputSampleRate(), settings.region());
     }
 
     @Override

@@ -28,7 +28,8 @@ class TestGameLoopRewindBoundaryPolicy {
     private List<RewindBoundary> boundaries;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        setActiveTraceSession(null);
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         context = SessionManager.getCurrentGameplayMode();
         boundaries = new ArrayList<>();
@@ -37,7 +38,8 @@ class TestGameLoopRewindBoundaryPolicy {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
+        setActiveTraceSession(null);
         SessionManager.clear();
     }
 

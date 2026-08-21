@@ -162,6 +162,11 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
                 Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
     }
 
+    @Override
+    public SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
+        return SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL;
+    }
+
     /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
     @Override
     protected void executeFadeOut(AudioManager manager) {

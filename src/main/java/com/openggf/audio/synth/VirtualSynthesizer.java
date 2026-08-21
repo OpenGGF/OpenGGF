@@ -5,6 +5,20 @@ import com.openggf.audio.smps.DacData;
 import java.util.Arrays;
 
 public class VirtualSynthesizer implements Synthesizer {
+    public enum ChipClockProfile {
+        // Mega Drive master clocks: NTSC 53,693,175 Hz and PAL 53,203,424 Hz.
+        // YM2612 = master/7; Z80 and PSG input use the regional /15 clock.
+        NTSC(7_670_453.0, 3_579_545.0),
+        PAL(53_203_424.0 / 7.0, 3_546_893.0);
+
+        private final double ymClock;
+        private final double psgClock;
+
+        ChipClockProfile(double ymClock, double psgClock) {
+            this.ymClock = ymClock;
+            this.psgClock = psgClock;
+        }
+    }
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
@@ -47,6 +61,19 @@ public class VirtualSynthesizer implements Synthesizer {
 
     public double getOutputSampleRate() {
         return outputSampleRate;
+    }
+
+    public void setChipClockProfile(ChipClockProfile profile) {
+        ym.setClockRates(profile.ymClock, profile.psgClock);
+        psg.setInputClock(profile.psgClock);
+    }
+
+    public final double ymChipClockForTesting() {
+        return ym.chipClockForTesting();
+    }
+
+    public final double psgInputClockForTesting() {
+        return psg.inputClockForTesting();
     }
 
     /**

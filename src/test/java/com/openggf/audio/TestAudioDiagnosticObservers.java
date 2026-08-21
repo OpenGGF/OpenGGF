@@ -563,11 +563,10 @@ class TestAudioDiagnosticObservers {
                 .filter(event -> event.kind()
                         == SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX)
                 .toList();
-        assertEquals(3, stopSfx.size(),
-                "both live music drivers and the standalone SFX driver"
-                        + " mutate once without a registry"
-                        + " event masquerading as a driver stop");
-        assertEquals(3, stopSfx.stream().map(LifecycleEvent::driver)
+        assertEquals(2, stopSfx.size(),
+                "the 1-up admission already stopped the standalone SFX; only"
+                        + " the saved and overriding music drivers remain");
+        assertEquals(2, stopSfx.stream().map(LifecycleEvent::driver)
                 .distinct().count());
         assertTrue(stopSfx.stream().allMatch(event -> event.scope()
                 == SmpsDriverServiceObserver.LifecycleScope.DRIVER));
@@ -685,7 +684,7 @@ class TestAudioDiagnosticObservers {
     }
 
     @Test
-    void serviceCallbacksMatchZeroOneAndMultipleActualSequencerTicks() {
+    void serviceCallbacksMatchEveryS2DriverFrameRegardlessOfCarryOrSpeedSetting() {
         SmpsDriver driver = new SmpsDriver(600.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
@@ -720,32 +719,30 @@ class TestAudioDiagnosticObservers {
         driver.read(new short[0]);
         restoreTempoState(music, 10, 0, 1, 0);
         driver.read(new short[20]);
-        assertEquals(List.of(), services,
-                "a real tempo frame whose accumulator does not overflow"
-                        + " executes zero SMPS ticks and reports no service");
+        assertEquals(List.of(
+                "begin:SEQUENCER_TICK:0:129",
+                "end:SEQUENCER_TICK:0:129"), services,
+                "S2 services tracks even when TempoWait holds durations");
 
+        services.clear();
         restoreTempoState(music, 10, 250, 1, 0);
         driver.read(new short[20]);
         assertEquals(List.of(
-                "begin:SEQUENCER_TICK:0:129",
-                "end:SEQUENCER_TICK:0:129"), services);
+                "begin:SEQUENCER_TICK:1:129",
+                "end:SEQUENCER_TICK:1:129"), services);
 
         services.clear();
         restoreTempoState(music, 10, 250, 3, 0);
         driver.read(new short[20]);
         assertEquals(List.of(
-                "begin:SEQUENCER_TICK:1:129",
-                "end:SEQUENCER_TICK:1:129",
                 "begin:SEQUENCER_TICK:2:129",
-                "end:SEQUENCER_TICK:2:129",
-                "begin:SEQUENCER_TICK:3:129",
-                "end:SEQUENCER_TICK:3:129"), services,
-                "one OVERFLOW2 tempo frame that invokes tick three times"
-                        + " emits three distinct ordered services");
+                "end:SEQUENCER_TICK:2:129"), services,
+                "S1/S2 speed shoes replace tempo bytes; a generic speed"
+                        + " multiplier must not create literal S2 subticks");
     }
 
     @Test
-    void speedupSubticksConsumeSfxBudgetOnlyOnTheFinalLiteralTick() {
+    void s2SfxBudgetConsumesOncePerDriverFrame() {
         SmpsDriver driver = new SmpsDriver(60.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
@@ -772,10 +769,9 @@ class TestAudioDiagnosticObservers {
 
         driver.read(new short[2]);
 
-        assertEquals(List.of(2, 2, 1), maxTicksAfterService,
-                "speed-up adds literal sequencer ticks but the shipped SFX"
-                        + " budget still decrements once per tempo frame,"
-                        + " on its final tick");
+        assertEquals(List.of(1), maxTicksAfterService,
+                "S1/S2 speed-up changes music tempo and never multiplies"
+                        + " an SFX track service");
     }
 
     @Test
@@ -812,21 +808,26 @@ class TestAudioDiagnosticObservers {
                 Integer.MAX_VALUE,
                 music.captureSnapshot().fade());
         driver.read(new short[2]);
-        assertEquals(List.of(), events,
-                "a zero-tick tempo frame with no fade has no service");
+        assertEquals("begin:SEQUENCER_TICK:0", events.getFirst());
+        assertEquals("end:SEQUENCER_TICK:0", events.getLast());
+        assertTrue(events.subList(1, events.size() - 1).stream()
+                .allMatch("write:SEQUENCER_TICK"::equals));
 
+        events.clear();
         restoreDiagnosticState(music, 10, 0, 1, 0,
                 Integer.MAX_VALUE,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         1, 0, 0, 1, 1, true, true));
         driver.read(new short[2]);
 
-        assertEquals("begin:FADE_STEP:0", events.getFirst());
-        assertEquals("end:FADE_STEP:0", events.getLast());
-        assertTrue(events.subList(1, events.size() - 1).stream()
-                .allMatch("write:FADE_STEP"::equals));
-        assertTrue(events.size() > 2,
+        int fadeEnd = events.indexOf("end:FADE_STEP:1");
+        assertEquals("begin:FADE_STEP:1", events.getFirst());
+        assertTrue(fadeEnd > 1,
                 "an actual fade volume step writes inside its service");
+        assertTrue(events.subList(1, fadeEnd).stream()
+                .allMatch("write:FADE_STEP"::equals));
+        assertEquals("begin:SEQUENCER_TICK:2", events.get(fadeEnd + 1));
+        assertEquals("end:SEQUENCER_TICK:2", events.getLast());
     }
 
     @Test
@@ -1563,7 +1564,7 @@ class TestAudioDiagnosticObservers {
                 state.normalTempo(), state.commData(), state.fm6DacOff(),
                 maxTicks, state.pitch(), state.sfxPriority(),
                 state.specialSfx(), state.sfx(), state.psgLatchChannel(),
-                speedMultiplier, speedupTimeout, fade,
+                speedMultiplier, speedupTimeout, state.palUpdateCounter(), fade,
                 state.sampleRate(), state.samplesPerFrame(), 0.0,
                 tempoWeight, tempoAccumulator, state.dividingTiming(),
                 state.primed(), state.tracks()));

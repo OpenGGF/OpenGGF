@@ -20,6 +20,7 @@ public record SmpsSequencerSnapshot(
         int psgLatchChannel,
         int speedMultiplier,
         int speedupTimeout,
+        int palUpdateCounter,
         FadeSnapshot fade,
         double sampleRate,
         double samplesPerFrame,

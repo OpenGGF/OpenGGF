@@ -296,6 +296,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     public void playSmps(AbstractSmpsData data, DacData dacData) {
         int musicId = data.getId();
         boolean isOverride = audioProfile != null && audioProfile.isMusicOverride(musicId);
+        AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
+        SmpsCompositeVoice legacyMusic = !isOverride
+                ? createOrdinaryLegacyMusic(data, dacData, requireSmpsConfig(),
+                        musicDescriptor)
+                : null;
         if (isOverride) {
             // ROM behavior: only 1-up jingle (isSfxBlockingMusic) kills active SFX.
             // Non-blocking overrides (invincibility, Super Sonic) let SFX continue.
@@ -341,9 +346,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsCompositeVoice legacyMusic = createLegacyMusic(
-                data, dacData, requireSmpsConfig(), musicDescriptor);
+        if (legacyMusic == null) {
+            legacyMusic = createLegacyMusic(
+                    data, dacData, requireSmpsConfig(), musicDescriptor);
+        }
         smpsDriver = legacyMusic.driver();
         SmpsSequencer seq = smpsDriver.firstMusicSequencer();
         currentSmps = seq;
@@ -366,6 +372,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         int musicId = data.getId();
         boolean isOverride = forceOverride
                 || (audioProfile != null && audioProfile.isMusicOverride(musicId));
+        AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
+        SmpsCompositeVoice legacyMusic = !isOverride
+                ? createOrdinaryLegacyMusic(data, dacData, effectiveConfig,
+                        musicDescriptor)
+                : null;
         if (isOverride) {
             boolean sfxBlocking = audioProfile != null && audioProfile.isSfxBlockingMusic(musicId);
             // ROM: only the 1-up jingle (isSfxBlockingMusic) kills active SFX.
@@ -403,9 +414,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsCompositeVoice legacyMusic = createLegacyMusic(
-                data, dacData, effectiveConfig, musicDescriptor);
+        if (legacyMusic == null) {
+            legacyMusic = createLegacyMusic(
+                    data, dacData, effectiveConfig, musicDescriptor);
+        }
         smpsDriver = legacyMusic.driver();
         SmpsSequencer seq = smpsDriver.firstMusicSequencer();
         currentSmps = seq;
@@ -467,6 +479,15 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         AdmissionResult admission = Objects.requireNonNull(
                 admissionPolicy.evaluate(admissionContext),
                 "SFX admission policy returned no result");
+        if (admission.accepted() && smpsDriver != null
+                && currentStream == smpsDriver
+                && smpsDriver.usesGlobalSfxPriority()) {
+            admission = smpsDriver.evaluateSfxRequest(
+                    data.getId(), sfxPriority, specialSfx, false);
+            admissionContext = new SmpsAdmissionContext(
+                    data.getId(), data.getId(), sfxPriority,
+                    admission.priorityBefore(), specialSfx, false);
+        }
         if (!admission.accepted()) {
             observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
                     admissionContext, admission));
@@ -870,7 +891,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         sequencer.setSourceDescriptor(
                 describeSmpsSource(descriptor, data, false));
         sequencer.setSampleRate(driver.getOutputSampleRate());
-        sequencer.setSpeedShoes(speedShoesEnabled);
+        sequencer.initializeSpeedShoes(speedShoesEnabled);
         sequencer.setSpeedMultiplier(speedMultiplier);
         sequencer.setFm6DacOff(configService.getBoolean(
                 SonicConfiguration.FM6_DAC_OFF));
@@ -879,6 +900,34 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         return new SmpsCompositeVoice(
                 0, 0, data.getId(), descriptor,
                 STREAM_BUFFER_SIZE, driver);
+    }
+
+    private SmpsCompositeVoice createOrdinaryLegacyMusic(
+            AbstractSmpsData data,
+            DacData dacData,
+            SmpsSequencerConfig sequencerConfig,
+            AudioSourceDescriptor descriptor) {
+        SmpsCompositeVoice replacement = createLegacyMusic(
+                data, dacData, sequencerConfig, descriptor);
+        if (audioProfile == null
+                || audioProfile.getOrdinaryMusicSfxPolicy()
+                != GameAudioProfile.OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE) {
+            return replacement;
+        }
+        SmpsDriver previous = smpsDriver;
+        if (previous == null && sfxStream instanceof SmpsDriver standalone) {
+            previous = standalone;
+        }
+        if (previous == null) {
+            return replacement;
+        }
+        try {
+            replacement.driver().adoptActiveSfxFrom(previous);
+            return replacement;
+        } catch (RuntimeException failure) {
+            replacement.stop();
+            throw failure;
+        }
     }
 
     private SmpsSequencerConfig legacySequencerConfig(

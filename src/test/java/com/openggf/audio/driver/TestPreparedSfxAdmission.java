@@ -94,7 +94,7 @@ class TestPreparedSfxAdmission {
         PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
                 replacement, 0, 2);
 
-        assertEquals(0b000001, admission.affectedFmMask());
+        assertEquals(0b000011, admission.affectedFmMask());
         assertEquals(0b0100, admission.affectedPsgMask());
         assertIdentityOrder(orderBefore, driver.sequencersForTesting());
         assertTrue(fmTrack.active);
@@ -151,8 +151,6 @@ class TestPreparedSfxAdmission {
         PsgChip legacyOracle = new PsgChip();
         legacyOracle.restoreSnapshot(before.psg());
         legacyOracle.write(0xBF);
-        legacyOracle.write(0xBF);
-        legacyOracle.write(0x9F);
         legacyOracle.write(0x9F);
         List<Integer> psgWrites = new java.util.ArrayList<>();
         driver.setChipWriteObserver(new ChipWriteObserver() {
@@ -169,8 +167,8 @@ class TestPreparedSfxAdmission {
         replacement.beginSfxAdmission();
         driver.commitSfxAdmission(admission);
 
-        assertEquals(List.of(0xBF, 0xBF, 0x9F, 0x9F), psgWrites,
-                "contention silence writes retain new-header order");
+        assertEquals(List.of(0xBF, 0x9F), psgWrites,
+                "each displaced PSG track is silenced once in header order");
         assertDeepEquals(legacyOracle.captureSnapshot(),
                 driver.captureSynthSnapshot().psg());
         assertEquals(1, driver.captureSynthSnapshot().psg().latch(),
@@ -259,8 +257,6 @@ class TestPreparedSfxAdmission {
 
         assertEquals(List.of(
                 "PSG:159",
-                "PSG:159",
-                "PSG:191",
                 "PSG:191",
                 "PSG:223",
                 "YM:1:129:255",

@@ -1,5 +1,48 @@
 # Changelog
 
+- **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
+  retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
+  longer inherit that destructive policy from shared presentation code. Direct
+  SMPS test playback and S1 parity capture also advance through real driver
+  service boundaries instead of relying on the removed synthetic priming tick.
+
+- **Pausing now executes each retail SMPS driver's chip protocol:** Sonic 1
+  pans and keys off all FM channels, Sonic 2 runs its destructive FM silencer
+  and reloads active voices on resume, and Sonic 3&K leaves FM6/DAC running
+  while muting FM1-5 and reproducing the shipped redundant PSG silence. Paused
+  frames continue clocking an already-started DAC sample without servicing
+  music, SFX, envelopes, or modulation.
+
+- **PAL playback now clocks the actual YM2612 and PSG cores from the PAL Mega
+  Drive master clock:** pitch and DAC timing no longer retain NTSC oscillator
+  rates while only the frame scheduler changes. Rewind snapshots preserve the
+  selected chip-clock domain exactly.
+
+- **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
+  the boot chant atomically stops music, overrides, and every SFX owner before
+  the PCM voice begins, streams its unsigned bytes through the region-clocked
+  YM2612 DAC core instead of a host-linear PCM shortcut, and StopSEGA leaves
+  the driver silent instead of restoring voices the retail `fix_sndbugs=0`
+  path discarded. Save/load retains the exact DAC latch and resampler state.
+
+- **1-up jingles now use each retail driver's SFX gate and priority restore:**
+  all active effects stop when the jingle begins and new effects remain blocked
+  through the driver-owned restore boundary. Sonic 1 clears the saved priority;
+  Sonic 2 deliberately restores the stale latch from its shipped
+  `FixDriverBugs=0` backup; Sonic 3&K reopens SFX immediately on song restore.
+  Sonic 1 also leaves the jingle's DAC mode active on restore, preserving the
+  retail `FixBugs=0` bug that can keep the restored FM6 inaudible.
+
+- **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
+
+- **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.
+
+- **SMPS fades now follow each retail driver's channel and terminal rules:** Sonic 1 stops active SFX when fading starts, Sonic 3&K halts DAC and PSG immediately while fading FM, Sonic 1/2 clear speed shoes, and all three stop on the shipped terminal count without an extra volume step.
+
+- **SMPS SFX release now matches each shipped driver:** Sonic 1 and Sonic 2 leave interrupted PSG music tracks resting until their next note and no longer inject a synthetic FM takeover reset; Sonic 3&K retains its same-VInt SFX-release/music-service path.
+
+- **SMPS ordinary music changes now retain SFX exactly where the shipped drivers do:** Sonic 1 atomically carries live normal/special SFX, channel locks, continuous state, and its priority latch into the replacement song, while Sonic 2 and Sonic 3&K continue to stop SFX before loading ordinary BGM.
+
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
@@ -3017,6 +3060,44 @@ All notable changes to the OpenGGF project are documented in this file.
   sum, so the results choreography ran for as many extra frames as the second
   player had rings -- 67 on the emerald run's first special stage (91 + 76 against
   `max(91, 76, 1000/10)`). Score awarded is unchanged; only the cadence is.
+- Fix: supported retail SMPS catalogs now fail closed instead of guessing past
+  malformed ROM framing. Sonic 2 accepts only little-endian Saxman payload
+  lengths and its four exact uncompressed-song boundaries, Sonic 1 requires
+  every PSG envelope's `$80` hold terminator, and Sonic 3&K loads exactly the
+  eight modulation and `$27` volume-envelope pointers. ROM-backed sweeps cover
+  every declared S1/S2/S3K song and SFX plus each DAC catalog; unreadable DAC
+  tables no longer become empty playable catalogs.
+- Fix: SMPS music tracks now retain the shipped driver-service cadence instead
+  of skipping whole VInts at tempo holds. Sonic 2 and Sonic 3 & Knuckles keep
+  modulation, envelopes, and note-fill running while extending note duration;
+  tempo accumulators start and change with the correct game-specific phase,
+  Sonic 2 performs its music-only PAL repeat every fifth VInt, and S3K speed
+  shoes use the shared SFX/music timeout cadence. Locked-on S3K also repeats
+  the complete music/SFX driver update on the shipped sixth PAL VInt cadence.
+  Sonic 1 and Sonic 2 now gate complete SFX requests through their rewindable
+  global priority latch and establish channel takeover at admission; S3K
+  remains correctly priority-free and services SFX before music so completed
+  effects release their channels before the same VInt's music update.
+  Sonic 2 also retains the shipped bugged `$90` spindash-release FM5
+  transpose instead of silently substituting the bug-fixed `$10` value, and
+  schedules DPCM at the driver's documented 295-cycle two-sample cadence.
+  Default chip presentation now uses GPGX/libvgm positive-edge PSG noise and
+  raw, uninterpolated DAC steps; the smoother alternatives remain opt-in.
+  S3K modulation envelopes now apply retail `$85`–`$FF` bytes as signed pitch
+  deltas instead of incorrectly freezing when an envelope crosses below zero,
+  and `$82`/`$84` commands reproduce the shipped bogus-`BC` operand read
+  instead of taking the assembly's disabled bug-fixed path.
+  Fade-out now uses each retail driver's channel set and terminal ordering:
+  Sonic 1 stops SFX at fade start, Sonic 3&K halts DAC and PSG immediately,
+  Sonic 1/2 clear speed shoes, and the final counter stops all audio without an
+  extra volume mutation.
+  Sonic 3&K 1-up overrides now run at normal speed and restore the displaced
+  song's saved speed state, matching `zTempoSpeedupSave` instead of inheriting
+  the live multiplier into the jingle. Sonic 2 spindash-rev requests now use
+  the sound driver's 0–11 semitone ladder and 0x3C-service reset instead of a
+  pitch derived from the gameplay charge counter. Restoring Sonic 3&K's
+  displaced song now starts the shipped 0x40-step FM-only fade instead of
+  making every channel audible immediately.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

@@ -64,6 +64,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private int psgLatchChannel = -1; // Cached PSG latch channel for performance (set by SmpsDriver.writePsg)
     private int speedMultiplier = 1; // S3K: zTempoSpeedup value (0/1=off, 8=speed shoes)
     private int speedupTimeout = 0;  // S3K: zSpeedupTimeout countdown for double-update
+    private int palUpdateCounter = 5;
 
     public void setPitch(float pitch) {
         this.pitch = pitch;
@@ -378,6 +379,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             this.pos = pos;
             this.type = type;
             this.channelId = channelId;
+            // All three shipped loaders initialize DurationTimeout to 1 so
+            // the first driver service enters the track stream. S2/S3K
+            // TempoWait may extend this value before that service.
+            this.duration = 1;
         }
     }
 
@@ -452,6 +457,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
         // Initialize Region and Tempo
         setRegion(Region.NTSC);
+        if (!sfxProgram) {
+            // Each shipped music loader seeds its live tempo timeout/
+            // accumulator from the selected header tempo. This phase is
+            // observable on the first carry decision.
+            tempoAccumulator = tempoWeight;
+        }
 
         int z80Start = smpsData.getZ80StartAddress();
 
@@ -621,6 +632,25 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public void setSpeedShoes(boolean active) {
         this.speedShoes = active;
         calculateTempo();
+        if (config.getTempoPhasePolicy()
+                == SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO) {
+            tempoAccumulator = tempoWeight;
+        }
+    }
+
+    /**
+     * Apply the speed-shoes state selected by the music loader. Unlike a live
+     * speed change, shipped BGM initialization seeds the tempo accumulator
+     * from the resulting normal or turbo tempo.
+     */
+    public void initializeSpeedShoes(boolean active) {
+        if (primed || sampleCounter != 0) {
+            throw new IllegalStateException(
+                    "initial speed-shoes state must precede driver service");
+        }
+        this.speedShoes = active;
+        calculateTempo();
+        tempoAccumulator = tempoWeight;
     }
 
     public void setFm6DacOff(boolean active) {
@@ -662,6 +692,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (wasOverridden && !overridden) {
                     if (!t.active)
                         continue;
+
+                    if (t.type == TrackType.PSG
+                            && config.getPsgSfxReleaseMode()
+                            == SmpsSequencerConfig.PsgSfxReleaseMode
+                                    .REST_UNTIL_NEXT_NOTE) {
+                        // Shipped S1/S2 stop the restored PSG music track. The
+                        // next note, not SFX cleanup, makes it audible again.
+                        t.resting = true;
+                        continue;
+                    }
 
                     // Channel released from SFX, restore instrument and volume
                     refreshInstrument(t);
@@ -820,16 +860,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
         }
 
-        double multiplier = 1.0;
-        if (region == Region.PAL && !smpsData.isPalSpeedupDisabled()) {
-            multiplier = 1.2; // Compensate 50Hz by speeding up music
+        if (region == Region.PAL
+                && !smpsData.isPalSpeedupDisabled()
+                && config.getPalServicePolicy()
+                        == SmpsSequencerConfig.PalServicePolicy.LEGACY_TEMPO_SCALE) {
+            // Locked-on S&K repeats the full driver update every sixth VInt.
+            // Keep the pre-existing approximation until that shared-driver
+            // boundary is implemented; S1 and S2 no longer use this path.
+            base = Math.min(0xFF, (int) (base * 1.2));
         }
-
-        int weighted = (int) (base * multiplier);
-        if (weighted > 0xFF)
-            weighted = 0xFF;
-
-        this.tempoWeight = weighted;
+        this.tempoWeight = base;
 
         // For TIMEOUT mode, initialize the countdown accumulator to the tempo value
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT && tempoAccumulator == 0) {
@@ -941,27 +981,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public int read(short[] buffer, int length) {
-        if (!primed) {
-            if (config.isTempoOnFirstTick()) {
-                if (tempoWeight != 0) {
-                    processTempoFrame(); // S1/S3K: process tempo on first frame (DOTEMPO)
-                } else {
-                    // Tempo-0 songs (e.g. S3K Title Screen) need an unconditional first tick
-                    // so their FF 00 (TEMPO_SET) command can execute and set the real tempo.
-                    tick();
-                }
-            } else {
-                if (tempoWeight != 0) {
-                    tick(); // S2: skip tempo on first frame (PlayMusic)
-                }
-            }
-            primed = true;
-        }
-
-        if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            return length;
-        }
-
         for (int i = 0; i < length; i++) {
             advance(1.0);
             if (synth instanceof VirtualSynthesizer) {
@@ -987,11 +1006,38 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @param samples Number of samples to advance
      */
     public void advanceBatch(int samples) {
+        advanceBatchAndCountDriverFrames(samples);
+    }
+
+    /**
+     * Advance this sequencer and return the number of VInt service boundaries
+     * crossed. SmpsDriver uses this to keep game-wide scheduler state aligned.
+     */
+    public int advanceBatchAndCountDriverFrames(int samples) {
+        int driverFrames = 0;
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
             processTempoFrame();
+            driverFrames++;
         }
+        return driverFrames;
+    }
+
+    public double driverSamplePhase() {
+        return sampleCounter;
+    }
+
+    public void alignDriverSamplePhase(double samplePhase) {
+        if (samplePhase < 0 || samplePhase >= samplesPerFrame) {
+            throw new IllegalArgumentException(
+                    "driver sample phase is outside the VInt interval");
+        }
+        sampleCounter = samplePhase;
+    }
+
+    public void repeatDriverService() {
+        processTempoFrame();
     }
 
     /**
@@ -1001,7 +1047,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @return Number of samples until next tempo frame, or Integer.MAX_VALUE if no tempo
      */
     public int getSamplesUntilNextTempoFrame() {
-        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
+        if (samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
         double remaining = samplesPerFrame - sampleCounter;
@@ -1066,7 +1112,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (ticks <= 0) {
             return 0;
         }
-        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
+        if (samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
 
@@ -1101,10 +1147,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return (int) Math.ceil(total);
     }
 
-    private boolean ticksEveryFrameWithZeroTempo() {
-        return config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW;
-    }
-
     private void tick() {
         tick(false);
     }
@@ -1112,6 +1154,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void tick(boolean finishSfxTempoFrame) {
         SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
                 ? smpsDriver : null;
+        int activeSfxTracksBefore = driver != null && isSfx
+                ? activeTrackCount() : 0;
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
@@ -1119,9 +1163,23 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (finishSfxTempoFrame) {
             finishSfxTempoFrame();
         }
+        if (driver != null && isSfx
+                && activeTrackCount() < activeSfxTracksBefore) {
+            driver.onSfxTrackStopped();
+        }
         if (driver != null) {
             driver.endSequencerService(service);
         }
+    }
+
+    private int activeTrackCount() {
+        int count = 0;
+        for (Track track : tracks) {
+            if (track.active) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void finishSfxTempoFrame() {
@@ -1258,11 +1316,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
+        primed = true;
         processObservedFadeStep();
 
-        if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            return;
-        }
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT) {
             // S1 style: always tick, but periodically extend track durations
             // SFX bypass tempo extension entirely - they just tick every frame
@@ -1280,49 +1336,79 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            // S2: tick when accumulator overflows. Higher tempo = more ticks = faster.
-            tempoAccumulator += tempoWeight;
-            if (tempoAccumulator >= tempoModBase) {
-                tempoAccumulator -= tempoModBase;
-                int tickCount = Math.max(1, speedMultiplier);
-                for (int tickIndex = 0; tickIndex < tickCount; tickIndex++) {
-                    tick(sfxMode && tickIndex == tickCount - 1);
+            if (!sfxMode && region == Region.PAL
+                    && !smpsData.isPalSpeedupDisabled()
+                    && config.getPalServicePolicy()
+                            == SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH) {
+                palUpdateCounter--;
+                if (palUpdateCounter == 0) {
+                    palUpdateCounter = 5;
+                    serviceS2TempoFrame(false);
                 }
             }
+            serviceS2TempoFrame(sfxMode);
         } else {
-            // S3K OVERFLOW: tick when accumulator does NOT overflow. Higher tempo = more skips = slower.
-            // SFX bypass: Z80 driver processes SFX every frame (zUpdateSFXTracks),
-            // independent of music tempo. Without this, tempoWeight=tempoModBase
-            // causes overflow every frame → SFX never ticks.
+            // SFX bypass: the S3K Z80 driver services SFX every VInt,
+            // independently of music tempo.
             if (sfxMode) {
                 tick(true);
             } else {
-                tempoAccumulator += tempoWeight;
-                if (tempoAccumulator >= tempoModBase) {
-                    tempoAccumulator -= tempoModBase;
-                    // Overflow → skip this frame (delay)
-                } else {
-                    // No overflow → tick normally
-                    tick();
-                }
-                // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
-                // zTempoSpeedup=N → one extra zUpdateMusic every (N+1) frames.
-                if (speedMultiplier > 1) {
-                    if (speedupTimeout <= 0) {
-                        speedupTimeout = speedMultiplier;
-                        // Re-run tempo processing for the extra update
-                        tempoAccumulator += tempoWeight;
-                        if (tempoAccumulator >= tempoModBase) {
-                            tempoAccumulator -= tempoModBase;
-                        } else {
-                            tick();
-                        }
-                    } else {
-                        speedupTimeout--;
-                    }
-                }
+                // zDoSpeedUp is the shared tail of zUpdateSFXTracks and every
+                // zUpdateMusic invocation. Model the SFX tail first.
+                serviceS3kSpeedTail();
+                serviceS3kMusicTempo();
+                serviceS3kSpeedTail();
             }
         }
+    }
+
+    private void extendActiveTrackDurations() {
+        for (Track track : tracks) {
+            if (track.active && track.duration > 0) {
+                track.duration++;
+            }
+        }
+    }
+
+    private void serviceS2TempoFrame(boolean finishSfxTempoFrame) {
+        // Shipped REV01 selects FixDriverBugs=0: TempoWait runs before every
+        // music track service. The fixed assembly branch moves TempoWait
+        // after track service to avoid delaying a newly loaded first note.
+        // Here a non-carry extends DurationTimeout but never skips service.
+        int nextAccumulator = tempoAccumulator + tempoWeight;
+        boolean carried = nextAccumulator >= tempoModBase;
+        tempoAccumulator = nextAccumulator % tempoModBase;
+        if (!sfxMode && !carried) {
+            extendActiveTrackDurations();
+        }
+        tick(finishSfxTempoFrame);
+    }
+
+    private void serviceS3kMusicTempo() {
+        // Shipped fix_sndbugs=0 TempoWait runs before zTrackUpdLoop. A carry
+        // holds the current note by extending every duration, but envelopes,
+        // note fill, modulation, and the rest of track service still run.
+        int nextAccumulator = tempoAccumulator + tempoWeight;
+        boolean carried = nextAccumulator >= tempoModBase;
+        tempoAccumulator = nextAccumulator % tempoModBase;
+        if (carried) {
+            extendActiveTrackDurations();
+        }
+        tick();
+    }
+
+    private void serviceS3kSpeedTail() {
+        if (speedMultiplier <= 1) {
+            return;
+        }
+        if (speedupTimeout <= 0) {
+            speedupTimeout = speedMultiplier;
+            serviceS3kMusicTempo();
+            // The extra zUpdateMusic reaches zDoSpeedUp as well.
+            serviceS3kSpeedTail();
+            return;
+        }
+        speedupTimeout--;
     }
 
     private void processObservedFadeStep() {
@@ -1336,7 +1422,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                         SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
         processFade();
         if (driver != null) {
-            driver.endSequencerService(service);
+            driver.endFadeSequencerService(service);
         }
     }
 
@@ -1373,8 +1459,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
-        // ROM: Decrement fade counter and apply volume change
+        // Shipped drivers decrement first and stop immediately when it reaches
+        // zero; the terminal count never applies one extra volume mutation.
         fadeState.steps--;
+        if (fadeState.steps == 0 && fadeState.fadeOut) {
+            for (Track t : tracks) {
+                t.active = false;
+                stopNote(t);
+            }
+            fadeState.active = false;
+            if (synth instanceof SmpsDriver driver) {
+                driver.requestFadeTerminalStopAll();
+            }
+            return;
+        }
         fadeState.delayCounter = fadeState.delayInit;
 
         int dir = fadeState.fadeOut ? 1 : -1;
@@ -1496,8 +1594,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (t.pos < programView.dataLength()) {
                     normalTempo = programView.dataByteAt(t.pos++) & 0xFF;
                     calculateTempo();
-                    // Parity: EA (Tempo Set) resets the tempo accumulator/counter to the new tempo value
-                    tempoAccumulator = tempoWeight;
+                    if (config.getTempoPhasePolicy()
+                            == SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO) {
+                        tempoAccumulator = tempoWeight;
+                    }
                 }
                 break;
             case 0xEB:
@@ -2885,7 +2985,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             int value = t.modEnvData[t.modEnvPos] & 0xFF;
             t.modEnvPos++;
 
-            if (value < 0x80) {
+            // Shipped S3K fix_sndbugs=0 reserves only $80-$84 as commands.
+            // Values $85-$FF take the signed branch (H=$FF) and are ordinary
+            // negative pitch deltas; treating every negative byte as HOLD
+            // freezes all retail modulation envelopes that cross below zero.
+            if (value < 0x80 || value >= 0x85) {
                 int envVal = (byte) value;
                 int multiplier = t.modEnvMult + 1; // S3K DefDrv: EnvMult = Z80
                 t.modEnvCache = (short) (envVal * multiplier);
@@ -2991,7 +3095,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.steps = steps;
         fadeState.delayInit = delay;
         fadeState.addFm = 1;
-        fadeState.addPsg = 1;
+        fadeState.addPsg = config.getFadeInChannelPolicy()
+                == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY ? 0 : 1;
         // ROM: FadeInDelay is NOT initialized, so first step happens immediately
         fadeState.delayCounter = 0;
         fadeState.active = true;
@@ -3004,6 +3109,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (track.type == TrackType.DAC) {
                 track.dacMuted = true;
                 stopNote(track);
+                continue;
+            }
+            if (track.type == TrackType.PSG
+                    && config.getFadeInChannelPolicy()
+                            == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY) {
                 continue;
             }
             track.volumeOffset += steps;
@@ -3031,9 +3141,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.active = true;
         fadeState.fadeOut = true;
 
+        if (config.isFadeOutClearsSpeedShoes()) {
+            setSpeedShoes(false);
+        }
+        if (config.isFadeOutStopsSfxImmediately()
+                && synth instanceof SmpsDriver driver) {
+            driver.stopAllSfx();
+        }
+
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
         for (Track track : tracks) {
-            if (track.type == TrackType.DAC) {
+            if (track.type == TrackType.DAC
+                    || (track.type == TrackType.PSG
+                    && config.getFadeOutChannelPolicy()
+                    == SmpsSequencerConfig.FadeOutChannelPolicy
+                            .HALT_DAC_AND_PSG_FADE_FM)) {
                 track.active = false;
                 stopNote(track);
             }
@@ -3053,6 +3175,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 applyFmPanAmsFms(t);
             } else if (t.type == TrackType.PSG) {
                 refreshVolume(t);
+            }
+        }
+    }
+
+    /** Restores the active, non-overridden FM tracks after a driver pause. */
+    public void resumeFmAfterPause(boolean reloadVoice) {
+        for (Track track : tracks) {
+            if (!track.active || track.overridden || track.type != TrackType.FM) {
+                continue;
+            }
+            if (reloadVoice) {
+                refreshInstrument(track);
+            } else {
+                applyFmPanAmsFms(track);
             }
         }
     }
@@ -3149,13 +3285,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public void setSpeedMultiplier(int multiplier) {
         this.speedMultiplier = Math.max(1, multiplier);
-        if (this.speedMultiplier <= 1) {
-            this.speedupTimeout = 0;
-        }
     }
 
     public int getSpeedMultiplier() {
         return speedMultiplier;
+    }
+
+    public boolean isSpeedShoes() {
+        return speedShoes;
     }
 
     public DebugState debugState() {
@@ -3210,6 +3347,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 psgLatchChannel,
                 speedMultiplier,
                 speedupTimeout,
+                palUpdateCounter,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         fadeState.steps,
                         fadeState.delayInit,
@@ -3248,6 +3386,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         psgLatchChannel = snapshot.psgLatchChannel();
         speedMultiplier = snapshot.speedMultiplier();
         speedupTimeout = snapshot.speedupTimeout();
+        palUpdateCounter = snapshot.palUpdateCounter();
         fadeState.steps = snapshot.fade().steps();
         fadeState.delayInit = snapshot.fade().delayInit();
         fadeState.delayCounter = snapshot.fade().delayCounter();

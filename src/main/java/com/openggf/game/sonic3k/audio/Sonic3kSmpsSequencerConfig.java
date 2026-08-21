@@ -13,7 +13,6 @@ import java.util.Collections;
  * <ul>
  *   <li>PtrFmt = Z80 (relativePointers=false)</li>
  *   <li>TempoMode = OVERFLOW</li>
- *   <li>Tempo1Tick = DOTEMPO (tempoOnFirstTick=true)</li>
  *   <li>ModAlgo = Z80 (applyModOnNote=true, halveModSteps=true)</li>
  *   <li>VolMode = BIT7</li>
  *   <li>NoteOnPrevent = HOLD</li>
@@ -52,10 +51,26 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.FULL_DRIVER_REPEAT_EVERY_SIXTH)
+                .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.NONE)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC)
+                .fadeOutChannelPolicy(
+                        SmpsSequencerConfig.FadeOutChannelPolicy
+                                .HALT_DAC_AND_PSG_FADE_FM)
+                .musicOverrideSpeedPolicy(
+                        SmpsSequencerConfig.MusicOverrideSpeedPolicy
+                                .NORMAL_DURING_OVERRIDE)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
+                .musicOverrideSfxReleasePolicy(
+                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
+                                .ON_RESTORE)
+                .fadeInChannelPolicy(
+                        SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)
-                .tempoOnFirstTick(true)     // Tempo1Tick = DOTEMPO
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)
@@ -67,6 +82,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h
                 .fadeInDelay(2)             // FadeInDelay = 2
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5)
                 .build();
     }
 

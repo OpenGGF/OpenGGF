@@ -58,7 +58,25 @@ public final class Sonic2SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH)
+                .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
+                .sfxRequestTransformPolicy(
+                        SmpsSequencerConfig.SfxRequestTransformPolicy
+                                .SONIC2_SPINDASH_REV)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                .psgSfxReleaseMode(
+                        SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
+                .fadeOutClearsSpeedShoes(true)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
+                .musicOverridePriorityPolicy(
+                        SmpsSequencerConfig.MusicOverridePriorityPolicy
+                                .PRESERVE_SAVED_LATCH)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD)
                 .build();
     }
 

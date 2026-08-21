@@ -1,5 +1,7 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy;
+
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 
@@ -126,7 +128,9 @@ public sealed interface AudioPresentationCommand
                                 snapshot.assetId(), musicId, sourceDescriptor,
                                 snapshot.sourcePositionQ32(),
                                 snapshot.sourceStepQ32(), snapshot.gainQ16(),
-                                snapshot.looping(), snapshot.stopped()));
+                                snapshot.looping(), snapshot.stopped(),
+                                snapshot.renderMode(), snapshot.synthSnapshot(),
+                                snapshot.lastDacSourceFrame()));
             } else if (voice instanceof SmpsCompositeVoice composite) {
                 PresentationVoiceSnapshot.Smps snapshot =
                         (PresentationVoiceSnapshot.Smps) composite.snapshot();
@@ -144,9 +148,18 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceMusic(MusicVoiceEntry music) implements AudioPresentationCommand {
+    record ReplaceMusic(
+            MusicVoiceEntry music,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy)
+            implements AudioPresentationCommand {
         public ReplaceMusic {
             Objects.requireNonNull(music, "music");
+            Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+        }
+
+        public ReplaceMusic(MusicVoiceEntry music) {
+            this(music,
+                    com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
         }
     }
 
@@ -179,14 +192,25 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceRawPcm(SampleVoiceDescriptor voice)
+    record ReplaceRawPcm(
+            SampleVoiceDescriptor voice,
+            SegaPcmPlaybackPolicy policy)
             implements AudioPresentationCommand {
         public ReplaceRawPcm {
             Objects.requireNonNull(voice, "voice");
+            Objects.requireNonNull(policy, "policy");
         }
 
         public static ReplaceRawPcm fromVoice(SampleBackedVoice voice) {
-            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice));
+            return fromVoice(voice,
+                    SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE);
+        }
+
+        public static ReplaceRawPcm fromVoice(
+                SampleBackedVoice voice,
+                SegaPcmPlaybackPolicy policy) {
+            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice),
+                    policy);
         }
     }
 
@@ -244,6 +268,8 @@ public sealed interface AudioPresentationCommand
                 sample.voiceId(), sample.priority(), sample.assetId(),
                 sample.musicId(), sample.sourceDescriptor(),
                 sample.sourcePositionQ32(), sample.sourceStepQ32(),
-                sample.gainQ16(), sample.looping(), sample.stopped());
+                sample.gainQ16(), sample.looping(), sample.stopped(),
+                sample.renderMode(), sample.synthSnapshot(),
+                sample.lastDacSourceFrame());
     }
 }

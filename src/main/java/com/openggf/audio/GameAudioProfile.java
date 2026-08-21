@@ -9,6 +9,16 @@ import com.openggf.data.Rom;
 import java.util.Map;
 
 public interface GameAudioProfile {
+    enum OrdinaryMusicSfxPolicy {
+        PRESERVE_ACTIVE,
+        STOP_ALL
+    }
+
+    enum SegaPcmPlaybackPolicy {
+        MIX_WITH_ACTIVE,
+        EXCLUSIVE_STOP_ALL
+    }
+
     default String presentationGameId() {
         return "base";
     }
@@ -103,12 +113,22 @@ public interface GameAudioProfile {
     }
 
     /**
-     * Returns the game-owned whole-request SFX admission policy. The shared
-     * default is exactly permissive, leaving existing driver-owned S1
-     * per-role priority behavior unchanged.
+     * Returns an optional game-owned whole-request SFX admission policy. The
+     * stateful shipped S1/S2 priority latch is owned by {@code SmpsDriver}; the
+     * shared default adds no policy beyond that driver rule.
      */
     default SmpsRequestAdmissionPolicy getSfxAdmissionPolicy() {
         return SmpsRequestAdmissionPolicy.PERMISSIVE;
+    }
+
+    /** How an ordinary (non-1-up) BGM load treats already-active SFX. */
+    default OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
+        return OrdinaryMusicSfxPolicy.STOP_ALL;
+    }
+
+    /** How the game's SEGA PCM command interacts with active SMPS voices. */
+    default SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
+        return SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE;
     }
 
     /**

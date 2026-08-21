@@ -785,7 +785,8 @@ public class AudioManager implements MusicRestoreSink {
             byte[] pcm = sourceRom.readBytes(
                     spec.address(), spec.length());
             mirrorShadowCommand(() ->
-                    shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
+                    shadowResolver.submitRawPcm(pcm, spec.sampleRate(),
+                            source.profile().getSegaPcmPlaybackPolicy()));
         } catch (Exception e) {
             AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
@@ -2097,14 +2098,16 @@ public class AudioManager implements MusicRestoreSink {
             BaseAudioSource source) {
         return new AudioPresentationCommandResolver.SourceAccess(
                 baseGameId(source), source.generation(), source.loader(),
-                source.dac(), source.config(), sfxPolicyFor(source.profile()));
+                source.dac(), source.config(), sfxPolicyFor(source.profile()),
+                ordinaryMusicSfxPolicyFor(source.profile()));
     }
 
     private AudioPresentationCommandResolver.SourceAccess donorSfxSource(
             String gameId, DonorAudioSource source) {
         return new AudioPresentationCommandResolver.SourceAccess(
                 gameId, source.generation(), source.loader(), source.dac(),
-                source.config(), sfxPolicyFor(source.sfxPolicyProfile()));
+                source.config(), sfxPolicyFor(source.sfxPolicyProfile()),
+                ordinaryMusicSfxPolicyFor(source.profile()));
     }
 
     private synchronized DonorAudioSource completeLegacyDonorSource(
@@ -2942,6 +2945,13 @@ public class AudioManager implements MusicRestoreSink {
         };
     }
 
+    private static GameAudioProfile.OrdinaryMusicSfxPolicy
+            ordinaryMusicSfxPolicyFor(GameAudioProfile profile) {
+        return profile != null
+                ? profile.getOrdinaryMusicSfxPolicy()
+                : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL;
+    }
+
     private final class ShadowSources implements AudioPresentationCommandResolver.Sources {
         private final int maxFrames;
 
@@ -2959,7 +2969,8 @@ public class AudioManager implements MusicRestoreSink {
                     yield new AudioPresentationCommandResolver.SourceAccess(
                             baseGameId(source), source.generation(),
                             source.loader(), source.dac(), source.config(),
-                            policyFor(source.profile()));
+                            policyFor(source.profile()),
+                            ordinaryMusicSfxPolicyFor(source.profile()));
                 }
                 case DONOR_MUSIC, DONOR_ID -> {
                     String gameId = requireDonorGameId(donorGameId);
@@ -2975,7 +2986,10 @@ public class AudioManager implements MusicRestoreSink {
                             source != null ? source.dac() : null,
                             source != null ? source.config() : null,
                             policyFor(source != null
-                                    ? source.sfxPolicyProfile() : null));
+                                    ? source.sfxPolicyProfile() : null),
+                            source != null && source.profile() != null
+                                    ? source.profile().getOrdinaryMusicSfxPolicy()
+                                    : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
                 }
                 case FALLBACK_NAME -> throw new IllegalArgumentException(
                         "fallback assets have no SMPS source");
@@ -3071,6 +3085,9 @@ public class AudioManager implements MusicRestoreSink {
      * Pauses audio playback. Called when the game window is minimized or loses focus.
      */
     public void pause() {
+        if (shadowRegistry != null) {
+            shadowRegistry.pauseSmpsDrivers();
+        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
@@ -3084,6 +3101,9 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
+        if (shadowRegistry != null) {
+            shadowRegistry.resumeSmpsDrivers();
+        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }

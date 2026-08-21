@@ -55,6 +55,53 @@ class TestFrozenSmpsDataImmutability {
     }
 
     @Test
+    void frozenCatalogCopiesTheTypedPausePolicy() {
+        MutableSmpsData source = MutableSmpsData.complete();
+        AudioPresentationSourceFactory factory = factory();
+        AudioPresentationCommand.MusicVoiceEntry entry = factory.musicSmps(
+                "base", 0x91, 1, source, EMPTY_DAC,
+                new SmpsSequencerConfig.Builder()
+                        .pausePolicy(SmpsSequencerConfig.PausePolicy
+                                .S3K_FM1_TO_5)
+                        .musicOverridePriorityPolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverridePriorityPolicy
+                                        .PRESERVE_SAVED_LATCH)
+                        .musicOverrideSfxReleasePolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverrideSfxReleasePolicy
+                                        .ON_RESTORE)
+                        .musicOverrideDacRestorePolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverrideDacRestorePolicy
+                                        .PRESERVE_OVERRIDE_DAC_MODE)
+                        .build(),
+                AudioSourceDescriptor.baseMusic(0x91), 32);
+
+        SmpsCompositeVoice voice = factory.recreateSmps(
+                (AudioPresentationCommand.SmpsVoiceDescriptor)
+                        entry.voiceDescriptor());
+
+        assertEquals(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getPausePolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .PRESERVE_SAVED_LATCH,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverridePriorityPolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverrideSfxReleasePolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                        .PRESERVE_OVERRIDE_DAC_MODE,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverrideDacRestorePolicy());
+    }
+
+    @Test
     void legacyIndexedReadsAllocateEachVoiceAndEnvelopeOnlyOnce() {
         CountingAllocatingSmpsData source =
                 CountingAllocatingSmpsData.withTracks();

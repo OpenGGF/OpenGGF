@@ -453,6 +453,10 @@ final class SmpsAssetCatalog {
                 .fmChannelOrder(source.getFmChannelOrder())
                 .psgChannelOrder(source.getPsgChannelOrder())
                 .tempoMode(source.getTempoMode())
+                .palServicePolicy(source.getPalServicePolicy())
+                .tempoPhasePolicy(source.getTempoPhasePolicy())
+                .sfxPriorityPolicy(source.getSfxPriorityPolicy())
+                .driverServiceOrder(source.getDriverServiceOrder())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
@@ -460,9 +464,23 @@ final class SmpsAssetCatalog {
                 .extraTrkEndFlags(Set.copyOf(
                         source.getExtraTrkEndFlags()))
                 .relativePointers(source.isRelativePointers())
-                .tempoOnFirstTick(source.isTempoOnFirstTick())
                 .direct68kDriver(source.isDirect68kDriver())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
+                .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
+                .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
+                .musicOverrideRestorePolicy(source.getMusicOverrideRestorePolicy())
+                .musicOverridePriorityPolicy(
+                        source.getMusicOverridePriorityPolicy())
+                .musicOverrideSfxReleasePolicy(
+                        source.getMusicOverrideSfxReleasePolicy())
+                .musicOverrideDacRestorePolicy(
+                        source.getMusicOverrideDacRestorePolicy())
+                .fadeInChannelPolicy(source.getFadeInChannelPolicy())
+                .pausePolicy(source.getPausePolicy())
+                .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
+                .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
+                .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
