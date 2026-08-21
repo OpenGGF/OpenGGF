@@ -468,7 +468,7 @@ public final class AudioPresentationSourceFactory
             SmpsAssetCatalog.ProgramEntry source,
             SmpsDriver driver) {
         SmpsSequencer sequencer = newSequencer(source, driver);
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.program());
         driver.addSequencer(sequencer, false);
@@ -488,7 +488,7 @@ public final class AudioPresentationSourceFactory
         SmpsSequencer sequencer = newLegacySequencer(source, driver);
         sequencer.setSourceDescriptor(
                 describeLegacyMusic(descriptor, source.data()));
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.data());
         driver.addSequencer(sequencer, false);

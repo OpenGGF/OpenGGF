@@ -13,7 +13,6 @@ import java.util.Collections;
  * <ul>
  *   <li>PtrFmt = Z80 (relativePointers=false)</li>
  *   <li>TempoMode = OVERFLOW</li>
- *   <li>Tempo1Tick = DOTEMPO (tempoOnFirstTick=true)</li>
  *   <li>ModAlgo = Z80 (applyModOnNote=true, halveModSteps=true)</li>
  *   <li>VolMode = BIT7</li>
  *   <li>NoteOnPrevent = HOLD</li>
@@ -52,10 +51,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.LEGACY_TEMPO_SCALE)
                 .applyModOnNote(true)       // ModAlgo = Z80
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)
-                .tempoOnFirstTick(true)     // Tempo1Tick = DOTEMPO
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)

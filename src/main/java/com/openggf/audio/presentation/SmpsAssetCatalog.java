@@ -453,6 +453,8 @@ final class SmpsAssetCatalog {
                 .fmChannelOrder(source.getFmChannelOrder())
                 .psgChannelOrder(source.getPsgChannelOrder())
                 .tempoMode(source.getTempoMode())
+                .palServicePolicy(source.getPalServicePolicy())
+                .tempoPhasePolicy(source.getTempoPhasePolicy())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
@@ -460,7 +462,6 @@ final class SmpsAssetCatalog {
                 .extraTrkEndFlags(Set.copyOf(
                         source.getExtraTrkEndFlags()))
                 .relativePointers(source.isRelativePointers())
-                .tempoOnFirstTick(source.isTempoOnFirstTick())
                 .direct68kDriver(source.isDirect68kDriver())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())

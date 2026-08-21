@@ -102,10 +102,10 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testTempoZeroStallsPlayback() {
+    public void testSonic2TempoZeroHoldsInitialTrackStream() {
         byte[] data = new byte[32];
         data[2] = 2; // 2 FM Channels so channel 1 avoids DAC path
-        data[5] = 0; // Tempo zero should halt progression
+        data[5] = 0; // TempoWait holds DurationTimeout at one forever
 
         // Track 0 (DAC) stubbed with stop
         data[6] = 0x10;
@@ -126,12 +126,14 @@ public class TestSmpsSequencer {
         short[] buf = new short[4000];
         seq.read(buf);
 
-        // Only the DAC enable write should be present when tempo is zero
-        assertEquals(1, synth.log.size(), "Sequencer should not advance when tempo is zero");
+        // Track service still runs each VInt, but TempoWait extends the initial
+        // duration before it can enter the stream.
+        assertEquals(1, synth.log.size(),
+                "Tempo zero should hold the initial track stream");
     }
 
     @Test
-    public void testTempoChangeResetsAccumulator() {
+    public void testSonic2TempoChangePreservesAccumulator() {
         byte[] data = new byte[48];
         data[2] = 2; // 2 FM Channels so we can use channel 1 for FM note sequencing
         data[5] = (byte) 0xC0; // Initial fast tempo
@@ -161,9 +163,8 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Enough samples for ~16 frames. Without resetting the accumulator, the leftover fast-tempo ticks
-        // would advance to the second note (takes ~10 frames), but with a reset the slow tempo (takes ~17 frames)
-        // keeps it out of range of this buffer.
+        // Shipped FixDriverBugs=0 writes CurrentTempo but preserves
+        // TempoTimeout, so the live fast-tempo phase advances to note two.
         short[] buf = new short[12000];
         seq.read(buf);
 
@@ -173,8 +174,10 @@ public class TestSmpsSequencer {
         int secondNoteIdx = logStr.indexOf("RA4 V02", firstNoteIdx + 1);
         assertTrue(firstNoteIdx >= 0, "First note should play. Log: " + logStr);
         assertTrue(logStr.contains("R28 V00"), "Rest after tempo change should key off the channel");
-        assertEquals(1, keyOnCount, "Second note should not play within the buffer when the tempo accumulator resets");
-        assertEquals(-1, secondNoteIdx, "Accumulator reset should delay the second note past the buffer");
+        assertEquals(2, keyOnCount,
+                "S2 tempo-set must preserve the live accumulator phase");
+        assertTrue(secondNoteIdx >= 0,
+                "Preserved accumulator phase should reach the second note");
     }
 
     @Test
@@ -269,7 +272,9 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        short[] buf = new short[100];
+        // Direct rendering no longer performs a hidden pre-sample driver
+        // tick; render past the first NTSC VInt service boundary.
+        short[] buf = new short[1000];
         seq.read(buf);
 
         assertEquals(0xAA, seq.getCommData(), "Comm data should be 0xAA");
@@ -548,6 +553,3 @@ public class TestSmpsSequencer {
         assertTrue(hasCenteredPan, "SFX 0xBC FM should center pan (not inherit music pan). FM log: " + synth.fmLog);
     }
 }
-
-
-

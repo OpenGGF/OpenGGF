@@ -3017,6 +3017,12 @@ All notable changes to the OpenGGF project are documented in this file.
   sum, so the results choreography ran for as many extra frames as the second
   player had rings -- 67 on the emerald run's first special stage (91 + 76 against
   `max(91, 76, 1000/10)`). Score awarded is unchanged; only the cadence is.
+- Fix: SMPS music tracks now retain the shipped driver-service cadence instead
+  of skipping whole VInts at tempo holds. Sonic 2 and Sonic 3 & Knuckles keep
+  modulation, envelopes, and note-fill running while extending note duration;
+  tempo accumulators start and change with the correct game-specific phase,
+  Sonic 2 performs its music-only PAL repeat every fifth VInt, and S3K speed
+  shoes use the shared SFX/music timeout cadence.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

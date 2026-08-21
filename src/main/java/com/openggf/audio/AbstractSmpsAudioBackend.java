@@ -870,7 +870,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         sequencer.setSourceDescriptor(
                 describeSmpsSource(descriptor, data, false));
         sequencer.setSampleRate(driver.getOutputSampleRate());
-        sequencer.setSpeedShoes(speedShoesEnabled);
+        sequencer.initializeSpeedShoes(speedShoesEnabled);
         sequencer.setSpeedMultiplier(speedMultiplier);
         sequencer.setFm6DacOff(configService.getBoolean(
                 SonicConfiguration.FM6_DAC_OFF));

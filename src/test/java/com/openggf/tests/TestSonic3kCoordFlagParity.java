@@ -488,7 +488,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2A74, finalPacked,
+        assertEquals(0x2A84, finalPacked,
                 "S3K zDoModulation decrements ModulationSteps every sustain tick, not only when speed elapses");
     }
 
@@ -502,7 +502,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2AAD, finalPacked,
+        assertEquals(0x2AD6, finalPacked,
                 "S3K zDoModulation applies the first delta on the tick that ModulationWait decrements to zero");
     }
 

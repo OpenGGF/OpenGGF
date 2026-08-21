@@ -444,7 +444,7 @@ class TestS1AudioStateNormalizer {
     private static SmpsSequencerSnapshot sequencer(List<SmpsTrackSnapshot> tracks, int tempoWeight,
             int tempoAccumulator) {
         return new SmpsSequencerSnapshot(Region.NTSC, false, false, tempoWeight, 0, false,
-                Integer.MAX_VALUE, 1.0f, 0, false, false, 0, 1, 0,
+                Integer.MAX_VALUE, 1.0f, 0, false, false, 0, 1, 0, 5,
                 new SmpsSequencerSnapshot.FadeSnapshot(0, 0, 0, 0, 0, false, false),
                 44100, 735, 0, tempoWeight, tempoAccumulator, 1, true, tracks);
     }

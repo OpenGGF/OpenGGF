@@ -10,12 +10,28 @@ import java.util.Set;
 public final class SmpsSequencerConfig {
 
     public enum TempoMode {
-        /** S3K: accumulator overflow → skip (delay). Tick on non-overflow. Higher tempo = slower. */
+        /** S3K: carry extends music durations before the mandatory per-VInt track service. */
         OVERFLOW,
-        /** S2: accumulator overflow → tick. Skip on non-overflow. Higher tempo = faster. */
+        /** S2: no carry extends music durations before the mandatory per-VInt track service. */
         OVERFLOW2,
         /** S1: countdown from tempo; when 0, extend all track durations by 1. Always tick. */
         TIMEOUT
+    }
+
+    public enum PalServicePolicy {
+        /** No driver-side PAL compensation (Sonic 1). */
+        NONE,
+        /** Sonic 2: one extra music-only service every fifth PAL VInt. */
+        EXTRA_MUSIC_EVERY_FIFTH,
+        /** Temporary compatibility until S3K's full-driver repeat is owned by SmpsDriver. */
+        LEGACY_TEMPO_SCALE
+    }
+
+    public enum TempoPhasePolicy {
+        /** S1: tempo and speed changes reload the live timeout. */
+        RESET_TO_EFFECTIVE_TEMPO,
+        /** S2/S3K: tempo and speed changes preserve accumulator phase. */
+        PRESERVE
     }
 
     /** How carrier operators are determined for volume scaling. */
@@ -94,12 +110,13 @@ public final class SmpsSequencerConfig {
     private final int[] fmChannelOrder;
     private final int[] psgChannelOrder;
     private final TempoMode tempoMode;
+    private final PalServicePolicy palServicePolicy;
+    private final TempoPhasePolicy tempoPhasePolicy;
     private final Map<Integer, Integer> coordFlagParamOverrides;
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
     private final Set<Integer> extraTrkEndFlags;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
-    private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
@@ -125,6 +142,8 @@ public final class SmpsSequencerConfig {
         this.fmChannelOrder = Arrays.copyOf(b.fmChannelOrder, b.fmChannelOrder.length);
         this.psgChannelOrder = Arrays.copyOf(b.psgChannelOrder, b.psgChannelOrder.length);
         this.tempoMode = b.tempoMode;
+        this.palServicePolicy = b.palServicePolicy;
+        this.tempoPhasePolicy = b.tempoPhasePolicy;
         this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
                 ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
                 : Collections.emptyMap();
@@ -134,7 +153,6 @@ public final class SmpsSequencerConfig {
                 ? Collections.unmodifiableSet(b.extraTrkEndFlags)
                 : Collections.emptySet();
         this.relativePointers = b.relativePointers;
-        this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
@@ -184,6 +202,14 @@ public final class SmpsSequencerConfig {
 
     public TempoMode getTempoMode() {
         return tempoMode;
+    }
+
+    public PalServicePolicy getPalServicePolicy() {
+        return palServicePolicy;
+    }
+
+    public TempoPhasePolicy getTempoPhasePolicy() {
+        return tempoPhasePolicy;
     }
 
     /**
@@ -241,15 +267,6 @@ public final class SmpsSequencerConfig {
         return fmVoiceWriteProfile;
     }
 
-    /**
-     * Whether to process tempo on the very first frame.
-     * S1 (DOTEMPO): true — first frame goes through processTempoFrame().
-     * S2 (PlayMusic): false — first frame calls tick() directly, bypassing tempo.
-     */
-    public boolean isTempoOnFirstTick() {
-        return tempoOnFirstTick;
-    }
-
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
     public VolMode getVolMode() {
         return volMode;
@@ -305,8 +322,8 @@ public final class SmpsSequencerConfig {
     // -----------------------------------------------------------------------
 
     /**
-     * Builder for SmpsSequencerConfig with S2-compatible defaults.
-     * Use this for S3K and other configs that need the new fields.
+     * Builder with legacy-compatible defaults. Production game configs must
+     * select their explicit scheduler, PAL-service, and tempo-phase policies.
      */
     public static final class Builder {
         // Required (defaults reference shared constants)
@@ -315,14 +332,15 @@ public final class SmpsSequencerConfig {
         private int[] fmChannelOrder = DEFAULT_FM_CHANNEL_ORDER;
         private int[] psgChannelOrder = DEFAULT_PSG_CHANNEL_ORDER;
 
-        // S2-compatible defaults
+        // Legacy-compatible defaults; production profiles override policies.
         private TempoMode tempoMode = TempoMode.OVERFLOW2;
+        private PalServicePolicy palServicePolicy = PalServicePolicy.LEGACY_TEMPO_SCALE;
+        private TempoPhasePolicy tempoPhasePolicy = TempoPhasePolicy.PRESERVE;
         private Map<Integer, Integer> coordFlagParamOverrides = null;
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
         private Set<Integer> extraTrkEndFlags = null;
         private boolean relativePointers = false;
-        private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
@@ -344,12 +362,13 @@ public final class SmpsSequencerConfig {
         public Builder fmChannelOrder(int[] val) { fmChannelOrder = val; return this; }
         public Builder psgChannelOrder(int[] val) { psgChannelOrder = val; return this; }
         public Builder tempoMode(TempoMode val) { tempoMode = val; return this; }
+        public Builder palServicePolicy(PalServicePolicy val) { palServicePolicy = val; return this; }
+        public Builder tempoPhasePolicy(TempoPhasePolicy val) { tempoPhasePolicy = val; return this; }
         public Builder coordFlagParamOverrides(Map<Integer, Integer> val) { coordFlagParamOverrides = val; return this; }
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
-        public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
@@ -369,6 +388,8 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmChannelOrder, "fmChannelOrder");
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
+            Objects.requireNonNull(palServicePolicy, "palServicePolicy");
+            Objects.requireNonNull(tempoPhasePolicy, "tempoPhasePolicy");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
