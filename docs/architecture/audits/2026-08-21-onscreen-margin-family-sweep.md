@@ -16,6 +16,40 @@ Same trap as the moving LZ blocks, which rebuild their spawn record every frame 
 object every time the thing moves.** Both failure modes produce a clean-looking number with a
 confident wrong owner behind it.
 
+## These are missed convention, not missing capability
+
+**The correct pattern already exists in this tree, documented, with a named constant.**
+`CollapsingPlatformObjectInstance:189-203` deletes on the ROM's render flag by sampling
+`isPreUpdateWithinRenderSpriteBounds(halfWidth, APPROX_RENDER_Y_MARGIN)` with
+`APPROX_RENDER_Y_MARGIN = 32 // BuildSprites_ApproxYCheck assumed radius`, and reasons out the
+BuildSprites-after-RunObjects ordering in its own comment. `GrounderWallInstance`,
+`GrounderRockProjectile`, `Sonic1SLZBossSpikeball` and two Knuckles cutscene objects do the
+same.
+
+So the sites in this family are not blocked on a capability the engine lacks — they are sites
+that did not use a convention the engine already has. **A convention that exists and is
+documented can be enforced**, and a guard test asserting that delete-on-not-drawn sites use the
+pre-update helper is worth more than any individual conversion.
+
+### Conversion checklist
+
+1. **Check the null-spawn guard, per site, never by assumption.**
+   `snapshotPreUpdatePosition()` opens `if (getSpawn() == null) return;`, leaving
+   `preUpdateValid` false, and `isPreUpdateWithinRenderSpriteBounds` returns **false** when it
+   is. On a delete-on-not-drawn site that reads as "not drawn" and destroys the object
+   **immediately** — a silent total-deletion bug wearing a correct predicate.
+2. **Check the first frame separately**, and from the ROM. Several `subObjData` rows seed
+   `render_flags` with `1<<render_flags.on_screen`, so the ROM's object survives its creation
+   frame regardless of position. Use `hasPreUpdateSnapshot()` to model that, rather than letting
+   a missing snapshot delete the object.
+3. **Derive both margins from the object's own setup row**, reached through the object that
+   loads it. `width_pixels` never generalises between objects; the `ApproxYCheck` 32 generalises
+   only within the class of objects whose row leaves `explicit_height` clear.
+4. **Confirm the object is queued for `BuildSprites` every surviving frame.** If it can stay
+   alive unqueued, its flag goes stale and the pre-update position is not a substitute.
+5. **Break the gate on purpose before quoting any negative.** An unmoved suite and an
+   unexercised path look identical otherwise.
+
 ## Population
 
 The commissioned scope was "54 literal-margin call sites". The real population is larger and the
@@ -231,3 +265,39 @@ assumed.
 **Consequence.** Stage 2 needs no renderer write-back, so the headless finding above — true and
 unchanged — is not a blocker for this path. It would only bind if someone later wanted a real
 draw-outcome flag for a predicate this helper cannot express.
+
+## Conversion 1 landed; conversion 2 blocked on S3K geometry (2026-08-21, `64812fe85`)
+
+**`WallTurretShotInstance` converted** (`bc8f08d46`). Matrix: both arms in one worktree,
+`target/` cleared before each, 800 tests, identical class-name sets (163), identical
+`Tests run: 0,` counts (6), and **failing-method sets identical on full untruncated messages**.
+Guards **500/0**.
+
+**The break-on-purpose is the most important measurement here, because it disproved the
+premise.** Inverting the gate left the covering trace **completely unchanged** — 0 errors, 3
+warnings, same failure both ways. `TestS2WfzLevelSelectTraceReplay` does **not** cover this
+defect: it reports 0 errors, and nothing in the comparator compares object occupancy. The
+occupancy probe, by contrast, moved from 46/602 to 159/59 under the inversion. **The path is
+exercised; only the probe can observe it.** Any future conversion in this family that reports
+"the suite did not move" is reporting nothing unless it breaks its gate first.
+
+| | short | over |
+|---|---|---|
+| control | 46 | **602** |
+| gate inverted (break-on-purpose) | 159 | 59 |
+| **converted** | 96 | **0** |
+
+Mean slot-run falls **19.86 → 5.73** samples against the ROM's 2.52.
+
+**The residual short is a separate, pre-existing defect, measured directly rather than by
+proxy.** The ROM fires **77** shots in this fixture (`aux_state` `object_appeared`, id `0x98`)
+and the engine fires **48** — *identical in both arms*, so the deletion change does not touch
+it. The old over-long lifetimes were masking a creation deficit of 29. This object has **both**
+defects; only the lifetime one is now fixed.
+
+**Conversion 2 — `HCZBreakableBarObjectInstance:670` — is NOT converted.** It is S3K, and cites
+`tst.b render_flags(a0) / bpl`. The margins derived above are **S2's**: `skdisasm` has no
+`BuildSprites`, `ApproxYCheck` or `explicit_height` labels, so S3K's culling geometry is a
+research task rather than a lookup. Carrying S2's 32 across would be precisely the
+wrong-routine citation this audit exists to catch — a number with a citation attached to a
+routine the ROM does not reach for that object. It needs the S3K geometry established first.
