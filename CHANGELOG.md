@@ -46,6 +46,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The S1 water splash deleted itself a frame early.** `Ani_Splash` ends with `afRoutine`
+  (`docs/s1disasm/_anim/Water Splash.asm`), which advances `obRoutine` rather than deleting;
+  `Spla_Delete` calls `DeleteObject` on the *next* pass
+  (`docs/s1disasm/_incObj/08 LZ Water Splash.asm:29-40`), so the object is still an SST
+  occupant for that extra frame. `Sonic1SplashObjectInstance` called `setDestroyed(true)` the
+  moment the script finished, one execution short.
+
+  The object now advances to routine 4 and deletes on the following update, giving each splash
+  **16 executions against the recording's 16 rows** -- fifteen at routine `$02` and one at
+  `$04`, as `lz1_completerun` slot 12 shows across 11934-11949. Measured over that fixture the
+  engine produces 28 splash objects of 16 executions each, against the ROM's 28 episodes of 16
+  rows: exact on both count and lifetime.
+
 - **The S1 water splash could occupy its reserved SST slot two and three times over.** Sonic 1
   loads the splash with `move.b #id_Splash,(v_splash).w`
   (`docs/s1disasm/_incObj/01 Sonic.asm:274,299`) -- a single id byte into one dedicated SST.

@@ -110008,3 +110008,70 @@ assumption:
 Nothing was fitted; no interval was adjusted. Not landed — the combined change
 needs the three-game matrix, both arms in one worktree, and that is the next
 round.
+
+## 2026-08-21 — Cluster 1 closed: the splash deleted a frame early, and the residual is the probe's sample point
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `1497fa4b7`.
+
+### The ROM's lifetime rule, read before measuring
+
+`Ani_Splash` is `dc.b 4 / dc.b 0,1,2 / dc.b afRoutine`
+(`docs/s1disasm/_anim/Water Splash.asm`). S1's `AnimateSprite` reloads the duration byte when
+`obTimeFrame` goes negative, so each script entry holds for **5 passes**; three entries is 15.
+`afRoutine` then **advances `obRoutine`** — it does not delete. Deletion happens on the *next*
+pass, in `Spla_Delete` (`_incObj/08 LZ Water Splash.asm:29-40`), so the object is still an SST
+occupant for one more frame.
+
+Total: **16 executions — 15 at routine `$02`, one at `$04`.** The recording agrees exactly:
+`lz1_completerun` slot 12 runs 11934-11948 at `$02` and 11949 at `$04`, and 24 of its 28
+episodes are 16 rows long. As predicted, the rule is a routine-advance condition, not a frame
+count.
+
+### The defect
+
+`Sonic1SplashObjectInstance.update` called `setDestroyed(true)` the moment `frameIndex`
+reached `FRAME_COUNT` — the `afRoutine` pass — so the object never had its `Spla_Delete` frame.
+It now sets a routine field and destroys on the following update.
+
+### Measured
+
+| | ROM | engine before | engine after |
+|---|---:|---:|---:|
+| splash objects over `lz1_completerun` | 28 | — | **28** |
+| executions per object | 16 | 15 | **16** |
+| spawner-slot divergence (probe) | — | 83 | **57** |
+
+The object count and the per-object lifetime are now exact.
+
+### The residual 57 is the probe's sample point, not a defect
+
+The remaining slot-12 divergences land on **exactly the last row of each ROM episode** (132,
+149, 422 — the routine-`$04` frames). With the engine at 16 executions per object and 28
+objects, matching the ROM on both, there is no object left to be missing. What differs is
+*when the two sides are sampled*: the recorder samples before the frame executes, so it sees
+the object on the frame `Spla_Delete` runs; the probe sits in `TraceBinder.compareFrame`, after
+the object pass, so that frame is already gone.
+
+**This matters for the comparison itself, and is a blocker for landing it.** A fixed-slot
+occupancy comparison written at `compareFrame` would report a systematic one-frame shortfall on
+every object that deletes itself, on every fixture — 28 slot-frames on this fixture alone,
+none of them a defect. The comparison must sample where the recorder does, or compare a
+quantity that is insensitive to the phase. That has to be settled before it is written; it is
+the same hazard class as the sample-point rule, arriving from the comparison side rather than
+the object side.
+
+### Matrix, both arms in the same worktree
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`1497fa4b7`, clean tree) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages.
+
+### Cluster 3 not chased
+
+Nine slot-frames at the shield's edges (2 at 850-851 the engine's way, 7 the ROM's). Given the
+sample-point finding above, some or all of those may be the same artefact rather than a defect,
+and chasing them before the comparison's sample point is settled would risk fitting the engine
+to a probe. It should be re-measured once the comparison samples where the recorder does.
