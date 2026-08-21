@@ -110415,7 +110415,6 @@ moved. `-Pguards`: 500 tests, 0 failures.
 
 Nothing was fitted. No interval was adjusted.
 
-<<<<<<< HEAD
 ## 2026-08-21 — S1 bubble creation lag: RETRACTED, and the parked phase correction must not land
 
 **The premise was false. There is no air-bubble creation lag, and the parked
@@ -110465,7 +110464,6 @@ Nothing landed. The retained patch at
 `$AGENT_SCRATCH_ROOT/tasks/s1-objectnear-phase-correction-*` is kept as evidence
 of a refuted premise, **not** as pending work.
 
-<<<<<<< HEAD
 ## 2026-08-21 -- SURVEY: the non-zero routine-install population (rule 107)
 
 **Survey, found-not-fixed.** Two earlier surveys in this investigation covered routine-**zero**
@@ -110854,7 +110852,6 @@ and never will be.
 `Camera.setMaxYAfterNextUpdate` now has zero callers. It is deliberately not removed here --
 that touches the camera rewind snapshot record, and the WFZ commit needs to stay droppable.
 The 9 unmeasured routine-install candidates and the cross-object install gap remain parked.
-=======
 ## 2026-08-21 — S2 chain segment 19: the abort is a drowning-triggered level restart, and the divergence that causes it is intrinsic to ARZ2, not carried from ARZ1
 
 Worktree `wt/s2-seg19`, branch `bugfix/ai-s2-seg19-titlecard`, both arms pinned to
@@ -110966,8 +110963,6 @@ mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsonic2.rom.path=s2.gen \
 mvn -Dmse=off -Dsonic2.rom.path=s2.gen -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay test
 ```
->>>>>>> bugfix/ai-s2-seg19-titlecard
-=======
 ## 2026-08-21 — CLOSED, no engine defect: the S1 air-bubble "creation lag" is an artefact of the parked phase correction, and the S1 recorder samples POST-pass
 
 Worktree `wt/s1-bubble-lag-r2`, branch `feature/ai-s1-bubble-lag-r2`, pinned to
@@ -111044,4 +111039,3 @@ mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dtest=DebugS1Lz2BubblesOccupancyProbe \
   -Dtrace.dir=src/test/resources/traces/s1/lz2_completerun -Dtrace.zone=3 -Dtrace.act=1 \
   -Dtrace.obj64Phase=0 test
 ```
->>>>>>> feature/ai-s1-bubble-lag-r2
