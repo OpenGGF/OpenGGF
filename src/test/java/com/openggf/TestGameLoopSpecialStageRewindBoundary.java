@@ -54,6 +54,7 @@ class TestGameLoopSpecialStageRewindBoundary {
 
     @BeforeEach
     void setUp() throws Exception {
+        setActiveTraceSession(null);
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
@@ -68,9 +69,17 @@ class TestGameLoopSpecialStageRewindBoundary {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
+        setActiveTraceSession(null);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         SessionManager.clear();
+    }
+
+    private static void setActiveTraceSession(TraceSessionLauncher session)
+            throws Exception {
+        Field field = TraceSessionLauncher.class.getDeclaredField("activeSession");
+        field.setAccessible(true);
+        field.set(null, session);
     }
 
     @Test
