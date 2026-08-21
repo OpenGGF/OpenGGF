@@ -104853,3 +104853,67 @@ Two separate questions, and neither should be bundled with the other:
    wants its own round and its own matrix.
 2. Why the engine enters the wind tunnel one frame before the ROM, given both test the same
    pre-move position against the same boundary.
+
+## 2026-08-21 — the clock's VALUE is exact; only pre-object-pass readers see it stale
+
+Round `s1-slz1-graze-r1`, clock characterisation. **Measurement only; no source change; probes reverted.**
+The "engine's vblank byte is a frame behind" alarm from the previous entry **narrows sharply**.
+
+### Which clock — named from code, not inferred
+
+`Sonic1LZWaterEvents.vblaByte()` is
+`romVisibleVblaByteBeforeObjectExecution(objectManager.getVblaCounter())`, and that helper is a
+pure `x & 0xFF`. So the quantity measured is **`ObjectManager.vblaCounter`** — the object-visible
+V-int run counter, the one CLAUDE.md's object-clock note names — read with no adjustment at all.
+Not the manager's executed-frame count and not the recorder's sample point.
+
+### Its value is exact in S1 and S2
+
+Sampling the engine's counter against the recording's `vblank_counter` at the **comparison
+cursor**, printing only when the delta changes (16-bit normalised, since the engine's counter does
+not wrap where the ROM's does — the raw deltas are multiples of `0x10000` and comparing them
+directly is meaningless):
+
+| game | delta-change events | value |
+|---|---|---|
+| S1 | 64 | **0 at every one** |
+| S2 | 38 | **0 at every one** |
+
+The delta is zero from cursor 0 of every segment and never changes. **So this is neither an
+initialisation offset nor a missed increment** — the two possibilities the round was scoped
+around. Both are ruled out.
+
+S3K is different and already documented: its first `aiz1` starts at 0, and later segments carry
+constant per-segment deficits (−1248, −2515, −3783, −5049, −5051). That is the accumulation of
+the deliberate non-tick rows recorded under "V-Int Run Counter Does Not Tick On Pause Or
+Seamless-Boundary Lag Rows" in `known-discrepancies.md`, not a new finding.
+
+### What the one frame actually is: read-before-tick
+
+Two measurements at two points in the same frame:
+
+- at the **comparison cursor** (end of frame) the engine's counter equals the recording's;
+- at the **wind-tunnel call** (pre-physics) it is one lower — `vbla&3F = 63` where the ROM's
+  gate variable reads 0.
+
+`advanceVblaCounter()` ticks inside the object pass (`ObjectManager.update`), while
+`LZWindTunnels` runs in the pre-physics event pass. The ROM's ordering is the opposite: the V-int
+increments during `WaitForVBlank`, which precedes `LZWaterFeatures` in `Level_MainLoop`
+(`sonic.asm:2998-3005`). **A pre-object-pass reader therefore sees the previous frame's value
+where the ROM's equivalent reader sees the current one.**
+
+So the blast radius is not "every frame-gated behaviour in three games". It is **readers that run
+before the object pass**. Consumers inside the object pass — badniks, `Sonic1EggPrison`, the CNZ
+slot machine — read after the tick and are unaffected.
+
+### Not established
+
+I did not enumerate every pre-object-pass reader of the counter, only established that
+`Sonic1LZWaterEvents` is one and that the in-pass consumers are not. That enumeration is the
+first thing a fixing round would need, because it is the actual extent of any change.
+
+Also relevant to scoping: `known-discrepancies.md` already records this behaviour indirectly —
+`Sonic1CreditsDemoBootstrap` **seeds the LZ credits-demo vblank phase** so the first ROM y-bump
+lands on the right trace frame "instead of drifting by the engine's default object-manager counter
+phase". The complete-run `lz3` segment gets no such seeding. A sanctioned mechanism for this
+already exists in one context.
