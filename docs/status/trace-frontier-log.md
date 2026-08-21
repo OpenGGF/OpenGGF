@@ -110463,3 +110463,162 @@ error. **Not** the routine-install class either.
 Nothing landed. The retained patch at
 `$AGENT_SCRATCH_ROOT/tasks/s1-objectnear-phase-correction-*` is kept as evidence
 of a refuted premise, **not** as pending work.
+
+## 2026-08-21 -- SURVEY: the non-zero routine-install population (rule 107)
+
+**Survey, found-not-fixed.** Two earlier surveys in this investigation covered routine-**zero**
+init only. This one establishes the population of the other half of rule 107: routines
+installed **mid-frame, from a callback that runs before the object's own dispatch**, and then
+executed by that same frame's dispatch. Measured at `40c3df936`, branch
+`bugfix/ai-routine-install-survey`, dedicated worktree.
+JDK 21, `-Dmse=off` throughout.
+
+### Acceptance gate
+
+A class is **confirmed** only with both halves in hand:
+
+1. **ROM half** -- the disassembly shows the install site is reached *after* the object's own
+   dispatch has already read its selector for the frame (routine-table head read, or a
+   `bsr`/`bra` tail that runs after the routine `jsr` returns), so the installed handler's
+   body cannot execute until the next pass.
+2. **Engine half** -- an executed probe shows the installed routine's body running on the
+   install frame, with the specific value that differs (a countdown at N-1 where the ROM ends
+   the frame at N).
+
+Anything with only the ROM half, only a textual tell, or only a mechanism read is a
+**candidate** (rule 92: a sweep this week produced 15 candidates and 1 confirmed).
+
+### How the candidates were generated -- and the five idioms
+
+Grepping a name would have found one idiom out of five (rule 100). The sweep instead walked
+every implementation of the six callbacks that run before an object's own update --
+`onPlayerAttack`, `onTouchResponse`, `onSolidContact`, `onSolidContactCleared`,
+`onPieceContact`, `onObjectControlledSolidContact` -- plus `onDefeatStarted`, extracted each
+body, and matched assignments to any field whose name carries `routine`/`phase`/`step`,
+**expanded one level through same-class method calls** so an install hidden behind
+`startDefeat()`, `applyHit()` or `capturePlayer()` is not missed.
+
+**33 candidate sites across 30 classes. 3 confirmed.**
+
+The five distinct idioms already used *correctly* in this codebase to model the invariant --
+none of which share a searchable name -- are:
+
+| Idiom | Owner |
+|---|---|
+| `defeatDeferralAppliesToThisBoss()` -> base `deferDefeatRoutineDispatch` | 11 S1/S2 bosses |
+| `pendingDefeatDispatch` early-return at the top of `updateBossLogic` | `HczEndBossInstance` |
+| `defeatWaitArmed` first-dispatch skip | `MgzMinibossInstance` |
+| `pendingDefeatReaction` latch applied post-move | `Sonic2MTZBossInstance` |
+| a skip-first guard on a solid-contact install | `Sonic1CollapsingFloorObjectInstance` |
+
+That last one matters for scope: it is **not a boss and not a touch callback**. The class is
+`onSolidContact` as well as `onPlayerAttack`.
+
+### CONFIRMED (3)
+
+| Class | Evidence |
+|---|---|
+| `AizEndBossInstance` | prior lane, `40c3df936`; deliberately unfixed |
+| `LbzEndBossInstance` | **this survey**, both halves |
+| `Sonic2WFZBossInstance` | **this survey**, both halves |
+
+**`LbzEndBossInstance`.** ROM: `Obj_LBZEndBoss` (`sonic3k.asm:153345-153354`) reads
+`routine(a0)`, `jsr`s the selected arm, *then* `bsr.w sub_73FE2`. `sub_73FE2`
+(`:154015-154088`) finds `collision_property == 0` and falls to `loc_7403A`, which installs
+`loc_73A52` into `(a0)` and sets `$2E = $7F`. `loc_73A52` (`:153478-153483`) is what calls
+`Obj_Wait`, so the first `subq` on `$2E` is the *following* frame -- end of the killing frame,
+`$2E = 127`.
+
+Engine, measured (headless probe, reverted):
+
+```
+PROBE final touch at frame=224 routine=14 defeatTimer=127
+PROBE after same-frame update: defeatTimer=126
+PROBE after next-frame update: defeatTimer=125
+```
+
+`onPlayerAttack` -> `startDefeat()` sets `state.routine = ROUTINE_DEFEAT` (0x0E) and
+`defeatTimer = 0x7F`; `updateBossLogic`'s `if (defeatStarted) updateDefeat()` then runs later in
+that same frame and does `--defeatTimer`. End of the killing frame: **126, not 127.**
+
+**`Sonic2WFZBossInstance`.** ROM: `ObjC5_LaserCase` (`s2.asm:81246-81251`) reads
+`routine_secondary(a0)` **once**, `jsr`s the case, then `bra.w ObjC5_HandleHits`;
+`ObjC5_NoHitPointsLeft` (`s2.asm:82045-82053`) sets `objoff_30 = $EF` and
+`routine_secondary = $1E`. The `$1E` case is the one that decrements `objoff_30`, and the head
+read is already past. End of the killing frame: `objoff_30 = 239`.
+
+Engine, measured (headless probe, reverted):
+
+```
+PROBE WFZ defeat installed at frame=224 routine=0x1e defeatTimer=239
+PROBE WFZ after same-frame update: routine=0x1e defeatTimer=238
+PROBE WFZ after next-frame update: defeatTimer=237
+```
+
+**This retracts an open question in the engine's own documentation.**
+`AbstractBossInstance.defeatDeferralAppliesToThisBoss()`'s javadoc records WFZ's `false` as
+*"unexplained ... nobody has established whether that is a latent defect or is compensated
+elsewhere"*. It is a latent defect, and the criterion the javadoc restates (read-once-at-head,
+defeat write downstream of it) is satisfied by ObjC5. The javadoc is left unedited here so the
+correction lands with the fix rather than ahead of it.
+
+### CANDIDATES -- mechanism read, engine half not measured (9)
+
+Each installs a routine or phase selector inside a pre-update callback, and each has no
+deferral by any of the five idioms, so the same frame's own dispatch consumes it. None was
+driven to its defeat in an executed probe, so none is confirmed.
+
+| Class | Install site | Consumed same frame by |
+|---|---|---|
+| `Sonic2ARZBossInstance` | `onDefeatStarted` -> `state.routine = MAIN_SUB8`, `bossCountdown` | `updateMainSub8` (`bossCountdown--`) |
+| `AizMinibossInstance` | `onDefeatStarted` -> `ROUTINE_DEFEATED`, `defeatHandoffTimer` | `updateDefeated` (`defeatHandoffTimer--`) |
+| `HczMinibossInstance` | `onDefeatStarted` -> `ROUTINE_DEFEATED`, `defeatHandoffTimer` | `updateDefeated` (`defeatHandoffTimer--`) |
+| `MhzMinibossInstance` | `onDefeatStarted` -> `defeatExplosionTimer` | defeat tick (`defeatExplosionTimer--`) |
+| `MhzEndBossInstance` | `onDefeatStarted` -> `finalDefeatPhase` | the `finalDefeatPhase` ladder |
+| `CnzMinibossInstance` | `onDefeatStarted` -> `waitCallback = END_GO` on a live `waitTimer` | `tickWait` |
+| `IczMinibossInstance` | `onPlayerAttack` -> `applyHit()` -> `ROUTINE_DEFEATED`, `defeatTimer` | defeated arm |
+| `LbzMinibossInstance` | `onPlayerAttack` -> `startDefeat()` | defeat arm |
+| `MgzDrillingRobotnikInstance` | `onPlayerAttack` -> `startEndBossDefeat()` (end-boss mode only) | `endBossDefeatPhase` ladder |
+
+`HczMinibossInstance` is the rule-105 shape: its own `onDefeatStarted` comment states
+*"Wait_FadeToLevelMusic's first decrement is necessarily on the following object pass
+(sonic3k.asm:139242-139249, 20900-20925)"* -- and the code decrements on the install frame.
+The comment is the acceptance test.
+
+`MhzEndBossInstance` was already named unfixed by the boss-directory survey; it is listed here
+so the non-zero population is complete, not as a new find.
+
+### RULED OUT
+
+- `Sonic1FZBossInstance` -- `onDefeatStarted` is an empty stub; defeat is handled inline.
+- `Sonic1LZBossInstance` -- `onDefeatStarted` sets flags and clears the boss id; installs no
+  routine.
+- `CollapsingPlatformObjectInstance` (S2) -- `onSolidContact` is a no-op comment; the sweep hit
+  it only through the one-level call expansion.
+- `Sonic1SeesawObjectInstance`, `OOZLauncherObjectInstance` -- expansion false positives; the
+  matched field is not a routine selector.
+
+Ruled out **on a cited ROM reading rather than a measurement**, so re-openable: the ROM half of
+each of these argues the install *is* same-frame, and each says so in the code with citations --
+`MGZTopPlatformObjectInstance` (`loc_34F2A` falls through in the same slot),
+`LbzTubeElevatorInstance` (Action then CheckPlayer in one slot), `ClamerObjectInstance`
+(`loc_890AA` fires in the touch pass), `MadmoleBadnikInstance` (grab deliberately deferred to
+`update()`), and `CnzMinibossInstance.onPlayerAttack` (`CNZMiniboss_CheckPlayerHit` runs after
+the routine body in the boss's own slot). These were read, not driven.
+
+### What this does not cover
+
+Sites where a routine is installed on **another** object -- a parent writing a child's selector,
+or a level-event manager writing an object's -- were not swept. In the engine, children are
+updated from inside the parent's `update()`, so an install-then-update pair there executes in
+one frame by construction; whether the ROM's slot order agrees is per-object and unmeasured.
+
+### Reproducing the two measurements
+
+Both probes were throwaway JUnit classes, deleted before the commit. Each constructs the boss
+with `ObjectConstructionContext.construct` plus a `TestObjectServices`
+(`.withGameState(new GameStateManager())` for WFZ, whose `commitDefeat` calls `addScore`),
+then loops `update(frame++, null); onPlayerAttack(null, null);` until `state.defeated`, and
+reads the private countdown by reflection immediately after the callback, after the same
+frame's `update`, and after the next one. Run with
+`mvn -q -Dmse=off -Dtest=<ProbeClass> -DfailIfNoTests=false test`.
