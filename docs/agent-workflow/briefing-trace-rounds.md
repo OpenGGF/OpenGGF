@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and five rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -122,6 +122,7 @@ that looks like a real result.
 | 103 | Artefacts analysed after a build that never ran | The previous run's files, right names, right count, wrong commit |
 | 104 | A true invariant enforced in the shared helper | Live-but-unwired objects at the callers that keep the reference |
 | 105 | A comment citing a ROM line and a number the code never produces | The defect, documented by its own author, with its acceptance test attached |
+| 106 | A green matrix quoted for a change nothing compares | Inertness inferred from a suite that measures no field the change touches |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2714,3 +2715,23 @@ and then implemented something else.
 **The strongest form of the tell is a cited number.** A comment naming a value the code cannot
 produce is a defect with its own acceptance test attached — the value is the fingerprint, and it
 cannot be satisfied by tuning something else.
+
+## One hundred and sixth rule: count the conversions, and prove the change was exercised
+
+**When two measurements disagree, count the conversions between raw fixture and claim before
+arguing the substance.** Two disputes today were settled that way, and in both cases the losing
+claim had exactly one conversion buried in it — a frame number derived from a counter running
+twenty-three behind, and a counter value attributed to the row just compared rather than to the
+row its update produces. Neither lane was careless; the conversion was invisible in the report
+and load-bearing in the conclusion. Prefer the measurement that compares in the recording's own
+coordinates, and when you cannot, say where the conversion is.
+
+**And a clean matrix and an unexercised change look identical from outside.** A round landing a
+one-line behavioural fix measured which it had: a constructor probe counted sixty spawns of the
+affected object in a single fixture, so the change is exercised heavily and the comparison still
+does not move — because those classes compare player and sidekick physics and no object identity,
+slot or position at all. It was written up as **"no observable effect on compared fields", not
+"no effect"**, and landed on ROM fidelity rather than on the strength of a green matrix.
+
+That distinction matters later: an inert-looking change cited as evidence of inertness is how a
+real regression gets attributed to something else months afterwards.

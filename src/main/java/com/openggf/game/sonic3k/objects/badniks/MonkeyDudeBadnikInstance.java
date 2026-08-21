@@ -145,6 +145,14 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
                 return;
             }
             armRootActivated = true;
+            // Obj_WaitOffscreen's release pass is loc_85B02: it restores the
+            // saved operation into (a0) and `rts` back to Process_Sprites
+            // (sonic3k.asm:180299-180301). It does NOT re-enter Obj_MonkeyDude,
+            // so the release frame runs no routine at all -- routine 0 is
+            // dispatched on the FOLLOWING frame. Returning here keeps that
+            // dispatch separate from the Init dispatch below; both frames exist
+            // in the ROM and both must be consumed.
+            return;
         }
 
         if (initPending) {
