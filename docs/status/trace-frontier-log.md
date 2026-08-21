@@ -109205,3 +109205,442 @@ Cluster 1 may share a cause with the queued splash-Y item: S1's `Sonic1SplashObj
 re-reads the water line every frame and cites `Spla_Display`, so its *position* is right; what
 differs is how long the object lives and how many exist. That is a different question from the
 S2/S3K snapshot issue and should not be assumed to be the same defect.
+## 2026-08-21 — the two-plus-one reading is DEAD: the engine's HCZ player exists 120 rows early and steps four times during the load
+
+Follow-up to the entry above, same lane. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s3k-handover-census`, based on `c28102846`.
+
+### First, a correction to the entry above
+
+That round reported the standalone `TestS3kSonicTailsHczSegmentTraceReplay` ran
+"under `-Ptrace-replay`". It ran, and its numbers are real, but the profile does
+not select it: `trace-replay` carries
+`<exclude>**/tests/trace/s3k/sonictails/*.java</exclude>`, and `-Dtest=`
+silently overrides profile selection. Briefing rule 98. The measurement stands;
+the coverage inference does not, and nobody should read that run as evidence
+that `trace-replay` exercises the `sonictails` package.
+
+### The kill condition ran, and it killed the reading
+
+The previous entry proposed that the engine's three-gravity-step lead was the
+two non-advancing `aiz_5` rows (7172, 7173) plus the uncovered movie frame
+53607, and wrote the falsifier: log the movie row of every gravity step the
+engine applies across the handover. A temporary probe in
+`AbstractRunChainTest.stepEngineFrame` (after `loop.step()`, printing the
+playback cursor, `vblaCounter` and the main playable's `y`/`y_sub`/`y_speed`;
+not landed) says:
+
+| movie row | engine state |
+|---|---|
+| 53410–53464 | AIZ2 (zone 0/1) player falling out of the act, `y` 0x1FD → 0x342 |
+| ~53465–53484 | destination level load |
+| **53485** | HCZ (zone 1/0) player **already exists**, `y` 0x0020, `y_speed` 0 |
+| **53487** | gravity step 1 — `y_speed` 0x38 |
+| **53559** | gravity step 2 — 0x70 |
+| **53608** | gravity step 3 — 0xA8 |
+| **53609** | gravity step 4 — 0xE0, and this is the state the comparator reads as segment 9 frame 0 |
+
+The engine steps on **none** of the three rows the reading named. It stands
+completely still on 53607, and on 7172/7173 (bk2 53604/53605) — `vblaCounter`
+advances on every row, physics on four of ~125. So the lead is not lag-row
+accounting, and the two-plus-one arithmetic in the entry above is a
+**coincidence**. Retracted.
+
+### What it actually is
+
+The ROM's destination player first appears on `aiz_5`'s final recorded row
+(bk2 53606, `y_speed` 0) and takes its first gravity step at `hcz` frame 0 —
+one step, `0x38`, which is the fixture's frame-0 row. The engine's destination
+player exists from about row **53485**, roughly 120 movie rows earlier, and is
+stepped four times before the comparison window opens.
+
+That is the ROM's own level-entry shape inverted. `AbstractRunChainTest`'s own
+gap doc states it: the ROM spends a level-advance gap inside the blocking
+`Level:` load path (docs/s2disasm/s2.asm:4757-4926), not in `Level_MainLoop`,
+and "the players do not even exist there until `InitPlayers`" (:4945). The
+engine suppresses the SOURCE level's body across that window, but the
+DESTINATION's players are alive inside it and their physics runs on a handful
+of its rows. The surplus is three steps because three of the four land before
+frame 0.
+
+Two things this also explains, which the position-only reading did not: the x
+axis is untouched because the recorded leftward air acceleration belongs to
+frames the ROM's player has not lived through yet, and the four steps are
+spread (53487, 53559, 53608, 53609) rather than consecutive, which no
+"N frames early" model produces.
+
+One caveat on row labels: the probe reads the playback cursor AFTER
+`loop.step()`, so every row index above may be one high. The step COUNT and the
+spacing are unaffected, and the substantive finding — four destination steps
+inside the load window, three of them before frame 0 — does not depend on the
+labelling.
+
+### The manifest census: a deliberate recorder decision, not a generation bug
+
+The previous entry flagged that no S3K transition carries `gap_admission_runs`
+and that all 22 zone-to-zone handovers have no transition record at all. Both
+are recorder-side and deliberate:
+
+- `S3KCompleteRunSegmenter.PushGiantRingTransition` documents it in as many
+  words — "plain level->level zone changes are boundaries with NO transition
+  record" — and the S3K segmenter pushes only `giant_ring`, `starpost_bonus`
+  and `stage_exit`.
+- `AttachGapAdmissionCensus` exists **only** in `S2RunCaptureRunner`; S1's and
+  S3K's runners have no equivalent. It run-length-encodes a `physicalLag` list
+  that is populated per frame *during emulation*, so it cannot be backfilled
+  from committed fixtures. Adding it to S3K is a **recording change** — new
+  captures of every affected run — not a code change, so per the commission
+  this thread stops here for a capture decision.
+
+It would not have fixed this segment in any case: `aiz_5` ends at bk2 53606 and
+`hcz` starts at 53608, so the gap between them is **one** movie row. A census
+over one row cannot account for four steps spread across 125 of them. The
+defect is on the engine side of the boundary, in which rows the destination
+level's players are alive and stepped.
+
+### Next
+
+The question is now narrow and engine-side: what keeps the destination
+players alive and occasionally stepping between the level load and the ROM's
+`InitPlayers`-equivalent, and why those particular rows. Nothing was fitted,
+nothing was landed in `src/`.
+
+## The clocks are exactly 1:1, the defeat row is correct, and the capsule's lead is intra-frame
+
+Measured at the comparator's own per-row point, reading the recorded counter and the engine's
+object-visible counter at the same instant so that no conversion is involved: across all 2,081
+compared rows of the segment — spanning the fight, the defeat, the capsule and the frontier —
+the difference between them takes **exactly one value, with zero exceptions**. The recording's
+own counter was already known to advance one per row. There is no drift, and the branch that
+supposed there might be is closed.
+
+**The withdrawn defeat row is withdrawn again, and for the right reason this time.** The
+conversion constant was correct all along; the attribution was not. A counter value was mapped
+to the row that had just been compared rather than to the row the update produces, and the
+interleaved stream shows the defeat write landing *after* the sample carrying its counter, so
+its effect is first visible on the recording's own defeat row. Engine and recording defeat on
+the same row. There is no defeat-detection defect, and the item routed to another lane on that
+basis should be dropped.
+
+**What remains is sharper and is recorded as a lead rather than a finding.** The wait length is
+correct — one hundred and eighty-four counter ticks, matching the ROM — and the detection row is
+correct, yet the capsule's initialisation prints *before* the sample carrying its counter while
+the defeat printed *after* the sample carrying its own. The two events sit on opposite sides of
+the comparator's sample point, so the same one hundred and eighty-four ticks span one row fewer.
+The proposed cause is an intra-frame position difference rather than a timing one: in the ROM
+both events happen inside the boss's own dispatch, while in the engine the defeat is detected in
+the player's touch scan, which runs at a different point in the frame from an object update.
+
+The lane states its own confidence: the two measurements are measured and it is confident in
+both, one of them against its own prior claim; the explanation of the third is one inference
+deep, on exactly the class of intra-frame reasoning where it has now been wrong twice, and it
+asks that the position be confirmed independently before anyone acts on it.
+
+**Effect on the causal chain:** its first link is replaced rather than removed. Not "the defeat
+is one frame early", which is dead, but "the defeat is detected in the wrong intra-frame
+position". The later links are untouched in shape, and the frontier-moving simulation remains a
+vehicle-level fact independent of the explanation.
+## 2026-08-21 — the aliveness is wrong and the suppression is not even running: the destination player is spawned live at the top of a load the ROM spends inert
+
+Third round of this lane. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s3k-handover-census`, based on `45756f882`. Probe reverted; nothing
+landed in `src/`.
+
+### The two decisions, separated
+
+The commission asked which of the two is wrong — the source-body suppression or
+the destination players' aliveness — since they may not both be. Measured
+answer: **the aliveness. The suppression is not wrong because it never runs.**
+
+A stack-dumping probe in `stepEngineFrame` reports
+`disposition=null` on **every** row of the handover window. There is no
+`TraceRunFrameDriver` installed on this path, so
+`TraceSessionLauncher.suppressesRunNativeLevelBody` — which requires
+`isRunFrameDriverActive()` — is false on every row, and the level body runs
+unsuppressed throughout. That follows from the manifest finding two entries
+above: with no transition record for 8 -> 9, `exit == null`, and
+`assertChainReplay` takes the **plain level->level** branch
+(`stepFrames` -> `prepareAcrossLevelBoundary` ->
+`admitPlainLevelBoundaryWhenReady`), which never opens a shared transition gap
+at all. Every gap-census, `SHARED_GAP` and `suppressedRowOwesVint` mechanism
+documented in that class is dormant here.
+
+The step call sites confirm the branch:
+
+| step row | driven from |
+|---|---|
+| 53485, 53487, 53559 | `stepFrames:3954` <- `assertChainReplay:1291` — segment 8's OWN recorded rows |
+| 53608 | `admitPlainLevelBoundaryWhenReady:3928` <- `assertChainReplay:1357` |
+| 53609+ | `awaitBoundary` <- `assertChainReplay:1864` — segment 9's own walk |
+
+Three of the four surplus steps are driven while segment 8 is still consuming
+its own recorded frames, which is why segment 8 reports HCZ state at its row
+7126.
+
+### Why those particular rows: they are the load's stage boundaries
+
+`mode` is `LEVEL` on every row of the window — the title-card theory is dead
+too; the mode never leaves `LEVEL`. Yet the player's `y_speed` changes on four
+rows out of ~125. Lining the engine's rows up against the ROM's own `aiz_5`
+tail (row + 46432 = bk2) settles what those rows are:
+
+| ROM | what the ROM has | engine | what the engine does |
+|---|---|---|---|
+| 7054 / bk2 53486 | level RAM cleared: `player_x` 0, routine 0, status 0, `sidekick_present` 0 | 53485 | HCZ player **exists**, `y` 0x0020, `y_speed` 0 |
+| — | — | **53487** | physics step 1 (`y_speed` 0x38) |
+| 7126 / bk2 53558 | `player_x` 0x0280, `y` 0x0020 seeded, but routine 0, status 0, air 0, anim 0 — **inert** | **53559** | physics step 2 (0x70) |
+| 7174 / bk2 53606 | player becomes **live**: status 0x02, air 1, anim 0x1B, sidekick present — `y_speed` still 0 | **53608** | physics step 3 (0xA8) |
+| `hcz` frame 0 / bk2 53608 | first and only physics step, `y_speed` 0 -> 0x38 | 53609 | physics step 4 (0xE0) — read as frame 0 |
+
+The engine's four steps land one to two rows after each of the ROM's three load
+milestones plus one at frame 0. The 72-row and 48-row waits between them are
+present in both. **The engine's load timing is right.** What differs is the
+object's state during the load: the ROM's player is inert through the whole
+window and runs physics exactly once, at frame 0; the engine's is live from the
+first milestone and runs physics on every row the load unblocks.
+
+This is the ROM's own shape and the engine already names it —
+`AbstractLevelInitProfile.spawnPlayerStep` is documented as
+"S2: InitPlayers, S3K: SpawnLevelMainSprites_SpawnPlayers", the ROM's LAST load
+phase. The destination player is nonetheless present and steppable from the
+load's first milestone, ~120 rows earlier. That is where the next round starts.
+
+### The fingerprint any candidate must match
+
+Not "fewer errors" and not "the frontier moved". A correct fix removes the steps
+at **53487, 53559 and 53608** and leaves exactly one, at the destination's frame
+0. A candidate that changes the count without matching that pattern is wrong
+even if the count improves. Re-run the probe, do not read the frontier.
+
+Nothing was fitted. Nothing was landed.
+
+## 2026-08-21 — BossExplosion is not one-way and is not its own defect: it is Eggrobo, and it is convert-in-place
+
+Worktree `<wt>/s2-bossexplosion`, branch `bugfix/ai-s2-boss-explosion-occupancy`, on
+`cae3ede3c`. Measured with the same probe and corpus as the occupancy summary — 94 reports:
+
+```
+OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_OUT=<dir> \
+mvn -Dmse=off -Ptrace-replay -Dsonic2.rom.path=<repo>/s2.gen test
+```
+
+**Nothing landed but the summary update and this entry.** The state page
+[object-occupancy-frontier.md](object-occupancy-frontier.md) carries the numbers; this is the
+narrative.
+
+**Reservation check first, as commissioned: negative.** Zero `RESERVED`/`UNATTRIB` lines on any
+S2 divergent frame carrying `0x58`. Not a correct fold, unlike BRIDGE and CPZStaircase.
+
+**Both directions, metric #3: 1,336 short / 35 over** across the same 6 fixtures the summary
+names. The summary's 1,725/17 is the same shape from a differently-netted pass; the difference
+does not change any conclusion, and the 6-fixture set is identical.
+
+**Three things the one-way classification got wrong.**
+
+1. **961 of the 2,297 raw `rom=0x58` lines are relocation** — an `eng=0x58` exists on the same
+   frame at another slot. A per-slot reading overstates the shortfall by 42% before anything
+   else is considered.
+2. **The engine does make them.** In the episode that carries 99.4% of the deficit it holds a
+   `BossExplosion` on 149 of 173 frames. "The engine never makes them" is false for this object.
+3. **The deficit is one event, not a rate.** 1,077 of the DEZ 1,084 is a single contiguous
+   173-frame episode, f7649-7887, peaking at 28 ROM explosions against 0 engine. Sustained over
+   173 consecutive frames, so the sampling-phase alternative is ruled out for this object —
+   which the summary asks be established per object before treating a divergence as a defect.
+
+**And the finding that matters: `0x58` and `0xC7` are the same defect.** Where the ROM has
+`0x58` the engine holds `0xC7` on **511** lines; where the engine holds `0xC7` and the ROM does
+not, the ROM holds `0x58` on **511** lines and anything else on 31. The same slots, counted
+twice under two names, in two different tables of the summary — one as the largest *one-way*
+target, the other as a *two-way* one. `0x5D` adds 135 and `0xAF` 28 in the same shape.
+
+**Mechanism: convert-in-place.** The ROM rewrites the id of the live object rather than
+deleting and respawning — `ObjC5_PlatformExplode` is
+`move.b #ObjID_BossExplosion,id(a0)` (`s2.asm:81762`), and `Obj5D_Main_Explode2` and
+`loc_3DFBA` inside `ObjC7` are the same shape. The engine leaves the object under its original
+id, which reads simultaneously as a BossExplosion shortfall and an Eggrobo over-count.
+
+That is **the same capability CANNONBALL is already parked on**, so this target is blocked on
+the same design note rather than being independent work. About 29% of the raw shortfall is the
+conversion; the 70.6% `eng=-` remainder is a genuinely separate question and is the only part
+still worth its own round.
+
+**A trap for the next ranking.** Grouping by raw recorded id mixes games: `0x58` also appears in
+S1 and S3K fixtures — 3,410 raw short lines across 17 fixtures if unfiltered — but `0x58` is
+BossExplosion only in S2 (`ObjPtr_BossExplosion: dc.l Obj58`, `s2.asm:30004`). Filtering to S2
+is what reproduces the summary's own 6-fixture count, so the filter is load-bearing and not a
+detail.
+## 2026-08-21 — PARKED: the engine's level entry is atomic where the ROM's is spread across the load, so there is nothing ROM-owned to gate on
+
+Fourth round of this lane, commissioned as the fix round. Worktree
+`wt/s3k-hcz-seg9`, branch `bugfix/ai-s3k-handover-census`, based on
+`234fdd6e3`. **No candidate landed, and none is proposed.** Probes reverted;
+`src/` is untouched.
+
+### The prediction, stated before measuring
+
+A correct fix removes the steps at 53487, 53559 and 53608, leaves exactly one at
+the destination's frame 0, and collapses segment 9's six frame-0 field
+divergences to zero. It was never tested, because no candidate survived the
+"model the ROM, do not gate the symptom" bar. Why is below.
+
+### What actually runs on those rows
+
+A counter on `LevelFrameStep.execute` plus a stack dump says it exactly. Across
+the whole ~125-row handover window the level body runs on **four** rows and no
+others, every one of them an `ORDINARY_LEVEL` phase reached through
+`GameLoop.step` -> `LevelIterationAdmissionController.runTraceObservedStep` ->
+`TraceSessionLauncher.runProductionIterationIfActive` ->
+`PlcFrameLifecycleCoordinator.runLogicalIteration` -> `stepInternalBody` ->
+`updateLevelMode:1752`.
+
+This also resolves the +/-1 the previous entry flagged: the earlier probe read
+the cursor AFTER the step, so its row labels were one high. In true cursor
+terms the body rows are **53486, 53558, 53607 and 53608**, and the ROM's own
+milestones are 53486 (level RAM cleared), 53558 (position seeded, object still
+inert), 53606 (player becomes live) and 53608 (`hcz` frame 0, first physics
+step). The engine runs a full ordinary level iteration on the ROM's load
+milestones. The ROM runs `Level_MainLoop` **zero** times there.
+
+So the previous entry's framing needs one refinement: it is not that a live
+player is being stepped by something. The entire destination level main loop
+runs three times inside the load. The player's three surplus gravity steps are
+that loop's visible output.
+
+### Why no candidate is proposed
+
+The ROM-owned rule is available and unambiguous: `Level_MainLoop` is not
+entered until the level entry sequence completes (s2.asm:4757-4926 then :5092;
+S3K's `LevelLoop` after `Load_Sprites`/`Process_Sprites`,
+sonic3k.asm:7849-7906). The engine already asserts exactly this rule — in
+`TraceSessionLauncher.suppressesRunNativeLevelBody` — but that predicate
+requires `isRunFrameDriverActive()`, so it is keyed on *a replay driver being
+installed*, which is not a ROM fact and is false on this path.
+
+The obvious repair is to gate the ordinary body on a ROM-owned "entry sequence
+not yet complete" instead. **There is no such state to read**, and the reason is
+structural:
+
+- `LevelManager` (:387-399) executes the whole `LevelInitProfile` in one
+  synchronous `for (InitStep step : steps) { step.execute(); }` inside a single
+  load call. Every phase runs at once, `spawnPlayerStep` — documented as
+  "S2: InitPlayers, S3K: SpawnLevelMainSprites_SpawnPlayers", the ROM's LAST
+  entry phase — included.
+- Measurement agrees: the destination player is present, positioned at
+  `0x0280/0x0020` and steppable at the **first** milestone (53486), the row the
+  ROM spends clearing level RAM with `player_x` 0, routine 0 and status 0.
+- The 72-row and 48-row waits that follow are the art/Kosinski queue, not level
+  init. By the engine's own model the level entry is COMPLETE at 53486; by the
+  ROM's it is not complete until 53606.
+
+So a predicate reading "is the entry sequence still in progress" has nothing
+truthful to return: the engine's entry is atomic, the ROM's is spread across
+~120 frames with three observable milestones. Anything that suppresses the body
+across that window would be a new flag asserting a load stage the engine does
+not model — invented state, not ported state, and precisely what this round was
+told not to do.
+
+**That is a capability gap and a design question, not a fix**: the engine has no
+notion of a partially-completed level entry, and therefore none of a seeded but
+inert player. Closing it means staging `LevelInitProfile` across the load to the
+ROM's own phase boundaries, for all three games and every load. Parked for a
+design round rather than patched.
+
+### On the matrix
+
+None was run, and none is owed: nothing in `src/` changed, so both arms would be
+identical by construction. Worth restating from the commission, because it
+outlives this round — no other trace class would catch a regression in this
+area, since every one of them begins at frame 0 after a completed load. When a
+staged-entry change is eventually attempted, the suite cannot protect it and the
+probe fingerprint above is the only real gate.
+
+## 2026-08-21 — S2 complete-emerald chain: twelve axes ranked, and three of them look like one origin in ARZ1
+
+Characterisation round, no target picked. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s2-chain-frontier`, based on `24dfd0171`. Nothing changed in `src/`.
+
+Command:
+`mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsonic2.rom.path=<s2.gen> -Dtest=TestS2CompleteEmeraldRunChain test`.
+Result: 1 test, 1 failure, **12 axes**.
+
+### Where the run stops
+
+The manifest has **35 segments** (`seg1_ehz1` .. `seg28_dez1`). The chain reaches
+segment **19** (`seg13_arz2`) and dies there, so segments 20-34 — all of CNZ,
+HTZ, MCZ, OOZ, MTZ, SCZ, WFZ and DEZ — are not characterised at all by this run.
+Unblocking segment 19 is worth more than any error count in the table below.
+
+### Mass by segment, from the per-segment reports
+
+Ten of the thirteen level segments that run are **completely green**: segments
+0, 2, 4, 6, 7, 9, 11, 12, 13, 16 all report `errorCount` 0. All the physics mass
+is in three:
+
+| segment | dir | errors | physics | anim | complete | first non-camera mismatch |
+|---:|---|---:|---:|---:|---|---|
+| 19 | `seg13_arz2` | **62616** | 58657 | 3959 | **false** | frame 344 `x` rom `0x03E7` engine `0x03E4` |
+| 18 | `seg12_arz1` | 12580 | 11658 | 922 | true | frame 4019 `x_sub` rom `0x7100` engine `0xB900` |
+| 15 | `seg10_cpz2` | 2122 | 2084 | 38 | true | frame 2252 `air` rom 1 engine 0 |
+
+Segment 19's report is from an **aborted** segment (`complete: false`) — the
+walk-failure axis is `segment 19 lost production ownership before source closure
+(mode=TITLE_CARD, level=LevelIdentity[loadGeneration=15, progressionZone=2,
+romZone=15, act=1], BK2 cursor=109135)`. Cursor 109135 is row ~2382 of that
+segment's 6409, so its 62,616 errors cover a third of the segment and are not
+comparable with a completed segment's count.
+
+### The nine dynamic-art-gap axes are not nine problems
+
+74 field errors across nine gaps, and eight of the nine are the same shape:
+
+| gap | fields | shape |
+|---|---:|---|
+| `seg4_ehz1 -> seg5_ehz2` | 4 | `movie_logical_frame` delta 1 |
+| `ss_4 -> seg6_ehz2` | 2 | `movie_logical_frame` delta 1 |
+| `ss_5 -> seg7_ehz2` | 2 | `movie_logical_frame` delta 1 |
+| `seg7_ehz2 -> seg8_cpz1` | 4 | `movie_logical_frame` delta 1 |
+| `seg8_cpz1 -> seg9_cpz2` | 4 | `movie_logical_frame` delta 1 |
+| `ss_6 -> seg10_cpz2` | 8 | `movie_logical_frame` delta 1, 2, 8, 20, 21 |
+| `seg10_cpz2 -> seg11_arz1` | 4 | `movie_logical_frame` delta 1 |
+| `ss_7 -> seg12_arz1` | 4 | `movie_logical_frame` delta 1, 2 |
+| **`seg12_arz1 -> seg13_arz2`** | **42** | `edge_ordinal` delta 16, `transfer_id` delta 8, ledger fingerprints, `movie_logical_frame` delta 1 |
+
+Eight gaps are a one-row stamp phase on `movie_logical_frame` and nothing else —
+one candidate cause, not eight. `ss_6 -> seg10_cpz2` is the same field with
+larger deltas. The ninth is a different animal entirely and is the interesting
+one.
+
+### Origin checks, which change the ranking
+
+- **Segment 15 (`seg10_cpz2`) is self-contained.** It ends diverged
+  (`sidekick_x_sub` off by `0x1000` at its last rows) but segment 16
+  (`seg11_arz1`) that follows it is completely green. Its 2,122 errors
+  propagate nowhere.
+- **Segment 18 (`seg12_arz1`) hands over diverged.** Its final row 4888 still
+  carries `y_sub`, `sidekick_y_sub` AND `dynamic_art.edge[0].transfer_id`
+  4531 vs 4523 (-8) with `edge_ordinal` 9063 vs 9047 (-16).
+- **The `seg12_arz1 -> seg13_arz2` gap reports the same -8 / -16.** Same
+  boundary, same deficit.
+- **Segment 19 then dies with `dynamic_art` edges absent** — its last mismatches
+  at row 2381 are `dynamic_art.edge[1].present` and `edge[2].present` true vs
+  false, and a `vram_destination` / `source_tile_index` mismatch on edge 0.
+
+So segment 18's physics divergence, the 42-field ARZ1->ARZ2 gap, and segment
+19's abort are **three of the twelve axes sitting on one boundary with one
+consistent deficit** — the engine having produced fewer art transfers than the
+recording by the end of ARZ1. That is a hypothesis about a shared origin, not a
+demonstration; what has been shown is that the same -8/-16 appears in all three
+reports at the same boundary.
+
+Segment 19's own first mismatch is at frame **344**, not frame 0, so its
+position state did not arrive broken — which argues the carried quantity is the
+art pipeline rather than physics.
+
+### Ranked, for the target decision
+
+1. **Segment 18/19 and the ARZ1->ARZ2 gap as one target.** Three axes, the chain
+   stopper, and 16 uncharacterised segments behind it.
+2. **The eight one-row `movie_logical_frame` gaps.** Eight axes, 32 fields, one
+   likely cause, but no gameplay consequence proven.
+3. **Segment 15 (`seg10_cpz2`).** 2,122 errors, self-contained, propagates
+   nowhere. Real, and the cheapest to work in isolation.

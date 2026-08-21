@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and one rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and two rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -118,6 +118,7 @@ that looks like a real result.
 | 99 | A `jmp` target read as a one-line helper | A fall-through past an end-of-function banner, hiding the write everyone was hunting |
 | 100 | A directory sized by grepping one idiom's name | Five idioms, one greppable; the correct group understated by half |
 | 101 | A clock conversion calibrated at one point | A one-row error in a nine-link causal chain, invisible and load-bearing |
+| 102 | A cross-game ranking grouped by raw object id | Two names for one defect, in two tables, as both a shortfall and an over-count |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2625,3 +2626,27 @@ are using it over**, not at one point — and say in the report where it was val
 measured as a difference of counter values was being compared against a ROM wait measured in
 rows; those are the same number only if the two clocks run one to one, which was the assumption
 under dispute. A drift between them would displace two downstream events by different amounts.
+
+## One hundred and second rule: a recorded object id is not a global identifier
+
+Object ids are per-game. Grouping a cross-game measurement by raw recorded id silently merges
+different objects: one id ranked as the largest remaining target showed three and a half
+thousand short lines across seventeen fixtures until it was filtered to the game where that id
+actually names that object, which reproduced the six-fixture count the summary already carried.
+The filter is load-bearing, not a detail.
+
+**And the same slots can appear twice under two names.** In that measurement, the lines where
+the recording holds one id and the engine holds another number **exactly** as many as the lines
+where the engine holds the second id and the recording does not — five hundred and eleven each
+way. One defect, counted once as a shortfall of the first object and once as an over-count of
+the second, sitting in two different tables of the same summary as a one-way target and a
+two-way target.
+
+**The tell is symmetry.** When a shortfall in one type and an over-count in another match to the
+row, suspect a single object being misidentified rather than two populations being mismanaged —
+here the ROM rewrites a live object's id in place while the engine leaves it under its original
+id, so it reads as both at once.
+
+**Practically.** Filter to the game before ranking; cross-tabulate the top shortfalls against the
+top over-counts before commissioning either; and treat an exact match between two such counts as
+a single finding until shown otherwise.
