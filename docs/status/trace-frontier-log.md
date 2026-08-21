@@ -111906,7 +111906,6 @@ waiting for a mode change that never settles.
 **Chain position, restated again:** the run stops at transition **1 of 48**, having completed
 segments 0 and 1 of 70. This is *not* comparable to the older "segment 9 of 63" -- that was a
 different and shorter fixture -- so it should not be read as a regression against it.
-<<<<<<< HEAD
 ### Addendum — the survey is now exhaustive: no routine in s2.asm writes the PLAYER's anim_frame outside Sonic_Animate
 
 Every remaining `anim_frame` writer in the file, mapped to its enclosing
@@ -112090,7 +112089,6 @@ checked so far (s2.asm:49065, an `AllocateObjectAfterCurrent` clone, and
 `Obj55_Wave` at 68983) are other objects' own SSTs.
 
 Nothing fitted; the three-entry offset stays ruled out.
-=======
 
 ## 2026-08-21 -- RETRACTED: 22243 is not a touch-categorisation defect
 
@@ -112142,4 +112140,3 @@ today, against a stream nothing currently compares.
 
 **Acceptance is unchanged and still sharp**: HCZ1 stays at 0 and the first error moves past
 22243. Nothing landed for TurboSpiker.
->>>>>>> bugfix/ai-routine-install-land
