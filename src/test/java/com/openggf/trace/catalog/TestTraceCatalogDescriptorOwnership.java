@@ -1,18 +1,47 @@
 package com.openggf.trace.catalog;
 
 import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
 
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mockStatic;
 
 class TestTraceCatalogDescriptorOwnership {
+
+    @Test
+    void catalogValidationNeverCallsStaticEagerPlanner(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
+        TraceEntry entry = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .findFirst()
+                .orElseThrow();
+
+        try (MockedStatic<TraceRunReplayWalker> walker = mockStatic(
+                TraceRunReplayWalker.class, CALLS_REAL_METHODS)) {
+            walker.when(() -> TraceRunReplayWalker.plan(
+                            any(TraceRunManifest.class), any(Path.class)))
+                    .thenThrow(new AssertionError(
+                            "validation must not call static eager planner"));
+
+            TraceCatalog.RunLaunchValidation validation =
+                    TraceCatalog.validateRunLaunch(entry);
+
+            assertTrue(validation.launchable(), validation.diagnostic());
+        }
+    }
 
     @Test
     void catalogValidationPlansDescriptorsWithoutEagerReplayPayloads(
