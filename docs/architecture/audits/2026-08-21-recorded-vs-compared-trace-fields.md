@@ -74,6 +74,7 @@ identified by its content, with no dependence on row alignment or on any model o
 ordering. That is why it could settle a question two rounds of frame-ordering argument could
 not.
 
+<<<<<<< HEAD
 By that test the most promising unexamined candidates are `s2_tornado_state` (subsystem ROM
 state, directly analogous) and `object_state` (per-object SST fields at enormous volume, in
 the game with the most unfinished object work). `slot_dump` is occupancy, which the existing
@@ -85,6 +86,79 @@ oracle already covers by another route.
 2. `object_state` — largest payoff and largest cost; S3K object parity is the active frontier
    and this is per-object ROM state nothing checks.
 3. The reporting-only 14 — cheap to re-classify, since they are already parsed and surfaced.
+=======
+The per-stream verdicts below apply that test to all 22.
+
+## Per-stream verdict for the 22 uncompared streams
+
+**Basis and its limits.** Each verdict below comes from the stream's recorded field shape —
+one sampled row per stream across the fixture set — read against the ROM meaning of those
+fields. It is a first-pass triage meant to decide what to look at, not a substitute for
+looking. Cost is rated on the two things that actually make this work expensive: whether the
+engine already exposes the state, and whether the recorded row can be matched to an engine
+object without an identity mapping. Volume matters far less than either.
+
+### Oracles — ROM state the engine also computes, comparable byte for byte
+
+| stream | game | why it qualifies | cost |
+|---|---|---|---|
+| `s2_tornado_state` | s2 | one object's full SST: `x`, `y`, `y_sub`, `y_vel`, `routine`, `routine_secondary`, `status_byte`, `objoff_2E..31`. Single known slot, so no identity mapping. | **low** — the closest analogue to the CNZ block and the obvious first one |
+| `v_oscillate` | s1 | the ROM's `Oscillating_Data` table as raw bytes; the engine computes the same table | **low** — one array compare, no identity mapping |
+| `oscillation_state` | s3k | same quantity for S3K, plus `level_frame_counter` | **low** |
+| `camera_boundary` | s1 | `limitbtm1/2`, `lookshift`, `bgscrollvert` — camera boundary RAM the engine models directly | **low** |
+| `control_lock_state` | s3k | `ctrl1/2_locked` and `ctrl1/2_logical`, i.e. `Ctrl_1_Logical` and its lock | **low** |
+| `v_objstate` | s1 | the object respawn/state table as raw bytes | **low–medium** — engine equivalent needs locating |
+| `s1_obj64_state` | s1 | LZ bubble-maker SST including the `objoff_32..38` fields that gate production timing | **medium** — per-slot, needs the object identified |
+| `air_countdown_state` | s3k | the drowning countdown object's SST plus its owner | **medium** — per-slot |
+| `interact_state` | s3k | `interact`, `interact_slot`, `status`, `status_secondary`, `object_control` for the player | **medium** — `interact_slot` needs the slot mapping |
+| `sidekick_interact_object` | s3k | the same for the sidekick, plus render flags, invulnerability timer and dimensions | **medium** |
+| `game_paused_state` | s3k | `game_paused`, one ROM flag | **low**, but thin — an oracle for pause parity only |
+| `object_state` | s3k | per-object SST — `object_code`, `routine`, `status`, `subtype`, `x`, `y`, radii | **high** — the identity problem is the whole cost: engine slots must be matched to ROM slots before any byte can be compared, which is exactly what `ObjectOccupancyOracle` already wrestles with. Largest payoff, largest cost. |
+
+### Already covered by another route
+
+| stream | why not |
+|---|---|
+| `slot_dump` | slot-to-type occupancy — `ObjectOccupancyOracle` already covers this content |
+| `object_appeared`, `object_removed` | occupancy edges, consumed by the same oracle |
+| `mode_change` | edge events on fields (`air`, …) that the physics comparison already checks per frame |
+| `state_snapshot` | player `routine`, `status_byte`, radii, `anim_id` — largely duplicates `physics.csv` columns already compared |
+
+### Telemetry — describes the recording, not the ROM
+
+| stream | why |
+|---|---|
+| `lag_state` | `lagged` / `lagcount` are emulator-side facts about the capture; already consumed to classify rows |
+| `cursor_state` | carries raw ROM addresses (`fwd_ptr`, `bwd_ptr`) the engine does not model as pointers; not comparable byte for byte |
+| `player_mode_set` | a setup value, not per-frame ROM state |
+| `zone_act_state` | mixed: `actual_zone_id` vs `engine_zone_id` is explicitly a recorder-to-engine mapping, and the stream already drives replay logic rather than comparison |
+| `routine_change` | a derived edge event; its underlying `routine` is compared per frame already |
+
+**Summary: 12 oracles, 5 already covered, 5 telemetry.** Of the 12, four are low-cost with no
+identity mapping (`s2_tornado_state`, `v_oscillate`, `oscillation_state`, `camera_boundary`)
+and one — `object_state` — is where the real value and the real difficulty both sit.
+
+## What the missing comparison cost, before it existed
+
+Stated plainly, because it is the argument for doing any of the above: **the CNZ slot
+comparison would have named the site on its first run, and its absence cost three rounds and
+two rejected candidates.** A tick-ownership reorder was built and measured (19,603 and 29,397
+errors), a tick-plus-seed pair was built and measured (39 classes newly red across three
+games), and a placement move was built and measured (22,879 errors) — all to answer a question
+about which frame the ROM's `SlotMachine` reads its counter on. The recording had the answer
+on every row the whole time.
+
+## Suggested order, if anyone acts on this
+
+1. `s2_tornado_state` — the closest analogue to the case that motivated the audit, one known
+   slot, no identity mapping. If the approach is going to be validated anywhere, here.
+2. The three other no-mapping oracles — `v_oscillate`, `oscillation_state`, `camera_boundary`.
+   Cheap, and they cover S1 and S3K rather than piling more coverage onto S2.
+3. `object_state` — largest payoff and largest cost; S3K object parity is the active frontier
+   and this is per-object ROM state nothing checks. Needs the engine-slot-to-ROM-slot mapping
+   solved first, which is a piece of work in its own right and should not be attempted as part
+   of wiring a comparison.
+>>>>>>> 10256be7c
 
 Wiring one in is not free: switching on the CNZ comparison immediately turned two green
 release-scope classes red by exposing 767 pre-existing divergences. That is the expected
