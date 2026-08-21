@@ -93,6 +93,31 @@ class TestSmpsGlobalSfxPriority {
     }
 
     @Test
+    void s1ClearsPriorityBeforeSavingTheOneUpState() {
+        SmpsDriver driver = driverWithLatchedSfx(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .CLEAR_BEFORE_SAVE);
+
+        driver.stopAllSfxForMusicOverride();
+
+        assertEquals(0, driver.captureSnapshot().sfxPriorityLatch());
+    }
+
+    @Test
+    void s2RetailBugRestoresThePriorityCapturedBeforeOneUp() {
+        SmpsDriver driver = driverWithLatchedSfx(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .PRESERVE_SAVED_LATCH);
+
+        driver.stopAllSfxForMusicOverride();
+
+        assertEquals(0x70, driver.captureSnapshot().sfxPriorityLatch(),
+                "FixDriverBugs=0 clears the live latch after the backup");
+        assertFalse(driver.evaluateSfxRequest(
+                0xA1, 0x60, false, false).accepted());
+    }
+
+    @Test
     void admissionRollbackAndStaleProofPreserveTheLatchAtomically() {
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer preparedLow = sfx(driver, 0xA0, 0x60,
@@ -182,6 +207,24 @@ class TestSmpsGlobalSfxPriority {
                         .build());
         sequencer.setSfxPriority(priority);
         return sequencer;
+    }
+
+    private static SmpsDriver driverWithLatchedSfx(
+            SmpsSequencerConfig.MusicOverridePriorityPolicy policy) {
+        SmpsDriver driver = new SmpsDriver();
+        MinimalData musicData = new MinimalData();
+        musicData.setId(0x81);
+        driver.addSequencer(new SmpsSequencer(
+                musicData, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                        .sfxPriorityPolicy(
+                                SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
+                        .musicOverridePriorityPolicy(policy)
+                        .build()), false);
+        driver.addSequencer(sfx(driver, 0xA0, 0x70,
+                SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH), true);
+        assertEquals(0x70, driver.captureSnapshot().sfxPriorityLatch());
+        return driver;
     }
 
     private static SmpsSequencer.Track track() {

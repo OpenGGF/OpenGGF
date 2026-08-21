@@ -538,10 +538,7 @@ class TestAudioVoiceRegistry {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
         original.apply(raw(longSample(13, 0, "raw")));
-        SmpsCompositeVoice music = composite(10, 0x81, new SmpsDriver());
-        original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x81, AudioSourceDescriptor.baseMusic(0x81), music)));
-        original.apply(new PushMusicOverride(music(11, 0x82, "override")));
+        original.apply(new ReplaceMusic(music(11, 0x81, "music")));
         original.apply(new AddSmpsSfx(source(12, 0xB0)));
         original.apply(start(longSample(14, 1, "sample")));
         AudioPresentationSnapshot snapshot = original.snapshot();
@@ -551,8 +548,8 @@ class TestAudioVoiceRegistry {
         restored.restore(snapshot, resolver);
 
         assertEquals(List.of(11L, 12L, 13L, 14L), orderedIds(restored));
-        assertEquals(1, restored.snapshot().overrideStack().size());
-        assertEquals(2, resolver.recreatedSmps);
+        assertEquals(0, restored.snapshot().overrideStack().size());
+        assertEquals(1, resolver.recreatedSmps);
         assertEquals(MAX_STEREO_FRAMES, resolver.lastMaxStereoFrames);
     }
 
@@ -1415,7 +1412,10 @@ class TestAudioVoiceRegistry {
         SmpsDriver base = musicDriver(new SmpsSequencerConfig.Builder()
                 .musicOverrideRestorePolicy(
                         SmpsSequencerConfig.MusicOverrideRestorePolicy
-                                .FM_FADE_IN)
+                                .DRIVER_FADE_IN)
+                .musicOverrideSfxReleasePolicy(
+                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
+                                .ON_RESTORE)
                 .fadeInSteps(0x40)
                 .fadeInDelay(2)
                 .build());
@@ -1440,14 +1440,59 @@ class TestAudioVoiceRegistry {
 
         assertFalse(oneUp.firstMusicSequencer().isSpeedShoes());
         assertEquals(1, oneUp.firstMusicSequencer().getSpeedMultiplier());
+        assertTrue(registry.snapshot().sfxBlocked());
 
         registry.apply(new RestoreMusicOverride());
 
+        assertFalse(registry.snapshot().sfxBlocked());
         assertTrue(base.firstMusicSequencer().isSpeedShoes());
         assertEquals(8, base.firstMusicSequencer().getSpeedMultiplier());
         assertTrue(base.firstMusicSequencer().captureSnapshot().fade().active());
         assertEquals(0x40,
                 base.firstMusicSequencer().captureSnapshot().fade().steps());
+    }
+
+    @Test
+    void oneUpStopsAndBlocksSfxUntilTheConfiguredRestoreBoundary() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        List<String> warnings = new ArrayList<>();
+        AudioVoiceRegistry registry = registry(instantiation, warnings);
+        SmpsDriver base = musicDriver(new SmpsSequencerConfig.Builder()
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
+                .musicOverrideSfxReleasePolicy(
+                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
+                                .AFTER_FADE_IN)
+                .fadeInSteps(1)
+                .fadeInDelay(0)
+                .build());
+        SmpsDriver oneUp = musicDriver(new SmpsSequencerConfig.Builder()
+                .build());
+        instantiation.enqueueMusicDriver(base);
+        instantiation.enqueueMusicDriver(oneUp);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, base))));
+        registry.apply(start(longSample(3, 1, "before-one-up")));
+
+        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(2, 0x82, oneUp))));
+
+        assertTrue(registry.snapshot().sfxBlocked());
+        assertTrue(registry.snapshot().voices().stream().noneMatch(
+                PresentationVoiceSnapshot.Sample.class::isInstance));
+        registry.apply(start(longSample(4, 1, "blocked-during-one-up")));
+        assertTrue(registry.snapshot().voices().stream().noneMatch(
+                PresentationVoiceSnapshot.Sample.class::isInstance));
+
+        registry.apply(new RestoreMusicOverride());
+        assertTrue(registry.snapshot().sfxBlocked(),
+                "S1/S2 FadeInFlag continues blocking SFX");
+        base.firstMusicSequencer().repeatDriverService();
+        base.firstMusicSequencer().repeatDriverService();
+        assertFalse(registry.snapshot().sfxBlocked());
     }
 
     /**

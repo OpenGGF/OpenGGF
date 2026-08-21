@@ -69,6 +69,12 @@ public final class Sonic2SmpsSequencerConfig {
                 .psgSfxReleaseMode(
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
                 .fadeOutClearsSpeedShoes(true)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
+                .musicOverridePriorityPolicy(
+                        SmpsSequencerConfig.MusicOverridePriorityPolicy
+                                .PRESERVE_SAVED_LATCH)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .pausePolicy(SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD)
                 .build();

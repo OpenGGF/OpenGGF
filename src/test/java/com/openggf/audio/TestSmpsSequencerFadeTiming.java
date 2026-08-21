@@ -7,6 +7,7 @@ import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,30 @@ class TestSmpsSequencerFadeTiming {
     void sonic2KeepsSfxBlockedUntilRestoreFadeCompletes() {
         assertTrue(new Sonic2AudioProfile().blocksSfxDuringMusicRestoreFadeIn(),
                 "S2 gates SFX on 1upPlaying OR FadeInFlag");
+        assertEquals(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .PRESERVE_SAVED_LATCH,
+                Sonic2SmpsSequencerConfig.CONFIG
+                        .getMusicOverridePriorityPolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideRestorePolicy
+                        .DRIVER_FADE_IN,
+                Sonic2SmpsSequencerConfig.CONFIG
+                        .getMusicOverrideRestorePolicy());
+    }
+
+    @Test
+    void sonic1ClearsPriorityBeforeSaveAndRunsTheRestoreFade() {
+        assertEquals(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .CLEAR_BEFORE_SAVE,
+                Sonic1SmpsSequencerConfig.CONFIG
+                        .getMusicOverridePriorityPolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideRestorePolicy
+                        .DRIVER_FADE_IN,
+                Sonic1SmpsSequencerConfig.CONFIG
+                        .getMusicOverrideRestorePolicy());
     }
 
     @Test
@@ -77,7 +102,7 @@ class TestSmpsSequencerFadeTiming {
 
     @Test
     void s3kRestoreFadeAttenuatesFmButLeavesPsgVolumeUnchanged() {
-        assertEquals(SmpsSequencerConfig.MusicOverrideRestorePolicy.FM_FADE_IN,
+        assertEquals(SmpsSequencerConfig.MusicOverrideRestorePolicy.DRIVER_FADE_IN,
                 Sonic3kSmpsSequencerConfig.CONFIG
                         .getMusicOverrideRestorePolicy());
         assertEquals(SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY,

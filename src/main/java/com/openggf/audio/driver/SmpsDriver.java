@@ -2065,6 +2065,30 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
     }
 
+    /** Stops 1-up-displaced SFX with the retail save-slot priority ordering. */
+    public void stopAllSfxForMusicOverride() {
+        SmpsSequencerConfig.MusicOverridePriorityPolicy policy;
+        int savedPriority;
+        synchronized (sequencersLock) {
+            SmpsSequencer music = firstMusicSequencer();
+            policy = music == null
+                    ? SmpsSequencerConfig.MusicOverridePriorityPolicy
+                            .CLEAR_BEFORE_SAVE
+                    : music.getConfig().getMusicOverridePriorityPolicy();
+            savedPriority = sfxPriorityLatch;
+        }
+        stopAllSfx();
+        if (policy == SmpsSequencerConfig.MusicOverridePriorityPolicy
+                .PRESERVE_SAVED_LATCH) {
+            synchronized (sequencersLock) {
+                // Sonic 2 FixDriverBugs=0 clears zSFXPriorityVal only after
+                // LDIR copied the old value into zTracksSaveStart. Restoring
+                // the song therefore restores that stale non-zero latch.
+                sfxPriorityLatch = savedPriority;
+            }
+        }
+    }
+
     @Override
     public int read(short[] buffer) {
         return read(buffer, buffer.length);

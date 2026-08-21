@@ -85,6 +85,9 @@ public final class Sonic1SmpsSequencerConfig {
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
                 .fadeOutClearsSpeedShoes(true)
                 .fadeOutStopsSfxImmediately(true)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
                 .pausePolicy(SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF)
                 .build();
     }

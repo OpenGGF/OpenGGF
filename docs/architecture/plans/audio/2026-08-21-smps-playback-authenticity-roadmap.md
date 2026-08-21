@@ -135,7 +135,11 @@ Driver-level pause now uses typed S1/S2/S3K chip-write and restore policies at
 the existing host pause boundary. Continuously clocked chip state, including
 an already-started DAC sample, advances during silent paused frames without a
 driver VInt. The remaining shipped S1/S2 1-up
-restoration bugs remain in this phase; S3K's intentionally invalid
+SFX lifecycle is now modeled as well: both drivers stop and block effects
+during the jingle, S1 clears its priority latch before saving, and S2 preserves
+the shipped stale-latch restore bug. SFX admission resumes at each driver's
+actual boundary (after fade-in for S1/S2, immediately on restore for S3K).
+The remaining shipped S1 DAC/FM6 restore bug remains in this phase; S3K's intentionally invalid
 `fix_sndbugs=0` resume-memory overrun remains a separately bounded follow-up.
 
 ### Phase 4 — SMPS bytecode and envelope quirks

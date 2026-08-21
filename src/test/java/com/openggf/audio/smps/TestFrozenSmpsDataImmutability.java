@@ -63,6 +63,14 @@ class TestFrozenSmpsDataImmutability {
                 new SmpsSequencerConfig.Builder()
                         .pausePolicy(SmpsSequencerConfig.PausePolicy
                                 .S3K_FM1_TO_5)
+                        .musicOverridePriorityPolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverridePriorityPolicy
+                                        .PRESERVE_SAVED_LATCH)
+                        .musicOverrideSfxReleasePolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverrideSfxReleasePolicy
+                                        .ON_RESTORE)
                         .build(),
                 AudioSourceDescriptor.baseMusic(0x91), 32);
 
@@ -73,6 +81,15 @@ class TestFrozenSmpsDataImmutability {
         assertEquals(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5,
                 voice.driver().firstMusicSequencer().getConfig()
                         .getPausePolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverridePriorityPolicy
+                        .PRESERVE_SAVED_LATCH,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverridePriorityPolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverrideSfxReleasePolicy());
     }
 
     @Test

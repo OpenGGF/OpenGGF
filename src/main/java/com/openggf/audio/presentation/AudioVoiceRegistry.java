@@ -793,10 +793,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 published = true;
                 return;
             }
+            stopAllSfxForMusicOverride();
             if (activeMusic != null) {
                 overrideStack[overrideCount++] = activeMusic;
             }
             activeMusic = music;
+            sfxBlocked = true;
             noteVoiceId(music.voice());
             published = true;
         } catch (RuntimeException failure) {
@@ -828,9 +830,23 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                                 .getMusicOverrideRestorePolicy()
                                 == SmpsSequencerConfig
                                         .MusicOverrideRestorePolicy
-                                        .FM_FADE_IN) {
+                                .DRIVER_FADE_IN) {
+                    if (restoredMusic.getConfig()
+                            .getMusicOverrideSfxReleasePolicy()
+                            == SmpsSequencerConfig
+                                    .MusicOverrideSfxReleasePolicy
+                                    .AFTER_FADE_IN) {
+                        composite.driver().bindMusicFadeCompleteCallback(
+                                () -> sfxBlocked = false);
+                    } else {
+                        sfxBlocked = false;
+                    }
                     restoredMusic.triggerFadeIn();
+                } else {
+                    sfxBlocked = false;
                 }
+            } else {
+                sfxBlocked = false;
             }
             if (current != null) {
                 current.stop();
@@ -1339,12 +1355,20 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private void stopAllSfx() {
+        stopAllSfx(false);
+    }
+
+    private void stopAllSfxForMusicOverride() {
+        stopAllSfx(true);
+    }
+
+    private void stopAllSfx(boolean musicOverride) {
         PresentationVoice[] voices = allOwnedVoices();
         boolean stoppedRawPcm = rawPcm != null;
         mutateVoicesAtomically(() -> {
-            stopOwnedSfx(activeMusic);
+            stopOwnedSfx(activeMusic, musicOverride);
             for (int index = 0; index < overrideCount; index++) {
-                stopOwnedSfx(overrideStack[index]);
+                stopOwnedSfx(overrideStack[index], false);
             }
             if (standaloneSmps != null) {
                 standaloneSmps.driver().stopAllSfx();
@@ -1391,10 +1415,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return java.util.Arrays.copyOf(voices, count);
     }
 
-    private static void stopOwnedSfx(MusicSlot music) {
+    private static void stopOwnedSfx(
+            MusicSlot music, boolean musicOverride) {
         if (music != null
                 && music.voice() instanceof SmpsCompositeVoice composite) {
-            composite.driver().stopAllSfx();
+            if (musicOverride) {
+                composite.driver().stopAllSfxForMusicOverride();
+            } else {
+                composite.driver().stopAllSfx();
+            }
         }
     }
 

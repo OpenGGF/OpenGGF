@@ -12,6 +12,12 @@
   the PCM voice begins, and StopSEGA leaves the driver silent instead of
   restoring voices the retail `fix_sndbugs=0` path discarded.
 
+- **1-up jingles now use each retail driver's SFX gate and priority restore:**
+  all active effects stop when the jingle begins and new effects remain blocked
+  through the driver-owned restore boundary. Sonic 1 clears the saved priority;
+  Sonic 2 deliberately restores the stale latch from its shipped
+  `FixDriverBugs=0` backup; Sonic 3&K reopens SFX immediately on song restore.
+
 - **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
 
 - **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.

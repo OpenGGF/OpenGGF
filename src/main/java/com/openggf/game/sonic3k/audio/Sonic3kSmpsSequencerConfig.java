@@ -62,7 +62,10 @@ public final class Sonic3kSmpsSequencerConfig {
                                 .NORMAL_DURING_OVERRIDE)
                 .musicOverrideRestorePolicy(
                         SmpsSequencerConfig.MusicOverrideRestorePolicy
-                                .FM_FADE_IN)
+                                .DRIVER_FADE_IN)
+                .musicOverrideSfxReleasePolicy(
+                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
+                                .ON_RESTORE)
                 .fadeInChannelPolicy(
                         SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY)
                 .applyModOnNote(true)       // ModAlgo = Z80
