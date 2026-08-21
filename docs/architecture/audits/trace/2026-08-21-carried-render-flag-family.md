@@ -166,3 +166,29 @@ consumer is a countdown rather than a delete, and it was confirmed against three
 independent recorded quantities. But it does mean the family cannot be converted
 on the phase argument alone: each class needs its consumer scored against a
 recorded stream before its flag is moved, exactly as the delete was here.
+
+
+---
+
+## Resolved at `d8386e181`: the partner was the queue guard, not a delete-path offset
+
+The follow-up above predicted a second one-frame offset "between `setDestroyed`
+and the observable slot free". It is not there. Probing the bounds test at each
+delete showed every one failing by hundreds of pixels rather than by a marginal
+crossing, so the delete frame is decided by *how many passes a bubble survives*,
+not by which camera judged it.
+
+`refreshPostCameraRenderState` runs over `dynamicObjects` at step 7, including a
+bubble allocated during that same frame's object pass which has not executed yet.
+The ROM's `BuildSprites` only rewrites `render_flags` bit 7 for objects in the
+sprite queue, and `Obj24` reaches `DisplaySprite` only at `loc_1F988`
+(`s2.asm:45265-45267`) on a pass that survived the flag test -- so an unexecuted
+object keeps `Obj24_Init`'s `$84` (`:45209`). Without that guard the hook judged
+bubbles that had never drawn and killed every off-screen one a pass early.
+
+Publishing inside `update()` is wrong by one camera deform; the missing guard is
+wrong by one pass the other way; the two cancel. Landed together they reproduce
+the control's delete rows exactly and the level-select trace passes.
+`BubbleGeneratorObjectInstance` already carries the same guard as
+`romDisplayedLastPass` -- it was load-bearing there too, and it is the second
+half of any conversion in the remaining five.
