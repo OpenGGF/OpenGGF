@@ -113011,3 +113011,100 @@ A ground settle is the obvious shape (4px is a plausible floor snap, and the
 direction is down), but "obvious shape" is how the last two leads got their
 plausibility, and both were wrong. The next round should measure before
 explaining.
+
+## 2026-08-21 -- The window is empty: the ROM is already at 1220, and upstream reopens
+
+Branch `bugfix/ai-s3k-return-window-r5`, based on `develop` at `9acbae86d`.
+`-Dmse=off`, `target/surefire-reports` **and** `target/test-tmp` cleared (rule
+118), `Tests run: 1` confirmed for `TestS3kTailsFullChainRunChain` by name.
+
+### The ROM side, sampled from the recording rather than reasoned about
+
+`aiz_2` is the transition-1 destination segment (`bk2_frame_offset` 6221).
+Its metadata carries `start_x = 0x1BC8` (7112) and `start_y = 0x04C4` (**1220**),
+and its first recorded rows read:
+
+```
+row  player_y  player_x  y_speed  air  ground_mode  angle
+ 0    04C4      1BC8      0000      1       0         00
+ 1    04C4      1BC8      0038      1       0         00
+ 2    04C4      1BC8      0070      1       0         00
+ 3    04C4      1BC8      00A8      1       0         00
+ 4    04C5      1BC9      00E0      1       0         00
+ 5    04C6      1BC9      0118      1       0         00
+ ...
+13    04D5      1BD1      02D8      1       0         00
+```
+
+**There is no settle, and the obvious shape was wrong again.** The ROM player is
+`air = 1` throughout, starts at y_speed **0**, and accelerates downward by
+`0x38` per frame -- plain gravity from rest. It is not standing on a floor and it
+does not snap to one; it is placed in mid-air at 1220 and begins falling. The
+first three rows hold `04C4` while the sub-pixel accumulates, which is what a
+fresh placement followed by gravity looks like.
+
+The zero y_speed at the arm frame carries a second fact: the ROM player was
+**not** falling before coverage began either. Had it been moving during the
+title card, the arm frame would show a non-zero y_speed. It shows 0. So the ROM
+placed the player at 1220 and held it, exactly as the engine holds its own.
+
+### The engine side, same window
+
+Probe at the restore and for the 16 frames after it:
+
+```
+PROBE_RESTORE br.playerY=1216 playerCentreYAfterSet=1216
+PROBE_WIN mode=TITLE_CARD playerCentreY=1216 ySpeed=0     (x16)
+```
+
+The instrument fired -- 16 lines, exactly the window requested, which is the
+control that separates "nothing moved" from "the probe never ran". The engine
+restores 1216, holds 1216 at zero y-speed through the title card, and hands over
+at 1216. Its behaviour in the window is the *same shape* as the ROM's. It is
+simply 4px higher, from the first instant to the last.
+
+### What this means: the window is empty and upstream reopens
+
+Nothing moves the player by 4 inside the window, on either side. The ROM is
+already at 1220 at the restore; the engine is already at 1216. This is the third
+of the three cases the round was set up to distinguish, and it is the one that
+sends the question back upstream.
+
+The chain of established facts now reads:
+
+1. The ROM layout places the AIZ entry ring at raw Y word `0x4C0` = **1216**
+   (measured through `Sonic3kObjectPlacement` over the real ROM).
+2. `SSEntryFlash_Init` copies the parent ring's `y_pos` verbatim into the flash
+   (`sonic3k.asm:128353-128356`).
+3. `SSEntryFlash_GoSS` calls `Save_Level_Data2` with `a0` = the flash
+   (`sonic3k.asm:128392`), which stores `y_pos(a0)` into `Saved2_Y_pos`
+   (`sonic3k.asm:61739`).
+4. `loc_2D2C2` writes `Saved2_Y_pos` straight into `Player_1+y_pos`
+   (`sonic3k.asm:61800`).
+5. The ROM player is at **1220** from the first covered frame, at rest.
+
+Steps 1 and 5 disagree by 4 with no arithmetic anywhere between them. So the
+ROM's *runtime* ring `y_pos` must be 1220 while its *layout record* says 1216,
+and the +4 is applied somewhere between the layout record and the ring object's
+live position -- the one step in this chain that has never been read.
+
+### Named, and deliberately not modelled
+
+The unexamined step is the ROM's object loader: what `SetUp_ObjAttributesSlotted`
+and the `Load_Sprites` placement path do to `y_pos` between reading the 6-byte
+record and the object's first execution. `SSEntryRing_Init`
+(`sonic3k.asm:238-262 of the object, :128238-128262`) does not write `y_pos`, and
+neither does `SSEntryRing_Main`, so the adjustment is not in the ring's own code.
+
+That is a statement about the shared S3K object-placement path, not about one
+ring, and it would change where **every** S3K object sits. It is not something to
+model in a hurry at the end of a round. Six families are now eliminated -- art
+pipeline and title card, comparator, save/restore, object placement *as decoded*,
+release timing, and the return window itself.
+
+**A caution for the next round, in the same spirit as the one that just paid
+off.** "The loader adds 4" is now the obvious shape, and the last two obvious
+shapes were both wrong. It is equally possible that the engine's ring is right
+and the ROM's ring is genuinely elsewhere for a reason not yet visible -- a
+different layout list for the return leg, or a respawn-table entry overriding the
+placement. Read the loader before believing the offset.
