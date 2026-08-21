@@ -107352,3 +107352,82 @@ where the bound sits. Both halves are true, and fixing the bound would be wrong.
 **Untouched by this round, as briefed:** the descent constants, the press predicate, the
 trigger box, the art selection, the sidekick follow-delay family, the post-defeat wait. The
 figures 63, 66 and 184 were not used as inputs.
+
+## 2026-08-21 — rings: phase ruled out, and the head-of-bucket ranking was wrong
+
+Round `occupancy-rings-r8`, branch `bugfix/ai-s3k-occupancy` off `f69686869`. Diagnosis only,
+no code written; the probe was re-run with `OGGF_SLOT_PROBE_FULL=1` for whole-map dumps.
+
+### Phase, settled first as instructed — it is ruled out
+
+For S1 frames where the engine holds strictly fewer occupants *and* a `0x25` is among the
+missing, the condition persists for a **mean of 4.06 consecutive dump samples** (median 2, max
+13), and **70% span more than one sample**. With `slot_dump` spacing at a median of 14 frames,
+a four-sample episode covers roughly fifty frames. A difference in *where in the frame* the
+engine holds a ring cannot survive that. These are not sampling-phase artefacts.
+
+Note the size while we are here: the S1 ring condition is **63 discrete episodes**, not the 490
+entries the per-slot count reports.
+
+### And then the ranking that sent me here turned out to be wrong
+
+**`RING` is not the right target, and I recommended it twice.** The head-of-bucket ranking was
+built from `rom=0xNN eng=-` entries — *per-slot presence*. An object that exists in both but
+sits at a different slot index produces exactly that entry at the ROM's slot, so the ranking
+counts **relocation as absence**. On the two fixtures with whole-map dumps, ring *counts* are
+equal on 83 of 87 divergent frames: the rings are there, at other slots.
+
+The placement-invariant metric is the **per-type count deficit** — how many of type T the ROM
+holds minus how many the engine holds, within the ROM's own slot range. Re-ranked on that:
+
+| game | id | object | deficit | share | fixtures |
+|---|---|---|---|---|---|
+| s1 | `0x11` | **BRIDGE** | 1,969 | **32.6%** | 7 |
+| s1 | `0x20` | CANNONBALL | 581 | 9.6% | 5 |
+| s1 | `0x25` | RING | 566 | 9.4% | **22** |
+| s1 | `0x31` | CHAINED_STOMPER | 314 | 5.2% | 4 |
+| s2 | `0x58` | **BossExplosion** | 1,725 | **19.9%** | 5 |
+| s2 | `0x78` | **CPZStaircase** | 966 | 11.2% | 5 |
+| s2 | `0x97` | RexonHead | 503 | 5.8% | 2 |
+| s2 | `0x98` | Projectile | 340 | 3.9% | 21 |
+
+Rings are a *real* deficit — 566, and the broadest at 22 fixtures — but third, not first, and
+at under a third of `BRIDGE`'s weight.
+
+### The pattern, and it is a better one than before
+
+`BRIDGE` and `CPZStaircase` are **multi-segment composites**: the ROM allocates one object per
+segment. `BossExplosion`, `EXPLOSION` and `Projectile` are **burst-spawned effects**, many
+instances at once. So the family is *the engine allocates fewer children than the ROM for
+composite and burst-spawning objects* — which answers the second question directly: **the engine
+creates fewer, it does not create the same number and lose them.** The deficit is
+placement-invariant, so it is not objects going missing from slots; they are never made.
+
+That also explains the earlier "dynamically spawned transients" reading, which was
+directionally right and ranked wrong for the same per-slot reason.
+
+### Four parsing and aggregation errors in this one analysis, all self-caught
+
+Worth recording as a group, because they are one species and they were all silent:
+
+1. Episodes grouped by a **frame gap** when dumps are 14 frames apart — inflated counts 2.6x.
+2. A duration statistic computed **in frames** over a sparse sampler — withdrawn entirely.
+3. The head ranking built on **per-slot presence**, counting relocation as absence — this round.
+4. The whole-map parse counted the occupant annotation's `spawn=6896,836` and `persist=false`
+   as slots, which briefly showed the engine holding 2-3x the ROM's objects. Stripping the
+   parenthesised annotations first showed the totals are close, with a small engine deficit.
+
+Every one changed a headline number, none raised an error, and three of the four pointed toward
+a *more tractable* defect than the truth. **When a derived statistic depends on a parsing or
+grouping choice, the choice is part of the measurement** — state it, and prefer a metric that
+does not depend on it. The count deficit is placement-invariant; the per-slot count was not.
+
+### Recommendation
+
+Commission **S1 `BRIDGE`** first: 32.6% of the S1 deficit in 7 fixtures, and a multi-segment
+composite is a bounded, well-defined allocation question. Then **S2 `BossExplosion`** and
+**`CPZStaircase`**. `RING` is worth doing for its breadth once the composites are understood,
+because a shared child-allocation fix may move it without separate work.
+
+Re-measure with the probe afterwards, in **sample units and per-type count deficit** — not
+frames, and not per-slot entries.

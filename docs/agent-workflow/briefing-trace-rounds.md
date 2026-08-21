@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-five rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -102,6 +102,7 @@ that looks like a real result.
 | 83 | A stream promoted from untyped to typed | Untyped-keyed formatters and probes stop firing, silently |
 | 84 | A duration in frames from an on-change stream | The sampler's period reported as the defect's duration |
 | 85 | An object aligned to the recording by its own coordinate | Perfect agreement that survives inserting an idle frame |
+| 86 | A ranking whose metric embeds a parsing choice | Relocation counted as absence; the wrong object at the top of the list |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2241,3 +2242,27 @@ different defect with a different owner.
 **Corollary.** When a candidate fix moves a knife-edge predicate the right way while making the
 underlying quantity *worse*, it is not the fix. A genuinely missing setup frame improves the
 motion; only a coincidence improves the count.
+
+## Eighty-sixth rule: the parsing choice is part of the measurement
+
+When a statistic is derived from a stream, the grouping and parsing decisions behind it are
+not implementation detail — they are the measurement, and a different reasonable choice gives
+a different headline.
+
+One analysis produced four such errors, every one self-caught and none raising any error at
+all: episodes grouped by a frame gap against a sampler whose median spacing is fourteen frames
+(2.6x inflation); a duration statistic computed in frames over that same sparse sampler
+(withdrawn outright); a head-of-bucket ranking built on per-slot presence, which counts an
+object that merely *moved slot* as absent; and a whole-map parse that read an occupant's
+annotation fields as slot entries, briefly showing the engine holding two to three times the
+ROM's objects.
+
+**Three of the four pointed toward a more tractable defect than the truth**, which is the
+direction that gets a lane commissioned on a false premise — and it is the second round in a
+row where the errors leaned the same way.
+
+**Practically.** State the parsing and grouping choices beside any derived number. Where a
+choice exists, prefer the metric that does not depend on it: in that round, a per-type *count
+deficit* inside the ROM's own slot range is placement-invariant, where per-slot presence is
+not, and the two produce different top-of-list objects entirely. And when a ranking decides
+what gets commissioned, re-derive it under a second metric before anyone acts on it.
