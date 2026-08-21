@@ -104973,3 +104973,108 @@ The only live phase mechanism is `ObjectManager.VIntRunCounterPhaseOffset`, fed 
 phase that **old S3K trace schemas** need because they captured the adjacent V-int word rather
 than the run counter, and that it is "zero in all normal gameplay". It is not S1, not this
 defect, and not a compensation for it.
+
+## 2026-08-21 — The geyser's on-screen bit is read a frame too new, and no uniform shift fits both HCZ fixtures
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `0e55eab17`.
+**Candidate committed and rejected**, with the measurement that rejects it. No fix landed.
+
+### First, the brief's premise as found
+
+The brief described the `bmi` cleanup fire-condition fix as landed and the vertical batch's
+submit as sitting two frames past its releasing edge. At `0e55eab17` the `bmi` change is **not
+in develop** and was not on any branch — it was uncommitted in another lane's worktree, which
+has since been removed. Everything below is measured against develop without it, and the
+combination is measured separately by re-applying it by hand.
+
+### The mechanism, from the ROM
+
+`Render_Sprites` clears `render_flags` bit 7 and re-sets it from the object's post-move position
+(`sonic3k.asm:36336-36339`, cull at `loc_1AEA2` `:37262-37268`), against `Camera_X_pos_copy` /
+`Camera_Y_pos_copy`, which `ScreenEvents` takes at `:102234-102235`. The level loop order is
+`Process_Sprites` → `DeformBgLayer` → `ScreenEvents` → `Render_Sprites` (`:7893-7911`), so the
+bit an object reads on dispatch *N+1* was computed from position and camera as of frame *N*.
+
+`HCZWaterWallObjectInstance` instead sampled its `drawnLastFrame` **inside the update body**, so
+the value the vertical fall consumed was computed from the *current* dispatch's post-move
+position. One frame too new. The engine already has the sanctioned mechanism for this —
+`refreshPostCameraRenderState()`, which `ObjectManager` runs after the camera move; roughly
+twenty objects use it, and `JawzBadnikInstance:93-104` carries the same ROM citation. The geyser
+did not override it.
+
+Bit 7 is also only cleared for objects Render_Sprites walks, i.e. those that reached a
+`Sprite_OnScreen_Test` that dispatch. The vertical rise does not draw (`:65189` returns), the
+eruption and the fall move do (`HCZWaterWall_Vertical_DrawActive` `:65253`, `FallMove`
+`:65285-65287`), so the candidate gates the refresh on having drawn.
+
+### It is worth exactly one frame, in both fixtures
+
+Vertical `FALLING` → `CLEANUP`, measured by probe on both arms:
+
+| fixture | control | candidate |
+|---|---:|---:|
+| `TestS3kSonicTailsHczSegmentTraceReplay` | 56038 | 56037 |
+| `TestS3kHczZoneSliceTraceReplay` | 30362 | 30361 |
+
+At the segment's flip the camera is climbing ~6px/frame while the column sits at `y≈1077`, so
+the transition is camera-driven; one frame of camera is the whole difference.
+
+### What it fixes, and what it breaks
+
+`-Ptrace-segments`, both arms, `-Dmse=off`, three ROM paths, JDK 21. Totals identical at 60 red
+(control 52F/8E, candidate 53F/7E — one throw became a divergence). Two classes move:
+
+- **`TestS3kSonicTailsHczSegmentTraceReplay`**: `IllegalStateException: S3K KosM module FIFO is
+  full` → runs to a divergence. 3481 → **3519 frames**, 744 → 749 errors. Diffing the two
+  reports' error groups: **no new divergence anywhere in the overlapping range** — the only
+  differences are two long groups extending to the new end frame and five single-frame errors
+  at 3573, the new frontier edge. The stall this round was pointed at is gone.
+- **`TestS3kHczZoneSliceTraceReplay`**: first error moves *earlier*, 22243 `g_speed` → **3260
+  `queue.s3k_kos_direct.busy` expected=false actual=true**, 1519 → 1527 errors. That frame is
+  the same geyser: `30361 − 3260 = 30362 − 3261 = 27101`, so the recording's submission edge
+  sits exactly on the control's transition and the candidate is one frame early.
+
+A recorded hardware edge is authority, not annoyance. The candidate is rejected on it.
+
+### The pair does not cancel into a fix either
+
+Re-applying the `bmi` condition by hand to both paths (`timer < 0`, the ROM's
+`subq`/`bmi` at `:64996-64998`) and measuring the four combinations:
+
+| arm | HCZ segment | HCZ zone slice |
+|---|---|---|
+| develop | FIFO full | first error 22243, 1519 |
+| + post-camera bit 7 (vertical) | runs, 749 errors, +38 frames | first error 3260, 1527 |
+| + `bmi` both paths | (other lane: two frames past its edge) | — |
+| + both | **FIFO full again** | **FIFO full, newly** |
+
+`bmi` (+1 dispatch) and the post-camera read (−1 frame) cancel on the vertical path, restoring
+develop's net timing and the segment's stall with it. Applied to both paths, `bmi` also delays
+the *horizontal* reload by one with no compensating correction, and that is enough to fill the
+FIFO in the zone slice, which develop passes.
+
+### What this kills
+
+**No uniform one-frame shift of this producer satisfies both fixtures.** The zone slice pins the
+reload submission to develop's net timing at a recorded edge; the segment stalls at that same
+timing. So the segment's stall is not a uniform phase error in the geyser's cleanup entry, and
+the "producer fires one frame late" framing — already narrowed once when the submission-versus-
+completion table was retracted as a phase measurement — does not survive as a *timing* story at
+all. Whatever the segment stall is, it differs between two recordings of the same object doing
+the same thing, which points at the queue state the batch lands in rather than at the frame it
+lands on.
+
+### Not established
+
+Whether the post-camera bit-7 read is right on its own terms. Two things say it is — the ROM's
+loop order, and twenty other objects modelling it that way through the same hook — and one
+recorded edge says the net timing that includes it is one frame early. Since the `bmi` fix moves
+the other way by the same amount, the pair may both be right with a third error absorbing them;
+that is exactly the shape that has produced three retracted verdicts at other seams. It should
+not be landed piecemeal, and it should not be landed at all until the segment stall has a cause
+that does not depend on the frame number.
+
+### Verification
+
+`-Ptrace-replay` 800 tests, 6 failures, per-test failure text **identical** to the control arm.
+`-Pguards` 500/0.

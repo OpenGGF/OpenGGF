@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Seventy-three rules and several worked sections, accumulated across many rounds. The narrative
+Seventy-four rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -66,6 +66,7 @@ that looks like a real result.
 | 30 | Mass errors | An environment artefact until proven otherwise |
 | 34 | Two Maven runs in one worktree | `target/test-classes` clobbered; "No tests matching pattern" reads as a bad filter |
 | 73 | A tree reset or rebase with a live `target/` | Stale reports that read as current — right names, plausible numbers, another commit |
+| 74 | A timing fix validated on one recording | ROM-derived, cited, improves its fixture, and one frame wrong |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -1938,3 +1939,27 @@ internally consistent and simply belonged to another commit.
 **Practically.** Delete the report directory before a measurement, not after; quote numbers
 only from a run you started in the tree you are in; and when a round reports a figure,
 state the commit it was measured at (rule 6) so a stale one is at least visible as stale.
+
+## Seventy-fourth rule: a second recording is what kills a timing story
+
+A one-frame or two-frame adjustment can be ROM-derived, cite real instructions, improve its
+fixture, and still be wrong. Resisting the temptation to fit is not what catches those —
+the fix does not feel fitted, because it is not. What catches them is a **second recording
+of the same object doing the same thing**.
+
+One round found a genuine ROM-derived defect (an object sampling a render flag inside its
+own update, where the ROM's flag is computed from the previous frame's position), measured
+it as worth one frame, and watched it clear a stall in one fixture while moving another
+fixture's first divergence thousands of frames earlier onto a recorded hardware edge. The
+two fixtures pin the same producer to incompatible timings, so **no uniform shift fits
+both** — which means the surviving explanation is not phase at all.
+
+**Practically.** Before landing any change whose content is *when* something happens, find
+a second fixture that exercises the same code and measure it there. If only one recording
+exercises it, say so explicitly and treat the result as provisional; a change validated on
+a single recording is validated against a movie nobody else will ever play.
+
+When the two disagree, do not average them and do not pick the one that improves. Ask what
+differs between the recordings other than time — occupancy, ordering, state the object
+lands in — because a disagreement between two recordings of the same behaviour is evidence
+that the axis you are adjusting is the wrong axis.
