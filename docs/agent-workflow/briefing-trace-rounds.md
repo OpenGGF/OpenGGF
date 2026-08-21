@@ -136,6 +136,7 @@ that looks like a real result.
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
+| 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3117,4 +3118,24 @@ dismissed earlier on the grounds that "no radius arithmetic exists on the restor
 longer excluded once a discrete write is known to exist somewhere in that window. The dismissal's
 premise was the same false generalisation. Revisit what an argument ruled out when the argument
 itself is corrected — without treating the revival as evidence.
+
+## One hundred and twentieth rule: "does the engine model this ROM behaviour" is a per-branch question
+
+`SpawnLevelMainSprites_SpawnPlayers` contains **two** `addi.w #4,y_pos` writes on **two branches**
+— one on the Player_2 arm (Tails as sidekick, `sonic3k.asm:8367`) and one on the Player_mode == 2
+arm (Tails as Player 1, `:8388`). The engine implemented the first, and its comment cites the
+routine by name.
+
+So a survey asking *"does the engine model this?"* answers **yes**, points at a correct
+implementation with an accurate citation, and is wrong — the ROM's other branch is unmodelled. The
+citation is not sloppy: it names the right routine and is correct for the arm it describes. It is
+**silently incomplete**, which no review of the cited line can detect.
+
+**Ask per branch.** When a ROM routine selects between arms, model coverage is a property of each
+arm, not of the routine — and a comment naming the routine will read as covering all of them.
+
+**The corollary that found this one:** before believing a candidate write, enumerate every routine
+in the call chain and check each for writes to the field. Here that established there was no
+second candidate rather than assuming it — and the same sweep is what proves an unmodelled arm
+exists, because an arm nobody enumerated cannot be ruled out by reading the arm that was.
 
