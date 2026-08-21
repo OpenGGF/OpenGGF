@@ -103768,3 +103768,99 @@ sphere/conversion path, with a green first-lap control (`ss_2`) to difference ag
 acceptance check is unchanged and is not the throw disappearing: the parent must retire against
 `KOS_MODULE_QUEUE#366` fingerprint `329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c`
 at raw frame 5152, and its child against `#531` at 5151.
+## 2026-08-21 — Segment 15 frame 5662: the CPZ gunk drop lands and splashes one frame early
+
+Branch `bugfix/ai-s2-seg15-sidekick-r1` off `origin/develop` (`5314e8001`).
+Diagnosis only; **nothing landed**.
+
+### Re-measured on the current tree first
+
+The 5662 divergence predates the object-loop-counter fix and that fix changed
+what runs in this act, so it was re-measured before anything else. It has not
+moved: `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` is 370 errors, first
+error still frame 2252, and 5662 still leads its cluster with the same fields
+and the same values. Frame bands are now 2252 (1), 5600s (132), 5800s (159),
+6000s (30), 6200s (44), 6600s (4).
+
+### It is not "the sidekick goes airborne" — it is a damage event, and the ROM has it too
+
+The engine's values at 5662 are `x_vel = -$200`, `y_vel = -$400`, `routine = 4`,
+`anim = $1A`, `status = 2`. Those are `HurtCharacter`'s knockback constants, and
+**the recording carries exactly the same numbers one row later**:
+
+```
+5662  T x=2AD3 xs=00BA ys=0000 air=0 rt=02 st=00 an=00   <- ROM still walking
+5663  T x=2AD5 xs=FE00 ys=FC00 air=1 rt=04 st=02 an=1A   <- ROM hurt, same constants
+```
+
+So this is not a spurious hazard, not a support/ground problem, and not a wrong
+constant. Every constant is correct on both sides. The engine hurts the sidekick
+on 5662 and the ROM hurts it on 5663.
+
+### The hazard, and the frame the ROM creates its splash
+
+`object_near` names it: slot 31, `0x5D`, `routine 0x0C` = `Obj5D_Gunk` — the mega
+mack drop — falling down x `$2AD6` onto Tails at y `$04F0`.
+
+The decisive row is a **creation event**, not a proximity one:
+`object_appeared` fires for slots 32, 33, 34 and 35 (`0x5D`) at frame **5663**.
+Those are the four splash droplets. The engine creates its four droplets during
+frame **5662**.
+
+### The ROM defers the splash by a frame, and the engine models that correctly
+
+`Obj5D_Gunk_Main` (`docs/s2disasm/s2.asm:62818-62841`), on the frame it hits the
+floor, snaps `y_pos` with `add.w d1,y_pos(a0)`, does
+`addq.b #2,routine_secondary(a0)` to `Obj5D_Gunk_Droplets`, and then
+`jmp (DisplaySprite).l` — it **returns**; it does not fall through into the
+droplet state. `CPZBossGunk.updateFalling` returns after setting `SUB_DROPLETS`
+in the same shape. That part is right on both sides.
+
+### What is actually one frame early: the whole fall
+
+Comparing like with like — the engine's state printed at the **end** of its
+update against `object_near`, which is also end-of-frame (established
+independently: the ROM's slot-31 row at 5663 already carries the
+`+$18` / `-$0C` offset that the droplet transition applies, so that row is
+post-transition) — and with the engine's frame counter calibrated against the
+recording's `player_x` rather than against the gunk itself (engine counter
+`= trace frame + 25`, matched over thirteen consecutive rows including repeats):
+
+| trace frame | engine gunk y | ROM gunk y |
+|---|---|---|
+| 5633-5635 | `$48B` | `$048B` |
+| 5636 | **`$48C`** | `$048B` |
+| 5637 | `$48D` | `$048C` |
+| 5640 | `$491` | `$048F` |
+| 5661 | `$4DF`, `rsec` already 4 | `$04DD` |
+| 5662 | droplets created | `$04DF`, still falling |
+| 5663 | — | droplets created |
+
+From 5636 onward the engine's gunk holds at frame F exactly the value the ROM
+holds at F+1. The lead is one frame, it is constant, and the landing, the splash
+and the damage all inherit it.
+
+### Where the frame enters is NOT established
+
+`object_near`'s first row for slot 31 is frame 5633, but there is no
+`object_appeared` for slot 31 anywhere in the window — the slot was occupied
+before it, and that first row is the object coming into proximity range, not its
+creation. So the recording does not date this gunk's creation and the lead
+cannot be attributed to the creation frame from what is here. Both sides hold y
+for the first frames because `y_vel` starts at zero, which makes those rows
+non-discriminating; the first row that discriminates is 5636.
+
+**Do not fix this by nudging the splash.** The splash is already deferred
+correctly on both sides. Whatever is fixed has to move the gunk's whole fall,
+and the next step is to date its creation — from the engine and from a wider
+recording window than this segment's proximity rows.
+
+### Both of the day's carried-in shapes, checked
+
+* **The S1 collapsing floor** (ROM supports a player one frame longer than the
+  engine): does not fit. Nothing here is support or ground contact; it is a
+  falling hazard's touch, and the sign of the error is the other way — the
+  engine acts early rather than late.
+* **The creation-frame class** (an object starting a frame early, every constant
+  correct): fits exactly, minus the sign-flip symptom. The knockback is `-$200` /
+  `-$400` on both sides, and the only difference is which frame it lands on.
