@@ -108248,3 +108248,67 @@ correct code, and both were caught before a fix was written.
 **That is the argument for measuring before commissioning, and it is the arc's real content:**
 one structural fix landed, two false targets retired, one game-scope correction, and a metric
 that had to be rebuilt three times before it described the thing it was named after.
+
+## 2026-08-21 — CANNONBALL is lifetime, not rate: two uncited deletions, one near-miss
+
+Round `s1-cannonball-deletion-r13`, branch `bugfix/ai-s1-cannonball-deletion` off `c017a7d7b`.
+Diagnosis only, no code.
+
+### The ROM condition, read and stated before opening the engine
+
+`CBal_ChkExplode` (`docs/s1disasm/_incObj/"1E, 20 Badnik - Ball Hog and Cannonball.asm":150-190`):
+
+- **The cannonball is never deleted on expiry — it converts in place.**
+  `_move.b #id_Explosion,obID(a0)` / `move.b #0,obRoutine(a0)` / `bra.w Explosion`. The object
+  keeps its SST slot; only its id changes `$20` → `$3F`.
+- Lifetime is `subtype x 60` frames (`mulu.w #60,d0`), set once at `CBal_Main`.
+- The only deletion is vertical: below `v_limitbtm2 + 224`.
+- **There is no horizontal off-screen deletion.** `CBal` does not route through `MarkObjGone`;
+  the retail branch ends `bsr DisplaySprite` / delete-check / `rts`.
+
+**What that implied before looking:** if the engine deletes and respawns rather than converting,
+the explosion lands in a *different slot* — which is exactly the two-way `0x3F` already measured
+(282 short / 275 over). The prediction was available from the disassembly alone.
+
+### What the engine does
+
+**Defect A — expiry deletes and respawns instead of converting.** `explode()` calls
+`setDestroyed(true)` and then `spawnFreeChild(() -> new ExplosionObjectInstance(0x3F, ...))`.
+Its own javadoc quotes the correct ROM behaviour — `_move.b #id_ExplosionBomb,obID(a0)`, an
+in-place id change — directly above the code that does the opposite. **The third class in this
+investigation to document its own defect.** The freed-then-retaken slot is the mechanism behind
+`EXPLOSION` being two-way rather than short.
+
+**Defect B — an uncited horizontal deletion.** `if (!isOnScreenX(256)) { destroyed = true; }`,
+commented *"Also check general off-screen for cleanup"*. The ROM has no such check in `CBal` at
+all. An invented cleanup, and the "cleanup" comment with no cited line is the tell.
+
+### The near-miss, recorded because it is the FixBugs trap exactly
+
+I read the vertical delete as `FixBugs`-only and had written it down as a third defect. It is
+not: **both branches delete**, and the conditional is only about *ordering* — the retail branch
+displays first and then deletes, with the comment "Moved to prevent a display-and-delete bug".
+The engine's threshold is `camera().getMaxY() + 0xE0`, and `0xE0` is 224, so it matches
+`v_limitbtm2 + 224` exactly. **Correct code, nearly reported as a defect** because I saw
+`if FixBugs` and assumed the whole block was conditional rather than reading both arms.
+
+### Answer
+
+**Lifetime, not rate.** Ball Hog's launch gate is untouched and correct; the shortfall is
+cannonballs being removed that the ROM keeps. Both directions, as required: `CANNONBALL` is
+one-way (581 short / 0 over) — consistent with deletion, not with under-creation — and
+`EXPLOSION` is two-way (282 / 275) — consistent with the slot moving on conversion. The two
+numbers are one defect seen from both ends.
+
+**The zero tail is defect B.** `rom 6 eng 0` and `rom 3 eng 0` are a Ball Hog whose cannonballs
+have all left the screen horizontally: the ROM keeps every one, the engine drops all of them at
+once. A constant offset and a total absence are indeed different failures, as suspected — but
+they are two *effects* of two defects in one object rather than two unrelated ones.
+
+### Next
+
+Fixing needs both, and they interact: converting in place (A) changes which slot the explosion
+occupies, and removing the invented deletion (B) changes how many cannonballs are alive to
+convert. Land them together with the prediction stated in advance — `0x20` short should fall
+toward zero **and** `0x3F`'s over-count should fall with it — and measure both directions, since
+A moves an object between slots rather than adding or removing one.

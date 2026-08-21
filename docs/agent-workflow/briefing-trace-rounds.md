@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-four rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -111,6 +111,7 @@ that looks like a real result.
 | 92 | A greppable tell quoted as a defect count | Fifteen candidates, one confirmed, four matching exactly with zero divergence |
 | 93 | A correction that changes no value anywhere | An unverifiable edit to verified code, indistinguishable from a wrong one |
 | 94 | A one-directional deficit metric | An over-count larger than the shortfall, invisible; the wrong defect named |
+| 95 | A `FixBugs` block read as a gate | Correct retail code reported as a defect; both arms did the work |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2459,3 +2460,25 @@ filter produced a false positive — a class excluded from "creates real childre
 name matched none of the expected child-name patterns — one round after the first filter's
 false-positive rate had been reported. A filter that has failed once is not more trustworthy
 for having been noticed.
+
+## Ninety-fifth rule: read both arms of a `FixBugs` conditional — it may only reorder
+
+The bug-fix conditionals in these disassemblies do not always gate *whether* something happens.
+Sometimes both arms do the same work and the conditional only changes the **order**, with the
+retail arm displaying before deleting and the fixed arm deleting first — the comment on such a
+site often says so outright ("moved to prevent a display-and-delete bug").
+
+One round read a delete inside such a block, took it for a fixed-branch-only behaviour, and had
+written it up as a third defect in the object. Both arms delete; the engine's margin already
+matched the ROM's exactly. Correct code, nearly reported as defective because "if FixBugs" was
+read as a gate rather than as a fork.
+
+**Read both arms before concluding anything about a conditional.** The engine models the retail
+path, so what matters is what the retail arm does, not that a conditional exists.
+
+**Two related tells from the same round, both worth carrying.** An uncited deletion commented as
+"general cleanup" is almost always invented — a cleanup with no cited ROM line is the tell. And
+where the ROM *converts an object in place* (changing its id and keeping its slot) while the
+engine deletes and spawns a replacement, the freed-then-retaken slot shows up as a **two-way**
+divergence in the replacement's type and a one-way shortfall in the original's: two numbers that
+are one defect seen from both ends, and only the ROM's convert-in-place line connects them.
