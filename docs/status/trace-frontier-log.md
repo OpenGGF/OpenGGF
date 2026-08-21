@@ -114504,3 +114504,77 @@ ownership.
 
 The owner is S1 player animation selection while rolling in the air. The other three death
 arms remain coordinates only.
+
+## 2026-08-21 -- Scoping the S1 animation-id defect: 67 rows, one segment, both directions
+
+Measured at `b23492925`. **Scoping only -- no fix, and `suppressCurrentRollAttack` untouched.**
+Walked `player_animation_id` on every compared row of the whole chain, matches included, with
+the `rolling` and `air` bits beside it.
+
+### The population
+
+**176,493 rows across 22 compared segments. 253 animation-id mismatches in total.**
+
+| segment | rows | mismatches |
+|---|---|---|
+| #13 | 8,479 | **1** (`0x05 -> 0x06`) |
+| #14 | 12,630 | **1** (`0x11 -> 0x0F`) |
+| **#21 (FZ)** | **1,324** | **251** |
+| all others (19 segments, ~154,000 rows) | | **0** |
+
+**Outside the Final Zone this barely exists**: two isolated single rows, each an
+adjacent-id blip of a different character, across roughly 154,000 rows covering GHZ, MZ, SYZ,
+LZ, SLZ, SBZ and seven special stages.
+
+### Splitting cause from consequence inside FZ
+
+The 251 break down as:
+
+| ROM -> engine | count | reading |
+|---|---|---|
+| `0x02 -> 0x18` | 86 | engine in **`id_Death`** |
+| `0x00 -> 0x18` | 68 | engine in **`id_Death`** |
+| `0x02 -> 0x00` | 46 | ROM roll, engine walk -- **includes row 841** |
+| `0x00 -> 0x02` | 21 | ROM walk, engine roll -- **includes row 354** |
+
+`0x18` is `id_Death` (`docs/s1disasm/_anim/Sonic.asm:132`), so **154 of the 251 are the engine
+playing its death animation after the restart -- the consequence of the very chain this is
+investigating, not part of the defect.**
+
+**The genuine selector disagreement is 67 rows**, split **46 one way and 21 the other**. It is
+a selector choosing wrongly in *both* directions, not a stuck value, which confirms the
+prediction that a one-directional fix would look right at whichever row it was tested on.
+
+### Adjudication: only this chain sees it
+
+That is the harder landing case. **19 of 22 segments show none**, and the two that show one
+row each show something else. **I did not run the standalone S1 zone-slice classes**, so that
+is stated as unmeasured -- though the chain already replays those same zones for ~154,000 rows
+and finds two blips, which makes a zone slice unlikely to adjudicate this. Anyone commissioning
+the fix should know it will land against evidence from one segment.
+
+### The ROM's selection, read before proposing a mechanism
+
+`Sonic_Jump` (`docs/s1disasm/_incObj/01 Sonic.asm:1247-1253`):
+
+```
+        btst    #2,obStatus(a0)         ; is Sonic already in a ball state?
+        bne.s   .rolljump               ; if so, branch
+        move.b  #sonic_roll_height,obHeight(a0)
+        move.b  #sonic_roll_width,obWidth(a0)
+        move.b  #id_Roll,obAnim(a0)     ; use "jumping" animation
+        bset    #2,obStatus(a0)
+```
+
+**A jump taken while already rolling branches to `.rolljump` and never writes `obAnim` at
+all** -- the animation is *carried* rather than re-selected. Landing writes `id_Walk`
+(`:1563`). So the ROM's animation id across a roll-jump depends on what it already was, and a
+selector that re-derives it from the current state instead of preserving it would disagree in
+**both** directions depending on the prior value -- which matches the 46/21 split.
+
+**That is a candidate mechanism, not a confirmed one.** I have not traced the engine's
+selector, and "rolling should set the roll animation" is exactly the obvious shape this needs
+protecting from. The next round should read the engine's animation selection against this
+carry semantics before changing anything.
+
+The other three death arms remain coordinates only.
