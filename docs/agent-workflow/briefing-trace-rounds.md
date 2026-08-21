@@ -129,6 +129,7 @@ that looks like a real result.
 | 110 | A batch instrument needs a positive control | "Nothing moved" also means the arm never ran |
 | 111 | `-Dtest=` overrides patterns, not tag filters | A tag-excluded class runs nothing and still says BUILD SUCCESS |
 | 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
+| 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2939,4 +2940,31 @@ a confident false constraint: *"`prev_anim` is written in exactly two places"* �
    pair is unequal, fully visible in one frame. It looked invisible only because **`prev_anim` is
    not a recorded column** — a gap in what the fixture carries, not a limit of the sampling rate.
    The fix is a column, not a recorder redesign.
+
+## One hundred and thirteenth rule: a citation can be wrong *and* agree with the right answer
+
+The worst citation is not one that is visibly wrong. It is one that yields the correct number by
+coincidence, because then no output can ever reveal it.
+
+Deriving an object's culling margins, the first `subObjData` hit matching the shape was **`ObjA6`,
+the CPZ Spiny** — which also uses `Obj98` and shares a mappings label. Its row
+(`on_screen|level_fg, 5, 4, $98`) carries the **same `width_pixels` 4 and the same
+`collision_flags` $98** as the intended object's, differing only in priority. Citing the Spiny for
+the wall turret shot would have produced the right margins with a wrong citation, and every number
+in the output would have agreed.
+
+**The only defence is reaching the row through the object that actually loads it** — follow the
+`Init` routine to its `LoadSubObject` call and read *that* row — never the first grep hit whose
+shape matches.
+
+**Two corollaries from the same derivation:**
+
+1. **Do not take a ROM fact from an engine javadoc.** The margin rested on `explicit_height` being
+   clear, taken from the engine class's own javadoc rather than the disassembly — the exact
+   failure the surrounding audit was written about, committed while writing it. Re-derived at
+   source: `LoadSubObject_Part3` (`s2.asm:72715-72726`) applies mappings, art_tile, render_flags,
+   priority, width_pixels and collision_flags, and **never writes `y_radius`**.
+2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
+   the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
+   carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
 
