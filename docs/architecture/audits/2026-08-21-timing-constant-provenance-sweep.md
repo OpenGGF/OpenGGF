@@ -130,3 +130,49 @@ Recorded here because it was found without reference to that seam and is easy to
 `AizEndBossInstance`'s post-defeat wait lacks, where it instead carries an uncited `0x7F`. The
 `#(2*60)-1` idiom appears **21 times** in `sonic3k.asm`. A sibling port holding the ROM idiom
 that the seam's own port is missing is independent support for that diagnosis.
+
+## Ranks 2-3 verified: four cleared, three ROM-exact and one with no ROM basis
+
+Each checked against the disassembly individually, per the method corrections above — neither
+the value's shape nor its author's confidence counted as evidence.
+
+| constant | verdict | ROM |
+|---|---|---|
+| `Sonic3kSpecialStageConstants.RATE_TIMER_NORMAL = 30 * 60` | **ROM-exact** | `move.w #30*60,(Special_stage_rate_timer).w` — `sonic3k.asm:10700`, `:11450`. Same expression, same variable. |
+| `Sonic3kSpecialStageConstants.RATE_TIMER_BLUE_SPHERES = 45 * 60` | **ROM-exact** | `move.w #45*60,(Special_stage_rate_timer).w` — `:10703`, `:11453`. |
+| `Sonic3kSpecialStageConstants.BANNER_DISPLAY_FRAMES = 3 * 60` | **ROM-exact** | `move.w #3*60,$32(a0)` — `:11325`, on the object built from `Map_GetBlueSpheres` / `ArtTile_SStage_GetBlueSpheres`, i.e. the GET BLUE SPHERES banner itself. |
+| `Sonic3kTitleScreenManager.SEGA_HOLD_DURATION = 180` | **no ROM basis** | see below |
+
+### `SEGA_HOLD_DURATION` — the one genuine finding
+
+There is **no SEGA screen sequence in either S3K disassembly**. `Sega_Screen` is
+`move.b #4,(Game_mode).w` followed immediately by the title screen in `sonic3k.asm:5387-5388`,
+and `move.b #4,(Game_mode).w / rts` in `s3.asm:4768-4770`. `JumpToSegaScreen`
+(`sonic3k.asm:454-456`) only sets game mode 0, which then advances the same way.
+
+A broad case-insensitive search for "sega" across both files returns **only** the cartridge
+header strings, the TMSS write, those two advancing routines, and one vestigial
+`SegaScr_VInt` reference in `s3.asm:830` — reachable at most once, since mode 0 advances on its
+first main-loop pass. No hold, no timer, no SEGA sound command.
+
+So the engine presents a SEGA screen the ROM does not, and 180 is its own presentation timing.
+**This is not a wrong number — it is an undocumented engine addition**, and the right home for
+it is `docs/status/known-discrepancies.md` rather than a citation, since there is nothing to
+cite. Flagged, not changed.
+
+### Not cleared, and why
+
+`AizMinibossInstance.RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13` (rank 3) was opened and
+**deliberately left unresolved**. It is not a scalar timer: it is threaded through
+`S3kBossDefeatSignpostFlow` into `S3kSignpostInstance` and on into
+`S3kResultsScreenObjectInstance` as a count of native **object-pass dispatch entries**, added
+to other boundary adjustments on the way. Clearing it means modelling the ROM's
+`Obj_EndSignControlWait` / results-owner dispatch ordering, which is a multi-routine read and
+its own round. Recorded so the next attempt does not mistake it for a one-line check.
+
+## Running score for the sweep
+
+**Six constants checked in total, five confirmed ROM-exact, one confirmed to have no ROM
+counterpart** — and that one is an engine feature the ROM lacks rather than a fitted value.
+Zero fitted constants have been found. Both of the sweep's original tells — the value's shape
+and the author's confessed uncertainty — produced only false positives.

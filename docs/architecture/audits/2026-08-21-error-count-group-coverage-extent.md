@@ -8,7 +8,23 @@ independent finding would be genuine rather than a shared assumption.
 Instrument: one full `-Ptrace-replay` run (800 tests), then every JSON report it produced —
 **128 reports** — analysed for arithmetic consistency.
 
-## Headline: not confirmed and not refuted on S2/S3K, for a structural reason
+> **RESOLVED, same day — there is no counting gap.** The S1 lane probed the absorber directly
+> rather than following the path by inference: all ~1200 divergences reach it and increment the
+> count. Nothing is dropped anywhere in the comparator. What misled that lane was a *summary*
+> field — "first non-camera mismatch" is filtered to the physics group **by design**, so an
+> animation error can never populate it, and the recent-mismatch list holds only the last few
+> entries. Absence there was read as a fact about the engine.
+>
+> **This audit therefore stands as a cross-game confirmation rather than an open question.**
+> The 56/56 standalone result below independently shows S2 and S3K totals are internally
+> consistent, which extends the S1 lane's single-game conclusion. Counts are correct; no
+> segment called green is in doubt; no round aimed by those numbers was misaimed.
+>
+> The two structural observations below remain true and useful: chain reports publish no group
+> breakdown, and the "physics" summary field is filtered by design — which is exactly the pair
+> that made a correct instrument look broken.
+
+## Headline as first measured: not confirmed and not refuted on S2/S3K, for a structural reason
 
 **The totals cannot decide this question for chains, because chain reports do not expose
 groups at all.** That is not a limitation of how hard I looked; it is a property of the
