@@ -17,6 +17,8 @@ public class TestPsgChipGpgxParity {
     public void defaultsToFastModeForCrisperGenesisParity() {
         PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
         assertFalse(chip.isHqMode(), "GPGX parity should default to fast PSG mode");
+        assertFalse(chip.isNoiseShiftOnEveryToggle(),
+                "GPGX/libvgm parity clocks noise only on positive edges");
     }
 
     @Test
@@ -41,6 +43,7 @@ public class TestPsgChipGpgxParity {
     @Test
     public void noiseLfsrClocksOnEveryToggle() throws Exception {
         PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
+        chip.setNoiseShiftOnEveryToggle(true);
 
         int initialShift = readPrivateInt(chip, "noiseShiftValue");
         int shiftWidth = readPrivateInt(chip, "noiseShiftWidth");
@@ -129,8 +132,9 @@ public class TestPsgChipGpgxParity {
     }
 
     @Test
-    public void noiseRenderOutputStaysExactInFastAndHqModes() {
+    public void everyToggleNoiseRenderOutputStaysExactInFastAndHqModes() {
         PsgChip fastChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
+        fastChip.setNoiseShiftOnEveryToggle(true);
         fastChip.write(0xE3);
         fastChip.write(0xF0);
 
@@ -143,6 +147,7 @@ public class TestPsgChipGpgxParity {
         assertArrayEquals(fastLeft, fastRight, "Stereo noise output should remain symmetric with default panning");
 
         PsgChip hqChip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
+        hqChip.setNoiseShiftOnEveryToggle(true);
         hqChip.setHqMode(true);
         hqChip.write(0xE3);
         hqChip.write(0xF0);
@@ -202,5 +207,3 @@ public class TestPsgChipGpgxParity {
         return current;
     }
 }
-
-

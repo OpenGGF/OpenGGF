@@ -3031,6 +3031,8 @@ All notable changes to the OpenGGF project are documented in this file.
   Sonic 2 also retains the shipped bugged `$90` spindash-release FM5
   transpose instead of silently substituting the bug-fixed `$10` value, and
   schedules DPCM at the driver's documented 295-cycle two-sample cadence.
+  Default chip presentation now uses GPGX/libvgm positive-edge PSG noise and
+  raw, uninterpolated DAC steps; the smoother alternatives remain opt-in.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

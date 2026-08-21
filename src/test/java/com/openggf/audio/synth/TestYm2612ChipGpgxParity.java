@@ -5,8 +5,14 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestYm2612ChipGpgxParity {
+    @Test
+    void dacDefaultsToUnsmoothedHardwareSamples() {
+        assertFalse(new Ym2612Chip().captureSnapshot().dacInterpolate());
+    }
+
     @Test
     void s1BombVoiceRoutesRegisterSlotsThroughAlgorithmTwoLikeGpgx() {
         Ym2612Chip chip = configuredEnhancedChip();

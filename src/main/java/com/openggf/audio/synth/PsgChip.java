@@ -80,7 +80,7 @@ public class PsgChip {
     private long clockFrac = 0;
     private long clocksPerSampleFixed = 0;
     private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
-    private boolean noiseShiftOnEveryToggle = true; // true=MAME-style, false=GPGX/libvgm positive-edge only
+    private boolean noiseShiftOnEveryToggle = false; // GPGX/libvgm positive-edge reference default
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
 
     public PsgChip() {
