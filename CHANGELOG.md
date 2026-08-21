@@ -92,6 +92,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The WFZ wall-turret shot now deletes on the ROM's render flag rather than an invented
+  480-pixel camera margin.** `Obj98_Main` deletes when `render_flags.on_screen` is clear
+  (`docs/s2disasm/s2.asm:74678-74679`), and that bit is not a distance band: `BuildSprites`
+  clears it for every object it visits and re-sets it only past its two culling tests, so the
+  value the routine reads was written by the **previous** frame's `BuildSprites` from the
+  object's end-of-frame position. The gate now samples the pre-update position, using the
+  convention `CollapsingPlatformObjectInstance` and five other classes already follow. Both
+  margins are `BuildSprites`' own: `width_pixels` = 4 from `ObjB8`'s `subObjData` row
+  (`s2.asm:74763`), and 32 from `BuildSprites_ApproxYCheck`, reached because that same row
+  leaves `explicit_height` clear. The previous `480` appears nowhere in the ROM, and the comment
+  above it cited an expression that evaluates to 640 while calling it 480. On the occupancy
+  probe the engine's spurious wall-turret shots fall from **602 to 0** in the WFZ fixture, with
+  mean object lifetime dropping from 19.86 samples to 5.73 against the ROM's 2.52. A separate,
+  pre-existing creation deficit remains and is untouched by this change: the ROM fires 77 shots
+  in that fixture where the engine fires 48, identically before and after.
+
 - **S2 Super Sonic now gets his alternate bright frames, and the DPLC transfers that go with
   them.** `SAnim_SuperWalk` writes the ordinary `mapping_frame = script byte + slope offset` and
   then, on one frame in four, steps it into the Super variants
