@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-nine rules and several worked sections, accumulated across many rounds. The narrative
+Ninety rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -106,6 +106,7 @@ that looks like a real result.
 | 87 | A delta read at the wrong intra-frame write of a folded object | A plausible defect, and a guard that would make the fixture pass wrongly |
 | 88 | A probe's text report parsed as data | Correct code at the top of a defect ranking, twice recommended |
 | 89 | A folded class documenting N ROM slots and reserving none | Every later object's slot index shifted; a deficit that is 100% structural |
+| 90 | "Not observable" asserted for a whole run | Rounds scoped around a gap that does not cover the rows in question |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2340,3 +2341,28 @@ exists to copy.
 **And check the reservation question before commissioning any occupancy target.** Two
 candidates in this investigation reached the top of a defect ranking while being correct code;
 a third was fully explained by this defect and was not the object anyone had commissioned.
+
+## Ninetieth rule: "not observable" is a claim about specific rows, not about the run
+
+A quantity absent from the recording for part of a run may be present exactly where the
+question lives. One investigation parked a boss's phase timing as a capture question — the
+body never enters the recorded near-list — and three rounds were scoped around that
+limitation. It is carried per frame at the rows that mattered: the fatal hit and the
+transition into the wait are both visible as routine-pointer values, and only the interval
+between them is a gap. The gap was irrelevant, because that interval's length is a ROM
+literal rather than something to measure.
+
+**Before declaring a quantity unobservable, check the specific rows your question needs.**
+Presence is per row, and a stream that is silent across a window can still pin both of its
+ends.
+
+**And prefer a derivation with no shared input to a second opinion.** In that round the
+transition row plus a ROM literal produced the same frame as an independent positional match
+across sixty-two rows. Two derivations sharing no term is the strongest confirmation available
+without new data — much stronger than the same measurement repeated.
+
+**Corollary — a total can be right while both its parts are wrong.** The same object's two
+wait stages are individually wrong and sum to the correct total, so no error count in the
+fixture can see it; the first stage is not a constant in the ROM at all but inherited state,
+so a different fight length breaks the cancellation. A sum that matches is not evidence its
+terms do.
