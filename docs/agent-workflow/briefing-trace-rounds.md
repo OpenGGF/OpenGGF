@@ -128,6 +128,7 @@ that looks like a real result.
 | 109 | On a moving object, `spawn` is not an identity | Re-key on slot; an inverted verdict looks clean |
 | 110 | A batch instrument needs a positive control | "Nothing moved" also means the arm never ran |
 | 111 | `-Dtest=` overrides patterns, not tag filters | A tag-excluded class runs nothing and still says BUILD SUCCESS |
+| 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2912,3 +2913,30 @@ by name, before quoting any result from a `-Dtest=` invocation.
 The tag mechanism is also easy to misdiagnose: a class can be present in a profile's include
 patterns, absent from its exclude patterns, and still never run. Read the `<excludedGroups>` and
 the class's `@Tag`s before concluding a profile covers it.
+
+## One hundred and twelfth rule: adjacent SST bytes make a word write invisible to a byte-field survey
+
+`anim_frame = $1B`, `anim = $1C`, `prev_anim = $1D` (`s2.constants.asm:32-35`) are **adjacent
+bytes**. So `move.w #(AniIDSonAni_Walk<<8)|(AniIDSonAni_Run<<0),anim(a1)` writes `anim` *and*
+`prev_anim` in one instruction — and since `Sonic_Animate` resets `anim_frame` whenever those two
+differ, that word write resets the animation frame without ever naming it. The disassembly states
+the intent outright (`s2.asm:35481`, "use walking animation (and force it to restart)"), and about
+twenty sites use the idiom.
+
+A survey for `anim_frame(aN)` sees **none of them** — nor writes by absolute address
+(`move.b #AniIDSonAni_Run,(MainCharacter+prev_anim).w`, `:26033`), of which two hit the player.
+An "exhaustive" survey on that grep missed roughly two thirds of the real population and produced
+a confident false constraint: *"`prev_anim` is written in exactly two places"* — it is three.
+
+**Two consequences worth carrying separately:**
+
+1. **A field's population is every instruction that changes its bytes, not every instruction that
+   names it.** Before calling a field survey exhaustive, check the field's neighbours in the SST
+   and search for word and longword writes at the enclosing offsets, plus absolute-address forms.
+2. **"Invisible at frame granularity" is a strong claim; check the column list first.** The same
+   round concluded a within-frame transient must be responsible and that only a sub-frame probe
+   could resolve it. False: a single word write leaves `anim` reading `02` on both sides while the
+   pair is unequal, fully visible in one frame. It looked invisible only because **`prev_anim` is
+   not a recorded column** — a gap in what the fixture carries, not a limit of the sampling rate.
+   The fix is a column, not a recorder redesign.
+
