@@ -50,7 +50,13 @@ does not rediscover them.
 
 | object | id | shortfall | status |
 |---|---|---|---|
-| **CANNONBALL** (S1) | `0x20` | 581 short / 0 over | **Two defects diagnosed, fix parked.** `explode()` destroys and spawns instead of rewriting `obID` in place; plus an uncited `!isOnScreenX(256)` deletion `CBal` does not have. Must land together. **Prediction, PARTLY REFUTED at `0fd7b7811`:** the `0x20` half is still open, but the `0x3F` half is dead — EXPLOSION shows no conversion pairing with CANNONBALL (12 and 6 slots against 511/511 for the confirmed case), so fixing `0x20` should not be expected to move `0x3F`. See the two-way table's note. Blocked on the convert-in-place capability — see [the design note](../architecture/designs/2026-08-21-object-convert-in-place.md). |
+| **CANNONBALL** (S1) | `0x20` | 581 short / 0 over | **Two defects diagnosed, fix parked.** `explode()` destroys and spawns instead of rewriting `obID` in place; plus an uncited `!isOnScreenX(256)` deletion `CBal` does not have. Must land together. **Prediction, PARTLY REFUTED at `0fd7b7811`:** the `0x20` half is still open, but the `0x3F` half is dead — EXPLOSION shows no conversion pairing with CANNONBALL (12 and 6 slots against 511/511 for the confirmed case), so fixing `0x20` should not be expected to move `0x3F`. See the two-way table's note. **And the 581 → 620 degradation is NOT recent:** `0x20`
+measures 620 identically at `cae3ede3c` and `0fd7b7811` (28/98 in `SONIC_1_50`/`51`, 51/196 in
+chain segments 8/9 and again in 30/31), so it shifted before `cae3ede3c` and has been stable
+since — a different story from the prediction, not the same one. Independent confirmation of the
+refutation from this side too: what the engine holds where the ROM has `0x20` is `0x20` itself
+(41.9%), nothing (14.9%), then `0x15`/`0x78`/`0x25` — **`0x3F` is not a significant partner in
+either direction.** Blocked on the convert-in-place capability — see [the design note](../architecture/designs/2026-08-21-object-convert-in-place.md). |
 
 ## One-way — the engine never makes them
 

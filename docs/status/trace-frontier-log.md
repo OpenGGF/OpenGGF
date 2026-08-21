@@ -111130,3 +111130,16 @@ prediction sitting in a status page is exactly what gets read as established lat
 fixture, of which 54.3% are slots where the ROM holds nothing at all — over-creation or late
 deletion, not misplacement. One object, one fixture, one direction, and a concentration higher
 than anything else left on the page.
+
+**Addendum, same measurement.** The CANNONBALL 581 → 620 degradation is *not* recent either:
+`0x20` measures **620 identically at `cae3ede3c` and `0fd7b7811`**, spread 28/98 across
+`SONIC_1_50`/`51` and 51/196 across chain segments 8/9 and again 30/31. So all three "worse"
+rows — CANNONBALL, Projectile, LeavesGenerator — shifted somewhere before `cae3ede3c` and have
+been stable since; none is attributable to a recent merge. The degradation and the refuted
+prediction are therefore different stories, which is what needed establishing before proposing
+anything.
+
+The refutation is also confirmed independently from the CANNONBALL side: what the engine holds
+where the ROM has `0x20` is `0x20` itself (41.9%), nothing (14.9%), then `0x15` (9.7%), `0x78`
+(7.2%), `0x25` (6.9%). **`0x3F` is not a significant partner in either direction.** Two
+measurements from opposite ends agreeing is what makes this a refutation rather than a null.
