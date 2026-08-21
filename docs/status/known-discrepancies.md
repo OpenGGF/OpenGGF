@@ -770,10 +770,26 @@ trace, captured on REV01 hardware, contains those occasional `+2` bumps.
 `Sonic1LZWaterEvents` now emulates the REV01 non-FixBugs path by preserving
 the high byte of the player X check while replacing the low byte with
 `v_vblank_byte & 0x3F`, and by using the waterfall SFX id on sound-gate
-frames. `Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank
-phase when applying the lamppost state, so the first ROM y-bump occurs at the
-same trace frame instead of drifting by the engine's default object-manager
-counter phase.
+frames.
+
+**Corrected 2026-08-21.** This paragraph previously said that
+`Sonic1CreditsDemoBootstrap` "also seeds the LZ credits-demo vblank phase when
+applying the lamppost state". **It does not, and no longer should.** The
+bootstrap carries an explicit note in its place: the ROM's `v_vblank_count` is
+incremented once per V-blank at `VBlank_Exit` (`sonic.asm:685`) and written
+nowhere else in the entire ROM, so nothing resets it on level load and
+`EndDemo_LampVar` (`sonic.asm:3879`) carries no vblank field. Its value entering
+a credits demo is a free-running count since console reset, not level-derived
+state, and cannot be reconstructed from the lamppost table -- **seeding a
+measured phase there would be a fitted model**. The counter is instead
+established once at frame 0 by the replay entry path, as every other
+trace-replay entry does.
+
+The resolution above survives that removal: `TestS1Credits03Lz3TraceReplay` was
+re-run on 2026-08-21 and passes green, so the fix is carried by the
+`d0`-clobber emulation and the frame-0 establishment alone. The stale sentence
+had been read as describing a live mechanism by two people in one session, one
+of whom spent part of a round looking for code that had been deleted.
 
 The `Sonic1LZWaterEvents` X-push and Y-input nudges have been migrated from
 `setCentreX`/`setCentreY` (which zero sub-pixels) to

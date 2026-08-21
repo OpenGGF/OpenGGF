@@ -105172,3 +105172,52 @@ path, it **does** change `DivergenceReport`, `TraceReportWriter` and
 totals quoted here may therefore not reproduce line-for-line on the newer base,
 for reasons that have nothing to do with this fix. The internal comparison
 (candidate against control on one base) is unaffected.
+## 2026-08-21 — the affected set is THREE, and the fix is a tick-ownership refactor not a reorder
+
+Round `s1-slz1-graze-r1`, classification. **No source change beyond the discrepancy-doc correction.**
+
+### The three unclassified readers, settled
+
+| reader | verdict |
+|---|---|
+| **`CNZSlotMachineManager`** (S2 CNZ) | **AFFECTED.** `Sonic2ZoneFeatureProvider.updatePrePhysics` calls it, and its own comment cites the reason: "ROM `LevEvents_CNZ` calls SlotMachine before object execution (`s2.asm:21494, 58827-58840`)". The ROM's V-int has already incremented by then; the engine's has not. |
+| `Sonic3kTitleCardManager` | **Not a ROM gate.** The two `& 3` reads are inside `requestLevelGamestateResetAtInLevelDisplay(...)` — one-shot transition requests, not per-frame gates, and the mask feeds an *engine* dispatch-count heuristic ("the slotless manager reaches its predicted display point after 24 updates"), not a ported ROM test. **But it is phase-sensitive**, so a tick move could shift it; it wants checking in any fixing round. |
+| `S3kSlotBonusStageRuntime` | **Not a level-pass reader.** `rawVblaCounter()` falls back to its own `lastFrameCounter`, and it runs in the bonus-stage runtime rather than the level object pass. |
+
+**So the affected set is three, spanning two games:** `Sonic1LZWaterEvents`,
+`Sonic1LevelEventManager` -> `Sonic1FixedEndCardSlot`, and `CNZSlotMachineManager`. That the S2
+one carries its own ROM citation for running before object execution is good corroboration that
+the ordering, not the readers, is what is wrong.
+
+### Why the fix is not the one-line reorder it looks like
+
+The correct shape is not in doubt — the ROM's V-int increments at `VBlank_Exit`, so everything in
+`Level_MainLoop` including `LZWaterFeatures` reads the already-incremented value, and the engine
+should tick at the frame boundary rather than inside the object pass. The blast radius is also
+narrower than feared: in-pass readers see the same value either way, so **only the three
+pre-physics readers change behaviour**.
+
+What makes it a refactor rather than a reorder is *tick ownership*. `advanceVblaCounter()` is
+called from **seven** sites and the gameplay tick sits inside `ObjectManager.update()`, guarded by
+the field's documented "exactly one tick per serviced V-blank" invariant and by
+`TestVblaCounterVBlankInvariant`. Moving it to the frame boundary means:
+
+- `LevelFrameStep.execute` must tick **after** its `SETUP_ONLY` early return, or setup-only rows
+  gain a tick they do not have today;
+- `ObjectManager.update()` must stop ticking, which strands three callers outside
+  `LevelFrameStep` — `GameLoop` (two sites) and `GameLoopTitleCardLifecycle` — each needing its own
+  decision about where its tick belongs;
+- and every V-blank-only path must still tick exactly once.
+
+That is a four-site ownership move under an invariant whose failure mode is documented as
+"de-phases every consumer". **I am not landing it at the end of this session.** A change whose
+entire content is when a counter is read is precisely the kind that measures well locally and
+desyncs elsewhere, and it deserves a fresh round with the full three-game matrix and nothing else
+in flight.
+
+### Also corrected this round
+
+`known-discrepancies.md`'s resolved-LZ3 entry no longer claims `Sonic1CreditsDemoBootstrap` seeds
+the vblank phase. `TestS1Credits03Lz3TraceReplay` was re-run and **passes green without any
+seeding**, so the resolution rests on the `d0`-clobber emulation and the frame-0 establishment
+alone — the surrounding claim survives the correction.
