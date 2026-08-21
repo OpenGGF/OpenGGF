@@ -29,10 +29,15 @@ class TestTraceCatalogDescriptorOwnership {
         TraceCatalog.RunLaunchValidation validation = TraceCatalog.validateRunLaunch(
                 entry,
                 movie -> new Bk2MovieLoader().load(movie),
-                (manifest, directory) -> {
-                    descriptorPlans.incrementAndGet();
-                    return TraceRunReplayWalker.planDescriptors(manifest, directory);
-                });
+                new TraceCatalog.RunPlannerPair(
+                        (manifest, directory) -> {
+                            descriptorPlans.incrementAndGet();
+                            return TraceRunReplayWalker.planDescriptors(manifest, directory);
+                        },
+                        (manifest, directory) -> {
+                            throw new AssertionError(
+                                    "validation must not plan eager replay payloads");
+                        }));
 
         assertTrue(validation.launchable(), validation.diagnostic());
         assertEquals(1, descriptorPlans.get());
@@ -41,10 +46,15 @@ class TestTraceCatalogDescriptorOwnership {
         TraceCatalog.prepareRunLaunch(
                 entry,
                 movie -> new Bk2MovieLoader().load(movie),
-                (manifest, directory) -> {
-                    eagerPlans.incrementAndGet();
-                    return TraceRunReplayWalker.plan(manifest, directory);
-                });
+                new TraceCatalog.RunPlannerPair(
+                        (manifest, directory) -> {
+                            throw new AssertionError(
+                                    "preparation must not plan only descriptors");
+                        },
+                        (manifest, directory) -> {
+                            eagerPlans.incrementAndGet();
+                            return TraceRunReplayWalker.plan(manifest, directory);
+                        }));
 
         assertEquals(1, descriptorPlans.get());
         assertEquals(1, eagerPlans.get());

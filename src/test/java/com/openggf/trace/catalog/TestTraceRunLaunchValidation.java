@@ -53,10 +53,15 @@ class TestTraceRunLaunchValidation {
                     movieLoads.incrementAndGet();
                     return new com.openggf.debug.playback.Bk2MovieLoader().load(movie);
                 },
-                (manifest, runDir) -> {
-                    planLoads.incrementAndGet();
-                    return TraceRunReplayWalker.plan(manifest, runDir);
-                });
+                new TraceCatalog.RunPlannerPair(
+                        (manifest, runDir) -> {
+                            throw new AssertionError(
+                                    "preparation must not plan only descriptors");
+                        },
+                        (manifest, runDir) -> {
+                            planLoads.incrementAndGet();
+                            return TraceRunReplayWalker.plan(manifest, runDir);
+                        }));
 
         assertEquals(1, movieLoads.get());
         assertEquals(1, planLoads.get());

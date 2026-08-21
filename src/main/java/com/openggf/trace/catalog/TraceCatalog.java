@@ -59,6 +59,19 @@ public final class TraceCatalog {
         List<TraceRunSegmentDescriptor> plan(
                 TraceRunManifest manifest, Path runDir) throws IOException;
     }
+
+    record RunPlannerPair(
+            RunDescriptorPlanner descriptorPlanner,
+            RunSegmentPlanner segmentPlanner) {
+        RunPlannerPair {
+            descriptorPlanner = Objects.requireNonNull(
+                    descriptorPlanner, "descriptorPlanner");
+            segmentPlanner = Objects.requireNonNull(segmentPlanner, "segmentPlanner");
+        }
+    }
+
+    private static final RunPlannerPair DEFAULT_RUN_PLANNERS = new RunPlannerPair(
+            TraceRunReplayWalker::planDescriptors, TraceRunReplayWalker::plan);
     private static final List<String> VALID_GAME_IDS = List.of("s1", "s2", "s3k");
     private static final Comparator<String> GAME_ORDER =
             Comparator.comparingInt(VALID_GAME_IDS::indexOf);
@@ -121,18 +134,18 @@ public final class TraceCatalog {
         return validateRunLaunch(
                 entry,
                 path -> new Bk2MovieLoader().load(path),
-                TraceRunReplayWalker::planDescriptors);
+                DEFAULT_RUN_PLANNERS);
     }
 
     static RunLaunchValidation validateRunLaunch(
             TraceEntry entry,
             RunMovieLoader movieLoader,
-            RunDescriptorPlanner descriptorPlanner) {
+            RunPlannerPair planners) {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(movieLoader, "movieLoader");
-        Objects.requireNonNull(descriptorPlanner, "descriptorPlanner");
+        Objects.requireNonNull(planners, "planners");
         try {
-            validateRunLaunchPayloads(entry, movieLoader, descriptorPlanner);
+            validateRunLaunchPayloads(entry, movieLoader, planners);
             return RunLaunchValidation.valid();
         } catch (IOException | RuntimeException e) {
             return RunLaunchValidation.invalid(diagnosticMessage(e));
@@ -142,7 +155,7 @@ public final class TraceCatalog {
     private static void validateRunLaunchPayloads(
             TraceEntry entry,
             RunMovieLoader movieLoader,
-            RunDescriptorPlanner descriptorPlanner) throws IOException {
+            RunPlannerPair planners) throws IOException {
         if (!entry.isRun()) {
             throw new IllegalArgumentException("Catalog entry is not a trace run");
         }
@@ -160,7 +173,7 @@ public final class TraceCatalog {
                     "Run BK2 parser failed: " + diagnosticMessage(e), e);
         }
         List<TraceRunSegmentDescriptor> descriptors =
-                descriptorPlanner.plan(manifest, entry.runDir());
+                planners.descriptorPlanner().plan(manifest, entry.runDir());
         for (int i = 0; i < manifest.segments().size(); i++) {
             TraceRunManifest.Segment segment = manifest.segments().get(i);
             int end;
@@ -198,7 +211,15 @@ public final class TraceCatalog {
         return prepareRunLaunch(
                 entry,
                 path -> new Bk2MovieLoader().load(path),
-                TraceRunReplayWalker::plan);
+                DEFAULT_RUN_PLANNERS);
+    }
+
+    static PreparedRunLaunch prepareRunLaunch(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunPlannerPair planners) throws IOException {
+        Objects.requireNonNull(planners, "planners");
+        return prepareRunLaunch(entry, movieLoader, planners.segmentPlanner());
     }
 
     static PreparedRunLaunch prepareRunLaunch(
