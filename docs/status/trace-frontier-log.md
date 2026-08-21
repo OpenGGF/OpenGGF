@@ -104103,3 +104103,67 @@ Do not implement the layout fix as a means of greening `Ss8`-`Ss14`; it will not
 as an explicitly unverifiable ROM-correctness fix with `SK_special_stage_flag` modelled at its
 real writer, or park it behind chain progress that reaches those segments. That is a scoping
 call rather than a measurement, so it is brought back rather than taken.
+
+## 2026-08-21 — RETRACTION: there is no HCZ ordinal skew. The engine matches the fixture ordinal for ordinal.
+
+Round `s3k-hcz-skew-r1`, branch `bugfix/ai-s3k-hcz-skew-r1` off `origin/develop` `2f187a343`.
+**Found, not fixed.** Probes reverted, tree clean.
+
+### RETRACT: "the engine's enemy art sits eleven ordinals ahead of the fixture's"
+
+That claim is mine, from the census round, and it is wrong. It came from reading the FIFO
+occupants at the throw (`#114`-`#117`) against the fixture's *first* recorded row (`#103`) and
+calling the difference a base error. It is not a base error: both sides run 103 → 118.
+
+Probing every KosM submission in a standalone `hcz` replay against the fixture's own stream:
+
+| ordinal | fixture fingerprint | engine producer |
+|---|---|---|
+| 103-106 | `f7d72`, `a0cfa`, `03987`, `0956e` | `processEnemyKosArt` — first enemy batch |
+| 107 | `804c9` | `HCZWaterWallObjectInstance` horizontal art |
+| 108-111 | the same four | `reloadEnemyArt` |
+| 112 | `90ab3` | `HCZLargeFanObjectInstance.queueFanArt` |
+| 113 | `98f14` | `HCZWaterWallObjectInstance` vertical art |
+| 114-117 | the same four again | `reloadEnemyArt` |
+| 118 | `70da8` | — |
+
+**The engine's ordinal base is correct and its sequence matches the recording producer for
+producer.** The first enemy batch lands on `#103`-`#106` exactly. There are no eleven boot
+submissions, and the fixture's recorded window is not short.
+
+So of the three candidates — engine, fixture window, ordinal base — it is **the engine**, and
+not in the enemy-art path at all.
+
+### What actually throws
+
+`Sonic3kSSEntryRingObjectInstance.retireRing` → `queueBadnikExplosionArt` attempts a fifth
+parent (`0xDB406` → `0x5A0`) while `#114`-`#117` are all still pending and unready, so the
+four-deep FIFO has no slot.
+
+Under recorded admission those four can only become ready at their recorded rows — 2958, 2962,
+2964 and 2967. The recording's next module after that batch is `#118` at raw frame **3538**,
+**571 frames later**. The engine is attempting its fifth submission inside a window the
+recording leaves empty.
+
+So the shape is an engine producer firing earlier than the ROM's, not a queue, base or window
+defect. The earlier reload batch at `#108`-`#111` drains without incident, which is why the run
+reaches `#117` at all.
+
+### Not established
+
+Whether `#118`'s `70da8` is this explosion art — the fixture stream carries fingerprints, not
+sources, and I did not match them. If it is, the engine's producer is ~571 frames early; if it
+is not, the recording never queues this art in this segment and the producer should not be
+firing at all. **Those are different defects and the distinction is one fingerprint lookup**,
+which is where the next round should start rather than with the FIFO.
+
+Also unmeasured: the exact frame at which the engine's ring fires. The `≥571` above is a lower
+bound derived from `#117`'s recorded row, not a measurement of the engine.
+
+### Consequence for the census
+
+The census listed this as one of two error-side defects and characterised it as the
+boot-coverage skew — the one case that supposedly *did* show that shape. **It does not, so the
+census's error side is not two defects of different kinds; it is seven missing-work special
+stages (now shown to be bootstrap debt) and one producer-timing defect.** Nothing in the census
+demonstrates a boot-coverage ordinal skew.

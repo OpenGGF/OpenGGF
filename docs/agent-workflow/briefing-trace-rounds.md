@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-eight rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-nine rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -51,6 +51,7 @@ that looks like a real result.
 | 66 | A substring match is not a value match; `0 errors` matches inside `5840 errors` |
 | 67 | A ratchet only checked at raise time will always be raised; ask for its whole history |
 | 68 | An in-place routine change is not a spawn; look for a routine byte changing on an occupied slot |
+| 69 | Check that your two numbers are the same kind of measurement before differencing them |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1834,3 +1835,25 @@ columns.
 **Fixing it** means converting in place, reusing the slot and identity, rather than
 spawning. That is a structural change; do not attempt it as a side effect of a frame-timing
 round.
+
+## Sixty-ninth rule: check that your two numbers are the same kind of measurement
+
+The most productive error of one long session was comparing two quantities that were never
+comparable, and it happened three times in a day:
+
+- A queue's **occupants at the moment it overflowed** were compared against a recorded
+  stream's **opening row**, and the difference was reported as an eleven-ordinal base
+  skew. Both sides were in fact identical; the same art was legitimately submitted three
+  times, so a later batch's ordinals looked like a shifted earlier batch's.
+- A **whole-report error count** was compared against a segment's **physics-filtered
+  headline field**, which cannot contain animation errors by design.
+- A first-lap and a second-lap run were nearly differenced against each other while their
+  **layouts differed**, which would have produced a confident answer about nothing.
+
+Each comparison was arithmetically fine and each produced a plausible number.
+
+**Before differencing two numbers, state what each one is.** Same quantity, same scope,
+same instant, same filter. If you cannot say that sentence about both, the difference
+between them is not a finding. This applies hardest to numbers you did not measure
+yourself — a count quoted from a census or an earlier round carries its own scope, and it
+is usually not written down next to it.
