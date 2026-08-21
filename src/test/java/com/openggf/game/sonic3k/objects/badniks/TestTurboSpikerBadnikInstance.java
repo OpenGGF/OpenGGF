@@ -85,9 +85,20 @@ public class TestTurboSpikerBadnikInstance {
 
             ObjectInstance shell = services.spawnedChildren.get(0);
             int shellXBeforeMove = shell.getX();
+            int shellYBeforeMove = shell.getY();
+            // ROM loc_87D72 installs loc_87DA4 into the child's own (a0) and ends at
+            // Sprite_CheckDeleteTouchXY, so the launch dispatch itself never moves the
+            // shell (docs/skdisasm/sonic3k.asm:184042-184058).
             shell.update(20, player);
+            assertEquals(shellXBeforeMove, shell.getX(),
+                    "Launch dispatch installs the move routine without moving");
+            assertEquals(shellYBeforeMove, shell.getY(),
+                    "Launch dispatch installs the move routine without moving");
+            shell.update(21, player);
             assertEquals(shellXBeforeMove - 1, shell.getX(),
                     "Detached shell launches opposite the parent's rightward retreat");
+            assertEquals(shellYBeforeMove - 4, shell.getY(),
+                    "Detached shell rises at the ROM's -$400 y_vel");
         }
     }
 

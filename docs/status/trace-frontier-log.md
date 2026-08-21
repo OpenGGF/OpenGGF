@@ -112674,3 +112674,34 @@ measurement and it either closes this or eliminates a third hypothesis.
    the launch frame all match the recording.
 3. **Both touch boxes** -- object box ROM-verified `(4, 8)` and read by the engine from ROM; the
    player box formula documented and its radii ROM-verified.
+
+### RESOLVED 2026-08-21 -- the sample point was right; the shell's trajectory was one frame early
+
+Measured at `1a5fb6f89`, in a detached worktree off `origin/develop`, with a probe on the touch
+loop's `objX`/`objY` site, on `AbstractObjectInstance.snapshotTouchResponseState()` and on the
+shell's own update, clocked by the touch pass's player centre (`playerX + 8`,
+`playerY + (y_radius - 3)`) against the recorded `player_x`/`player_y` rows -- it matched
+`0x32E8/0x048C` at 22242 and `0x32ED/0x0490` at 22243 exactly.
+
+**Hypothesis 4 (sample point) is eliminated.** The pre-update snapshot does reach the shell child,
+and the touch pass on frame N reads the shell's end-of-frame-(N-1) position, as the ROM does.
+
+**The real defect:** the engine's shell was one frame ahead of the recording for its whole flight.
+Recorded `object_near` slot 6: `0x04B0` through 22239, then `0x04AC` at 22240, `0x04A8`, `0x04A4`,
+`0x04A0` at 22243. The engine reached `0x04AC` at 22239 -- the frame the parent's routine goes
+`0x06 -> 0x08`, i.e. the launch frame itself.
+
+`TurboSpiker_SpikeChild_Launch` (loc_87D72, `docs/skdisasm/sonic3k.asm:184042-184053`) writes
+`TurboSpiker_SpikeChild_Move` into the child's own `(a0)`, sets `x_vel`/`y_vel`, plays the SFX,
+creates the trail child and then `jmp Sprite_CheckDeleteTouchXY` -- it never calls `MoveSprite2`.
+Movement is the whole body of the newly installed `TurboSpiker_SpikeChild_Move`
+(loc_87DA4, `:184056-184058`), which the dispatcher does not reach until the following frame.
+This is the eleventh rule of the routine-install class (rule 107), same-object shape. The engine
+launched and moved in one dispatch.
+
+**Result:** `TestS3kHczZoneSliceTraceReplay` 1519 errors / first error frame 22243 (`g_speed`)
+-> **531 errors / first error frame 22860** (`y_speed`, expected `-0530`, actual `-0430`).
+HCZ1 stays clean, and the engine's shell now sits on the recorded `object_near` y for every frame
+of the flight. Controls at the same SHA, same tree pair:
+`TestS3kSonicTailsHczSegmentTraceReplay` pass/pass, `Hcz2` 3437/3437, `Hcz3` 643/643,
+`Hcz4` 454 -> 450.
