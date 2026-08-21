@@ -17,6 +17,14 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **The batched solid resolver now releases the player's push bit on a four-pixel side-air
+  contact even when the object never raised it**, matching the inline resolver and the ROM.
+  `Solid_NotPushing` clears `status(a1)`'s pushing bit unconditionally; only the object's own
+  bit clear is guarded, and the guarded entry is `SolidObject_TestClearPush` one instruction
+  above (`docs/s1disasm/_incObj/sub SolidObject.asm:246-263`,
+  `docs/s2disasm/s2.asm:35453-35487`, `docs/skdisasm/sonic3k.asm:41509, 41527-41531`). The
+  batched path still folded the two together. No committed trace exercises it, so this is a
+  correctness fix with no measured movement rather than a frontier change.
 - **Sonic no longer stays in the hurt animation after landing.** `Sonic_HurtStop`'s landing
   branch writes four things between detecting the touchdown and returning to
   `Sonic_Control`: the three speeds zeroed, and the walk animation --
