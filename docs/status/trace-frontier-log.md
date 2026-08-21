@@ -113475,3 +113475,41 @@ seen at least twice.
 
 Full write-up:
 [2026-08-21-lbz-frame-411-touch-pass-phase.md](../architecture/audits/trace/2026-08-21-lbz-frame-411-touch-pass-phase.md).
+
+## 2026-08-21 - Obj_WaitOffscreen wake-phase survey: the class is closed at one member
+
+Survey commissioned after the LBZ 411 fix, on the theory that the HCZ Jawz
+CHANGELOG entry plus the Flybot767 made this a defect class with two confirmed
+members. Surveyed at `53cf33da0`. No code change; nothing to land and nothing to
+record ready-to-apply.
+
+**Population correction.** The earlier report's "six other `Obj_WaitOffscreen`
+callers" was a `grep | head` truncated at ten lines. There are **50** call sites,
+one per routine; the six named were the first six.
+
+**Result.** The defect needs two conditions together: the object's first
+placeholder pass must run in its creation frame, and it must be created already
+on screen. S3K has no `ObjID_` table, so `move.l #Obj_X,<dest>` is the complete
+install idiom; intersecting all 316 objects installed anywhere in the ROM with
+the 50 waiters yields exactly one name, `Obj_Flybot767`. Its installer
+`sub_2949C` calls `AllocateObjectAfterCurrent` (`sonic3k.asm:57069`), so the new
+slot runs the same frame, and seats it at `Player_1`'s position
+(`sonic3k.asm:57072-57074`), so it is on screen at once. Both conditions, and
+only there. Every other waiter is layout-placed only, and layout placement
+creates objects off screen because the placement window is wider than the screen.
+
+**Engine cross-check.** 33 classes model the wait: 8 gate on the published render
+flag, 25 on a live bounds test. The 25 are latent-safe rather than correct --
+safe because nothing spawns them dynamically, not because their gate models the
+ROM phase. One id-based dynamic creation of a waiter exists in the engine,
+`LbzAlarmObjectInstance.java:161`, the fixed one.
+
+**Method note worth carrying.** The first intersection returned EMPTY, including
+the member already known to be one, because `sonic3k.asm` has CRLF endings and
+`comm` was matching `Obj_Flybot767\r` against `Obj_Flybot767`. An empty survey
+result and a survey that cannot match anything look identical. This one was
+checkable only because a member was already known -- so run a defect-class survey
+such that the known member MUST appear in its output.
+
+Full write-up:
+[2026-08-21-s3k-wait-offscreen-wake-phase-survey.md](../architecture/audits/trace/2026-08-21-s3k-wait-offscreen-wake-phase-survey.md).
