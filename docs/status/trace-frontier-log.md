@@ -113350,3 +113350,84 @@ That is the third measurement discarded for this reason today.
   (`Tests run: 23, Failures: 1, Errors: 1`).
   `TestHardwareTimingAuthorityGuard` 24/0/0 and
   `TestHardwareTimingInterstitialStream` 11/0/0 are green.
+## 2026-08-21 - LBZ frame 411: player touch pass consumes same-frame badnik position
+
+**Command.** `mvn -Dmse=off -Ptrace-replay "-Dtest=TestS3kLbzZoneSliceTraceReplay"
+"-Ds3k.rom.path=<repo>/s3k.gen" test`, worktree
+a dedicated worktree on `bugfix/ai-lbz-f411`, measured at
+`f7a3ba7101f4de7882f349c592381096091710cf`. `target/surefire-reports` and
+`target/test-tmp` cleared before every run; `UnsatisfiedLinkError` grep clean.
+
+**Result.** `Tests run: 1, Failures: 1, Errors: 0, Skipped: 0` for the class by
+name. `Totals: 4592 errors, 0 warnings. First error: frame 411 -- y_speed
+mismatch (expected=0x0000, actual=-0100)`. Frontier unmoved; nothing landed.
+
+**Attributed.** The player touch pass evaluates the LBZ Flybot767 against the
+position that badnik reached in the *same* frame's object pass, so the
+`Touch_KillEnemy` bounce (`subi.w #$100,y_vel`) lands on 411 instead of the
+ROM's 412. `TouchResponse` runs from the tail of `Obj_Sonic`
+(`sonic3k.asm:22018-22022`), before `Process_Sprites` reaches the badnik's slot
+(`sonic3k.asm:35963-35995`, `Player_1` first per
+`sonic3k.constants.asm:303-304`), and `Touch_Loop` dereferences the object
+pointer live (`sonic3k.asm:20655-20681`) -- so the ROM always reads
+end-of-previous-frame positions. Measured engine order is MOVE, then SNAP, then
+the player scan, with `getPreUpdateX/Y == getX/getY()` in all 2491 probe lines.
+Shared path, not Flybot-specific.
+
+**Open, and blocking any remedy.** Why the touch pass runs after the object pass
+here, when `LevelFrameStep.java:299` declares the opposite order.
+
+**Also noted.** Three aux schemas advertised in the fixture's `metadata.json`
+carry zero rows, and `collision_response_list` is absent from the report's own
+"Missing advertised aux schemas" line, so that gap is silently unreported.
+
+**The physics CSV frame column is hexadecimal.** Row `0411` is frame 1041; frame
+411 is row `019B`. Reading the decimal-looking row makes the comparator look
+inverted, because that row already holds the engine's value.
+
+Full write-up:
+[2026-08-21-lbz-frame-411-touch-pass-phase.md](../architecture/audits/trace/2026-08-21-lbz-frame-411-touch-pass-phase.md).
+
+## 2026-08-21 - LBZ frame 411 re-attributed: the Flybot767 wakes a frame early
+
+**Corrects the entry above.** That entry attributed the divergence to the player
+touch pass consuming a same-frame badnik position -- a shared-path ordering
+defect. That is wrong. The engine's touch phase is ROM-correct.
+
+**Command.** `mvn -Dmse=off -Ptrace-replay "-Dtest=TestS3kLbzZoneSliceTraceReplay"
+"-Ds3k.rom.path=<repo>/s3k.gen" test`, dedicated worktree on
+`bugfix/ai-lbz-f411`, measured at `458e92ad3`. `target/surefire-reports` and
+`target/test-tmp` cleared before every run; `UnsatisfiedLinkError` grep clean.
+`Tests run: 1, Failures: 1, Errors: 0, Skipped: 0` for the class by name; error
+text unchanged at `4592 errors, first error frame 411`, so the probes are
+non-perturbing. Frontier unmoved; nothing beyond documentation landed.
+
+**Attributed.** `Obj_WaitOffscreen`'s `loc_85AD2` gates on `render_flags` bit 7,
+published by the *previous* frame's draw, and `loc_85B02` restores the saved
+operation pointer and `rts` without running it
+(`docs/skdisasm/sonic3k.asm:180271-180302`). Aux `object_appeared` confirms:
+slot 7 is `0x00085AD2` at row 307 and `0x0008C96C` at row 308, so the ROM's
+first `Obj_Flybot767` pass is row 309. The engine creates the object and clears
+`waitingForOnscreen` in the same row (307), first moving on row 308. Its dynamic
+arm (`layoutIndex < 0`, how `Obj_LBZAlarm` allocates) tests
+`isWithinRenderSpriteBounds(...)` live in the creation frame, where the layout
+arm correctly waits for `placeholderRenderedOnscreen`. One frame early, and it
+propagates to the touch at 411 instead of 412. Rule 120: the routine is
+modelled, one of its two arms is not.
+
+**How the first attribution went wrong, because the shape recurs.** The probe
+log had no frame delimiter, so `[MOVE][SNAP][SCAN]` and `[MOVE] | [SNAP][SCAN]`
+were equally consistent with the bytes. The tie was broken by reasoning
+backwards from the failing row, which silently assumed `engine frame == trace
+row` -- an unverified one-point clock conversion, off by one. Printing the
+driver's `DRIVE idx=` alongside the frame marker converted the clock by
+measurement and settled it. A probe stream spanning frames must print the
+compared row, not a counter of its own.
+
+**Also corrected.** The earlier elimination "trajectory in phase, so not a
+creation-frame error" rested on an assumed anchor. Two value-identical sequences
+offset by one row cannot be told apart by value comparison; that check could not
+have returned the answer it was asked for.
+
+Full write-up (revised in place):
+[2026-08-21-lbz-frame-411-touch-pass-phase.md](../architecture/audits/trace/2026-08-21-lbz-frame-411-touch-pass-phase.md).
