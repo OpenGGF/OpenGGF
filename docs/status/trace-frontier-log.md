@@ -104719,3 +104719,66 @@ f3838 blip raised from the other side: whether the boundary is tested against th
 post-move position, and where the pass sits relative to the player's own movement. Both `lz3`
 findings would fall out of that one ordering, which makes it worth answering before either is
 touched.
+## 2026-08-21 — The geyser `bmi` fix is ROM-correct and REJECTED on reach; and a one-frame correction to two earlier entries
+
+Round `s3k-geyser-bmi-r1`, branch `bugfix/ai-s3k-geyser-bmi-r1` off `origin/develop` `2eb2189fe`.
+**Rejected — not landed, and the candidate source is not on this branch**, only this entry.
+
+### The candidate
+
+`HCZWaterWallObjectInstance` `:360` (horizontal) and `:640` (vertical), both
+`timer--; if (timer <= 0)` → `if (timer < 0)`, matching `HCZGeyser_CleanupDelay`'s
+`subq.w #1,$30(a0)` / `bmi.s` (`sonic3k.asm:64996-64998`). Durations untouched — `#150` at
+`:64988`, `#$1E` at `:65302-65305`. Two lines.
+
+### Matrix — both arms, same tree, same commit
+
+| Arm | `-Ptrace-segments` | `-Ptrace-replay` | `-Pguards` |
+|---|---|---|---|
+| control | 70 / 52F / **8E** | 800 / 6F / 0E / 4S (6 `Tests run: 0,`) | 500 / 0F / 0E |
+| candidate | 70 / 51F / **10E** | 800 / 6F / 0E / 4S (6) | 500 / 0F / 0E |
+
+Trace-replay and guards match exactly. **The segments arm does not.** The failing *class* sets
+are identical — 60 red in both, no newly-red class — but one class **changes kind**:
+
+`TestS3kHczZoneSliceTraceReplay`, control: `Totals: 1519 errors … First error: frame 22243 --
+g_speed`, running to completion. Candidate: **throws** `Unable to queue HCZ large-fan KosM art`
+and aborts.
+
+That is a reach regression. Holding the geyser one dispatch longer keeps its reload parents in
+the four-deep FIFO one frame longer, and the large fan's submission — which previously fitted —
+now collides. Same shape as the geyser throw closed earlier tonight, one object along.
+
+### Rejected, and deliberately not compensated
+
+The condition is ROM-correct from a named instruction and it is **not** being adjusted to keep
+the collision away. Splitting the difference here would be a fitted constant concealing a phase
+error, and it would read as an improvement.
+
+The pair, for whoever takes the upstream defect:
+
+1. **This condition is right.** Both sites fire a dispatch early today.
+2. **The vertical cleanup phase is entered about two frames later than the ROM's.** With the
+   condition corrected, the vertical batch submits at 2959 against a recorded edge at 2957 —
+   further away, not closer. The early fire was masking part of that.
+3. **FIFO occupancy is already marginal.** One extra dispatch of correct behaviour is enough to
+   collide with a neighbouring producer, which says the parents are resident far too long for
+   reasons upstream of this condition.
+
+**Working-path control for any candidate:** `#108`-`#111`, the horizontal reload, must keep
+draining. It does under this candidate — the run still reaches `#112`-`#117` — and any change
+that breaks it is wrong regardless of what it does to the vertical path.
+
+### CORRECTION to two earlier entries: the edge boundary is inclusive
+
+Both the `s3k-hcz-decomp-r1` and `s3k-hcz-fp-r1` entries state that a submission must **precede**
+the recorded edge that releases it. That is wrong by one frame. It must precede **or equal** it.
+
+Measured: with the condition corrected the horizontal reload submits at frame **1022** against
+its recorded decompression edge `#161` at **1022** — the same frame — and still drains. The
+reason is ordering within the frame, not a tolerance: the submission happens during the object
+pass, and the edge is applied at `PRE_MAIN_LOOP`, later in the same frame.
+
+This does not change either entry's conclusion — the vertical batch at 2958 against an edge at
+2957 is late under the corrected rule too — but the rule as written would misjudge any
+same-frame case, and it is stated in two places.
