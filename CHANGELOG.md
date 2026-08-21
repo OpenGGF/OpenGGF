@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **The destination's level art no longer starves behind its own title card.** `Level:`
+  reaches `LoadLevelLoadBlock` only once `Obj_TitleCardCreate`'s
+  `tst.b (Kos_modules_left).w` wait has drained the card's archives
+  (`docs/skdisasm/sonic3k.asm:62169-62171`), and that routine then queues *both* terrain
+  parents at the call before blocking at `loc_7870` until the queue empties again
+  (`:9727`, `:9734`, `:9736-9743`). The enemy art that follows comes later still, from
+  `Obj_TitleCardWait2`'s `LoadEnemyArt` (`:62298`). The engine instead deferred the terrain
+  submission to a later publication service: it released the slots it had while the FIFO
+  was empty, the following level frames' object art took all four, and the deferred batch
+  then retried against a full FIFO forever -- silently, hundreds of times. Submission now
+  happens at the call once the module queue is clear, which is the ROM's own precondition
+  rather than a capacity test; a caller that arrives while modules are still outstanding is
+  ahead of the ROM's control flow and waits.
+  On the Sonic 3 & Knuckles complete-emerald run this restores the recorded submission
+  order -- title card `#97`-`#100`, level art `#101`/`#102` carrying the recorded
+  `0x3B9668` -> `0x0000` and `0x3BAE7A` -> `0x2360` pair, then object art -- and unwedges
+  the module FIFO: the `Unable to queue HCZ geyser KosM art` failure is gone, segment 8's
+  physics errors fall from 4787 to 2288 with its first non-camera mismatch moving from
+  frame 4909 to 6000, and segment 9 (HCZ1) now runs to completion instead of aborting
+  partway.
+
 - **Sonic 2's Super transformation now fires just past the apex, not on the way up.**
   `Sonic_JumpHeight` ends `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
   (`docs/s2disasm/s2.asm:37432-37434`). On a big-endian word `tst.b` reads the **high**

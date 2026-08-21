@@ -593,7 +593,7 @@ public class Sonic3kTitleCardManager
      * One dispatch of the omitted owner: the locked loop's iteration retires
      * whatever the module queue has made ready, which is what
      * {@code Obj_TitleCardCreate}'s {@code tst.b (Kos_modules_left).w} gate
-     * (docs/skdisasm/sonic3k.asm:62168-62170) waits on before the owner
+     * (docs/skdisasm/sonic3k.asm:62169-62171) waits on before the owner
      * advances. Renders nothing.
      */
     @Override
