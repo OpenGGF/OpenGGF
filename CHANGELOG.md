@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Added
+- **The S2 tornado recordings' ROM object state is now compared instead of only parsed.**
+  `s2_tornado_state` carries ObjB2's SST on every row of the SCZ and WFZ fixtures and was an
+  untyped member of `KNOWN_GENERIC_NATIVE_EVENTS`. It is now a parsed
+  `TraceEvent.S2TornadoState`, reachable via `TraceData.s2TornadoStateForFrame`, compared
+  against a read-only `TornadoObjectInstance.Snapshot` by `TraceBinder.compareS2Tornado`
+  across 11 fields. Identity is by content, not by the recorded slot index: the comparison
+  runs only when exactly one tornado instance is active, so no engine-slot-to-ROM-slot
+  mapping is invented. Comparison-only throughout.
+
+  The engine models the ROM's scratch bytes semantically, so the snapshot re-encodes them
+  using ObjB2's own idioms rather than a chosen representation: `objoff_2E` is the
+  `p1_standing` transition (`docs/s2disasm/s2.asm:78827, 78834-78839`), `objoff_2F`/`objoff_30`
+  are `st.b`/`clr.b` flags (`s2.asm:79382-79383, 79390`), and `y_sub` is exact because the
+  ROM's sub-pixel word has a zero low byte on all 7629 SCZ rows. Those encodings were read off
+  the SCZ arm; WFZ records an `objoff_2f` value they cannot produce, so that arm's scratch
+  semantics are recorded as unmodelled in `docs/status/known-discrepancies.md`.
+
+  Switching it on exposes five divergence spans across 24,056 rows, all pre-existing and each
+  individually nameable. Fields emit at `WARNING` to record an untriaged frontier. Measured at
+  800/10F against an 800/8F baseline with `-Pguards` clean; the SCZ and WFZ classes are the
+  entire blast radius and both carry a deliberate-red javadoc.
+
 - **The S2 CNZ recordings' ROM slot-machine state is now compared instead of merely parsed.**
   `aux_state.jsonl` carries the ROM's own `SlotMachineVariables` block
   (`cnz_slot_machine_state`) on every one of the 9469/12083 rows of both CNZ fixtures;

@@ -113,7 +113,7 @@ object without an identity mapping. Volume matters far less than either.
 | `interact_state` | s3k | `interact`, `interact_slot`, `status`, `status_secondary`, `object_control` for the player | **medium** — `interact_slot` needs the slot mapping |
 | `sidekick_interact_object` | s3k | the same for the sidekick, plus render flags, invulnerability timer and dimensions | **medium** |
 | `game_paused_state` | s3k | `game_paused`, one ROM flag | **low**, but thin — an oracle for pause parity only |
-| `object_state` | s3k | per-object SST — `object_code`, `routine`, `status`, `subtype`, `x`, `y`, radii | **high** — the identity problem is the whole cost: engine slots must be matched to ROM slots before any byte can be compared, which is exactly what `ObjectOccupancyOracle` already wrestles with. Largest payoff, largest cost. |
+| `object_state` | s3k | per-object SST — `object_code`, `routine`, `status`, `subtype`, `x`, `y`, radii | **blocked, not merely expensive — see the scoping section below.** This row's original "high cost" rating was wrong. |
 
 ### Already covered by another route
 
@@ -154,10 +154,8 @@ on every row the whole time.
    slot, no identity mapping. If the approach is going to be validated anywhere, here.
 2. The three other no-mapping oracles — `v_oscillate`, `oscillation_state`, `camera_boundary`.
    Cheap, and they cover S1 and S3K rather than piling more coverage onto S2.
-3. `object_state` — largest payoff and largest cost; S3K object parity is the active frontier
-   and this is per-object ROM state nothing checks. Needs the engine-slot-to-ROM-slot mapping
-   solved first, which is a piece of work in its own right and should not be attempted as part
-   of wiring a comparison.
+3. `object_state` — **do not commission yet.** Not a cost problem but a precondition problem;
+   the scoping section below sets out why.
 >>>>>>> 10256be7c
 
 Wiring one in is not free: switching on the CNZ comparison immediately turned two green
@@ -170,3 +168,60 @@ promotion condition is.
 confirm the field goes red — before believing a green. The CNZ comparison was first wired
 into `LiveTraceComparator`, which the replay tests never execute, and reported a perfectly
 clean green while never running.
+
+## Scoping `object_state` — commissioned 2026-08-21, and the answer is "not yet"
+
+Asked for before anyone acts on it: what it would compare, how many classes would go red on
+the first run, and whether it can be introduced per-field or only wholesale.
+
+**It is blocked, and my own "high cost, largest payoff" rating above was wrong.** The cost is
+not high. The precondition is unmet, and the evidence was already in the repository.
+
+### What the recorded field actually is
+
+`object_state.object_code` is **not an object identity**. S3K keeps a 32-bit ROM code pointer
+in the first SST long — `Process_Sprites` does `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
+(`sonic3k.asm:35985-35988`) — and objects overwrite their own dispatch pointer with internal
+sub-routine addresses to advance state, at **1,758 `move.l #<label>,(a0)` sites**. The existing
+audit
+[*S3K trace object identity: the object pointer tables cannot supply it*](2026-08-15-s3k-object-code-pointer-identity.md)
+inverted both ROM object pointer tables and found **only 7 of 189 distinct recorded pointers
+are table entries at all — 4.26% of entries.** The S3K SST has no id field at any offset. The
+recorded value is a live program counter, not a type at any width.
+
+### Therefore
+
+- **Per-field or wholesale?** Per-field in principle — the record decomposes into `routine`,
+  `status`, `subtype`, `x`, `y`, radii, keyed by `slot`. But every one of those is *per slot*,
+  so a comparison is only meaningful once engine and ROM agree on **which object occupies the
+  slot**, and identity cannot supply that.
+- **The occupant already disagrees, everywhere.** Engine-vs-ROM occupancy diverges on
+  **2387 of 2387 sampled frames**, with 19,519 genuine presence/absence divergences.
+  Comparing per-slot scalars across an object graph that disagrees on the occupant produces
+  noise, not signal: a `routine` mismatch would mean "different object in this slot", which is
+  already known and already documented.
+- **Blast radius, if switched on anyway.** 210 of the 272 S3K fixtures carry the event,
+  spanning essentially every S3K trace class and every S3K run chain — an order of magnitude
+  more than the two classes each of the CNZ and tornado comparisons cost, and all of them
+  reporting the same already-known fact.
+
+### What to commission instead
+
+The audit already names the sound comparison S3K can support today: **occupancy alone** —
+presence/absence and slot index over `Dynamic_object_RAM` slots 4-90, no identity. That is a
+real, landable oracle, and it is the precondition for `object_state` rather than a substitute
+for it. Identity would require annotating every ported S3K object with its current ROM routine
+address, which is a programme, not a round.
+
+**Sequencing:** occupancy first; `object_state` only once slot occupancy matches, at which
+point its per-slot fields become meaningful and can be introduced a field at a time.
+
+### The general lesson for this inventory
+
+The oracle test has a second clause I did not state when I wrote it. It is not enough that the
+recorded values be ROM state the engine also holds; **the recorded row must be attributable to
+an engine object.** The CNZ block passed because it is global state with no identity question,
+and the tornado passed because exactly one instance exists so identity is by content.
+`object_state` fails on attribution alone, with every individual field perfectly comparable.
+Attribution is the clause worth checking first, because it can block a stream whose every byte
+looks ideal.

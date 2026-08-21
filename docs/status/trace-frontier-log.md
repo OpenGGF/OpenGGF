@@ -106563,3 +106563,76 @@ around, and it would have named the site in a report on the first run. **Worth a
 same aux streams carry `s2_tornado_state`, `slot_dump`, `cursor_state` and `state_snapshot`
 under the same untyped-generic path, none of them compared. Whether each is an oracle or just
 telemetry is a per-stream question, but nobody has asked it.
+
+## 2026-08-21 — s2_tornado_state is an oracle, and it was hiding five divergences
+
+Round `tornado-oracle-r5`, branch `bugfix/ai-tornado-oracle` off `e04a6a081`. The first
+inventory candidate acted on, chosen as the smallest, closest analogue to the CNZ block: it
+tests whether that result was a one-off or the first of a family.
+
+### The oracle test, applied before writing any comparison
+
+The test is whether the recorded values are ROM state the engine also holds, comparable byte
+for byte at events identified by content. `s2_tornado_state` **passes on all twelve fields**,
+but not trivially — two things had to be checked first, and one of them nearly produced a
+false limitation:
+
+- **The engine does not store the scratch bytes as bytes.** It holds
+  `standingTransition`, `moveVertActive`, `moveVert2Active` as booleans and `moveVertTimer` as
+  an int, with a comment calling them "objoff_2E/$2F/$30/$31 equivalents". That looked like a
+  representation gap the inventory had not anticipated. Reading the ROM resolved it in the
+  engine's favour: `objoff_2F`/`objoff_30` are `st.b`/`clr.b` flags, so `0xFF`/`0x00`
+  (`s2.asm:79382-79383, 79390`), and a boolean models that exactly.
+- **`objoff_2E` looked lossy and is not.** At `s2.asm:78827` ObjB2 copies the whole
+  `status(a0)` byte into it, which the engine's boolean cannot represent — so this was written
+  down as not comparable. Ten lines later (`78834-78839`) the ROM narrows it:
+  `(saved ^ current) & p1_standing`, leaving only `$00` or `$08`, which is exactly the
+  standing-bit *transition* the engine's `standingTransition` computes. **Reading the second
+  write retired the limitation.** The recorded values are `{0x00, 0x08}` and nothing else,
+  which corroborates it.
+- **`y_sub` is exact, not truncating.** The ROM's sub-pixel is a word and the engine's is a
+  byte, which looks lossy; the recorded low byte is zero on 7629 of 7629 SCZ rows, so the
+  engine's 8-bit sub is a faithful model.
+
+Verdict: an oracle, with three ROM-derived encodings — none invented, each cited.
+
+### What it found
+
+Five divergence spans across 24,056 rows, all pre-existing, listed with their mechanisms in
+`docs/status/known-discrepancies.md`. The shape is the notable part: unlike CNZ's 767, these
+are **discrete and individually nameable** — a level-start initialisation difference on each
+fixture, two single-row phase divergences that self-correct, and one span the encoding cannot
+explain.
+
+That last one is a finding against my own mapping rather than against the engine: WFZ records
+`objoff_2f = 0x01`, which the `st.b`/`clr.b` encoding cannot produce, so **the WFZ arm uses
+the byte for something else and the scratch semantics are per-routine, not per-object.** The
+encoding above was read off the SCZ arm only. Recorded as unmodelled rather than papered over.
+
+### Matrix
+
+| | control `e04a6a081` | with the comparison |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 8F / 0E / 4S | 800 / **10F** / 0E / 4S |
+| `-Pguards` | 500 / 0F | 500 / 0F |
+
+157 classes both ways, red sets diffed both directions. Newly red: `TestS2SczLevelSelectTraceReplay`
+and `TestS2WfzLevelSelectTraceReplay`. Newly green: none.
+
+**A third class went red first and was a real regression, not new coverage.**
+`TestTraceEventFormatting` failed because promoting `s2_tornado_state` from an untyped generic
+event to a typed record silently disabled the formatter's special case for it, which keyed on
+`StateSnapshot.fields().get("event")`. Fixed by adding a typed formatter branch that emits the
+byte-identical string, so every context dump and report is unchanged. Worth noting as a cost of
+the promote-to-typed step that the CNZ round did not hit: **anything switching on the untyped
+map's `event` key stops firing the moment the event becomes typed**, and it fails silently in
+formatting rather than loudly in parsing. Check for those before promoting the next stream.
+
+### Falsification, as standing procedure
+
+Before trusting any result the engine snapshot was deliberately corrupted (`currentX + 1`) and
+the suite re-run: `tornado.x` reported expected `0x0137` against actual `0x0138` across 7628
+rows. Only then was the corruption reverted and the real numbers taken. Also learned in
+passing: `warning_count` counts **spans, not rows** — the corrupted run reported "3 warnings"
+for a divergence on nearly every row, because the report collapses consecutive identical
+divergences. Do not read that field as a row count.

@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
 import com.openggf.level.LevelManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
@@ -552,6 +553,8 @@ public abstract class AbstractTraceReplayTest {
                             trace, binder, comparisonExpected.frame());
                     compareCnzSlotMachineIfRecorded(
                             trace, binder, comparisonExpected.frame());
+                    compareS2TornadoIfRecorded(
+                            trace, binder, comparisonExpected.frame());
                     compareDynamicArtIfAdvertised(
                             trace, binder, expected.frame());
                     recordUnmatchedHardwareCompletions(
@@ -991,6 +994,37 @@ public abstract class AbstractTraceReplayTest {
      * or speed divergence: see the 2026-08-21 tick-ownership entries in
      * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
      */
+    /**
+     * Compares ObjB2's recorded SST against the engine's whenever the fixture
+     * carries the event. Identity is by content, not by the recorded slot index:
+     * the comparison runs only when exactly one tornado instance is active, so
+     * no engine-slot-to-ROM-slot mapping is invented.
+     */
+    private static void compareS2TornadoIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.S2TornadoState expected = trace.s2TornadoStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return;
+        }
+        TornadoObjectInstance found = null;
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance instanceof TornadoObjectInstance tornado) {
+                if (found != null) {
+                    return; // ambiguous; do not guess which one the recorder meant
+                }
+                found = tornado;
+            }
+        }
+        if (found == null) {
+            return;
+        }
+        binder.compareS2Tornado(frame, expected, found.snapshot());
+    }
+
     private static void compareCnzSlotMachineIfRecorded(
             TraceData trace, TraceBinder binder, int frame) {
         TraceEvent.CnzSlotMachineState expected =

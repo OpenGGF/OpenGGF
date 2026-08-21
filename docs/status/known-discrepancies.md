@@ -2564,3 +2564,48 @@ frontier is untriaged rather than asserting a tolerance.
 **Removal condition.** Model all three members together, drive the CNZ slot
 divergences to zero, then promote `TraceBinder.putSlotField` from
 `Severity.WARNING` to `Severity.ERROR` and delete this entry.
+
+## S2 tornado (ObjB2): recorded ROM SST diverges at five discrete points
+
+**Status:** open, comparison landed at WARNING on 2026-08-21.
+
+`aux_state.jsonl` carries ObjB2's SST (`s2_tornado_state`) on every row of the SCZ and WFZ
+fixtures. It was parsed as an untyped generic event and never compared. Comparing it exposes
+five pre-existing divergence spans across 24,056 rows:
+
+| fixture | field | rows | ROM | engine |
+|---|---|---|---|---|
+| `scz` | `tornado.objoff_31` | 0–198 | `0xFF` | `0x00` |
+| `scz` | `tornado.x` | 7103 only | `0x12F5` | `0x12F6` |
+| `wfz` | `tornado.status_byte` | 0–196 | `0x08` | `0x00` |
+| `wfz` | `tornado.routine` | 10419 only | `0x00` | `0x06` |
+| `wfz` | `tornado.objoff_2f` | 13378–13440 | `0x01` | `0x00` |
+
+Unlike the CNZ slot block these are discrete and individually nameable rather than a cascade,
+which makes each one a small self-contained target:
+
+- **`objoff_31` at level start.** The ROM's vertical-move countdown is decremented with
+  `subq.b #1` / `bpl` (`s2.asm:79388`), so its expired resting value is `-1` = `0xFF`. The
+  engine initialises `moveVertTimer` to `0`. A one-line initialisation difference, visible for
+  199 rows until the first vertical move loads `$14`.
+- **`status_byte` at WFZ level start.** The ROM has the `p1_standing` bit set on ObjB2 for the
+  first 197 rows; the engine's `lastMainStanding` is false there.
+- **The two single-row spans** (`scz` `x` at 7103, `wfz` `routine` at 10419) are one-frame
+  divergences that self-correct, so each is a phase question at a specific transition rather
+  than a drift.
+
+**A limitation of the encoding, stated because it is not obvious.** The scratch bytes are
+re-encoded from the engine's semantic fields using ROM idioms read off the **SCZ** arm:
+`objoff_2E` is the `p1_standing` transition (`status(a0)` saved, then
+`(saved ^ current) & p1_standing`, `s2.asm:78827, 78834-78839`), and `objoff_2F`/`objoff_30`
+are `st.b`/`clr.b` flags, hence `0xFF`/`0x00` (`s2.asm:79382-79383, 79390`). The WFZ
+`objoff_2f` divergence records `0x01`, which that encoding cannot produce — so **the WFZ arm
+uses the byte for something else**, and the mapping is per-routine rather than per-object. The
+WFZ arm's scratch semantics have not been read; until they are, `tornado.objoff_2f` on a WFZ
+row should be treated as unmodelled rather than as a divergence.
+
+`y_sub` is exact rather than truncating: the ROM's sub-pixel word has a zero low byte on all
+7629 SCZ rows, so the engine's 8-bit sub-pixel is a faithful model of it.
+
+**Removal condition.** Fix the five divergences, read the WFZ arm's scratch semantics, then
+promote the tornado fields from `Severity.WARNING` to `ERROR` and delete this entry.

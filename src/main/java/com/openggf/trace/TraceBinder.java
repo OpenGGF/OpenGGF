@@ -682,6 +682,41 @@ public class TraceBinder {
      * so the two are different quantities despite the shared name.
      */
     /**
+     * Compares ObjB2's recorded SST against the engine's. Comparison-only.
+     *
+     * <p>Emitted at WARNING for the same reason as the CNZ slot block: brand-new
+     * coverage of a stream nothing has ever compared, so its frontier is
+     * untriaged. Promote to ERROR once the divergences are zero.
+     */
+    public void compareS2Tornado(
+            int frame,
+            TraceEvent.S2TornadoState expected,
+            com.openggf.game.sonic2.objects.TornadoObjectInstance.Snapshot actual) {
+        if (expected == null || actual == null) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        putSlotField(fields, "tornado.x", expected.x(), actual.x());
+        putSlotField(fields, "tornado.y", expected.y(), actual.y());
+        putSlotField(fields, "tornado.y_sub", expected.ySub(), actual.ySub());
+        putSlotField(fields, "tornado.y_vel", expected.yVel(), actual.yVel());
+        putSlotField(fields, "tornado.routine", expected.routine(), actual.routine());
+        putSlotField(fields, "tornado.routine_secondary",
+                expected.routineSecondary(), actual.routineSecondary());
+        putSlotField(fields, "tornado.status_byte", expected.statusByte(), actual.statusByte());
+        putSlotField(fields, "tornado.objoff_2e", expected.objoff2E(), actual.objoff2E());
+        putSlotField(fields, "tornado.objoff_2f", expected.objoff2F(), actual.objoff2F());
+        putSlotField(fields, "tornado.objoff_30", expected.objoff30(), actual.objoff30());
+        putSlotField(fields, "tornado.objoff_31", expected.objoff31(), actual.objoff31());
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
      * Emits one slot field at WARNING rather than ERROR.
      *
      * <p>Deliberate and temporary. This comparison is brand-new coverage of a

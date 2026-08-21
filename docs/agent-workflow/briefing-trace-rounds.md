@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-one rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-three rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -74,6 +74,8 @@ that looks like a real result.
 | 79 | A citation whose numbers were refreshed but whose claim was not re-read | A false statement wearing a freshly-audited look |
 | 80 | A derivation that explains everything | One unchecked premise, fitted so tightly it convinces — and points the wrong way |
 | 81 | A new comparison that has never been seen to fail | Green from a code path the suite never enters |
+| 82 | A stream whose every byte is comparable | Blocked anyway — rows not attributable to an engine object |
+| 83 | A stream promoted from untyped to typed | Untyped-keyed formatters and probes stop firing, silently |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2131,3 +2133,35 @@ This is the third door into the same room as the tautological probe and the unin
 instrument: output that looks like a result and carries no information. The other two were
 caught by asking what would falsify them; this one was caught by making it fail on purpose,
 which is the cheaper check.
+
+## Eighty-second rule: the oracle test needs an attribution clause
+
+Deciding whether a recorded stream can be compared has three parts, not two. The values must
+be ROM state the engine also holds; the arithmetic must be invertible so a recorded byte pins
+an engine quantity; **and the row must be attributable to a specific engine object.**
+
+The third clause is the one that blocks, and it blocks streams whose every individual byte is
+perfect. One per-object stream decomposes cleanly, every field is individually comparable, and
+none of it means anything until engine and ROM agree on which object occupies a slot — the
+recorded identity is a live dispatch pointer that objects overwrite with their own internal
+addresses at seventeen hundred sites, and only a handful of distinct recorded values are table
+entries at all. A global block passes attribution trivially because there is no identity
+question; a single-instance object passes it by content, because exactly one instance exists.
+
+**Check attribution first.** It is the cheapest of the three and the only one that can make the
+other two irrelevant.
+
+## Eighty-third rule: promoting a stream to typed silently unhooks its untyped consumers
+
+Recorded events that arrive through an untyped generic path can be read by formatters, report
+writers and debug probes that switch on a key in the untyped map. The moment the stream is
+promoted to a typed event, every one of those special cases stops firing — and it fails
+silently in formatting rather than loudly in parsing, so the first symptom is an unrelated test
+going red for a reason that looks nothing like the change.
+
+Before promoting a stream, grep for consumers keyed on its untyped name and give each a typed
+branch producing byte-identical output. Say in the write-up which consumers you checked.
+
+**Related counting trap, same round.** A warning count in this harness counts *spans*, not
+rows: a deliberately corrupted run diverging on nearly every row of a fixture reported three
+warnings. Do not read such a count as a row count when sizing a divergence.

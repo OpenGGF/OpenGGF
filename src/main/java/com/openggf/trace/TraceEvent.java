@@ -19,8 +19,7 @@ public sealed interface TraceEvent {
     Set<String> KNOWN_GENERIC_NATIVE_EVENTS = Set.of(
             "state_snapshot",
             "cursor_state",
-            "slot_dump",
-            "s2_tornado_state");
+            "slot_dump");
 
     int frame();
 
@@ -679,6 +678,29 @@ public sealed interface TraceEvent {
      * offset in the low byte, matching the ROM's 16-bit
      * {@code (index, offset)} word.
      */
+    /**
+     * Per-frame snapshot of ObjB2's SST, emitted by the S2 recorder on every row
+     * of an SCZ or WFZ capture. Comparison-only.
+     *
+     * <p>The scratch bytes carry ROM idioms rather than plain numbers, and the
+     * engine models each one semantically:
+     * {@code objoff_2E} is the standing-bit transition — ObjB2 saves
+     * {@code status(a0)}, then stores {@code (saved ^ current) & p1_standing}
+     * (s2.asm:78827, 78834-78839), so it is `$00` or `$08`;
+     * {@code objoff_2F} and {@code objoff_30} are `st.b`/`clr.b` flags, hence
+     * `$FF` or `$00` (s2.asm:79382-79383, 79390); and {@code objoff_31} is the
+     * vertical-move countdown loaded with `$14` (s2.asm:79385-79388).
+     *
+     * <p>{@code y_sub} is the ROM's 16-bit sub-pixel word. Its low byte is zero
+     * on all 7629 rows of the SCZ fixture, so the engine's 8-bit sub-pixel is a
+     * faithful model of it and the comparison is exact rather than truncating.
+     */
+    record S2TornadoState(
+            int frame, int slot, int x, int y, int ySub, int yVel,
+            int routine, int routineSecondary, int statusByte,
+            int objoff2E, int objoff2F, int objoff30, int objoff31)
+            implements TraceEvent {}
+
     record CnzSlotMachineState(
             int frame,
             int vbc,
@@ -735,6 +757,21 @@ public sealed interface TraceEvent {
                 case "load_queue_state" -> parseLoadQueueState(frame, node);
                 case "cnz_slot_machine_state" ->
                         parseCnzSlotMachineState(frame, node);
+                case "s2_tornado_state" -> new S2TornadoState(
+                    frame,
+                    node.has("slot") ? node.get("slot").asInt() : -1,
+                    parseHexInt(node, "x") & 0xFFFF,
+                    parseHexInt(node, "y") & 0xFFFF,
+                    parseHexInt(node, "y_sub") & 0xFFFF,
+                    parseHexInt(node, "y_vel") & 0xFFFF,
+                    parseHexInt(node, "routine") & 0xFF,
+                    parseHexInt(node, "routine_secondary") & 0xFF,
+                    parseHexInt(node, "status_byte") & 0xFF,
+                    parseHexInt(node, "objoff_2e") & 0xFF,
+                    parseHexInt(node, "objoff_2f") & 0xFF,
+                    parseHexInt(node, "objoff_30") & 0xFF,
+                    parseHexInt(node, "objoff_31") & 0xFF
+                );
                 case "dynamic_art_transfer_state" ->
                         parseDynamicArtTransferState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
