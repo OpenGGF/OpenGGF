@@ -105730,3 +105730,78 @@ Both remaining worktree-resident artefacts are preserved rather than tidied: the
 `parked/ai-s3k-geyser-postcamera-bit7-REJECTED`, whose entry above explains why it is
 neither superseded nor rejected, and one earlier lane's uncommitted diff saved outside the
 repository.
+
+## Three open decisions, reviewed with a second model, and what verification changed
+
+Each recommendation below was reviewed independently, and each rested on one load-bearing
+fact that was then checked. Two of the three checks changed the answer.
+
+### The segments profile in CI
+
+**Recommendation:** a non-blocking baseline-diff job rather than a pass/fail gate — fail only
+when a class recorded green goes red, or a baseline-red class goes green without the baseline
+being updated. A plain gate is unusable at sixty red of seventy and would pressure someone
+toward the trace hydration hard rule 4 forbids; zero coverage is how a class regressed
+unobserved for six days.
+
+**Verified, and it holds:** CI already has the ROMs. Both the develop trace job and the
+release workflow pass all three ROM paths from repository variables, and both already use
+`-Dmse=off`. The "CI cannot have the ROMs" objection is false, and neither workflow mentions
+this profile.
+
+**Verified, with a caveat:** the red set is stable. Two consecutive runs at the same commit
+give an identical sixty-one-class red set and identical totals. The caveat is that both runs
+were in the same worktree, and this project has a recorded hazard where Surefire's filesystem
+run order varies *between* worktrees and selects order-dependent victims — so this is
+evidence of stability across repeats, not across checkouts.
+
+**The counter-proposal worth weighing:** fold the handful of currently-green segment classes
+into the existing keep-green set inside the profile CI already runs. That captures most of the
+regression-detection value at near-zero maintenance, against a baseline file that legitimate
+frontier work will churn constantly.
+
+### The source-size budget
+
+**Recommendation:** keep the budget, add a ratchet-down so extraction wins are locked in, and
+add a narrow structural rule asserting what the number proxies — that placement, touch-response
+and solid-contact logic stay out of the facade. ArchUnit is already adopted in this repo, so
+that has no tooling cost. The two guards catch disjoint failure modes: a type-dependency rule
+cannot catch a misplaced write that changes no dependencies, which is exactly what the sibling
+budget caught this week when an author moved a write to the caller that owned the ROM routine
+rather than raising it.
+
+**Verified, and it partly overturns the diagnosis.** The recommendation was ranked behind
+"first fix CI so the guard runs at all", on the reading that the raises trace to an enforcement
+gap. The gap was real — the largest raise says in its own message that forty-seven commits
+touched the file while no job ran this guard — but it is **already closed**: the guards job
+was added to CI on the same day as that raise, and the guard is inside the profile it runs. So
+the enforcement half is done, and only one raise has happened since, with an extraction behind
+it. That leaves the ratchet-down and the structural rule as the live proposals, and it removes
+the argument that the metric has never been tested under enforcement.
+
+### The touch-scan frame position
+
+**Verified, and the load-bearing reading holds.** `Obj_ResetCollisionResponseList` is
+`move.w #0,(Collision_response_list).w` — an unconditional per-frame clear, installed in the
+slot immediately after the two player slots. So the players' scan consumes the list built by
+the previous frame's object dispatches, and because the scan reads each candidate's live
+position, the geometry is tested against positions no non-player object has yet updated this
+frame. The alternative reading, in which the players consume a list populated earlier in the
+same frame, would have collapsed the finding to a slot-order effect and is ruled out.
+
+**Two compensations predicted, and both exist.** The review predicted that the codebase
+already contains local compensations for the wrong global timing, and named the shape: a
+counter seeded one below its ROM literal near a touch path, justified by a comment about
+dispatch phase. Both were found in minutes -- one badnik whose hover duration is fifty-nine
+against the ROM's sixty, and a boss child whose wait is one above the ROM's literal with a
+comment about publishing positions "before the next player touch scan". Under a corrected
+global ordering each double-counts, so a fix will take currently-green fixtures red and the
+brief must say so rather than leaving the round to report a false regression.
+
+**The pre-implementation test that should run first.** The traces record per-frame object
+positions, so the hypothesis can be killed or confirmed with no engine change: for a recorded
+touch event, compute the overlap from the recording's own positions twice, with the candidate
+at the event frame and at the frame before, using the object's ROM touch radii. The stale-position
+model predicts the earlier box overlaps at the recorded event and the live one does not. One
+clean event where the two disagree settles it; two, in different games, settle it well. The
+recorder's own sampling phase has to be established first or the oracle is ambiguous.
