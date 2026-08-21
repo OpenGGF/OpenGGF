@@ -151,6 +151,7 @@ that looks like a real result.
 | 131 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
 | 132 | A gate probe must cover the early returns you were not thinking about | The suspected branches log; the deciding one has no line at all |
 | 133 | A field can be the origin though a walk shows it not propagating | Propagation is a property of a path; ask what reads it |
+| 134 | A defect's own consequence contaminates its own count | 154 of 253 rows were the post-restart death animation |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3485,4 +3486,29 @@ thing than a single stuck value.
 wrong.** That is a third diagnosis distinct from an invented guard and from a missing mechanism,
 and it moves the owner upstream — here, out of a boss object entirely and into shared player code,
 inverting the blast radius the round had been scoped for.
+
+## One hundred and thirty-fourth rule: a defect's own consequence contaminates its own count
+
+Walking a field across a whole chain gave **253 mismatches** in one segment. **154 of them are the
+engine playing its death animation after a restart** — the restart being the end of the very chain
+under investigation. Counting them as defect rows would have inflated the population **fourfold**
+and made a 67-row selector disagreement look like a systemic failure.
+
+**Split a population by cause before sizing work from it**, and say which rows are the defect and
+which are its downstream. Any future count in that segment needs the same split — the contamination
+does not go away until the defect does.
+
+**Two further things the same scoping produced:**
+
+1. **A narrow population changes the landing calculus in both directions.** 67 rows across one
+   segment, with nineteen other segments clean over ~154,000 rows, means the fix has *no
+   independent adjudication* — whoever lands it lands against one segment's evidence. That is worth
+   knowing before commissioning, not after. It also means the rows can be enumerated individually,
+   so the fix can be adjudicated row by row rather than by a count.
+2. **Read the ROM's selector before believing the obvious mechanism — it may be that the ROM does
+   not select at all.** Here a jump taken while already rolling branches away and *never writes the
+   animation id*: the value is **carried**, not re-derived. So an engine that re-derives from
+   current state disagrees in **both directions** depending on the prior value — which is exactly
+   the shape of a split population, and the opposite of the obvious "rolling should set the roll
+   animation".
 
