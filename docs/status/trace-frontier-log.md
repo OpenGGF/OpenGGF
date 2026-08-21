@@ -114277,3 +114277,89 @@ rebound constant against S1's boss-touch path rather than against `SolidObject`.
 shapes are 0-for-8 and the cylinder was the obvious shape here.
 
 The other three death arms remain coordinates only, segments and shared cause unestablished.
+
+## 2026-08-21 -- S1 FZ row 841: it is `BossFinal_Eggman_Crush`'s side-hit, and the engine has no such write
+
+Measured at `ee2f8708b`. **No new run.** Reading the boss-touch constant before measuring, as
+commissioned, refuted the candidate mechanism and then found the real one.
+
+### `React_BossHit` is refuted, twice over
+
+The generic S1 boss-touch response
+(`docs/s1disasm/_incObj/Sonic ReactToItem.asm:259-263`) is not a constant at all:
+
+```
+React_BossHit:
+        neg.w   obVelX(a0)     ; repel Sonic horizontally
+        neg.w   obVelY(a0)     ; repel Sonic vertically
+        asr.w   obVelX(a0)     ; halve current X-speed
+        asr.w   obVelY(a0)     ; halve current Y-speed
+```
+
+- On X it would give `-0x01D2 / 2` = **-0xE9**, not `-0x300`.
+- On Y it would give **+0xCC, downward** -- and the recorded `y_speed` runs
+  `-0198 -> -0160 -> -0128`, differing by exactly `+0x38` each row. **Pure gravity,
+  continuous through the event.**
+
+The Y series is the stronger half and it eliminates a whole class: **every S1 hurt, bounce
+and boss-touch path writes `obVelY`**, and `obVelY` is provably untouched. `React_BadnikHit`,
+the `.bounceSonicAway` pair (`-$400`/`-$200` and `-$200`/`-$100`) and the hurt paths all go
+with it. Whatever produces `-0x300` writes **x velocity only**.
+
+No S1 site writes `-$300` to `obVelX` as a literal either -- all four `#-$300` writes in the
+tree target `obVelY`.
+
+### The real owner, and it is Eggman after all -- through a different routine
+
+`BossFinal_Eggman_Crush`'s `.checkHit`
+(`docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:236-248`):
+
+```
+.checkCollision:
+        move.w  #64/2+sonic_solid_width,d1     ; same half-width: 43 = 0x2B
+        move.w  #40/2,d2
+        move.w  #40/2,d3
+        move.w  obX(a0),d4
+        jsr     (SolidObject).l
+        tst.w   d4                             ; colliding with the SIDE of the piston?
+        bgt.s   .checkHit
+.checkHit:
+        addq.w  #7,(v_random).w                ; seeds the RNG on contact
+        cmpi.b  #id_Roll,(v_player+obAnim).w   ; is Sonic rolling/jumping?
+        bne.s   .checkFlash
+        move.w  #$300,d0
+        btst    #0,obStatus(a0)                ; is Eggman on the right?
+        bne.s   .applyDamage
+        neg.w   d0                             ; flip velocity
+.applyDamage:
+        move.w  d0,(v_player+obVelX).w         ; bounce Sonic back
+```
+
+Every constraint the data imposed is met: magnitude exactly `0x300`; sign negative via the
+`neg`; **`obVelX` written and `obVelY` never touched**; gated on Sonic **rolling**, which row
+841 is (`roll=1`, `anim=02`); and reached through a `SolidObject` call with the **same
+`64/2 + sonic_solid_width` half-width** that matched the player's x to the pixel -- though
+with Eggman's own `40/2` heights rather than the cylinder's `192/2`.
+
+**So the candidate was right and the mechanism was wrong.** Eggman is the actor, but not
+through the boss-touch path any boss-contact probe would have instrumented -- it is the FZ
+controller's own bespoke code. Reading the constant first is what separated those, and a
+probe aimed at `React_BossHit` would have come back empty and read as "the engine models no
+boss contact here".
+
+`addq.w #7,(v_random).w` is a **second divergence in the same routine**: the ROM advances the
+RNG on this contact and the engine does not.
+
+### Absent, not wrong
+
+`Sonic1FZBossInstance` contains **no `0x300` write and no x-velocity write on side contact**
+at all. It carries a `suppressCurrentRollAttack` mechanism gated on
+`player.getAir() && player.getRolling()` -- the same roll condition the ROM uses -- so the
+engine appears to detect the roll-attack case and do something else with it. **The response
+is absent rather than wrong**, which was the distinction asked for.
+
+`FixBugs`: the conditional immediately after `.applyDamage` guards a hit-counter underflow on
+defeat. At `FixBugs = 0` the guard is absent, which is the arm the engine must model, and it
+concerns boss HP rather than the `-0x300`.
+
+The other three death arms remain coordinates only, segments and shared cause unestablished.
