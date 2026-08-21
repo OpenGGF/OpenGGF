@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Chain reports publish their error groups (merged 2026-08-21):** chain trace
+  reports now carry a per-group error breakdown alongside the flat total, tallied
+  at the same increments that feed it, and fail unless the groups plus bootstrap
+  account for the total exactly. Whether animation errors reached chain totals had
+  cost two rounds and an escalation to establish by probing; it is now a grep.
+
 - **S2 object-loop slot budget (`bugfix/ai-s2-objectloop-budget-r1`, merged
   2026-08-21):** the CPZ pipe retract borrows the object loop's own slot counter as
   scratch and leaves the boss's id in it, a shipped-ROM bug the disassembly warns

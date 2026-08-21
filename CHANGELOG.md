@@ -2,6 +2,20 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
+### Added
+- **Chain trace reports now publish the per-verification-group error breakdown, and assert it
+  accounts for the flat total.** Standalone reports have always carried `verification_groups`
+  with `physics` and `animation`; chain segment reports carried only a flat `errorCount`, so
+  "does every group reach the total?" could not be answered from the artefact. On 2026-08-21
+  that cost two lanes a round and an escalation before a direct probe showed the counting had
+  been correct all along. An instrument that cannot be audited from its own output is a
+  liability even when it is right. `LiveTraceComparator` now tallies errors per
+  `VerificationGroup` in lockstep with the existing increments — never a second source of
+  truth — plus a separate bootstrap tally for `compareBootstrap`'s group-less divergences, and
+  the chain report writer publishes both and **fails** unless
+  `physics + animation + bootstrap == errorCount`. Purely additive: no existing key changed,
+  and every count in the suite is bit-identical.
+
 ### Fixed
 - **The destination's terrain art is queued inside the title-card window, not past the segment
   seam.** `Obj_TitleCardCreate` holds the card while `Kos_modules_left` is non-zero
