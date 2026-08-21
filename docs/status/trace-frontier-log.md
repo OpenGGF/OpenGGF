@@ -103696,3 +103696,75 @@ A caution for whoever takes it: the throw disappearing is not the check. The che
 parent retires against recorded `KOS_MODULE_QUEUE#366` with fingerprint
 `329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c` at raw frame 5152, and its
 child against `#531` at 5151.
+
+## 2026-08-21 — Ss8-Ss14: the replay runs to the end and the player stops collecting after four spheres
+
+Round `s3k-ss-spheres-r1`, branch `bugfix/ai-s3k-ss-spheres-r1` off `origin/develop`
+`c9a82b02d`. **Found, not fixed — nothing landed but this entry.** Probes reverted, tree clean.
+
+### The discriminator, answered
+
+The previous entry left open whether `ss_8` fails to clear because the replay diverges in play
+or because it never runs far enough. Probe on `Sonic3kSpecialStageManager.update`, counting
+frames and tracking `spheresLeft`:
+
+```
+[SSPROBE] f=1     spheres=102 min=102 clearRoutine=0
+[SSPROBE] f=500   spheres=98  min=98  clearRoutine=0
+[SSPROBE] f=1000  spheres=98  min=98  clearRoutine=0
+   … identical every 500 frames …
+[SSPROBE] f=5000  spheres=98  min=98  clearRoutine=0
+```
+
+**It is not a harness early-stop.** The replay reaches frame 5000+ of a 5419-frame segment,
+past the recorded module at 5151. **The stage does not clear because the player collects four
+spheres and then stops**, holding 98 for the remaining ~4,500 frames.
+
+### The control makes it conclusive
+
+`TestS3kSonicTailsSs2SpecialStageTraceReplay` — first lap, passing — under the same probe:
+
+```
+[SSPROBE] f=1     spheres=127 min=127 clearRoutine=0
+[SSPROBE] f=500   spheres=115 …
+[SSPROBE] f=1000  spheres=100 …
+[SSPROBE] f=4000  spheres=35  …
+[SSPROBE] f=4500  spheres=16  …
+[SSPROBE] f=5000  spheres=0   min=0  clearRoutine=1
+```
+
+`Tests run: 1, Failures: 0, Errors: 0`. The engine plays a special stage end to end, clears it,
+enters `clearRoutine`, queues the emerald art and matches the recorded completion — on the
+first lap. The second lap stalls after four spheres. **The special-stage implementation is not
+broadly broken; something specific to the second lap is.**
+
+### What the recording does
+
+`ss_8/physics.csv` carries a `spheres_left` column, in **hex**: `0x43` (67) at row 200,
+`0x3a` (58) at 500, `0x33` (51) at 1000, `0x2a` (42) at 2000, `0x1b` (27) at 3000, `0x12` (18)
+at 4000, `0x2` at 5000 and **`0` at row 5150** — one row before the recorded
+`KOS_DECOMPRESSION_QUEUE#531` at 5151 and `KOS_MODULE_QUEUE#366` at 5152. The clear and the art
+handoff line up exactly, which confirms the art is a pure consequence of the clear.
+
+Rows 0 and 100 read `1000` and `0`, pre-stage values; the stage proper starts around row 150.
+
+**Unexplained and left as such:** the engine starts this stage at **102** spheres against the
+recording's **67** at row 200. Whether that is a different layout, a different count, or 35
+collected before row 200 is not established here, and it may or may not be the same defect as
+the stall.
+
+### And the answer to "what would the physics verdict have been"
+
+The hardware assertion is a teardown throw, so the physics comparison is invisible behind it.
+It can now be answered anyway: with `spheres_left` frozen at 98 while the recording walks it to
+zero, the physics comparison was never going to be near-clean. **This is not a stage that plays
+correctly and fails only its art handoff.** The art is several steps downstream of a player who
+stops playing.
+
+### Next
+
+The frontier is "why does the second lap stop collecting after four spheres", in the
+sphere/conversion path, with a green first-lap control (`ss_2`) to difference against. The
+acceptance check is unchanged and is not the throw disappearing: the parent must retire against
+`KOS_MODULE_QUEUE#366` fingerprint `329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c`
+at raw frame 5152, and its child against `#531` at 5151.
