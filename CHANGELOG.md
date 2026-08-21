@@ -60,6 +60,30 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **S2 Super Sonic now gets his alternate bright frames, and the DPLC transfers that go with
+  them.** `SAnim_SuperWalk` writes the ordinary `mapping_frame = script byte + slope offset` and
+  then, on one frame in four, steps it into the Super variants
+  (`docs/s2disasm/s2.asm:38534-38539`): `move.b (Level_frame_counter+1).w,d1 / andi.b #3,d1 /
+  bne.s + / cmpi.b #$B5,mapping_frame(a0) / bhs.s + / addi.b #$20,mapping_frame(a0)`. The engine
+  read the correct Super script and omitted the step applied on top of it, so its mapping frame
+  was exactly `$20` low on every fourth frame.
+
+  The consequence was larger than one field. `LoadSonicDynPLC` reads `mapping_frame(a0)`
+  directly (`:38830-38831`), so every stepped frame the engine did not produce was an art
+  transfer it did not issue: on the complete-emerald chain's ARZ1 segment that deficit
+  accumulated from 1 at frame 4062 to 54 by the segment's last row, and the following
+  ARZ1->ARZ2 gap reported the same 54.
+
+  All three numbers are read out of the ROM block and none is chosen — the mask is the
+  `andi.b #3`, the ceiling is the `cmpi.b #$B5` (the Super run and push frames are already
+  bright), and the step is the `addi.b #$20`. They live on the S2 animation profile rather than
+  in shared animation code, which applies whatever step the active profile declares.
+
+  ARZ1 segment: 3395 comparator errors to 119, first divergence frame 4061 to 4213, and the gap
+  axis falls from an ordinal deficit of 54 to the same one-row `movie_logical_frame` stamp the
+  run's other eight gaps show. No mapping-frame mismatch with a magnitude of 32 remains anywhere
+  in the segment.
+
 - **S2's Super transformation freeze now ends when the palette fade ends, as the ROM ends it.**
   `Sonic_CheckGoSuper` writes `obj_control = $81` on the transformation frame (`s2.asm:37479`)
   and nothing in Sonic's own code clears it: there is no `clr.b obj_control(a0)` anywhere in

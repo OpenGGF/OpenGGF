@@ -133,6 +133,8 @@ public class Sonic2PlayerArt {
                     .setBlinkAnimId(Sonic2AnimationIds.BLINK)
                     .setGetUpAnimId(Sonic2AnimationIds.GET_UP)
                     .setCompactSuperRunSlope(true)
+                    // SAnim_SuperWalk's alternate bright frames, s2.asm:38534-38539.
+                    .setSuperAlternateFrameStep(3, 0x20, 0xB5)
                     .setWalkRunPublishesFrameBeforeTimerAdvance(true);
         } else {
             // TAnim_WalkRunZoom keeps raw anim=Walk while selecting its private

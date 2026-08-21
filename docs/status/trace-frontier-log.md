@@ -111039,3 +111039,64 @@ mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dtest=DebugS1Lz2BubblesOccupancyProbe \
   -Dtrace.dir=src/test/resources/traces/s1/lz2_completerun -Dtrace.zone=3 -Dtrace.act=1 \
   -Dtrace.obj64Phase=0 test
 ```
+
+## 2026-08-21 — the Super alternate-frame step LANDED: ARZ1 3395 -> 119, and the gap ordinal followed the field
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-altframe`, both arms
+pinned to `0fd7b7811`, `target/` cleared before every measurement.
+
+### Landed
+
+`ScriptedVelocityAnimationProfile.applySuperAlternateFrame` applies whatever
+step the active profile declares; the S2 Sonic profile installs
+`setSuperAlternateFrameStep(3, 0x20, 0xB5)` with the s2.asm:38534-38539
+citation. Shared animation code contains no game name and no character test —
+only "the profile declares a step, the sprite is Super, the ROM's two gates
+pass". The step is applied on the walk/run publish path only, because that is
+the only handler the ROM's block sits in; roll, push and plain script paths
+reach `mapping_frame` without it.
+
+The gate reads the level frame counter the animation update is already handed,
+latched as `levelFrameCounterThisTick`, and the field's javadoc says explicitly
+that this is `Level_frame_counter` and NOT the object-visible
+`V_int_run_count`.
+
+### Fingerprint
+
+- `player_mapping_frame` matches on 4061, 4065, 4069 and the rest of the series
+  — **met**.
+- **Zero mapping-frame mismatches with magnitude 32 remain in the segment**
+  (17 mismatches remain, none of them `$20`). The step is fully applied, not
+  partially.
+- Segment 18: **3395 -> 119** comparator errors.
+
+**On your added condition, reported precisely rather than claimed.** The new
+first divergence is 4213, and 4213 - 4061 = 152, which IS divisible by 4 — so by
+arithmetic alone it is congruent to the old series. It is not a partial fix
+wearing a complete fingerprint, and the evidence is the values rather than the
+index: the remaining window is **17 CONSECUTIVE frames, 4213-4229**, not a
+four-frame series, and its mismatches are `SonAni_Roll` frames
+(`$3D,$41,$3E,$41,$3F,$41,$40,$41`) differing by 1 to 4 with the ROM sometimes
+LOWER than the engine. A misfiring `+$20` step cannot produce a delta of 4, a
+negative delta, or seventeen consecutive frames. It is a different defect, in
+the roll animation, previously buried under the Super mass.
+
+### The falsifier did NOT trigger
+
+The named risk was that the field would match while the art got worse, since the
+`+$20` frames are real `MapRUnc_Sonic` entries the engine had not been loading.
+The art followed the field: the segment's `dynamic_art.*` mass went with it,
+and the `seg12_arz1 -> seg13_arz2` gap axis fell from `edge[0].edge_ordinal`
+139754 vs 139700 (delta **54**) to `edge[8].movie_logical_frame` 106743 vs
+106742 (delta **1**) — the same one-row stamp phase the run's other eight gaps
+show. The 54-ordinal deficit is gone, which confirms the shared-owner finding
+positively rather than by elimination.
+
+### Matrix
+
+Both arms in one worktree from the pinned SHA, `target/` cleared before each.
+`-Ptrace-replay -Dsurefire.forkCount=1`, all three ROMs: **798 tests, 10
+failures, 0 errors, 4 skipped on both arms**, identical 155-class sets,
+identical `Tests run: 0,` counts (2), identical failing-method sets. Full
+untruncated failure text differs on **exactly two lines**, both S2 ARZ1 and both
+improvements. `-Pguards`: 500 tests, 0 failures.

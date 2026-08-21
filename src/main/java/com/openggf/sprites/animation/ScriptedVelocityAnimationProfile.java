@@ -135,6 +135,59 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setFallbackFrame(int fallbackFrame) { this.fallbackFrame = fallbackFrame; return this; }
     public ScriptedVelocityAnimationProfile setAnglePreAdjust(boolean anglePreAdjust) { this.anglePreAdjust = anglePreAdjust; return this; }
     public ScriptedVelocityAnimationProfile setCompactSuperRunSlope(boolean compactSuperRunSlope) { this.compactSuperRunSlope = compactSuperRunSlope; return this; }
+
+    /**
+     * S2 Super Sonic's alternate-frame step. {@code SAnim_SuperWalk} writes the
+     * ordinary {@code mapping_frame = script byte + slope offset} and then, on
+     * one frame in four, bumps it into the bright Super variants
+     * (docs/s2disasm/s2.asm:38534-38539):
+     * <pre>
+     *   move.b (Level_frame_counter+1).w,d1
+     *   andi.b #3,d1
+     *   bne.s  +
+     *   cmpi.b #$B5,mapping_frame(a0)
+     *   bhs.s  +
+     *   addi.b #$20,mapping_frame(a0)
+     * </pre>
+     * All three numbers are read out of that block: the mask is the
+     * {@code andi.b #3}, the ceiling is the {@code cmpi.b #$B5} (the Super run
+     * and push frames are already bright and are skipped), and the step is the
+     * {@code addi.b #$20}. The rule is off unless a game installs it.
+     */
+    private int superAlternateFrameMask;
+    private int superAlternateFrameStep;
+    private int superAlternateFrameCeiling;
+
+    public ScriptedVelocityAnimationProfile setSuperAlternateFrameStep(
+            int mask, int step, int ceiling) {
+        this.superAlternateFrameMask = mask;
+        this.superAlternateFrameStep = step;
+        this.superAlternateFrameCeiling = ceiling;
+        return this;
+    }
+
+    public int getSuperAlternateFrameMask() { return superAlternateFrameMask; }
+    public int getSuperAlternateFrameStep() { return superAlternateFrameStep; }
+    public int getSuperAlternateFrameCeiling() { return superAlternateFrameCeiling; }
+
+    /**
+     * Applies the alternate-frame step to an already-resolved walk/run mapping
+     * frame. Returns the frame unchanged when the game installs no such rule,
+     * when the sprite is not Super, or when either ROM gate rejects it.
+     */
+    public int applySuperAlternateFrame(
+            int mappingFrame, boolean superActive, int levelFrameCounter) {
+        if (superAlternateFrameStep == 0 || !superActive) {
+            return mappingFrame;
+        }
+        if ((levelFrameCounter & superAlternateFrameMask) != 0) {
+            return mappingFrame;
+        }
+        if (mappingFrame >= superAlternateFrameCeiling) {
+            return mappingFrame;
+        }
+        return mappingFrame + superAlternateFrameStep;
+    }
     public ScriptedVelocityAnimationProfile setWalkRunPublishesFrameBeforeTimerAdvance(boolean value) { this.walkRunPublishesFrameBeforeTimerAdvance = value; return this; }
     public ScriptedVelocityAnimationProfile setHighSpeedWalkRunAnimId(int value) { this.highSpeedWalkRunAnimId = value; return this; }
     public ScriptedVelocityAnimationProfile setHighSpeedWalkRunThreshold(int value) { this.highSpeedWalkRunThreshold = value; return this; }
@@ -705,6 +758,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.fallbackFrame = this.fallbackFrame;
         copy.anglePreAdjust = this.anglePreAdjust;
         copy.compactSuperRunSlope = this.compactSuperRunSlope;
+        copy.superAlternateFrameMask = this.superAlternateFrameMask;
+        copy.superAlternateFrameStep = this.superAlternateFrameStep;
+        copy.superAlternateFrameCeiling = this.superAlternateFrameCeiling;
         copy.walkRunPublishesFrameBeforeTimerAdvance = this.walkRunPublishesFrameBeforeTimerAdvance;
         copy.highSpeedWalkRunAnimId = this.highSpeedWalkRunAnimId;
         copy.highSpeedWalkRunThreshold = this.highSpeedWalkRunThreshold;
