@@ -109212,3 +109212,39 @@ The question is now narrow and engine-side: what keeps the destination
 players alive and occasionally stepping between the level load and the ROM's
 `InitPlayers`-equivalent, and why those particular rows. Nothing was fitted,
 nothing was landed in `src/`.
+
+## The clocks are exactly 1:1, the defeat row is correct, and the capsule's lead is intra-frame
+
+Measured at the comparator's own per-row point, reading the recorded counter and the engine's
+object-visible counter at the same instant so that no conversion is involved: across all 2,081
+compared rows of the segment — spanning the fight, the defeat, the capsule and the frontier —
+the difference between them takes **exactly one value, with zero exceptions**. The recording's
+own counter was already known to advance one per row. There is no drift, and the branch that
+supposed there might be is closed.
+
+**The withdrawn defeat row is withdrawn again, and for the right reason this time.** The
+conversion constant was correct all along; the attribution was not. A counter value was mapped
+to the row that had just been compared rather than to the row the update produces, and the
+interleaved stream shows the defeat write landing *after* the sample carrying its counter, so
+its effect is first visible on the recording's own defeat row. Engine and recording defeat on
+the same row. There is no defeat-detection defect, and the item routed to another lane on that
+basis should be dropped.
+
+**What remains is sharper and is recorded as a lead rather than a finding.** The wait length is
+correct — one hundred and eighty-four counter ticks, matching the ROM — and the detection row is
+correct, yet the capsule's initialisation prints *before* the sample carrying its counter while
+the defeat printed *after* the sample carrying its own. The two events sit on opposite sides of
+the comparator's sample point, so the same one hundred and eighty-four ticks span one row fewer.
+The proposed cause is an intra-frame position difference rather than a timing one: in the ROM
+both events happen inside the boss's own dispatch, while in the engine the defeat is detected in
+the player's touch scan, which runs at a different point in the frame from an object update.
+
+The lane states its own confidence: the two measurements are measured and it is confident in
+both, one of them against its own prior claim; the explanation of the third is one inference
+deep, on exactly the class of intra-frame reasoning where it has now been wrong twice, and it
+asks that the position be confirmed independently before anyone acts on it.
+
+**Effect on the causal chain:** its first link is replaced rather than removed. Not "the defeat
+is one frame early", which is dead, but "the defeat is detected in the wrong intra-frame
+position". The later links are untouched in shape, and the frontier-moving simulation remains a
+vehicle-level fact independent of the explanation.
