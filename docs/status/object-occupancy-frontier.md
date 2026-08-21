@@ -55,7 +55,6 @@ The remaining value. Same question for each: *why is this never created?*
 
 | game | object | id | short | over | fixtures |
 |---|---|---|---|---|---|
-| S2 | **BossExplosion** | `0x58` | **1,725** | 17 | 6 |
 | S2 | RexonHead | `0x97` | 503 | 0 | 2 |
 | S1 | CANNONBALL | `0x20` | 581 | 0 | 5 |
 | S1 | RING | `0x25` | 566 | 6 | 22 |
@@ -68,6 +67,51 @@ The remaining value. Same question for each: *why is this never created?*
 **Check the reserved-slot question first for each** — several object families use
 `allocateChildSlots`, and two commissioned targets have already turned out to be correct folds.
 
+## Re-attributed — was the largest one-way target, is not one-way and is not its own defect
+
+**BossExplosion (S2, `0x58`) and Eggrobo (S2, `0xC7`) are the same defect**, measured
+2026-08-21 over the same 94-report sweep. Do not work them separately.
+
+| what | measurement |
+|---|---|
+| reserved-slot credit | **none** — zero `RESERVED`/`UNATTRIB` lines on any S2 divergent frame. Not a fold. |
+| metric #3, both directions | **1,336 short / 35 over** across the same 6 fixtures |
+| relocation inside the raw signal | **961 of 2,297** raw `rom=0x58` lines cancel against an `eng=0x58` on the same frame |
+| sampling phase | **ruled out** — 1,077 of the 1,084 DEZ shortfall is ONE contiguous 173-frame episode, f7649-7887 |
+| "engine never makes them" | **false** — the engine holds `BossExplosion` on 149 of those 173 frames |
+
+**What the engine actually holds where the ROM has `0x58`:**
+
+| engine | lines | share |
+|---|---|---|
+| `-` (absent) | 1,621 | 70.6% |
+| **`0xC7`** (Eggrobo/DEZ boss) | **511** | 22.2% |
+| `0x5D` (CPZ boss) | 135 | 5.9% |
+| `0xAF` | 28 | 1.2% |
+
+And the mirror is exact: where the engine holds `0xC7` and the ROM does not, the ROM holds
+`0x58` on **511** lines and anything else on 31. **511 = 511** — the same slots, counted twice
+under two names, in two different tables of this page.
+
+**Mechanism: convert-in-place, the capability CANNONBALL is already parked on.** The ROM
+rewrites the id of the live object rather than deleting and spawning:
+`ObjC5_PlatformExplode` does `move.b #ObjID_BossExplosion,id(a0)`
+(`docs/s2disasm/s2.asm:81762`), and `Obj5D_Main_Explode2` and `loc_3DFBA` (inside `ObjC7`) are
+the same shape. The engine leaves the object under its original id, which reads as a
+BossExplosion shortfall *and* an Eggrobo over-count simultaneously.
+
+So this is **blocked on the same capability** as CANNONBALL — see
+[the design note](../architecture/designs/2026-08-21-object-convert-in-place.md) — and it
+should land with that work, not before it. The ~29% conversion share is the part that fix
+addresses; the 70.6% `eng=-` remainder is a separate question and is the only part still worth
+its own investigation.
+
+**One warning for the next ranking.** Grouping by raw recorded id mixes games: id `0x58` also
+appears in S1 and S3K fixtures (3,410 raw short lines across 17 fixtures), but `0x58` is
+BossExplosion only in S2 (`ObjPtr_BossExplosion: dc.l Obj58`, `s2.asm:30004`). Filtering to S2
+is what reproduces this page's own 6-fixture count. Any per-object row must be filtered by game
+before it means anything.
+
 ## Two-way — made at the wrong time or place
 
 Different question: *why is this mistimed?* A deficit-ranked list under-reports these, and for
@@ -75,7 +119,7 @@ three of them the engine holds **more** than the ROM.
 
 | game | object | id | short | over | fixtures |
 |---|---|---|---|---|---|
-| S2 | Eggrobo | `0xC7` | 6 | **523** | 1 |
+| S2 | Eggrobo † | `0xC7` | 6 | **523** | 1 |
 | S2 | Rexon2 | `0x96` | 0 | **457** | 2 |
 | S2 | Projectile | `0x98` | 340 | **373** | 22 |
 | S2 | SmallBubbles | `0x0A` | 231 | 247 | 5 |
@@ -85,6 +129,10 @@ three of them the engine holds **more** than the ROM.
 | S1 | LZ_CONVEYOR | `0x63` | 0 | **181** | 4 |
 | S1 | FLOATING_BLOCK | `0x56` | 53 | 126 | 13 |
 | S2 | ArrowShooter | `0x22` | 246 | 82 | 2 |
+
+† **Eggrobo is not a separate target.** 511 of its 523 over-counts are slots where the ROM has
+converted the object to `BossExplosion` in place — see the re-attribution section above. It
+lands with that work.
 
 `Eggrobo`, `Rexon2` and `LZ_CONVEYOR` have **no shortfall at all** and were invisible to every
 deficit-ranked list produced before metric #3. `EXPLOSION`'s two-way shape is expected to be a

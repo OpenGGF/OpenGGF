@@ -222,6 +222,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
   policy on S1/S2. The work is intentionally bounded to audible playback and
   chip behavior; complete-run semantic observer expansion remains out of scope.
 
+- **Trace frontier reports now distinguish atomic level-load handover debt
+  (merged 2026-08-21):** the S2 chain's segment-19 stop and the S3K handover
+  census are recorded against their actual load boundary, avoiding fitted
+  clock conversions or treating destination-player state as a later frame.
+
 - **Shared trace fixtures now rebind every playable power-up spawner (merged
   2026-08-21):** retained S1/S2 level managers no longer gate the replacement
   playable roster's spawner on S3K-only elemental-shield support, so splash,
