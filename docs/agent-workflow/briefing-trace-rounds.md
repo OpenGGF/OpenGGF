@@ -2458,6 +2458,13 @@ cut across that line, with one burst effect genuinely absent and another merely 
 **So report both directions from the first measurement**, and treat a one-way total as a lower
 bound on nothing in particular until you have the other.
 
+**And rank by short *plus* over, not by shortfall.** Ranking by deficit is structurally
+incapable of showing an object the engine holds *too many* of. Sorting the same data by the sum
+surfaced three objects with **no shortfall at all** — five hundred and twenty-three, four
+hundred and fifty-seven, and a hundred and eighty-one instances the engine holds and the
+recording does not — one of which would have ranked third overall. Every deficit-ranked list
+produced before that point could not have shown them, whatever its other corrections.
+
 **And re-check your own filters after they have been wrong once.** The same round's second
 filter produced a false positive — a class excluded from "creates real children" because its
 name matched none of the expected child-name patterns — one round after the first filter's
