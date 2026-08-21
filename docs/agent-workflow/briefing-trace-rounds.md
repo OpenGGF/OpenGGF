@@ -2786,6 +2786,39 @@ Three questions, in order; a "no" at any one ends it:
    solid pass, an earlier object? If engine and ROM write from the same relative position, no
    member.
 
+**Q2 does not transfer to cross-object installs, and it fails in the dangerous direction.** Q2
+treats "not inside `Touch_Response`" as meaning the target's dispatch already happened. For a
+*same-object* install those are the same fact — a routine writing into its own `(a0)` is
+necessarily downstream of its own head read. For a *cross-object* install they come apart: a
+parent's write is never in `Touch_Response`, so Q2 answers "member" every time, while whether the
+child already ran is not a property of the write site at all.
+
+4. **Cross-object only: is the target's slot before or after the writer's?** After → the ROM sees
+   the install same-frame, and the engine updating children inside the parent agrees by
+   construction, so **not a member**. Before → **member**.
+
+**And Q4 is not always answerable by reading.** Slot order is the allocator's:
+`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) scans forward from
+`a0` and is therefore *always after* the parent — settled by reading. Plain `AllocateObject`
+(`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) scans from the start of the dynamic table for
+the first free slot, so the child may land before *or* after depending on live occupancy.
+For those children **membership is a runtime property that reading cannot settle**, and it can
+differ between two runs of the same object. That is strictly harder than the same-object
+population, where reading always settles it.
+
+**The cross-object direction is otherwise structurally empty.** Swept by role: 42 raw sites → one
+true cross-object install, which resolves to a non-member by reading (S2's `LoadChildObject` calls
+`AllocateObjectAfterCurrent`, `s2.asm:73012-73014`). No level-event manager writes an object's
+selector. Nine of S3K's ten `CreateChild*` helpers use `AllocateObjectAfterCurrent`; the exception
+is `CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), plain `AllocateObject`, whose four call
+sites include `HCZEndBossBomb_ResetOrSpawn` (`:141453`) — inside the AIZ→HCZ slice and **not yet
+implemented**. That is a constraint to hand the implementer, not a defect to fix.
+
+**A by-role sweep has its own failure mode when the "role" is a bare method name.** Expanding by
+method name matched anything sharing it — a map's `clear()` among them — and produced 1366 sites
+across 362 files with no signal. Filtering by the *receiver's declared type* is what made it
+tractable.
+
 **Q1 is the cheap cut** and disposes of most false positives by reading alone. An S2 Super Sonic
 freeze release (a state byte read at the top of the dispatch; the defect is which subsystem
 clears it) and an S1 air-bubble creation lag (an allocation-ordering error) both fail Q1 —
