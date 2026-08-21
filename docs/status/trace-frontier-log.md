@@ -111660,3 +111660,74 @@ which may be a second independent defect or may be inherited. **1519 is an upper
 work, not a count of defects.** The next round is `TurboSpikerBadnikInstance`'s touch
 categorisation for a rolling player, and it has a sharp acceptance test: HCZ1 stays at 0 errors
 and the first error moves past 22243.
+## 2026-08-21 — the 4213 roll window is a 3-entry phase, and the ROM's own script index jumps where the engine's does not
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-arz1-roll`, pinned to
+`c9f7b7ffe`, `target/` cleared before measuring. Probe reverted, `src/`
+unchanged. Characterised, not fixed.
+
+### It is a phase, exactly as predicted, and the phase is 3
+
+`SonAni_Roll` is `$FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF` (s2.asm:38695) — an
+eight-entry cycle `3D,41,3E,41,3F,41,40,41`. Over the whole 17-frame window both
+sides are walking that one script, one entry per frame, and every "delta" is
+just two different indices into it:
+
+| | 4213 | 4214 | 4215 | 4216 | 4217 | 4218 | 4219 | 4220 |
+|---|---|---|---|---|---|---|---|---|
+| rom | 3D | 41 | 3E | 41 | 3F | 41 | 40 | 41 |
+| eng | 41 | 40 | 41 | 3D | 41 | 3E | 41 | 3F |
+| rom idx | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| eng idx | 5 | 6 | 7 | 0 | 1 | 2 | 3 | 4 |
+
+The engine is a constant **three entries behind** for all 17 frames, and both
+advance one per frame — `inertia` is `0x0388` throughout, so `SAnim_Roll`'s
+duration term is `(-|inertia| + $400) >> 8` = 0 (s2.asm:38612-38618) and every
+frame steps. No drift, no accumulation: one fixed phase, established at the
+window's first frame. The deltas of 1 to 4 with sign changes that made this look
+unlike the `+$20` defect are exactly what two indices into a
+`3D,41,3E,41,3F,41,40,41` cycle produce.
+
+### The origin is a ROM index jump the engine does not make
+
+Reading the fixture's own column back from a known-good stretch:
+
+```
+4204 3F   4208 3D   4212 3F
+4205 41   4209 41   4213 3D   <-- index 4 to index 0
+4206 40   4210 3E
+4207 41   4211 41
+```
+
+The ROM runs the cycle cleanly to index 4 at frame 4212 and then reads **index
+0** at 4213, skipping indices 5, 6 and 7 — the three entries the engine is
+behind by. So this is not the engine losing three frames; it is the ROM's
+`anim_frame` jumping, and the engine continuing its cycle undisturbed.
+
+What makes that hard: `player_animation_id` is `02` on **every** row of the
+window and either side of it, `player_rolling` is 1 throughout, `inertia` is
+constant, and `y_speed` steps by exactly `0x38` across 4212 -> 4213, so no lag
+frame and no missed gameplay frame is involved. `Sonic_Animate` resets
+`anim_frame` only when `anim != prev_anim` (s2.asm:38386-38390), and by the
+recorded `anim` column that test cannot have fired.
+
+Ruled out on the way: it is not a script switch. `SAnim_Roll` chooses
+`SonAni_Roll2` above inertia `$600` and `SonAni_Roll` below (s2.asm:38606-38610),
+`inertia` is `0x0388` so the choice never changes — and the two scripts are
+byte-identical anyway (s2.asm:38695, :38697), so a switch could not move the
+frame. It is also not the Super `+$20` step: that lives in `SAnim_SuperWalk` and
+the roll path never reaches it, which is why nothing here is `$20` apart.
+
+### The exact open question for the next round
+
+**What writes `anim_frame` at ROM frame 4213 while `anim` stays `02`?** It is a
+write from outside `Sonic_Animate`'s own reset path, and finding it is the whole
+fix — the engine needs to make the same write, not to be nudged three entries.
+
+Explicitly not to be done: adding a three-entry offset, or resetting the
+engine's index at a frame index. Both would close this fixture and desync the
+first different recording — the phase is a symptom of a write, and the write is
+what has to be ported.
+
+This is the last mass in segment 18: 119 errors, all of it this window and the
+art edges that follow the mapping frames through `LoadSonicDynPLC`.
