@@ -153,3 +153,39 @@ so establish it *before* writing the write-back, not after.
 Because stage 2 is blocked, the conversion stages behind it are not started: the 2 render-flag
 sites cannot be converted, and the 3 X-axis sites and the remaining 30 wait on the merge-and-
 measure checkpoint as planned.
+
+## The headless question, answered as a measurement (2026-08-21, `d448ec294`)
+
+**The per-object render pass does not execute under headless trace replay.** Measured, not read.
+
+Method: counters and first-hit prints on every call site in the object render path in
+`ObjectManager`, plus a **positive control** in the `ObjectManager` constructor so that silence
+could be distinguished from a broken probe channel. Run:
+`mvn -Dmse=off -Ptrace-replay -Dsonic2.rom.path=<repo>/s2.gen -Dtest=TestS2WfzLevelSelectTraceReplay test`.
+
+| probe | fired |
+|---|---|
+| **control** — `ObjectManager` constructor | **1** — channel works, `System.err` is captured |
+| `renderBucketSnapshot.capture` | **0** |
+| `drawPriorityBucket` entry | **0** |
+| `appendRenderCommands` via `drawPriorityBucket` (`ObjectManager:1519`) | **0** |
+| `appendRenderCommands` via `drawBucketInstances` (`ObjectManager:1567`) | **0** |
+
+The test itself is confirmed to have executed — `Tests run: 1` — so this is a measured zero and
+not an absent run. Both halves matter: **a zero from a probe whose channel is unproven is not a
+zero**, and an absent probe line in a run that never ran is not evidence of anything. Each of
+those mistakes cost a round today.
+
+**Consequence for the render-flag predicate.** A per-object draw-outcome flag would be written
+by code that never runs during trace replay. Every object would read "not drawn last frame", and
+a predicate deleting on that would **delete every object on every trace** — while looking like a
+correct implementation, because the flag, the predicate and the ROM citation would all be right.
+The only thing wrong would be that the producer never runs.
+
+**This is therefore not a "build the write-back more carefully" problem.** It is a question about
+what trace replay can observe at all: the ROM's `render_flags.on_screen` is a *rendering* outcome,
+and the replay harness does not render. Any faithful implementation needs a source of truth that
+exists in a non-rendering run — which is a design decision, not an implementation detail.
+
+**Stage 2 and every conversion behind it stay blocked.** `ObjectRangeOps` (stage 1) is unaffected:
+it takes object x and camera x and reads nothing from the render path.
