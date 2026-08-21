@@ -125,6 +125,7 @@ that looks like a real result.
 | 106 | A green matrix quoted for a change nothing compares | Inertness inferred from a suite that measures no field the change touches |
 | 107 | A routine installed mid-frame and run in the same frame | One tick early, structurally; the fitted fix is a skipped tick |
 | 108 | The symptom is one frame; the class is one intra-frame slot | Q1 cuts most false positives by reading; survey by role |
+| 109 | On a moving object, `spawn` is not an identity | Re-key on slot; an inverted verdict looks clean |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2841,3 +2842,22 @@ arms — control `0 errors, 3 warnings` on a pre-existing `tornado.status_byte` 
 arm `1 error, 3 warnings`. A pass/fail comparison of that class reads "red before, red after, no
 effect" and lands a regression. Only the message separates them (rule 24). A class red in the
 control **for an unrelated reason** is the case that defeats arm-vs-arm status comparison.
+
+## One hundred and ninth rule: on a moving object, `spawn` is not an identity
+
+Keying a persistence measurement on `(slot, spawn)` reported **713 of 714 objects living exactly
+one sample** — apparent instant death, i.e. wild over-creation. Re-keyed on **slot alone**, the
+verdict inverted completely: 36 distinct objects against the ROM's 64, each held roughly eight
+times longer. Under-deletion, the opposite owner.
+
+The `spawn` record is **rebuilt as the object moves**, so the key changes every frame and every
+sample looks like a new object. Any metric keyed on it measures motion, not lifetime.
+
+**This is the second inversion of its kind.** A latch keyed on a moving spawn rather than the
+instance produced the same class of error in an S1 Labyrinth block. Whenever a measurement or a
+latch needs object identity, ask what the key does when the object moves — and prefer the slot,
+the instance, or an explicit id.
+
+The tell is a persistence or occupancy result that is *implausibly* one-sided (every object dies
+instantly; nothing is ever reused). Before reporting the owner it implies, re-key and re-measure:
+an inverted verdict arrives with a clean-looking number behind it and nothing else marks it wrong.
