@@ -139,6 +139,7 @@ that looks like a real result.
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
 | 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
+| 123 | Run a survey so the known member must appear in its output | An empty result and a broken matcher look identical |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3176,3 +3177,33 @@ printed unconditionally above the real `ERROR` lines. All three happened on one
 day. Gate diagnostic probes on an environment variable instead: forks inherit the
 environment, and `ORDINAL_PROBE=1 mvn ...` works under every profile. Whichever
 gate is used, count the probe's own output lines before reading the result.
+
+## One hundred and twenty-third rule: run a class survey so the known member must appear in its output
+
+A survey intersecting 316 ROM install sites against 50 candidate routines returned **EMPTY** — no
+members at all, *including the one already fixed and known to be a member*. The cause was line
+endings: the disassembly has CRLF, so `comm` was matching `Obj_Flybot767\r` against
+`Obj_Flybot767`. **An empty survey result and a survey that cannot match anything look identical.**
+
+What made it distinguishable was that a member was already known, so "no members" was *checkable*
+rather than merely plausible. Construct every defect-class survey so the known member **must**
+appear in its output; if it does not, the survey is broken, not the class empty. This is rule 110's
+positive control applied to a survey rather than a probe.
+
+**Two further hazards from the same round:**
+
+1. **A truncated result reads as a complete one.** "The six other callers" came from a
+   `grep | head` whose ten-line cap was read as the whole result. There were **fifty**. The six
+   named were simply the first six in file order, and a survey was scoped on that number. The count
+   was a fact about the pager.
+2. **Counts derived from identifier names need one read each before they are trusted.** A class was
+   filed as gating on the published render flag because it names a *local variable* after it —
+   which it computes live. Three further cross-references were substring matches, a comment naming
+   a test, and a nested record.
+
+**And the useful distinction the survey produced: latent-safe is not correct.** Of 33 engine sites
+modelling the wait, 8 gate on the published flag and 25 on a live bounds test. Those 25 are safe
+only because nothing spawns them dynamically — not because their gate models the ROM's phase. Any
+one of them acquires the defect the day it gains a dynamic spawn route. That is worth more than a
+list of sites to change, because it names the condition rather than the instances.
+
