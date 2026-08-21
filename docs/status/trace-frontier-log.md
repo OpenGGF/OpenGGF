@@ -113672,3 +113672,73 @@ value -- a unique, perfectly-shaped candidate. It was a different frame, and cor
 left row 1015 untouched. Rarity is not identity; see rule 126. The probe before that never
 compiled, so it produced no output file and no `Tests run` line, which is indistinguishable
 from a predicate that never fires; see rule 125.
+
+## 2026-08-21 -- S1 chain segments 12 and 15: one owner, and the trigger is a CONJUNCTION
+
+Measured at `c5d4125ff` against the committed fixtures; **no instrumentation was needed
+and none was added.** Every number below comes from `physics.csv` and `aux_state.jsonl`
+of `s1-sonic-complete-withemeralds`.
+
+Segment 12 is `mz2_3`, segment 15 is `mz3_2`. Both report
+`queue.s1_nemesis_plc.prepared` `rom=true engine=false` first, at rows 101 and 102.
+
+**Shared owner, not coincidence.** The failing row in each segment is the row where a PLC
+FIFO **arm edge** coincides with a **held iteration**, and the conjunction happens nowhere
+else:
+
+| segment | rows | held rows | PLC arm edges | **both** | errors reported |
+|---|---|---|---|---|---|
+| 12 `mz2_3` | 16207 | 20 | 7 | **{101}** | **3** |
+| 15 `mz3_2` | 11332 | 33 | 10 | **{102, 109}** | **6** |
+
+Neither condition alone does anything: 20 and 33 held rows, 7 and 10 arm edges, no errors
+from either. **The error counts are exactly three per conjunction** -- one occurrence in
+segment 12 and two in segment 15, against 3 and 6 errors. That is the incidence evidence,
+not merely a mechanism that fits.
+
+"Held iteration" is `TraceExecutionModel.isIterationHeldIntoNextRow`: the gameplay frame
+counter does not advance into the next row while the V-blank counter does. Verified on the
+rows themselves -- `mz2_3` row 101 `gfc=102`, row 102 `gfc=102` with `vbc` 46764 -> 46765;
+`mz3_2` row 102 `gfc=102`, row 103 `gfc=102` with `vbc` 786 -> 787. Both next rows are
+`lag_state.lagged = true`, which is also why `remaining_work` holds its fresh value for two
+rows before counting down: `VBlank_Lag` services no PLC, and the engine already models that.
+
+**Why the ROM reads `prepared=true` there.** The recorder's `prepared` is literally
+`v_plc_patternsleft != 0` (`LoadQueueStateProjector.CapturePlc`, `S1Ram.PlcPatternsLeft`
+`0xF6F8`) -- "art is currently being decompressed", with slot 0 skipped from the fingerprint
+list while it holds. In V-int, `ProcessPLC`'s `subq.w #1,(v_plc_patternsleft).w / beq
+ProcessPLC_ShiftCue` (`sonic.asm:1475-1477`) empties the counter and
+`ProcessPLC_ShiftCue` (`:1494`) shifts the next entry up. The same iteration's `RunPLC`
+(`:1379-1417`) then sees a non-empty buffer with `v_plc_patternsleft == 0` and re-arms it,
+storing the new head's section count -- and on the **`FixBugs = 0` path the engine models**,
+that store happens *before* `NemDec_BuildCodeTable` (`:1396-1399`), where the bug-fixed arm
+moves it after. So the ROM is armed again within the same row and never shows an unarmed
+sample at a retire edge.
+
+**Why the engine reads false.** `NemesisPlcServiceQueue.servicePatterns` nulls `activeEntry`
+when an entry completes, and `prepared` is `activeEntry != null`
+(`captureDiagnostics`). Re-arming is `prepareHead()`, reached through
+`Sonic1PlcService.prepareAfterLoop` at the loop-tail boundary. On a held row the replay
+calls `markIterationHeldIntoNextRowForReplay` (`TraceReplayBootstrap:606-612`), which sets
+`representedIterationDefersLoopTailPreparation`, and
+`PlcFrameLifecycleCoordinator.prepareAfterLoop` then computes
+`held = representedIterationDefersLoopTailPreparation && !timedArm` and **skips the arm**,
+handing it to a later closure. So the row samples with nothing active.
+
+`timedArm` is `Sonic1PlcService.ownsTimedLoopTailArm()`, which is
+`armTiming.isRecordedAuthority()`. **No committed S1 fixture carries a
+`hardware_timing.jsonl`** -- 0 under `traces/s1`, against 274 under `traces/s3k` -- so it is
+false for every S1 replay and the hold is unconditional. This is the coverage status the
+contract document already states: the S1 timing port is *implemented but dormant*, and an S1
+PLC divergence must be reasoned about as native service, which is what this entry does.
+
+**Not attempted, and why.** The fix is in the native service model, not in what the timing
+contract permits, so no contract question arises. But the deferral lives in
+`PlcFrameLifecycleCoordinator`, shared with S2 and S3K and with the dynamic-art edge
+deferral that its own comments say depends on it -- so "do not hold the arm" is a
+cross-game change needing a full-suite blast-radius measurement, and the deferral was added
+deliberately. The narrow question for whoever takes it: **the ROM re-arms inside the row
+that retires the head, so the loop-tail arm is not the part of the iteration that is held.**
+Whether that means the arm should be exempt from the hold, or that the hold's premise is
+right and the retire should not have been sampled unarmed, is a design decision this round
+did not take.
