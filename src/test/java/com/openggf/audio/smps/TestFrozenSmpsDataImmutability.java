@@ -55,6 +55,27 @@ class TestFrozenSmpsDataImmutability {
     }
 
     @Test
+    void frozenCatalogCopiesTheTypedPausePolicy() {
+        MutableSmpsData source = MutableSmpsData.complete();
+        AudioPresentationSourceFactory factory = factory();
+        AudioPresentationCommand.MusicVoiceEntry entry = factory.musicSmps(
+                "base", 0x91, 1, source, EMPTY_DAC,
+                new SmpsSequencerConfig.Builder()
+                        .pausePolicy(SmpsSequencerConfig.PausePolicy
+                                .S3K_FM1_TO_5)
+                        .build(),
+                AudioSourceDescriptor.baseMusic(0x91), 32);
+
+        SmpsCompositeVoice voice = factory.recreateSmps(
+                (AudioPresentationCommand.SmpsVoiceDescriptor)
+                        entry.voiceDescriptor());
+
+        assertEquals(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getPausePolicy());
+    }
+
+    @Test
     void legacyIndexedReadsAllocateEachVoiceAndEnvelopeOnlyOnce() {
         CountingAllocatingSmpsData source =
                 CountingAllocatingSmpsData.withTracks();

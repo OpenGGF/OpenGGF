@@ -131,6 +131,18 @@ public final class SmpsSequencerConfig {
         FM_ONLY
     }
 
+    /** Hardware mute/restore sequence selected by the retail sound driver. */
+    public enum PausePolicy {
+        /** Compatibility default for custom data without a driver contract. */
+        NONE,
+        /** S1 68k PauseMusic: pan/key-off FM1-6 and restore pan only. */
+        S1_PAN_KEYOFF,
+        /** S2 zPauseMusic: destructive FM silence and voice reload. */
+        S2_SILENCE_RELOAD,
+        /** S3K zPauseAudio: preserve FM6/DAC and use the shipped resume loop. */
+        S3K_FM1_TO_5
+    }
+
     /** Driver-owned request transform applied before an SFX starts. */
     public enum SfxRequestTransformPolicy {
         NONE,
@@ -182,6 +194,7 @@ public final class SmpsSequencerConfig {
     private final MusicOverrideSpeedPolicy musicOverrideSpeedPolicy;
     private final MusicOverrideRestorePolicy musicOverrideRestorePolicy;
     private final FadeInChannelPolicy fadeInChannelPolicy;
+    private final PausePolicy pausePolicy;
     private final SfxRequestTransformPolicy sfxRequestTransformPolicy;
     private final boolean fadeOutClearsSpeedShoes;
     private final boolean fadeOutStopsSfxImmediately;
@@ -228,6 +241,7 @@ public final class SmpsSequencerConfig {
         this.musicOverrideSpeedPolicy = b.musicOverrideSpeedPolicy;
         this.musicOverrideRestorePolicy = b.musicOverrideRestorePolicy;
         this.fadeInChannelPolicy = b.fadeInChannelPolicy;
+        this.pausePolicy = b.pausePolicy;
         this.sfxRequestTransformPolicy = b.sfxRequestTransformPolicy;
         this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
@@ -429,6 +443,10 @@ public final class SmpsSequencerConfig {
         return fadeInChannelPolicy;
     }
 
+    public PausePolicy getPausePolicy() {
+        return pausePolicy;
+    }
+
     public SfxRequestTransformPolicy getSfxRequestTransformPolicy() {
         return sfxRequestTransformPolicy;
     }
@@ -472,6 +490,7 @@ public final class SmpsSequencerConfig {
                 MusicOverrideRestorePolicy.IMMEDIATE;
         private FadeInChannelPolicy fadeInChannelPolicy =
                 FadeInChannelPolicy.ALL_NON_DAC;
+        private PausePolicy pausePolicy = PausePolicy.NONE;
         private SfxRequestTransformPolicy sfxRequestTransformPolicy =
                 SfxRequestTransformPolicy.NONE;
         private boolean fadeOutClearsSpeedShoes;
@@ -511,6 +530,7 @@ public final class SmpsSequencerConfig {
         public Builder musicOverrideSpeedPolicy(MusicOverrideSpeedPolicy val) { musicOverrideSpeedPolicy = val; return this; }
         public Builder musicOverrideRestorePolicy(MusicOverrideRestorePolicy val) { musicOverrideRestorePolicy = val; return this; }
         public Builder fadeInChannelPolicy(FadeInChannelPolicy val) { fadeInChannelPolicy = val; return this; }
+        public Builder pausePolicy(PausePolicy val) { pausePolicy = val; return this; }
         public Builder sfxRequestTransformPolicy(SfxRequestTransformPolicy val) { sfxRequestTransformPolicy = val; return this; }
         public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
@@ -541,6 +561,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(musicOverrideSpeedPolicy, "musicOverrideSpeedPolicy");
             Objects.requireNonNull(musicOverrideRestorePolicy, "musicOverrideRestorePolicy");
             Objects.requireNonNull(fadeInChannelPolicy, "fadeInChannelPolicy");
+            Objects.requireNonNull(pausePolicy, "pausePolicy");
             Objects.requireNonNull(sfxRequestTransformPolicy, "sfxRequestTransformPolicy");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);

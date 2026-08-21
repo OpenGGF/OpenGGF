@@ -3084,6 +3084,9 @@ public class AudioManager implements MusicRestoreSink {
      * Pauses audio playback. Called when the game window is minimized or loses focus.
      */
     public void pause() {
+        if (shadowRegistry != null) {
+            shadowRegistry.pauseSmpsDrivers();
+        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
@@ -3097,6 +3100,9 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
+        if (shadowRegistry != null) {
+            shadowRegistry.resumeSmpsDrivers();
+        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }

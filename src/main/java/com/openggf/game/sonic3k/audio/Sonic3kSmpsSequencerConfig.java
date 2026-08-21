@@ -79,6 +79,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h
                 .fadeInDelay(2)             // FadeInDelay = 2
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5)
                 .build();
     }
 

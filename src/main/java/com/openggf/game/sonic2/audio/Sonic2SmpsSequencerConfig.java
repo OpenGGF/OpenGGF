@@ -70,6 +70,7 @@ public final class Sonic2SmpsSequencerConfig {
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
                 .fadeOutClearsSpeedShoes(true)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD)
                 .build();
     }
 

@@ -471,6 +471,7 @@ final class SmpsAssetCatalog {
                 .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
                 .musicOverrideRestorePolicy(source.getMusicOverrideRestorePolicy())
                 .fadeInChannelPolicy(source.getFadeInChannelPolicy())
+                .pausePolicy(source.getPausePolicy())
                 .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
                 .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())

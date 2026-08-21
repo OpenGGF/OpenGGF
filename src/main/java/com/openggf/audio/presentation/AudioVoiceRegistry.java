@@ -246,6 +246,32 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return orderedVoiceCount;
     }
 
+    /** Applies the active retail SMPS driver's pause transition atomically. */
+    public void pauseSmpsDrivers() {
+        assertOwnerBoundary();
+        mutateActiveSmpsDrivers(SmpsDriver::pauseAudio);
+    }
+
+    /** Applies the active retail SMPS driver's resume transition atomically. */
+    public void resumeSmpsDrivers() {
+        assertOwnerBoundary();
+        mutateActiveSmpsDrivers(SmpsDriver::resumeAudio);
+    }
+
+    private void mutateActiveSmpsDrivers(
+            java.util.function.Consumer<SmpsDriver> mutation) {
+        PresentationVoice musicVoice = activeMusic == null
+                ? null : activeMusic.voice();
+        mutateVoicesAtomically(() -> {
+            if (musicVoice instanceof SmpsCompositeVoice composite) {
+                mutation.accept(composite.driver());
+            }
+            if (standaloneSmps != null && standaloneSmps != musicVoice) {
+                mutation.accept(standaloneSmps.driver());
+            }
+        }, musicVoice, standaloneSmps);
+    }
+
     @Override
     public PresentationVoice orderedVoiceAt(int index) {
         if (index < 0 || index >= orderedVoiceCount) {

@@ -3179,6 +3179,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
+    /** Restores the active, non-overridden FM tracks after a driver pause. */
+    public void resumeFmAfterPause(boolean reloadVoice) {
+        for (Track track : tracks) {
+            if (!track.active || track.overridden || track.type != TrackType.FM) {
+                continue;
+            }
+            if (reloadVoice) {
+                refreshInstrument(track);
+            } else {
+                applyFmPanAmsFms(track);
+            }
+        }
+    }
+
     public Synthesizer getSynthesizer() {
         return synth;
     }

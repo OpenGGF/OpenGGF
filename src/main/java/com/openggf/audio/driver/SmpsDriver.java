@@ -1910,6 +1910,88 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    /** Applies the retail driver's first pause transition to the chip cores. */
+    public void pauseAudio() {
+        SmpsSequencerConfig.PausePolicy policy = pausePolicy();
+        switch (policy) {
+            case NONE -> { }
+            case S1_PAN_KEYOFF -> {
+                // S1 PauseMusic ($71E50): pan FM1-6 to zero, key off, silence PSG.
+                for (int channel = 0; channel < 3; channel++) {
+                    super.writeFm(null, 0, 0xB4 + channel, 0);
+                    super.writeFm(null, 1, 0xB4 + channel, 0);
+                }
+                keyOffChannels(0, 1, 2, 4, 5, 6);
+                silenceAllPsg();
+            }
+            case S2_SILENCE_RELOAD -> {
+                // S2 FixDriverBugs=0 zFMSilenceAll ($0B36) is destructive.
+                keyOffChannels(2, 6, 1, 5, 0, 4);
+                for (int register = 0x30; register < 0x90; register++) {
+                    super.writeFm(null, 0, register, 0xFF);
+                    super.writeFm(null, 1, register, 0xFF);
+                }
+                silenceAllPsg();
+            }
+            case S3K_FM1_TO_5 -> {
+                /*
+                 * S3K fix_sndbugs=0 zPauseAudio ($098D) redundantly silences
+                 * PSG, mutes only FM1-5 (FM6/DAC continues), then silences PSG
+                 * again on the shared fall-through.
+                 */
+                silenceAllPsg();
+                for (int channel = 0; channel < 3; channel++) {
+                    super.writeFm(null, 0, 0xB4 + channel, 0);
+                }
+                for (int channel = 0; channel < 2; channel++) {
+                    super.writeFm(null, 1, 0xB4 + channel, 0);
+                }
+                keyOffChannels(0, 1, 2, 3, 4, 5);
+                silenceAllPsg();
+            }
+        }
+    }
+
+    /** Restores active FM ownership using the matching retail pause policy. */
+    public void resumeAudio() {
+        SmpsSequencerConfig.PausePolicy policy = pausePolicy();
+        if (policy == SmpsSequencerConfig.PausePolicy.NONE) {
+            return;
+        }
+        boolean reloadVoice = policy
+                == SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD;
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                sequencer.resumeFmAfterPause(reloadVoice);
+            }
+        }
+    }
+
+    private SmpsSequencerConfig.PausePolicy pausePolicy() {
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                if (!isSfx(sequencer)) {
+                    return sequencer.getConfig().getPausePolicy();
+                }
+            }
+            return sequencers.isEmpty()
+                    ? SmpsSequencerConfig.PausePolicy.NONE
+                    : sequencers.get(0).getConfig().getPausePolicy();
+        }
+    }
+
+    private void keyOffChannels(int... channels) {
+        for (int channel : channels) {
+            super.writeFm(null, 0, 0x28, channel);
+        }
+    }
+
+    private void silenceAllPsg() {
+        for (int value = 0x9F; value <= 0xFF; value += 0x20) {
+            super.writePsg(null, value);
+        }
+    }
+
     public void stopAll() {
         synchronized (sequencersLock) {
             sequencers.clear();
