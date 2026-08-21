@@ -106133,3 +106133,39 @@ markers rather than inferred — supersedes it. **The number is 14 rows, not 12.
 **Frontier unmoved, and the next question is unchanged:** why the engine's capsule-button
 trigger fires 14 rows early. Nothing was landed; a change that moved the lock by a frame count
 would be a fitted constant.
+
+## The challenged frame-1433 citation is reconciled, and it stands
+
+The previous entry recorded the earlier session's landmark as unverified, because the
+round that went looking could not find it. Checked directly, the original citation is
+correct and the failure to find it was a fixture mismatch introduced by my brief.
+
+The landmark lives in the **chain's** `hcz` segment — index 9 of
+`s3k-sonic-tails-complete-emeralds`, directory `hcz`, `bk2_frame_offset` 53608 — not in the
+standalone `hcz_completerun` fixture, which is a different recording and where the round
+that was briefed with "the S3K HCZ segment" reasonably looked. Segment 8 of that chain is
+`aiz_5`, AIZ act 2, which is why the two threads' segment numbers never lined up either.
+
+In the chain segment the rows read:
+
+| frame | `player_y` | `player_y_speed` |
+|---|---|---|
+| 1432 | 07EC | 0010 |
+| 1433 | 07EC | 0020 |
+| **1434** | 07EC | **0030** |
+| **1435** | 07EC | **FF40** |
+
+`FF40` is `-0x00C0`, and `0x0030 + 0x38 - 0x28 - 0x100 = -0x00C0` — the recording applying
+gravity, the underwater reduction and the badnik bounce in that order, exactly as the
+original entry derived it. The bounce is present, at the stated frames, with the stated
+arithmetic.
+
+On the hexadecimal `frame` column: it is hexadecimal, and that is a real trap worth keeping
+— but it does not bite here, because in these fixtures the frame value equals the row index,
+so decimal 1433 and `0x599` name the same row. The mismatch was the fixture, not the base.
+
+**What this changes.** The eight-link consequence chain recorded at the end of the previous
+session stands as written. The touch-scan half of it is separately settled — the ROM's
+staleness is confirmed and the engine already models it — so the chain's *first* link is now
+known not to be an engine defect, and whatever moves that bounce a dispatch early is still
+unattributed. That is the open question, and it is not the scan's frame position.
