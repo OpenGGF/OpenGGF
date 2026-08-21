@@ -827,6 +827,18 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         composite.driver().firstMusicSequencer();
                 if (restoredMusic != null
                         && restoredMusic.getConfig()
+                                .getMusicOverrideDacRestorePolicy()
+                                == SmpsSequencerConfig
+                                        .MusicOverrideDacRestorePolicy
+                                        .PRESERVE_OVERRIDE_DAC_MODE
+                        && current instanceof SmpsCompositeVoice displaced) {
+                    boolean dacEnabled = displaced.driver()
+                            .captureSynthSnapshot().ym().dacEnabled();
+                    composite.driver().writeFm(
+                            null, 0, 0x2B, dacEnabled ? 0x80 : 0x00);
+                }
+                if (restoredMusic != null
+                        && restoredMusic.getConfig()
                                 .getMusicOverrideRestorePolicy()
                                 == SmpsSequencerConfig
                                         .MusicOverrideRestorePolicy

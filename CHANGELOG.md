@@ -17,6 +17,8 @@
   through the driver-owned restore boundary. Sonic 1 clears the saved priority;
   Sonic 2 deliberately restores the stale latch from its shipped
   `FixDriverBugs=0` backup; Sonic 3&K reopens SFX immediately on song restore.
+  Sonic 1 also leaves the jingle's DAC mode active on restore, preserving the
+  retail `FixBugs=0` bug that can keep the restored FM6 inaudible.
 
 - **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
 

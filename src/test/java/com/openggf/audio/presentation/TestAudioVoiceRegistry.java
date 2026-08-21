@@ -1495,6 +1495,33 @@ class TestAudioVoiceRegistry {
         assertFalse(registry.snapshot().sfxBlocked());
     }
 
+    @Test
+    void sonic1RetailRestoreLeavesTheJingleDacModeMaskingFm6() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        SmpsDriver base = musicDriver(new SmpsSequencerConfig.Builder()
+                .musicOverrideDacRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                                .PRESERVE_OVERRIDE_DAC_MODE)
+                .build());
+        SmpsDriver oneUp = musicDriver(new SmpsSequencerConfig.Builder().build());
+        base.writeFm(null, 0, 0x2B, 0x00);
+        oneUp.writeFm(null, 0, 0x2B, 0x80);
+        instantiation.enqueueMusicDriver(base);
+        instantiation.enqueueMusicDriver(oneUp);
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, base))));
+        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(2, 0x82, oneUp))));
+
+        registry.apply(new RestoreMusicOverride());
+
+        assertTrue(base.captureSynthSnapshot().ym().dacEnabled(),
+                "S1 FixBugs=0 omits the $2B DAC-disable write on restore");
+    }
+
     /**
      * Every real rewind restore targets a registry that is already holding
      * live, dirtied voices — never a fresh one. Restoring into that registry

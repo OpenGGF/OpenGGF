@@ -71,6 +71,10 @@ class TestFrozenSmpsDataImmutability {
                                 SmpsSequencerConfig
                                         .MusicOverrideSfxReleasePolicy
                                         .ON_RESTORE)
+                        .musicOverrideDacRestorePolicy(
+                                SmpsSequencerConfig
+                                        .MusicOverrideDacRestorePolicy
+                                        .PRESERVE_OVERRIDE_DAC_MODE)
                         .build(),
                 AudioSourceDescriptor.baseMusic(0x91), 32);
 
@@ -90,6 +94,11 @@ class TestFrozenSmpsDataImmutability {
                 SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
                 voice.driver().firstMusicSequencer().getConfig()
                         .getMusicOverrideSfxReleasePolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                        .PRESERVE_OVERRIDE_DAC_MODE,
+                voice.driver().firstMusicSequencer().getConfig()
+                        .getMusicOverrideDacRestorePolicy());
     }
 
     @Test

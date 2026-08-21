@@ -139,6 +139,13 @@ public final class SmpsSequencerConfig {
         ON_RESTORE
     }
 
+    public enum MusicOverrideDacRestorePolicy {
+        /** Restore the displaced driver's preserved YM2612 DAC mode. */
+        RESTORE_SAVED_CHIP,
+        /** S1 FixBugs=0 omits $2B and leaves the jingle's DAC mode active. */
+        PRESERVE_OVERRIDE_DAC_MODE
+    }
+
     public enum FadeInChannelPolicy {
         ALL_NON_DAC,
         /** S3K zDoMusicFadeIn changes FM volume only. */
@@ -209,6 +216,7 @@ public final class SmpsSequencerConfig {
     private final MusicOverrideRestorePolicy musicOverrideRestorePolicy;
     private final MusicOverridePriorityPolicy musicOverridePriorityPolicy;
     private final MusicOverrideSfxReleasePolicy musicOverrideSfxReleasePolicy;
+    private final MusicOverrideDacRestorePolicy musicOverrideDacRestorePolicy;
     private final FadeInChannelPolicy fadeInChannelPolicy;
     private final PausePolicy pausePolicy;
     private final SfxRequestTransformPolicy sfxRequestTransformPolicy;
@@ -258,6 +266,7 @@ public final class SmpsSequencerConfig {
         this.musicOverrideRestorePolicy = b.musicOverrideRestorePolicy;
         this.musicOverridePriorityPolicy = b.musicOverridePriorityPolicy;
         this.musicOverrideSfxReleasePolicy = b.musicOverrideSfxReleasePolicy;
+        this.musicOverrideDacRestorePolicy = b.musicOverrideDacRestorePolicy;
         this.fadeInChannelPolicy = b.fadeInChannelPolicy;
         this.pausePolicy = b.pausePolicy;
         this.sfxRequestTransformPolicy = b.sfxRequestTransformPolicy;
@@ -465,6 +474,10 @@ public final class SmpsSequencerConfig {
         return musicOverrideSfxReleasePolicy;
     }
 
+    public MusicOverrideDacRestorePolicy getMusicOverrideDacRestorePolicy() {
+        return musicOverrideDacRestorePolicy;
+    }
+
     public FadeInChannelPolicy getFadeInChannelPolicy() {
         return fadeInChannelPolicy;
     }
@@ -518,6 +531,8 @@ public final class SmpsSequencerConfig {
                 MusicOverridePriorityPolicy.CLEAR_BEFORE_SAVE;
         private MusicOverrideSfxReleasePolicy musicOverrideSfxReleasePolicy =
                 MusicOverrideSfxReleasePolicy.AFTER_FADE_IN;
+        private MusicOverrideDacRestorePolicy musicOverrideDacRestorePolicy =
+                MusicOverrideDacRestorePolicy.RESTORE_SAVED_CHIP;
         private FadeInChannelPolicy fadeInChannelPolicy =
                 FadeInChannelPolicy.ALL_NON_DAC;
         private PausePolicy pausePolicy = PausePolicy.NONE;
@@ -561,6 +576,7 @@ public final class SmpsSequencerConfig {
         public Builder musicOverrideRestorePolicy(MusicOverrideRestorePolicy val) { musicOverrideRestorePolicy = val; return this; }
         public Builder musicOverridePriorityPolicy(MusicOverridePriorityPolicy val) { musicOverridePriorityPolicy = val; return this; }
         public Builder musicOverrideSfxReleasePolicy(MusicOverrideSfxReleasePolicy val) { musicOverrideSfxReleasePolicy = val; return this; }
+        public Builder musicOverrideDacRestorePolicy(MusicOverrideDacRestorePolicy val) { musicOverrideDacRestorePolicy = val; return this; }
         public Builder fadeInChannelPolicy(FadeInChannelPolicy val) { fadeInChannelPolicy = val; return this; }
         public Builder pausePolicy(PausePolicy val) { pausePolicy = val; return this; }
         public Builder sfxRequestTransformPolicy(SfxRequestTransformPolicy val) { sfxRequestTransformPolicy = val; return this; }
@@ -594,6 +610,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(musicOverrideRestorePolicy, "musicOverrideRestorePolicy");
             Objects.requireNonNull(musicOverridePriorityPolicy, "musicOverridePriorityPolicy");
             Objects.requireNonNull(musicOverrideSfxReleasePolicy, "musicOverrideSfxReleasePolicy");
+            Objects.requireNonNull(musicOverrideDacRestorePolicy, "musicOverrideDacRestorePolicy");
             Objects.requireNonNull(fadeInChannelPolicy, "fadeInChannelPolicy");
             Objects.requireNonNull(pausePolicy, "pausePolicy");
             Objects.requireNonNull(sfxRequestTransformPolicy, "sfxRequestTransformPolicy");

@@ -87,6 +87,11 @@ class TestSmpsSequencerFadeTiming {
                         .DRIVER_FADE_IN,
                 Sonic1SmpsSequencerConfig.CONFIG
                         .getMusicOverrideRestorePolicy());
+        assertEquals(
+                SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                        .PRESERVE_OVERRIDE_DAC_MODE,
+                Sonic1SmpsSequencerConfig.CONFIG
+                        .getMusicOverrideDacRestorePolicy());
     }
 
     @Test

@@ -139,8 +139,10 @@ SFX lifecycle is now modeled as well: both drivers stop and block effects
 during the jingle, S1 clears its priority latch before saving, and S2 preserves
 the shipped stale-latch restore bug. SFX admission resumes at each driver's
 actual boundary (after fade-in for S1/S2, immediately on restore for S3K).
-The remaining shipped S1 DAC/FM6 restore bug remains in this phase; S3K's intentionally invalid
-`fix_sndbugs=0` resume-memory overrun remains a separately bounded follow-up.
+S1 also preserves the jingle's YM2612 DAC mode because retail `FixBugs=0`
+omits the `$2B` repair, reproducing the resulting restored-FM6 masking bug.
+S3K's intentionally invalid `fix_sndbugs=0` resume-memory overrun remains a
+separately bounded follow-up.
 
 ### Phase 4 — SMPS bytecode and envelope quirks
 

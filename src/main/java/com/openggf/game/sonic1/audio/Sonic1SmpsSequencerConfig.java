@@ -88,6 +88,11 @@ public final class Sonic1SmpsSequencerConfig {
                 .musicOverrideRestorePolicy(
                         SmpsSequencerConfig.MusicOverrideRestorePolicy
                                 .DRIVER_FADE_IN)
+                // Retail FixBugs=0 omits the $2B DAC-disable repair in
+                // cfFadeInToPrevious, so a restored FM6 can remain masked.
+                .musicOverrideDacRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                                .PRESERVE_OVERRIDE_DAC_MODE)
                 .pausePolicy(SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF)
                 .build();
     }

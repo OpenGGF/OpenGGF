@@ -474,6 +474,8 @@ final class SmpsAssetCatalog {
                         source.getMusicOverridePriorityPolicy())
                 .musicOverrideSfxReleasePolicy(
                         source.getMusicOverrideSfxReleasePolicy())
+                .musicOverrideDacRestorePolicy(
+                        source.getMusicOverrideDacRestorePolicy())
                 .fadeInChannelPolicy(source.getFadeInChannelPolicy())
                 .pausePolicy(source.getPausePolicy())
                 .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
