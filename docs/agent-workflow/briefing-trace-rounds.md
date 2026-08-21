@@ -132,6 +132,7 @@ that looks like a real result.
 | 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
 | 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
 | 115 | A proxy that survives one question silently answers a different one | Three inversions in one family; measure the quantity directly |
+| 116 | A classification keyed on one game's vocabulary misses the others | S1 spells it obRender; 2 sites became 6 |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3015,4 +3016,31 @@ counted against recorded `object_appeared` events, rather than runs inferred fro
 
 Before reading an existing metric to answer a new question, state what the metric actually counts
 and check that it is the thing the new question asks about.
+
+## One hundred and sixteenth rule: a classification keyed on one game's vocabulary under-reports every other game
+
+A sweep counted **2** render-flag deletion sites. Re-reading the same population site by site found
+at least **6**. The miss was vocabulary: the search used S2's spelling — `render_flags` /
+`on_screen` — and **S1 spells the same field `obRender`**. A site citing the *routine* rather than
+the flag test (`Obj28_Main` / `Obj28_ChkDel` reaching the flag indirectly) matched neither
+spelling and was invisible to both.
+
+This is rule 102's failure in a different coat: a category defined by one game's names silently
+becomes a category of *that game's sites*. Before reporting a cross-game population, name the
+field in each game's own disassembly and search all of them — and include the indirect form, where
+a site cites the routine that performs the test rather than the test itself.
+
+**Corollary, from the same re-classification: a failing citation usually fails on the QUANTITY,
+not the value.** Of 18 classifiable sites, zero were faithful — and none failed merely by having
+the wrong number. They failed because the cited routine computes a *different quantity* or *no
+quantity at all*:
+
+- a margin of 480 citing a routine that computes 640;
+- a margin of 128 citing a bottom-of-level camera test — different quantity **and** different axis;
+- a margin of 64 citing `Obj_DeleteBehindScreen`, which is a `bmi` on a coarse difference — a
+  **sign test containing no constant whatsoever**, and one that deletes only *behind* the camera
+  where the engine also deletes ahead of it.
+
+That last shape passes any review that asks "does the cited routine exist, and is it reached?"
+Both answers are yes. The number still cannot come from there.
 
