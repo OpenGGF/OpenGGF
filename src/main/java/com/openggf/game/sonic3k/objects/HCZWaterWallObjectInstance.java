@@ -146,6 +146,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     // frame after the sprite left the draw cull. True until a phase that
     // maintains it observes a non-drawn frame.
     private boolean drawnLastFrame = true;
+    private boolean drewThisDispatch;
 
     // Mapping frame for rendering
     private int mappingFrame;
@@ -348,6 +349,31 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             timer = HORZ_CLEANUP_TIMER;
             horzPhase = HorzPhase.CLEANUP;
         }
+    }
+
+    /**
+     * ROM: {@code Render_Sprites} clears {@code render_flags} bit 7 and re-sets
+     * it from the object's post-move position, using {@code Camera_X_pos_copy} /
+     * {@code Camera_Y_pos_copy} (sonic3k.asm:36336-36339, 37262-37268). Both
+     * copies are taken by {@code ScreenEvents} (:102234-102235), and the level
+     * loop runs {@code Process_Sprites} → {@code ScreenEvents} →
+     * {@code Render_Sprites} (:7893-7911) — so the bit an object reads on its
+     * next dispatch was computed against <em>that</em> frame's camera, not the
+     * camera the object pass started with. Sampling it here rather than inside
+     * the update body is what puts it on the ROM's side of the camera move.
+     *
+     * <p>Only dispatches that reach a {@code Sprite_OnScreen_Test} are in
+     * {@code Sprite_table_input}, and Render_Sprites clears the bit only for
+     * objects it walks — so a dispatch that does not draw leaves the previous
+     * value standing, which is why this is gated on {@code drewThisDispatch}.
+     */
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (isHorizontal || !drewThisDispatch) {
+            return;
+        }
+        drewThisDispatch = false;
+        drawnLastFrame = isWithinRenderSpriteBounds(0x20, 0x60);
     }
 
     /**
@@ -598,6 +624,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
         // Spawn spray pairs each frame
         spawnVertSprayPair();
+
+        // ROM: HCZWaterWall_Vertical_DrawActive jmps Sprite_OnScreen_Test, so
+        // the eruption frames are drawn and keep render_flags bit 7 current --
+        // which is the value HCZWaterWall_Vertical_Fall reads on its first
+        // dispatch (sonic3k.asm:65253, 65285-65287).
+        drewThisDispatch = true;
     }
 
     /** ROM loc_3041A release: x_vel=0, y_vel=-$C00, jumping=0. */
@@ -629,7 +661,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         y = motionState.y;
         ySub = motionState.ySub;
         yVel = motionState.yVel;
-        drawnLastFrame = isWithinRenderSpriteBounds(0x20, 0x60);
+        // ROM: HCZWaterWall_Vertical_FallMove ends in Sprite_OnScreen_Test, so
+        // this dispatch is drawn and Render_Sprites will re-evaluate bit 7.
+        drewThisDispatch = true;
     }
 
     /**
