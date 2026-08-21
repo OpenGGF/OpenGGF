@@ -111464,3 +111464,75 @@ it.
   dynamic-art shape (`player_animation_id` `0x0005` vs `0x0015`, then
   `dynamic_art.edges` `[]` vs `[1368]`), not position. Different animal from what this
   entry closed.
+
+## 2026-08-21 — S2 Obj82's on-screen gate: landed as a correctness fix with a proven-live branch and a deliberately negative measurement
+
+Worktree `wt/s2-obj82-gate`, branch `bugfix/ai-s2-obj82-onscreen-gate`, both arms pinned
+to `bd65ab870`. The second commit promised by the entry above, kept separate from the
+axis-choice fix on purpose because it is not that defect and has no measured payoff.
+
+### The predicate, derived rather than chosen
+
+`Obj82_Main`'s `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +`
+(`docs/s2disasm/s2.asm:57205-57206`) skips past **both** `JmpTo23_SolidObject` and
+`loc_2A432`. `loc_2A432` (`docs/s2disasm/s2.asm:57340-57365`) holds the `objoff_3E`
+angle counter *and* the `CalcSine` `y_pos` write, so the freeze covers the angle: an
+off-screen platform mid-decay holds its offset instead of returning to `objoff_30`.
+`Obj82_Types` runs before the gate and is unaffected.
+
+The flag itself is `BuildSprites`' output from the previous frame. It clears the bit for
+every queued object (`docs/s2disasm/s2.asm:30560`) and re-sets it only past both culling
+tests (`:30627`), and `MarkObjGone2` (`:30237-30254`) either `DisplaySprite`s or
+`DeleteObject`s, so a live Obj82 is queued every frame and the flag never goes stale.
+
+**The vertical window is the ROM's own constant, not a margin.** Retail `Obj82_Init`
+takes the `fixBugs = 0` arm, `move.b #1<<render_flags.level_fg,render_flags(a0)`
+(`docs/s2disasm/s2.asm:57169-57174`) — the disassembly's own comment there reads *"Same
+as Obj2B, this should use the accurate height flag"*. Without `explicit_height`,
+`BuildSprites` takes `BuildSprites_ApproxYCheck`, which compares against
+`spriteScreenPositionY(0-32)` / `spriteScreenPositionY(screen_height+32)`
+(`:30604-30610`) and "assume[s] Y radius to be 32 pixels" — **regardless of the pillar's
+real `y_radius` of `$30`**. So the engine overrides `getOnScreenHalfHeight()` to 32 with
+`usesCustomRenderHeight()` left false, and `getOnScreenHalfWidth()` to the
+`Obj82_Properties` `width_pixels` that `BuildSprites`' horizontal cull actually reads
+(`:30568-30578`). Both numbers are read out of the routine that owns them.
+
+The gate is evaluated with `isPreUpdateWithinRenderSpriteBounds`, not `isOnScreen()`,
+because the ROM flag describes where the object was when the *previous* frame's
+`BuildSprites` ran — i.e. after that frame's `loc_2A432` — which is the engine's
+frame-start position.
+
+### The branch is live, and the measurement is a real negative
+
+Across four ARZ fixtures the gate evaluates 10,856 times: **9311 closed, 1461 open**, and
+**382 of the closed passes carry a non-zero swing angle** — exactly the case where the ROM
+freezes the decay and the engine previously kept decaying. This is not dead code.
+
+And yet: `com.openggf.tests.trace.s2.**` is **129 tests / 6 failures on both arms with
+every red class's first-error message byte-identical**. The object/guard sweep
+(`sonic2.**`, `level.objects.**`, rewind and trace guards) is 1546 tests, 20 failures /
+16 errors, identical class set — that population is the known reused-fork ambient-state
+cluster and is red in the control.
+
+**Break-on-purpose, because "identical" is worthless if the suite cannot see this path.**
+Inverting the gate (freeze when *on* screen) takes the sweep from 6 failures to **7**,
+adds a new red class at **26390 errors, first error frame 225 `y_speed`**, and drags the
+ARZ2 segment's first error back to **frame 344 `x`**. The suite is demonstrably sensitive
+to this code path, so the negative result above is a fact about current coverage, not a
+blind spot.
+
+### What this is, stated plainly
+
+A correctness fix with a proven-live branch and **no measured behavioural payoff on any
+committed fixture**. The observable it would produce — a platform re-entering the screen
+up to 4 px off centre (`CalcSine($40) * $400 >> 16` = 4) after the player rode and left
+it — needs a recording where an Obj82 leaves the screen mid-decay and the player meets it
+again. No committed trace does that. Landed because the predicate is derived from the ROM
+routine that owns it rather than fitted, not because anything went green.
+
+### Related
+
+The 32 here is the counter-example to the invented-margin class another lane is sweeping:
+it is `BuildSprites_ApproxYCheck`'s own constant, cited to the line that contains it,
+reached because a *different* cited `fixBugs = 0` arm leaves `explicit_height` clear. A
+margin is only legitimate when both of those are true.

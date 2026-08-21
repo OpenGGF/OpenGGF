@@ -1,5 +1,14 @@
 # Changelog
 
+- **An off-screen ARZ swinging platform is now inert, as the ROM has it:**
+  `Obj82_Main` tests its own render flag and, when clear, skips both the solid
+  collision and the swing — and the swing routine holds the swing angle as well
+  as the position write, so a platform that leaves the screen mid-swing stays
+  where it was instead of settling back to centre. The engine ran both
+  unconditionally. Its culling window is the one the shipped ROM actually uses:
+  the retail build leaves the accurate-height flag clear, so the vertical test
+  assumes a 32-pixel radius rather than the pillar's real 48.
+
 - **ARZ's swinging platforms and pillars are solid on all four sides, as the ROM
   has them:** `Obj82_Main` calls the full `SolidObject` routine, not one of the
   top-only platform entries, so a contact whose horizontal penetration does not
