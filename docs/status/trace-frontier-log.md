@@ -111791,3 +111791,42 @@ that it is not any of the four owners above, and that the obvious path through
 it is a candidate at all.
 
 Nothing was fitted, and the three-entry offset remains ruled out.
+
+### Addendum — the survey is now exhaustive: no routine in s2.asm writes the PLAYER's anim_frame outside Sonic_Animate
+
+Every remaining `anim_frame` writer in the file, mapped to its enclosing
+routine:
+
+| line | routine | whose SST |
+|---|---|---|
+| 28023 | `loc_142CC` | its own object |
+| 30428, 30460, 30494 | `AnimateSprite`, `Anim_End_FF`, `Anim_End_FB` | the **generic** object animator; Obj01 does not use it — Sonic has his own `Sonic_Animate` |
+| 41276, 41311 | `Tails_Animate_Part2`, `TAnim_End_FF` | Obj02, the sidekick |
+| 44947 | `loc_1F5D6` | its own object |
+| 46345 | `Obj04_Display` | its own object |
+| 49913 | `Obj33_FlameOff` | its own object |
+| 57704, 57802 | `loc_2A86A`, `loc_2A966` | their own objects |
+| 69279, 69635 | `SSPlayer_Jump`, `SSPlayer_Animate` | the **Special Stage** player, not in ARZ1 |
+
+Together with the four discarded above, that is every `anim_frame` write in
+`s2.asm`. **None of them targets the main character's SST.** The search for an
+external writer is closed, not merely unfinished.
+
+### What that forces, and where the evidence runs out
+
+If no routine outside `Sonic_Animate` writes the player's `anim_frame`, the
+reset at 4213 came from `Sonic_Animate`'s own `anim != prev_anim` path
+(s2.asm:38386-38390) — which means `anim` and `prev_anim` DID differ at the
+moment that test ran, even though the recorded `player_animation_id` column
+reads `02` on 4212, 4213 and 4214 alike.
+
+That is a transient inside a single frame, and **a frame-granularity fixture
+cannot show it**. The recorded column samples once per frame; a value written
+and restored between two samples is invisible by construction. So this is not a candidate I failed to check — it is the limit of what this recording can
+answer.
+
+What would resolve it, for whoever picks it up: a per-frame aux column carrying
+`prev_anim` alongside `anim`, or a sub-frame probe at the `Sonic_Animate` entry.
+Both are recorder-side. Until one exists, the writer cannot be identified from
+committed data, and no fix should be attempted on inference alone — the fitted
+answers stay ruled out, and a three-entry offset would be exactly that.
