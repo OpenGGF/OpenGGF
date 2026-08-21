@@ -139,6 +139,7 @@ that looks like a real result.
 | 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
+| 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
@@ -150,6 +151,7 @@ that looks like a real result.
 | 127 | A probe can fire in the right class and the wrong harness | Plausible output from a path the test does not use |
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
+| 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3376,4 +3378,31 @@ velocity says what did it.
 **Corollary — read the routine before assigning a role.** The same round had the launch backwards:
 the impulse it attributed to the boss platform is S1's own jump velocity, so the event is the player
 jumping off, not the object launching him. Reading the routine corrected an actor, not just a value.
+
+## One hundred and thirtieth rule: read the candidate mechanism's constant before probing for it
+
+A round had the right actor and the wrong mechanism. Probing the mechanism first would have come
+back **empty** — a true statement about that code path, and a false conclusion about the defect
+("the engine models no boss contact here"). Reading the constant first is what separated them.
+
+The suspected path computes its rebound as `neg`/`asr` on the incoming velocity, giving roughly a
+seventh of the observed magnitude on X **and a downward write on Y**. The recorded `y_speed` runs
+continuous gravity — differing by exactly the gravity constant per row — straight through the
+event, **so the vertical write provably never happened**.
+
+**That one column eliminated a whole class rather than one candidate.** Every hurt, bounce and
+boss-touch path in that game writes vertical velocity; vertical velocity is untouched; so all of
+them die together, and whatever acted writes **x only**. The real owner turned out to be a
+different routine on the same object — same half-width, x-only write, gated on the exact player
+state the row records.
+
+**Two habits worth keeping:**
+
+1. **Check the untouched fields, not only the diverging one.** A field that provably did *not*
+   change is often a stronger discriminator than the one that did, because it rules out every
+   mechanism that would have written it.
+2. **Absent and wrong are different defects, and a probe must distinguish them.** Here the class
+   has *no* x-velocity write on side contact at all, while carrying a separate mechanism gated on
+   the same player state — so it detects the case and does something else with it. "No rebound
+   observed" would have reported neither.
 
