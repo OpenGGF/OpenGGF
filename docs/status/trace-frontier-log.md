@@ -104241,3 +104241,89 @@ producer firing early. **Both are now wrong.** The engine's ordinals match the f
 and its producers fire on time; the defect is retirement. Three characterisations of one failure,
 each replaced by measurement rather than argument — the constant across them is that every one
 was formed by reading a symptom's location instead of instrumenting its cause.
+
+## 2026-08-21 — `Sonic_HurtStop`'s missing walk write: `lz1` green, `lz3` advances 1033 frames
+
+Round `s1-slz1-graze-r1`, landed. Rebased onto `develop` `11bac5cf7` first — the previous entries
+were written from a base that predated rules 44-63, and the unnumbered hazard block I added there
+was redundant.
+
+### The owner was right, present, and incomplete
+
+Neither of the two possibilities scoped for this round. `completeHurtLandingRecovery()` **is** the
+engine's `Sonic_HurtStop` landing branch, and it **does** fire at the site — a first probe missed it
+only because `doObjectMoveAndFall()` moves the sprite before the call, so a position filter set to
+the pre-move coordinates never matched. Anchoring on the dispatch instead:
+
+```
+[DISPATCH] x=ba3 y=1cc hurt=true air=true  branch=AIRBORNE
+[DISPATCH] x=ba4 y=1cc hurt=true air=false branch=HURT-STOP     <- lz1 f3122
+[DISPATCH] x=ba5 y=1cc hurt=true air=true  branch=AIRBORNE
+[HURT] completeHurtLandingRecovery x=ba5 y=1cc anim=26 mf=85 forced=-1
+```
+
+All **11** hurt landings in the chain show `anim=26` (`id_Hurt`) and `mf=85` (`fr_Injury`) at the
+moment of recovery. The routine ran; it simply never wrote the animation.
+
+The ROM writes four things (`_incObj/"01 Sonic.asm":1947-1952`): the three speeds zeroed,
+**`move.b #id_Walk,obAnim(a0)`**, the routine decrement, and the `2*60` flash timer. The engine had
+three of the four — `setXSpeed/setYSpeed/setGSpeed(0)`, `hurt = false`, `invulnerableFrames = 0x78`
+— and not the animation. S2's `Sonic_HurtStop` writes the same animation
+(`docs/s2disasm/s2.asm:38223`), so the behaviour is shared and needs no per-game owner. S3K's
+disassembly carries no `HurtStop` label; its chain is unchanged by the fix, which is the evidence
+available.
+
+### Where it lives, and why not in the obvious place
+
+Adding it to `completeHurtLandingRecovery()` put `AbstractPlayableSprite.java` at 3216 effective
+lines against a 3212 budget and failed `TestArchitecturalSourceGuard`'s release-critical ratchet.
+The guard asks for extraction rather than growth, so the write sits in `PlayableSpriteMovement`'s
+hurt-stop branch instead — the caller that already owns this ROM routine and already cites it.
+**The budget was not raised.**
+
+### Result
+
+| | before | after |
+|---|---|---|
+| segment 23 (`lz1`) | 16 errors, first at f3124 `dynamic_art.edges` | **green** |
+| segment 26 (`lz3`) | 11,334 errors, first at f2805 `dynamic_art.edges` | **10,212**, first at **f3838** `y` |
+| segment 24 (`lz1_2`) | 18,205 | 18,205 (unchanged) |
+
+`lz3`'s frontier advances 1033 frames and its leading field changes from dynamic art to physics —
+the missed transfer there was the same symptom.
+
+`TestS1ColdStartAttribution`'s segment-23 pin is re-pinned from "16 errors at f3124" to **green**,
+which is strictly stronger than the assertion it replaces. The file's own instruction is to update
+a pin when a defect is fixed and never to relax one; this tightens it.
+
+### Verification
+
+Candidate against control `11bac5cf7`, both arms in the same worktree.
+
+- `-Ptrace-replay`: **800 / 6 failures / 0 errors / 4 skipped in both arms, failing sets
+  identical**. Across all three chains exactly two `segment N ... diverged` lines change — the two
+  above. 163 `Running` lines.
+- `-Pguards`: **500 / 0**.
+- Default suite: 15194 / 52 failures / 67 errors against the control's 51 / 67. The single delta is
+  `TestCnzHoverFanObjectInstance.overlappingActiveFans...`, a self-contained CNZ unit test that
+  cannot reach an S1 hurt landing — and the same victim already observed flipping on an unrelated
+  change earlier in this session, when the control disagreed with itself. Attributed as the
+  documented order-dependent churn, not as a regression.
+
+**Re-verified after rebasing onto `9b8920b59`** (the original matrix was measured at `11bac5cf7`,
+which develop then moved 17 commits past, including a revert of a rejected candidate that had
+reached it). Both arms re-run on the new tip:
+
+- `-Ptrace-replay`: 800 / 6 / 0 / 4 in both arms, failing sets identical, and the same two
+  segment lines change and only those. 163 `Running` lines.
+- `-Pguards`: 500 / 0.
+- Default suite: candidate 15194 / **51** failures / 64 errors against the control's **52** / 64 —
+  the candidate one *better* this time, with the single delta again
+  `TestCnzHoverFanObjectInstance.overlappingActiveFans...`, now appearing in the **control** arm.
+  Third independent sighting of that test flipping in this session, on both sides, which settles
+  it as order-dependent churn rather than anything attributable.
+
+**The placement still holds.** The guard change in that window was to `ObjectManager`'s budget
+(3041 -> 3051), not `AbstractPlayableSprite`'s, which is still 3212 — so the ratchet that put this
+write in `PlayableSpriteMovement` rather than in `completeHurtLandingRecovery()` is unchanged.
+

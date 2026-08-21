@@ -677,6 +677,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
 			}
 			sprite.completeHurtLandingRecovery();
+			// Sonic_HurtStop's landing branch also writes the walk animation,
+			// between zeroing the three speeds and dropping the routine: S1
+			// `move.b #id_Walk,obAnim(a0)`
+			// (docs/s1disasm/_incObj/"01 Sonic.asm":1949) and S2
+			// `move.b #AniIDSonAni_Walk,anim(a0)` (docs/s2disasm/s2.asm:38223).
+			// Without it the player stays in the hurt animation after touching
+			// down and the hurt script keeps republishing fr_Injury, so any read
+			// before normal control re-selects an animation sees the wrong frame.
+			// It lives here rather than in completeHurtLandingRecovery because
+			// AbstractPlayableSprite is at its release-critical size budget.
+			int hurtLandingWalk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+			if (hurtLandingWalk >= 0) {
+				sprite.setAnimationId(hurtLandingWalk);
+			}
 		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {

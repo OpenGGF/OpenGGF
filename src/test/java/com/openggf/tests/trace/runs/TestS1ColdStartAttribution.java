@@ -111,13 +111,22 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
                 "segment 22 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n"
                         + bootReport);
+        // Re-pinned from "16 errors leading with dynamic_art.edges at frame
+        // 3124" to GREEN when Sonic_HurtStop's landing branch began writing the
+        // walk animation (docs/s1disasm/_incObj/"01 Sonic.asm":1949). Those 16
+        // were never an art defect: the segment's real first error was
+        // player_mapping_frame at frame 3123 -- an ANIMATION-group field, which
+        // firstNonCameraPhysicsMismatch cannot report because it is filtered to
+        // PHYSICS -- and the absent DPLC transfer at 3124 was that divergence's
+        // downstream symptom, one frame later by the ROM's ordinary DMA lag.
+        // This pin is now strictly stronger than the one it replaces: no
+        // divergence at all, rather than exactly sixteen.
         assertTrue(
-                report.contains("segment 1 of s1-sonic-complete-withemeralds "
-                        + "diverged: 16 physics comparator errors, first "
-                        + "non-camera mismatch at frame 3124 field "
-                        + "dynamic_art.edges rom=[1738, 1739] engine=[]"),
-                "segment 23 must still diverge identically from a cold start; "
-                        + "if it was fixed, update this pin. Report:\n" + report);
+                !report.contains("segment 1 of s1-sonic-complete-withemeralds "
+                        + "diverged:"),
+                "segment 23 must stay GREEN from a cold start; if it regressed, "
+                        + "do not re-pin it to a divergence without establishing "
+                        + "why. Report:\n" + report);
         // Updated when the water splash stopped consuming a level-object SST
         // slot: the LZ door now loads into ROM slot 34 instead of 45, so its
         // ascent no longer leads the ROM's by one 2px step and the frame-1337
