@@ -104917,3 +104917,59 @@ Also relevant to scoping: `known-discrepancies.md` already records this behaviou
 lands on the right trace frame "instead of drifting by the engine's default object-manager counter
 phase". The complete-run `lz3` segment gets no such seeding. A sanctioned mechanism for this
 already exists in one context.
+
+## 2026-08-21 — enumeration: two affected readers, and the seeding was already removed
+
+Round `s1-slz1-graze-r1`, bounded enumeration. **Measurement only; no source change.**
+
+### Pre-object-pass readers of `ObjectManager.vblaCounter` — the affected set is TWO
+
+| reader | position | status |
+|---|---|---|
+| `Sonic1LZWaterEvents.vblaByte()` | `updatePrePhysics`, before the object pass | **affected** — measured directly last round |
+| `Sonic1LevelEventManager.updateFixedInLevelObjectsBeforeDynamicObjects` -> `Sonic1FixedEndCardSlot.updateFixedPass` | `LevelFrameStep` wraps `fixed-objects-pre` before the `objects` pass | **affected** by call position |
+
+**Unaffected — in-pass, read after `advanceVblaCounter()`:** `ObjectExecutionController` (the
+dispatch itself), `Sonic1CaterkillerBadnikInstance`, `Sonic1EggPrisonObjectInstance`,
+`LostRingObjectInstance`, `AbstractS3kUprightEggCapsuleInstance`.
+
+**Not gameplay gates:** `LevelManager` (two reads, both carrying the clock across an
+ObjectManager rebuild at level load), `GameLoop` (captures the pre-frame value deliberately for
+the hold/pause path), `TraceSessionLauncher` (four harness-admission reads),
+`LiveTraceComparator` (the comparison sample point itself), `RewindSnapshotDiff` (snapshot
+equality).
+
+**Unclassified, and stated as such:** `CNZSlotMachineManager` (S2 CNZ), `S3kSlotBonusStageRuntime`,
+`Sonic3kTitleCardManager` (reads `& 3`, a sparse gate of exactly the kind that would show this).
+All three run in their own modes rather than the level object pass, and each needs its own
+call-position check. I did not make it.
+
+**Sizing:** two confirmed sites, both S1. That is a small ordering question rather than a
+cross-game phase problem — unless one of the three unclassified mode readers joins them.
+
+### The seeding: already removed, and the discrepancy doc is stale
+
+The suspicion that `Sonic1CreditsDemoBootstrap`'s seeding is a fitted compensation for this exact
+defect is right in principle — and someone reached that conclusion already and acted on it. **The
+code no longer seeds anything**, and says why:
+
+> no `v_vblank_count` value is seeded here [...] incremented once per V-blank at `VBlank_Exit`
+> and written nowhere else in the entire ROM [...] its value entering a credits demo is therefore
+> a free-running count since console reset, not level-derived state, and cannot be reconstructed
+> from the lamppost table. **Seeding a measured phase here is a fitted model**; the counter is
+> established once at frame 0 by the replay entry path, exactly as every other trace-replay entry
+> does.
+
+So there is **nothing to unwind**: no live compensation would become wrong under a corrected
+tick, and no green fixture depends on one.
+
+**`known-discrepancies.md` is out of date.** Its resolved-LZ3 entry still reads
+"`Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank phase when applying the
+lamppost state" — describing a mechanism that no longer exists. I quoted it last round in good
+faith and went looking for the seeding it names. Worth correcting so the next reader does not.
+
+The only live phase mechanism is `ObjectManager.VIntRunCounterPhaseOffset`, fed by
+`TraceData.initialVIntRunCounterPhaseOffset()`. Its own contract says it re-applies a low-bit
+phase that **old S3K trace schemas** need because they captured the adjacent V-int word rather
+than the run counter, and that it is "zero in all normal gameplay". It is not S1, not this
+defect, and not a compensation for it.
