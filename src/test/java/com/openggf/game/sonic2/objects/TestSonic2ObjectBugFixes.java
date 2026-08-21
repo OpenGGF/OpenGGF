@@ -1191,10 +1191,10 @@ class TestSonic2ObjectBugFixes {
         platform.setServices(services);
         setBooleanField(platform, "collapsed", true);
         setIntField(platform, "parentY", 0x0700);
-        setIntField(platform, "verticalOnlyOffscreenTicks", 2);
 
         AbstractObjectInstance.updateCameraBounds(0x0200, 0x052C, 0x0340, 0x060C, 0);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(222, new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C));
 
         assertTrue(platform.isDestroyed(),
@@ -1234,12 +1234,30 @@ class TestSonic2ObjectBugFixes {
         setBooleanField(platform, "collapsed", true);
         setIntField(platform, "parentY", 0x05FA);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(321, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
 
         assertFalse(platform.isDestroyed(),
                 "Obj1F lacks render_flags.explicit_height, so BuildSprites keeps it through the 32px approximate Y band");
     }
 
+    /**
+     * LEFT RED DELIBERATELY, 2026-08-21. This asserts the two-tick
+     * {@code verticalOnlyOffscreenTicks} grace that {@code 3f0fd4a70} removed on
+     * purpose, replacing it with the ROM's own rule: {@code Obj1F_FragmentFall}
+     * deletes on the {@code render_flags} bit the last {@code BuildSprites} pass
+     * wrote, judged at the pre-fall position (docs/s2disasm/s2.asm:23860-23864).
+     *
+     * <p>It is a correct test of behaviour that no longer exists -- green against
+     * the pre-conversion class, red against the current one -- so unlike its two
+     * siblings it cannot be repaired by supplying the frame-start snapshot the
+     * harness was missing. Rewriting it to pass would mean inventing the new
+     * expectation for this scenario rather than deriving it, and a first attempt
+     * at that failed on its own first tick, which is the tell. Deleting it would
+     * discard the only encoding of what the grace was for. It stays red until
+     * someone derives the ROM's answer for a vertically clipped, horizontally
+     * visible fragment parent and rewrites it to that.
+     */
     @Test
     void collapsingPlatformFragmentFallKeepsVerticalOnlyOffscreenParentForCpuSlotRefresh() throws Exception {
         StubObjectServices services = new StubObjectServices();
