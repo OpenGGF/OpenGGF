@@ -112785,11 +112785,21 @@ not a settled question.
 ## 2026-08-21 -- The S3K return boundary: both leads dead, and the 4px localised to the ring
 
 Branch `bugfix/ai-s3k-return-boundary-r3`, based on `develop` at `a8b508bd7`.
-Every measurement below is at that SHA, `-Dmse=off`, `target/surefire-reports`
-cleared before each run, and `Tests run: 1` confirmed for
-`TestS3kTailsFullChainRunChain` by name under `-Ptrace-replay-r7`.
+
+**Measurement provenance, stated per measurement rather than in one blanket
+line.** The perturbation pair below was run before this branch existed, at
+`c9319fe2b` and again at `cd84b68a3`; the lead-1 dump and the save-site probe
+are at `a8b508bd7`. Every run: `-Dmse=off`, `target/surefire-reports` cleared
+beforehand, and `Tests run: 1` confirmed for `TestS3kTailsFullChainRunChain`
+by name under `-Ptrace-replay-r7`. A single "all numbers are at SHA X" header
+is what produced this correction -- it was written while the perturbation
+numbers were two tips old, and it was wrong the moment it was typed.
 
 ### First: the delta is not the new release timing
+
+*Measured at `c9319fe2b`, then re-run in full at `cd84b68a3` with identical
+results (7/11 blocks, 1216 both arms), which also showed the intervening merges
+moved nothing. Both arms of each pair share one SHA.*
 
 There was no control for `run_boundary.position.y` -- the value was unreachable
 behind the stall the previous round closed -- so one was built by varying the
