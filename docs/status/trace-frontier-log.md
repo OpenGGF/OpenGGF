@@ -109461,3 +109461,94 @@ outlives this round — no other trace class would catch a regression in this
 area, since every one of them begins at frame 0 after a completed load. When a
 staged-entry change is eventually attempted, the suite cannot protect it and the
 probe fingerprint above is the only real gate.
+
+## 2026-08-21 — S2 complete-emerald chain: twelve axes ranked, and three of them look like one origin in ARZ1
+
+Characterisation round, no target picked. Worktree `wt/s3k-hcz-seg9`, branch
+`bugfix/ai-s2-chain-frontier`, based on `24dfd0171`. Nothing changed in `src/`.
+
+Command:
+`mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsonic2.rom.path=<s2.gen> -Dtest=TestS2CompleteEmeraldRunChain test`.
+Result: 1 test, 1 failure, **12 axes**.
+
+### Where the run stops
+
+The manifest has **35 segments** (`seg1_ehz1` .. `seg28_dez1`). The chain reaches
+segment **19** (`seg13_arz2`) and dies there, so segments 20-34 — all of CNZ,
+HTZ, MCZ, OOZ, MTZ, SCZ, WFZ and DEZ — are not characterised at all by this run.
+Unblocking segment 19 is worth more than any error count in the table below.
+
+### Mass by segment, from the per-segment reports
+
+Ten of the thirteen level segments that run are **completely green**: segments
+0, 2, 4, 6, 7, 9, 11, 12, 13, 16 all report `errorCount` 0. All the physics mass
+is in three:
+
+| segment | dir | errors | physics | anim | complete | first non-camera mismatch |
+|---:|---|---:|---:|---:|---|---|
+| 19 | `seg13_arz2` | **62616** | 58657 | 3959 | **false** | frame 344 `x` rom `0x03E7` engine `0x03E4` |
+| 18 | `seg12_arz1` | 12580 | 11658 | 922 | true | frame 4019 `x_sub` rom `0x7100` engine `0xB900` |
+| 15 | `seg10_cpz2` | 2122 | 2084 | 38 | true | frame 2252 `air` rom 1 engine 0 |
+
+Segment 19's report is from an **aborted** segment (`complete: false`) — the
+walk-failure axis is `segment 19 lost production ownership before source closure
+(mode=TITLE_CARD, level=LevelIdentity[loadGeneration=15, progressionZone=2,
+romZone=15, act=1], BK2 cursor=109135)`. Cursor 109135 is row ~2382 of that
+segment's 6409, so its 62,616 errors cover a third of the segment and are not
+comparable with a completed segment's count.
+
+### The nine dynamic-art-gap axes are not nine problems
+
+74 field errors across nine gaps, and eight of the nine are the same shape:
+
+| gap | fields | shape |
+|---|---:|---|
+| `seg4_ehz1 -> seg5_ehz2` | 4 | `movie_logical_frame` delta 1 |
+| `ss_4 -> seg6_ehz2` | 2 | `movie_logical_frame` delta 1 |
+| `ss_5 -> seg7_ehz2` | 2 | `movie_logical_frame` delta 1 |
+| `seg7_ehz2 -> seg8_cpz1` | 4 | `movie_logical_frame` delta 1 |
+| `seg8_cpz1 -> seg9_cpz2` | 4 | `movie_logical_frame` delta 1 |
+| `ss_6 -> seg10_cpz2` | 8 | `movie_logical_frame` delta 1, 2, 8, 20, 21 |
+| `seg10_cpz2 -> seg11_arz1` | 4 | `movie_logical_frame` delta 1 |
+| `ss_7 -> seg12_arz1` | 4 | `movie_logical_frame` delta 1, 2 |
+| **`seg12_arz1 -> seg13_arz2`** | **42** | `edge_ordinal` delta 16, `transfer_id` delta 8, ledger fingerprints, `movie_logical_frame` delta 1 |
+
+Eight gaps are a one-row stamp phase on `movie_logical_frame` and nothing else —
+one candidate cause, not eight. `ss_6 -> seg10_cpz2` is the same field with
+larger deltas. The ninth is a different animal entirely and is the interesting
+one.
+
+### Origin checks, which change the ranking
+
+- **Segment 15 (`seg10_cpz2`) is self-contained.** It ends diverged
+  (`sidekick_x_sub` off by `0x1000` at its last rows) but segment 16
+  (`seg11_arz1`) that follows it is completely green. Its 2,122 errors
+  propagate nowhere.
+- **Segment 18 (`seg12_arz1`) hands over diverged.** Its final row 4888 still
+  carries `y_sub`, `sidekick_y_sub` AND `dynamic_art.edge[0].transfer_id`
+  4531 vs 4523 (-8) with `edge_ordinal` 9063 vs 9047 (-16).
+- **The `seg12_arz1 -> seg13_arz2` gap reports the same -8 / -16.** Same
+  boundary, same deficit.
+- **Segment 19 then dies with `dynamic_art` edges absent** — its last mismatches
+  at row 2381 are `dynamic_art.edge[1].present` and `edge[2].present` true vs
+  false, and a `vram_destination` / `source_tile_index` mismatch on edge 0.
+
+So segment 18's physics divergence, the 42-field ARZ1->ARZ2 gap, and segment
+19's abort are **three of the twelve axes sitting on one boundary with one
+consistent deficit** — the engine having produced fewer art transfers than the
+recording by the end of ARZ1. That is a hypothesis about a shared origin, not a
+demonstration; what has been shown is that the same -8/-16 appears in all three
+reports at the same boundary.
+
+Segment 19's own first mismatch is at frame **344**, not frame 0, so its
+position state did not arrive broken — which argues the carried quantity is the
+art pipeline rather than physics.
+
+### Ranked, for the target decision
+
+1. **Segment 18/19 and the ARZ1->ARZ2 gap as one target.** Three axes, the chain
+   stopper, and 16 uncharacterised segments behind it.
+2. **The eight one-row `movie_logical_frame` gaps.** Eight axes, 32 fields, one
+   likely cause, but no gameplay consequence proven.
+3. **Segment 15 (`seg10_cpz2`).** 2,122 errors, self-contained, propagates
+   nowhere. Real, and the cheapest to work in isolation.
