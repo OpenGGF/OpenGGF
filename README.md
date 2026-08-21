@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Shared trace fixtures now rebind every playable power-up spawner (merged
+  2026-08-21):** retained S1/S2 level managers no longer gate the replacement
+  playable roster's spawner on S3K-only elemental-shield support, so splash,
+  invincibility-star, and shield children are created by their real runtime
+  owner after per-test reset.
+
 - **S3K badnik Init dispatch (merged 2026-08-21):** six badniks skipped the ROM's
   routine-zero dispatch -- the frame in which an object sets up and returns without
   moving or running its collision check -- because the engine models that frame as a
