@@ -112781,3 +112781,115 @@ ordinal with no other pending job of the kind, and these are claimed 11,12,13,14
 ascending order. No ordinal or fingerprint mismatch appears on this fixture afterwards, so
 nothing is being papered over here -- but a batch-shaped identity return is an open gap,
 not a settled question.
+
+## 2026-08-21 -- The S3K return boundary: both leads dead, and the 4px localised to the ring
+
+Branch `bugfix/ai-s3k-return-boundary-r3`, based on `develop` at `a8b508bd7`.
+Every measurement below is at that SHA, `-Dmse=off`, `target/surefire-reports`
+cleared before each run, and `Tests run: 1` confirmed for
+`TestS3kTailsFullChainRunChain` by name under `-Ptrace-replay-r7`.
+
+### First: the delta is not the new release timing
+
+There was no control for `run_boundary.position.y` -- the value was unreachable
+behind the stall the previous round closed -- so one was built by varying the
+only thing that would have to matter if the delta belonged to that change. The
+unrepresented service rate was cut to one boundary in three, lengthening the
+title card's art wait:
+
+```
+unperturbed:  released after  7 blocks  ->  position.y actual = 1216
+perturbed:    released after 11 blocks  ->  position.y actual = 1216
+```
+
+The positive control fired -- 7 against 11 blocks, a 57% longer wait -- so the
+perturbation demonstrably changed the schedule rather than silently doing
+nothing, which is the failure mode that makes "the value did not move"
+indistinguishable from "the instrument never ran". The boundary y is
+**invariant under release timing**. That eliminates the whole art-pipeline and
+title-card family as its owner.
+
+The perturbation was a diagnostic and is discarded. A schedule tuned until 1216
+became 1220 would be a fitted constant under hard rule 3: green on this fixture,
+desyncing the first recording nobody has made yet. The release schedule is owned
+by the ROM's work budget.
+
+### Lead 1 -- the arm-frame branch -- is dead
+
+`TraceRunBoundaryComparator.comparePosition` branches on
+`destinationRowsConsumed <= 0` between the arm frame's `start_y` and row zero's
+`y`, so a one-frame phase error would compare against the wrong sample. Dumped:
+
+```
+rowsConsumed=0  onArmFrame=true  armY=1220  rowZeroY=1220  engineCentreY=1216
+                                 armX=7112  rowZeroX=7112  engineCentreX=7112
+```
+
+Dead, and more strongly than the kill condition asked. The engine is on the arm
+frame, the branch selected the arm-frame sample -- and **both candidates are
+1220**, so the expectation is the same whichever branch is taken. The branch
+cannot be the defect. This is **not** a comparator defect: x matches exactly and
+y does not, on both candidate samples.
+
+### Lead 2 -- the character radius -- is dead
+
+Sonic's `y_radius` is `$13` = 19 (`sonic3k.asm:21904`), Tails' is `$F` = 15
+(`sonic3k.asm:26103`); the difference is exactly 4 and this is the Tails route.
+The kill condition was whether any radius arithmetic exists on the restore path.
+It does not, on **either** branch:
+
+- `Load_Starpost_Settings` -> `move.w (Saved_Y_pos).w,(Player_1+y_pos).w`
+  (`sonic3k.asm:61767`)
+- its `Special_bonus_entry_flag` branch `loc_2D2C2` -> `move.w
+  (Saved2_Y_pos).w,(Player_1+y_pos).w` (`sonic3k.asm:61800`)
+- the save side `Save_Level_Data2` -> `move.w y_pos(a0),(Saved2_Y_pos).w`
+  (`sonic3k.asm:61739`)
+
+Plain word copies end to end, no arithmetic, and no `FixBugs` conditional
+anywhere in the block. The 4 is a coincidence, and exactly the kind rule 113
+warns about -- a number that agrees with the right answer for the wrong reason.
+
+### What the round did establish: the ring, not the player
+
+The ROM's saved return position is **the giant ring's**, not the player's.
+`SSEntryFlash_GoSS` calls `Save_Level_Data2` with `a0` pointing at the flash
+object (`sonic3k.asm:128392`), and `SSEntryFlash_Init` copied the flash's
+position verbatim from its parent ring -- the disassembly's own comment reads
+"Copy positional data from parent ring" (`sonic3k.asm:128353-128356`). The
+engine models this correctly; `Sonic3kSSEntryFlashObjectInstance`'s javadoc
+already states it accurately.
+
+Measured at the save site:
+
+```
+flashGetX=7112  flashGetY=1216  spawn=7112,1216
+ringGetY=1216   ringSpawnY=1216   playerY=1248
+```
+
+So the engine takes the ring's position, not the player's (the player is 32px
+away at 1248), and saves 1216 -- which is exactly what it later restores. The
+whole save/restore round trip is faithful. **The 4px is in the ring's own y.**
+
+### Two candidates, and reading cannot separate them
+
+1. **The ring is placed 4px high.** The engine spawns the AIZ entry ring at
+   y=1216; the ROM's may sit at 1220. `SSEntryRing_Init`
+   (`sonic3k.asm:128238-128262`) does not adjust `y_pos`, so the value comes
+   straight from the object layout.
+2. **The ring is right and the player settles.** 1220 is 4px *below* 1216, and
+   the ROM player may move down onto the floor between the restore and the arm
+   frame while the engine's does not.
+
+The next measurement is to read the AIZ object layout entry for the entry ring
+at x=7112 and compare its y against the engine's 1216. That is a ROM fact
+needing no trace, and it kills one of the two outright.
+
+### A measurement that answered a different question
+
+`expected.entry().savedYPos()` looked like the recorded saved return position
+and was dumped as the discriminator. It returned **1050 / x=5024** -- nowhere
+near the ring. Those fields only *gate* whether position is compared; the
+comparator never tests against them, and the value is a different saved block.
+Rule 115 again: a proxy validated for one question (is a saved position
+present?) silently answering another (what was saved?). It separated nothing and
+is recorded here so the next lane does not reach for it.
