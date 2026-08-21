@@ -1,4 +1,4 @@
-# LBZ frame 23533: not a speed cap -- a Ribot child running two rows ahead
+# LBZ frame 23533: not a speed cap -- a Ribot child running one row ahead
 
 Attribution round for the frontier `TestS3kLbzZoneSliceTraceReplay` moved onto
 after the Flybot767 wake-phase fix. Measured at `2e15b6251`.
@@ -42,26 +42,84 @@ ROM slot 20, `object_code 0x0008C370` = `loc_8C370` (`sonic3k.asm:191313`), a
 `Child_DrawTouch_Sprite`. The engine calls it `RibotChild`. It is long-lived, not
 a projectile: aux `object_appeared` creates it at frame 23436, ~97 rows earlier.
 
-## The child is two rows ahead of the ROM
+## The child is one row ahead of the ROM -- corrected from two
+
+**This section is a correction.** Its first version said two rows. It is one,
+constantly, and the error is instructive enough to keep.
 
 Measured with a frame-delimited probe carrying the driver's compared row, per
 rule 121. Within one engine frame the order is `SCAN` -> `MOVE` -> `DRIVE idx=N`,
 so the `MOVE` in the frame that ends with `DRIVE idx=N` writes the engine's
 end-of-row-N position.
 
-| | engine end-of-row | ROM `object_state` slot 20 |
-|---|---|---|
-| `0x0639` | row 23530 | frame 23532 |
-| `0x063C` | row 23531 | frame 23533 |
+Walking the whole ROM-covered stretch, engine end-of-row-`N` equals ROM
+`object_state` frame `N+1` at every row from 23476 to 23533:
 
-Engine end-of-row-`N` equals ROM end-of-row-`N+2`.
+```
+row    engine MOVE       ROM object_state
+23477  (12E8,061E)       (12E9,0620)
+23478  (12E6,061B)       (12E8,061E)
+...
+23492  (12C8,0601)       (12CB,0602)
+23493  (12C5,05FF)       (12C8,0601)
+```
 
-**The touch phase is not at fault.** `SCAN` precedes `MOVE` in every frame, so the
-scan consumes the end-of-previous-row position -- exactly `Touch_Loop`
-dereferencing the object pointer at Sonic's slot before `Process_Sprites` reaches
-the child (`sonic3k.asm:20655-20681`, `22018-22022`, `35963-35995`). `preU ==
-live` at scan time for the same reason as in the Flybot round: the object has not
-moved yet.
+**How "two" happened.** The lead was measured at rows 23531 and 23534 -- both
+adjacent to a point where the ROM series *stalls*. Row `5BBA` (23482) is a lag
+row: `lag_counter=0001`, `gameplay_frame_counter` unchanged, and the ROM repeats
+the previous position. Where the ROM repeats a value, `eng(N) == rom(N+1)` and
+`eng(N) == rom(N+2)` are both true, and the larger was reported.
+
+That is the same failure mode this document already warns about one section
+down, in a new place: two sequences compared by value cannot be disambiguated
+across a stall, because the stall makes two different offsets produce identical
+matches. The fix is to classify only where the reference series is locally
+strictly monotonic, and to print the ambiguity rather than pick from it.
+
+The engine handles that lag row correctly, incidentally: it emits no `MOVE` at
+row 23482, matching the ROM's hold.
+
+## Both candidate mechanisms are ruled out
+
+The two candidates named for the walk-back were a per-frame double-step and a
+creation-frame error that persisted. Neither survives.
+
+**Not a double-step.** The lead is exactly one row at 23476 and exactly one row
+at 23533, constant across every covered row between. A per-frame double-step
+would accumulate; over ~57 covered rows it would be ~57 rows of lead.
+
+**Not a creation-frame offset.** The engine `CREATE`s the child at compared row
+23436 and `MOVE`s it in that same row. The ROM does the same: aux
+`object_appeared` installs `0x0008C370` in slot 20 at frame 23436, and the
+creating helper `CreateChild1_Normal` (`sonic3k.asm:176924`) allocates through
+`AllocateObjectAfterCurrent` (`sonic3k.asm:176929`), which takes a slot after the
+parent -- so `Process_Sprites` reaches the child later in the same frame's walk
+and the child runs its own routine in its creation frame. Both sides create and
+run it on row 23436, so no offset is acquired there.
+
+So it is neither of the two shapes, and specifically **not** a third member of the
+`Obj_WaitOffscreen` wake-phase family closed earlier today: that class was closed
+at one member from the ROM side, and this child does not wait offscreen at all.
+
+## Where the row is acquired, and why this round cannot say
+
+The lead is gained somewhere in rows 23437-23476. `object_state` emits no rows
+for slot 20 in that window -- its coverage begins at 23477 -- because the stream
+only records objects near the player, and the child spends that window
+approaching.
+
+This is rule 119 exactly: the walk-back bounds only what the recorded rows cover,
+and the acquisition sits in a window nothing recorded. It is a coverage gap by
+construction, not a measurement left untaken.
+
+The parent gives no signal either: ROM slot 19, `object_code 0x0008C2E8`, sits at
+`(12B0,064C)` unmoving for the whole window, so nothing about its phase is
+observable from position.
+
+Naming what would settle it, without proposing a fix: a probe on the child's
+state machine across 23436-23477 compared against the parent's routine
+transitions, or a re-record of this segment with `object_state` forced on for the
+slot. The mechanism is **unnamed**, and that is the honest state.
 
 ## It is masked, not fresh
 
@@ -77,14 +135,9 @@ for a `frame` key while the report stores `start_frame` / `end_frame`. That was 
 fact about the walker. Rule 123, one level down: an absence needs the shape
 checked before it is believed.
 
-## Named upstream owner, and where to go next
+## Named upstream owner
 
-The owner is **the Ribot child's own timing**, not the touch path, not the
-player's physics, and not any limit. The open question is why it leads by two
-rows: a creation-frame or wake-phase error at its 23436 creation that has simply
-persisted, or a per-frame double-step. Those predict different things and are
-distinguishable by walking its position series back from 23533 to 23436 against
-`object_state` and finding where the lead is acquired -- one row at a time, or
-two at once.
-
-Not attempted here, and deliberately not fixed.
+The owner is **the Ribot child's own timing** -- not the touch path, not the
+player's physics, and not any limit. It leads the ROM by exactly one row, gained
+once, inside a window the recording does not cover, after a creation frame that
+matches. Deliberately not fixed.

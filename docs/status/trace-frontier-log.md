@@ -113549,3 +113549,40 @@ per-frame double-step. Distinguishable by walking the position series back to
 
 Full write-up:
 [2026-08-21-lbz-frame-23533-ribot-child-lead.md](../architecture/audits/trace/2026-08-21-lbz-frame-23533-ribot-child-lead.md).
+
+## 2026-08-21 - LBZ 23533 walk-back: the Ribot child leads by ONE row, not two
+
+**Corrects the entry above.** That entry said two rows. It is one, constant, from
+23476 to 23533. Measured at `8fcfbb92a`; no code change.
+
+**How "two" happened.** The lead was read at rows adjacent to a ROM stall. Row
+`5BBA` (23482) is a lag row -- `lag_counter=0001`, `gameplay_frame_counter`
+unchanged -- so the ROM repeats its position, and where the reference series
+repeats, `eng(N)==rom(N+1)` and `eng(N)==rom(N+2)` are both true. The larger was
+reported. Classify a lead only where the reference series is locally strictly
+monotonic, and print the ambiguity instead of picking from it. (The engine
+handles that lag row correctly: no MOVE at 23482, matching the hold.)
+
+**Both candidates ruled out.** Not a per-frame double-step: the lead is one row
+at 23476 and one row at 23533, constant across every covered row between, where a
+double-step would accumulate to ~57. Not a creation-frame offset: engine CREATEs
+and MOVEs the child at row 23436, and the ROM does too -- `object_appeared`
+installs `0x0008C370` at 23436 and the creating helper `CreateChild1_Normal`
+(`sonic3k.asm:176924`) allocates through `AllocateObjectAfterCurrent`
+(`sonic3k.asm:176929`), so the child runs its own routine in its creation frame.
+Also **not** a third member of the `Obj_WaitOffscreen` wake-phase family -- this
+child never waits offscreen.
+
+**Where it is acquired, and why this round cannot say.** Somewhere in rows
+23437-23476. `object_state` emits no rows for slot 20 there; coverage starts at
+23477 because the stream only records objects near the player. Rule 119: the
+walk-back bounds only what the rows cover, and the acquisition sits in a window
+nothing recorded. The parent gives no signal either -- ROM slot 19,
+`0x0008C2E8`, is stationary at `(12B0,064C)` throughout.
+
+Mechanism **unnamed**. Settling it needs a probe on the child's state machine
+across 23436-23477 against the parent's routine transitions, or a re-record with
+`object_state` forced on for the slot.
+
+Full write-up (revised in place):
+[2026-08-21-lbz-frame-23533-ribot-child-lead.md](../architecture/audits/trace/2026-08-21-lbz-frame-23533-ribot-child-lead.md).
