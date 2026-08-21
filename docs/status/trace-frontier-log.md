@@ -104313,3 +104313,81 @@ the recorded edges are one frame apart in opposite directions, so "correct" sits
 neither arm has been checked against the ROM's own trigger. That is the thing to read before
 touching a timing value, since a one-frame change justified by this fixture alone would be the
 fitted constant this log keeps refusing.
+
+## 2026-08-21 — The two reloads have two triggers, and the engine's fire condition is off by one dispatch
+
+Round `s3k-reload-trigger-r1`, branch `bugfix/ai-s3k-reload-trigger-r1` off `origin/develop`
+`5e34148da`. **Found, not fixed.** No engine change.
+
+### The trigger, from the ROM
+
+`LoadEnemyArt` (`:64281`) has four callers; the geyser's is
+`HCZGeyser_ReloadEnemyArtAndDelete` (`:65002-65004`), reached only from
+`HCZGeyser_CleanupDelay` (`:64996-64999`):
+
+```
+HCZGeyser_CleanupDelay:
+        subq.w  #1,$30(a0)
+        bmi.s   HCZGeyser_ReloadEnemyArtAndDelete
+        rts
+```
+
+So the trigger is a **countdown to negative**, not a position, a parent state, or a
+neighbour's completion.
+
+### They are two triggers, not one
+
+`HCZGeyser_CleanupDelay` is installed at **two** sites with **different durations**:
+
+| path | site | arming | timer |
+|---|---|---|---:|
+| horizontal | `:64980-64989` | `tst.b render_flags(a0)` / `bmi` — the sprite stops being drawn | `#150` |
+| vertical | `HCZWaterWall_Vertical_StartCleanup` `:65302-65305` | after the fall's SFX/palette teardown and respawn-bit clear | **`#$1E` (30)** |
+
+So the round's framing question — which of the two observations is the correct one — **is the
+wrong question**, as suspected. The first reload and the second are different code paths with
+different arming conditions and a five-fold difference in duration. Each is correct relative to
+its own trigger, and the engine's error has to be evaluated per path.
+
+Mapping to the observed batches: `#107` is the horizontal art load and `#108`-`#111` its reload;
+`#113` is the vertical art load and `#114`-`#117` its reload. So the batch that drains is the
+**horizontal** path and the batch that stalls is the **vertical** one.
+
+### What the engine gets right, and the one thing it does not
+
+Both constants are correct: `HORZ_CLEANUP_TIMER = 150`, `VERT_CLEANUP_TIMER = 0x1E`.
+
+The **fire condition** is not. The ROM decrements and branches on `bmi`, so it fires when the
+counter goes *negative* — on the `N+1`th dispatch. The engine uses `timer--; if (timer <= 0)`,
+firing on the `N`th. **A one-dispatch-early error, in both paths.**
+
+That is a genuine ROM-vs-engine discrepancy derived from a named instruction, not a constant
+fitted to a fixture — but it is reported rather than fixed, because:
+
+**It pushes the wrong way.** The observed failure is a submission landing one frame *after* its
+recorded edge. An engine that fires a dispatch *early* cannot explain a submission that is late.
+So the `bmi` off-by-one is real and worth fixing on its own terms, and it is **not** the cause of
+the HCZ stall.
+
+### RETRACT the phase reading of the previous entry's table
+
+That entry tabulated engine decompression *submissions* against recorded *completions* and read
+the signs as phase — "eleven lead, the twelfth trails". The recorded stream carries completions
+only; it has no submission rows. So that comparison is valid as a **releasability** test — a
+submit must precede the edge that releases it, and at 2958 against 2957 it does not — but it is
+**not** a measurement of the producer's phase, and the `+1 … +6` spread in that column is the
+distance to a completion, not an earliness.
+
+Which means the conclusion "the second reload fires one frame late" is **not established**. What
+is established is that its submission is unreleasable, and that the two batches take different
+trigger paths.
+
+### Next, and what cannot be answered from the recording
+
+The vertical path arms after its fall teardown; the horizontal arms when the sprite stops being
+drawn. Whether the engine enters the *vertical* cleanup phase later than the ROM does is a
+question about the preceding vertical phases, not about the countdown — and **the recorded
+columns cannot answer it**, because they carry no submission timestamps and no per-object routine
+for this slot. Comparing the engine's vertical phase transitions against the ROM's requires
+either an aux column that is not in this capture or a ROM-side trace, so it is parked with the
+capture questions rather than pursued against the fixture.
