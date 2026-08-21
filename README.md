@@ -214,6 +214,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Performance report validation (2026-08-21, design only):** the static
+  performance survey now has measured follow-up evidence. The AIZ GPU diagnostic
+  was rejected as a benchmark because it submitted zero fire-curtain commands;
+  the 67-segment trace run retained 1.095 GB after forced GC and now has a
+  bounded segment-cursor ownership design; and dynamic rewind identities have a
+  reproduced removal-lifetime defect whose collision-list ownership blocks the
+  proposed narrow prune. No runtime optimisation is included in this
+  documentation change.
+
 - **S2 Super transformation group (merged 2026-08-21):** three defects with three
   owners, landed together -- the sidekick was given a Super state controller in a
   game that has no Super sidekick, the activation test was evaluated after the

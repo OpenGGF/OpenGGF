@@ -38,7 +38,7 @@
 - Consumes: the current integration baseline and ROMs discovered at the project root
 - Produces: a task directory path and immutable measurement identity used by Tasks 2–4
 
-- [ ] **Step 1: Allocate managed scratch storage**
+- [x] **Step 1: Allocate managed scratch storage**
 
 Run:
 
@@ -54,7 +54,7 @@ Expected: `TASK_SCRATCH` names the new managed directory and `S3K_ROM` names
 the verified locked-on image. Do not name either variable `HOME`, `home`, or
 `CODEX_HOME`.
 
-- [ ] **Step 2: Record source and environment identity**
+- [x] **Step 2: Record source and environment identity**
 
 Run:
 
@@ -70,7 +70,7 @@ find . -maxdepth 1 -type f -name '*.gen' -printf '%f\n' | sort
 Expected: Maven reports Java 21; the working-tree state and commit are copied
 verbatim into `measurement-context.md`.
 
-- [ ] **Step 3: Verify ROM identities**
+- [x] **Step 3: Verify ROM identities**
 
 Run:
 
@@ -89,7 +89,7 @@ cfbf98c36c776677290a872547ac47c53d2761d6  s3k.gen
 The validation tracks below pass `${S3K_ROM}` through `s3k.rom.path`; they do
 not rename, copy, or symlink the ROM.
 
-- [ ] **Step 4: Define evidence completeness rules**
+- [x] **Step 4: Define evidence completeness rules**
 
 Write these fields into `measurement-context.md` before running a profile:
 
@@ -129,7 +129,7 @@ fields populated.
 - Consumes: pinned identity from Task 1 and an available GL display
 - Produces: per-frame tile/direct-command/draw counts, CPU/GPU timing context, and baseline framebuffer hashes
 
-- [ ] **Step 1: Prove the focused correctness fixtures execute**
+- [x] **Step 1: Prove the focused correctness fixtures execute**
 
 Run with full Maven logging:
 
@@ -144,7 +144,7 @@ Expected: fresh Surefire XML exists for each selected class. Record failures
 exactly; a pre-existing red does not invalidate measurement but must remain
 identical in later A/B work.
 
-- [ ] **Step 2: Capture the baseline GPU diagnostic**
+- [x] **Step 2: Capture the baseline GPU diagnostic**
 
 Run on the pinned display with no concurrent GL workload:
 
@@ -159,7 +159,7 @@ or reports an explicit assumption/initialisation failure. A skipped or stale
 capture is not evidence. Copy fresh PNGs into
 `${TASK_SCRATCH}/fire-curtain/baseline/` and record SHA-256 hashes.
 
-- [ ] **Step 3: Count the actual command path**
+- [x] **Step 3: Count the actual command path**
 
 In a disposable measurement worktree, add counters at the command admission
 and draw boundaries that distinguish:
@@ -177,14 +177,14 @@ the GPU diagnostic. Do not infer GL calls by multiplying source statements.
 Keep the probe patch out of any candidate implementation commit unless it is
 accepted as reusable profiling infrastructure.
 
-- [ ] **Step 4: Capture repeatable timing context**
+- [x] **Step 4: Capture repeatable timing context**
 
 Run two warmups followed by at least seven serialized samples of the same
 curtain interval. Record frame-time distribution, command counts, and GPU
 timer results if supported. If GPU timers are unavailable, report CPU-side GL
 submission time explicitly rather than calling it GPU time.
 
-- [ ] **Step 5: Apply the promotion gate**
+- [x] **Step 5: Apply the promotion gate**
 
 Promote the candidate to a separate rendering design only if:
 
@@ -216,7 +216,7 @@ retain the raw evidence.
 - Consumes: pinned identity from Task 1 and the committed 67-segment run
 - Produces: retained-heap attribution by class/load site and a consumer inventory for a bounded-memory design
 
-- [ ] **Step 1: Record static fixture sizes without decompressing to disk**
+- [x] **Step 1: Record static fixture sizes without decompressing to disk**
 
 Run `mkdir -p "${TASK_SCRATCH}/trace-retention"`, then walk the 67 segment
 directories and sum uncompressed gzip sizes from their headers or a streaming
@@ -224,7 +224,7 @@ reader for `physics.csv(.gz)` and `aux_state.jsonl(.gz)`. Record segment count,
 totals, and the largest five segments in
 `${TASK_SCRATCH}/trace-retention/fixture-sizes.tsv`.
 
-- [ ] **Step 2: Capture a single-class baseline with effective JVM options**
+- [x] **Step 2: Capture a single-class baseline with effective JVM options**
 
 Set `test.cds.argLine`, not `surefire.argLine`, so the trace profile expands
 the diagnostics into its fork:
@@ -242,7 +242,7 @@ fresh XML report. The chain is deliberately red today; preserve its exact
 failure message, segment/row frontier, and `framesCompared` rather than
 requiring green.
 
-- [ ] **Step 3: Attribute retained memory**
+- [x] **Step 3: Attribute retained memory**
 
 Use `jfr view`, `jfr print`, and a post-plan class histogram or heap dump to
 separate at least:
@@ -260,7 +260,7 @@ engine state unrelated to trace planning
 Expected: percentages are of retained bytes or allocation weight as labelled;
 execution samples are never described as wall time.
 
-- [ ] **Step 4: Inventory random-access consumers**
+- [x] **Step 4: Inventory random-access consumers**
 
 For every `SegmentPlan.trace()` consumer, record whether it needs metadata,
 sequential physics rows, random frame lookup, random auxiliary-event lookup,
@@ -268,7 +268,7 @@ cross-segment hardware timing, or a terminal/opening dynamic-art ledger.
 Produce `${TASK_SCRATCH}/trace-retention/consumer-inventory.tsv` with source
 location, lifetime, and required access shape.
 
-- [ ] **Step 5: Select the smallest valid ownership design**
+- [x] **Step 5: Select the smallest valid ownership design**
 
 Compare these designs against the inventory:
 
@@ -282,7 +282,7 @@ Recommend the smallest design that lowers the measured peak while preserving
 all required random access and cross-boundary state. Do not write code under
 this task; save the approved choice as a separate architecture design.
 
-- [ ] **Step 6: Define the later implementation acceptance gate**
+- [x] **Step 6: Define the later implementation acceptance gate**
 
 The eventual implementation must demonstrate on the same pinned workload:
 
@@ -313,15 +313,15 @@ no file descriptor or gzip-stream leak at segment boundaries.
 **Interfaces:**
 
 - Consumes: `ObjectManager` dynamic add/remove/capture/restore lifecycle
-- Produces: proof whether removed instances are required after removal and a bounded fix design if they are not
+- Produces: proof whether removed instances are required after removal and an explicit ownership blocker if they are
 
-- [ ] **Step 1: Map every `rewindObjectIds` read and write**
+- [x] **Step 1: Map every `rewindObjectIds` read and write**
 
 Classify each access as add, active removal, dynamic removal, snapshot capture,
 graph-reference encoding, restore, or reset. Record whether any read can occur
 after an object has been removed from both live collections.
 
-- [ ] **Step 2: Write the failing lifetime test in an implementation worktree**
+- [x] **Step 2: Write the failing lifetime test in an implementation worktree**
 
 Add a package-private test seam that reports the live rewind-identity entry
 count without exposing identities themselves. Extend
@@ -338,7 +338,7 @@ Also capture before removal, remove, restore the captured snapshot, and assert
 that the recreated object receives the captured `ObjectRefId` through snapshot
 data rather than a stale live-map entry.
 
-- [ ] **Step 3: Run the test and prove it fails for the intended reason**
+- [x] **Step 3: Run the test and prove it fails for the intended reason**
 
 Run:
 
@@ -351,7 +351,7 @@ Expected before a fix: the post-removal count assertion fails with one retained
 entry. A compile error, skipped class, or unrelated singleton failure is not the
 required red.
 
-- [ ] **Step 4: Review graph-reference lifetime before proposing removal**
+- [x] **Step 4: Review graph-reference lifetime before proposing removal**
 
 Trace `collisionResponseList.captureRewindState(rewindObjectIds::get)` and all
 other graph encoders. Prove they enumerate only live objects or carry removed
@@ -359,7 +359,7 @@ object IDs in snapshot-owned data. If any subsystem legitimately resolves a
 removed object through the live map, stop and design explicit ownership rather
 than pruning the entry.
 
-- [ ] **Step 5: Produce the bounded fix design**
+- [x] **Step 5: Apply the bounded-fix promotion gate**
 
 If Step 4 confirms no post-removal reader, propose pruning inside
 `removeDynamicObjectInstance()` only after successful removal. Require focused
@@ -376,6 +376,11 @@ The eventual implementation also requires the full baseline/development/
 merged-suite comparison from `AGENTS.md`. Runtime code still requires separate
 approval.
 
+Result: not promoted. Previous and partial-current collision-response lists
+retain object references after dynamic membership can end, and
+`cleanupDestroyedDynamicObjects()` is a separate retirement path. The follow-up
+must design explicit identity ownership and test those seams before pruning.
+
 ---
 
 ### Task 5: Publish the evidence-backed shortlist
@@ -391,18 +396,20 @@ approval.
 - Consumes: raw artifacts and decisions from Tasks 1–4
 - Produces: an updated shortlist containing only measured candidates
 
-- [ ] **Step 1: Update the audit with measured results**
+- [x] **Step 1: Update the audit with measured results**
 
 For every candidate, add commit, workload, host, raw artifact path, samples,
 metric, median/range, semantic invariant, and confidence. Record negative
 findings with equal prominence.
 
-- [ ] **Step 2: Separate independent implementation designs**
+- [x] **Step 2: Separate independent implementation designs**
 
-Do not combine rendering, trace ownership, and rewind lifetime into one branch
-or design. Each can be reviewed, rejected, tested, and delivered independently.
+Do not combine rendering, trace ownership, and rewind lifetime into one runtime
+implementation branch or design. This validation branch may publish their
+independent evidence documents together; each future implementation must be
+reviewed, rejected, tested, and delivered independently.
 
-- [ ] **Step 3: Stop before implementation**
+- [x] **Step 3: Stop before implementation**
 
 Present the evidence and recommended candidate order to the user. Begin no
 runtime implementation until the corresponding narrow design is explicitly

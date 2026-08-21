@@ -21,9 +21,11 @@ to that subsystem.
 | Reviewed checkout | `develop` at `683b1a3984958b4b6ae53baf383a81bee6727078` |
 | Report directory | `$AGENT_SCRATCH_ROOT/tasks/perf-investigation-20260821T122623Z-2247429-42c53748/reports/` |
 | Reports | `00-summary.md` through `08-build-test-bench.md` |
-| Method | Source inspection, call-path inspection, configuration inspection, and fixture-size verification |
-| Runtime profiling | Not performed by this audit |
-| Test execution | Not performed; this is a review of claims, not an implementation validation |
+| Method | Source and call-path inspection followed by focused GPU, JFR, forced-GC, and lifetime validation |
+| Validation baseline | `18c20dec8938e898a37a5eb270234d9dc5fe38db` on branch `feature/ai-performance-candidate-validation` |
+| Runtime profiling | Serialized on a 32-logical-CPU x86_64 host, OpenJDK 21.0.11, Maven 3.9.16; timing probes pinned to CPU 31 and display `:0` |
+| Test execution | Default-suite baseline plus focused AIZ, trace-run, and rewind ownership tests; exact outcomes below |
+| Raw artifacts | `$AGENT_SCRATCH_ROOT/tasks/performance-candidate-validation-20260821T161822Z-3319778-904a0080/` |
 
 Confidence labels used below:
 
@@ -33,6 +35,103 @@ Confidence labels used below:
   proposed equivalence is not established.
 - **Incorrect:** a factual statement conflicts with the source.
 - **Unsafe:** the proposed transformation can change observable behaviour.
+
+## Measured validation results
+
+### AIZ fire curtain: not promoted
+
+The checked-in GPU diagnostic initially skipped because it requested the
+camera before active gameplay services existed. A disposable bootstrap repair
+produced fresh framebuffers, but diagnostic counters at command admission and
+draw execution proved that the test never submitted the fire-curtain workload.
+Across two warmups and seven serialized samples, every sampled milestone
+reported zero curtain tile draws, zero admitted curtain pattern commands, and
+zero curtain pattern draw calls. The observed two instanced batches per frame
+belonged to the ordinary background path. The manually advanced diagnostic did
+not service the production Kosinski queue, so its fire-overlay tile count
+remained zero; converting it to the production frame driver left the event
+inactive and still produced no overlay.
+
+The renderer's direct-command source shape remains confirmed, but the required
+real-frame workload observation failed. The recorded submission timings and
+framebuffer hashes are not evidence about this candidate, so no rendering
+design was produced. Confidence: **disproved measurement workload**, not
+“immaterial renderer.”
+
+The focused correctness baseline ran 28 tests: the 9 renderer and 4 ROM-backed
+renderer tests passed; the 15 headless tests had two pre-existing errors in the
+fire-continuation queue fixture (`AIZ fire continuation has no prepared
+fire-overlay payload`).
+
+### Complete-run trace retention: promoted to an ownership design
+
+The 67-segment Knuckles super-emerald fixture contains 58,796,492 uncompressed
+physics bytes and 1,548,327,089 uncompressed auxiliary bytes, for
+1,607,123,581 bytes total. The largest segment is `soz_2` at 161,853,777 bytes,
+followed by `mgz_2` at 133,722,923, `lbz` at 105,539,097, `icz` at 102,691,624,
+and `fbz_3` at 79,020,684.
+
+With the trace fork at its configured 3 GiB heap, a full class histogram after
+all 67 `TraceData` plans were built reported 1,094,956,904 live bytes across
+27,919,039 objects. Direct `TraceEvent` implementations accounted for
+399,294,016 bytes (36.47%), `CompactFieldMap` for 86,444,992 bytes (7.89%), and
+physics/special-stage frame records for 62,909,200 bytes (5.75%). Common
+trace-dominated arrays, strings, boxed integers, lists, and maps accounted for
+535,363,856 bytes (48.89%). Hardware-timing classes used only 102,864 bytes
+(0.0094%), so timing schedules should stay globally retained.
+
+The JFR allocation sample independently points to `TraceData.load`,
+`TraceData.loadAuxEvents`, and `TraceEvent.parseJsonLine`; these are allocation
+weights, not wall-time shares. The trace consumed all 1,653 AIZ physics rows,
+first differed at trace frame 0 on `camera_x` (expected `0x1300`, actual
+`0x1308`), then failed because segment 0's `giant_ring` exit boundary was not
+observed. Those values form the later equivalence oracle.
+
+Consumer inventory shows no payload consumer requiring whole-run random
+access. Planning needs a one-time sequential validation scan; live comparison
+needs previous/current/next physics rows and the current raw frame's typed
+auxiliary events; cross-boundary consumers need compact metadata, timing,
+opening-row, and terminal-ledger summaries. Visual/audio harness frame views
+also need a compact per-row lag mapping for arbitrary BK2 cursors during gaps;
+that scheduling outcome remains global without retaining trace payloads. The
+selected design is therefore a global compact plan plus lag mapping and one
+closeable segment-local cursor, documented in
+`docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`.
+Confidence: **confirmed and measured**.
+
+### Dynamic rewind identities: retention reproduced, pruning not promoted
+
+A temporary red test showed that adding then removing one dynamic object left
+one `rewindObjectIds` entry (`expected: <0> but was: <1>`). A companion
+capture/remove/restore test passed and recovered the captured ID, proving that
+historical identity comes from the snapshot rather than the stale map entry.
+
+The initial pruning hypothesis fails the graph-lifetime gate.
+`ObjectCollisionResponseList` retains previous and partial-current object
+references independently of `dynamicObjects`, and rewind capture encodes those
+views through `rewindObjectIds`. Immediate pruning could therefore make a valid
+collision-list capture lose its ID. In addition,
+`cleanupDestroyedDynamicObjects()` removes through its iterator and bypasses
+`removeDynamicObjectInstance()`, so the proposed one-method change would not
+cover every retirement path.
+
+The unmodified seven-class graph/guard baseline ran 29 tests, all passing. The
+follow-up ownership questions and adversarial test matrix are documented in
+`docs/architecture/designs/2026-08-21-dynamic-rewind-identity-ownership.md`.
+Confidence: **retention confirmed; fix rejected pending explicit ownership**.
+
+### Development-suite comparison
+
+The freshly cleared default baseline produced 1,941 Surefire XML files and a
+terminal Maven result of 15,274 tests, 58 failures, 64 errors, and 18 skips.
+The documentation tree produced the same 1,941-file class set and 15,274 tests,
+with 56 failures, 63 errors, and 36 skips. Identity comparison in both
+directions found one apparent new failing test, but the validation command had
+exported `MAVEN_OPTS` to redirect sandboxed temporary output and that test
+explicitly requires a clean tool environment. Its clean-environment focused
+rerun passed all 7 tests. Four baseline failures were absent from the
+development run, consistent with the repository's documented order-dependent
+red-set churn. No new failure was attributable to the documentation changes.
 
 ## Report-level assessment
 
@@ -195,13 +294,17 @@ tests do not execute this GLFW/vsync pacing path and cannot validate it.
 
 ## Corrected priority
 
-1. **Measure AIZ fire-curtain command count and frame cost.** It is directly
-   on the primary release slice and has a clear pixel-equivalence oracle.
-2. **Measure and design bounded trace-segment retention.** Existing heap
-   evidence establishes a real infrastructure problem, but the ownership
-   redesign is larger than the report suggests.
-3. **Prove and fix dynamic rewind-map pruning.** This is primarily a lifetime
-   correctness issue rather than a frame-time optimisation.
+1. **Implement bounded trace-segment ownership from its separate design.** The
+   retained-heap cost is material and attributed, but this is the larger change
+   and its cross-boundary oracle must remain exact.
+2. **Resolve dynamic rewind identity ownership before pruning.** Add the
+   previous/partial collision-list and destroyed-child cleanup tests, then
+   choose an identity retirement owner that covers every reference holder and
+   removal path.
+3. **Repair the AIZ GPU diagnostic before reconsidering curtain batching.** A
+   useful benchmark must drive the production frame path, service the ROM-backed
+   art queues, observe non-zero curtain commands, and preserve a real-frame
+   framebuffer oracle. The current samples must not be used for prioritisation.
 4. **Profile grounded collision and solid-registry allocations.** Promote
    duplicate sensor reuse or allocation work only if JFR shows material cost.
 5. **Benchmark decoder paths using real ROM spans.** Preserve byte output,
