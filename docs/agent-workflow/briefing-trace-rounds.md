@@ -152,6 +152,7 @@ that looks like a real result.
 | 132 | A gate probe must cover the early returns you were not thinking about | The suspected branches log; the deciding one has no line at all |
 | 133 | A field can be the origin though a walk shows it not propagating | Propagation is a property of a path; ask what reads it |
 | 134 | A defect's own consequence contaminates its own count | 154 of 253 rows were the post-restart death animation |
+| 135 | Brief HOW to measure, not WHAT to expect | Four forks, four "neithers"; the measurement instructions changed every answer |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3511,4 +3512,27 @@ does not go away until the defect does.
    current state disagrees in **both directions** depending on the prior value — which is exactly
    the shape of a split population, and the opposite of the obvious "rolling should set the roll
    animation".
+
+## One hundred and thirty-fifth rule: brief HOW to measure, not WHAT to expect
+
+Over one investigation a lead offered four two-way forks — wrong-state or no-contact, gravity twice
+or impulse twice or a carry release, absent or wrong, one branch or two. **Every one was answered
+"neither."** The forks were well-posed against the evidence available when each was written; they
+failed because the investigation kept moving *owner* between rounds — boss touch, then boss state,
+then a gate, then player animation. **A fork drawn in one subsystem cannot anticipate a move to the
+next.**
+
+What changed answers, every time, was the constraint that said **how to measure**:
+
+- *print the velocity beside the position* — refuted doubled gravity from a series that invited it;
+- *read the candidate mechanism's constant first* — killed the mechanism and kept the actor, where a
+  probe would have returned a clean-looking empty;
+- *log every exit, not the gates you suspect* — found that the deciding row had no line at all;
+- *check the neighbourhood before settling on the obvious object* — produced a better fit than the
+  obvious one;
+- *walk, do not sample* — separated a first failing frame from an origin 800 rows earlier.
+
+**Offering branches is cheap and rarely wrong; it is also rarely useful.** Spend the brief on the
+instrument and the discipline, and let the measurement name the branch. A lane that is told what to
+expect will find it; a lane that is told how to look will find what is there.
 
