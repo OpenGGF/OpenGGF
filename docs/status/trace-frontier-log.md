@@ -113586,3 +113586,37 @@ across 23436-23477 against the parent's routine transitions, or a re-record with
 
 Full write-up (revised in place):
 [2026-08-21-lbz-frame-23533-ribot-child-lead.md](../architecture/audits/trace/2026-08-21-lbz-frame-23533-ribot-child-lead.md).
+
+
+## 2026-08-21 -- S2 ARZ2 seg13, the air-bubble inhale residue (two frames, one left)
+
+Command: `mvn -Dmse=off -DforkCount=1 -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=<s2 rom> test`
+in a worktree off `f3d83fc0e`. Fail both arms; first error frame 1015,
+`x_speed expected=0x0000 actual=-0031`. Errors 15072 (control) -> 13213 (fix).
+
+The ROM inhales the ARZ2 air bubble on row 1015 and the engine inhaled on 1017.
+The recorded `object_near` stream carries the bubble (slot 38, `0x24`) per row, so
+no instrumentation was needed to establish the reference: it appears at row 933,
+rises 0.53px/frame, and its `routine` byte steps `2 -> 4` at 1008 (the `$FC`
+terminator of `Ani_obj24` script 2) and `4 -> 6` at 1015 (the collect).
+
+The two frames were three separate ROM-order defects in `Obj24`, each worth at
+most one frame and none of them the inflate climb:
+
+1. The collect box's upper Y bound. `loc_1FB0C` (`s2.asm:45434-45436`) is
+   `addi.w #$10,d1 / cmp.w d1,d0 / blo return` -- inclusive. The engine used a
+   strict `<`. Row 1015 is an exact tie: bubble `y_pos` 1565, player `y_pos` 1581,
+   `1565 + $10 == 1581`.
+2. `ObjectMove` runs at `loc_1F988` (`s2.asm:45263-45264`), *after* the collect at
+   `:45259`. The engine applied the rise first, so its box was always one rise
+   step ahead of the ROM's.
+3. Left unfixed, different owner. The engine's generator creates this bubble on
+   row 932 where the ROM allocates it on 933, so the whole rise series is one row
+   early. It is not a uniform phase: `object_appeared` puts the two ROM firings at
+   903 and 933 (interval 30) and the engine's at 904 and 932 (interval 28), so the
+   `objoff_38` reload `andi.w #$1F` draw at `loc_1FA2A` (`s2.asm:45325-45327`)
+   differs -- a `BubbleGeneratorObjectInstance` RNG/timer question, not the
+   bubble's.
+
+With 1 and 2 landed the inhale moves 1017 -> 1016 and every 1015 span shortens to
+one frame. Any two of the three give 1016; only all three give 1015.

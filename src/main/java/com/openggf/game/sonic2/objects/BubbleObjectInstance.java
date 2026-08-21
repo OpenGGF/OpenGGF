@@ -187,24 +187,9 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         // it at the end of update() instead delayed every inhale by one frame.
         animateSprite();
 
-        // Update wobble angle (ROM: addq.b #1,objoff_32(a0))
-        wobbleAngle = (wobbleAngle + 1) & 0xFF;
-
-        // Apply rise velocity to Y position (16.16 fixed point)
-        // ROM: move.w y_vel(a0),d0 / ext.l d0 / asl.l #8,d0 / add.l d0,y_pos(a0)
-        posY16 += RISE_VELOCITY << 8;
-
-        // Calculate display Y from 16.16 fixed point
-        displayY = posY16 >> 16;
-
-        // Apply wobble to X position
-        // ROM: move.b objoff_32(a0),d0 / lea Obj24_WobbleData,a1 / move.b (a1,d0.w),d0
-        //      ext.w d0 / add.w objoff_30(a0),d0 / move.w d0,x_pos(a0)
-        int wobbleIndex = wobbleAngle & 0x7F; // 128-entry table
-        int wobbleOffset = WOBBLE_DATA[wobbleIndex];
-        displayX = baseX + wobbleOffset;
-
-        // Check if reached water surface (bubble pops)
+        // ROM loc_1F93E (docs/s2disasm/s2.asm:45238-45244) tests the water
+        // surface against y_pos BEFORE the wobble and BEFORE ObjectMove, so the
+        // value compared is the position the bubble held on entry to this pass.
         // Use getFeatureZoneId/ActId to match the keys WaterSystem stores configs
         // under (important for S1 SBZ3 which remaps from LZ).
         if (services().currentLevel() != null) {
@@ -222,17 +207,47 @@ public class BubbleObjectInstance extends AbstractObjectInstance
             }
         }
 
+        // Apply wobble to X position
+        // ROM loc_1F956 (docs/s2disasm/s2.asm:45247-45256):
+        //   move.b angle(a0),d0 / addq.b #1,angle(a0) / andi.w #$7F,d0
+        //   lea (Obj0A_WobbleData).l,a1 / move.b (a1,d0.w),d0 / ext.w d0
+        //   add.w objoff_30(a0),d0 / move.w d0,x_pos(a0)
+        // The table is indexed with the angle the pass STARTED with; the
+        // increment lands in the SST for the next pass. Incrementing first put
+        // every bubble one wobble step ahead of the ROM for its whole life.
+        int wobbleIndex = wobbleAngle & 0x7F; // 128-entry table
+        wobbleAngle = (wobbleAngle + 1) & 0xFF;
+        int wobbleOffset = WOBBLE_DATA[wobbleIndex];
+        displayX = baseX + wobbleOffset;
+
         if (!observedRomRenderOnScreen) {
             setDestroyed(true);
             return;
         }
-        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
 
-        // Check for player collision if this is a breathable bubble
+        // ROM loc_1F956 (docs/s2disasm/s2.asm:45257-45259) runs the collect box
+        // -- tst.b objoff_2E(a0) / beq.s loc_1F988 / bsr.w loc_1FB02 -- while
+        // y_pos still holds this pass's entry position. ObjectMove only runs
+        // afterwards, at loc_1F988 (:45263-45264), so the box the ROM tests is
+        // always one rise step behind the position the frame ends on. Applying
+        // the rise first made every inhale one frame late.
         if (player != null && isBreathable()) {
             checkPlayerCollision(player);
         }
 
+        // ROM loc_1F988: jsrto JmpTo3_ObjectMove (docs/s2disasm/s2.asm:45263-45264).
+        // ROM: move.w y_vel(a0),d0 / ext.l d0 / asl.l #8,d0 / add.l d0,y_pos(a0)
+        if (!isDestroyed() && !breathed) {
+            posY16 += RISE_VELOCITY << 8;
+
+            // Calculate display Y from 16.16 fixed point
+            displayY = posY16 >> 16;
+        }
+
+        // ROM tests render_flags bit 7 and calls DisplaySprite only after
+        // ObjectMove (:45265-45267), so the flag Render_Sprites refreshes is
+        // taken from the post-move position.
+        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /** The bubble's {@code Ani_obj24} script, clamped to the defined entries. */
@@ -291,11 +306,12 @@ public class BubbleObjectInstance extends AbstractObjectInstance
 
     /**
      * Checks for collision with the player and handles air restoration.
-     * ROM uses an asymmetric collision box: ±16 horizontal, downward-only from bubble Y.
+     * ROM uses an asymmetric collision box: 16 either side horizontally,
+     * downward-only from bubble Y.
      * <p>
-     * ROM collision logic (lines 44952-44965):
-     * X: (bubble_x - 16) <= player_x <= (bubble_x + 16)
-     * Y: bubble_y < player_y < (bubble_y + 16)
+     * ROM collision logic ({@code loc_1FB0C}, docs/s2disasm/s2.asm:45422-45436):
+     * X: (bubble_x - 16) < player_x <= (bubble_x + 16)
+     * Y: bubble_y < player_y <= (bubble_y + 16)
      * <p>
      * The player's center must be BELOW the bubble (bubble above player),
      * but within 16 pixels. This is a downward-only collision box.
@@ -317,8 +333,18 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         int bubbleLeft = displayX - COLLISION_HALF_WIDTH;
         int bubbleRight = displayX + COLLISION_HALF_WIDTH;
 
-        if (playerX >= bubbleLeft && playerX <= bubbleRight &&
-            playerY > displayY && playerY < displayY + COLLISION_HALF_HEIGHT) {
+        // ROM loc_1FB0C (docs/s2disasm/s2.asm:45422-45436). Every bound is a
+        // signed word compare against a branch that RETURNS on failure, so the
+        // surviving window is:
+        //   subi.w #$10,d1 / cmp.w d0,d1 / bhs -> bubble_x - $10 <  player_x
+        //   addi.w #$20,d1 / cmp.w d0,d1 / blo -> player_x <= bubble_x + $10
+        //   cmp.w d0,d1    / bhs         -> bubble_y      <  player_y
+        //   addi.w #$10,d1 / cmp.w d0,d1 / blo -> player_y <= bubble_y + $10
+        // Both upper bounds are inclusive and both lower bounds are exclusive;
+        // an exclusive upper Y bound loses exactly the frame where the player
+        // sits on the bottom edge of the box, which is where this inhale lands.
+        if (playerX > bubbleLeft && playerX <= bubbleRight &&
+            playerY > displayY && playerY <= displayY + COLLISION_HALF_HEIGHT) {
 
             // Player touched the bubble - restore air
             player.replenishAir();
