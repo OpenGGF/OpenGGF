@@ -112306,3 +112306,80 @@ overwrite lands repeatedly against a cursor that lags by a varying amount, which
 turns a fixed offset into `+1, +2, +8, +20, +21`. Noted only — the special-stage
 family stays parked, and this is a reason to check the two together rather than
 to work it now.
+
+## 2026-08-21 -- ATTRIBUTED: the chain stall is the title card's art wait, NOT the special-stage exit
+
+Measured at `36f7566ab`. **Found, not fixed, and it corrects two claims I made in the previous
+two entries.** Per the standing instruction, this is named and stopped rather than fixed: the
+title card is waiting on art readiness that never arrives, which is a bring-up / timing-port
+question, not a boundary fix.
+
+### The measured chain, end to end
+
+Env-gated probes inside `awaitBoundary`, `GameLoopTitleCardLifecycle` and
+`Sonic3kTitleCardManager` (all reverted):
+
+```
+PROBE_MODE steps=1     bk2=6221 target=6221 kind=stage_exit mode=SPECIAL_STAGE
+PROBE_MODE steps=4000  bk2=6221 target=6221 kind=stage_exit mode=SPECIAL_STAGE_RESULTS
+PROBE_MODE steps=8000+ bk2=6221 target=6221 kind=stage_exit mode=TITLE_CARD   <- and stays
+PROBE_TC   calls=16000 state=SLIDE_IN inLevelMode=false freshLevelTransitionMode=false
+PROBE_UPD  calls=28000 state=SLIDE_IN artLoading=true
+```
+
+1. The special stage plays to its final frame and **exits correctly**: `SPECIAL_STAGE` ->
+   `SPECIAL_STAGE_RESULTS` -> `TITLE_CARD`.
+2. The AIZ re-entry title card enters `SLIDE_IN` with `artLoading = true`.
+3. `Sonic3kTitleCardManager.update()` **is** called every frame, and early-returns every frame
+   because `finishQueuedArtIfReady()` never becomes true (`:808-818`).
+4. The state therefore never leaves `SLIDE_IN`, so `shouldReleaseControl()` -- which requires
+   `EXIT` or `COMPLETE` (`:844-850`) -- never returns true.
+5. Mode never returns to `LEVEL`, so the `stage_exit` latch, which requires
+   `hooks.currentMode() == GameMode.LEVEL`, never fires.
+6. The BK2 cursor stays at 6221 and `awaitBoundary` burns its 42908-step cap.
+
+### Correction 1: the owner is not the special-stage exit
+
+The previous entry concluded "the engine hangs on the special-stage exit back into AIZ. Owner:
+the special-stage exit path." **That is wrong.** The exit works -- it completes three mode
+transitions correctly. The hang is in the **title card that follows it**, waiting on art.
+
+The earlier reasoning was sound as far as it went (the cursor freezes on arrival, and the walker
+is genuinely not at fault), but "the engine hangs at the exit boundary" was read as "the exit
+code is broken" when the exit had in fact already finished its work.
+
+### Correction 2: the pending hardware submission is NOT downstream
+
+The previous two entries said the suppressed
+`PendingRecordedSubmissionsException: [kind=KOS_MODULE_QUEUE...]` was downstream of the stall by
+construction, and warned against sending anyone to the timing port for it. **Withdraw that.**
+The title card is blocked precisely on queued-art readiness, and the pending submission is a
+`KOS_MODULE_QUEUE` job. These are the same defect, or the pending job is directly implicated in
+it. The timing port is now a legitimate place to look, and the earlier warning pointed away from
+the most likely owner.
+
+The reasoning that produced it -- "a run that never completes leaves submissions pending by
+construction" -- is true in general and was still the wrong call here, because it explained the
+observation away instead of checking whether the pending job was the thing being waited on.
+
+### Cross-reference
+
+A lane earlier in this session landed *"the S1 title card never releases -- a stall, not a longer
+span"*. Same fingerprint in a different game: a title card that never releases control, stalling
+rather than merely running long. Worth reading before starting the S3K one (rule 18).
+
+### Where this stops
+
+Under the standing instruction, this is a bring-up question rather than a boundary fix: the
+engine submits a Kosinski module-queue job whose recorded readiness never releases it, on the
+special-stage-return path. Whether that is a missing/misfingerprinted submission, or art the
+engine never queues correctly on this path, is the next question and it belongs to whoever owns
+S3K runtime art and the hardware-timing port. **Named and stopped.**
+
+### Instrument hazard hit in this round
+
+The first version of the title-card probe **did not compile** -- inserting a field between an
+`@Override` and its method. Maven reported the compile error, but the run was filtered to
+`grep PROBE_TC`, so it printed nothing and looked exactly like "the method is never called" --
+which was almost recorded as a finding about the code (rule 46). Always confirm the build
+succeeded before reading an absence of probe output as evidence.
