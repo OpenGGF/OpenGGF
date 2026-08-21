@@ -3,6 +3,27 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Added
+- **The S2 CNZ recordings' ROM slot-machine state is now compared instead of merely parsed.**
+  `aux_state.jsonl` carries the ROM's own `SlotMachineVariables` block
+  (`cnz_slot_machine_state`) on every one of the 9469/12083 rows of both CNZ fixtures;
+  `TraceEvent` listed it among the untyped generic native events and nothing read it. It is
+  now a parsed `TraceEvent.CnzSlotMachineState`, reachable via
+  `TraceData.cnzSlotMachineStateForFrame`, compared against a read-only
+  `CNZSlotMachineManager.Snapshot` by `TraceBinder.compareCnzSlotMachine` across 13 exact ROM
+  bytes per row. `reward` is deliberately excluded — the ROM decrements
+  `SlotMachine_Reward` as prizes spawn (`docs/s2disasm/s2.asm:59190`) while the engine's
+  field holds the once-computed payout, so the two are different quantities sharing a name.
+  Comparison-only throughout: nothing hydrates engine state from the recording.
+
+  Switching it on exposes 237 divergent field-rows on `cnz` and 530 on `cnz2`, all of which
+  predate this change and none of which any test could previously see. They sit almost
+  entirely inside the slot machine's own active windows, so the owner is the unresolved
+  ordering group documented in `docs/status/known-discrepancies.md` rather than anything
+  diffuse. Fields are emitted at `WARNING` to record that the frontier is untriaged; this is
+  new coverage, not a relaxed tolerance, and nothing that was red became green. Measured at
+  800/8F against an 800/6F baseline with `-Pguards` clean: the two CNZ classes are the entire
+  blast radius, and both carry a deliberate-red javadoc with the promotion condition.
+
 - **Chain trace reports now publish the per-verification-group error breakdown, and assert it
   accounts for the flat total.** Standalone reports have always carried `verification_groups`
   with `physics` and `animation`; chain segment reports carried only a flat `errorCount`, so

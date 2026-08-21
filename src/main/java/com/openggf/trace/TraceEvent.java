@@ -20,8 +20,7 @@ public sealed interface TraceEvent {
             "state_snapshot",
             "cursor_state",
             "slot_dump",
-            "s2_tornado_state",
-            "cnz_slot_machine_state");
+            "s2_tornado_state");
 
     int frame();
 
@@ -663,6 +662,42 @@ public sealed interface TraceEvent {
     }
 
     /** Mandatory per-stored-row player-art lifecycle heartbeat. */
+    /**
+     * Per-frame snapshot of the ROM's {@code SlotMachineVariables} block, emitted
+     * by the S2 recorder on every row of a CNZ capture. Purely a comparison
+     * oracle: replay must never hydrate engine slot state from these values.
+     *
+     * <p>The ROM derives {@code slotN_speed} and {@code timer} from
+     * {@code V_int_run_count} by byte arithmetic in {@code SlotMachine_Routine3}
+     * and {@code Routine4} (s2.asm:59360-59375), so these fields pin the exact
+     * counter the ROM's {@code SlotMachine} consumed. That is what makes them
+     * worth comparing rather than merely recording: a clock or call-ordering
+     * error at this site shows up here as a field mismatch instead of surfacing
+     * thousands of rows later as a ring or speed divergence.
+     *
+     * <p>{@code pos} packs the reel index in the high byte and the sub-tile
+     * offset in the low byte, matching the ROM's 16-bit
+     * {@code (index, offset)} word.
+     */
+    record CnzSlotMachineState(
+            int frame,
+            int vbc,
+            boolean inUse,
+            int routine,
+            int timer,
+            int index,
+            int reward,
+            List<Integer> slotPos,
+            List<Integer> slotSpeed,
+            List<Integer> slotRoutine)
+            implements TraceEvent {
+        public CnzSlotMachineState {
+            slotPos = List.copyOf(slotPos);
+            slotSpeed = List.copyOf(slotSpeed);
+            slotRoutine = List.copyOf(slotRoutine);
+        }
+    }
+
     record DynamicArtTransferState(
             int frame,
             List<DynamicArtTransfer.SegmentEdge> edges,
@@ -698,6 +733,8 @@ public sealed interface TraceEvent {
 
             return switch (event) {
                 case "load_queue_state" -> parseLoadQueueState(frame, node);
+                case "cnz_slot_machine_state" ->
+                        parseCnzSlotMachineState(frame, node);
                 case "dynamic_art_transfer_state" ->
                         parseDynamicArtTransferState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
@@ -1368,6 +1405,28 @@ public sealed interface TraceEvent {
             outstanding.add(id.asLong());
         }
         return new DynamicArtTransferState(frame, edges, outstanding);
+    }
+
+    private static CnzSlotMachineState parseCnzSlotMachineState(int frame, JsonNode node) {
+        List<Integer> pos = new ArrayList<>();
+        List<Integer> speed = new ArrayList<>();
+        List<Integer> routine = new ArrayList<>();
+        for (int slot = 1; slot <= 3; slot++) {
+            pos.add(parseHexInt(node, "slot" + slot + "_pos") & 0xFFFF);
+            speed.add(parseHexInt(node, "slot" + slot + "_speed") & 0xFF);
+            routine.add(parseHexInt(node, "slot" + slot + "_routine") & 0xFF);
+        }
+        return new CnzSlotMachineState(
+                frame,
+                parseHexInt(node, "vbc") & 0xFFFF,
+                (parseHexInt(node, "in_use") & 0xFFFF) != 0,
+                parseHexInt(node, "routine") & 0xFF,
+                parseHexInt(node, "timer") & 0xFF,
+                parseHexInt(node, "index") & 0xFF,
+                parseHexInt(node, "reward") & 0xFFFF,
+                pos,
+                speed,
+                routine);
     }
 
     private static LoadQueueState parseLoadQueueState(int frame, JsonNode node) {

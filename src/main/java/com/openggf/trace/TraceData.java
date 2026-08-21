@@ -238,6 +238,19 @@ public class TraceData {
         return eventsByFrame.getOrDefault(traceFrame, Collections.emptyList());
     }
 
+    /**
+     * The ROM's own {@code SlotMachineVariables} for this row, or {@code null}
+     * when the fixture does not carry the event. Comparison-only.
+     */
+    public TraceEvent.CnzSlotMachineState cnzSlotMachineStateForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzSlotMachineState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
     public List<TraceEvent.LoadQueueState> loadQueueStatesForFrame(int frame) {
         List<TraceEvent.LoadQueueState> states = new ArrayList<>();
         for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {

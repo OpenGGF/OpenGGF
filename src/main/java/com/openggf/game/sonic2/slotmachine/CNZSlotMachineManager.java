@@ -115,6 +115,39 @@ public class CNZSlotMachineManager {
     }
 
     /**
+     * Read-only view of the ROM's {@code SlotMachineVariables} block, for
+     * comparison against a recorded {@code cnz_slot_machine_state} row.
+     * Comparison-only: nothing may write engine state back from this.
+     */
+    public record Snapshot(
+            boolean inUse,
+            int routine,
+            int timer,
+            int index,
+            int reward,
+            java.util.List<Integer> slotPos,
+            java.util.List<Integer> slotSpeed,
+            java.util.List<Integer> slotRoutine) {}
+
+    /**
+     * Captures the current slot variables in ROM layout. {@code slotPos} packs
+     * the reel index in the high byte and the sub-tile offset in the low byte,
+     * matching the ROM's 16-bit {@code (index, offset)} word.
+     */
+    public Snapshot snapshot() {
+        java.util.List<Integer> pos = new java.util.ArrayList<>(3);
+        java.util.List<Integer> speed = new java.util.ArrayList<>(3);
+        java.util.List<Integer> rout = new java.util.ArrayList<>(3);
+        for (int i = 0; i < 3; i++) {
+            pos.add((((slotIndices[i] & 0xFF) << 8) | (slotOffsets[i] & 0xFF)) & 0xFFFF);
+            speed.add(slotSpeeds[i] & 0xFF);
+            rout.add(slotSubroutines[i] & 0xFF);
+        }
+        return new Snapshot(inUse, routine & 0xFF, slotTimer & 0xFF, slotIndex & 0xFF,
+                reward & 0xFFFF, pos, speed, rout);
+    }
+
+    /**
      * Check if slot machine is available (inactive).
      */
     public boolean isAvailable() {
