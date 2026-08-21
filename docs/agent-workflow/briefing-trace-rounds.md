@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-six rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-seven rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -49,6 +49,7 @@ that looks like a real result.
 | 64 | A profile no matrix runs is covered by nothing; know which ones yours omits |
 | 65 | A shared exception type is not a shared defect; instrument the throw's contents |
 | 66 | A substring match is not a value match; `0 errors` matches inside `5840 errors` |
+| 67 | A ratchet only checked at raise time will always be raised; ask for its whole history |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1785,3 +1786,26 @@ would have turned fifty-nine unmeasured classes into eleven fabricated regressio
 boundary after — and check a sample by eye against the source. If a count comes out
 suspiciously convenient for the story you are telling, that is the moment to re-check the
 pattern rather than the moment to report it.
+
+## Sixty-seventh rule: a ratchet only checked at raise time will always be raised
+
+A source-size budget, a maximum-error count, an allowed-failure list — any number that a
+change must satisfy — constrains nothing if the only occasion anyone looks at it is the
+moment it blocks someone. The person who meets it is always mid-task, always has a
+justification, and always raises it. The number then re-sets to whatever the code happened
+to be.
+
+Measured on one such budget: **seven raises in fifty-five days, +11.6%, never once
+lowered**, with the largest single raise explicitly recording that it was absorbing two
+months of drift accumulated while no job ran the guard.
+
+**The tell is the pattern, not any single raise.** Every individual raise looks
+proportionate — an extraction behind it, a reason at the constant, a small delta. Ask for
+the constant's whole history before approving one, and treat "this is the seventh" as the
+finding rather than "this is a small one".
+
+**The structural fix, when it is available, is to assert the property rather than the
+proxy.** A line budget usually stands in for something real — that a particular kind of
+logic stays out of a particular class — and that property can be asserted directly, at
+which point it neither drifts nor needs raising. A proxy that can only be discovered at
+raise time is a proxy that will be discovered at raise time.
