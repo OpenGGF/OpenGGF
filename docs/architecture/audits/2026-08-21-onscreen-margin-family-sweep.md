@@ -231,3 +231,42 @@ assumed.
 **Consequence.** Stage 2 needs no renderer write-back, so the headless finding above — true and
 unchanged — is not a blocker for this path. It would only bind if someone later wanted a real
 draw-outcome flag for a predicate this helper cannot express.
+
+### The margins, verified against the ROM table rather than the engine's javadoc
+
+The transfer conclusion above initially took `explicit_height` being clear from
+`WallTurretShotInstance`'s own javadoc. That is the failure this whole audit is about, so it is
+now checked at source. `Obj98_Init` tail-calls `LoadSubObject`, whose `LoadSubObject_Part3`
+(`s2.asm:72715-72726`) applies a table row of
+`mappings / art_tile / render_flags / priority / width_pixels / collision_flags` — and
+**never writes `y_radius`**, which the accurate Y path would require.
+
+The wall turret shot's row (`s2.asm:74763`):
+
+```
+subObjData ObjB8_Obj98_MapUnc_3BA46, make_art_tile(ArtTile_ArtNem_WfzWallTurret,0,0),
+           1<<render_flags.on_screen|1<<render_flags.level_fg, 3, 4, $98
+```
+
+`render_flags` is `on_screen | level_fg` — **`explicit_height` is clear**, so `BuildSprites`
+takes `BuildSprites_ApproxYCheck` and its assumed **32**; `width_pixels` is **4**. Both margins
+are ROM-sourced, and both halves of the discriminator are nameable.
+
+**A near-miss worth recording, because it would have been invisible.** Searching for the shot's
+data, the first `subObjData` hit is `ObjA6_SubObjData` — the CPZ **Spiny**, which also uses
+`Obj98` and whose mappings label is shared. Its row is
+`... on_screen|level_fg, 5, 4, $98`: **the same `width_pixels` 4 and the same
+`collision_flags` $98**, differing only in `priority` (5 against 3). Citing the Spiny's row for
+the wall turret would have produced the **correct margins by coincidence** with a wrong
+citation, and nothing in the resulting numbers could have revealed it.
+
+That is the sharpest form of the pattern this audit keeps finding: not a citation that is
+visibly wrong, but one that is wrong and *agrees with the right answer*. The only defence is
+reaching the row through the object that actually loads it — here, `ObjB8`'s own subtype — never
+through the first grep hit that matches the shape.
+
+**A second row for the same object confirms the warning not to generalise 32's companions.**
+`ObjB8`'s own body row (`s2.asm:80297`) is `1<<render_flags.level_fg, 4, $10, 0` —
+`explicit_height` also clear, so also `ApproxYCheck`'s 32, but `width_pixels` **$10** rather
+than 4. Same Y margin, different X margin, same object family. The `yMargin` generalises within
+the `ApproxYCheck` class; the `xMargin` never does.
