@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Sixty-two rules and several worked sections, accumulated across many rounds. The narrative
+Sixty-three rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -45,6 +45,7 @@ that looks like a real result.
 | 59 | When the engine looks right and the recording looks broken, the engine is probably missing a ROM bug |
 | 60 | Right family, wrong mechanics is still wrong — test the mechanism's own prediction |
 | 61 | An absence in a routine is not a positive fact about it; read one level deeper |
+| 63 | Resolve a divergence's values to their disassembly names before hypothesising |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1714,3 +1715,22 @@ like an answer.
 *point in a frame*; this one covers sampling on the wrong *frame entirely*. Both produce
 internally consistent output. A probe that reports the same value across a whole window is
 evidence you may be looking at the wrong window, not evidence the value is stable.
+
+## Sixty-third rule: resolve a divergence's values to their disassembly names
+
+A mismatch reported as `rom=0x0008 eng=0x0055` carries no information about what either
+side was doing. Resolved through the disassembly's own equates it becomes `fr_Walk13`
+against `fr_Injury`, and the divergence explains itself: the recording published a walk
+frame where the engine held the outgoing animation's.
+
+**Why it matters beyond readability.** Three sites in one chain looked like three separate
+defects while their values were hex. Named, all three showed the same recording-side value
+and the same engine-side behaviour — one trigger with three occurrences, one round's work
+instead of three. The unification was invisible until the numbers had names.
+
+The equates are free to read (`_anim/*.asm`, `*.constants.asm`, the object id lists), and
+they also make an impossible combination obvious: an animation id from one script paired
+with a frame that appears only in another is a two-writes-in-one-frame signature, which no
+amount of staring at hex will suggest.
+
+**Do this before forming any hypothesis about a divergence**, not while writing it up.
