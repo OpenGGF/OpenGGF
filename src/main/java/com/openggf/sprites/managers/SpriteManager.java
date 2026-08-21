@@ -1755,6 +1755,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (!isUnified && !usesInlineSolidResolution) {
 			applySolidContacts(levelManager, playable, false, false);
 		}
+		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
+		// runs, and the Super transformation gate is the first thing inside the
+		// jump mode: Obj01_MdJump calls Sonic_JumpHeight, which ends
+		// `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
+		// (docs/s2disasm/s2.asm:36241, :37432-37434). The gate therefore reads
+		// the y_vel left by the PREVIOUS frame. Driving it from tickStatus at
+		// the end of this tick read the value this frame's move had just
+		// produced, firing the same predicate one frame early.
+		var superStateBeforeMove = playable.getSuperStateController();
+		if (superStateBeforeMove != null) {
+			superStateBeforeMove.checkTransformationBeforeMove();
+		}
 		if (playable instanceof CustomPlayablePhysics customPhysics) {
 			customPhysics.tickCustomPhysics(up, down, left, right, jump, test, speedUp, slowDown,
 					levelManager, frameCounter);

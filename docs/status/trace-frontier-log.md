@@ -109916,3 +109916,64 @@ assumption:
 Nothing was fitted; no interval was adjusted. Not landed — the combined change
 needs the three-game matrix, both arms in one worktree, and that is the next
 round.
+
+## 2026-08-21 — the S2 Super group LANDED: fingerprint met on all four conditions, arms differ on two lines
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-group`, both arms pinned
+to `7825466a9`.
+
+### Fingerprint, all four conditions
+
+| condition | result |
+|---|---|
+| no sidekick transformation at all | **met** — the probe prints one `START` line, `who=Sonic`, where it printed two |
+| Sonic transforms on segment-18 frame 4019 | **met** — movie row 105710, offset 101691 |
+| `rings` matches at 4019 and drains at 4080 and 4141 | **met** — `rings` has zero mismatches in the whole segment |
+| `x_speed` is `0x0121` at 4019 | **met** — no `x_speed` mismatch at 4019 |
+
+Checked in that order deliberately: the sidekick condition fails loudly if A is
+wrong and cannot be reached by tuning anything.
+
+Segment 18: 12580 comparator errors -> **9564**, first divergence 4019 -> 4049.
+The `seg12_arz1 -> seg13_arz2` gap axis changes character too, from 42 fields
+(`edge_ordinal` -16, `transfer_id` -8) to a single `edge_count` 12 vs 11. Chain
+axes 12 -> 12.
+
+### The three members as landed
+
+- **A** `Sonic2GameModule.createSuperStateController` returns null for a
+  non-`Sonic` playable. The decline is in the module, which owns "which
+  characters this game lets transform"; no character or game-name test was added
+  to the shared controller.
+- **B** the NORMAL-state gate moves out of `update()` into
+  `checkTransformationBeforeMove()`, called from `SpriteManager` immediately
+  before `handleMovement`/`tickCustomPhysics`, where `Obj01_Modes` dispatches it.
+- **C** `startTransformation` applies `getSuperProfile()` and leaves
+  `ringDrainCounter` at zero; the `Sonic_Super` body is gated on the flag rather
+  than the state; the drain test is `< 0`, matching `subq`/`bpl`.
+
+### Matrix
+
+Both arms in one worktree by `git reset --hard` / `git apply` from the pinned
+SHA. `-Ptrace-replay -Dsurefire.forkCount=1` with all three ROM properties:
+**798 tests, 10 failures, 0 errors, 4 skipped on both arms**, identical 155-class
+sets, identical `Tests run: 0,` counts (2), identical failing-method sets.
+
+Member B reaches every playable in every game, so the full untruncated failure
+messages were diffed between arms. **They differ on exactly two lines, both the
+intended ARZ1 ones.** No S1 result moved, no S3K result moved, no other S2 class
+moved. `-Pguards`: 500 tests, 0 failures.
+
+### Two things named, not worked
+
+1. **A fourth defect, at segment-18 frame 4049.** The new frontier is `x`
+   rom `0x2936` engine `0x2937`: the ROM's Super Sonic is still frozen there and
+   the engine has started moving, so the transformation freeze
+   (`obj_control $81`) is released early. Reported rather than folded in — the
+   group was three members from three owners and widening it was declined.
+2. **Segment 19 still aborts, identically.** 62616 errors, range 344..2381, same
+   `lost production ownership before source closure (mode=TITLE_CARD,
+   romZone=15, act=1)`. So it is **a separate defect**, not a consequence of the
+   ARZ1 group — the shared origin refuted earlier does not re-establish here.
+
+Nothing was fitted. No interval was adjusted.
