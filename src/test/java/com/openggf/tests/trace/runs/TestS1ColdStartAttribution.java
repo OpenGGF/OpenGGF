@@ -137,11 +137,21 @@ class TestS1ColdStartAttribution extends AbstractRunChainTest {
         // player's pushing bit unconditionally, as the ROM's Solid_NotPushing
         // does. First non-camera mismatch, frame and field are unchanged;
         // sixteen downstream errors on the same axis went away.
+        //
+        // Re-pinned 18205 -> 7176 when the Obj61 LZ blocks took the instance
+        // solid-state latch key. Their real first error was
+        // player_mapping_frame at frame 3181 -- an ANIMATION-group field
+        // firstNonCameraPhysicsMismatch cannot report -- where the recording
+        // publishes fr_Walk13 ($08) and the engine held fr_Push1 ($45): the
+        // rising block's Solid_NoCollision tail could not find its own pushing
+        // bit under the moving spawn key, so Solid_NotPushing never ran. The
+        // frontier moved 11,564 frames later, to frame 14745, and the leading
+        // field is now a PHYSICS one.
         assertTrue(
                 report.contains("segment 2 of s1-sonic-complete-withemeralds "
-                        + "diverged: 18205 physics comparator errors, first "
-                        + "non-camera mismatch at frame 3182 field "
-                        + "dynamic_art.edges rom=[1778, 1779] engine=[]"),
+                        + "diverged: 7176 physics comparator errors, first "
+                        + "non-camera mismatch at frame 14745 field "
+                        + "x_speed rom=-0299 engine=0x0000"),
                 "segment 24 must still diverge identically from a cold start; "
                         + "if it was fixed, update this pin. Report:\n" + report);
     }

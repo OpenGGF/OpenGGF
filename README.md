@@ -214,6 +214,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S1 Labyrinth block solid latch (merged 2026-08-21):** the moving LZ blocks keyed
+  their solid-state latch on a spawn record that is recreated every frame they
+  travel, so the ROM's clear-pushing tail was unreachable and the player kept
+  publishing the push animation after a rising platform left his collision box.
+  Keying the latch on the instance, as the floating blocks already do, drops the
+  affected chain segment from 18,205 to 7,176 errors and moves its first error
+  from frame 3181 to 14,745.
+
 - **Chain reports publish their error groups (merged 2026-08-21):** chain trace
   reports now carry a per-group error breakdown alongside the flat total, tallied
   at the same increments that feed it, and fail unless the groups plus bootstrap
