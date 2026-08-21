@@ -111791,3 +111791,118 @@ that it is not any of the four owners above, and that the obvious path through
 it is a candidate at all.
 
 Nothing was fitted, and the three-entry offset remains ruled out.
+
+## 2026-08-21 -- HAZARD: `-Dtest=` overrides patterns but NOT tag exclusions, and the chain frontier restated
+
+Measured at `2973a0430`. Two things in one entry: a measurement hazard that produces a clean
+green from a class that never ran, and a correction of two stale frontier numbers.
+
+### The hazard, with the mechanism corrected
+
+`TestS3kTailsFullChainRunChain` under `-Ptrace-replay -Dtest=TestS3kTailsFullChainRunChain`
+reports:
+
+```
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+**A clean green from a class that never ran.** Under `-Ptrace-replay-r7` with the identical
+`-Dtest=`, the same class runs and fails in 15s.
+
+The first explanation offered for this -- "the class is only in the r7 profile's `<include>`
+list" -- was **wrong**, and the real mechanism is worth more. `trace-replay` *does* include it
+by pattern (`**/tests/trace/**/*.java`) and does *not* exclude it by pattern; the two run-chain
+classes named in that profile's `<exclude>` list are the Knuckles super-emerald and Mega runs.
+What drops it is a **JUnit tag**: the class carries `@Tag("trace-scope-r7")` and `trace-replay`
+sets `<excludedGroups>performance-measurement,trace-scope-r7</excludedGroups>` (pom.xml:259).
+
+**So the rule is sharper than "`-Dtest=` overrides profile selection" (rule 98):**
+
+> `-Dtest=` overrides a profile's `<include>` and `<exclude>` **patterns**, but **not** its
+> `<excludedGroups>` tag filter.
+
+Both halves were measured in this round against the same profile. `TestS3kHczZoneSliceTraceReplay`
+is **pattern**-excluded from `trace-replay` (`**/tests/trace/s3k/*ZoneSliceTraceReplay.java`),
+and `-Ptrace-replay -Dtest=TestS3kHczZoneSliceTraceReplay` **ran it anyway** -- 2 tests. The
+Tails chain is **tag**-excluded from the same profile, and the same flag shape ran nothing.
+Identical invocation shape, opposite outcomes, and only the exclusion *kind* differs.
+
+**What it looks like from outside:** `BUILD SUCCESS`. Not a skip, not a filter warning -- a
+zero-test success that is indistinguishable from a passing run unless you read
+`Tests run:`. Check the tag before concluding a `-Dtest=` run means anything, and treat
+`Tests run: 0` as a failed measurement rather than a result.
+
+Tag-to-profile map at this SHA: `trace-scope-r7` is excluded by `trace-replay` and selected by
+`trace-replay-r7`; `trace-scope-r6` is excluded by `trace-replay-r7` (pom.xml:452).
+
+### The chain frontier, restated and stamped
+
+**Both previously recorded positions are stale.** This log's "the chain fails at segment 9 of
+63" and a lane note of "5 of 63" no longer describe it, and the current failure is a **different
+shape** -- not a physics divergence at a segment at all. Measured at `2973a0430`:
+
+```
+TestS3kTailsFullChainRunChain.tailsFullChainAllEmeraldsRoundTrip
+BoundaryStepCapExceededException: awaitBoundary exceeded step cap 42908
+  for entry_kind 'stage_exit' (mode_change_bk2_frame=6221, last observed bk2 frame=6221)
+  cursor frozen or mode change never observed
+  (no active objects within a screen-width of the player)
+```
+
+The run **stalls at a `stage_exit` boundary at bk2 frame 6221**, burning the full 42908-step
+cap. Last observed frame equals the mode-change frame exactly, so this is a stall, not a drift.
+Note the run is 70 segments, not 63 -- the older counts were against a shorter fixture.
+
+The class is *designed* to be red: its javadoc records it as a frontier harness added to say
+where the route diverges, not as a regression.
+
+**The suppressed `PendingRecordedSubmissionsException` is downstream of the stall, not a second
+defect.** A run that never completes leaves recorded hardware submissions pending by
+construction; reading it as independent sends someone to the timing port for nothing.
+
+**Two opposite defects share that one message** and it is unresolved which applies: the engine
+never reaches the stage exit, or it reaches it and the walker never observes the mode change.
+The `(no active objects within a screen-width of the player)` diagnostic argues for the first,
+but that is a hint, not a measurement. Instrument the boundary before assigning ownership --
+handing this to the walker's owner presumes the second.
+
+### Instrumented: the stall is the SPECIAL-STAGE EXIT, and the walker is not at fault
+
+Measured at `2973a0430` with an env-gated probe inside `awaitBoundary` (reverted). The two
+opposite defects behind the one message are now separated, and it is **neither** of the two
+candidates as posed.
+
+```
+PROBE_BOUNDARY steps=1     bk2=759   target=2126  kind=giant_ring  latched=false
+PROBE_BOUNDARY steps=2     bk2=760   target=2126  kind=giant_ring  latched=false   <- advances normally
+...
+PROBE_BOUNDARY steps=1     bk2=6221  target=6221  kind=stage_exit  latched=false   <- ALREADY at target
+PROBE_BOUNDARY steps=2000  bk2=6221  target=6221  kind=stage_exit  latched=false
+PROBE_BOUNDARY steps=40000 bk2=6221  target=6221  kind=stage_exit  latched=false
+```
+
+The preceding `giant_ring` boundary advances its cursor one frame per step and latches. At the
+`stage_exit` boundary the cursor is **already at 6221 on step 1** -- the engine *reached* the
+boundary -- and then never advances again across 42908 steps.
+
+So it is not "the engine never gets there", and not "the walker missed a latch after passing".
+`awaitBoundary`'s own contract already rules the second out: passing the boundary returns
+`NOT_OBSERVED` rather than throwing, so a throw with `last observed == mode_change_bk2_frame`
+means the cursor never moved. **The engine arrives and the BK2 cursor freezes on arrival.**
+
+`currentBk2Frame()` reads `GameServices.playbackDebug().getCursorFrame()`, so what is frozen is
+the movie playback cursor, not the walker's bookkeeping.
+
+**Which boundary this is.** From `run_manifest.json`: transition 1 of 48, `from_segment: 1`
+(`ss`) `to_segment: 2` (`aiz_2`), and segment 2's `bk2_frame_offset` is 6221. Segment 1 is a
+**special stage**, spanning bk2 2126 to 6221. So the engine plays the giant-ring entry
+correctly, plays the whole special stage through to its final frame, and then **hangs on the
+special-stage exit back into AIZ**.
+
+**Owner: the special-stage exit path, not the run-chain walker.** The walker is correctly
+waiting for a mode change that never settles.
+
+**Chain position, restated again:** the run stops at transition **1 of 48**, having completed
+segments 0 and 1 of 70. This is *not* comparable to the older "segment 9 of 63" -- that was a
+different and shorter fixture -- so it should not be read as a regression against it.
