@@ -429,6 +429,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         private int xSubpixel;
         private int ySubpixel;
         private boolean attached = true;
+        /**
+         * False from detach until the launch dispatch has been consumed. ROM
+         * {@code TurboSpiker_SpikeChild_Launch} (loc_87D72,
+         * docs/skdisasm/sonic3k.asm:184042-184053) writes
+         * {@code TurboSpiker_SpikeChild_Move} into the child's own {@code (a0)}
+         * code pointer and then falls through to {@code Sprite_CheckDeleteTouchXY}
+         * -- it never calls {@code MoveSprite2} itself. The dispatcher has already
+         * jumped through the old pointer for this frame, so the installed
+         * {@code TurboSpiker_SpikeChild_Move} (loc_87DA4, :184056-184058), whose
+         * only work is {@code MoveSprite2}, first executes on the FOLLOWING frame.
+         */
+        private boolean moveRoutineInstalled;
         private boolean facingLeft;
         private boolean deleteNextFrame;
         private TurboSpikerTrailEmitter trailEmitter;
@@ -446,6 +458,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             this.currentX = spawn.x();
             this.currentY = spawn.y();
             this.attached = false;
+            this.moveRoutineInstalled = true;
         }
 
         @Override
@@ -513,6 +526,18 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
                 facingLeft = parent.badnikFacingLeft();
                 currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
                 currentY = parent.getY();
+                return;
+            }
+
+            if (!moveRoutineInstalled) {
+                // Launch dispatch: velocities, the trail child and the SFX were
+                // all done in launch(); loc_87D72's own frame ends at
+                // Sprite_CheckDeleteTouchXY with the shell still at the parent's
+                // position. Movement belongs to the just-installed loc_87DA4.
+                moveRoutineInstalled = true;
+                if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+                    deleteNextFrame = true;
+                }
                 return;
             }
 

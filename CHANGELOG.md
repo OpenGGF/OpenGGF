@@ -1,5 +1,12 @@
 # Changelog
 
+- **A TurboSpiker's spike no longer hits a frame early:** the ROM's launch step
+  writes the moving routine into the shell's own code pointer and ends there, so
+  the shell sets its velocities on the launch frame and does not travel until the
+  next one. The engine launched and moved in the same dispatch, which put the
+  spike four pixels high for its entire flight and cost a hit in HCZ2 one frame
+  before the ROM takes one.
+
 - **ARZ's air bubbles have to inflate before Sonic can breathe them again:**
   a large bubble only becomes inhalable once its animation has climbed to the
   big-bubble frame, which is the delay the ROM builds out of the animation
