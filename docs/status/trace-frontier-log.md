@@ -111731,3 +111731,63 @@ what has to be ported.
 
 This is the last mass in segment 18: 119 errors, all of it this window and the
 art edges that follow the mapping frames through `LoadSonicDynPLC`.
+
+## 2026-08-21 — the anim_frame writer at 4213: four candidates discarded, including the one that fit perfectly
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-animframe-write`, pinned to
+`99ae394df`. No measurement run was needed beyond reading the fixture's own
+columns; `src/` unchanged. **The writer was not found.** This is the negative
+result, with the eliminations that constrain the next attempt.
+
+### Discarded, with reasons
+
+**1. `s2.asm:13634` — the offered candidate. `ObjCF`, an ending cutscene
+object.** The enclosing label is `loc_A4B6`, and the surrounding code reads
+`Ending_Routine`, sets `CutScene+objoff_34` and loads `ObjCF_MapUnc_ADA2`. The
+`clr.b anim_frame(a0)` is the object clearing **its own** SST, not the player's,
+and it belongs to a routine that does not run in ARZ1. Exactly the class of
+false lead the brief warned about.
+
+**2. `Sonic_RevertToNormal` (s2.asm:37533) — discarded on EXECUTION evidence,
+not on fit.** This one fit perfectly: `move.b #AniIDSonAni_Run,prev_anim(a0)`,
+whose own comment reads *"Force Sonic's animation to restart"* — a `prev_anim`
+write outside `Sonic_Animate`, which would make the next `anim != prev_anim`
+test fire and reset `anim_frame` to 0, producing exactly the observed index
+jump. It did not run. The fixture's `rings` column is **constant at `0x2F`
+across 4205-4219**, so neither `Sonic_Super`'s ring-zero revert
+(`tst.w (Ring_count).w / beq`) nor a drain-to-zero fired anywhere near 4213.
+Mechanism fit is not execution evidence, and this is the fourth time today a
+candidate that fit did not fire. Not inside a `FixBugs` block either — checked
+before discarding, so the retail-arm question does not arise.
+
+**3. A `SonAni_Roll2` switch.** `AniIDSonAni_Roll2` is **never written anywhere
+in s2.asm** — every `anim` write in the roll family is `AniIDSonAni_Roll`
+(:37114, :37136, :37324, :37392, :37595, :40140, :40162). `SonAni_Roll2` is
+reachable only through `SAnim_Roll`'s `inertia >= $600` selection, and `inertia`
+is `0x0388` throughout. Dead twice over.
+
+**4. `s2.asm:26741` — `Obj0E_FlashingStar_Move`.** Its own SST again.
+
+### The constraint that makes this hard, stated for the next attempt
+
+`prev_anim` is written in exactly two places: `Sonic_Animate` itself
+(`move.b d0,prev_anim(a0)`, s2.asm:38388) and `Sonic_RevertToNormal` (:37533).
+The revert did not run. So **`Sonic_Animate`'s own `anim != prev_anim` reset
+cannot account for the jump** given the recorded columns — which means the
+write is either a direct `anim_frame` store from a routine not yet found, or an
+`anim` value written and restored inside a single frame so the end-of-frame
+column never shows it. The second only works if the intermediate script's first
+frame is also `$3D`, which restricts it to the roll family, and the roll family
+has exactly one reachable id.
+
+### What I did NOT establish
+
+I did not establish that the writer is something the engine does not model —
+that would be the bigger finding and I am not claiming it. What I established is
+that it is not any of the four owners above, and that the obvious path through
+`prev_anim` is closed. The remaining `anim_frame` writers in the file
+(:28023, :30428-30494, :41276-41320, :44947, :46343, :49913, :57701-57809,
+:69279, :69635) are unsurveyed; each needs its `a0` traced to the player before
+it is a candidate at all.
+
+Nothing was fitted, and the three-entry offset remains ruled out.
