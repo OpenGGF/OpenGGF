@@ -110464,6 +110464,7 @@ Nothing landed. The retained patch at
 `$AGENT_SCRATCH_ROOT/tasks/s1-objectnear-phase-correction-*` is kept as evidence
 of a refuted premise, **not** as pending work.
 
+<<<<<<< HEAD
 ## 2026-08-21 -- SURVEY: the non-zero routine-install population (rule 107)
 
 **Survey, found-not-fixed.** Two earlier surveys in this investigation covered routine-**zero**
@@ -110852,3 +110853,116 @@ and never will be.
 `Camera.setMaxYAfterNextUpdate` now has zero callers. It is deliberately not removed here --
 that touches the camera rewind snapshot record, and the WFZ commit needs to stay droppable.
 The 9 unmeasured routine-install candidates and the cross-object install gap remain parked.
+=======
+## 2026-08-21 — S2 chain segment 19: the abort is a drowning-triggered level restart, and the divergence that causes it is intrinsic to ARZ2, not carried from ARZ1
+
+Worktree `wt/s2-seg19`, branch `bugfix/ai-s2-seg19-titlecard`, both arms pinned to
+`9ef9fbbcd`. **Found and attributed, not fixed.** Nothing in `src/main/` changed;
+the only committed artefact is a `Debug*` isolation test.
+
+Control reproduces exactly at `9ef9fbbcd`: 12 axes, `[walk-failure] segment 19 lost
+production ownership before source closure (mode=TITLE_CARD,
+level=LevelIdentity[loadGeneration=15, progressionZone=2, romZone=15, act=1], BK2
+cursor=109135)`, `seg19_report.json` `errorCount` 62616, `complete: false`, first
+non-camera mismatch frame 344 `x` rom `0x03E7` engine `0x03E4`.
+
+### What the abort is
+
+"Production ownership" is `TraceRunPlaybackCoordinator.ownsCurrentSegment`: a `level`
+segment owns its rows only while the engine is in `GameMode.LEVEL` at the identity and
+load generation it was admitted on. The observation at cursor 109135 is `TITLE_CARD`
+at *the same* zone and act, at load generation 15 — a **re-entry into ARZ2**, not a
+transition out of it. So no act-transition or title-card-sequencing question arises,
+and the parked `LevelInitProfile` atomicity item is **not** this abort's owner.
+
+**Measured, env-gated stack probe (reverted, never committed):** the mid-segment title
+card comes from
+
+```
+LevelTransitionCoordinator.requestTitleCard <- LevelManager.requestTitleCardIfNeeded
+  <- AbstractLevelInitProfile.requestTitleCardStep <- LevelManager.loadLevel
+  <- LevelManager.restartCurrentLevelAfterDeath <- GameLoop.doRespawn
+```
+
+A second probe on the death appliers fires **exactly once in the whole 35-segment
+chain**: `[probe-death] cause=DROWN-PRE cpu=false x=156f y=6da`. Sonic drowns in ARZ2.
+
+**The ROM never dies there.** `seg13_arz2`'s recorded `player_routine` is `0x02` on all
+6409 rows, and `rings` rises monotonically through the segment. At the row the engine
+drowns the ROM is at `x=0x1825`; the engine is at `x=0x156F`, about 0x2B6 (~700 px)
+behind. So the abort is the tail of a divergence, and its 62,616 errors are one cause
+rendered across two thousand rows.
+
+### The divergence is not carried from ARZ1
+
+`DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay` (added by this entry, `Debug*` so
+Surefire's default pattern skips it) replays `seg13_arz2` standalone, from a fresh ARZ2
+level load with no chain carry, no ARZ1 predecessor and no run coordinator. It fails on
+**the same first error: frame 344, `x` rom `0x03E7` engine `0x03E4`** (17307 errors over
+the full 6409 rows).
+
+That is decisive against the ranked hypothesis in the entry above: segment 19's
+divergence is **not** the `seg12_arz1 -> seg13_arz2` boundary's `-8`/`-16` art deficit,
+nor the 42-field gap, nor segment 18's physics. The chain carry makes it *worse*
+(62,616 errors in a third of the rows against 17,307 in all of them) but does not cause
+it. The three axes are two problems, not one.
+
+### What happens at frame 344
+
+Rows 0-343 are exact — `x`, `y`, `y_speed`, `g_speed`, `air` and both camera axes all
+match. The ROM is in a long free fall: `air=1` and `stand_on_obj=00` continuously from
+before row 300, `y_speed` climbing by the S2 gravity constant `0x38` per row to `0x0B60`
+at row 344, and it keeps falling past the platform line into the water at row 349
+(`status` gains `0x40`, `y_speed` drops `0x0C40 -> 0x031E`).
+
+At row 344 the engine instead **lands**: `y_speed 0x0B60 -> 0`, `air 1 -> 0`,
+`status 0x03 -> 0x09` (`Status_OnObj`), `onSlot=22 (0x82)`, `ride=1`, and `x` snapped to
+`0x03E4`. It then sits at `y=0x04DC` for a frame and falls again from rest, having shed
+the entire `0x0B60` of downward speed.
+
+**Measured, env-gated stack probe (reverted, never committed)** — the landing is not
+inferred from the field values:
+
+```
+[probe-land] x=3e4 y=4dc ysp=0
+  AbstractPlayableSprite.setOnObject <- ObjectSolidContactController.resolveContactInternal
+  <- ... <- ObjectSolidExecutionContext.resolveSolidNowAll
+  <- SwingingPformObjectInstance.update:207
+```
+
+So **`Obj82`, the ARZ swinging platform, catches Sonic during an 11 px/frame fall the
+ROM passes straight through.** It is the first of six such landings the standalone
+segment logs.
+
+### Named, not worked — for whoever takes this next
+
+- **The reported positions do not overlap.** Both the recorded `object_near` and the
+  engine's own census put slot 22 at `(0x03C0, 0x0520)` on row 344, while the player is
+  at `(0x03E4, 0x04DC)` — feet roughly 41 px *above* the platform's top. Either the
+  solid box is built from a position other than the one both censuses report, or the
+  landing window is not the one `Obj82_Main` builds. That is the question to answer
+  first; it is not a band-width tuning question.
+- **`Obj82_Main`'s on-screen gate is missing in the engine.** The ROM runs
+  `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +` (`docs/s2disasm/s2.asm:57205-57206`)
+  around **both** `JmpTo23_SolidObject` and the `loc_2A432` swing, so an off-screen
+  `Obj82` is neither solid nor moving. `SwingingPformObjectInstance.update:207` calls
+  `resolveSolidNowAll()` unconditionally. Real, and worth closing — but **not** the
+  frame-344 discriminator: with the camera at `(0x0347, 0x045E)` the platform at
+  `y=0x0520` is on screen, so the gate would not have suppressed this contact. Do not
+  land it as "the fix" on this evidence.
+- The `fixBugs` arm at `s2.asm:57150-57156` (`subq.w #2,d3` for pillars) is already
+  correctly excluded, with the `fixBugs = 0` box `d1 = width_pixels + 0xB`,
+  `d2 = y_radius`, `d3 = y_radius + 1` cited in
+  `SwingingPformObjectInstance.getSolidParams`. No defect there.
+- Whether the standalone segment also drowns was not measured; the single drown above
+  was measured on the chain.
+
+Commands:
+
+```
+mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsonic2.rom.path=s2.gen \
+  -Dtest=TestS2CompleteEmeraldRunChain test
+mvn -Dmse=off -Dsonic2.rom.path=s2.gen -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay test
+```
+>>>>>>> bugfix/ai-s2-seg19-titlecard
