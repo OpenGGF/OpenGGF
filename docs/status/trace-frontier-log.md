@@ -108710,3 +108710,111 @@ evidence for the change.
 
 `ZoneFeatureProvider.getWaterLevel` is untouched by this round — the splash never used it,
 and nothing else does either.
+
+## 2026-08-21 — Diagnosis: the power-up spawner is null under S1/S2 trace replay, and wiring it would change no occupancy number
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `f541479c6`.
+**Diagnosis only — no code change.** The one-line experiment described below was applied,
+measured, and reverted.
+
+Follows the splash entry above, which found `powerUpSpawner` null on the playables that cross
+water in `cpz2`.
+
+### Where the swap happens relative to the rebind
+
+`HeadlessTestFixture` step 5 creates the new roster with
+`GameplayTeamBootstrap.registerActiveTeam`, then immediately rebinds — but only inside:
+
+```java
+if (sharedLevel != null
+        && !needsSharedLevelReload
+        && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+    GameServices.level().refreshPlayablePowerUpSpawners();
+}
+```
+
+The **ordering is correct**; the third condition is the defect. `elementalShieldsEnabled` is a
+shield-specific capability — `false` for S1 and S2, `true` only for S3K
+(`GameRules.java:60, 208, 363`, third field of `PlayerCapabilityRules`) — and it gates a
+rebind that owns three unrelated objects: the shield, the invincibility stars, and the water
+splash.
+
+### Measured, per game
+
+A one-shot probe on the live playable's `powerUpSpawner`, plus a probe on the branch inputs:
+
+| test | `sharedLevel` | `needsReload` | `elemental` | live spawner |
+|---|---|---|---|---|
+| `TestS1Ghz1TraceReplay` | true | false | **false** | **NULL** |
+| `TestS2Cpz2LevelSelectTraceReplay` | true | false | **false** | **NULL** |
+| `TestS3kAizTraceReplay` | **false** | false | true | PRESENT (all 32 instances) |
+
+Note what this kills: **the gate is not what saves S3K.** Its test takes the fresh-load path
+(`sharedLevel=false`), where `LevelManager` wires the spawner at `:679` and the gate is never
+consulted. S1 and S2 satisfy both of the conditions that matter and are blocked purely by the
+capability check. Had S3K taken the reuse path it would have been rebound; it simply never
+reaches it here.
+
+### What S1 and S2 lose
+
+Every `powerUpSpawner` call site is null-guarded, so nothing crashes — the objects are just
+never created:
+
+- `spawnShield` (`AbstractPlayableSprite.java:1276, 1424`)
+- `spawnInvincibilityStars` (`:1313, 1544`)
+- `spawnSplash` (`:5234, 5298`)
+
+Shield *state* lives on the sprite, so damage protection is unaffected; it is the objects that
+are missing.
+
+### Nothing else binds against the pre-swap roster
+
+`LevelManagerInitializationSupport.rebindPowerUpSpawners` sets the spawner and nothing else
+(`:26, 29`), and the fixture's neighbouring `refreshPlayableSpriteArt()` is ungated. This is a
+single missing binding, not a class of them.
+
+### Would fixing it change slot occupancy? No — and this was measured, not predicted
+
+Every object the spawner creates lives at a **fixed SST slot outside the dynamic pool**, which
+is what `PowerUpRules` already documents at length (`:24-42`) and what `ObjectOccupancyOracle`
+excludes by construction — it counts only `slot >= firstDynamicSlot`:
+
+| game | dynamic pool | shield | inv. stars | splash | dust | super stars |
+|---|---|---:|---:|---:|---:|---:|
+| S1 | 32..127 | 6 | 8 | 12 | — | — |
+| S2 | 16..127 | 134 | 136 | via dust | 132/133 | 129 |
+| S3K | 4..93 | 100 | 102 | via dust | 98/99 | 96 |
+
+S1's sit below the pool, S2's and S3K's above it. **No spawner object can enter the counted
+range in any game**, so the occupancy investigation's numbers are unaffected and can be quoted
+as they stand.
+
+The fixture data corroborates the slot model exactly: in `lz1_2`'s `object_near` stream, slot
+**6** carries type `0x38` (`id_Shield`) for 29 frames and slot **12** carries type `0x08`
+(`id_Splash`) for **424** frames — precisely `PowerUpRules`' `shieldObjectFixedSlotIndex = 6`
+and `waterSplashFixedSlotIndex = 12`. The engine's slot model is right; only the wiring is
+absent.
+
+### The experiment
+
+Deleting the third condition — one line — was applied and the full suite re-run:
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | failing methods |
+|---|---|---:|---:|---|
+| control (`f541479c6`) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | — |
+| ungated | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | **identical** |
+
+And the ungating genuinely takes effect rather than being inert: with it applied, the same
+probe reports `PRESENT` for `TestS1Ghz1TraceReplay` and both `TestS2Cpz2LevelSelectTraceReplay`
+playables, where it reported `NULL` before. So the "identical" above is a real result about the
+change, not the tautology it would otherwise be.
+
+**Conclusion: the wiring can be fixed at any time without disturbing occupancy or any current
+comparison.** It is not urgent and it is not risky. What it would buy is coverage rather than
+correction — slots 6 and 12 are recorded in S1 fixtures and compared by nothing, so extending
+a comparison there would be the way to make the shield and splash objects verifiable.
+
+### Still queued
+
+The snapshot-versus-tracking splash Y (S2/S3K `SpindashDustController.triggerSplash` freezes
+`splashY` where `Obj08_MdSplash` re-reads `Water_Level_1` every frame), behind this.
