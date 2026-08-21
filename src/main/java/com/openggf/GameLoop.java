@@ -53,6 +53,7 @@ import com.openggf.data.RomManager;
 import com.openggf.data.Rom;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.SpecialStageReturnSpawn;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
@@ -3161,38 +3162,11 @@ public class GameLoop {
             // Unfreeze camera (frozen by S3K big ring entry sequence)
             camera.setFrozen(false);
 
-            // ROM parity: both S2 (InitPlayers) and S3K (SpawnLevelMainSprites_SpawnPlayers)
-            // do a full level re-init on special stage return, which spawns Tails at
-            // Player_1 - $20, + 4. We don't reload the level, so replicate the spawn here.
-            for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-                sidekick.setX((short) (playable.getX() - 0x20));
-                sidekick.setY((short) (playable.getY() + 4));
-                sidekick.setXSpeed((short) 0);
-                sidekick.setYSpeed((short) 0);
-                sidekick.setGSpeed((short) 0);
-                sidekick.setAir(false);
-                sidekick.setDead(false);
-                sidekick.setDeathCountdown(0);
-                sidekick.setHurt(false);
-                sidekick.setHidden(false);
-                sidekick.setObjectControlled(false);
-                sidekick.setRolling(false);
-                sidekick.setDirection(playable.getDirection());
-                if (sidekick.getCpuController() != null) {
-                    sidekick.getCpuController().reset();
-                    // ROM LevelSizeLoad re-writes Tails_Min/Max_X_pos and
-                    // Tails_Min/Max_Y_pos from the LevelSize table on every
-                    // entry to the Level: routine, and the special-stage return
-                    // re-runs that routine in full
-                    // (docs/s2disasm/s2.asm:14695-14706). reset() clears the
-                    // controller's copies of those words, so restore them
-                    // exactly as the level-load path does; without this
-                    // Tails_Max_Y_pos stays unset and Obj02_CheckGameOver's
-                    // kill plane (s2.asm:41146-41155) can never fire after a
-                    // special-stage return.
-                    levelManager.applySidekickLevelBounds(sidekick);
-                }
-            }
+            // ROM SpawnLevelMainSprites_SpawnPlayers, both arms
+            // (docs/skdisasm/sonic3k.asm:8367 sidekick, :8388 Tails-as-Player_1).
+            SpecialStageReturnSpawn.applyMainCharacterSpawnOffset(playable, configService);
+            SpecialStageReturnSpawn.respawnSidekicks(
+                    playable, spriteManager.getSidekicks(), levelManager);
         }
         InLevelTitleCardCoordinator.prepareResultsTransition(
                 this::applyTitleCardControlLock);

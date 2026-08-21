@@ -1,5 +1,14 @@
 # Changelog
 
+- **Tails now returns from a special stage standing where Sonic 3 & Knuckles puts
+  him:** when Tails is played on his own, the game drops him four pixels lower at
+  the moment it places him in the level, because he is a shorter character than
+  Sonic and his middle has to sit lower for his feet to land in the same place.
+  The engine already did this for Tails when he follows Sonic around, but not
+  when he is the one being played — so a Tails-only game came back from a special
+  stage hovering four pixels above where it should, from the very first frame.
+  Both cases now come from one place in the code rather than two.
+
 - **An HCZ Jawz no longer wakes up a frame early:** the fish waits offscreen
   behind a $20-square placeholder and starts swimming on the dispatch after the
   ROM sees that placeholder drawn. The engine tested a box two pixels taller, so
