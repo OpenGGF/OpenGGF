@@ -114427,3 +114427,80 @@ check**, and should distinguish them before anything is changed.
 So the fix is **not** yet writable: the row-1161 blocker is named (`suppressCurrentRollAttack`)
 but the row-841 origin is not, and 841 is the one that matters. The other three death arms
 remain coordinates only.
+## 2026-08-21 -- FZ row 841: the rejecting gate is ROM-derived, and it is fed a wrong animation id
+
+Measured at `4174128b2`, with **every** exit of `onSolidContact` logged this time -- including
+the `STATE_CYLINDER_ATTACK` check the previous probe omitted. 44 entries, 44 exits, all
+accounted for.
+
+| outcome | count |
+|---|---|
+| `ENTER` | 44 |
+| `notRolling` | 25 |
+| `SUPPRESSED` | 18 |
+| `verticalExtent` | 1 |
+| `STATE_NOT_ATTACK` | **0** |
+| `touchSide=false` | **0** |
+| `APPLIED` | **0** |
+
+### The row-841 contact, identified by its own x_speed
+
+```
+player=(2525,0576) xsp=475  ENTER state=2
+player=(2525,0576) xsp=475  notRolling anim=0x0
+```
+
+`475` decimal is `0x1DB` -- the engine's `x_speed` at row 841 exactly, from the velocity
+walk (`xsp=[-0300/+01DB]`). So this is that contact, and **the gate that rejects is
+`notRolling`**.
+
+**It is NOT the suppression.** `suppressCurrentRollAttack` rejects only in the second jump's
+window, rows ~1158-1165. It is untouched by this finding and nothing here justifies removing
+it.
+
+### The gate is right; its input is wrong
+
+The ROM's animation across the whole approach:
+
+```
+row 836 anim=02 map=30 roll=1 air=1
+row 840 anim=02 map=31 roll=1 air=1 xsp=01D2
+row 841 anim=02 map=32 roll=1 air=1 xsp=FD00   <- the -0x300 write
+row 845 anim=02 map=2E roll=1 air=1
+```
+
+**The ROM has `anim = 0x02` (roll) continuously from row 836.** The engine has `anim = 0x00`
+while its `rolling` status bit and `air` bit both match the ROM (`roll=[1/1]`, `air=[1/1]` in
+the velocity walk).
+
+`BossFinal_Eggman_Crush` gates on **`cmpi.b #id_Roll,(v_player+obAnim).w`** -- the *animation
+id*, not the status bit -- and the engine implements that faithfully. So the predicate is
+correct, correctly cited, and **fed a value that is wrong**: the engine's animation selection
+reports walk where the ROM reports roll.
+
+**This is a mis-modelled predicate's INPUT, not an invented guard and not a missing
+mechanism** -- the third distinct diagnosis this chain has had, and the first that is upstream
+of the boss entirely.
+
+### Correcting an earlier dismissal of my own
+
+An earlier entry recorded the segment's lowest failing frame as row **354**,
+`player_animation_id exp=0x0000 act=0x0002`, and dismissed it as "a separate non-propagating
+divergence" because `y` matched for another 800 rows. **That dismissal was wrong.** It was
+true of `y` and false as a conclusion: the *same field* is what fails the gate at row 841.
+The animation id diverges in both directions at different times -- engine `0x02` where the ROM
+has `0x00` at row 354, engine `0x00` where the ROM has `0x02` at row 841 -- so it is an
+animation-selection defect, not a blip.
+
+**A field can be the origin even when a walk of a different field shows it not propagating
+there.** Propagation was measured in `y`; the coupling was through a gate that reads neither.
+
+### The chain, complete
+
+engine animation id wrong -> `cmpi.b #id_Roll` fails -> the `±$300` side-hit never applies
+(`APPLIED` = 0 across the whole run) -> ~20px x drift -> a different cylinder contact at row
+1161 -> fall past the kill plane -> death restart -> `TITLE_CARD` -> segment 33 loses
+ownership.
+
+The owner is S1 player animation selection while rolling in the air. The other three death
+arms remain coordinates only.
