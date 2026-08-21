@@ -108995,3 +108995,121 @@ one, changing a contact threshold that is currently correct, and no test compare
 Recorded rather than removed, because deletion is a behavioural-surface change on a class under
 active investigation and the constant documents the table's byte usefully. If it is removed
 later, the citation belongs in a comment on the flags method instead.
+
+## 2026-08-21 — The spawner rebind no longer asks whether the game has elemental shields
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `f172f5033`.
+Acts on the diagnosis above.
+
+### The change
+
+`HeadlessTestFixture`'s post-roster-swap rebind drops its third condition. It read:
+
+```java
+if (sharedLevel != null && !needsSharedLevelReload
+        && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+```
+
+`elementalShieldsEnabled` is true only for S3K (`GameRules.java:60, 208, 363`), and the
+spawner owns three unrelated objects of which one is a shield — `spawnShield`,
+`spawnInvincibilityStars` and `spawnSplash`
+(`AbstractPlayableSprite.java:1276,1424 / 1313,1544 / 5234,5298`). The capability is not the
+right question to ask before rebinding all three, so it is removed rather than widened.
+
+Measured branch inputs, from the diagnosis round:
+
+| test | `sharedLevel` | `needsReload` | `elemental` | live spawner before |
+|---|---|---|---|---|
+| `TestS1Ghz1TraceReplay` | true | false | false | NULL |
+| `TestS2Cpz2LevelSelectTraceReplay` | true | false | false | NULL |
+| `TestS3kAizTraceReplay` | false | — | true | PRESENT |
+
+S3K is unaffected for a reason other than the gate, and the comment now records it: its
+fixtures take the fresh-load path, where `LevelManager:679` wires the spawner and this branch
+is never reached.
+
+### Matrix — predicted inert in advance, and inert
+
+Stated before running, on the strength of the diagnosis round's experiment: this should move
+nothing, and any movement would be the finding.
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`f172f5033`, clean tree) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages. Nothing
+moved.
+
+**And the inertness is a result, not a tautology.** With the change applied, the one-shot
+spawner probe reports `PRESENT` for `TestS1Ghz1TraceReplay` and for both
+`TestS2Cpz2LevelSelectTraceReplay` playables, where it reported `NULL` on the control. The
+binding really is restored; the suite simply does not compare any of the three objects yet.
+That is what the next round is for.
+
+## 2026-08-21 — The fixed power-up slots would not land green: 95 divergent slot-frames in three named clusters
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, on `b7946c64c`.
+**Measurement only — the comparison is NOT landed.** Reporting before writing it, because the
+premise it was sequenced on does not hold.
+
+### Which harness entry point
+
+The affected suites do not share the one I first probed. Standalone `*TraceReplay` classes call
+`binder.compareFrame(...)` directly from `AbstractTraceReplayTest` (`:539, 728, 889`) and never
+touch `LiveTraceComparator`; the run chains go through `LiveTraceComparator`, which itself calls
+`binder.compareFrame` at `:307`. So **`TraceBinder.compareFrame` is the single shared point** and
+is where such a comparison has to live. A probe placed in `LiveTraceComparator.compareCurrentRow`
+produced zero output for `TestS1Lz1CompleteRunTraceReplay` — worth knowing before writing a
+comparison that would silently cover only half the suite.
+
+### A retraction, from my own probe
+
+My first pass reported slot 6 diverging on **3,431 frames** — the engine apparently never
+creating the shield object. That was an artefact of the probe, which skipped instances with
+`getSpawn() == null`; power-up objects are constructed programmatically and have no spawn. With
+the filter removed, `ShieldObjectInstance` is present at slot 6 on 3,426 frames. The engine also
+reports `hasShield=true, type=BASIC, obj=true` on 3,426 frames, which corroborates it from the
+sprite side. No such divergence exists.
+
+### The measured distribution, after the wiring fix
+
+`TestS1Lz1CompleteRunTraceReplay`, engine occupancy at the spawner-owned slots (6, 8-11, 12)
+against the fixture's `object_near` stream, counted per slot per frame:
+
+| slot | ROM | engine | slot-frames | example frames |
+|---|---:|---:|---:|---|
+| 12 splash | 1 | 0 | **70** | 131, 132, 148 |
+| 12 splash | 1 | **3** | 12 | 11936-11938 |
+| 6 shield | 1 | 0 | 7 | 3892, 4018, 4101 |
+| 6 shield | 0 | 1 | 2 | 850, 851 |
+| 12 splash | 0 | 1 | 2 | 8545, 8546 |
+| 12 splash | 1 | **2** | 2 | 11935, 11948 |
+
+**95 divergent slot-frames** out of 22,902 (3,817 frames where either side held a spawner
+object, times six slots) — 0.4%. Three clusters, each nameable:
+
+1. **Splash short by 70 frames.** The ROM holds `id_Splash` at slot 12 for 462 frames across the
+   run; the engine for about 392. Concentrated early (131-148).
+2. **Slot 12 over-occupancy — the engine puts two or three splash objects in one reserved
+   slot** on 14 frames. A ROM SST slot holds exactly one object by construction, so this is
+   unambiguous: `ObjectLifetimeOps.addDynamicAtReservedSlot` is not evicting the previous
+   occupant when splashes overlap.
+3. **Shield edges,** ±a few frames at the start and end of the shield's life (2 early, 7 late).
+
+### Recommendation: do not land the comparison yet
+
+It was sequenced after the wiring fix so that it would land as verification rather than as an
+accusation. That reasoning was right and its premise is now measured to be false: the comparison
+would go **red**, in three clusters that are real engine defects rather than missing coverage.
+Two options, both consistent with what this project has done before:
+
+- Fix the three clusters first — cluster 2 in particular is small, unambiguous and independent —
+  then land the comparison green, which is the strongest confirmation.
+- Or land it at `WARNING` severity now to pin the frontier without reddening the suite, the
+  shape the `s2_tornado_state` comparison used earlier today.
+
+Cluster 1 may share a cause with the queued splash-Y item: S1's `Sonic1SplashObjectInstance`
+re-reads the water line every frame and cites `Spla_Display`, so its *position* is right; what
+differs is how long the object lives and how many exist. That is a different question from the
+S2/S3K snapshot issue and should not be assumed to be the same defect.
