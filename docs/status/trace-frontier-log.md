@@ -112383,3 +112383,67 @@ The first version of the title-card probe **did not compile** -- inserting a fie
 `grep PROBE_TC`, so it printed nothing and looked exactly like "the method is never called" --
 which was almost recorded as a finding about the code (rule 46). Always confirm the build
 succeeded before reading an absence of probe output as evidence.
+
+## 2026-08-21 -- MEASURED: the spike agrees with the recording; it is not position or launch timing
+
+Measured at `0bd7aa23f`, against the acceptance test that the engine's spike position and launch
+frame agree with the `object_near` rows. **They do.** So this eliminates the position/timing
+hypothesis -- the second of my own hypotheses for frame 22243 to fall to measurement -- and
+narrows the defect to the touch test itself. **Found, not fixed; nothing landed.**
+
+### The recorded track
+
+| frame | parent | spike | note |
+|---|---|---|---|
+| 22222 | `0x32F6,0x04B0` r=`02` | `0x32FA` | walking left, spike at parent+4 |
+| 22223 | `0x32F6` r=**`06`** | `0x32F2` | turn: routine 2->6, spike flips to parent-4 |
+| 22224-22238 | stationary | `0x32F2` | windup, 15 frames |
+| **22239** | r=**`08`** | `0x32F2,0x04B0` -> `TurboSpiker_SpikeChild_Move` | **launch**, trail spawns slot 19 |
+| 22240+ | +2/frame | -1 x, -4 y per frame | `x_vel = -$100`, `y_vel = -$400` |
+
+### The engine, measured with an env-gated probe (reverted)
+
+```
+PROBE_SPIKE LAUNCH parent x=0x32f6 y=0x4b0 facingLeft=false player=(0x32d9,0x483)
+PROBE_SPIKE LAUNCH shell  x=0x32f2 y=0x4b0 xVel=-256 yVel=-1024
+```
+
+Every quantity in the acceptance test matches:
+
+- **parent launch position** `0x32F6,0x04B0` == recorded
+- **spike launch position** `0x32F2,0x04B0` == recorded
+- **velocities** `-256 = -$100`, `-1024 = -$400` == `TurboSpiker_SpikeChild_SetVelocity`
+  (`sonic3k.asm:184048-184056`)
+- **launch frame** -- the player is at `(0x32D9,0x0483)` at the moment of launch, which is
+  *exactly* the recorded player position at frame **22239** (physics.csv). Using a compared
+  field as the clock avoids converting the engine's own frame counter, which is not the trace
+  frame.
+
+The windup length also matches: ROM `TurboSpiker_ChargeWindup` is
+`subq.w #1,$2E / bmi` from `$2E = $0F` (`:183968-183971`), launching on the 16th dispatch; the
+engine's `TURN_DELAY = 0x0F` with the same decrement shape, and `enterLaunchPrep()` returns
+rather than falling through, so it does not lose a frame.
+
+### What that leaves
+
+Spike position, spike velocity, launch frame and player position all agree with the recording,
+and the engine's touch size table is read from ROM (`TOUCH_SIZES_ADDR = 0x00FF62`,
+`Sonic3kGameModule.createTouchResponseTable`). The engine is nonetheless hurt at 22243 and the
+ROM is not.
+
+**So the defect is in the touch test, not in where or when the spike is.** The next round should
+compare the actual box arithmetic: `Touch_Width`/`Touch_Height` (`sonic3k.asm:20674-20700`) index
+`Touch_Sizes` by `collision_flags & $3F` **doubled** (`add.w d0,d0`), so `$9E` gives size 30 and
+byte offset 60 -- an easy off-by-two-times error to make, and one this entry deliberately does
+not assert a value for, because the table parse was not independently verified. Verify the entry
+against the ROM bytes rather than by counting rows in the listing, then compare the player's own
+touch radii for the rolling state.
+
+### Hypotheses eliminated so far for frame 22243
+
+1. **Touch categorisation** (retracted earlier): the spike is `$9E` -> harmful -> `Touch_ChkHurt`,
+   the engine's constant already matches the ROM byte.
+2. **Spike position / launch timing** (this entry): all four quantities match the recording.
+
+Both were mine, both were confidently held, and both cost a measurement rather than a landing.
+The remaining surface is small and specific.
