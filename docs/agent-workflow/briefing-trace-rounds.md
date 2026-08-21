@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and seven rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and twenty-six rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -141,6 +141,8 @@ that looks like a real result.
 | 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 123 | Run a survey so the known member must appear in its output | An empty result and a broken matcher look identical |
 | 124 | A stall in the reference series makes two offsets match identically | Classify only where it is strictly monotonic; walk, do not sample |
+| 125 | A probe that never compiled looks exactly like a predicate that never fires | No Tests-run line and no probe file; ask why the file is absent |
+| 126 | A uniquely-fitting event is not evidence it is *your* event | Rarity is not identity; put a clock on it before believing it |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3238,3 +3240,61 @@ records objects near the player. Rule 119 in its exact form: the walk bounds onl
 cover, and a coverage gap by construction is not a measurement anyone skipped. Name it as unnamed
 rather than reaching for a candidate to fill the slot.
 
+
+## One hundred and twenty-fifth rule: a probe that never compiled looks exactly like a predicate that never fires
+
+A probe was added to an object's collect predicate to establish whether it was evaluated at
+the divergence frame. It referenced a method that does not exist on that class, so the build
+failed at `compile` and surefire never ran. The result: **no probe file, and no `Tests run`
+line anywhere in the log.**
+
+That is bit-for-bit the signature of the thing being investigated — a predicate the engine
+never reaches. The natural next sentence writes itself ("the check never fires, so the
+object is never eligible") and it would have been fiction.
+
+This is the **fifth** distinct way a probe goes silent while looking like a measurement, and
+the previous four all had the probe *running*: `-DargLine` not reaching the fork (rule 122),
+a tag filter excluding the class (rule 111), MSE swallowing `System.err`, and a stale temp
+directory. This one never got as far as running, which makes it the cheapest to detect and
+the easiest to miss, because a failed Maven build still prints hundreds of lines and exits
+with the same code a failing test does.
+
+**The check is one question, asked before reading anything into the silence: *why* is the
+file absent?** `grep` the build log for `COMPILATION ERROR` and for the `Tests run:` line of
+the class you targeted. An absent probe file is a fact about the file, never yet a fact
+about the code — the same shape as rule 123's empty survey and rule 28's absence that is
+only in your view.
+
+Corollary for briefs: **"the probe printed nothing" is not a finding and must never be
+reported as one** without the positive control that rule 110 already requires. If the run
+that produced the silence cannot also show you something it *did* print, it has told you
+nothing at all.
+
+## One hundred and twenty-sixth rule: a uniquely-fitting event is not evidence that it is *your* event
+
+A probe over one segment logged 1366 evaluations of a collect predicate and found **exactly
+one** row where the ROM's bounds accept and the engine's reject — and it sat on the exact
+boundary value, `dy` equal to the bound. One candidate, in the right mechanism, with the
+right shape, at the arithmetic edge that the ROM listing had just been shown to include.
+
+It was a different frame from the divergence, and landing the correction left the first
+error frame exactly where it was.
+
+**Rarity felt like identity, and they are not the same thing.** "Only one event in the whole
+segment could produce this symptom" establishes that the event is rare; it says nothing about
+*when* it happened. The inference silently assumed the probe's one hit and the report's one
+frame were the same moment, which is precisely the assumption rules 6 and the "name the
+clock" section exist to forbid — and it is easier to make when the candidate is unique,
+because uniqueness supplies the feeling of proof that a clock would otherwise have to earn.
+
+**Put the clock in the probe, and anchor it before believing it.** Adding the object-visible
+frame counter and checking it against the fixture's `vblank_counter` column — matching
+`player_y` value-for-value across the five rows before the divergence — turned the story
+over in one run: the engine's player geometry matched the ROM *exactly* at the deciding
+frame, and the thing that differed was a second object's position, a completely different
+owner.
+
+The wider form, worth carrying beyond probes: **a hypothesis that explains the symptom and
+has no competitors is still only a hypothesis about mechanism, never about incidence.**
+Mechanism and incidence are separate measurements, and the second one is usually the cheap
+one.

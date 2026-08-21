@@ -113620,3 +113620,55 @@ most one frame and none of them the inflate climb:
 
 With 1 and 2 landed the inhale moves 1017 -> 1016 and every 1015 span shortens to
 one frame. Any two of the three give 1016; only all three give 1015.
+
+## 2026-08-21 -- S2 complete-emeralds segment 19: what the chain's ABORT actually is, and why it is not the player
+
+Measured in a dedicated worktree off `24edd3db4`, before `674cb1bad` landed the collect-box
+and ROM-order fixes. This entry is the **drowning attribution** only; the inhale residue and
+its three ROM-order causes are the preceding entry's, and nothing here restates them.
+
+**The chain aborts on a level restart caused by a drowning, and the standalone segment
+reproduces it.** `DebugS2Arz2Seg13CompleteEmeraldsSegmentTraceReplay` reaches
+`player_animation_id` **`0x17` = `SonAni_Drown`** (s2.asm:38679) at row 2882 and holds it to
+the end of the segment, with `y` diverging to `0x0949` and `rings` stuck at 8. So no chain
+carry is needed to produce the drown; the segment does it alone.
+
+**Row 1015 is a bubble inhale, not a physics event.** `player_animation_id` there is
+**`0x15` = `SonAni_Bubble`** (s2.asm:38677), and in the same row all three speeds go to zero,
+`rolling` clears, `control_locked` goes 0->1 (`move.w #$23,move_lock`) and `y` drops 5 --
+every one a write in `loc_1FB0C` (s2.asm:45414-45460), whose tail is `ResumeMusic` and
+`move.b #30,air_left(a1)`. Read the field as hex or the frame looks like an arbitrary
+animation id and invites a state-machine hunt.
+
+**Neither of the two candidate shapes is the owner.** The player is not failing to surface,
+and the air countdown is not wrong. With the clock anchored -- the object-visible counter
+equals the fixture's `vblank_counter`, offset 40875, verified by matching `player_y`
+value-for-value across rows 1010-1014 (`063D 063A 0636 0633 0630`, identical on both sides) --
+the deciding row reads:
+
+| row | ROM `player_y` | engine `player_y` | engine's nearest breathable bubble | dy |
+|---|---|---|---|---|
+| 1010-1014 | 063D..0630 | identical | -- | -- |
+| **1015** | 0628 (post-collect; 062D before the `subq.w #5`) | **062D** | **(0601,061C)** | **17** |
+
+**The player geometry matches the ROM exactly at the deciding frame. The bubble's does not.**
+The ROM collects its slot-19 bubble at `(05F3,0624)` -- `dy` 9, well inside a window bounded
+at `$10` -- while the engine's nearest breathable bubble sits at `dy` 17, outside it.
+`object_appeared` dates the ROM's bubble to row 963 at `(05F6,0640)`; at its ~0.54px/frame
+rise the engine's is roughly **14 frames older**, with a matching ~14px offset in x through
+the wobble table's per-frame angle. The engine also holds a bubble (`0x0A`) in a slot where
+the ROM holds the generator (`0x24`).
+
+**This converges with the preceding entry's item 3 from the other end.** That entry measured
+the ROM's two generator firings at rows 903 and 933 (interval 30) against the engine's 904
+and 932 (interval 28); this one measures the resulting bubble as ~14 frames of rise out of
+position at the collect. Same defect, two independent measurements, two worktrees with no
+contact -- **the owner is `BubbleGeneratorObjectInstance`'s RNG/timer cadence and its slot
+occupancy, not the player, not the air countdown, and not the collect predicate.**
+
+**Method note, since it nearly inverted this entry.** A first probe found exactly one
+evaluation in 1366 where the ROM's bounds accept and the engine's reject, on the boundary
+value -- a unique, perfectly-shaped candidate. It was a different frame, and correcting it
+left row 1015 untouched. Rarity is not identity; see rule 126. The probe before that never
+compiled, so it produced no output file and no `Tests run` line, which is indistinguishable
+from a predicate that never fires; see rule 125.
