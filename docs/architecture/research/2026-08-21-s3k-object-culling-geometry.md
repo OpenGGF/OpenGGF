@@ -63,8 +63,11 @@ column refers to the four predicates established for S1/S2 by the earlier round.
 
 ### S3K-1 — coarse X-only deletion window, bound `$280`
 
-The dominant predicate: **61 occurrences** of the exact instruction sequence in
-sonic3k.asm.
+The dominant predicate: **61 occurrences** — *re-measured 2026-08-21, unchanged* — of the
+comparison in sonic3k.asm. One refinement: **58** of the 61 end in `bhi` as shown below; the
+other **three** (sonic3k.asm:81151, 91750, 92055) end in **`bls`**, branching when *in* range
+and falling through to the off-screen handling. Same predicate, inverted branch — a sweep
+anchored on `bhi` finds 58 and reads like a complete answer.
 
 ```
 move.w  x_pos(a0),d0
@@ -96,8 +99,13 @@ Named entry points, all with this body:
 | `Sprite_CheckDeleteTouchSlotted` | 179086 | slotted, with an early `status` bit-7 test |
 | `Obj_WaitOffscreen` (`loc_85AD2`) | 180271 | see S3K-5 |
 
-Four further copies in that block are marked `; unused` in the disassembly
-(sonic3k.asm:179068, 179104, 179116, 179124) and one more unused copy sits at 37320.
+**Corrected 2026-08-21: there are five unused copies in that block, not four, and the line
+citations were wrong.** They begin at sonic3k.asm:**179078, 179104, 179112, 179119, 179126**.
+The previously cited 179068 is `Remove_From_TrackingSlot`'s header rather than a copy; 179116
+and 179124 are the `bhi`/`rts` lines *inside* the copies beginning at 179112 and 179119; and
+the copy at 179126 was missed. The disassembly marks them with `; unused` (179077) and
+"Unused, seems to be identical to the above" (179102) and "Next three are unused, virtually
+the same" (179112). One more unused copy sits at 37322 (its `; unused` marker is at 37321).
 
 **S1/S2 counterpart: predicate 1** (`out_of_range` / `MarkObjGone`). Same quantities, same
 quantisation, same signedness, same axis, same bound. The engine's existing
@@ -112,7 +120,9 @@ deliberately as the bound.
 
 ### S3K-2 — coarse Y-only deletion window, bound `$200`
 
-Same shape, Y axis, different bound. Four occurrences:
+Same shape, Y axis, different bound. Four occurrences — *re-measured 2026-08-21, unchanged*
+(the table's line numbers name each block's first instruction; the `andi.w` sits one line
+below):
 
 | sonic3k.asm | Owner |
 |---|---|
@@ -139,6 +149,18 @@ is a genuine S3K addition, and it is concentrated in CNZ, a vertically-tall zone
 sonic3k.asm:178981, and the same body inlined in `Obj_FlickerMove` (sonic3k.asm:178995)
 and `Sprite_CheckDeleteTouchXY` (sonic3k.asm:179032).
 
+**Corrected 2026-08-21: there are seven sites, not three.** Beyond those three helpers the
+identical geometry is inlined at **sonic3k.asm:128465** (`loc_61928`), **176267**
+(`loc_8395E`, the signpost), **193223** (`loc_8D6E6`) and **197113** (`loc_90282`) — each
+with the coarse-X `$280` half followed by the fine-Y `+$80` / `$200` half, verified by
+reading all four. This more than doubles the population of the one predicate the decision
+procedure below says a symmetric margin cannot express.
+
+A fine-Y test also appears at **sonic3k.asm:133719** (`loc_6594A`) *without* the coarse-X
+half — paired instead with a fine-X `Camera_X_pos - $80` compare, and tailing into a
+star-post trigger rather than a deletion. It is **not** S3K-3; it is listed here so the next
+sweep does not count it as one.
+
 ```
 ; X: exactly S3K-1
 move.w  x_pos(a0),d0 / andi.w #$FF80,d0
@@ -161,7 +183,7 @@ still not symmetric on either axis. **No S1/S2 counterpart** in this exact form.
 
 ### S3K-4 — offset-window variant, bound `$680`
 
-One occurrence, sonic3k.asm:95823-95830, inside `Obj_DEZGravityRoom`
+One occurrence — *re-measured 2026-08-21, unchanged* — sonic3k.asm:95823-95830, inside `Obj_DEZGravityRoom`
 (label at sonic3k.asm:95814; delete tail `loc_49638`):
 
 ```
@@ -188,8 +210,21 @@ tst.b   render_flags(a0)
 bpl     <off-screen path>          ; bit 7 clear -> was not drawn last frame
 ```
 
-123 `tst.b render_flags(a0)` sites are followed within two instructions by a `bpl`;
-19 of those lead to a `Delete`. Two representative examples:
+**Re-measured 2026-08-21.** There are **160** `tst.b render_flags(a0)` sites in total.
+**123** are followed within two instructions by a `bpl` — *unchanged, confirmed*.
+
+**The "19 of those lead to a `Delete`" figure does not reproduce under either reading, and
+is withdrawn.** Following each `bpl` target through its label to the routine it actually
+reaches gives **49**; counting only targets whose *name* contains "Delete" gives **11**.
+Neither is 19, so the original number cannot be reconstructed and should not be relied on.
+49 is the defensible figure: `sonic3k.asm:33348` branches to `loc_1824E`, which is
+`jmp (Delete_Current_Sprite).l` — a delete that a name-only match misses.
+
+**And the `bpl` framing misses an inverted-spelling family**, the same failure mode as
+keying on one game's vocabulary. **37** of the 160 sites are followed by **`bmi`** instead —
+branching to *continue*, with the delete on the fall-through — and **8** of those delete.
+The doc's own first example below is one of them, so it is not a member of the 123 it
+illustrates. Two representative examples:
 
 - `Obj_SuperTailsBirds_FlyAway`, sonic3k.asm:35104-35105 — `bmi` to continue,
   otherwise `jmp (Delete_Current_Sprite).l`, with the disassembly's own comment
@@ -253,9 +288,24 @@ the Y half does not, for reasons 1, 2 and 4 above.
 > measured. **Predicate 4's absence does not**: S3K has it, as `Obj_Animal`'s `loc_2CAE4`
 > (sonic3k.asm:61184-61194), instruction-for-instruction the S2 routine and reached by the
 > same `tst.b subtype` selector. Details in
-> [the family sweep](../audits/2026-08-21-onscreen-margin-family-sweep.md). **Every other
-> figure in this document was produced by the contaminated method and should be re-measured
-> before it is relied on.**
+> [the family sweep](../audits/2026-08-21-onscreen-margin-family-sweep.md).
+>
+> **Follow-up, `24edd3db4`: the remaining figures have now been re-measured**, each with a
+> known positive required to appear before any count or zero was believed, and with a
+> nonexistent-field control required to return zero. Results are marked inline throughout —
+> every figure is now either *re-measured, unchanged*, *corrected* with its old value shown,
+> or *withdrawn*. Summary:
+>
+> | figure | was | now |
+> |---|---|---|
+> | S3K-1 occurrences | 61 | **61** — confirmed; 58 end in `bhi`, 3 in `bls` |
+> | S3K-2 occurrences | 4 | **4** — confirmed |
+> | S3K-3 sites | 3 | **7** — corrected; four more inlined copies |
+> | S3K-4 occurrences | 1 | **1** — confirmed |
+> | unused S3K-1 copies in the helper block | 4 | **5** — corrected, and the line cites were wrong |
+> | `tst.b render_flags` + `bpl` | 123 | **123** — confirmed (of 160 sites; 37 use `bmi` instead) |
+> | of those leading to a `Delete` | 19 | **withdrawn** — reproduces as 49 or 11, never 19 |
+> | engine S3K `isOnScreen(<literal>)` sites | 30 | **30** — confirmed (32 including the X/Y variants) |
 
 ## What S1/S2 has that S3K does not
 
@@ -299,7 +349,9 @@ would be the same four, is false in both directions.
 I do not have the other lane's list of 16 site identities, so this is a decision procedure
 rather than a site-by-site assignment. `src/main/java` currently holds **30** S3K
 `isOnScreen(<literal>)` call sites (`grep -rn --include='*.java' "isOnScreen([0-9]"
-src/main/java | grep -i sonic3k`).
+src/main/java | grep -i sonic3k`) — *re-measured 2026-08-21 at `24edd3db4`, unchanged*.
+Note the stated command matches only `isOnScreen`; including the `isOnScreenX` /
+`isOnScreenY` variants gives **32**.
 
 The procedure for each site is: **read the ROM routine the object actually calls**, and
 classify by that, never by the margin the engine happens to pass.
