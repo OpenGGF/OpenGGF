@@ -104917,3 +104917,98 @@ Also relevant to scoping: `known-discrepancies.md` already records this behaviou
 lands on the right trace frame "instead of drifting by the engine's default object-manager counter
 phase". The complete-run `lz3` segment gets no such seeding. A sanctioned mechanism for this
 already exists in one context.
+
+## 2026-08-21 — Addendum: the rejected gunk deferral's reach, and the audit's twelve near-misses
+
+Branch `bugfix/ai-folded-bitclear-audit-r1`.
+
+### The do-not-retry note understated the cost
+
+The rejection entry says the one-line `CPZBossGunk.skipsSameFrameUpdateAfterSpawn()`
+override "costs a thousand errors elsewhere". That reads as a local price paid
+inside segment 15. It is not local. Measured on `develop` while the override was
+briefly live there:
+
+| | without | with the override |
+|---|---|---|
+| `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` | 370 errors | 1377 |
+| `TestS2Cpz2LevelSelectTraceReplay` | **green** | **1705 errors**, first error frame 10465, `x_speed` rom `0x01A6` engine `-01A6` |
+| `-Ptrace-replay` | 800 / 6 F / 4 skipped | 800 / **7** F / 4 skipped |
+
+So the candidate takes a **previously green trace on a different route** red,
+thousands of frames from anything it was aimed at, and does it by **inverting
+horizontal speed** — the signature the S3K lane records for a one-frame creation
+error, which is exactly what the override introduces. Anyone re-reading the
+rejection should size it as "plus a different trace entirely", not as a segment-15
+number.
+
+(It reached `develop` because the override and the write-up rejecting it were
+committed together; reverted by the merge lane. A rejected candidate now never
+goes on a branch that gets merged — the write-up lands and cites the hash, the
+code stays on a branch nobody takes.)
+
+### The audit's sweep: one instance, not a pattern
+
+Grepping the whole of `ObjectSolidContactController` for any `if (...)` whose
+condition contains a `clear` / `remove` / `consume` / `retire` / `release` /
+`unset` / `drop` call gives **thirteen** candidates. One is the defect. The other
+twelve are recorded here because the next person to run this sweep will hit them
+and needs to know they were looked at:
+
+| candidate | why it is not the shape |
+|---|---|
+| four push sites publishing the Walk/Run word | they stand for `SolidObject_TestClearPush`, which really does gate on `btst d4,status(a0)` |
+| two set-membership tests inside the bit helpers themselves | no player write |
+| three `solidProfile.dropOnFloor()` | a profile gate, not a clear |
+| one rules predicate | likewise |
+| `clearObjectStandingBitOnContinuedRideExit` | gates an object-side clear only; writes nothing on the player |
+| **`releasedSupports.remove(instance)`** | **the near-miss** |
+
+The last deserves its own line. It looks exactly like the defect — a consume in
+the condition, player writes in the body — and it is not one. The latch is an
+engine-owned once-per-support record standing in for a deferral with no ROM
+counterpart, so there is no unguarded `bclr` for it to be folded against; and the
+player writes inside it sit under `!relandedOnDifferentSupport`, a different
+condition, not under the consume. **Do not "fix" it.**
+
+So the pattern was applied once, not repeatedly. That was worth checking and the
+negative is worth keeping: a sweep that finds one hit and records why the other
+twelve are clean is a different artefact from a sweep that reports one hit.
+
+### The audit fix's matrix
+
+`ObjectSolidContactController`'s batched `contact.touchSide()` fold, unfolded.
+Measured with the revert of the gunk deferral as the control, so the two arms
+differ only by this change.
+
+| arm | control (revert only) | candidate (revert + unfold) |
+|---|---|---|
+| `-Ptrace-replay` | 800 / 6 F / 4 skipped | 800 / 6 F / 4 skipped |
+| `-Pguards` | 500 / 0 | 500 / 0 |
+| default suite | 15,194 / 51 F / 67 E / 18 skipped | 15,194 / 51 F / 64 E / 18 skipped |
+
+Trace-replay failing-method and class-name sets diff clean, `Tests run: 0,`
+counts equal at 6, chain axes unchanged at S1 21 / S2 12 / S3K 3, and all three
+reported error totals identical (370, 113, 37). **The fix is behaviourally inert
+on the committed traces** — no route puts a player in a four-pixel side-air
+contact with a multi-piece solid it does not own the push on.
+
+**The three-error default-suite difference is not this change**, and that is
+evidence rather than an assumption. The three are
+`TestGameLoopSpecialStageEntryPresentation`'s SFX-ownership tests, which have
+nothing to do with solid contact. Across two earlier rounds tonight the same
+class failed in **both** arms of one round (67 errors each) and passed in
+**both** arms of another (64 errors each) — it flaps per Maven invocation, not
+per code change, and those two rounds' arms only agreed because they ran
+back-to-back. This round's arms straddled the flap. Attributing a three-error
+improvement to an inert change would have been the easy read and the wrong one.
+
+### Base note for anyone comparing these numbers
+
+The arms above were run on `3096fe52b` plus the gunk revert. `develop` has since
+moved to `f4d7017c0`, and while nothing in that window touches the solid-contact
+path, it **does** change `DivergenceReport`, `TraceReportWriter` and
+`AbstractTraceReplayTest` — the comparator's reporting surface. Absolute error
+totals quoted here may therefore not reproduce line-for-line on the newer base,
+for reasons that have nothing to do with this fix. The internal comparison
+(candidate against control on one base) is unaffected.

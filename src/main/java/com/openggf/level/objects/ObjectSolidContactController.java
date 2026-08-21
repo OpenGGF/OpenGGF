@@ -3118,10 +3118,21 @@ public final class ObjectSolidContactController {
                 // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                 setObjectPushingBit(player, instance);
                 provider.setPlayerPushing(player, true);
-            } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
+            } else if (contact.touchSide()) {
                 // Non-pushing contacts (notably Solid_SideAir) enter
                 // Solid_NotPushing below Solid_NoCollision's S1-only animation
                 // write, so only the object/player status pair is cleared.
+                //
+                // Solid_NotPushing clears the PLAYER's bit unconditionally --
+                // only the object's own bit clear is guarded, and `bclr` on an
+                // already-clear bit is a no-op (docs/s1disasm/_incObj/sub
+                // SolidObject.asm:246-263, docs/s2disasm/s2.asm:35453-35487,
+                // docs/skdisasm/sonic3k.asm:41509, 41527-41531). The guarded
+                // entry is SolidObject_TestClearPush, one instruction above,
+                // which does test the object's bit -- the two must not be
+                // folded together. Same defect and same fix as the inline
+                // resolver's site; this is the batched resolver's copy.
+                clearObjectPushingBit(player, instance);
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
