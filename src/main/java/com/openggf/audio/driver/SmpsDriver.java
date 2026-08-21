@@ -1406,6 +1406,86 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     /**
+     * Atomically adopts the live SFX state of another driver while retaining
+     * this driver's newly loaded music. Sonic 1 uses this during ordinary BGM
+     * loads; Sonic 2 and S3K stop SFX before loading music instead.
+     */
+    public void adoptActiveSfxFrom(SmpsDriver source) {
+        Objects.requireNonNull(source, "source");
+        if (source == this) {
+            throw new IllegalArgumentException("cannot adopt SFX from self");
+        }
+        SmpsDriverSnapshot targetSnapshot = captureSnapshot();
+        SmpsDriverSnapshot sourceSnapshot = source.captureSnapshot();
+        List<SmpsDriverSnapshot.SequencerEntry> targetEntries =
+                targetSnapshot.sequencers();
+        if (targetEntries.size() != 1 || targetEntries.get(0).sfx()) {
+            throw new IllegalStateException(
+                    "replacement driver must contain exactly one music sequencer");
+        }
+
+        SmpsDriverSnapshot.SequencerEntry targetMusic = targetEntries.get(0);
+        SmpsSourceDescriptor oldMusicSource = null;
+        for (SmpsDriverSnapshot.SequencerEntry entry : sourceSnapshot.sequencers()) {
+            if (!entry.sfx()) {
+                oldMusicSource = entry.source();
+                break;
+            }
+        }
+
+        List<SmpsDriverSnapshot.SequencerEntry> combined = new ArrayList<>();
+        combined.add(targetMusic);
+        int[] sourceToCombined = new int[sourceSnapshot.sequencers().size()];
+        Arrays.fill(sourceToCombined, -1);
+        for (int index = 0; index < sourceSnapshot.sequencers().size(); index++) {
+            SmpsDriverSnapshot.SequencerEntry entry =
+                    sourceSnapshot.sequencers().get(index);
+            if (!entry.sfx()) {
+                continue;
+            }
+            SmpsSourceDescriptor fallback = entry.fallbackVoiceSource();
+            if (fallback != null && fallback.equals(oldMusicSource)) {
+                fallback = targetMusic.source();
+            }
+            sourceToCombined[index] = combined.size();
+            combined.add(new SmpsDriverSnapshot.SequencerEntry(
+                    true, entry.source(), entry.sourceDescriptorTrust(), fallback,
+                    entry.smpsData(), entry.dacData(), entry.audioManager(),
+                    entry.config(), entry.snapshot()));
+        }
+        if (combined.size() == 1) {
+            return;
+        }
+
+        SmpsDriverSnapshot adopted = new SmpsDriverSnapshot(
+                targetSnapshot.region(), targetSnapshot.readMode(),
+                targetSnapshot.palFullUpdateCounter(),
+                sourceSnapshot.sfxPriorityLatch(),
+                sourceSnapshot.continuousSfxId(),
+                sourceSnapshot.continuousSfxFlag(),
+                sourceSnapshot.contSfxLoopCnt(), combined,
+                remapAdoptedLocks(sourceSnapshot.fmLockSequencerIds(),
+                        sourceToCombined),
+                remapAdoptedLocks(sourceSnapshot.psgLockSequencerIds(),
+                        sourceToCombined),
+                sourceSnapshot.synthSnapshot());
+        restoreSnapshot(adopted);
+    }
+
+    private static int[] remapAdoptedLocks(
+            int[] sourceLocks, int[] sourceToCombined) {
+        int[] result = new int[sourceLocks.length];
+        Arrays.fill(result, -1);
+        for (int index = 0; index < sourceLocks.length; index++) {
+            int sourceId = sourceLocks[index];
+            if (sourceId >= 0 && sourceId < sourceToCombined.length) {
+                result[index] = sourceToCombined[sourceId];
+            }
+        }
+        return result;
+    }
+
+    /**
      * Restores logical SMPS driver state only. Native/audio-chip presentation state is
      * cleared and must be refreshed by subsequent sequencer advancement.
      */
@@ -2324,9 +2404,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                                     SmpsSequencer currentLock,
                                     SmpsSequencer challenger) {
         boolean acquired = shouldStealLock(currentLock, challenger);
-        SfxContentionObserver.Source previous = currentLock == null
-                ? pendingConflictOwners.remove(new ConflictKey(bus, channel, challenger))
-                : sourceFor(currentLock);
+        ConflictKey key = new ConflictKey(bus, channel, challenger);
+        SfxContentionObserver.Source deferred =
+                pendingConflictOwners.remove(key);
+        SfxContentionObserver.Source previous = deferred != null
+                ? deferred
+                : currentLock == null ? null : sourceFor(currentLock);
         return new LockDecision(acquired, new SfxContentionObserver.Arbitration(
                 bus, channel, sourceFor(challenger), previous, acquired));
     }

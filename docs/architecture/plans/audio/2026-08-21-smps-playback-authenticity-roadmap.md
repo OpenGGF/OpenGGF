@@ -98,6 +98,8 @@ green.
   shipped `FixDriverBugs=0` behavior; do not invent a priority table for S3K.
 - Establish channel ownership at request admission before the same-frame music
   service, rather than waiting for the first SFX chip write.
+- Match ordinary BGM replacement: S1 preserves live normal/special SFX and
+  rebinds their channel overrides to the new song, while S2 and S3K stop SFX.
 - Match each driver's music/SFX service order, takeover writes, and release
   point. Remove injected reset/key-off behavior where the retail driver relies
   on SFX bytecode instead.

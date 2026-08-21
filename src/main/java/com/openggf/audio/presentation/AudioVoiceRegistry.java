@@ -173,7 +173,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         Objects.requireNonNull(command, "command");
 
         if (command instanceof ReplaceMusic replace) {
-            replaceMusic(replace.music());
+            replaceMusic(replace.music(), replace.sfxPolicy());
         } else if (command instanceof PushMusicOverride push) {
             pushMusicOverride(push.music());
             sfxInstantiation.observeLifecycle(
@@ -679,13 +679,22 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
-    private void replaceMusic(MusicVoiceEntry entry) {
+    private void replaceMusic(
+            MusicVoiceEntry entry,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy) {
         MusicSlot music = materializeMusic(entry);
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
             applyMusicControls(music, speedShoesEnabled, speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
+            if (sfxPolicy
+                    == com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE
+                    && activeMusic != null
+                    && activeMusic.voice() instanceof SmpsCompositeVoice previous
+                    && music.voice() instanceof SmpsCompositeVoice replacement) {
+                replacement.driver().adoptActiveSfxFrom(previous.driver());
+            }
             stopMusic();
             activeMusic = music;
             noteVoiceId(music.voice());

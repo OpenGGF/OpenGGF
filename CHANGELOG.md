@@ -1,5 +1,7 @@
 # Changelog
 
+- **SMPS ordinary music changes now retain SFX exactly where the shipped drivers do:** Sonic 1 atomically carries live normal/special SFX, channel locks, continuous state, and its priority latch into the replacement song, while Sonic 2 and Sonic 3&K continue to stop SFX before loading ordinary BGM.
+
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed

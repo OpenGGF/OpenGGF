@@ -5,6 +5,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsSequencerFadeTiming {
+    @Test
+    void ordinaryMusicLoadsUseShippedPerGameSfxPolicy() {
+        assertEquals(GameAudioProfile.OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE,
+                new Sonic1AudioProfile().getOrdinaryMusicSfxPolicy());
+        assertEquals(GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,
+                new Sonic2AudioProfile().getOrdinaryMusicSfxPolicy());
+        assertEquals(GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,
+                new Sonic3kAudioProfile().getOrdinaryMusicSfxPolicy());
+    }
 
     @Test
     void fadeInCompletionUsesFrameClockInsteadOfMusicTempoTicks() {

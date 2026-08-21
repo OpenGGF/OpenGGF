@@ -144,9 +144,18 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceMusic(MusicVoiceEntry music) implements AudioPresentationCommand {
+    record ReplaceMusic(
+            MusicVoiceEntry music,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy)
+            implements AudioPresentationCommand {
         public ReplaceMusic {
             Objects.requireNonNull(music, "music");
+            Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+        }
+
+        public ReplaceMusic(MusicVoiceEntry music) {
+            this(music,
+                    com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
         }
     }
 

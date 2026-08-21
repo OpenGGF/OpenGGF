@@ -9,6 +9,11 @@ import com.openggf.data.Rom;
 import java.util.Map;
 
 public interface GameAudioProfile {
+    enum OrdinaryMusicSfxPolicy {
+        PRESERVE_ACTIVE,
+        STOP_ALL
+    }
+
     default String presentationGameId() {
         return "base";
     }
@@ -109,6 +114,11 @@ public interface GameAudioProfile {
      */
     default SmpsRequestAdmissionPolicy getSfxAdmissionPolicy() {
         return SmpsRequestAdmissionPolicy.PERMISSIVE;
+    }
+
+    /** How an ordinary (non-1-up) BGM load treats already-active SFX. */
+    default OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
+        return OrdinaryMusicSfxPolicy.STOP_ALL;
     }
 
     /**

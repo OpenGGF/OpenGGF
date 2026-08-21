@@ -31,7 +31,7 @@ class TestS1SfxTakeoverOrder {
     }
 
     @Test
-    void legacyProfilesRetainTheirExistingSyntheticTakeoverPolicy() {
+    void admissionOwnershipDoesNotDelaySyntheticTakeoverUntilFirstWrite() {
         SmpsDriver driver = new SmpsDriver();
         RecordingObserver observer = new RecordingObserver();
         driver.setChipWriteObserver(observer);
@@ -41,7 +41,7 @@ class TestS1SfxTakeoverOrder {
 
         sfx.writeFm(1, 0xB1, 0x3C);
 
-        assertEquals(List.of("YM:0:28:05", "YM:1:B1:3C"), observer.events);
+        assertEquals(List.of("YM:1:B1:3C"), observer.events);
     }
 
     private static SmpsSequencer sequencer(SmpsDriver driver, SmpsSequencerConfig config) {
