@@ -102804,3 +102804,57 @@ defeat-to-capsule distance it always was.
 Read the debris child and the children's break-off sequence for what gates the parent's
 progress after `AIZEndBoss_StartDefeat`. The candidate from two rounds ago can then be re-landed
 with that element added — it was rejected for landing 34 rows early, and this says why.
+
+## 2026-08-21 — No gating element found, and the 33 rests on an unverified assumption
+
+Round off `origin/develop` `bd936c5bd`. **No condition found. Nothing landed but this entry.**
+
+### The two reads, both negative
+
+- **The debris child does not gate the parent.** `ChildObjDat_AIZEndBossDebris`
+  (`sonic3k.asm:139074-139082`) is six `AIZEndBossDebris_Init` children, and
+  `AIZEndBoss_StartDefeat` creates them *after* the fade wait has already ended — at the point
+  `Obj_Wait` begins. It cannot delay a wait that finished before it existed.
+- **The break-off sequence is the children's own wait, not the parent's.**
+  `AIZEndBossChild_StartDefeatBreakOff` (`:138994-139000`) sets `$2E = $1F` and
+  `$34 = AIZEndBossChild_BreakOff` on **the child** (`a0` is the child; it reaches the parent
+  only through `parent3` to read status bit 7). Nothing writes back to the parent.
+
+Also read and negative: `AIZEndBoss_CheckHitOrDefeat` (`:138914-138940`) takes its defeat
+branch on `collision_flags == 0 && collision_property == 0`, **before** the `$20`-frame
+hit-flash logic, so the 32-frame flash does not sit between the final hit and
+`AIZEndBoss_StartDefeatCallback`. Its size being one off the sought 33 is a coincidence of the
+kind rule 3 exists for, and it is recorded here so nobody spends a round on it.
+
+### The problem with the 33 itself
+
+The 33 is `184 - 151`, where 151 is `30 + 1 + 120`. The **30** is the *engine's* residual. It
+was accepted because the engine's fight timeline is self-consistent with the ROM's phase
+constants — but that establishes only that the engine's phases are internally correct, **not
+that they enter on the same rows as the ROM's**, which this recording cannot show: the boss
+body never appears in the near-list, so no ROM phase entry row is observable.
+
+So the 33 is arithmetic resting on an unverified assumption — **the same construction as the
+63 and 66 that were retracted two rounds ago**, one round after retracting them. It should
+carry the same status: not an input to anything.
+
+What survives unconditionally, because each is read from the ROM or measured directly:
+
+- `Wait_FadeToLevelMusic` runs the fight's residual, then reloads `(2*60)-1` and hands to
+  `Obj_Wait`, which runs 120 frames to the capsule (`:179656-179671`, `:177949-177952`,
+  `:138240-138260`).
+- Emerge 13 frames and revealed 20, from their scripts under the pinned animator convention.
+- The engine's measured phase entries, its residual of 30, capsule init at 5670, and the
+  recording's capsule at 5671.
+- The engine's two post-defeat constants have no ROM basis and their sum reproducing the
+  measured distance is what a fitted pair does.
+
+### Handover
+
+By the criterion set for this round — a round ending without a condition means hand over — this
+seam should go to a fresh lane with this log as the brief. The unread surface is now small and
+named: what, if anything, delays the parent between `AIZEndBoss_StartDefeatCallback` and the
+capsule, given that the residual, the reload and `Obj_Wait` are all accounted for. The most
+likely answer is that no such element exists and the ROM's residual simply is not 30 — which
+would mean the engine's fight enters its phases on different rows than the ROM's, and that is
+**not decidable from this recording**.
