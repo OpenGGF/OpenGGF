@@ -114214,3 +114214,66 @@ that discrepancy is the question rather than an answer.
 
 Unchanged from the previous entry: the other three death arms remain coordinates only, with
 segments and shared cause both unestablished.
+
+## 2026-08-21 -- S1 Final Zone row 841: the ENGINE is textbook and the ROM is the anomaly
+
+Measured at `4094ed938` from the recorded `object_near` stream -- **no instrumentation
+added.**
+
+### The wall is identified, exactly
+
+Player at row 841 is `x = 0x2525`, `y = 0x0576`, airborne and rolling. The neighbourhood:
+
+| slot | id | x | y | note |
+|---|---|---|---|---|
+| 41 | `0x84` cylinder | 0x24D0 | 0x0580 | |
+| **42** | **`0x84` cylinder** | **0x2550** | 0x0580 | |
+| **33** | **`0x85` FZ main** | **0x2550** | **0x0576** | **same y as the player**; `obj_frame` steps `01 -> 05` on **exactly row 841** |
+| 35 | `0x85` | 0x25B0 | 0x0590 | |
+| 40 | `0x86` plasma | 0x2588 | 0x053C | far |
+| 32, 34 | `0x71` | 0x24D0 / 0x2550 | 0x0510 | |
+
+`EggmanCylinder_UpdatePos` calls `SolidObject` with half-width `64/2 + sonic_solid_width`,
+and `sonic_solid_width` is `22/2` = 11 (`docs/s1disasm/_Constants.asm:265`), so the half-width
+is **43 = 0x2B** and slot 42's left solid edge is `0x2550 - 0x2B` = **`0x2525`** -- the
+player's x to the pixel. The player is precisely on that cylinder's left solid edge.
+
+### Which side is doing something extra: the ROM
+
+S1's `SolidObject` side collision is `Solid_StopX`
+(`docs/s1disasm/_incObj/sub SolidObject.asm:231-233`):
+
+```
+Solid_StopX:
+        move.w  #0,obInertia(a1)
+        move.w  #0,obVelX(a1)      ; stop Sonic moving
+```
+
+**Zeroing `x_speed` IS the textbook response, and that is what the ENGINE does.** The ROM
+instead produces `x_speed = -0x300` -- and produces it **one row earlier**, at 841, where the
+engine's value does not change until 842.
+
+So the question is not "why does the engine fail to bounce". It is **"what, other than
+`SolidObject`, acts on the ROM's Sonic at row 841"** -- and the engine's omission is of that
+second thing, not of a rebound.
+
+### The leading candidate is NOT the cylinder, and it is not confirmed
+
+Checking the neighbourhood before settling on the obvious object produced a better fit than
+the obvious object. **Slot 33, `0x85` (FZ main / Eggman), sits at `x = 0x2550` with
+`y = 0x0576` -- the player's y exactly -- and its `obj_frame` steps `0x01 -> 0x05` on
+precisely row 841**, then `0x09` at 842 and back to `0x05` at 843.
+
+Eggman is co-located with the cylinder by construction: `EggmanCylinder_UpdatePos`'s
+`.setPosition` writes `obY` and `obX` into the parent Eggman object, with the disassembly's
+own comment saying *"now Eggman's code in `BossFinal_Eggman_Crush` will run and set his
+hitbox and check for his collision"*. A rolling airborne Sonic contacting a boss is the
+classic S1 rebound, which `SolidObject` would never produce.
+
+**This is a candidate with three independent coincidences (same x, same y, frame stepping on
+the exact row), not a confirmed cause.** The measurement that would settle it: probe whether
+the engine runs a boss-contact response for slot 33 on row 841 at all, and compare the ROM's
+rebound constant against S1's boss-touch path rather than against `SolidObject`. Obvious
+shapes are 0-for-8 and the cylinder was the obvious shape here.
+
+The other three death arms remain coordinates only, segments and shared cause unestablished.
