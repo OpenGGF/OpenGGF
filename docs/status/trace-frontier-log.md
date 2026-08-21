@@ -105584,3 +105584,68 @@ Frame 1433, `y_speed` `0x0030` against `-00D0` — a landing or bounce that the 
 upward and the ROM takes downward, 1500 frames before anything in this round. It is the segment's
 first error, it is a player-physics defect rather than an art or timing one, and it is now known
 to be load-bearing for at least the HCZ geyser frontier.
+
+## 2026-08-21 — Frame 1433: the Mega Chopper's defeat bounce lands one dispatch early
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `7cc25f8be`.
+**Found, not fixed. Probes reverted, tree clean.**
+
+### The gate, stated before starting
+
+Not error counts, and not the queue-axis gap rule from the geyser rounds — that one was built for
+submission timing and does not apply here. This round's gate is a **write-for-write comparison of
+one frame**: log every write to the player's `y_speed` during frames 1428-1437 with its call
+site, and check the sequence against the recorded column and against the ROM's own arithmetic.
+A candidate is right if it reproduces the recorded value by the ROM's writes, in the ROM's order.
+
+### The writes
+
+```
+[FRAME] 1433
+[YS] 20->58    PlayableSpriteMovement.applyGravity ... modeAirborne
+[YS] 58->30    PlayableSpriteMovement.applyUnderwaterAirGravityReduction
+[YS] 30->ff30  EnemyDefeatBounce.apply  MegaChopperBadnikInstance.processPendingCollisionProperty
+                                        MegaChopperBadnikInstance.updateSwim
+```
+
+**The engine's physics is exactly right up to the third write.** After gravity and the
+underwater reduction it holds `0x0030`, which is precisely the recording's value for frame 1433.
+Then a Mega Chopper defeat bounce subtracts `0x100` and leaves `-0x00D0`, which is the divergence.
+
+### The ROM applies the same bounce one frame later, and the arithmetic proves it
+
+The recording has `y_speed` `0x0030` at 1433 and `-0x00C0` at 1434. Continuing the ROM's own
+per-frame writes from `0x0030`: gravity `+0x38` gives `0x0068`, the underwater reduction takes
+`-0x28` (the same delta the engine applies one frame earlier, `0x58`→`0x30`) giving `0x0040`, and
+the defeat bounce's `-0x100` gives **`-0x00C0`** — the recorded value at 1434, exactly.
+
+So this is not a different bounce, a different magnitude, or a missing write. It is the **same
+write, one dispatch early**: the engine applies it at 1433 and the ROM at 1434.
+
+### Where it is not
+
+`MegaChopper_CheckCapture` (`sonic3k.asm:184412-184430`) reads `collision_property(a0)` at the
+top of the badnik's routine, before `Animate_Raw` and before any movement, and
+`MegaChopperBadnikInstance.updateSwim:212-213` calls `processPendingCollisionProperty()` in the
+same position. The consumer is faithful. The difference is in **when `collision_property` is
+written** — i.e. where the touch scan sits in the frame relative to this badnik's dispatch — not
+in the badnik's own routine.
+
+That is the next thing to read, and it should be read from the ROM's frame order rather than
+from this fixture: the badnik's routine is already a faithful port, so a candidate that changes
+it is fixing the wrong file.
+
+### Why this is the whole thread
+
+`y_speed` at 1433 is the HCZ segment's first error. From it: `y` at 1434, `x_speed` at 1434
+(`0x0300` against `0x02E8`), `camera_y` from 2668 growing to seven pixels, and — 1500 frames
+later — the geyser's fall staying drawn one frame too long, its cleanup entry late, its reload
+submission one frame past its releasing edge, and the KosM depth tripwire. Four characterisations,
+two retractions and two rejected candidates in this log are downstream of this single write.
+
+### Not established
+
+Why the touch flag is written a dispatch earlier than the ROM writes it. Two shapes are possible
+and this round does not separate them: the engine's touch scan running at a different point in the
+frame than `Touch_Response` does, or this badnik being dispatched at a different point relative to
+the player. The second would be slot-order, which has its own family in this log.
