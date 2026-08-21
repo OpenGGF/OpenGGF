@@ -101851,3 +101851,75 @@ sooner than the recording retires them. That is the `loc_7870` blocking loop's r
 one `Process_Kos_Module_Queue` service per row across the ~120-row window — and it is a
 retirement-schedule question, now cleanly separated from the submission question this entry
 closes.
+
+## 2026-08-21 — The post-defeat wait: both engine constants are wrong and nearly cancel
+
+Round off `origin/develop` `5206f53c4`. **Found, not fixed — nothing landed but this entry.**
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+### The ROM's structure, read from the routines
+
+The AIZ end boss reaches its capsule through **two chained waits**, not one:
+
+1. `AIZEndBoss_StartDefeatCallback` (`sonic3k.asm:138945-138951`) installs
+   `Wait_FadeToLevelMusic` as the object's routine and `AIZEndBoss_StartDefeat` as its `$34`
+   callback. It does **not** write `$2E`.
+2. `Wait_FadeToLevelMusic` (`:179656-179659`) is `subq.w #1,$2E(a0) / bmi`. On the frame the
+   counter goes negative, `loc_85674` (`:179662-179671`) sets **`$2E = (2*60)-1 = 119`**,
+   allocates the music-fade object, and jumps to `$34` — so `AIZEndBoss_StartDefeat`
+   (`:138240-138246`) runs on that **same frame**, installing `Obj_Wait` and re-pointing `$34`
+   at `AIZEndBoss_StartCapsuleSequence`. It does not touch `$2E`.
+3. `Obj_Wait` (`:177949-177952`) is the same `subq / bmi` shape, so from 119 it runs
+   **120 frames** before jumping to `AIZEndBoss_StartCapsuleSequence` (`:138249-138260`),
+   which creates the capsule via `ChildObjDat_BossEggCapsule` and sets
+   `bset #1,render_flags(a1)` — the very bit `loc_8657A` tests to take the route-8 path.
+
+### Two defects, and they nearly cancel
+
+| stage | ROM | engine |
+|---|---|---|
+| first wait | `Wait_FadeToLevelMusic` from the **residual** `$2E` left by the fight — *not a constant* | `defeatExplosionWaitTimer = 0x37` (56 frames) |
+| second wait | `Obj_Wait` from `$2E = 119` → **120 frames** | `defeatPhaseTimer = 0x7F` (128 frames) |
+
+**The second constant is wrong by eight frames** (128 against 120). **The first cannot be a
+constant at all**: `AIZEndBoss_StartDefeatCallback` never writes `$2E`, so the fade wait counts
+down from whatever the fight's own state machine last left there — `AIZEndBoss_StartHover` sets
+`$1F`, `AIZEndBoss_EndHover` sets `$2F`, `AIZEndBoss_SetPostDefeatDelay` sets `$BF` (or `$FF`
+for Knuckles, `:138161-138168`) — so its length depends on which phase the final hit landed in.
+
+The two errors run in opposite directions and the measured total is off by only **one** frame
+(engine capsule init 5670, ROM 5671). **Correcting `0x7F` to 119 on its own would move the
+capsule eight frames earlier and make this seam substantially worse.** This is the sixth
+cancelling pair recorded today.
+
+### Note on the citations
+
+`AizEndBossInstance` cites `loc_694A4` / `loc_694AA` for the capsule spawn and `loc_47360` for
+the `$7F` wait. **None of those labels exist in `docs/skdisasm/sonic3k.asm`** — the same
+revision mismatch already recorded for `AizEndBossBombChild`'s `loc_698D2`. The `0x7F` appears
+to have come from that other revision; the routine this disassembly actually runs uses `119`.
+That is now two object classes in this boss carrying citations to labels that are not there.
+
+### What a correct fix has to do
+
+Model the fight's residual `$2E` rather than a fixed first wait, and take the second from
+`(2*60)-1`. Both must land together, and both gates still apply: the press must reach row 6007
+**and** be made by Tails. A one-frame total that comes out of two wrong halves will look right
+on this recording and desync on any other.
+
+### Correction to the note above on the missing labels
+
+The entry above says `AizEndBossInstance`'s `loc_694A4` / `loc_694AA` / `loc_47360` citations
+point at labels "that are not there", and calls it a revision mismatch. That is right in
+substance but misleading in form, and the sharper statement matters for whoever follows.
+
+A `loc_XXXX` label **is the ROM address in hex**, so `loc_694A4` names ROM `$694A4` whatever the
+disassembly calls it. Checked against this tree: `loc_86592` and `loc_85674` are defined,
+while `loc_460DC`, `loc_694A4`, `loc_47360` and `loc_698D2` are not — and the missing ones all
+sit in the AIZ end-boss band, which **this revision gives semantic names** to
+(`AIZEndBoss_StartDefeat`, `AIZEndBossBomb_Init`, and so on).
+
+So the citations are not pointing at nothing: the addresses are still valid and the routines are
+present, just named. A `grep` for the label fails while the code is right there. Do not conclude
+from a failed label grep that a citation is bogus — and do not cite a `loc_` label as a line
+number, which is the related trap recorded separately today.
