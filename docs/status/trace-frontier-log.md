@@ -111906,3 +111906,54 @@ waiting for a mode change that never settles.
 **Chain position, restated again:** the run stops at transition **1 of 48**, having completed
 segments 0 and 1 of 70. This is *not* comparable to the older "segment 9 of 63" -- that was a
 different and shorter fixture -- so it should not be read as a regression against it.
+
+## 2026-08-21 -- RETRACTED: 22243 is not a touch-categorisation defect
+
+Measured at `0fa9ae60b`, while starting the commissioned TurboSpiker fix. **The previous
+entry's mechanism for frame 22243 is withdrawn before anything was built on it.**
+
+### What was claimed, and why it was wrong
+
+The attribution said the ROM routes a rolling player to `Touch_Enemy`'s `.checkhurtenemy`
+branch -- the player damages the badnik -- while the engine took the hurt path, citing
+`cmpi.b #2,anim(a0)` (`sonic3k.asm:20877-20884`) and the recording's
+`player_animation_id = 0x0002`.
+
+**That branch does not govern this object.** `Touch_ChkValue` (`sonic3k.asm:20773-20779`)
+dispatches on `collision_flags & $C0`: `00` -> `Touch_Enemy`, `01` -> monitor,
+`10` -> `Touch_ChkHurt` ("harmful"), `11` -> `Touch_Special`. The spike child's ROM ObjData is
+`TurboSpiker_SpikeChildObjData` = `dc.b 8, $10, 3, $9E` (`sonic3k.asm:184173-184175`), so
+`$9E & $C0 = $80` -- **harmful**, which goes to `Touch_ChkHurt` and never reaches the rolling
+test at all.
+
+The rolling-player reasoning was read off the wrong branch of the dispatcher.
+
+### And the engine's constant is already correct
+
+`TurboSpikerBadnikInstance.SHELL_COLLISION_FLAGS = 0x9E` **matches the ROM byte exactly.**
+There is no categorisation defect to fix. Had this been implemented as commissioned, it would
+have changed a correct value to an incorrect one and been validated against a fixture that
+cannot see object collision flags.
+
+### What the evidence actually supports
+
+`Touch_ChkHurt` (`sonic3k.asm:20952+`) spares the player only for shields, invincibility, or
+`double_jump_flag == 1` (Insta-Shield / Tails flying / Knuckles gliding). The recording has the
+player **rolling** (`anim = 2`), none of which apply. So a ROM player who overlapped that spike
+**would** have been hurt, and the recording shows they were not.
+
+**Therefore the ROM's spike did not overlap the player, and the engine's did.** That makes 22243
+a spike **position or launch-timing** defect, not a touch defect -- and object positions are not
+among the compared fields, which is why it stayed invisible until it produced a hurt.
+
+### The next step is directly adjudicable
+
+The `object_near` stream records the spike's own coordinates each frame -- at 22239 slot 6 sits
+at `x=0x32F2, y=0x04B0` with the parent at `x=0x32F6, y=0x04B0`, and the launch sets
+`x_vel = +/-$100`, `y_vel = -$400` (`TurboSpiker_SpikeChild_SetVelocity`,
+`sonic3k.asm:184048-184056`). So the recording already contains the answer: compare the engine's
+spike position and launch frame against those rows. That is a comparison the fixture supports
+today, against a stream nothing currently compares.
+
+**Acceptance is unchanged and still sharp**: HCZ1 stays at 0 and the first error moves past
+22243. Nothing landed for TurboSpiker.
