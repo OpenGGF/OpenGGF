@@ -107126,3 +107126,85 @@ against the ROM's already-raised `0x0618` — AIZ2 has water for Sonic/Tails,
 `sonic3k.asm:9751-9812`, and the recording's twelve underwater transitions all sit exactly on
 the `0x0618`/`0x0619` boundary). Only the chain figure, 2288 first at 6000, is the frontier.
 Quote the harness, not just the directory.
+
+## 2026-08-21 — occupancy comparison scoped: sound by design, and it would red 88 of 94 fixtures
+
+Round `occupancy-scope-r6`, branch `bugfix/ai-s3k-occupancy` off `aad772eca`.
+**Measured, not landed.** Commissioned as the precondition for the per-object stream.
+
+### Oracle test — passes all three clauses, including attribution
+
+- **ROM state the engine also holds?** Yes: occupancy of `Dynamic_object_RAM`, against
+  `ObjectManager.occupiedDynamicSlotIdsWithReservations()`.
+- **Comparable?** Yes, and trivially — presence/absence is a set comparison, no arithmetic.
+- **Attributable?** Yes, and this is the clause that matters: **the slot index *is* the
+  attribution.** Presence/absence needs no object identity, which is exactly why occupancy
+  passes where `object_state` fails on the same fixtures.
+
+The design is sound. That is not the same claim as the engine passing it, and the 2026-08-15
+audit's phrase "occupancy alone … is already sound today" — which this log repeated, and which
+my own inventory repeated again — means *well-defined*, **not green**. I read it as landable.
+It is not. Correcting that in place rather than leaving it.
+
+### No code was needed to measure it
+
+`SlotOccupancyProbe` already implements this comparison, complete with the lag-frame filter
+and parent-held child-reservation folding, gated off behind `OGGF_SLOT_PROBE`. Arming it over
+the full `-Ptrace-replay` sweep produced 94 reports and left the suite result unchanged at
+800/10F, as designed — the probe decides no outcome.
+
+### The count
+
+Presence/absence only, with id comparison excluded (see below):
+
+| game | fixtures | frames compared | frames with a presence divergence | fixtures affected |
+|---|---|---|---|---|
+| s1 | 48 | 13,494 | 2,811 | **45 of 48** |
+| s2 | 36 | 7,903 | 2,995 | **33 of 36** |
+| s3k | 10 | 8,435 | 6,158 | **10 of 10** |
+| **all** | **94** | **29,832** | **11,964 (40.1%)** | **88 of 94** |
+
+**Recommendation: do not land it.** Eighty-eight fixtures is two orders of magnitude past the
+two-classes-apiece the CNZ and tornado comparisons cost, and the stop-and-report threshold was
+"more than a couple".
+
+### Two corrections this measurement forces
+
+**It is not an S3K problem.** `known-discrepancies` carries this as *"S3K object-slot occupancy
+is not compared, and diverges from ROM everywhere"*. S1 diverges on 45 of 48 fixtures and S2 on
+33 of 36, on presence alone. The S3K framing is narrower than the defect.
+
+**The probe's own criterion cannot be the landed one.** It also compares ids, truncated with
+`& 0xFF` (`SlotOccupancyProbe:150`). For S3K that is the low byte of a 32-bit code pointer
+against an engine layout id — the artefact the 2026-08-15 identity audit already measured, and
+it accounts for 3,911 of the 15,875 raw divergent frames (24.6%). A landed comparison must be
+presence-only. The headline above already excludes it; the raw 53.2% figure does not, and
+should not be quoted.
+
+### What the divergences actually are
+
+Classifying each divergent frame by the balance of ROM-only against engine-only slots:
+
+| share | shape |
+|---|---|
+| 39.0% | engine has **fewer** occupants than the ROM |
+| 24.6% | id-only (excluded above; contaminated for S3K) |
+| 24.2% | **balanced** — same occupant count, different slots |
+| 12.2% | engine has **more** occupants |
+
+The balanced quarter is the counting trap: one wrong occupant permutes every later slot, so
+those frames are a multiplier on a small number of real events rather than independent
+defects. An S1 example makes the shape plain — at `SONIC_1_32` f523 the ROM holds `0x56`,
+`0x26`, `0x65` at slots 59-61 and the engine holds the same three ids **shifted one slot**,
+driven by one extra `Sonic1FloatingBlockObjectInstance` occupying s65. Count drift, not errors.
+
+**The dominant genuine signal is the 39% "engine has fewer occupants"** — objects the ROM holds
+that the engine does not. That is where a fix round should start, and it is a far smaller
+target than 11,964 frames suggests.
+
+### Sequencing
+
+Occupancy is still the right precondition for `object_state`, and it is still not landable as a
+comparison until the engine passes it. The order is: fix the missing-occupant bucket, re-measure
+with the probe (free), and only wire the comparison in when the count is small enough that the
+red set is reviewable. Landing it first would red 88 fixtures to report one already-known fact.

@@ -2200,7 +2200,21 @@ would correct the 8–47-row cases but changes nothing at `ss_4` and nothing on 
 test currently reaches, so it is unverifiable today. See
 [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
 
-## S3K object-slot occupancy is not compared, and diverges from ROM everywhere
+## Object-slot occupancy is not compared, and diverges from ROM in all three games
+
+**Retitled 2026-08-21.** This entry was headed *"S3K object-slot occupancy…"*. Arming
+`SlotOccupancyProbe` across the full `-Ptrace-replay` sweep shows the defect is **not
+S3K-specific**: on presence/absence alone, S1 diverges on 45 of 48 fixtures and S2 on 33 of
+36, alongside S3K's 10 of 10 — 88 of 94 fixtures and 40.1% of 29,832 compared frames. The
+S3K-specific material below stands; its scope does not. Measurements and the divergence
+breakdown: the 2026-08-21 occupancy entry in
+[trace-frontier-log.md](trace-frontier-log.md).
+
+**Do not wire occupancy in as a comparison yet** — it would red 88 fixtures across three games
+to report an already-known fact. Fix the dominant "engine has fewer occupants" bucket (39% of
+divergent frames) first, re-measure with the probe, and land the comparison when the red set is
+reviewable.
+
 
 **Measured 2026-08-15.** `AbstractTraceReplayTest.compareObjectNearEvents()` defaults to `false`
 and `TestS3kHczCompleteRunTraceReplay` does not override it; `SlotOccupancyProbe` is

@@ -208,9 +208,15 @@ recorded value is a live program counter, not a type at any width.
 ### What to commission instead
 
 The audit already names the sound comparison S3K can support today: **occupancy alone** —
-presence/absence and slot index over `Dynamic_object_RAM` slots 4-90, no identity. That is a
-real, landable oracle, and it is the precondition for `object_state` rather than a substitute
-for it. Identity would require annotating every ported S3K object with its current ROM routine
+presence/absence and slot index over `Dynamic_object_RAM` slots 4-90, no identity.
+
+**Corrected 2026-08-21: "sound" means well-defined, not green, and I first read it as
+"landable".** Occupancy passes the oracle test including attribution — the slot index *is* the
+attribution — but measuring it shows the engine does not pass the comparison: 88 of 94 fixtures
+diverge on presence alone, across all three games, not only S3K. It is the precondition for
+`object_state` rather than a substitute for it, and it is itself blocked on fixing the
+divergences before it can be wired in. See the 2026-08-21 occupancy entry in
+`docs/status/trace-frontier-log.md`. Identity would require annotating every ported S3K object with its current ROM routine
 address, which is a programme, not a round.
 
 **Sequencing:** occupancy first; `object_state` only once slot occupancy matches, at which
