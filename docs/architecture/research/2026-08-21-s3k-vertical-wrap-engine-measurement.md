@@ -121,8 +121,12 @@ of them reads the ROM constant:
    and again at `:1552-1560`. It does not consult the camera's mask; it takes
    `verticalWrapEnabled` as a passed-in boolean and recomputes the modulus itself.
    This is the engine's counterpart to the ROM's `Layout_row_index_mask`.
-3. **`Camera.VERTICAL_WRAP_BG_MASK`**, a hardcoded static `0x3FF`
-   (`Camera.getVerticalWrapBgMask()`, `Camera.java:1290-1295`), the BG counterpart.
+3. ~~**`Camera.VERTICAL_WRAP_BG_MASK`**, a hardcoded static `0x3FF`.~~ **WITHDRAWN** by
+   [2026-08-21-s3k-wrap-trigger-and-bg-mask-provenance.md](2026-08-21-s3k-wrap-trigger-and-bg-mask-provenance.md):
+   it is Sonic 1's BG wrap (`docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:241,266`),
+   genuine and correctly valued, reached only from `SwScrlLz`. It does not participate in the
+   S3K period. **The S3K period is modelled twice, not three times** — items 1 and 2 above.
+   The ownership point is unchanged; the fix is smaller than reported.
 
 The ROM writes its three — `Screen_Y_wrap_value`, `Camera_Y_pos_mask`,
 `Layout_row_index_mask` — as one triple from one place (`LevelSetup`, sonic3k.asm:102205-102207),
@@ -134,13 +138,15 @@ period from the same layout, and the `0x3FF` BG literal untouched.
 ## What I could not establish
 
 1. **Whether B is observable in any committed trace** — see above. Needs a trace run.
-2. **Whether `minY < 0` is itself ROM-accurate** as the engine's wrap trigger. I measured
-   what it selects; I did not find what the ROM uses in its place, if anything. The ROM's
-   equivalent question is what `Camera_min_Y_pos` is for each act, which I did not read.
-3. **Whether `VERTICAL_WRAP_BG_MASK = 0x3FF` corresponds to any ROM constant.** It is
-   asserted by a javadoc with no citation. `sonic3k.asm` has no `$3FF` write to a BG wrap
-   variable that I found; the only `$3FF` in the wrap family is `Gumball_ScreenInit`'s
-   *foreground* value, which is a different thing. This may be an invented constant and is
-   worth its own look.
+2. ~~**Whether `minY < 0` is itself ROM-accurate** as the engine's wrap trigger.~~
+   **CLOSED** by the follow-up doc: it is ROM-derived, but S3K's player/camera paths test
+   `Camera_min_Y_pos == -$100` exactly (sonic3k.asm:21989, "is vertical wrapping enabled?")
+   while its object-load manager uses a `< 0` sign test (sonic3k.asm:37560) — and
+   `Render_Sprites` uses **no trigger at all**. So B is a slightly wrong threshold for
+   position wrapping and an *invented gate* for the render path.
+3. ~~**Whether `VERTICAL_WRAP_BG_MASK = 0x3FF` corresponds to any ROM constant.**~~
+   **CLOSED — the suspicion was wrong.** It is Sonic 1's, not S3K's: `andi.w #$3FF,
+   (v_bgscreenposy).w` at `docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:241` and
+   `:266`. Only the citation was missing. See the follow-up doc.
 4. **DEZ1/DEZ2's actual behaviour.** They are the case where B should be reachable inside
    the layout, and I identified them by arithmetic rather than by observing a wrong render.
