@@ -17,6 +17,24 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **The AIZ end boss's two post-defeat wait stages now use the ROM's own literals, `$3F` and
+  `(2*60)-1`, instead of an invented `0x37`/`0x7F` pair that summed to the right total with
+  both halves wrong.** `AIZEndBoss_StartDefeatCallback` ends with
+  `jmp (BossDefeated_StopTimer).l`, and that label is a single
+  `clr.b (Update_HUD_timer).w` which **falls through** into `BossDefeated`, whose first
+  instruction is `move.w #$3F,$2E(a0)` (`docs/skdisasm/sonic3k.asm:180814-180821`). The defeat
+  path therefore does write `$2E`, which is easy to miss because the routine being jumped to is
+  named for stopping a different timer. `Wait_FadeToLevelMusic` counts that `$3F` down over 64
+  frames, and on expiry `loc_85674` installs `(2*60)-1` = 119 (`sonic3k.asm:179663`) which
+  `Obj_Wait` counts down over 120 before `AIZEndBoss_StartCapsuleSequence` creates the egg
+  capsule. The engine instead hardcoded 56 and 128 frames. Those sum to 184, exactly as 64 and
+  120 do, so no error count in any committed fixture could see the error -- and correcting
+  either half on its own makes the AIZ2 capsule land dozens of frames off. Both stages now run
+  as one countdown over the existing `$2E`/`$34` analogue (`waitTimer`/`waitCallback`) in
+  `Obj_Wait`'s own `subq`/`bmi` shape. Behaviour is unchanged on every committed trace, by
+  construction and by measurement; what changes is that a fight whose length differs from the
+  recorded one no longer desyncs the capsule.
+
 - **The Obj61 LZ blocks now keep their solid standing/pushing bits on the live instance
   instead of a spawn that moves under them**, so `Solid_NoCollision` can find the object's
   own pushing bit and run `Solid_NotPushing`. `SolidObject` stores those bits in the block's
