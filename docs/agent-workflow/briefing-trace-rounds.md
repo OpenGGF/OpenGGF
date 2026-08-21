@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and two rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and three rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -119,6 +119,7 @@ that looks like a real result.
 | 100 | A directory sized by grepping one idiom's name | Five idioms, one greppable; the correct group understated by half |
 | 101 | A clock conversion calibrated at one point | A one-row error in a nine-link causal chain, invisible and load-bearing |
 | 102 | A cross-game ranking grouped by raw object id | Two names for one defect, in two tables, as both a shortfall and an over-count |
+| 103 | Artefacts analysed after a build that never ran | The previous run's files, right names, right count, wrong commit |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2650,3 +2651,24 @@ id, so it reads as both at once.
 **Practically.** Filter to the game before ranking; cross-tabulate the top shortfalls against the
 top over-counts before commissioning either; and treat an exact match between two such counts as
 a single finding until shown otherwise.
+
+## One hundred and third rule: a failed run leaves the previous run's output in place
+
+A build that fails before executing anything writes nothing — and deletes nothing. The
+artefacts from whatever ran there last are still on disk, with the right names, in the right
+directory, in the expected quantity.
+
+One sweep used an invalid separator in its per-class selector, so the build failed with no
+tests executed. The round then analysed ninety-four probe files that had been written two and a
+half hours earlier by a run of unknown provenance, and the fact that the file count matched
+expectation read as confirmation. Every figure it derived — including an exact numeric pairing
+that made its conclusion persuasive — is unattested.
+
+**Before analysing any artefact, prove the run that was supposed to produce it actually ran.**
+Check the build's exit status, check for the tests-run lines, and check the artefacts' modification
+times against the run you just started. A count that matches expectation is not evidence of
+freshness.
+
+**And a missing artefact is not a feature failure.** The same round concluded the probe's full
+mode did not reach the forked process; it emits normally, and the absence was the same
+non-existent run. Absence of output has two causes and the boring one is far more common.

@@ -109552,3 +109552,38 @@ art pipeline rather than physics.
    likely cause, but no gameplay consequence proven.
 3. **Segment 15 (`seg10_cpz2`).** 2,122 errors, self-contained, propagates
    nowhere. Real, and the cheapest to work in isolation.
+
+## UNVERIFIED: the BossExplosion re-attribution rests on stale probe output
+
+Raised by the lane that produced it, against its own merged entry. **Do not act on the
+BossExplosion figures in the entry above until they are re-measured.**
+
+The sweep that produced them used an invalid separator in its per-class selector, so the build
+failed before any test ran: reproduced deliberately, it exits non-zero with no tests executed
+and writes no probe output at all. The ninety-four probe files that were then analysed had been
+sitting in the directory for two and a half hours, from a run of unknown commit provenance. The
+file count matching the expected number read as confirmation and was coincidence.
+
+So the shortfall and over-count figures, the relocation share, the single-episode reading and
+the exactly-equal pairing are all unattested. The **disassembly** half of the conclusion does
+not depend on the probe — the ROM rewrites a live object's id in place at a cited instruction —
+so convert-in-place remains the mechanism on that evidence alone. But the numeric pairing that
+made it persuasive does depend on it, and the parked capability's value must not be sized on it
+until re-measured.
+
+**Two retractions travel with it.** The claim that the probe's full mode does not reach the
+forked process is withdrawn: tested through the build on a single trace it emits full lines
+normally, and the earlier reading was the same artefact — no tests ran, nothing was written, and
+an absence was read as a feature failure.
+
+And the leakage hypothesis is **refuted rather than confirmed**: computing each row of the
+occupancy page in-game-only reproduces the page exactly for four rows and closely for six more,
+despite several of those ids carrying hundreds of raw lines in other games. A filter that was
+not there could not produce four exact matches. The page is game-filtered, rule 102 stands as a
+caution for future rankings, and the suggestion that the current page might be contaminated is
+withdrawn.
+
+One methodological limit is worth keeping from the audit: the probe emits divergent slots only,
+so reservations that are working are invisible to a diff-line reading and only the full engine
+map shows the whole reserved pool. Rows whose objects reserve child slots cannot be reproduced
+without it.
