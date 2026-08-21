@@ -112597,3 +112597,80 @@ touch radii for the rolling state.
 
 Both were mine, both were confidently held, and both cost a measurement rather than a landing.
 The remaining surface is small and specific.
+
+## 2026-08-21 -- BOX CHECK: both boxes are ROM-correct; the remaining lead is the sample point
+
+Measured at `161bd1e92`. **The box check does not close frame 22243, so per instruction this
+hands over the eliminations rather than opening a fourth hypothesis.** Nothing landed.
+
+### The object's box is correct, verified from ROM bytes
+
+Read from the ROM file itself at `TOUCH_SIZES_ADDR = 0x00FF62`, not by counting rows in the
+listing:
+
+| size index | width | height |
+|---|---|---|
+| `$1A` (26) -- the TurboSpiker parent, `ObjDat_TurboSpiker` flags `$1A` | 12 | 12 |
+| **`$1E` (30) -- the spike, `$9E & $3F`** | **4** | **8** |
+
+This confirms the value the previous entry deliberately withheld, and confirms the doubling in
+`Touch_Width` (`add.w d0,d0`) was read correctly: size 30 is byte offset 60. The engine reads the
+same table through `TouchResponseTable(romReader, TOUCH_SIZES_ADDR, TOUCH_SIZES_COUNT)` with
+`TOUCH_SIZES_COUNT = 58`, so index 30 is in range and is not falling back to entry 0.
+**No defect here.**
+
+### The player's box, read exactly
+
+`Touch_NoInstaShield` (`sonic3k.asm:20641-20653`):
+
+```
+d2 = x_pos - 8              ; left boundary
+d4 = $10                    ; collision WIDTH = 16, a CONSTANT
+d5 = y_radius - 3           ; collision half-height
+d3 = y_pos - d5             ; top boundary
+d5 = d5 * 2                 ; collision height
+```
+
+Two things worth having written down: the player's touch **width is a fixed 16 and is not
+derived from `x_radius`**, and the height is `y_radius - 3`, doubled -- there is no ducking
+reduction, as the ROM's own comment notes. Radii are ROM-verified: standing `y_radius = $13`
+(19), rolling `$E` (14) (`:21904`, `:23261`), so a rolling player's half-height is 11.
+
+Neither `TurboSpikerBadnikInstance` nor its shell child overrides
+`usesCurrentTouchResponseState()` or `snapshotTouchResponseState()`, so both take the default --
+the **pre-update snapshot**, which is the ROM-correct choice, because the player's slot runs
+before the spike's.
+
+### The remaining lead -- DERIVED, NOT MEASURED
+
+With every ROM constant now verified, the arithmetic at frame 22243 turns on **which intra-frame
+position of the spike the touch test sees**:
+
+- player `y = 0x0490` (1168), rolling half-height 11 -> top boundary 1157, height 22
+- spike box half-height 8
+
+| spike sampled at | `obj_y - height` | minus player top | vs height 22 | result |
+|---|---|---|---|---|
+| frame 22243 position, `y = 0x04A0` (1184) | 1176 | 19 | 19 <= 22 | **overlap** |
+| frame 22242 position, `y = 0x04A4` (1188) | 1180 | 23 | 23 > 22 | **no overlap** |
+
+So hit versus no-hit is exactly one intra-frame sample point of the spike, **with a one-pixel
+margin**. That margin is why this is written as a lead and not a finding: a one-pixel result
+derived by hand from five ROM constants is precisely the kind of chain where a single wrong
+assumption flips the answer, and it has not been measured in the engine.
+
+**The check for the next lane** is therefore not "is the sample point wrong in principle" -- the
+overrides say it should be right -- but whether the pre-update snapshot is actually applied to
+this **dynamically spawned, self-positioning** child, which keeps its own `currentX`/`currentY`
+and overrides `getX()`/`getY()` to return them. Instrument the position the touch test actually
+reads for the shell on frame 22243 and compare it against `0x04A4` and `0x04A0`. That is one
+measurement and it either closes this or eliminates a third hypothesis.
+
+### Eliminated so far for frame 22243, all by measurement
+
+1. **Touch categorisation** -- the spike is `$9E` -> harmful; the engine's constant already
+   matches the ROM byte.
+2. **Spike position / launch timing** -- parent and spike launch positions, both velocities, and
+   the launch frame all match the recording.
+3. **Both touch boxes** -- object box ROM-verified `(4, 8)` and read by the engine from ROM; the
+   player box formula documented and its radii ROM-verified.
