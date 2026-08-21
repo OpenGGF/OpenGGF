@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and three rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and four rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -120,6 +120,7 @@ that looks like a real result.
 | 101 | A clock conversion calibrated at one point | A one-row error in a nine-link causal chain, invisible and load-bearing |
 | 102 | A cross-game ranking grouped by raw object id | Two names for one defect, in two tables, as both a shortfall and an over-count |
 | 103 | Artefacts analysed after a build that never ran | The previous run's files, right names, right count, wrong commit |
+| 104 | A true invariant enforced in the shared helper | Live-but-unwired objects at the callers that keep the reference |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2672,3 +2673,24 @@ freshness.
 **And a missing artefact is not a feature failure.** The same round concluded the probe's full
 mode did not reach the forked process; it emits normally, and the absence was the same
 non-existent run. Absence of output has two causes and the boring one is far more common.
+
+## One hundred and fourth rule: a true general claim can still produce a wrong general change
+
+"A reserved slot holds exactly one object, in every game" is true, and putting the guard that
+enforces it in the shared helper was wrong. Four of the five callers hand the created object
+back to a caller that keeps and uses the reference, so suppressing the add leaves a live but
+unwired instance — the matrix returned errors and a guard failure. The fifth discards its
+return value, which is the only reason the narrow fix is safe there.
+
+**What varies between call sites is the contract, not the invariant.** Before generalising a
+correction, check what each caller does with the result, not just whether the rule applies to
+it. The round that hit this had established the ROM's write semantics for exactly one of the
+five sites and generalised from that one.
+
+**And a general change carries a general cost.** The same attempt pushed a facade past its
+source-size budget, which was the second signal that the predicate did not belong there.
+
+**Corollary, from the same round:** when a masking defect is removed, an underlying one can get
+*worse* on the count. Suppressing the duplicate object raised one cluster's shortfall by two
+frames, because on those frames the duplicate had been the only live object. That is the
+masked defect showing through, not a regression, and the report should say which.

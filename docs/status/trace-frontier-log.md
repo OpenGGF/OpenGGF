@@ -109587,3 +109587,88 @@ One methodological limit is worth keeping from the audit: the probe emits diverg
 so reservations that are working are invisible to a diff-line reading and only the full engine
 map shows the whole reserved pool. Rows whose objects reserve child slots cannot be reproduced
 without it.
+
+## 2026-08-21 — Cluster 2 closed: the splash could hold its reserved slot three times over; clusters 1 and 3 survive
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `7e14c4fc9`.
+
+### What the ROM does
+
+`move.b #id_Splash,(v_splash).w` (`docs/s1disasm/_incObj/01 Sonic.asm:274, 299`) writes a
+single id byte into one dedicated SST. It is not an allocation and there is no `FindFreeObj`.
+When a splash is already running there the byte already holds `id_Splash`, so the write is
+**inert** — the object keeps its routine and animation, is not restarted, and no second object
+can exist.
+
+The fixture shows precisely that across a run of repeated surface crossings: `lz1_completerun`
+slot 12 holds one object at routine `$02` for frames 11934-11948, then advances to `$04`
+(`Spla_Delete`) at 11949. The routine never returns to 0, so it is one continuous splash and
+not a sequence of restarts — which is what decided *skip* over *evict and replace*.
+
+### The fix, and the wider version that was wrong
+
+`DefaultPowerUpSpawner.addWaterSplashObject` now skips the add when a live object already
+occupies the reserved slot.
+
+The first attempt put that guard in the shared `ObjectLifetimeOps.addDynamicAtReservedSlot`,
+on the reasoning that a reserved SST holds one object in every game. The matrix rejected it:
+**3 new errors and a guard failure**, and both were informative.
+
+- `LightningShieldObjectInstance: services not available — object must be created through
+  ObjectManager` on `TestS3kMgzTraceReplay`. The other reserved-slot callers — shield,
+  invincibility stars, the S1 end card, the AIZ miniboss — hand the object **back** to a caller
+  that keeps and uses the reference. Silently dropping the add there leaves a live but unwired
+  instance whose `services()` was never set. `spawnSplash` discards its return, which is why
+  the splash path alone is safe.
+- `TestArchitecturalSourceGuard.objectManagerFacadeStaysWithinExtractedCollaboratorBudget`:
+  `ObjectManager.java` at 3064 effective lines against a budget of 3051. The predicate did not
+  belong there either.
+
+Both are recorded because the general claim ("a reserved SST holds one object") is *true* and
+still produced a wrong change: what varies is whether the caller keeps the reference, and the
+ROM write semantics of the other four sites were never established. The guard is therefore
+scoped to the one site whose ROM line was read.
+
+### Measured effect
+
+`TestS1Lz1CompleteRunTraceReplay`, engine occupancy at the spawner slots against the fixture:
+
+| | before | after |
+|---|---:|---:|
+| slot 12, rom=1 eng=0 | 70 | **72** |
+| slot 12, rom=1 eng=3 | 12 | **0** |
+| slot 12, rom=1 eng=2 | 2 | **0** |
+| slot 6, rom=1 eng=0 | 7 | 7 |
+| slot 6, rom=0 eng=1 | 2 | 2 |
+| slot 12, rom=0 eng=1 | 2 | 2 |
+| **total** | **95** | **83** |
+
+The over-occupancy cluster is gone. Note the honest cost: `rom=1 eng=0` rises by 2, because on
+frames 11935 and 11948 the engine's *first* splash had already expired and the suppressed
+duplicate was the only one alive. That is not a new defect — it is cluster 1 (lifetime) showing
+through where cluster 2 was masking it.
+
+### Matrix, both arms in the same worktree
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`7e14c4fc9`, clean tree) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| broad guard (rejected) | 800, 10 failures, **3 errors**, 4 skipped | 163 | 6 | **500/1F** |
+| scoped fix | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages.
+
+### Clusters 1 and 3 survive — for the owner, before the comparison lands
+
+- **Cluster 1, splash lifetime: 72 slot-frames.** The ROM holds `id_Splash` for 462 frames
+  across the run, the engine for about 390. Concentrated early (131-148) with a tail at
+  11935/11948. This is a *lifetime and spawn-count* question and is **not** the queued S2/S3K
+  snapshot-versus-tracking item, which is about the splash's Y while it lives: S1's
+  `Sonic1SplashObjectInstance.update` already re-reads the water line every frame and cites
+  `Spla_Display`. Same object, different property — worth not conflating.
+- **Cluster 3, shield edges: 9 slot-frames.** Two frames where the engine has a shield object
+  and the ROM does not (850, 851) and seven the other way (3892, 4018, 4101, ...). Edge phase
+  at the shield's start and end, not a lifetime gap.
+
+83 slot-frames out of 22,902. Whether the comparison lands green, or lands with these two
+named, is the owner's call.
