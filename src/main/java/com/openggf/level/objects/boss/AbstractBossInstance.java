@@ -338,18 +338,22 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * (docs/s2disasm/s2.asm:63665) from {@code loc_2F4A6} (:63632-63636), called by
      * {@code loc_2F304} / Sub4 at :63486.
      *
-     * <p><strong>Open question - Wing Fortress (ObjC5).</strong> The previous wording of
-     * this javadoc justified WFZ's {@code false} by claiming {@code ObjC5_LaserCase}
-     * re-reads {@code routine_secondary} per dispatch, citing
-     * docs/s2disasm/s2.asm:81155-81160 (which is ObjC2 level-layout code, not a dispatch)
-     * and :81954-81962 (which is {@code ObjC5_RobotnikInit}, not the defeat write). Both
-     * citations had drifted. Opened afresh: ObjC5 reads the selector once at :81246-81251,
-     * and its defeat write {@code move.b #$1E,routine_secondary(a0)} (:82045-82050) sits
-     * downstream of that head read via {@code bra.w ObjC5_HandleHits} (:82013) ->
-     * {@code ObjC5_NoHitPointsLeft} (:82045). On the restated criterion WFZ's {@code false}
-     * is therefore <em>unexplained</em>. Nobody has established whether that is a latent
-     * defect or is compensated elsewhere in the engine, so WFZ is deliberately left
-     * unchanged pending a measurement.
+     * <p><strong>Wing Fortress (ObjC5) - settled, was an open question.</strong> An earlier
+     * wording of this javadoc justified WFZ's {@code false} by claiming
+     * {@code ObjC5_LaserCase} re-reads {@code routine_secondary} per dispatch, citing two
+     * addresses that had both drifted onto unrelated code. Re-read against the criterion
+     * above, ObjC5 satisfies it: the selector is read <em>once</em> at
+     * {@code ObjC5_LaserCase} (docs/s2disasm/s2.asm:81246-81251) and the defeat write
+     * {@code move.b #$1E,routine_secondary(a0)} sits downstream of that head read, in
+     * {@code ObjC5_NoHitPointsLeft} (docs/s2disasm/s2.asm:82045-82053), reached via
+     * {@code bra.w ObjC5_HandleHits}. WFZ's {@code false} was a latent defect.
+     *
+     * <p>It is not fixed by flipping this flag, though, and WFZ deliberately does not use
+     * this mechanism. This deferral <em>skips</em> the dispatch, whereas ObjC5 runs the
+     * previously selected case on the killing frame and installs afterwards. WFZ models that
+     * directly instead, by latching the install to the tail of its own dispatch - see
+     * {@code Sonic2WFZBossInstance.onDefeatStarted()}. Prefer that shape for any boss whose
+     * ROM detection sits at the tail of its own routine rather than in {@code Touch_Response}.
      *
      * <p><strong>Not settled by this criterion.</strong> Obj89 / ARZ
      * (docs/s2disasm/s2.asm:64759-64763) and Obj54 / MTZ
@@ -435,8 +439,10 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 // 77412-77415, 78091-78095, 77848-77853; Obj5D tail:
                 // 61723-61772). Defer the first defeat dispatch by one frame only for
                 // bosses whose ROM dispatch shape carries that offset. Bosses that
-                // select defeat via routine_secondary dispatched fresh each frame
-                // (ObjC5 / WFZ) do not carry this offset and must not be deferred.
+                // select defeat via a selector genuinely re-read per dispatch do not
+                // carry this offset and must not be deferred. ObjC5 / WFZ was cited here
+                // as such a boss; it is not - it carries the offset and models it with a
+                // tail latch of its own instead. See defeatDeferralAppliesToThisBoss().
                 if (defeatDeferralAppliesToThisBoss()) {
                     deferDefeatRoutineDispatch = true;
                 }
