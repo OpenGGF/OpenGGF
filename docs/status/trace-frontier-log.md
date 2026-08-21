@@ -108079,3 +108079,89 @@ ROM, stage B is now positively confirmed, and the capsule's own acceptance targe
 5671, first motion 5672, trigger from P2 at 6006) is untouched. The dead figures were not used:
 63 does not appear as an input anywhere above — it is named only to record that the required
 value is **64**, which is not 63 and not any ROM literal.
+## 2026-08-21 — The S2 bubbles are not the same defect, and the swayed-water sweep is closed across all three games
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `aacda4e98`.
+**No code change** — and the point of the round is *why* there should not be one.
+
+Follows the entry above, which fixed `Sonic1BubblesObjectInstance` reading `v_waterpos2`
+where Obj64 reads `v_waterpos1`, and flagged S2's two bubble classes as making the same call.
+
+### The S2 bubbles: a no-op, not a defect
+
+S2 applies the sway to every water zone **except ARZ**, by an explicit branch in `MoveWater`
+(`docs/s2disasm/s2.asm:5273-5283`):
+
+```
+	cmpi.b	#aquatic_ruin_zone,(Current_Zone).w	; is level ARZ?
+	beq.s	+					; if yes, d0 stays 0
+	move.b	(Oscillating_Data).w,d0
+	lsr.w	#1,d0
++
+	add.w	(Water_Level_2).w,d0
+	move.w	d0,(Water_Level_1).w
+```
+
+`Obj24` reads `Water_Level_1` in all three of its water tests (`s2.asm:45240, 45295, 45380`) —
+structurally identical to S1's Obj64. But `Obj24` has exactly **one** reference in the whole
+disassembly, `ObjPtr_ARZBubbles: dc.l Obj24 ; Bubbles in Aquatic Ruin Zone`
+(`s2.asm:29950`). It is ARZ's object, and ARZ is the one zone the ROM excludes from the sway.
+
+So in the only zone Obj24 runs in, `Water_Level_1 == Water_Level_2` **by construction**, and
+`BubbleObjectInstance`/`BubbleGeneratorObjectInstance` calling `getWaterLevelY` is exactly
+right. Switching them to `getGameplayWaterLevelY` would change no value on any frame of any
+fixture — an unverifiable edit to trace-verified code. Not landed.
+
+The engine already models the ROM's carve-out on the other side too:
+`Sonic2WaterDataProvider.getGameplayWaterLevelOffset` returns the sway for CPZ and **0** for
+ARZ (`:92-101`), matching the `beq` above.
+
+### The sweep, by the tell: engine reads the base where the ROM reads the swayed value
+
+**S1** — the only game whose water sways in the zones its objects occupy. Every ROM read,
+and its engine counterpart:
+
+| ROM object | reads | engine | accessor | verdict |
+|---|---|---|---|---|
+| Obj1B water surface (`:38`) | `v_waterpos1` | `Sonic1WaterSurfaceManager:167` | `getVisualWaterLevelY` | correct |
+| Obj61 LZ blocks (`:161`) | `v_waterpos1` | `Sonic1LabyrinthBlockObjectInstance:649` | `getVisualWaterLevelY` | correct |
+| Obj0A drowning countdown (`:63`) | `v_waterpos1` | `BreathingBubbleInstance:269` | `getGameplayWaterLevelY` | correct |
+| Obj08 water splash (`:29`) | `v_waterpos1` | `Sonic1SplashObjectInstance:62` | `getVisualWaterLevelY` | correct |
+| Obj65 waterfalls (`:60`) | `v_waterpos1` | `Sonic1WaterfallObjectInstance:204` | `getVisualWaterLevelY` | correct |
+| Obj01 Sonic (`:249`) | `v_waterpos1` | `LevelWaterCoordinator:92,105` | `getGameplayWaterLevelY` | correct |
+| Obj64 air bubbles (`:66/154/241`) | `v_waterpos1` | `Sonic1BubblesObjectInstance` | — | **was wrong, fixed in `aacda4e98`** |
+| Obj79 lamppost (`:171`) | **`v_waterpos2`** | `Sonic1LamppostObjectInstance:169` | `getWaterLevelY` | correct |
+| `LZDynamicWater` target test (`:128`) | **`v_waterpos2`** | `Sonic1LZWaterEvents:382,636` | `getWaterLevelY` | correct |
+
+Obj79 is the only ROM object that reads the *unswayed* level, and deliberately: it stores the
+checkpoint water height (`move.w (v_waterpos2).w,(v_lamp_wtrpos).w`), which must not have a
+frame's sway baked into it. The engine matches. S1's provider returns the same
+`(v_oscillate+2)>>1` from both `getVisualWaterLevelOffset` and `getGameplayWaterLevelOffset`,
+so either accessor yields `v_waterpos1` there.
+
+**S2** — sway everywhere except ARZ; the only bubble object is ARZ's. Covered above.
+
+**S3K** — there is no sway term at all. `Handle_Onscreen_Water_Height` is
+`moveq #0,d0 / add.w (Mean_water_level).w,d0 / move.w d0,(Water_level).w`
+(`docs/skdisasm/sonic3k.asm:8486-8488`): d0 is zeroed and nothing is ever added to it, so
+`Water_level == Mean_water_level` unconditionally. Every S3K `getWaterLevelY` call — HCZ
+events, the water walls, the fan, the miniboss, the AIZ log, Buggernaut — is exact by
+construction.
+
+**Result: S1's Obj64 was the only instance in all three games.** The sweep is closed.
+
+### Two things found on the way, neither fixed
+
+- **`ZoneFeatureProvider.getWaterLevel(int, int)` has no callers.** Declared at
+  `ZoneFeatureProvider.java:77` and overridden in the S1 and S2 providers; nothing in
+  `src/main` or `src/test` invokes it, through the interface or otherwise. Its S1 override
+  returns the base level, so it cannot currently be a behavioural defect — but it is a live
+  trap for whoever wires it up next, since the correct answer for an S1 object is almost
+  always the swayed value.
+- **S2's `getVisualWaterLevelOffset` returns `oscillation - 8` for CPZ, not `oscillation >> 1`**
+  (`Sonic2WaterDataProvider.java:104-117`). The javadoc says this is deliberate, centring the
+  bob around zero for rendering. That makes S2 the one game where the visual and gameplay
+  accessors disagree, so a CPZ *gameplay* consumer reaching for `getVisualWaterLevelY` would
+  read a value the ROM never computes. `DefaultPowerUpSpawner:125` is the one shared,
+  non-rendering caller of that accessor and would hit this in CPZ. Establishing whether it
+  runs there, and what the ROM does at that site, is a round of its own.

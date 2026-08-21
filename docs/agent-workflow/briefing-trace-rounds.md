@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Ninety-two rules and several worked sections, accumulated across many rounds. The narrative
+Ninety-three rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -109,6 +109,7 @@ that looks like a real result.
 | 90 | "Not observable" asserted for a whole run | Rounds scoped around a gap that does not cover the rows in question |
 | 91 | Two threads merged because their symptoms match | An inherited framing that already cost the first thread its rounds |
 | 92 | A greppable tell quoted as a defect count | Fifteen candidates, one confirmed, four matching exactly with zero divergence |
+| 93 | A correction that changes no value anywhere | An unverifiable edit to verified code, indistinguishable from a wrong one |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2413,3 +2414,24 @@ several conclusions had already turned on exactly that.
 **And be explicit when a clean gate is not evidence.** Where no committed comparison covers the
 quantity a change improves, the suite cannot see the improvement in either direction; the clean
 arms buy a non-regression check, not a confirmation. Say which one you have.
+
+## Ninety-third rule: an edit that cannot change any value is not a safe edit
+
+A correction that provably changes no value on any frame of any fixture looks free. It is not:
+it is an unverifiable edit to trace-verified code. Nothing can confirm it and nothing would
+catch it if the reasoning behind it were wrong.
+
+One round was sent to apply a water-level correction to a second game's bubble objects, having
+just landed the same correction in the first. It stopped at the zone question and found that
+the object exists only in the one zone the ROM excludes from the sway, so the two accessors
+return the same number there by construction. It made no change and said why.
+
+**Ask what the edit would change before making it.** If the answer is "nothing on any recording
+we have", the honest outcome is a documented no-op, not a commit.
+
+**And close the sweep in the same breath.** That round then checked every site in all three
+games against the same tell — nine in the first game, all but one already correct, two
+deliberately reading the base value for reasons that survive reading (a checkpoint saving a
+height must not bake in a frame's sway); the second game's only such object is in the excluded
+zone; and the third game has no sway term at all, so its reads are exact by construction. One
+defect in three games, and the population is now known rather than suspected.
