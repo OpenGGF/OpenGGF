@@ -140,6 +140,7 @@ that looks like a real result.
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
 | 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 123 | Run a survey so the known member must appear in its output | An empty result and a broken matcher look identical |
+| 124 | A stall in the reference series makes two offsets match identically | Classify only where it is strictly monotonic; walk, do not sample |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3213,4 +3214,27 @@ modelling the wait, 8 gate on the published flag and 25 on a live bounds test. T
 only because nothing spawns them dynamically — not because their gate models the ROM's phase. Any
 one of them acquires the defect the day it gains a dynamic spawn route. That is worth more than a
 list of sites to change, because it names the condition rather than the instances.
+
+## One hundred and twenty-fourth rule: a stall in the reference series makes two different offsets match identically
+
+A lead was reported as **two rows** and is **one**. The measurement sampled the offset at rows
+adjacent to a point where the ROM series *stalls* — a lag row, where the gameplay frame counter does
+not advance and the recorded position repeats. Where the reference repeats a value,
+`eng(N) == rom(N+1)` and `eng(N) == rom(N+2)` are **both true**, and the larger was reported.
+
+**Two sequences compared by value cannot be disambiguated across a stall.** This is the sibling of
+"two value-identical sequences offset by one row cannot be told apart" (rule 121's corollary): there
+the values were identical along the whole series, here they repeat at a single point, and both
+defeat value comparison in the same way.
+
+**Classify an offset only where the reference series is locally strictly monotonic, print the
+ambiguity rather than choosing from it, and walk the whole covered stretch rather than sampling
+it.** Sampling is how the wrong number was produced; the full walk is what corrected it — the lead
+was one row at *every* covered row from first coverage to the divergence.
+
+**And the acquisition point may sit in a window nothing recorded.** Here `object_state` emits no
+rows for that slot across the forty rows where the offset must be gained, because the stream only
+records objects near the player. Rule 119 in its exact form: the walk bounds only what the rows
+cover, and a coverage gap by construction is not a measurement anyone skipped. Name it as unnamed
+rather than reaching for a candidate to fill the slot.
 
