@@ -794,8 +794,22 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * executes before the dust.
 	 */
 	public void advancePlayableFixedSlotsAfterObjectExecution() {
+		// These slots are the tail of the SAME ROM object walk that just ran, so
+		// they execute only if that walk reached them. A routine that rewrites
+		// the loop counter can end the walk inside the dynamic window, and then
+		// the ROM never dispatches Tails' tails or the fixed dust at all that
+		// frame -- see ObjectManager#objectLoopReachedFixedInLevelSlots.
+		if (!objectLoopReachedFixedInLevelSlots()) {
+			return;
+		}
 		advanceTailsTailsAfterObjectExecution();
 		advanceFixedSkidDustAfterObjectExecution();
+	}
+
+	private boolean objectLoopReachedFixedInLevelSlots() {
+		LevelManager levelManager = getLevelManager();
+		ObjectManager objects = levelManager != null ? levelManager.getObjectManager() : null;
+		return objects == null || objects.objectLoopReachedFixedInLevelSlots();
 	}
 
 	/**

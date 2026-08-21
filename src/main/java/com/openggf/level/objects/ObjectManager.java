@@ -145,6 +145,53 @@ public class ObjectManager {
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
     private int currentExecSlot = -1; // -1 when not in update loop
+
+    /**
+     * Last ROM slot this frame's ExecuteObjects walk may reach, inclusive, or
+     * {@code -1} for the whole table.
+     *
+     * <p>The ROM's object loop counter is a live register, not a bound. S2
+     * {@code RunObjects} loads it once per frame and steps it with
+     * {@code dbf d7,RunObject} (docs/s2disasm/s2.asm:29810-29822, 29840-29842),
+     * so an object that writes {@code d7} shortens or lengthens the REST OF
+     * THAT FRAME's walk and nothing beyond it. Modelled the same way: set by
+     * {@link #overrideRemainingObjectLoopSlots}, cleared at the top of every
+     * pass, never carried across frames.
+     */
+    private int romObjectLoopLastSlotInclusive = -1;
+
+    /**
+     * Rewrites the remaining length of this frame's ExecuteObjects walk from the
+     * calling object's own slot, modelling a ROM routine that writes the loop
+     * counter register.
+     *
+     * <p>{@code remainingSlots} is the value left in the ROM counter when the
+     * calling object returns, i.e. the number of further slots {@code dbf} will
+     * step through after it. Callers pass the ROM's own number and cite where it
+     * comes from; this method invents nothing.
+     */
+    public void overrideRemainingObjectLoopSlots(ObjectInstance source, int remainingSlots) {
+        if (!(source instanceof AbstractObjectInstance aoi) || remainingSlots < 0) {
+            return;
+        }
+        int sourceSlot = executionSlotIndex(aoi);
+        if (sourceSlot < 0) {
+            return;
+        }
+        romObjectLoopLastSlotInclusive = sourceSlot + remainingSlots;
+    }
+
+    /**
+     * Whether this frame's ExecuteObjects walk got past the managed dynamic
+     * window and would therefore have reached the fixed-in-level slots that the
+     * ROM places immediately after it — S2 {@code LevelOnly_Object_RAM}
+     * (docs/s2disasm/s2.constants.asm:1145-1150), S3K {@code Level_object_RAM}.
+     * False only while a routine has shortened the walk below that point.
+     */
+    public boolean objectLoopReachedFixedInLevelSlots() {
+        return romObjectLoopLastSlotInclusive < 0
+                || romObjectLoopLastSlotInclusive >= slotLayout.lastProcessSlotExclusive();
+    }
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
@@ -321,6 +368,11 @@ public class ObjectManager {
 
     private int executionSlotIndex(AbstractObjectInstance instance) {
         return instance.getExecutionSlotIndex();
+    }
+
+    private boolean romObjectLoopWalkEndedBefore(int execIndex) {
+        return romObjectLoopLastSlotInclusive >= 0
+                && slotIndexForExec(execIndex) > romObjectLoopLastSlotInclusive;
     }
 
     private int slotIndexForExec(int execIndex) {
@@ -893,8 +945,12 @@ public class ObjectManager {
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
         updating = true;
         boolean objectsRemoved = false;
+        romObjectLoopLastSlotInclusive = -1;
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (romObjectLoopWalkEndedBefore(currentExecSlot)) {
+                    break;
+                }
                 capturePlayerCentreAtSlotStart(player);
                 if (pendingChildSlotRelease.get(currentExecSlot)) {
                     pendingChildSlotRelease.clear(currentExecSlot);
@@ -1097,9 +1153,13 @@ public class ObjectManager {
         // doesn't double-update objects that lost their slot mid-frame.
         // Reused per frame; cleared in the finally block below.
         Set<ObjectInstance> processedInExecLoop = processedInExecLoopScratch;
+        romObjectLoopLastSlotInclusive = -1;
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (romObjectLoopWalkEndedBefore(currentExecSlot)) {
+                    break;
+                }
                 capturePlayerCentreAtSlotStart(player);
                 // A reserved child slot freed earlier in this pass is released
                 // here, at the exec position its own ROM object would have
