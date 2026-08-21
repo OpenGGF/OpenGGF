@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **Signpost sparkles now live the ROM's 25 frames instead of 16, so the end-of-act slot
+  table matches.** The signpost spawns a sparkle every 12 frames with `FindFreeObj`,
+  reusing `Obj25` on its `Ring_Sparkle` routine
+  (`docs/s1disasm/_incObj/0D Signpost.asm:74-85`), and each one runs `Ani_Ring`'s sparkle
+  script -- duration 5, four frames, then `afRoutine`
+  (`docs/s1disasm/_anim/Rings.asm:7-9`; S2's `Ani_Ring` is byte-identical). `AnimateSprite`
+  reloads only once `subq.b #1,obTimeFrame` goes negative, so a duration of 5 holds each
+  frame for **six** executions, and `afRoutine` advancing to `Ring_Delete` costs one more
+  execution before `DeleteObject` -- 25 frames of slot occupancy in total, against the
+  engine's flat four-frames-per-step 16. The ROM therefore keeps three sparkles alive
+  where the engine kept two, leaving one SST slot permanently free that the ROM had
+  occupied. With this, `s1-sonic-complete-withemeralds` segment 27 (`slz1`) reproduces the
+  ROM's entire dynamic slot table: **0 divergent frames across all 146 recorded
+  `slot_dump` samples**, from 107 at the start of this work.
 - **Sonic 1's collapsing floors (Obj53) now collapse on the ROM's frame, and drop their
   rider on the ROM's frame.** Three one-frame errors in `CFlo`, two of which were
   cancelling. `CFlo_OnPlatform` is unconditional -- test the timer, and while it is

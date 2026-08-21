@@ -100259,3 +100259,67 @@ Candidate against control `2204cb61d`, both arms in the same worktree.
 
 Segment 27's residual is now 10 slot-divergent frames, all one `0x25` the ROM holds in slot 41
 (then 40) between f4637 and f4736, unchanged by this round.
+
+## 2026-08-21 — `slz1`'s slot table matches the ROM exactly: the sparkles were dying nine frames early
+
+Round `s1-slz1-graze-r1`, final residual. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**Segment 27 slot diff: 10 divergent frames -> 0, out of 146 samples.**
+
+### The table said which of the three it was, before any object code was opened
+
+The residual read as "a `0x25` the ROM holds in slot 41 (then 40) that the engine does not",
+which suggested a missing object. The full-map dump says otherwise:
+
+```
+rom: ... 37=0x25 40=0x25 41=0x25 ...
+eng: ... 37=UNATTRIB(SignpostSparkleObjectInstance @8272,576)
+         40=UNATTRIB(SignpostSparkleObjectInstance @8296,584)
+```
+
+The engine creates them and they do hold SST slots; they report `UNATTRIB` only because the
+probe cannot map them to a ROM id, and it treats that as matching any occupant. So this was
+never a missing object, a wrong slot, or an early delete of *that* slot — **the ROM simply has
+three sparkles alive where the engine has two.**
+
+The 41 -> 40 movement is not a second event either: `object_appeared` shows the sparkles
+alternating 40, 41, 40, 41 continuously. Which slot the diff names is just which one was newly
+filled at the sampled dump.
+
+### The ROM's 25 frames, derived rather than measured
+
+`Signpost` spawns one every 12 frames via `FindFreeObj`, reusing `Obj25` on its `Ring_Sparkle`
+routine (`_incObj/0D Signpost.asm:74-85`). The script is `Ani_Ring.sparkle` — `dc.b 5` then
+frames `4,5,6,7` then `afRoutine` (`_anim/Rings.asm:7-9`); S2's `Ani_Ring` is byte-identical,
+so the constant is genuinely shared and needs no per-game owner.
+
+`AnimateSprite` does `subq.b #1,obTimeFrame / bpl.s Anim_Wait`
+(`_incObj/"sub AnimateSprite.asm"`), reloading only once the decrement goes **negative** — so a
+duration of 5 holds each frame for six executions, not five. Four frames is 24, the 25th
+execution reads `afRoutine` and advances to `Ring_Delete`, and `DeleteObject` costs one more.
+The slot is occupied for 25 frames after creation.
+
+That is derived from the script and the animation routine. It agrees with every appear/remove
+pair in the fixture (`4625->4650`, `4637->4662`, `4661->4686`, `4673->4698`, `4697->4722`,
+`4709->4734`, `4733->4758`), which is corroboration, not the source.
+
+At 25 frames' life and a 12-frame cadence three are alive; the engine's flat `FRAME_DELAY = 4`
+gave 16 frames and two. `SignpostSparkleObjectInstance` now models `obTimeFrame`/`obAniFrame`
+and the separate `Ring_Delete` execution directly.
+
+### Verification
+
+Candidate against control `8b1120208`, both arms in the same worktree. All three anchors held.
+
+- Segment 27: green, and its slot diff **0 / 146**.
+- `-Ptrace-replay`: **800 tests, 6 failures, 0 errors, 4 skipped**, failing set identical to the
+  control — `TestS1Slz1CompleteRunTraceReplay` and `TestS1Mz3CompleteRunTraceReplay` both still
+  green — and every `segment N ... diverged` line on all three chains identical. 163 `Running`
+  lines.
+- `-Pguards`: 500 tests, 0 failures.
+- Default suite: 15194 / 51 failures / **64 errors** / 18 skipped, against the control's 51 / 67.
+  No new failure or error. **Three `TestGameLoopSpecialStageEntryPresentation` cases that
+  errored with `Failed to initialize Special Stage 1` in all four previous runs of this suite
+  now pass.** Recorded as observed, not as a claimed fix: the mechanism connecting a sparkle's
+  lifetime to special-stage initialisation is not established, and the likeliest explanation is
+  shared-state ordering rather than a real dependency. It is an improvement either way, and
+  nothing regressed.
