@@ -109377,3 +109377,87 @@ S1 and S3K fixtures — 3,410 raw short lines across 17 fixtures if unfiltered �
 BossExplosion only in S2 (`ObjPtr_BossExplosion: dc.l Obj58`, `s2.asm:30004`). Filtering to S2
 is what reproduces the summary's own 6-fixture count, so the filter is load-bearing and not a
 detail.
+## 2026-08-21 — PARKED: the engine's level entry is atomic where the ROM's is spread across the load, so there is nothing ROM-owned to gate on
+
+Fourth round of this lane, commissioned as the fix round. Worktree
+`wt/s3k-hcz-seg9`, branch `bugfix/ai-s3k-handover-census`, based on
+`234fdd6e3`. **No candidate landed, and none is proposed.** Probes reverted;
+`src/` is untouched.
+
+### The prediction, stated before measuring
+
+A correct fix removes the steps at 53487, 53559 and 53608, leaves exactly one at
+the destination's frame 0, and collapses segment 9's six frame-0 field
+divergences to zero. It was never tested, because no candidate survived the
+"model the ROM, do not gate the symptom" bar. Why is below.
+
+### What actually runs on those rows
+
+A counter on `LevelFrameStep.execute` plus a stack dump says it exactly. Across
+the whole ~125-row handover window the level body runs on **four** rows and no
+others, every one of them an `ORDINARY_LEVEL` phase reached through
+`GameLoop.step` -> `LevelIterationAdmissionController.runTraceObservedStep` ->
+`TraceSessionLauncher.runProductionIterationIfActive` ->
+`PlcFrameLifecycleCoordinator.runLogicalIteration` -> `stepInternalBody` ->
+`updateLevelMode:1752`.
+
+This also resolves the +/-1 the previous entry flagged: the earlier probe read
+the cursor AFTER the step, so its row labels were one high. In true cursor
+terms the body rows are **53486, 53558, 53607 and 53608**, and the ROM's own
+milestones are 53486 (level RAM cleared), 53558 (position seeded, object still
+inert), 53606 (player becomes live) and 53608 (`hcz` frame 0, first physics
+step). The engine runs a full ordinary level iteration on the ROM's load
+milestones. The ROM runs `Level_MainLoop` **zero** times there.
+
+So the previous entry's framing needs one refinement: it is not that a live
+player is being stepped by something. The entire destination level main loop
+runs three times inside the load. The player's three surplus gravity steps are
+that loop's visible output.
+
+### Why no candidate is proposed
+
+The ROM-owned rule is available and unambiguous: `Level_MainLoop` is not
+entered until the level entry sequence completes (s2.asm:4757-4926 then :5092;
+S3K's `LevelLoop` after `Load_Sprites`/`Process_Sprites`,
+sonic3k.asm:7849-7906). The engine already asserts exactly this rule — in
+`TraceSessionLauncher.suppressesRunNativeLevelBody` — but that predicate
+requires `isRunFrameDriverActive()`, so it is keyed on *a replay driver being
+installed*, which is not a ROM fact and is false on this path.
+
+The obvious repair is to gate the ordinary body on a ROM-owned "entry sequence
+not yet complete" instead. **There is no such state to read**, and the reason is
+structural:
+
+- `LevelManager` (:387-399) executes the whole `LevelInitProfile` in one
+  synchronous `for (InitStep step : steps) { step.execute(); }` inside a single
+  load call. Every phase runs at once, `spawnPlayerStep` — documented as
+  "S2: InitPlayers, S3K: SpawnLevelMainSprites_SpawnPlayers", the ROM's LAST
+  entry phase — included.
+- Measurement agrees: the destination player is present, positioned at
+  `0x0280/0x0020` and steppable at the **first** milestone (53486), the row the
+  ROM spends clearing level RAM with `player_x` 0, routine 0 and status 0.
+- The 72-row and 48-row waits that follow are the art/Kosinski queue, not level
+  init. By the engine's own model the level entry is COMPLETE at 53486; by the
+  ROM's it is not complete until 53606.
+
+So a predicate reading "is the entry sequence still in progress" has nothing
+truthful to return: the engine's entry is atomic, the ROM's is spread across
+~120 frames with three observable milestones. Anything that suppresses the body
+across that window would be a new flag asserting a load stage the engine does
+not model — invented state, not ported state, and precisely what this round was
+told not to do.
+
+**That is a capability gap and a design question, not a fix**: the engine has no
+notion of a partially-completed level entry, and therefore none of a seeded but
+inert player. Closing it means staging `LevelInitProfile` across the load to the
+ROM's own phase boundaries, for all three games and every load. Parked for a
+design round rather than patched.
+
+### On the matrix
+
+None was run, and none is owed: nothing in `src/` changed, so both arms would be
+identical by construction. Worth restating from the commission, because it
+outlives this round — no other trace class would catch a regression in this
+area, since every one of them begins at frame 0 after a completed load. When a
+staged-entry change is eventually attempted, the suite cannot protect it and the
+probe fingerprint above is the only real gate.
