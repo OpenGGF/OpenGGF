@@ -112255,3 +112255,63 @@ The traced-register survey over the correct population is untouched, deliberatel
 — if the column lands, the writer is identified by reading it at 4212 and 4213
 rather than by tracing twenty word-write sites. The eight-gap family stays
 parked.
+
+## 2026-08-21 — parser check: TOLERANT (measured). And the writer change is not contained
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-prevanim-recorder`, pinned to
+`37b7e5ab0`. Probe deleted. **No recorder change landed** — see the second half.
+
+### The parser check, answered as a measurement with a positive control
+
+A full copy of `seg12_arz1` was doctored by appending a `player_prev_anim`
+column to the physics header and a value to all 4889 rows, and an unmodified
+copy kept as a control. Both were loaded through `TraceData.load`:
+
+| fixture | result |
+|---|---|
+| control (unmodified copy) | `LOADED ok frames=4889` |
+| doctored (one extra unknown column) | `LOADED ok frames=4889` |
+
+**The parser tolerates a column present in one fixture and absent from others.**
+The control matters: an earlier attempt failed with `incomplete load queue state
+at frame 0`, which was a missing `aux_state.jsonl.gz` in a partial copy, not a
+column problem — without the control that would have read as strictness.
+
+**Scope of the claim, stated precisely:** this exercises `TraceData.load`, the
+parse. It does not exercise a full replay comparison against a doctored fixture.
+Anyone regenerating a single segment should run one real replay against it as a
+confirmation, which is nearly free at that point.
+
+**Consequence for the cost decision: regeneration can be ONE segment**, not the
+corpus.
+
+### The writer change is wider than it looks — not landed
+
+`S2TraceCsvWriter.Header` is not S2's. It is:
+
+```
+public const string Header = S1TraceCsvWriter.Header;   // S2TraceCsvWriter.cs:20
+```
+
+One shared constant, written by at least four runners across two games —
+`S1CreditsDemoCaptureRunner:384`, `S1TraceCaptureRunner:180`,
+`S1RunCaptureRunner:488` and `S2RunCaptureRunner:595`. Appending two columns to
+it changes **S1's** recorded format as well as S2's.
+
+And S1 cannot simply emit them. `S1Ram` defines `OffMappingFrame = 0x1A` and
+`OffAnimId = 0x1C` and has **neither an anim_frame nor a prev_anim offset**
+(:72-73). S1's SST layout would have to be established against `s1disasm` rather
+than assumed from S2's `$1B`/`$1D`, because the two games do not share a layout
+by default.
+
+So the authorised change — "one RAM constant and a writer change, additive,
+affects no committed fixture" — is really: decouple or extend a header shared by
+two games and four-plus runners, plus new S1 offsets verified against a
+different disassembly. That is a different size of change and it alters S1
+capture output, which other lanes depend on. **Stopped rather than widening it
+unilaterally.**
+
+Two shapes for whoever decides: give S2 its own header constant and append there
+(contained to S2, but forks a shared structure), or add the fields to both games
+with each game's own verified offsets (wider, and keeps the shared header
+honest).
