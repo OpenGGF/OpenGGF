@@ -104241,3 +104241,75 @@ producer firing early. **Both are now wrong.** The engine's ordinals match the f
 and its producers fire on time; the defect is retirement. Three characterisations of one failure,
 each replaced by measurement rather than argument — the constant across them is that every one
 was formed by reading a symptom's location instead of instrumenting its cause.
+
+## 2026-08-21 — HCZ root cause: one decompression submit lands one frame after its recorded edge
+
+Round `s3k-hcz-decomp-r1`, branch `bugfix/ai-s3k-hcz-decomp-r1` off `origin/develop` `9b8920b59`.
+**Found, not fixed.** Probes reverted, tree clean.
+
+### First: the earlier numbers re-verified on a clean base
+
+Two of the preceding rounds were based on `2f187a343` and `3096fe52b`, both inside the window
+in which a rejected S2 candidate was live on develop. Re-measured here on `9b8920b59`, which
+carries the revert, the load-bearing numbers are **identical**: modules `#112` at 2468, `#113`
+at 2764, `#114`-`#117` all at 2958, blocked at 3536. The regression touched only
+`CPZBossGunk.java`, a Sonic 2 boss object, which cannot reach an S3K segment replay — but that
+is the reasoning, and the re-run is the check.
+
+### The stall, instrumented
+
+At the throw, all four parents are untouched:
+
+```
+[D] BLOCKED rf=3536 pending: #114--/c0 #115--/c0 #116--/c0 #117--/c0
+```
+
+Not ready, not prepared, **`completedModules = 0`** — the head parent never finished even its
+first module, so `Process_Kos_Module_Queue`'s state machine never advances and the other three
+sit behind it. Only one decompression child was submitted after frame 2900, at 2958.
+
+### The cause: every submit leads its recorded edge except the last
+
+Engine decompression submissions against the fixture's recorded completions, whole segment:
+
+| engine submits | recorded | lead | | engine submits | recorded | lead |
+|---:|---:|---:|---|---:|---:|---:|
+| 34 | 35 | +1 | | 1029 | 1030 | +1 |
+| 37 | 41 | +4 | | 1032 | 1034 | +2 |
+| 43 | 43 | 0 | | 2468 | 2469 | +1 |
+| 45 | 46 | +1 | | 2764 | 2767 | +3 |
+| 744 | 750 | +6 | | **2958** | **2957** | **−1** |
+| 1021 | 1022 | +1 | | | | |
+
+**Eleven of twelve submissions precede the completion that releases them. The twelfth trails it
+by one frame.** A recorded edge at 2957 cannot release work submitted at 2958, so that child
+never goes ready, the head parent never completes a module, and the batch is stuck for the rest
+of the segment. The explosion art then arrives on schedule at 3536 and finds four dead slots.
+
+### So the defect is one frame in one producer
+
+The parents come from `HCZWaterWallObjectInstance.reloadEnemyArt` → `reloadEnemyKosArt`, and
+that producer fires one frame late on its **second** reload. The **first** reload is the control:
+same object, same routine, same four fingerprints, submitted at 1021 against a recorded 1022 —
+one frame early, and it drains normally.
+
+That satisfies the filter this round was given: any explanation had to distinguish two batches
+identical in content, and a one-frame lead that is positive on the first and negative on the
+second does exactly that.
+
+### Fourth characterisation, and the last three were mine
+
+Ordinal skew → producer early by ~571 frames → retirement failure → **a one-frame late
+decompression submit from a named object routine.** The distances shrank by two orders of
+magnitude each time a real instrument replaced an inference. The 571 figure is already retracted;
+the "retirement failure" framing of the previous entry is correct as far as it goes but stops one
+step short — retirement fails *because* the submit is late.
+
+### Next
+
+Why `reloadEnemyArt` fires a frame late on the second reload and not the first. Not measured:
+what triggers each reload, and whether the first is early rather than the second being late —
+the recorded edges are one frame apart in opposite directions, so "correct" sits between them and
+neither arm has been checked against the ROM's own trigger. That is the thing to read before
+touching a timing value, since a one-frame change justified by this fixture alone would be the
+fitted constant this log keeps refusing.
