@@ -301,3 +301,41 @@ defects; only the lifetime one is now fixed.
 research task rather than a lookup. Carrying S2's 32 across would be precisely the
 wrong-routine citation this audit exists to catch — a number with a citation attached to a
 routine the ROM does not reach for that object. It needs the S3K geometry established first.
+
+### The converted gate's open/closed split — positive evidence, not a dodge
+
+Measured on `TestS2WfzLevelSelectTraceReplay` with a throwaway counter on the converted gate
+(reverted; the conversion is `bc8f08d46`):
+
+| outcome | count |
+|---|---|
+| **open** — snapshot valid, within bounds, object survives | **523** |
+| **closed** — snapshot valid, out of bounds, object deleted | **48** |
+| **nosnap** — no pre-update snapshot | **0** |
+
+Three things follow, and the first is the one that matters:
+
+**It did not collapse to all-closed.** A position-recomputed predicate with no producer behind it
+would report "not drawn" for everything. This one reports a live split, in the very environment
+where the per-object render pass is measured never to run. So recomputing `BuildSprites`' bounds
+from position is not a workaround that happens to survive that finding — it is a predicate that
+demonstrably carries signal without a render pass at all. A sibling lane's gate split 9311/1461
+across four ARZ fixtures; this is a second object agreeing from a different direction.
+
+**`nosnap = 0` settles the spawn guard empirically.** The trap never fired for this object, which
+confirms by measurement what was previously only reasoned, and explains why seeding the first
+frame changed nothing. **The seed stays in as correct ROM modelling, not as a load-bearing fix** —
+stated explicitly so a later reader neither deletes it as dead code nor treats it as structural.
+The guard remains item 1 of the checklist, because for another object it will fire.
+
+**`closed = 48` is exactly the number of shots the engine creates.** Every projectile ends
+through this gate and none leak. That accounting was not predicted and it balances; a merely
+plausible predicate does not usually balance.
+
+**Method note.** Three separate times in this family a keying choice inverted or concealed a
+verdict: `(slot, spawn)` reported instant death where the truth was over-long life; slot-keyed
+run counts implied a creation deficit that direct constructor counting later confirmed for a
+different reason; and slot-keying again made run count read as creation count when it was slot
+reuse. The lesson is not "choose a better key" — it is that **a proxy which survives one question
+will silently answer a different one**. Each time, the fix was an instrument measuring the
+quantity directly: constructor calls against recorded `object_appeared` events, not runs.
