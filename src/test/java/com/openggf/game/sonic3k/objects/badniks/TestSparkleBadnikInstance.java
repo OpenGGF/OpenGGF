@@ -101,6 +101,7 @@ class TestSparkleBadnikInstance {
         SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
                 0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0x02, false, 0));
         sparkle.setServices(new SparkleTestServices(spawned));
+        sparkle.testReleaseOffscreenWait();
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
         setPrivateField(sparkle, "chargeTimer", 0);
         setPrivateField(sparkle, "chargeDelay", 0);
@@ -125,6 +126,7 @@ class TestSparkleBadnikInstance {
         SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
                 0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0x02, false, 0));
         sparkle.setServices(new SparkleTestServices(spawned));
+        sparkle.testReleaseOffscreenWait();
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
         setPrivateField(sparkle, "chargeTimer", 0);
         setPrivateField(sparkle, "chargeDelay", 0);
@@ -162,6 +164,7 @@ class TestSparkleBadnikInstance {
         SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
                 0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0x02, false, 0));
         sparkle.setServices(new SparkleTestServices(spawned));
+        sparkle.testReleaseOffscreenWait();
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
         setPrivateField(sparkle, "chargeTimer", 0);
         setPrivateField(sparkle, "chargeFrameIndex", 0);
@@ -186,6 +189,7 @@ class TestSparkleBadnikInstance {
         PlayableEntity sonic = mock(PlayableEntity.class);
         PlayableEntity tails = mock(PlayableEntity.class);
         sparkle.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+        sparkle.testReleaseOffscreenWait();
 
         when(sonic.getCentreX()).thenReturn((short) 0x0200);
         when(tails.getCentreX()).thenReturn((short) 0x017F);
@@ -225,6 +229,7 @@ class TestSparkleBadnikInstance {
         SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
                 0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, renderFlags, false, 0));
         sparkle.setServices(new SparkleTestServices(spawned));
+        sparkle.testReleaseOffscreenWait();
         setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "WARNING_WAIT"));
         setPrivateField(sparkle, "timer", 0);
         return sparkle;

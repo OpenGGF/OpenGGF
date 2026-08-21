@@ -214,6 +214,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K badnik Init dispatch (merged 2026-08-21):** six badniks skipped the ROM's
+  routine-zero dispatch -- the frame in which an object sets up and returns without
+  moving or running its collision check -- because the engine models that frame as a
+  per-class convention rather than a shared mechanism. Modelling it closes the HCZ
+  segment class, whose art-queue abort turned out to be downstream of a badnik dying
+  a frame early rather than an independent blocker.
+
 - **S1 LZ bubble water level (merged 2026-08-21):** every water test in the LZ air
   bubbles object reads the swayed water height, and the engine was reading the base
   height without the surface oscillation -- up to eight pixels low on a 126-frame

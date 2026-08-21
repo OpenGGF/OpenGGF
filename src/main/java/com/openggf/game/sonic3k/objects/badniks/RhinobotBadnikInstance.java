@@ -62,11 +62,31 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     private int targetSpeed;
     private int stateTimer;
     private SpeedCallback speedCallback = SpeedCallback.REACH_TURN_POINT;
+    /**
+     * routine 0. Obj_WaitOffscreen's release pass (loc_85B02) returns without
+     * dispatching and leaves routine at 0, so the first dispatch after the gate
+     * releases runs Rhinobot_Init, not Rhinobot_Patrol.
+     */
+    private boolean initPending = true;
 
     public RhinobotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Rhinobot",
                 Sonic3kObjectArtKeys.RHINOBOT, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        // Rhinobot_Init's field writes are NOT done here: the ROM performs them on
+        // the routine-0 dispatch (see runInit), which costs a whole frame.
+    }
 
+    /**
+     * Rhinobot_Init (sonic3k.asm:182389-182408): loads ObjSlot_Rhinobot through
+     * SetUp_ObjAttributesSlotted (whose shared tail is
+     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:176901-176919), sets
+     * x_radius/y_radius, picks d0/d1 = -$10/-$300 (negated, with $38 bits 2 and 3
+     * set, when render_flags bit 0 is set), stores them in $40/$3E and points
+     * $34 at Rhinobot_ReverseAcceleration — then `rts`. It does NOT fall through
+     * to Rhinobot_Patrol, so this dispatch performs no floor probe, no
+     * acceleration and no MoveSprite2; the patrol begins on the next dispatch.
+     */
+    private void runInit() {
         accelStep = -PATROL_ACCEL;
         targetSpeed = -PATROL_TOP_SPEED;
         if (!facingLeft) {
@@ -75,6 +95,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
             targetSpeed = PATROL_TOP_SPEED;
         }
         mappingFrame = FRAME_SLOW;
+        speedCallback = SpeedCallback.REACH_TURN_POINT;
     }
 
     @Override
@@ -97,6 +118,12 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
                 return;
             }
             waitOffscreenReleased = true;
+            return;
+        }
+
+        if (initPending) {
+            initPending = false;
+            runInit();
             return;
         }
 
@@ -267,6 +294,15 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
             }
         }
         mappingFrame = frame;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        // collision_flags is written by SetUp_ObjAttributesSlotted inside
+        // Rhinobot_Init (sonic3k.asm:176910), so the SST slot still reads zero
+        // for the whole Init dispatch: the frame's touch scan runs at the player
+        // slot before this object's routine.
+        return initPending ? 0 : super.getCollisionFlags();
     }
 
     private void maybeTriggerBrakeEffect() {

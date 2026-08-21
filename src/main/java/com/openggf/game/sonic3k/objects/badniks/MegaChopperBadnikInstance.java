@@ -69,6 +69,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private State state = State.SWIM;
     private boolean waitingForOnscreen = true;
     private boolean placeholderRenderedOnscreen;
+    // routine 0. Obj_WaitOffscreen resumes at $34(a0) with routine still 0, so the
+    // first dispatch after the gate releases runs MegaChopper_Init, not the swim.
+    private boolean initPending = true;
     private int animationTimer;
 
     private int pendingCollisionProperty;
@@ -132,6 +135,21 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        if (initPending) {
+            // MegaChopper_Init (sonic3k.asm:184253-184263) calls
+            // SetUp_ObjAttributes, whose tail is addq.b #2,routine(a0) then rts
+            // (sonic3k.asm:176901-176919), sets the animation script pointer and
+            // clears child_dx/child_dy. It does NOT fall through to
+            // MegaChopper_Swim: it returns, so this dispatch moves the badnik
+            // zero pixels and never reaches MegaChopper_CheckCapture, which is
+            // reachable only from MegaChopper_Swim (sonic3k.asm:184266). The swim
+            // begins on the following dispatch.
+            initPending = false;
+            childDx = 0;
+            childDy = 0;
+            return;
+        }
+
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         switch (state) {
@@ -171,10 +189,12 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         if (isDestroyed()) {
             return 0;
         }
-        if (waitingForOnscreen) {
+        if (waitingForOnscreen || initPending) {
             // collision_flags is only written by SetUp_ObjAttributes in
             // MegaChopper_Init (sonic3k.asm:184253-184255), which Obj_WaitOffscreen
             // suppresses; the freshly allocated SST slot holds zero until then.
+            // It stays zero through the Init dispatch too, because the frame's
+            // touch scan runs at the player slot before this object's routine.
             return 0;
         }
         return SPECIAL_COLLISION_FLAGS;
@@ -571,5 +591,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     void testReleaseOffscreenWait() {
         waitingForOnscreen = false;
         placeholderRenderedOnscreen = false;
+        // Also consume the routine-0 Init dispatch, so the badnik is in its
+        // running state exactly as these tests assume. Setup only.
+        initPending = false;
     }
 }
