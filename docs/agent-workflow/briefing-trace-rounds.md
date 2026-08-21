@@ -138,7 +138,7 @@ that looks like a real result.
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
-| 121 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
+| 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
