@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and four rules and several worked sections, accumulated across many rounds. The narrative
+One hundred and five rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -121,6 +121,7 @@ that looks like a real result.
 | 102 | A cross-game ranking grouped by raw object id | Two names for one defect, in two tables, as both a shortfall and an over-count |
 | 103 | Artefacts analysed after a build that never ran | The previous run's files, right names, right count, wrong commit |
 | 104 | A true invariant enforced in the shared helper | Live-but-unwired objects at the callers that keep the reference |
+| 105 | A comment citing a ROM line and a number the code never produces | The defect, documented by its own author, with its acceptance test attached |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2694,3 +2695,22 @@ source-size budget, which was the second signal that the predicate did not belon
 *worse* on the count. Suppressing the duplicate object raised one cluster's shortfall by two
 frames, because on those frames the duplicate had been the only live object. That is the
 masked defect showing through, not a regression, and the report should say which.
+
+## One hundred and fifth rule: a class that documents the behaviour it does not implement
+
+Five times in one investigation, the clearest statement of a defect was a comment in the very
+class carrying it. A staircase documented the ROM's four slots in three separate comments and
+reserved none. A cannonball's javadoc quoted the ROM's convert-in-place while the code deleted
+and respawned. A boss's init profile named the ROM's last load phase while running it first. And
+a Super-state controller documented the transformation frame's acceleration change — with the
+ROM line cited and the exact velocity transition spelled out — while producing a different
+number.
+
+**So grep the comments, not just the code.** A comment that states a ROM behaviour precisely,
+including a numeric transition, is a claim that can be checked against what the code does; where
+they disagree, the comment is usually right and was written by someone who read the disassembly
+and then implemented something else.
+
+**The strongest form of the tell is a cited number.** A comment naming a value the code cannot
+produce is a defect with its own acceptance test attached — the value is the fingerprint, and it
+cannot be satisfied by tuning something else.

@@ -109672,3 +109672,95 @@ Class-name sets identical; failing-method sets identical on full untruncated mes
 
 83 slot-frames out of 22,902. Whether the comparison lands green, or lands with these two
 named, is the owner's call.
+## 2026-08-21 — S2 segment 18 is the Super Sonic transformation frame, and the art deficit is 17 frames downstream of it
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-chain-frontier`, based on
+`7b05eac00`. Comparator hook reverted; nothing changed in `src/`.
+
+### The shared-origin hypothesis is refuted as stated
+
+The previous entry proposed that the -8/-16 art-transfer deficit appearing in
+three reports at the ARZ1->ARZ2 boundary might be one cause. It is one cause,
+but **the art pipeline is not it**. A `System.err` hook at
+`LiveTraceComparator`'s `mismatches.push` (property-gated, reverted) dumped all
+77,318 errors. Grouped by segment:
+
+| segment rows | dir | errors | frame range |
+|---:|---|---:|---|
+| 4889 | `seg12_arz1` (18) | 12580 | **4019..4888** |
+| 6409 | `seg13_arz2` (19) | 62616 | 344..2381 |
+| 7088 | `seg10_cpz2` (15) | 2122 | 2252..6723 |
+
+Segment 18 is clean for its first 4019 rows of 4889. At frame **4019** exactly
+three fields diverge, and they hold the same constant values for the next
+sixteen frames:
+
+```
+f=4019 x_sub   rom=0x7100 eng=0xB900
+f=4019 x_speed rom=0x0121 eng=0x0169
+f=4019 rings   rom=50     eng=51
+```
+
+Nothing else diverges until 4035 (`sidekick_animation_id`,
+`sidekick_mapping_frame`, `dynamic_art.edges`), and the `transfer_id` /
+`edge_ordinal` drift starts at **4036-4037**. So the art deficit is seventeen
+frames downstream of the origin, not the origin.
+
+### What frame 4019 is
+
+The fixture says it outright. At ROM row `0x0FB3` the player's
+`player_animation_id` changes `02` -> **`1F`**, position and speeds latch, and
+`rings` steps `0x33` -> `0x32`. Segment 18 is `seg12_arz1`, the segment
+immediately after `ss_7` — the seventh special stage. **Frame 4019 is the Super
+Sonic transformation**, and `AniIDSupSonAni_Transform` is `$1F`
+(docs/s2disasm/s2.asm:37484).
+
+Two ROM-cited defects, both in `SuperStateController`, both one root — Super
+activation is installed a frame late:
+
+**1. The ring drain misses the transformation frame.** `Sonic_CheckGoSuper`
+(s2.asm:37460-37490) never writes `Super_Sonic_frame_count`, so the first
+`Sonic_Super` pass runs `subq.w #1` on a zero counter (:37510), falls through
+`bpl`, and drains a ring **on the transformation frame itself**, then reloads 60
+(:37512). The recording matches exactly: drains at 4019, 4080, 4141 — every 61
+frames. The engine sets `ringDrainCounter = getRingDrainInterval()` in
+`updateTransformation()`, which runs only once the transformation ANIMATION
+completes, so its first drain lands far later (measured: engine still 51 at
+4080, drains around 4108). The counts part company at 4019 and never re-converge.
+
+**2. The transform frame does not carry the Super acceleration.**
+`Sonic_CheckGoSuper` sets `Sonic_acceleration = $30` (:37483) on the transform
+frame, and `Sonic_ChgJumpDir`/`ObjectMoveAndFall` run behind it on that same
+frame with the new value — a doubled step of `$60`, `x_vel $181 -> $121`.
+Measured engine: `0x0169`, which is `0x0181 - 0x18`, an ordinary doubled step.
+The engine applies `getSuperProfile()` in `updateTransformation()`, one frame
+late. **`SuperStateController.startTransformation` documents this exact
+sequence in its own comment**, including the `$181 -> $121` figure and the
+`s2.asm:37483` citation, and the code does not do it.
+
+### The deficit accumulates; it is not a missed batch
+
+The lead question was gradual drift versus one dropped batch. Gradual, and it
+does not even start negative: at 4036 the engine is one AHEAD (`edge_ordinal`
+8067 vs rom 8066), then falls behind steadily — rom 8121 vs eng 8097 (-24) by
+4061 — and lands at -16 / -8 at the segment's last row. A single missed batch
+would show one step and a flat delta. This is an animation-driven DPLC stream
+whose driver diverged: `sidekick_mapping_frame` and `sidekick_animation_id`
+part company at 4035 (rom Tails `0x02`, engine `0x1F`) one frame before the art
+does.
+
+### Segment 19 is untouched, as instructed
+
+Its 62,616 errors are from an aborted segment and were not worked. Its own first
+mismatch is at frame **344**, not frame 0 — worth stating, because it separates
+this from the entry-state family: nothing arrived broken at its first row. If
+segment 18's transformation is the cause, 19 should stop aborting when it is
+fixed; if it still aborts on `mode=TITLE_CARD, romZone=15, act=1`, that is a
+second defect.
+
+### Proposed, not landed
+
+Install the Super activation state — physics profile and drain counter — on the
+transformation frame, per `Sonic_CheckGoSuper`, rather than when the
+transformation animation completes. Fingerprint for the candidate: `rings`
+matches at 4019 and drains at 4080 and 4141; `x_speed` is `0x0121` at 4019.
