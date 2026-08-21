@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Fifty-eight rules and several worked sections, accumulated across many rounds. The narrative
+Sixty rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -42,6 +42,8 @@ that looks like a real result.
 | 56 | `loc_XXXX` is a ROM address; citing it as a line number lands on plausible unrelated code |
 | 57 | A cited frame number can itself be an artefact of the defect it justifies |
 | 58 | The count of cancelling errors is usually understated; two is rarely the whole set |
+| 59 | When the engine looks right and the recording looks broken, the engine is probably missing a ROM bug |
+| 60 | Right family, wrong mechanics is still wrong — test the mechanism's own prediction |
 
 ### Measurement hazards — all produce plausible output
 
@@ -1626,3 +1628,42 @@ rather than reasoning past it.
 closed. Land them together, verify against every anchor, and expect the intermediate
 states between fixes to be informative rather than merely broken. Compensating code reads
 as cited and faithful, because it was written to make a real observation come out right.
+
+## Fifty-ninth rule: the engine can be missing a bug, not making one
+
+A divergence where the engine's behaviour is *reasonable* and the recording's is not
+usually means the ROM has a side effect the engine has no counterpart for — and the
+shipped ROM's bugs are part of the specification, because all three disassemblies build
+with their bug-fix conditionals off.
+
+One round found an object borrowing the object loop's own slot counter as scratch and
+leaving a constant in it, truncating the update pass so that an unrelated object in a high
+slot did not run for eleven frames. The engine modelled that object's *intended* behaviour
+faithfully and was wrong for exactly that reason. The disassembly's own comment warned
+about the site.
+
+**Practically.** When the engine looks right and the recording looks broken, search the
+owning routine for writes to anything shared — a register the caller relies on, a global
+the loop reads, a field another object owns. And read the disassembly's comments: the
+un-fixed path is often annotated as a known bug by the people who disassembled it.
+
+**When you model one,** name the flag and the branch in a comment as CLAUDE.md requires.
+Once the side effect is implemented it becomes invisible again, and the comment is the
+only thing that will make a future bug-fixed-revision effort tractable.
+
+**Expect collateral, and do not dodge it.** A bug that truncates or reorders shared work
+will change other objects' behaviour too. Those changes are ROM behaviour; a test that was
+green without them was green on behaviour the ROM does not have. Establish that per case
+rather than assuming it.
+
+## Sixtieth rule: right family, wrong mechanics is still wrong
+
+An inference that names the correct *kind* of cause — "something is truncating the object
+loop" — can still be wrong about the mechanism in a way that changes the entire fix. One
+round proposed a bound that shrinks as slots are freed; the actual cause was a constant
+written over the counter. The shrinking variant was testable and false: the objects below
+the supposed truncation kept updating every frame.
+
+Test the mechanism, not the family. A family-level guess that survives because nobody
+checked its specific prediction will be carried into the fix, and the fix will be built
+around a mechanism that does not exist.
