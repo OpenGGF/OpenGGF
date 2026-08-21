@@ -107,7 +107,31 @@ public final class Sonic1PlcArmTiming
             return true;
         }
         if (!timing.isReady(outstanding)) {
-            return false;
+            if (timing.recordedAuthorityRepresentsRow()) {
+                return false;
+            }
+            // Row authority is deactivated, and HardwareTimingReplayPort
+            // .enterUnrepresentedGap's contract is that "production hardware
+            // work may continue, but no recorded completion edge may be applied
+            // until the next beginRawFrame" (HardwareTimingReplayPort:120-126).
+            // The recorder discards anything observed before a segment's first
+            // row, so a level load's own RunPLC arming reaches no trace file
+            // (S1PlcHardwareTimingObserver.cs:80-83) and no edge for this arm
+            // can ever exist. Holding it against recorded readiness deadlocks
+            // the ROM title-card wait, which loops until the PLC buffer empties
+            // (docs/s1disasm/sonic.asm:2840-2841). Fall back to native
+            // readiness for the span the stream never described.
+            timing.admitUnrepresentedReadiness(outstanding);
+            timing.claim(outstanding);
+            // The recorder never counted this arm, so it must not hold a place
+            // in the shared numbering: the next arm the stream does describe
+            // has to be allocated the ordinal the recording gives it
+            // (S1PlcHardwareTimingObserver.cs:80-83, cited above). Returning
+            // the identity after the claim keeps the allocator invariant --
+            // nothing unclaimed is left numbered on the old axis.
+            timing.releaseUnrepresentedIdentity(outstanding);
+            outstanding = null;
+            return true;
         }
         timing.claim(outstanding);
         outstanding = null;

@@ -27,22 +27,18 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
     // Non-final so generic rewind capture can restore the constructor variant.
     private int boundary;
     private int accumulator;
-    private boolean firstUpdate = true;
-    private boolean freshNativeAccumulator;
 
     AizAct2CameraResizeController(int boundary) {
-        this(boundary, false);
-    }
-
-    AizAct2CameraResizeController(int boundary, boolean freshNativeAccumulator) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZAct2CameraResize");
         this.boundary = boundary;
-        this.freshNativeAccumulator = freshNativeAccumulator;
-        if (!freshNativeAccumulator) {
-            // The slotless engine owner has already crossed the native
-            // creation-pass carry represented by this worker dispatch.
-            this.accumulator = boundary == MAX_X ? 0x4000 : 0x8000;
-        }
+        // The ROM's $30 accumulator starts at zero. CreateChild1_Normal
+        // allocates each worker through AllocateObjectAfterCurrent, which only
+        // ever hands back an SST slot *after* the creating object
+        // (sonic3k.asm:37917-37932,176924-176936), so Process_Sprites reaches
+        // the worker in the same pass that created it. The creation frame is
+        // therefore the worker's dispatch 1, whose fixed-point carry
+        // ($4000 for X, $8000 for Y) still yields a zero integer step. No
+        // creation-pass carry is skipped and none is pre-charged here.
     }
 
     AizAct2CameraResizeController(ObjectSpawn spawn) {
@@ -67,21 +63,17 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (boundary == MAX_X) {
-            updateMaxX(playerEntity);
+            updateMaxX();
         } else {
-            updateMaxY(playerEntity);
+            updateMaxY();
         }
-        firstUpdate = false;
     }
 
-    private void updateMaxX(PlayableEntity playerEntity) {
+    private void updateMaxX() {
         var camera = services().camera();
         var level = services().currentLevel();
         int storedMax = level != null ? level.getMaxX() : (camera.getMaxX() & 0xFFFF);
 
-        if (firstUpdate && playerEntity != null && playerEntity.getAir()) {
-            return;
-        }
         accumulator += 0x4000;
         int delta = accumulator >>> 16;
         int currentMax = camera.getMaxX() & 0xFFFF;
@@ -100,26 +92,13 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         }
     }
 
-    private void updateMaxY(PlayableEntity playerEntity) {
+    private void updateMaxY() {
         var camera = services().camera();
         var level = services().currentLevel();
         int storedMax = level != null ? level.getMaxY() : (camera.getMaxYTarget() & 0xFFFF);
 
-        if (firstUpdate && playerEntity != null && playerEntity.getAir()) {
-            // Change_Act2Sizes runs after this frame's camera scroll. Preserve
-            // the worker's first fixed-point carry for its next object pass;
-            // boundary easing may still prepare the native +8 airborne step
-            // for the following camera update.
-            camera.setMaxYTarget((short) storedMax);
-            return;
-        }
         accumulator += 0x8000;
         int delta = accumulator >>> 16;
-        if (firstUpdate && playerEntity != null && !freshNativeAccumulator) {
-            // Preserve the creation-pass carry when the retained control owner
-            // observes title completion later in the same object pass.
-            delta += 2;
-        }
         int nextMax = (camera.getMaxY() & 0xFFFF) + delta;
         if (nextMax > storedMax) {
             camera.setMaxY((short) storedMax);

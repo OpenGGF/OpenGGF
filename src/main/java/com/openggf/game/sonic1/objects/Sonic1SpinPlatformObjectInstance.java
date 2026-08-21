@@ -55,6 +55,13 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     // move.w #$1B,d1 / move.w #7,d2 / move.w d2,d3 / addq.w #1,d3
     private static final SolidObjectParams SPINNER_SOLID = new SolidObjectParams(0x1B, 0x7, 0x8);
 
+    // Spin_Main: move.b #256/2,obActWid(a0) on the shipped FixBugs = 0 branch
+    // (69 SBZ Spinning Platforms and Trapdoors.asm:28-31). Kept by the trapdoor.
+    private static final int TRAPDOOR_ACT_WIDTH = 0x80;
+
+    // Spin_Main spinner path: move.b #32/2,obActWid(a0) (:49), overwriting the above.
+    private static final int SPINNER_ACT_WIDTH = 0x10;
+
     // ---- Trapdoor animation (Ani_Spin entries 0 and 1) ----
     // .trapopen:  dc.b 3, 0, 1, 2, afBack, 1  (plays 0->1->2, holds on frame 2 = fully open)
     // .trapclose: dc.b 3, 2, 1, 0, afBack, 1  (plays 2->1->0, holds on frame 0 = closed/solid)
@@ -417,6 +424,41 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return isSpinner ? SPINNER_SOLID : TRAPDOOR_SOLID;
+    }
+
+    /**
+     * Obj69's ROM {@code obActWid}, which differs by variant.
+     *
+     * <p>{@code Spin_Main} writes {@code move.b #256/2,obActWid(a0)} = 128 for
+     * every Obj69 and only then overwrites it with {@code #32/2} = 16 on the
+     * spinning-platform path
+     * (docs/s1disasm/_incObj/69 SBZ Spinning Platforms and Trapdoors.asm:28-31,49).
+     * The trapdoor keeps the 128. That first write sits on a {@code FixBugs}
+     * conditional: with {@code FixBugs = 1} the ROM would write {@code #128/2}
+     * = 64, the listing calling 128 "way too big, resulting in screen wrapping
+     * issues". The engine takes the {@code FixBugs = 0} branch
+     * (docs/s1disasm/sonic.asm:20) because that is what the shipped ROM does and
+     * what every trace records.
+     *
+     * <p>The variant split is the subtype's bit 7, the same ROM byte the class
+     * already reads for {@link #isSpinner} -- {@code tst.b obSubtype(a0) /
+     * bpl.s Spin_Trapdoor} at {@code :46}.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * both ROM consumers want the byte: {@code BuildSprites}' horizontal cull
+     * (docs/s1disasm/_inc/BuildSprites.asm:49-58) and {@code Sonic_Balance}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423). Obj69 is full-solid, so the
+     * balance accessor inherits this one. The collision widths are authored
+     * separately -- {@code #128/2+sonic_solid_width} = {@code $4B} for the
+     * trapdoor at {@code :85} -- and are unchanged.
+     *
+     * <p>Without the override the inherited 16 made the player balance anywhere
+     * more than 12px from the centre of a 128-wide trapdoor, where the ROM's
+     * window of {@code d1 < 4 || d1 >= 252} balances essentially nowhere on it.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return isSpinner ? SPINNER_ACT_WIDTH : TRAPDOOR_ACT_WIDTH;
     }
 
     @Override

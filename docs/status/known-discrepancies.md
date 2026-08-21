@@ -770,10 +770,26 @@ trace, captured on REV01 hardware, contains those occasional `+2` bumps.
 `Sonic1LZWaterEvents` now emulates the REV01 non-FixBugs path by preserving
 the high byte of the player X check while replacing the low byte with
 `v_vblank_byte & 0x3F`, and by using the waterfall SFX id on sound-gate
-frames. `Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank
-phase when applying the lamppost state, so the first ROM y-bump occurs at the
-same trace frame instead of drifting by the engine's default object-manager
-counter phase.
+frames.
+
+**Corrected 2026-08-21.** This paragraph previously said that
+`Sonic1CreditsDemoBootstrap` "also seeds the LZ credits-demo vblank phase when
+applying the lamppost state". **It does not, and no longer should.** The
+bootstrap carries an explicit note in its place: the ROM's `v_vblank_count` is
+incremented once per V-blank at `VBlank_Exit` (`sonic.asm:685`) and written
+nowhere else in the entire ROM, so nothing resets it on level load and
+`EndDemo_LampVar` (`sonic.asm:3879`) carries no vblank field. Its value entering
+a credits demo is a free-running count since console reset, not level-derived
+state, and cannot be reconstructed from the lamppost table -- **seeding a
+measured phase there would be a fitted model**. The counter is instead
+established once at frame 0 by the replay entry path, as every other
+trace-replay entry does.
+
+The resolution above survives that removal: `TestS1Credits03Lz3TraceReplay` was
+re-run on 2026-08-21 and passes green, so the fix is carried by the
+`d0`-clobber emulation and the frame-0 establishment alone. The stale sentence
+had been read as describing a live mechanism by two people in one session, one
+of whom spent part of a round looking for code that had been deleted.
 
 The `Sonic1LZWaterEvents` X-push and Y-input nudges have been migrated from
 `setCentreX`/`setCentreY` (which zero sub-pixels) to
@@ -1066,13 +1082,19 @@ ROM-header secondary cue. A trace may select the ordinary production
 presentation-omitted transition, but it cannot submit, mutate, service, or
 release either queue.
 
-The hardware-timing replay exception below does not apply to S1/S2 PLCs.
-Physics and auxiliary trace data remain comparison-only, and no S1/S2
-recorded completion edge is accepted. No S1 or S2 capture can supply one
-either: see "Recorder coverage" under that exception. Remove or amend this
-entry only if a future cycle-accuracy finding proves the modeled native
-service budget insufficient and the hardware-timing contract is deliberately
-expanded with its own guarded schema.
+The hardware-timing replay exception below does not apply to S2 DPLCs at
+all, and applies to S1 PLCs only at the `RunPLC` FIFO-head arming edge
+(`NEMESIS_PLC_QUEUE`). Physics and auxiliary trace data remain
+comparison-only for both games, no recorded edge may carry decoded art or any
+other payload, and no S2 capture can supply an edge of any kind. Everything
+this entry describes — the native service queue, its cadence, and every
+pattern it produces — stays natively owned in both games; the S1 exception
+moves only *when* an engine-submitted arm becomes visible. No committed S1 or
+S2 fixture carries a timing stream today, so in practice no recorded edge
+reaches either game's PLC service: see "Coverage" under that exception.
+Remove or amend this entry only if a future cycle-accuracy finding proves the
+modeled native service budget insufficient and the hardware-timing contract is
+deliberately expanded further.
 
 ---
 
@@ -1147,9 +1169,11 @@ readiness of a job only when the engine independently submitted and prepared
 the same job and its kind, ordinal, stable submission fingerprint, and service
 boundary match the recording.
 
-The live v5 contract grants this authority to both `KOS_MODULE_QUEUE` and
-`KOS_DECOMPRESSION_QUEUE` whenever the dedicated `hardware_timing.jsonl`
-stream is present. The stream has one complete registry; policy is never
+The live v5 contract grants this authority to `KOS_MODULE_QUEUE`,
+`KOS_DECOMPRESSION_QUEUE` and `NEMESIS_PLC_QUEUE` whenever the dedicated
+`hardware_timing.jsonl` stream is present. `NEMESIS_PLC_QUEUE` carries only
+S1's `RunPLC` FIFO-head *arming* edge; every pattern the armed entry
+decompresses is still produced natively by the production PLC pipeline. The stream has one complete registry; policy is never
 inferred from which kinds happen to have rows. Direct Kosinski edges can
 release only a prepared FIFO head at `pre_main_loop`.
 Schema-2 direct edges can release only a prepared head that the shared
@@ -1177,25 +1201,47 @@ scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
 
-### Recorder coverage: S3K only
+### Coverage: implemented for S1 and S3K, fixtures S3K-only
 
-The contract's wording is cross-game — recorded timing *may* delay S1 PLC, S2
-DPLC, and S3K Kosinski readiness. **The recorder implements it for S3K only.**
-`HardwareTimingEventEngine` is constructed solely by
-`tools/bizhawk-headless/src/Recording/S3KCompleteRunCaptureRunner.cs`:428 and
-`.../S3KTraceCaptureRunner.cs`:297, and `hardware_timing.jsonl` appears only in
-`CommandLineOptions.S3kTraceOutputFileNames` — never in `TraceOutputFileNames`,
-and never in the shared S1/S2 run-mode sink (`StagedRunSegmentSink`:47-49).
+Three separate questions; do not collapse them.
 
-Consequently an S1 or S2 capture emits no `hardware_timing.jsonl`, and
-re-recording an S1/S2 run cannot produce one. Treat "re-record it with the
-hardware-timing stream" as unavailable for those games until the recorder side
-is built deliberately, alongside the timing-kind registry change that
-`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`
-currently pins to Kosinski kinds. Recorded timing is not the first resort in any
-case: an S1 divergence that looks like elapsed hardware cost is usually a
-counted ROM wait loop in the wrong place (see the `plc-system` skill's S1
-`segment_start - 26` load-pair invariant).
+**Contract scope is cross-game.** Recorded timing *may* delay S1 Nemesis PLC,
+S2 DPLC, and S3K Kosinski readiness.
+
+**Implementation covers S1 and S3K.** The live registry is
+`KOS_MODULE_QUEUE`, `KOS_DECOMPRESSION_QUEUE`, and `NEMESIS_PLC_QUEUE`
+(`HardwareWorkKind`), pinned by
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`.
+On the engine side `Sonic1PlcArmTiming` submits the S1 `RunPLC` arming edge and
+`Sonic1PlcService.ownsTimedLoopTailArm()` gates on `isRecordedAuthority()`. On
+the recorder side `HardwareTimingEventEngine` is constructed by
+`S3KCompleteRunCaptureRunner`, `S3KTraceCaptureRunner`, `S1TraceCaptureRunner`
+and `S1RunCaptureRunner`; `S1PlcHardwareTimingObserver` supplies the S1 edges,
+`StagedRunSegmentSink` defines the run-mode sink, and
+`CommandLineOptions.S1ConditionalTraceOutputFileNames` publishes the S1 stream
+only when the capture observed an edge. **S2 is not implemented at either end**
+— no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
+recorder constructs `HardwareTimingEventEngine`.
+
+**Fixture coverage is S3K-only.** Every committed `hardware_timing.jsonl` under
+`src/test/resources/traces` is beneath `s3k/` (272, plus 2
+`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
+one.
+
+So the S1 path is **implemented but dormant**, which is not the same as absent.
+Recorded admission is installed only by
+`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream every
+kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
+`isRecordedAuthority()` is false, and the arm is released by the boundary that
+prepared it — the pre-timing-port behaviour. An S1 trace divergence today must
+be reasoned about against the native service model, because no committed
+fixture can supply an edge.
+
+"Re-record it with the hardware-timing stream" is now available for S1 and
+still unavailable for S2. It is not the first resort for S1 in any case: a
+divergence that looks like elapsed hardware cost is usually a counted ROM wait
+loop in the wrong place (see the `plc-system` skill's S1 `segment_start - 26`
+load-pair invariant).
 
 ### Historical pre-v5 evidence (not live)
 
@@ -1298,6 +1344,43 @@ checks current complete-run fixtures use metadata start position only, keep an
 unseeded replay start, and do not receive the S3K sidekick seed-row prelude.
 `TestBuildToolingGuard.traceReplayLegacyExceptionsShouldBeDocumentedAndBounded`
 keeps this release-debt entry present.
+
+### Measured Scope: Every Continuation Segment, Not Only Emerald Counts
+
+The consequence above is written for Chaos and Super Emerald counts, but it
+applies to every quantity a mid-run segment inherits rather than earns. Measured
+across the whole `-Ptrace-segments` profile (70 tests: 52 physics failures, 7
+`unmatched recorded hardware completions`, 1 FIFO-full):
+
+| group | first error at trace frame 0 | first error later |
+|---|---:|---:|
+| continuation segments | **29** | **0** |
+| first-of-zone / other | 5 | 18 |
+
+**Every continuation segment in the profile diverges at its first compared row,
+and none diverges later.** The correlation is total, and the fields are the
+carried run state a standalone segment cannot reconstruct:
+
+| field | classes | | field | classes |
+|---|---:|---|---|---:|
+| `rings` | 12 | | `y_speed` | 2 |
+| `tails_x` | 4 | | `x_sub` | 2 |
+| `camera_y` | 4 | | `x_speed` | 1 |
+| `tails_y` | 3 | | `tails_y_speed` | 1 |
+
+The twelve `rings` cases are identical in shape — trace frame 0, engine `0`, ROM
+carrying an accumulated count (8, 75, 77, 85, 96, 117, 126, 150, 156, 177, 180,
+201). Ring count is the same class of state as the emerald counts named above:
+run-level progression the segment never played. Seeding it — or the sidekick
+position, camera, or player sub-pixel and speed columns — from `physics.csv` row
+0 or from run-manifest metadata would be per-frame trace hydration under hard
+rule 4, which this debt exists to refuse. The fixtures carry no such fields:
+`aiz_3/metadata.json` supplies `start_x`/`start_y` and nothing else.
+
+**So these 29 red classes are this debt showing up as failures, not defects.**
+They must not be driven green by seeding entry state, and a report that counts
+them as regressions is overstating. A mid-run segment's frame-0 divergence on a
+carried field is expected until the Removal Condition below is met.
 
 ### Removal Condition
 
@@ -1653,8 +1736,11 @@ gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
 level loop did not run but the V-int was still serviced (lag skip, bonus-stage
 lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
 trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
-`ObjectManager.advanceVblaCounter()` exactly once. `TestVblaCounterVBlankInvariant`
-pins the single mutation statement and the per-row tick counts.
+`ObjectManager.advanceVblaCounter()` exactly once. **No guard test enforces this.**
+Earlier revisions of this note cited a `TestVblaCounterVBlankInvariant` pinning the
+single mutation statement and the per-row tick counts; no such class exists anywhere
+in `src/`, and the invariant is carried by the field javadoc alone. Anyone changing
+tick ownership should write the guard rather than assume it caught a missed site.
 
 Three row kinds diverge:
 
@@ -2114,7 +2200,21 @@ would correct the 8–47-row cases but changes nothing at `ss_4` and nothing on 
 test currently reaches, so it is unverifiable today. See
 [the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
 
-## S3K object-slot occupancy is not compared, and diverges from ROM everywhere
+## Object-slot occupancy is not compared, and diverges from ROM in all three games
+
+**Retitled 2026-08-21.** This entry was headed *"S3K object-slot occupancy…"*. Arming
+`SlotOccupancyProbe` across the full `-Ptrace-replay` sweep shows the defect is **not
+S3K-specific**: on presence/absence alone, S1 diverges on 45 of 48 fixtures and S2 on 33 of
+36, alongside S3K's 10 of 10 — 88 of 94 fixtures and 40.1% of 29,832 compared frames. The
+S3K-specific material below stands; its scope does not. Measurements and the divergence
+breakdown: the 2026-08-21 occupancy entry in
+[trace-frontier-log.md](trace-frontier-log.md).
+
+**Do not wire occupancy in as a comparison yet** — it would red 88 fixtures across three games
+to report an already-known fact. Fix the dominant "engine has fewer occupants" bucket (39% of
+divergent frames) first, re-measure with the probe, and land the comparison when the red set is
+reviewable.
+
 
 **Measured 2026-08-15.** `AbstractTraceReplayTest.compareObjectNearEvents()` defaults to `false`
 and `TestS3kHczCompleteRunTraceReplay` does not override it; `SlotOccupancyProbe` is
@@ -2439,3 +2539,87 @@ Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
 logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
 `$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
 
+## CNZ slot machine: recorded ROM state diverges inside the slot windows
+
+**Status:** open, comparison landed at WARNING on 2026-08-21.
+
+`aux_state.jsonl` carries the ROM's own `SlotMachineVariables` block
+(`cnz_slot_machine_state`) on every row of both S2 CNZ fixtures. It was parsed
+and never compared. Wiring it into the comparison exposes divergences that were
+present all along:
+
+| fixture | divergent field-rows | at level-start roll | in the slot session | elsewhere |
+|---|---|---|---|---|
+| `cnz` | 237 | 8 | 229 | 0 |
+| `cnz2` | 530 | 8 | 516 | 6 |
+
+Almost everything sits inside the slot machine's own active windows, which is
+what makes the owner identifiable rather than diffuse. The six exceptions are
+both worth a look rather than a shrug: they are `slotN_routine` on exactly two
+rows, `cnz2` 8405 and 10936, long after the last session. Row 8405 sits beside
+the frame 8506 residual left by the rejected tick-plus-seed pair, and neither
+has been investigated.
+
+**Mechanism.** The unresolved three-member ordering group: the engine calls
+`CNZSlotMachineManager.update()` from `updatePrePhysics` while the ROM calls
+`SlotMachine` *after* the object pass (`s2.asm:5095` then 5098, 15175, 20329,
+21511, 21512); the object-visible clock is read before its tick, which cancels
+the placement error at the seed but not in phase; and ObjD6's completion check
+(`s2.asm:59205`, during `RunObjects`) is unmodelled. Moving any one member alone
+desyncs the fixtures — measured at tick-alone 19,603/29,397 errors,
+tick-plus-seed green/10, placement-alone 22,879/green.
+
+**Why WARNING and not ERROR.** This is new coverage of a never-triaged block, not
+a relaxation of existing coverage: nothing that was red becomes green, and every
+divergence stays visible in the report. Warnings are release-blocking in this
+harness, so the two CNZ classes are red either way; the severity records that the
+frontier is untriaged rather than asserting a tolerance.
+
+**Removal condition.** Model all three members together, drive the CNZ slot
+divergences to zero, then promote `TraceBinder.putSlotField` from
+`Severity.WARNING` to `Severity.ERROR` and delete this entry.
+
+## S2 tornado (ObjB2): recorded ROM SST diverges at five discrete points
+
+**Status:** open, comparison landed at WARNING on 2026-08-21.
+
+`aux_state.jsonl` carries ObjB2's SST (`s2_tornado_state`) on every row of the SCZ and WFZ
+fixtures. It was parsed as an untyped generic event and never compared. Comparing it exposes
+five pre-existing divergence spans across 24,056 rows:
+
+| fixture | field | rows | ROM | engine |
+|---|---|---|---|---|
+| `scz` | `tornado.objoff_31` | 0–198 | `0xFF` | `0x00` |
+| `scz` | `tornado.x` | 7103 only | `0x12F5` | `0x12F6` |
+| `wfz` | `tornado.status_byte` | 0–196 | `0x08` | `0x00` |
+| `wfz` | `tornado.routine` | 10419 only | `0x00` | `0x06` |
+| `wfz` | `tornado.objoff_2f` | 13378–13440 | `0x01` | `0x00` |
+
+Unlike the CNZ slot block these are discrete and individually nameable rather than a cascade,
+which makes each one a small self-contained target:
+
+- **`objoff_31` at level start.** The ROM's vertical-move countdown is decremented with
+  `subq.b #1` / `bpl` (`s2.asm:79388`), so its expired resting value is `-1` = `0xFF`. The
+  engine initialises `moveVertTimer` to `0`. A one-line initialisation difference, visible for
+  199 rows until the first vertical move loads `$14`.
+- **`status_byte` at WFZ level start.** The ROM has the `p1_standing` bit set on ObjB2 for the
+  first 197 rows; the engine's `lastMainStanding` is false there.
+- **The two single-row spans** (`scz` `x` at 7103, `wfz` `routine` at 10419) are one-frame
+  divergences that self-correct, so each is a phase question at a specific transition rather
+  than a drift.
+
+**A limitation of the encoding, stated because it is not obvious.** The scratch bytes are
+re-encoded from the engine's semantic fields using ROM idioms read off the **SCZ** arm:
+`objoff_2E` is the `p1_standing` transition (`status(a0)` saved, then
+`(saved ^ current) & p1_standing`, `s2.asm:78827, 78834-78839`), and `objoff_2F`/`objoff_30`
+are `st.b`/`clr.b` flags, hence `0xFF`/`0x00` (`s2.asm:79382-79383, 79390`). The WFZ
+`objoff_2f` divergence records `0x01`, which that encoding cannot produce — so **the WFZ arm
+uses the byte for something else**, and the mapping is per-routine rather than per-object. The
+WFZ arm's scratch semantics have not been read; until they are, `tornado.objoff_2f` on a WFZ
+row should be treated as unmodelled rather than as a divergence.
+
+`y_sub` is exact rather than truncating: the ROM's sub-pixel word has a zero low byte on all
+7629 SCZ rows, so the engine's 8-bit sub-pixel is a faithful model of it.
+
+**Removal condition.** Fix the five divergences, read the WFZ arm's scratch semantics, then
+promote the tornado fields from `Severity.WARNING` to `ERROR` and delete this entry.

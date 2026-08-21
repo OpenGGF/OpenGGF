@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -75,7 +77,7 @@ class TestBizhawkProbeContractGuard {
             String source = Files.readString(probe);
             String executable = stripLuaCommentsAndStrings(source);
             assertTrue(executable.contains("ProbeRuntime.run({"), probe + " must delegate to ProbeRuntime.run");
-            assertTrue(executable.contains("stage = function"), probe + " must declare a semantic stage gate");
+            assertTrue(declaresStageGate(executable), probe + " must declare a semantic stage gate");
             assertTrue(executable.contains("hooks = {"), probe + " must declare hooks for deferred registration");
             for (String forbidden : List.of(
                     "event.onmemoryexecute", "event.onmemorywrite", "event.unregisterbyname",
@@ -101,6 +103,29 @@ class TestBizhawkProbeContractGuard {
         assertTrue(executable.indexOf("ProbeRuntime.run") == executable.lastIndexOf("ProbeRuntime.run"),
                 "equal-delimited comment decoy survived");
         assertTrue(executable.contains("client.exit()"), "executable call was stripped");
+    }
+
+
+    /**
+     * A probe may declare its stage gate inline ({@code stage = function() ... end})
+     * or hand it a name ({@code stage = inAiz2}), which lets the gate carry a comment
+     * explaining what it binds to. The named form is accepted only when the probe also
+     * defines that function, so the requirement is still that a gate exists -- a
+     * {@code stage = nil} or {@code stage = true} does not satisfy it.
+     */
+    private static boolean declaresStageGate(String executable) {
+        if (executable.contains("stage = function")) {
+            return true;
+        }
+        Matcher named = Pattern.compile("stage\\s*=\\s*([A-Za-z_][A-Za-z0-9_]*)").matcher(executable);
+        while (named.find()) {
+            String gate = named.group(1);
+            if (Pattern.compile("(local\\s+)?function\\s+" + Pattern.quote(gate) + "\\s*\\(")
+                    .matcher(executable).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String stripLuaCommentsAndStrings(String source) {

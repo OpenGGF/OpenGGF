@@ -126,11 +126,16 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
         if (isDestroyed()) return;
         this.frameCounter++;
         if (initRoutinePending) {
-            // ROM: same-frame execution after AllocateObjectAfterCurrent runs
-            // Obj_AIZShipBomb init only (sonic3k.asm:105362); ReadyDrop begins
-            // when Obj_AIZShipBombMain is called on the next object pass.
+            // ROM: Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and is
+            // followed immediately by the label Obj_AIZShipBombMain, with no
+            // rts between them (sonic3k.asm:105367-105379), which dispatches
+            // routine 0 straight into AIZShipBomb_ReadyDrop (:105384,:105391).
+            // The ship creates the bomb with AllocateObjectAfterCurrent, so the
+            // bomb's slot is still ahead of the pass and it runs on its creation
+            // frame -- init AND the first ReadyDrop step, not init alone.
+            // Returning here spent an extra frame in the air and made the fall
+            // one row longer than the recording's.
             initRoutinePending = false;
-            return;
         }
 
         switch (state) {

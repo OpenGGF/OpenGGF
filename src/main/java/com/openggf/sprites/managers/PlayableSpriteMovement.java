@@ -209,6 +209,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	@Override
+	public void resetGroundAngleLatches() {
+		latchedNextTilt = 0;
+		latchedTilt = 0;
+	}
+
+	@Override
 	public void resetTransientState() {
 		jumpPressed = false;
 		jumpPrevious = false;
@@ -671,6 +677,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
 			}
 			sprite.completeHurtLandingRecovery();
+			// Sonic_HurtStop's landing branch also writes the walk animation,
+			// between zeroing the three speeds and dropping the routine: S1
+			// `move.b #id_Walk,obAnim(a0)`
+			// (docs/s1disasm/_incObj/"01 Sonic.asm":1949) and S2
+			// `move.b #AniIDSonAni_Walk,anim(a0)` (docs/s2disasm/s2.asm:38223).
+			// Without it the player stays in the hurt animation after touching
+			// down and the hurt script keeps republishing fr_Injury, so any read
+			// before normal control re-selects an animation sees the wrong frame.
+			// It lives here rather than in completeHurtLandingRecovery because
+			// AbstractPlayableSprite is at its release-critical size budget.
+			int hurtLandingWalk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+			if (hurtLandingWalk >= 0) {
+				sprite.setAnimationId(hurtLandingWalk);
+			}
 		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {
@@ -3763,14 +3783,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		if (movementRules != null
-				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
-				&& sprite.getSpindash()
-				&& sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
-				&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
-			// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
-			// forced-roll guard separate, but an actively charging Spindash animation
-			// still proves that the native byte is live, so ResetOnFloor skips Walk.
-			return;
+				&& movementRules.landingWalkWriteSkippedWhileSpindashing()
+				&& sprite.getSpindash()) {
+			if (movementRules.rollingJumpPinballGateRequiresSpindashFlag()) {
+				if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
+						&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
+					// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
+					// forced-roll guard separate, but an actively charging Spindash animation
+					// still proves that the native byte is live, so ResetOnFloor skips Walk.
+					return;
+				}
+			} else {
+				// S3K keeps a dedicated spin_dash_flag with no pinball aliasing, so
+				// Player_TouchFloor_Check_Spindash's `tst.b spin_dash_flag(a0)` is the
+				// whole predicate (sonic3k.asm:24325-24329; Tails :29123-29127). No
+				// animation condition: the ROM does not test anim here.
+				return;
+			}
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {

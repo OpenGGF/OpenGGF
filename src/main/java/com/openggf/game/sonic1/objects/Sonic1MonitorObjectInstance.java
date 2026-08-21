@@ -387,6 +387,33 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         return SolidObjectParams.of(0x1A, 0x0F, 0x10);
     }
 
+    /**
+     * The monitor's SST {@code obActWid}, {@code move.b #30/2,obActWid(a0)}
+     * = 15 (docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:43). The
+     * {@code #16/2} at {@code :234} belongs to {@code Pow_Main}, the power-up
+     * icon Obj2E, which is a separate object and a separate class here.
+     *
+     * <p>The byte's readers all want 15, and the engine already depends on it
+     * twice without naming it: {@code Mon_Solid}'s {@code .normal} passes
+     * {@code #30/2+sonic_solid_width} = {@code $1A} to {@code Mon_SolidSides}
+     * ({@code :100}), which is the literal in {@link #getSolidParams()} above,
+     * and the falling/stood-on branch reads {@code obActWid} and adds
+     * {@code sonic_solid_width} itself ({@code :72}). {@code BuildSprites}
+     * culls on it ({@code docs/s1disasm/_inc/BuildSprites.asm:49-58}) and
+     * {@code Sonic_Balance} reads it off the stood-on object
+     * ({@code _incObj/01 Sonic.asm:423}).
+     *
+     * <p>Without this the inherited 16 shifted the balance window by a pixel at
+     * both edges on an object the player stands on constantly:
+     * {@code d1 = player_x + width - object_x} against {@code #4} and
+     * {@code 2*width-4} (_incObj/01 Sonic.asm:425-433).
+     * {@code getBalanceWidthPixels()} defaults to this accessor.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 30 / 2;
+    }
+
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // ROM: Mon_Solid only calls Mon_SolidSides when ob2ndRout=0 (normal state).

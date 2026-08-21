@@ -1522,7 +1522,20 @@ public class GameLoop {
      * exits when complete. Falls through to the shared post-update tail.
      */
     private void updateSpecialStageResultsMode() {
-        activePlcLifecycleFrame.claim(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
+        // ROM SS_NormalExit is a full loop iteration: VintID_TitleCards, a
+        // V-int that runs ProcessPLC_9Tiles (docs/s1disasm/sonic.asm:946),
+        // ExecuteObjects, BuildSprites, then RunPLC at the tail
+        // (docs/s1disasm/sonic.asm:3402-3413). Claiming the lifecycle frame
+        // alone never reached the hardware timing boundaries, so the loop-tail
+        // arm was never submitted as hardware work.
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
+                this::runSpecialStageResultsIteration);
+    }
+
+    /** One ROM SS_NormalExit iteration (docs/s1disasm/sonic.asm:3402-3413). */
+    private void runSpecialStageResultsIteration() {
         if (resultsExitReady) {
             // ROM: the GM loop only falls through to the next mode's dispatch
             // on the frame after the whiteout's final WaitForVBla, so the
@@ -1541,16 +1554,10 @@ public class GameLoop {
                 // cleared queue, so hold the exit body — and with it the
                 // reload's PLC submissions — for the fade's duration.
                 resultsExitPreLevelFadeFramesRemaining--;
-                if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
-                    activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
-                }
                 return;
             }
             resultsExitPreLevelFadeFramesRemaining = -1;
             resultsExitReady = false;
-            if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
-                activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
-            }
             doExitResultsScreen();
             return;
         }
@@ -1570,9 +1577,6 @@ public class GameLoop {
                     exitResultsScreen();
                 }
             }
-        }
-        if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
-            activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
         }
     }
 
@@ -1815,6 +1819,17 @@ public class GameLoop {
             }
         } else {
             updateNonGameplayAudio(doFrameStep);
+            // A level-to-level transition fade freezes gameplay but not V_int:
+            // the admission controller consumes the row when the compared span
+            // still owns it. See consumeTransitionFreezeRow for the ROM
+            // citations and why the ownership question is asked, not assumed.
+            if (freezeForNonRewindableTransition
+                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
+                levelIterationAdmission.consumeTransitionFreezeRow(
+                        playbackDebugManager,
+                        levelManager != null ? levelManager.getObjectManager() : null,
+                        LevelFrameContext.from(gameplayMode));
+            }
         }
 
         // Debug keys for level transitions (use request system for fade)

@@ -178,6 +178,40 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    /**
+     * The bridge's SST {@code obActWid}, which {@code Sonic_Balance} reads off
+     * the stood-on object (docs/s1disasm/_incObj/01 Sonic.asm:423).
+     *
+     * <p>The player stands on the <em>parent</em>: the child logs are routine
+     * {@code $A} ({@code Bri_ChildLog}, display only) and it is
+     * {@code Bri_CheckOnBridge} in the parent's own routine that sets
+     * {@code obRoutine = 4} ({@code Bri_StoodOn})
+     * (docs/s1disasm/_incObj/11 GHZ Bridge.asm:85,100,111-118). So the byte that
+     * matters is the parent's, not the logs' {@code #16/2} = 8 at {@code :94}.
+     *
+     * <p><b>{@code FixBugs} = 0.</b> {@code Bri_Main} writes {@code #256/2} = 128
+     * on the un-fixed branch and {@code #16/2} under the flag ({@code :32-39}).
+     * The listing's own comment says the wide value "is way too large, causing
+     * the bridge to potentially screen-wrap" and was "likely forgotten when the
+     * bridge was turned into individual 16px log objects". However plainly that
+     * reads as an oversight, 128 is what the shipped ROM stores and therefore
+     * what every recorded trace reflects.
+     *
+     * <p>Required rather than tidy: {@code getBalanceWidthPixels()} falls back to
+     * {@code getSolidParams().halfWidth()} for top-solid objects, which here is
+     * {@code logCount * 8} — the collision half-width from
+     * {@code Bri_CheckOnBridge}'s {@code d1 = bridge_children*8 + 8}
+     * ({@code :122-126}), a different quantity from {@code obActWid}. The
+     * consequence is reachable and not marginal: with the ROM's 128 the balance
+     * window {@code [4, 2*128-4)} is wider than any bridge, so the ROM never
+     * balances on one, while the inherited {@code logCount * 8} puts a player
+     * standing on the end log at {@code d1 = 0} and starts the animation.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return 256 / 2;
+    }
+
     @Override
     public boolean usesCollisionHalfWidthForTopLanding() {
         // ROM Bri_Solid passes the already-final PlatformObject width in d1/d2.

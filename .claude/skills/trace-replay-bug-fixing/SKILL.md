@@ -16,6 +16,7 @@ Use these to get oriented on a divergence before you start editing engine code. 
 - **TraceTriageTool** — reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine value, likely owning subsystem, disasm search terms). Run after a failing `*TraceReplay` test produces a report:
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"`
 - **`docs/agent-workflow/runbooks/runbook-trace-divergence.md`** — step-by-step divergence runbook.
+- **`docs/agent-workflow/briefing-trace-rounds.md`** — the accumulated round rules, with a scannable index. Read the **measurement-hazard table** before reporting any number: every hazard in it produces output indistinguishable from a real result (phantom errors from a native-library failure, a failed compile that reads as a short test run, a backgrounded build reporting its wrapper's exit code, run-order swaps that look like "broke one, fixed one", truncated arms with plausible totals, and message diffs that compare equal on a shared prefix). It also carries the evidence rules — diff messages not class names, `bk2_frame_offset + row + 1` for a row's emulator frame, BizHawk reporting the PC *after* the storing instruction — and the fitted-constant tell.
 - **`docs/agent-workflow/documentation-obligation-checklist.md`** — commit trailers, changelog justification, and the `docs/status/trace-frontier-log.md` update obligation when a trace frontier moves.
 
 ## Core Mission Rules (apply to all trace work)
@@ -1802,6 +1803,29 @@ fired, because its precondition was the very thing the second measurement denied
 Contradictions between your own measurements are the cheapest bugs you will ever
 find and the most expensive to leave. Re-run the specific measurement before
 building on either number.
+
+### Restore from a named commit, never from the index
+
+`git checkout -- <path>` restores from the **index**, not from `HEAD` and not from any
+commit you named earlier. Setting up a control arm as `git checkout <base> -- <files>`
+stages the reverted files; the later `git checkout -- src/` that is meant to undo it
+reads that same staged revert straight back out. The tree looks restored, `git status`
+shows only a staged `M`, and the experiment arm runs the control's code.
+
+The failure is silent and the result is plausible: two arms agreeing on every class and
+every count, which reads exactly like a change with no regressions. It is the one
+outcome you are least likely to question.
+
+Use `git restore --source=<commit> --staged --worktree <path>`, or `git reset --hard`
+when the branch head is the state you want, and verify with `git diff HEAD --stat` plus a
+`grep` for a token the change introduces — not `git status`, which shows a staged revert
+as an ordinary modification.
+
+The general form is worth more than the git detail: **a restore that reads from a mutable
+intermediate returns whatever you last put there.** Name the source. This applies equally
+to a reused `target/` directory, a cached report under `target/trace-reports/`, and a
+stale surefire XML — each is an intermediate that answers with history rather than with
+the run you think you just made.
 
 ### The fixture is ground truth about the RECORDER, not about the ROM
 

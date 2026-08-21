@@ -145,6 +145,30 @@ public class ObjectManager {
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
     private int currentExecSlot = -1; // -1 when not in update loop
+
+    /** ROM object-loop counter for the current pass; see ObjectLoopSlotBudget. */
+    private final ObjectLoopSlotBudget objectLoopBudget = new ObjectLoopSlotBudget();
+
+    /**
+     * Rewrites the remaining length of this frame's object walk from the calling
+     * object's own slot, modelling a ROM routine that writes the loop counter
+     * register. {@code remainingSlots} is the ROM's own number; callers cite
+     * where it comes from and this method invents nothing.
+     */
+    public void overrideRemainingObjectLoopSlots(ObjectInstance source, int remainingSlots) {
+        if (source instanceof AbstractObjectInstance aoi) objectLoopBudget.overrideFrom(
+                executionSlotIndex(aoi), remainingSlots);
+    }
+
+    /**
+     * Whether this frame's walk got past the managed dynamic window and so would
+     * have reached the fixed-in-level slots the ROM places straight after it --
+     * S2 {@code LevelOnly_Object_RAM} (docs/s2disasm/s2.constants.asm:1145-1150),
+     * S3K {@code Level_object_RAM}.
+     */
+    public boolean objectLoopReachedFixedInLevelSlots() {
+        return objectLoopBudget.reaches(slotLayout.lastProcessSlotExclusive());
+    }
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
@@ -893,8 +917,10 @@ public class ObjectManager {
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
         updating = true;
         boolean objectsRemoved = false;
+        objectLoopBudget.reset();
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (objectLoopBudget.walkEndedBefore(slotIndexForExec(currentExecSlot))) break;
                 capturePlayerCentreAtSlotStart(player);
                 if (pendingChildSlotRelease.get(currentExecSlot)) {
                     pendingChildSlotRelease.clear(currentExecSlot);
@@ -1097,9 +1123,11 @@ public class ObjectManager {
         // doesn't double-update objects that lost their slot mid-frame.
         // Reused per frame; cleared in the finally block below.
         Set<ObjectInstance> processedInExecLoop = processedInExecLoopScratch;
+        objectLoopBudget.reset();
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (objectLoopBudget.walkEndedBefore(slotIndexForExec(currentExecSlot))) break;
                 capturePlayerCentreAtSlotStart(player);
                 // A reserved child slot freed earlier in this pass is released
                 // here, at the exec position its own ROM object would have
@@ -3834,6 +3862,27 @@ public class ObjectManager {
                 planeSwitchers.remove(spawn);
             }
             instanceToSpawn.remove(removed);
+            // ROM parity: an object's per-player pushing bits live in its SST
+            // slot's status byte, and every game's delete routine zeroes the
+            // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
+            // S1 DeleteObject/DeleteChild (_incObj/sub DeleteObject.asm:10-20),
+            // S3K Delete_Current_Sprite/Delete_Referenced_Sprite
+            // (sonic3k.asm:36108-36125). So a solid that unloads and is later
+            // reloaded from the same layout entry comes back with its pushing
+            // bits CLEAR, and its first SolidObject_TestClearPush takes the
+            // `beq SolidObject_NoCollision` exit (s2.asm:35462-35466) without
+            // writing the Walk/Run animation word. The engine keys that bit on
+            // the persistent ObjectSpawn record, which outlives the instance, so
+            // without this the stale bit survives the unload and the reloaded
+            // object publishes a release the ROM never performs.
+            solidContacts.releaseObjectPushLatchForAllPlayers(removed);
+            // Same delete-routine citation, standing half. The object-side
+            // standing bit is in that same zeroed status byte, so a reloaded
+            // solid must not answer "this player is standing on me" on the
+            // strength of a bit its predecessor set. Object-side only: none of
+            // the three routines touches the player's slot, so the player's own
+            // Status_OnObj and the engine's riding state are left alone.
+            solidContacts.releaseObjectStandingLatchForAllPlayers(removed);
             notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext

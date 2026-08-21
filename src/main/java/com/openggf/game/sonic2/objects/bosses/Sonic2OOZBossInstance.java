@@ -249,9 +249,16 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         }
         if (!bossDefeatedFlagSet) {
             ObjectServices services = tryServices();
-            if (services != null && services.gameState() != null) {
-                services.gameState().setCurrentBossId(0);
-            }
+            // ROM: Current_Boss_ID is NEVER cleared in Sonic 2. It is written only by
+            // the boss-arena setup routines (`move.b #N,(Current_Boss_ID).w`, ids 1-9)
+            // and read by `tst.b`; docs/s2disasm/s2.asm contains no `clr.b` or
+            // `move.b #0` for it, so it resets only via the level-load RAM clear and
+            // persists to the end of the act. Sonic_Boundary's right-hand test widens
+            // the side boundary by $40 only when it is zero (s2.asm:37243-37251), so
+            // clearing it here let the character run 64px past the ROM's clamp.
+            // Contrast S1, which DOES clear at the Egg Prison
+            // (s1disasm/_incObj/3E Prison Capsule.asm:97), and S3K, which clears
+            // Boss_flag at 31 sites. S2 is the exception.
             if (services != null) {
                 if (!Sonic2PlcRequests.append(services, Sonic2Constants.PLC_ANIMALS_OOZ,
                         Sonic2Constants.PLC_EXPLOSION)) return;

@@ -43,8 +43,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    private static final int RELEASE_OWNER_BEFORE_CONTROLLER_DELAY = 1;
-    private static final int RELEASE_OWNER_AFTER_CONTROLLER_DELAY = 2;
+    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 1;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
     private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
@@ -55,11 +54,11 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private int arenaBaseY;
     private boolean initialized;
     private boolean postCapsuleSequenceStarted;
+    private boolean pendingButtonInputRelease;
     private boolean knucklesSpawned;
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
-    private boolean pendingButtonInputRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
@@ -180,16 +179,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // slot. This controller then observes the shared button flag and
             // clears its engine-side forced word so the next player dispatch
             // reads the unlocked raw input, matching loc_65C56/loc_69588.
-            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
-                player.clearForcedInputMask();
-                player.setForceInputRight(false);
-            } else {
-                // The lower native button slot clears Ctrl_1_locked before the
-                // later Player_1 slot consumes loc_69588's retained UP word.
-                // Keep the engine's late-write representation through that
-                // player dispatch and release it on the next controller entry.
-                pendingButtonInputRelease = true;
-            }
+            // Obj_CutsceneButton clears Ctrl_1_locked from an object slot, but
+            // Player_1 is SST slot 0 and consumed the retained logical UP word
+            // earlier in this same scan. Keep the engine's late-write
+            // representation through that player dispatch and release it on the
+            // next controller entry (sonic3k.asm:133968-133970, 138317-138323).
+            pendingButtonInputRelease = true;
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
@@ -238,17 +233,22 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private int postResultsControlRestoreDelay() {
-        // The embedded result children publish one owner entry before
-        // Obj_LevelResultsWait2 clears _unkFAA8. The cutscene's allocation-time
-        // SST-order marker distinguishes whether loc_694D4 precedes that later
-        // lowest-free results owner (retain one entry) or follows it (restore
-        // immediately). The engine folds the bridge/button children, so its
-        // physical Java slots are not the native ordering authority
-        // (sonic3k.asm:62709-62720,138313-138331,181978-181990).
-        if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
-            return RELEASE_OWNER_AFTER_CONTROLLER_DELAY;
-        }
-        return RELEASE_OWNER_BEFORE_CONTROLLER_DELAY;
+        // AIZEndBoss_StartPostDefeatCutscene polls tst.b (_unkFAA8).w from the
+        // boss's own SST slot and only restores control on the entry that first
+        // reads it clear (sonic3k.asm:138263-138268). The clearing owner is
+        // Obj_LevelResultsWait2, created through AllocateObject
+        // (sonic3k.asm:62700-62712, 181967-181971), so whether the boss sees
+        // the clear in the same scan or on its next entry depends on the
+        // lowest free SST slot AllocateObject happened to return -- runtime
+        // allocation state the engine's folded controller does not model.
+        //
+        // This controller is allocated below the egg capsule that publishes the
+        // engine-side release, so its first entry that observes the release
+        // already stands for the boss entry that first read _unkFAA8 clear: no
+        // further entry is retained. The previous two-way selector keyed this
+        // off the bridge/button dispatch marker, which answers an unrelated
+        // ordering question and is gone.
+        return POST_RESULTS_CONTROL_RESTORE_DELAY;
     }
 
     private void restoreNativePlayerControlsAfterResults(AbstractPlayableSprite player) {

@@ -214,6 +214,86 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K badnik Init dispatch (merged 2026-08-21):** six badniks skipped the ROM's
+  routine-zero dispatch -- the frame in which an object sets up and returns without
+  moving or running its collision check -- because the engine models that frame as a
+  per-class convention rather than a shared mechanism. Modelling it closes the HCZ
+  segment class, whose art-queue abort turned out to be downstream of a badnik dying
+  a frame early rather than an independent blocker.
+
+- **S1 LZ bubble water level (merged 2026-08-21):** every water test in the LZ air
+  bubbles object reads the swayed water height, and the engine was reading the base
+  height without the surface oscillation -- up to eight pixels low on a 126-frame
+  cycle. Reading the value the ROM reads takes the S1 chain's `lz1_2` segment from
+  7,176 comparator errors to zero and the chain from nineteen failing axes to
+  fourteen.
+
+- **S1 Labyrinth block solid latch (merged 2026-08-21):** the moving LZ blocks keyed
+  their solid-state latch on a spawn record that is recreated every frame they
+  travel, so the ROM's clear-pushing tail was unreachable and the player kept
+  publishing the push animation after a rising platform left his collision box.
+  Keying the latch on the instance, as the floating blocks already do, drops the
+  affected chain segment from 18,205 to 7,176 errors and moves its first error
+  from frame 3181 to 14,745.
+
+- **Chain reports publish their error groups (merged 2026-08-21):** chain trace
+  reports now carry a per-group error breakdown alongside the flat total, tallied
+  at the same increments that feed it, and fail unless the groups plus bootstrap
+  account for the total exactly. Whether animation errors reached chain totals had
+  cost two rounds and an escalation to establish by probing; it is now a grep.
+
+- **S2 object-loop slot budget (`bugfix/ai-s2-objectloop-budget-r1`, merged
+  2026-08-21):** the CPZ pipe retract borrows the object loop's own slot counter as
+  scratch and leaves the boss's id in it, a shipped-ROM bug the disassembly warns
+  about, so the update pass stops short of the high level-only object band for
+  eleven frames. Modelling it drops the affected segment from 1681 to 370 errors
+  standalone and 7415 to 2122 on the chain, and closes an S2 chain axis eleven
+  segments downstream that was breaking on the skewed art ledger.
+
+- **S3K level art seam trigger (`bugfix/ai-s3k-seam-trigger-r1`, merged 2026-08-21):**
+  the destination's terrain art now publishes when the title-card owner retires --
+  the engine's form of the ROM's own module-queue gate -- instead of from the
+  destination's frames past the seam. The two parents that had been stuck pending
+  for the rest of the run now retire on their recorded rows, closing eleven module
+  and seventeen decompression ordinals downstream; unmatched completions fall from
+  42 to 14.
+
+- **S1 ring sparkle lifetime (merged 2026-08-21):** the signpost's sparkles were
+  living sixteen frames instead of twenty-five, because a flat frame delay stood
+  in for the animation script's own duration byte and the routine's reload-on-
+  negative semantics. SLZ1's slot table now matches the ROM exactly for the whole
+  act -- zero divergent frames out of 146, from 107 when the work started.
+
+- **S3K level art ordering (`bugfix/ai-s3k-art-order-r1`, merged 2026-08-21):** the
+  title-card deferral was releasing the module queue while it was empty, so the
+  following frames' object art took every slot and the terrain art starved. The
+  ordering and the starvation were one defect, not two. Level art now publishes
+  behind the ROM's own precondition -- whether the module queue still holds
+  parents -- and the AIZ2 to HCZ1 boundary no longer wedges: the HCZ1 segment
+  runs end to end instead of aborting a tenth of the way in.
+
+- **S1 collapsing floor (`bugfix/ai-s1-slz1-graze-r1`, merged 2026-08-21):** three
+  one-frame errors landed together, because two of them were compensating for the
+  first. The floor fragmented a frame late, the post-fragmentation carry lasted a
+  single frame instead of holding the rider until he walks off the ROM's X band,
+  and timer expiry forced the rider airborne instead of letting his next control
+  tick do it. All three SLZ1 and MZ3 anchors stay green and both fragmentations
+  now allocate the ROM's slots.
+
+- **S3K capsule press timing diagnosed (2026-08-21):** the capsule's fourteen-row
+  early press is one pixel of capsule Y against an exclusive bound, caused by
+  subpixel drift in the capsule's descent rather than by the trigger. Held
+  unlanded: the engine also presses with the wrong character, so correcting the
+  pixel alone would produce a clean-looking count win that is still wrong.
+
+- **Solid-object push release (`bugfix/ai-solid-rider-push-r1`, merged 2026-08-21):**
+  a solid object now releases the player's pushing flag even when a different
+  solid raised it, matching the unconditional player-side clear in all three
+  disassemblies. Where solids tile without a gap, the neighbouring block that
+  takes the four-pixel side-air branch is what the ROM relies on to leave the
+  player not pushing, so the engine's ownership gate stranded the flag. Two
+  per-segment trace error counts fall and none rise.
+
 - **Managed agent scratch storage (2026-08-14):** Codex, Claude Code, trace
   diagnostics and benchmark retention now use a validated disk-backed
   `$AGENT_SCRATCH_ROOT`; Claude Code also receives `TMPDIR`, `TMP`, and `TEMP`
@@ -249,6 +329,323 @@ straightforward to add new objects, zones, and game-specific behaviour.
   **excluded** by citation and the owning routine named as still unidentified) and the Super
   Emerald 7 latent turn in `ss_9`, whose `turning` value survives the jump and discharges sixteen
   frames later with no input on that frame.
+- **The S3K signpost frontier is the second post-bounce kick; a latent `romBumpXVelocity` fix lands
+  (`bugfix/ai-s3k-signpost-gate-r1`, merged 2026-08-19).** The specified three-bit gate was **not**
+  built, for the reason recorded in the retraction it carries: `loc_85CA4` is the arena-**entry**
+  gate, installed as a boss's routine at init with the boss's start routine in `$34(a0)`, and
+  "replace the 119-frame timer" would have deleted correct code modelling `Obj_EndSignControl`'s
+  `move.w #(2*60)-1,$2E(a0)`. The round took the success criteria as the instruction and the
+  mechanism as superseded. **Landed and honestly latent:** `romBumpXVelocity` applied the ROM's `#8`
+  fallback *after* the `<< 4`, where `sub_83A70` (`skdisasm/sonic3k.asm:176381-176390`) does
+  `bne.s + / moveq #8,d0 / + lsl.w #4,d0` -- so an exactly aligned player gives `x_vel = $80` where
+  the engine gave `8`, sixteen times too small. **The `dx == 0` case occurs nowhere in the corpus**,
+  the sweep is identical, and it is landed because it is wrong rather than because it fixes anything.
+  **Both sides measured:** the engine tracks the ROM to within a frame through the first landing at
+  5449/5448, reproduces the hidden-monitor bounce, matches the first post-bounce kick at 5520/5519 --
+  then diverges on the **second** (5595 against 5606) and never lands the third, so its signpost
+  second-lands at 5698 where the ROM's does at 6899. The bump box is **ruled out**, not left open:
+  `Check_PlayerInRange` builds bounds cumulatively and gives exactly the engine's constants. The
+  round also flags its own instrument's blind spot -- a kick count of 15 is a **floor**, since the
+  ROM's apex after the 5595 kick implies an ~83 px rise where one `y_vel = -$200` yields ~43, so at
+  least one more kick lands while the signpost is still rising and a direction-change detector cannot
+  see it. **The live candidate:** `EndSign_CheckPlayerHit`'s `FixBugs = 0` path, subtler than the
+  disassembly's own comment -- `sub_83A70` ends in `jmp (HUD_AddToScore).l`, a tail jump, so
+  `HUD_AddToScore`'s `rts` consumes the return address and control resumes with `d0` holding whatever
+  that routine left, which the `swap d0 / tst.w d0` Tails test then reads. Closing it needs
+  `HUD_AddToScore`'s exit `d0`, which is not yet established.
+
+- **A cursor owner already exists, so the S1 ordinal fix is alignment rather than a second counter
+  (`bugfix/ai-s1-ordinal-scope-r1`, merged 2026-08-19 -- survey only, deliberately not implemented).**
+  The pre-implementation question is answered: **ordinals are the only shared counter**.
+  `HardwareTimingService.submit` allocates from `nextOrdinals`, one per `HardwareWorkKind`, and that
+  ordinal is part of the handle identity; nothing else counts arms, since `hasSubmitted` is a boolean
+  epoch flag and the port's other `ordinal` references are enum positions or reads of a recorded
+  edge's own ordinal. **But asking it turned up something that changes the design.**
+  `RecordedCompletionAuthority.advanceOrdinalCursorAcrossRecordedSpan` is already called from the
+  port for interstitial spans (`HardwareTimingReplayPort:322`) -- the **mirror-image** case, where
+  *recorded* ordinals belong to a span the engine never submits into and the cursor must skip so the
+  next engine handle lands on the recording's axis. Its guard states the invariant that governs this
+  case too: *"The cursor is the allocator for the next handle. Moving it while production still holds
+  an unclaimed one would leave that handle numbered on the old axis with no completion able to reach
+  it, which is the silent desync this whole path exists to prevent."* So the codebase already treats
+  "the two axes must not drift" as the property to protect and already has an owner for adjusting it,
+  and **the parallel-counter design this round was drifting toward would have been the wrong shape**
+  -- a second axis beside the mechanism built to make them meet. Two things remain unmeasured and
+  decide the implementation: whether an unrepresented submission can carry identity **without**
+  consuming `nextOrdinals`, given the ordinal is part of the handle and used for lookup; and whether
+  the pending-submissions guard fires on the reconciliation path, since the natively released arm is
+  *claimed* rather than pending by then.
+
+- **S2 bosses no longer clear `Current_Boss_ID`, because the ROM never does
+  (`bugfix/ai-s2-boss-id-fix-r1`, merged 2026-08-19).** Seven S2 boss classes -- CPZ, EHZ, HTZ, ARZ,
+  CNZ, OOZ and WFZ -- drop `setCurrentBossId(0)`, each replaced by a comment citing the ROM's
+  silence: `Current_Boss_ID` appears in `s2.asm` only as boss-arena setup writes and `tst.b` readers,
+  with **zero explicit clears**, so it resets only through the level-load RAM clear and persists to
+  the end of the act. The consequence was that `Sonic_Boundary_Sides` widened the level's right edge
+  by `addi.w #$40,d0` -- gated on the boss id being zero -- letting the engine run **64 px** past the
+  ROM's stop. **S3K was read rather than assumed and is a genuine third case:**
+  `clr.b (Boss_flag).w` at **31 sites**, one annotated "Unlock the screen". So **S1 clears, S3K
+  clears, S2 does not** -- the engine was right for two games and wrong for one -- and
+  `GameStateManager`'s field comment now states all three lifetimes instead of S1's as universal.
+  `bossDefeatedFlag` and `screenLocked` are untouched. **Verified 790/4 set-identical both ways
+  against a control measured in a clean worktree at the same commit, with no S1 or S3K test moved**,
+  guards 499/0, and the CPZ2 standalone segment **2491 -> 1749 errors**. The causal chain was checked
+  link by link rather than assumed: the stop lands at 6600 with zero `x` errors, `x_speed` and
+  `g_speed` match with zero errors, the Roll delay follows, the mapping-frame slip at 6608-7087 is
+  **gone** -- and the tail collapses only **partly**, 1247 -> 505. The residual is entirely
+  `dynamic_art` carrying a **+2 ordinal offset in from the 5554 onset**, which is the separate DPLC
+  submission-timing divergence recorded earlier and untouched here -- so it is not a second break in
+  this chain but the chain ending where an earlier independent defect takes over.
+
+- **RETRACTION: `loc_85CA4` is the pre-boss arena-entry gate, and both timers are correct
+  (`bugfix/ai-s3k-signpost-gate-r1`, merged 2026-08-19 -- nothing landed).** `loc_85CA4` is installed
+  as a boss's routine **at init, before the fight**, with the boss's start routine in `$34(a0)`:
+  `Obj_HCZEndBoss` does `lea HCZEndBoss_SonicCameraRange(pc),a1 / jsr Check_CameraInRange /
+  jsr sub_85D6A / move.l #HCZEndBoss_WaitStartCallback,(a0)`, and that callback is
+  `jmp (loc_85CA4).l` (`skdisasm/sonic3k.asm:140783-140806`). It waits for the camera to settle and
+  then **starts** the boss -- it does not gate the post-defeat signpost. The previous round read the
+  routine correctly and inferred its purpose from what it does rather than from **who calls it and
+  when they install it**. **Both timers are right:** `Obj_EndSignControl` sets
+  `move.w #(2*60)-1,$2E(a0)` = 119 frames (`:180377-180384`), which
+  `S3kBossDefeatSignpostFlow.FADE_TIMER` models exactly, and the fixture shows the lock landing 65
+  frames after the signpost's second landing, matching `Obj_EndSignLanded`'s `$2E = $40` counted with
+  `subq/bmi` (`:176201-176218`). **Building the specified gate would have replaced correct code with
+  a mechanism from a different routine**, and `Obj_AIZEndBoss` never touches `sub_85D6A`/`loc_85CA4`
+  at all. **Where the 1,200 frames actually are, from the fixture with no probe:** the ROM signpost
+  (`object_code 0x000837B2`, slot 25) is created at 5171, lands at 5449, **bounces straight back up
+  at 5450**, lands again at 6899, and locks at 6964 -- **1,449 frames being knocked back up**, which
+  the engine's signpost never is. Also measured: a stack trace at the flow's constructor names
+  **`AizMinibossInstance`**, not the end boss. **Flagged for whoever takes it:**
+  `EndSign_CheckPlayerHit` contains a `FixBugs` conditional (`:176357-176365`) -- with `FixBugs = 0`,
+  `d0` is corrupted by `bsr.w sub_83A70` before the `swap d0` that tests Tails, so the shipped ROM's
+  **sidekick** hit check does not work correctly, and taking the fixed branch would give Tails a
+  signpost hit the ROM never registers on a route that carries a sidekick throughout.
+
+- **The S1 title-card deadlock is closed: readiness sought in an unrepresented span takes native
+  readiness (`bugfix/ai-s1-arm-scope-impl-r1`, merged 2026-08-19 -- first code change in this
+  sequence).** The port declares row representation to the recorded authority at `beginRawFrame` and
+  `enterUnrepresentedGap`; the service exposes `recordedAuthorityRepresentsRow()` and
+  `admitUnrepresentedReadiness(handle)`; and `Sonic1PlcArmTiming.releaseArm` falls back to native
+  readiness **only** while row authority is deactivated. This restores the port's **own documented
+  contract** -- `enterUnrepresentedGap` already stated that production hardware work may continue
+  while no recorded edge may be applied -- so it claims no new authority, and that javadoc is quoted
+  at the gate itself with the recorder citation so the boundary's reason is findable without the log.
+  The arm gate asks the **service**, never the port, so no port internals reach per-game art code,
+  and the new interface method is a `default` so no existing implementer changes.
+  **`TestHardwareTimingAuthorityGuard` 24/0** and `TestS1S2PlcComparisonOnlyGuard` 7/0 by explicit
+  name; `-Ptrace-replay` **790/4 with an empty both-way set-diff** against a control measured at the
+  same base; `-Pguards` 499/0. **The title card releases at 9681 and segment 3 admits at 9741** --
+  the exact recorded row the equality window demands -- with no `rowsConsumed` violation, no stall and
+  no admission exception. The 213-row deadlock is closed **without widening the window**. The next
+  defect is stated as a consequence rather than left to be discovered: the level-load arm released
+  natively in the unrepresented span **still allocated an ordinal**, and since the recorder never
+  counted that arm it must not occupy a place in the shared numbering either -- so the chain now stops
+  at segment 3 frame 69 on a **one-ordinal offset, not a content mismatch**. Readiness was scoped;
+  allocation was not. The fixture therefore still does not land.
+
+- **The S3K frame-5766 divergence is a 119-frame timer standing in for a three-bit ROM gate
+  (`bugfix/ai-s3k-seg4-5766-r1`, merged 2026-08-19 -- diagnosis only, deliberately not landed).**
+  The reported one-pixel `sidekick_x` delta is a **lower bound**, per the rule this chain derived
+  earlier: both sides are byte-identical through frame 5765 and the gap reaches **23 px by 5799**. At
+  5766 the ROM applies `Tails_JumpHeight`'s `-$400` clamp (`skdisasm/sonic3k.asm:28592-28606`) and
+  the air drag that becomes eligible with it; the engine applies neither, because its Tails is still
+  holding jump. Tails' CPU input is Sonic's replayed 16 frames later (`loc_13DA6`, `:26683-26694`),
+  and Sonic released B at 5750 -- but `SidekickCpuController.update` returns at the
+  `controller2SignedLocked` guard from frame 5764, latching the last CPU-written jump hold. That lock
+  models `Obj_EndSignLanded`'s `st (Ctrl_2_locked).w` (`:176209-176218`) and its semantics are
+  **correct** -- `Tails_Control`'s three-way sign test at `loc_13830` (`:26195-26200`) is faithful --
+  but the **timing** is not: the fixture's own `control_lock_state` stream records `ctrl2_locked = 0`
+  for all 8,235 rows except 6964-6965, so **the engine locks roughly 1,200 frames early**. ~~Root cause: a bare 119-frame timer where `loc_85CA4` requires all three bits of `$27(a0)`~~
+  (**retracted below: `loc_85CA4` is the pre-boss arena-entry gate, both timers are correct, and the
+  missing frames are the signpost being knocked back up**). The superseded reading was that
+  `S3kBossDefeatSignpostFlow.updateWaitFade` advances on a bare 119-frame timer where
+  `loc_85CA4` (`:180495-180552`) requires all three bits of `$27(a0)` -- the music timer **and**
+  the Y camera-boundary ease **and** the X ease, loaded per boss by `sub_85D6A` (`:180565-180577`).
+  The engine models the first only. Nothing is landed because the real gate needs per-boss bounds and
+  all four camera eases routed through the shared defeat flow used by CNZ, ICZ2, MHZ2 and HCZ, and a
+  partial gate would be **a second fitted model on top of the first**.
+
+- **Confirmed: the engine clears `Current_Boss_ID` where the ROM never does, at seven S2 sites
+  (`bugfix/ai-s2-boss-id-r1`, merged 2026-08-19 -- probe and source read, fix scoped not landed).**
+  The byte is now a direct observation rather than a magnitude inference. Hooking the widening
+  instruction -- whose execution *is* the boss-id test -- shows **`WIDEN+40` never executes**, so
+  `Current_Boss_ID` is non-zero on every row, with `d0` a constant `2D58` and `d1` crossing it by
+  exactly two pixels at 6600, which accounts for the whole clamp arithmetically. **The lifetime, read
+  from the ROM before deciding where to change the engine:** `Current_Boss_ID` appears in `s2.asm`
+  only as `move.b #N` from boss-arena setup and as `tst.b` readers -- **zero explicit clears** -- so it
+  resets only via the level-load RAM clear and persists to the end of the act. The engine clears it
+  on defeat at **seven** S2 sites (CPZ, EHZ, HTZ, ARZ, CNZ, OOZ, WFZ). `GameStateManager`'s javadoc
+  says the field is "cleared on every boss defeat", which is **true for S1** -- the Egg Prison clears
+  it, citing `3E Prison Capsule.asm:97` -- and **false for S2**: the doc encodes S1's lifetime as if
+  it were universal. The fix is therefore seven sites rather than one, because a CPZ-only change
+  would be fitting the symptom, and those sites interact with `bossDefeatedFlag` and `screenLocked`,
+  each with its own cited ROM lifetime, on a boundary shared across three games.
+
+- **The arm-scope rule is a correction, not a widening -- the port already says so
+  (`bugfix/ai-s1-arm-scope-r1`, merged 2026-08-19 -- design and evidence only, not implemented).**
+  Measured before designing: with the pair applied, `HardwareTimingReplayPort.apply` sees
+  **`rawFrameLatch == null` on every boundary of every one of the 213 stalled rows**, so the port
+  holds no row and by its own construction no edge can be applied there. And the port's own javadoc
+  states the intended behaviour -- `enterUnrepresentedGap` says *"Production hardware work may
+  continue, but no recorded completion edge may be applied until the next `beginRawFrame`"*
+  (`HardwareTimingReplayPort.java:120-126`). Production hardware work is exactly what does **not**
+  continue: `releaseArm` waits on a readiness that can only come from an edge the port has disclaimed
+  the authority to apply. **The current behaviour contradicts the port's documented contract**, so
+  closing it claims no new authority. **The rule:** work whose readiness is sought while the port
+  holds no row takes native readiness, discriminated on `rawFrameLatch == null` -- a property of the
+  stream's coverage, not of game, zone, route or frame, with the recorder as the authority for why
+  the boundary sits there (`S1PlcHardwareTimingObserver.cs:80-83`). It is **not** "release anything we
+  cannot match": inside coverage an unmatched arm still blocks and still raises, so genuine
+  mismatches remain hard failures and the S3K ordinal lesson is untouched. **Explicitly not claimed:**
+  the design is not implemented and `TestHardwareTimingAuthorityGuard` has not been run against an
+  implementation, so no verdict is implied. Two decisions need the change in front of them -- which
+  owner expresses the rule, since `Sonic1PlcArmTiming` talks to `HardwareTimingService` rather than
+  the port and the wrong shape would leak port internals into per-game art code, and whether the
+  guard accepts that shape.
+
+- **ROOT CAUSE: the S2 stop is the level side boundary, gated on `Current_Boss_ID`
+  (`bugfix/ai-s2-solid-stop-r1`, merged 2026-08-19 -- writer probe, no code).** A write hook on
+  `MainCharacter + x_vel` capturing the writing PC names it: `0x1A932` is the ordinary per-frame
+  speed write, and `0x1A9CA` -- appearing **only at the stop** -- is the third instruction of
+  **`Sonic_Boundary_Sides`** (`s2disasm/s2.asm:37281-37286`), whose `move.w d0,x_pos(a0)` is the
+  "2-pixel correction" and whose `move.w #0,x_vel(a0)` is the dead stop. **It is not a solid object
+  and not collision at all.** And the 64 pixels are literally in the ROM: the boundary expression
+  adds `screen_width-24`, then `tst.b (Current_Boss_ID).w / bne.s` skips **`addi.w #$40,d0`** -- 64
+  more only when no boss is active. That is exactly the engine's overshoot and the magnitude that has
+  been the discriminating constraint for four rounds, it is the only term of that size in the
+  expression, and it is gated by one byte: the ROM holds `Current_Boss_ID` non-zero at 6600 and does
+  not widen, while the engine widens and runs those 64 px. **The chain this closes:**
+  `Current_Boss_ID` -> side boundary -> stop -> `x_speed` -> Roll delay -> mapping frame -> DPLC
+  submission timing -> the 1247-error tail. One value still to confirm directly rather than by
+  inference from a magnitude: `Current_Boss_ID` at row 6600 on both sides, since `Obj5D` leaves the
+  object list after 6084 and the live question is whether the engine clears its boss id when the
+  object goes while the ROM holds it through the end of the act.
+
+- **RETRACTION of a retraction: the recorder discards level-load arms by design
+  (`bugfix/ai-s1-quickplc-r1`, merged 2026-08-19).** The narrow question is settled and it is
+  **`AddPLC`, not `QuickPLC`**: `LevelHeaders`' first field is the level's 1st PLC, GHZ's is
+  `plcid_GHZ` (`LevelHeaders.asm:17-18`), and `GM_Level` reads that byte and calls `AddPLC`
+  (`s1disasm/sonic.asm:2731-2733`). The 461-tile zone art goes **through the queue, armed by
+  `RunPLC`** -- exactly what the engine does. That triggers the other half of the brief, which asked
+  for the missing recording to be *explained* rather than accepted, and the explanation was in a file
+  this lane had already read: *"Anything observed before the arm belongs to no row and is discarded,
+  so the level load's own PLC arming never reaches a trace file"*
+  (`S1PlcHardwareTimingObserver.cs:80-83`). **The absence is a property of the instrument**, so
+  `a41fef286`'s "the engine arms work the hardware never arms" is wrong -- the hardware arms it and
+  the recorder throws it away. **The position has now moved twice and both prior entries are
+  superseded:** "correct and insufficient" was right in words and wrong in mechanism, and its
+  retraction was wrong outright. **What it decides:** the engine's submission is correct and must not
+  be removed, so neither candidate fix shape applies -- it is not spurious, and it cannot be released
+  from a stream that will never contain it. **Recorded admission must not gate an arm the recorder
+  does not record**, because a level-load arm has no representation in any segment's stream and
+  holding one against recorded readiness is a deadlock by construction -- which is exactly the 214
+  consecutive `releaseArm` blocks measured last round. How to scope that is deliberately **not**
+  claimed: it touches the port's authority, hard rule 4 and `TestHardwareTimingAuthorityGuard`.
+
+- **The S1 title card blocks on art the hardware never arms -- an engine defect, not a stream gap
+  (`bugfix/ai-s1-titlecard-stall-r1`, merged 2026-08-19).** The kill condition was tested first and
+  does **not** fire: with the pair applied the PLC queue holds **one state across all 213 stalled
+  rows** -- `busy=true queued=15 prepared=false remaining=-1` -- so the card waits on a queue that
+  never advances a single tile, and the ROM basis is confirmed at `Level_TtlCardLoop`'s
+  `tst.l (v_plc_buffer).w / bne.s` (`s1disasm/sonic.asm:2840-2841`). Instrumenting `releaseArm`
+  rather than reasoning about it gives **4,866 passes with nothing outstanding and 214 consecutive
+  blocks on a single handle**, `NEMESIS_PLC_QUEUE#14` -- 214 blocks against 213 stalled rows, one job
+  never released for the whole wait. Reverse-mapped against `ArtLoadCues` that handle is **`PLC_GHZ`
+  entry 0, source `0x03CB3C`, VRAM `0x0000`, 461 tiles**: the returning level's main zone art.
+  **The previous round's consequence is refuted** -- that fingerprint appears **zero times in all 242
+  recorded edges**, absent from a run that visits every zone. So "the capture is correct and
+  insufficient" is wrong: the capture is correct and complete, and the engine arms work the
+  hardware never arms (**retracted below: the hardware does arm it -- the recorder discards level-load
+  arms by design, so the absence is a property of the instrument**). The lead, stated
+  and not claimed: the ROM `AddPLC`s the level header's PLC at load (`:2731-2737`) yet `ghz2_2`'s
+  first recorded arm is `PLC_Main` entry 0, and **`QuickPLC`** (`:1519-1526`) decompresses and
+  transfers immediately without using or affecting the queue -- which path the ROM takes decides
+  whether the engine's submission is mistimed or spurious.
+
+- **RETRACTION: there is no terrain wall at 2D62 -- the layout word is zero
+  (`bugfix/ai-s2-chunk-id-r1`, merged 2026-08-19).** `FindWall` masks the layout word's low ten bits
+  and branches to no-collision when that id is zero, testing the solidity bit only *afterwards*.
+  Hooking both exits at row 6600 gives **two calls, both taking the no-collision exit, both with
+  `word = 0000`** -- and the second is `d3 = 2D62`, exactly the "wall face" derived from the ROM's own
+  clamp. **The Chunk-id question has no subject: the id is zero and the tile is absent, not solid.**
+  The 6-pixel clamp is real; the inference that *terrain* caused it was wrong. The engine's 27-px
+  clear reading is **correct and agrees with the ROM**, and the Block/Chunk arithmetic was right and
+  aimed at empty space. **Where the stop actually is:** `d3 = x_pos + $A`, so `x_pos` was already
+  `2D58` when `CheckRightWallDist` ran -- the clamp and the speed kill happened **earlier in the
+  frame, before the terrain pass**. A mechanism zeroing `x_vel` and correcting `x_pos` by two pixels
+  ahead of terrain was read as the **solid-object** path (**retracted below: it is the level side
+  boundary, not collision at all**) (`SolidObject_StopCharacter` zeroing inertia and
+  `x_vel`, `SolidObject_AtEdge` doing `sub.w d0,x_pos(a1)`, `s2disasm/s2.asm:35428-35446`) -- named as
+  direction, not finding, since the object is unidentified. **A naming inversion worth knowing:** the
+  S2 disassembly calls the **16x16** unit a "block" and the **128x128** unit a "chunk", and this
+  codebase inverts **both** -- so `FindWall`'s `blockID` is the codebase's **Chunk id**. **The
+  method note is the uncomfortable one:** every collision-path elimination came back faithful because
+  the engine's terrain collision *is* faithful here, so nine rounds of correct eliminations searched a
+  subsystem that was never involved -- the founding inference went untested against the layout until
+  now, and the cheap test existed the whole time.
+
+- **The bit-7 object-control gate now defaults to rejecting new solid contacts
+  (`bugfix/ai-s3k-solid-gate-r1`, merged 2026-08-19).** A sidekick in CPU flight carries
+  `object_control = $81`, and the ROM's shared landing tail sign-tests bit 7 immediately before
+  writing the rider's y -- `loc_1E45A` (`skdisasm/sonic3k.asm:42012-42013`, with its reverse-gravity
+  twin at `:42060-42061`), `loc_19BA2` in S2 (`s2disasm/s2.asm:35651-35652`) and `MoveWithPlatform` in
+  S1 (`_incObj/sub MvSonicOnPtfm.asm:26-27`). The engine modelled that exclusion on the touch path but
+  not the solid one, so a second writer moved Tails' y on top of his legitimate CPU step and doubled
+  his vertical catch-up rate. `SolidObjectProvider.rejectsBit7ObjectControlNewSolidContact` now
+  defaults to **`true`** with all six citations: six of the eight objects opting into
+  `allowsObjectControlledSolidContacts` already overrode it to `true`, so **the default was the
+  outlier**, and `AizDrawBridgeObjectInstance` keeps its documented override to `false`. **Two
+  corrections to the diagnosis it inherited:** the writer is **not** the star post -- a stack-trace
+  probe gated to an object-controlled CPU sidekick records 15 hits in the whole run and all fifteen
+  are `Sonic3kCollapsingPlatformObjectInstance`, whose `centreY` sequence matches the divergence
+  window exactly, and `Sonic3kStarPostObjectInstance` is not even a `SolidObjectProvider`; and
+  `SolidObject_cont`/`loc_1DFFE` is **not** the routine on this path, since a sloped top-solid object
+  runs `SolidObjectTopSloped2` and never enters it. The existing gate at
+  `ObjectSolidContactController:1188` **is** reached, 16,035 times, and returned "allow" because the
+  platform's opt-in disabled *all* object-control gating rather than only the bits-0-6 part. Chain
+  segment 4 falls **40,000 -> 34,112 errors** and its first non-camera mismatch moves from frame 3573
+  `sidekick_y` to frame 5766 `sidekick_x`. Execution verified: with the fix the probe records **zero**
+  contact entries for an object-controlled sidekick. **Untested, not verified:**
+  `MhzMushroomCapObjectInstance` also opts in without the hook, so its behaviour changed too, and no
+  committed fixture exercises an MHZ bit-7 rider.
+
+- **The S3K sidekick's second writer is a checkpoint solid contact the ROM gates out
+  (`bugfix/ai-s3k-sidekick-writer-r1`, merged 2026-08-19 -- diagnosis complete, fix deliberately not
+  attempted).** The constant is innocent, as the transition shape predicted: `sidekickFlightYStep` is
+  1 for all three games and `updateFlightAutoRecovery` applies it exactly once per dispatch, one
+  dispatch per frame. A stack-trace probe on Tails' `setY` (73 writes in the whole run) names the
+  second writer: `ObjectSolidContactController.resolveContactInternal` via `resolveSlopedContact`,
+  `processInlineObjectForPlayer` and `resolveCheckpointForPlayer` -- **star-post solid contact**,
+  supplying the -2 at the transition and one extra -1 every frame after, on top of the CPU step. That
+  is the two-writers-out-of-phase shape exactly. **The ROM has no such writer:** `SolidObject_cont`
+  reaches `loc_1DFFE` (`skdisasm/sonic3k.asm:41443-41445`) where `tst.b object_control(a1) / bmi`
+  skips the solid interaction outright when bit 7 is set, and `Tails_FlySwim_Unknown` runs with
+  `object_control = $81` (`:26511`, `:26542`). S2 has the identical gate at `SolidObject_ChkBounds`
+  (`s2disasm/s2.asm:35376-35377`), so this is a **universal correction rather than a per-game
+  divergence** -- and the engine already models the exclusion on the *touch* path
+  (`isTouchResponseSuppressedByObjectControl`) but not on the *solid* one. Also answered: the second
+  writer is **not** present throughout -- only 16 of the 73 writes are the contact path and they begin
+  at the transition frame, so it is a writer that switches on. **Two cautions recorded rather than
+  resolved:** the ROM gate is on bit 7 specifically (`tst.b`/`bmi`), so `isObjectControlled()` is not
+  the same predicate; and the failing path enters via `processCompatibilityCheckpoint` and may bypass
+  the existing object-control gate entirely.
+
+- **Same Block, same Chunk: the S2 wall is a Chunk-content disagreement
+  (`bugfix/ai-s2-collision-data-r1`, merged 2026-08-19 -- arithmetic and a report re-read).** Position
+  is confirmed identical without a filter, per the rule this lane broke earlier: `y` and `y_speed`
+  diverge only from row **6611**, after the landing, and there is no `angle` or `ground_mode`
+  divergence anywhere in the segment, so both sides scan the same map row at 6600. In the project's
+  terminology -- **Pattern** 8x8, **Chunk** 16x16, **Block** 128x128 -- the ROM's wall face at
+  `x=0x2D62 y=0x04C9` and the engine's probe at `x=0x2D64` both land in **Block(90,9), Chunk(6,4)**,
+  differing only in within-Chunk pixel column, 2 against 4. So it is neither which Block was loaded
+  nor which Chunk sits there: **both sides read the same 16x16 Chunk and disagree about its
+  content.** And the engine's distance says that Chunk reads empty -- at `x=2D5A` the probe reports
+  27 px clear while the Chunk containing it ends 11 px to the right, so the engine found nothing
+  solid in that Chunk at all on the LRB bit and scanned straight past, where the ROM with the same
+  Chunk and the same `lrb_solid_bit=$0D` finds a wall face 2 px away. The next measurement is the
+  **Chunk id** the engine holds at that location against the ROM's layout -- differing ids mean the
+  wrong location was read or decoded, matching ids point at the solidity/height array that id maps
+  to on the primary plane.
 
 - **The S1 title card never releases -- a stall, not a longer span
   (`bugfix/ai-s1-titlecard-span-r1`, merged 2026-08-19 -- investigation only).** A new instrument was
@@ -448,7 +845,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
   `mode_change` events place Sonic **airborne across the whole window** -- rolling at 6586, air at
   6588 with `on_object` dropping, landing at 6611 -- so his `x` freezes at `2D58` at 6600 **mid-air**,
   with recorded `x_speed` and `g_speed` both zero against the engine's `0x07F4`. A rolling, airborne
-  character whose horizontal speed is zeroed dead in one frame at a fixed `x` is a **wall hit**, and
+  character whose horizontal speed is zeroed dead in one frame at a fixed `x` is a wall hit
+  (**retracted below: there is no terrain wall there -- the layout word is zero**), and
   the engine hitting the same wall eight rows late confirms this as trigger timing rather than a
   missing mechanism. The strongly-indicated candidate is the signature `trace-replay-bug-fixing`
   already documents -- rolling-air sliding into a flush wall, where the ROM's probe uses a fixed pixel

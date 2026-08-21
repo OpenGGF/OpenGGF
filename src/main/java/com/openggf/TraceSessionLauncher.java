@@ -1103,6 +1103,27 @@ public final class TraceSessionLauncher {
         ssCursor++;
     }
 
+    /**
+     * Whether the row being prepared belongs to a recorded special-stage
+     * segment, and so to the segment-local row cursor rather than the shared
+     * movie cursor. This is the segment-kind question the special-stage row
+     * driver already asks of itself; asking it at the call site keeps the
+     * driver from being invoked for a row it has no authority over.
+     */
+    private boolean currentRunSegmentIsRecordedSpecialStage() {
+        int index = currentRunSegmentIndex();
+        if (index < 0 || index >= runSegments.size()) {
+            return false;
+        }
+        if ("special_stage".equals(runSegments.get(index).segment().kind())) {
+            return true;
+        }
+        return index + 1 < runSegments.size()
+                && "special_stage".equals(
+                        runSegments.get(index + 1).segment().kind())
+                && isCurrentRunSegmentExhausted();
+    }
+
     private Optional<SpecialStageRowAdmission> currentRunSpecialAdmission() {
         if (runCoordinator == null || runSpecialRowDriver == null || fadeStarted
                 || runCoordinator.phase()
@@ -1540,6 +1561,14 @@ public final class TraceSessionLauncher {
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
         }
+        if (runHardwareTiming != null) {
+            // Releasing the row owner at a segment close puts the drive between
+            // segments: the shared cursor keeps running through the transition
+            // choreography and must not be read as membership of whatever
+            // segment its arithmetic lands in. The destination declares itself
+            // through its admission receipt (applyRunDestinationAdmission).
+            runHardwareTiming.enterTransitionGap();
+        }
         if (runSpecialRowDriver != null) {
             runSpecialRowDriver.verifyComplete();
             runSpecialLocalRow = runSpecialRowDriver.cursor();
@@ -1605,7 +1634,7 @@ public final class TraceSessionLauncher {
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
-            runHardwareTiming.handoffToSegment(receipt.segmentIndex());
+            runHardwareTiming.enterSegment(receipt.segmentIndex());
         }
         FrameComparison gapComparison = null;
         if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SPECIAL_LOCAL) {
@@ -1660,7 +1689,7 @@ public final class TraceSessionLauncher {
             if (runDynamicArtGapJournal != null
                     && receipt.segmentIndex() > 0) {
                 gapComparison = runDynamicArtGapJournal.destinationOpened(
-                        receipt.segmentIndex());
+                        receipt.segmentIndex(), receipt.rowsConsumed());
             }
         }
         if (receipt.executionPolicy()
@@ -1953,10 +1982,23 @@ public final class TraceSessionLauncher {
             return;
         }
         int sourceIndex = entryBoundary.fromSegment();
+        // Deliberately a literal 1, NOT receipt.rowsConsumed(). The budget now
+        // carries the consumed-row term, but this production admission is not
+        // reached by any test today -- the chain harness runs its own anchor and
+        // never this one, and the visual harness self-pauses in the results
+        // screen well before the return -- so the count this receipt carries
+        // here has never been observed. One is the value the budget hardcoded
+        // before the term existed, so passing it preserves this path's behaviour
+        // exactly while the derivation itself becomes layout-independent.
+        // Substituting the receipt's real count is the correct end state and
+        // should be done once the path is reachable and the value measured;
+        // until then it would be an unverified behaviour change, and a count of
+        // 0 would now throw where it previously produced a silent answer.
         runVblankClock.uncomparedInteriorReturnTarget(
                 sourceIndex,
                 runSegments.get(sourceIndex).segment(),
-                destination).ifPresent(objects::initVblaCounter);
+                destination,
+                1).ifPresent(objects::initVblaCounter);
     }
 
     /**
@@ -2116,7 +2158,9 @@ public final class TraceSessionLauncher {
                 new TraceRunBoundaryComparator.ExpectedBoundary(
                         interior.entryBoundary(), interior.exitBoundary(),
                         preEntry.segment(), destination.segment(),
-                        destination.trace().getFrame(0), resolvedZone);
+                        destination.trace().getFrame(0), resolvedZone,
+                        destination.trace().metadata().startX() & 0xFFFF,
+                        destination.trace().metadata().startY() & 0xFFFF);
         TraceRunBoundaryComparator.ActualBoundary actual =
                 new TraceRunBoundaryComparator.ActualBoundary(
                         sprite != null ? (int) sprite.getCentreX() : null,
@@ -2128,7 +2172,9 @@ public final class TraceSessionLauncher {
                         GameServices.level().getLevelGamestate().getRings(),
                         GameServices.gameState().getEmeraldCount(),
                         !TraceRunReplayWalker.isUncomparedInterior(
-                                interior.segment()));
+                                interior.segment()),
+                        GameServices.playbackDebug().getCursorFrame()
+                                - destination.segment().bk2FrameOffset());
         ingestRunUndisplayedComparison(TraceRunBoundaryComparator.compare(
                 interior.exitBoundary().modeChangeBk2Frame(), expected, actual));
     }
@@ -2152,6 +2198,9 @@ public final class TraceSessionLauncher {
         }
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
+        }
+        if (runHardwareTiming != null) {
+            runHardwareTiming.enterTransitionGap();
         }
         runTerminalTail = plan;
         runTerminalRowAdvanced = false;
@@ -2945,31 +2994,15 @@ public final class TraceSessionLauncher {
                             "presentation row " + localRow + " outside segment "
                                     + segmentIndex);
                 }
-                TraceReplayRowPolicy rowPolicy = TraceReplayRowPolicy.resolve(
-                        plan.trace(), localRow, movieRow);
-                rowPhase = rowPolicy.phase();
-                observedVblankCounterAdvance =
-                        rowPolicy.observedVblankCounterAdvance();
-                if (localRow > 0) {
-                    previousObservedVblankCounterAdvance =
-                            TraceReplayRowPolicy.resolve(
-                                    plan.trace(), localRow - 1, movieRow - 1)
-                                    .observedVblankCounterAdvance();
-                }
-                if (localRow + 1 < plan.trace().frameCount()) {
-                    TraceReplayRowPolicy nextRowPolicy =
-                            TraceReplayRowPolicy.resolve(
-                                    plan.trace(), localRow + 1, movieRow + 1);
-                    deferBoundaryCommit = TraceRunFrameDriver
-                            .shouldDeferBoundaryCommit(
-                                    rowPolicy.observedVblankCounterAdvance(),
-                                    nextRowPolicy
-                                            .observedVblankCounterAdvance());
-                }
-                nextRowCarriesDeferredVblank =
-                        localRow + 1 < plan.trace().frameCount()
-                                && TraceReplayRowPolicy.carriesDeferredVblank(
-                                        plan.trace(), localRow + 1);
+                // One implementation of the bridge-stepping contract, shared
+                // with the headless chain harness. terminalSegmentRow stays
+                // this caller's own: it comes from the manifest's segment row
+                // count here and from the loaded fixture's row count there.
+                return TraceRunFrameDriver.presentationBridgeStep(
+                        plan.trace(), localRow, movieRow, policy,
+                        loop != null
+                                && loop.getCurrentGameMode() == GameMode.LEVEL,
+                        localRow == plan.segment().traceFrameCount() - 1);
             }
             terminalRow = localRow == plan.segment().traceFrameCount() - 1;
         } else if (phase
@@ -2983,7 +3016,10 @@ public final class TraceSessionLauncher {
                         previousObservedVblankCounterAdvance,
                         loop != null
                                 && loop.getCurrentGameMode() == GameMode.LEVEL,
-                        nextRowCarriesDeferredVblank);
+                        nextRowCarriesDeferredVblank,
+                        // Only a presentation-bridge row can be a recorded lag
+                        // V-int, and that path returned above.
+                        false);
         boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
                 .shouldCommitDeferredBoundaryAfterClosure(
                         previousObservedVblankCounterAdvance,
@@ -3114,6 +3150,13 @@ public final class TraceSessionLauncher {
     private void applyRunAdvanceAfterProduction(
             RunSegmentAdvancer.AdvanceAction action) {
         applyRunSegmentAdvance(action);
+        if (runHardwareTiming != null) {
+            // The advancer drive's counterpart to the coordinator drive's
+            // admission receipt: this is where it enters the next segment, so
+            // this is where it declares membership. Like the receipt path, the
+            // handoff completes before any destination owner opens below.
+            runHardwareTiming.enterSegment(action.nextSegmentIndex());
+        }
         armRunSpecialDynamicArtComparison(action.nextSegmentIndex());
         if (runDynamicArtSegments == null) {
             return;
@@ -3185,7 +3228,8 @@ public final class TraceSessionLauncher {
                 runHardwareTiming.beginPlaybackFrame(
                         GameServices.playbackDebug().currentFrameOrThrow());
             } else if (RunPlaybackObservation
-                    .insideRecordedSpecialStageMode(mode)) {
+                    .insideRecordedSpecialStageMode(mode)
+                    && currentRunSegmentIsRecordedSpecialStage()) {
                 // The recorded segment owns the ROM's whole
                 // GameModeID_SpecialStage span, results tail included
                 // (s2.asm:6721-6800) -- so its rows keep being driven by the
@@ -3193,6 +3237,15 @@ public final class TraceSessionLauncher {
                 // SPECIAL_STAGE -> SPECIAL_STAGE_RESULTS boundary. The driver
                 // falls back to a hardware-timing gap once it is complete.
                 prepareRunSpecialStageHardwareTimingRow();
+            } else if (RunPlaybackObservation
+                    .insideRecordedSpecialStageMode(mode)) {
+                // A special-stage MODE row inside a non-special-stage segment
+                // is an ordinary shared-playback row: it advances one row per
+                // frame against the shared movie cursor, like LEVEL and
+                // BONUS_STAGE above, so it takes the same authority rather
+                // than a segment-local cursor.
+                runHardwareTiming.beginPlaybackFrame(
+                        GameServices.playbackDebug().currentFrameOrThrow());
             } else {
                 fixture.enterHardwareTimingGap();
             }

@@ -115,6 +115,7 @@ public final class HardwareTimingReplayPort
         }
         dropEdgesBefore(rawFrame);
         rawFrameLatch = rawFrame;
+        authority.setRecordedRowRepresentation(true);
         lastAppliedBoundary = null;
     }
 
@@ -128,6 +129,7 @@ public final class HardwareTimingReplayPort
         requireActive();
         rawFrameLatch = null;
         lastAppliedBoundary = null;
+        authority.setRecordedRowRepresentation(false);
     }
 
     public void apply(HardwareServiceBoundary boundary) {
@@ -524,8 +526,43 @@ public final class HardwareTimingReplayPort
     private void reportUnconsumedEdge(String where, HardwareCompletionEdge edge) {
         unmatchedCompletions.add(
                 describe(edge) + ": unconsumed hardware completion edge "
-                        + where + "; the engine submitted no matching work");
+                        + where + "; " + productionStateFor(edge));
         edgeCursor++;
+    }
+
+    /**
+     * Describes what production actually holds for a dropped edge's identity,
+     * as observed now.
+     *
+     * <p>This exists because the previous wording asserted "the engine
+     * submitted no matching work", which the port never checks and which was
+     * measured false: on the S1 complete-emeralds run the engine submits the
+     * expected descriptors with exactly the recorded ordinals and
+     * fingerprints, and the edges go unconsumed anyway. A diagnostic that
+     * names the wrong subsystem is worse than a vague one, because it is
+     * acted on.
+     *
+     * <p>The wording is deliberately limited to what is observable at this
+     * point. An identity absent from the pending list may never have been
+     * submitted, or may have been submitted, admitted and already claimed --
+     * the port cannot distinguish those and so does not claim to.
+     */
+    private String productionStateFor(HardwareCompletionEdge edge) {
+        for (PendingRecordedSubmission submission : authority.pendingSubmissions()) {
+            HardwareWorkHandle handle = submission.handle();
+            if (handle.kind() != edge.kind() || handle.ordinal() != edge.ordinal()) {
+                continue;
+            }
+            if (handle.submissionFingerprint().equals(edge.submissionFingerprint())) {
+                return "production holds a matching unclaimed submission "
+                        + describe(handle)
+                        + ", so this is an admission failure rather than missing work";
+            }
+            return "production holds this identity with a different descriptor: "
+                    + describe(handle);
+        }
+        return "production holds no unclaimed submission for this identity"
+                + " (it was never submitted, or was already admitted and claimed)";
     }
 
     /**

@@ -166,6 +166,20 @@ final class AizVineHandleLogic {
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
+        // ROM AIZRideVineHandle_CheckGrab: move.b #0,spin_dash_flag(a1)
+        // (sonic3k.asm:46743). That is a byte write, so it clears the WHOLE
+        // field, and the engine splits that one ROM byte across three flags:
+        //   bit 0 ($01) -> pinball mode
+        //   bit 7 ($80) -> pinball speed lock
+        //   the spindash-charge sense used by Tails_Spindash
+        // Clearing only the charge left bit 7 latched from an earlier
+        // Obj_AutoSpin capture, and Tails_RollSpeed's own entry test
+        //   tst.b spin_dash_flag(a0) / bmi.w loc_14DF0   (sonic3k.asm:28180-28181)
+        // then skipped input, friction and deceleration for the rest of the
+        // level -- so a landed, rolling sidekick kept its ground_vel forever
+        // and only slope gravity could change it.
+        player.setPinballMode(false);
+        player.setPinballSpeedLock(false);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM grab path (sonic3k.asm:46739-46743 loc_22302) writes only:
@@ -247,7 +261,30 @@ final class AizVineHandleLogic {
             return;
         }
 
-        if (player == null || player.isHurt() || player.getDead() || player.isDebugMode()) {
+        // AIZRideVineHandle_ProcessPlayer tests the held player's render_flags
+        // BEFORE the routine check and the button read:
+        //   tst.b  render_flags(a1)
+        //   bpl.w  AIZRideVineHandle_ReleasePlayer
+        //   cmpi.b #4,routine(a1)
+        //   bhs.w  AIZRideVineHandle_ReleasePlayer
+        // (sonic3k.asm:46490-46494). Bit 7 is the on-screen flag written by the
+        // preceding display pass, so a held player that scrolls out of the
+        // render box is dropped on the handle's NEXT pass. The target is the
+        // plain AIZRideVineHandle_ReleasePlayer (sonic3k.asm:46548-46552),
+        // which only clears object_control and the grab byte and arms the $3C
+        // regrab cooldown -- unlike AIZRideVineHandle_ForcedRelease above it
+        // writes no velocity, no Status_InAir and no animation, so the player
+        // simply resumes normal physics from a standstill.
+        //
+        // isHurt()/getDead() stand in for the ROM's routine >= 4 test (routine
+        // 4 = Hurt, 6 = Dead). The sibling grab object LbzRideGrappleInstance
+        // already models the same pair for sub_266B0.
+        boolean renderFlagOffScreen =
+                player != null
+                        && player.hasRenderFlagOnScreenState()
+                        && !player.isRenderFlagOnScreen();
+        if (player == null || renderFlagOffScreen
+                || player.isHurt() || player.getDead() || player.isDebugMode()) {
             if (player != null) {
                 clearPlayerControl(player);
             }

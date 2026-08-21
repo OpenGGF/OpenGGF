@@ -213,9 +213,22 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.getDead() && deathAnimId >= 0) {
             return deathAnimId;
         }
-        // Hurt state uses separate hurt animation (animation 0x19)
+        // Hurt state uses separate hurt animation (animation 0x19).
+        //
+        // The native hurt animation is a ONE-SHOT byte write on HurtCharacter's
+        // common tail (`move.b #$1A,anim(a0)`, sonic3k.asm:21321; equivalents in
+        // s1disasm/_incObj/01 Sonic.asm and s2.asm). The hurt ROUTINE that runs on
+        // the following frames -- S3K loc_1569C, S1 Sonic_Hurt, S2 Obj01_Hurt --
+        // never rewrites anim, so any later owner that stores the byte during the
+        // hurt keeps it. The solid push-release tail is exactly such an owner:
+        // S3K loc_1E0A2 / S2 SolidObject_TestClearPush / S1 Solid_NoCollision
+        // store anim=Walk, prev_anim=Run and exempt only Roll (and Spindash in
+        // S3K) -- never Hurt. Re-deriving the hurt animation from the hurt state
+        // every frame would clobber that store, so this branch only re-publishes
+        // a hurt byte that is still live, exactly as the blink/get-up interrupt
+        // above leaves a foreign byte alone.
         if (sprite.isHurt() && hurtAnimId >= 0) {
-            return hurtAnimId;
+            return sprite.getAnimationId() == hurtAnimId ? hurtAnimId : null;
         }
         // Tails_FlyingSwimming calls Tails_Set_Flying_Animation every frame and
         // writes anim $20-$28 before the shared animation routine runs

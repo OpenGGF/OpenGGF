@@ -256,11 +256,14 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
             meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
         }
+        var levelGamestate = services().levelGamestate();
+        long savedTimerFrames = levelGamestate == null ? 0L : levelGamestate.getTimerFrames();
         services().saveBigRingReturn(new BigRingReturnState(
                 getX(), getY(),
                 camera.getX(), camera.getY(), player.getRingCount(),
                 player.getTopSolidBit(), player.getLrbSolidBit(),
-                camera.getMaxY(), resizeRoutine, meanWaterLevel));
+                camera.getMaxY(), resizeRoutine, meanWaterLevel,
+                savedTimerFrames));
     }
 
     /**

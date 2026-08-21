@@ -364,9 +364,22 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
-            // ROM LevEvents_CNZ calls SlotMachine before object execution
-            // (s2.asm:21494, 58827-58840), so PointPokey sees completion
-            // on the same frame the slot routine goes inactive.
+            // KNOWN DIVERGENCE -- this call site is one pass too early.
+            // The ROM runs SlotMachine AFTER the object pass, not before it:
+            // Level_MainLoop reaches jsr (RunObjects).l at s2.asm:5095 and only
+            // then jsrto JmpTo_DeformBgLayer at s2.asm:5098; DeformBgLayer calls
+            // RunDynamicLevelEvents (s2.asm:15175, defined at 20329), which
+            // dispatches DynamicLevelEventIndex to LevEvents_CNZ (s2.asm:21511),
+            // whose first instruction is jsr (SlotMachine).l (s2.asm:21512;
+            // routine at 59305). So ObjD6's capture and SlotMachine_Routine3 run
+            // in the same ROM frame and read the same V_int_run_count.
+            //
+            // Running it here instead reads the following frame's counter, and
+            // that error is currently cancelled by the object-visible clock being
+            // read before its tick -- moving either one alone desyncs both CNZ
+            // fixtures. Earlier revisions of this comment asserted the opposite
+            // ordering; that claim is retracted. See the 2026-08-21 tick-ownership
+            // entries in docs/status/trace-frontier-log.md before changing this.
             cnzSlotMachineManager.update();
         }
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {

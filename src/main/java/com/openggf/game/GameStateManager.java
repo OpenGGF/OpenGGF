@@ -39,11 +39,33 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     private int currentBossId;
 
+    /*
+     * LIFETIME IS PER-GAME, and the three games do not agree. A comment here once
+     * said this field is "cleared on every boss defeat"; that is true of S1 only,
+     * and stating it as universal is how seven S2 bosses came to clear it.
+     *
+     *  S1  -- CLEARED. The Egg Prison clears it on release
+     *         (docs/s1disasm/_incObj/3E Prison Capsule.asm:97), and the LZ boss
+     *         clears it too (_incObj/77 Boss - LZ Main.asm:288).
+     *  S2  -- NEVER CLEARED. docs/s2disasm/s2.asm writes it only as
+     *         `move.b #N,(Current_Boss_ID).w` from the boss-arena setup routines
+     *         (ids 1-9) and otherwise only reads it with `tst.b`. There is no
+     *         `clr.b` and no `move.b #0` anywhere in the file, so it resets only
+     *         through the level-load RAM clear and persists to the end of the act.
+     *  S3K -- CLEARED. `clr.b (Boss_flag).w` appears at 31 sites in
+     *         docs/skdisasm/sonic3k.asm, one annotated "Unlock the screen";
+     *         note S3K uses the separate boolean Boss_flag rather than an id.
+     *
+     * The asymmetry matters because Sonic_Boundary's right-hand test widens the
+     * side boundary by $40 only while this is zero (docs/s2disasm/s2.asm:37243-37251).
+     */
+
     /**
      * Boss defeated flag (S2 ROM: {@code Boss_defeated_flag} at $FFFFF7A7).
      * Dynamic level events use this separately from {@link #currentBossId}; S2
      * bosses set it when their escape sequence begins while {@code Current_Boss_ID}
-     * can remain nonzero for boundary/player logic.
+     * remains nonzero for boundary/player logic -- see the lifetime note on
+     * {@link #currentBossId}, which S2 never clears.
      */
     private boolean bossDefeatedFlag;
 
@@ -220,6 +242,28 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // from leaking into the next act's free-scroll approach.
         screenLocked = false;
         bossDefeatedFlag = false;
+        // Current_Boss_ID is cleared by the same level-load RAM wipe as the two
+        // flags above: S2 Level_ClrRam runs `clearRAM Misc_Variables,Misc_Variables_End`
+        // (docs/s2disasm/s2.asm:4810) and Current_Boss_ID (s2.constants.asm:1597) lies
+        // inside Misc_Variables (:1484) .. Misc_Variables_End (:1629), alongside
+        // Boss_defeated_flag (:1595). S1 Level_ClrRam wipes v_misc_variables the same
+        // way (docs/s1disasm/sonic.asm:2741), so this is a universal correction, not a
+        // per-game rule. S2 never writes the byte back to zero anywhere else -- see the
+        // lifetime note on currentBossId -- so without this the previous act's boss id
+        // survives into the next act and Sonic_LevelBound's `tst.b (Current_Boss_ID).w`
+        // (s2.asm:37245-37250) keeps withholding the +$40 right-boundary extension.
+        currentBossId = 0;
+        // f_bigring is a level variable, cleared by the same level-load RAM wipe:
+        // S1 Level_ClrRam runs `clearRAM v_levelvariables` (docs/s1disasm/sonic.asm:2742)
+        // and f_bigring (_Variables.asm:285) lies inside v_levelvariables (:179) ..
+        // v_levelvariables_end (:301), the block commented "variables that are reset
+        // between levels". Nothing else in the ROM ever writes the byte back to zero --
+        // Obj7C's `move.b #1,(f_bigring).w` ("_incObj/4B, 7C Giant Ring and Flash.asm":123)
+        // is its only other write -- so without this the flag survives the special stage
+        // it triggered and every later act end reads it as still set. Got_ChkSS
+        // ("_incObj/3A Got Through Card.asm":199-201) then writes v_gamemode = id_Special
+        // on an act the player finished with fewer than ss_giantring_rings rings.
+        bigRingCollected = false;
     }
 
     public int getScore() {

@@ -339,6 +339,10 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     }
 
     private void updateActiveTitleCardOverlay() {
+        if (normalTitleCardActive) {
+            // stepNormalTitleCard owns this row's single title-object dispatch.
+            return;
+        }
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
             titleCardProvider.update();
@@ -623,6 +627,11 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
         TraceSuppressedRowClosure.executeUnownedTitleCardWork(
                 true,
+                // The normal title owner still standing from a previous row is
+                // dispatched by stepNormalTitleCard below, inside this row's
+                // represented object scan. The overlay is owned here, so the
+                // unowned path must not dispatch it a second time.
+                normalTitleCardActive,
                 GameServices.module().getTitleCardProvider(),
                 this::startPendingInLevelTitleCardIfRequested,
                 this::applyInLevelTitleCardControlLock);

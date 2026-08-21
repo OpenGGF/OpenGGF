@@ -130,19 +130,37 @@ file is guidance you can weigh against the situation in front of you.
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
    [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
-   That contract is **cross-game**: recorded hardware timing may drive a **delay** in the
+   That contract is **cross-game** and has **two permitted shapes**; both are scheduling
+   outcomes, and neither may decide *what* happens.
+   *Readiness release.* Recorded hardware timing may drive a **delay** in the
    art-loading pipelines of all three games — S1 PLC, S2 DPLC, and S3K Kosinski queues. It
    may release only the readiness of a matching, prepared, production-submitted ROM-backed
    hardware job after kind, ordinal, stable submission fingerprint, and service boundary all
-   match. It must not use physics/aux comparison data, carry gameplay values, call gameplay
-   owners, or create work the engine did not submit, and it must not key on a frame index,
-   zone, route, or game name. The test is whether the change only affects *when* real,
-   engine-created work becomes ready; anything deciding *what* happens is outside the
-   exception however well the ROM behaviour is cited. Guard tests must keep this exception
+   match.
+   *Per-row scheduling admission.* A recorded per-row outcome may select which ROM loop a row
+   represents — the lag contract, where `lag_state.lagged` admits the `VBlank_Lag` branch that
+   services no PLC while the frame counter still advances. This shape carries no job, ordinal
+   or fingerprint, because it names no work: it selects between two ROM loops that both
+   already exist in the engine. It predates the readiness shape and already ships in
+   `TraceRunSpecialStageRows.syntheticLagPhase`. It may admit or suppress a loop; it may never
+   supply a *value*, and `lagcount` is comparison data like any other.
+
+   *Both shapes.* The exception must not use physics/aux comparison data, carry gameplay
+   values, call gameplay owners, or create work the engine did not submit, and it must not key
+   on a frame index, zone, route, or game name. The test is whether the change only affects
+   *when* real, engine-created work becomes ready, or *which* already-existing ROM loop a row
+   takes — never *what* work exists, and never what values it carries. Anything deciding
+   *what* happens is outside the exception however well the ROM behaviour is cited. Guard tests must keep this exception
    confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
    isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
-   `hardware_timing.jsonl` stream records module-queue and direct Kosinski readiness;
-   either still requires matching production-submitted ROM work. V5 is the sole live
+   `hardware_timing.jsonl` stream records S3K module-queue readiness, S3K direct Kosinski
+   readiness, and the S1 `RunPLC` arming edge (`NEMESIS_PLC_QUEUE`) — the three kinds
+   `HardwareWorkKind` admits, and no others; each still requires matching
+   production-submitted ROM work. Contract scope, implementation and fixture coverage are
+   three different things: S2 DPLC is in scope but unimplemented, and every committed
+   timing sidecar is S3K, so the S1 path is implemented but exercised by no trace fixture.
+   The design doc's coverage-status section is authoritative on which is which.
+   V5 is the sole live
    trace contract: `trace_schema: 5` owns metadata, rows, timing, and run manifests.
    `recorder` and `recorder_version` are opaque provenance only;
    `lua_script_version` was removed, not renamed, and no provenance field selects
@@ -308,6 +326,7 @@ Deeper reference, loaded when the work needs it:
 | [docs/architecture/per-game-rule-placement.md](docs/architecture/per-game-rule-placement.md) | Where a per-game behavioural difference belongs |
 | [docs/guide/contributing/headless-testing.md](docs/guide/contributing/headless-testing.md) | `HeadlessTestRunner`, singleton reset, test infrastructure |
 | [docs/agent-workflow/README.md](docs/agent-workflow/README.md) | Workflow CLIs, per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist |
+| [docs/agent-workflow/briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md) | Accumulated trace-round rules, indexed: how to brief a round, the evidence rules, and the **measurement-hazard table** — read that before reporting any suite number, because every hazard in it produces output indistinguishable from a real result |
 | [docs/status/known-discrepancies.md](docs/status/known-discrepancies.md) | Intentional divergences from the ROM, virtual pattern ID ranges, trace bootstrap contracts |
 | [AGENTS_S3K.md](AGENTS_S3K.md) | Sonic 3&K specifics |
 | [CONFIGURATION.md](CONFIGURATION.md) | `config.yaml` keys, bindings, debug flags |

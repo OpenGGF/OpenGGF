@@ -62,7 +62,13 @@ class TestArchitecturalSourceGuard {
     // job ran this guard (the gap the -Pguards gate closes). The growth is spread
     // across the existing orchestration surface; placement, touch-response and
     // solid-contact logic remain in their extracted collaborators.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3041;
+    // 2026-08-21: 3041 -> 3051. The ROM object-loop counter is the facade's own
+    // loop bound, so it cannot go in the placement, touch-response or
+    // solid-contact collaborators this budget exists to protect. Its state and
+    // arithmetic were extracted to ObjectLoopSlotBudget; what stayed is the two
+    // entry points, the per-pass reset and the walk's exit test, at their
+    // smallest honest size. See CPZBossPipe for the ROM site that drives it.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3051;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
@@ -72,7 +78,11 @@ class TestArchitecturalSourceGuard {
             // 2026-08-03: 3159 -> 3161 for explicit native player-SST presence
             // reset/restore state; accessors retain the existing compact precedent.
             // 2026-08-19: 3161 -> 3211 (50 commits since the 2026-08-03 ratchet).
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3211,
+            // 2026-08-20: 3211 -> 3212 for the one-line ground-angle-latch reset in
+            // resetState(). The level-load SST clear it models already lives here
+            // (balanceState, topSolidBit, runningMode); the state itself stays owned
+            // by PlayableSpriteMovement, so this is a delegating call, not new logic.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3212,
             // 2026-08-19: 2500 -> 2812. The 2500 entry carried no ratchet history and
             // 110 commits have touched LevelManager since it was written on 2026-07-02,
             // so 2500 stopped describing this file long before now. Recorded here as
@@ -105,7 +115,14 @@ class TestArchitecturalSourceGuard {
             // own the actual state machine) and does not belong in any other file.
             // 2026-08-19: 3005 -> 3065. Same recorded-drift note as the entries above;
             // 140 commits have touched GameLoop since the guard last ran anywhere.
-            GAME_LOOP_PATH, 3065
+            // 2026-08-20: 3065 -> 3071 for the level-to-level transition-fade row
+            // consumption. The logic itself was extracted --
+            // LevelIterationAdmissionController.consumeTransitionFreezeRow owns the
+            // ownership predicate, the V-blank service and the ROM citations -- and
+            // GameLoop keeps only the guarded call, which needs the freeze flag, the
+            // run-frame-driver check and the level's ObjectManager, none of which the
+            // controller can reach on its own.
+            GAME_LOOP_PATH, 3071
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

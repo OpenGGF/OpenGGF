@@ -446,6 +446,41 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    /**
+     * {@code Sonic_Balance} reads the stood-on object's {@code obActWid}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423), which for this object is
+     * {@link #ACTIVE_WIDTH} = {@code #200/2} = 100 -- not the {@code #96/2} =
+     * 48 that {@code Ledge_ChkTouch} passes to {@code SlopeObject} as {@code d1}
+     * (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:61) and
+     * that {@link #getSolidParams()} models.
+     *
+     * <p>This override is required rather than merely tidy. The base
+     * {@code getBalanceWidthPixels()} returns {@code getOnScreenHalfWidth()}
+     * except for top-solid objects, where it returns
+     * {@code getSolidParams().halfWidth()} on the premise that a
+     * {@code PlatformObject} caller passes {@code obActWid} straight through as
+     * {@code d1}. Most S1 platforms do; this one does not, so that fallback
+     * intercepts and no {@code getOnScreenHalfWidth()} override could reach the
+     * balance test.
+     *
+     * <p><b>{@code FixBugs} = 0.</b> {@code Ledge_Main} writes {@code #200/2}
+     * on the un-fixed branch and {@code #96/2} under {@code FixBugs}
+     * ({@code :37-48}); the disassembly's own comment argues 200 is too wide a
+     * culling radius and "could cause wrapping issues". The shipped ROM, and
+     * therefore every recorded trace, takes the 200 branch, so the engine models
+     * 100. Under {@code FixBugs} = 1 the balance width would equal the collision
+     * width and this override would be redundant.
+     *
+     * <p>Balance only; the ROM's {@code obRender}-based delete
+     * ({@code :119-133}) is keyed on the same byte but this class culls through
+     * {@code isInRangeAt} instead, which is a separate pre-existing divergence
+     * and deliberately not touched here.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return ACTIVE_WIDTH;
+    }
+
     @Override
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // ROM PlatformObject/Plat_NoXCheck_AltY (docs/s1disasm/sonic.lst 0x7B00-0x7B0A):

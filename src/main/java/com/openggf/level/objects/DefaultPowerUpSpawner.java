@@ -116,13 +116,20 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             return;
         }
 
-        // Get water level from WaterSystem
-        // Use getVisualWaterLevelY so splash appears at the oscillating water surface (CPZ2)
+        // The splash sits on the ROM's own water line: S1 Spla_Display is
+        // `move.w (v_waterpos1).w,obY(a0)` (docs/s1disasm/_incObj/08 LZ Water
+        // Splash.asm:29) and S2 Obj08_MdSplash is
+        // `move.w (Water_Level_1).w,y_pos(a0)` (docs/s2disasm/s2.asm:42758).
+        // getGameplayWaterLevelY is that value in all three games; the visual
+        // accessor is only equal to it in S1 and S3K, because S2 centres the CPZ
+        // bob around zero for rendering (`oscillation - 8`) rather than using the
+        // ROM's `oscillation >> 1`, so reading it here put the CPZ2 splash on a
+        // line the ROM never computes.
         WaterSystem waterSystem = services.waterSystem();
         if (waterSystem == null) {
             return;
         }
-        int waterY = waterSystem.getVisualWaterLevelY(level.getZoneIndex(), services.currentAct());
+        int waterY = waterSystem.getGameplayWaterLevelY(level.getZoneIndex(), services.currentAct());
 
         // S2/S3K: use dust/splash renderer from SpindashDustController
         if (player instanceof AbstractPlayableSprite aps) {
@@ -147,7 +154,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
                 boolean facingLeft = player.getDirection() == Direction.LEFT;
                 var splash = new SplashObjectInstance(
                         player.getCentreX(), waterY, renderer, facingLeft);
-                objectManager.addDynamicObject(splash);
+                addWaterSplashObject(splash);
                 return;
             }
         }
@@ -155,7 +162,27 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         // S1: use LZ splash art from ObjectRenderManager (Object 0x08)
         var s1Splash = new Sonic1SplashObjectInstance(
                 player.getCentreX(), waterY);
-        objectManager.addDynamicObject(s1Splash);
+        addWaterSplashObject(s1Splash);
+    }
+
+    /**
+     * Places the water-entry splash in the SST the game's ROM owns for it.
+     *
+     * <p>Games whose splash lives in a fixed SST outside the level-object pool
+     * never scan for a free slot, so allocating one from the dynamic pool would
+     * displace every later level object by one slot -- and SST order is
+     * execution order, so a displaced object's routine runs on the wrong side of
+     * its neighbours. {@code waterSplashFixedSlotIndex < 0} keeps the ordinary
+     * dynamic allocation for games that really do allocate.
+     */
+    private void addWaterSplashObject(ObjectInstance splash) {
+        PowerUpRules rules = fixedSlotRules();
+        int fixedSlot = rules != null ? rules.waterSplashFixedSlotIndex() : -1;
+        if (fixedSlot >= 0) {
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, splash, fixedSlot);
+            return;
+        }
+        objectManager.addDynamicObject(splash);
     }
 
     private PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {

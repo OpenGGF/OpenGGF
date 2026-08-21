@@ -611,16 +611,38 @@ public class TitleCardManager implements TitleCardProvider {
             element.updateSlideIn();
         }
 
-        // Check if all elements have reached their targets. This is the first
-        // half of Level_TtlCard's compound re-loop test (docs/s2disasm/s2.asm:
-        // 4919-4924): the zone-name piece's x_pos must equal its
-        // titlecard_x_target. The second half -- tst.l (Plc_Buffer).w -- is
-        // enforced by updateDisplay(), so the pair of states together exits
-        // only when both halves hold, exactly as the ROM loop does. S1 splits
-        // the same loop the same way (Sonic1TitleCardManager.updateSlideIn /
-        // updateDisplay).
-        boolean allAtTarget = elements.stream().allMatch(TitleCardElement::isAtTarget);
-        if (allAtTarget) {
+        // Level_TtlCard's re-loop test names one piece and one piece only:
+        // it reads (TitleCard_ZoneName+x_pos) and compares it against that
+        // object's titlecard_x_target (docs/s2disasm/s2.asm:4920-4921). The
+        // other pieces keep moving under RunObjects while the loop spins, and
+        // the loop never waits on them. Testing every element instead held the
+        // card for the LAST piece to arrive: "ZONE" and the act number carry
+        // anim_frame_duration $1C against the zone name's $1B
+        // (Obj34_TitleCardData, :27369-27371), so they land one iteration
+        // later than the piece the ROM actually watches.
+        //
+        // The zone name lands on the same iteration in both models, but by two
+        // offsetting routes worth naming. Obj34_Wait skips the move while the
+        // post-decrement duration is non-zero and moves on the pass that takes
+        // it to zero (:27380-27387), i.e. $1B gives 26 skips, not 27; against
+        // that, Obj34_Init writes the zone-name child over the parent's own
+        // slot (:27328-27346), so RunObjects has already passed it and it
+        // misses the creation pass. 26 skips from the second iteration and the
+        // engine's 27 from the first both put the eighteenth and last 16px
+        // step (Obj34_MoveTowardsTargetPosition, :27493-27499) on iteration 45.
+        if (zoneNameElement != null && zoneNameElement.isAtTarget()) {
+            // Both halves of the re-loop test live in the SAME iteration: the
+            // x_pos compare falls through to tst.l (Plc_Buffer).w and only a
+            // failure of either branches back to Level_TtlCard (:4919-4924).
+            // So an already-drained queue leaves the loop on the very
+            // iteration the zone name arrives -- entering DISPLAY to discover
+            // that on the next iteration spends a frame the ROM does not.
+            // DISPLAY still owns the case the ROM spends real iterations on:
+            // the piece is parked at its target while the cue drains.
+            if (!plcQueueBusy()) {
+                enterZoneTileUpload();
+                return;
+            }
             state = TitleCardState.DISPLAY;
             stateTimer = 0;
             LOGGER.fine("Title card entered DISPLAY state at frame " + frameCounter);
@@ -644,16 +666,23 @@ public class TitleCardManager implements TitleCardProvider {
      */
     private void updateDisplay() {
         if (!plcQueueBusy()) {
-            // Level: falls out of the card loop into bsr.w LoadZoneTiles
-            // (docs/s2disasm/s2.asm:4938) before any of the leave sequence.
-            state = TitleCardState.ZONE_TILE_UPLOAD;
-            stateTimer = 0;
-            zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
-            LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
-                    + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
-            if (zoneTileUploadFramesLeft <= 0) {
-                enterLeftSwooshExit();
-            }
+            enterZoneTileUpload();
+        }
+    }
+
+    /**
+     * Leaves {@code Level_TtlCard} the way the ROM does: straight into
+     * {@code bsr.w LoadZoneTiles} (docs/s2disasm/s2.asm:4938), ahead of any of
+     * the leave sequence.
+     */
+    private void enterZoneTileUpload() {
+        state = TitleCardState.ZONE_TILE_UPLOAD;
+        stateTimer = 0;
+        zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
+        LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
+                + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
+        if (zoneTileUploadFramesLeft <= 0) {
+            enterLeftSwooshExit();
         }
     }
 

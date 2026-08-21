@@ -54,7 +54,29 @@ public record PlayerMovementRules(
          * ("01 Sonic.asm":270-272). So a character riding the CPZ spin tube into the
          * water still gets quartered.
          */
-        boolean waterVelocityChangeGatedByObjectControl) {
+        boolean waterVelocityChangeGatedByObjectControl,
+        /**
+         * Whether this game's landing path skips its {@code anim = Walk} write while
+         * the native spindash byte is live.
+         *
+         * <p>S3K gates it explicitly: {@code Player_TouchFloor_Check_Spindash} is
+         * {@code tst.b spin_dash_flag(a0) / bne / move.b #0,anim(a0)}
+         * (docs/skdisasm/sonic3k.asm:24325-24329), reached from all five
+         * {@code Player_TouchFloor} landing exits (:24102, :24113, :24222, :24262,
+         * :24317) and mirrored for Tails at {@code Tails_TouchFloor_Check_Spindash}
+         * (:29123-29127, called from :28938, :28949, :29018, :29058, :29113).
+         * Sonic 2 has the same shape through its spindash alias:
+         * {@code Sonic_ResetOnFloor} opens {@code tst.b pinball_mode(a0) / bne.s
+         * Sonic_ResetOnFloor_Part3}, skipping the Walk store
+         * (docs/s2disasm/s2.asm:38122-38125).
+         *
+         * <p>Sonic 1 has no spindash and no such byte, so it is false there.
+         *
+         * <p>Without this, a character who charges a spindash in the air and then
+         * lands has the charge animation replaced by Walk on the landing frame while
+         * the ROM holds it until release — visible for as long as the charge is held.
+         */
+        boolean landingWalkWriteSkippedWhileSpindashing) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();

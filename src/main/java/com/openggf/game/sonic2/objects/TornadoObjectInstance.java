@@ -182,6 +182,37 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private int animId;
     private int animFrameIndex;
 
+    /**
+     * Read-only view of ObjB2's SST in ROM byte layout, for comparison against a
+     * recorded {@code s2_tornado_state} row. Comparison-only.
+     *
+     * <p>The engine models the ROM's scratch bytes semantically, so this re-encodes
+     * them the way ObjB2 stores them rather than inventing a representation:
+     * {@code standingTransition} and {@code lastMainStanding} are the `p1_standing`
+     * bit ($08), and the two `st.b`/`clr.b` flags are $FF or $00.
+     */
+    public record Snapshot(
+            int x, int y, int ySub, int yVel,
+            int routine, int routineSecondary, int statusByte,
+            int objoff2E, int objoff2F, int objoff30, int objoff31) {}
+
+    private static final int P1_STANDING_BIT = 0x08;
+
+    public Snapshot snapshot() {
+        return new Snapshot(
+                currentX & 0xFFFF,
+                currentY & 0xFFFF,
+                (yPosFixed8 & 0xFF) << 8,
+                yVel & 0xFFFF,
+                routine & 0xFF,
+                routineSecondary & 0xFF,
+                lastMainStanding ? P1_STANDING_BIT : 0,
+                standingTransition ? P1_STANDING_BIT : 0,
+                moveVertActive ? 0xFF : 0,
+                moveVert2Active ? 0xFF : 0,
+                moveVertTimer & 0xFF);
+    }
+
     // SCZ movement helpers (objoff_2E/$2F/$30/$31/$38 equivalents).
     private boolean standingTransition;
     private boolean moveVertActive;

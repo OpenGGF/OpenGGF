@@ -544,6 +544,86 @@ to left, restoring mappings `$2B-$2D` on the following steep curve.
 
 ## P30 — Player edge balance reads the object's raw `obActWid`, not the padded `SolidObject` collision width
 
+**Symptom.** The player plays the *balancing* animation while standing on an
+object where the ROM stands idle. It reports as an animation mismatch, not a
+position one: `player_animation_id` `0x06` (`id_Balance`) against `0x05`
+(`id_Wait`), and `player_mapping_frame` `0x3A` (`fr_Balance1`) against `0x01`
+(`fr_Stand`). Position and riding state look perfectly correct on both sides,
+which is what makes it confusing -- the recorded `player_x` and
+`player_stand_on_obj` match the engine exactly.
+
+**How to spot it.** Compare the engine's `d1` against the ROM's before assuming
+a position bug. If `player_x` and `player_stand_on_obj` both match the
+recording, the width is the only remaining input.
+
+**What `obActWid` actually is.** `_Constants.asm:230` names it *action width*,
+and the per-object comments call it *sprite display width*, but neither is the
+whole story: it is one byte with several consumers and it is never the rendered
+sprite extent (the mappings own that). It is read by `BuildSprites`' horizontal
+on-screen cull, `d1 = obX - cameraX +/- obActWid` tested against 0 and 320
+(`docs/s1disasm/_inc/BuildSprites.asm:49-58`); by `Sonic_Balance`
+(`01 Sonic.asm:423`); and by many objects as their own solidity width passed
+straight to `PlatformObject`, sometimes after adding `sonic_solid_width`. So an
+object whose ROM `obActWid` differs from the engine's default has *two* wrong
+consumers, not one -- the balance window and the render cull -- and where the
+byte genuinely serves both, supplying it at `getOnScreenHalfWidth()` fixes both
+and `getBalanceWidthPixels()` inherits it. Where a class already models its
+on-screen width from a different quantity, override the balance accessor alone.
+
+**The siting trap, and why it is invisible.** `obActWid` is one byte with three
+ROM consumers -- `BuildSprites`' horizontal on-screen cull, `Sonic_Balance`, and
+many objects' own solidity width -- so the normally correct home for it is
+`getOnScreenHalfWidth()`, which `getBalanceWidthPixels()` defaults to. **But on a
+top-solid object that override is a SILENT NO-OP for balance.**
+`getBalanceWidthPixels()` returns `getSolidParams().halfWidth()` for top-solid
+objects *before* consulting the on-screen accessor, so the value never reaches
+the balance test. It compiles, it looks like the blessed fix, it changes
+nothing, and it measures clean. On a top-solid object, override
+`getBalanceWidthPixels()`.
+
+**Tell one, nine instances: an unused constant, not a missing one.** In nine of the objects
+found so far the correct ROM byte was already present in the class and simply
+never handed to the balance test: Obj1A's `ACTIVE_WIDTH = 0x64` had exactly one
+reference in the whole file, its own declaration; Obj53 modelled 68 as
+`CFLO_ACT_WIDTH` for its cull while balance fell through to 32; Obj36 Spikes and
+Obj33 Push Block build their solid params as `actWidth + 0x0B`; Obj26 Monitor
+hardcodes `0x1A`, which *is* `15 + $B`. The 2026-08-20 reachability round added
+three more: Obj3B GHZ purple rock held `ACT_WIDTH = 0x13` with one reference,
+`getTopLandingHalfWidth()`; Obj33 push block derived `activeWidth` from
+`PushB_Var` for its collision width and never passed it on; and Obj71 invisible
+barrier evaluated the ROM's own `((subtype & $F0) + $10) >> 1` into a live
+`halfWidth` field and did the same. Round two added a ninth, Obj2A SBZ small
+door, whose `ACT_WIDTH = 8` sat one line above the solid params it was not
+feeding. The last two show the shape is not only
+constants -- a *derived field* hides just as well. When auditing an object for
+this, grep for its width constant or field and count the references.
+
+**Tell two, one instance: the right byte is not always missing, it can be
+*substituted*.**
+Obj11 GHZ Bridge had no `obActWid` constant at all; it used `logCount * 8`,
+which is the ROM's *collision* half-width from `Bri_CheckOnBridge`
+(`11 GHZ Bridge.asm:122-126`), not `obActWid`. That is harder to spot than an
+idle constant, because there is nothing unused to grep for and the expression
+looks purposeful. When an object's width comes from a computation, check which
+ROM quantity the computation reproduces.
+
+The two counts are kept apart deliberately. Two named shapes with their own
+instances are more useful than six instances of a blurred one, and the second
+shape is the one a reviewer waves through: someone did derive the width from the
+ROM, just from the wrong quantity.
+
+**Enforced since `TestS1BalanceWidthRomParityGuard`.** Every S1
+`SolidObjectProvider` must have a ROM-cited entry there; omission fails. The
+top-solid fallback's premise -- that a platform caller passes `obActWid` through
+as `d1` -- holds for seven S1 objects and failed for four. All four are now fixed, so the
+guard is green; it is enforced rather than deleted because deleting it would
+mean seven overrides that only preserve behaviour those classes already get.
+
+**Cross-game.** The same shape is documented in `PlayableSpriteMovement` for the
+S2 CPZ/WFZ moving platform Obj19, whose subtype `width_pixels` is
+`$20`/`$18`/`$40`, and for SmashableGround (`docs/s2disasm/s2.asm:48703-48705`)
+whose balance width is `$10` while its SolidObject width is `$1B`.
+
 **Symptom.** Sonic stands still safely inboard on a wide full-solid object, but
 the engine selects Balance while the ROM retains Wait. Physics and standing
 contact remain exact; only animation/facing diverge.
@@ -572,6 +652,57 @@ animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
 block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`). Obj31 chained
 stomper was the next exposed instance: raw `$38/$30/$10`, not the collision
 argument extended by `$B`.
+Obj30 MZ glass pillar followed (`d7422d98f`): `Glass_Main` writes
+`move.b #64/2,obActWid(a1)` = 32 to every pillar child including the parent's own
+slot, reused as child 0 via `movea.l a0,a1`
+(`30 MZ Large Green Glass Blocks.asm:57,78`), and overwrites it with `#32/2` only
+for the reflection child at `:84`. The routine 2/6 `SolidObject` argument is
+`#64/2+sonic_solid_width` = `$2B` (`:99,:117`). The default 16 put `d1` at `-6`
+where the ROM has `10`, so the player balanced on a pillar he was standing well
+inside. A standing audit of every S1 `SolidObjectProvider` against its ROM byte
+is recorded in
+`docs/architecture/audits/2026-08-19-s1-obactwid-balance-width-audit.md`; the
+Obj30 case is not the only one.
+
+**Reachability is a separate question from the byte, and it has its own tell.**
+A wrong `obActWid` is only observable if the player can be grounded, standing
+still, with that object recorded as his stood-on object. Three of the audit's
+rows fail that test for reasons in the ROM rather than the level: Obj44 GHZ edge
+wall calls `EdgeWall_SolidWall`, a stripped-down solid routine that never sets
+`Status_OnObj` at all (`_incObj/sub SolidWall.asm:14-67`); Obj3E's prison switch
+clears the player's `Status_OnObj` on the same frame `SolidObject` sets it
+(`3E Prison Capsule.asm:88-109`); and Obj36's spikes hurt on contact from above
+for exactly the subtypes whose width differs, the standable sideways ones being
+`#32/2` = 16 already. **Check the solid routine's name before the width** -- if
+it is not `SolidObject` or `PlatformObject`, it may not produce a stood-on
+object, and then no width is wrong. Recorded in the guard as
+`RECORDED_UNREACHABLE`, kept distinct from `RECORDED_UNASSESSED` so a later
+reader can tell "looked, cannot happen" from "nobody looked".
+
+**A defeated boss is exempt from the balance test entirely.** `Sonic_Balance`
+reads the stood-on object's `obStatus` and branches to `Sonic_LookUp` on bit 7
+before it ever reaches the width
+(`docs/s1disasm/_incObj/01 Sonic.asm:418-420`), and `Sonic ReactToItem.asm:268`
+sets that bit on a defeated boss. So no boss's post-defeat width is ever
+balance-observable, however carefully the ROM re-writes it -- the FZ boss's
+`BossFinal_Eggman_Fall` writes `#96/2` and `#64/2` that nothing can see. Model
+them for the render cull if you like; do not treat them as balance evidence.
+
+**`obActWid` can legitimately be zero, and zero is a *total* balance window, not
+an absent one.** The FZ plasma launcher's `BossPlasma_Main` writes
+`move.b #16/2,obWidth(a0)` where it meant `obActWid`, and unlike the neighbouring
+cylinders it was never repaired in either revision; `DeleteObject` zeroes a slot
+before `FindFreeObj` hands it out, so the byte stays 0 for the object's life.
+Substituting into `d1 = obActWid + dx`, `d2 = 2*obActWid - 4` gives `dx < 4` or
+`dx >= -4`, which leave no gap -- the ROM balances the whole time the player
+stands on it. When an object has no `obActWid` write at all, the answer is 0, and
+0 is a real value; do not reach for the shared default.
+
+**The default is not always too small.** Every early instance widened the balance
+window, which made "the inherited 16 is too narrow" an unexamined habit. The SBZ
+small door's `obActWid` is 8, so the inherited 16 made the window *wider* than the
+ROM's and suppressed balance across `4 <= |dx| < 12`. Check the direction before
+describing the symptom.
 
 ## P31 -- Only the horizontal spring locks the player's grounded controls
 
@@ -601,3 +732,10 @@ move-lock setter; keep any launch marker free of input semantics.
 `docs/s1disasm/_incObj/41 Springs.asm:144`.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.
+
+## P32 -- merged into P30
+
+This entry duplicated P30 above: both describe an object whose ROM `obActWid`
+differs from the engine's default shifting the `Sonic_Balance` window. Two lanes
+catalogued the same defect within an hour. The number is retained because commit
+`d7422d98f` cites it; read P30.

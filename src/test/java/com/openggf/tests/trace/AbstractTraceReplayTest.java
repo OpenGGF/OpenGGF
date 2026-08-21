@@ -6,6 +6,10 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
+import com.openggf.level.LevelManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -547,6 +551,10 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
                             trace, binder, comparisonExpected.frame());
+                    compareCnzSlotMachineIfRecorded(
+                            trace, binder, comparisonExpected.frame());
+                    compareS2TornadoIfRecorded(
+                            trace, binder, comparisonExpected.frame());
                     compareDynamicArtIfAdvertised(
                             trace, binder, expected.frame());
                     recordUnmatchedHardwareCompletions(
@@ -584,6 +592,11 @@ public abstract class AbstractTraceReplayTest {
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
+            // Asserted here rather than inside writeReport: the finally block below
+            // rewrites the report best-effort and only swallows RuntimeException, so
+            // an AssertionError thrown from there would replace the real divergence
+            // failure instead of adding to it.
+            TraceReportWriter.assertGroupAccountingHolds(report);
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {
@@ -967,6 +980,69 @@ public abstract class AbstractTraceReplayTest {
         }
         binder.compareRecordedHardwareCompletions(
                 frame, fixture.drainUnmatchedRecordedHardwareCompletions());
+    }
+
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's whenever the fixture carries the event and this session has a
+     * CNZ slot manager. A no-op on every other fixture and game.
+     *
+     * <p>The recording has always carried this block on every row of both CNZ
+     * captures and nothing read it. It is the instrument that makes a clock or
+     * call-ordering error at the slot site show up as a field mismatch on the
+     * frame it happens, instead of surfacing thousands of rows later as a ring
+     * or speed divergence: see the 2026-08-21 tick-ownership entries in
+     * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
+     */
+    /**
+     * Compares ObjB2's recorded SST against the engine's whenever the fixture
+     * carries the event. Identity is by content, not by the recorded slot index:
+     * the comparison runs only when exactly one tornado instance is active, so
+     * no engine-slot-to-ROM-slot mapping is invented.
+     */
+    private static void compareS2TornadoIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.S2TornadoState expected = trace.s2TornadoStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return;
+        }
+        TornadoObjectInstance found = null;
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance instanceof TornadoObjectInstance tornado) {
+                if (found != null) {
+                    return; // ambiguous; do not guess which one the recorder meant
+                }
+                found = tornado;
+            }
+        }
+        if (found == null) {
+            return;
+        }
+        binder.compareS2Tornado(frame, expected, found.snapshot());
+    }
+
+    private static void compareCnzSlotMachineIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.CnzSlotMachineState expected =
+                trace.cnzSlotMachineStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null
+                || !(levelManager.getZoneFeatureProvider()
+                        instanceof Sonic2ZoneFeatureProvider provider)) {
+            return;
+        }
+        CNZSlotMachineManager manager = provider.getSlotMachineManager();
+        if (manager == null) {
+            return;
+        }
+        binder.compareCnzSlotMachine(frame, expected, manager.snapshot());
     }
 
     private static void compareLoadQueuesIfAdvertised(

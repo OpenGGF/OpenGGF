@@ -386,6 +386,79 @@ class TestHardwareTimingService {
                 () -> service.beginRecordedAdmission(Map.of()));
     }
 
+    /**
+     * The identity return moves the allocator, so it is bounded by the same
+     * invariant {@code advanceOrdinalCursorAcrossRecordedSpan}'s guard states:
+     * it may only move while production holds nothing unclaimed that the move
+     * would renumber, and only the most recently allocated identity may go
+     * back. Each rejection leaves the cursor and the ledger untouched.
+     */
+    @Test
+    void returningAnUnrepresentedIdentityIsRefusedUnlessTheAxisIsProvablyFree() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.setRecordedRowRepresentation(false);
+
+        HardwareWorkHandle first = service.submit(submission(1, new byte[] {41}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(first);
+
+        // Unclaimed: production still owns the result behind this identity.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(first));
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        HardwareWorkHandle second = service.submit(submission(1, new byte[] {42}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(second);
+        service.claim(second);
+
+        // Claimed, and the most recent -- but `first` is still unclaimed and
+        // would be stranded on the old axis by the move.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(second));
+        assertEquals(2L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        service.claim(first);
+        // Claimed and nothing pending -- but not the most recently allocated.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(first));
+        assertEquals(2L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        service.releaseUnrepresentedIdentity(second);
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+        // The spent record is retired, so the reissued ordinal is unambiguous.
+        HardwareWorkHandle reissued = service.submit(submission(1, new byte[] {43}));
+        assertEquals(1L, reissued.ordinal());
+        assertEquals(List.of(reissued), service.pendingHandles());
+    }
+
+    /**
+     * Row authority is the whole discriminator: inside recorded coverage an
+     * identity is on the recording's axis and can never be returned.
+     */
+    @Test
+    void anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.setRecordedRowRepresentation(false);
+
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {44}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(handle);
+        service.claim(handle);
+
+        authority.setRecordedRowRepresentation(true);
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(handle));
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
     private static HardwareWorkSubmission submission(int workUnits, byte[] payload) {
         return submission(HardwareWorkKind.KOS_MODULE_QUEUE, workUnits, payload);
     }

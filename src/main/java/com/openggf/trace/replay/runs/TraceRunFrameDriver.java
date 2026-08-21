@@ -1,6 +1,9 @@
 package com.openggf.trace.replay.runs;
 
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentExecutionPolicy;
 
 import java.util.Objects;
@@ -257,6 +260,132 @@ public final class TraceRunFrameDriver {
             boolean previousObservedVblankCounterAdvance,
             boolean destinationGameplayModeReached,
             boolean nextRowCarriesDeferredVblank) {
+        return selectDisposition(
+                coordinatorPhase, executionPolicy, rowPhase,
+                observedVblankCounterAdvance,
+                previousObservedVblankCounterAdvance,
+                destinationGameplayModeReached,
+                nextRowCarriesDeferredVblank,
+                false);
+    }
+
+    /**
+     * Resolves one presentation-bridge row into the {@link Step} that drives
+     * it. This is the single implementation of the bridge-stepping contract:
+     * the visual launcher and the headless chain harness both call it, having
+     * previously each carried their own copy.
+     *
+     * <p>Everything the contract derives from the recorded row is derived
+     * here -- row phase, this row's and the previous row's observed V-blank
+     * counter advance, whether the next row carries a deferred V-blank,
+     * whether the row is a recorded lag V-int, and the two boundary-commit
+     * flags. {@code terminalSegmentRow} stays a caller argument on purpose:
+     * the launcher takes it from the manifest's segment row count and the
+     * chain from the loaded fixture's row count. Those agree on all 327
+     * segments currently in the tree, but they are not the same expression,
+     * so folding them together here would be a behaviour change smuggled into
+     * a refactor.
+     *
+     * @param movieRow the physical movie cursor for {@code localRow}; the
+     *                 neighbouring rows are resolved against
+     *                 {@code movieRow - 1} and {@code movieRow + 1} to match
+     *                 the row-policy contract.
+     */
+    public static Step presentationBridgeStep(
+            TraceData trace,
+            int localRow,
+            int movieRow,
+            SegmentExecutionPolicy executionPolicy,
+            boolean destinationGameplayModeReached,
+            boolean terminalSegmentRow) {
+        Objects.requireNonNull(trace, "trace");
+        Objects.requireNonNull(executionPolicy, "executionPolicy");
+        if (localRow < 0 || localRow >= trace.frameCount()) {
+            throw new IllegalArgumentException(
+                    "presentation row " + localRow + " outside trace");
+        }
+        TraceReplayRowPolicy rowPolicy =
+                TraceReplayRowPolicy.resolve(trace, localRow, movieRow);
+        boolean observedVblankCounterAdvance =
+                rowPolicy.observedVblankCounterAdvance();
+        boolean previousObservedVblankCounterAdvance = localRow == 0
+                || TraceReplayRowPolicy
+                        .resolve(trace, localRow - 1, movieRow - 1)
+                        .observedVblankCounterAdvance();
+        boolean hasNextRow = localRow + 1 < trace.frameCount();
+        boolean nextRowCarriesDeferredVblank = hasNextRow
+                && TraceReplayRowPolicy.carriesDeferredVblank(
+                        trace, localRow + 1);
+        boolean deferBoundaryCommit = hasNextRow
+                && shouldDeferBoundaryCommit(
+                        observedVblankCounterAdvance,
+                        TraceReplayRowPolicy
+                                .resolve(trace, localRow + 1, movieRow + 1)
+                                .observedVblankCounterAdvance());
+        Disposition disposition = selectDisposition(
+                TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT,
+                executionPolicy,
+                rowPolicy.phase(),
+                observedVblankCounterAdvance,
+                previousObservedVblankCounterAdvance,
+                destinationGameplayModeReached,
+                nextRowCarriesDeferredVblank,
+                recordedRowIsLagVint(trace, localRow));
+        return new Step(
+                disposition,
+                movieRow,
+                terminalSegmentRow,
+                deferBoundaryCommit,
+                shouldCommitDeferredBoundaryAfterClosure(
+                        previousObservedVblankCounterAdvance,
+                        observedVblankCounterAdvance),
+                observedVblankCounterAdvance);
+    }
+
+    /**
+     * The emulator's own per-frame lag observation for a recorded row. A
+     * lagged row's V-int took {@code VBlank_Lag}
+     * (docs/s1disasm/sonic.asm:656-657) and reached no {@code ProcessPLC}
+     * call (:711-746), so the row owns a V-int closure with no mode handler.
+     *
+     * <p>Read from the recorded flag and never inferred from counter shape:
+     * inside a presentation bridge the two disagree on nearly every row,
+     * because bridge gameplay is structurally frozen regardless of lag.
+     */
+    private static boolean recordedRowIsLagVint(TraceData trace, int localRow) {
+        TraceEvent.LagState state =
+                trace.lagStateForFrame(trace.getFrame(localRow).frame());
+        return state != null && state.lagged();
+    }
+
+    /**
+     * Adds the recorded per-frame lag observation as a second, independent
+     * reason to suppress a presentation row's mode handler.
+     *
+     * <p>{@code presentationRowIsCarriedLagClosure} models <em>no V-int
+     * elapsed for this row</em>, derived from counter shape. This models the
+     * other ROM case: a V-int <em>did</em> run and took the {@code VBlank_Lag}
+     * branch (docs/s1disasm/sonic.asm:656-657), which reaches no
+     * {@code ProcessPLC} call (:712-746) yet still advances
+     * {@code v_vblank_count} through {@code VBlank_Exit} (:684-687). Both
+     * produce a row that services no patterns, so both select the suppressed
+     * closure; neither subsumes the other.
+     *
+     * <p>The recorded flag is the authority and counter shape must never be
+     * used in its place. Inside a presentation bridge the two diverge sharply
+     * -- {@code syz2} holds 802 of 811 rows with a frozen gameplay counter
+     * while only 9 are lagged -- because bridge gameplay is structurally
+     * frozen regardless of lag.
+     */
+    public static Disposition selectDisposition(
+            TraceRunPlaybackCoordinator.Phase coordinatorPhase,
+            SegmentExecutionPolicy executionPolicy,
+            TraceExecutionPhase rowPhase,
+            boolean observedVblankCounterAdvance,
+            boolean previousObservedVblankCounterAdvance,
+            boolean destinationGameplayModeReached,
+            boolean nextRowCarriesDeferredVblank,
+            boolean recordedRowIsLagVint) {
         Objects.requireNonNull(coordinatorPhase, "coordinatorPhase");
         Objects.requireNonNull(executionPolicy, "executionPolicy");
         Objects.requireNonNull(rowPhase, "rowPhase");
@@ -273,7 +402,8 @@ public final class TraceRunFrameDriver {
                     // but the segment policy has already proven that the
                     // destination is native presentation rather than gameplay.
                     case FULL_LEVEL_FRAME -> Disposition.PRESENTATION_VBLANK;
-                    case VBLANK_ONLY -> presentationRowIsCarriedLagClosure(
+                    case VBLANK_ONLY -> recordedRowIsLagVint
+                            || presentationRowIsCarriedLagClosure(
                             observedVblankCounterAdvance,
                             previousObservedVblankCounterAdvance,
                             nextRowCarriesDeferredVblank)

@@ -80,7 +80,17 @@ public final class TraceRunDynamicArtGapJournal {
                 .toList();
     }
 
-    public FrameComparison destinationOpened(int destinationSegmentIndex) {
+    /**
+     * Closes the gap and compares it, at the instant the destination segment
+     * opens.
+     *
+     * @param destinationRowsConsumed the destination's own recorded rows the
+     *                                engine has already run when admission is
+     *                                polled; see
+     *                                {@link #lastMovieRowRun(int, int)}
+     */
+    public FrameComparison destinationOpened(
+            int destinationSegmentIndex, int destinationRowsConsumed) {
         if (sourceSegmentIndex < 0
                 || destinationSegmentIndex != sourceSegmentIndex + 1) {
             throw new IllegalStateException(
@@ -219,12 +229,22 @@ public final class TraceRunDynamicArtGapJournal {
      * Row a stamp actually belongs to, given the unannounced-row counts at the
      * stamp and at the gap's end. A stamp taken in the same row as the end has
      * nothing to subtract.
+     *
+     * <p>Every stamp counts back from itself. A stale stamp — one carrying the
+     * admission's own row, which is what a frozen cursor re-announces — is
+     * already that row, because the admission stands on the destination's first
+     * row whether or not that row has run yet. This used to count back from a
+     * separate {@code lastMovieRowRun}, derived as
+     * {@code bk2FrameOffset + rowsConsumed - 1}: a comparator fact standing in
+     * for a clock fact, equal to the admission row only while every return
+     * consumed the destination's row zero. Where a return consumes none it was
+     * one low, and every recovered row in that gap came out one row early.
      */
     public static int rowCountedBackFromAdmission(
             int stampedRow,
             int admissionUnannouncedRows,
             int unannouncedRowsAtStamp) {
-        return Math.toIntExact(Math.subtractExact((long) stampedRow,
+        return Math.toIntExact(Math.subtractExact(stampedRow,
                 Math.max(0, admissionUnannouncedRows - unannouncedRowsAtStamp)));
     }
 

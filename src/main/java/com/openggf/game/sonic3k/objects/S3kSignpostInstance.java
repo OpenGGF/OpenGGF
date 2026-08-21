@@ -367,10 +367,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                     resultsTimerCatchUpEntries,
                     preservesPostObjectResultDispatchBoundary,
                     bumpedFromBelow);
-            yVel = 0;
-            xVel = 0;
-            subX = 0;
-            subY = 0;
+            // ROM loc_838AA (docs/skdisasm/sonic3k.asm:176191-176194) is the whole
+            // landing branch: it writes routine, $38 bit 0 and the $40 timer, and
+            // touches NEITHER velocity nor either sub-pixel. The velocities are
+            // cleared only later, by loc_838D6 when the post-land timer expires
+            // (:176209-176218) -- which this class already does at that transition.
+            //
+            // Clearing x_vel here broke the hidden-monitor re-bounce. loc_838FA
+            // (:176222-176227) resumes routine 2 with `move.b #$20,$20(a0)` and
+            // `move.w #-$200,y_vel(a0)` only, so the signpost carries its
+            // PRE-LANDING x_vel back into the air and keeps drifting sideways.
+            // With x_vel zeroed the engine's signpost hung motionless in x after
+            // the bounce while the ROM's drifted, and the two were ~40px apart by
+            // the time the player's next bump-box test ran.
             state = State.LANDED;
             landingSparklePending = preservesPostLandingSparkleGate
                     && isRomSparkleFrame(vIntRunCount + 1);
@@ -413,13 +422,65 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             return;
         }
 
-        // ROM EndSign_CheckPlayerHit checks the range once, then calls sub_83A70
-        // for Sonic and Tails in that order. The delay byte is written inside
-        // sub_83A70, so a same-frame Tails hit can overwrite Sonic's x velocity
-        // (docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387).
+        // ROM EndSign_CheckPlayerHit range-tests both players once, then calls
+        // sub_83A70 for Player 1 and afterwards for Player 2
+        // (docs/skdisasm/sonic3k.asm:176347-176371, 176376-176397).
+        //
+        // FixBugs conditional at docs/skdisasm/sonic3k.asm:176357-176365. The
+        // engine takes the FixBugs = 0 branch, which is what the shipped ROM
+        // does. The fixed branch would push/pop d0 around the Player 1 call so
+        // that the following `swap d0 / tst.w d0` still holds Player 2's
+        // address; the un-fixed branch does not, and d0 is destroyed whenever
+        // Player 1 actually scores a bump. It is destroyed by a route that is
+        // easy to miss: sub_83A70 ends in `jmp (HUD_AddToScore).l`, a TAIL
+        // jump, so HUD_AddToScore's own rts consumes the return address that
+        // `bsr.w sub_83A70` pushed and returns straight to loc_83A6A -- with
+        // whatever HUD_AddToScore left in d0.
+        //
+        // HUD_AddToScore has TWO exits and both leave the same thing in d0's
+        // high word, which is the only half the following `swap d0 / tst.w d0`
+        // can see (:17645-17665):
+        //   - the ordinary `.end` exit returns after `move.l (a3),d0`, so d0 is
+        //     the whole 32-bit Score;
+        //   - the extra-life exit does `move.w #mus_ExtraLife,d0` and tail-jumps
+        //     to Play_Music, which writes only `d0.b` into Z80 RAM and touches
+        //     no register (:1471-1475; its stopZ80/startZ80 macros are pure
+        //     memory writes, sonic3k.macros.asm:94-103). That `move.w` replaces
+        //     only the LOW word, so the high word is still the Score's.
+        // The extra-life exit is reachable in an ordinary run, not hypothetical,
+        // so covering it matters: `swap d0` moves mus_ExtraLife into the high
+        // word where `tst.w` cannot see it, and both exits therefore present the
+        // Score's high word to the test.
+        //
+        // So on a frame where Player 1 bumps, the Player 2 test reads the HIGH
+        // WORD of the score instead of Tails' address, and Player 2 can never
+        // bump. Note what this does and does not make deterministic: the VALUE
+        // varies from run to run because it is a function of the live score, but
+        // the OUTCOME does not, because every value it can take is rejected
+        // below. That residual branch is provably inert rather than merely
+        // unlikely: Score is capped at 999999 = $F423F (:17649-17652), so the
+        // swapped value is 0..$F. Zero returns immediately. For 1..$F the ROM
+        // does `movea.w d0,a1` and reads `anim(a1)` = $20(a1) and then
+        // `y_vel(a1)` = $1A(a1) out of the 68000 vector table at the bottom of
+        // the ROM. In the locked-on ROM those bytes are $00 at every odd a1 and
+        // $02 at a1 = 2, 6, $A, $E -- and at all four of those the y_vel word is
+        // $0000, so `tst.w y_vel(a1) / bpl.s locret_83ABC` always returns. The
+        // wild read therefore never reaches the bump body, and modelling it as
+        // "no Player 2 bump this frame" is exact, not an approximation.
+        //
+        // Consequence for behaviour: at most ONE player bumps the signpost per
+        // frame, and it is Player 1 whenever Player 1 qualifies. A same-frame
+        // Player 2 bump is only reachable when Player 1 did not bump -- either
+        // out of range, or in range but failing sub_83A70's animation/velocity
+        // test, both of which return with d0 intact.
+        boolean bumpedThisFrame = false;
         for (PlayableEntity candidate : playerQuery(player).playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (bumpedThisFrame) {
+                break;
+            }
             if (candidate instanceof AbstractPlayableSprite sprite && isRomBumpCandidate(worldX, worldY, sprite)) {
                 applyRomBumpFromBelow(sprite);
+                bumpedThisFrame = true;
             }
         }
     }
@@ -452,8 +513,22 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     }
 
     static int romBumpXVelocity(int signpostX, int playerX) {
-        int kickX = (signpostX - playerX) * 16;
-        return kickX == 0 ? 8 : kickX;
+        // ROM sub_83A70 (docs/skdisasm/sonic3k.asm:176381-176390):
+        //   move.w x_pos(a0),d0
+        //   sub.w  x_pos(a1),d0
+        //   bne.s  loc_83A92
+        //   moveq  #8,d0
+        // loc_83A92:
+        //   lsl.w  #4,d0
+        //   move.w d0,x_vel(a0)
+        // The #8 substitution happens BEFORE the shift, so an exactly aligned
+        // player produces x_vel = 8 << 4 = $80, not 8. Substituting after the
+        // shift understated the kick by a factor of 16 on alignment frames.
+        int delta = (short) (signpostX - playerX);
+        if (delta == 0) {
+            delta = 8;
+        }
+        return (short) (delta << 4);
     }
 
     static boolean hasRomBumpPose(AbstractPlayableSprite player) {

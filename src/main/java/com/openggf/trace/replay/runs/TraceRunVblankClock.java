@@ -119,7 +119,8 @@ public final class TraceRunVblankClock {
     public OptionalInt uncomparedInteriorReturnTarget(
             int sourceIndex,
             TraceRunManifest.Segment source,
-            TraceRunManifest.Segment destination) {
+            TraceRunManifest.Segment destination,
+            int destinationFramesConsumed) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(destination, "destination");
         if (!profile.alignUncomparedInteriorReturnVblank()
@@ -132,7 +133,7 @@ public final class TraceRunVblankClock {
             return OptionalInt.empty();
         }
         int ticks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                source, destination,
+                source, destination, destinationFramesConsumed,
                 specialStageReturnLoss(profile, destination));
         return OptionalInt.of(Math.addExact(sourceAnchor.tailVblank(), ticks));
     }

@@ -991,6 +991,30 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         return SolidObjectParams.of(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
     }
 
+    /**
+     * The block's ROM {@code obActWid}, read out of {@code PushB_Var}.
+     *
+     * <p>{@code PushB_Main} indexes the subtype into {@code PushB_Var} and stores
+     * the first byte of the pair straight into {@code obActWid} -- {@code #32/2}
+     * = 16 for the 1x1 block, {@code #128/2} = 64 for the 4x1
+     * (docs/s1disasm/_incObj/33 MZ, LZ Pushable Blocks.asm:22-24,48-49). This is
+     * the same {@link #activeWidth} the class already derives for the collision
+     * width, which {@code PushB_Action} forms by padding it
+     * ({@code addi.w #sonic_solid_width,d1}) without writing the padded value
+     * back to {@code obActWid}.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * both ROM consumers want the raw byte -- {@code BuildSprites}' horizontal
+     * cull (docs/s1disasm/_inc/BuildSprites.asm:49-58) and {@code Sonic_Balance}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423). {@link #isTopSolidOnly()} is
+     * false for this class, so the balance accessor does inherit this one rather
+     * than intercepting at {@code getSolidParams().halfWidth()}.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return activeWidth;
+    }
+
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // Solid_ChkEnter rejects positions beyond the right edge with BHI, so

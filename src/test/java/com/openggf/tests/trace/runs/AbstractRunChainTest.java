@@ -35,6 +35,7 @@ import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.VerificationGroup;
 import com.openggf.trace.live.MismatchEntry;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.replay.TraceReplayDriver;
@@ -56,7 +57,6 @@ import com.openggf.trace.replay.runs.SpecialStageRecordedPassPacing;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceStructuralRowComparator;
-import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -130,6 +130,25 @@ abstract class AbstractRunChainTest {
      */
     private final List<String> chainAxisFailures = new ArrayList<>();
     private LiveTraceComparator productionComparator;
+    /**
+     * Comparison-only ROM-vs-engine SST occupancy diff for the chain walk, armed
+     * per segment and off unless {@code OGGF_SLOT_PROBE=1}.
+     *
+     * <p>{@link com.openggf.tests.trace.SlotOccupancyProbe} was already wired into
+     * the single-segment replay path but not into the chain, so the recorder's
+     * {@code slot_dump} ground truth was unreachable for any fixture that only
+     * exists as a chain segment -- which is most complete-run material.
+     */
+    private com.openggf.tests.trace.SlotOccupancyProbe slotOccupancyProbe;
+    /** Names the slot-probe output file; set once the run manifest is known. */
+    private String slotProbeRunId = "run";
+    /**
+     * The run's hardware-timing coordinator, so the walk can declare which
+     * segment it owns at the same places it attaches and releases its row
+     * owner. Membership is drive-owned; see
+     * {@link HardwareTimingCoordinator#enterTransitionGap()}.
+     */
+    private HardwareTimingCoordinator activeHardwareTiming;
     private HeadlessRunCoordinatorAdapter activeRunCoordinator;
     /**
      * Segment indices whose comparator was attached by
@@ -174,6 +193,13 @@ abstract class AbstractRunChainTest {
      */
     private final java.util.Set<Integer> assertedPhysicsSegmentIndices =
             new java.util.HashSet<>();
+
+    /**
+     * Comparator summary JSON written by this walk, by segment index -- the
+     * race-free source for {@link #writtenSegmentReport}.
+     */
+    private final Map<Integer, String> writtenSegmentReports =
+            new LinkedHashMap<>();
 
     protected record DynamicArtGapJournalEvidence(
             int transitionCountAfterFirstArm,
@@ -747,7 +773,7 @@ abstract class AbstractRunChainTest {
          * caller can keep stepping while the coordinator legitimately denies.
          * Returns true only when the coordinator actually admitted.
          */
-        private boolean tryAdmitLevel(
+        boolean tryAdmitLevel(
                 TraceRunManifest.Transition boundary,
                 int observedBk2Frame,
                 GameMode mode,
@@ -970,8 +996,109 @@ abstract class AbstractRunChainTest {
                 runDir, new ReplayPrefixTarget(segmentIndex, committedRows));
     }
 
+    /**
+     * Boots the run <em>at</em> {@code startSegmentIndex} and walks forward from
+     * there, instead of walking to it from segment 0.
+     *
+     * <p>This is the control instrument for "is this axis newly visible, or did
+     * my change cause it?". When a change lets the chain reach segments it never
+     * reached before, the ordinary chain gives no control arm for those
+     * segments: the unchanged code terminates earlier and never executes them,
+     * so their axes cannot be attributed either way.
+     * {@link #assertChainReplayThroughSegmentRow} does not help -- it replays
+     * <em>through</em> a prefix and still walks from segment 0.
+     *
+     * <p>Booting at a segment is already an exercised path rather than a new
+     * one: segment 0 of every run boots at its own non-zero
+     * {@code bk2FrameOffset} (860 for {@code s1-sonic-complete-withemeralds}),
+     * and every boot-time input is taken from the boot segment's own plan.
+     *
+     * <p><strong>What it does and does not prove.</strong> A run started at
+     * segment K carries none of the engine state segments 0..K-1 would have
+     * left. An axis that reproduces identically from a cold start at K is
+     * therefore owned by K's own entry conditions and is not carry-in -- and,
+     * in particular, is not caused by whatever let the chain arrive there. An
+     * axis that does <em>not</em> reproduce is not thereby proven to be
+     * carry-in, because the cold start is a different starting state, not the
+     * chain's state minus one change.
+     */
+    protected DynamicArtGapJournalEvidence assertChainReplayFromSegment(
+            Path runDir, int startSegmentIndex) throws Exception {
+        if (startSegmentIndex < 0) {
+            throw new IllegalArgumentException(
+                    "start segment must be nonnegative: " + startSegmentIndex);
+        }
+        return assertChainReplay(runDir, null, startSegmentIndex);
+    }
+
+
+    /**
+     * Returns the run as it would read if it began at {@code startSegmentIndex}:
+     * that segment becomes segment 0, and every transition and dynamic-art gap
+     * that belongs to a dropped segment is dropped with it.
+     *
+     * <p>Re-basing the manifest rather than teaching the walk to start partway
+     * is deliberate. Every index in the replay -- segment indices, the
+     * coordinator's transcript, exit-boundary lookups, the gap journal's
+     * positional pairing of transitions to dynamic-art gaps -- is relative to
+     * the run it was given. Handing the machinery a run that genuinely starts
+     * here keeps all of that arithmetic correct by construction, and needs no
+     * change in {@code src/main}: the production coordinator still activates
+     * "segment 0" and still refuses anything else.
+     *
+     * <p>Transitions are re-based by subtracting the offset. Dynamic-art gap
+     * transitions carry no segment index and are paired to transitions
+     * positionally, so they are sliced by the same count.
+     */
+    private static TraceRunManifest rebaseRunFromSegment(
+            TraceRunManifest run, int startSegmentIndex, Path runDir) {
+        List<TraceRunManifest.Segment> segments = run.segments();
+        assertTrue(
+                startSegmentIndex < segments.size(),
+                "start segment " + startSegmentIndex + " outside run ("
+                        + segments.size() + " segments): " + runDir);
+        assertEquals(
+                "level", segments.get(startSegmentIndex).kind(),
+                "start segment " + startSegmentIndex
+                        + " must be a level to boot from: " + runDir);
+        int droppedTransitions = 0;
+        List<TraceRunManifest.Transition> transitions = new ArrayList<>();
+        for (TraceRunManifest.Transition t : run.transitions()) {
+            if (t.fromSegment() < startSegmentIndex) {
+                droppedTransitions++;
+                continue;
+            }
+            transitions.add(new TraceRunManifest.Transition(
+                    t.fromSegment() - startSegmentIndex,
+                    t.toSegment() - startSegmentIndex,
+                    t.entryKind(), t.modeChangeBk2Frame(),
+                    t.specialBonusEntryFlag(), t.savedXPos(), t.savedYPos(),
+                    t.lastStarPostHit(), t.ringsBefore(), t.ringsAfter(),
+                    t.emeraldsBefore(), t.emeraldsAfter(),
+                    t.gapAdmissionRuns()));
+        }
+        List<DynamicArtTransfer.GapTransition> gaps =
+                run.dynamicArtGapTransitions();
+        List<DynamicArtTransfer.GapTransition> rebasedGaps =
+                droppedTransitions >= gaps.size()
+                        ? List.of()
+                        : List.copyOf(gaps.subList(droppedTransitions, gaps.size()));
+        return new TraceRunManifest(
+                run.game(), run.runId(), run.sourceBk2(), run.romChecksum(),
+                List.copyOf(segments.subList(startSegmentIndex, segments.size())),
+                List.copyOf(transitions),
+                rebasedGaps,
+                run.expectedMovieEndMode());
+    }
+
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
+        return assertChainReplay(runDir, prefixTarget, 0);
+    }
+
+    private DynamicArtGapJournalEvidence assertChainReplay(
+            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex)
+            throws Exception {
         chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
@@ -979,6 +1106,9 @@ abstract class AbstractRunChainTest {
             run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
         } catch (IOException e) {
             throw new AssertionError("Failed to load run manifest: " + runDir, e);
+        }
+        if (startSegmentIndex > 0) {
+            run = rebaseRunFromSegment(run, startSegmentIndex, runDir);
         }
         List<SegmentPlan> plans;
         try {
@@ -1061,6 +1191,7 @@ abstract class AbstractRunChainTest {
                         TraceRunReplayWalker.hardwareTimingSegments(plans),
                         com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader
                                 .load(runDir));
+        activeHardwareTiming = hardwareTiming;
         GameplayModeContext gameplayMode =
                 SessionManager.getCurrentGameplayMode();
         gameplayMode.plcFrameLifecycle()
@@ -1132,7 +1263,9 @@ abstract class AbstractRunChainTest {
             // delegating comparison to whichever segment comparator is attached.
             playback.setFrameObserver(probe);
             probe.setDelegate(driver.comparator());
-            productionComparator = driver.comparator();
+            declareHardwareTimingSegment(0);
+            slotProbeRunId = run.runId();
+            installProductionComparator(driver.comparator(), first.trace(), 0);
             runCoordinator.activateInitial(loop.getCurrentGameMode());
 
             // --- Step 3: walk every segment -------------------------------------
@@ -1156,6 +1289,8 @@ abstract class AbstractRunChainTest {
                 int remainingFrames = TraceRunReplayWalker.remainingSegmentFrames(
                         seg.trace().frameCount(), activeComparator.cursor());
                 stepFrames(loop, remainingFrames);
+                topUpUnconsumedSegmentRows(
+                        loop, activeComparator, seg.trace().frameCount(), stepCap);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
                 dynamicArtSegments.enterGap();
@@ -1210,8 +1345,7 @@ abstract class AbstractRunChainTest {
                             playback, probe, movie, next, fixture, i + 1);
                     activeSegmentInitialCursor = cursorOrZero(activeComparator);
                     dynamicArtSegments.beginSegment();
-                    dynamicArtGapJournal.nextSegmentArmed(
-                            next.segment().dir());
+                    dynamicArtGapJournal.nextSegmentArmed(next.segment().dir());
                     i++;
                     continue;
                 }
@@ -1220,10 +1354,9 @@ abstract class AbstractRunChainTest {
                 int rowsConsumed = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                runCoordinator.admitLevel(
-                        null, playback.getCursorFrame(),
-                        loop.getCurrentGameMode(), rowsConsumed, false,
-                        runCoordinator.latestLoadReceipt());
+                admitPlainLevelBoundaryWhenReady(
+                        loop, playback, runCoordinator, next, rowsConsumed,
+                        stepCap);
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed,
                         i + 1);
@@ -1231,8 +1364,7 @@ abstract class AbstractRunChainTest {
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
-                dynamicArtGapJournal.nextSegmentArmed(
-                        next.segment().dir());
+                dynamicArtGapJournal.nextSegmentArmed(next.segment().dir());
                 i++;
                 continue;
             }
@@ -1476,21 +1608,72 @@ abstract class AbstractRunChainTest {
                 // executed row zero.
                 boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
+                    // Pre-seeked SS interior: its single title-card-exit fall-through
+                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
+                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
+                    // Computed BEFORE the anchor because the anchor now consumes it:
+                    // the budget runs to the last consumed destination row.
+                    int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    // The V-blank anchor below consumes framesConsumed, so it is
+                    // computed first. uncomparedInteriorReturnVblankBudget now carries
+                    // the consumed-row term its sibling interLevelVblankBudget always
+                    // had, instead of hardcoding a count of one -- which is what made
+                    // the anchor depend on the seam's row layout.
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
                         if (uncomparedInteriorSourceLevel == null) {
                             throw new AssertionError(
                                     "Uncompared interior return has no source-level clock anchor");
                         }
+                        // Scoped to the anchored games ON PURPOSE. The anchor and
+                        // attachReturnedLevelSegment's comparator base are one
+                        // contract, and the thing that keeps them coherent is that
+                        // BOTH consume this same framesConsumed: the comparator bases
+                        // at destination row framesConsumed, and the budget targets
+                        // returnOffset + framesConsumed - 1, which is the counter
+                        // value entering that row. That holds at every non-negative
+                        // count, zero included -- a return that hands its host
+                        // iteration back rather than fusing the destination's frame 0
+                        // into it anchors on the row before frame 0, exactly as the
+                        // level_advance admissions do through the arithmetically
+                        // identical interLevelVblankBudget. What must NOT happen is a
+                        // count that names rows the engine never ran (see OPTION B
+                        // below, which re-anchors the cursor and is therefore excluded
+                        // from this branch), or a cursor that has left the destination
+                        // segment altogether -- either breaks the pairing by making
+                        // the comparator's base and the anchor's target disagree about
+                        // which row the engine is standing on.
+                        //
+                        // A game whose profile leaves alignUncomparedInteriorReturnVblank
+                        // false runs no anchor here, so it has no pairing at all. S3K
+                        // takes GameModule's default TracePlaybackProfile.DISABLED
+                        // (GameModule.java:334-336) and reaches its aiz_2 return with
+                        // framesConsumed == 0 -- a legitimate second return shape, not
+                        // a defect. An earlier version of this assertion sat outside
+                        // this guard and aborted the whole S3K chain at segment 1 for
+                        // exactly that reason; it was reverted in 34e58af86. Do not
+                        // widen it.
+                        assertTrue(framesConsumed >= 0
+                                        && framesConsumed
+                                                <= plans.get(i + 1).segment().traceFrameCount(),
+                                "Uncompared interior return's organic cursor must lie "
+                                        + "within the destination segment before the "
+                                        + "comparator attaches (cursor "
+                                        + playback.getCursorFrame()
+                                        + ", offset " + returnOffset + ", recorded rows "
+                                        + plans.get(i + 1).segment().traceFrameCount()
+                                        + ", segment "
+                                        + plans.get(i + 1).segment().dir() + "). The "
+                                        + "comparator bases at framesConsumed and the "
+                                        + "V-blank anchor targets the counter entering "
+                                        + "that same row; outside the segment the two "
+                                        + "name different rows and every compared row "
+                                        + "is read off by one. For " + runDir);
                         alignUncomparedInteriorReturnVblank(
                                 uncomparedInteriorSourceLevel, plans.get(i + 1),
-                                uncomparedInteriorSourceVblank);
+                                uncomparedInteriorSourceVblank, framesConsumed);
                         uncomparedInteriorSourceLevel = null;
                     }
-                    // Pre-seeked SS interior: its single title-card-exit fall-through
-                    // frame consumed the return segment's frame 0 (framesConsumed == 1)
-                    // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
-                    int framesConsumed = playback.getCursorFrame() - returnOffset;
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
                             loop.getCurrentGameMode(), framesConsumed, false,
@@ -1715,13 +1898,12 @@ abstract class AbstractRunChainTest {
                         exit, obs.observedBk2Frame(),
                         loop.getCurrentGameMode(), rowsConsumed);
                 activeComparator = attachPreparedInterior(
-                        probe, interior, fixture, rowsConsumed);
+                        probe, interior, fixture, rowsConsumed, i + 1);
                 activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
-                dynamicArtGapJournal.nextSegmentArmed(
-                        interior.segment().dir());
+                dynamicArtGapJournal.nextSegmentArmed(interior.segment().dir());
                 i++;
             }
             }
@@ -1740,6 +1922,9 @@ abstract class AbstractRunChainTest {
         } finally {
             activeRunCoordinator = null;
             productionComparator = null;
+            // Flush the final segment's slot diff; earlier segments were closed
+            // when the next one re-armed the probe.
+            closeSlotOccupancyProbe();
             try {
                 dynamicArtSegments.close();
             } catch (RuntimeException | Error closeFailure) {
@@ -1854,6 +2039,12 @@ abstract class AbstractRunChainTest {
         TraceRunFrameDriver physicalRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(physicalRows);
         probe.setDelegate(null);
+        // An uncompared special stage has no comparator, but the walk still
+        // OWNS its rows -- it drives them itself below. Declaring entry here is
+        // what makes the interior a segment the coordinator is inside, so the
+        // bridge that follows is an ordinary next-segment entry rather than a
+        // jump over a segment nothing ever declared.
+        declareHardwareTimingSegment(specialIndex);
         productionComparator = null;
         try {
             // Reuse the plan's parse (loaded with the segment's declared
@@ -1978,6 +2169,10 @@ abstract class AbstractRunChainTest {
             dynamicArtGapJournal.gapOpened(special.segment().dir());
 
             int bridgeOffset = bridge.segment().bk2FrameOffset();
+            // The stage's rows are done and the bridge's have not started: the
+            // rows driven below are transition rows the recording does not
+            // cover, whatever the shared cursor reads.
+            declareHardwareTimingTransitionGap();
             while (playback.getCursorFrame() < bridgeOffset) {
                 if (playback.getCursorFrame() + 1 > bridgeOffset) {
                     throw new AssertionError(
@@ -2004,6 +2199,7 @@ abstract class AbstractRunChainTest {
                     GameServices.level().getObjectManager().getVblaCounter();
 
             dynamicArtSegments.beginSegment();
+            declareHardwareTimingSegment(bridgeIndex);
             dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir());
 
             TraceStructuralRowComparator structural =
@@ -2013,47 +2209,20 @@ abstract class AbstractRunChainTest {
             while (!structural.allRowsConsumed()) {
                 int localRow = structural.cursor();
                 int movieRow = playback.getCursorFrame();
-                var rowPolicy = TraceReplayRowPolicy.resolve(
-                        bridge.trace(), localRow, movieRow);
-                boolean previousObservedVblank = localRow == 0
-                        || TraceReplayRowPolicy.resolve(
-                                bridge.trace(), localRow - 1, movieRow - 1)
-                                .observedVblankCounterAdvance();
-                TraceRunFrameDriver.Disposition disposition =
-                        TraceRunFrameDriver.selectDisposition(
-                                TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT,
-                                bridge.executionPolicy(), rowPolicy.phase(),
-                                rowPolicy.observedVblankCounterAdvance(),
-                                previousObservedVblank,
+                // One implementation of the bridge-stepping contract,
+                // shared with TraceSessionLauncher. terminalSegmentRow stays
+                // this caller's own: it comes from the loaded fixture's row
+                // count here and from the manifest's segment row count there.
+                TraceRunFrameDriver.Step bridgeStep =
+                        TraceRunFrameDriver.presentationBridgeStep(
+                                bridge.trace(), localRow, movieRow,
+                                bridge.executionPolicy(),
                                 loop.getCurrentGameMode() == GameMode.LEVEL,
-                                localRow + 1 < bridge.trace().frameCount()
-                                        && TraceReplayRowPolicy
-                                                .carriesDeferredVblank(
-                                                        bridge.trace(),
-                                                        localRow + 1));
-                boolean deferBoundaryCommit = false;
-                if (localRow + 1 < bridge.trace().frameCount()) {
-                    TraceReplayRowPolicy nextRowPolicy =
-                            TraceReplayRowPolicy.resolve(
-                                    bridge.trace(), localRow + 1, movieRow + 1);
-                    deferBoundaryCommit = TraceRunFrameDriver
-                            .shouldDeferBoundaryCommit(
-                                    rowPolicy.observedVblankCounterAdvance(),
-                                    nextRowPolicy
-                                            .observedVblankCounterAdvance());
-                }
+                                localRow
+                                        == bridge.trace().frameCount() - 1);
                 boolean[] hostStepRan = {false};
-                boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
-                        .shouldCommitDeferredBoundaryAfterClosure(
-                                previousObservedVblank,
-                                rowPolicy.observedVblankCounterAdvance());
                 physicalRows.execute(
-                        new TraceRunFrameDriver.Step(
-                                disposition, movieRow,
-                                localRow == bridge.trace().frameCount() - 1,
-                                deferBoundaryCommit,
-                                commitDeferredBoundaryAfterClosure,
-                                rowPolicy.observedVblankCounterAdvance()),
+                        bridgeStep,
                         new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
                             @Override
                             public void preparePhysicalRow(
@@ -2248,8 +2417,7 @@ abstract class AbstractRunChainTest {
                     null, gameplayOffset, loop.getCurrentGameMode(),
                     0, true, null);
             dynamicArtSegments.beginSegment();
-            dynamicArtGapJournal.nextSegmentArmed(
-                    gameplay.segment().dir());
+            dynamicArtGapJournal.nextSegmentArmed(gameplay.segment().dir());
             LiveTraceComparator comparator =
                     attachReturnedLevelSegment(
                             probe, gameplay, fixture, 0, gameplayIndex);
@@ -2545,6 +2713,7 @@ abstract class AbstractRunChainTest {
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
             Bk2Movie movie, SegmentPlan interior, int stepCap) {
         probe.setDelegate(null);
+        declareHardwareTimingTransitionGap();
         productionComparator = null;
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
@@ -2595,7 +2764,7 @@ abstract class AbstractRunChainTest {
 
     private LiveTraceComparator attachPreparedInterior(
             BoundaryProbe probe, SegmentPlan interior,
-            LiveEngineFixture fixture, int rowsConsumed) {
+            LiveEngineFixture fixture, int rowsConsumed, int segmentIndex) {
         LiveTraceComparator comparator;
         if (TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
             if (rowsConsumed != 0) {
@@ -2615,8 +2784,8 @@ abstract class AbstractRunChainTest {
                     rowsConsumed, fixture::sprite);
         }
         probe.setDelegate(comparator); // null => special-stage advance-uncompared
-        productionComparator = comparator;
-        return comparator;
+        declareHardwareTimingSegment(segmentIndex);
+        return installProductionComparator(comparator, interior.trace(), segmentIndex);
     }
 
     /**
@@ -2678,8 +2847,7 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
         probe.setDelegate(comparator);
-        productionComparator = comparator;
-        return comparator;
+        return installProductionComparator(comparator, level.trace(), segmentIndex);
     }
 
     /**
@@ -2738,8 +2906,8 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
-        productionComparator = comparator;
-        return comparator;
+        declareHardwareTimingSegment(segmentIndex);
+        return installProductionComparator(comparator, level.trace(), segmentIndex);
     }
 
     /**
@@ -2757,6 +2925,7 @@ abstract class AbstractRunChainTest {
         int sourceTailVblank =
                 observedSourceTailVblank(currentLevel.segment(), playback);
         probe.setDelegate(null);
+        declareHardwareTimingTransitionGap();
         if (!isNewActiveLevelSegment(nextLevel, levelAtSegmentStart)) {
             int offset = nextLevel.segment().bk2FrameOffset();
             playback.scheduleSessionAtNextLevelLoad(movie, offset);
@@ -2764,8 +2933,14 @@ abstract class AbstractRunChainTest {
                     loop, GameMode.LEVEL, nextLevel, levelAtSegmentStart, stepCap);
             int firstGameplayFrame = playback.getCursorFrame() - offset;
             if (firstGameplayFrame < 0 || firstGameplayFrame > 1) {
+                // Name the boundary. Without it the axis says only how far the
+                // cursor moved, and locating it costs a bisect -- which is how
+                // this one stayed undetermined.
                 throw new AssertionError("Destination playback cursor advanced "
-                        + firstGameplayFrame + " frames during level-load handoff");
+                        + firstGameplayFrame + " frames during level-load handoff"
+                        + " (" + currentLevel.segment().dir() + " -> "
+                        + nextLevel.segment().dir() + ", destination offset "
+                        + offset + ", cursor " + playback.getCursorFrame() + ")");
             }
             completeInterLevelVblankBudget(
                     currentLevel, nextLevel, firstGameplayFrame, sourceTailVblank);
@@ -2925,8 +3100,27 @@ abstract class AbstractRunChainTest {
                 nextLevel.trace(), ToleranceConfig.DEFAULT,
                 rowsConsumed, fixture::sprite);
         probe.setDelegate(comparator);
-        productionComparator = comparator;
-        return comparator;
+        declareHardwareTimingSegment(segmentIndex);
+        return installProductionComparator(comparator, nextLevel.trace(), segmentIndex);
+    }
+
+    /**
+     * Declares that the walk has entered {@code segmentIndex} -- called where
+     * the walk attaches that segment's row owner. The coordinator latches rows
+     * only for the segment the walk says it is in, so this is the single thing
+     * that admits a destination's rows.
+     */
+    private void declareHardwareTimingSegment(int segmentIndex) {
+        if (activeHardwareTiming != null) {
+            activeHardwareTiming.enterSegment(segmentIndex);
+        }
+    }
+
+    /** Declares that the walk has released its row owner and is between segments. */
+    private void declareHardwareTimingTransitionGap() {
+        if (activeHardwareTiming != null) {
+            activeHardwareTiming.enterTransitionGap();
+        }
     }
 
     private void completeInterLevelVblankBudget(
@@ -3037,13 +3231,14 @@ abstract class AbstractRunChainTest {
     private void alignUncomparedInteriorReturnVblank(
             SegmentPlan sourceLevel,
             SegmentPlan returnLevel,
-            int sourceVblank) {
+            int sourceVblank,
+            int returnFramesConsumed) {
         var profile = GameServices.module().getTracePlaybackProfile();
         if (!profile.alignUncomparedInteriorReturnVblank()) {
             return;
         }
         int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                sourceLevel.segment(), returnLevel.segment(),
+                sourceLevel.segment(), returnLevel.segment(), returnFramesConsumed,
                 TraceRunVblankClock.specialStageReturnLoss(
                         profile, returnLevel.segment()));
         // Movie-clock pacing only: the target derives from the source engine
@@ -3117,7 +3312,9 @@ abstract class AbstractRunChainTest {
                         preEntry.segment(),
                         returnLevel.segment(),
                         returnLevel.trace().getFrame(0),
-                        resolvedReturnZone);
+                        resolvedReturnZone,
+                        returnLevel.trace().metadata().startX() & 0xFFFF,
+                        returnLevel.trace().metadata().startY() & 0xFFFF);
         TraceRunBoundaryComparator.ActualBoundary actual =
                 new TraceRunBoundaryComparator.ActualBoundary(
                         (int) sprite.getCentreX(),
@@ -3128,7 +3325,9 @@ abstract class AbstractRunChainTest {
                         GameServices.level().getCurrentAct(),
                         GameServices.level().getLevelGamestate().getRings(),
                         GameServices.gameState().getEmeraldCount(),
-                        emeraldCarryOverIsVerifiable(interior));
+                        emeraldCarryOverIsVerifiable(interior),
+                        GameServices.playbackDebug().getCursorFrame()
+                                - returnLevel.segment().bk2FrameOffset());
         FrameComparison comparison = TraceRunBoundaryComparator.compare(
                 exit.modeChangeBk2Frame(), expected, actual);
         List<com.openggf.trace.FieldComparison> errors =
@@ -3668,6 +3867,88 @@ abstract class AbstractRunChainTest {
         });
     }
 
+    /**
+     * Steps on past a segment's frame budget while it still has recorded rows
+     * left to consume.
+     *
+     * <p>The budget above is a count of FRAMES; the cursor it is meant to land
+     * is a count of ROWS. They agree for a segment whose every step consumes one
+     * row, which is nearly every segment. They do not agree where the drive
+     * spends a step WITHOUT consuming a row -- the transition freeze's
+     * request-consume frame is one, and asking for the freeze is itself another
+     * -- so the walk stopped short of the segment's declared end by however many
+     * such frames it spent, and the shared cursor never reached the row the next
+     * segment is admitted from.
+     *
+     * <p>Strictly additive: the budgeted frames are still stepped first and this
+     * loop exits immediately for a segment whose rows are already consumed, so no
+     * boundary that works today steps a frame fewer. {@code
+     * hasUnconsumedRecordedRows} is the comparator's own answer about its own
+     * cursor -- the same predicate the freeze itself consults -- so no row count,
+     * tail length or segment identity is encoded here. The loop is bounded by
+     * the manifest-derived {@code stepCap} every other await in this class uses.
+     */
+    /**
+     * Admits the destination of a plain level-&gt;level boundary, stepping the
+     * engine while the coordinator legitimately denies -- the same shape
+     * {@link #admitLevelWhenReady} already applies to boundaries that carry a
+     * transition record, and the same thing production does, where
+     * {@code TraceSessionLauncher#runCoordinatorTick} polls
+     * {@code beforeAdmission} every tick and keeps stepping while it is denied.
+     *
+     * <p>This branch admitted one-shot, which is correct only when the
+     * destination is admissible the instant its level became active. The
+     * recorder leaves movie rows between adjacent segments -- every adjacent
+     * pair in the committed S3K Sonic-and-Tails manifest does -- and the
+     * destination is not admissible until the shared cursor reaches its first
+     * recorded row. Where the source's frame budget happened to exceed the rows
+     * it owed, the surplus frames carried the cursor across that gap and the
+     * one-shot admission worked by luck; where the budget matched the rows
+     * exactly, as at the S3K seg 8 -&gt; 9 seam, nothing crossed it and the
+     * destination was refused one row short.
+     *
+     * <p>The gap is crossed by stepping real engine frames, never by seeking the
+     * cursor: a seek would step over recorded rows at a boundary whose gap is
+     * long (S2's {@code seg4_ehz1 -> seg5_ehz2} spans 171 rows), and the engine
+     * must genuinely become admissible either way. Additive: a boundary that
+     * admits immediately exits on iteration zero having stepped nothing, and the
+     * loop is bounded by the manifest-derived {@code stepCap}.
+     */
+    private void admitPlainLevelBoundaryWhenReady(
+            GameLoop loop, PlaybackDebugManager playback,
+            HeadlessRunCoordinatorAdapter runCoordinator, SegmentPlan next,
+            int rowsConsumed, int stepCap) {
+        for (int step = 0; step < stepCap; step++) {
+            if (runCoordinator.tryAdmitLevel(
+                    null, playback.getCursorFrame(),
+                    loop.getCurrentGameMode(), rowsConsumed,
+                    runCoordinator.latestLoadReceipt())) {
+                return;
+            }
+            stepEngineFrame(loop);
+        }
+        runCoordinator.admitLevel(
+                null, playback.getCursorFrame(),
+                loop.getCurrentGameMode(), rowsConsumed, false,
+                runCoordinator.latestLoadReceipt());
+    }
+
+    private void topUpUnconsumedSegmentRows(
+            GameLoop loop, LiveTraceComparator comparator,
+            int segmentFrameCount, int stepCap) {
+        int steps = 0;
+        while (comparator.hasUnconsumedRecordedRows()) {
+            if (steps++ >= stepCap) {
+                throw new AssertionError(
+                        "segment did not consume its remaining recorded rows"
+                                + " within " + stepCap + " extra steps (cursor "
+                                + comparator.cursor() + " of "
+                                + segmentFrameCount + ")");
+            }
+            stepEngineFrame(loop);
+        }
+    }
+
     private void stepFrames(GameLoop loop, int frameCount) {
         for (int f = 0; f < frameCount; f++) {
             stepEngineFrame(loop);
@@ -4100,6 +4381,29 @@ abstract class AbstractRunChainTest {
         }
     }
 
+    /**
+     * Installs {@code comparator} as the production comparator and re-arms the
+     * slot-occupancy probe on the segment's own trace, so each segment's diff
+     * lands in its own report keyed by segment index.
+     */
+    private LiveTraceComparator installProductionComparator(
+            LiveTraceComparator comparator, TraceData trace, int segmentIndex) {
+        productionComparator = comparator;
+        closeSlotOccupancyProbe();
+        if (trace != null) {
+            slotOccupancyProbe = com.openggf.tests.trace.SlotOccupancyProbe.createIfEnabled(
+                    trace, slotProbeRunId + "_seg" + segmentIndex);
+        }
+        return comparator;
+    }
+
+    private void closeSlotOccupancyProbe() {
+        if (slotOccupancyProbe != null) {
+            slotOccupancyProbe.close();
+            slotOccupancyProbe = null;
+        }
+    }
+
     /** Advances one engine frame through the same outer PLC/fade lifecycle as live play. */
     void stepEngineFrame(GameLoop loop) {
         stateMovieLogicalRow();
@@ -4109,7 +4413,21 @@ abstract class AbstractRunChainTest {
         if (coordinator != null) {
             coordinator.beforeProduction(loop.getCurrentGameMode());
         }
+        // Capture the row index BEFORE production: the single-segment path
+        // observes with the index of the frame just produced, and the comparator
+        // may or may not have advanced its cursor inside loop.step() depending on
+        // the phase. Sampling the index first is correct either way.
+        LiveTraceComparator preStepComparator = productionComparator;
+        int slotProbeRowIndex = slotOccupancyProbe != null && preStepComparator != null
+                ? preStepComparator.cursor()
+                : -1;
         loop.step();
+        if (slotProbeRowIndex >= 0) {
+            var slotProbeLevel = GameServices.levelOrNull();
+            if (slotProbeLevel != null) {
+                slotOccupancyProbe.observe(slotProbeRowIndex, slotProbeLevel.getObjectManager());
+            }
+        }
         LiveTraceComparator comparator = productionComparator;
         if (comparator != null) {
             comparator.consumePostProductionPlayableAnimationAction();
@@ -4225,8 +4543,40 @@ abstract class AbstractRunChainTest {
             throws IOException {
         Files.createDirectories(REPORT_OUTPUT_DIR);
         Path jsonPath = REPORT_OUTPUT_DIR.resolve(runId + "_seg" + segmentIndex + "_report.json");
-        Files.writeString(jsonPath, buildComparatorSummaryJson(comparator));
+        String json = buildComparatorSummaryJson(comparator);
+        writtenSegmentReports.put(segmentIndex, json);
+        Files.writeString(jsonPath, json);
         assertTrue(Files.exists(jsonPath), "Chain segment report must be written: " + jsonPath);
+    }
+
+    /**
+     * The comparator summary this walk wrote for {@code segmentIndex}, as JSON.
+     *
+     * <p><b>Why a test must read this and not the file.</b> The report path is
+     * {@code <runId>_seg<N>_report.json} -- keyed on the run id and the
+     * <em>re-based</em> segment index, and on nothing that distinguishes one
+     * lane of that run from another. Every class replaying a run therefore
+     * writes the same names into the one shared {@code target/trace-reports/}
+     * directory: for {@code s1-sonic-complete-withemeralds}, the full chain's
+     * real segment 0 and a {@link #assertChainReplayFromSegment} boot segment
+     * both land on {@code _seg0_report.json}. The trace-replay profile runs
+     * {@code forkCount=4}, so those lanes run in PARALLEL JVMs and the last
+     * writer before a read wins.
+     *
+     * <p>That made {@code TestS1ColdStartAttribution} flaky in a way that read
+     * as a game result rather than an instrument fault: it saw the full chain's
+     * clean GHZ1 {@code errorCount: 0} where its own boot segment's 15564
+     * should have been, i.e. the pin reported the defect it exists to
+     * characterise as FIXED. The in-memory record is the walk's own, so it
+     * cannot be overwritten by another lane. The file is still written,
+     * unchanged, for triage.
+     */
+    protected String writtenSegmentReport(int segmentIndex) {
+        String json = writtenSegmentReports.get(segmentIndex);
+        assertTrue(json != null,
+                "no segment report was written for segment " + segmentIndex
+                        + "; written segments=" + writtenSegmentReports.keySet());
+        return json;
     }
 
     /**
@@ -4345,6 +4695,31 @@ abstract class AbstractRunChainTest {
             mismatches.add(row);
         }
         summary.put("recentMismatches", mismatches);
+
+        // Additive: the flat errorCount above is untouched. Chain reports used to
+        // publish only that, so "does every verification group reach the total?"
+        // could not be answered from the artefact -- and on 2026-08-21 that cost
+        // two lanes a round and an escalation before a direct probe showed the
+        // counting was correct all along. An instrument that cannot be audited
+        // from its own output is a standing liability even when it is right, so
+        // the breakdown the standalone reports already carry is published here
+        // too, and the invariant is asserted rather than merely shown.
+        Map<String, Object> groups = new LinkedHashMap<>();
+        int groupSum = 0;
+        for (VerificationGroup group : VerificationGroup.values()) {
+            int count = comparator.errorCount(group);
+            groups.put(group.id(), Map.of("error_count", count));
+            groupSum += count;
+        }
+        summary.put("verification_groups", groups);
+        summary.put("bootstrapErrorCount", comparator.bootstrapErrorCount());
+        int accounted = groupSum + comparator.bootstrapErrorCount();
+        assertEquals(comparator.errorCount(), accounted,
+                "verification groups plus bootstrap must account for the flat error"
+                        + " count exactly; groups=" + groups
+                        + " bootstrap=" + comparator.bootstrapErrorCount()
+                        + " total=" + comparator.errorCount());
+
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         return mapper.writeValueAsString(summary);
     }

@@ -827,27 +827,11 @@ final class ObjectTouchResponseController {
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
                 : instance != null ? instance.getX() : sidekick.getCentreX();
-        int previousAnimationId = sidekick.getAnimationId();
-        boolean applied = sidekick.applyHurt(sourceX);
-        // Object-owned touch providers can preserve the prior raw animation
-        // when their ROM touch owner leaves anim untouched. Direct object-owned
-        // HurtCharacter calls still use applyHurt() and publish $1A; this
-        // provider rule therefore applies only to the generic touch dispatcher.
-        TouchResponseProvider provider = instance instanceof TouchResponseProvider
-                ? (TouchResponseProvider) instance
-                : null;
-        if (applied
-                && provider != null
-                && !provider.sidekickTouchHurtPublishesAnimation()
-                && sidekick instanceof AbstractPlayableSprite playable) {
-            playable.setAnimationId(previousAnimationId);
-            playable.setForcedAnimationId(previousAnimationId);
-            // The shared applyHurt path briefly published $1A and the ROM
-            // sidekick touch owner restarts the retained raw script on the
-            // following Animate_Tails pass. Reset the manager's private
-            // prev_anim/script cursor without changing the comparison state.
-            playable.forceAnimationRestart();
-        }
+        // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21321).
+        // Where the ROM appears to keep the prior byte it is the solid
+        // push-release tail erasing it later in the same frame, which
+        // ObjectSolidContactController owns; the touch path has no say in it.
+        sidekick.applyHurt(sourceX);
     }
 
     private boolean isOverlapping(int playerX, int playerY, int playerHeight,

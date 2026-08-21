@@ -175,7 +175,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int postTitleAct2TargetMaxX;
     private int postTitleAct2TargetMinY;
     private int postTitleAct2TargetMaxY;
-    private boolean postTitleAct2WorkersCreatedThisPass;
     private int act2MaxXAccumulator;
     private int act2MinYAccumulator;
     private int act2MaxYAccumulator;
@@ -235,7 +234,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMaxX = 0;
         postTitleAct2TargetMinY = 0;
         postTitleAct2TargetMaxY = 0;
-        postTitleAct2WorkersCreatedThisPass = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -310,11 +308,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMinY = level.getMinY();
         postTitleAct2TargetMaxY = level.getMaxY();
         postTitleAct2SizeChangeActive = true;
-        // The retained worker slots execute their creation entry in the same
-        // Process_Sprites pass that publishes Change_Act2Sizes. Preserve that
-        // first fixed-point carry before the camera step; the next dispatch is
-        // not the creation boundary.
-        postTitleAct2WorkersCreatedThisPass = false;
+        // Make_LevelSizeObj allocates the Child1_Act2LevelSize workers with
+        // AllocateObjectAfterCurrent (sonic3k.asm:180598-180616,176924-176950,
+        // 37917-37930), so the ascending Process_Sprites walk reaches them in
+        // the creating pass. That pass is dispatch 1 and every accumulator
+        // starts at zero -- neither pre-charge them nor skip the dispatch.
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -324,10 +322,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     /** Runs the retained {@code Child1_Act2LevelSize} slots before the camera step. */
     public void updatePostTitleAct2SizeWorkers() {
         if (!postTitleAct2SizeChangeActive) {
-            return;
-        }
-        if (postTitleAct2WorkersCreatedThisPass) {
-            postTitleAct2WorkersCreatedThisPass = false;
             return;
         }
         boolean maxXDone = updateGradualMaxX();

@@ -1437,3 +1437,39 @@ progression -- for every game, since S1 and S2 segment fixtures have the same
 shape -- and measure the blast radius across every segment class before
 landing. Do **not** close it by keying on the run id, the fixture name, the
 zone or a frame index. Delete this entry when the bootstrap carries the value.
+
+## SEGA Screen: an engine addition the ROM does not have
+
+**What the ROM does.** Nothing. There is no SEGA screen sequence in either half of the
+locked-on cartridge.
+
+- `Sega_Screen` — game mode 0's handler — is
+  `move.b #4,(Game_mode).w` and falls straight into `Title_Screen`
+  (`docs/skdisasm/sonic3k.asm:5387-5388`); the S3 half is the same with an explicit `rts`
+  (`docs/skdisasm/s3.asm:4768-4770`).
+- `JumpToSegaScreen`, the handler for game modes `$10` and `$18`, only sets game mode 0
+  (`sonic3k.asm:454-456`), which then advances the same way.
+- A case-insensitive search for "sega" across both disassemblies returns **only** the
+  cartridge header strings, the TMSS security write, those advancing routines, and one
+  `SegaScr_VInt` reference in `s3.asm:830` that is vestigial — game mode 0 advances on its
+  first main-loop pass, so that V-int handler can run at most once.
+
+There is no hold, no timer, and no SEGA sound command anywhere in either file.
+
+**What we do.** `Sonic3kTitleScreenManager` presents a SEGA screen: it plays the SEGA sound,
+holds for `SEGA_HOLD_DURATION = 180` frames, stops the sound and moves to the palette
+transition.
+
+**Why this is acceptable.** It is a presentation addition, not a parity gap — there is no ROM
+behaviour being approximated, so there is nothing for the 180 to be wrong against. It affects
+only the pre-title sequence and no gameplay state, and it is skippable by input like the rest of
+the intro.
+
+**Why it is written down.** Found during the 2026-08-21 timing-constant provenance sweep, where
+`SEGA_HOLD_DURATION` was the only constant of six checked with no ROM counterpart — the other
+five were ROM-exact. Without this entry the next sweep re-flags it as an uncited constant and
+someone goes looking for the ROM value that does not exist. **Whether to keep the screen at all
+is a product decision, not a parity one.**
+
+Full context:
+[docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).

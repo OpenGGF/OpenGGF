@@ -175,6 +175,9 @@ public class Sonic3kTitleCardManager
     private Pattern[] combinedPatterns;
     private boolean artLoaded;
     private boolean artCached;
+    private boolean omittedFreshLevelOwnerActive;
+    private final List<HardwareWorkHandle> omittedOwnerHandles = new ArrayList<>();
+    private S3kKosModuleQueue omittedOwnerQueue;
     private int lastLoadedZone = -1;
     private int lastLoadedAct = -1;
     private S3kKosModuleQueue artQueue;
@@ -525,6 +528,115 @@ public class Sonic3kTitleCardManager
         if (inLevelMode) {
             inLevelPlayerControlLockOwned = true;
         }
+    }
+
+    /**
+     * Models the owner {@code Level:} installs when the presentation is omitted.
+     *
+     * <p>{@code Obj_TitleCardInit} (docs/skdisasm/sonic3k.asm:62121-62164)
+     * queues four archives — RedAct {@code $500}, Zone {@code $510}, act number
+     * {@code $53D} and the zone graphic {@code $54D} — on its first dispatch,
+     * before anything is drawn. {@code Level:} installs the owner at 7735 and
+     * enters the locked loop regardless of what the host displays, so those
+     * {@code Queue_Kos_Module} calls belong to the object's creation rather
+     * than to its presentation — the same reason
+     * {@link #onTitleCardPresentationSkipped} already keeps the owner's later
+     * {@code Obj_TitleCardWait2} {@code LoadEnemyArt} handoff.
+     *
+     * <p>The caller reaches this only for a load that owns the destination's
+     * fresh runtime art, which is the same ownership the level's own
+     * {@code LoadLevelLoadBlock} art already carries. Nothing here establishes
+     * an overlay: no element is created and no state machine is started.
+     */
+    @Override
+    public void beginOmittedFreshLevelOwner(int zoneIndex, int actIndex) {
+        if (!GameServices.rom().isRomAvailable()) {
+            return;
+        }
+        int actArtAddr = (actIndex == 0)
+                ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
+                : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
+        int artIndex = (zoneIndex == 22) ? 13 : zoneIndex;
+        try {
+            Rom rom = GameServices.rom().getRom();
+            S3kKosModuleQueue queue =
+                    S3kRuntimeArtCoordinator.current().moduleQueue();
+            omittedOwnerHandles.clear();
+            omittedOwnerHandles.add(queue.queue(rom,
+                    Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR,
+                    VRAM_BASE));
+            omittedOwnerHandles.add(queue.queue(rom,
+                    Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+                    Sonic3kConstants.VRAM_TITLE_CARD_ZONE_TEXT));
+            omittedOwnerHandles.add(queue.queue(rom, actArtAddr,
+                    Sonic3kConstants.VRAM_TITLE_CARD_ACT_NUM));
+            if (artIndex >= 0
+                    && artIndex < Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS.length) {
+                omittedOwnerHandles.add(queue.queue(rom,
+                        Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS[artIndex],
+                        Sonic3kConstants.VRAM_TITLE_CARD_ZONE_ART));
+            }
+            omittedOwnerQueue = queue;
+            omittedFreshLevelOwnerActive = true;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue omitted S3K title-card owner art", e);
+        }
+    }
+
+    @Override
+    public boolean ownsOmittedFreshLevelPresentation() {
+        return omittedFreshLevelOwnerActive;
+    }
+
+    /**
+     * One dispatch of the omitted owner: the locked loop's iteration retires
+     * whatever the module queue has made ready, which is what
+     * {@code Obj_TitleCardCreate}'s {@code tst.b (Kos_modules_left).w} gate
+     * (docs/skdisasm/sonic3k.asm:62169-62171) waits on before the owner
+     * advances. Renders nothing.
+     */
+    @Override
+    public void updateOmittedFreshLevelOwner() {
+        if (!omittedFreshLevelOwnerActive) {
+            return;
+        }
+        for (HardwareWorkHandle handle : omittedOwnerHandles) {
+            if (!omittedOwnerQueue.isReady(handle)) {
+                return;
+            }
+        }
+        try {
+            for (HardwareWorkHandle handle : omittedOwnerHandles) {
+                omittedOwnerQueue.claim(handle);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to claim omitted S3K title-card owner art", e);
+        }
+        omittedOwnerHandles.clear();
+        omittedOwnerQueue = null;
+        omittedFreshLevelOwnerActive = false;
+        // Retiring here is this engine's form of Kos_modules_left reaching
+        // zero, which is the gate Obj_TitleCardCreate holds on
+        // (docs/skdisasm/sonic3k.asm:62169-62171). Once it clears the ROM
+        // builds the card's pieces (:62212), Obj_TitleCardWait clears
+        // objoff_48 (:62244), loc_62CC exits and Level: runs
+        // LoadLevelLoadBlock (:7761) -- so the destination's terrain art is
+        // queued a few dispatches later, still inside the transition window.
+        // Publishing it from the destination's own frames instead put it past
+        // the segment seam, where the parents could never meet the completions
+        // recorded against the window and stayed pending for the rest of the
+        // run, blocking every later module behind them.
+        //
+        // Known-incomplete: loc_62CC also holds while Nem_decomp_queue is
+        // non-empty (:7747-7748), and S3K has no per-frame Nemesis drain
+        // (NemesisPlcServiceQueue has only S1/S2 consumers), so the engine
+        // leaves the loop earlier within the window than the ROM does. The
+        // parents simply wait pending until their recorded completions arrive,
+        // so the retirement schedule is unaffected; modelling that drain is
+        // what would make the submission row itself accurate.
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
     }
 
     @Override
@@ -911,6 +1023,7 @@ public class Sonic3kTitleCardManager
         actNumberVisible = false;
         artLoaded = false;
         artCached = false;
+        omittedFreshLevelOwnerActive = false;
         lastLoadedZone = -1;
         lastLoadedAct = -1;
         combinedPatterns = null;

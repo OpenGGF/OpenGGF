@@ -192,6 +192,16 @@ public final class TraceRunReplayWalker {
         private final HardwareTimingInterstitialSpans interstitialSpans;
         private int currentSegment;
         private boolean closed;
+        /**
+         * Whether the DRIVE currently owns a segment's rows. Membership is the
+         * drive's to declare, never the cursor's to infer: across a transition
+         * the drive detaches its row owner and the shared BK2 cursor keeps
+         * free-running through choreography frames the recording never covered,
+         * then gets re-seeked to the destination's true first row when the
+         * destination's load actually happens. Segment 0 starts owned because
+         * the run's initial attach is what constructs this coordinator.
+         */
+        private boolean insideSegment = true;
 
         public HardwareTimingCoordinator(
                 TraceReplayFixture fixture,
@@ -244,26 +254,36 @@ public final class TraceRunReplayWalker {
          */
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
-            if (closed) {
+            if (closed || !insideSegment) {
                 fixture.enterHardwareTimingGap();
                 return;
             }
-            for (int segmentIndex = segments.size() - 1;
-                    segmentIndex >= 0;
-                    segmentIndex--) {
-                HardwareTimingSegment segment = segments.get(segmentIndex);
-                int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
-                if (traceIndex < 0) {
-                    continue;
-                }
-                if (traceIndex < segment.rawFrames().size()) {
-                    beginSegmentRow(segmentIndex, traceIndex);
-                } else {
-                    fixture.enterHardwareTimingGap();
-                }
-                return;
+            HardwareTimingSegment segment = segments.get(currentSegment);
+            int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
+            if (traceIndex >= 0 && traceIndex < segment.rawFrames().size()) {
+                beginSegmentRow(currentSegment, traceIndex);
+            } else {
+                fixture.enterHardwareTimingGap();
             }
-            fixture.enterHardwareTimingGap();
+        }
+
+        /**
+         * The drive has released its row owner: it is between segments. No
+         * frame belongs to any segment until {@link #enterSegment} declares the
+         * next one, however far the shared cursor runs meanwhile.
+         */
+        public void enterTransitionGap() {
+            insideSegment = false;
+        }
+
+        /**
+         * The drive has attached {@code segmentIndex}'s row owner, so its rows
+         * begin here. Performs the schedule handoff, which still enforces
+         * structural order.
+         */
+        public void enterSegment(int segmentIndex) {
+            handoffToSegment(segmentIndex);
+            insideSegment = true;
         }
 
         /**
@@ -288,6 +308,10 @@ public final class TraceRunReplayWalker {
                                 + segmentIndex);
             }
             handoffToSegment(segmentIndex);
+            // Latching a row IS the drive declaring it owns this segment: the
+            // special-stage row driver enters that way rather than through an
+            // attach.
+            insideSegment = true;
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
         }
@@ -312,6 +336,9 @@ public final class TraceRunReplayWalker {
                         segments.get(segmentIndex).schedule(),
                         interstitialSpans.spansAfterSegment(currentSegment));
                 currentSegment = segmentIndex;
+                // A drive that latches the next segment's rows directly (the
+                // special-stage row driver) has declared its entry by doing so.
+                insideSegment = true;
             }
         }
 
@@ -784,10 +811,46 @@ public final class TraceRunReplayWalker {
      * return choreography. The anchor is the final recorded row of the source
      * level; Sonic 1's special-stage path advances its global counter once for
      * every subsequent BK2 row through the destination level's first row.
+     *
+     * <p>{@code returnFramesConsumed} is the number of leading destination rows
+     * the transition fall-through has already executed before the anchor is
+     * applied, exactly as {@code nextFramesConsumed} is on
+     * {@link #interLevelVblankBudget}. The target is the counter value in effect
+     * on the LAST of those consumed rows -- equivalently, the value entering the
+     * first row the comparator will compare -- so the budget runs to
+     * {@code returnOffset + returnFramesConsumed - 1}.
+     *
+     * <p>This term was previously hardcoded to a consumed count of one, which is
+     * what every uncompared return in the committed runs actually did, so the
+     * arithmetic is unchanged for all of them. Carrying it explicitly is what
+     * makes the anchor independent of the seam's row layout: with the count
+     * fixed, any change to the number of rows the seam consumes silently
+     * re-based the comparator against an anchor that had not moved, and the
+     * resulting off-by-one row read was indistinguishable from a physics
+     * divergence. Threading the real count is the precondition for judging such
+     * a change at all.
+     *
+     * <p>A consumed count of zero is a legitimate return shape and is admitted
+     * here, exactly as {@link #interLevelVblankBudget} admits
+     * {@code nextFramesConsumed == 0}. The two budgets are the SAME expression:
+     * {@code interLevelVblankBudget} counts from one past the source's final row
+     * to {@code destOffset + consumed}, this one counts from the source's final
+     * row to {@code destOffset + consumed - 1}, and both reduce to
+     * {@code destOffset + consumed - sourceFinalRow - 1}. So the target is
+     * always "the counter value entering the first row the comparator will
+     * compare", whether or not a fall-through row was consumed first: at one
+     * consumed row that is the value ON destination row 0, at zero consumed rows
+     * it is the value on the row BEFORE destination row 0. The old
+     * {@code >= 1} rejection asserted the observed shape of the committed runs,
+     * not a property of the arithmetic, and a return that hands its host
+     * iteration back rather than fusing the destination's first row into it is
+     * the same boundary shape every {@code level_advance} admission already has
+     * (all of which pass a consumed count of zero).
      */
     public static int uncomparedInteriorReturnVblankBudget(
             TraceRunManifest.Segment sourceLevel,
             TraceRunManifest.Segment returnLevel,
+            int returnFramesConsumed,
             int nonAdvancingMovieRows) {
         if (sourceLevel.traceFrameCount() <= 0) {
             throw new IllegalArgumentException("source level must contain recorded frames");
@@ -795,9 +858,13 @@ public final class TraceRunReplayWalker {
         if (nonAdvancingMovieRows < 0) {
             throw new IllegalArgumentException("frame counts must be non-negative");
         }
+        if (returnFramesConsumed < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
         int sourceFinalRow = sourceLevel.bk2FrameOffset()
                 + sourceLevel.traceFrameCount() - 1;
-        int movieRows = returnLevel.bk2FrameOffset() - sourceFinalRow;
+        int targetRow = returnLevel.bk2FrameOffset() + returnFramesConsumed - 1;
+        int movieRows = targetRow - sourceFinalRow;
         if (movieRows < 0) {
             throw new IllegalArgumentException("interior return precedes source level tail");
         }
@@ -1196,6 +1263,16 @@ public final class TraceRunReplayWalker {
             prepareFrame(frame);
             return preparedDelegate == null
                     ? 1 : preparedDelegate.vblankAdvanceCountOnSkippedTick(frame);
+        }
+
+        @Override
+        public boolean hasUnconsumedRecordedRows() {
+            // Row ownership is the row delegate's to answer; the probe adds
+            // only boundary latching. No prepareFrame() here -- this query is
+            // read on frozen frames that never prepared a row.
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            return rowDelegate != null && rowDelegate.hasUnconsumedRecordedRows();
         }
 
         @Override

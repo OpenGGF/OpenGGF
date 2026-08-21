@@ -51,6 +51,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     private boolean chargeRawActive;
     private boolean verticalPhaseDown;
     private boolean waitingForOnscreen = true;
+    /**
+     * routine 0. Obj_WaitOffscreen's release pass (loc_85B02) returns without
+     * dispatching and leaves routine at 0, so the first dispatch after the gate
+     * releases is loc_891BA (Init), not the wait state.
+     */
+    private boolean initPending = true;
 
     public SparkleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sparkle", Sonic3kObjectArtKeys.CNZ_SPARKLE,
@@ -77,6 +83,17 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
                 return;
             }
             waitingForOnscreen = false;
+        }
+
+        if (initPending) {
+            // loc_891BA (sonic3k.asm:186074-186076), Sparkle's routine-0 entry, is
+            // `lea ObjDat_Sparkle,a1 / jmp SetUp_ObjAttributes`; that subroutine
+            // ends `addq.b #2,routine(a0)` then `rts`
+            // (sonic3k.asm:176901-176919). Init RETURNS instead of falling through
+            // to loc_891C2, so this dispatch runs no Find_SonicTails proximity
+            // test and cannot start the charge; routine 2 runs next dispatch.
+            initPending = false;
+            return;
         }
 
         switch (state) {
@@ -165,6 +182,25 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
             return;
         }
         state = State.WAIT;
+    }
+
+    /**
+     * Test setup only: put the badnik in its running state by consuming the
+     * Obj_WaitOffscreen release dispatch and the routine-0 Init dispatch, the two
+     * frames the ROM burns before loc_891C2 first runs.
+     */
+    void testReleaseOffscreenWait() {
+        waitingForOnscreen = false;
+        initPending = false;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        // collision_flags is written by SetUp_ObjAttributes inside loc_891BA
+        // (sonic3k.asm:176910), so the freshly allocated SST slot still reads
+        // zero for the whole Init dispatch: the frame's touch scan runs at the
+        // player slot before this object's routine.
+        return initPending ? 0 : super.getCollisionFlags();
     }
 
     boolean isFiringDown() {

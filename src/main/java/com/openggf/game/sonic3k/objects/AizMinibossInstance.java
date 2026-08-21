@@ -70,6 +70,22 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     // by the delayed boss handoff are already carried into
     // Obj_EndSignControlWait and must not be repeated by the results owner.
     private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 0;
+    /**
+     * Native object-pass DISPATCH ENTRIES, not frames.
+     *
+     * <p>The name is easy to misread as a frame delay, and it is not one. It is
+     * threaded through {@code S3kBossDefeatSignpostFlow} into
+     * {@code S3kSignpostInstance} and on into
+     * {@code S3kResultsScreenObjectInstance}, where it is summed with other
+     * dispatch-boundary adjustments before it means anything.
+     *
+     * <p>Clearing it against the ROM therefore requires modelling the
+     * results-owner dispatch ordering across those owners, not reading a single
+     * constant out of a routine — noted here because a timing-constant sweep on
+     * 2026-08-21 opened it, found no single citation, and correctly left it
+     * alone. An uncited number invites a one-line fix; an uncited number whose
+     * name says something other than what it counts invites a wrong one.
+     */
     private static final int RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13;
     private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
@@ -448,20 +464,16 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             if (reusedResultsOwnerSlot) {
                 ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
                         new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_X,
-                                levelEndControlPollDeferred),
+                                AizAct2CameraResizeController.MAX_X),
                         retainedResultsOwnerSlot);
                 spawnChildAfterSlot(retainedResultsOwnerSlot,
                         () -> new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_Y,
-                                levelEndControlPollDeferred));
+                                AizAct2CameraResizeController.MAX_Y));
             } else {
                 spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_X,
-                        levelEndControlPollDeferred));
+                        AizAct2CameraResizeController.MAX_X));
                 spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_Y,
-                        levelEndControlPollDeferred));
+                        AizAct2CameraResizeController.MAX_Y));
             }
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from

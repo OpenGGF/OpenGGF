@@ -3021,6 +3021,111 @@ period-vs-reload trap applies to every one of them.
 
 ---
 
+## `clr.b spin_dash_flag` is a BYTE write, and the engine splits that byte across three flags
+
+**Symptom.** A player or sidekick that once passed through a spin tube, flipper or dash
+trigger never decelerates again while rolling. Ground velocity is changed only by slope
+gravity: it climbs on a slope and then sits perfectly flat on level ground, where the ROM
+loses a few units per frame. The reported field is usually `x_sub` or `x` — a sub-pixel or
+one-pixel drift — because those cross an integer boundary first, but `x_speed` and
+`g_speed` diverge on the *same* frame and are the real origin.
+
+**The ROM shape.** `spin_dash_flag` is one byte with several meanings: bit 0 is pinball
+mode, bit 7 is the speed lock, and a nonzero value also marks a spindash charge.
+`Obj_AutoSpin` writes `$01` or `$81` to it; the roll routines then test it at their own
+entry and skip their whole body when bit 7 is set:
+
+```
+Tails_RollSpeed:
+        ...
+        tst.b   spin_dash_flag(a0)
+        bmi.w   loc_14DF0          ; skip input, friction AND deceleration
+```
+
+(`docs/skdisasm/sonic3k.asm:28180-28181`; `Sonic_RollSpeed` at `:22935-22936` is identical.)
+Every ROM site that releases the player writes the whole byte — `move.b #0,spin_dash_flag(a1)`
+or `clr.b spin_dash_flag(a1)` — so all three meanings clear together.
+
+**What to check.** The engine represents that one byte as `pinballMode`,
+`pinballSpeedLock` and `spindash`. **Any port of a `clr.b`/`move.b #0` to `spin_dash_flag`
+must clear all three.** Clearing a subset leaves a latch that no later code will remove,
+and the symptom appears thousands of frames later in a completely different object's
+neighbourhood — the AIZ ride vine's grab (`AIZRideVineHandle_CheckGrab`,
+`docs/skdisasm/sonic3k.asm:46743`) cleared only the charge, and a lock set by a spin tube
+~3,100 rows earlier survived to the end of the level.
+
+**How to find it fast.** Put a stack probe on the *setter* and count transitions across the
+whole segment. One `-> true` and no `-> false` in four thousand rows is conclusive on its
+own, and takes one run. Do not start from the reported field: check whether `x_speed` and
+`g_speed` diverge on the same frame, and if they do, the sub-pixel is downstream.
+
+**Do not assume the constant is wrong.** The engine's rolling friction here was already
+exactly right (`getRunAccel() / 2`, matching `Acceleration_P2 asr #1`). Instrument the
+branch before touching a value — the defect was that a correct computation was being
+skipped, and any "correction" to the friction number would have been a fitted model.
+
+**Known remaining sites (audit, unverified).** `ForcedSpinObjectInstance` (S2),
+`MGZDashTriggerObjectInstance` and `CnzCannonInstance` clear pinball mode and the charge
+but not the bit-7 lock. Check each against its own ROM write before changing it.
+
+**Originating commit.** AIZ ride-vine grab clears the full byte; S3K complete-emeralds
+chain segment 6 `1,955 -> 0` errors (segment green).
+
+---
+
+## A grab-and-hold object drops a rider whose `render_flags` bit 7 is clear
+
+**Symptom.** A player or CPU sidekick is captured by a grab object (vine handle, grapple,
+pulley, parachute) and never gets off. The recorded row shows the ROM's rider frozen where
+it was, `x_vel`/`y_vel` zero, and `y_vel` then accumulating the ordinary `0x38` gravity step
+per frame while `x_pos` does not move at all — a plain resumption of normal physics from a
+standstill — while the engine keeps writing the object's hold position and hold mapping
+frame. Because the object's frame table keeps running, the *animation* and *mapping_frame*
+divergences look like an animation defect rather than a lifetime one.
+
+**The ROM shape.** These objects test the held player's render flag at their own entry,
+*before* the routine check and *before* they read the buttons:
+
+```
+        tst.b   (a2)                    ; grab byte
+        beq.w   ..._CheckGrab
+        bmi.w   ..._ForcedRelease
+        tst.b   render_flags(a1)
+        bpl.w   ..._ReleasePlayer       ; rider not drawn last frame -> drop it
+        cmpi.b  #4,routine(a1)
+        bhs.w   ..._ReleasePlayer
+```
+
+`AIZRideVineHandle_ProcessPlayer` (`docs/skdisasm/sonic3k.asm:46486-46496`) and
+`sub_266B0` (LBZ ride grapple) are the same routine shape. Bit 7 is written by the
+*preceding* display pass, so the drop lands on the handle's next pass — natural one-frame
+visibility, not a latency to model.
+
+**The release target is the quiet one.** `AIZRideVineHandle_ReleasePlayer`
+(`docs/skdisasm/sonic3k.asm:46548-46552`) is
+`clr.b object_control(a1) / clr.b (a2) / move.b #$3C,2(a2) / rts`. It sits two lines below
+`AIZRideVineHandle_ForcedRelease`, which *does* write `x_vel=$300`, `y_vel=$200` and
+`Status_InAir` — reaching for the wrong one gives the rider a launch the ROM never
+performs. The off-screen release writes no velocity, no status and no animation.
+
+**What to check.** For any object that holds a player under `object_control`, enumerate
+*every* branch out of its hold routine, not just the ones the player can trigger. The
+engine had the forced eject, the hurt/dead release (standing in for `routine >= 4`) and the
+jump release, and was missing only the render-flag one — invisible until a route carried a
+CPU sidekick off the top of the screen while held. Use the existing playable-sprite
+contract `hasRenderFlagOnScreenState()` / `isRenderFlagOnScreen()`; do not invent a
+visibility test.
+
+**Corollary — check the sibling.** `LbzRideGrappleInstance.updateHeldPlayer` already
+modelled this exact predicate, with the same helper and the same ROM idiom, while
+`AizVineHandleLogic` did not. When a grab object is missing a release branch, diff it
+against every other grab object in the tree before deriving the branch from scratch.
+
+**Originating commit.** AIZ giant ride vine off-screen release; S3K complete-emeralds chain
+segment 6 `7,434 -> 1,955` errors, frontier f3339 -> f3887.
+
+---
+
 ## The touch pass sets a flag; the object's OWN pass performs the reaction
 
 **Symptom.** A ROM-correct knockback/reward is computed with the right magnitude and
@@ -3095,3 +3200,224 @@ Two consequences when implementing an S3K object:
 `(0x1D00, 0x04A9)`, smashed before the segment-0 giant ring, came back intact on the
 segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
 80379 errors @ f94 -> 74575 @ f384.
+
+## A routine that reads its own standing bits at entry has one dispatch of trigger latency
+
+`Obj_CollapsingPlatform`'s trigger looks like "start the countdown when a player stands on
+me", and porting it that way collapses the platform one frame early -- because the ROM does
+not read the standing bits at contact time. `loc_20594` (`docs/skdisasm/sonic3k.asm:44819`)
+tests `$3A`, and only if it is already set does it touch the `$38` countdown. It then falls
+through to `loc_205A6` (`:44826-44830`), which reads `status(a0) & standing_mask` and sets
+`$3A` -- **before** reaching `sub_205B6` (`:44835`), whose `SolidObjectTopSloped2` is the
+thing that writes those bits.
+
+So the read at the top of dispatch N observes what dispatch N-1's solid helper wrote. The
+landing dispatch sets nothing; the next dispatch sets `$3A` and does not decrement; the one
+after that is the first decrement. Fragments land on `landing + 9`, not `landing + 8`.
+
+Generalise the shape, not the object: **whenever a routine both reads a field at entry and
+writes it via a later sub-call in the same dispatch, the read is one dispatch stale, and a
+port that reacts inside the contact callback loses that latency.** The engine's
+`update()`-then-solid-pass split already mirrors the routine-body-then-`sub_205B6` order, so
+the fix is to let the callback set only the flag and let the next `update()` act on it --
+never a counter tweaked by one.
+
+Watch for the compensations such an early trigger accretes downstream. This one had grown
+three: a one-frame deferral of the CreateFragments slope skip, a `+1` on the post-collapse
+solid-stay timer, and a saved-standing-bit escape hatch letting P1 re-acquire during the
+deferral. Each was individually plausible and each was absorbing the same frame. Removing
+the trigger defect alone made segment 4 of the S3K chain **worse** (292 -> 50,060 errors);
+the pair, plus the timer, restored 292 exactly. Two wrongs that cancel come out together.
+
+**Originating commit.** `<pending: S3K collapsing-platform trigger latency>` -- AIZ act 2
+(`aiz_4`, chain segment 6), where the ROM seats Tails on the platform at frame 118 on the
+dispatch the engine had already fragmented. Frontier f118 `sidekick_y` -> f150.
+
+## A player rides exactly one object, and re-seating clears the previous object's standing bit
+
+`RideObject_SetRide` (`docs/skdisasm/sonic3k.asm:42027-42046`) is the tail every top-solid
+landing goes through, and it opens by *un-seating* the player from whatever they were on:
+
+```
+RideObject_SetRide:
+        btst    #Status_OnObj,status(a1)
+        beq.s   loc_1E4A0
+        movea.w interact(a1),a3
+        bclr    d6,status(a3)          ; clear the PREVIOUS object's standing bit
+loc_1E4A0:
+        move.w  a0,interact(a1)
+        ...
+        bset    d6,status(a0)          ; set THIS object's standing bit
+```
+
+So an object's own standing bit is not private state it can rely on across frames. Any
+other solid object that seats the same character clears it. And because objects run in slot
+order, **the lower-slot object wins the read the higher-slot object depends on**: where two
+solids overlap one character, the lower slot clears the higher slot's bit every frame,
+before the higher slot's routine gets to read it.
+
+Measured instance: AIZ act 2 has two collapsing platforms whose spans overlap Tails. Slot 05
+has already fragmented and sits in `loc_205DE`, which still calls `SolidObjectTopSloped2`;
+slot 08 is intact. Per frame, slot 05 clears slot 08's bit and slot 08 re-sets it. A
+V-blank sample therefore shows slot 08's bit **set** for 35 straight frames while slot 08's
+own `loc_20594` reads it **clear** on every one of those entries, so its `$3A` trigger never
+latches and its `$38` countdown never starts. Slot 08 fragments 35 dispatches after Tails
+lands; nineteen P1 landings elsewhere in the corpus fragment after 9.
+
+Two things to take from it when implementing any S3K object that reads its own standing bit:
+
+- **Do not model the standing bit as per-object state the object controls.** It is one
+  shared "who is this character riding" relation, and the object's bit is a projection of
+  it. An engine that gives each object an independent flag will latch triggers the ROM never
+  latches — and the symptom appears in the *other* object, frames later.
+- **A V-blank-sampled fixture cannot see this.** The recorder samples after every object has
+  run, so it records the last writer's value. Only a routine-entry read shows what the
+  object's own code saw. When a recorded bit and an object's behaviour disagree, suspect
+  intra-frame ordering before suspecting the object.
+
+**Originating commit.** `<pending: S3K single-rider standing-bit invariant>` — S3K
+complete-emeralds chain segment 6, frame 150. See `docs/status/trace-frontier-log.md`,
+2026-08-20, for the PC-execute and write-hook probe output naming both writers.
+
+### Follow-up: the engine had every piece of state right and still got it wrong
+
+Worth reading with the entry above, because the fix was not where any of it pointed. Three
+plausible engine defects were proposed and each was refuted by a probe: that the engine
+stopped re-claiming the rider (it does re-claim, every frame, in slot order); that it never
+cleared the previous object's bit (it does, twice per frame); that it batched all object
+updates before all solid passes (the interleaving is already ROM-correct).
+
+The defect was that the object's own trigger was a **sticky flag set from the contact
+callback** rather than a **fresh read at dispatch entry**. `loc_205A6` re-reads
+`status(a0) & standing_mask` every dispatch; a latch taken when the contact happens can
+never observe a clear that arrives afterwards.
+
+**So when porting any ROM routine that reads a field at its own entry, port the READ, not
+the event that last wrote the field.** They differ exactly when something else writes
+between the two, which is precisely the case the trace catches and code review does not.
+
+## The standing bit selects the surface formula, not just the trigger — and the two differ by a pixel
+
+A sloped solid seats a player through one of two routines, and **which one runs depends on
+the object's own standing bit**, the same bit any other solid can clear out from under it
+(see the single-rider entry above):
+
+| path | routine | formula |
+|---|---|---|
+| fresh landing | `RideObject_SetRide` / `loc_1E45A` (`docs/skdisasm/sonic3k.asm:42004-42019`) | `surface - y_radius - 1` |
+| continued ride | `SolidObjSloped2` / `loc_1E260` (`:41744-41752`) | `surface - y_radius` |
+
+The fresh-landing formula looks relative but is not: `d0 = surface - (y_pos(a1) + y_radius
++ 4)` then `d2 = y_pos(a1) + d0 + 3`, so `y_pos(a1)` cancels and it resolves to
+`surface - y_radius - 1`. The continued-ride path writes `y_pos(a0) - slope[d0] - y_radius`.
+**They are one pixel apart, permanently.**
+
+The consequence is easy to miss and hard to debug: a player standing still on an unchanging
+slope can move one pixel purely because the object *re-landed* them instead of *carrying*
+them, or vice versa. Measured instance: two overlapping AIZ collapsing platforms, where the
+lower slot clears the higher slot's bit every frame, so the higher slot re-lands the sidekick
+fresh every frame; the moment the lower one stops being solid the bit survives, the seat
+becomes a continued ride, and the sidekick drops a pixel with nothing else having changed.
+
+When porting a solid object, therefore:
+
+- **Route the two formulas on the object's standing bit as the ROM does**, not on an engine
+  "who is riding what" record. Those agree only while nothing else touches the bit.
+- **A one-pixel `y` on a stationary player is a routing symptom**, not a rounding one. Check
+  which of the two routines wrote the value before touching any arithmetic. A write hook on
+  the player's `y_pos` logging PC and `a0` names it immediately — same writer, different PC.
+
+**Originating commit.** `<pending: S3K f167 handover>` — see `docs/status/trace-frontier-log.md`,
+2026-08-20, for the PC evidence and the unresolved engine-routing contradiction.
+
+## A per-player release must not withdraw the other player's solid pass from the same dispatch
+
+ROM object routines that release a rider do it **after** the dispatch's solid pass, and the
+solid pass covers both players in one call. `loc_205DE` (`docs/skdisasm/sonic3k.asm:44850-44859`)
+is the canonical shape:
+
+```
+loc_205DE:
+        bsr.w   sub_205B6          ; SolidObjectTopSloped2 -- BOTH players seated here
+        subq.b  #1,$38(a0)
+        bne.s   locret_2061E
+        move.l  #loc_20620,(a0)    ; object stops being solid from the NEXT dispatch
+        lea     (Player_1).w,a1
+        moveq   #p1_standing_bit,d6
+        bsr.s   sub_205FC          ; release P1
+        lea     (Player_2).w,a1
+        moveq   #p2_standing_bit,d6
+                                   ; falls through: release P2
+```
+
+The engine splits that one pass into a **per-player** solid callback. So an engine object
+that flips its own "no longer solid" state inside Player 1's release callback silently
+withdraws the pass Player 2 was entitled to on the same dispatch — the ROM had already
+seated them before the release was even considered.
+
+The symptom is not a missing collision. It is the *next* object in the batch taking a
+different path: the player it should have re-landed becomes a continued ride instead (see
+the standing-bit/formula entry above), and the sidekick moves one pixel a frame early. Nothing
+looks broken at the release site; the damage shows up in a different object.
+
+When porting any ROM routine of this shape:
+
+- **Keep the whole dispatch solid.** Mark the release dispatch with a flag set when the
+  release fires and cleared at the top of the next `update()`, and report solid while it is
+  set. The ROM's guarantee is per-*dispatch*, not per-*player*.
+- **Do not gate that on "was already riding".** `sub_205B6` is unconditional; a rider record
+  the engine happens not to hold is not a ROM predicate.
+- **Check the release's own guard mirrors `sub_205FC`'s `btst d6,status(a0)`.** A release
+  loop that runs for both players releases neither one that the object does not actually
+  hold the standing bit for.
+- **Suspect this whenever a two-player trace diverges on the frame an object stops being
+  solid, and the diverging player is the one the engine processes second.** Log the object's
+  per-player solid callbacks with identity, state and pending-release: the missing callback
+  is visible immediately.
+
+**Originating commit.** S3K complete-emeralds segment 6, first non-camera mismatch
+f167 -> f3245. See `docs/status/trace-frontier-log.md`, 2026-08-20.
+
+## Port every field a ROM state block writes — an omitted clear can fire hundreds of frames later
+
+When a ROM routine installs a state by writing a block of player fields, porting "the fields
+that obviously matter" is not enough. `Tails_Catch_Up_Flying`'s `loc_13B50`
+(`docs/skdisasm/sonic3k.asm:26498-26529`) writes velocities, `status`, radii, the flip
+selector, `double_jump_flag`, `object_control`, facing, animation — and also:
+
+```
+move.b  d0,spin_dash_flag(a0)
+move.b  d0,spin_dash_flag(a0)     ; ROM writes it twice; harmless, but it IS written
+move.w  d0,spin_dash_counter(a0)
+```
+
+The engine's port had every other field and omitted those two. Nothing failed for **769
+frames**, because `spin_dash_flag` is only read at the top of `Tails_Spindash`
+(`:28696`), which runs solely from the grounded routine — and the whole recovery flight is
+airborne. The charge sat in RAM across the entire flight and detonated on the first grounded
+frame after landing: `doUpdateSpindash` saw the down button released, took the release path,
+and read the speed table at index `(counter >> 8) = 0`, launching Tails at `0x800`.
+
+What makes this class expensive to debug is the delay and the disguise. The reported
+divergence was `sidekick_y` off by **one pixel** — the roll-height adjustment applied on the
+way out of the spindash — hundreds of frames from the omission, in a different subsystem,
+wearing the signature of an unrelated known bug.
+
+When porting a ROM block-write:
+
+- **Diff the routine's writes against your port field by field.** A missed *clear* is far
+  more dangerous than a missed *set*, because a clear only matters when the field was
+  already dirty, which is exactly the case no unit test sets up.
+- **A duplicated ROM instruction is still an instruction.** Do not treat the second
+  `move.b d0,spin_dash_flag(a0)` as noise to be tidied away; it tells you the field is in
+  the block.
+- **Ask where the omitted field is READ.** If the reader is gated to a state the block's
+  own state excludes (grounded vs airborne here), the bug is guaranteed to be latent and
+  delayed rather than immediate. That is a reason to be more careful, not less.
+- **When a trace's headline field is a small positional delta, read the per-field error
+  histogram before theorising.** Here the same frame carried `g_speed 0x0800 vs 0x0024`,
+  `rolling 1 vs 0` and a roll animation; the one-pixel `y` was the least informative field
+  of the set and the only one in the headline.
+
+**Originating commit.** S3K complete-emeralds segment 6, 8,940 -> 7,663 errors, frontier
+f3245 -> f3339. See `docs/status/trace-frontier-log.md`, 2026-08-20.
