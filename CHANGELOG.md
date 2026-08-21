@@ -1,5 +1,12 @@
 # Changelog
 
+- **The HCZ miniboss's post-defeat wait is ROM-sourced and no longer starts a
+  frame early:** the wait was seeded from the miniboss's unrelated *reopen*
+  delay plus one, and the defeated routine was dispatched on the frame that
+  installed it. The two errors cancelled exactly, so the timer never looked
+  wrong. It is now seeded from `BossDefeated`'s `$3F` and first decrements on
+  the following object pass, as in ROM.
+
 - **ARZ's swinging platforms and pillars are solid on all four sides, as the ROM
   has them:** `Obj82_Main` calls the full `SolidObject` routine, not one of the
   top-only platform entries, so a contact whose horizontal penetration does not
