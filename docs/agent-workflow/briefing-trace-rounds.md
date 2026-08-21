@@ -131,6 +131,7 @@ that looks like a real result.
 | 112 | Adjacent SST bytes hide word writes from a byte survey | Check neighbours; "invisible at frame granularity" may be a missing column |
 | 113 | A citation can be wrong and still agree with the right answer | Reach the row through the object that loads it, not the first matching grep |
 | 114 | A true general principle can explain away the key evidence | "Downstream by construction" dismissed the job naming the same subsystem |
+| 115 | A proxy that survives one question silently answers a different one | Three inversions in one family; measure the quantity directly |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2994,4 +2995,24 @@ primary is attributed.
    reported it, but the run was filtered to `grep PROBE_TC`, so it printed nothing — indis-
    tinguishable from "this method is never called", and nearly recorded as a finding about the
    code. Read the build result before reading the probe's output.
+
+## One hundred and fifteenth rule: a proxy that survives one question will silently answer a different one
+
+Three separate inversions in one object family, all from the same cause: a metric keyed on
+something that stands in for the quantity of interest.
+
+- Persistence keyed on `(slot, spawn)` reported 713 of 714 objects living one sample — apparent
+  wild over-creation. Re-keyed on slot: 36 objects held eight times too long. **Opposite owner.**
+- Run-count keyed on slot answered "how long does each live" correctly and was then read as
+  "how many are created" — which it cannot answer at all. The object turned out to have *both* a
+  lifetime defect and a creation deficit (ROM 77 shots, engine 48), and the long lifetimes were
+  masking the deficit.
+
+**The useful form is not "pick a better key".** It is that a proxy validated for one question
+carries no warranty for the next one, and the failure is silent — the number is well-formed either
+way. Each time, the fix was an instrument measuring the quantity **directly**: constructor calls
+counted against recorded `object_appeared` events, rather than runs inferred from occupancy.
+
+Before reading an existing metric to answer a new question, state what the metric actually counts
+and check that it is the thing the new question asks about.
 
