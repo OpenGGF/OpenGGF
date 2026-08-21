@@ -104026,3 +104026,80 @@ make on a rejected measurement.
 **For whoever takes it:** do not re-try the one-line override. It is ROM-correct
 in isolation and it costs a thousand errors elsewhere, which is the more
 interesting fact about it.
+
+## 2026-08-21 — The layout defect is real, but no predicate can fix Ss8-Ss14: the lap is not knowable standalone
+
+Round `s3k-ss-layout-r1`, branch `bugfix/ai-s3k-ss-layout-r1` off `origin/develop` `5f09e7a3e`.
+**Nothing landed but this entry.** The round was scoped to implement the layout fix; the
+predicate derivation says the fix cannot make these seven classes green, so it is brought back
+rather than written.
+
+### The predicate, derived from the writers
+
+Reading `sub_85B0` alone would have given the wrong answer. The writers settle it:
+
+- **`SK_alone_flag`** is the S&K-cartridge-alone flag. The engine already documents, in several
+  places, that it models only the locked-on ROM and treats this as permanently zero
+  (`Sonic3kBonusStageCoordinator`, `Sonic3k.java:455-458`,
+  `Sonic3kSSEntryFlashObjectInstance:275-283`). Its branch in `sub_85B0` is therefore a no-op
+  here.
+- **`SK_special_stage_flag`** is written `0` on the ordinary giant-ring route —
+  `loc_61892` (`sonic3k.asm:128395-128412`) does `moveq #0,d0` … `move.b d0,(SK_special_stage_flag).w`,
+  and the `moveq #1,d0` immediately above it is commented **`; unused`**. With seven Chaos
+  Emeralds in an S&K-half level that route does not reach a Blue Sphere stage at all; it
+  branches to `loc_618AC` and sends the player to **Hidden Palace** (`$1701`).
+- It is written `1` at `loc_90926` (`:197720-197734`) — an HPZ object that takes
+  `Current_special_stage` from its own `subtype`. **That is the second lap's entry point.** The
+  other two `#1` writers (`:5704`, `:6653`) are attract-mode demos, one explicitly commented as
+  dead code.
+
+**The two flags are independent** — level select sets `SK_special_stage_flag` for "Special Stage
+2" with `SK_alone_flag` clear (`:10102-10130`) — and they are not interchangeable: the S&K path
+also switches `d3` from `Chaos_emerald_count` to `Super_emerald_count`. So both would need
+modelling, and neither is modelled today.
+
+**`superEmeraldMode` is not equivalent to either** and must not be substituted for them. It is a
+derived state predicate (`hasAllEmeralds() && !hasAllSuperEmeralds()`); `SK_special_stage_flag`
+is a latch written at a specific entry point. They coincide often, which is exactly why using
+the convenient one would have survived review.
+
+### Why no predicate fixes the seven
+
+Measured at `initialize`, standalone:
+
+```
+ss_8: init stage=0 superEmeraldMode=false allEmeralds=false allSuper=false
+ss_2: init stage=1 superEmeraldMode=false allEmeralds=false allSuper=false
+```
+
+**A standalone segment cannot know which lap it is.** The emerald counts start at zero — the
+documented bootstrap debt — so `superEmeraldMode` is false; and `SK_special_stage_flag` is never
+set because the segment never played the HPZ shrine that sets it. The harness enters the stage
+by calling `initialize(stageIndex)` directly, and `special_stage_index` carries 0-6 for both
+laps.
+
+So the lap is **run-level progression the segment never earned**, in the same category as the
+ring counts and the emerald counts already named in the bootstrap debt. Supplying it from the
+fixture would be trace hydration under hard rule 4.
+
+**This is the third cluster in the census to land on that debt, and the second where the
+resemblance had to be tested rather than assumed** — the previous entry's root cause is correct
+and the layout selection really is wrong, but fixing it does not turn these tests green.
+
+### The engine defect is still real, and still worth fixing — for the chain
+
+`loadRomData` selects the layout set on `currentStage < 8` where the ROM selects it on the lap
+flag. In a *chain* run, which plays HPZ and its shrines, a correctly modelled
+`SK_special_stage_flag` would be set and the right layout chosen. That fix is ROM-correct and
+belongs in the engine.
+
+**But it cannot be validated today.** The chain fails at segment 9 of 63, far short of the
+second-lap special stages, so there is no green-able fixture that exercises the corrected path.
+Landing it now would be an unverifiable change whose only measurable effect is nil.
+
+### Recommendation
+
+Do not implement the layout fix as a means of greening `Ss8`-`Ss14`; it will not. Either land it
+as an explicitly unverifiable ROM-correctness fix with `SK_special_stage_flag` modelled at its
+real writer, or park it behind chain progress that reaches those segments. That is a scoping
+call rather than a measurement, so it is brought back rather than taken.
