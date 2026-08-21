@@ -435,13 +435,25 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                         SonicConfigurationService.getInstance())
                         .mainSprite();
             }
-            if (sharedLevel != null
-                    && !needsSharedLevelReload
-                    && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+            if (sharedLevel != null && !needsSharedLevelReload) {
                 // resetPerTest() replaces the playable roster while retaining
                 // the shared level's ObjectManager. Rebind the new sprites so
-                // elemental shield objects and their dynamic children use that
+                // the spawner's objects and their dynamic children use that
                 // retained manager just as they do after a fresh load.
+                //
+                // This is deliberately NOT conditioned on
+                // playerCapability().elementalShieldsEnabled(). That capability
+                // is true only for S3K (GameRules.java:60,208,363), and the
+                // spawner owns three unrelated objects, only one of which is a
+                // shield: spawnShield, spawnInvincibilityStars and spawnSplash
+                // (AbstractPlayableSprite.java:1276,1424 / 1313,1544 /
+                // 5234,5298). With the capability in the condition, S1 and S2
+                // reached here with sharedLevel=true and needsReload=false and
+                // were left with a null spawner, so none of the three objects
+                // was ever created under trace replay. S3K was unaffected for a
+                // different reason than the gate: its fixtures take the
+                // fresh-load path (sharedLevel=false), where LevelManager wires
+                // the spawner itself and this branch is never reached.
                 GameServices.level().refreshPlayablePowerUpSpawners();
             }
             if (sprite.getAnimationProfile() == null && GameServices.level() != null) {

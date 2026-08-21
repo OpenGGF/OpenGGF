@@ -108802,3 +108802,406 @@ evidence for the change.
 
 `ZoneFeatureProvider.getWaterLevel` is untouched by this round — the splash never used it,
 and nothing else does either.
+
+## 2026-08-21 — Diagnosis: the power-up spawner is null under S1/S2 trace replay, and wiring it would change no occupancy number
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `f541479c6`.
+**Diagnosis only — no code change.** The one-line experiment described below was applied,
+measured, and reverted.
+
+Follows the splash entry above, which found `powerUpSpawner` null on the playables that cross
+water in `cpz2`.
+
+### Where the swap happens relative to the rebind
+
+`HeadlessTestFixture` step 5 creates the new roster with
+`GameplayTeamBootstrap.registerActiveTeam`, then immediately rebinds — but only inside:
+
+```java
+if (sharedLevel != null
+        && !needsSharedLevelReload
+        && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+    GameServices.level().refreshPlayablePowerUpSpawners();
+}
+```
+
+The **ordering is correct**; the third condition is the defect. `elementalShieldsEnabled` is a
+shield-specific capability — `false` for S1 and S2, `true` only for S3K
+(`GameRules.java:60, 208, 363`, third field of `PlayerCapabilityRules`) — and it gates a
+rebind that owns three unrelated objects: the shield, the invincibility stars, and the water
+splash.
+
+### Measured, per game
+
+A one-shot probe on the live playable's `powerUpSpawner`, plus a probe on the branch inputs:
+
+| test | `sharedLevel` | `needsReload` | `elemental` | live spawner |
+|---|---|---|---|---|
+| `TestS1Ghz1TraceReplay` | true | false | **false** | **NULL** |
+| `TestS2Cpz2LevelSelectTraceReplay` | true | false | **false** | **NULL** |
+| `TestS3kAizTraceReplay` | **false** | false | true | PRESENT (all 32 instances) |
+
+Note what this kills: **the gate is not what saves S3K.** Its test takes the fresh-load path
+(`sharedLevel=false`), where `LevelManager` wires the spawner at `:679` and the gate is never
+consulted. S1 and S2 satisfy both of the conditions that matter and are blocked purely by the
+capability check. Had S3K taken the reuse path it would have been rebound; it simply never
+reaches it here.
+
+### What S1 and S2 lose
+
+Every `powerUpSpawner` call site is null-guarded, so nothing crashes — the objects are just
+never created:
+
+- `spawnShield` (`AbstractPlayableSprite.java:1276, 1424`)
+- `spawnInvincibilityStars` (`:1313, 1544`)
+- `spawnSplash` (`:5234, 5298`)
+
+Shield *state* lives on the sprite, so damage protection is unaffected; it is the objects that
+are missing.
+
+### Nothing else binds against the pre-swap roster
+
+`LevelManagerInitializationSupport.rebindPowerUpSpawners` sets the spawner and nothing else
+(`:26, 29`), and the fixture's neighbouring `refreshPlayableSpriteArt()` is ungated. This is a
+single missing binding, not a class of them.
+
+### Would fixing it change slot occupancy? No — and this was measured, not predicted
+
+Every object the spawner creates lives at a **fixed SST slot outside the dynamic pool**, which
+is what `PowerUpRules` already documents at length (`:24-42`) and what `ObjectOccupancyOracle`
+excludes by construction — it counts only `slot >= firstDynamicSlot`:
+
+| game | dynamic pool | shield | inv. stars | splash | dust | super stars |
+|---|---|---:|---:|---:|---:|---:|
+| S1 | 32..127 | 6 | 8 | 12 | — | — |
+| S2 | 16..127 | 134 | 136 | via dust | 132/133 | 129 |
+| S3K | 4..93 | 100 | 102 | via dust | 98/99 | 96 |
+
+S1's sit below the pool, S2's and S3K's above it. **No spawner object can enter the counted
+range in any game**, so the occupancy investigation's numbers are unaffected and can be quoted
+as they stand.
+
+The fixture data corroborates the slot model exactly: in `lz1_2`'s `object_near` stream, slot
+**6** carries type `0x38` (`id_Shield`) for 29 frames and slot **12** carries type `0x08`
+(`id_Splash`) for **424** frames — precisely `PowerUpRules`' `shieldObjectFixedSlotIndex = 6`
+and `waterSplashFixedSlotIndex = 12`. The engine's slot model is right; only the wiring is
+absent.
+
+### The experiment
+
+Deleting the third condition — one line — was applied and the full suite re-run:
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | failing methods |
+|---|---|---:|---:|---|
+| control (`f541479c6`) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | — |
+| ungated | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | **identical** |
+
+And the ungating genuinely takes effect rather than being inert: with it applied, the same
+probe reports `PRESENT` for `TestS1Ghz1TraceReplay` and both `TestS2Cpz2LevelSelectTraceReplay`
+playables, where it reported `NULL` before. So the "identical" above is a real result about the
+change, not the tautology it would otherwise be.
+
+**Conclusion: the wiring can be fixed at any time without disturbing occupancy or any current
+comparison.** It is not urgent and it is not risky. What it would buy is coverage rather than
+correction — slots 6 and 12 are recorded in S1 fixtures and compared by nothing, so extending
+a comparison there would be the way to make the shield and splash objects verifiable.
+
+### Still queued
+
+The snapshot-versus-tracking splash Y (S2/S3K `SpindashDustController.triggerSplash` freezes
+`splashY` where `Obj08_MdSplash` re-reads `Water_Level_1` every frame), behind this.
+## 2026-08-21 — S3K chain segment 9 (`hcz`) frame 0 is a three-gravity-step lead at the handover, not the start-position debt
+
+- Worktree `wt/s3k-hcz-seg9`, branch
+  `bugfix/ai-s3k-hcz-seg9-entry`, pinned to `53d5dfa77`. Nothing was changed in
+  `src/`; this entry is the measurement.
+- Command:
+  `mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Ds3k.rom.path=<s3k.gen> -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain test`.
+  Result: 1 test, 1 failure, on three axes — `[walk-failure]` segment 9 (`hcz`)
+  exit boundary (`giant_ring`) never observed; `[segment-physics]` segment 8
+  2288 errors, first non-camera mismatch frame 6000 `sidekick_x` rom `0x4997`
+  engine `0x4996`; `[segment-physics]` segment 9 **59070** errors, first
+  non-camera mismatch frame 0 `y` rom `0x0020` engine `0x0021`.
+- **Run it under a trace profile.** Without one, surefire's `-Xmx1g` OOMs
+  (`Java heap space`) before any segment report is written, which looks like an
+  infrastructure failure rather than a frontier.
+
+### The headline field is one of six, and none of them is a position seed
+
+Segment 9 report: `errorCount` 59070, `bootstrapErrorCount` **0**,
+`laggedFrames` 55, `complete` true, physics 50664 / animation 8406; the last
+retained mismatch is at frame 3573 of 3574, so this is a whole-segment
+divergence, not a one-frame blip. The full frame-0 comparison has exactly six
+diverging fields; every `x` field, camera, rings, angle, routine, status byte
+and both animation ids MATCH:
+
+| field | rom | engine |
+|---|---|---|
+| `y` | `0x0020` | `0x0021` |
+| `y_sub` | `0x0000` | `0x5000` |
+| `y_speed` | `0x0038` | `0x00E0` |
+| `sidekick_y` | `0x0024` | `0x0025` |
+| `sidekick_y_sub` | `0x0000` | `0x5000` |
+| `sidekick_y_speed` | `0x0038` | `0x00E0` |
+
+The engine's frame-0 y-triple is **bit-exact the fixture's own frame-3 row**,
+for the player and the sidekick both (`hcz/physics.csv.gz` row 3: player
+`0021/5000/00E0`, sidekick `0025/5000/00E0`). `0x38` is one gravity step;
+`0xE0` is four. The engine has taken three more destination-level gravity
+steps than the ROM had taken when the comparator's frame 0 is sampled.
+
+The x axis is NOT advanced: the engine sits on the ROM's frame-0 `x`
+(`0x0280`, sub `0`, speed `0`) while ROM row 3 is `027F/7000/FFB8`. So this is
+not "the engine entered HCZ three frames early" wholesale — the ROM's x_speed
+walks `0000, FFE8, FFD0, FFB8`, a constant `-0x18`/frame, and the engine is
+applying none of it. (`0x18` is the S3K air acceleration; that the recorded
+player is accelerating left in the air is consistent with held input, and is a
+separate open question from the y phase.)
+
+### Ruled out: the S3K complete-run start-position bootstrap debt
+
+The debt entry in `known-discrepancies.md` covers segments that arm from
+metadata start coordinates. That is not this:
+
+- `hcz/metadata.json` `start_x` `0x0280` / `start_y` `0x0020` equals the
+  fixture's own frame-0 row exactly, so the seed is right.
+- `bootstrapErrorCount` is 0.
+- The standalone `TestS3kSonicTailsHczSegmentTraceReplay`, on this same SHA, is
+  clean at frame 0 — 744 errors, first error frame **1433** `y_speed`
+  (`0x0030` vs `-00D0`). (It then errors out with `S3K KosM module FIFO is
+  full` from `Sonic3kSSEntryRingObjectInstance.retireRing`, which is the defect
+  another lane closed; irrelevant to frame 0.)
+
+Same fixture, same seed, clean standalone, diverged in the chain: the defect is
+in the chain's `aiz_5` → `hcz` handover.
+
+### What the fixture says the ROM did at that handover
+
+Segments are contiguous in movie frames: `aiz_5` is offset 46432 × 7175 rows
+(bk2 46432..53606), `hcz` is offset 53608. In the whole 7175-row `aiz_5`
+segment there are **exactly two** rows whose recorded `vblank_counter` does not
+advance — rows 7172 and 7173, both `CF73`, with `lag_counter` pinned at `0x10`
+after climbing one per row from 7156. Its final row 7174 (`CF74`) is the first
+to show the destination player at all (`air` 1, `player_animation_id` `0x1B`,
+`sidekick_present` 1, `y_speed` `0000`). `hcz` frame 0 is `CF76`; bk2 53607
+(`CF75`) is covered by no segment.
+
+Two stalled rows plus one uncovered movie frame is three, and the engine's lead
+is three gravity steps. **That correspondence is arithmetic, not a traced
+causal chain** — which rows the engine actually stepped was not instrumented.
+The kill condition for the next round is direct: log the movie row of every
+gravity step the engine applies to the HCZ player over bk2 53550..53608. If it
+steps on 7172, 7173 and 53607 where the ROM did not, confirmed; if it does not,
+the lead comes from somewhere else and this reading dies.
+
+### The manifest has no record of this handover at all
+
+`AbstractRunChainTest.expandGapAdmissionCensus` reads
+`TraceRunManifest.Transition.gapAdmissionRuns()` (`gap_admission_runs`, an
+alternating non-lag/lag run-length census) to decide which gap rows the engine
+runs and which it plays as lag; an absent census expands to no rows, "which
+leaves the gap walk exactly as it behaved before any census existed".
+
+- The S3K run manifest emits **no `gap_admission_runs` on any of its 40
+  transitions**. The only manifest in the repo carrying the key is
+  `traces/s2/runs/s2-sonic-tails-complete-emeralds` (e.g. `stage_exit`:
+  `[23, 11, 53, 14, 8, 39, 25]`).
+- Worse for this segment, there is **no transition record for 8 → 9 at all**.
+  The 40 records are `stage_exit` (20), `giant_ring` (14) and
+  `starpost_bonus` (6) — special-stage and bonus boundaries only. All 22
+  zone→zone handovers of the 63-segment run are unrecorded: `aiz_5`→`hcz`,
+  `hcz_4`→`mgz`, `mgz`→`cnz`, `cnz`→`icz`, `icz_2`→`lbz`, `lbz`→`mhz`, the
+  seven `mhz_*`→`dez23_*`, `mhz_9`→`fbz`, `fbz`→`soz`, `soz_2`→`lrz`,
+  `lrz`→`hpz22`, `hpz22_2`→`hpz`, `hpz_3`→`ssz`, `ssz`→`dez23_8`,
+  `dez23_8`→`zone0c`, `zone0c`→`ddz`.
+
+So the chain has no admission census for the one handover in question, and none
+for any zone advance in the run. That is a recorder/manifest gap, and closing it
+is a capture-side round, not a physics fix.
+
+### Status
+
+Found, not fixed. Segment 9 stays red at frame 0; the standalone segment's own
+frontier is unaffected by it. The chain will not display another lane's
+`TestS3kSonicTailsHczSegmentTraceReplay` green until the handover phase is
+closed.
+
+## The defeat-frame reading is withdrawn: a single-point clock conversion, not a measurement
+
+Two lanes measured the same rows in the same vehicle and disagreed by one frame. The
+disagreement is resolved in favour of the lane that never converted between clocks, and the
+other has withdrawn its own number without being asked to.
+
+**What the withdrawn reading rested on.** A probe printed the engine's V-int counter at the
+defeat, and that counter was converted to a trace row by a **single-point calibration** — one
+counter value observed beside one trace frame in the comparator's own diagnostics, then
+subtracted. That assumes the counter advances exactly one per trace row across four hundred and
+sixty frames, which was never validated over that span; one extra or missing tick anywhere in it
+produces precisely the one-row error in dispute. An attempted cross-check against the camera did
+not settle it either, because an object reading the camera mid-frame may see the previous row's
+value — the intra-frame sample-point trap, met for the second time in the same thread.
+
+**What the surviving reading rests on.** Contact separation against the ROM's own threshold on
+the two candidate frames — collision flags to size index to half-width plus attacker radius —
+and seven earlier hit frames matched to the recording's own status-bit edges, frame for frame,
+with the eighth absent because the ROM sets a different bit on the fatal hit. No conversion
+anywhere, all of it in the recording's coordinate system.
+
+**So the engine's fatal hit is on the recording's row and there is no defeat-detection defect.**
+
+**What this costs.** Everything downstream of the withdrawn row is unmeasured, not wrong: the
+capsule-one-frame-early claim, the nine-link causal chain, and the idle-frame simulation. The
+lane that produced them flagged a specific reason the simulation may not mean what it said —
+inserting an idle frame delays the capsule's seeding, which takes its horizontal origin from a
+moving camera and its vertical from a stationary one, so it shifts the horizontal origin by a
+pixel while leaving the vertical unchanged, and that simulation's match was keyed on the
+horizontal series.
+
+**The sharper question the disagreement exposes.** The engine's post-defeat wait was measured as
+a difference of counter values, which is conversion-independent, while the ROM's wait is a count
+of rows. Those are the same quantity only if the counter and rows run one to one — the very
+assumption in doubt. If the counter drifts against rows anywhere in that window, the defeat and
+the capsule are displaced by different amounts. Measuring whether the engine's counter advances
+exactly one per trace row across the fight is now the round, and it is worth more than either
+row reading.
+
+## A dead accessor on the AIZ2 boss, and why it must not be "fixed"
+
+Flagged by one lane as a possible defect and checked before anyone acted on it: the class
+declares a collision-size constant citing the object data table's byte, exposes it through the
+shared size accessor, and **nothing reads either**. Ninety-nine classes declare that accessor;
+the ones that matter are the handful whose flags method composes `category | size`. This class's
+flags method does not — it returns a literal, and cites the ROM instruction that writes it.
+
+**Both are correct, and that is the trap.** The table's byte is the value the setup helper
+installs; the boss then overwrites its collision flags when it is fully revealed, and the
+literal is that write. The other lane's threshold derivation — flags to size index to half-width
+plus attacker radius — reproduces the observed contact behaviour exactly, so the literal is the
+value in play.
+
+So the constant is superseded rather than wrong, and its accessor is dead for this class. The
+hazard is a later reader tidying the class by making the flags method compose the constant the
+way its siblings do: that would silently replace the revealed-state size with the pre-reveal
+one, changing a contact threshold that is currently correct, and no test compares it.
+
+Recorded rather than removed, because deletion is a behavioural-surface change on a class under
+active investigation and the constant documents the table's byte usefully. If it is removed
+later, the citation belongs in a comment on the flags method instead.
+
+## 2026-08-21 — The spawner rebind no longer asks whether the game has elemental shields
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, off `f172f5033`.
+Acts on the diagnosis above.
+
+### The change
+
+`HeadlessTestFixture`'s post-roster-swap rebind drops its third condition. It read:
+
+```java
+if (sharedLevel != null && !needsSharedLevelReload
+        && GameServices.module().getRules().playerCapability().elementalShieldsEnabled()) {
+```
+
+`elementalShieldsEnabled` is true only for S3K (`GameRules.java:60, 208, 363`), and the
+spawner owns three unrelated objects of which one is a shield — `spawnShield`,
+`spawnInvincibilityStars` and `spawnSplash`
+(`AbstractPlayableSprite.java:1276,1424 / 1313,1544 / 5234,5298`). The capability is not the
+right question to ask before rebinding all three, so it is removed rather than widened.
+
+Measured branch inputs, from the diagnosis round:
+
+| test | `sharedLevel` | `needsReload` | `elemental` | live spawner before |
+|---|---|---|---|---|
+| `TestS1Ghz1TraceReplay` | true | false | false | NULL |
+| `TestS2Cpz2LevelSelectTraceReplay` | true | false | false | NULL |
+| `TestS3kAizTraceReplay` | false | — | true | PRESENT |
+
+S3K is unaffected for a reason other than the gate, and the comment now records it: its
+fixtures take the fresh-load path, where `LevelManager:679` wires the spawner and this branch
+is never reached.
+
+### Matrix — predicted inert in advance, and inert
+
+Stated before running, on the strength of the diagnosis round's experiment: this should move
+nothing, and any movement would be the finding.
+
+| arm | `-Ptrace-replay` | `Running` classes | `Tests run: 0,` | `-Pguards` |
+|---|---|---:|---:|---|
+| control (`f172f5033`, clean tree) | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+| fix | 800, 10 failures, 0 errors, 4 skipped | 163 | 6 | 500/0/0/0 |
+
+Class-name sets identical; failing-method sets identical on full untruncated messages. Nothing
+moved.
+
+**And the inertness is a result, not a tautology.** With the change applied, the one-shot
+spawner probe reports `PRESENT` for `TestS1Ghz1TraceReplay` and for both
+`TestS2Cpz2LevelSelectTraceReplay` playables, where it reported `NULL` on the control. The
+binding really is restored; the suite simply does not compare any of the three objects yet.
+That is what the next round is for.
+
+## 2026-08-21 — The fixed power-up slots would not land green: 95 divergent slot-frames in three named clusters
+
+Worktree `<wt>/s1-seg24`, branch `bugfix/ai-s1-seg24-frontier`, on `b7946c64c`.
+**Measurement only — the comparison is NOT landed.** Reporting before writing it, because the
+premise it was sequenced on does not hold.
+
+### Which harness entry point
+
+The affected suites do not share the one I first probed. Standalone `*TraceReplay` classes call
+`binder.compareFrame(...)` directly from `AbstractTraceReplayTest` (`:539, 728, 889`) and never
+touch `LiveTraceComparator`; the run chains go through `LiveTraceComparator`, which itself calls
+`binder.compareFrame` at `:307`. So **`TraceBinder.compareFrame` is the single shared point** and
+is where such a comparison has to live. A probe placed in `LiveTraceComparator.compareCurrentRow`
+produced zero output for `TestS1Lz1CompleteRunTraceReplay` — worth knowing before writing a
+comparison that would silently cover only half the suite.
+
+### A retraction, from my own probe
+
+My first pass reported slot 6 diverging on **3,431 frames** — the engine apparently never
+creating the shield object. That was an artefact of the probe, which skipped instances with
+`getSpawn() == null`; power-up objects are constructed programmatically and have no spawn. With
+the filter removed, `ShieldObjectInstance` is present at slot 6 on 3,426 frames. The engine also
+reports `hasShield=true, type=BASIC, obj=true` on 3,426 frames, which corroborates it from the
+sprite side. No such divergence exists.
+
+### The measured distribution, after the wiring fix
+
+`TestS1Lz1CompleteRunTraceReplay`, engine occupancy at the spawner-owned slots (6, 8-11, 12)
+against the fixture's `object_near` stream, counted per slot per frame:
+
+| slot | ROM | engine | slot-frames | example frames |
+|---|---:|---:|---:|---|
+| 12 splash | 1 | 0 | **70** | 131, 132, 148 |
+| 12 splash | 1 | **3** | 12 | 11936-11938 |
+| 6 shield | 1 | 0 | 7 | 3892, 4018, 4101 |
+| 6 shield | 0 | 1 | 2 | 850, 851 |
+| 12 splash | 0 | 1 | 2 | 8545, 8546 |
+| 12 splash | 1 | **2** | 2 | 11935, 11948 |
+
+**95 divergent slot-frames** out of 22,902 (3,817 frames where either side held a spawner
+object, times six slots) — 0.4%. Three clusters, each nameable:
+
+1. **Splash short by 70 frames.** The ROM holds `id_Splash` at slot 12 for 462 frames across the
+   run; the engine for about 392. Concentrated early (131-148).
+2. **Slot 12 over-occupancy — the engine puts two or three splash objects in one reserved
+   slot** on 14 frames. A ROM SST slot holds exactly one object by construction, so this is
+   unambiguous: `ObjectLifetimeOps.addDynamicAtReservedSlot` is not evicting the previous
+   occupant when splashes overlap.
+3. **Shield edges,** ±a few frames at the start and end of the shield's life (2 early, 7 late).
+
+### Recommendation: do not land the comparison yet
+
+It was sequenced after the wiring fix so that it would land as verification rather than as an
+accusation. That reasoning was right and its premise is now measured to be false: the comparison
+would go **red**, in three clusters that are real engine defects rather than missing coverage.
+Two options, both consistent with what this project has done before:
+
+- Fix the three clusters first — cluster 2 in particular is small, unambiguous and independent —
+  then land the comparison green, which is the strongest confirmation.
+- Or land it at `WARNING` severity now to pin the frontier without reddening the suite, the
+  shape the `s2_tornado_state` comparison used earlier today.
+
+Cluster 1 may share a cause with the queued splash-Y item: S1's `Sonic1SplashObjectInstance`
+re-reads the water line every frame and cites `Spla_Display`, so its *position* is right; what
+differs is how long the object lives and how many exist. That is a different question from the
+S2/S3K snapshot issue and should not be assumed to be the same defect.
