@@ -105246,3 +105246,72 @@ not have to reconstruct the priority.
 first-error frame, and LZ3 showed those pointing at completely different defects in the same
 segment. A first-error field is a sorting key, not a size — it aimed three rounds wrong in one
 session, twice from the lead and once from the lane.
+## 2026-08-21 — The KosM depth guard is stricter than the ROM, and the batch that trips it never retires
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `1d467ab40`.
+**Measurement only; probes reverted, tree clean.** Follows the entry above, which killed the
+uniform-shift reading of the HCZ vertical cleanup entry.
+
+### What the throw actually reports
+
+Instrumenting every `Queue_Kos_Module` submission in
+`TestS3kSonicTailsHczSegmentTraceReplay` with the queue's own depth and pending set:
+
+```
+[KQ] submit src=0x36a7c6 depth=0 pending=[]
+[KQ] submit src=0x36a968 depth=1 pending=[108-]
+[KQ] submit src=0x36a6c4 depth=2 pending=[108-, 109-]
+[KQ] submit src=0x36ad8a depth=3 pending=[108-, 109-, 110-]
+[KQ] submit src=0x390900 depth=0 pending=[]          <- #108-#111 drained
+...
+[KQ] submit src=0x36a7c6 depth=0 pending=[]
+[KQ] submit src=0x36a968 depth=1 pending=[114-]
+[KQ] submit src=0x36a6c4 depth=2 pending=[114-, 115-]
+[KQ] submit src=0x36ad8a depth=3 pending=[114-, 115-, 116-]
+[KQ] submit src=0xdb406  depth=4 pending=[114-, 115-, 116-, 117-]   <- throws
+```
+
+Sixteen module submissions in the whole segment. The horizontal reload `#108`-`#111` submits
+against a queue that empties behind it; the vertical reload `#114`-`#117` submits the identical
+four sources and **none of the four ever leaves**, all still unprepared (`-`) when the
+explosion art arrives. The depth is a *symptom of a stuck head*, not a capacity problem, and
+"queue occupancy is marginal" is the wrong reading of it: occupancy is zero either side of
+both batches.
+
+### The guard is stricter than the hardware
+
+`Queue_Kos_Module` (`sonic3k.asm:2668-2684`) walks slots with `tst.l (a2)` / `addq.w #6,a2`
+and **has no bounds check at all**. `Kos_module_queue` is `ds.w 3*4`
+(`sonic3k.constants.asm:907`) — 6 bytes per entry, so exactly four entries — and the next
+labels in RAM are `_unkFF7C`, `_unkFF7E` and `Level_select_repeat` (`:911-913`). A fifth
+queued module on hardware therefore writes its source longword and destination word *past* the
+array into words that are unused during a level, and the walker reads them back happily. It
+does not fail, and it does not lose the submission.
+
+So `MAX_QUEUE_DEPTH = 4` throwing `S3K KosM module FIFO is full` is an engine tripwire, not
+modelled ROM behaviour. That is defensible — an engine that silently scribbles past its own
+array is worse than one that stops — but it means **the throw is not evidence of a capacity
+defect**, and neither HCZ failure should be characterised as one. Both are the tripwire firing
+because a batch that should have retired did not.
+
+### Where that leaves the lane
+
+The question is why `#114`-`#117`'s head parent never completes its first module, and the
+rejected candidate in the preceding entry is evidence about it rather than a fix: moving the
+vertical submission one frame earlier is enough to make the whole batch retire, which says the
+head parent's release is decided at submission time against a recorded edge that has already
+passed. With the boundary corrected to *precede or equal*, a submission at 2958 against an edge
+at 2957 is still late by one — and one frame is the whole difference between a batch that
+drains and a batch that never does.
+
+That is the thing to instrument next: not when the batch arrives, but what the readiness match
+is offered and rejects, at the frame it arrives. The recorded columns can answer that one,
+because it is a question about the engine's own matching, not about the ROM's phase.
+
+### Corrected
+
+Two earlier entries state the releasability rule as *strictly precede*. It is **precede or
+equal**: submission happens during the object pass and the edge applies later in the same
+frame, which is why the horizontal reload submits on the same frame as its edge and drains.
+The conclusions in those entries stand — every case they judged is late by a whole frame — but
+the rule as written misjudges every same-frame submission.
