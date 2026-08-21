@@ -107504,3 +107504,99 @@ different points inside one frame — after the `$4000` descent, after `Swing_Up
 recording's single end-of-frame sample produces a different delta series, and two of the three
 produce a *plausible* one that is not a defect. Fix the sample point before reading a delta on
 a folded parent/child object.
+
+## 2026-08-21 — BRIDGE is folded and correctly reserved; it is not a defect
+
+Round `s1-bridge-r9`, branch `bugfix/ai-s1-bridge` off `5e534431e`. Diagnosis only, no code.
+**The commissioned target turns out not to be a defect, and the head of the ranking moves
+again** — for the second consecutive round, and for the same reason.
+
+### The ROM rule, established before looking at the engine
+
+`Bri_Main` (`docs/s1disasm/_incObj/"11 GHZ Bridge.asm":26-97`):
+
+- `bridge_children` is `obSubtype` — the total number of logs. **The parent is the middle log**,
+  so the loop allocates `subtype - 1` children (`subq.b #2,d1`: one for `dbf`, one for the
+  parent), and `bcs` skips the loop entirely for a one-log bridge.
+- Each child is a **real object** in object RAM: `obID` copied from the parent, `obRoutine = $A`
+  (`Bri_ChildLog`, display only). So one bridge occupies `subtype` slots of id `0x11`.
+- Allocation is `FindFreeObj` on the retail `FixBugs = 0` path — *any* free slot, including one
+  **before** the parent — and the loop **aborts when object RAM is full**, truncating the bridge.
+
+Target count therefore comes from the ROM: `subtype` logs, of which `subtype - 1` are children.
+
+### The engine folds them, and that is the right model
+
+`Sonic1BridgeObjectInstance` draws every log from the parent and calls
+`ObjectManager.allocateChildSlots(spawn, subtype - 1)`, whose cited purpose is that
+"the slots must still be reserved so the ascending `FindFreeObj` scan — and therefore every
+later dynamic object's slot number, which feeds the `(v_vblank_byte + 127 - slot) & 3` cadence
+gates — matches the ROM". The fold is deliberate, cited, and preserves the thing that actually
+matters downstream.
+
+### So why was it top of the ranking? Because my metric discarded the reservations
+
+`SlotOccupancyProbe.describe()` prints a reserved child slot as **`RESERVED`** and an
+unattributed one as **`UNATTRIB`**, not as a hex id. My whole-map parser matched only
+`(\d+)=(0x..)`, so **every reserved slot was dropped from the engine map** — exactly the slots
+that model bridge children.
+
+Crediting them:
+
+| | frames with a `0x11` deficit | raw deficit | reserved slots on those frames | explained | **unexplained** |
+|---|---|---|---|---|---|
+| s1 `0x11` | 179 | 1,969 | 1,950 | 1,950 (99%) | **19** |
+
+**BRIDGE is not under-allocated. It is folded, the fold is correct, and 99% of its apparent
+deficit was my parser.**
+
+### The corrected ranking
+
+Residual per-type deficit after crediting the reserved pool per frame (greedy, largest deficit
+first — so per-type residuals are a lower bound):
+
+| game | id | object | residual | share | fixtures |
+|---|---|---|---|---|---|
+| s1 | `0x20` | **CANNONBALL** | 581 | 18.1% | 5 |
+| s1 | `0x73` | MZ_BOSS | 279 | 8.7% | 2 |
+| s1 | `0x25` | RING | 249 | 7.8% | **20** |
+| s1 | `0x3F` | EXPLOSION | 244 | 7.6% | 12 |
+| s1 | `0x11` | ~~BRIDGE~~ | **19** | 0.6% | — |
+| s2 | `0x58` | **BossExplosion** | 1,725 | 21.2% | 5 |
+| s2 | `0x78` | **CPZStaircase** | 903 | 11.1% | 5 |
+
+Totals: S1 raw 6,042 → **3,209** residual (the reserved pool absorbs 47%). S2 raw 8,653 →
+**8,140** (only 6% absorbed — its pool is 523).
+
+### The reframe
+
+**The "engine allocates fewer children for composite objects" family claim does not survive for
+S1.** Its largest member was a correct fold, and nearly half the S1 deficit overall is reserved
+slots the metric was not counting. It *does* survive for S2, where the pool is small and
+`CPZStaircase` keeps 903 of 966 — that one is worth looking at as a genuine composite deficit.
+
+Burst-spawned effects survive in both games: `BossExplosion` (1,725), `EXPLOSION` (244),
+`Projectile` (332). **That is now the strongest family, and the composite half is largely
+retracted.**
+
+### Fifth parsing error in this line of work, and the pattern is now unmistakable
+
+Five in three rounds, every one silent, every one changing a headline, and **four of the five
+pointing toward a more tractable defect than the truth**: frame-gap grouping under a sparse
+sampler; durations in frames; per-slot presence counting relocation as absence; annotation
+tokens read as slots; and now a value-domain regex that silently dropped a whole class of
+engine state.
+
+They share a root: **I kept treating the probe's text report as data when it is a rendering**,
+and each error was a place where the rendering has a form my parser did not anticipate. The
+durable fix is not more careful regexes — it is to check the *renderer* for its full value
+domain before parsing its output, and to reconcile a derived total against something
+independent. Nineteen of 1,969 would have looked wrong immediately against the engine's own
+reservation count, and I never computed that until this round.
+
+### Recommendation
+
+`CANNONBALL` (S1, 581, 5 fixtures) and `CPZStaircase` (S2, 903, 5 fixtures) are the genuine
+composite/burst targets. Before either, **check the reserved-slot question first** for that
+object — several families use `allocateChildSlots`/`allocateChildSlotsAfter`, and the same fold
+may already be modelled correctly.

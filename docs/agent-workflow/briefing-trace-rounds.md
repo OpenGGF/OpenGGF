@@ -10,7 +10,7 @@ skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-Eighty-seven rules and several worked sections, accumulated across many rounds. The narrative
+Eighty-eight rules and several worked sections, accumulated across many rounds. The narrative
 below is the argument for each; this table is for finding one mid-round. **The measurement
 hazards are the ones to re-read before reporting a number** — every single one produces output
 that looks like a real result.
@@ -104,6 +104,7 @@ that looks like a real result.
 | 85 | An object aligned to the recording by its own coordinate | Perfect agreement that survives inserting an idle frame |
 | 86 | A ranking whose metric embeds a parsing choice | Relocation counted as absence; the wrong object at the top of the list |
 | 87 | A delta read at the wrong intra-frame write of a folded object | A plausible defect, and a guard that would make the fixture pass wrongly |
+| 88 | A probe's text report parsed as data | Correct code at the top of a defect ranking, twice recommended |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -2292,3 +2293,27 @@ wrong.
 an inserted-frame candidate for "making the motion worse"; at the right sample point that
 candidate matches on every row and fires the right actor on the right frame. The rejection was
 an artefact of the measurement, not a property of the candidate.
+
+## Eighty-eighth rule: a probe's report is a rendering, not data
+
+Instrument output is formatted for a human. Parsing it as though it were the underlying data
+means your analysis inherits every choice the renderer made — and the places where its
+vocabulary is wider than your parser expects become silent holes in your results.
+
+Five parsing errors across three rounds of one investigation shared this single root, unseen
+until the last of them. The probe renders an occupied slot as a hex id, a *reserved* slot as
+`RESERVED`, and an unattributed one as `UNATTRIB`; a parser matching hex values silently
+dropped exactly the slots that model a composite object's children — and put a correctly
+modelled, faithfully folded object at the top of a defect ranking, where it survived two
+recommendations and a commission. Crediting the reserved pool removed 1,950 of its 1,969
+"missing" entries and cut the game's whole deficit by 47%.
+
+**Read the renderer before parsing its output.** Enumerate every value domain it can emit,
+including the ones that mean "known but not an id".
+
+**And reconcile any derived total against something independent.** Nineteen unexplained
+entries against the engine's own reservation count would have exposed this immediately; that
+cross-check was never computed until the round that found the error.
+
+**Better still, do not parse a rendering at all** where the instrument can emit structured
+output or where the quantity can be recomputed from the source data.
