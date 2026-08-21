@@ -103,9 +103,9 @@ public interface GameAudioProfile {
     }
 
     /**
-     * Returns the game-owned whole-request SFX admission policy. The shared
-     * default is exactly permissive, leaving existing driver-owned S1
-     * per-role priority behavior unchanged.
+     * Returns an optional game-owned whole-request SFX admission policy. The
+     * stateful shipped S1/S2 priority latch is owned by {@code SmpsDriver}; the
+     * shared default adds no policy beyond that driver rule.
      */
     default SmpsRequestAdmissionPolicy getSfxAdmissionPolicy() {
         return SmpsRequestAdmissionPolicy.PERMISSIVE;

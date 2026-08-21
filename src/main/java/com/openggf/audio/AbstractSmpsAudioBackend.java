@@ -467,6 +467,15 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         AdmissionResult admission = Objects.requireNonNull(
                 admissionPolicy.evaluate(admissionContext),
                 "SFX admission policy returned no result");
+        if (admission.accepted() && smpsDriver != null
+                && currentStream == smpsDriver
+                && smpsDriver.usesGlobalSfxPriority()) {
+            admission = smpsDriver.evaluateSfxRequest(
+                    data.getId(), sfxPriority, specialSfx, false);
+            admissionContext = new SmpsAdmissionContext(
+                    data.getId(), data.getId(), sfxPriority,
+                    admission.priorityBefore(), specialSfx, false);
+        }
         if (!admission.accepted()) {
             observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(
                     admissionContext, admission));

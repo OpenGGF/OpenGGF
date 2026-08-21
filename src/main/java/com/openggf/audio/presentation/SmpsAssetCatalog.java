@@ -455,6 +455,7 @@ final class SmpsAssetCatalog {
                 .tempoMode(source.getTempoMode())
                 .palServicePolicy(source.getPalServicePolicy())
                 .tempoPhasePolicy(source.getTempoPhasePolicy())
+                .sfxPriorityPolicy(source.getSfxPriorityPolicy())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())

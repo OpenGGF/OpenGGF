@@ -59,6 +59,7 @@ public final class Sonic2SmpsSequencerConfig {
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
                 .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH)
+                .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }

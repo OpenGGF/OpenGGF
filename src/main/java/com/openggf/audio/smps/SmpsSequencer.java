@@ -1144,6 +1144,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void tick(boolean finishSfxTempoFrame) {
         SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
                 ? smpsDriver : null;
+        int activeSfxTracksBefore = driver != null && isSfx
+                ? activeTrackCount() : 0;
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
@@ -1151,9 +1153,23 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (finishSfxTempoFrame) {
             finishSfxTempoFrame();
         }
+        if (driver != null && isSfx
+                && activeTrackCount() < activeSfxTracksBefore) {
+            driver.onSfxTrackStopped();
+        }
         if (driver != null) {
             driver.endSequencerService(service);
         }
+    }
+
+    private int activeTrackCount() {
+        int count = 0;
+        for (Track track : tracks) {
+            if (track.active) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void finishSfxTempoFrame() {

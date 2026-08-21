@@ -16,6 +16,7 @@ public record SmpsDriverSnapshot(
         SmpsSequencer.Region region,
         SmpsDriver.ReadMode readMode,
         int palFullUpdateCounter,
+        int sfxPriorityLatch,
         int continuousSfxId,
         boolean continuousSfxFlag,
         int contSfxLoopCnt,
@@ -30,6 +31,10 @@ public record SmpsDriverSnapshot(
         if (palFullUpdateCounter < 0 || palFullUpdateCounter > 6) {
             throw new IllegalArgumentException(
                     "PAL full-update counter must be in [0, 6]");
+        }
+        if (sfxPriorityLatch < 0 || sfxPriorityLatch > 0xFF) {
+            throw new IllegalArgumentException(
+                    "SFX priority latch must fit one unsigned byte");
         }
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
@@ -49,6 +54,7 @@ public record SmpsDriverSnapshot(
                 region,
                 readMode,
                 5,
+                0,
                 continuousSfxId,
                 continuousSfxFlag,
                 contSfxLoopCnt,
@@ -72,6 +78,7 @@ public record SmpsDriverSnapshot(
                 region,
                 readMode,
                 5,
+                0,
                 continuousSfxId,
                 continuousSfxFlag,
                 contSfxLoopCnt,

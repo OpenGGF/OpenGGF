@@ -738,6 +738,15 @@ public final class AudioPresentationSourceFactory
         AdmissionResult result = Objects.requireNonNull(
                 sfxAdmissionPolicy.evaluate(context),
                 "SFX admission policy returned no result");
+        if (result.accepted() && currentOwner != null
+                && currentOwner.usesGlobalSfxPriority()) {
+            result = currentOwner.evaluateSfxRequest(
+                    source.resolvedSoundId(), source.priority(),
+                    source.specialSfx(), false);
+            context = new SmpsAdmissionContext(
+                    requestedId, source.resolvedSoundId(), source.priority(),
+                    result.priorityBefore(), source.specialSfx(), false);
+        }
         return new Admission(context, result);
     }
 
