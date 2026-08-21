@@ -101923,3 +101923,99 @@ So the citations are not pointing at nothing: the addresses are still valid and 
 present, just named. A `grep` for the label fails while the code is right there. Do not conclude
 from a failed label grep that a citation is bogus — and do not cite a `loc_` label as a line
 number, which is the related trap recorded separately today.
+
+## 2026-08-21 — S2 segment 15's 5554 cluster is Tails' *tails*, and the ROM is the side that stalls
+
+Branch `bugfix/ai-s2-seg15-art-r1` off `origin/develop` (`5206f53c4`).
+Diagnosis only; **nothing landed**.
+
+### Scope: one owner, and it is not the one the field names suggest
+
+The cluster's first error is frame 5554 `dynamic_art.outstanding_transfer_ids`
+(rom `[]`, engine `[4048]`). Probing every buffered edge over frames 5540-5580
+and diffing against the recorded `dynamic_art_transfer_state` rows:
+
+* **`sonic` submissions are frame-identical** — 5543, 5548, 5553, 5559, 5564,
+  5569, 5577, with the same mapping frames (11, 1, 11, 1, 11, 1, 76) and the
+  same request counts.
+* **`tails` submissions are frame-identical** — 5543, 5550, 5559, 5564, 5569,
+  5575, 5580, mapping frames 91, 1, 4, 1, 4, 1, 4.
+* **`tails-tails` is the only owner that differs.**
+
+Both sides are riding out the CPZ act 2 boss defeat at `x ≈ 0x2AB5`, both
+characters idle and motionless, while the boss debris is torn down.
+
+### The two series
+
+| | submissions (frame → tails-tails mapping frame) |
+|---|---|
+| ROM | 5546→12, **5565→13**, **5569→9**, 5573→10, 5575→9 |
+| engine | 5546→12, **5554→13**, **5559→9**, **5563→10**, **5564→9**, 5573→10, 5575→9 |
+
+They agree before 5546 and from 5573 onward; the whole disagreement is a
+~20-frame window, and every later error in the segment is the ordinal/transfer-id
+skew this leaves behind.
+
+### The engine's series is exactly what the ROM's own code predicts
+
+Reading `Obj05` against Tails' recorded animation column
+(`08` 5543-5549, `05` 5550-5558, `07` 5559-5563, `05` 5564-5568, `07` 5569-5574,
+`05` 5575-5579):
+
+* `Obj05AniSelection` (`docs/s2disasm/s2.asm:41769-41797`) maps Wait and Duck to
+  `Obj05Ani_Swish` (entry 1) and LookUp to `Obj05Ani_Flick` (entry 2).
+* `Obj05Ani_Swish` is `dc.b 7, 9,$A,$B,$C,$D,$FF` and `Obj05Ani_Flick` is
+  `dc.b 3, 9,$A,$B,$C,$D,$FD,1` (`:41812-41816`) — 8 frames and 4 frames per
+  step respectively.
+* `Obj05_Main` rewrites `anim(a0)` only when Tails' animation *value* changes
+  (`:41753-41756`), and `Tails_Animate_Part2` restarts on a changed `anim`,
+  stepping immediately because it zeroes `anim_frame_duration` and then
+  decrements it below zero (`:41270-41291`).
+* `LoadTailsTailsDynPLC` submits only when the mapping frame differs from the
+  single `TailsTails_LastLoadedDPLC` byte (`:41636-41641`).
+
+Every one of the engine's six events falls out of that: Swish step at 5546+8;
+Flick restart at 5559 (05→07); Flick step at 5563; Swish restart at 5564 (07→05);
+Flick restart at 5569 suppressed by the dedup because the frame is already 9;
+Flick step at 5573; Swish restart at 5575. **Six predicted, six observed.**
+
+### So the ROM is the side doing something extra
+
+The recording holds Obj05's mapping frame at `$0C` from 5546 to 5564 — **19
+frames** on a script whose step is 8 — and it misses the restarts at 5559 and
+5564 that Tails' own recorded animation changes must force. That is roughly
+eleven frames in which the ROM's Obj05 did not animate at all.
+
+### Three explanations killed
+
+* **The `FixBugs = 0` pushing override.** `Obj05_Main` forces `d0 = 4` when
+  Tails' pushing bit is set (`:41746-41748`; the engine must take this un-fixed
+  path). That would put Obj05 on `Obj05Ani_Pushing`, whose frames are `$87-$8A`
+  (`:41830`). **No edge anywhere in the window carries any of those**, so Obj05
+  was never on the pushing script. Dead — and worth stating, because after the
+  previous round this was the tempting answer.
+* **A DPLC dedup stall.** `TailsTails_LastLoadedDPLC` is a single byte rewritten
+  on every load, so any changed frame submits. It cannot swallow a run of
+  changes. Dead.
+* **Lag frames.** `lag_counter` is `0000` on every row 5540-5580 and both
+  `gameplay_frame_counter` and `vblank_counter` advance by one per row. Dead.
+
+### The one coincident recorded event, named as a lead and not as a finding
+
+Twenty-four objects of type `0x5D` — `ObjPtr_CPZBoss` (`s2.asm:30009`) — occupy
+slots 24-47 through the window, and `object_removed` fires for them **one per
+frame from 5553 to 5565**. The ROM's Obj05 animation resumes at exactly 5565, the
+frame the last of that run is freed.
+
+That is an exact match at the resume end and nothing else in the window comes
+close, but no mechanism is established: nothing in `Obj05_Main` reads the object
+table, and the removals start at 5553 while the stall starts at 5546. Anyone
+taking it should first check what the tear-down does to whichever slot Obj05
+occupies, and confirm the recorder's `object_type` read on a slot being cleared
+is the id and not a stale byte.
+
+### Note for whoever takes it
+
+This is an ~11-frame stall, not a one-frame phase error, so the S3K lane's
+"creation frame one frame off produces a sign-flipping pixel error" shape does
+not apply here — the magnitude rules it out rather than the mechanism.
