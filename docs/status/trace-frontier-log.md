@@ -102543,3 +102543,74 @@ Establish the ROM's emerge termination from `AIZEndBoss_Emerge`'s own position/v
 condition and give the engine the same, rather than an animation counter. Do not re-land the
 post-defeat handoff until the residual is right; a correct handoff on a wrong residual moves the
 capsule further out, as measured.
+
+## 2026-08-21 — S1 chain triage by slot occupancy, and one art-transfer family worth 29,571 errors
+
+Round `s1-slz1-graze-r1`, next-axis selection. Branch `bugfix/ai-s1-slz1-graze-r1`.
+**No source change.** Instrument-led triage first, per the method that closed `slz1`.
+
+### Every S1 chain segment, ranked by what the slot probe can see
+
+`OGGF_SLOT_PROBE=1` over `TestS1CompleteEmeraldRunChain` at `b1f5f1eb9`, against each segment's
+physics frontier. "1stSlot" is the first frame the ROM and engine slot tables disagree.
+
+| seg | dumps | divergent | 1st slot | slots | phys errors | 1st phys | field |
+|---|---|---|---|---|---|---|---|
+| 23 | 162 | 3 | 3123 | 28 | 16 | 3124 | `dynamic_art.edges` |
+| 25 | 441 | 34 | 1023 | 7 | 4365 | 2705 | `y` |
+| 26 | 520 | 115 | 573 | 2 | 11334 | 2805 | `dynamic_art.edges` |
+| 29 | 339 | 45 | 1384 | 1 | 1456 | 8557 | `x_sub` |
+| 31 | 334 | 163 | 1542 | 3 | 1 | 7821 | `rings` |
+| 32 | 299 | 17 | 0 | 30 | 12 | 11 | `queue.s1_nemesis_plc.prepared` |
+| 24 | 736 | 36 | 9947 | 4 | 18221 | 3182 | `dynamic_art.edges` |
+| 27, 28 | 146, 108 | **0** | — | — | 0 | — | — |
+
+Segments 0, 3, 6, 7, 8, 11, 16, 19, 22, 30, 33 carry slot divergence with **zero** physics
+errors — the instrument sees things no comparator does, which is the point of running it.
+Segment 24's slot signal is at f9947, long *after* its physics frontier, so slots do not explain
+it.
+
+### The family: one missed Sonic DPLC submission, three segments
+
+Segments 23, 24 and 26 all lead with the same shape — the ROM emits a two-edge transfer and the
+engine emits none — and the aux shows the four edges are identical in kind:
+
+```
+owner=sonic  mapping_frame=8  origin=segment  rom_callback_pc=3360 and 3408
+```
+
+lz1 f3124, lz1_2 f3182, lz3 f2805. In each case Sonic's `player_mapping_frame` moves **to 8** on
+the preceding frame (55 -> 8 -> 55 in lz1; 45 -> 8 in lz1_2; 55 -> 8 in lz3) and the ROM's DPLC
+load lands on the next frame, which is the ordinary one-frame DMA lag.
+
+**The engine's mapping frames are not the problem:** `player_mapping_frame` never appears in
+segment 23's mismatch list, so the engine reaches frame 8 exactly when the ROM does. It simply
+does not submit the transfer. From that frame the engine runs permanently behind by a fixed
+offset — segment 23 at f3198 has ROM `[1744, 1745]` against engine `[1738, 1739]`, exactly six
+edge ordinals and three transfer ids, i.e. one whole missed transfer, never recovered.
+
+`owner=sonic mapping_frame=8` edges are routine everywhere (156 in `slz1`, 106 in `ghz1`, 96 in
+`lz1`, 408 in `lz3`) and `slz1` is green on dynamic art, so this is **one missed submission, not
+an unimplemented path**.
+
+Combined: **16 + 18221 + 11334 = 29,571 comparator errors**, the largest single identified
+family on the S1 chain.
+
+### Excluded, so the next round does not chase it
+
+Segment 23's 28-slot divergence at f3123 is the engine holding 28 `LostRingObjectInstance`
+where the ROM holds none — a genuine one-frame difference in when the spill objects are created.
+It is **not** the cause of the 16 errors: `rings` never mismatches in that segment, the ROM's own
+ring count drops on schedule at f3124, and all 16 errors are dynamic-art ordinals. Worth its own
+look; not this thread.
+
+Segment 25's first slot divergence is six `0x65` Waterfall plus one `0x36` Spikes at slots 91-97
+that the engine lacks at f1023 — and Waterfall **is** registered in `Sonic1ObjectRegistry`, so
+that is a creation-timing question, not a missing object.
+
+### Next measurement
+
+Instrument the engine's Sonic DPLC submission at `lz1` f3123-3124 and establish why the frame-8
+load is skipped when the same load succeeds hundreds of times elsewhere in the same act. The
+suppression is the thing to find; nothing here yet says what it is, and the fix must not be a
+frame-keyed exception.
