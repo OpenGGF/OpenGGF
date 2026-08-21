@@ -1,5 +1,12 @@
 # Changelog
 
+- **The LBZ end boss's defeat countdown no longer starts a frame early:** the
+  ROM installs its post-defeat handler after the boss's routine arm has already
+  run for the frame, so the handler's first wait decrement belongs to the next
+  object pass. The engine installs it during the player's touch scan and now
+  consumes that dispatch instead of running the new handler on the frame that
+  installed it. The killing frame ends with the wait at $7F, as in ROM.
+
 - **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
   retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
   longer inherit that destructive policy from shared presentation code. Direct
