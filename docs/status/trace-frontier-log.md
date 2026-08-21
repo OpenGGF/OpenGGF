@@ -110411,3 +110411,76 @@ moved. `-Pguards`: 500 tests, 0 failures.
    ARZ1 group — the shared origin refuted earlier does not re-establish here.
 
 Nothing was fitted. No interval was adjusted.
+
+## 2026-08-21 — the transformation freeze is released by the PALETTE fade, not the animation, and the engine has no fade-in state
+
+Fifth defect of the S2 Super group, located not landed. Worktree
+`wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-freeze`, based on `141c91f5a`.
+`src/` unchanged.
+
+### Read the ROM before measuring, as commissioned
+
+`Sonic_CheckGoSuper` writes four things on the transformation frame
+(s2.asm:37476-37479):
+
+```
+move.b #1,(Super_Sonic_palette).w
+move.b #$F,(Palette_timer).w
+move.b #1,(Super_Sonic_flag).w
+move.b #$81,obj_control(a0)
+```
+
+Nothing in Sonic's own code clears that `obj_control` afterwards. There is no
+`clr.b obj_control(a0)` anywhere in `s2.asm` — the only `clr.b obj_control`
+instructions are `(a1)` forms in unrelated objects, and the `move.b #0` forms
+belong to the 2P reset (:38329), the hurt-landing path (:38222) and Tails
+(:39095, :39231). The transformation animation does not clear it either:
+`SupSonAni_Transform` (:38818) ends `$FD, 0`, and `SAnim_End_FD` (:38439) only
+writes `anim(a0)`.
+
+**The clear lives in the palette cycler.** `PalCycle_SuperSonic` (:3118) runs
+the fade-in branch while `Super_Sonic_palette == 1`: it decrements
+`Palette_timer`, reloads it with `#3`, advances `Palette_frame` by 8 per step,
+and when `Palette_frame` reaches `$30` it marks the fade done and executes
+
+```
+move.b #0,(MainCharacter+obj_control).w   ; restore Sonic's movement   (:3139)
+```
+
+So the freeze's length is a consequence of the palette fade's own constants —
+an initial `Palette_timer` of `$F`, then reloads of `3`, six `Palette_frame`
+steps to `$30`. It is derived, never chosen.
+
+### What the engine does instead
+
+`SuperStateController.updateTransformation()` releases the freeze when
+`updateTransformationAnimation()` reports the transformation ANIMATION complete,
+with a comment reading `// ROM: clr.b obj_control(a0) - unfreeze after
+transformation complete`. That instruction does not exist. Wrong owner, and
+therefore a length that has no reason to agree with the ROM's.
+
+And the state it should be keyed on is missing. `Sonic2SuperStateController`
+models `Super_Sonic_palette == -1` (steady cycling, `updateSuperPalette`, whose
+own comment says `PalCycle_SuperSonic_normal`) and `== 2` (the revert fade-out),
+but **not `== 1`, the fade-in**: `onSuperActivated()` sets `paletteState = -1`
+directly, so the branch that owns the release never runs.
+
+### Not the routine-install class
+
+Checked against rule 107 explicitly: nothing here is a routine installed
+mid-frame and executed in the same frame. `obj_control` is a state byte read at
+the top of `Obj01_Control` (:36236, :36261), and the defect is which subsystem
+clears it, not which dispatch runs it. This is not a member of the population
+the other lane is surveying and should not be filed with it.
+
+### Fix shape and fingerprint, for whoever takes it
+
+Model `PalCycle_SuperSonic`'s fade-in branch as the third state of the existing
+machine — `Super_Sonic_palette = 1` and `Palette_timer = $F` installed by the
+transformation, reloads of `3`, `Palette_frame += 8` per step, and at `$30` mark
+the fade done AND clear the freeze — then delete the animation-keyed release.
+The duration must fall out of those constants; **do not set a freeze length**.
+
+Fingerprint: the engine's `x` stays at the ROM's `0x2936` through segment-18
+frame 4049 and releases on the same frame the ROM does, with segment 18's first
+divergence moving past 4049 rather than a shorter freeze merely delaying it.
