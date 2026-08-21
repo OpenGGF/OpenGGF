@@ -109321,3 +109321,59 @@ at **53487, 53559 and 53608** and leaves exactly one, at the destination's frame
 even if the count improves. Re-run the probe, do not read the frontier.
 
 Nothing was fitted. Nothing was landed.
+
+## 2026-08-21 — BossExplosion is not one-way and is not its own defect: it is Eggrobo, and it is convert-in-place
+
+Worktree `<wt>/s2-bossexplosion`, branch `bugfix/ai-s2-boss-explosion-occupancy`, on
+`cae3ede3c`. Measured with the same probe and corpus as the occupancy summary — 94 reports:
+
+```
+OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_OUT=<dir> \
+mvn -Dmse=off -Ptrace-replay -Dsonic2.rom.path=<repo>/s2.gen test
+```
+
+**Nothing landed but the summary update and this entry.** The state page
+[object-occupancy-frontier.md](object-occupancy-frontier.md) carries the numbers; this is the
+narrative.
+
+**Reservation check first, as commissioned: negative.** Zero `RESERVED`/`UNATTRIB` lines on any
+S2 divergent frame carrying `0x58`. Not a correct fold, unlike BRIDGE and CPZStaircase.
+
+**Both directions, metric #3: 1,336 short / 35 over** across the same 6 fixtures the summary
+names. The summary's 1,725/17 is the same shape from a differently-netted pass; the difference
+does not change any conclusion, and the 6-fixture set is identical.
+
+**Three things the one-way classification got wrong.**
+
+1. **961 of the 2,297 raw `rom=0x58` lines are relocation** — an `eng=0x58` exists on the same
+   frame at another slot. A per-slot reading overstates the shortfall by 42% before anything
+   else is considered.
+2. **The engine does make them.** In the episode that carries 99.4% of the deficit it holds a
+   `BossExplosion` on 149 of 173 frames. "The engine never makes them" is false for this object.
+3. **The deficit is one event, not a rate.** 1,077 of the DEZ 1,084 is a single contiguous
+   173-frame episode, f7649-7887, peaking at 28 ROM explosions against 0 engine. Sustained over
+   173 consecutive frames, so the sampling-phase alternative is ruled out for this object —
+   which the summary asks be established per object before treating a divergence as a defect.
+
+**And the finding that matters: `0x58` and `0xC7` are the same defect.** Where the ROM has
+`0x58` the engine holds `0xC7` on **511** lines; where the engine holds `0xC7` and the ROM does
+not, the ROM holds `0x58` on **511** lines and anything else on 31. The same slots, counted
+twice under two names, in two different tables of the summary — one as the largest *one-way*
+target, the other as a *two-way* one. `0x5D` adds 135 and `0xAF` 28 in the same shape.
+
+**Mechanism: convert-in-place.** The ROM rewrites the id of the live object rather than
+deleting and respawning — `ObjC5_PlatformExplode` is
+`move.b #ObjID_BossExplosion,id(a0)` (`s2.asm:81762`), and `Obj5D_Main_Explode2` and
+`loc_3DFBA` inside `ObjC7` are the same shape. The engine leaves the object under its original
+id, which reads simultaneously as a BossExplosion shortfall and an Eggrobo over-count.
+
+That is **the same capability CANNONBALL is already parked on**, so this target is blocked on
+the same design note rather than being independent work. About 29% of the raw shortfall is the
+conversion; the 70.6% `eng=-` remainder is a genuinely separate question and is the only part
+still worth its own round.
+
+**A trap for the next ranking.** Grouping by raw recorded id mixes games: `0x58` also appears in
+S1 and S3K fixtures — 3,410 raw short lines across 17 fixtures if unfiltered — but `0x58` is
+BossExplosion only in S2 (`ObjPtr_BossExplosion: dc.l Obj58`, `s2.asm:30004`). Filtering to S2
+is what reproduces the summary's own 6-fixture count, so the filter is load-bearing and not a
+detail.
