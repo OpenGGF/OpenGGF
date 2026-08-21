@@ -136,11 +136,6 @@ that looks like a real result.
 | 117 | A constant in a shared class is not a constant of every game | 0x3FF was Sonic 1's; check the callers before picking a disassembly |
 | 118 | A stale native temp dir reports as a catastrophic regression | rm -rf target/test-tmp; grep for UnsatisfiedLinkError before quoting Errors |
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
-| 128 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
-| 127 | Inertness measured on the fixture you happen to have | Identical error lists across a change whose path a probe proves live, because that fixture compares no field the change reaches; another fixture calls the same change a regression |
-| 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
-| 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
-| 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
 | 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
@@ -153,6 +148,7 @@ that looks like a real result.
 | 128 | `stand_on_obj` is a slot index, not an object id | Both readings name a real object; resolve through slot_dump |
 | 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
 | 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
+| 131 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3406,4 +3402,38 @@ state the row records.
    has *no* x-velocity write on side contact at all, while carrying a separate mechanism gated on
    the same player state — so it detects the case and does something else with it. "No rebound
    observed" would have reported neither.
+
+## One hundred and thirty-first rule: a conversion onto manager-supplied state silently breaks every direct-drive unit test
+
+Moving a decision onto per-frame state the manager supplies — a frame-start position snapshot, a
+published render flag — breaks every unit test that calls `update()` directly, because those tests
+never receive that state. The helper's `preUpdateValid &&` prefix then returns false, the object
+takes the negative branch unconditionally whatever its position, and **the failure reads exactly
+like a test encoding the old behaviour**.
+
+Two of three reds beside an already-landed conversion were this and nothing else: adding
+`snapshotPreUpdatePosition()` made both pass **with their original assertions unchanged**. Nothing
+needed inverting. **Complete the harness before inverting anything.**
+
+**And run the revert-first proof, because a repaired test can pass against both trees.** Reverting
+the class to its pre-conversion form and re-running gave three different answers:
+
+| test | vs revert | vs current | verdict |
+|---|---|---|---|
+| deletes using the falling parent's y | **red** | green | discriminates |
+| uses the approximate render height | green | green | **proves nothing about the conversion** |
+| keeps a vertical-only offscreen parent | green | **red** | tests removed behaviour |
+
+The middle row is the one to look for. A repaired test that passes against *both* trees is not
+evidence for the fix, and claiming the proof for it is exactly what the proof exists to prevent —
+keep it if its assertion is true, but record that it is not evidence.
+
+**A test of behaviour that no longer exists cannot be repaired, and should stay red with its reason
+in the test.** An attempt to rewrite the third to the new contract failed on its own first tick —
+the tell that the expectation was being invented rather than derived. Deleting it would discard the
+only record of what the removed grace period was for.
+
+**Related, and the second time this prefix produced a misleading signal in one session:** the same
+`preUpdateValid` guard silently reads "off screen" in one caller and "not drawn" in another. Both
+times the tell was the same helper.
 
