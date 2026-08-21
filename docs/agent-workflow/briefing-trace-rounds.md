@@ -149,6 +149,7 @@ that looks like a real result.
 | 129 | The origin may be in a field nobody walked | Carry neighbouring fields; print velocity beside position |
 | 130 | Read the candidate mechanism's constant before probing for it | An empty probe on the wrong path reads as "not modelled" |
 | 131 | A red unit test beside an already-landed fix | It may be encoding the old behaviour, or it may simply never supply the per-frame state the new code reads (`snapshotPreUpdatePosition`); both look like a stale assertion. Complete the harness before inverting anything, and run the revert-first proof -- a repaired test that passes against BOTH trees is not evidence for the fix |
+| 132 | A gate probe must cover the early returns you were not thinking about | The suspected branches log; the deciding one has no line at all |
 | 54 | A probe read mid-frame | A clean, consistent, plausible offset that does not exist |
 | 62 | A probe anchored by row arithmetic | Stable self-consistent state on the wrong rows entirely |
 | 55 | An error count compared across different depths | A count that rises on a fix, or falls on a truncation |
@@ -3436,4 +3437,26 @@ only record of what the removed grace period was for.
 **Related, and the second time this prefix produced a misleading signal in one session:** the same
 `preUpdateValid` guard silently reads "off screen" in one caller and "not drawn" in another. Both
 times the tell was the same helper.
+
+## One hundred and thirty-second rule: a gate probe must cover the early returns you were not thinking about
+
+A round instrumented four rejection gates in a contact routine and produced a clean table — 25
+rejected on one gate, 18 on an invented one, 1 on a third, 0 applications in the whole run. It
+still could not answer the question, because **the row that starts the whole chain logged nothing
+at all**: the method's *first* early return, a state check before any gate, was uninstrumented.
+
+So the origin row is either "no contact detected" or "the object was in the wrong state" — two
+different defects with two different fixes, and the probe distinguishes neither. **The gates
+instrumented were the ones already under suspicion; the one that mattered was the one nobody was
+thinking about.**
+
+**Enumerate every exit from the routine before reading the table.** A probe that covers the
+branches you suspect produces a plausible, complete-looking distribution while the real answer sits
+in a path with no line in it — the same family as a probe in the wrong harness (rule 127), reached
+by a different route.
+
+**And fixing the named blocker first would have been fitting.** The invented guard blocks the
+bounce in a window ~300 rows *downstream* of the origin, and that window is a *consequence* of the
+origin. Removing it might make the consequence behave while leaving the cause wrong — a green-ish
+result attributable to nothing. Fix the origin, then re-measure the consequence.
 
