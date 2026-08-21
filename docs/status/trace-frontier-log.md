@@ -111660,3 +111660,78 @@ which may be a second independent defect or may be inherited. **1519 is an upper
 work, not a count of defects.** The next round is `TurboSpikerBadnikInstance`'s touch
 categorisation for a rolling player, and it has a sharp acceptance test: HCZ1 stays at 0 errors
 and the first error moves past 22243.
+
+## 2026-08-21 -- HAZARD: `-Dtest=` overrides patterns but NOT tag exclusions, and the chain frontier restated
+
+Measured at `2973a0430`. Two things in one entry: a measurement hazard that produces a clean
+green from a class that never ran, and a correction of two stale frontier numbers.
+
+### The hazard, with the mechanism corrected
+
+`TestS3kTailsFullChainRunChain` under `-Ptrace-replay -Dtest=TestS3kTailsFullChainRunChain`
+reports:
+
+```
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+**A clean green from a class that never ran.** Under `-Ptrace-replay-r7` with the identical
+`-Dtest=`, the same class runs and fails in 15s.
+
+The first explanation offered for this -- "the class is only in the r7 profile's `<include>`
+list" -- was **wrong**, and the real mechanism is worth more. `trace-replay` *does* include it
+by pattern (`**/tests/trace/**/*.java`) and does *not* exclude it by pattern; the two run-chain
+classes named in that profile's `<exclude>` list are the Knuckles super-emerald and Mega runs.
+What drops it is a **JUnit tag**: the class carries `@Tag("trace-scope-r7")` and `trace-replay`
+sets `<excludedGroups>performance-measurement,trace-scope-r7</excludedGroups>` (pom.xml:259).
+
+**So the rule is sharper than "`-Dtest=` overrides profile selection" (rule 98):**
+
+> `-Dtest=` overrides a profile's `<include>` and `<exclude>` **patterns**, but **not** its
+> `<excludedGroups>` tag filter.
+
+Both halves were measured in this round against the same profile. `TestS3kHczZoneSliceTraceReplay`
+is **pattern**-excluded from `trace-replay` (`**/tests/trace/s3k/*ZoneSliceTraceReplay.java`),
+and `-Ptrace-replay -Dtest=TestS3kHczZoneSliceTraceReplay` **ran it anyway** -- 2 tests. The
+Tails chain is **tag**-excluded from the same profile, and the same flag shape ran nothing.
+Identical invocation shape, opposite outcomes, and only the exclusion *kind* differs.
+
+**What it looks like from outside:** `BUILD SUCCESS`. Not a skip, not a filter warning -- a
+zero-test success that is indistinguishable from a passing run unless you read
+`Tests run:`. Check the tag before concluding a `-Dtest=` run means anything, and treat
+`Tests run: 0` as a failed measurement rather than a result.
+
+Tag-to-profile map at this SHA: `trace-scope-r7` is excluded by `trace-replay` and selected by
+`trace-replay-r7`; `trace-scope-r6` is excluded by `trace-replay-r7` (pom.xml:452).
+
+### The chain frontier, restated and stamped
+
+**Both previously recorded positions are stale.** This log's "the chain fails at segment 9 of
+63" and a lane note of "5 of 63" no longer describe it, and the current failure is a **different
+shape** -- not a physics divergence at a segment at all. Measured at `2973a0430`:
+
+```
+TestS3kTailsFullChainRunChain.tailsFullChainAllEmeraldsRoundTrip
+BoundaryStepCapExceededException: awaitBoundary exceeded step cap 42908
+  for entry_kind 'stage_exit' (mode_change_bk2_frame=6221, last observed bk2 frame=6221)
+  cursor frozen or mode change never observed
+  (no active objects within a screen-width of the player)
+```
+
+The run **stalls at a `stage_exit` boundary at bk2 frame 6221**, burning the full 42908-step
+cap. Last observed frame equals the mode-change frame exactly, so this is a stall, not a drift.
+Note the run is 70 segments, not 63 -- the older counts were against a shorter fixture.
+
+The class is *designed* to be red: its javadoc records it as a frontier harness added to say
+where the route diverges, not as a regression.
+
+**The suppressed `PendingRecordedSubmissionsException` is downstream of the stall, not a second
+defect.** A run that never completes leaves recorded hardware submissions pending by
+construction; reading it as independent sends someone to the timing port for nothing.
+
+**Two opposite defects share that one message** and it is unresolved which applies: the engine
+never reaches the stage exit, or it reaches it and the walker never observes the mode change.
+The `(no active objects within a screen-width of the player)` diagnostic argues for the first,
+but that is a hint, not a measurement. Instrument the boundary before assigning ownership --
+handing this to the walker's owner presumes the second.
