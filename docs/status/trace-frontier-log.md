@@ -111299,3 +111299,64 @@ No fix landed. `MhzMinibossInstance` is confirmed but **no trace covers it** -- 
 the current S3K chain frontier -- and the WFZ result stands as the warning: a correct member
 fix can be load-bearing, and there is no covering trace here to reveal a compensation if one
 exists. Landing it would be unverifiable in exactly the way that produced the WFZ regression.
+
+## 2026-08-21 -- CONFIRMED: HczMiniboss is a member, and its constant is the compensating half
+
+Follow-up within the 9-candidate batch, measured at `6da393111`. **Found, not fixed.**
+
+`HczMinibossInstance` was the batch's flagged case: its own comment states the ROM's first
+decrement is necessarily the following object pass while the code decrements on the install
+frame. Measured rather than trusted, and it is a member -- but the interesting half is what
+sits next to it.
+
+### Measured engine half
+
+The bare batch fixture never lands the final hit, because `getCoreCollisionFlags()` returns 0
+until `isFightVisible()` (`state.routine >= ROUTINE_DESCEND`), which needs the camera inside the
+trigger window. Driven into `ROUTINE_WAIT` with `hitCount = 1`:
+
+```
+HCZ pre-hit      : routine=8  defeated=false handoffTimer=-1 coreFlags=15
+HCZ after touch  : routine=26 defeated=true  handoffTimer=64
+HCZ install frame: routine=26 defeated=true  handoffTimer=63
+HCZ frame N+1    : routine=26 defeated=true  handoffTimer=62
+```
+
+The touch callback installs `ROUTINE_DEFEATED` and seeds the timer; the install frame's own
+dispatch decrements it. **Member.**
+
+### The constant is the other half, and the two cancel exactly
+
+ROM `BossDefeated` is `move.w #$3F,$2E(a0)` = 63 (`sonic3k.asm:180821`). The engine seeds
+`DEFEAT_HANDOFF_WAIT = REOPEN_TIME + 1` = **64**.
+
+Seed 64 and tick on the install frame -> 63 at the end of the killing frame. Seed 63 and do not
+tick -> 63. **The compensation is exact: the timer holds the same value on every frame either
+way.** This is the WFZ shape a second time, and it was predicted before it was found.
+
+Worse, the `+1` does not even borrow from `BossDefeated`. `REOPEN_TIME` is the miniboss's
+*reopen* delay, a different ROM quantity that happens to share the value `$3F`. So the constant
+is fitted, and its provenance points at an unrelated routine -- a value that is close to the
+ROM's but not equal, absorbing an error elsewhere.
+
+### The comment is right for the wrong reason
+
+The comment at the install site says *"Touch_Enemy runs from Draw_And_Touch_Sprite after the
+boss routine dispatch"*. That is the same misreading caught earlier this round:
+`Draw_And_Touch_Sprite` only calls `Add_SpriteToCollisionResponseList`
+(`sonic3k.asm:178041-178044`); `TouchResponse` runs from the player's control routine. The
+comment's **conclusion** is correct and its **mechanism** is not, which is why it could sit next
+to a fitted constant without anyone noticing the two disagreed.
+
+### Why it is not fixed here
+
+The fix is both halves in one move: seed `$3F` cited to `BossDefeated`, and defer the first
+dispatch. Because the compensation is exact in the timer, the only observable change is that
+`updateDefeated()` -- and with it `defeatExplosionController.tick()` and its explosion child
+spawns -- no longer runs on the install frame.
+
+**No trace can currently adjudicate that.** `TestS3kHczZoneSliceTraceReplay` has a
+**pre-existing 1519-error baseline, first error frame 22243 `g_speed`**, and whether that
+precedes the miniboss is unestablished; under rule 77 a target downstream of a segment's first
+error cannot be judged by it. Having just been burned by an exact-cancelling stack on WFZ, an
+unverifiable landing is the wrong call, so this is recorded rather than committed.
