@@ -520,6 +520,9 @@ public class TestSmpsSequencer {
         assertTrue(sfx instanceof Sonic2SfxData, "Expected Sonic2SfxData for SFX 0xBC");
         assertNotNull(sfx.getVoice(0), "SFX 0xBC should have voice 0");
         Sonic2SfxData sfxData = (Sonic2SfxData) sfx;
+        assertEquals((byte) 0x90,
+                (byte) sfxData.getTrackEntries().getFirst().transpose(),
+                "shipped FixMusicAndSFXDataBugs=0 keeps the invalid FM5 transpose");
         int ptr = sfxData.getTrackEntries().get(0).pointer;
         assertTrue(ptr >= 0 && ptr < sfxData.getData().length, "Track pointer should be within data");
         assertEquals((byte) 0xEF, sfxData.getData()[ptr], "SFX 0xBC track should start with Set Voice");
