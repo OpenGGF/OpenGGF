@@ -102019,3 +102019,89 @@ is the id and not a stale byte.
 This is an ~11-frame stall, not a one-frame phase error, so the S3K lane's
 "creation frame one frame off produces a sign-flipping pixel error" shape does
 not apply here — the magnitude rules it out rather than the mechanism.
+## 2026-08-21 — RETRACTION: the level art is not retiring early, it is loading on the wrong side of the seam
+
+Round `s3k-kosm-retire-r1`, branch `bugfix/ai-s3k-kosm-retire-r1` off `origin/develop`
+`b1a8dbbdf`. **Found, not fixed — nothing landed but this entry**, and the probes are
+reverted. The round was scoped to the retirement schedule; that premise is wrong.
+
+### RETRACT: "the engine retires the parents sooner than the recording does"
+
+The preceding entry read `engine pending: <none>` at raw frames 7129/7136 as the engine
+having already retired `#101`/`#102`. It has not. It has not yet **submitted** them.
+
+### The cadence is not the defect, and the engine already implements it
+
+`Process_Kos_Module_Queue` (`sonic3k.asm:2726-2790`) does at most one state step per call:
+`Kos_modules_left` zero returns; bit 7 clear queues **one** module into the decompression
+queue (unless `Kos_decomp_queue_count >= 4`) and sets bit 7; bit 7 set returns unless
+`Kos_decomp_queue_count` is zero, then DMAs that module, decrements, and on the last module
+shifts the queue up and inits the next parent. `loc_7870` calls it once per iteration, so
+one step per row, and a module needs at least two rows.
+
+`S3kKosModuleQueue.beforeTimingService(POST_OBJECTS)` → `stepHeadArchive` already performs
+exactly one such step per row. Probed per row across 7040-7175, the title-card parents
+behave correctly:
+
+```
+rf=7053..7057  #97--:0 #98--:0 #99--:0 #100--:0
+rf=7058        #97RP:1 #98--:0 ...
+rf=7060        #97RP:1 #98RP:1 ...
+rf=7062        #97RP:1 #98RP:1 #99RP:1 ...
+rf=7064..7175  <none>
+```
+
+(`R` = ready, `P` = prepared.) They go ready at 7058/7060/7062 against recorded `#97`-`#100`
+at 7057/7059/7061/7063. The row model works.
+
+### What actually happens
+
+`#101`/`#102` never appear pending anywhere in 7040-7175. Probing the submission itself:
+
+```
+SUBMIT KosM #101 src=0x3B9668 dst=0x0    at rawFrame=31
+SUBMIT KosM #102 src=0x3BAE7A dst=0x2360 at rawFrame=31
+```
+
+**Raw frame 31 — the destination segment's numbering, not the source's.** The engine runs
+the destination's `LoadLevelLoadBlock` after crossing the segment seam; the recording files
+those edges in the source segment's tail, at 7129-7155. The 7136 edge is long dropped by
+the time the engine submits, so the two can never meet.
+
+### The confirmation, and it is exact
+
+At the destination's own rows the engine does hold the work, with **identical fingerprints**
+and a constant ordinal lag:
+
+| recorded | engine pending | sha256 |
+|---|---|---|
+| `KOS_DECOMPRESSION_QUEUE#156` @ rf 35 | `KOS_DECOMPRESSION_QUEUE#148` | `82c973d7…` both |
+| `KOS_MODULE_QUEUE#103` @ rf 36 | `KOS_MODULE_QUEUE#101` | `f7d726c9…` both |
+
+Right art, right order, byte-identical submission fingerprints — **2 module ordinals and 8
+decompression ordinals behind**, because one whole art load that the recording performs in
+the source segment's tail has not happened yet on the engine side. This is the same shape as
+the older "roughly 10 module and 16-33 decompression submissions behind" note, now pinned to
+one cause at one seam.
+
+### What this means for the next round
+
+It is not a retirement-schedule question and not a cadence question. It is
+**seam attribution**: the destination's art load belongs to the source segment's tail rows,
+which is the same ownership already recorded for the transition window
+(`zone_act_state` `Game_Mode` bit 7 marking the handover, tail rows belonging to the
+destination load). The engine walks those tail rows — the row model above proves it, since
+the title card's own archives retire inside them — but runs `LoadLevelLoadBlock` only after
+the seam.
+
+So the question to answer is *when in the transition window the engine should reach
+`LoadLevelLoadBlock`*, given that `Obj_TitleCardCreate`'s `Kos_modules_left` gate
+(`:62169-62171`) clears at row ~7063 and the recording starts the terrain load's children at
+7129. Those ~66 rows are the card's remaining locked loop, and deriving the answer from the
+7129 spacing would be fitting; the loop's own release condition
+(`Obj_TitleCardWait` clearing `objoff_48`) is what owns it.
+
+**No hard-rule-4 concern arises from this finding.** Nothing here wants a recorded value to
+decide what work exists or what it carries — the engine builds the identical batch
+independently, as the matching fingerprints show. The open question is purely which engine
+row creates it.
