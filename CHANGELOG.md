@@ -17,6 +17,20 @@ All notable changes to the OpenGGF project are documented in this file.
   and every count in the suite is bit-identical.
 
 ### Fixed
+- **Sonic no longer stays in the hurt animation after landing.** `Sonic_HurtStop`'s landing
+  branch writes four things between detecting the touchdown and returning to
+  `Sonic_Control`: the three speeds zeroed, and the walk animation --
+  `move.b #id_Walk,obAnim(a0)` (`docs/s1disasm/_incObj/1A... "01 Sonic.asm":1949`) and
+  `move.b #AniIDSonAni_Walk,anim(a0)` in Sonic 2 (`docs/s2disasm/s2.asm:38223`). The engine's
+  recovery mirrored the speeds, the routine and the two-second flash timer but not the
+  animation, so a hurt player who touched down kept running the hurt script and republishing
+  `fr_Injury` instead of an angle-derived walk frame. The ROM's own art pipeline then loads
+  the walk frame's tiles one frame later, so the visible symptom was a *missing DPLC
+  transfer* rather than a wrong sprite -- the animation error is in the `ANIMATION`
+  verification group, which `firstNonCameraPhysicsMismatch` cannot report. On
+  `s1-sonic-complete-withemeralds` this takes segment 23 (`lz1`) from 16 comparator errors to
+  green, and moves segment 26 (`lz3`) from 11,334 errors leading at frame 2805 to 10,212
+  leading at frame 3838.
 - **The destination's terrain art is queued inside the title-card window, not past the segment
   seam.** `Obj_TitleCardCreate` holds the card while `Kos_modules_left` is non-zero
   (`docs/skdisasm/sonic3k.asm:62169-62171`); once it clears the ROM builds the card's pieces
