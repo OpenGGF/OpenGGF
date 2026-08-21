@@ -49,8 +49,6 @@ public class Sonic2SuperStateController extends SuperStateController {
     private int paletteFrame;
     /** Countdown timer between palette frame advances. */
     private int paletteTimer;
-    /** Frames remaining in the transformation animation (30 frame timer). */
-    private int transformFramesRemaining;
 
     /**
      * Raw ROM palette data from CyclingPal_SSTransformation.
@@ -88,7 +86,6 @@ public class Sonic2SuperStateController extends SuperStateController {
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
-        transformFramesRemaining = 0;
     }
 
     @Override
@@ -141,8 +138,12 @@ public class Sonic2SuperStateController extends SuperStateController {
         // carries over from whatever the previous cycle left - $0000 on a fresh level
         // (RAM clear), $00F8 after a revert on the shipped ROM (see updatePaletteFade).
         // Zeroing it here would be the fixBugs = 1 behaviour by proxy.
-        paletteTimer = 3;
-        transformFramesRemaining = 30;
+        // ROM Sonic_CheckGoSuper: move.b #$F,(Palette_timer).w (s2.asm:37477).
+        // $F is the transformation's own first interval; 3 is only the value
+        // PalCycle_SuperSonic reloads on every step AFTER the first
+        // (s2.asm:3129). Seeding 3 here shortened the fade's opening step from
+        // 16 frames to 4.
+        paletteTimer = 0xF;
         // Play transformation SFX
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -159,9 +160,20 @@ public class Sonic2SuperStateController extends SuperStateController {
 
     @Override
     protected boolean updateTransformationAnimation() {
+        // The transformation ends when the PALETTE FADE ends, not when an
+        // animation or a counter does. Nothing in Sonic's own code clears
+        // obj_control after Sonic_CheckGoSuper sets it to $81 (s2.asm:37479):
+        // there is no `clr.b obj_control(a0)` anywhere in s2.asm, and
+        // SupSonAni_Transform terminates `$FD, 0` (:38818), which SAnim_End_FD
+        // handles by writing anim(a0) and nothing else (:38439). The one clear
+        // that runs on this path is PalCycle_SuperSonic's, on the pass that
+        // takes Palette_frame to $30:
+        //   move.b #0,(MainCharacter+obj_control).w  ; restore Sonic's movement
+        // (s2.asm:3139). So the freeze's length is a consequence of $F, the
+        // reloads of 3 and the six steps to $30 -- derived, never chosen. This
+        // used to count down an invented 30-frame timer instead.
         updatePaletteFade();
-        transformFramesRemaining--;
-        return transformFramesRemaining <= 0;
+        return paletteState != 1;
     }
 
     @Override

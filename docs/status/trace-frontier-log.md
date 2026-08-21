@@ -110484,3 +110484,71 @@ The duration must fall out of those constants; **do not set a freeze length**.
 Fingerprint: the engine's `x` stays at the ROM's `0x2936` through segment-18
 frame 4049 and releases on the same frame the ROM does, with segment 18's first
 divergence moving past 4049 rather than a shorter freeze merely delaying it.
+
+## 2026-08-21 — the Super freeze LANDED on the palette fade, and a correction to the entry above
+
+Worktree `wt/s3k-hcz-seg9`, branch `bugfix/ai-s2-super-freeze`, both arms pinned
+to `141c91f5a`.
+
+### Correction first
+
+The previous entry said `Sonic2SuperStateController` "does not model
+`Super_Sonic_palette == 1`, the fade-in", and that `onSuperActivated()` sets
+`paletteState = -1` directly. **That was wrong.** `onTransformationStarted()`
+sets `paletteState = 1`, and `updatePaletteFade()` models the fade-in branch
+correctly — including the `Palette_frame >= $30` completion. The class doc even
+describes all three states.
+
+The real defect was narrower than the entry claimed, and worse in kind: the fade
+ran to `$30` correctly and **nothing was hung off its completion**. The
+transformation instead ended on `transformFramesRemaining`, an invented
+**30-frame** counter, and the freeze was released there. A fitted duration, in
+plain sight, in the same class as a correct ROM-derived fade. The fix is smaller
+than the previous entry described — the state machine did not need building, its
+completion needed connecting.
+
+### Landed
+
+- `updateTransformationAnimation()` returns `paletteState != 1` — the
+  transformation ends when the fade ends. `transformFramesRemaining` is deleted,
+  so there is exactly one mechanism for the event.
+- `onTransformationStarted()` seeds `paletteTimer = 0xF`, per
+  `move.b #$F,(Palette_timer).w` (s2.asm:37477). `3` is only what
+  `PalCycle_SuperSonic` reloads on steps after the first (:3129); seeding it
+  shortened the fade's opening step from 16 frames to 4.
+- The release comment in `SuperStateController` no longer cites
+  `clr.b obj_control(a0)`, an instruction that does not exist.
+
+### Fingerprint
+
+`x` holds at the ROM's `0x2936` through frame 4049 — necessary but not
+sufficient — **and the first divergence moves PAST 4049, to 4061**. Twelve
+frames later, not 4050 or 4051, so this is the freeze ending in the right place
+rather than a freeze of a different length. Segment 18: 9564 comparator errors
+-> **3395**. The new frontier at 4061 is `dynamic_art.edges` and
+`player_mapping_frame`, no longer a position field.
+
+### Matrix
+
+Both arms in one worktree from the pinned SHA. `-Ptrace-replay
+-Dsurefire.forkCount=1`, all three ROM properties: **798 tests, 10 failures, 0
+errors, 4 skipped on both arms**, identical 155-class sets, identical
+`Tests run: 0,` counts (2), identical failing-method sets. Full untruncated
+failure text differs on **exactly two lines**, both S2 ARZ1. `-Pguards`: 500
+tests, 0 failures.
+
+Reported honestly rather than as an improvement: the second differing line is
+the `seg12_arz1 -> seg13_arz2` gap axis **changing character again**, from
+`edge_count` 12 vs 11 to `edge[0].edge_ordinal` 139754 vs 139700, a delta of 54.
+Same axis, same axis count, larger ordinal delta. The art stream downstream of
+the freeze has moved and has not been chased.
+
+### The observation worth generalising
+
+An engine comment of the form `// ROM: <instruction>` is normally the strongest
+evidence a port is faithful. Here it was the thing carrying the error: the
+release cited `clr.b obj_control(a0)`, which appears nowhere in `s2.asm`, and
+that citation made an invented 30-frame duration look derived. **Cited
+instructions need checking for existence, not only for what they do.** Two of
+this lane's five defects were found by reading a comment and then failing to
+find what it cited.

@@ -46,6 +46,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
+- **S2's Super transformation freeze now ends when the palette fade ends, as the ROM ends it.**
+  `Sonic_CheckGoSuper` writes `obj_control = $81` on the transformation frame (`s2.asm:37479`)
+  and nothing in Sonic's own code clears it: there is no `clr.b obj_control(a0)` anywhere in
+  `s2.asm`, and `SupSonAni_Transform` terminates `$FD, 0` (`:38818`), which `SAnim_End_FD`
+  handles by writing `anim(a0)` and nothing else (`:38439`). The clear that runs on this path
+  belongs to the palette cycler: `PalCycle_SuperSonic` reloads `Palette_timer` with `3`,
+  advances `Palette_frame` by 8 a step, and on the pass that reaches `$30` executes
+  `move.b #0,(MainCharacter+obj_control).w` (`:3139`).
+
+  The engine ended the transformation on an invented 30-frame counter and released the freeze
+  there, so Sonic began moving while the recording's Super Sonic was still held. The counter is
+  gone; the transformation now ends when the fade does. The transformation also seeded
+  `Palette_timer` with the cycler's reload value of `3` rather than the `$F` that
+  `Sonic_CheckGoSuper` writes (`:37477`), which shortened the fade's opening step from 16
+  frames to 4. No freeze length is set anywhere: the duration falls out of `$F`, the reloads of
+  `3` and the six steps to `$30`.
+
+  On the complete-emerald chain's ARZ1 segment the comparator errors fall from 9564 to 3395 and
+  the first divergence moves from frame 4049 to 4061 — past the freeze rather than shifted
+  within it. Across a three-game trace matrix the two arms differ on exactly two lines, both in
+  this segment.
+
 - **The S1 water splash deleted itself a frame early.** `Ani_Splash` ends with `afRoutine`
   (`docs/s1disasm/_anim/Water Splash.asm`), which advances `obRoutine` rather than deleting;
   `Spla_Delete` calls `DeleteObject` on the *next* pass
