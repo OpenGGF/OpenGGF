@@ -105450,3 +105450,56 @@ do-not-land-alone note. The remaining frame is upstream of the cleanup entry —
 it — and the control now dates it precisely: the vertical reload must submit at 2956, and any
 candidate can be scored by whether the submit-to-first-child-edge gap becomes +1 like the
 control's, on both recordings, rather than by an error total.
+
+## 2026-08-21 — The second consumer cannot arbitrate the bit-7 model, and that is the finding
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `028a32f13`.
+**Measurement only; experiment reverted, tree clean.** The candidate is parked on
+`parked/ai-s3k-geyser-postcamera-bit7-REJECTED` (`f3d1c5432`), off the reflog and out of any
+branch that merges.
+
+### There is a second consumer, and it models it the same way
+
+Ten objects sample `render_flags` bit 7 in `refreshPostCameraRenderState()` and consume it on
+the following dispatch: eight S3K badniks (`Ribot`, `Jawz`, `Mantis`, `MegaChopper`,
+`SnaleBlaster`, `Corkey`, `Blastoid`, `Flybot767`) and two S2 objects (`GrounderWallInstance`,
+`GrounderRockProjectile`). `RibotBadnikInstance:60-74, 96-103` carries the citation:
+`Obj_WaitOffscreen` / `loc_85AD2` (`sonic3k.asm:180271-180281`), whose `tst.b render_flags` /
+`bmi` reads the **same bit** for the **opposite edge** — coming on screen rather than leaving.
+`HCZWaterWallObjectInstance` was the only consumer sampling inside its own update body.
+
+So the model has consensus: ten implementations, one ROM citation, one outlier — the object this
+round is about.
+
+### But the fixtures cannot tell the difference
+
+Inverting all ten to the geyser's pattern — sampling at the point of consumption instead of in
+the hook — and running both trace profiles against the same control:
+
+| profile | control | ten consumers inverted |
+|---|---|---|
+| `-Ptrace-replay` | 800 tests, 6 failures | 800 tests, 6 failures, **per-test text identical** |
+| `-Ptrace-segments` | 70 tests, 52F/8E | 70 tests, 52F/8E, **per-test text identical** |
+
+Not one message changed. The one-frame difference is invisible through every one of those
+consumers in every fixture we have, most likely because they gate on *entering* a `$20`-by-`$20`
+window rather than leaving one, and one frame of camera does not move that boundary.
+
+### What that settles, and what it does not
+
+- **The gate cannot be met as posed.** A second consumer exists and agrees by construction, but
+  no behavioural second witness is available: the fixtures do not exercise the distinction. The
+  candidate is derived from the ROM's loop order and corroborated by consensus, and that is all
+  the evidence there is going to be from this direction.
+- **Landing it is low-risk outside the geyser.** The same experiment shows nothing else in the
+  suite depends on which side of the camera move the sample is taken.
+- **And nothing would catch a regression in it.** The corollary of the same null result: if the
+  model is wrong for any of those ten objects, no test we have says so.
+
+### Recommendation
+
+Judge the candidate on the contract measurement that already exists — 8 unmatched hardware edges
+to 0 in the segment, 29 unchanged in the zone slice — and on the control rule from the preceding
+entry: a correct fix makes the submit-to-first-child-edge gap `+1` like the horizontal batch's.
+The candidate reaches the releasability boundary but not that gap, so it is still half a fix, and
+the remaining frame is the thing to find before landing either.
