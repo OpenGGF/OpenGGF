@@ -1,5 +1,7 @@
 # Changelog
 
+- **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.
+
 - **SMPS fades now follow each retail driver's channel and terminal rules:** Sonic 1 stops active SFX when fading starts, Sonic 3&K halts DAC and PSG immediately while fading FM, Sonic 1/2 clear speed shoes, and all three stop on the shipped terminal count without an extra volume step.
 
 - **SMPS SFX release now matches each shipped driver:** Sonic 1 and Sonic 2 leave interrupted PSG music tracks resting until their next note and no longer inject a synthetic FM takeover reset; Sonic 3&K retains its same-VInt SFX-release/music-service path.
@@ -3040,7 +3042,9 @@ All notable changes to the OpenGGF project are documented in this file.
   Default chip presentation now uses GPGX/libvgm positive-edge PSG noise and
   raw, uninterpolated DAC steps; the smoother alternatives remain opt-in.
   S3K modulation envelopes now apply retail `$85`–`$FF` bytes as signed pitch
-  deltas instead of incorrectly freezing when an envelope crosses below zero.
+  deltas instead of incorrectly freezing when an envelope crosses below zero,
+  and `$82`/`$84` commands reproduce the shipped bogus-`BC` operand read
+  instead of taking the assembly's disabled bug-fixed path.
   Fade-out now uses each retail driver's channel set and terminal ordering:
   Sonic 1 stops SFX at fade start, Sonic 3&K halts DAC and PSG immediately,
   Sonic 1/2 clear speed shoes, and the final counter stops all audio without an

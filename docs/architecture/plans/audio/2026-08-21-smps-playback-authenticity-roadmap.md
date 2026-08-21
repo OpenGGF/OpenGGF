@@ -145,6 +145,10 @@ this phase.
 Acceptance: command-level chip-write fixtures and representative real ROM
 songs/SFX that execute each path.
 
+Status: S3K signed modulation-envelope deltas and the retail bogus-`BC`
+operand reads for `$82`/`$84` are implemented from the decompressed ROM driver.
+The wider envelope, note-fill, tie, and coordination-flag audit remains.
+
 ### Phase 5 — Chip, DAC, PCM, and regional behavior
 
 - Correct the S2 DAC service-cycle constant and validate DAC latch timing.

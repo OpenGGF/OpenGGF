@@ -778,13 +778,13 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             if (envRelOffset < 0 || envRelOffset >= z80AdditionalData.length) {
                 // Fallback for pointers into the main driver blob.
                 if (z80Driver != null && ptr < z80Driver.length) {
-                    loadEnvelopeFromData(i, z80Driver, ptr, modEnvelopes);
+                    loadModEnvelopeFromData(i, z80Driver, ptr);
                     continue;
                 }
                 continue;
             }
 
-            loadEnvelopeFromData(i, z80AdditionalData, envRelOffset, modEnvelopes);
+            loadModEnvelopeFromData(i, z80AdditionalData, envRelOffset);
         }
 
         LOGGER.info("Loaded " + modEnvelopes.size() + " S3K modulation envelopes.");
@@ -815,6 +815,43 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             byte[] env = new byte[len];
             System.arraycopy(buffer, 0, env, 0, len);
             target.put(id, env);
+        }
+    }
+
+    private void loadModEnvelopeFromData(
+            int id, byte[] sourceData, int offset) {
+        // The shipped fix_sndbugs=0 interpreter leaves BC holding the envelope
+        // index, then handles $82/$84 with INC BC / LD A,(BC). Consequently
+        // the operand comes from low Z80 driver memory at index+1, not from the
+        // byte following the command. The fixed assembly branch preserves the
+        // actual envelope pointer; retail locked-on S3K does not take it.
+        byte[] buffer = new byte[256];
+        int len = 0;
+        for (int sourceIndex = 0;
+                sourceIndex < 256 && offset + sourceIndex < sourceData.length;
+                sourceIndex++) {
+            int value = sourceData[offset + sourceIndex] & 0xff;
+            buffer[len++] = (byte) value;
+            if (value == 0x80 || value == 0x81 || value == 0x83) {
+                break;
+            }
+            if (value == 0x82 || value == 0x84) {
+                sourceIndex++;
+                if (sourceIndex + offset >= sourceData.length
+                        || z80Driver == null || len >= z80Driver.length) {
+                    break;
+                }
+                int bogusBcAddress = len;
+                buffer[len++] = z80Driver[bogusBcAddress];
+                if (value == 0x82) {
+                    break;
+                }
+            }
+        }
+        if (len > 0) {
+            byte[] envelope = new byte[len];
+            System.arraycopy(buffer, 0, envelope, 0, len);
+            modEnvelopes.put(id, envelope);
         }
     }
 
