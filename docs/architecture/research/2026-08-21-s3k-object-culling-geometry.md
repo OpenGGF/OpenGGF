@@ -320,15 +320,21 @@ classify by that, never by the margin the engine happens to pass.
 
 ## What I could not establish
 
-1. **`Screen_Y_wrap_value`'s selection rule.** The constants file says "`$7FF` or `$FFF`"
-   (sonic3k.constants.asm:433). I did not trace what sets it per level, and an S3K-5
-   conversion cannot be correct without it. This is the single largest open item.
+1. ~~**`Screen_Y_wrap_value`'s selection rule.**~~ **CLOSED** by
+   [2026-08-21-s3k-screen-y-wrap-value-rule.md](2026-08-21-s3k-screen-y-wrap-value-rule.md).
+   The constants file's "`$7FF` or `$FFF`" (sonic3k.constants.asm:433) is wrong in both
+   directions: there are four values (`$FFFF`, `$FFF`, `$7FF`, `$3FF`) and the default,
+   written unconditionally by `LevelSetup` (sonic3k.asm:102205) for every zone, is
+   **`$FFF`** — not S2's `$7FF`. Only ICZ1, SOZ2 and Slots lower it, and ICZ1 raises it
+   back mid-act.
 2. **The 16 blocked sites by identity.** Not in my inputs; the mapping above is a
    procedure, not an assignment. Someone holding the list should run the procedure per
    site.
-3. **Whether the `$1701` zone/act special case for `Camera_X_pos_coarse_back`
-   (sonic3k.asm:37476-37483) affects any traced route.** I read what it does; I did not
-   establish which zone/act `$1701` is, nor whether it matters at load time only.
+3. ~~**Whether the `$1701` zone/act special case for `Camera_X_pos_coarse_back`
+   (sonic3k.asm:37476-37483) affects any traced route.**~~ **CLOSED** by the follow-up
+   doc: `$1701` is zone 23 act 1 = **HPZS**, the Hidden Palace super-emerald shrine
+   (`HPZS_ScreenInit`, sonic3k.asm:120806). It touches no main-route act, so it does not
+   affect AIZ → HCZ, but a complete-run trace that visits the shrine would hit it.
 4. **`$38(a0)` bit 4 and `status` bit 7 semantics in the deferred-delete tails.** I
    recorded which tail each helper uses but did not chase what consumes those bits, so I
    cannot say whether the tail difference is observable in trace fields.
