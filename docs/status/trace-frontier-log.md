@@ -103628,3 +103628,71 @@ right after gaps in which the guard was not running, which is the shape of a
 ratchet that can only be discovered at raise time and will therefore always be
 raised. That is a property of the mechanism, not of any one raise, and it is
 recorded here as the finding rather than as a defence of this one.
+
+## 2026-08-21 — Ss8-Ss14: the missing art is a stage that never clears, and it is not the bootstrap debt
+
+Round `s3k-ss-missing-work-r1`, branch `bugfix/ai-s3k-ss-missing-work-r1` off `origin/develop`
+`62b27d541`. **Found, not fixed — nothing landed but this entry and the known-discrepancies
+extension.** Probes reverted; `git status` clean.
+
+### Baseline
+
+`-Ptrace-segments`, `TestS3kSonicTailsSs8SpecialStageTraceReplay` at this commit: `Tests run: 1,
+Failures: 0, Errors: 1`, `unmatched recorded hardware completions` — `KOS_DECOMPRESSION_QUEUE#531`
+at raw frame 5151 and `KOS_MODULE_QUEUE#366` at 5152, both `engine pending: <none>`.
+`-Pguards` after the known-discrepancies edit: **500 / 0F / 0E.**
+
+### The seven are the second lap, and the fixtures are structurally identical
+
+All thirteen special-stage fixtures carry exactly **two** timing rows — one KosM parent and its
+one decompression child, near the end of the segment. The split is not structural:
+
+| fixtures | `special_stage_index` | result |
+|---|---|---|
+| `ss_2`-`ss_7` | 1, 2, 3, 4, 5, 6 | pass |
+| `ss_8`-`ss_14` | 0, 1, 2, 3, 4, 6, 5 | **fail** |
+
+`ss_2`-`ss_7` are the first (Chaos Emerald) lap; `ss_8`-`ss_14` are the second (Super Emerald)
+lap. Same shape, same single module, different lap.
+
+### Localised: the art is never queued because the stage never clears
+
+The producer is `Sonic3kSpecialStageManager.queueEmeraldArtModule`, which already picks the
+Super or Chaos archive on `superEmeraldMode` — the ROM branch at `loc_9C28`-`loc_9C52`
+(`sonic3k.asm:12595-12610`) — so the art selection is not the defect.
+
+It is reached only through `placeEmerald` ← `updateClearFlyaway` ← `updateClearSequence`, and
+`updateClearSequence` runs only while `clearRoutine > 0`, which is set only when
+`spheresLeft == 0`.
+
+**Measured, probe on the method entry, reverted:** in a standalone `ss_8` replay
+`updateClearSequence` is entered **zero times**. So is `queueEmeraldArtModule`. The stage never
+reaches its clear phase at all, and the missing hardware work is a symptom several steps
+downstream of that.
+
+The probes were proven live rather than assumed: the same probe placed at
+`queueEmeraldArtModule`'s success path and then at its entry both reported zero while the run's
+failure text stayed byte-identical to the baseline, and a "BUILD FAILURE" line in the log was
+the test failing, not a compile error.
+
+### This is not the segment bootstrap debt
+
+Worth stating explicitly, because the same explanation covered the previous two clusters and it
+does **not** cover this one. The harness seeds the recorded stage from the fixture —
+`AbstractS3kSpecialStageTraceReplayTest` reads `specialStageIndex(trace)` and passes it to
+`initialize(stageIndex)` — so the sphere layout the engine plays is the layout the recording
+played. This is not run-level progression the segment never earned; it is a stage that should
+clear under recorded input and does not.
+
+### The open question, stated as open
+
+**Not measured:** whether the stage fails to clear because the replay diverges in
+sphere/conversion behaviour, or because it does not run far enough to reach the clear. The
+error is a teardown assertion, so it does not establish how many frames were compared, and the
+special-stage comparator's physics verdict is not visible behind it. `spheresLeft` over the
+replay is the next measurement, and it discriminates the two directly.
+
+A caution for whoever takes it: the throw disappearing is not the check. The check is that the
+parent retires against recorded `KOS_MODULE_QUEUE#366` with fingerprint
+`329c7e3b4beba0cc8851941785c42b8252fafecaab787197bf3fcf1001b9520c` at raw frame 5152, and its
+child against `#531` at 5151.

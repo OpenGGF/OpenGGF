@@ -1329,6 +1329,43 @@ unseeded replay start, and do not receive the S3K sidekick seed-row prelude.
 `TestBuildToolingGuard.traceReplayLegacyExceptionsShouldBeDocumentedAndBounded`
 keeps this release-debt entry present.
 
+### Measured Scope: Every Continuation Segment, Not Only Emerald Counts
+
+The consequence above is written for Chaos and Super Emerald counts, but it
+applies to every quantity a mid-run segment inherits rather than earns. Measured
+across the whole `-Ptrace-segments` profile (70 tests: 52 physics failures, 7
+`unmatched recorded hardware completions`, 1 FIFO-full):
+
+| group | first error at trace frame 0 | first error later |
+|---|---:|---:|
+| continuation segments | **29** | **0** |
+| first-of-zone / other | 5 | 18 |
+
+**Every continuation segment in the profile diverges at its first compared row,
+and none diverges later.** The correlation is total, and the fields are the
+carried run state a standalone segment cannot reconstruct:
+
+| field | classes | | field | classes |
+|---|---:|---|---|---:|
+| `rings` | 12 | | `y_speed` | 2 |
+| `tails_x` | 4 | | `x_sub` | 2 |
+| `camera_y` | 4 | | `x_speed` | 1 |
+| `tails_y` | 3 | | `tails_y_speed` | 1 |
+
+The twelve `rings` cases are identical in shape — trace frame 0, engine `0`, ROM
+carrying an accumulated count (8, 75, 77, 85, 96, 117, 126, 150, 156, 177, 180,
+201). Ring count is the same class of state as the emerald counts named above:
+run-level progression the segment never played. Seeding it — or the sidekick
+position, camera, or player sub-pixel and speed columns — from `physics.csv` row
+0 or from run-manifest metadata would be per-frame trace hydration under hard
+rule 4, which this debt exists to refuse. The fixtures carry no such fields:
+`aiz_3/metadata.json` supplies `start_x`/`start_y` and nothing else.
+
+**So these 29 red classes are this debt showing up as failures, not defects.**
+They must not be driven green by seeding entry state, and a report that counts
+them as regressions is overstating. A mid-run segment's frame-0 divergence on a
+carried field is expected until the Removal Condition below is met.
+
 ### Removal Condition
 
 Replace per-segment metadata start positions with a native ROM-state handoff
