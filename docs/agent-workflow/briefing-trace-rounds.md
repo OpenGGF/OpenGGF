@@ -2772,9 +2772,16 @@ Three questions, in order; a "no" at any one ends it:
    re-reads the byte fresh every frame and the argument is about who *writes or clears* it, it
    is not a member.
 2. In the ROM, is the write site reached **after** that object's dispatch already read its
-   selector this frame — a routine-table head read followed by a `bsr`/`bra` tail, or a callback
-   installed into `(a0)`? If the ROM writes it from `Touch_Response` while the object's slot has
-   not yet run, the ROM runs it same-frame too, and there is nothing to fix.
+   selector this frame? **This reduces to a single lookup, with no reasoning about slot order.**
+   `TouchResponse` runs from the *player's own* control routine — `Sonic_Control` /
+   `Tails_Control` / `Knuckles_Control` (`sonic3k.asm:21947, :26159, :30389`) and from Sonic's
+   and Tails' object code in S2 (`s2.asm:38998`) — and the players run before the object slots,
+   so a `Touch_Response` write **always** lands before the touched object's own dispatch, in all
+   three games. So: find where the ROM writes the selector. Inside `Touch_Response` /
+   `Touch_Enemy` → **not a member**, the ROM runs it same-frame too. Inside the object's own
+   routine or its tail → **member**. Every confirmed member writes from its own tail:
+   `bsr.w sub_73FE2` (LBZ), `bra.w ObjC5_HandleHits` (WFZ), `AIZEndBoss_CheckHitOrDefeat` (AIZ2).
+   That is also why ordinary badniks are not members and never will be.
 3. In the engine, does the write happen **before** that object's own `update()` — touch scan,
    solid pass, an earlier object? If engine and ROM write from the same relative position, no
    member.
@@ -2787,3 +2794,17 @@ neither is a member, and neither needed a measurement to exclude.
 **Survey this class by role, not by name, and expand one level through same-class calls.** Five
 distinct idioms model the invariant correctly with no shared searchable name, and one confirmed
 member is neither a boss nor a touch callback. A name grep reports a class that does not exist.
+
+**Confirming a member does not make it landable.** A member whose correction moves a countdown
+moves everything downstream of it. WFZ passes all three questions, has both halves measured, and
+still cannot be landed alone: correcting the engine's 238 to the ROM's 239 puts a new
+`camera_y` error into a trace that had none, because the engine was previously *in phase* with
+the recording while holding a value the ROM does not hold. If a covering trace goes red on a fix
+whose ROM half is solid, suspect a compensation the defect was cancelling, and take the stack out
+in one move (rule 17) rather than reverting the correct half.
+
+**Measurement hazard, from the same case.** `TestS2WfzLevelSelectTraceReplay` fails in *both*
+arms — control `0 errors, 3 warnings` on a pre-existing `tornado.status_byte` warning gate, fixed
+arm `1 error, 3 warnings`. A pass/fail comparison of that class reads "red before, red after, no
+effect" and lands a regression. Only the message separates them (rule 24). A class red in the
+control **for an unrelated reason** is the case that defeats arm-vs-arm status comparison.
