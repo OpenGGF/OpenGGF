@@ -108972,3 +108972,26 @@ assumption in doubt. If the counter drifts against rows anywhere in that window,
 the capsule are displaced by different amounts. Measuring whether the engine's counter advances
 exactly one per trace row across the fight is now the round, and it is worth more than either
 row reading.
+
+## A dead accessor on the AIZ2 boss, and why it must not be "fixed"
+
+Flagged by one lane as a possible defect and checked before anyone acted on it: the class
+declares a collision-size constant citing the object data table's byte, exposes it through the
+shared size accessor, and **nothing reads either**. Ninety-nine classes declare that accessor;
+the ones that matter are the handful whose flags method composes `category | size`. This class's
+flags method does not — it returns a literal, and cites the ROM instruction that writes it.
+
+**Both are correct, and that is the trap.** The table's byte is the value the setup helper
+installs; the boss then overwrites its collision flags when it is fully revealed, and the
+literal is that write. The other lane's threshold derivation — flags to size index to half-width
+plus attacker radius — reproduces the observed contact behaviour exactly, so the literal is the
+value in play.
+
+So the constant is superseded rather than wrong, and its accessor is dead for this class. The
+hazard is a later reader tidying the class by making the flags method compose the constant the
+way its siblings do: that would silently replace the revealed-state size with the pre-reveal
+one, changing a contact threshold that is currently correct, and no test compares it.
+
+Recorded rather than removed, because deletion is a behavioural-surface change on a class under
+active investigation and the constant documents the table's byte usefully. If it is removed
+later, the citation belongs in a comment on the flags method instead.
