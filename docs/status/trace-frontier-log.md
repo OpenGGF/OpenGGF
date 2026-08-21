@@ -101423,3 +101423,75 @@ Two reasons, both concrete:
 Read `Obj_EggCapsule` routine 8's own descent stepping and reproduce its subpixel phase, then
 verify the press lands on row 6007 **and** on the same character. Verify against the chain,
 not the segment alone.
+
+## 2026-08-21 — The capsule presser needs no fix; the descent's residual is an unwritten subpixel
+
+Round off `origin/develop` `0aa2262bb`. **Found, not fixed — nothing landed but this entry.**
+Row convention: 0-based indices into `aiz_5`'s `physics.csv`, `row = cursor - 46432`.
+
+### The presser question, settled: there is no second defect
+
+Evaluating the engine's own trigger predicate against **the recording's** capsule position
+(`x=0x499A`, `y=0x0171`, button at `y=0x0195`) on the ROM's trigger row 6007:
+
+| candidate | dx (range `[-26,26)`) | dy (range `[-28,28)`) | y speed (`< 0`) | passes |
+|---|---|---|---|---|
+| Sonic | **64** | 11 | **+296** | no — fails on two counts |
+| Tails | 8 | 23 | -600 | **yes** |
+
+Sonic is rejected both on horizontal range and on falling rather than rising. **The engine's
+candidate selection is correct.** The wrong presser observed last round is entirely downstream
+of the capsule's one-pixel y error: with the capsule a pixel low at row 5992, Sonic's box
+qualified before Tails ever came near. Fixing the pixel should fix the actor; there is no
+separate selection defect to chase.
+
+Applied row by row against the recording's capsule, Tails first qualifies at row **6006**
+(`dy` 26) and is excluded at **6005** by the same exclusive bound (`dy` 28). The ROM fires at
+6007. That one-row offset is the shape the class's existing
+`defersButtonEligibilityCreatedByParentMotion` /
+`defersCollapsedButtonPastLaterSupportOwner` hooks already exist to model — the ROM's button is
+a later child SST than the parent — so it may need nothing further.
+
+### Every constant in the descent already matches
+
+Read out of the routines that own them rather than off the recording:
+
+| quantity | ROM | engine |
+|---|---|---|
+| initial x | `cameraX + $A0` (`:181537-181538`) | `X_OFFSET = 0xA0` |
+| initial y | `cameraY - $40` (`:181541-181543`) | `Y_START_OFFSET = -0x40` |
+| x direction | `move.w #1,$3A(a0)` (`:181544`) | `xDirection = 1` |
+| descent step | `move.l #$4000` / `add.l d1,y_pos(a0)` toward `cameraY + $40` (`:181616-181624`) | `0x4000` longword step toward `cameraY + targetYOffset()` |
+| swing max | `Swing_Setup1`: `$3E = $C0` (`:136835-136836`) | `SWING_MAX_SPEED = 0xC0` |
+| initial y velocity | `y_vel = $C0` (`:136837`) | `yVelocity = SWING_MAX_SPEED` |
+| swing acceleration | `$40 = $10` (`:136838`) | `SWING_ACCELERATION = 0x10` |
+| swing phase | `bclr #0,$38(a0)` (`:136839`) | `swingDescending = false` |
+
+The ordering matches too: the ROM applies the `$4000` approach step, then `Swing_UpAndDown`
+(velocity only), then `MoveSprite2` (velocity into position) — which is
+`updateRoute8BeforeTrigger()` then `updateSwingAndMove()`. The comparison sense matches
+(`cmp.w y_pos,d0 / bhi` keeps `+$4000`; the engine's unsigned compare does the same), and
+`Swing_UpAndDown`'s double-application on the flip frame nets to an unchanged velocity, which
+the engine reproduces.
+
+### The residual is the one field the routine never writes
+
+`loc_86592` sets the capsule's y with **`move.w d0,y_pos(a0)`** — a word write to the pixel
+half only. It never touches `y_pos+2`, the subpixel word, which therefore still holds whatever
+the object's earlier routine-4 motion left there; `MoveSprite2` runs every frame in that
+routine and writes it. The engine's `initializeRoute8FromCamera` sets `ySubpixel = 0`.
+
+With a quarter-pixel approach step plus the swing accumulating into the same longword, a
+different initial subpixel shifts every pixel transition of the descent by up to a frame —
+which is exactly the observed ±1, one **higher** at row 5945 and one **lower** at 5992.
+
+**So there is no constant left to correct.** Reproducing the phase means modelling what the
+capsule's own routine-4 motion left in `y_pos+2` before route 8 began. Picking a starting
+subpixel that makes this recording's y values line up would be fitting the fixture, not
+modelling the ROM, and it would desync the first different recording — the descent is slow
+enough that any starting phase reproduces *some* run.
+
+### Next
+
+Trace the capsule's routine-4 motion to establish what it leaves in `y_pos+2`. Then both gates
+apply: the press must land on row 6007 **and** on Tails.
