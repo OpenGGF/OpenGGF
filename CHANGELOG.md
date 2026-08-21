@@ -3033,6 +3033,8 @@ All notable changes to the OpenGGF project are documented in this file.
   schedules DPCM at the driver's documented 295-cycle two-sample cadence.
   Default chip presentation now uses GPGX/libvgm positive-edge PSG noise and
   raw, uninterpolated DAC steps; the smoother alternatives remain opt-in.
+  S3K modulation envelopes now apply retail `$85`–`$FF` bytes as signed pitch
+  deltas instead of incorrectly freezing when an envelope crosses below zero.
 - Sonic 2: submit the new level's player art where the ROM does. `Level:` reaches
   `InitPlayers` (s2.asm:4946) only after `LoadZoneTiles`, `loadZoneBlockMaps`,
   `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`,

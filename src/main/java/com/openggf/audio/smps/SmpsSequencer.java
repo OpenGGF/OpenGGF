@@ -2963,7 +2963,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             int value = t.modEnvData[t.modEnvPos] & 0xFF;
             t.modEnvPos++;
 
-            if (value < 0x80) {
+            // Shipped S3K fix_sndbugs=0 reserves only $80-$84 as commands.
+            // Values $85-$FF take the signed branch (H=$FF) and are ordinary
+            // negative pitch deltas; treating every negative byte as HOLD
+            // freezes all retail modulation envelopes that cross below zero.
+            if (value < 0x80 || value >= 0x85) {
                 int envVal = (byte) value;
                 int multiplier = t.modEnvMult + 1; // S3K DefDrv: EnvMult = Z80
                 t.modEnvCache = (short) (envVal * multiplier);

@@ -618,6 +618,32 @@ public class TestSonic3kCoordFlagParity {
         assertTrue(synth.psgWrites.contains(0x83), "PSG frequency should reflect +3 modulation delta");
     }
 
+    @Test
+    public void negativeModEnvelopeByteIsASignedPitchDelta() {
+        byte[] psgTrack = {
+                (byte) 0xF4, 0x01,
+                (byte) 0x92, 0x04,
+                (byte) 0xF2
+        };
+        Map<Integer, byte[]> modEnvs = new HashMap<>();
+        modEnvs.put(1, new byte[] { (byte) 0xFF, (byte) 0x81 });
+
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(
+                1, 1, null, psgTrack, null, modEnvs);
+        SmpsSequencer seq = new SmpsSequencer(
+                smps, EMPTY_DAC, synth,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[25000]);
+
+        SmpsSequencer.Track psg = findTrack(
+                seq, SmpsSequencer.TrackType.PSG);
+        assertEquals(-1, psg.modEnvCache,
+                "fix_sndbugs=0 applies $85-$FF as signed deltas");
+        assertTrue(synth.psgWrites.contains(0x8F),
+                "PSG frequency should include the negative envelope delta");
+    }
+
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
             Map<Integer, byte[]> psgEnvelopes) {
         return createMusicData(channels, psgChannels, fmTrack, psgTrack, psgEnvelopes, null);
