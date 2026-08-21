@@ -105221,3 +105221,28 @@ in flight.
 the vblank phase. `TestS1Credits03Lz3TraceReplay` was re-run and **passes green without any
 seeding**, so the resolution rests on the `d0`-clobber emulation and the frame-0 establishment
 alone — the surrounding claim survives the correction.
+
+## Parked S1 threads, in the order the lane that found them would take them
+
+Left by the S1 lane on stand-down, 2026-08-21, at develop `70b475333`. Each is written up
+in its own entry above; this is the ordering and the one-line reason, so the next round does
+not have to reconstruct the priority.
+
+1. **Tick ownership.** The object-visible V-int counter ticks inside the object pass, so the
+   three readers that run before that pass see the previous frame's value where the ROM's
+   interrupt increments first. Four call sites, one documented one-tick-per-interrupt
+   invariant, three callers stranded outside the frame step. Written up to be taken cold and
+   wants a clean lane with nothing else in flight.
+2. **The LZ3 tunnel entry, one frame early.** A real second defect, not the clock and not the
+   pre-move/post-move ordering — both were measured and ruled out. Its skew is a genuine
+   sequence insertion, which no uniform time offset can produce.
+3. **LZ1_2 at 18,205 errors.** Same family as the hurt-landing walk write, different
+   transition: push-release, with the engine holding `fr_Push1` where the recording publishes
+   `fr_Walk13`. Its own round; the hurt-landing fix does not touch it, measured.
+4. **LZ3's ordinal-skew mass.** The segment's ten thousand errors run to frame 12,725 and are
+   not the frontier field, which is a self-healing one-frame blip worth about one error.
+
+**Read the triage table's two columns as independent signals.** It ranks by error count and by
+first-error frame, and LZ3 showed those pointing at completely different defects in the same
+segment. A first-error field is a sorting key, not a size — it aimed three rounds wrong in one
+session, twice from the lead and once from the lane.
