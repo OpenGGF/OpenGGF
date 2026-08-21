@@ -105649,3 +105649,57 @@ Why the touch flag is written a dispatch earlier than the ROM writes it. Two sha
 and this round does not separate them: the engine's touch scan running at a different point in the
 frame than `Touch_Response` does, or this badnik being dispatched at a different point relative to
 the player. The second would be slot-order, which has its own family in this log.
+
+## 2026-08-21 — Frame order: the ROM's touch scan runs before every badnik, by slot construction
+
+Round `s3k-chain-r9`, branch `bugfix/ai-s3k-chain-r9` off `origin/develop` `1f277c251`.
+**Found, not fixed, and parked as shared runtime.** No probes needed; this one is settled from the
+ROM's own RAM map and object order.
+
+### The two shapes, separated
+
+The preceding entry left two possibilities for why the Mega Chopper's defeat bounce lands one
+dispatch early: the touch scan sitting at a different point in the frame, or this badnik being
+dispatched at a different point relative to the player. The ROM's object RAM decides it
+(`sonic3k.constants.asm:303-307`):
+
+| slot | object |
+|---|---|
+| 0 | `Player_1` — its routine ends in `jsr (TouchResponse)` (`sonic3k.asm:22022`) |
+| 1 | `Player_2` |
+| 2 | `Reserved_object_3` = `Obj_ResetCollisionResponseList` (`:8112`, `:8467-8469`) |
+| 3+ | everything else, each adding itself with `Add_SpriteToCollisionResponseList` (`:21200-21209`) during its own dispatch |
+
+So in the ROM the players scan **first**, a dedicated object clears the list **immediately after
+them**, and every other object re-registers itself **after** the scan. `Touch_Loop` reads each
+candidate's live `x_pos`/`y_pos` (`:20655-20667`), and at that moment no non-player object has
+moved this frame — the geometry is tested against **last frame's badnik positions**.
+
+That is the scan's position in the frame, not this badnik's slot. It is structural, it applies to
+**every** touched object in all three games, and nothing about the Mega Chopper is special except
+that it is where a one-frame difference first became visible.
+
+### Why it produces exactly one dispatch
+
+The engine tests the same geometry against a badnik position updated closer to the scan. For a
+badnik closing on the player, one frame of approach is the difference between in range and not,
+so the touch fires a dispatch early, `collision_property` is set a dispatch early, and
+`MegaChopper_CheckCapture` — a faithful port, consuming the flag at the top of its routine —
+applies the bounce a dispatch early. Every part of the chain is correct except the frame the
+geometry is sampled on.
+
+### Parked, deliberately
+
+This is shared runtime across S1, S2 and S3K, reached by every object with a touch profile. It
+wants a fresh round with a full matrix and nothing else in flight — the same treatment as the tick
+ownership move — and not the tail of a long session. Two changes tonight whose entire content was
+*when* something runs were rejected, and a third was correct and net-negative until its partner
+landed; this one is larger than all three.
+
+### The dependency chain, end to end
+
+For whoever picks this up: the touch scan's frame position → the Mega Chopper bounce a dispatch
+early at 1433 → `y`/`x_speed` at 1434 → `camera_y` seven pixels low by 2900 → the HCZ geyser's
+fall drawn one frame too long → its cleanup entry late → its reload submitted past its releasing
+edge → the KosM depth tripwire and the segment's abort. One frame-order decision, eight
+consequences, and four rounds of this log spent on the last two of them.
