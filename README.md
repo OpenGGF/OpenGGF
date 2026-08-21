@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K object-culling geometry (2026-08-21, research only):** ROM-backed
+  analysis identifies five S3K culling/deletion predicates, only two of which
+  correspond to the four previously catalogued S1/S2 families. It also records
+  S3K's distinct height, render-flag, coordinate-space, and coarse-camera
+  semantics. No runtime conversions were included.
+
 - **Object culling-margin audit follow-up (2026-08-21, analysis only):** a
   disassembly-backed review classified 18 S1/S2/shared literal-margin deletion
   gates and found that none faithfully implemented its owning ROM predicate.
