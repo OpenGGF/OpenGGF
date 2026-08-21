@@ -58,6 +58,41 @@ All notable changes to the OpenGGF project are documented in this file.
   `$04`, as `lz1_completerun` slot 12 shows across 11934-11949. Measured over that fixture the
   engine produces 28 splash objects of 16 executions each, against the ROM's 28 episodes of 16
   rows: exact on both count and lifetime.
+- **S2's Super Sonic transformation now installs its state where the ROM does, and Tails no
+  longer transforms at all.** Three defects in one place, found by dumping every comparator
+  error in the `s2-sonic-tails-complete-emeralds` chain's ARZ1 segment instead of reading its
+  first reported field.
+
+  `Sonic2GameModule` handed a `Sonic2SuperStateController` to every playable, sidekick
+  included, so the engine's Tails ran the whole transformation. S2 grants a Super form to Sonic
+  alone -- `Sonic_CheckGoSuper` is reached from `Sonic_JumpHeight` inside `Obj01_MdJump`
+  (`docs/s2disasm/s2.asm:37432`, `:37455`) and `Sonic_Super` is called from `Obj01_Control`
+  (`:36249`); Obj02 has no counterpart of either, and Super Tails is an S3K feature needing the
+  super emeralds. The recording agrees: at ARZ1 frame 4035 `sidekick_animation_id` is `0x0002`
+  against the engine's `0x001F`, the transformation animation. That stray transformation was
+  also driving the sidekick's mapping frame, and through it the DPLC stream whose transfer
+  deficit first exposed the group.
+
+  The activation gate was evaluated at the end of the playable's tick, after the frame's move.
+  `Obj01_Modes` dispatches the movement mode before the move runs, so the ROM's
+  `tst.b y_vel(a0)` reads the velocity the PREVIOUS frame left; the engine read the one this
+  frame had just produced and fired a frame early. Recorded `player_y_speed` is `0x0028` at row
+  4018, which is the value the ROM's frame-4019 check sees.
+
+  And the Super constants and the ring-drain counter were installed when the transformation
+  animation finished rather than on the transformation frame. `Sonic_CheckGoSuper` sets
+  `Sonic_top_speed $A00` / `Sonic_acceleration $30` / `Sonic_deceleration $100`
+  (`:37481-37483`) itself, so the move behind it on that same frame carries them --
+  `x_vel $181 -> $121`, a doubled `$60` step where the engine produced an ordinary `$18`. It
+  never writes `Super_Sonic_frame_count`, so the first `Sonic_Super` pass decrements a zero and
+  drains a ring on the transformation frame before reloading 60 (`:37510-37512`); with `bpl`
+  that reload yields 61 frames between drains, the cadence the recording shows at rows 4019,
+  4080 and 4141.
+
+  Measured on the chain's ARZ1 segment: 12580 comparator errors to 9564, `rings` and `x_speed`
+  matching for the whole segment, and the first divergence moving from frame 4019 to 4049.
+  Across a three-game trace matrix the two arms differ on exactly two lines, both in this
+  segment; no S1 or S3K result moved.
 
 - **The S1 water splash could occupy its reserved SST slot two and three times over.** Sonic 1
   loads the splash with `move.b #id_Splash,(v_splash).w`

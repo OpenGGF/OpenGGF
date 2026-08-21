@@ -31,12 +31,45 @@ public abstract class SuperStateController {
         ringDrainCounter = 0;
     }
 
+    /**
+     * The ROM's {@code Sonic_JumpHeight} test, which reaches
+     * {@code Sonic_CheckGoSuper} (docs/s2disasm/s2.asm:37432, :37455).
+     *
+     * <p>It is called from {@code Obj01_MdJump}, which the {@code Obj01_Modes}
+     * dispatch enters BEFORE the frame's {@code Sonic_ChgJumpDir} and
+     * {@code ObjectMoveAndFall} (:36241). So the {@code y_vel} the gate reads is
+     * the one left at the end of the PREVIOUS frame, not the one this frame's
+     * move is about to produce. Running the gate from {@link #update()} instead
+     * -- which the playable drives at the end of its tick, after movement,
+     * animation and touch -- read the same predicate against the same value one
+     * frame sooner, and transformed on the complete-emerald run's ARZ1 frame
+     * 4018 where the recording transforms at 4019.
+     */
+    public void checkTransformationBeforeMove() {
+        if (state == SuperState.NORMAL) {
+            checkTransformationTrigger();
+        }
+    }
+
     public void update() {
+        SuperState stateAtEntry = state;
         switch (state) {
-            case NORMAL -> checkTransformationTrigger();
+            case NORMAL -> {} // the trigger runs pre-move; see checkTransformationBeforeMove
             case TRANSFORMING -> updateTransformation();
             case SUPER -> updateSuper();
             default -> {} // REVERTING not used (revert is instant in ROM)
+        }
+        // Sonic_Super is gated on Super_Sonic_flag (s2.asm:37506), which
+        // Sonic_CheckGoSuper writes on the transformation frame (:37478), and
+        // Obj01_Control calls it behind the movement dispatch on that same frame
+        // (:36249). So it runs on the transformation frame itself and through
+        // the transformation animation, not only once the animation finishes.
+        // updateSuper is the SUPER-state entry into the same body, so this
+        // covers only the frames it does not -- including the one on which the
+        // animation completes and the state becomes SUPER.
+        if (stateAtEntry != SuperState.SUPER
+                && (state == SuperState.TRANSFORMING || state == SuperState.SUPER)) {
+            runSuperFrameWork();
         }
         // Post-revert effects (e.g. palette fade-out) run every frame regardless of state
         updatePostRevertEffects();
@@ -282,8 +315,21 @@ public abstract class SuperStateController {
         // the complete-emerald run's ARZ1 transform that frame carries x_vel
         // $181 -> $121, a full doubled Super acceleration step of $60
         // (s2.asm:37483 sets acceleration $30), and y_vel $28 -> $60 of
-        // gravity. Freezing here instead kept both at their pre-transform
-        // values. The freeze is applied at the next tick, below.
+        // gravity. The freeze is applied at the next tick, below.
+        //
+        // Sonic_CheckGoSuper installs the Super constants itself --
+        // Sonic_top_speed $A00, Sonic_acceleration $30, Sonic_deceleration $100
+        // (s2.asm:37481-37483) -- so the move that runs behind it on this same
+        // frame uses them. Installing the profile at animation completion
+        // instead left the transform frame on the normal constants, an ordinary
+        // $18 step rather than the ROM's $60.
+        player.applyExternalPhysicsProfile(getSuperProfile());
+        // Sonic_CheckGoSuper does NOT write Super_Sonic_frame_count, so the
+        // first Sonic_Super pass decrements whatever it already held -- zero --
+        // and drains a ring on the transformation frame itself before reloading
+        // 60 (:37510-37512). Arming the counter to a full interval here, or at
+        // animation completion, skips that first drain.
+        ringDrainCounter = 0;
     }
 
     private void updateTransformation() {
@@ -292,9 +338,7 @@ public abstract class SuperStateController {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         if (updateTransformationAnimation()) {
             state = SuperState.SUPER;
-            player.applyExternalPhysicsProfile(getSuperProfile());
             swapToSuperAnimProfile();
-            ringDrainCounter = getRingDrainInterval();
             onSuperActivated();
             // ROM: clr.b obj_control(a0) - unfreeze after transformation complete
             ObjectControlState.none().applyTo(player);
@@ -303,6 +347,14 @@ public abstract class SuperStateController {
     }
 
     private void updateSuper() {
+        runSuperFrameWork();
+    }
+
+    /**
+     * The ROM's {@code Sonic_Super} (s2.asm:37505-37525), which runs on every
+     * frame {@code Super_Sonic_flag} is set.
+     */
+    private void runSuperFrameWork() {
         // ROM: Sonic_Super checks Update_HUD_timer == 0 every frame.
         // When the signpost/egg prison clears the timer, Super Sonic reverts.
         // Do NOT use player.isObjectControlled() - many objects (CPZ pipes, grabbers)
@@ -313,8 +365,14 @@ public abstract class SuperStateController {
             return;
         }
         updateSuperPalette();
+        // ROM: subq.w #1,(Super_Sonic_frame_count).w / bpl.w return
+        // (s2.asm:37510-37511). The branch is taken while the DECREMENTED value
+        // is still non-negative, so the drain fires only when the counter was
+        // already zero -- a reload of 60 therefore yields 61 frames between
+        // drains, which is the cadence the complete-emerald recording shows
+        // (ARZ1 drains at rows 4019, 4080, 4141).
         ringDrainCounter--;
-        if (ringDrainCounter <= 0) {
+        if (ringDrainCounter < 0) {
             ringDrainCounter = getRingDrainInterval();
             player.addRings(-1);
             if (player.getRingCount() <= 0) {

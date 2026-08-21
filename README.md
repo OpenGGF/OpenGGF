@@ -214,6 +214,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S2 Super transformation group (merged 2026-08-21):** three defects with three
+  owners, landed together -- the sidekick was given a Super state controller in a
+  game that has no Super sidekick, the activation test was evaluated after the
+  frame's movement instead of before it, and the Super physics profile and ring
+  drain were installed when the transformation animation completed rather than on
+  the transformation frame. The affected chain segment falls from 12,580 comparator
+  errors to 9,564 and the art-transfer gap at the following boundary collapses from
+  forty-two fields to one.
+
 - **S1's reserved water-splash slot no longer duplicates occupants (merged
   2026-08-21):** repeated surface crossings leave the live slot-12 splash
   running, matching the ROM's inert id-byte rewrite instead of stacking two or
