@@ -111123,3 +111123,77 @@ The cross-object install gap contains **zero confirmed members and zero measurab
 today**. It was worth surveying for the boundary rather than the population: the direction is
 safe by construction except through one allocator, and that one allocator makes membership
 runtime-dependent rather than readable.
+
+## 2026-08-21 -- BATCH: the 9 same-object candidates, ROM half settled, engine half 1 of 9
+
+Measured at `080fdb520` / `2a62432cf`. **Found, not fixed.** Partial by design of the
+instrument, not abandoned -- the ROM half is fully settled, the engine half is not.
+
+### The ROM half is settled for all nine at once
+
+Rule 108's Q2 asks where the ROM writes the selector. For this whole batch the answer comes
+from **one routine per game**, not nine readings (rule 18 -- an identical fingerprint means the
+same lever):
+
+- S3K `Touch_Enemy`'s boss path (`sonic3k.asm:20908-20925`): negates the player's velocities,
+  backs `collision_flags` into `$25`, records the hitting player in `$1C`, zeroes
+  `collision_flags`, decrements `boss_hitcount2`, and on reaching zero does `bset #7,status(a1)`.
+- S2 `Touch_Enemy_Part2` (`s2.asm:85373-85382`): zeroes `collision_flags`, decrements
+  `collision_property`, and on reaching zero sets status bit 7.
+
+**Neither writes a routine.** The install is always in the boss's own dispatch, testing the
+status bit or the hit count. So Q2 is satisfied for all nine, and the only open question per
+class is the engine half: does its own dispatch consume the newly installed selector on the
+install frame?
+
+### The engine half, and the instrument's own failure mode
+
+A generic detector drove each boss to its final hit through `onPlayerAttack`, snapshotted every
+scalar on the object and its state, then dispatched one frame and compared.
+
+**The first version of that detector was wrong in the dangerous direction.** It reported
+`IczMinibossInstance` as moving nothing on the install frame, which reads as "models the
+invariant". It does not: `IczMinibossInstance.updateBossLogic` early-returns before its routine
+switch while `arenaGateComplete` is false, so in a bare fixture the defeated arm never executes
+at all. Nothing moved because nothing ran -- a null result from code that never ran (rule 45/49),
+one step from being recorded as a false exclusion.
+
+The fix is a **positive control**: dispatch a *second* frame too. If the arm is live, a countdown
+moves on at least one of the two. If neither frame moves anything, the arm never ran and the
+result is inconclusive rather than negative. Any future use of this instrument needs that
+control.
+
+### Per-class state
+
+| class | ROM half | engine half |
+|---|---|---|
+| `MhzMinibossInstance` | member | **CONFIRMED MEMBER, measured** -- install frame moved `defeatExplosionIntervalCounter` 2->1, `defeatHandoffQueued` false->true, and `destroyed` false->true |
+| `IczMinibossInstance` | member | inconclusive -- `arenaGateComplete` gate; needs a fixture that opens the arena |
+| `Sonic2ARZBossInstance` | member | not reached -- bare fixture never lands the final hit |
+| `HczMinibossInstance` | member | not reached (same) |
+| `MhzEndBossInstance` | member | not reached (same) |
+| `CnzMinibossInstance` | member | not reached (same) |
+| `AizMinibossInstance` | member | unconstructible -- needs `SonicConfigurationService` |
+| `LbzMinibossInstance` | member | unconstructible -- needs a `Rom` |
+| `MgzDrillingRobotnikInstance` | member | unconstructible -- needs runtime-art coordination |
+
+**1 of 9 confirmed by measurement.** The other eight are candidates whose ROM half is now
+settled and whose engine half is blocked on fixture depth, not on analysis. Four need a hit
+sequence the bare fixture does not produce; three need services; one needs its arena opened.
+
+### Reproducing
+
+The detector was a throwaway JUnit class, deleted before the commit. It reflectively finds an
+`ObjectSpawn` constructor, builds through `ObjectConstructionContext.construct` with a
+`TestObjectServices` carrying a `Camera` and a `GameStateManager`, loops
+`update(frame++, null); onPlayerAttack(null, null);` until `state.defeated` flips, then compares
+scalar snapshots across the install frame **and the frame after it**, ignoring
+`lastUpdatedVIntRunCount`. Run with
+`mvn -q -Dmse=off -Dtest=<ProbeClass> -DfailIfNoTests=false test`.
+
+### Not done
+
+No fix landed. `MhzMinibossInstance` is confirmed but **no trace covers it** -- MHZ is far past
+the current S3K chain frontier -- and the WFZ result stands as the warning: a correct member
+fix can be load-bearing, and there is no covering trace here to reveal a compensation if one
+exists. Landing it would be unverifiable in exactly the way that produced the WFZ regression.
