@@ -2,11 +2,12 @@
 
 ## Status
 
-Phase-one descriptor planning and descriptor-backed catalog validation were
-implemented and measured on 2026-08-21. Actual replay still uses the eager
-`SegmentPlan` path. The phase-two active-segment ownership design below was
-approved in principle and then narrowed by independent authority review on
-2026-08-22. Implementation and replay-memory measurements remain pending.
+Implemented and feature-branch validated on 2026-08-22. Phase-one descriptor
+planning and descriptor-backed catalog validation landed first; phase two now
+uses those descriptors for complete-run replay and owns at most one eager
+segment payload. The acceptance evidence is recorded in
+[`2026-08-22-active-segment-ownership-validation.md`](../validation/trace/2026-08-22-active-segment-ownership-validation.md).
+Independent final review and main-workspace integration remain pending.
 
 ## Problem
 
@@ -39,9 +40,42 @@ forced-GC measurement phases. The warmed measurement reported 1,087,200,800
 retained bytes for eager planning and 8,660,152 bytes for descriptor planning.
 The descriptor graph retained 1,078,540,648 fewer
 bytes (99.20%) while representing the same 409,630 rows. This is a planning
-and catalog-validation result, not a replay-memory result: live, visual, and
-audio replay memory is unchanged until the active-payload work below is
-implemented.
+and catalog-validation result, not a replay-memory result: at that checkpoint,
+live, visual, and audio replay memory was unchanged. The active-payload work
+below subsequently implemented the replay ownership boundary.
+
+## Validated implementation result
+
+The phase-two implementation preserves the approved eager comparator,
+bootstrap, phase, timing, and special-stage objects behind a guarded,
+closeable active lease. Production, headless, visual, and complete-audio
+owners detach their aliases and close the old lease before another payload is
+retained. Descriptor-only planning has no eager launch escape path.
+
+Two independent warmed, forced-GC forks measured descriptor graphs of
+9,255,056 and 9,254,968 bytes. Their maximum installed consumer graphs were
+115,657,656 and 115,553,504 bytes, reductions of 89.36% and 89.37% from the
+fixed 1,087,200,800-byte eager baseline. Both maxima came from `s3k-59-soz_2`.
+A disposable diagnostic measured the largest real special-stage graph at
+22,737,320 and 22,604,408 bytes, both from the S2 composite `s2-1-ss`.
+
+The deterministic resource oracle passed twice: each run completed 100 cycles
+per ordinary and special-stage shape and observed exactly 1,000 reader opens
+and 1,000 closes. Authority/ownership guards passed 12/12 and focused migration
+tests passed 177/177. The recorded 67-segment oracle consumed all 1,653 AIZ
+rows, retained the first `camera_x` mismatch (`0x1300` / `0x1308`), the terminal
+segment-0 `giant_ring` miss, both unmatched timing completions, and zero
+dynamic-art gaps/failures. A fresh all-game trace sweep completed every one of
+its 165 classes with the established 12 failures and no errors. The exact JDK
+21 default-suite comparison found zero new or worsened `kind + class#method`
+identities against synchronized `develop`; focused groups were message-identical
+before and after that suite.
+
+This validation does not certify the quarantined phase/bootstrap authority
+listed below. The reachability guard also lacks a historical live-leak RED,
+although its retained-comparator mutation proves sensitivity to the extra-root
+shape. These are recorded evidence and authority debts, not additions to the
+approved surface.
 
 ## Full design decision
 
@@ -279,3 +313,7 @@ Raw evidence is retained under
 `$AGENT_SCRATCH_ROOT/tasks/performance-candidate-validation-20260821T161822Z-3319778-904a0080/trace-retention/`
 and the phase-one benchmark and verification logs under
 `$AGENT_SCRATCH_ROOT/tasks/trace-segment-descriptor-benchmark-20260821T192520Z-4127426-d936ca5a/`.
+Phase-two implementation and validation evidence is retained under
+`$AGENT_SCRATCH_ROOT/tasks/trace-active-segment-cursor-20260822T002616Z-260779-06974cb7/`;
+the durable result and exact regression accounting are in the linked validation
+report.

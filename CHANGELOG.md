@@ -1,5 +1,14 @@
 # Changelog
 
+- **Complete-run trace ownership is measured and regression-checked:** two
+  warmed, forced-GC forks retained 9.25 MB of whole-run descriptors and at most
+  115.6 MB with a real active payload installed, an 89.36-89.37% reduction from
+  the 1.087 GB eager baseline. The maximum real special-stage sample was 22.7
+  MB, 100-cycle resource checks balanced every open and close, the 67-segment
+  oracle consumed all 1,653 AIZ rows at its unchanged frontier, and the JDK 21
+  default suite introduced no new or worsened failure identity against
+  synchronized `develop`.
+
 - **Long visual trace runs now finish and exit cleanly from every unrepresented
   span:** terminal tails enter their final payload-free gap exactly once, and
   Escape can tear down a run while it is between segments, inside a
@@ -39,9 +48,9 @@
 - **Trace catalog validation now uses compact run-segment descriptors:** the
   planner scans and validates one segment at a time, retaining 8,660,152 bytes
   after warmed forced-GC measurement on the 67-segment run instead of the eager
-  plan's 1,087,200,800 bytes (99.20% lower). Actual replay deliberately remains
-  on the eager plan in this phase, so replay memory and behaviour are unchanged;
-  active-segment cursor ownership remains separately approved future work.
+  plan's 1,087,200,800 bytes (99.20% lower). That phase established compact
+  planning; active replay now uses the separately measured one-segment
+  ownership boundary described above.
 
 - **A Flybot767 spawned by an LBZ alarm no longer wakes a frame early:** the
   drone waits behind an offscreen placeholder, and the game only lets it start

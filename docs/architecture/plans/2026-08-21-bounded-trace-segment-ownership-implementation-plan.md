@@ -40,7 +40,7 @@
 - Preserves: `TraceRunSegmentDescriptor.executionPolicy()` exactly as phase one computes it.
 - Produces: `TraceRunPlaybackCoordinator.fromDescriptors(TraceRunManifest, TracePlaybackProfile, int, List<TraceRunSegmentDescriptor>)` while the eager constructor remains during migration; generic-list erasure forbids overloading the constructor.
 
-- [ ] **Step 1: Add failing scalar-parity and coordinator tests**
+- [x] **Step 1: Add failing scalar-parity and coordinator tests**
 
 For synthetic level, presentation-bridge, and special-stage descriptors, assert constructor range checks and that the coordinator consumes descriptor values without loading a payload. On a synthetic run, compare each descriptor with the current eager reference:
 
@@ -58,7 +58,7 @@ for (int i = 0; i < eager.size(); i++) {
 
 Add `levelLoopRowCount:int` to the exact descriptor component whitelist; approve no other component.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunSegmentDescriptorPlanning,com.openggf.tests.trace.runs.TestTraceRunReplayWalkerControlFlow,com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator" test
@@ -66,7 +66,7 @@ mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunSegmentDescriptor
 
 Expected: compilation failures for the missing descriptor component and descriptor-backed coordinator factory.
 
-- [ ] **Step 3: Implement the minimal descriptor extension**
+- [x] **Step 3: Implement the minimal descriptor extension**
 
 Add `int levelLoopRowCount` immediately before `executionPolicy` and validate:
 
@@ -89,7 +89,7 @@ this.levelLoopRows = descriptors.stream()
 Do not add a public descriptor helper for either scalar.
 Keep the eager `List<SegmentPlan>` constructor compiling until Task 5 migrates its last caller; share initialization through a private constructor that takes non-generic scalar lists or another erasure-safe internal shape.
 
-- [ ] **Step 4: Run focused tests and descriptor benchmark GREEN**
+- [x] **Step 4: Run focused tests and descriptor benchmark GREEN**
 
 Run Step 2, then:
 
@@ -101,7 +101,7 @@ mvn -Ptrace-replay -Dmse=off \
 
 Require zero failures/errors and descriptor retained bytes `<= 16,777,216`.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 Stage only the listed files and commit as `refactor(traces): retain coordinator scalars in descriptors` with policy trailers.
 
@@ -121,7 +121,7 @@ Stage only the listed files and commit as `refactor(traces): retain coordinator 
 - Produces: public final lease methods `descriptor()`, `trace()`, `specialStageRows()`, `isClosed()`, and idempotent `close()`; constructor/mutable fields remain non-public.
 - Produces: package-private `TraceFiles.ReaderLifecycleEvent { OPENED, CLOSED }`, `ReaderLifecycleObserver.onEvent(ReaderLifecycleEvent, Path)`, and `AutoCloseable observeReadersForTest(ReaderLifecycleObserver)`; observation is thread-confined and defaults to no-op.
 
-- [ ] **Step 1: Write failing lease tests**
+- [x] **Step 1: Write failing lease tests**
 
 Cover ordinary, special-stage composite, construction failure, post-close access, and repeated close:
 
@@ -142,11 +142,11 @@ payload.close();
 For special stages require non-null metadata-only `TraceData` and game-owned rows with matching row count, metadata, timing schedule, optional S2 pass-binder shape, and spill-normalised rows equal to the eager reference.
 Treat S2 pass-binder presence as parity with the eager reference rather than universally non-empty; add a separate positive fixture containing `run_objects_end` that proves the binder and spill-normalised rows are retained when present.
 
-- [ ] **Step 2: Write failing reader-balance tests**
+- [x] **Step 2: Write failing reader-balance tests**
 
 Install `TraceFiles.ReaderLifecycleObserver` around actual plain/gzip loads. Count every successful open and close, including a special-stage composite whose second parser fails. Require `opened == closed`; restore the thread-confined observer in `finally`.
 
-- [ ] **Step 3: Run suites and verify RED**
+- [x] **Step 3: Run suites and verify RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.trace.replay.runs.TestActiveSegmentPayload,com.openggf.trace.TestTraceReaderLifecycle" test
@@ -154,7 +154,7 @@ mvn -Dmse=off "-Dtest=com.openggf.trace.replay.runs.TestActiveSegmentPayload,com
 
 Expected: compilation failure because the lease, facade, and observer do not exist.
 
-- [ ] **Step 4: Implement the lease and failure-atomic facade**
+- [x] **Step 4: Implement the lease and failure-atomic facade**
 
 Use nullable mutable payload fields only so close breaks reachability:
 
@@ -199,11 +199,11 @@ public final class ActiveSegmentPayload implements AutoCloseable {
 
 Move current `loadSegmentPayload` logic behind `openActiveSegment`; construct the lease only after both special-stage components succeed. Retain exact parsing order and diagnostics. Wrap readers from `TraceFiles.openReader` so the observer sees one `OPENED` and one `CLOSED`; production no-observer state retains no observer/path.
 
-- [ ] **Step 5: Run Task 2 suites GREEN**
+- [x] **Step 5: Run Task 2 suites GREEN**
 
 Run Step 3; require balanced reader events, correct ordinary/composite shapes, post-close guards, and idempotent close.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 Commit as `feat(traces): lease one active run segment payload`, staging Task 2 files and `CHANGELOG.md` if required by the hook.
 
@@ -225,11 +225,11 @@ Commit as `feat(traces): lease one active run segment payload`, staging Task 2 f
 - Retains `TraceRunReplayWalker.plan(...)` only as benchmark/reference until Task 7.
 - Preserves validation ordering, diagnostics, profiles, row ranges, dynamic-art validation, and BK2 parsing.
 
-- [ ] **Step 1: Write failing descriptor-only launch tests**
+- [x] **Step 1: Write failing descriptor-only launch tests**
 
 Inject a descriptor planner returning sentinel descriptors and an eager loader that throws if called. Assert `prepareDescriptorRunLaunch` returns the descriptors, validates profile/row/range from them, and opens no payload. Add a transitive assertion that `PreparedDescriptorRunLaunch` reaches no `TraceData`, `TraceRunSpecialStageRows`, `TraceEvent`, `Reader`, `InputStream`, or mapped buffer. Also assert the legacy eager result remains available and unchanged during this migration task.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.trace.catalog.TestTraceRunLaunchValidation,com.openggf.trace.catalog.TestTraceCatalogDescriptorOwnership,com.openggf.tests.trace.runs.TestTraceRunPlanningOwnership" test
@@ -237,15 +237,15 @@ mvn -Dmse=off "-Dtest=com.openggf.trace.catalog.TestTraceRunLaunchValidation,com
 
 Expected: the parallel descriptor preparation API does not exist.
 
-- [ ] **Step 3: Add descriptor preparation**
+- [x] **Step 3: Add descriptor preparation**
 
 Add the parallel descriptor result/method and validate metadata and row counts from each descriptor, returning an immutable descriptor list. Keep the eager result and planner pair compiling for visual/headless consumers not migrated until Tasks 5-6. No migrated production path may call the eager method.
 
-- [ ] **Step 4: Run catalog/planning suites GREEN**
+- [x] **Step 4: Run catalog/planning suites GREEN**
 
 Run Step 2, then `mvn -Dmse=off "-Dtest=com.openggf.trace.catalog.*" test`.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 Commit as `perf(traces): prepare run launch from descriptors` with policy trailers.
 
@@ -278,7 +278,7 @@ Commit as `perf(traces): prepare run launch from descriptors` with policy traile
 - Adds nullable `ActiveSegmentPayload activeRunPayload` and package-private `ActiveSegmentFactory` test seam with `open(TraceRunSegmentDescriptor, int) throws IOException` plus a default `close(ActiveSegmentPayload)` that delegates to the lease's no-throw close.
 - Adds distinctly named descriptor helpers `hasDescriptorHardwareTimingStream` and `descriptorHardwareTimingSegments`; retain eager helpers until the headless consumer migrates.
 
-- [ ] **Step 1: Write failing lifecycle transcript tests**
+- [x] **Step 1: Write failing lifecycle transcript tests**
 
 Use an injected factory that calls the real facade, records each opened lease,
 and asserts every preceding lease is closed before returning the next. Cover
@@ -296,17 +296,17 @@ close 1
 Assert maximum active count one and zero during gap/terminal tail.
 For each visual/audio entry point, inject one failure before the reflective session constructor accepts the lease and one failure after ownership transfer but before replay bootstrap completes. Require the local owner to close before transfer, and session teardown to detach aliases and close after transfer.
 
-- [ ] **Step 2: Write failing alias-release tests**
+- [x] **Step 2: Write failing alias-release tests**
 
 Hold weak references to source `TraceData`, special rows, comparator/driver, and aux graph. Advance/fail, clear only test locals, force GC with bounded retries, and require each source reference clears while destination remains usable. Attach boundary probe, playback observer, HUD/camera model, fixture, dynamic-art comparison, and S2 pass binder.
 
-- [ ] **Step 3: Run launcher lifecycle tests RED**
+- [x] **Step 3: Run launcher lifecycle tests RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherActivePayloadLifecycle,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.TestTraceSessionLauncherProductionFailureCleanup,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestLevelIterationAdmissionController,com.openggf.TestTraceSessionSpecialStageTerminalExit,com.openggf.TestVisualTraceRunTerminalTail,com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle" test
 ```
 
-- [ ] **Step 4: Implement production ownership**
+- [x] **Step 4: Implement production ownership**
 
 Call `prepareDescriptorRunLaunch`, open segment zero in `launchRun` before `prepareConfiguration`, and pass descriptors and lease through the five-argument session constructor. Existing eager consumers receive `activeRunPayload.trace()` or `.specialStageRows()` unchanged. Convert all package-level tests that directly construct run sessions to this constructor, using null only for deliberately empty/non-driving lifecycle states.
 
@@ -316,7 +316,7 @@ At source close, preserve verification order, then detach all aliases and close 
 
 During destination admission: enter hardware timing, open destination, run return-boundary/adopted-row comparison, attach consumers. Attachment failure detaches and closes before `failRun`. Construct the coordinator through `fromDescriptors`; no new consumer reads coordinator scalars. Use the distinctly named descriptor timing helpers, leaving eager helpers only for not-yet-migrated headless code.
 
-- [ ] **Step 5: Run launcher/run-control suites GREEN**
+- [x] **Step 5: Run launcher/run-control suites GREEN**
 
 Run Step 3 plus:
 
@@ -331,7 +331,7 @@ Before the ROM-backed command, discover `.gen` files from the project root as re
 
 Document known base-equivalent launcher errors only if each reproduces unchanged in an isolated one-method fork; no new error is acceptable.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 Commit as `perf(traces): own one active production run payload`, including `CHANGELOG.md` and required release summary.
 
@@ -348,17 +348,17 @@ Commit as `perf(traces): own one active production run payload`, including `CHAN
 - Headless setup uses `List<TraceRunSegmentDescriptor>` and one lease per driven segment.
 - `HeadlessRunCoordinatorAdapter` owns coordinator results; `sourceComparatorExhausted` no longer calls `levelLoopRowCount` directly.
 
-- [ ] **Step 1: Write failing headless lifecycle tests**
+- [x] **Step 1: Write failing headless lifecycle tests**
 
 Drive ordinary -> special -> bridge -> return. Assert open/close order, zero payload in gaps, adopted row parity, S2 pass parity, and source weak-reference collection. Exercise a failing comparison and failing destination open to prove the per-boundary `finally` clears every alias before propagating the primary failure.
 
-- [ ] **Step 2: Run tests RED**
+- [x] **Step 2: Run tests RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle,com.openggf.tests.trace.runs.TestTraceRunReplayWalkerControlFlow" test
 ```
 
-- [ ] **Step 3: Convert `AbstractRunChainTest` by ownership**
+- [x] **Step 3: Convert `AbstractRunChainTest` by ownership**
 
 Use descriptors for all topology/history variables, including replacing retained `SegmentPlan` values and `uncomparedInteriorSourceLevel`. Use `descriptor.openingFrame()` plus metadata for return-boundary comparison, and the active destination lease only for the adopted row. The current lease is the only payload source:
 
@@ -371,11 +371,11 @@ try (ActiveSegmentPayload active =
 
 Do not capture `TraceData` beyond the block or store it in lists/report fields. Route direct `levelLoopRowCount` logic through the coordinator adapter. In a per-boundary `finally`, clear the probe delegate, `productionComparator`, active/structural comparator, special driver/pass binder, dynamic-art comparison, slot probe, fixture aliases, and current lease before the next open. Mark the eager coordinator constructor and eager timing helpers eligible for removal, but defer removal to Task 7's whole-repository caller proof.
 
-- [ ] **Step 4: Run headless chain suites GREEN**
+- [x] **Step 4: Run headless chain suites GREEN**
 
 Find subclasses with `rg -l "extends AbstractRunChainTest" src/test/java | sort`, pass their class names to Maven `-Dtest=` under `-Ptrace-replay`, and preserve exact frontiers. No baseline-passing trace may regress.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 Commit as `test(traces): bound headless run payload ownership`.
 
@@ -393,27 +393,27 @@ Commit as `test(traces): bound headless run payload ownership`.
 - Visual and complete-audio replay share one failure-safe active-lease lifecycle.
 - Adds only inside the test harness a package-private `VisualPayloadCloser.close(ActiveSegmentPayload)` injection seam whose normal default delegates to the lease's idempotent no-throw close; it is not an acquisition or relay path.
 
-- [ ] **Step 1: Write a failing cleanup-suppression test, then add lifecycle characterization**
+- [x] **Step 1: Write a failing cleanup-suppression test, then add lifecycle characterization**
 
 First inject a closer that invokes the real close and then throws while a distinct primary observer/replay failure is active. Assert the primary failure remains primary, the cleanup failure is suppressed exactly once, and lease/payload aliases are collectible; this test must fail because the injection seam is absent. Then cover active first/last row, gap, handoff, adopted row, tail, visual/audio failure, abort, repeated teardown, and normal audio completion. Preserve the Task 4 proof that frame view leaves the factory transcript empty and uses `descriptor.laggedRows().get(localRow)`.
 
-- [ ] **Step 2: Run tests RED**
+- [x] **Step 2: Run tests RED**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle,com.openggf.tests.trace.runs.TestCompleteRunAudioReplayCadence" test
 ```
 
-- [ ] **Step 3: Implement failure-safe visual/audio cleanup**
+- [x] **Step 3: Implement failure-safe visual/audio cleanup**
 
 Keep the descriptor preparation/session/frame-view path established in Task 4. Add the closer seam only to make cleanup failure observable, and route both entrypoint `finally` blocks through it after clearing HUD/camera/observer aliases. Complete-audio replay remains owned inside `VisualRunReplayHarness`; update its cadence regression rather than inventing a second audio lease owner. Suppress injected cleanup failures onto the primary replay failure and throw cleanup alone only when no primary exists. Add the remaining assertion, observer, audio, abort, reachability, and repeated-teardown cases without adding another acquisition path.
 
-- [ ] **Step 4: Run visual/audio/special-stage suites GREEN**
+- [x] **Step 4: Run visual/audio/special-stage suites GREEN**
 
 ```bash
 mvn -Ptrace-replay -Dmse=off "-Dtest=com.openggf.tests.trace.runs.*Visual*,com.openggf.tools.audio.completerun.*,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRows,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver" test
 ```
 
-- [ ] **Step 5: Commit Task 6**
+- [x] **Step 5: Commit Task 6**
 
 Commit as `perf(traces): bound visual and audio run payloads`.
 
@@ -439,7 +439,7 @@ Commit as `perf(traces): bound visual and audio run payloads`.
 - Exact accessor/facade allowlist: `com.openggf.TraceSessionLauncher`, `com.openggf.tests.trace.runs.AbstractRunChainTest`, `com.openggf.tests.trace.runs.VisualRunReplayHarness`, `com.openggf.trace.replay.runs.TestActiveSegmentPayload`, `com.openggf.trace.TestTraceReaderLifecycle`, `com.openggf.TestTraceSessionLauncherActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership`, `com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance`, and `com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard`. No naming pattern or package-wide allowance is permitted.
 - Benchmark property: `openggf.trace.activePayloadBenchmark=true` under `-Ptrace-replay`.
 
-- [ ] **Step 1: Write failing public-surface/caller guard**
+- [x] **Step 1: Write failing public-surface/caller guard**
 
 Require final lease, non-public constructor, exact public methods `descriptor`, `trace`, `specialStageRows`, `isClosed`, `close`, and one public walker open facade. Use the existing ArchUnit dependency to inspect compiled production and test bytecode and reject every direct call or method reference targeting `trace`, `specialStageRows`, or the walker facade outside the exact FQCN allowlist above. Lock the exact public API and constructor visibility with reflection. Do not derive test permission from a class-name pattern or package.
 
@@ -447,11 +447,11 @@ Add a separate source scan for reflective and method-handle acquisition (`Class.
 
 Also reject relay APIs: none of the allowlisted callers may add a public/protected method or field that exposes `ActiveSegmentPayload`, its raw `TraceData`, or `TraceRunSpecialStageRows`, and no helper class may acquire on an allowlisted caller's behalf. Dedicated tests may inspect/use the lease but must not become production acquisition paths.
 
-- [ ] **Step 2: Write failing installed-consumer reachability proof**
+- [x] **Step 2: Write failing installed-consumer reachability proof**
 
 Attach real ordinary comparator and special driver/pass binder, then detach/close. Keep the complete installed ownership roots reachable—session/launcher, playback observer, boundary delegate, HUD/camera suppliers, fixture, comparator/structural comparator, special driver/pass binder, dynamic-art comparison, slot probe, descriptor list, and active lease—through sampling. After normal and injected-failure teardown, keep all non-payload session roots alive, force GC, and require prior `TraceData`, special rows, aux events, comparator/driver/binder, and lease graphs to clear. Mutation-control by intentionally retaining a comparator and proving the reference remains until removed.
 
-- [ ] **Step 3: Write opt-in memory/resource benchmark**
+- [x] **Step 3: Write opt-in memory/resource benchmark**
 
 Warm/release planners before both arms. Measure both arm orders or fresh forks, use isolated lexical scopes for each arm, clear locals between them, and call `Reference.reachabilityFence` on every root after the sample so JIT liveness cannot bias the result. Keep the fixed warmed eager baseline `1,087,200,800` bytes as the denominator; do not replace it with a same-run noisy measurement. Keep descriptors plus the complete installed-consumer roots enumerated in Step 2 reachable while sampling all 67 S3K segments and representative S1/S2 special stages. Print:
 
@@ -461,11 +461,11 @@ TRACE_ACTIVE_PAYLOAD_BENCH eager_retained_bytes=... descriptor_retained_bytes=..
 
 Assert descriptor `<= 16,777,216`, installed `<= 268,435,456`, and `100 * (1 - max_installed_bytes / 1_087_200_800.0) >= 75`. Keep deterministic 100-cycle plain/gzip/ordinary/S1/S2/S3K balance assertions in package-peer `com.openggf.trace.TestTraceReaderLifecycle`, where the package-private observer is accessible. The performance test runs that suite as a separate acceptance command and uses `/proc/self/fd` only as a Linux smoke check, never as the deterministic oracle.
 
-- [ ] **Step 4: Remove the transitional eager launch path**
+- [x] **Step 4: Remove the transitional eager launch path**
 
 After `rg` and ArchUnit prove no production/headless/visual/audio caller remains, remove `PreparedRunLaunch`, `prepareRunLaunch`, `RunSegmentPlanner`, `RunPlannerPair.segmentPlanner`, the eager timing helpers, and any non-benchmark use of `TraceRunReplayWalker.plan(...)`. Update catalog discovery/validation tests to the descriptor result. Convert every remaining four-argument eager-coordinator call in `TestTraceRunPlaybackCoordinator` to `fromDescriptors` (or an explicit three-argument no-plan case) before removing that constructor. Retain `plan(...)` only if the eager benchmark/reference still requires it, and guard that no runtime or replay harness calls it.
 
-- [ ] **Step 5: Run guard/ownership RED, then fix only enforcement gaps**
+- [x] **Step 5: Run guard/ownership RED, then fix only enforcement gaps**
 
 ```bash
 mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard,com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership" test
@@ -473,7 +473,7 @@ mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestActiveSegmentPayloadAutho
 
 Do not relax allowlists or reachability assertions; remove leaked aliases or excess API.
 
-- [ ] **Step 6: Run benchmark and reader lifecycle GREEN twice and preserve logs**
+- [x] **Step 6: Run benchmark and reader lifecycle GREEN twice and preserve logs**
 
 ```bash
 mvn -Ptrace-replay -Dmse=off \
@@ -484,7 +484,7 @@ mvn -Dmse=off "-Dtest=com.openggf.trace.TestTraceReaderLifecycle" test
 
 Repeat in a fresh Maven fork and require both passes meet every cap.
 
-- [ ] **Step 7: Commit Task 7**
+- [x] **Step 7: Commit Task 7**
 
 Commit as `test(traces): enforce active payload ownership`.
 
@@ -504,33 +504,38 @@ Commit as `test(traces): enforce active payload ownership`.
 - Produces exact before/after heap, frontier, resource, suite, branch, and commit evidence.
 - Marks design implemented only after every gate passes.
 
-- [ ] **Step 1: Synchronize the main workspace and establish the exact baseline**
+- [x] **Step 1: Synchronize the main workspace and establish the exact baseline**
 
 Inspect the main workspace for user changes without switching its branch. Fetch `origin`, fast-forward pull the checked-out `develop` only when doing so preserves all user changes, record the resulting commit, and run `mvn -Dmse=off test` there on JDK 21. Preserve the complete baseline log and exact failing method identities. If the main workspace cannot be safely fast-forwarded, stop integration work and report the unresolved state rather than using a stale or destructive baseline.
 
-- [ ] **Step 2: Run focused acceptance suites**
+- [x] **Step 2: Run focused acceptance suites**
 
 Run catalog/planning, lease/reader, coordinator/frame driver, launcher lifecycle, live/structural comparator, timing authority, S1/S2/S3K special stage, headless chain, visual, and complete-audio suites on JDK 21. Preserve complete logs in managed scratch.
 
-- [ ] **Step 3: Run recorded 67-segment oracle**
+- [x] **Step 3: Run recorded 67-segment oracle**
 
 Require all 1,653 AIZ rows, first mismatch `camera_x` expected `0x1300` actual `0x1308`, same terminal segment-0 `giant_ring` failure, and identical unmatched timing completions/dynamic-art result.
 
-- [ ] **Step 4: Run fresh complete trace sweep**
+- [x] **Step 4: Run fresh complete trace sweep**
 
 Use the trace-replay profile with all discovered ROM properties. Record counts, failures/errors/skips, first-error frame/field, and base-equivalent errors. No baseline-passing trace may fail/starve.
 
-- [ ] **Step 5: Run the development full-suite comparison required by `AGENTS.md`**
+- [x] **Step 5: Run the development full-suite comparison required by `AGENTS.md`**
 
 Run the same `mvn -Dmse=off test` command in the development worktree and compare exact failing method identities with Step 1. A red baseline is acceptable; a new or worsened failure is not. Run the focused suites again in the development worktree after this full-suite command so both broad and relevant evidence are fresh.
 
-- [ ] **Step 6: Update documentation and self-review**
+- [x] **Step 6: Update documentation and self-review**
 
 Record exact measurements, special-stage maxima, resource cycles, oracle, full-suite comparison, and authority debt. Mark completed plan boxes. Run `git diff --check` and `git status --short`.
 
-- [ ] **Step 7: Commit documentation**
+- [x] **Step 7: Commit documentation**
 
 Commit as `docs(traces): validate active segment ownership`, staging all listed artifacts with truthful `updated` trailers.
+
+Steps 1-7 are evidenced by
+[`2026-08-22-active-segment-ownership-validation.md`](../validation/trace/2026-08-22-active-segment-ownership-validation.md).
+Independent review and integration remain controller-owned Steps 8 and 9 and
+are intentionally unchecked here.
 
 - [ ] **Step 8: Independent final code/spec review**
 

@@ -214,13 +214,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Bounded active-segment trace ownership (2026-08-22, validated for
+  integration):** complete-run replay now retains compact descriptors for the
+  whole run and one eager payload only for the active segment. Two warmed,
+  forced-GC forks measured 9.25 MB descriptor graphs and 115.6 MB maximum
+  installed graphs, 89.36-89.37% below the 1.087 GB eager baseline; the largest
+  special-stage graph was 22.7 MB. The recorded 67-segment oracle consumed all
+  1,653 AIZ rows with its exact established frontier, and the JDK 21 default
+  suite introduced zero new or worsened failure identities against synchronized
+  `develop`.
+
 - **Compact trace-run catalog validation (2026-08-21):** run manifests now
   validate through immutable descriptors produced one segment at a time. On
   the real 67-segment Knuckles super-emerald run, warmed retained planning heap
   fell from 1,087,200,800 to 8,660,152 bytes (99.20%) with identical segment
-  and row counts. Actual replay remains eager and behaviourally unchanged in
-  this phase; active-segment cursor migration remains future work requiring
-  separate approval.
+  and row counts. That was the descriptor-planning phase; active replay now
+  uses the separately validated ownership boundary described above.
 
 - **ROM-shaped object range primitives (2026-08-21):** shared helpers now model
   Sonic 2's one-sided behind-screen sign test and the three-game player-relative

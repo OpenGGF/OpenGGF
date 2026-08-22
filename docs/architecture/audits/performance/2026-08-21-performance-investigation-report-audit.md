@@ -63,7 +63,7 @@ renderer tests passed; the 15 headless tests had two pre-existing errors in the
 fire-continuation queue fixture (`AIZ fire continuation has no prepared
 fire-overlay payload`).
 
-### Complete-run trace retention: promoted to an ownership design
+### Complete-run trace retention: implemented and validated
 
 The 67-segment Knuckles super-emerald fixture contains 58,796,492 uncompressed
 physics bytes and 1,548,327,089 uncompressed auxiliary bytes, for
@@ -99,8 +99,9 @@ closeable segment-local cursor, documented in
 `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`.
 Confidence: **confirmed and measured**.
 
-Phase-one implementation now scans one segment at a time into immutable
-descriptors and routes catalog launch validation through those descriptors.
+At the phase-one checkpoint, implementation scanned one segment at a time into
+immutable descriptors and routed catalog launch validation through those
+descriptors.
 An opt-in forced-GC comparison on the same 67-segment run, from the Task 3
 working tree based at `b89a732e4`, measured 1,087,200,800 retained bytes for
 the eager plan and 8,660,152 retained bytes for the descriptor plan: a
@@ -108,11 +109,21 @@ the eager plan and 8,660,152 retained bytes for the descriptor plan: a
 whole-run warmups and released those graphs before either measured arm, so
 persistent parser/cache initialization is outside both deltas. Both plans
 represented 67 segments and
-409,630 rows/raw-frame mappings. This establishes the planning boundary and
-benefits catalog validation now; actual replay still owns the eager
-`SegmentPlan` graph, so its retained heap is unchanged in this phase. Moving
-replay to a closeable active-segment cursor remains separately approved future
-work.
+409,630 rows/raw-frame mappings. This established the planning boundary and
+benefited catalog validation at that checkpoint; actual replay still owned the
+eager `SegmentPlan` graph, so its retained heap was unchanged in that phase.
+Moving replay to a closeable active-segment cursor remained separately approved
+future work.
+
+Phase two has now completed that approved migration. Two warmed, forced-GC
+forks retained 9,255,056 and 9,254,968 bytes for the complete descriptor graph
+and peaked at 115,657,656 and 115,553,504 bytes with one real segment payload
+installed into its consumers. Those are 89.36% and 89.37% reductions from the
+fixed eager baseline; both overall maxima were `s3k-59-soz_2`. The largest real
+special-stage samples were 22,737,320 and 22,604,408 bytes, both the S2
+composite `s2-1-ss`. Reader lifecycle checks balanced exactly 1,000 opens and
+1,000 closes per run across 100 cycles of every ordinary and special-stage
+shape.
 
 The benchmark passed 1/1 and the descriptor-plus-six-catalog functional set
 passed 49/49. Of 151 requested authority/replay controls, 148 passed and three
@@ -156,6 +167,28 @@ explicitly requires a clean tool environment. Its clean-environment focused
 rerun passed all 7 tests. Four baseline failures were absent from the
 development run, consistent with the repository's documented order-dependent
 red-set churn. No new failure was attributable to the documentation changes.
+
+### Active-segment implementation comparison
+
+The final feature comparison used synchronized `develop` at
+`d9650fd7dff2828c75c39ca575ffbafbbde7409d` and the implementation head
+`3a3c1fc52169a16f390a1d1b8083cf74473fb357`, both on JDK 21 with the exact
+`mvn -Dmse=off test` command. The baseline completed 15,295 tests with 56
+failures, 81 errors, and 26 skips; the feature completed 15,324 tests with 54
+failures, 65 errors, and 26 skips. Exact fresh-Surefire `kind + class#method`
+comparison found 119 shared identities, zero new or worsened identities, and
+18 baseline identities absent from the feature result.
+
+The fresh all-game trace-profile sweep completed all 165 launched classes: 840
+tests, 12 established failures, zero errors, and 6 skips. The 67-segment oracle
+consumed every one of its 1,653 AIZ rows and retained the exact first mismatch,
+terminal `giant_ring` miss, unmatched timing completions, and dynamic-art
+result. Focused catalog/ownership, special-stage, headless-chain, and
+visual/audio groups were rerun after the default suite; their failure identities
+and complete messages were byte-identical to the pre-suite controls. Full
+evidence, including the baseline-equivalent reds and quarantined authority debt,
+is in
+[`2026-08-22-active-segment-ownership-validation.md`](../../validation/trace/2026-08-22-active-segment-ownership-validation.md).
 
 ## Report-level assessment
 
@@ -318,10 +351,11 @@ tests do not execute this GLFW/vsync pacing path and cannot validate it.
 
 ## Corrected priority
 
-1. **Complete bounded trace-segment ownership only as a separately approved
-   replay migration.** Compact descriptor planning and catalog validation are
-   implemented and measured; the active-segment cursor remains the larger
-   change and its cross-boundary oracle must remain exact.
+1. **Keep bounded trace-segment ownership enforced by its measured gates.**
+   Descriptor planning and the active-segment replay migration are implemented
+   and feature-branch validated. Further row/profile streaming remains a
+   separate change that first requires an authority audit and must preserve the
+   exact cross-boundary oracle.
 2. **Resolve dynamic rewind identity ownership before pruning.** Add the
    previous/partial collision-list and destroyed-child cleanup tests, then
    choose an identity retirement owner that covers every reference holder and
