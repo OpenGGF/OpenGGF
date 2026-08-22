@@ -2618,12 +2618,50 @@ class TestTraceSessionLauncherRunBranch {
     private static void setField(
             TraceSessionLauncher session, String fieldName, Object value) {
         try {
-            Field field = TraceSessionLauncher.class.getDeclaredField(fieldName);
+            Field field = launcherField(fieldName);
             field.setAccessible(true);
             field.set(session, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
+    }
+
+    private static Field launcherField(String fieldName)
+            throws NoSuchFieldException {
+        return switch (fieldName) {
+            case "activeSession" -> TraceSessionLauncher.class
+                    .getDeclaredField("activeSession");
+            case "comparator" -> TraceSessionLauncher.class
+                    .getDeclaredField("comparator");
+            case "dynamicArtSegmentGameplayMode" -> TraceSessionLauncher.class
+                    .getDeclaredField("dynamicArtSegmentGameplayMode");
+            case "fixture" -> TraceSessionLauncher.class
+                    .getDeclaredField("fixture");
+            case "runAdvancer" -> TraceSessionLauncher.class
+                    .getDeclaredField("runAdvancer");
+            case "runBoundaryProbe" -> TraceSessionLauncher.class
+                    .getDeclaredField("runBoundaryProbe");
+            case "runCoordinator" -> TraceSessionLauncher.class
+                    .getDeclaredField("runCoordinator");
+            case "runDynamicArtSegments" -> TraceSessionLauncher.class
+                    .getDeclaredField("runDynamicArtSegments");
+            case "runExternalDiagnostics" -> TraceSessionLauncher.class
+                    .getDeclaredField("runExternalDiagnostics");
+            case "runFrameDriver" -> TraceSessionLauncher.class
+                    .getDeclaredField("runFrameDriver");
+            case "runHardwareTiming" -> TraceSessionLauncher.class
+                    .getDeclaredField("runHardwareTiming");
+            case "runSpecialLocalRow" -> TraceSessionLauncher.class
+                    .getDeclaredField("runSpecialLocalRow");
+            case "runSpecialRowDriver" -> TraceSessionLauncher.class
+                    .getDeclaredField("runSpecialRowDriver");
+            case "runSpecialVerificationPending" -> TraceSessionLauncher.class
+                    .getDeclaredField("runSpecialVerificationPending");
+            case "runVblankClock" -> TraceSessionLauncher.class
+                    .getDeclaredField("runVblankClock");
+            default -> throw new IllegalArgumentException(
+                    "unsupported launcher field " + fieldName);
+        };
     }
 
     private static void setObjectField(
@@ -2749,6 +2787,15 @@ final class TestRunPayloads {
             Bk2Movie movie,
             List<TraceRunReplayWalker.SegmentPlan> plans,
             com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot) {
+        return session(entry, movie, plans, snapshot, null);
+    }
+
+    static TraceSessionLauncher session(
+            com.openggf.trace.catalog.TraceEntry entry,
+            Bk2Movie movie,
+            List<TraceRunReplayWalker.SegmentPlan> plans,
+            com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot,
+            java.util.concurrent.atomic.AtomicBoolean payloadClosed) {
         List<TraceRunSegmentDescriptor> descriptors = descriptors(plans);
         ActiveSegmentPayload initial = plans.isEmpty()
                 ? null : payload(descriptors.getFirst(), plans.getFirst());
@@ -2759,6 +2806,14 @@ final class TestRunPayloads {
             public ActiveSegmentPayload open(
                     TraceRunSegmentDescriptor descriptor, int segmentIndex) {
                 return payload(descriptor, plans.get(segmentIndex));
+            }
+
+            @Override
+            public void close(ActiveSegmentPayload payload) {
+                payload.close();
+                if (payloadClosed != null) {
+                    payloadClosed.set(payload.isClosed());
+                }
             }
         };
         return session;

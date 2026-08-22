@@ -48,7 +48,7 @@ class TestVisualTraceRunTerminalTail {
 
     @AfterEach
     void clearActiveSession() {
-        setStaticField("activeSession", null);
+        setActiveSession(null);
         Engine.clearGlobalInstance();
         GameServices.playbackDebug().endSession();
         SessionManager.clear();
@@ -134,7 +134,7 @@ class TestVisualTraceRunTerminalTail {
         invokeBeginTail(session,
                 new TraceRunReplayWalker.TerminalMovieTailPlan(
                         1, 2, GameMode.TITLE_SCREEN));
-        setStaticField("activeSession", session);
+        setActiveSession(session);
         InputHandler input = new InputHandler();
         GameLoop loop = mock(GameLoop.class);
         when(loop.getInputHandler()).thenReturn(input);
@@ -330,7 +330,7 @@ class TestVisualTraceRunTerminalTail {
         installCurrentLoop(loop);
         GameServices.playbackDebug().startSession(movie,
                 movieFrames == 3 ? 1 : 0);
-        setStaticField("activeSession", session);
+        setActiveSession(session);
         return new TerminalFixture(
                 session, payload, coordinator, timing, gameplay, loop);
     }
@@ -393,9 +393,10 @@ class TestVisualTraceRunTerminalTail {
         }
     }
 
-    private static void setStaticField(String name, Object value) {
+    private static void setActiveSession(TraceSessionLauncher value) {
         try {
-            Field field = TraceSessionLauncher.class.getDeclaredField(name);
+            Field field = TraceSessionLauncher.class
+                    .getDeclaredField("activeSession");
             field.setAccessible(true);
             field.set(null, value);
         } catch (ReflectiveOperationException e) {

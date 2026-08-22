@@ -19,7 +19,6 @@ import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
-import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
@@ -32,6 +31,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,8 +74,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
     @Test
     void runtimeFailureAbortsAuthorityAndReturnsToTitleWithoutStrictClose() {
         TraceReplayFixture fixture = mock(TraceReplayFixture.class);
-        TraceSessionLauncher session = activeSession(fixture);
-        ActiveSegmentPayload payload = activePayload(session);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
+        TraceSessionLauncher session = activeSession(fixture, payloadClosed);
         RuntimeException primary = new RuntimeException("production body failed");
 
         TraceSessionLauncher.runProductionIterationIfActive(() -> {
@@ -83,7 +83,7 @@ class TestTraceSessionLauncherProductionFailureCleanup {
         });
 
         assertNull(TraceSessionLauncher.active());
-        assertTrue(payload.isClosed());
+        assertTrue(payloadClosed.get());
         assertFalse(gameplayMode.isGameplayRuntimeReady());
         verify(fixture).abortHardwareTimingReplayRun();
         verify(gameLoop, atLeastOnce()).setTraceCameraFocusController(null);
@@ -98,8 +98,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
         IllegalStateException cleanupFailure =
                 new IllegalStateException("abort detach failed");
         doThrow(cleanupFailure).when(fixture).abortHardwareTimingReplayRun();
-        TraceSessionLauncher session = activeSession(fixture);
-        ActiveSegmentPayload payload = activePayload(session);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
+        TraceSessionLauncher session = activeSession(fixture, payloadClosed);
         AssertionError primary = new AssertionError("fatal production failure");
 
         AssertionError thrown = assertThrows(AssertionError.class,
@@ -109,7 +109,7 @@ class TestTraceSessionLauncherProductionFailureCleanup {
 
         assertSame(primary, thrown);
         assertSame(cleanupFailure, thrown.getSuppressed()[0]);
-        assertTrue(payload.isClosed());
+        assertTrue(payloadClosed.get());
         assertNull(TraceSessionLauncher.active());
         assertFalse(gameplayMode.isGameplayRuntimeReady());
         verify(gameLoop).returnToMasterTitle();
@@ -118,7 +118,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
     @Test
     void postFinishComparisonFailureIsContainedAndAbortsSession() {
         TraceReplayFixture fixture = mock(TraceReplayFixture.class);
-        TraceSessionLauncher session = activeSession(fixture);
+        TraceSessionLauncher session = activeSession(
+                fixture, new AtomicBoolean());
         armPendingDynamicPublication(session);
 
         TraceSessionLauncher.runProductionIterationIfActive(() -> { });
@@ -132,9 +133,9 @@ class TestTraceSessionLauncherProductionFailureCleanup {
     @Test
     void bodyFailureClosesTheRealPayloadBeforePostFinishPublication() {
         TraceReplayFixture fixture = mock(TraceReplayFixture.class);
-        TraceSessionLauncher session = activeSession(fixture);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
+        TraceSessionLauncher session = activeSession(fixture, payloadClosed);
         armPendingDynamicPublication(session);
-        ActiveSegmentPayload payload = activePayload(session);
         RuntimeException primary = new RuntimeException("production body failed");
 
         TraceSessionLauncher.runProductionIterationIfActive(() -> {
@@ -143,7 +144,7 @@ class TestTraceSessionLauncherProductionFailureCleanup {
 
         assertEquals(0, primary.getSuppressed().length,
                 "a failed body never reaches post-finish publication");
-        assertTrue(payload.isClosed());
+        assertTrue(payloadClosed.get());
         assertNull(TraceSessionLauncher.active());
         verify(fixture).abortHardwareTimingReplayRun();
     }
@@ -151,8 +152,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
     @Test
     void observedStepAssertionAbortsRealSessionAndRethrowsOriginal() {
         TraceReplayFixture fixture = mock(TraceReplayFixture.class);
-        TraceSessionLauncher session = activeSession(fixture);
-        ActiveSegmentPayload payload = activePayload(session);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
+        TraceSessionLauncher session = activeSession(fixture, payloadClosed);
         TraceRunPlaybackCoordinator coordinator =
                 (TraceRunPlaybackCoordinator) field(session, "runCoordinator");
         AssertionError primary = new AssertionError("observed-step assertion");
@@ -163,7 +164,7 @@ class TestTraceSessionLauncherProductionFailureCleanup {
                 () -> session.runAdvanceTickIfActive(GameMode.LEVEL, 0));
 
         assertSame(primary, thrown);
-        assertTrue(payload.isClosed());
+        assertTrue(payloadClosed.get());
         assertNull(TraceSessionLauncher.active());
         verify(fixture).abortHardwareTimingReplayRun();
         verify(gameLoop).returnToMasterTitle();
@@ -178,8 +179,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
                 new IllegalStateException("completion abort failed");
         doThrow(primary).when(fixture).closeHardwareTimingReplayRun();
         doThrow(cleanup).when(fixture).abortHardwareTimingReplayRun();
-        TraceSessionLauncher session = activeSession(fixture);
-        ActiveSegmentPayload payload = activePayload(session);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
+        TraceSessionLauncher session = activeSession(fixture, payloadClosed);
         LiveTraceComparator comparator = mock(LiveTraceComparator.class);
         when(comparator.isComplete()).thenReturn(true);
         setField(session, "comparator", comparator);
@@ -199,14 +200,14 @@ class TestTraceSessionLauncherProductionFailureCleanup {
 
         session.runAdvanceTickIfActive(GameMode.LEVEL, 0);
 
-        assertTrue(payload.isClosed());
+        assertTrue(payloadClosed.get());
         assertNull(TraceSessionLauncher.active());
         assertSame(cleanup, primary.getSuppressed()[0]);
         verify(gameLoop).returnToMasterTitle();
     }
 
     private static TraceSessionLauncher activeSession(
-            TraceReplayFixture fixture) {
+            TraceReplayFixture fixture, AtomicBoolean payloadClosed) {
         TraceData trace = TraceFixtures.trace(
                 TraceFixtures.metadata("s2", 0, 0),
                 List.of(TraceFrame.executionTestFrame(0, 0, 0, 0)));
@@ -219,7 +220,8 @@ class TestTraceSessionLauncherProductionFailureCleanup {
                 null, movie,
                 List.of(new TraceRunReplayWalker.SegmentPlan(
                         segment, trace, null, null)),
-                TraceReplaySessionBootstrap.snapshotGameplayConfig());
+                TraceReplaySessionBootstrap.snapshotGameplayConfig(),
+                payloadClosed);
         TraceRunFrameDriver driver = new TraceRunFrameDriver();
         TraceRunPlaybackCoordinator coordinator =
                 mock(TraceRunPlaybackCoordinator.class);
@@ -234,18 +236,6 @@ class TestTraceSessionLauncherProductionFailureCleanup {
         GameServices.playbackDebug().startSession(movie, 0);
         setStaticField(TraceSessionLauncher.class, "activeSession", session);
         return session;
-    }
-
-    private static ActiveSegmentPayload activePayload(
-            TraceSessionLauncher session) {
-        try {
-            Field field = TraceSessionLauncher.class.getDeclaredField(
-                    "activeRunPayload");
-            field.setAccessible(true);
-            return (ActiveSegmentPayload) field.get(session);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
     }
 
     private static Object field(Object target, String name) {

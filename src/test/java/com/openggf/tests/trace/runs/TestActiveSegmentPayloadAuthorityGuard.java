@@ -101,7 +101,16 @@ class TestActiveSegmentPayloadAuthorityGuard {
             UnauthorizedOpenHelper.class.getName(),
             UnauthorizedEagerPlan.class.getName(),
             ErasedMultiHelperRelayMutation.class.getName());
-    private static final Set<String> RESTRICTED_FIELD_ENUMERATION_TARGETS =
+    private static final Set<String> EXACT_DEDICATED_FIELD_INSPECTORS = Set.of(
+            "com.openggf.trace.replay.runs.TestActiveSegmentPayload",
+            "com.openggf.trace.TestTraceReaderLifecycle",
+            "com.openggf.TestTraceSessionLauncherActivePayloadLifecycle",
+            "com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle",
+            "com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle",
+            "com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership",
+            "com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance",
+            "com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard");
+    private static final Set<String> RESTRICTED_FIELD_TARGETS =
             Stream.concat(
                     Stream.of(PAYLOAD, WALKER),
                     EXACT_CALLER_ALLOWLIST.stream())
@@ -542,6 +551,222 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void sourceGuardReportsEveryExactOwnerFieldAcquisitionPrimitiveExactly() {
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "OwnerRuntimeDeclaredField.java:3 getDeclaredField uses an "
+                                + "unresolved field name on com.openggf."
+                                + "TraceSessionLauncher",
+                        "OwnerRuntimeDeclaredField.java", """
+                                class OwnerRuntimeDeclaredField {
+                                    Object acquire(String name) throws Exception {
+                                        return TraceSessionLauncher.class.getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerKnownLeaseGet.java:3 getDeclaredField acquires field "
+                                + "activeRunPayload on com.openggf.TraceSessionLauncher",
+                        "OwnerKnownLeaseGet.java", """
+                                class OwnerKnownLeaseGet {
+                                    Object acquire(TraceSessionLauncher owner) throws Exception {
+                                        Field field = TraceSessionLauncher.class
+                                                .getDeclaredField("activeRunPayload");
+                                        field.setAccessible(true);
+                                        return field.get(owner);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerRuntimeGetField.java:3 getField uses an unresolved field "
+                                + "name on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "OwnerRuntimeGetField.java", """
+                                class OwnerRuntimeGetField {
+                                    Object acquire(String name) throws Exception {
+                                        return AbstractRunChainTest.class.getField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindGetter.java:3 findGetter acquires field activeRunPayload "
+                                + "on com.openggf.TraceSessionLauncher",
+                        "OwnerFindGetter.java", """
+                                class OwnerFindGetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findGetter(TraceSessionLauncher.class,
+                                                "activeRunPayload", ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindSetter.java:3 findSetter acquires field "
+                                + "activeSegmentPayload on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "OwnerFindSetter.java", """
+                                class OwnerFindSetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findSetter(AbstractRunChainTest.class,
+                                                "activeSegmentPayload",
+                                                ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindStaticGetter.java:3 findStaticGetter acquires field "
+                                + "runSpecialRows on com.openggf.TraceSessionLauncher",
+                        "OwnerFindStaticGetter.java", """
+                                class OwnerFindStaticGetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findStaticGetter(TraceSessionLauncher.class,
+                                                "runSpecialRows",
+                                                TraceRunSpecialStageRows.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindStaticSetter.java:3 findStaticSetter acquires field "
+                                + "activeSpecialRows on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "OwnerFindStaticSetter.java", """
+                                class OwnerFindStaticSetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findStaticSetter(AbstractRunChainTest.class,
+                                                "activeSpecialRows",
+                                                TraceRunSpecialStageRows.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindVarHandle.java:3 findVarHandle acquires field "
+                                + "activeRunPayload on com.openggf.TraceSessionLauncher",
+                        "OwnerFindVarHandle.java", """
+                                class OwnerFindVarHandle {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVarHandle(TraceSessionLauncher.class,
+                                                "activeRunPayload", ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFindStaticVarHandle.java:3 findStaticVarHandle acquires field "
+                                + "activeSegmentPayload on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "OwnerFindStaticVarHandle.java", """
+                                class OwnerFindStaticVarHandle {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findStaticVarHandle(
+                                                AbstractRunChainTest.class,
+                                                "activeSegmentPayload",
+                                                ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerUnreflectGetter.java:3 getDeclaredField acquires field "
+                                + "activeRunPayload on com.openggf.TraceSessionLauncher",
+                        "OwnerUnreflectGetter.java", """
+                                class OwnerUnreflectGetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        Field field = TraceSessionLauncher.class
+                                                .getDeclaredField("activeRunPayload");
+                                        return lookup.unreflectGetter(field);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerUnreflectSetter.java:3 getDeclaredField acquires field "
+                                + "activeSegmentPayload on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "OwnerUnreflectSetter.java", """
+                                class OwnerUnreflectSetter {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        Field field = AbstractRunChainTest.class
+                                                .getDeclaredField("activeSegmentPayload");
+                                        return lookup.unreflectSetter(field);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerFieldSet.java:3 getDeclaredField acquires field "
+                                + "activeRunPayload on com.openggf.TraceSessionLauncher",
+                        "OwnerFieldSet.java", """
+                                class OwnerFieldSet {
+                                    void mutate(Object owner, Object value) throws Exception {
+                                        Field field = TraceSessionLauncher.class
+                                                .getDeclaredField("activeRunPayload");
+                                        field.setAccessible(true);
+                                        field.set(owner, value);
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void sourceGuardAllowsOnlyProvenHarmlessExactOwnerFields() {
+        assertNoSourceViolation(
+                "HarmlessOwnerFields.java", """
+                        class HarmlessOwnerFields {
+                            Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                Field scalar = TraceSessionLauncher.class
+                                        .getDeclaredField("runSpecialTimingRow");
+                                Field label = AbstractRunChainTest.class
+                                        .getDeclaredField("slotProbeRunId");
+                                return List.of(scalar, label,
+                                        lookup.findGetter(TraceSessionLauncher.class,
+                                                "runSpecialTimingRow", int.class),
+                                        lookup.findSetter(AbstractRunChainTest.class,
+                                                "slotProbeRunId", String.class));
+                            }
+                        }
+                        """);
+    }
+
+    @Test
+    void onlyExactDedicatedTestsMayInspectOwnerFields() {
+        assertAll(
+                () -> assertNoSourceViolation(
+                        "TestTraceRunActivePayloadPerformance.java", """
+                                package com.openggf.tests.trace.runs;
+                                class TestTraceRunActivePayloadPerformance {
+                                    Object inspect() throws Exception {
+                                        return TraceSessionLauncher.class
+                                                .getDeclaredField("activeRunPayload");
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "TraceSessionLauncher.java:4 getDeclaredField acquires "
+                                + "field activeRunPayload on com.openggf."
+                                + "TraceSessionLauncher",
+                        "TraceSessionLauncher.java", """
+                                package com.openggf;
+                                class TraceSessionLauncher {
+                                    Object inspect() throws Exception {
+                                        return TraceSessionLauncher.class
+                                                .getDeclaredField("activeRunPayload");
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "AbstractRunChainTest.java:5 findGetter acquires field "
+                                + "activeSegmentPayload on com.openggf.tests."
+                                + "trace.runs.AbstractRunChainTest",
+                        "AbstractRunChainTest.java", """
+                                package com.openggf.tests.trace.runs;
+                                class AbstractRunChainTest {
+                                    Object inspect(MethodHandles.Lookup lookup)
+                                            throws Exception {
+                                        return lookup.findGetter(
+                                                AbstractRunChainTest.class,
+                                                "activeSegmentPayload",
+                                                ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
     void sourceGuardDoesNotFailClosedForUnrelatedReflection() {
         assertNoSourceViolation(
                 "UnrelatedReflection.java", """
@@ -563,6 +788,25 @@ class TestActiveSegmentPayloadAuthorityGuard {
                                     }
                                 }
                                 return null;
+                            }
+                        }
+                        """);
+        assertNoSourceViolation(
+                "UnrelatedFieldPrimitives.java", """
+                        class UnrelatedFieldPrimitives {
+                            Object acquire(Class<?> target, String name,
+                                    MethodHandles.Lookup lookup, Field field)
+                                    throws Exception {
+                                target.getField(name);
+                                target.getDeclaredField(name);
+                                lookup.findGetter(target, name, Object.class);
+                                lookup.findStaticGetter(target, name, Object.class);
+                                lookup.findSetter(target, name, Object.class);
+                                lookup.findStaticSetter(target, name, Object.class);
+                                lookup.findVarHandle(target, name, Object.class);
+                                lookup.findStaticVarHandle(target, name, Object.class);
+                                lookup.unreflectGetter(field);
+                                return lookup.unreflectSetter(field);
                             }
                         }
                         """);
@@ -721,6 +965,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private final SourcePositions positions;
         private final List<String> violations;
         private final Deque<Map<String, KnownValue>> scopes = new ArrayDeque<>();
+        private final Deque<String> sourceOrigins = new ArrayDeque<>();
 
         private ReflectiveAcquisitionScanner(
                 String fileName,
@@ -736,11 +981,23 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
         @Override
         public Void visitClass(ClassTree node, Void unused) {
+            String simpleName = node.getSimpleName().toString();
+            String sourceOrigin;
+            if (sourceOrigins.isEmpty()) {
+                String packageName = unit.getPackageName() == null
+                        ? "" : unit.getPackageName().toString();
+                sourceOrigin = packageName.isEmpty()
+                        ? simpleName : packageName + "." + simpleName;
+            } else {
+                sourceOrigin = sourceOrigins.peek() + "$" + simpleName;
+            }
+            sourceOrigins.push(sourceOrigin);
             scopes.push(new HashMap<>());
             try {
                 return super.visitClass(node, unused);
             } finally {
                 scopes.pop();
+                sourceOrigins.pop();
             }
         }
 
@@ -830,7 +1087,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     || "getDeclaredFields".equals(primitive))
                     && arguments.isEmpty()) {
                 String target = targetName(evaluate(receiver(invocation)));
-                if (isRestrictedFieldEnumerationTarget(target)) {
+                if (isRestrictedFieldTarget(target)) {
                     report(invocation, primitive
                             + " enumerates active payload fields on " + target);
                 }
@@ -894,13 +1151,18 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 String primitive,
                 String target,
                 String fieldName) {
-            if (!isRestrictedTarget(target)) {
+            if (!isRestrictedFieldTarget(target)) {
+                return;
+            }
+            String sourceOrigin = sourceOrigins.peek();
+            if (sourceOrigin != null
+                    && EXACT_DEDICATED_FIELD_INSPECTORS.contains(sourceOrigin)) {
                 return;
             }
             if (fieldName == null) {
                 report(invocation, primitive
                         + " uses an unresolved field name on " + target);
-            } else {
+            } else if (!isProvenNonGraphField(target, fieldName)) {
                 report(invocation, primitive + " acquires field "
                         + fieldName + " on " + target);
             }
@@ -1126,9 +1388,25 @@ class TestActiveSegmentPayloadAuthorityGuard {
         return PAYLOAD.equals(target) || WALKER.equals(target);
     }
 
-    private static boolean isRestrictedFieldEnumerationTarget(String target) {
+    private static boolean isRestrictedFieldTarget(String target) {
         return target != null
-                && RESTRICTED_FIELD_ENUMERATION_TARGETS.contains(target);
+                && RESTRICTED_FIELD_TARGETS.contains(target);
+    }
+
+    private static boolean isProvenNonGraphField(
+            String target, String fieldName) {
+        Class<?> owner = loadClass(target);
+        for (Class<?> current = owner;
+             current != null;
+             current = current.getSuperclass()) {
+            try {
+                return !containsPayloadGraph(current
+                        .getDeclaredField(fieldName).getGenericType());
+            } catch (NoSuchFieldException ignored) {
+                // Continue through the declared owner hierarchy.
+            }
+        }
+        return false;
     }
 
     private static void assertExactSourceViolation(

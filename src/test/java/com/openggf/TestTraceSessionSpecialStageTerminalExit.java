@@ -53,14 +53,14 @@ class TestTraceSessionSpecialStageTerminalExit {
     void nativeWhiteHoldDefersTeardownWithoutStartingASecondFade()
             throws Exception {
         TraceSessionLauncher session = session();
-        setBoolean(session, "productionIterationInProgress", true);
+        setProductionIterationInProgress(session, true);
         GameServices.fade().holdWhite();
 
         session.beginSpecialStageTerminalExit();
 
         assertEquals(FadeManager.FadeState.HOLD_WHITE,
                 GameServices.fade().getState());
-        assertTrue(getBoolean(session, "teardownPending"));
+        assertTrue(teardownPending(session));
         assertFalse(session.shouldSkipCurrentSpecialStageTick(),
                 "a structural unit seam without SS data remains neutral");
     }
@@ -94,17 +94,19 @@ class TestTraceSessionSpecialStageTerminalExit {
                 null, null);
     }
 
-    private static void setBoolean(
-            TraceSessionLauncher session, String name, boolean value)
+    private static void setProductionIterationInProgress(
+            TraceSessionLauncher session, boolean value)
             throws Exception {
-        Field field = TraceSessionLauncher.class.getDeclaredField(name);
+        Field field = TraceSessionLauncher.class
+                .getDeclaredField("productionIterationInProgress");
         field.setAccessible(true);
         field.setBoolean(session, value);
     }
 
-    private static boolean getBoolean(
-            TraceSessionLauncher session, String name) throws Exception {
-        Field field = TraceSessionLauncher.class.getDeclaredField(name);
+    private static boolean teardownPending(
+            TraceSessionLauncher session) throws Exception {
+        Field field = TraceSessionLauncher.class
+                .getDeclaredField("teardownPending");
         field.setAccessible(true);
         return field.getBoolean(session);
     }
