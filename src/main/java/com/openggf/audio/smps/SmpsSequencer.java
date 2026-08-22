@@ -2220,16 +2220,33 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 synth.writeFm(this, 0, 0x28, chVal); // Key Off before frequency change
             }
 
-            writeFmFreq(port, ch, fnum, block);
-            // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
-            // or its coordination flag. Keep the existing Z80 refresh behavior.
-            if (!config.isDirect68kDriver()) {
-                applyFmPanAmsFms(t);
-            }
-            // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
-            if (t.modEnabled && config.isApplyModOnNote()) {
+            boolean z80Modulation = config.getModAlgo()
+                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
+                    && t.modEnabled && config.isApplyModOnNote();
+            if (z80Modulation) {
+                // S3K zUpdateFMorPSGTrack prepares modulation in HL before its
+                // sole zFMSendFreq call. Do not expose an unmodulated A4/A0
+                // pair (or a second pan write) before the final frequency.
                 t.forceModulationWrite = true;
-                applyModulation(t);
+                if (!applyModulation(t)) {
+                    writeFmFreq(port, ch, fnum, block);
+                }
+            } else {
+                writeFmFreq(port, ch, fnum, block);
+                // S1/S2 FMPrepareNote writes only A4/A0; the historical Z80
+                // compatibility path refreshes pan here. S3K uploads pan as
+                // part of zSendFMInstrument instead.
+                if (!config.isDirect68kDriver()
+                        && config.getModAlgo()
+                        != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+                    applyFmPanAmsFms(t);
+                }
+                // S2 (ModAlgo 68k_a) applies modulation before note-on; S1
+                // (ModAlgo 68k) does not.
+                if (t.modEnabled && config.isApplyModOnNote()) {
+                    t.forceModulationWrite = true;
+                    applyModulation(t);
+                }
             }
 
             // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
@@ -2350,11 +2367,24 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (!preventAttack) {
                 synth.writeFm(this, 0, 0x28, chVal);
             }
-            writeFmFreq(port, ch, fnum, block);
-            applyFmPanAmsFms(t);
-            if (t.modEnabled && config.isApplyModOnNote()) {
+            boolean z80Modulation = config.getModAlgo()
+                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
+                    && t.modEnabled && config.isApplyModOnNote();
+            if (z80Modulation) {
                 t.forceModulationWrite = true;
-                applyModulation(t);
+                if (!applyModulation(t)) {
+                    writeFmFreq(port, ch, fnum, block);
+                }
+            } else {
+                writeFmFreq(port, ch, fnum, block);
+                if (config.getModAlgo()
+                        != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+                    applyFmPanAmsFms(t);
+                }
+                if (t.modEnabled && config.isApplyModOnNote()) {
+                    t.forceModulationWrite = true;
+                    applyModulation(t);
+                }
             }
             if (!preventAttack) {
                 synth.writeFm(this, 0, 0x28, 0xF0 | chVal);
@@ -2867,26 +2897,26 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // Adding Key On here caused re-keying during rests, breaking SFX like 0xAD.
     }
 
-    private void applyModulation(Track t) {
+    private boolean applyModulation(Track t) {
         if (!t.modEnabled)
-            return;
+            return false;
         // Z80-family drivers return before stepping modulation at rest. S1's
         // 68k DoModulation has no rest check and continues advancing its phase.
         if (!config.isDirect68kDriver() && t.resting)
-            return;
+            return false;
 
         stepCustomModulation(t);
         stepModEnvelope(t);
         if (!t.modStepInEffect && !t.modEnvStepInEffect) {
             t.modEnabled = false;
-            return;
+            return false;
         }
 
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
         boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
         t.forceModulationWrite = false;
         if (!changed) {
-            return;
+            return false;
         }
 
         if (t.type == TrackType.FM) {
@@ -2906,6 +2936,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 int fnum = packed & 0x7FF;
                 writeFmFreq(port, ch, fnum, block);
             }
+            return true;
         } else if (t.type == TrackType.PSG && t.channelId < 3 && !t.resting) {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             if (!t.noiseMode || noiseUsesTone2) {
@@ -2919,8 +2950,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
                 synth.writePsg(this, (reg >> 4) & 0x3F);
+                return true;
             }
         }
+        return false;
     }
 
     private void stepCustomModulation(Track t) {

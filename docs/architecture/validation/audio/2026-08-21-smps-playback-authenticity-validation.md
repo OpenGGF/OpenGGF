@@ -194,5 +194,43 @@ The fresh JDK 21 full suite ran 15,275 tests with 52 failures, 64 errors, and
 18 skips across the same 116 known baseline-red methods; the added test passed
 and no audio-focused test failed.
 
+### Blue Sphere key-on follow-up
+
+The next listening rejection was narrowed to isolated pickups after the prior
+effect had ended. The original finite replay skipped lag rows entirely, which
+also skipped the continuously clocked Z80/YM audio frame. It now advances audio
+on every recorded frame while advancing gameplay only on non-lag rows. The
+bounded observer also records YM2612 key-ons in the same internal-sample domain
+as its selected FM-channel samples, allowing every pickup window to start at
+the actual FM5 key-on instead of at the earlier high-level request.
+
+A scratch-only diagnostic build of the pinned Genesis Plus GX core showed that
+operator envelope attenuation at key-on is legitimately history-dependent; it
+must not be normalized to one trace-derived value. The durable comparison
+therefore checks the source-owned admission writes and that each isolated
+restart retains at least 95% of the preceding pickup's fixed 5,334-sample FM5
+RMS energy. It also exposed one deterministic register-order difference:
+OpenGGF wrote the base frequency and pan, then the modulated frequency, whereas
+retail `zUpdateFMorPSGTrack` runs `zPrepareModulation`, `zDoModulation`, one
+`zFMSendFreq`, then `zFMNoteOn`. The S3K `MOD_Z80` path now emits only the final
+modulated frequency before key-on. A ROM-backed S1 onset test caught and
+prevented this rule from changing S1/S2 behavior.
+
+The focused post-fix selection ran 93 tests with no failures, errors, or skips,
+including the real special-stage replay, S1 and S2 ROM presentation paths, S1
+FM5 onset ordering, all three voice-write profiles, modulation, admission,
+snapshot, and bounded-observer tests. Human listening remains the release gate;
+this evidence establishes a positive source-level correction but does not claim
+that the reported sound is subjectively resolved.
+
+Two fresh JDK 21 full-suite runs executed 15,275 and 15,276 tests. Each reported
+53 failures, 64 errors, and 18 skips, with every modified audio and trace test
+green. The one failure beyond this branch's previously recorded 52/64 baseline
+is
+`TestObjectManagerLifecycle#s2ExecThenLoadBypassesVerticalFilterWithoutPreExecLoad`;
+it also fails in isolation, and this candidate changes no object-loading source
+or test. It remains an unrelated baseline defect rather than being hidden or
+treated as evidence that the listening issue is resolved.
+
 Phase 7 cleanup remains deferred. The rejected semantic-observer worktree and
 its protected stashes are not part of this delivery.

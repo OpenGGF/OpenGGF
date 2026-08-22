@@ -16,12 +16,13 @@ public final class AudioPlaybackTraceSnapshot {
     private final int ym2612ChannelSampleMask;
     private final List<Ym2612ChannelSample> ym2612ChannelSamples;
     private final List<TimedYm2612Write> timedYm2612Writes;
+    private final List<TimedYm2612KeyOn> timedYm2612KeyOns;
     private final List<TimedAudioRequest> timedAudioRequests;
     private final Map<String, Integer> markerYm2612SampleOffsets;
 
     AudioPlaybackTraceSnapshot(
             List<AudioPlaybackTraceEvent> events, short[] pcm) {
-        this(events, pcm, 0, List.of(), List.of(), List.of(), Map.of());
+        this(events, pcm, 0, List.of(), List.of(), List.of(), List.of(), Map.of());
     }
 
     AudioPlaybackTraceSnapshot(
@@ -30,6 +31,7 @@ public final class AudioPlaybackTraceSnapshot {
             int ym2612ChannelSampleMask,
             List<Ym2612ChannelSample> ym2612ChannelSamples,
             List<TimedYm2612Write> timedYm2612Writes,
+            List<TimedYm2612KeyOn> timedYm2612KeyOns,
             List<TimedAudioRequest> timedAudioRequests,
             Map<String, Integer> markerYm2612SampleOffsets) {
         this.events = List.copyOf(events);
@@ -37,6 +39,7 @@ public final class AudioPlaybackTraceSnapshot {
         this.ym2612ChannelSampleMask = ym2612ChannelSampleMask;
         this.ym2612ChannelSamples = List.copyOf(ym2612ChannelSamples);
         this.timedYm2612Writes = List.copyOf(timedYm2612Writes);
+        this.timedYm2612KeyOns = List.copyOf(timedYm2612KeyOns);
         this.timedAudioRequests = List.copyOf(timedAudioRequests);
         this.markerYm2612SampleOffsets = Map.copyOf(markerYm2612SampleOffsets);
         pcmSummary = summarize(this.pcm);
@@ -82,6 +85,10 @@ public final class AudioPlaybackTraceSnapshot {
 
     public List<Ym2612ChannelSample> ym2612ChannelSamples() {
         return ym2612ChannelSamples;
+    }
+
+    public List<TimedYm2612KeyOn> timedYm2612KeyOns() {
+        return timedYm2612KeyOns;
     }
 
     public List<TimedAudioRequest> timedAudioRequests() {
@@ -183,6 +190,21 @@ public final class AudioPlaybackTraceSnapshot {
             if (rawSoundId < 0 || rawSoundId > 0xFF) {
                 throw new IllegalArgumentException(
                         "raw sound id must be an unsigned byte");
+            }
+        }
+    }
+
+    public record TimedYm2612KeyOn(
+            int sampleOrdinal, int channel, int operator, int attenuation) {
+        public TimedYm2612KeyOn {
+            if (sampleOrdinal < 0) {
+                throw new IllegalArgumentException(
+                        "YM2612 sample ordinal must not be negative");
+            }
+            if (channel < 0 || channel >= 6 || operator < 0 || operator >= 4
+                    || attenuation < 0 || attenuation > 1023) {
+                throw new IllegalArgumentException(
+                        "timed YM2612 key-on fields are outside their bounds");
             }
         }
     }

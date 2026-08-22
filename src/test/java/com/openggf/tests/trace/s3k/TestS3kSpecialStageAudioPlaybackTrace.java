@@ -71,11 +71,10 @@ class TestS3kSpecialStageAudioPlaybackTrace {
                              audio, audio.presentationFrameRate())) {
             short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
             for (int frame = 0; frame < 500; frame++) {
-                if (traceData.getFrame(frame).lag()) {
-                    continue;
-                }
                 audioTrace.mark("frame-" + frame);
-                harness.stepFrame(frame);
+                if (!traceData.getFrame(frame).lag()) {
+                    harness.stepFrame(frame);
+                }
                 audio.presentFrame(PresentationMode.FORWARD);
                 int stereoFrames = capture.drainPresentationFrame(packet);
                 audioTrace.recordPcm(packet, stereoFrames);
@@ -111,6 +110,15 @@ class TestS3kSpecialStageAudioPlaybackTrace {
                         value.maxReleaseWrites().equals(Set.of(
                                 0x81, 0x85, 0x89, 0x8D))),
                 () -> "missing cfSetVoice maximum-release writes: " + restarts);
+        for (int index = 1; index < restarts.size(); index++) {
+            RequestRestart current = restarts.get(index);
+            RequestRestart previous = restarts.get(index - 1);
+            if (current.requestFrame() - previous.requestFrame() > 20) {
+                assertTrue(current.rms() >= previous.rms() * 0.95,
+                        () -> "fresh Blue Sphere restart lost FM5 onset energy: "
+                                + restarts);
+            }
+        }
     }
 
     private static List<RequestRestart> blueSphereRestarts(
@@ -197,11 +205,20 @@ class TestS3kSpecialStageAudioPlaybackTrace {
                     "request event/timing count differs");
         }
         for (int index = 0; index < result.size(); index++) {
-            int start = requests.get(index).sampleOrdinal();
-            int end = Math.min(samples.size(), start + 12_800);
-            if (index + 1 < requests.size()) {
-                end = Math.min(end, requests.get(index + 1).sampleOrdinal());
-            }
+            int requestStart = requests.get(index).sampleOrdinal();
+            int requestEnd = index + 1 < requests.size()
+                    ? requests.get(index + 1).sampleOrdinal()
+                    : Integer.MAX_VALUE;
+            int start = snapshot.timedYm2612KeyOns().stream()
+                    .filter(keyOn -> keyOn.channel() == 4
+                            && keyOn.operator() == 0
+                            && keyOn.sampleOrdinal() >= requestStart
+                            && keyOn.sampleOrdinal() < requestEnd)
+                    .mapToInt(AudioPlaybackTraceSnapshot.TimedYm2612KeyOn::sampleOrdinal)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Blue Sphere request has no FM5 key-on boundary"));
+            int end = Math.min(samples.size(), start + 5_334);
             long squares = 0;
             int peak = 0;
             for (int sample = start; sample < end; sample++) {

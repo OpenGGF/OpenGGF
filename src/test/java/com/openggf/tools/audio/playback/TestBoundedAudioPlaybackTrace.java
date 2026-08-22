@@ -110,6 +110,7 @@ class TestBoundedAudioPlaybackTrace {
         trace.onYm2612ChannelSample(4, 120);
         trace.onYm2612ChannelSample(4, -240);
         trace.onRequested(AudioRequestObserver.RequestClass.SFX, 0x65);
+        trace.onYm2612KeyOn(4, 0, 511);
         trace.onYm2612Write(1, 0x49, 5);
         trace.mark("second");
         trace.onYm2612ChannelSample(4, 60);
@@ -136,6 +137,10 @@ class TestBoundedAudioPlaybackTrace {
                                 2, AudioRequestObserver.RequestClass.SFX,
                                 0x65)),
                 snapshot.timedAudioRequests());
+        assertEquals(List.of(
+                        new AudioPlaybackTraceSnapshot.TimedYm2612KeyOn(
+                                2, 4, 0, 511)),
+                snapshot.timedYm2612KeyOns());
         assertEquals(2, snapshot.ym2612ChannelSampleOffset("second"));
         assertThrows(IllegalArgumentException.class,
                 () -> snapshot.ym2612ChannelSamplesAfter("first", 3));

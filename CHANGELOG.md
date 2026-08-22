@@ -1,5 +1,14 @@
 # Changelog
 
+- **Sonic 3&K FM SFX now publish the retail first-note bus sequence:** the
+  Z80-style sequencer applies the initial modulation step before its single
+  frequency write and no longer emits an extra pan/frequency pair ahead of
+  key-on. The bounded playback trace can now align selected-channel samples to
+  exact YM2612 key-ons, and its special-stage replay continues clocking audio
+  across lag frames so isolated Blue Sphere restarts are checked at the
+  boundary where the reported onset problem occurs. Sonic 1 and Sonic 2 retain
+  their existing 68k/Z80 voice-write profiles.
+
 - **YM2612 and PSG output now retain the retail mixer level in all three
   games:** the shared synthesizer no longer halves the already-clipped chip
   mix through a synthetic `-6 dB` headroom stage. A native Genesis Plus GX

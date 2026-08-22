@@ -25,6 +25,8 @@ public final class BoundedAudioPlaybackTrace
             ym2612ChannelSamples = new ArrayList<>();
     private final List<AudioPlaybackTraceSnapshot.TimedYm2612Write>
             timedYm2612Writes = new ArrayList<>();
+    private final List<AudioPlaybackTraceSnapshot.TimedYm2612KeyOn>
+            timedYm2612KeyOns = new ArrayList<>();
     private final List<AudioPlaybackTraceSnapshot.TimedAudioRequest>
             timedAudioRequests = new ArrayList<>();
     private final Map<String, Integer> markerYm2612SampleOffsets =
@@ -103,6 +105,12 @@ public final class BoundedAudioPlaybackTrace
             int channel, int operator, int attenuation) {
         addEvent(new AudioPlaybackTraceEvent.Ym2612KeyOn(
                 channel, operator, attenuation));
+        if ((ym2612ChannelSampleMask & (1 << channel)) != 0) {
+            timedYm2612KeyOns.add(
+                    new AudioPlaybackTraceSnapshot.TimedYm2612KeyOn(
+                            ym2612ChannelSamples.size(), channel, operator,
+                            attenuation));
+        }
     }
 
     @Override
@@ -135,6 +143,7 @@ public final class BoundedAudioPlaybackTrace
         return new AudioPlaybackTraceSnapshot(
                 events, pcm, ym2612ChannelSampleMask,
                 ym2612ChannelSamples, timedYm2612Writes,
+                timedYm2612KeyOns,
                 timedAudioRequests,
                 markerYm2612SampleOffsets);
     }

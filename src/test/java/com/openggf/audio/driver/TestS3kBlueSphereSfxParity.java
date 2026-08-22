@@ -94,6 +94,36 @@ class TestS3kBlueSphereSfxParity {
                 "same-ID retrigger must not inherit the previous track's attenuation");
     }
 
+    @Test
+    void firstBlueSphereNoteWritesOnlyTheFinalModulatedFrequency() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        AbstractSmpsData data = loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id);
+        SmpsDriver driver = new SmpsDriver();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                if (port == 1 && (register == 0xB5
+                        || register == 0xA5 || register == 0xA1)) {
+                    writes.add("%02X:%02X".formatted(register, value));
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+
+        admit(driver, data, loader);
+        driver.read(new short[735 * 2]);
+        driver.read(new short[735 * 2]);
+
+        assertEquals(List.of("B5:C0", "A5:23", "A1:3F"), writes,
+                "zUpdateFMorPSGTrack applies modulation before its sole "
+                        + "zFMSendFreq write");
+    }
+
     private static SmpsSequencer admit(
             SmpsDriver driver,
             AbstractSmpsData data,
