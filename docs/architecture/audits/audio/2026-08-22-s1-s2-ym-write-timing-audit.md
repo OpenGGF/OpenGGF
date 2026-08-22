@@ -66,8 +66,10 @@ Inputs:
 S1 is a 68K driver. The retained representative ledger contains all 909 native
 decoded instruction occurrences from source admission through key-on, including
 875 occurrences assigned to the 30 inter-write gaps. Every row records exact
-PC, opcode, start cycle, next PC, delta, call/return or branch outcome, busy-poll
-and YM-write roles, and the source citation. `TestS1S2YmWriteTimingAudit`
+PC, opcode, start cycle, next PC, delta, call/return or branch outcome, and
+occurrence-exact ordinary/control-flow, busy-poll, and YM-write roles. Its
+source field is a checked PC-to-disassembly-label/line mapping, rather than a
+blanket path citation. `TestS1S2YmWriteTimingAudit`
 hash-locks that ledger, reconstructs every gap from the ordered occurrence
 chain plus the source-authentic terminal `$13C1` write boundary, and compares
 it to the retained native write. Deleting, reordering, changing PC/opcode/count,
@@ -102,7 +104,7 @@ Deterministic A/B compact result:
 - terminal payload `032dee96c0163e089b689c8095ce9c95842e9bdf3a60006bd14953f3e254070a`;
 - raw writes `87265ee3d08d91128faef6338695c426f6697df127b0431b16d77ade6210a509`;
 - full instruction stream `b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa`;
-- representative ledger `327b681c5014ba6224c1b0c8c3b5d37c436410f895581f7074649157db1b517c`;
+- representative ledger `790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643`;
 - six-column projection `06888e2d89794879947fa2256aaf3bb9ae0244e0c147f400dd6363bc4d42125c`;
 - FM5 samples `10ccfc1aa351f34e9b7be4b7eab44fb8003e73f8bef15bff3ba4218c50285534`.
 
@@ -110,7 +112,8 @@ Deterministic A/B compact result:
 
 S2 uses its own Z80 driver. The representative ledger contains all 953 decoded
 Z80 instruction occurrences, 899 assigned to the 30 inter-write gaps. It
-records exact conditional outcomes through their next PCs and marks each
+records exact conditional outcomes through their next PCs, assigns every PC
+to a specific driver label and bounded line range, and marks each
 banked `LD r,(HL)` occurrence whose 10-T-state delta consists of the source
 instruction's 7 T-states plus GPGX's exact 3-T-state bank-read wait. The joined
 sequence derives the 135,435-master-cycle group without a copied total.
@@ -144,7 +147,7 @@ Deterministic A/B compact result:
 - capture script `a21fbd6ee44173fd8bbe20b0af747bc703f0f1c7f9c521a1866f89e579cd7388`;
 - raw writes `ea68ebff17ad939b9b17040f7ce846a4bfef895a4401abcf8104a1e972f0179e`;
 - full instruction stream `d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c`;
-- representative ledger `f34d17e2dafabcb70f160303c44cec445f07d926d03d587ed62fd457c4f076ee`;
+- representative ledger `b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4`;
 - six-column projection `c4dbf980004f7b1af450a0889a6bc5ae8b443b5378cd0fb546d889dd8a1a54d2`;
 - FM5 samples `a277dfd825e9c72706094b837666a3ddeb17b97ed04ad5d6f2b5cf21913ddaeb`.
 

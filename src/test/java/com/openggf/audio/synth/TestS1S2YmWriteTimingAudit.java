@@ -38,20 +38,20 @@ class TestS1S2YmWriteTimingAudit {
                 "s1", "m68k", 2, 7,
                 "s1-ring-ym-write-audit-v2.json",
                 "s1-ring-ym-write-timing-calculation-v2.json",
-                "327b681c5014ba6224c1b0c8c3b5d37c436410f895581f7074649157db1b517c",
+                "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
                 "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa");
         assertInstructionJoin(
                 "s2", "z80", 1, 15,
                 "s2-ringright-ym-write-audit-v2.json",
                 "s2-ringright-ym-write-timing-calculation-v2.json",
-                "f34d17e2dafabcb70f160303c44cec445f07d926d03d587ed62fd457c4f076ee",
+                "b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4",
                 "d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c");
     }
 
     @Test
     void captureDigestRejectsDeletionPcOpcodeCountOrderAndFakePrimitive() throws IOException {
         Path ledger = RESEARCH.resolve("s2-ringright-ym-write-instruction-ledger-v1.tsv");
-        String expected = "f34d17e2dafabcb70f160303c44cec445f07d926d03d587ed62fd457c4f076ee";
+        String expected = "b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4";
         List<String> original = Files.readAllLines(ledger);
         List<List<String>> mutations = new ArrayList<>();
         mutations.add(without(original, 59));
@@ -63,11 +63,35 @@ class TestS1S2YmWriteTimingAudit {
         reordered.set(59, reordered.get(60));
         reordered.set(60, row);
         mutations.add(reordered);
-        mutations.add(replaced(original, 59, "\tsource_path,", "\tfake_primitive\tsource_path,"));
+        mutations.add(replaced(original, 59, "ordinary", "fake_primitive"));
+        mutations.add(replaced(original, 59, "@s2.sounddriver.asm:", "@wrong.asm:"));
         for (List<String> mutation : mutations) {
             byte[] bytes = (String.join("\n", mutation) + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
             assertThrows(AssertionError.class, () -> assertEquals(expected, sha256(bytes)));
         }
+
+        List<String> s1 = Files.readAllLines(RESEARCH.resolve(
+                "s1-ring-ym-write-instruction-ledger-v1.tsv"));
+        int indexedJump = java.util.stream.IntStream.range(1, s1.size())
+                .filter(i -> s1.get(i).contains("\t0x4EFB\t"))
+                .findFirst().orElseThrow();
+        List<String> wrongJump = replaced(s1, indexedJump, "\tjump\t", "\tlinear\t");
+        assertThrows(AssertionError.class, () -> assertEquals(
+                "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
+                sha256((String.join("\n", wrongJump) + "\n").getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8))));
+        LedgerRow authenticJump = readLedger(RESEARCH.resolve(
+                "s1-ring-ym-write-instruction-ledger-v1.tsv")).stream()
+                .filter(candidate -> candidate.opcode() == 0x4efb).findFirst().orElseThrow();
+        assertThrows(AssertionError.class, () -> assertClassification("s1", "m68k",
+                authenticJump.pc(), authenticJump.opcode(), "linear",
+                authenticJump.roles(), authenticJump.source()));
+        assertThrows(AssertionError.class, () -> assertClassification("s1", "m68k",
+                authenticJump.pc(), authenticJump.opcode(), authenticJump.flow(),
+                "ordinary", authenticJump.source()));
+        assertThrows(AssertionError.class, () -> assertClassification("s1", "m68k",
+                authenticJump.pc(), authenticJump.opcode(), authenticJump.flow(),
+                authenticJump.roles(), "CoordFlag@wrong.asm:1-2"));
     }
 
     private static void assertNativeCounterfactual(Path path, String game)
@@ -136,16 +160,22 @@ class TestS1S2YmWriteTimingAudit {
         List<LedgerRow> rows = readLedger(ledgerPath);
         assertEquals(calculation.path("ledger").path("row_count").asInt(), rows.size());
         assertTrue(rows.stream().anyMatch(row -> row.afterSourceOrdinal() == -1));
+        if (architecture.equals("m68k")) {
+            assertTrue(rows.stream().anyMatch(row -> (row.opcode() & 0xffc0) == 0x4e80));
+            assertTrue(rows.stream().anyMatch(row -> (row.opcode() & 0xffc0) == 0x4ec0));
+            assertTrue(rows.stream().anyMatch(row -> row.opcode() == 0x4e75));
+            assertTrue(rows.stream().anyMatch(row -> (row.opcode() >>> 8) >= 0x60
+                    && (row.opcode() >>> 8) <= 0x6f));
+            assertTrue(rows.stream().anyMatch(row -> (row.opcode() & 0xf0f8) == 0x50c8));
+        }
 
-        String citation = calculation.path("source").path("citation").asText();
         Map<Integer, List<LedgerRow>> byGap = new HashMap<>();
         for (int index = 0; index < rows.size(); index++) {
             LedgerRow row = rows.get(index);
             assertEquals(index, row.occurrenceOrdinal());
             assertEquals(cpu, row.cpu());
-            assertEquals(citation, row.source());
-            assertEquals(expectedFlow(architecture, row.opcode()), row.flow());
-            assertEquals(expectedRoles(game, row.pc(), row.opcode(), row.flow()), row.roles());
+            assertClassification(game, architecture, row.pc(), row.opcode(), row.flow(),
+                    row.roles(), row.source());
             if (index + 1 < rows.size()) {
                 LedgerRow next = rows.get(index + 1);
                 assertEquals(next.pcText(), row.nextPc());
@@ -195,9 +225,11 @@ class TestS1S2YmWriteTimingAudit {
             assertEquals(first.opcodeText(), gap.path("first_opcode").asText());
             assertEquals(last.pcText(), gap.path("last_pc").asText());
             assertEquals(last.opcodeText(), gap.path("last_opcode").asText());
-            assertEquals(citation, gap.path("source").asText());
+            assertEquals("per-occurrence ledger source mapping", gap.path("source").asText());
             assertRoleCount(gap, occurrences, "branch_occurrences", "branch", false);
-            assertRoleCount(gap, occurrences, "call_return_occurrences", "call_return", true);
+            long callReturns = occurrences.stream().filter(row ->
+                    row.flow().equals("call") || row.flow().equals("return")).count();
+            assertEquals(callReturns, gap.path("call_return_occurrences").asLong());
             assertRoleCount(gap, occurrences, "busy_poll_occurrences", "busy_poll", true);
             assertRoleCount(gap, occurrences, "bank_wait_occurrences", "bank_wait_3t", true);
             assertTrue(gap.path("branch_occurrences").asInt() > 0);
@@ -255,6 +287,7 @@ class TestS1S2YmWriteTimingAudit {
         }
         int high = opcode >>> 8;
         if (high == 0x61 || (opcode & 0xffc0) == 0x4e80) return "call";
+        if ((opcode & 0xffc0) == 0x4ec0) return "jump";
         if (contains(opcode, 0x4e75, 0x4e73, 0x4e77)) return "return";
         if ((high >= 0x60 && high <= 0x6f) || (opcode & 0xf0f8) == 0x50c8) return "branch";
         return "linear";
@@ -286,20 +319,59 @@ class TestS1S2YmWriteTimingAudit {
     }
 
     private static String expectedRoles(String game, int pc, int opcode, String flow) {
-        StringBuilder roles = new StringBuilder("source_path");
+        StringBuilder roles = new StringBuilder(flow.equals("linear") ? "ordinary" : "control_flow");
         if (game.equals("s1")) {
-            if (pc >= 0x7272e && pc <= 0x7278e) roles.append(",busy_poll");
+            if (((contains(pc, 0x7272e, 0x72746, 0x72764, 0x7277c) && opcode == 0x1439)
+                    || (contains(pc, 0x72734, 0x7274c, 0x7276a, 0x72782) && opcode == 0x0802)
+                    || (contains(pc, 0x7273a, 0x72750, 0x72770, 0x72786)
+                    && (opcode & 0xff00) == 0x6600))) roles.append(",busy_poll");
             if ((pc == 0x72788 || pc == 0x72752) && opcode == 0x13c1) roles.append(",ym_write");
         } else {
-            if (pc >= 0x8 && pc <= 0x31) roles.append(",busy_poll");
+            if ((pc == 0x8 && opcode == 0x3a) || (pc == 0xb && opcode == 0x87)
+                    || (pc == 0xc && opcode == 0x38)) roles.append(",busy_poll");
             if ((pc == 0xe34 && opcode == 0x7e)
                     || ((pc == 0xe46 || pc == 0xe52 || pc == 0xe79) && opcode == 0x4e)) {
                 roles.append(",bank_wait_3t");
             }
             if ((pc == 0x31 || pc == 0x21) && opcode == 0x32) roles.append(",ym_write");
         }
-        if (flow.equals("call") || flow.equals("return")) roles.append(",call_return");
         return roles.toString();
+    }
+
+    private static void assertClassification(String game, String architecture, int pc,
+                                             int opcode, String flow, String roles,
+                                             String source) {
+        assertEquals(expectedFlow(architecture, opcode), flow);
+        assertEquals(expectedRoles(game, pc, opcode, flow), roles);
+        assertEquals(expectedSource(game, pc), source);
+        assertFalse(source.equals("UNKNOWN"));
+    }
+
+    private static String expectedSource(String game, int pc) {
+        if (game.equals("s1")) {
+            if (pc >= 0x71cd8 && pc <= 0x71e48) return "FinishTrackUpdate@s1.sounddriver.asm:436-544";
+            if (pc >= 0x726e2 && pc <= 0x72714) return "FMNoteOn_FMNoteOff@s1.sounddriver.asm:1670-1704";
+            if (pc >= 0x72716 && pc <= 0x72720) return "WriteFMIorIIMain@s1.sounddriver.asm:1707-1717";
+            if (pc >= 0x72722 && pc <= 0x72728) return "WriteFMIorII@s1.sounddriver.asm:1720-1726";
+            if (pc >= 0x7272e && pc <= 0x72758) return "WriteFMI@s1.sounddriver.asm:1737-1755";
+            if (pc >= 0x7275a && pc <= 0x72762) return "WriteFMIIPart@s1.sounddriver.asm:1759-1763";
+            if (pc >= 0x72764 && pc <= 0x7278e) return "WriteFMII@s1.sounddriver.asm:1766-1784";
+            if (pc >= 0x72a5a && pc <= 0x72a64) return "CoordFlag@s1.sounddriver.asm:2066-2072";
+            if (pc >= 0x72acc && pc <= 0x72ae6) return "cfPanningAMSFMS@s1.sounddriver.asm:2128-2140";
+            if (pc >= 0x72c26 && pc <= 0x72c48) return "cfSetVoice@s1.sounddriver.asm:2313-2326";
+            if (pc >= 0x72c4e && pc <= 0x72caa) return "SetVoice@s1.sounddriver.asm:2329-2375";
+        } else {
+            if (pc >= 0x8 && pc <= 0x35) return "zFMBusyWait_zWriteFM@s2.sounddriver.asm:343-389";
+            if (pc >= 0x243 && pc <= 0x2d9) return "zFinishTrackUpdate@s2.sounddriver.asm:947-1076";
+            if (pc >= 0x3e5 && pc <= 0x413) return "zTrackRun@s2.sounddriver.asm:1078-1124";
+            if (pc >= 0xc46 && pc <= 0xc94) return "zBankSwitchToMusic@s2.sounddriver.asm:2796-2829";
+            if (pc >= 0xcfc && pc <= 0xd19) return "zSetMaxRelRate@s2.sounddriver.asm:3005-3024";
+            if (pc >= 0xe06 && pc <= 0xe11) return "cfSetVoice@s2.sounddriver.asm:3271-3282";
+            if (pc >= 0xe12 && pc <= 0xe1f) return "cfSetVoiceCont@s2.sounddriver.asm:3285-3295";
+            if (pc >= 0xe24 && pc <= 0xe64) return "zSetVoice@s2.sounddriver.asm:3305-3396";
+            if (pc >= 0xe65 && pc <= 0xe89) return "zSetFMTLs@s2.sounddriver.asm:3399-3432";
+        }
+        throw new AssertionError("unmapped source PC " + Integer.toHexString(pc));
     }
 
     private static boolean contains(int value, int... candidates) {

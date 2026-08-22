@@ -5,7 +5,7 @@
   "representative_group_ordinal": 0,
   "ledger": {
     "path": "s1-ring-ym-write-instruction-ledger-v1.tsv",
-    "sha256": "327b681c5014ba6224c1b0c8c3b5d37c436410f895581f7074649157db1b517c",
+    "sha256": "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
     "full_capture_sha256": "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa",
     "row_count": 909
   },
@@ -19,10 +19,10 @@
     ],
     "opcode": "0x13C1",
     "master_cycles_from_instruction_start": 119,
-    "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+    "source": "per-occurrence PC-to-label mapping in ledger"
   },
   "source": {
-    "citation": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375",
+    "citation": "per-occurrence PC-to-label mapping in ledger",
     "owner": null,
     "bank_wait": null,
     "method": "Exact ordered native PC/opcode/start/next occurrence join; no primitive counts or aggregate fitting."
@@ -42,9 +42,9 @@
       "last_cycle": 161755,
       "branch_occurrences": 5,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 1,
@@ -60,9 +60,9 @@
       "last_cycle": 163925,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 2,
@@ -78,9 +78,9 @@
       "last_cycle": 166081,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 3,
@@ -96,9 +96,9 @@
       "last_cycle": 168237,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 4,
@@ -114,9 +114,9 @@
       "last_cycle": 170393,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 5,
@@ -132,9 +132,9 @@
       "last_cycle": 172563,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 6,
@@ -150,9 +150,9 @@
       "last_cycle": 174719,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 7,
@@ -168,9 +168,9 @@
       "last_cycle": 176875,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 8,
@@ -186,9 +186,9 @@
       "last_cycle": 179031,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 9,
@@ -204,9 +204,9 @@
       "last_cycle": 181201,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 10,
@@ -222,9 +222,9 @@
       "last_cycle": 183357,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 11,
@@ -240,9 +240,9 @@
       "last_cycle": 185513,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 12,
@@ -258,9 +258,9 @@
       "last_cycle": 187669,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 13,
@@ -276,9 +276,9 @@
       "last_cycle": 189839,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 14,
@@ -294,9 +294,9 @@
       "last_cycle": 191995,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 15,
@@ -312,9 +312,9 @@
       "last_cycle": 194151,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 16,
@@ -330,9 +330,9 @@
       "last_cycle": 196307,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 17,
@@ -348,9 +348,9 @@
       "last_cycle": 198477,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 18,
@@ -366,9 +366,9 @@
       "last_cycle": 200633,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 19,
@@ -384,9 +384,9 @@
       "last_cycle": 202789,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 20,
@@ -402,9 +402,9 @@
       "last_cycle": 205120,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 18,
+      "busy_poll_occurrences": 7,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 21,
@@ -420,9 +420,9 @@
       "last_cycle": 207416,
       "branch_occurrences": 7,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 22,
@@ -438,9 +438,9 @@
       "last_cycle": 209712,
       "branch_occurrences": 7,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 23,
@@ -456,9 +456,9 @@
       "last_cycle": 212008,
       "branch_occurrences": 7,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 24,
@@ -474,9 +474,9 @@
       "last_cycle": 214220,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 21,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 25,
@@ -492,9 +492,9 @@
       "last_cycle": 217160,
       "branch_occurrences": 10,
       "call_return_occurrences": 3,
-      "busy_poll_occurrences": 15,
+      "busy_poll_occurrences": 5,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 26,
@@ -510,9 +510,9 @@
       "last_cycle": 219239,
       "branch_occurrences": 8,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 15,
+      "busy_poll_occurrences": 7,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 27,
@@ -528,9 +528,9 @@
       "last_cycle": 224251,
       "branch_occurrences": 13,
       "call_return_occurrences": 8,
-      "busy_poll_occurrences": 15,
+      "busy_poll_occurrences": 5,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 28,
@@ -546,9 +546,9 @@
       "last_cycle": 226582,
       "branch_occurrences": 6,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 24,
+      "busy_poll_occurrences": 11,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     },
     {
       "after_source_ordinal": 29,
@@ -564,9 +564,9 @@
       "last_cycle": 228752,
       "branch_occurrences": 8,
       "call_return_occurrences": 2,
-      "busy_poll_occurrences": 18,
+      "busy_poll_occurrences": 9,
       "bank_wait_occurrences": 0,
-      "source": "s1.sounddriver.asm:436-456,1680-1769,2080-2140,2313-2375"
+      "source": "per-occurrence ledger source mapping"
     }
   ]
 }
