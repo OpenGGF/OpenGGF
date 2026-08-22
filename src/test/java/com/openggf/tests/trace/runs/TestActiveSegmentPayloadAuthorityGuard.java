@@ -927,6 +927,104 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void standardClassProducersAndQualifiedAliasesCannotEraseAuthority() {
+        String accessorDiagnostic =
+                " getDeclaredMethod acquires active payload accessor trace on "
+                        + PAYLOAD;
+        String lookupDiagnostic =
+                " findVirtual acquires active payload accessor trace on " + PAYLOAD;
+        assertAll(
+                () -> assertExactSourceViolations(
+                        List.of(
+                                "StaticImportedForName.java:5" + accessorDiagnostic,
+                                "StaticImportedForName.java:5 Class.forName resolves "
+                                        + "active payload owner " + PAYLOAD),
+                        "StaticImportedForName.java", """
+                                import static java.lang.Class.forName;
+                                class StaticImportedForName {
+                                    private static final String ACTIVE_PAYLOAD_FQCN = "com.openggf.trace.replay.runs.ActiveSegmentPayload";
+                                    Object acquire() throws Exception {
+                                        return forName(ACTIVE_PAYLOAD_FQCN).getDeclaredMethod("trace");
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "ClassLoaderAccessor.java:4" + accessorDiagnostic,
+                        "ClassLoaderAccessor.java", """
+                                class ClassLoaderAccessor {
+                                    private static final String ACTIVE_PAYLOAD_FQCN = "com.openggf.trace.replay.runs.ActiveSegmentPayload";
+                                    Object acquire(ClassLoader loader) throws Exception {
+                                        return loader.loadClass(ACTIVE_PAYLOAD_FQCN).getDeclaredMethod("trace");
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "AsSubclassAccessor.java:3" + accessorDiagnostic,
+                        "AsSubclassAccessor.java", """
+                                class AsSubclassAccessor {
+                                    Object acquire() throws Exception {
+                                        return ActiveSegmentPayload.class.asSubclass(Object.class).getDeclaredMethod("trace");
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "InstanceClassAlias.java:3" + lookupDiagnostic,
+                        "InstanceClassAlias.java", """
+                                class InstanceClassAlias {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVirtual(this.type, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                    private final Class<?> type = ActiveSegmentPayload.class;
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OwnerClassAlias.java:6" + lookupDiagnostic,
+                        "OwnerClassAlias.java", """
+                                class Owner {
+                                    static final Class<?> TYPE = ActiveSegmentPayload.class;
+                                }
+                                class OwnerClassAlias {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVirtual(Owner.TYPE, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void standardClassProducerAndQualifiedAliasControlsRemainNarrow() {
+        assertNoSourceViolation(
+                "ClassProducerControls.java", """
+                        import static java.lang.Class.forName;
+                        class HarmlessOwner {
+                            static final Class<?> TYPE = StringBuilder.class;
+                        }
+                        class ClassProducerControls {
+                            private static final String ACTIVE_PAYLOAD_FQCN = "com.openggf.trace.replay.runs.ActiveSegmentPayload";
+                            private final Class<?> type = StringBuilder.class;
+                            static final Class<?> TYPE = StringBuilder.class;
+                            Object inspect(ClassLoader loader, MethodHandles.Lookup lookup)
+                                    throws Exception {
+                                forName("java.lang.String").getDeclaredMethod("trace");
+                                forName(ACTIVE_PAYLOAD_FQCN).getDeclaredMethod("trace");
+                                loader.loadClass("java.lang.String").getDeclaredMethod("trace");
+                                StringBuilder.class.asSubclass(Object.class)
+                                        .getDeclaredMethod("trace");
+                                lookup.findVirtual(this.type, "trace",
+                                        MethodType.methodType(Object.class));
+                                lookup.findVirtual(ClassProducerControls.TYPE, "trace",
+                                        MethodType.methodType(Object.class));
+                                return lookup.findVirtual(HarmlessOwner.TYPE, "trace",
+                                        MethodType.methodType(Object.class));
+                            }
+                            Class<?> forName(String ignored) {
+                                return StringBuilder.class;
+                            }
+                        }
+                        """);
+    }
+
+    @Test
     void sourceGuardAllowsOnlyProvenHarmlessExactOwnerFields() {
         assertNoSourceViolation(
                 "HarmlessOwnerFields.java", """
@@ -1193,6 +1291,13 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private final Deque<Map<String, KnownValue>> scopes = new ArrayDeque<>();
         private final Deque<String> sourceOrigins = new ArrayDeque<>();
         private final Set<MethodTree> activeHelperMethods = new HashSet<>();
+        private final Map<String, Map<String, KnownValue>> sourceFields =
+                new HashMap<>();
+        private final Map<String, Map<String, ExpressionTree>>
+                sourceFieldInitializers = new HashMap<>();
+        private final Set<String> activeFieldAliases = new HashSet<>();
+        private final boolean staticClassForNameImported;
+        private int methodDepth;
 
         private ReflectiveAcquisitionScanner(
                 String fileName,
@@ -1203,6 +1308,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
             this.unit = unit;
             this.positions = positions;
             this.violations = violations;
+            this.staticClassForNameImported = unit.getImports().stream()
+                    .filter(importTree -> importTree.isStatic())
+                    .map(importTree -> importTree.getQualifiedIdentifier().toString())
+                    .anyMatch(imported -> imported.equals("java.lang.Class.forName")
+                            || imported.equals("java.lang.Class.*"));
             scopes.push(new HashMap<>());
             collectSourceMethods();
         }
@@ -1214,6 +1324,15 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 @Override
                 public Void visitClass(ClassTree node, Void unused) {
                     String owner = sourceOwner(owners, node);
+                    for (Tree member : node.getMembers()) {
+                        if (member instanceof VariableTree variable
+                                && variable.getInitializer() != null) {
+                            sourceFieldInitializers.computeIfAbsent(
+                                    owner, ignored -> new HashMap<>())
+                                    .put(variable.getName().toString(),
+                                            variable.getInitializer());
+                        }
+                    }
                     owners.push(owner);
                     try {
                         return super.visitClass(node, unused);
@@ -1253,6 +1372,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
         @Override
         public Void visitMethod(MethodTree node, Void unused) {
             scopes.push(new HashMap<>());
+            methodDepth++;
             try {
                 for (VariableTree parameter : node.getParameters()) {
                     KnownValue type = typedTarget(parameter.getType());
@@ -1263,6 +1383,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 }
                 return super.visitMethod(node, unused);
             } finally {
+                methodDepth--;
                 scopes.pop();
             }
         }
@@ -1285,6 +1406,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
             }
             if (value != null) {
                 scopes.peek().put(node.getName().toString(), value);
+                if (methodDepth == 0 && !sourceOrigins.isEmpty()) {
+                    sourceFields.computeIfAbsent(
+                            sourceOrigins.peek(), ignored -> new HashMap<>())
+                            .put(node.getName().toString(), value);
+                }
             }
             return super.visitVariable(node, unused);
         }
@@ -1322,6 +1448,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private void recordAcquisition(MethodInvocationTree invocation) {
             String primitive = invokedName(invocation);
             List<? extends ExpressionTree> arguments = invocation.getArguments();
+            if (isSameSourceHelperCall(invocation)) {
+                recordSameSourceHelperCall(invocation);
+                return;
+            }
             if (isClassForName(invocation)
                     && !arguments.isEmpty()) {
                 String target = normalizeTargetName(
@@ -1330,10 +1460,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     report(invocation, "Class.forName resolves active payload owner "
                             + target);
                 }
-                return;
-            }
-            if (isSameSourceHelperCall(invocation)) {
-                recordSameSourceHelperCall(invocation);
                 return;
             }
             if (("getMethods".equals(primitive)
@@ -1539,10 +1665,15 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 return left != null && right != null
                         ? KnownValue.string(left + right) : null;
             }
-            if (expression instanceof MemberSelectTree selection
-                    && "class".contentEquals(selection.getIdentifier())) {
-                return KnownValue.classTarget(normalizeTargetName(
-                        selection.getExpression().toString()));
+            if (expression instanceof MemberSelectTree selection) {
+                if ("class".contentEquals(selection.getIdentifier())) {
+                    return KnownValue.classTarget(normalizeTargetName(
+                            selection.getExpression().toString()));
+                }
+                KnownValue qualifiedAlias = lookupQualifiedAlias(selection);
+                if (qualifiedAlias != null) {
+                    return qualifiedAlias;
+                }
             }
             if (expression instanceof NewClassTree newClass
                     && newClass.getIdentifier().toString()
@@ -1560,6 +1691,9 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private KnownValue evaluateInvocation(MethodInvocationTree invocation) {
             String method = invokedName(invocation);
             List<? extends ExpressionTree> arguments = invocation.getArguments();
+            if (isSameSourceHelperCall(invocation)) {
+                return null;
+            }
             KnownValue receiverValue = evaluate(receiver(invocation));
             if ("concat".equals(method) && arguments.size() == 1) {
                 String prefix = text(receiverValue);
@@ -1597,6 +1731,25 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     && targetName(receiverValue) != null) {
                 return KnownValue.classTarget(targetName(receiverValue));
             }
+            if ("getClassLoader".equals(method) && arguments.isEmpty()
+                    && receiverValue != null && receiverValue.classObject()) {
+                return KnownValue.classLoaderValue();
+            }
+            if ("getSystemClassLoader".equals(method) && arguments.isEmpty()
+                    && receiver(invocation) != null
+                    && Set.of("ClassLoader", "java.lang.ClassLoader")
+                    .contains(receiver(invocation).toString())) {
+                return KnownValue.classLoaderValue();
+            }
+            if ("loadClass".equals(method) && arguments.size() == 1
+                    && receiverValue != null && receiverValue.classLoader()) {
+                return KnownValue.classTarget(normalizeTargetName(
+                        text(evaluate(arguments.getFirst()))));
+            }
+            if ("asSubclass".equals(method) && arguments.size() == 1
+                    && receiverValue != null && receiverValue.classObject()) {
+                return receiverValue;
+            }
             if (isClassForName(invocation) && !arguments.isEmpty()) {
                 return KnownValue.classTarget(normalizeTargetName(
                         text(evaluate(arguments.getFirst()))));
@@ -1615,9 +1768,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private boolean isClassForName(MethodInvocationTree invocation) {
             ExpressionTree receiver = receiver(invocation);
             return "forName".equals(invokedName(invocation))
-                    && receiver != null
+                    && ((receiver != null
                     && Set.of("Class", "java.lang.Class")
-                    .contains(receiver.toString());
+                    .contains(receiver.toString()))
+                    || (receiver == null && staticClassForNameImported));
         }
 
         private void report(Tree tree, String message) {
@@ -1633,7 +1787,63 @@ class TestActiveSegmentPayloadAuthorityGuard {
             if (type == null) {
                 return null;
             }
+            if (Set.of("ClassLoader", "java.lang.ClassLoader")
+                    .contains(type.toString())) {
+                return KnownValue.classLoaderValue();
+            }
             return KnownValue.target(normalizeTargetName(type.toString()));
+        }
+
+        private KnownValue lookupQualifiedAlias(MemberSelectTree selection) {
+            String qualifier = selection.getExpression().toString();
+            String owner = matchingSourceOwner(qualifier);
+            if (owner == null) {
+                return null;
+            }
+            String fieldName = selection.getIdentifier().toString();
+            KnownValue bound = sourceFields.getOrDefault(owner, Map.of())
+                    .get(fieldName);
+            if (bound != null) {
+                return bound;
+            }
+            ExpressionTree initializer = sourceFieldInitializers
+                    .getOrDefault(owner, Map.of()).get(fieldName);
+            String aliasKey = owner + "#" + fieldName;
+            if (initializer == null || !activeFieldAliases.add(aliasKey)) {
+                return null;
+            }
+            try {
+                return evaluate(initializer);
+            } finally {
+                activeFieldAliases.remove(aliasKey);
+            }
+        }
+
+        private String matchingSourceOwner(String qualifier) {
+            if ("this".equals(qualifier) && !sourceOrigins.isEmpty()) {
+                return sourceOrigins.peek();
+            }
+            for (String owner : sourceOrigins) {
+                if (matchesOwnerQualifier(owner, qualifier)) {
+                    return owner;
+                }
+            }
+            for (String owner : sourceFieldInitializers.keySet()) {
+                if (matchesOwnerQualifier(owner, qualifier)) {
+                    return owner;
+                }
+            }
+            return null;
+        }
+
+        private boolean matchesOwnerQualifier(
+                String owner, String qualifier) {
+            int lastDot = owner.lastIndexOf('.');
+            String simpleOwner = lastDot < 0
+                    ? owner : owner.substring(lastDot + 1);
+            return qualifier.equals(owner)
+                    || qualifier.equals(simpleOwner)
+                    || qualifier.equals(simpleOwner.replace('$', '.'));
         }
 
         private String sourceOwner(
@@ -1694,25 +1904,30 @@ class TestActiveSegmentPayloadAuthorityGuard {
             String text,
             String targetName,
             boolean builder,
-            boolean classObject) {
+            boolean classObject,
+            boolean classLoader) {
         private static KnownValue string(String value) {
             return value == null ? null
-                    : new KnownValue(value, null, false, false);
+                    : new KnownValue(value, null, false, false, false);
         }
 
         private static KnownValue target(String value) {
             return value == null ? null
-                    : new KnownValue(null, value, false, false);
+                    : new KnownValue(null, value, false, false, false);
         }
 
         private static KnownValue classTarget(String value) {
             return value == null ? null
-                    : new KnownValue(null, value, false, true);
+                    : new KnownValue(null, value, false, true, false);
         }
 
         private static KnownValue builder(String value) {
             return value == null ? null
-                    : new KnownValue(value, null, true, false);
+                    : new KnownValue(value, null, true, false, false);
+        }
+
+        private static KnownValue classLoaderValue() {
+            return new KnownValue(null, null, false, false, true);
         }
     }
 
@@ -1799,6 +2014,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
             String expected, String fileName, String source) {
         List<String> violations = scanReflectiveAcquisition(fileName, source);
         assertEquals(List.of(expected), violations);
+    }
+
+    private static void assertExactSourceViolations(
+            List<String> expected, String fileName, String source) {
+        assertEquals(expected, scanReflectiveAcquisition(fileName, source));
     }
 
     private static void assertNoSourceViolation(
