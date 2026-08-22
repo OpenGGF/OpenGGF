@@ -71,8 +71,8 @@ The deterministic resource oracle passed with three failure-atomicity controls
 in addition to its 100-cycle matrix: each matrix run completed 100 cycles
 per ordinary and special-stage shape and observed exactly 1,000 reader opens
 and 1,000 closes. After the later enforcement-only corrections through
-`c59e3320c`, the authority guard passes 25/25, authority plus ownership passes
-28/28, the combined reader gate passes 34/34, and focused migration tests pass
+`43051529b`, the authority guard passes 27/27, authority plus ownership passes
+30/30, the combined reader gate passes 36/36, and focused migration tests pass
 179/179. Those corrections did not change the production ownership graph or
 the retained-memory samples. The recorded 67-segment oracle consumed all 1,653 AIZ
 rows, retained the first `camera_x` mismatch (`0x1300` / `0x1308`), the terminal
