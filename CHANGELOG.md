@@ -1,5 +1,12 @@
 # Changelog
 
+- **Long visual trace runs now finish and exit cleanly from every unrepresented
+  span:** terminal tails enter their final payload-free gap exactly once, and
+  Escape can tear down a run while it is between segments, inside a
+  special-stage-local span, or replaying the movie tail. Invalid destination
+  ownership and failures observed after coordinator completion also close the
+  active segment lease while preserving the original failure.
+
 - **Long visual trace runs now keep only one segment payload in memory:** the
   production launcher and both visual/audio replay routes retain compact run
   descriptors, open an eager payload only for the active segment, and release

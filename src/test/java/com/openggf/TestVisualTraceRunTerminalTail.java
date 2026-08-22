@@ -10,8 +10,14 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
+import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
@@ -32,9 +38,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 class TestVisualTraceRunTerminalTail {
 
@@ -234,6 +242,136 @@ class TestVisualTraceRunTerminalTail {
 
         verify(gapJournal).terminalTailClosed(3);
         verify(comparator).ingestExternalComparison(terminalComparison);
+    }
+
+    @Test
+    void replayedTerminalTailOpensRealGapOnceAndCompletesFadeTeardown() {
+        TerminalFixture fixture = terminalFixture(3);
+        invokeCoordinatorActions(fixture.session(), List.of(
+                new TraceRunPlaybackCoordinator.CloseSegment(0),
+                new TraceRunPlaybackCoordinator.BeginTerminalTail(
+                        new TraceRunReplayWalker.TerminalMovieTailPlan(
+                                1, 2, GameMode.TITLE_SCREEN))));
+
+        invokeCompareTerminalTail(fixture.session());
+        invokeCoordinatorActions(fixture.session(), List.of(
+                new TraceRunPlaybackCoordinator.CompleteRun(0)));
+        finishFade(fixture.gameplay());
+
+        assertTrue(fixture.payload().isClosed());
+        assertNull(TraceSessionLauncher.active());
+        verify(fixture.loop()).returnToMasterTitle();
+        verify(fixture.timing(), times(1)).enterTransitionGap();
+    }
+
+    @Test
+    void zeroLengthTerminalTailOpensRealGapOnceAndCompletesFadeTeardown() {
+        TerminalFixture fixture = terminalFixture(3);
+        when(fixture.coordinator().finishTerminalTail(GameMode.TITLE_SCREEN))
+                .thenReturn(List.of(new TraceRunPlaybackCoordinator.CompleteRun(0)));
+        GameServices.playbackDebug().onLevelFrameAdvanced();
+
+        invokeCoordinatorActions(fixture.session(), List.of(
+                new TraceRunPlaybackCoordinator.CloseSegment(0),
+                new TraceRunPlaybackCoordinator.BeginTerminalTail(
+                        new TraceRunReplayWalker.TerminalMovieTailPlan(
+                                3, 0, GameMode.TITLE_SCREEN))));
+        finishFade(fixture.gameplay());
+
+        assertTrue(fixture.payload().isClosed());
+        assertNull(TraceSessionLauncher.active());
+        verify(fixture.loop()).returnToMasterTitle();
+        verify(fixture.timing(), times(1)).enterTransitionGap();
+    }
+
+    private static TerminalFixture terminalFixture(int movieFrames) {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext gameplay = SessionManager.getCurrentGameplayMode();
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadata("s2", 0, 1),
+                List.of(TraceFrame.executionTestFrame(0, 0, 0, 0)));
+        TraceRunManifest.Segment segment = new TraceRunManifest.Segment(
+                "active", "level", null, 0, 1, 0, 1, null, null);
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("tail.bk2"), "", Map.of(),
+                java.util.stream.IntStream.range(0, movieFrames)
+                        .mapToObj(index -> frame(index, index))
+                        .toList(), 1);
+        TraceSessionLauncher session = TestRunPayloads.session(
+                null, movie,
+                List.of(new TraceRunReplayWalker.SegmentPlan(
+                        segment, trace, null, null)), null);
+        ActiveSegmentPayload payload = (ActiveSegmentPayload) field(
+                session, "activeRunPayload");
+        DynamicArtLifecycleService lifecycle =
+                new DynamicArtLifecycleService();
+        lifecycle.beginRun();
+        lifecycle.openComparisonSegment();
+        lifecycle.closeComparisonSegment();
+        TraceRunManifest manifest = new TraceRunManifest(
+                "s2", "terminal", "tail.bk2", "crc", List.of(segment),
+                List.of(), List.of(),
+                TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN);
+        TraceRunDynamicArtGapJournal journal =
+                new TraceRunDynamicArtGapJournal(manifest, lifecycle);
+        journal.sourceClosed(0);
+        setField(session, "runDynamicArtGapJournal", journal);
+        setField(session, "runExternalDiagnostics",
+                new TraceRunExternalDiagnostics(null));
+        TraceRunPlaybackCoordinator coordinator =
+                mock(TraceRunPlaybackCoordinator.class);
+        setField(session, "runCoordinator", coordinator);
+        TraceRunReplayWalker.HardwareTimingCoordinator timing =
+                mock(TraceRunReplayWalker.HardwareTimingCoordinator.class);
+        setField(session, "runHardwareTiming", timing);
+        GameLoop loop = mock(GameLoop.class);
+        when(loop.getCurrentGameMode()).thenReturn(GameMode.TITLE_SCREEN);
+        installCurrentLoop(loop);
+        GameServices.playbackDebug().startSession(movie,
+                movieFrames == 3 ? 1 : 0);
+        setStaticField("activeSession", session);
+        return new TerminalFixture(
+                session, payload, coordinator, timing, gameplay, loop);
+    }
+
+    private static void finishFade(GameplayModeContext gameplay) {
+        for (int frame = 0; frame < 30; frame++) {
+            gameplay.getFadeManager().update();
+        }
+    }
+
+    private static Object field(Object target, String name) {
+        try {
+            Field field = target.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private record TerminalFixture(
+            TraceSessionLauncher session,
+            ActiveSegmentPayload payload,
+            TraceRunPlaybackCoordinator coordinator,
+            TraceRunReplayWalker.HardwareTimingCoordinator timing,
+            GameplayModeContext gameplay,
+            GameLoop loop) { }
+
+    private static void invokeCompareTerminalTail(
+            TraceSessionLauncher session) {
+        try {
+            var method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "compareRunTerminalDynamicArtTail");
+            method.setAccessible(true);
+            method.invoke(session);
+        } catch (ReflectiveOperationException e) {
+            if (e.getCause() instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new AssertionError(e);
+        }
     }
 
     private static Bk2FrameInput frame(int index, int mask) {

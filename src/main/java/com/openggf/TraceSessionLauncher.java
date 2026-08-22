@@ -204,6 +204,8 @@ public final class TraceSessionLauncher {
     private boolean runTerminalRowAdvanced;
     private boolean runTerminalMovieEndReached;
     private boolean runTerminalTailCompared;
+    /** True once the terminal-tail action has opened the final source gap. */
+    private boolean runTerminalGapOpened;
     /**
      * The level production row that requests a Special Stage is also the
      * destination segment's BK2 offset. Keep the shared cursor on that row
@@ -1379,12 +1381,37 @@ public final class TraceSessionLauncher {
         if (runCoordinator != null) {
             try {
                 runCoordinatorTick(mode);
-            } catch (RuntimeException failure) {
+            } catch (RuntimeException | Error failure) {
                 clearRunOwnedInputOverride();
                 String diagnostic = failure.getMessage() != null
                         ? failure.getMessage()
                         : failure.getClass().getSimpleName();
-                applyRunCoordinatorActions(runCoordinator.abort(diagnostic));
+                boolean directAbort = false;
+                List<TraceRunPlaybackCoordinator.Action> cleanupActions =
+                        List.of();
+                try {
+                    cleanupActions = runCoordinator.abort(diagnostic);
+                    directAbort = cleanupActions.isEmpty();
+                } catch (RuntimeException | Error abortFailure) {
+                    suppressCleanupFailure(failure, abortFailure);
+                    directAbort = true;
+                }
+                if (!directAbort) {
+                    try {
+                        applyRunCoordinatorActions(cleanupActions);
+                    } catch (RuntimeException | Error cleanupFailure) {
+                        suppressCleanupFailure(failure, cleanupFailure);
+                        directAbort = true;
+                    }
+                }
+                if (directAbort) {
+                    abortIncompleteSession(failure,
+                            "visual trace run aborted after observed-step failure",
+                            Engine.currentGameLoop());
+                }
+                if (failure instanceof Error fatal) {
+                    throw fatal;
+                }
             }
             return;
         }
@@ -1637,10 +1664,16 @@ public final class TraceSessionLauncher {
                 runLevelLoadedDuringSourceProduction = false;
                 runGapSourceLevelMainLoopEnded = false;
             } else if (action instanceof TraceRunPlaybackCoordinator.BeginTerminalTail tail) {
-                enterRunUnrepresentedGap(runSegments.size() - 1);
+                if (!runTerminalGapOpened) {
+                    enterRunUnrepresentedGap(runSegments.size() - 1);
+                    runTerminalGapOpened = true;
+                }
                 beginRunTerminalTail(tail.plan());
             } else if (action instanceof TraceRunPlaybackCoordinator.CompleteRun complete) {
-                enterRunUnrepresentedGap(complete.segmentIndex());
+                if (!runTerminalGapOpened) {
+                    enterRunUnrepresentedGap(complete.segmentIndex());
+                    runTerminalGapOpened = true;
+                }
                 compareRunTerminalDynamicArtTail();
                 finishPendingRunEnd();
             } else if (action instanceof TraceRunPlaybackCoordinator.FailRun failure) {
@@ -1657,6 +1690,7 @@ public final class TraceSessionLauncher {
     private void closeRunSegment(int segmentIndex) {
         Throwable failure = null;
         try {
+            requireActiveRunPayload(segmentIndex);
             captureRunLevelSourceTail(segmentIndex);
             if (runBoundaryProbe != null) {
                 runBoundaryProbe.setDelegate(null);
@@ -1739,8 +1773,9 @@ public final class TraceSessionLauncher {
     }
 
     private void applyRunDestinationAdmission(DestinationAdmissionReceipt receipt) {
-        TraceRunSegmentDescriptor segment = runSegments.get(receipt.segmentIndex());
         try {
+            TraceRunSegmentDescriptor segment =
+                    runSegments.get(receipt.segmentIndex());
             if (runHardwareTiming != null) {
                 // The handoff verifies the source schedule. It must succeed
                 // before any destination comparison, dynamic-art, or input
@@ -2373,9 +2408,6 @@ public final class TraceSessionLauncher {
         }
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
-        }
-        if (runHardwareTiming != null) {
-            runHardwareTiming.enterTransitionGap();
         }
         runTerminalTail = plan;
         runTerminalRowAdvanced = false;
@@ -3938,7 +3970,8 @@ public final class TraceSessionLauncher {
     /** Called when Esc is pressed during a LEVEL tick. */
     public void requestEarlyExit() {
         if (fadeStarted
-                || (comparator == null && !launchPhase.ownsEarlyExit())) {
+                || (!isRunSession() && comparator == null
+                        && !launchPhase.ownsEarlyExit())) {
             return;
         }
         Throwable failure = abortIncompleteSession(
@@ -3960,6 +3993,7 @@ public final class TraceSessionLauncher {
         runAdvancePending = null;
         runGapEntryPending = false;
         runSpecialVerificationPending = false;
+        runTerminalGapOpened = false;
         SessionManager.clearNextGameplayAdmissionPolicy();
         if (fixture != null) {
             failure = cleanupFailure(failure,
@@ -3995,6 +4029,13 @@ public final class TraceSessionLauncher {
         fixture = null;
         LOGGER.info(reason);
         return failure;
+    }
+
+    private static void suppressCleanupFailure(
+            Throwable primary, Throwable cleanupFailure) {
+        if (cleanupFailure != primary) {
+            primary.addSuppressed(cleanupFailure);
+        }
     }
 
     /** Detaches every payload-backed alias before closing the sole lease. */

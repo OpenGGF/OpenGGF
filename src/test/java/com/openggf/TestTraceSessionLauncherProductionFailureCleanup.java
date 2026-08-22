@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +45,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 class TestTraceSessionLauncherProductionFailureCleanup {
 
@@ -145,6 +148,63 @@ class TestTraceSessionLauncherProductionFailureCleanup {
         verify(fixture).abortHardwareTimingReplayRun();
     }
 
+    @Test
+    void observedStepAssertionAbortsRealSessionAndRethrowsOriginal() {
+        TraceReplayFixture fixture = mock(TraceReplayFixture.class);
+        TraceSessionLauncher session = activeSession(fixture);
+        ActiveSegmentPayload payload = activePayload(session);
+        TraceRunPlaybackCoordinator coordinator =
+                (TraceRunPlaybackCoordinator) field(session, "runCoordinator");
+        AssertionError primary = new AssertionError("observed-step assertion");
+        when(coordinator.beforeAdmission(any())).thenThrow(primary);
+        when(coordinator.abort(anyString())).thenReturn(List.of());
+
+        AssertionError thrown = assertThrows(AssertionError.class,
+                () -> session.runAdvanceTickIfActive(GameMode.LEVEL, 0));
+
+        assertSame(primary, thrown);
+        assertTrue(payload.isClosed());
+        assertNull(TraceSessionLauncher.active());
+        verify(fixture).abortHardwareTimingReplayRun();
+        verify(gameLoop).returnToMasterTitle();
+    }
+
+    @Test
+    void completedObservedStepDirectlyAbortsWhenCompletionCleanupFails() {
+        TraceReplayFixture fixture = mock(TraceReplayFixture.class);
+        RuntimeException primary =
+                new RuntimeException("completion hardware close failed");
+        IllegalStateException cleanup =
+                new IllegalStateException("completion abort failed");
+        doThrow(primary).when(fixture).closeHardwareTimingReplayRun();
+        doThrow(cleanup).when(fixture).abortHardwareTimingReplayRun();
+        TraceSessionLauncher session = activeSession(fixture);
+        ActiveSegmentPayload payload = activePayload(session);
+        LiveTraceComparator comparator = mock(LiveTraceComparator.class);
+        when(comparator.isComplete()).thenReturn(true);
+        setField(session, "comparator", comparator);
+        TraceRunPlaybackCoordinator coordinator =
+                (TraceRunPlaybackCoordinator) field(session, "runCoordinator");
+        AtomicReference<TraceRunPlaybackCoordinator.Phase> phase =
+                new AtomicReference<>(
+                        TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT);
+        when(coordinator.phase()).thenAnswer(invocation -> phase.get());
+        when(coordinator.afterProduction(any())).thenAnswer(invocation -> {
+            phase.set(TraceRunPlaybackCoordinator.Phase.COMPLETE);
+            return List.of(
+                    new TraceRunPlaybackCoordinator.CloseSegment(0),
+                    new TraceRunPlaybackCoordinator.CompleteRun(0));
+        });
+        when(coordinator.abort(anyString())).thenReturn(List.of());
+
+        session.runAdvanceTickIfActive(GameMode.LEVEL, 0);
+
+        assertTrue(payload.isClosed());
+        assertNull(TraceSessionLauncher.active());
+        assertSame(cleanup, primary.getSuppressed()[0]);
+        verify(gameLoop).returnToMasterTitle();
+    }
+
     private static TraceSessionLauncher activeSession(
             TraceReplayFixture fixture) {
         TraceData trace = TraceFixtures.trace(
@@ -183,6 +243,16 @@ class TestTraceSessionLauncherProductionFailureCleanup {
                     "activeRunPayload");
             field.setAccessible(true);
             return (ActiveSegmentPayload) field.get(session);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static Object field(Object target, String name) {
+        try {
+            Field field = target.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(target);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

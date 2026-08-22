@@ -2,32 +2,36 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.GameLoop;
 import com.openggf.TraceSessionLauncher;
-import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameMode;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.tests.trace.TraceV5RunFixture;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestVisualRunActivePayloadLifecycle {
+
+    @AfterEach
+    void tearDown() {
+        VisualRunReplayHarness.tearDown();
+    }
 
     @Test
     void descriptorFrameViewAnswersSegmentLagGapAndTailWithoutOpeningPayload(
@@ -60,61 +64,118 @@ class TestVisualRunActivePayloadLifecycle {
     @Test
     void visualAndCompleteAudioCloseLocallyOnPreTransferConstructorFailure(
             @TempDir Path root) throws Exception {
-        for (String route : List.of("visual", "complete-audio")) {
-            Path runDir = TraceV5RunFixture.writeS3kBonusRun(
-                    root.resolve(route));
-            TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
-            List<TraceRunSegmentDescriptor> descriptors = descriptors(runDir);
-            ActiveSegmentPayload local = TraceRunReplayWalker.openActiveSegment(
-                    descriptors.getFirst(), 0);
-            Bk2Movie movie = new com.openggf.debug.playback.Bk2MovieLoader()
-                    .load(runDir.resolve("synthetic.bk2"));
-            List<TraceRunSegmentDescriptor> wrongOwner =
-                    new ArrayList<>(descriptors);
-            wrongOwner.set(0, copyWithLag(descriptors.getFirst(),
-                    descriptors.getFirst().laggedRows()));
+        Path visual = preparedRun(root.resolve("visual"));
+        AtomicReference<ActiveSegmentPayload> visualPayload =
+                new AtomicReference<>();
+        Exception visualFailure = assertThrows(Exception.class,
+                () -> VisualRunReplayHarness.replay(
+                        visual, new VisualRunReplayHarness.Stop(1, -1),
+                        VisualRunReplayHarness.FrameObserver.NONE, false,
+                        failingConstructor(visualPayload), minimalBootstrap(false)));
+        assertEquals("injected constructor failure", visualFailure.getMessage());
+        assertTrue(visualPayload.get().isClosed(), "visual");
+        VisualRunReplayHarness.tearDown();
 
-            Exception failure;
-            try {
-                failure = assertThrows(Exception.class,
-                        () -> VisualRunReplayHarness.newRunSession(
-                                null, movie, wrongOwner, local), route);
-            } finally {
-                VisualRunReplayHarness.closeLocalRunPayload(local);
-            }
-
-            assertTrue(local.isClosed(), route);
-            assertTrue(rootCause(failure) instanceof IllegalArgumentException,
-                    () -> route + ": " + failure);
-        }
+        Path completeAudio = preparedRun(root.resolve("complete-audio"));
+        AtomicReference<ActiveSegmentPayload> audioPayload =
+                new AtomicReference<>();
+        Exception audioFailure = assertThrows(Exception.class,
+                () -> VisualRunReplayHarness.replayCompleteAudio(
+                        completeAudio,
+                        new VisualRunReplayHarness.CompleteAudioStop(500, 3000, 0),
+                        VisualRunReplayHarness.FrameObserver.NONE,
+                        failingConstructor(audioPayload), minimalBootstrap(false)));
+        assertEquals("injected constructor failure", audioFailure.getMessage());
+        assertTrue(audioPayload.get().isClosed(), "complete-audio");
     }
 
     @Test
     void visualAndCompleteAudioCloseThroughSessionAfterTransferFailure(
             @TempDir Path root) throws Exception {
-        for (String route : List.of("visual", "complete-audio")) {
-            Path runDir = TraceV5RunFixture.writeS3kBonusRun(
-                    root.resolve(route));
-            TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
-            List<TraceRunSegmentDescriptor> descriptors = descriptors(runDir);
-            ActiveSegmentPayload local = TraceRunReplayWalker.openActiveSegment(
-                    descriptors.getFirst(), 0);
-            Bk2Movie movie = new com.openggf.debug.playback.Bk2MovieLoader()
-                    .load(runDir.resolve("synthetic.bk2"));
+        Path visual = preparedRun(root.resolve("visual"));
+        AtomicReference<ActiveSegmentPayload> visualPayload =
+                new AtomicReference<>();
+        AtomicReference<TraceSessionLauncher> visualSession =
+                new AtomicReference<>();
+        AssertionError visualFailure = assertThrows(AssertionError.class,
+                () -> VisualRunReplayHarness.replay(
+                        visual, new VisualRunReplayHarness.Stop(1, -1),
+                        VisualRunReplayHarness.FrameObserver.NONE, false,
+                        recordingConstructor(visualPayload, visualSession),
+                        minimalBootstrap(true)));
+        assertEquals("injected post-transfer bootstrap failure",
+                visualFailure.getMessage());
+        assertTrue(visualPayload.get().isClosed(), "visual");
+        assertNull(field(visualSession.get(), "activeRunPayload"), "visual");
+        VisualRunReplayHarness.tearDown();
 
-            TraceSessionLauncher session = VisualRunReplayHarness.newRunSession(
-                    null, movie, descriptors, local);
+        Path completeAudio = preparedRun(root.resolve("complete-audio"));
+        AtomicReference<ActiveSegmentPayload> audioPayload =
+                new AtomicReference<>();
+        AtomicReference<TraceSessionLauncher> audioSession =
+                new AtomicReference<>();
+        AssertionError audioFailure = assertThrows(AssertionError.class,
+                () -> VisualRunReplayHarness.replayCompleteAudio(
+                        completeAudio,
+                        new VisualRunReplayHarness.CompleteAudioStop(500, 3000, 0),
+                        VisualRunReplayHarness.FrameObserver.NONE,
+                        recordingConstructor(audioPayload, audioSession),
+                        minimalBootstrap(true)));
+        assertEquals("injected post-transfer bootstrap failure",
+                audioFailure.getMessage());
+        assertTrue(audioPayload.get().isClosed(), "complete-audio");
+        assertNull(field(audioSession.get(), "activeRunPayload"),
+                "complete-audio");
+    }
 
-            assertSame(local, field(session, "activeRunPayload"), route);
-            AssertionError primary = new AssertionError(
-                    route + " post-transfer failure");
-            Throwable returned =
-                    VisualRunReplayHarness.closeTransferredRunSession(
-                            session, primary);
-            assertSame(primary, returned, route);
-            assertTrue(local.isClosed(), route);
-            assertNull(field(session, "activeRunPayload"), route);
-        }
+    private static Path preparedRun(Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
+        return runDir;
+    }
+
+    private static VisualRunReplayHarness.RunSessionConstructor
+            failingConstructor(
+                    AtomicReference<ActiveSegmentPayload> payload) {
+        return (entry, movie, descriptors, activePayload) -> {
+            payload.set(activePayload);
+            throw new Exception("injected constructor failure");
+        };
+    }
+
+    private static VisualRunReplayHarness.RunSessionConstructor
+            recordingConstructor(
+                    AtomicReference<ActiveSegmentPayload> payload,
+                    AtomicReference<TraceSessionLauncher> session) {
+        return (entry, movie, descriptors, activePayload) -> {
+            payload.set(activePayload);
+            TraceSessionLauncher created = VisualRunReplayHarness.newRunSession(
+                    entry, movie, descriptors, activePayload);
+            session.set(created);
+            return created;
+        };
+    }
+
+    private static VisualRunReplayHarness.RunBootstrap minimalBootstrap(
+            boolean failAfterTransfer) {
+        return new VisualRunReplayHarness.RunBootstrap() {
+            @Override
+            public GameLoop beforeTransfer(
+                    com.openggf.trace.catalog.TraceEntry entry,
+                    com.openggf.trace.TraceData firstTrace,
+                    VisualRunReplayHarness.FrameObserver observer) {
+                return mock(GameLoop.class);
+            }
+
+            @Override
+            public void afterTransfer(
+                    TraceSessionLauncher session, GameLoop loop) {
+                if (failAfterTransfer) {
+                    throw new AssertionError(
+                            "injected post-transfer bootstrap failure");
+                }
+            }
+        };
     }
 
     private static List<TraceRunSegmentDescriptor> descriptors(Path runDir)
@@ -143,14 +204,6 @@ class TestVisualRunActivePayloadLifecycle {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
-    }
-
-    private static Throwable rootCause(Throwable failure) {
-        Throwable result = failure;
-        while (result.getCause() != null) {
-            result = result.getCause();
-        }
-        return result;
     }
 
 }

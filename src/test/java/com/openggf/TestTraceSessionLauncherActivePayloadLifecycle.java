@@ -17,6 +17,7 @@ import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.runs.ActiveSegmentPayload;
+import com.openggf.trace.replay.runs.DestinationAdmissionReceipt;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
@@ -193,6 +194,137 @@ class TestTraceSessionLauncherActivePayloadLifecycle {
     }
 
     @Test
+    void activeRunGapExitDoesNotRequireAComparator(@TempDir Path root)
+            throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        closeSegment(session, 0);
+        setStaticField(TraceSessionLauncher.class, "activeSession", session);
+
+        session.requestEarlyExit();
+
+        assertNull(TraceSessionLauncher.active());
+        assertEquals(List.of("open 0", "close 0"), factory.transcript);
+    }
+
+    @Test
+    void activeRunSpecialLocalExitDoesNotRequireAComparator(@TempDir Path root)
+            throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        closeSegment(session, 0);
+        openSegment(session, 1);
+        ActiveSegmentPayload special =
+                (ActiveSegmentPayload) field(session, "activeRunPayload");
+        setStaticField(TraceSessionLauncher.class, "activeSession", session);
+
+        session.requestEarlyExit();
+
+        assertNull(TraceSessionLauncher.active());
+        assertTrue(initial.isClosed());
+        assertTrue(special.isClosed());
+        assertNull(field(session, "activeRunPayload"));
+    }
+
+    @Test
+    void activeRunTerminalTailExitDoesNotRequireAComparator(@TempDir Path root)
+            throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        closeSegment(session, 0);
+        setField(session, "runTerminalTail",
+                new TraceRunReplayWalker.TerminalMovieTailPlan(
+                        100, 2, GameMode.TITLE_SCREEN));
+        setStaticField(TraceSessionLauncher.class, "activeSession", session);
+
+        session.requestEarlyExit();
+
+        assertNull(TraceSessionLauncher.active());
+        assertNull(field(session, "activeRunPayload"));
+    }
+
+    @Test
+    void wrongCloseIndexKeepsValidationPrimaryAndClosesActualLease(
+            @TempDir Path root) throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        factory.closeFailure = new IllegalStateException("close seam failed");
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> closeSegment(session, 1));
+
+        assertTrue(failure.getMessage().contains("segment 1"), failure::getMessage);
+        assertSame(factory.closeFailure, failure.getSuppressed()[0]);
+        assertTrue(initial.isClosed());
+        assertNull(field(session, "activeRunPayload"));
+    }
+
+    @Test
+    void outOfBoundsAdmissionKeepsValidationPrimaryAndClosesActualLease(
+            @TempDir Path root) throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        factory.closeFailure = new IllegalStateException("close seam failed");
+        DestinationAdmissionReceipt receipt = new DestinationAdmissionReceipt(
+                99, DestinationAdmissionReceipt.InputClock.SHARED, 0, 0,
+                new DestinationAdmissionReceipt.LevelIdentity(0, 0, 1),
+                0, 0, 0);
+
+        IndexOutOfBoundsException failure = assertThrows(
+                IndexOutOfBoundsException.class,
+                () -> admitDestination(session, receipt));
+
+        assertTrue(failure.getMessage().contains("99"), failure::getMessage);
+        assertSame(factory.closeFailure, failure.getSuppressed()[0]);
+        assertTrue(initial.isClosed());
+        assertNull(field(session, "activeRunPayload"));
+    }
+
+    @Test
+    void wrongIndexAdmissionKeepsIdentityPrimaryAndClosesActualLease(
+            @TempDir Path root) throws Exception {
+        Fixture fixture = fixture(root, false);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(
+                fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(
+                fixture.descriptors(), initial, factory);
+        factory.closeFailure = new IllegalStateException("close seam failed");
+        DestinationAdmissionReceipt receipt = new DestinationAdmissionReceipt(
+                1, DestinationAdmissionReceipt.InputClock.SPECIAL_LOCAL, 800, 0,
+                new DestinationAdmissionReceipt.SpecialStageIdentity(0),
+                0, 0, 0);
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> admitDestination(session, receipt));
+
+        assertTrue(failure.getMessage().contains("segment 1"), failure::getMessage);
+        assertSame(factory.closeFailure, failure.getSuppressed()[0]);
+        assertTrue(initial.isClosed());
+        assertNull(field(session, "activeRunPayload"));
+    }
+
+    @Test
     void ordinarySourceAliasesClearWhileDestinationRemainsUsable(
             @TempDir Path root) throws Exception {
         OrdinaryReachability sample = openOrdinaryThenAdvance(root);
@@ -342,6 +474,12 @@ class TestTraceSessionLauncherActivePayloadLifecycle {
     private static void openSegment(TraceSessionLauncher session, int index)
             throws Exception {
         invoke(session, "openRunPayload", new Class<?>[] {int.class}, index);
+    }
+
+    private static void admitDestination(TraceSessionLauncher session,
+            DestinationAdmissionReceipt receipt) throws Exception {
+        invoke(session, "applyRunDestinationAdmission",
+                new Class<?>[] {DestinationAdmissionReceipt.class}, receipt);
     }
 
     private static Throwable abort(TraceSessionLauncher session,

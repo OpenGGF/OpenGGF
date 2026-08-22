@@ -11,6 +11,7 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.TraceData;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
@@ -125,6 +126,55 @@ public final class VisualRunReplayHarness {
 
         default void afterOuterFrame(FrameView frame) { }
     }
+
+    @FunctionalInterface
+    interface RunSessionConstructor {
+        TraceSessionLauncher create(
+                TraceEntry entry, Bk2Movie movie,
+                List<TraceRunSegmentDescriptor> segments,
+                ActiveSegmentPayload activePayload) throws Exception;
+    }
+
+    /** Injectable lifecycle boundary used to prove ownership on either side. */
+    interface RunBootstrap {
+        GameLoop beforeTransfer(
+                TraceEntry entry, TraceData firstTrace,
+                FrameObserver observer) throws Exception;
+
+        void afterTransfer(
+                TraceSessionLauncher session, GameLoop loop) throws Exception;
+    }
+
+    private static final RunSessionConstructor PRODUCTION_SESSION_CONSTRUCTOR =
+            VisualRunReplayHarness::newRunSession;
+    private static final RunBootstrap PRODUCTION_BOOTSTRAP = new RunBootstrap() {
+        @Override
+        public GameLoop beforeTransfer(
+                TraceEntry entry, TraceData firstTrace,
+                FrameObserver observer) throws Exception {
+            GraphicsManager.getInstance().resetState();
+            GraphicsManager.getInstance().initHeadless();
+            TraceLaunchStatus.clear();
+            TraceReplaySessionBootstrap.prepareConfiguration(
+                    firstTrace, firstTrace.metadata());
+            HeadlessTestFixture.builder()
+                    .withZoneAndAct(entry.zone(), entry.act())
+                    .withHardwareReadinessAdmissionPolicy(
+                            HardwareReadinessAdmissionPolicy.LIVE)
+                    .build();
+            observer.beforeReplayBootstrap();
+            GameLoop loop = new GameLoop(new InputHandler());
+            installCurrentGameLoop(loop);
+            return loop;
+        }
+
+        @Override
+        public void afterTransfer(
+                TraceSessionLauncher session, GameLoop loop) throws Exception {
+            setActiveSession(session);
+            finishRunLaunch(session);
+        }
+    };
 
     /** Exact half-open complete-audio epoch and diagnostic bootstrap budget. */
     public record CompleteAudioStop(int firstFrame, int exclusiveEnd,
@@ -273,8 +323,19 @@ public final class VisualRunReplayHarness {
     public static CompleteAudioCadenceResult replayCompleteAudio(
             Path runDir, CompleteAudioStop stop,
             FrameObserver observer) throws Exception {
+        return replayCompleteAudio(runDir, stop, observer,
+                PRODUCTION_SESSION_CONSTRUCTOR, PRODUCTION_BOOTSTRAP);
+    }
+
+    static CompleteAudioCadenceResult replayCompleteAudio(
+            Path runDir, CompleteAudioStop stop,
+            FrameObserver observer,
+            RunSessionConstructor sessionConstructor,
+            RunBootstrap bootstrap) throws Exception {
         java.util.Objects.requireNonNull(stop, "stop");
         java.util.Objects.requireNonNull(observer, "observer");
+        java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
+        java.util.Objects.requireNonNull(bootstrap, "bootstrap");
         ActiveSegmentPayload localPayload = null;
         TraceSessionLauncher transferredSession = null;
         Throwable primary = null;
@@ -298,35 +359,12 @@ public final class VisualRunReplayHarness {
                                 + manifestFirst);
             }
 
-            GraphicsManager.getInstance().resetState();
-            GraphicsManager.getInstance().initHeadless();
-            TraceLaunchStatus.clear();
-            TraceReplaySessionBootstrap.prepareConfiguration(
-                    seg0, seg0.metadata());
-
-            // A visual run boots LIVE, exactly as the windowed launch does
-            // (TraceSessionLauncher.launchRun's admission policy). The
-            // title-card prelude is production-live work, so its submissions
-            // retire before the level starts; the replay driver then converts
-            // the drained service in place to recorded admission.
-            HeadlessTestFixture.builder()
-                    .withZoneAndAct(entry.zone(), entry.act())
-                    .withHardwareReadinessAdmissionPolicy(
-                            HardwareReadinessAdmissionPolicy.LIVE)
-                    .build();
-
-            // The fixture resets transient audio state. Install capture
-            // observers after that reset and before title-card bootstrap.
-            observer.beforeReplayBootstrap();
-
-            GameLoop loop = new GameLoop(new InputHandler());
-            installCurrentGameLoop(loop);
-            transferredSession = newRunSession(
+            GameLoop loop = bootstrap.beforeTransfer(entry, seg0, observer);
+            transferredSession = sessionConstructor.create(
                     entry, movie, segments, localPayload);
             localPayload = null;
             TraceSessionLauncher session = transferredSession;
-            setActiveSession(session);
-            finishRunLaunch(session);
+            bootstrap.afterTransfer(session, loop);
 
             ArrayDeque<String> recent = new ArrayDeque<>();
             List<String> timeline = new ArrayList<>();
@@ -638,7 +676,18 @@ public final class VisualRunReplayHarness {
     private static Result replay(Path runDir, Stop stop,
                                  FrameObserver observer,
                                  boolean rejectFastForward) throws Exception {
+        return replay(runDir, stop, observer, rejectFastForward,
+                PRODUCTION_SESSION_CONSTRUCTOR, PRODUCTION_BOOTSTRAP);
+    }
+
+    static Result replay(Path runDir, Stop stop,
+                         FrameObserver observer,
+                         boolean rejectFastForward,
+                         RunSessionConstructor sessionConstructor,
+                         RunBootstrap bootstrap) throws Exception {
         java.util.Objects.requireNonNull(observer, "observer");
+        java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
+        java.util.Objects.requireNonNull(bootstrap, "bootstrap");
         ActiveSegmentPayload localPayload = null;
         TraceSessionLauncher transferredSession = null;
         Throwable primary = null;
@@ -655,34 +704,12 @@ public final class VisualRunReplayHarness {
                     segments.getFirst(), 0);
             var seg0 = localPayload.trace();
 
-            // Match the windowed order: recorded configuration precedes load.
-            GraphicsManager.getInstance().resetState();
-            GraphicsManager.getInstance().initHeadless();
-            TraceLaunchStatus.clear();
-            TraceReplaySessionBootstrap.prepareConfiguration(
-                    seg0, seg0.metadata());
-
-            // The title-card prelude uses live admission; replay converts the
-            // drained service in place to recorded admission.
-            HeadlessTestFixture.builder()
-                    .withZoneAndAct(entry.zone(), entry.act())
-                    .withHardwareReadinessAdmissionPolicy(
-                            HardwareReadinessAdmissionPolicy.LIVE)
-                    .build();
-
-            observer.beforeReplayBootstrap();
-
-            GameLoop loop = new GameLoop(new InputHandler());
-            installCurrentGameLoop(loop);
-
-            transferredSession = newRunSession(
+            GameLoop loop = bootstrap.beforeTransfer(entry, seg0, observer);
+            transferredSession = sessionConstructor.create(
                     entry, movie, segments, localPayload);
             localPayload = null;
             TraceSessionLauncher session = transferredSession;
-            setActiveSession(session);
-            // The same callback launchRun gives the master-title fade: it
-            // presents segment zero's title card before replay bootstrap.
-            finishRunLaunch(session);
+            bootstrap.afterTransfer(session, loop);
             if (rejectFastForward
                     && !"< 1x >".equals(session.playbackRateDisplay())) {
                 throw new IllegalStateException(
