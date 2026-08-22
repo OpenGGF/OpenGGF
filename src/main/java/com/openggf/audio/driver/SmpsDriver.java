@@ -8,8 +8,11 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.YmWriteTimeline;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,6 +33,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private static final int MIN_BATCH_SAMPLES = 32;
+    private static final SmpsSourceDescriptor DRIVER_SOURCE =
+            new SmpsSourceDescriptor(
+                    SmpsSourceDescriptor.Kind.UNKNOWN, -1,
+                    "SMPS driver", null, 0, 0, 0, false, 0);
 
     private final Object sequencersLock = new Object();
     private final List<SmpsSequencer> sequencers = new ArrayList<>();
@@ -83,6 +90,114 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver.NONE;
     private SmpsDriverServiceObserver.DriverIdentity diagnosticIdentity =
             SmpsDriverServiceObserver.DriverIdentity.unspecified();
+    private long ymServiceCursor;
+    private long nextYmServiceOrdinal;
+    private long nextYmWriteOrdinal;
+    private ServiceTransaction ymServiceTransaction;
+
+    @FunctionalInterface
+    private interface LogicalObserverNotification {
+        void publish();
+    }
+
+    private static final class ServiceTransaction {
+        private final LiveCommandMutationToken rollback;
+        private final Object source;
+        private final long serviceOrdinal;
+        private final long generation;
+        private final boolean implicit;
+        private final List<YmWriteTimeline.Entry> writes = new ArrayList<>();
+        private final List<LogicalObserverNotification> observers =
+                new ArrayList<>();
+        private long cursor;
+        private DriverYmTimingScope activeScope;
+
+        private ServiceTransaction(
+                LiveCommandMutationToken rollback,
+                Object source,
+                long serviceOrdinal,
+                long generation,
+                long cursor,
+                boolean implicit) {
+            this.rollback = rollback;
+            this.source = source;
+            this.serviceOrdinal = serviceOrdinal;
+            this.generation = generation;
+            this.cursor = cursor;
+            this.implicit = implicit;
+        }
+    }
+
+    private final class DriverYmTimingScope
+            implements Synthesizer.YmTimingScope {
+        private final ServiceTransaction transaction;
+        private final Object source;
+        private final YmServiceTimingProfile.Segment segment;
+        private final long[] advances;
+        private int consumed;
+        private boolean closed;
+
+        private DriverYmTimingScope(
+                ServiceTransaction transaction,
+                Object source,
+                YmServiceTimingProfile.Segment segment) {
+            this.transaction = transaction;
+            this.source = source;
+            this.segment = segment;
+            this.advances = segment.advanceBeforeWriteMasterCycles();
+        }
+
+        private long consumeSlot() {
+            requireUsable();
+            if (consumed >= advances.length) {
+                IllegalStateException failure = new IllegalStateException(
+                        "YM timing segment produced excess hardware writes");
+                abortYmServiceTransaction(failure);
+                throw failure;
+            }
+            try {
+                transaction.cursor = Math.addExact(
+                        transaction.cursor, advances[consumed]);
+            } catch (ArithmeticException failure) {
+                abortYmServiceTransaction(failure);
+                throw failure;
+            }
+            consumed++;
+            return transaction.cursor;
+        }
+
+        @Override
+        public void consumeSuppressedHardwareAttempt() {
+            consumeSlot();
+        }
+
+        @Override
+        public void close() {
+            requireUsable();
+            if (consumed != advances.length) {
+                closed = true;
+                transaction.activeScope = null;
+                IllegalStateException failure = new IllegalStateException(
+                        "YM timing segment closed after " + consumed
+                                + " of " + advances.length + " slots");
+                abortYmServiceTransaction(failure);
+                throw failure;
+            }
+            closed = true;
+            transaction.activeScope = null;
+            if (transaction.implicit) {
+                commitYmServiceTransaction();
+            }
+        }
+
+        private void requireUsable() {
+            if (closed || ymServiceTransaction != transaction
+                    || transaction.activeScope != this) {
+                throw new IllegalStateException(
+                        "YM timing scope is closed or no longer active");
+            }
+        }
+    }
 
     /**
      * Exact, identity-bearing rollback state for one live presentation command.
@@ -112,6 +227,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
+        private final long ymServiceCursor;
+        private final long nextYmServiceOrdinal;
+        private final long nextYmWriteOrdinal;
         private final DacData liveDacDataReference;
         private final VirtualSynthesizer.Snapshot synthSnapshot;
 
@@ -138,6 +256,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
+                long ymServiceCursor,
+                long nextYmServiceOrdinal,
+                long nextYmWriteOrdinal,
                 DacData liveDacDataReference,
                 VirtualSynthesizer.Snapshot synthSnapshot) {
             this.owner = owner;
@@ -162,6 +283,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
+            this.ymServiceCursor = ymServiceCursor;
+            this.nextYmServiceOrdinal = nextYmServiceOrdinal;
+            this.nextYmWriteOrdinal = nextYmWriteOrdinal;
             this.liveDacDataReference = liveDacDataReference;
             this.synthSnapshot = synthSnapshot;
         }
@@ -307,6 +431,184 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public SmpsDriver(
             double outputSampleRate, ChipWriteObserver observer) {
         super(outputSampleRate, observer);
+        nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
+    }
+
+    @Override
+    public Synthesizer.YmTimingScope beginYmTiming(
+            Object source,
+            YmServiceTimingProfile.SegmentKind kind,
+            YmServiceTimingProfile.Variant variant) {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(variant, "variant");
+        YmServiceTimingProfile profile = timingProfileFor(source);
+        if (profile == YmServiceTimingProfile.none()) {
+            return Synthesizer.YmTimingScope.immediate();
+        }
+
+        YmServiceTimingProfile.Segment segment;
+        try {
+            segment = profile.requireSegment(kind, variant);
+        } catch (RuntimeException failure) {
+            if (ymServiceTransaction != null) {
+                abortYmServiceTransaction(failure);
+            }
+            throw failure;
+        }
+        if (ymServiceTransaction == null) {
+            beginYmServiceTransaction(source, true);
+        }
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction.activeScope != null) {
+            IllegalStateException failure = new IllegalStateException(
+                    "nested YM timing scopes are not permitted");
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        DriverYmTimingScope scope = new DriverYmTimingScope(
+                transaction, source, segment);
+        transaction.activeScope = scope;
+        return scope;
+    }
+
+    private YmServiceTimingProfile timingProfileFor(Object source) {
+        return source instanceof SmpsSequencer sequencer
+                ? sequencer.getConfig().getYmServiceTimingProfile()
+                : YmServiceTimingProfile.none();
+    }
+
+    private ServiceTransaction beginYmServiceTransaction(
+            Object source, boolean implicit) {
+        if (ymServiceTransaction != null) {
+            throw new IllegalStateException(
+                    "a YM driver service transaction is already active");
+        }
+        int requiredCapacity = aggregateYmServiceWriteBound(source);
+        int remainingCapacity = Math.subtractExact(
+                ymWriteTimelineCapacity(), pendingYmWriteCount());
+        if (remainingCapacity < requiredCapacity) {
+            throw new IllegalStateException(
+                    "YM write timeline cannot admit aggregate service bound "
+                            + requiredCapacity + " with only "
+                            + remainingCapacity + " slots remaining");
+        }
+        LiveCommandMutationToken rollback = captureLiveCommandMutation();
+        long cursor = Math.max(renderedYmMasterCycle(),
+                lastPendingYmWriteDueCycle());
+        ymServiceTransaction = new ServiceTransaction(
+                rollback, source, nextYmServiceOrdinal, ymTimelineGeneration(),
+                cursor, implicit);
+        return ymServiceTransaction;
+    }
+
+    private int aggregateYmServiceWriteBound(Object source) {
+        int activeBound = 0;
+        boolean sourceIncluded = false;
+        for (SmpsSequencer sequencer : sequencers) {
+            YmServiceTimingProfile profile =
+                    sequencer.getConfig().getYmServiceTimingProfile();
+            activeBound = Math.addExact(activeBound,
+                    profile.maximumWritesPerDriverService());
+            sourceIncluded |= sequencer == source;
+        }
+        if (!sourceIncluded) {
+            activeBound = Math.addExact(activeBound,
+                    timingProfileFor(source).maximumWritesPerDriverService());
+        }
+
+        int completionBound = 0;
+        for (SmpsSequencer pending : pendingRemovals) {
+            completionBound = Math.addExact(completionBound,
+                    pending.getConfig().getYmServiceTimingProfile()
+                            .maximumWritesPerDriverService());
+        }
+        int repeatedBound = region == SmpsSequencer.Region.PAL
+                && usesPalFullDriverRepeat() ? activeBound : 0;
+        return Math.addExact(Math.addExact(activeBound, completionBound),
+                repeatedBound);
+    }
+
+    private void commitYmServiceTransaction() {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction == null) {
+            return;
+        }
+        if (transaction.activeScope != null) {
+            IllegalStateException failure = new IllegalStateException(
+                    "YM driver service ended with an open timing scope");
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        try {
+            commitYmWriteJournal(transaction.writes);
+            ymServiceCursor = transaction.cursor;
+            nextYmWriteOrdinal = Math.addExact(
+                    nextYmWriteOrdinal, transaction.writes.size());
+            nextYmServiceOrdinal = Math.incrementExact(
+                    nextYmServiceOrdinal);
+        } catch (RuntimeException failure) {
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        List<LogicalObserverNotification> notifications =
+                List.copyOf(transaction.observers);
+        ymServiceTransaction = null;
+        for (LogicalObserverNotification notification : notifications) {
+            notification.publish();
+        }
+    }
+
+    private void abortYmServiceTransaction(Throwable failure) {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction == null) {
+            return;
+        }
+        if (transaction.activeScope != null) {
+            transaction.activeScope.closed = true;
+            transaction.activeScope = null;
+        }
+        ymServiceTransaction = null;
+        try {
+            rollbackLiveCommandMutation(transaction.rollback);
+        } catch (RuntimeException rollbackFailure) {
+            failure.addSuppressed(rollbackFailure);
+        }
+    }
+
+    private void cancelUnpublishedYmServiceForBarrier(String barrier) {
+        if (ymServiceTransaction != null) {
+            abortYmServiceTransaction(new IllegalStateException(
+                    barrier + " cancelled an unpublished YM service"));
+        }
+    }
+
+    private void cancelUnpublishedSfxServiceForStop() {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction == null) {
+            return;
+        }
+        if (!(transaction.source instanceof SmpsSequencer sequencer)
+                || !sequencer.isSfx()) {
+            throw new IllegalStateException(
+                    "cannot stop all SFX during a non-SFX YM service");
+        }
+        abortYmServiceTransaction(new IllegalStateException(
+                "stopAllSfx cancelled an unpublished SFX service"));
+    }
+
+    /** Rolls back a semantic service which failed before atomic publication. */
+    public void abortSequencerService(Throwable failure) {
+        abortYmServiceTransaction(Objects.requireNonNull(
+                failure, "failure"));
+    }
+
+    private void stageLogicalObserver(
+            LogicalObserverNotification notification) {
+        if (ymServiceTransaction == null) {
+            notification.publish();
+        } else {
+            ymServiceTransaction.observers.add(notification);
+        }
     }
 
     /** Installs the disabled-by-default complete-service diagnostic observer. */
@@ -335,6 +637,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public SmpsDriverServiceObserver.ServiceEvent beginSequencerService(
             SmpsSequencer sequencer,
             SmpsDriverServiceObserver.ServiceKind kind) {
+        Objects.requireNonNull(sequencer, "sequencer");
+        Objects.requireNonNull(kind, "kind");
+        if (timingProfileFor(sequencer) != YmServiceTimingProfile.none()
+                && ymServiceTransaction == null) {
+            beginYmServiceTransaction(sequencer, false);
+        }
         if (serviceObserver == SmpsDriverServiceObserver.NONE) {
             return null;
         }
@@ -351,8 +659,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                                 sequencerOrdinal,
                                 sequencer.getSourceDescriptor(),
                                 sequencer.isSfx()),
-                        Objects.requireNonNull(kind, "kind"));
-        serviceObserver.onServiceBegin(event);
+                        kind);
+        SmpsDriverServiceObserver observer = serviceObserver;
+        stageLogicalObserver(() -> observer.onServiceBegin(event));
         return event;
     }
 
@@ -360,8 +669,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public void endSequencerService(
             SmpsDriverServiceObserver.ServiceEvent event) {
         if (event != null) {
-            serviceObserver.onServiceEnd(event, captureSnapshot());
+            SmpsDriverServiceObserver observer = serviceObserver;
+            stageLogicalObserver(() -> observer.onServiceEnd(
+                    event, captureSnapshot()));
         }
+        commitYmServiceTransaction();
     }
 
     /**
@@ -372,8 +684,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver.ServiceEvent event) {
         if (fadeTerminalStopAllPending) {
             fadeTerminalStopAllPending = false;
+            boolean unpublishedTimedService = ymServiceTransaction != null;
             stopAll();
             fadeTerminalStopAllCompleted = true;
+            if (!unpublishedTimedService) {
+                // None profiles publish their begin callback immediately, so
+                // preserve the matching legacy end around terminal StopAll.
+                endSequencerService(event);
+            }
+            return;
         }
         endSequencerService(event);
     }
@@ -402,10 +721,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         : kind == SmpsDriverServiceObserver.LifecycleKind.RESTORE
                         ? SmpsDriverServiceObserver.LifecycleSource.SNAPSHOT_RESTORE
                         : SmpsDriverServiceObserver.LifecycleSource.DRIVER_MUTATION;
-        serviceObserver.onLifecycle(
+        SmpsDriverServiceObserver observer = serviceObserver;
+        SmpsDriverServiceObserver.LifecycleEvent event =
                 SmpsDriverServiceObserver.LifecycleEvent.driver(
                         Objects.requireNonNull(kind, "kind"), source,
-                        diagnosticIdentity));
+                        diagnosticIdentity);
+        stageLogicalObserver(() -> observer.onLifecycle(event));
     }
 
     // --- Continuous SFX API ---
@@ -573,41 +894,57 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     "prepared SFX admission belongs to another driver");
         }
         synchronized (sequencersLock) {
-            if (admission.continuousExtension()) {
-                admission.claimCommit();
-                continuousSfxFlag = true;
-                contSfxLoopCnt = admission.trackCount();
-                return;
-            }
-
-            if (admission.priorityBefore()
+            if (!admission.continuousExtension()
+                    && admission.priorityBefore()
                     != SmpsRequestAdmissionPolicy.NO_PRIORITY
                     && admission.priorityBefore() != sfxPriorityLatch) {
                 throw new IllegalStateException(
                         "prepared SFX priority proof is stale");
             }
 
-            admission.claimCommit();
             SfxAdmissionMutationState rollbackState = null;
+            ServiceTransaction timingTransaction = null;
+            boolean claimed = false;
             try {
-                if (captureLocalJournal
-                        && hasPotentiallyThrowingAdmissionObserver()) {
+                boolean timedAdmission = timingProfileFor(
+                        admission.sequencer())
+                        != YmServiceTimingProfile.none();
+                if (timedAdmission || (captureLocalJournal
+                        && hasPotentiallyThrowingAdmissionObserver())) {
                     rollbackState = captureSfxAdmissionMutation(admission);
                 }
-            } catch (RuntimeException failure) {
-                admission.releaseCommit();
-                throw failure;
-            }
-            try {
-                commitNewSfxAdmission(admission);
-            } catch (RuntimeException failure) {
-                if (rollbackState != null) {
+                if (timedAdmission) {
+                    timingTransaction = beginYmServiceTransaction(
+                            admission.sequencer(), false);
+                }
+                admission.claimCommit();
+                claimed = true;
+                if (admission.continuousExtension()) {
+                    continuousSfxFlag = true;
+                    contSfxLoopCnt = admission.trackCount();
+                } else {
+                    commitNewSfxAdmission(admission);
+                }
+                if (timingTransaction != null) {
+                    commitYmServiceTransaction();
+                }
+            } catch (RuntimeException | Error failure) {
+                boolean unpublishedTiming = timingTransaction != null
+                        && ymServiceTransaction == timingTransaction;
+                if (unpublishedTiming) {
+                    abortYmServiceTransaction(failure);
+                }
+                if (timingTransaction == null || unpublishedTiming) {
                     try {
-                        restoreSfxAdmissionMutation(rollbackState);
+                        if (rollbackState != null) {
+                            restoreSfxAdmissionMutation(rollbackState);
+                        }
                     } catch (RuntimeException rollbackFailure) {
                         failure.addSuppressed(rollbackFailure);
                     } finally {
-                        admission.releaseCommit();
+                        if (claimed) {
+                            admission.releaseCommit();
+                        }
                     }
                 }
                 throw failure;
@@ -741,7 +1078,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    private void applyAdmissionFmPreparation(SmpsSequencer sequencer) {
+    void applyAdmissionFmPreparation(SmpsSequencer sequencer) {
         if (sequencer.getConfig().getFmSfxTakeoverMode()
                 != SmpsSequencerConfig.FmSfxTakeoverMode
                         .KEY_OFF_CLEAR_SSG_EG) {
@@ -759,9 +1096,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             int port = track.channelId < 3 ? 0 : 1;
             int channel = track.channelId % 3;
             int keyChannel = port == 0 ? channel : channel + 4;
-            super.writeFm(null, 0, 0x28, keyChannel);
+            publishAuthorizedFmWrite(
+                    sequencer, 0, 0x28, keyChannel);
             for (int operatorOffset : operatorOffsets) {
-                super.writeFm(null, port,
+                publishAuthorizedFmWrite(sequencer, port,
                         0x90 + operatorOffset + channel, 0);
             }
         }
@@ -1368,6 +1706,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public LiveCommandMutationToken captureLiveCommandMutation() {
         synchronized (sequencersLock) {
+            if (ymServiceTransaction != null) {
+                throw new IllegalStateException(
+                        "cannot capture a command token during an in-flight YM service");
+            }
             SmpsSequencer[] capturedSequencers =
                     sequencers.toArray(SmpsSequencer[]::new);
             SmpsSequencer.LiveCommandMutationToken[] sequencerStates =
@@ -1421,6 +1763,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
+                    ymServiceCursor,
+                    nextYmServiceOrdinal,
+                    nextYmWriteOrdinal,
                     captureLiveDacDataReference(),
                     captureSynthSnapshot());
         }
@@ -1492,6 +1837,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxId = token.continuousSfxId;
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
+            ymServiceCursor = token.ymServiceCursor;
+            nextYmServiceOrdinal = token.nextYmServiceOrdinal;
+            nextYmWriteOrdinal = token.nextYmWriteOrdinal;
             restoreLiveDacDataReference(token.liveDacDataReference);
             restoreSynthSnapshot(token.synthSnapshot);
             if (serviceSequencerOrdinals != null) {
@@ -1502,6 +1850,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public SmpsDriverSnapshot captureSnapshot() {
         synchronized (sequencersLock) {
+            if (ymServiceTransaction != null) {
+                throw new IllegalStateException(
+                        "cannot expose an in-flight YM service snapshot");
+            }
             IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();
             IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor> sourceDescriptors = new IdentityHashMap<>();
             for (SmpsSequencer sequencer : sequencers) {
@@ -1545,7 +1897,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
                     captureLockIds(psgLocks, sequencerIds),
-                    captureSynthSnapshot());
+                    captureSynthSnapshot(),
+                    ymServiceCursor,
+                    nextYmServiceOrdinal,
+                    nextYmWriteOrdinal,
+                    ymTimelineGeneration());
         }
     }
 
@@ -1601,6 +1957,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return;
         }
 
+        VirtualSynthesizer.Snapshot adoptedSynth = adoptPendingSfxWrites(
+                targetSnapshot, sourceSnapshot);
+        long adoptedCursor = Math.max(targetSnapshot.ymServiceCursor(),
+                adoptedSynth.ymWriteTimeline().pending().stream()
+                        .mapToLong(YmWriteTimeline.Entry::dueMasterCycle)
+                        .max().orElse(0L));
+        long adoptedServiceOrdinal = Math.incrementExact(
+                targetSnapshot.nextYmServiceOrdinal());
+
         SmpsDriverSnapshot adopted = new SmpsDriverSnapshot(
                 targetSnapshot.region(), targetSnapshot.readMode(),
                 targetSnapshot.palFullUpdateCounter(),
@@ -1614,8 +1979,59 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         sourceToCombined),
                 remapAdoptedLocks(sourceSnapshot.psgLockSequencerIds(),
                         sourceToCombined),
-                sourceSnapshot.synthSnapshot());
+                adoptedSynth,
+                adoptedCursor,
+                adoptedServiceOrdinal,
+                adoptedSynth.ymWriteTimeline().nextOrdinal(),
+                targetSnapshot.driverGeneration());
         restoreSnapshot(adopted);
+    }
+
+    private static VirtualSynthesizer.Snapshot adoptPendingSfxWrites(
+            SmpsDriverSnapshot target,
+            SmpsDriverSnapshot source) {
+        VirtualSynthesizer.Snapshot targetSynth = Objects.requireNonNull(
+                target.synthSnapshot(), "target synth snapshot");
+        VirtualSynthesizer.Snapshot sourceSynth = Objects.requireNonNull(
+                source.synthSnapshot(), "source synth snapshot");
+        Set<SmpsSourceDescriptor> sfxSources = new HashSet<>();
+        for (SmpsDriverSnapshot.SequencerEntry entry : source.sequencers()) {
+            if (entry.sfx()) {
+                sfxSources.add(entry.source());
+            }
+        }
+
+        List<YmWriteTimeline.Entry> pending = new ArrayList<>(
+                targetSynth.ymWriteTimeline().pending());
+        long nextOrdinal = targetSynth.ymWriteTimeline().nextOrdinal();
+        for (YmWriteTimeline.Entry entry
+                : sourceSynth.ymWriteTimeline().pending()) {
+            if (!sfxSources.contains(entry.sourceDescriptor())) {
+                continue;
+            }
+            long remaining = Math.max(0L, Math.subtractExact(
+                    entry.dueMasterCycle(),
+                    sourceSynth.renderedYmMasterCycle()));
+            long due = Math.addExact(
+                    targetSynth.renderedYmMasterCycle(), remaining);
+            pending.add(new YmWriteTimeline.Entry(
+                    due, nextOrdinal++, entry.port(), entry.register(),
+                    entry.value(), target.driverGeneration(),
+                    target.nextYmServiceOrdinal(),
+                    entry.sourceDescriptor(), entry.segment()));
+        }
+        if (pending.size() > targetSynth.ymWriteTimeline().capacity()) {
+            throw new IllegalStateException(
+                    "adopted SFX writes exceed target YM timeline capacity");
+        }
+        YmWriteTimeline.Snapshot timeline = new YmWriteTimeline.Snapshot(
+                targetSynth.ymWriteTimeline().capacity(),
+                nextOrdinal, pending);
+        return new VirtualSynthesizer.Snapshot(
+                targetSynth.outputSampleRate(), targetSynth.ym(),
+                targetSynth.psg(), timeline,
+                targetSynth.renderedYmMasterCycle(),
+                target.driverGeneration());
     }
 
     private static int[] remapAdoptedLocks(
@@ -1649,6 +2065,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverSnapshot.DependencyResolver resolver) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
+        if (ymServiceTransaction != null) {
+            throw new IllegalStateException(
+                    "cannot restore during an in-flight YM service");
+        }
         List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
         List<ResolvedSequencerDependencies> resolved = resolveSequencerDependencies(entries, resolver);
         synchronized (sequencersLock) {
@@ -1727,8 +2147,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         if (snapshot.synthSnapshot() != null) {
             restoreSynthSnapshot(snapshot.synthSnapshot());
+            ymServiceCursor = snapshot.ymServiceCursor();
+            nextYmServiceOrdinal = snapshot.nextYmServiceOrdinal();
+            nextYmWriteOrdinal = snapshot.nextYmWriteOrdinal();
         } else {
             silenceAll();
+            ymServiceCursor = Math.max(renderedYmMasterCycle(),
+                    lastPendingYmWriteDueCycle());
+            nextYmServiceOrdinal = 0;
+            nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
         }
         observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
     }
@@ -1982,6 +2409,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     /** Applies the retail driver's first pause transition to the chip cores. */
     public void pauseAudio() {
+        // Pause is an external control boundary, never a sequencer service or
+        // source-timing scope. Its immediate writes deliberately bypass the
+        // authorized source publication journal.
         SmpsSequencerConfig.PausePolicy policy = pausePolicy();
         switch (policy) {
             case NONE -> { }
@@ -2068,6 +2498,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private void keyOffChannels(int... channels) {
+        // Only the out-of-service pause policies above call this helper.
         for (int channel : channels) {
             super.writeFm(null, 0, 0x28, channel);
         }
@@ -2079,7 +2510,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    /**
+     * Full silence is a named generation barrier. Any source work which has
+     * not reached atomic publication is rolled back before the synth advances
+     * its epoch and discards older committed writes.
+     */
+    @Override
+    public void silenceAll() {
+        cancelUnpublishedYmServiceForBarrier("full silence");
+        super.silenceAll();
+        ymServiceCursor = Math.max(renderedYmMasterCycle(),
+                lastPendingYmWriteDueCycle());
+        nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
+    }
+
     public void stopAll() {
+        cancelUnpublishedYmServiceForBarrier("stopAll");
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -2112,27 +2558,49 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * Used when starting override music to prevent partial SFX playback on restore.
      */
     public void stopAllSfx() {
-        synchronized (sequencersLock) {
-            sfxPriorityLatch = 0;
-            sfxRemovalBuffer.clear();
-            sfxRemovalBuffer.addAll(sfxSequencers);
-            for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
-                SmpsSequencer sfx = sfxRemovalBuffer.get(i);
-                sequencers.remove(sfx);
-                releaseLocks(sfx);
-                sfxSequencers.remove(sfx);
-                sfxSequencersById.remove(sfx.getSmpsData().getId(), sfx);
-                forgetSfxClaims(sfx);
-                sfxAdmissionOrdinals.remove(sfx);
-                forgetSequencerServiceIdentity(sfx);
+        cancelUnpublishedSfxServiceForStop();
+        ServiceTransaction stopTransaction = null;
+        try {
+            synchronized (sequencersLock) {
+                for (SmpsSequencer sfx : sfxSequencers) {
+                    if (timingProfileFor(sfx)
+                            != YmServiceTimingProfile.none()) {
+                        stopTransaction = beginYmServiceTransaction(
+                                sfx, false);
+                        break;
+                    }
+                }
+                sfxPriorityLatch = 0;
+                sfxRemovalBuffer.clear();
+                sfxRemovalBuffer.addAll(sfxSequencers);
+                for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
+                    SmpsSequencer sfx = sfxRemovalBuffer.get(i);
+                    sequencers.remove(sfx);
+                    releaseLocks(sfx);
+                    sfxSequencers.remove(sfx);
+                    sfxSequencersById.remove(
+                            sfx.getSmpsData().getId(), sfx);
+                    forgetSfxClaims(sfx);
+                    sfxAdmissionOrdinals.remove(sfx);
+                    forgetSequencerServiceIdentity(sfx);
+                }
+                pendingConflictOwners.clear();
+                continuousSfxId = 0;
+                continuousSfxFlag = false;
+                contSfxLoopCnt = 0;
             }
-            pendingConflictOwners.clear();
-            continuousSfxId = 0;
-            continuousSfxFlag = false;
-            contSfxLoopCnt = 0;
+            observeLifecycle(
+                    SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
+            if (stopTransaction != null) {
+                commitYmServiceTransaction();
+            }
+        } catch (RuntimeException | Error failure) {
+            if (stopTransaction != null
+                    && ymServiceTransaction == stopTransaction) {
+                abortYmServiceTransaction(failure);
+            }
+            throw failure;
         }
-        observeLifecycle(
-                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
     }
 
     /** Stops 1-up-displaced SFX with the retail save-slot priority ordering. */
@@ -2195,6 +2663,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         hybridChunkCountForTesting = 0;
 
         synchronized (sequencersLock) {
+            if (hasPendingYmWrites()) {
+                // Keep the complete call on the sample boundary once it starts
+                // with scheduled YM work. Switching to a PSG batch after the
+                // first due write would leave a different resampler phase than
+                // SAMPLE_ACCURATE despite identical PCM for this call.
+                for (int frameIndex = 0;
+                        frameIndex < frames; frameIndex++) {
+                    renderSingleSample(buffer, frameIndex);
+                }
+                return length;
+            }
             int frameIndex = 0;
             while (frameIndex < frames) {
                 if (requiresSampleAccurateFallback()) {
@@ -2477,7 +2956,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
                             && usesForcedFmTakeover(source)) {
-                        silenceFmChannel(ch);
+                        silenceFmChannel(source, ch);
                     }
                     fmLocks[ch] = (SmpsSequencer) source;
                     updateOverrides(SmpsSequencer.TrackType.FM, ch, true);
@@ -2485,17 +2964,65 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (fmLocks[ch] == source) {
-                    super.writeFm(source, port, reg, val);
+                    publishAuthorizedFmWrite(source, port, reg, val);
                 }
             } else {
                 if (fmLocks[ch] == null) {
-                    super.writeFm(source, port, reg, val);
+                    publishAuthorizedFmWrite(source, port, reg, val);
                 }
             }
         } else {
             // Global or unmapped
-            super.writeFm(source, port, reg, val);
+            publishAuthorizedFmWrite(source, port, reg, val);
         }
+    }
+
+    /**
+     * Publishes one FM write whose source/channel authorization is already
+     * complete. Admission preparation and ordinary arbitration converge here
+     * so a timed source slot can be consumed exactly once.
+     */
+    final void publishAuthorizedFmWrite(
+            Object source, int port, int reg, int val) {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction == null) {
+            super.writeFm(source, port, reg, val);
+            return;
+        }
+
+        DriverYmTimingScope scope = transaction.activeScope;
+        long dueMasterCycle = transaction.cursor;
+        YmServiceTimingProfile.SegmentKind segment = null;
+        if (scope != null) {
+            dueMasterCycle = scope.consumeSlot();
+            segment = scope.segment.kind();
+        }
+        long ordinal;
+        try {
+            ordinal = Math.addExact(nextYmWriteOrdinal,
+                    transaction.writes.size());
+            transaction.writes.add(new YmWriteTimeline.Entry(
+                    dueMasterCycle, ordinal, port & 1, reg & 0x1FF,
+                    val & 0xFF, transaction.generation,
+                    transaction.serviceOrdinal,
+                    sourceDescriptorFor(source), segment));
+        } catch (RuntimeException failure) {
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+    }
+
+    private SmpsSourceDescriptor sourceDescriptorFor(Object source) {
+        if (source instanceof SmpsSequencer sequencer) {
+            return sequencer.getSourceDescriptor();
+        }
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction != null && transaction.activeScope != null
+                && transaction.activeScope.source
+                instanceof SmpsSequencer sequencer) {
+            return sequencer.getSourceDescriptor();
+        }
+        return DRIVER_SOURCE;
     }
 
     @Override
@@ -2588,7 +3115,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[channelId] != source && !isSfx(fmLocks[channelId])
                             && usesForcedFmTakeover(source)) {
-                        silenceFmChannel(channelId);
+                        silenceFmChannel(source, channelId);
                     }
                     fmLocks[channelId] = (SmpsSequencer) source;
                     updateOverrides(SmpsSequencer.TrackType.FM, channelId, true);
@@ -2617,7 +3144,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 // Silence channel if stealing from music (not from another SFX or self)
                 if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
                         && usesForcedFmTakeover(source)) {
-                    silenceFmChannel(5);
+                    silenceFmChannel(source, 5);
                     super.stopDac(null);
                 }
                 fmLocks[ch] = (SmpsSequencer) source;
@@ -2704,7 +3231,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private void reportLockDecision(LockDecision decision) {
-        sfxContentionObserver.onRoleArbitrated(decision.arbitration());
+        SfxContentionObserver observer = sfxContentionObserver;
+        stageLogicalObserver(() -> observer.onRoleArbitrated(
+                decision.arbitration()));
     }
 
     private SfxContentionObserver.Source sourceFor(SmpsSequencer sequencer) {
@@ -2767,8 +3296,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (sfxContentionObserver == SfxContentionObserver.NONE) {
             return;
         }
-        sfxContentionObserver.onSfxAdmitted(new SfxContentionObserver.Admission(
-                sourceFor(sequencer), declaredRoles(sequencer)));
+        SfxContentionObserver observer = sfxContentionObserver;
+        SfxContentionObserver.Admission admission =
+                new SfxContentionObserver.Admission(
+                        sourceFor(sequencer), declaredRoles(sequencer));
+        stageLogicalObserver(() -> observer.onSfxAdmitted(admission));
     }
 
     /**
@@ -2781,7 +3313,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * voice load), this directly resets the envelope counters to fully
      * silent state, ensuring the next Key On starts from a clean slate.
      */
-    private void silenceFmChannel(int ch) {
+    private void silenceFmChannel(Object source, int ch) {
         // Directly reset envelope state - this takes effect immediately
         // without needing audio samples to be rendered
         super.forceSilenceChannel(ch);
@@ -2790,7 +3322,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         int port = (ch < 3) ? 0 : 1;
         int hwCh = ch % 3;
         int chVal = (port == 0) ? hwCh : (hwCh + 4);
-        super.writeFm(null, 0, 0x28, 0x00 | chVal);
+        publishAuthorizedFmWrite(source, 0, 0x28, 0x00 | chVal);
     }
 
     /**

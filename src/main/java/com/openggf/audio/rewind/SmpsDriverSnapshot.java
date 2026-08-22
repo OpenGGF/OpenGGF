@@ -25,7 +25,11 @@ public record SmpsDriverSnapshot(
         List<SequencerEntry> sequencers,
         int[] fmLockSequencerIds,
         int[] psgLockSequencerIds,
-        VirtualSynthesizer.Snapshot synthSnapshot) {
+        VirtualSynthesizer.Snapshot synthSnapshot,
+        long ymServiceCursor,
+        long nextYmServiceOrdinal,
+        long nextYmWriteOrdinal,
+        long driverGeneration) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -51,6 +55,53 @@ public record SmpsDriverSnapshot(
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
+        if (ymServiceCursor < 0 || nextYmServiceOrdinal < 0
+                || nextYmWriteOrdinal < 0 || driverGeneration < 0) {
+            throw new IllegalArgumentException(
+                    "YM driver timeline state cannot be negative");
+        }
+        if (synthSnapshot != null) {
+            if (driverGeneration != synthSnapshot.ymTimelineGeneration()) {
+                throw new IllegalArgumentException(
+                        "driver and synth YM generations do not match");
+            }
+            if (nextYmWriteOrdinal
+                    != synthSnapshot.ymWriteTimeline().nextOrdinal()) {
+                throw new IllegalArgumentException(
+                        "driver and synth YM write ordinals do not match");
+            }
+            long lastPendingDue = synthSnapshot.ymWriteTimeline().pending()
+                    .stream()
+                    .mapToLong(entry -> entry.dueMasterCycle())
+                    .max().orElse(0L);
+            if (ymServiceCursor < lastPendingDue) {
+                throw new IllegalArgumentException(
+                        "YM service cursor precedes a committed write");
+            }
+        }
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int palFullUpdateCounter,
+            int sfxPriorityLatch,
+            int spindashRevPlayingCounter,
+            int spindashRevFrequencyIndex,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds,
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        this(region, readMode, palFullUpdateCounter, sfxPriorityLatch,
+                spindashRevPlayingCounter, spindashRevFrequencyIndex,
+                continuousSfxId, continuousSfxFlag, contSfxLoopCnt,
+                sequencers, fmLockSequencerIds, psgLockSequencerIds,
+                synthSnapshot, inferredCursor(synthSnapshot), 0,
+                inferredWriteOrdinal(synthSnapshot),
+                inferredGeneration(synthSnapshot));
     }
 
     public SmpsDriverSnapshot(
@@ -75,7 +126,11 @@ public record SmpsDriverSnapshot(
                 sequencers,
                 fmLockSequencerIds,
                 psgLockSequencerIds,
-                null);
+                null,
+                0,
+                0,
+                0,
+                1);
     }
 
     public SmpsDriverSnapshot(
@@ -101,7 +156,34 @@ public record SmpsDriverSnapshot(
                 sequencers,
                 fmLockSequencerIds,
                 psgLockSequencerIds,
-                synthSnapshot);
+                synthSnapshot,
+                inferredCursor(synthSnapshot),
+                0,
+                inferredWriteOrdinal(synthSnapshot),
+                inferredGeneration(synthSnapshot));
+    }
+
+    private static long inferredCursor(
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        if (synthSnapshot == null) {
+            return 0;
+        }
+        return Math.max(synthSnapshot.renderedYmMasterCycle(),
+                synthSnapshot.ymWriteTimeline().pending().stream()
+                        .mapToLong(entry -> entry.dueMasterCycle())
+                        .max().orElse(0L));
+    }
+
+    private static long inferredWriteOrdinal(
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        return synthSnapshot == null ? 0
+                : synthSnapshot.ymWriteTimeline().nextOrdinal();
+    }
+
+    private static long inferredGeneration(
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        return synthSnapshot == null ? 1
+                : synthSnapshot.ymTimelineGeneration();
     }
 
     @Override

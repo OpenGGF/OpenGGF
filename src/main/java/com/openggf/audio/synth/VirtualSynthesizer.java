@@ -106,6 +106,41 @@ public class VirtualSynthesizer implements Synthesizer {
         return ym.renderedMasterCycleFrontier();
     }
 
+    /** Returns the latest due cycle already committed to the synth timeline. */
+    protected final long lastPendingYmWriteDueCycle() {
+        synchronized (ymTimelineStateLock) {
+            return ymWriteTimeline.captureSnapshot().pending().stream()
+                    .mapToLong(YmWriteTimeline.Entry::dueMasterCycle)
+                    .max().orElse(0L);
+        }
+    }
+
+    /** Returns the fixed publication capacity owned by this synth. */
+    protected final int ymWriteTimelineCapacity() {
+        synchronized (ymTimelineStateLock) {
+            return ymWriteTimeline.captureSnapshot().capacity();
+        }
+    }
+
+    /** Returns the number of writes already committed but not yet drained. */
+    protected final int pendingYmWriteCount() {
+        synchronized (ymTimelineStateLock) {
+            return ymWriteTimeline.captureSnapshot().pending().size();
+        }
+    }
+
+    /** Returns whether render still owns at least one committed YM write. */
+    protected final boolean hasPendingYmWrites() {
+        return pendingYmWriteCount() != 0;
+    }
+
+    /** Returns the first unused immutable source-write identity. */
+    protected final long nextCommittedYmWriteOrdinal() {
+        synchronized (ymTimelineStateLock) {
+            return ymWriteTimeline.captureSnapshot().nextOrdinal();
+        }
+    }
+
     /**
      * Atomically verifies the current synth generation and publishes one
      * already-authorized source write journal. A journal built against an old

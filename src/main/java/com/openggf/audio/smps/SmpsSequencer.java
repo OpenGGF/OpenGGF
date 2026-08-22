@@ -1178,16 +1178,23 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
-        tickTracks();
-        if (finishSfxTempoFrame) {
-            finishSfxTempoFrame();
-        }
-        if (driver != null && isSfx
-                && activeTrackCount() < activeSfxTracksBefore) {
-            driver.onSfxTrackStopped();
-        }
-        if (driver != null) {
-            driver.endSequencerService(service);
+        try {
+            tickTracks();
+            if (finishSfxTempoFrame) {
+                finishSfxTempoFrame();
+            }
+            if (driver != null && isSfx
+                    && activeTrackCount() < activeSfxTracksBefore) {
+                driver.onSfxTrackStopped();
+            }
+            if (driver != null) {
+                driver.endSequencerService(service);
+            }
+        } catch (RuntimeException | Error failure) {
+            if (driver != null) {
+                driver.abortSequencerService(failure);
+            }
+            throw failure;
         }
     }
 
@@ -1439,9 +1446,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
-        processFade();
-        if (driver != null) {
-            driver.endFadeSequencerService(service);
+        try {
+            processFade();
+            if (driver != null) {
+                driver.endFadeSequencerService(service);
+            }
+        } catch (RuntimeException | Error failure) {
+            if (driver != null) {
+                driver.abortSequencerService(failure);
+            }
+            throw failure;
         }
     }
 

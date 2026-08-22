@@ -190,9 +190,12 @@ public class BlipResampler {
             throw new IllegalArgumentException(
                     "blip resampler history position is invalid");
         }
+        double nextOutputLimit = snapshot.inputIndex() + snapshot.ratio()
+                - (FILTER_TAPS / 2.0);
         if (!Double.isFinite(snapshot.outputPos())
                 || snapshot.outputPos() < 0.0
-                || snapshot.outputPos() > snapshot.inputIndex()) {
+                || (snapshot.outputPos() != 0.0
+                && snapshot.outputPos() >= nextOutputLimit)) {
             throw new IllegalArgumentException(
                     "blip resampler output position is invalid");
         }
