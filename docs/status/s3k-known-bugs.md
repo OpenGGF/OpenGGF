@@ -77,7 +77,9 @@ that source-relative vector and drains it at YM internal-sample boundaries.
 Focused playback, service-order, contention, rewind, observer, pause, fade,
 one-up, PAL, ring-panning, special-stage, OpenAL, and snapshot tests pass. The
 full three-ROM suite introduces no failure attributable to this change when
-compared by test identity with the recorded pre-feature baseline.
+compared by test identity with the isolated feature-base baseline at
+`914ac9a87badbad5c574cd8edaadc81c743e390a`; the 117 red identities and their
+failure/error classifications are byte-identical.
 
 The evidence establishes relative write spacing, not an absolute phase within
 VInt, and the native capture contains no DMA-contended upload. Those are limits

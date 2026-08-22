@@ -7,8 +7,12 @@
   retaining atomic service publication, rollback, rewind, pause, fade, and
   cross-SFX ownership semantics. Sonic 1 and Sonic 2 remain on their audited
   untimed profiles because their 68k/Z80 service paths do not justify inheriting
-  S3K's timing. Automated native, oracle, ROM-backed, and presentation gates are
-  complete; integration remains deliberately blocked on the listening check.
+  S3K's timing. The replacement playback oracle accepts committed predecessor
+  writes only when source/segment metadata proves there is no intervening music
+  voice restore, and the rollback architecture guard admits only the reviewed
+  timing-dominated callsites and one-capture helper shape. Automated native,
+  oracle, ROM-backed, and presentation gates are complete against an isolated
+  feature-base comparison; integration remains blocked on the listening check.
 
 - **Sonic 3&K FM SFX now publish the retail first-note bus sequence:** the
   Z80-style sequencer applies the initial modulation step before its single

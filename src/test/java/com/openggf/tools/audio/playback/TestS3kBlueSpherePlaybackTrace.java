@@ -5,6 +5,11 @@ import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioAdmissionObserver;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind;
+import com.openggf.audio.synth.YmWriteTimeline;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
@@ -20,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,6 +35,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kBlueSpherePlaybackTrace {
     private static final int CAPTURE_FRAMES = 20;
+    private static final List<ExpectedYmWrite> BLUE_SPHERE_FIRST_ATTACK = List.of(
+            w(1, 0x81, 0xFF), w(1, 0x85, 0xFF), w(1, 0x89, 0xFF),
+            w(1, 0x8D, 0xFF), w(1, 0xB5, 0xC0), w(1, 0xB1, 0x05),
+            w(1, 0x31, 0x07), w(1, 0x39, 0x12), w(1, 0x35, 0x22),
+            w(1, 0x3D, 0x32), w(1, 0x51, 0x0A), w(1, 0x59, 0x0F),
+            w(1, 0x55, 0x0F), w(1, 0x5D, 0x0F), w(1, 0x61, 0x00),
+            w(1, 0x69, 0x00), w(1, 0x65, 0x00), w(1, 0x6D, 0x00),
+            w(1, 0x71, 0x00), w(1, 0x79, 0x10), w(1, 0x75, 0x10),
+            w(1, 0x7D, 0x10), w(1, 0x81, 0x0F), w(1, 0x89, 0x0F),
+            w(1, 0x85, 0x0F), w(1, 0x8D, 0x0F), w(1, 0x41, 0x21),
+            w(1, 0x49, 0x05), w(1, 0x45, 0x05), w(1, 0x4D, 0x05),
+            w(0, 0x28, 0x05), w(1, 0xA5, 0x23), w(1, 0xA1, 0x3F),
+            w(0, 0x28, 0xF5));
 
     private AudioManager audio;
     private LiveCaptureAudioHandle capture;
@@ -50,6 +69,7 @@ class TestS3kBlueSpherePlaybackTrace {
     void tearDown() {
         audio.setChipWriteObserver(null);
         audio.setAdmissionObserver(null);
+        audio.setDriverServiceObserver(null);
         if (capture != null) {
             capture.close();
         }
@@ -127,6 +147,25 @@ class TestS3kBlueSpherePlaybackTrace {
                 GameServices.module().getSpecialStageProvider();
         assertNotNull(stage);
         stage.initializeStage(0);
+        AtomicReference<SmpsDriverSnapshot> blueService =
+                new AtomicReference<>();
+        List<SmpsDriverServiceObserver.ServiceEvent> observedServices =
+                new ArrayList<>();
+        audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                observedServices.add(event);
+                if (event.kind() == ServiceKind.SEQUENCER_TICK
+                        && event.sequencer().sfx()
+                        && event.sequencer().source().kind()
+                                == SmpsSourceDescriptor.Kind.BASE_SFX_ID
+                        && event.sequencer().source().id()
+                                == Sonic3kSfx.BLUE_SPHERE.id) {
+                    blueService.compareAndSet(null, snapshot);
+                }
+            }
+        });
         assertTrue(audio.playMusic(GameMusic.SPECIAL_STAGE));
         capture = AudioManagerTestDiagnostics.attachPresentationCapture(
                 audio, audio.presentationFrameRate());
@@ -146,6 +185,36 @@ class TestS3kBlueSpherePlaybackTrace {
                 () -> "retail shared-SFX overwrite must reach the Blue Sphere voice after "
                         + "draining any already-committed predecessor writes: "
                         + levels);
+        SmpsDriverSnapshot serviceSnapshot = blueService.get();
+        assertNotNull(serviceSnapshot,
+                () -> "missing Blue Sphere service snapshot: "
+                        + observedServices);
+        List<YmWriteTimeline.Entry> pending = serviceSnapshot.synthSnapshot()
+                .ymWriteTimeline().pending();
+        assertTrue(isReviewedBlueSphereReplacement(pending),
+                () -> "replacement timeline contains a music restore or differs "
+                        + "from the reviewed Blue Sphere source/segment sequence: "
+                        + pending);
+    }
+
+    @Test
+    void reviewedReplacementRejectsMusicVoiceProgrammingBeforeBlueSource() {
+        List<YmWriteTimeline.Entry> pending = new ArrayList<>();
+        pending.add(timelineEntry(0, SmpsSourceDescriptor.Kind.BASE_SFX_ID,
+                Sonic3kSfx.SPRING.id, null, 1, 0xA1, 0x44));
+        pending.add(timelineEntry(1, SmpsSourceDescriptor.Kind.BASE_MUSIC,
+                7, null, 1, 0x41, 0x18));
+        for (int index = 0; index < BLUE_SPHERE_FIRST_ATTACK.size(); index++) {
+            ExpectedYmWrite write = BLUE_SPHERE_FIRST_ATTACK.get(index);
+            pending.add(timelineEntry(index + 2,
+                    SmpsSourceDescriptor.Kind.BASE_SFX_ID,
+                    Sonic3kSfx.BLUE_SPHERE.id,
+                    expectedSegment(index), write.port(), write.register(),
+                    write.value()));
+        }
+
+        assertFalse(isReviewedBlueSphereReplacement(pending),
+                "a raw-value subsequence must not hide a music voice restore");
     }
 
     @Test
@@ -266,5 +335,83 @@ class TestS3kBlueSpherePlaybackTrace {
             }
         }
         return false;
+    }
+
+    private static boolean isReviewedBlueSphereReplacement(
+            List<YmWriteTimeline.Entry> pending) {
+        List<YmWriteTimeline.Entry> blue = pending.stream()
+                .filter(entry -> entry.sourceDescriptor().kind()
+                        == SmpsSourceDescriptor.Kind.BASE_SFX_ID)
+                .filter(entry -> entry.sourceDescriptor().id()
+                        == Sonic3kSfx.BLUE_SPHERE.id)
+                .toList();
+        if (blue.size() != BLUE_SPHERE_FIRST_ATTACK.size()) {
+            return false;
+        }
+        long serviceOrdinal = blue.getFirst().serviceOrdinal();
+        for (int index = 0; index < blue.size(); index++) {
+            YmWriteTimeline.Entry entry = blue.get(index);
+            ExpectedYmWrite expected = BLUE_SPHERE_FIRST_ATTACK.get(index);
+            if (entry.serviceOrdinal() != serviceOrdinal
+                    || entry.segment() != expectedSegment(index)
+                    || entry.port() != expected.port()
+                    || entry.register() != expected.register()
+                    || entry.value() != expected.value()) {
+                return false;
+            }
+        }
+        YmWriteTimeline.Entry blueVoiceStart = blue.get(4);
+        return pending.stream().noneMatch(entry ->
+                entry.sourceDescriptor().kind()
+                                == SmpsSourceDescriptor.Kind.BASE_MUSIC
+                        && isFm5VoiceProgramming(entry)
+                        && drainsBefore(entry, blueVoiceStart));
+    }
+
+    private static boolean isFm5VoiceProgramming(
+            YmWriteTimeline.Entry entry) {
+        return entry.port() == 1
+                && entry.register() >= 0x30
+                && entry.register() <= 0x9F
+                && (entry.register() & 0x03) == 1;
+    }
+
+    private static boolean drainsBefore(
+            YmWriteTimeline.Entry candidate,
+            YmWriteTimeline.Entry boundary) {
+        int dueOrder = Long.compare(
+                candidate.dueMasterCycle(), boundary.dueMasterCycle());
+        return dueOrder < 0 || (dueOrder == 0
+                && candidate.sourceOrdinal() < boundary.sourceOrdinal());
+    }
+
+    private static YmWriteTimeline.Entry timelineEntry(
+            long ordinal, SmpsSourceDescriptor.Kind kind, int id,
+            SegmentKind segment, int port, int register, int value) {
+        SmpsSourceDescriptor source = new SmpsSourceDescriptor(
+                kind, id, null, null, 0, 1, id, false, 0);
+        return new YmWriteTimeline.Entry(ordinal, ordinal, port, register,
+                value, 1, kind == SmpsSourceDescriptor.Kind.BASE_MUSIC ? 1 : 2,
+                source, segment);
+    }
+
+    private static SegmentKind expectedSegment(int index) {
+        if (index < 4) {
+            return SegmentKind.SFX_MAX_RELEASE;
+        }
+        if (index < 30) {
+            return SegmentKind.FM_VOICE_UPLOAD;
+        }
+        if (index == 30) {
+            return SegmentKind.KEY_OFF;
+        }
+        return SegmentKind.FREQUENCY_AND_KEY_ON;
+    }
+
+    private static ExpectedYmWrite w(int port, int register, int value) {
+        return new ExpectedYmWrite(port, register, value);
+    }
+
+    private record ExpectedYmWrite(int port, int register, int value) {
     }
 }

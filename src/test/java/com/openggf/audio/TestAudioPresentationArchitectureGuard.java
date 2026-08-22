@@ -410,10 +410,6 @@ class TestAudioPresentationArchitectureGuard {
                 "public void commitSfxAdmission() { "
                         + "if (hasChipWriteObserver()) { "
                         + "captureLiveCommandMutation(); } }",
-                "public void commitSfxAdmission() { "
-                        + "if (timingProfileFor(admission.sequencer()) "
-                        + "!= YmServiceTimingProfile.none()) { "
-                        + "captureLiveCommandMutation(); } }",
                 "public void commitSfxAdmission() { Object state = "
                         + "this.hasChipWriteObserver() "
                         + "? captureLiveCommandMutation() : null; }")) {
@@ -427,15 +423,72 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
-    void driverGuardAllowsTheReviewedYmTransactionRollbackSeam() {
+    void driverGuardAllowsOnlyTheReviewedTimedAdmissionRollbackCallsite() {
         Map<String, String> sources = representativeSafeSmpsSources();
         sources.put("audio/driver/SmpsDriver.java",
-                "public void commitSfxAdmission() { beginYmServiceTransaction(); } "
-                        + "private void beginYmServiceTransaction() { "
-                        + "captureLiveCommandMutation(); }");
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; }");
 
         assertFalse(smpsOwnershipViolations(sources).contains(
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsYmTransactionRollbackAtAnUnreviewedCallsite() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsAnExtraSnapshotInsideTheReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void productionYmRollbackSeamRetainsItsReviewedShape() throws IOException {
+        String source = Files.readString(
+                AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Map.Entry<MethodSignature, String> helper = methods.entrySet().stream()
+                .filter(entry -> entry.getKey().name().equals(
+                        "beginYmServiceTransaction"))
+                .findFirst().orElseThrow();
+        assertTrue(reviewedYmTransactionHelper(
+                helper.getKey(), helper.getValue()));
+        String admission = methodsNamed(methods, "commitSfxAdmission")
+                .getFirst().getValue();
+        int call = admission.indexOf("beginYmServiceTransaction(");
+        assertTrue(call >= 0 && reviewedYmTransactionCallDominates(
+                new MethodSignature("commitSfxAdmission", ""),
+                admission, call));
     }
 
     @Test
@@ -1130,7 +1183,7 @@ class TestAudioPresentationArchitectureGuard {
         return !roots.isEmpty() && roots.stream().allMatch(root ->
                 observerSafe(root.getValue(), methods,
                         allowDriverObserverGate, false,
-                        new HashSet<>(Set.of(root.getKey()))));
+                        new HashSet<>(Set.of(root.getKey())), root.getKey()));
     }
 
     private static boolean observerSafe(
@@ -1138,7 +1191,8 @@ class TestAudioPresentationArchitectureGuard {
             Map<MethodSignature, String> methods,
             boolean allowDriverObserverGate,
             boolean inheritedObserverDominance,
-            Set<MethodSignature> activeMethods) {
+            Set<MethodSignature> activeMethods,
+            MethodSignature currentMethod) {
         int capture = body.indexOf("captureLiveCommandMutation(");
         while (capture >= 0) {
             if (!allowDriverObserverGate
@@ -1152,22 +1206,28 @@ class TestAudioPresentationArchitectureGuard {
         for (Map.Entry<MethodSignature, String> method : methods.entrySet()) {
             String called = method.getKey().name();
             if (called.equals("captureLiveCommandMutation")
-                    // Source-timed services require an all-or-nothing rollback
-                    // token even without diagnostic observers. This named seam
-                    // is reviewed separately from warmed asset materialization.
-                    || called.equals("beginYmServiceTransaction")
                     || called.equals("hasChipWriteObserver")) {
                 continue;
             }
             Matcher calls = localCallPattern(called).matcher(body);
             while (calls.find()) {
                 int call = calls.start();
+                if (called.equals("beginYmServiceTransaction")) {
+                    if (!reviewedYmTransactionCallDominates(
+                                    currentMethod, body, call)
+                            || !reviewedYmTransactionHelper(
+                                    method.getKey(), method.getValue())) {
+                        return false;
+                    }
+                    continue;
+                }
                 if (activeMethods.add(method.getKey())) {
                     boolean dominated = allowDriverObserverGate
                             && (inheritedObserverDominance
                             || observerDominates(body, call));
                     boolean safe = observerSafe(method.getValue(), methods,
-                            allowDriverObserverGate, dominated, activeMethods);
+                            allowDriverObserverGate, dominated, activeMethods,
+                            method.getKey());
                     activeMethods.remove(method.getKey());
                     if (!safe) {
                         return false;
@@ -1176,6 +1236,58 @@ class TestAudioPresentationArchitectureGuard {
             }
         }
         return true;
+    }
+
+    private static boolean reviewedYmTransactionHelper(
+            MethodSignature method, String body) {
+        String parameters = method.parameters().replaceAll("\\s+", "");
+        String compact = body.replaceAll("\\s+", "");
+        return parameters.equals("Objectsource,booleanimplicit")
+                && occurrences(compact,
+                        "captureLiveCommandMutation()") == 1
+                && compact.contains("LiveCommandMutationTokenrollback="
+                        + "captureLiveCommandMutation();");
+    }
+
+    private static boolean reviewedYmTransactionCallDominates(
+            MethodSignature currentMethod, String body, int offset) {
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            int conditionClose = conditionOpen < 0 ? -1
+                    : matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && offset > blockOpen && offset < blockClose) {
+                String compact = body.substring(
+                        conditionOpen + 1, conditionClose)
+                        .replaceAll("\\s+", "");
+                if (currentMethod.name().equals("commitSfxAdmission")
+                        && compact.equals(
+                                "timingProfileFor(admission.sequencer())"
+                                        + "!=YmServiceTimingProfile.none()")) {
+                    return true;
+                }
+                if (currentMethod.name().equals("beginYmTiming")
+                        && compact.equals("ymServiceTransaction==null")) {
+                    return true;
+                }
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static int occurrences(String text, String needle) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = text.indexOf(needle, offset)) >= 0) {
+            count++;
+            offset += needle.length();
+        }
+        return count;
     }
 
     private static boolean observerDominates(String body, int offset) {
@@ -1212,8 +1324,6 @@ class TestAudioPresentationArchitectureGuard {
         String compact = condition.replaceAll("\\s+", "");
         return compact.equals("hasChipWriteObserver()")
                 || compact.equals("this.hasChipWriteObserver()")
-                || compact.equals("timingProfileFor(admission.sequencer())"
-                        + "!=YmServiceTimingProfile.none()")
                 || compact.equals("hasPotentiallyThrowingAdmissionObserver()")
                 || compact.equals(
                         "this.hasPotentiallyThrowingAdmissionObserver()")

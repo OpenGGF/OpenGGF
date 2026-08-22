@@ -92,18 +92,68 @@ rollback. The Task 7 three-ROM audio selector passed 102 tests with zero
 failures, errors, or skips.
 
 Final-verification tests also corrected two stale assumptions exposed by the
-new delayed timeline: the bounded playback trace now admits already-committed
-predecessor writes before matching the Blue Sphere carrier sequence, and the
-architecture guard explicitly recognizes only the reviewed timed-service
-rollback seam. The final focused regression run passed 52 tests with zero
-failures, errors, or skips.
+new delayed timeline. The bounded playback trace admits already-committed
+predecessor writes, but now inspects the pending timeline's source descriptors
+and segment kinds, rejects any FM5 music-voice programming before the Blue
+Sphere source, and requires the exact reviewed 34-write sequence. The
+architecture guard no longer exempts a helper globally by name: it admits only
+the timing-dominated callsites and the one-capture implementation shape. Tests
+were observed failing against both broader checks before the constraints were
+implemented. The pre-review focused run actually passed 53 tests, not the 52
+reported in the first handoff. The corrected focused group passes 57 tests with
+zero failures, errors, or skips.
+
+The exact focused commands in the correction round used this common prefix:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk mvn -Dmse=off \
+  -Dsonic1.rom.path="$OPENGGF_MAIN_WORKSPACE/s1.gen" \
+  -Dsonic2.rom.path="$OPENGGF_MAIN_WORKSPACE/s2.gen" \
+  -Ds3k.rom.path="$OPENGGF_MAIN_WORKSPACE/s3k.gen"
+```
+
+The twice-run native/oracle selector appended:
+
+```text
+-Dtest=TestYm2612ChipGpgxParity,TestS1S2YmWriteTimingAudit,
+TestSonic3kYmServiceTimingProfile,TestS3kBlueSphereSfxParity test
+```
+
+Each run passed 51 tests. The review selector appended
+`-Dtest=TestAudioPresentationArchitectureGuard,TestS3kBlueSpherePlaybackTrace,TestS3kBlueSphereSfxParity test`
+and passed 57 tests. The rewind/observer/cadence/presentation selector appended:
+
+```text
+-Dtest=TestSmpsSequencerSnapshot,TestS3kPalDriverCadence,
+TestSmpsSequencerDriverCadence,TestS3kSpecialStageAudioPlaybackTrace,
+TestAudioVoiceRegistry,TestVirtualSynthesizerSnapshot,TestSmpsFadeHybridParity,
+TestSmpsPauseProtocol,TestSmpsDriverServiceOrder,TestSfxContentionObserver,
+TestSmpsDriverYmWriteTimeline,TestS3kBlueSphereSfxParity,
+TestSmpsDriverSnapshot,TestSpeakerPacketFifo,TestOpenAlPcmSink,
+TestAudioPresentationSnapshotParity,TestSmpsSequencerFadeTiming,
+TestAudioDiagnosticObservers,TestSonic3kUnifiedAudioPresentationRomIntegration test
+```
+
+It passed 263 tests. Log SHA-256 values are
+`6f240ee0a0a8b7bc5d53cea3fea4ae43ecf5eec28ac2347549560b888715fbf1`
+and `64bec44152d2da0a5437d82d3fa1f5b6344d8feb65700bbc2b4382fdd91eaa04`
+for the oracle repetitions,
+`aeb892b921c4e475e4bd474b8eee6ca93b657eaa8e06ce0f60c6bf346f12ebf7`
+for the review selector, and
+`66d9c857f095dc9b7e1dc7c6973918ff034b37f8681ede2568e846fa8024e5ca`
+for the 263-test selector. All commands used Maven 3.9.16 and OpenJDK 21.0.11.
 
 ## Full-suite comparison
 
-The recorded JDK 21 pre-feature baseline was commit
-`d473365ed72facfffcd36d9e07af09666b094d37`, log SHA-256
-`9751656e7d6b8cdf025b4537b63e6f1ff7b87cfb740a16c6493b538e2ca58b62`,
-with 15,299 tests, 58 failures, 65 errors, and 18 skips.
+The earlier `d473365ed72facfffcd36d9e07af09666b094d37` result is not a
+valid regression baseline: it is not an ancestor of this feature branch and
+its merge base is `683b1a3984958b4b6ae53baf383a81bee6727078`.
+
+The comparable baseline was therefore run in an isolated detached worktree at
+the documented feature base `914ac9a87badbad5c574cd8edaadc81c743e390a`.
+Its log SHA-256 is
+`3c6266ba425ae8b20ddbf3c456c8b0d870c782a0511b4cc85fa821b4fc3e09bc`.
+It ran 15,298 tests with 53 failures, 64 errors, and 18 skips.
 
 The final three-ROM test command was:
 
@@ -114,29 +164,19 @@ JAVA_HOME=/usr/lib/jvm/java-21-openjdk mvn -Dmse=off \
   -Ds3k.rom.path="$OPENGGF_MAIN_WORKSPACE/s3k.gen" test
 ```
 
-It ran 15,400 tests with 54 failures, 64 errors, and 18 skips. The expected red
-baseline therefore improved by four failures and one error in aggregate. The
-full log SHA-256 is
-`4d5e25021433c9f060b09f2b330abb315c5ddb7a0c888d497fc3a6d12ec100e6`.
+The candidate ran 15,404 tests with 53 failures, 64 errors, and 18 skips. Its
+log SHA-256 is
+`a5612865fe4ba8f85ca4df0081f2762eddfebe73ec420419d4a9c6496b8e939b`.
+The higher test total is the feature's added coverage, not a changed selector.
 
-Comparison by unique test identity found 122 failing baseline identities and
-117 branch identities. Ten baseline failures resolved. Five identities that
-passed in the older baseline failed on this divergent feature baseline:
-
-- `TestHardwareTimingService.recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`;
-- `TestHeaderNameRomDetectors.serviceAndRegistryDetectionShareSuccessAndFallbackResults`;
-- `TestSonic2ObjectBugFixes.collapsingPlatformFragmentFallUsesApproximateRenderHeight`;
-- `TestSonic2ObjectBugFixes.collapsingPlatformFragmentFallDeletesUsingFallingParentY`;
-- `TestVirtualSynthesizerMix.mixedFmAndPsgOutputRemainsBitExact`.
-
-None is introduced or worsened by the source-timed YM work. Hardware timing
-and Sonic 2 object behavior differ in commits already present on the feature
-base but absent from the older baseline; the ROM-detector class is the known
-suite-order-sensitive registry test and passed all 14 tests independently; and the obsolete
-fixed-mix expectation predates this feature in `11d59088d`'s native output-level
-change. All task-attributable audio, architecture, and playback identities pass.
-The acceptance rule—no newly failing baseline-passing test attributable to this
-branch's YM timeline—is satisfied.
+XML parsing compared the fully qualified class and test method plus failure
+versus error status. Both baseline and candidate contain exactly 117 unique red
+identities. The two sorted identity ledgers are byte-identical, each with
+SHA-256
+`584fe83dcf7311fbee0dce80c3308439608318b814a9c243e2f098786fcedaa5`.
+No baseline-passing test fails, no baseline-red test changes failure class, and
+no red identity is added, removed, or waived. This is the applicable regression
+comparison for the feature branch.
 
 ## Cross-game ruling and limits
 
