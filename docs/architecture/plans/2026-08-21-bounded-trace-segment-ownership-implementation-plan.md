@@ -552,13 +552,20 @@ Independent review and integration remain controller-owned Steps 8 and 9 and
 are intentionally unchecked here.
 
 The authoritative Step 1/5 baseline was refreshed after upstream moved:
-current `develop` / `origin/develop` is `d473365ed`, and the feature was
-reconciled at merge head `1a96fbdf1`. The fresh main/feature trace sweeps share
-ten exact red identities and the completion audit accounts for all
-baseline-green replay families. Task 8 initially exposed two real S1 visual
+measured `develop` / `origin/develop` is `d473365ed`, and the feature suite
+measurement point is reconciled commit `1a96fbdf1`. The fresh main/feature
+trace sweeps share ten exact red identities and the completion audit accounts
+for all baseline-green replay families. Task 8 initially exposed two real S1 visual
 bridge regressions at `3a3c1fc5`; Task 4 fixes `25d4a41b7` and `c8cb56808`
 closed them before the refreshed gates. Older `d9650fd7` measurements remain
 historical only.
+
+Later whole-branch authority review produced enforcement-only corrections
+through `0fe4a79bc`; the production ownership graph and the suite measurement
+point above are unchanged. At that correction head the authority guard passes
+17/17, authority plus ownership passes 20/20, and the combined reader gate
+passes 26/26. Focused migration remains 179/179, the benchmark-root structural
+test is 1/1, and policy/docs guards are 156/156.
 
 - [ ] **Step 8: Independent final code/spec review**
 

@@ -174,9 +174,9 @@ red-set churn. No new failure was attributable to the documentation changes.
 
 ### Active-segment implementation comparison
 
-The authoritative comparison uses current synchronized `develop` at
-`d473365ed72facfffcd36d9e07af09666b094d37` and reconciled feature head
-`1a96fbdf1588564d584afb57040f749656f3cbf4`, both on JDK 21 with the exact
+The authoritative full-suite comparison uses synchronized `develop` at
+`d473365ed72facfffcd36d9e07af09666b094d37` and reconciled feature measurement
+point `1a96fbdf1588564d584afb57040f749656f3cbf4`, both on JDK 21 with the exact
 `mvn -Dmse=off test` command. Main completed 15,299 tests with 55 failures, 81
 errors, and 26 skips; the feature rerun completed 15,330 tests with 55 failures,
 65 errors, and 26 skips. The 119 shared reds have complete message/root-detail
@@ -186,6 +186,12 @@ The raw feature-only ICZ result and the first run's MGZ result both reproduce
 exactly on current main under their same-fork predecessors, proving upstream
 singleton/order leaks rather than feature attribution. Attributable new or
 worsened reds are zero.
+
+Subsequent whole-branch review added enforcement-only corrections through
+`0fe4a79bc`. They did not change the production ownership graph or supersede
+the full-suite/trace measurements above. At that correction head the authority
+guard passes 17/17, authority plus ownership passes 20/20, and the combined
+reader gate passes 26/26.
 
 Fresh all-game sweeps completed current main at 811 tests / 10 failures and
 feature at 840 / 10, with exact red identity equality and complete-message

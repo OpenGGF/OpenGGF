@@ -11,7 +11,10 @@
   baseline-green replay completions have explicit row or terminal proof.
   Current-main and feature sweeps share the same ten trace reds, while exhaustive
   JDK 21 default-suite message comparison found zero feature-attributable new or
-  worsened red.
+  worsened red. Subsequent test-only enforcement corrections close typed
+  receiver and same-source reflection-helper bypasses; the current authority,
+  authority/ownership, and authority/ownership/reader gates pass 17/17, 20/20,
+  and 26/26 respectively without changing the measured ownership graph.
 
 - **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
   exposed two real bridge regressions that aborted after destination segment 2

@@ -70,8 +70,11 @@ stages remain in both runs, including the S2 recorded-pass binder.
 The deterministic resource oracle passed with three failure-atomicity controls
 in addition to its 100-cycle matrix: each matrix run completed 100 cycles
 per ordinary and special-stage shape and observed exactly 1,000 reader opens
-and 1,000 closes. Authority/ownership guards passed 14/14 and focused migration
-tests passed 179/179. The recorded 67-segment oracle consumed all 1,653 AIZ
+and 1,000 closes. After the later enforcement-only corrections through
+`0fe4a79bc`, the authority guard passes 17/17, authority plus ownership passes
+20/20, the combined reader gate passes 26/26, and focused migration tests pass
+179/179. Those corrections did not change the production ownership graph or
+the retained-memory samples. The recorded 67-segment oracle consumed all 1,653 AIZ
 rows, retained the first `camera_x` mismatch (`0x1300` / `0x1308`), the terminal
 segment-0 `giant_ring` miss, both unmatched timing completions, and zero
 dynamic-art gaps/failures. Fresh current-main and feature all-game trace sweeps

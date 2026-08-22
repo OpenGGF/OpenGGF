@@ -7,13 +7,18 @@ feature-branch gates through Task 8 Step 7. Run planning retains compact
 descriptors for the whole run and opens one eager payload only for the active
 segment.
 
-The authoritative comparison is current synchronized `develop` /
-`origin/develop` at `d473365ed72facfffcd36d9e07af09666b094d37` against
-`feature/ai-trace-active-segment-cursor` at merge head
-`1a96fbdf1588564d584afb57040f749656f3cbf4`. The merge reconciled upstream's
-Tails sprite-manager change and preserved both projects' additive README and
-CHANGELOG entries. Both trees were source-clean when measured. Older evidence
+The authoritative full-suite and trace-sweep comparison uses synchronized
+`develop` / `origin/develop` at
+`d473365ed72facfffcd36d9e07af09666b094d37` against the reconciled feature
+measurement point `1a96fbdf1588564d584afb57040f749656f3cbf4`. The merge
+reconciled upstream's Tails sprite-manager change and preserved both projects'
+additive README and CHANGELOG entries. Both trees were source-clean when measured. Older evidence
 at `d9650fd7` and feature `3a3c1fc5` is historical, not the delivery baseline.
+Later whole-branch review produced enforcement-only correction commits through
+`0fe4a79bc`; they do not change production ownership or the measured graph.
+Their focused authority, ownership, reader, migration, structural benchmark,
+and policy results are recorded below. The expensive full/default/trace suite
+figures remain explicitly attributable to `1a96fbdf1`, not the later head.
 Independent final review and integration remain controller-owned Task 8 Steps
 8 and 9.
 
@@ -58,16 +63,17 @@ S2 recorded-pass binder.
 atomicity controls. Its deterministic matrix completed 100 cycles per payload
 shape and balanced exactly 1,000 opens with 1,000 closes:
 plain physics 100, plain aux 100, gzip physics 100, gzip aux 100, S1 physics
-200, S2 physics 200, S2 aux 100, and S3K physics 100. The authority/ownership
-gate passes 14/14 after runtime-name, enumeration, field/method-handle, and
-erased-helper relay mutations were added. The focused migration set passed
-179/179. Existing
+200, S2 physics 200, S2 aux 100, and S3K physics 100. At correction head
+`0fe4a79bc`, the authority guard passes 17/17 after runtime-name, enumeration,
+field/method-handle, erased relay, typed receiver, and same-source helper-flow
+mutations were added. Authority plus ownership passes 20/20; including the
+reader lifecycle gives 26/26. The focused migration set passes 179/179. Existing
 physics/aux-derived bootstrap and row-policy authority remains quarantined; the
 lease does not broaden it.
 
 ## Recorded 67-segment oracle
 
-The current-head focused chain run reran
+The `1a96fbdf1` measurement-point focused chain run reran
 `TestS3kKnucklesSuperEmeraldRunChain`. Its segment-0 report is `complete: true`
 and consumed all 1,653 AIZ rows:
 
@@ -198,7 +204,9 @@ The headless group also supplied the fresh 67-segment oracle above.
 
 ## Conclusion
 
-Every gate applicable through Task 8 Step 7 passes at the reconciled feature
-head. The design is implemented and feature-branch validated. This conclusion
+Every gate applicable through Task 8 Step 7 passed at the reconciled
+`1a96fbdf1` measurement point, and the subsequent enforcement corrections
+through `0fe4a79bc` pass their focused acceptance matrix. The design is
+implemented and feature-branch validated. This conclusion
 does not claim controller-owned independent review, merge, post-merge
 comparison, push, or cleanup.
