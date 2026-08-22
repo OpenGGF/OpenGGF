@@ -1,5 +1,25 @@
 package com.openggf.tests.trace.runs;
 
+import com.sun.source.tree.AssignmentTree;
+import com.sun.source.tree.BinaryTree;
+import com.sun.source.tree.BlockTree;
+import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.IdentifierTree;
+import com.sun.source.tree.LiteralTree;
+import com.sun.source.tree.MemberSelectTree;
+import com.sun.source.tree.MethodInvocationTree;
+import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.NewClassTree;
+import com.sun.source.tree.ParenthesizedTree;
+import com.sun.source.tree.Tree;
+import com.sun.source.tree.TypeCastTree;
+import com.sun.source.tree.VariableTree;
+import com.sun.source.util.JavacTask;
+import com.sun.source.util.SourcePositions;
+import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.Trees;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceCatalog;
@@ -19,20 +39,33 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import javax.tools.JavaCompiler;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,8 +80,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
     private static final String WALKER = TraceRunReplayWalker.class.getName();
     private static final Set<String> PAYLOAD_ACCESSORS = Set.of(
             "trace", "specialStageRows");
-    private static final Set<String> ACQUISITION_METHODS = Set.of(
-            "trace", "specialStageRows", "openActiveSegment");
     private static final Set<String> EXACT_CALLER_ALLOWLIST = Set.of(
             "com.openggf.TraceSessionLauncher",
             "com.openggf.tests.trace.runs.AbstractRunChainTest",
@@ -73,11 +104,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
             ActiveSegmentPayload.class,
             TraceData.class,
             TraceRunSpecialStageRows.class);
-    private static final Pattern REFLECTIVE_ACQUISITION = Pattern.compile(
-            "\\b(?:Class\\s*\\.\\s*forName|getMethod|getDeclaredMethod|"
-                    + "findVirtual|findStatic)\\s*\\(");
-    private static final Pattern TARGET_TYPE_REFERENCE = Pattern.compile(
-            "\\b(?:ActiveSegmentPayload|TraceRunReplayWalker)\\b");
 
     @Test
     void leaseAndWalkerExposeOnlyTheApprovedPublicSurface() {
@@ -201,49 +227,104 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
-    void sourceGuardRejectsReflectiveMethodHandleAndConstructedAcquisition() {
-        assertSingleSourceViolation("Reflective.java", """
-                class Reflective {
-                    Object acquire() throws Exception {
-                        return ActiveSegmentPayload.class.getMethod("trace");
-                    }
-                }
-                """);
-        assertSingleSourceViolation("ClassForName.java", """
-                class ClassForName {
-                    Object acquire() throws Exception {
-                        return Class.forName(
-                                "com.openggf.trace.replay.runs.ActiveSegmentPayload")
-                                .getDeclaredMethod("specialStageRows");
-                    }
-                }
-                """);
-        assertSingleSourceViolation("MethodHandle.java", """
-                class MethodHandle {
-                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
-                        return lookup.findVirtual(ActiveSegmentPayload.class,
-                                "trace", MethodType.methodType(TraceData.class));
-                    }
-                }
-                """);
-        assertSingleSourceViolation("StaticMethodHandle.java", """
-                class StaticMethodHandle {
-                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
-                        return lookup.findStatic(TraceRunReplayWalker.class,
-                                "openActiveSegment", MethodType.methodType(
-                                        ActiveSegmentPayload.class,
-                                        TraceRunSegmentDescriptor.class, int.class));
-                    }
-                }
-                """);
-        assertSingleSourceViolation("ConstructedName.java", """
-                class ConstructedName {
-                    Object acquire() throws Exception {
-                        String name = "tr" + "ace";
-                        return ActiveSegmentPayload.class.getDeclaredMethod(name);
-                    }
-                }
-                """);
+    void sourceGuardReportsEachPrimitiveForConstructedNamesExactly() {
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "ClassForNameConcat.java:5 Class.forName resolves active payload "
+                                + "owner com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "ClassForNameConcat.java", """
+                                class ClassForNameConcat {
+                                    Object acquire() throws Exception {
+                                        String type = "com.openggf.trace.replay.runs."
+                                                + "ActiveSegment";
+                                        return Class.forName(type.concat("Payload"));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "GetDeclaredMethodConcat.java:4 getDeclaredMethod acquires active "
+                                + "payload accessor trace on "
+                                + "com.openggf.trace.replay.runs.ActiveSegmentPayload",
+                        "GetDeclaredMethodConcat.java", """
+                                class GetDeclaredMethodConcat {
+                                    Object acquire() throws Exception {
+                                        String name = "tr".concat("ace");
+                                        return ActiveSegmentPayload.class
+                                                .getDeclaredMethod(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "GetMethodSplitLocals.java:6 getMethod acquires active payload "
+                                + "accessor trace on "
+                                + "com.openggf.trace.replay.runs.ActiveSegmentPayload",
+                        "GetMethodSplitLocals.java", """
+                                class GetMethodSplitLocals {
+                                    Object acquire() throws Exception {
+                                        String prefix = "tr";
+                                        String suffix = "ace";
+                                        String name = prefix + suffix;
+                                        return ActiveSegmentPayload.class.getMethod(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "GetDeclaredMethodBuilder.java:6 getDeclaredMethod acquires active "
+                                + "payload accessor specialStageRows on "
+                                + "com.openggf.trace.replay.runs.ActiveSegmentPayload",
+                        "GetDeclaredMethodBuilder.java", """
+                                class GetDeclaredMethodBuilder {
+                                    Object acquire() throws Exception {
+                                        StringBuilder name = new StringBuilder("special");
+                                        name.append("Stage");
+                                        name.append("Rows");
+                                        return ActiveSegmentPayload.class
+                                                .getDeclaredMethod(name.toString());
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "FindVirtualJoin.java:5 findVirtual acquires active payload accessor "
+                                + "trace on "
+                                + "com.openggf.trace.replay.runs.ActiveSegmentPayload",
+                        "FindVirtualJoin.java", """
+                                class FindVirtualJoin {
+                                    Object acquire(MethodHandles.Lookup lookup)
+                                            throws Exception {
+                                        String name = String.join("", "tr", "ace");
+                                        return lookup.findVirtual(
+                                                ActiveSegmentPayload.class, name,
+                                                MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "FindStaticPlus.java:5 findStatic acquires active payload accessor "
+                                + "openActiveSegment on "
+                                + "com.openggf.trace.replay.runs.TraceRunReplayWalker",
+                        "FindStaticPlus.java", """
+                                class FindStaticPlus {
+                                    Object acquire(MethodHandles.Lookup lookup)
+                                            throws Exception {
+                                        String name = "openActive" + "Segment";
+                                        return lookup.findStatic(
+                                                TraceRunReplayWalker.class, name,
+                                                MethodType.methodType(
+                                                        ActiveSegmentPayload.class,
+                                                        TraceRunSegmentDescriptor.class,
+                                                        int.class));
+                                    }
+                                }
+                                """),
+                () -> assertNoSourceViolation(
+                        "UnknownAccessor.java", """
+                                class UnknownAccessor {
+                                    Object acquire(String name) throws Exception {
+                                        return ActiveSegmentPayload.class.getMethod(name);
+                                    }
+                                }
+                                """));
     }
 
     @Test
@@ -271,19 +352,24 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
-    void relayGuardRejectsLeaseTraceAndSpecialRowsSurfaces() {
-        List<String> violations = new ArrayList<>();
-        inspectRelaySurface(LeaseRelayMutation.class, violations);
-        inspectRelaySurface(TraceRelayMutation.class, violations);
-        inspectRelaySurface(SpecialRowsRelayMutation.class, violations);
-
-        assertEquals(3, violations.size());
-        assertTrue(violations.stream().anyMatch(line -> line.contains(
-                LeaseRelayMutation.class.getName())), violations.toString());
-        assertTrue(violations.stream().anyMatch(line -> line.contains(
-                TraceRelayMutation.class.getName())), violations.toString());
-        assertTrue(violations.stream().anyMatch(line -> line.contains(
-                SpecialRowsRelayMutation.class.getName())), violations.toString());
+    void relayGuardRejectsEveryNestedPayloadGraphTypeShapeExactly() {
+        assertAll(
+                () -> assertExactRelayViolation(
+                        LeaseRelayMutation.class, "method payload"),
+                () -> assertExactRelayViolation(
+                        TraceRelayMutation.class, "method trace"),
+                () -> assertExactRelayViolation(
+                        SpecialRowsRelayMutation.class, "method rows"),
+                () -> assertExactRelayViolation(
+                        ClassArrayRelayMutation.class, "field payloads"),
+                () -> assertExactRelayViolation(
+                        GenericArrayRelayMutation.class, "method traces"),
+                () -> assertExactRelayViolation(
+                        UpperWildcardRelayMutation.class, "method traces"),
+                () -> assertExactRelayViolation(
+                        LowerWildcardRelayMutation.class, "method traces"),
+                () -> assertExactRelayViolation(
+                        TypeVariableRelayMutation.class, "method rows"));
     }
 
     private static JavaClasses importProjectClasses() {
@@ -356,162 +442,384 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
     private static List<String> scanReflectiveAcquisition(
             String fileName, String source) {
-        String withoutComments = stripCommentsPreservingLines(source);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        assertTrue(compiler != null,
+                "the authority source guard requires a JDK compiler");
         List<String> violations = new ArrayList<>();
-        java.util.regex.Matcher acquisition =
-                REFLECTIVE_ACQUISITION.matcher(withoutComments);
-        while (acquisition.find()) {
-            int windowStart = Math.max(0, acquisition.start() - 800);
-            int windowEnd = Math.min(
-                    withoutComments.length(), acquisition.end() + 800);
-            String acquisitionWindow = withoutComments.substring(
-                    windowStart, windowEnd);
-            if (!TARGET_TYPE_REFERENCE.matcher(acquisitionWindow).find()) {
-                continue;
+        JavacTask task = (JavacTask) compiler.getTask(
+                null, null, null, List.of("-proc:none"), null,
+                List.of(new StringSourceFile(fileName, source)));
+        try {
+            Iterable<? extends CompilationUnitTree> units = task.parse();
+            SourcePositions positions = Trees.instance(task).getSourcePositions();
+            for (CompilationUnitTree unit : units) {
+                new ReflectiveAcquisitionScanner(
+                        fileName, unit, positions, violations)
+                        .scan(unit, null);
             }
-            Set<String> names = accessorNamesPresent(acquisitionWindow);
-            if (names.isEmpty()) {
-                continue;
-            }
-            int line = 1;
-            for (int index = 0; index < acquisition.start(); index++) {
-                if (withoutComments.charAt(index) == '\n') {
-                    line++;
-                }
-            }
-            violations.add(fileName + ":" + line
-                    + " reflectively acquires active payload authority "
-                    + names);
+        } catch (IOException failure) {
+            throw new IllegalStateException(
+                    "could not parse authority source " + fileName, failure);
         }
-        return violations;
+        return List.copyOf(violations);
     }
 
-    private static Set<String> accessorNamesPresent(String source) {
-        java.util.HashSet<String> names = new java.util.HashSet<>();
-        List<StringLiteral> literals = stringLiterals(source);
-        for (StringLiteral literal : literals) {
-            if (ACQUISITION_METHODS.contains(literal.value())) {
-                names.add(literal.value());
+    private static final class ReflectiveAcquisitionScanner
+            extends TreePathScanner<Void, Void> {
+        private final String fileName;
+        private final CompilationUnitTree unit;
+        private final SourcePositions positions;
+        private final List<String> violations;
+        private final Deque<Map<String, KnownValue>> scopes = new ArrayDeque<>();
+
+        private ReflectiveAcquisitionScanner(
+                String fileName,
+                CompilationUnitTree unit,
+                SourcePositions positions,
+                List<String> violations) {
+            this.fileName = fileName;
+            this.unit = unit;
+            this.positions = positions;
+            this.violations = violations;
+            scopes.push(new HashMap<>());
+        }
+
+        @Override
+        public Void visitClass(ClassTree node, Void unused) {
+            scopes.push(new HashMap<>());
+            try {
+                return super.visitClass(node, unused);
+            } finally {
+                scopes.pop();
             }
         }
-        for (int first = 0; first < literals.size(); first++) {
-            StringBuilder joined = new StringBuilder(literals.get(first).value());
-            for (int next = first + 1; next < literals.size(); next++) {
-                if (!isConcatenationSeparator(source,
-                        literals.get(next - 1).end(),
-                        literals.get(next).start())) {
-                    break;
-                }
-                joined.append(literals.get(next).value());
-                if (ACQUISITION_METHODS.contains(joined.toString())) {
-                    names.add(joined.toString());
-                }
+
+        @Override
+        public Void visitMethod(MethodTree node, Void unused) {
+            scopes.push(new HashMap<>());
+            try {
+                return super.visitMethod(node, unused);
+            } finally {
+                scopes.pop();
             }
         }
-        return Set.copyOf(names);
+
+        @Override
+        public Void visitBlock(BlockTree node, Void unused) {
+            scopes.push(new HashMap<>());
+            try {
+                return super.visitBlock(node, unused);
+            } finally {
+                scopes.pop();
+            }
+        }
+
+        @Override
+        public Void visitVariable(VariableTree node, Void unused) {
+            KnownValue value = evaluate(node.getInitializer());
+            if (value != null) {
+                scopes.peek().put(node.getName().toString(), value);
+            }
+            return super.visitVariable(node, unused);
+        }
+
+        @Override
+        public Void visitAssignment(AssignmentTree node, Void unused) {
+            if (node.getVariable() instanceof IdentifierTree identifier) {
+                KnownValue value = evaluate(node.getExpression());
+                if (value != null) {
+                    bind(identifier.getName().toString(), value);
+                }
+            }
+            return super.visitAssignment(node, unused);
+        }
+
+        @Override
+        public Void visitMethodInvocation(
+                MethodInvocationTree node, Void unused) {
+            recordBuilderMutation(node);
+            recordAcquisition(node);
+            return super.visitMethodInvocation(node, unused);
+        }
+
+        private void recordBuilderMutation(MethodInvocationTree invocation) {
+            if (!"append".equals(invokedName(invocation))
+                    || !(receiver(invocation) instanceof IdentifierTree identifier)) {
+                return;
+            }
+            KnownValue appended = evaluate(invocation);
+            if (appended != null && appended.builder()) {
+                bind(identifier.getName().toString(), appended);
+            }
+        }
+
+        private void recordAcquisition(MethodInvocationTree invocation) {
+            String primitive = invokedName(invocation);
+            List<? extends ExpressionTree> arguments = invocation.getArguments();
+            if (isClassForName(invocation)
+                    && !arguments.isEmpty()) {
+                String target = normalizeTargetName(
+                        text(evaluate(arguments.getFirst())));
+                if (target != null) {
+                    report(invocation, "Class.forName resolves active payload owner "
+                            + target);
+                }
+                return;
+            }
+            if (("getMethod".equals(primitive)
+                    || "getDeclaredMethod".equals(primitive))
+                    && !arguments.isEmpty()) {
+                recordAccessorAcquisition(invocation, primitive,
+                        targetName(evaluate(receiver(invocation))),
+                        text(evaluate(arguments.getFirst())));
+                return;
+            }
+            if (("findVirtual".equals(primitive)
+                    || "findStatic".equals(primitive))
+                    && arguments.size() >= 2) {
+                recordAccessorAcquisition(invocation, primitive,
+                        targetName(evaluate(arguments.get(0))),
+                        text(evaluate(arguments.get(1))));
+            }
+        }
+
+        private void recordAccessorAcquisition(
+                MethodInvocationTree invocation,
+                String primitive,
+                String target,
+                String accessor) {
+            if (!isAcquisition(target, accessor)) {
+                return;
+            }
+            report(invocation, primitive + " acquires active payload accessor "
+                    + accessor + " on " + target);
+        }
+
+        private KnownValue evaluate(ExpressionTree expression) {
+            if (expression == null) {
+                return null;
+            }
+            if (expression instanceof LiteralTree literal
+                    && literal.getValue() instanceof String value) {
+                return KnownValue.string(value);
+            }
+            if (expression instanceof ParenthesizedTree parenthesized) {
+                return evaluate(parenthesized.getExpression());
+            }
+            if (expression instanceof TypeCastTree cast) {
+                return evaluate(cast.getExpression());
+            }
+            if (expression instanceof IdentifierTree identifier) {
+                return lookup(identifier.getName().toString());
+            }
+            if (expression instanceof AssignmentTree assignment) {
+                return evaluate(assignment.getExpression());
+            }
+            if (expression instanceof BinaryTree binary
+                    && binary.getKind() == Tree.Kind.PLUS) {
+                String left = text(evaluate(binary.getLeftOperand()));
+                String right = text(evaluate(binary.getRightOperand()));
+                return left != null && right != null
+                        ? KnownValue.string(left + right) : null;
+            }
+            if (expression instanceof MemberSelectTree selection
+                    && "class".contentEquals(selection.getIdentifier())) {
+                return KnownValue.target(normalizeTargetName(
+                        selection.getExpression().toString()));
+            }
+            if (expression instanceof NewClassTree newClass
+                    && newClass.getIdentifier().toString()
+                    .endsWith("StringBuilder")) {
+                String initial = newClass.getArguments().isEmpty()
+                        ? "" : text(evaluate(newClass.getArguments().getFirst()));
+                return initial == null ? null : KnownValue.builder(initial);
+            }
+            if (expression instanceof MethodInvocationTree invocation) {
+                return evaluateInvocation(invocation);
+            }
+            return null;
+        }
+
+        private KnownValue evaluateInvocation(MethodInvocationTree invocation) {
+            String method = invokedName(invocation);
+            List<? extends ExpressionTree> arguments = invocation.getArguments();
+            KnownValue receiverValue = evaluate(receiver(invocation));
+            if ("concat".equals(method) && arguments.size() == 1) {
+                String prefix = text(receiverValue);
+                String suffix = text(evaluate(arguments.getFirst()));
+                return prefix != null && suffix != null
+                        ? KnownValue.string(prefix + suffix) : null;
+            }
+            if (isStringJoin(invocation) && arguments.size() >= 2) {
+                String delimiter = text(evaluate(arguments.getFirst()));
+                if (delimiter == null) {
+                    return null;
+                }
+                List<String> parts = new ArrayList<>();
+                for (ExpressionTree argument : arguments.subList(
+                        1, arguments.size())) {
+                    String part = text(evaluate(argument));
+                    if (part == null) {
+                        return null;
+                    }
+                    parts.add(part);
+                }
+                return KnownValue.string(String.join(delimiter, parts));
+            }
+            if ("append".equals(method) && arguments.size() == 1
+                    && receiverValue != null && receiverValue.builder()) {
+                String suffix = text(evaluate(arguments.getFirst()));
+                return suffix == null ? null
+                        : KnownValue.builder(receiverValue.text() + suffix);
+            }
+            if ("toString".equals(method) && arguments.isEmpty()
+                    && receiverValue != null && receiverValue.builder()) {
+                return KnownValue.string(receiverValue.text());
+            }
+            if (isClassForName(invocation) && !arguments.isEmpty()) {
+                return KnownValue.target(normalizeTargetName(
+                        text(evaluate(arguments.getFirst()))));
+            }
+            return null;
+        }
+
+        private boolean isStringJoin(MethodInvocationTree invocation) {
+            ExpressionTree receiver = receiver(invocation);
+            return "join".equals(invokedName(invocation))
+                    && receiver != null
+                    && Set.of("String", "java.lang.String")
+                    .contains(receiver.toString());
+        }
+
+        private boolean isClassForName(MethodInvocationTree invocation) {
+            ExpressionTree receiver = receiver(invocation);
+            return "forName".equals(invokedName(invocation))
+                    && receiver != null
+                    && Set.of("Class", "java.lang.Class")
+                    .contains(receiver.toString());
+        }
+
+        private void report(Tree tree, String message) {
+            long position = positions.getStartPosition(unit, tree);
+            long line = unit.getLineMap().getLineNumber(position);
+            violations.add(fileName + ":" + line + " " + message);
+        }
+
+        private KnownValue lookup(String name) {
+            for (Map<String, KnownValue> scope : scopes) {
+                KnownValue value = scope.get(name);
+                if (value != null) {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        private void bind(String name, KnownValue value) {
+            for (Map<String, KnownValue> scope : scopes) {
+                if (scope.containsKey(name)) {
+                    scope.put(name, value);
+                    return;
+                }
+            }
+            scopes.peek().put(name, value);
+        }
+
+        private static String invokedName(MethodInvocationTree invocation) {
+            ExpressionTree select = invocation.getMethodSelect();
+            if (select instanceof MemberSelectTree member) {
+                return member.getIdentifier().toString();
+            }
+            if (select instanceof IdentifierTree identifier) {
+                return identifier.getName().toString();
+            }
+            return "";
+        }
+
+        private static ExpressionTree receiver(
+                MethodInvocationTree invocation) {
+            return invocation.getMethodSelect() instanceof MemberSelectTree member
+                    ? member.getExpression() : null;
+        }
     }
 
-    private static List<StringLiteral> stringLiterals(String source) {
-        List<StringLiteral> literals = new ArrayList<>();
-        for (int index = 0; index < source.length(); index++) {
-            if (source.charAt(index) != '"') {
-                continue;
-            }
-            int start = index;
-            StringBuilder value = new StringBuilder();
-            for (index++; index < source.length(); index++) {
-                char current = source.charAt(index);
-                if (current == '"' && !escaped(source, index)) {
-                    literals.add(new StringLiteral(
-                            value.toString(), start, index + 1));
-                    break;
-                }
-                value.append(current);
-            }
+    private record KnownValue(String text, String targetName, boolean builder) {
+        private static KnownValue string(String value) {
+            return value == null ? null : new KnownValue(value, null, false);
         }
-        return List.copyOf(literals);
+
+        private static KnownValue target(String value) {
+            return value == null ? null : new KnownValue(null, value, false);
+        }
+
+        private static KnownValue builder(String value) {
+            return value == null ? null : new KnownValue(value, null, true);
+        }
     }
 
-    private static boolean isConcatenationSeparator(
-            String source, int start, int end) {
-        boolean plus = false;
-        for (int index = start; index < end; index++) {
-            char current = source.charAt(index);
-            if (Character.isWhitespace(current)) {
-                continue;
-            }
-            if (current == '+' && !plus) {
-                plus = true;
-                continue;
-            }
-            return false;
+    private static final class StringSourceFile extends SimpleJavaFileObject {
+        private final String source;
+
+        private StringSourceFile(String fileName, String source) {
+            super(URI.create("string:///" + fileName.replace('\\', '/')),
+                    Kind.SOURCE);
+            this.source = source;
         }
-        return plus;
+
+        @Override
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+            return source;
+        }
     }
 
-    private static String stripCommentsPreservingLines(String source) {
-        StringBuilder result = new StringBuilder(source.length());
-        boolean lineComment = false;
-        boolean blockComment = false;
-        boolean string = false;
-        boolean character = false;
-        for (int index = 0; index < source.length(); index++) {
-            char current = source.charAt(index);
-            char next = index + 1 < source.length()
-                    ? source.charAt(index + 1) : '\0';
-            if (lineComment) {
-                if (current == '\n') {
-                    lineComment = false;
-                    result.append(current);
-                } else {
-                    result.append(' ');
-                }
-            } else if (blockComment) {
-                if (current == '*' && next == '/') {
-                    result.append("  ");
-                    index++;
-                    blockComment = false;
-                } else {
-                    result.append(current == '\n' ? '\n' : ' ');
-                }
-            } else if (!string && !character && current == '/' && next == '/') {
-                result.append("  ");
-                index++;
-                lineComment = true;
-            } else if (!string && !character && current == '/' && next == '*') {
-                result.append("  ");
-                index++;
-                blockComment = true;
-            } else {
-                result.append(current);
-                if (current == '"' && !character && !escaped(source, index)) {
-                    string = !string;
-                } else if (current == '\'' && !string
-                        && !escaped(source, index)) {
-                    character = !character;
-                }
-            }
-        }
-        return result.toString();
+    private static String text(KnownValue value) {
+        return value == null ? null : value.text();
     }
 
-    private static boolean escaped(String source, int index) {
-        int slashes = 0;
-        for (int candidate = index - 1;
-                candidate >= 0 && source.charAt(candidate) == '\\';
-                candidate--) {
-            slashes++;
-        }
-        return (slashes & 1) != 0;
+    private static String targetName(KnownValue value) {
+        return value == null ? null : value.targetName();
     }
 
-    private static void assertSingleSourceViolation(
-            String fileName, String source) {
+    private static String normalizeTargetName(String candidate) {
+        if (candidate == null) {
+            return null;
+        }
+        if (candidate.equals(PAYLOAD)
+                || candidate.equals(ActiveSegmentPayload.class.getSimpleName())) {
+            return PAYLOAD;
+        }
+        if (candidate.equals(WALKER)
+                || candidate.equals(TraceRunReplayWalker.class.getSimpleName())) {
+            return WALKER;
+        }
+        return null;
+    }
+
+    private static boolean isAcquisition(String target, String accessor) {
+        return accessor != null
+                && ((PAYLOAD.equals(target)
+                && PAYLOAD_ACCESSORS.contains(accessor))
+                || (WALKER.equals(target)
+                && "openActiveSegment".equals(accessor)));
+    }
+
+    private static void assertExactSourceViolation(
+            String expected, String fileName, String source) {
         List<String> violations = scanReflectiveAcquisition(fileName, source);
-        assertFalse(violations.isEmpty(), violations.toString());
-        assertTrue(violations.stream().allMatch(
-                        violation -> violation.startsWith(fileName + ":")),
-                violations.toString());
+        assertEquals(List.of(expected), violations);
+    }
+
+    private static void assertNoSourceViolation(
+            String fileName, String source) {
+        assertEquals(List.of(), scanReflectiveAcquisition(fileName, source));
+    }
+
+    private static void assertExactRelayViolation(
+            Class<?> owner, String memberDescription) {
+        List<String> violations = new ArrayList<>();
+        inspectRelaySurface(owner, violations);
+        assertEquals(List.of(owner.getName() + " " + memberDescription),
+                violations);
     }
 
     private static void inspectRelaySurface(
@@ -531,15 +839,42 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     private static boolean containsPayloadGraph(Type type) {
+        return containsPayloadGraph(type, new HashSet<>());
+    }
+
+    private static boolean containsPayloadGraph(
+            Type type, Set<Type> inspected) {
+        if (type == null || !inspected.add(type)) {
+            return false;
+        }
         if (type instanceof Class<?> typeClass) {
+            if (typeClass.isArray()) {
+                return containsPayloadGraph(
+                        typeClass.getComponentType(), inspected);
+            }
             return PAYLOAD_GRAPH_TYPES.stream()
                     .anyMatch(payloadType -> payloadType.isAssignableFrom(typeClass));
         }
         if (type instanceof ParameterizedType parameterized) {
-            return containsPayloadGraph(parameterized.getRawType())
+            return containsPayloadGraph(parameterized.getOwnerType(), inspected)
+                    || containsPayloadGraph(parameterized.getRawType(), inspected)
                     || Arrays.stream(parameterized.getActualTypeArguments())
-                    .anyMatch(TestActiveSegmentPayloadAuthorityGuard
-                            ::containsPayloadGraph);
+                    .anyMatch(argument -> containsPayloadGraph(
+                            argument, inspected));
+        }
+        if (type instanceof GenericArrayType array) {
+            return containsPayloadGraph(
+                    array.getGenericComponentType(), inspected);
+        }
+        if (type instanceof WildcardType wildcard) {
+            return Arrays.stream(wildcard.getUpperBounds())
+                    .anyMatch(bound -> containsPayloadGraph(bound, inspected))
+                    || Arrays.stream(wildcard.getLowerBounds())
+                    .anyMatch(bound -> containsPayloadGraph(bound, inspected));
+        }
+        if (type instanceof TypeVariable<?> variable) {
+            return Arrays.stream(variable.getBounds())
+                    .anyMatch(bound -> containsPayloadGraph(bound, inspected));
         }
         return false;
     }
@@ -562,9 +897,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
         } catch (ClassNotFoundException failure) {
             return null;
         }
-    }
-
-    private record StringLiteral(String value, int start, int end) {
     }
 
     private static final class UnauthorizedDirectCall {
@@ -607,6 +939,34 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
     private static final class SpecialRowsRelayMutation {
         public TraceRunSpecialStageRows rows() {
+            return null;
+        }
+    }
+
+    private static final class ClassArrayRelayMutation {
+        public ActiveSegmentPayload[] payloads;
+    }
+
+    private static final class GenericArrayRelayMutation {
+        public List<TraceData>[] traces() {
+            return null;
+        }
+    }
+
+    private static final class UpperWildcardRelayMutation {
+        public List<? extends TraceData> traces() {
+            return null;
+        }
+    }
+
+    private static final class LowerWildcardRelayMutation {
+        public List<? super TraceData> traces() {
+            return null;
+        }
+    }
+
+    private static final class TypeVariableRelayMutation {
+        public <T extends TraceRunSpecialStageRows> T rows() {
             return null;
         }
     }
