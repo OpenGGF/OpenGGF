@@ -2,6 +2,7 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
@@ -198,19 +199,25 @@ class TestTraceRunSegmentDescriptorPlanning {
     }
 
     @Test
-    void descriptorRejectsLevelLoopRowsOutsideItsRowRange(@TempDir Path root)
-            throws Exception {
-        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
-        TraceRunManifest run = TraceRunManifest.load(
-                runDir.resolve("run_manifest.json"));
-        TraceRunSegmentDescriptor descriptor =
-                TraceRunReplayWalker.planDescriptors(run, runDir).getFirst();
+    void descriptorRejectsLevelLoopRowsOutsideItsRowRangeForEveryPolicy() {
+        List<TraceRunSegmentDescriptor> descriptors = List.of(
+                syntheticDescriptor("level", 2, 2,
+                        TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY),
+                syntheticDescriptor("level", 2, 1,
+                        TraceRunReplayWalker.SegmentExecutionPolicy
+                                .LEVEL_PRESENTATION_BRIDGE),
+                syntheticDescriptor("special_stage", 2, 0,
+                        TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> copyWithLevelLoopRows(descriptor, -1));
-        assertThrows(IllegalArgumentException.class,
-                () -> copyWithLevelLoopRows(descriptor,
-                        descriptor.rowCount() + 1));
+        for (TraceRunSegmentDescriptor descriptor : descriptors) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> copyWithLevelLoopRows(descriptor, -1),
+                    descriptor.executionPolicy().toString());
+            assertThrows(IllegalArgumentException.class,
+                    () -> copyWithLevelLoopRows(descriptor,
+                            descriptor.rowCount() + 1),
+                    descriptor.executionPolicy().toString());
+        }
     }
 
     @Test
@@ -333,6 +340,27 @@ class TestTraceRunSegmentDescriptorPlanning {
                 descriptor.terminalDynamicArtLedger(), descriptor.entryBoundary(),
                 descriptor.exitBoundary(), levelLoopRowCount,
                 descriptor.executionPolicy());
+    }
+
+    private static TraceRunSegmentDescriptor syntheticDescriptor(
+            String kind,
+            int rowCount,
+            int levelLoopRowCount,
+            TraceRunReplayWalker.SegmentExecutionPolicy executionPolicy) {
+        TraceRunManifest.Segment segment = new TraceRunManifest.Segment(
+                executionPolicy.name().toLowerCase(), kind, "synthetic", 0,
+                rowCount, 0, 1, null, null);
+        List<Integer> rawFrames = new ArrayList<>(rowCount);
+        for (int row = 0; row < rowCount; row++) {
+            rawFrames.add(row);
+        }
+        return new TraceRunSegmentDescriptor(
+                segment, Path.of(segment.dir()), TraceFixtures.metadata("s1", 0, 1),
+                rowCount, "special_stage".equals(kind) ? null
+                        : TraceFrame.executionTestFrame(0, 0x300, 0, 0),
+                rawFrames, new BitSet(),
+                com.openggf.trace.timing.HardwareTimingSchedule.empty(), List.of(),
+                null, null, levelLoopRowCount, executionPolicy);
     }
 
     private static TraceMetadata copyMetadataWithLists(

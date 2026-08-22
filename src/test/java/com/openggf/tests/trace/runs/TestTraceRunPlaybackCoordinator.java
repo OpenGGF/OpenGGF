@@ -395,17 +395,39 @@ class TestTraceRunPlaybackCoordinator {
                         bridgeExitObservation(14, false)).getFirst());
     }
 
-    /** A coordinator parked in the gap between a bridge and its gameplay. */
-    private static TraceRunPlaybackCoordinator bridgeAtGameplayHandoff() {
-        return bridgeAtGameplayHandoff(false);
-    }
-
     private static TraceRunPlaybackCoordinator descriptorBackedBridgeAtGameplayHandoff() {
-        return bridgeAtGameplayHandoff(true);
+        List<TraceRunManifest.Segment> segments = List.of(
+                level("ghz1", 0, 1, 0, 5),
+                special("ss", 5, 5, 0),
+                level("ghz2_bridge", 0, 2, 11, 2),
+                level("ghz2", 0, 2, 14, 3));
+        List<TraceRunManifest.Transition> transitions = List.of(
+                transition(0, "giant_ring", 5),
+                transition(1, "stage_exit", 10));
+        TraceRunManifest run = run(segments, transitions,
+                TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED);
+        TraceRunPlaybackCoordinator coordinator =
+                TraceRunPlaybackCoordinator.fromDescriptors(
+                        run, TracePlaybackProfile.DISABLED, 30, List.of(
+                                syntheticDescriptor(segments.get(0), null,
+                                        transitions.get(0), 2, 2,
+                                        TraceRunReplayWalker
+                                                .SegmentExecutionPolicy.GAMEPLAY),
+                                syntheticDescriptor(segments.get(1),
+                                        transitions.get(0), transitions.get(1),
+                                        5, 0, TraceRunReplayWalker
+                                                .SegmentExecutionPolicy.SPECIAL_LOCAL),
+                                syntheticDescriptor(segments.get(2),
+                                        transitions.get(1), null, 2, 1,
+                                        TraceRunReplayWalker.SegmentExecutionPolicy
+                                                .LEVEL_PRESENTATION_BRIDGE),
+                                syntheticDescriptor(segments.get(3), null,
+                                        null, 3, 3, TraceRunReplayWalker
+                                                .SegmentExecutionPolicy.GAMEPLAY)));
+        return parkCoordinatorAtBridgeHandoff(coordinator);
     }
 
-    private static TraceRunPlaybackCoordinator bridgeAtGameplayHandoff(
-            boolean descriptorBacked) {
+    private static TraceRunPlaybackCoordinator bridgeAtGameplayHandoff() {
         List<TraceRunManifest.Segment> segments = List.of(
                 level("ghz1", 0, 1, 0, 5),
                 special("ss", 5, 5, 0),
@@ -430,14 +452,13 @@ class TestTraceRunPlaybackCoordinator {
                         transitions.get(1), null),
                 new TraceRunReplayWalker.SegmentPlan(
                         segments.get(3), executionTrace(11, 12, 13), null, null));
-        TraceRunPlaybackCoordinator coordinator = descriptorBacked
-                ? TraceRunPlaybackCoordinator.fromDescriptors(
-                        run, TracePlaybackProfile.DISABLED, 30,
-                        plans.stream()
-                                .map(TestTraceRunPlaybackCoordinator::descriptorFor)
-                                .toList())
-                : new TraceRunPlaybackCoordinator(
-                        run, TracePlaybackProfile.DISABLED, 30, plans);
+        TraceRunPlaybackCoordinator coordinator = new TraceRunPlaybackCoordinator(
+                run, TracePlaybackProfile.DISABLED, 30, plans);
+        return parkCoordinatorAtBridgeHandoff(coordinator);
+    }
+
+    private static TraceRunPlaybackCoordinator parkCoordinatorAtBridgeHandoff(
+            TraceRunPlaybackCoordinator coordinator) {
         coordinator.activateInitialLevel(levelObservation(1, 0, 0, 0, false, 0));
         coordinator.observeBoundary(
                 new RunBoundarySignal.SpecialStageRequest(5, 0));
@@ -456,21 +477,25 @@ class TestTraceRunPlaybackCoordinator {
         return coordinator;
     }
 
-    private static TraceRunSegmentDescriptor descriptorFor(
-            TraceRunReplayWalker.SegmentPlan plan) {
-        TraceData trace = plan.trace();
-        List<Integer> rawFrames = new ArrayList<>(trace.frameCount());
-        for (int row = 0; row < trace.frameCount(); row++) {
-            rawFrames.add(trace.getFrame(row).frame());
+    private static TraceRunSegmentDescriptor syntheticDescriptor(
+            TraceRunManifest.Segment segment,
+            TraceRunManifest.Transition entryBoundary,
+            TraceRunManifest.Transition exitBoundary,
+            int rowCount,
+            int levelLoopRowCount,
+            TraceRunReplayWalker.SegmentExecutionPolicy executionPolicy) {
+        List<Integer> rawFrames = new ArrayList<>(rowCount);
+        for (int row = 0; row < rowCount; row++) {
+            rawFrames.add(row);
         }
         return new TraceRunSegmentDescriptor(
-                plan.segment(), java.nio.file.Path.of(plan.segment().dir()),
-                trace.metadata(), trace.frameCount(),
-                trace.frameCount() == 0 ? null : trace.getFrame(0), rawFrames,
-                new java.util.BitSet(), trace.hardwareTimingSchedule(),
-                trace.terminalDynamicArtLedger(), plan.entryBoundary(),
-                plan.exitBoundary(), TraceRunReplayWalker.levelLoopRowCount(trace),
-                plan.executionPolicy());
+                segment, java.nio.file.Path.of(segment.dir()),
+                TraceFixtures.metadata("s1", segment.zoneId(), segment.act()), rowCount,
+                "special_stage".equals(segment.kind()) ? null
+                        : TraceFrame.executionTestFrame(0, 0x300, 0, 0),
+                rawFrames, new java.util.BitSet(),
+                com.openggf.trace.timing.HardwareTimingSchedule.empty(), List.of(),
+                entryBoundary, exitBoundary, levelLoopRowCount, executionPolicy);
     }
 
     private static RunPlaybackObservation bridgeExitObservation(
