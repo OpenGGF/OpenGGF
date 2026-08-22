@@ -14,10 +14,11 @@
   worsened red. Subsequent test-only enforcement corrections close typed
   receiver, same-source reflection-helper, primitive-name collision, and
   transformed lookup/class-producer, loader, field-alias, and helper-return
-  branch/class-producer bypasses; the current authority, authority/ownership, and
-  authority/ownership/reader gates
-  pass 31/31, 34/34, and 40/40 respectively without changing the measured
-  ownership graph.
+  branch/class-producer, reachable switch-baseline, component-type symmetry,
+  transformed lookup-target, and direct lookup-bind bypasses; the current
+  authority, authority/ownership, and authority/ownership/reader gates pass
+  35/35, 38/38, and 44/44 respectively without changing the measured ownership
+  graph.
 
 - **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
   exposed two real bridge regressions that aborted after destination segment 2

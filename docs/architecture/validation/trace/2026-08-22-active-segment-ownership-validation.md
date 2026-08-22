@@ -15,7 +15,7 @@ reconciled upstream's Tails sprite-manager change and preserved both projects'
 additive README and CHANGELOG entries. Both trees were source-clean when measured. Older evidence
 at `d9650fd7` and feature `3a3c1fc5` is historical, not the delivery baseline.
 Later whole-branch review produced enforcement-only correction commits through
-`e69599c0d`; they do not change production ownership or the measured graph.
+`7b16dc94b`; they do not change production ownership or the measured graph.
 Their focused authority, ownership, reader, migration, structural benchmark,
 and policy results are recorded below. The expensive full/default/trace suite
 figures remain explicitly attributable to `1a96fbdf1`, not the later head.
@@ -64,11 +64,13 @@ atomicity controls. Its deterministic matrix completed 100 cycles per payload
 shape and balanced exactly 1,000 opens with 1,000 closes:
 plain physics 100, plain aux 100, gzip physics 100, gzip aux 100, S1 physics
 200, S2 physics 200, S2 aux 100, and S3K physics 100. At correction head
-`e69599c0d`, the authority guard passes 31/31 after runtime-name, enumeration,
+`7b16dc94b`, the authority guard passes 35/35 after runtime-name, enumeration,
 field/method-handle, erased relay, typed receiver, same-source helper-flow,
 primitive-name collision, transformed-lookup, standard class-producer, and
-loader/field-alias/helper-return branch mutations were added. Authority plus
-ownership passes 34/34; including the reader lifecycle gives 40/40. The focused
+loader/field-alias/helper-return branch, reachable switch-baseline,
+component-type symmetry, lookup-target, and direct lookup-bind mutations were
+added. Authority plus ownership passes 38/38; including the reader lifecycle
+gives 44/44. The focused
 migration set passes 179/179. Existing
 physics/aux-derived bootstrap and row-policy authority remains quarantined; the
 lease does not broaden it.
@@ -208,7 +210,7 @@ The headless group also supplied the fresh 67-segment oracle above.
 
 Every gate applicable through Task 8 Step 7 passed at the reconciled
 `1a96fbdf1` measurement point, and the subsequent enforcement corrections
-through `e69599c0d` pass their focused acceptance matrix. The design is
+through `7b16dc94b` pass their focused acceptance matrix. The design is
 implemented and feature-branch validated. This conclusion
 does not claim controller-owned independent review, merge, post-merge
 comparison, push, or cleanup.
