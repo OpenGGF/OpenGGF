@@ -108,7 +108,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final long generation;
         private final boolean implicit;
         private final List<YmWriteTimeline.Entry> writes = new ArrayList<>();
-        private final List<PostCommitPublication> publications =
+        private final List<PostCommitPublication> hardwarePublications =
+                new ArrayList<>();
+        private final List<PostCommitPublication> logicalPublications =
                 new ArrayList<>();
         private long cursor;
         private DriverYmTimingScope activeScope;
@@ -635,12 +637,37 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             abortYmServiceTransaction(failure);
             throw failure;
         }
-        List<PostCommitPublication> publications =
-                List.copyOf(transaction.publications);
+        List<PostCommitPublication> hardwarePublications =
+                List.copyOf(transaction.hardwarePublications);
+        List<PostCommitPublication> logicalPublications =
+                List.copyOf(transaction.logicalPublications);
         ymServiceTransaction = null;
-        for (PostCommitPublication publication : publications) {
-            publication.publish();
+        // Hardware belongs to the committed service. Diagnostic failures can
+        // be reported afterward, but cannot gate or interrupt chip mutation.
+        RuntimeException publicationFailure = publishAll(
+                hardwarePublications, null);
+        publicationFailure = publishAll(
+                logicalPublications, publicationFailure);
+        if (publicationFailure != null) {
+            throw publicationFailure;
         }
+    }
+
+    private RuntimeException publishAll(
+            List<PostCommitPublication> publications,
+            RuntimeException primaryFailure) {
+        for (PostCommitPublication publication : publications) {
+            try {
+                publication.publish();
+            } catch (RuntimeException failure) {
+                if (primaryFailure == null) {
+                    primaryFailure = failure;
+                } else if (failure != primaryFailure) {
+                    primaryFailure.addSuppressed(failure);
+                }
+            }
+        }
+        return primaryFailure;
     }
 
     private void abortYmServiceTransaction(Throwable failure) {
@@ -689,21 +716,20 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void stageLogicalObserver(
             PostCommitPublication notification) {
-        stagePostCommitPublication(notification);
-    }
-
-    private void stagePostCommitPublication(
-            PostCommitPublication publication) {
         if (ymServiceTransaction == null) {
-            publication.publish();
+            notification.publish();
         } else {
-            ymServiceTransaction.publications.add(publication);
+            ymServiceTransaction.logicalPublications.add(notification);
         }
     }
 
     private void publishAuthorizedPsgWrite(Object source, int value) {
-        stagePostCommitPublication(
-                () -> super.writePsg(source, value));
+        if (ymServiceTransaction == null) {
+            super.writePsg(source, value);
+        } else {
+            ymServiceTransaction.hardwarePublications.add(
+                    () -> super.writePsg(source, value));
+        }
     }
 
     /** Installs the disabled-by-default complete-service diagnostic observer. */
@@ -2792,7 +2818,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         synchronized (sequencersLock) {
             for (int i = 0; i < frames; i++) {
                 advanceSequencersBatch(1);
-                removeCompletedSequencers();
 
                 super.render(scratchFrameBuf);
                 buffer[i * 2] = scratchFrameBuf[0];
@@ -2807,7 +2832,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         hybridChunkCountForTesting = 0;
 
         synchronized (sequencersLock) {
-            if (hasPendingYmWrites() || hasTimedYmServiceOwner()) {
+            if (hasPendingYmWrites()
+                    || mayPublishTimedWorkDuringAdvance(frames)) {
                 // Keep the complete call on the sample boundary once it starts
                 // with scheduled YM work or a source which can create it.
                 // Switching to a PSG batch after a mid-call service would
@@ -2832,29 +2858,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
 
                 advanceSequencersBatch(safeChunk);
-                removeCompletedSequencers();
                 renderChunk(buffer, frameIndex, safeChunk);
                 hybridChunkCountForTesting++;
                 frameIndex += safeChunk;
             }
         }
         return length;
-    }
-
-    private boolean hasTimedYmServiceOwner() {
-        for (SmpsSequencer sequencer : sequencers) {
-            if (timingProfileFor(sequencer)
-                    != YmServiceTimingProfile.none()) {
-                return true;
-            }
-        }
-        for (SmpsSequencer pending : pendingRemovals) {
-            if (timingProfileFor(pending)
-                    != YmServiceTimingProfile.none()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean requiresSampleAccurateFallback() {
@@ -2885,6 +2894,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         beginYmDriverServiceReservation(frames);
         try {
             advanceSequencersWithinReservation(frames);
+            removeCompletedSequencers();
         } catch (RuntimeException | Error failure) {
             abortYmServiceTransaction(failure);
             throw failure;
@@ -3003,7 +3013,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void renderSingleSample(short[] buffer, int frameIndex) {
         advanceSequencersBatch(1);
-        removeCompletedSequencers();
 
         super.render(scratchFrameBuf);
         buffer[frameIndex * 2] = scratchFrameBuf[0];

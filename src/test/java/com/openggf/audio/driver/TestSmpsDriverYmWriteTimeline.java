@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -378,6 +379,85 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
+    void throwingLogicalObserverCannotBlockCommittedPsgPublication() {
+        // Break caught: begin, PSG, and end publications share one fail-fast
+        // list, so the committed PSG write is skipped when begin throws.
+        List<String> publications = new ArrayList<>();
+        SmpsDriver driver = new SmpsDriver(
+                44_100.0, recordingAllObserver(publications));
+        publications.clear();
+        SmpsSequencer source = sequencer(driver, PROFILE, 0xA0);
+        publications.clear();
+        IllegalStateException injected =
+                new IllegalStateException("injected logical begin failure");
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                publications.add("logical:begin");
+                throw injected;
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                publications.add("logical:end");
+            }
+        });
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        driver.writePsg(source, 0x9F);
+
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> driver.endSequencerService(service));
+
+        assertSame(injected, failure);
+        assertEquals(List.of("PSG:9F", "logical:begin", "logical:end"),
+                publications);
+        assertEquals(1L,
+                driver.captureSnapshot().nextYmServiceOrdinal());
+    }
+
+    @Test
+    void logicalPublicationFailuresDrainInOrderWithLaterFailuresSuppressed() {
+        // Break caught: fail-fast publication leaves the paired end callback
+        // unobserved and makes the diagnostic state depend on which callback
+        // throws first.
+        List<String> publications = new ArrayList<>();
+        IllegalStateException beginFailure =
+                new IllegalStateException("injected begin failure");
+        IllegalStateException endFailure =
+                new IllegalStateException("injected end failure");
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer source = sequencer(driver, PROFILE, 0xA0);
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                publications.add("begin");
+                throw beginFailure;
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                publications.add("end");
+                throw endFailure;
+            }
+        });
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> driver.endSequencerService(service));
+
+        assertSame(beginFailure, failure);
+        assertEquals(List.of("begin", "end"), publications);
+        assertEquals(1, failure.getSuppressed().length);
+        assertSame(endFailure, failure.getSuppressed()[0]);
+    }
+
+    @Test
     void admissionPreparationUsesOneAuthorizedPublicationBoundary() {
         // Break caught: admission key-off/SSG-EG clear re-enters arbitration,
         // skips a timing slot, or invokes chip callbacks before timeline drain.
@@ -606,6 +686,59 @@ class TestSmpsDriverYmWriteTimeline {
 
         assertEquals(4_089, driver.captureSnapshot().synthSnapshot()
                 .ymWriteTimeline().pending().size());
+    }
+
+    @Test
+    void aggregateCapacityCoversNormalAndCompletionLifecycleTogether() {
+        // Break caught: the outer reservation is cleared after the normal
+        // service, so same-advance completion re-preflights the full owner
+        // maximum against only the reservation's unused tail.
+        YmServiceTimingProfile lifecycleProfile =
+                YmServiceTimingProfile.of(4,
+                        new Segment(SegmentKind.KEY_OFF, VARIANT,
+                                new long[] { 0, 100 }),
+                        new Segment(SegmentKind.COMPLETION_RESTORE, VARIANT,
+                                new long[] { 0, 100 }));
+        SmpsDriver exact = new SmpsDriver();
+        fillRemainingCapacity(exact, 4);
+        LifecycleCompletingSequencer exactSource =
+                new LifecycleCompletingSequencer(
+                        exact, lifecycleProfile, 0xA0);
+        exact.addSequencer(exactSource, false);
+        exactSource.setIsSfx(true);
+        setFmLock(exact, 0, exactSource);
+        long serviceOrdinalBefore =
+                exact.captureSnapshot().nextYmServiceOrdinal();
+
+        exact.read(new short[2]);
+
+        assertEquals(1, exactSource.advanceCalls);
+        assertEquals(1, exactSource.completionCalls);
+        assertTrue(exact.sequencersForTesting().isEmpty());
+        assertEquals(serviceOrdinalBefore + 2,
+                exact.captureSnapshot().nextYmServiceOrdinal());
+        assertEquals(4_096L,
+                exact.captureSnapshot().nextYmWriteOrdinal());
+
+        SmpsDriver shortDriver = new SmpsDriver();
+        fillRemainingCapacity(shortDriver, 3);
+        LifecycleCompletingSequencer shortSource =
+                new LifecycleCompletingSequencer(
+                        shortDriver, lifecycleProfile, 0xA1);
+        shortDriver.addSequencer(shortSource, false);
+        shortSource.setIsSfx(true);
+        setFmLock(shortDriver, 0, shortSource);
+        SmpsDriverSnapshot before = shortDriver.captureSnapshot();
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> shortDriver.read(new short[2]));
+
+        assertTrue(failure.getMessage().contains(
+                "aggregate service bound 4"));
+        assertEquals(0, shortSource.advanceCalls);
+        assertEquals(0, shortSource.completionCalls);
+        assertDeepEquals(before, shortDriver.captureSnapshot());
     }
 
     @Test
@@ -889,6 +1022,39 @@ class TestSmpsDriverYmWriteTimeline {
         hybrid.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
         assertDeepEquals(accurate.captureSnapshot(),
                 hybrid.captureSnapshot());
+    }
+
+    @Test
+    void hybridChunksWhenTimedOwnerCannotServiceInsideRequestedHorizon() {
+        // Break caught: owner existence alone disables HYBRID batching even
+        // when the real scheduler places its next service after this buffer.
+        MinimalData sharedData = data(0xA0);
+        SmpsSequencerConfig sharedConfig = timedConfig(PROFILE);
+        SmpsDriver hybrid = new SmpsDriver();
+        MidReadTimedSequencer hybridSource =
+                new MidReadTimedSequencer(
+                        hybrid, sharedData, sharedConfig, 1_024);
+        hybrid.addSequencer(hybridSource, false);
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
+
+        SmpsDriver accurate = new SmpsDriver();
+        MidReadTimedSequencer accurateSource =
+                new MidReadTimedSequencer(
+                        accurate, sharedData, sharedConfig, 1_024);
+        accurate.addSequencer(accurateSource, false);
+        accurate.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+
+        short[] hybridPcm = new short[512];
+        short[] accuratePcm = new short[512];
+        hybrid.read(hybridPcm);
+        accurate.read(accuratePcm);
+
+        assertEquals(1, hybrid.getHybridChunkCountForTesting());
+        assertArrayEquals(accuratePcm, hybridPcm);
+        assertEquals(0L,
+                hybrid.captureSnapshot().nextYmServiceOrdinal());
+        assertEquals(List.of(), hybrid.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending());
     }
 
     @Test
@@ -1249,6 +1415,17 @@ class TestSmpsDriverYmWriteTimeline {
         }
     }
 
+    private static void setFmLock(
+            SmpsDriver driver, int channel, SmpsSequencer owner) {
+        try {
+            Field field = SmpsDriver.class.getDeclaredField("fmLocks");
+            field.setAccessible(true);
+            ((SmpsSequencer[]) field.get(driver))[channel] = owner;
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static void addPendingRemoval(
             SmpsDriver driver, SmpsSequencer sequencer) {
@@ -1488,6 +1665,63 @@ class TestSmpsDriverYmWriteTimeline {
         @Override
         public boolean isComplete() {
             return true;
+        }
+    }
+
+    private static final class LifecycleCompletingSequencer
+            extends SmpsSequencer {
+        private final SmpsDriver driver;
+        private boolean complete;
+        private int advanceCalls;
+        private int completionCalls;
+
+        private LifecycleCompletingSequencer(
+                SmpsDriver driver, YmServiceTimingProfile profile, int id) {
+            super(data(id), AudioTestFixtures.EMPTY_DAC, driver,
+                    AudioManager.getInstance(), timedConfig(profile));
+            this.driver = driver;
+        }
+
+        @Override
+        public int advanceBatchAndCountDriverFrames(int samples) {
+            advanceCalls++;
+            SmpsDriverServiceObserver.ServiceEvent service =
+                    driver.beginSequencerService(this,
+                            SmpsDriverServiceObserver.ServiceKind
+                                    .SEQUENCER_TICK);
+            try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                    this, SegmentKind.KEY_OFF, VARIANT)) {
+                driver.writeFm(this, 0, 0x22, 0x08);
+                driver.writeFm(this, 0, 0x22, 0x09);
+            }
+            driver.endSequencerService(service);
+            complete = true;
+            return 1;
+        }
+
+        @Override
+        public void forceSilence(TrackType type, int channelId) {
+            completionCalls++;
+            try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                    this, SegmentKind.COMPLETION_RESTORE, VARIANT)) {
+                driver.writeFm(this, 0, 0x22, 0x0A);
+                driver.writeFm(this, 0, 0x22, 0x0B);
+            }
+        }
+
+        @Override
+        public int getSamplesUntilNextTempoFrame() {
+            return 1;
+        }
+
+        @Override
+        public int getSamplesUntilNextObservableEvent() {
+            return 1;
+        }
+
+        @Override
+        public boolean isComplete() {
+            return complete;
         }
     }
 
