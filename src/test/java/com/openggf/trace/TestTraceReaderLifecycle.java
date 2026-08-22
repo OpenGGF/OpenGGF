@@ -16,6 +16,7 @@ import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReaderLifecycle {
 
@@ -28,9 +29,13 @@ class TestTraceReaderLifecycle {
         gzip(gzipSegment.resolve("aux_state.jsonl"));
         Files.delete(gzipSegment.resolve("physics.csv"));
         Files.delete(gzipSegment.resolve("aux_state.jsonl"));
-        List<TraceFiles.ReaderLifecycleEvent> events = new ArrayList<>();
+        Path plainPhysics = plainSegment.resolve("physics.csv");
+        Path plainAux = plainSegment.resolve("aux_state.jsonl");
+        Path gzipPhysics = gzipSegment.resolve("physics.csv.gz");
+        Path gzipAux = gzipSegment.resolve("aux_state.jsonl.gz");
+        List<ReaderEvent> events = new ArrayList<>();
         AutoCloseable restore = TraceFiles.observeReadersForTest(
-                (event, path) -> events.add(event));
+                (event, path) -> events.add(new ReaderEvent(event, path)));
 
         try {
             TraceData.load(plainSegment);
@@ -40,6 +45,7 @@ class TestTraceReaderLifecycle {
         }
 
         assertBalanced(events);
+        assertOpened(events, plainPhysics, plainAux, gzipPhysics, gzipAux);
     }
 
     @Test
@@ -51,9 +57,9 @@ class TestTraceReaderLifecycle {
         TraceRunSegmentDescriptor descriptor = TraceRunReplayWalker
                 .planDescriptors(run, runDirectory).get(1);
         Files.writeString(runDirectory.resolve("ss/aux_state.jsonl"), "{not-json}\n");
-        List<TraceFiles.ReaderLifecycleEvent> events = new ArrayList<>();
+        List<ReaderEvent> events = new ArrayList<>();
         AutoCloseable restore = TraceFiles.observeReadersForTest(
-                (event, path) -> events.add(event));
+                (event, path) -> events.add(new ReaderEvent(event, path)));
 
         try {
             assertThrows(IOException.class,
@@ -72,13 +78,34 @@ class TestTraceReaderLifecycle {
         }
     }
 
-    private static void assertBalanced(List<TraceFiles.ReaderLifecycleEvent> events) {
+    /**
+     * Catches removing TraceFiles' observation wrapper entirely: balance alone
+     * would incorrectly accept an empty event stream.
+     */
+    private static void assertBalanced(List<ReaderEvent> events) {
         long opened = events.stream()
-                .filter(event -> event == TraceFiles.ReaderLifecycleEvent.OPENED)
+                .filter(event -> event.event() == TraceFiles.ReaderLifecycleEvent.OPENED)
                 .count();
         long closed = events.stream()
-                .filter(event -> event == TraceFiles.ReaderLifecycleEvent.CLOSED)
+                .filter(event -> event.event() == TraceFiles.ReaderLifecycleEvent.CLOSED)
                 .count();
+        assertTrue(opened > 0,
+                "reader observation must report at least one successful open: " + events);
         assertEquals(opened, closed, events::toString);
+    }
+
+    private static void assertOpened(List<ReaderEvent> events, Path... expectedPaths) {
+        List<Path> openedPaths = events.stream()
+                .filter(event -> event.event() == TraceFiles.ReaderLifecycleEvent.OPENED)
+                .map(ReaderEvent::path)
+                .toList();
+        for (Path expectedPath : expectedPaths) {
+            assertTrue(openedPaths.contains(expectedPath),
+                    () -> "missing observed open for " + expectedPath
+                            + ": " + openedPaths);
+        }
+    }
+
+    private record ReaderEvent(TraceFiles.ReaderLifecycleEvent event, Path path) {
     }
 }
