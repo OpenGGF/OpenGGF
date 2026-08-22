@@ -145,8 +145,19 @@ public final class VisualRunReplayHarness {
                 TraceSessionLauncher session, GameLoop loop) throws Exception;
     }
 
+    /**
+     * Test-only cleanup seam. The production closer preserves the active
+     * payload's idempotent, no-throw lease close.
+     */
+    @FunctionalInterface
+    interface VisualPayloadCloser {
+        void close(ActiveSegmentPayload payload);
+    }
+
     private static final RunSessionConstructor PRODUCTION_SESSION_CONSTRUCTOR =
             VisualRunReplayHarness::newRunSession;
+    private static final VisualPayloadCloser PRODUCTION_PAYLOAD_CLOSER =
+            ActiveSegmentPayload::close;
     private static final RunBootstrap PRODUCTION_BOOTSTRAP = new RunBootstrap() {
         @Override
         public GameLoop beforeTransfer(
@@ -332,11 +343,23 @@ public final class VisualRunReplayHarness {
             FrameObserver observer,
             RunSessionConstructor sessionConstructor,
             RunBootstrap bootstrap) throws Exception {
+        return replayCompleteAudio(runDir, stop, observer, sessionConstructor,
+                bootstrap, PRODUCTION_PAYLOAD_CLOSER);
+    }
+
+    static CompleteAudioCadenceResult replayCompleteAudio(
+            Path runDir, CompleteAudioStop stop,
+            FrameObserver observer,
+            RunSessionConstructor sessionConstructor,
+            RunBootstrap bootstrap,
+            VisualPayloadCloser payloadCloser) throws Exception {
         java.util.Objects.requireNonNull(stop, "stop");
         java.util.Objects.requireNonNull(observer, "observer");
         java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
         java.util.Objects.requireNonNull(bootstrap, "bootstrap");
+        java.util.Objects.requireNonNull(payloadCloser, "payloadCloser");
         ActiveSegmentPayload localPayload = null;
+        ActiveSegmentPayload leasedPayload = null;
         TraceSessionLauncher transferredSession = null;
         Throwable primary = null;
         try {
@@ -350,6 +373,7 @@ public final class VisualRunReplayHarness {
             Bk2Movie movie = prepared.movie();
             localPayload = TraceRunReplayWalker.openActiveSegment(
                     segments.getFirst(), 0);
+            leasedPayload = localPayload;
             var seg0 = localPayload.trace();
             int manifestFirst = segments.getFirst().segment().bk2FrameOffset();
             if (manifestFirst != stop.firstFrame()) {
@@ -459,14 +483,11 @@ public final class VisualRunReplayHarness {
             primary = failure;
             throw failure;
         } finally {
-            if (transferredSession != null) {
-                Throwable cleanup = closeTransferredRunSession(
-                        transferredSession, primary);
-                if (primary == null) {
-                    rethrowCleanup(cleanup);
-                }
-            } else if (localPayload != null) {
-                closeLocalRunPayload(localPayload);
+            Throwable cleanup = closeVisualPayloadLifecycle(
+                    transferredSession, localPayload, leasedPayload, primary,
+                    payloadCloser);
+            if (primary == null) {
+                rethrowCleanup(cleanup);
             }
         }
     }
@@ -685,10 +706,22 @@ public final class VisualRunReplayHarness {
                          boolean rejectFastForward,
                          RunSessionConstructor sessionConstructor,
                          RunBootstrap bootstrap) throws Exception {
+        return replay(runDir, stop, observer, rejectFastForward,
+                sessionConstructor, bootstrap, PRODUCTION_PAYLOAD_CLOSER);
+    }
+
+    static Result replay(Path runDir, Stop stop,
+                         FrameObserver observer,
+                         boolean rejectFastForward,
+                         RunSessionConstructor sessionConstructor,
+                         RunBootstrap bootstrap,
+                         VisualPayloadCloser payloadCloser) throws Exception {
         java.util.Objects.requireNonNull(observer, "observer");
         java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
         java.util.Objects.requireNonNull(bootstrap, "bootstrap");
+        java.util.Objects.requireNonNull(payloadCloser, "payloadCloser");
         ActiveSegmentPayload localPayload = null;
+        ActiveSegmentPayload leasedPayload = null;
         TraceSessionLauncher transferredSession = null;
         Throwable primary = null;
         try {
@@ -702,6 +735,7 @@ public final class VisualRunReplayHarness {
             Bk2Movie movie = prepared.movie();
             localPayload = TraceRunReplayWalker.openActiveSegment(
                     segments.getFirst(), 0);
+            leasedPayload = localPayload;
             var seg0 = localPayload.trace();
 
             GameLoop loop = bootstrap.beforeTransfer(entry, seg0, observer);
@@ -800,14 +834,11 @@ public final class VisualRunReplayHarness {
             primary = failure;
             throw failure;
         } finally {
-            if (transferredSession != null) {
-                Throwable cleanup = closeTransferredRunSession(
-                        transferredSession, primary);
-                if (primary == null) {
-                    rethrowCleanup(cleanup);
-                }
-            } else if (localPayload != null) {
-                closeLocalRunPayload(localPayload);
+            Throwable cleanup = closeVisualPayloadLifecycle(
+                    transferredSession, localPayload, leasedPayload, primary,
+                    payloadCloser);
+            if (primary == null) {
+                rethrowCleanup(cleanup);
             }
         }
     }
@@ -858,8 +889,41 @@ public final class VisualRunReplayHarness {
         return ctor.newInstance(entry, movie, segments, activePayload, null);
     }
 
-    static void closeLocalRunPayload(ActiveSegmentPayload payload) {
-        payload.close();
+    /**
+     * Lets the session detach HUD/camera/observer aliases first, then closes
+     * the idempotent local lease exactly once through the harness seam.
+     */
+    private static Throwable closeVisualPayloadLifecycle(
+            TraceSessionLauncher transferredSession,
+            ActiveSegmentPayload localPayload,
+            ActiveSegmentPayload leasedPayload,
+            Throwable primary,
+            VisualPayloadCloser payloadCloser) throws Exception {
+        Throwable failure = primary;
+        if (transferredSession != null) {
+            failure = closeTransferredRunSession(transferredSession, failure);
+        }
+        ActiveSegmentPayload payload = transferredSession != null
+                ? leasedPayload : localPayload;
+        if (payload != null) {
+            failure = closeVisualPayload(payload, failure, payloadCloser);
+        }
+        return failure;
+    }
+
+    private static Throwable closeVisualPayload(
+            ActiveSegmentPayload payload, Throwable primary,
+            VisualPayloadCloser payloadCloser) {
+        try {
+            payloadCloser.close(payload);
+            return primary;
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (primary != null) {
+                primary.addSuppressed(cleanupFailure);
+                return primary;
+            }
+            return cleanupFailure;
+        }
     }
 
     static Throwable closeTransferredRunSession(

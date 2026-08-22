@@ -38,6 +38,8 @@ class TestCompleteRunAudioReplayCadence {
                         .toList());
         assertNull(observer.semantic.get(2).segment());
         assertNull(observer.semantic.get(8).segment());
+        assertNull(observer.semantic.get(9).segment(),
+                "the normal completion includes the terminal-tail row");
         assertTrue(observer.semantic.get(6).lag(), "row 8 is the recorded lag row");
         assertTrue(observer.semantic.stream()
                 .allMatch(VisualRunReplayHarness.FrameView::semanticRow));
