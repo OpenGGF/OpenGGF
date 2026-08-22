@@ -5,10 +5,10 @@
   "provenance": {
     "gpgx_commit": "051d430d3d1b54625f9900c8f152d7f232e06daf",
     "gpgx_ym2612_source_sha256": "45b7b9ffc971078a4f846343b4c2ab82b694ae108cb568152cc352495abe4f5c",
-    "retained_oracle_sha256": "dc3b53ebd572dbbdfbab613b370d5faa36f4aac91b9b4a8ee72ab42892f2d162",
+    "retained_oracle_sha256": "f420226631d8a98beb0c8d097ad4457eaa9b02efd5429ee9c2c05d7380105220",
     "retained_native_write_projection_sha256": "33cef3472ad2c9c0d0d50e27f6ae574b51e02755420cd9c542b0443996013f99",
-    "diagnostic_patch_sha256": "8644d8553e44e86580ad711505e9c95dee465588102eddc79d700fdd6634e463",
-    "diagnostic_core_sha256": "a59bc1924e0d0c207f3387086df471cd9e91d95443a3e87616211b21737367b8",
+    "diagnostic_patch_sha256": "42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1",
+    "diagnostic_core_sha256": "b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a",
     "harness_sha256": "82d61b0c5547f45a55a2d87e337494c9a1d668cd690b858db1ceba59801fdcb1",
     "compiler": "gcc (GCC) 16.2.1 20260810",
     "binary_sha256": "b088475fa7c394cf6f9bb3f5ad1bd182ca5a6d7402326f57fa8a4c789e15d0df"

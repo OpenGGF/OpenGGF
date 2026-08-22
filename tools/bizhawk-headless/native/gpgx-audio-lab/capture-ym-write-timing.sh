@@ -8,16 +8,27 @@ fail() { printf 'capture-ym-write-timing: %s\n' "$*" >&2; exit 1; }
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
 
 game=
+sound_id=
+fm_channel=
 output=
 while (($#)); do
   case "$1" in
     --game) game=${2-}; shift 2 ;;
+    --sound-id) sound_id=${2-}; shift 2 ;;
+    --fm-channel) fm_channel=${2-}; shift 2 ;;
     --output) output=${2-}; shift 2 ;;
     *) fail "unknown argument: $1" ;;
   esac
 done
-[[ "$game" == s3k ]] || fail '--game must be s3k'
+[[ "$game" == s1 || "$game" == s2 || "$game" == s3k ]] \
+  || fail '--game must be s1, s2, or s3k'
 [[ -n "$output" ]] || fail '--output is required'
+if [[ "$game" == s1 || "$game" == s2 ]]; then
+  [[ "$sound_id" == 0xB5 && "$fm_channel" == 4 ]] \
+    || fail 'S1/S2 audits require --sound-id 0xB5 --fm-channel 4'
+elif [[ -n "$sound_id" || -n "$fm_channel" ]]; then
+  fail 'S3K capture does not accept --sound-id or --fm-channel'
+fi
 [[ "$output" = /* ]] || fail '--output must be absolute'
 [[ ! -e "$output" && ! -L "$output" ]] || fail "output already exists: $output"
 output_parent=${output%/*}; [[ -n "$output_parent" ]] || output_parent=/
@@ -27,8 +38,29 @@ output_parent=${output%/*}; [[ -n "$output_parent" ]] || output_parent=/
 source_path=${GPGX_SOURCE_PATH:?set GPGX_SOURCE_PATH to the pinned pristine BizHawk source}
 toolchain_path=${GPGX_TOOLCHAIN_PATH:?set GPGX_TOOLCHAIN_PATH to the pinned native toolchain}
 stock_path=${BIZHAWK_STOCK_PATH:-${OPENGGF_MAIN_WORKSPACE:?set OPENGGF_MAIN_WORKSPACE}/docs/BizHawk-2.11-linux-x64}
-rom_path=${S3K_ROM_PATH:?set S3K_ROM_PATH}
-movie_path=${S3K_BK2_PATH:?set S3K_BK2_PATH}
+case "$game" in
+  s1)
+    rom_path=${S1_ROM_PATH:?set S1_ROM_PATH}
+    movie_path=${S1_BK2_PATH:?set S1_BK2_PATH}
+    rom_sha1=69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b
+    movie_sha256=f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b
+    test_filter='GpgxYmWriteTimingLabTests capture corrected S1 ring YM timing'
+    ;;
+  s2)
+    rom_path=${S2_ROM_PATH:?set S2_ROM_PATH}
+    movie_path=${S2_BK2_PATH:?set S2_BK2_PATH}
+    rom_sha1=8bca5dcef1af3e00098666fd892dc1c2a76333f9
+    movie_sha256=e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5
+    test_filter='GpgxYmWriteTimingLabTests capture corrected S2 ring YM timing'
+    ;;
+  s3k)
+    rom_path=${S3K_ROM_PATH:?set S3K_ROM_PATH}
+    movie_path=${S3K_BK2_PATH:?set S3K_BK2_PATH}
+    rom_sha1=cfbf98c36c776677290a872547ac47c53d2761d6
+    movie_sha256=ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0
+    test_filter='GpgxYmWriteTimingLabTests capture corrected S3K Blue Sphere YM timing'
+    ;;
+esac
 for pair in "source:$source_path" "toolchain:$toolchain_path" "stock:$stock_path"; do
   name=${pair%%:*}; value=${pair#*:}
   [[ "$value" = /* && -d "$value" && ! -L "$value" ]] \
@@ -40,12 +72,10 @@ for pair in "ROM:$rom_path" "BK2:$movie_path"; do
     || fail "$name must be an absolute non-symlink file"
 done
 
-[[ "$(sha1sum -- "$rom_path" | awk '{print $1}')" \
-    == cfbf98c36c776677290a872547ac47c53d2761d6 ]] \
-  || fail 'S3K ROM SHA-1 differs'
-[[ "$(sha256 "$movie_path")" \
-    == ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0 ]] \
-  || fail 'S3K BK2 SHA-256 differs'
+[[ "$(sha1sum -- "$rom_path" | awk '{print $1}')" == "$rom_sha1" ]] \
+  || fail "$game ROM SHA-1 differs"
+[[ "$(sha256 "$movie_path")" == "$movie_sha256" ]] \
+  || fail "$game BK2 SHA-256 differs"
 
 [[ "$(git -C "$source_path" rev-parse HEAD)" \
     == 427556b5ef3ac437eba754d90c5e7e9096c9a8df ]] \
@@ -92,7 +122,7 @@ lab_patch_sha=$(sha256 "$lab_patch")
     == 9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c ]] \
   || fail 'production observer patch differs'
 [[ "$lab_patch_sha" \
-    == 8644d8553e44e86580ad711505e9c95dee465588102eddc79d700fdd6634e463 ]] \
+    == 42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1 ]] \
   || fail 'diagnostic YM patch differs'
 
 stage=$(mktemp -d "$output_parent/.ym-write-lab.XXXXXX")
@@ -108,8 +138,8 @@ mkdir "$stage/source" "$stage/install" "$stage/raw" \
 cp -a -- "$source_path/." "$stage/source/"
 git -C "$stage/source" apply --check "$observer_patch"
 git -C "$stage/source" apply --whitespace=error-all "$observer_patch"
-git -C "$stage/source" apply --check --ignore-space-change "$lab_patch"
-git -C "$stage/source" apply --ignore-space-change --whitespace=nowarn "$lab_patch"
+git -C "$stage/source" apply --check --recount --ignore-space-change "$lab_patch"
+git -C "$stage/source" apply --recount --ignore-space-change --whitespace=nowarn "$lab_patch"
 "$observer_dir/selftest/run.sh" "$stage/source" "$toolchain_path" \
   "$stage/observer-selftest"
 selftest_source="$observer_dir/selftest"
@@ -149,11 +179,8 @@ compressed_core="$stage/gpgx.wbx.zst"
   --force "$core" >"$compressed_core"
 core_sha=$(sha256 "$core")
 compressed_core_sha=$(sha256 "$compressed_core")
-[[ "$core_sha" \
-    == 3b240dda3af4a534f3409cabe9803bf6c0fffc1dcce7325d9a71e0695bed5e40 ]] \
-  || fail "diagnostic core SHA-256 differs: $core_sha"
 [[ "$compressed_core_sha" \
-    == a59bc1924e0d0c207f3387086df471cd9e91d95443a3e87616211b21737367b8 ]] \
+    == b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a ]] \
   || fail "compressed diagnostic core SHA-256 differs: $compressed_core_sha"
 
 cp -a -- "$stock_path/." "$stage/install/"
@@ -164,10 +191,13 @@ OPENGGF_YM_TIMING_OUTPUT="$candidate" \
 OPENGGF_YM_TIMING_RAW_DIRECTORY="$stage/raw-capture" \
 OPENGGF_YM_TIMING_PATCH_SHA256="$lab_patch_sha" \
 OPENGGF_YM_TIMING_CORE_SHA256="$compressed_core_sha" \
+OPENGGF_YM_TIMING_GAME="$game" \
+S1_ROM_PATH="$rom_path" S1_BK2_PATH="$movie_path" \
+S2_ROM_PATH="$rom_path" S2_BK2_PATH="$movie_path" \
 S3K_ROM_PATH="$rom_path" S3K_BK2_PATH="$movie_path" \
 BIZHAWK_HOME="$stage/install" \
   "$repo_root/tools/bizhawk-headless/test.sh" \
-    --filter 'GpgxYmWriteTimingLabTests capture corrected S3K Blue Sphere YM timing' \
+    --filter "$test_filter" \
     --jobs 1
 
 raw_writes="$stage/raw-capture/native-writes.tsv"
@@ -175,15 +205,14 @@ raw_fm5="$stage/raw-capture/native-fm5.s32le"
 raw_writes_sha=$(sha256 "$raw_writes")
 raw_projection_sha=$(cut -f1-6 "$raw_writes" | sha256sum | awk '{print $1}')
 raw_fm5_sha=$(sha256 "$raw_fm5")
-[[ "$raw_writes_sha" \
-    == 8b55ae5833651fc3cdbe6caddee54dd604cbea2b7e906615e6edd55ddd9614d0 ]] \
-  || fail "DMA-marked native write SHA-256 differs: $raw_writes_sha"
-[[ "$raw_projection_sha" \
-    == 33cef3472ad2c9c0d0d50e27f6ae574b51e02755420cd9c542b0443996013f99 ]] \
-  || fail "native write address/data/cycle projection differs: $raw_projection_sha"
-[[ "$raw_fm5_sha" \
-    == 4277bc5f29fa086013b49f006fd887b9795ebfbb17e8288de4c50005bb97e6d8 ]] \
-  || fail "native FM5 SHA-256 differs: $raw_fm5_sha"
+if [[ "$game" == s3k ]]; then
+  [[ "$raw_writes_sha" == 8b55ae5833651fc3cdbe6caddee54dd604cbea2b7e906615e6edd55ddd9614d0 ]] \
+    || fail "DMA-marked native write SHA-256 differs: $raw_writes_sha"
+  [[ "$raw_projection_sha" == 33cef3472ad2c9c0d0d50e27f6ae574b51e02755420cd9c542b0443996013f99 ]] \
+    || fail "native write address/data/cycle projection differs: $raw_projection_sha"
+  [[ "$raw_fm5_sha" == 4277bc5f29fa086013b49f006fd887b9795ebfbb17e8288de4c50005bb97e6d8 ]] \
+    || fail "native FM5 SHA-256 differs: $raw_fm5_sha"
+fi
 
 ln -- "$candidate" "$output" \
   || fail "output appeared during capture: $output"

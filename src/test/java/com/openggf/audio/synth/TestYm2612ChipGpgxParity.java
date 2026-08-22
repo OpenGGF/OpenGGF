@@ -46,6 +46,12 @@ class TestYm2612ChipGpgxParity {
                 oracle.groups().get(7).writes().getLast().sourceOrdinal());
         assertEquals(151_590L,
                 oracle.groups().get(7).relativeLastMasterCycle());
+        assertEquals(
+                "42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1",
+                oracle.provenance().diagnosticPatchSha256());
+        assertEquals(
+                "b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a",
+                oracle.provenance().diagnosticCoreSha256());
         assertTrue(oracle.groups().stream()
                 .flatMap(group -> group.writes().stream())
                 .allMatch(write -> write.dmaStallCount() == 0));
@@ -542,7 +548,7 @@ class TestYm2612ChipGpgxParity {
                 provenance.path("gpgx_commit").asText());
         assertEquals("82d61b0c5547f45a55a2d87e337494c9a1d668cd690b858db1ceba59801fdcb1",
                 provenance.path("harness_sha256").asText());
-        assertEquals("dc3b53ebd572dbbdfbab613b370d5faa36f4aac91b9b4a8ee72ab42892f2d162",
+        assertEquals("f420226631d8a98beb0c8d097ad4457eaa9b02efd5429ee9c2c05d7380105220",
                 provenance.path("retained_oracle_sha256").asText());
         List<EnvelopeSeed> isolated = new ArrayList<>();
         for (JsonNode node : root.path("isolated")) {

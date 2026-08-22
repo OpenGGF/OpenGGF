@@ -458,5 +458,14 @@ namespace OpenGGF.BizHawk.Headless
         [global::BizHawk.BizInvoke.BizImport(
             System.Runtime.InteropServices.CallingConvention.Cdecl)]
         public abstract int gpgx_ym_timing_lab_abort_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_mark_sound_request(
+            uint soundId, uint fmChannel);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_configure_z80_admission(
+            uint admissionPc, uint groupStartPc,
+            uint soundId, uint fmChannel);
     }
 }

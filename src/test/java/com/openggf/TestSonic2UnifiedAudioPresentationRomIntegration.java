@@ -11,6 +11,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
+import com.openggf.audio.smps.YmServiceTimingProfile;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -54,6 +56,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2UnifiedAudioPresentationRomIntegration {
+
+    @Test
+    void ymTimingAuditDoesNotEnableAnS2RuntimeProfile() {
+        assertTrue(Sonic2SmpsSequencerConfig.CONFIG
+                        .getYmServiceTimingProfile()
+                        == YmServiceTimingProfile.none(),
+                "Task 7 records the material S2 defect as separate follow-up");
+    }
 
     private static final int ZONE = 0;
     private static final int ACT = 0;

@@ -18,6 +18,8 @@ index 41d1caa..cf16ddb 100644
 +void gpgx_ym_timing_lab_fm_write(uint32_t cycles, uint32_t address,
 +  uint32_t data, uint32_t dma_stall_count);
 +void gpgx_ym_timing_lab_fm_channel_sample(uint32_t channel, int32_t sample);
++void gpgx_ym_timing_lab_sound_request(uint32_t sound_id, uint32_t fm_channel);
++void gpgx_ym_timing_lab_z80_instruction(uint32_t pc, uint32_t sound_id);
  void gpgx_audio_trace_fm_write(uint32_t address, uint32_t data);
  void gpgx_audio_trace_psg_write(uint32_t data);
  void gpgx_audio_trace_reset_begin(uint8_t hard);
@@ -36,6 +38,11 @@ index 41d1caa..cf16ddb 100644
 +  uint32_t *drained_count);
 +int32_t gpgx_ym_timing_lab_first_fault(uint32_t *fault);
 +int32_t gpgx_ym_timing_lab_abort_frame(void);
++int32_t gpgx_ym_timing_lab_mark_sound_request(
++  uint32_t sound_id, uint32_t fm_channel);
++int32_t gpgx_ym_timing_lab_configure_z80_admission(
++  uint32_t admission_pc, uint32_t group_start_pc,
++  uint32_t sound_id, uint32_t fm_channel);
 +
  #define GPGX_AUDIO_TRACE_ENTER(cpu, previous) do { \
    (previous) = 0; \
@@ -53,6 +60,11 @@ index f1104ac..7ea3d7f 100644
 +ECL_INVISIBLE static uint32_t ym_timing_lab_event_count;
 +ECL_INVISIBLE static uint32_t ym_timing_lab_omitted_count;
 +ECL_INVISIBLE static uint32_t ym_timing_lab_fault;
++ECL_INVISIBLE static uint32_t ym_timing_lab_z80_admission_pc;
++ECL_INVISIBLE static uint32_t ym_timing_lab_z80_group_start_pc;
++ECL_INVISIBLE static uint32_t ym_timing_lab_z80_admission_sound;
++ECL_INVISIBLE static uint32_t ym_timing_lab_z80_admission_channel;
++ECL_INVISIBLE static uint32_t ym_timing_lab_z80_admission_pending;
 +ECL_INVISIBLE static struct gpgx_audio_trace_event
 +  ym_timing_lab_events[GPGX_YM_TIMING_LAB_EVENT_CAPACITY]
 +  __attribute__((used, aligned(32)));
@@ -108,6 +120,32 @@ index f1104ac..7ea3d7f 100644
 +  event->subject = (uint16_t)channel;
 +  event->payload_length = 4u;
 +  memcpy(event->payload, &sample, 4u);
++}
++
++void gpgx_ym_timing_lab_sound_request(uint32_t sound_id, uint32_t fm_channel)
++{
++  struct gpgx_audio_trace_event *event = new_ym_timing_lab_event();
++  uint32_t packed;
++  if (!event) return;
++  packed = ((fm_channel & 0xffu) << 8) | (sound_id & 0xffu);
++  event->subject = 13u;
++  event->payload_length = 4u;
++  memcpy(event->payload, &packed, 4u);
++}
++
++void gpgx_ym_timing_lab_z80_instruction(uint32_t pc, uint32_t sound_id)
++{
++  if (ym_timing_lab_z80_admission_pc != 0u
++      && pc == ym_timing_lab_z80_admission_pc
++      && (sound_id & 0xffu) == ym_timing_lab_z80_admission_sound)
++    ym_timing_lab_z80_admission_pending = 1u;
++  if (ym_timing_lab_z80_admission_pending
++      && pc == ym_timing_lab_z80_group_start_pc)
++  {
++    gpgx_ym_timing_lab_sound_request(ym_timing_lab_z80_admission_sound,
++      ym_timing_lab_z80_admission_channel);
++    ym_timing_lab_z80_admission_pending = 0u;
++  }
 +}
 +
 +ECL_EXPORT uint32_t gpgx_ym_timing_lab_event_size(void)
@@ -176,6 +214,45 @@ index f1104ac..7ea3d7f 100644
 +  ym_timing_lab_phase = PHASE_DISABLED;
 +  return TRACE_OK;
 +}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_mark_sound_request(
++  uint32_t sound_id, uint32_t fm_channel)
++{
++  if (ym_timing_lab_phase != PHASE_RECORDING) return TRACE_INVALID_PHASE;
++  gpgx_ym_timing_lab_sound_request(sound_id, fm_channel);
++  return ym_timing_lab_fault ? TRACE_OVERFLOW : TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_configure_z80_admission(
++  uint32_t admission_pc, uint32_t group_start_pc,
++  uint32_t sound_id, uint32_t fm_channel)
++{
++  if (ym_timing_lab_phase != PHASE_DISABLED) return TRACE_INVALID_PHASE;
++  ym_timing_lab_z80_admission_pc = admission_pc;
++  ym_timing_lab_z80_group_start_pc = group_start_pc;
++  ym_timing_lab_z80_admission_sound = sound_id & 0xffu;
++  ym_timing_lab_z80_admission_channel = fm_channel & 0xffu;
++  ym_timing_lab_z80_admission_pending = 0u;
++  return TRACE_OK;
++}
+diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c b/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
+index 7fb4fd9..bbbbbbb 100644
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
+@@ -3429,6 +3429,7 @@ void z80_run(unsigned int cycles)
+       }
+       Z80.after_ei = FALSE;
++      gpgx_ym_timing_lab_z80_instruction(PCD, C);
+       R++;
+       EXEC_INLINE(op,ROP());
+     }
+@@ -3450,6 +3451,7 @@ void z80_run(unsigned int cycles)
+ 
+     Z80.after_ei = FALSE;
+     GPGX_AUDIO_TRACE_INSTRUCTION_ENABLED(GPGX_AUDIO_TRACE_CPU_Z80, PCD);
++    gpgx_ym_timing_lab_z80_instruction(PCD, C);
+     R++;
+     EXEC_INLINE(op,ROP());
 diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c b/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
 index 1c4dcf0..f38afda 100644
 --- a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
