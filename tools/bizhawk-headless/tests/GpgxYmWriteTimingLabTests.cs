@@ -67,9 +67,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             using (var host = GpgxHost.Open(
                 rom, GpgxHost.CreateGhz1SyncSettings()))
             {
-                GpgxAudioTraceNative api =
-                    (GpgxAudioTraceNative)host.CreateAudioTraceApi();
-                ConfigureDiagnosticOnly(api);
+                GpgxYmTimingLabDepartures api =
+                    host.BindDiagnosticDeparture<GpgxYmTimingLabDepartures>();
+                AssertEx.Equal(32u, api.gpgx_ym_timing_lab_event_size());
+                AssertEx.Equal(8192u, api.gpgx_ym_timing_lab_capacity());
                 using (IEnumerator<Bk2Frame> rows =
                     movie.OpenFrameStream().GetEnumerator())
                 {
@@ -77,23 +78,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     {
                         AssertEx.Equal(true, rows.MoveNext());
                         S1TraceCaptureRunner.ApplyFrame(rows.Current, host);
-                        AssertEx.Equal(0, api.BeginFrame());
+                        AssertEx.Equal(0,
+                            api.gpgx_ym_timing_lab_begin_frame());
                         host.AdvanceDiagnosticAudio();
-                        AssertEx.Equal(0, api.EndFrame());
+                        AssertEx.Equal(0,
+                            api.gpgx_ym_timing_lab_end_frame());
                         int stereoFrames;
                         host.DrainDiagnosticAudio(out stereoFrames);
                         if (stereoFrames <= 0)
                             throw new InvalidDataException(
                                 "Diagnostic audio produced no samples at frame " + frame + ".");
                         uint count, overflow, copied;
-                        AssertEx.Equal(0, api.EventCount(out count, out overflow));
-                        AssertEx.Equal(0u, overflow);
-                        GpgxAudioObserverAdapter.FirstFault fault;
-                        AssertEx.Equal(0, api.GetFirstFault(out fault));
-                        AssertEx.Equal(0u, fault.Reason);
-                        GpgxAudioTraceEvent[] events;
                         AssertEx.Equal(0,
-                            api.DrainNative(count, out copied, out events));
+                            api.gpgx_ym_timing_lab_event_count(
+                                out count, out overflow));
+                        AssertEx.Equal(0u, overflow);
+                        uint fault;
+                        AssertEx.Equal(0,
+                            api.gpgx_ym_timing_lab_first_fault(out fault));
+                        AssertEx.Equal(0u, fault);
+                        GpgxAudioTraceEvent[] events = count == 0
+                            ? null
+                            : new GpgxAudioTraceEvent[checked((int)count)];
+                        AssertEx.Equal(0,
+                            api.gpgx_ym_timing_lab_drain(
+                                events, count, out copied));
                         AssertEx.Equal(count, copied);
                         for (int index = 0; index < copied; index++)
                         {
@@ -194,31 +203,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + string.Join(",", groups[7].KeyOnAttenuation) + "]"
                 + " group7_native_rms="
                 + groups[7].OnsetRms.ToString("F2", CultureInfo.InvariantCulture));
-        }
-
-        private static void ConfigureDiagnosticOnly(GpgxAudioTraceNative api)
-        {
-            var config = new GpgxAudioObserverAdapter.Config {
-                Magic = 0x31544147, AbiVersion = 1, StructSize = 64,
-                KindSize = 16, HookSize = 32, RangeSize = 16,
-                EventSize = 32, MaxDepth = 8, MaxOpcodeBytes = 8,
-                ResetServiceKind = 1, WatchMaskBytes = 8192,
-                KindCount = 1, HookCount = 1, RangeCount = 1,
-                SnapshotBytesTotal = 1, EventCapacity = 65536,
-                MaxServiceTokensPerFrame = 65535
-            };
-            var kinds = new[] { new GpgxAudioObserverAdapter.ServiceKind {
-                KindId = 1, CancellationRangeCount = 1
-            } };
-            var hooks = new[] { new GpgxAudioObserverAdapter.ServiceHook {
-                HookToken = 1, Action = 1, Cpu = 2, Pc = 0xffffff,
-                ServiceKindId = 1, OpcodeLength = 1, Opcode = 0
-            } };
-            var ranges = new[] { new GpgxAudioObserverAdapter.SnapshotRange {
-                RangeId = 1, Start = 0, Length = 1
-            } };
-            AssertEx.Equal(0, api.Configure(ref config, new byte[8192],
-                kinds, hooks, ranges));
         }
 
         private static bool IsFirstMaximumRelease(
@@ -435,4 +419,5 @@ namespace OpenGGF.BizHawk.Headless.Tests
             internal List<TimedWrite> Writes { get; set; }
         }
     }
+
 }

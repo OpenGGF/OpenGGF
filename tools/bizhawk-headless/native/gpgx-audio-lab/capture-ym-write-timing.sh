@@ -92,7 +92,7 @@ lab_patch_sha=$(sha256 "$lab_patch")
     == 9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c ]] \
   || fail 'production observer patch differs'
 [[ "$lab_patch_sha" \
-    == 1b1e76613f384dfb5c60a260c1ec2976e7dfafaff761e0963481bd1117cbabab ]] \
+    == 8644d8553e44e86580ad711505e9c95dee465588102eddc79d700fdd6634e463 ]] \
   || fail 'diagnostic YM patch differs'
 
 stage=$(mktemp -d "$output_parent/.ym-write-lab.XXXXXX")
@@ -103,12 +103,25 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
-mkdir "$stage/source" "$stage/install" "$stage/raw"
+mkdir "$stage/source" "$stage/install" "$stage/raw" \
+  "$stage/observer-selftest"
 cp -a -- "$source_path/." "$stage/source/"
 git -C "$stage/source" apply --check "$observer_patch"
 git -C "$stage/source" apply --whitespace=error-all "$observer_patch"
 git -C "$stage/source" apply --check --ignore-space-change "$lab_patch"
 git -C "$stage/source" apply --ignore-space-change --whitespace=nowarn "$lab_patch"
+"$observer_dir/selftest/run.sh" "$stage/source" "$toolchain_path" \
+  "$stage/observer-selftest"
+selftest_source="$observer_dir/selftest"
+selftest_binary="$stage/unowned-chip-write-selftest"
+/usr/bin/env -i PATH=/usr/bin:/bin \
+  LD_LIBRARY_PATH="$toolchain_path/clang/usr/lib/x86_64-linux-gnu:$toolchain_path/clang/usr/lib/llvm-16/lib" \
+  "$toolchain_path/clang/usr/bin/clang-16" \
+  -std=c99 -DLSB_FIRST -O2 -Wall -Wextra -Werror \
+  -I"$selftest_source" -I"$stage/source/waterbox/gpgx/cinterface" \
+  "$stage/source/waterbox/gpgx/cinterface/audio_trace.c" \
+  "$script_dir/unowned-chip-write-selftest.c" -o "$selftest_binary"
+"$selftest_binary"
 cp -a -- "$toolchain_path/sysroot" "$stage/source/waterbox/sysroot"
 
 build_root_hex=2f686f6d652f
@@ -137,10 +150,10 @@ compressed_core="$stage/gpgx.wbx.zst"
 core_sha=$(sha256 "$core")
 compressed_core_sha=$(sha256 "$compressed_core")
 [[ "$core_sha" \
-    == e8c76cce49f75ceb571fc1929fea73c361ea8dac8e8531e37931e9f0b3ecbecb ]] \
+    == 3b240dda3af4a534f3409cabe9803bf6c0fffc1dcce7325d9a71e0695bed5e40 ]] \
   || fail "diagnostic core SHA-256 differs: $core_sha"
 [[ "$compressed_core_sha" \
-    == ca59bfe9306b8c453d09fbbe211cf5217965289d7b8e00007d2bf7a585fdc7e0 ]] \
+    == a59bc1924e0d0c207f3387086df471cd9e91d95443a3e87616211b21737367b8 ]] \
   || fail "compressed diagnostic core SHA-256 differs: $compressed_core_sha"
 
 cp -a -- "$stock_path/." "$stage/install/"

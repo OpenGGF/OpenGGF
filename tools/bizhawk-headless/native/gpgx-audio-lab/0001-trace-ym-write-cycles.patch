@@ -1,194 +1,258 @@
 diff --git a/waterbox/gpgx/cinterface/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
-index 41d1caabf..5a6828d2a 100644
+index 41d1caa..cf16ddb 100644
 --- a/waterbox/gpgx/cinterface/audio_trace.h
 +++ b/waterbox/gpgx/cinterface/audio_trace.h
-@@ -122,7 +122,10 @@ extern uint32_t trace_m68k_instruction_pc;
+@@ -6,6 +6,7 @@
+ #define GPGX_AUDIO_TRACE_ABI_VERSION 4u
+ #define GPGX_AUDIO_TRACE_EVENT_CAPACITY 65536u
+ #define GPGX_AUDIO_TRACE_EVENT_SIZE 32u
++#define GPGX_YM_TIMING_LAB_EVENT_CAPACITY 8192u
+ 
+ #define GPGX_AUDIO_TRACE_CPU_Z80 1u
+ #define GPGX_AUDIO_TRACE_CPU_M68K 2u
+@@ -122,6 +123,10 @@ extern uint32_t trace_m68k_instruction_pc;
  uint8_t gpgx_audio_trace_enter_cpu(uint8_t cpu);
  void gpgx_audio_trace_leave_cpu(uint8_t previous);
  void gpgx_audio_trace_instruction(uint8_t cpu, uint32_t pc);
--void gpgx_audio_trace_fm_write(uint32_t address, uint32_t data);
-+extern uint32_t gpgx_audio_trace_dma_stall_count;
-+void gpgx_audio_trace_fm_write(uint32_t cycles, uint32_t address,
++extern uint32_t gpgx_ym_timing_lab_dma_stall_count;
++void gpgx_ym_timing_lab_fm_write(uint32_t cycles, uint32_t address,
 +  uint32_t data, uint32_t dma_stall_count);
-+void gpgx_audio_trace_fm_channel_sample(uint32_t channel, int32_t sample);
++void gpgx_ym_timing_lab_fm_channel_sample(uint32_t channel, int32_t sample);
+ void gpgx_audio_trace_fm_write(uint32_t address, uint32_t data);
  void gpgx_audio_trace_psg_write(uint32_t data);
  void gpgx_audio_trace_reset_begin(uint8_t hard);
- void gpgx_audio_trace_reset_end(uint8_t hard);
+@@ -144,6 +149,18 @@ int32_t gpgx_audio_trace_drain(struct gpgx_audio_trace_event *out,
+ int32_t gpgx_audio_trace_abort_frame(void);
+ int32_t gpgx_audio_trace_disable(void);
+ 
++uint32_t gpgx_ym_timing_lab_event_size(void);
++uint32_t gpgx_ym_timing_lab_capacity(void);
++int32_t gpgx_ym_timing_lab_begin_frame(void);
++int32_t gpgx_ym_timing_lab_end_frame(void);
++int32_t gpgx_ym_timing_lab_event_count(
++  uint32_t *required_count, uint32_t *overflow_count);
++int32_t gpgx_ym_timing_lab_drain(
++  struct gpgx_audio_trace_event *out, uint32_t capacity,
++  uint32_t *drained_count);
++int32_t gpgx_ym_timing_lab_first_fault(uint32_t *fault);
++int32_t gpgx_ym_timing_lab_abort_frame(void);
++
+ #define GPGX_AUDIO_TRACE_ENTER(cpu, previous) do { \
+   (previous) = 0; \
+   if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0)) \
 diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
-index f1104ac26..d86a54fab 100644
+index f1104ac..7ea3d7f 100644
 --- a/waterbox/gpgx/cinterface/audio_trace.c
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -181,6 +181,7 @@ struct trace_deferred_begin_reservation
- #define TRACE_DEFERRED_CURRENT_OWNER(reservation) ((reservation).current_owner)
+@@ -212,6 +212,14 @@ ECL_INVISIBLE static struct trace_stack_entry trace_stack[TRACE_MAX_DEPTH];
+ ECL_INVISIBLE static struct trace_deferred_begin_reservation trace_deferred_begin;
+ ECL_INVISIBLE static struct gpgx_audio_trace_event trace_events[GPGX_AUDIO_TRACE_EVENT_CAPACITY]
+   __attribute__((used, aligned(32)));
++ECL_INVISIBLE uint32_t gpgx_ym_timing_lab_dma_stall_count;
++ECL_INVISIBLE static uint8_t ym_timing_lab_phase;
++ECL_INVISIBLE static uint32_t ym_timing_lab_event_count;
++ECL_INVISIBLE static uint32_t ym_timing_lab_omitted_count;
++ECL_INVISIBLE static uint32_t ym_timing_lab_fault;
++ECL_INVISIBLE static struct gpgx_audio_trace_event
++  ym_timing_lab_events[GPGX_YM_TIMING_LAB_EVENT_CAPACITY]
++  __attribute__((used, aligned(32)));
  
- ECL_INVISIBLE volatile uint8_t gpgx_audio_trace_enabled;
-+ECL_INVISIBLE uint32_t gpgx_audio_trace_dma_stall_count;
- ECL_INVISIBLE static uint8_t trace_phase;
- ECL_INVISIBLE static uint8_t trace_runtime_error;
- ECL_INVISIBLE static uint8_t trace_ready_invalid;
-@@ -1567,11 +1568,46 @@ static void record_chip(uint8_t kind, uint16_t subject, uint8_t value)
-   event->value = value;
+ static const struct gpgx_audio_service_kind_v1 *kind_for(uint8_t kind);
+ 
+@@ -1807,3 +1815,116 @@ ECL_EXPORT int32_t gpgx_audio_trace_disable(void)
+   trace_phase = PHASE_DISABLED; gpgx_audio_trace_enabled = 0;
+   return TRACE_OK;
  }
- 
--void gpgx_audio_trace_fm_write(uint32_t address, uint32_t data)
--{ record_chip(EVENT_FM_WRITE, (uint16_t)(address & 3u), (uint8_t)data); }
-+void gpgx_audio_trace_fm_write(uint32_t cycles, uint32_t address,
-+  uint32_t data, uint32_t dma_stall_count)
++
++static struct gpgx_audio_trace_event *new_ym_timing_lab_event(void)
 +{
 +  struct gpgx_audio_trace_event *event;
-+  uint32_t packed;
-+  if (trace_phase == PHASE_RECORDING)
++  if (ym_timing_lab_phase != PHASE_RECORDING) return NULL;
++  if (ym_timing_lab_event_count >= GPGX_YM_TIMING_LAB_EVENT_CAPACITY)
 +  {
-+    event = new_event(24u);
-+    if (!event) return;
-+    packed = ((address & 3u) << 8) | (data & 0xffu);
-+    event->subject = 12u;
-+    event->flags = 1u;
-+    event->offset = dma_stall_count > UINT16_MAX
-+      ? UINT16_MAX : (uint16_t)dma_stall_count;
-+    event->payload_length = 8u;
-+    memcpy(event->payload, &packed, 4u);
-+    memcpy(event->payload + 4u, &cycles, 4u);
++    if (ym_timing_lab_omitted_count != UINT32_MAX)
++      ym_timing_lab_omitted_count++;
++    ym_timing_lab_fault = GPGX_AUDIO_TRACE_FAULT_CAPACITY;
++    return NULL;
 +  }
-+  if (!trace_depth) return;
-+  record_chip(EVENT_FM_WRITE, (uint16_t)(address & 3u), (uint8_t)data);
++  event = &ym_timing_lab_events[ym_timing_lab_event_count];
++  memset(event, 0, sizeof(*event));
++  event->ordinal = ym_timing_lab_event_count++;
++  event->kind = 24u;
++  return event;
 +}
 +
-+void gpgx_audio_trace_fm_channel_sample(uint32_t channel, int32_t sample)
++void gpgx_ym_timing_lab_fm_write(uint32_t cycles, uint32_t address,
++  uint32_t data, uint32_t dma_stall_count)
++{
++  struct gpgx_audio_trace_event *event = new_ym_timing_lab_event();
++  uint32_t packed;
++  if (!event) return;
++  packed = ((address & 3u) << 8) | (data & 0xffu);
++  event->subject = 12u;
++  event->flags = 1u;
++  event->offset = dma_stall_count > UINT16_MAX
++    ? UINT16_MAX : (uint16_t)dma_stall_count;
++  event->payload_length = 8u;
++  memcpy(event->payload, &packed, 4u);
++  memcpy(event->payload + 4u, &cycles, 4u);
++}
++
++void gpgx_ym_timing_lab_fm_channel_sample(uint32_t channel, int32_t sample)
 +{
 +  struct gpgx_audio_trace_event *event;
-+  if (trace_phase != PHASE_RECORDING ||
-+      ((channel < 4u || channel > 6u)
-+       && (channel < 8u || channel > 11u))) return;
-+  event = new_event(24u);
++  if ((channel < 4u || channel > 6u)
++      && (channel < 8u || channel > 11u)) return;
++  event = new_ym_timing_lab_event();
 +  if (!event) return;
 +  event->subject = (uint16_t)channel;
 +  event->payload_length = 4u;
 +  memcpy(event->payload, &sample, 4u);
 +}
- 
- void gpgx_audio_trace_psg_write(uint32_t data)
--{ record_chip(EVENT_PSG_WRITE, 0, (uint8_t)data); }
++
++ECL_EXPORT uint32_t gpgx_ym_timing_lab_event_size(void)
++{ return sizeof(struct gpgx_audio_trace_event); }
++
++ECL_EXPORT uint32_t gpgx_ym_timing_lab_capacity(void)
++{ return GPGX_YM_TIMING_LAB_EVENT_CAPACITY; }
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_begin_frame(void)
 +{
-+  if (!trace_depth) return;
-+  record_chip(EVENT_PSG_WRITE, 0, (uint8_t)data);
++  if (ym_timing_lab_phase != PHASE_DISABLED) return TRACE_INVALID_PHASE;
++  ym_timing_lab_event_count = ym_timing_lab_omitted_count = 0;
++  ym_timing_lab_fault = gpgx_ym_timing_lab_dma_stall_count = 0;
++  ym_timing_lab_phase = PHASE_RECORDING;
++  return TRACE_OK;
 +}
- 
- void gpgx_audio_trace_reset_begin(uint8_t hard)
- {
-@@ -1710,6 +1745,7 @@ ECL_EXPORT int32_t gpgx_audio_trace_begin_frame(void)
-   if (trace_phase != PHASE_CONFIGURED) return TRACE_INVALID_PHASE;
-   trace_event_count_value = trace_omitted_count = trace_protected_tail = 0;
-   trace_runtime_error = trace_ready_invalid = trace_reset_active = 0; trace_issue_source = 0;
-+  gpgx_audio_trace_dma_stall_count = 0;
-   trace_ready_drained = 0;
-   trace_z80_instruction_pc = trace_m68k_instruction_pc = 0; trace_next_token = 1;
-   for (i = 0; i < trace_depth; i++)
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_end_frame(void)
++{
++  if (ym_timing_lab_phase != PHASE_RECORDING) return TRACE_INVALID_PHASE;
++  ym_timing_lab_phase = PHASE_READY;
++  return ym_timing_lab_fault ? TRACE_OVERFLOW : TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_event_count(
++  uint32_t *required_count, uint32_t *overflow_count)
++{
++  if (ym_timing_lab_phase != PHASE_READY) return TRACE_INVALID_PHASE;
++  if (!required_count || !overflow_count) return TRACE_INVALID_ARGUMENT;
++  *required_count = ym_timing_lab_event_count;
++  *overflow_count = ym_timing_lab_omitted_count;
++  return ym_timing_lab_fault ? TRACE_OVERFLOW : TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_drain(
++  struct gpgx_audio_trace_event *out, uint32_t capacity,
++  uint32_t *drained_count)
++{
++  if (ym_timing_lab_phase != PHASE_READY) return TRACE_INVALID_PHASE;
++  if (!drained_count) return TRACE_INVALID_ARGUMENT;
++  *drained_count = ym_timing_lab_event_count;
++  if (ym_timing_lab_fault) return TRACE_OVERFLOW;
++  if (capacity < ym_timing_lab_event_count) return TRACE_OUTPUT_CAPACITY;
++  if (ym_timing_lab_event_count && !out) return TRACE_INVALID_ARGUMENT;
++  if (ym_timing_lab_event_count)
++    memcpy(out, ym_timing_lab_events,
++      ym_timing_lab_event_count * sizeof(ym_timing_lab_events[0]));
++  ym_timing_lab_event_count = 0;
++  ym_timing_lab_phase = PHASE_DISABLED;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_first_fault(uint32_t *fault)
++{
++  if (!fault) return TRACE_INVALID_ARGUMENT;
++  *fault = ym_timing_lab_fault;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_ym_timing_lab_abort_frame(void)
++{
++  if (ym_timing_lab_phase != PHASE_RECORDING
++      && ym_timing_lab_phase != PHASE_READY) return TRACE_INVALID_PHASE;
++  ym_timing_lab_event_count = ym_timing_lab_omitted_count = 0;
++  ym_timing_lab_fault = gpgx_ym_timing_lab_dma_stall_count = 0;
++  ym_timing_lab_phase = PHASE_DISABLED;
++  return TRACE_OK;
++}
 diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c b/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
-index 1c4dcf056..49b5ea2a3 100644
+index 1c4dcf0..f38afda 100644
 --- a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
 +++ b/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
-@@ -68,9 +68,10 @@ unsigned int (*fm_read)(unsigned int cycles, unsigned int address);
- 
- void fm_write(unsigned int cycles, unsigned int address, unsigned int data)
- {
--  if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0))
--    gpgx_audio_trace_fm_write(address, data);
+@@ -71,6 +71,9 @@ void fm_write(unsigned int cycles, unsigned int address, unsigned int data)
+   if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0))
+     gpgx_audio_trace_fm_write(address, data);
    fm_write_impl(cycles, address, data);
-+  if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0))
-+    gpgx_audio_trace_fm_write(cycles, address, data,
-+      gpgx_audio_trace_dma_stall_count);
++  /* Diagnostic lab timing is post-update; the observer above remains pre-write. */
++  gpgx_ym_timing_lab_fm_write(cycles, address, data,
++    gpgx_ym_timing_lab_dma_stall_count);
  }
  
  #ifdef HAVE_YM3438_CORE
 diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/sound/ym2612.c b/waterbox/gpgx/Genesis-Plus-GX/core/sound/ym2612.c
-index 57e5dd8d6..3e2cc31ed 100644
+index 57e5dd8..1557c5b 100644
 --- a/waterbox/gpgx/Genesis-Plus-GX/core/sound/ym2612.c
 +++ b/waterbox/gpgx/Genesis-Plus-GX/core/sound/ym2612.c
-@@ -147,7 +147,9 @@
- /*    YM2610B : PSG:3ch FM:6ch ADPCM(18.5KHz):6ch DeltaT ADPCM:1ch      */
- /************************************************************************/
+@@ -149,6 +149,9 @@
  
--#include "shared.h"
-+#include "shared.h"
+ #include "shared.h"
+ 
++extern void gpgx_ym_timing_lab_fm_channel_sample(
++  unsigned int channel, signed int sample);
 +
-+extern void gpgx_audio_trace_fm_channel_sample(unsigned int channel, signed int sample);
- 
  /* envelope generator */
  #define ENV_BITS    10
-@@ -639,9 +641,14 @@ static int chip_type = YM2612_DISCRETE;
- 
- INLINE void FM_KEYON(FM_CH *CH , int s )
+ #define ENV_LEN      (1<<ENV_BITS)
+@@ -641,6 +644,11 @@ INLINE void FM_KEYON(FM_CH *CH , int s )
  {
--  FM_SLOT *SLOT = &CH->SLOT[s];
--
--  if (!SLOT->key && !ym2612.OPN.SL3.key_csm)
-+  FM_SLOT *SLOT = &CH->SLOT[s];
-+
+   FM_SLOT *SLOT = &CH->SLOT[s];
+ 
 +  if ((CH - ym2612.CH) == 4)
 +  {
-+    gpgx_audio_trace_fm_channel_sample(8 + s, SLOT->volume);
++    gpgx_ym_timing_lab_fm_channel_sample(8 + s, SLOT->volume);
 +  }
 +
-+  if (!SLOT->key && !ym2612.OPN.SL3.key_csm)
+   if (!SLOT->key && !ym2612.OPN.SL3.key_csm)
    {
      /* restart Phase Generator */
-     SLOT->phase = 0;
-@@ -2090,8 +2097,10 @@ void YM2612Update(int *buffer, int length)
-     else if (out_fm[3] < -8192) out_fm[3] = -8192;
-     if (out_fm[4] > 8191) out_fm[4] = 8191;
-     else if (out_fm[4] < -8192) out_fm[4] = -8192;
--    if (out_fm[5] > 8191) out_fm[5] = 8191;
--    else if (out_fm[5] < -8192) out_fm[5] = -8192;
-+    if (out_fm[5] > 8191) out_fm[5] = 8191;
-+    else if (out_fm[5] < -8192) out_fm[5] = -8192;
-+
-+    gpgx_audio_trace_fm_channel_sample(4, out_fm[4]);
+@@ -2093,6 +2101,8 @@ void YM2612Update(int *buffer, int length)
+     if (out_fm[5] > 8191) out_fm[5] = 8191;
+     else if (out_fm[5] < -8192) out_fm[5] = -8192;
  
++    gpgx_ym_timing_lab_fm_channel_sample(4, out_fm[4]);
++
      /* stereo DAC output panning & mixing  */
      lt  = ((out_fm[0]) & ym2612.OPN.pan[0]);
-@@ -2127,10 +2136,13 @@ void YM2612Update(int *buffer, int length)
-           lt += (4 << 5);
-           rt += (4 << 5);
-         }
--      }
--    }
--
--    /* buffering */
-+      }
-+    }
+     rt  = ((out_fm[0]) & ym2612.OPN.pan[1]);
+@@ -2130,6 +2140,9 @@ void YM2612Update(int *buffer, int length)
+       }
+     }
+ 
++    gpgx_ym_timing_lab_fm_channel_sample(5, lt);
++    gpgx_ym_timing_lab_fm_channel_sample(6, rt);
 +
-+    gpgx_audio_trace_fm_channel_sample(5, lt);
-+    gpgx_audio_trace_fm_channel_sample(6, rt);
-+
-+    /* buffering */
+     /* buffering */
      *buffer++ = lt;
      *buffer++ = rt;
- 
 diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/memz80.c b/waterbox/gpgx/Genesis-Plus-GX/core/memz80.c
-index bdd876a6f..08d599ee8 100644
+index bdd876a..73102b2 100644
 --- a/waterbox/gpgx/Genesis-Plus-GX/core/memz80.c
 +++ b/waterbox/gpgx/Genesis-Plus-GX/core/memz80.c
-@@ -39,7 +39,9 @@
-  *
-  ****************************************************************************************/
+@@ -41,6 +41,8 @@
  
--#include "shared.h"
-+#include "shared.h"
+ #include "shared.h"
+ 
++extern unsigned int gpgx_ym_timing_lab_dma_stall_count;
 +
-+extern unsigned int gpgx_audio_trace_dma_stall_count;
- 
  
  /*--------------------------------------------------------------------------*/
-@@ -97,8 +99,9 @@ static void z80_request_68k_bus_access(void)
-   /* check if 68k bus is accessed by VDP DMA */
-   if ((Z80.cycles < dma_endCycles) && (dma_type < 2))
+ /*  Handlers for access to unused addresses and those which make the        */
+@@ -99,6 +101,7 @@ static void z80_request_68k_bus_access(void)
    {
--    /* force Z80 to wait until end of DMA */
--    Z80.cycles = dma_endCycles;
-+    /* force Z80 to wait until end of DMA */
-+    Z80.cycles = dma_endCycles;
-+    gpgx_audio_trace_dma_stall_count++;
+     /* force Z80 to wait until end of DMA */
+     Z80.cycles = dma_endCycles;
++    gpgx_ym_timing_lab_dma_stall_count++;
  
      /* check if DMA is not finished at the end of current timeframe */
      if (dma_length)

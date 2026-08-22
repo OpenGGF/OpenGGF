@@ -117,6 +117,12 @@ namespace OpenGGF.BizHawk.Headless
             return new GpgxAudioTraceNative(new GpgxAudioObserverAdapter(core));
         }
 
+        internal T BindDiagnosticDeparture<T>() where T : class
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            return new GpgxAudioObserverAdapter(core).BindDeparture<T>();
+        }
+
         internal byte[] CloneSavestate()
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");
@@ -421,5 +427,36 @@ namespace OpenGGF.BizHawk.Headless
                 GC.KeepAlive(observedAction);
             }
         }
+    }
+
+    public abstract class GpgxYmTimingLabDepartures
+    {
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract uint gpgx_ym_timing_lab_event_size();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract uint gpgx_ym_timing_lab_capacity();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_begin_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_end_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_event_count(
+            out uint count, out uint overflow);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_drain(
+            [System.Runtime.InteropServices.Out] GpgxAudioTraceEvent[] events,
+            uint capacity, out uint count);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_first_fault(out uint fault);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_abort_frame();
     }
 }
