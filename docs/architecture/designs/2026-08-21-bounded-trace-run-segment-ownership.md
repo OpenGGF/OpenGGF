@@ -4,8 +4,9 @@
 
 Phase-one descriptor planning and descriptor-backed catalog validation were
 implemented and measured on 2026-08-21. Actual replay still uses the eager
-`SegmentPlan` path. The phase-two active-segment design below was approved on
-2026-08-22. Implementation and its replay-memory measurements remain pending.
+`SegmentPlan` path. The phase-two active-segment ownership design below was
+approved in principle and then narrowed by independent authority review on
+2026-08-22. Implementation and replay-memory measurements remain pending.
 
 ## Problem
 
@@ -39,186 +40,202 @@ retained bytes for eager planning and 8,660,152 bytes for descriptor planning.
 The descriptor graph retained 1,078,540,648 fewer
 bytes (99.20%) while representing the same 409,630 rows. This is a planning
 and catalog-validation result, not a replay-memory result: live, visual, and
-audio replay memory is unchanged until the cursor work below is authorised
-and implemented.
+audio replay memory is unchanged until the active-payload work below is
+implemented.
 
 ## Full design decision
 
-Retain compact run and segment plans globally, but own physics and auxiliary
-payloads through one closeable, segment-local cursor while replay is driving
-that segment.
+Retain compact run descriptors globally and retain at most one existing eager
+segment payload while a run is preparing or driving that segment. This phase is
+an ownership-only migration: it removes whole-run reachability without changing
+the row representation or generalising any trace consumer.
 
-Planning scans each segment once, in manifest order, and closes it before
-opening the next. The scan validates schemas and ledgers and produces an
-immutable descriptor containing only:
+Planning continues to scan and validate each segment in manifest order, but
+publishes only the phase-one `TraceRunSegmentDescriptor` shape:
 
-- metadata, manifest topology, row counts, and the classified execution policy;
-- a compact per-row execution-phase vector produced by the existing validated
-  phase classifier;
-- the opening-row summary needed by bootstrap and return-boundary comparison;
-- terminal dynamic-art descriptors and cross-segment ledger summaries;
-- the complete hardware-timing schedule and its compact raw-frame mapping;
-- a compact per-row lag mapping keyed by segment-local raw frame; and
-- scalar bootstrap, level-loop, missing-schema, and special-stage policy values
-  currently discovered by whole-payload scans.
+- manifest segment, directory, metadata, row count, and opening physics row;
+- local-row-to-raw-frame mapping and a lag bit set indexed by local row;
+- hardware-timing schedule and terminal dynamic-art ledger;
+- entry and exit boundaries; and
+- the existing `SegmentPlan.executionPolicy` scalar, relocated unchanged and
+  consumed only by the run coordinator.
 
-Replay opens one segment cursor at entry and closes it at every successful,
-failed, or aborted boundary. The cursor provides:
+The descriptor gains no per-row phase vector, bootstrap projection, auxiliary
+event, special-stage row, parser, reader, or generic replay-data surface. Its
+component types remain guarded by an exact whitelist and a transitive
+reachability test.
 
-- a physics window containing previous, current, and one-row lookahead;
-- all typed auxiliary events for the current and next raw frames, materialised
-  only for those rows;
-- rolling latest-checkpoint and zone/act state plus an 80-prior-frame
-  `SonicRecordPos` diagnostic ring;
-- the current dynamic-art row state; and
-- special-stage rows through the same segment-local lifetime, using their
-  existing game-owned representation initially.
+Replay owns a package-private `ActiveSegmentPayload`. For any
+non-special-stage segment (level, presentation bridge, or `bonus_stage`) it
+contains the existing eager `TraceData`. For a special-stage interior it is a
+composite containing both objects the current driver already requires:
 
-The phase vector is required because the current classifier can inspect two
-rows behind and can transitively inspect beyond a single lookahead. Precomputing
-its already-existing outcome avoids widening the physics window or changing
-which replay loop a row takes. Current-plus-next auxiliary ownership is required
-because load-queue projection joins state across adjacent raw frames. The
-diagnostic ring preserves mismatch-report context without retaining arbitrary
-auxiliary buckets.
+- metadata-only shared `TraceData`, including validated dynamic-art auxiliary
+  state and the segment hardware-timing schedule; and
+- the game-owned `TraceRunSpecialStageRows`, including S2 pass binding and its
+  spill-normalised dynamic-art rows.
 
-Special-stage row formats remain owned by their S1, S2, and S3K readers. Their
-payload is removed from the global plan and attached only to the active segment
-owner. This bounds run ownership without combining this change with three
-profile-schema migrations. The acceptance measurement decides whether that
-bounded eager representation is sufficient: if a special-stage payload becomes
-the dominant peak and prevents the required reduction, profile-specific
-streaming is required before integration.
+The special-stage factory deliberately performs the same two reads as the
+current `loadSegmentPayload`: the shared and profile readers may parse overlapping
+auxiliary content, but both graphs exist only for the active segment. Removing
+that duplication is not part of this ownership proof.
+
+`ActiveSegmentPayload` implements `AutoCloseable` only as a lifetime boundary.
+The eager readers close their files during construction; `close()` idempotently
+clears the wrapper's strong references so the graphs become collectible. A
+failed composite construction publishes no wrapper and retains no partial
+payload.
+
+### Authority quarantine
+
+The current replay path contains pre-existing phase and bootstrap authority that
+does not satisfy the repository's present trace-authority rule, including
+physics/aux-derived loop selection and metadata RNG seeding. This performance
+phase does not certify, copy, compact, broaden, or otherwise legitimise that
+debt. It preserves the current eager objects and leaves these APIs and their
+lookup semantics unchanged:
+
+- `LiveTraceComparator`;
+- `TraceReplaySessionBootstrap` and `TraceReplayBootstrap`;
+- `TraceReplayRowPolicy`, `TraceBinder`, and
+  `LoadQueueComparisonProjection`; and
+- `TraceStructuralRowComparator` and `TraceRunSpecialStageRowDriver`.
+
+New code may pass only the active payload's existing `TraceData` or
+`TraceRunSpecialStageRows` into those existing call sites. Descriptor metadata
+may replace a payload read only where the old launch path already consumed that
+same metadata without hydrating gameplay. RNG and all other gameplay bootstrap
+calls remain confined to the active eager payload path. True row streaming
+requires a separate authority audit/remediation first; it is not silently
+implemented by adding an authority-bearing forward-window interface.
 
 ### Alternatives considered
 
-1. **Selected: stream ordinary rows and bound special stages to the active
-   segment.** This removes the measured ordinary physics/auxiliary amplification
-   while preserving the three game-owned special-stage contracts.
-2. **Stream every special-stage format in this change.** This offers the lowest
-   theoretical peak, but adds S1/S2/S3 parser migrations. S2 also requires a
-   separate pass-binding and dynamic-art spill-normalisation pass, making this a
-   materially larger accuracy risk.
-3. **Load one complete eager `TraceData` per segment.** This removes whole-run
-   retention but leaves parser/container amplification for the largest active
-   level. It does not meet the durable ordinary-level cursor goal.
+1. **Selected: one active eager segment payload.** This removes the measured
+   whole-run graph while leaving comparison, bootstrap, phase, report, S2 pass,
+   and spill-normalisation semantics unchanged.
+2. **Stream ordinary physics and auxiliary rows now.** This would require a new
+   phase/bootstrap abstraction around pre-existing authority debt and would
+   either preserve a prohibited path or change replay scheduling. It is deferred
+   until that authority is separately resolved.
+3. **Stream all ordinary and special-stage formats now.** In addition to the
+   authority blocker, this requires three profile migrations and an S2 two-pass
+   binder/normalisation design. It adds risk that the measured ownership change
+   does not need.
 
 ## Consumer contract
 
-The existing consumers divide into these ownership groups:
-
 | Owner | Required data | Lifetime |
 |---|---|---|
-| Run plan, manifest, hardware timing, playback coordinator | Metadata, topology, policy scalars, timing schedule, opening and terminal summaries | Whole run |
-| Live comparator, row policy, presentation bridge, active dynamic-art comparison | Previous/current/next physics row, compact execution phase, current/next raw-frame auxiliary events, and bounded rolling summaries | Active segment only |
-| Special-stage driver | Existing game-owned special-stage rows, pass binding, and spill-normalised comparison data | Active segment only |
-| Visual run/audio harness frame view | Segment row counts and lag outcome for a BK2 cursor, including presentation gaps and handoffs | Whole run, compact lag mapping only |
+| Run plan, manifest, hardware timing, playback coordinator | Existing descriptor components only | Whole run |
+| Ordinary comparator/bootstrap/policy/dynamic-art consumers | Existing eager `TraceData` API | Active ordinary segment only |
+| Special-stage driver | Composite shared `TraceData` plus game-owned special-stage rows | Active special-stage segment only |
+| Visual run/audio `frameView` | Segment row range plus lag bit indexed by local row | Whole run descriptor |
 | Trace catalog | Metadata and row counts | Whole run descriptor |
 
-Planning-time validation may scan an entire payload, but it must not publish
-payload objects into the whole-run plan. Return-boundary comparison consumes
-the immutable destination opening summary, not a prematurely opened destination
-cursor. Hardware timing remains global because its measured footprint is
-negligible and it coordinates production-submitted work across boundaries.
-The recorded lag outcome is likewise retained as a compact per-row scheduling
-mapping: `VisualRunReplayHarness.frameView()` resolves an arbitrary BK2 cursor
-across every segment and may do so during presentation gaps, when no segment
-payload cursor is active. The mapping admits only the already-existing ROM lag
-loop; it carries no gameplay value or work identity.
+Row identity remains explicit. BK2 membership and visual/audio lag lookup use
+`localRow = bk2Cursor - segment.bk2FrameOffset()`. Auxiliary and hardware-timing
+lookups use `descriptor.rawFrames().get(localRow)`. These identities are never
+interchanged.
 
-The cursor is run-only and monotonic. Standalone replay keeps eager `TraceData`
-and its existing rewind seek support. Run sessions already disable rewind
-because a rewind cannot safely cross a structural segment boundary; phase two
-does not change that contract.
+An admission receipt may report `rowsConsumed == 1`. The destination payload is
+opened before its consumers attach; existing comparator adoption then advances
+the eager payload exactly as today and compares row zero's dynamic-art state
+before continuing at row one. Return-boundary comparison may use the descriptor's
+opening physics row and metadata, while adopted-row comparison continues to use
+the active eager payload.
 
-Segment zero is not opened during title-card setup. Configuration and launch
-preparation consume descriptor/bootstrap summaries. The launcher opens the
-first active owner immediately before bootstrap and comparator attachment.
+Hardware timing stays globally retained because its measured footprint is
+negligible and it coordinates matching production-submitted work across
+boundaries. The compact lag bit set also remains global because `frameView()`
+must answer arbitrary gap and handoff cursors. It admits only the existing lag
+loop and carries no gameplay value.
 
-## Accuracy constraints
-
-- Trace payloads remain comparison-only. This design does not expand either
-  hardware-timing exception.
-- Row order, raw-frame identity, previous/current/lookahead semantics, and all
-  typed auxiliary lookup results remain identical.
-- The stored execution-phase vector is the output of the existing classifier;
-  it neither adds a trace authority path nor changes row admission.
-- Planning performs the same schema, manifest, phase, hardware-timing, and
-  dynamic-art validation before replay begins.
-- Auxiliary streaming requires non-decreasing raw-frame order while preserving
-  same-frame event order. Planning enforces that constraint before launch so a
-  malformed stream cannot fail only after gameplay has started.
-- A segment boundary cannot discard its terminal comparison ledger before the
-  destination opening comparison has consumed it.
-- Cursor cleanup must be deterministic on normal completion, assertion
-  failure, constructor failure, and launcher abort.
+Standalone replay keeps eager `TraceData` and rewind unchanged. Run sessions
+continue to disable rewind across structural segment boundaries.
 
 ## Active-owner lifecycle
 
-For every replay driver and harness:
+For production, headless, visual, and complete-audio run drivers:
 
-1. retain descriptors only after planning;
-2. open segment zero immediately before bootstrap;
-3. retain the source owner through source-tail capture, observer detachment,
+1. plan and retain descriptors only;
+2. open segment zero before the existing pre-load configuration call and retain
+   it through title-card presentation and replay bootstrap;
+3. retain the source payload through source-tail capture, observer detachment,
    special-stage verification, dynamic-art closure, terminal comparison, and
    gap-journal publication;
-4. close the source in a failure-preserving `finally` before entering the gap;
-5. compare the destination opening summary and perform timing handoff while no
-   payload owner is open;
-6. open and attach exactly one destination owner; and
-7. close the final owner before terminal-tail playback.
+4. detach every consumer alias -- comparator, structural comparator, special
+   driver/pass binder, dynamic-art comparison, boundary observer, HUD/camera
+   model, fixture, and launcher field -- then close the source in a
+   failure-preserving `finally` before entering the transition gap;
+5. while no payload is active, advance presentation and resolve `frameView()`
+   solely from descriptors;
+6. perform timing handoff, open exactly one destination payload, apply any
+   return-boundary/adopted-row comparison, and attach destination consumers; and
+7. close the final payload before terminal-tail playback.
 
-Partial construction closes every reader already opened. Session abort, user
-exit, comparison failure, production failure, harness failure, and repeated
-teardown all close the active owner idempotently. A cleanup exception is
-suppressed onto the primary failure rather than replacing it.
+Launch failure, session abort, user exit, comparison failure, production
+failure, harness failure, and repeated teardown all close the active payload
+idempotently. Cleanup exceptions are suppressed onto the primary failure.
 
 ## Implementation boundary
 
-Phase one introduced the payload-independent descriptor. Phase two proceeds in
-the following compatibility-preserving order:
+Phase two proceeds in the following compatibility-preserving order:
 
-1. add compact phase/bootstrap summaries and launch-time auxiliary ordering
-   validation while preserving eager replay as the reference path;
-2. implement failure-atomic ordinary physics and auxiliary cursors, including
-   current-plus-next aux ownership and bounded rolling summaries;
-3. migrate `LiveTraceComparator`, structural comparison, row policy, binder,
-   bootstrap, and dynamic-art comparison to a narrow forward-window contract;
-4. introduce a closeable active owner that wraps the ordinary cursor or one
-   game-owned special-stage payload;
-5. migrate launcher, headless, visual, and complete-audio lifecycle ownership;
-6. change boundary/bootstrap and arbitrary BK2 frame-view consumers to compact
-   descriptor summaries; and
-7. remove `SegmentPlan.trace()` and `SegmentPlan.specialStageRows()`, then assert
-   no payload, event graph, or I/O owner is reachable from the run plan.
+1. expose a package-private factory that recreates the current eager ordinary or
+   composite special-stage payload for one descriptor;
+2. introduce the closeable active-payload holder and exact open/close counters
+   for lifecycle tests;
+3. change catalog launch preparation and run plans to retain descriptors only;
+4. migrate production launcher/coordinator ownership without changing the eager
+   comparator/bootstrap APIs;
+5. migrate headless chain, visual, and complete-audio harness ownership;
+6. replace arbitrary BK2 `frameView()` payload reads with descriptor local-row
+   and lag-bit lookups; and
+7. remove the eager `SegmentPlan` path from run launch and prove no payload,
+   auxiliary-event, special-stage, or I/O owner is reachable from either the
+   run plan or any closed segment's session/observer/HUD/driver roots.
 
-Do not combine this change with parser-format changes, compact-field encoding,
-trace schema changes, or hardware-timing redesign. Those would obscure the
-ownership proof and make the replay oracle ambiguous.
+Do not combine this phase with parser-format, trace-schema, execution-phase,
+bootstrap-authority, RNG, compact-field, or hardware-timing changes.
 
 ## Acceptance gate
 
-Run the same 67-segment fixture at the same commit-derived baseline and require:
+Use the same warmed, forced-GC protocol as the phase-one measurement and the
+same 1,087,200,800-byte eager retained-graph baseline. Measure the descriptor
+graph alone, then the live replay/session graph with each payload installed into
+its real comparator, driver, observer, HUD, fixture, and binder consumers. The
+67-segment S3K run supplies every ordinary segment and its S3K special stages;
+representative S1 and S2 run fixtures supply their composite special-stage
+shapes. Require all of:
 
-- the identical first mismatch (`camera_x`, expected `0x1300`, actual `0x1308`)
-  and terminal segment-0 `giant_ring` boundary failure;
-- all 1,653 AIZ physics rows consumed before the boundary failure;
-- identical unmatched hardware completions and dynamic-art comparison outcome;
-- a lower post-plan forced-GC live heap and lower peak live heap with the same
-  or lower configured `-Xmx`;
+- descriptor graph at or below 16 MiB (16,777,216 bytes);
+- maximum combined live ownership graph -- descriptors, session/driver consumer
+  roots, wrapper, and the sole installed active payload -- at or below 256 MiB
+  (268,435,456 bytes);
+- at least a 75% retained-graph reduction from the warmed eager baseline;
+- exactly one or zero active payloads at every lifecycle observation, plus a
+  transitive reachability check after each normal transition and failure exit
+  proving no closed segment's `TraceData`, special-stage rows, or auxiliary
+  graph remains reachable from session, playback observer, HUD/camera, driver,
+  fixture, or binder roots;
+- identical first mismatch (`camera_x`, expected `0x1300`, actual `0x1308`), all
+  1,653 AIZ rows consumed, and the same terminal segment-0 `giant_ring` failure;
+- identical unmatched hardware completions, dynamic-art result, visual/audio
+  frame/lag observations, and special-stage driver results;
 - no missing or starved trace class in a fresh complete trace sweep; and
-- identical visual-run and complete-audio harness frame/lag observations,
-  including gap and handoff cursors; and
-- no open file descriptor, gzip stream, or mapped-buffer growth across segment
-  boundaries and failure exits.
+- zero file-descriptor growth after 100 repeated open/close cycles for each
+  ordinary and special-stage payload shape, plus normal boundary, constructor
+  failure, comparison failure, and abort exits.
 
-Structural gates additionally require that an ordinary physics cursor retain no
-more than previous/current/next rows, an ordinary auxiliary cursor retain no
-more than current/next frame buckets plus the documented bounded summaries, and
-the run have at most one active segment owner. The special-stage owner must be
-reachable only while its segment is active. If it dominates the measured peak
-enough to prevent the required replay-memory reduction, its profile must stream
-before this design can be marked implemented.
+The retained-graph measurements run in equivalently warmed fresh forks or in
+both arm orders, with the installed consumer graph kept reachable until after
+the forced-GC sample. `/proc/self/fd` is a Linux smoke check; injected
+reader/stream open-close counters are the deterministic file-resource oracle,
+while payload-holder counters prove only active-owner cardinality. Failure of
+either numeric memory cap or the closed-payload reachability check makes
+row/profile streaming or additional alias cleanup prerequisite work rather than
+an acceptable partial result.
 
 Raw evidence is retained under
 `$AGENT_SCRATCH_ROOT/tasks/performance-candidate-validation-20260821T161822Z-3319778-904a0080/trace-retention/`
