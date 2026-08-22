@@ -1004,7 +1004,7 @@ validate_tip_tree_links() {
 validate_content_commit_list() {
     commits=$1
     tip=$2
-    old_ifs=$IFS
+    content_list_old_ifs=$IFS
     IFS='
 '
     for commit in $commits; do
@@ -1014,7 +1014,7 @@ validate_content_commit_list() {
         fi
         validate_commit_content "$commit"
     done
-    IFS=$old_ifs
+    IFS=$content_list_old_ifs
     validate_tip_tree_links "$tip"
 }
 

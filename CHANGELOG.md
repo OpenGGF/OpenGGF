@@ -1,5 +1,11 @@
 # Changelog
 
+- **CI push validation again recognizes merge commits:** nested content checks
+  no longer overwrite the shell field-separator state used to count commit
+  parents. True merge commits remain exempt from per-commit trailer checks,
+  while their introduced content and every non-merge commit in the range are
+  still validated normally.
+
 - **Complete-run trace ownership is measured and regression-checked:** two
   warmed, forced-GC forks retained 9.25 MB of whole-run descriptors and at most
   170.6-170.9 MB with a real active payload installed, an 84.28-84.31% reduction from

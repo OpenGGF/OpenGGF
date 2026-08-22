@@ -1064,6 +1064,43 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void ciPushSkipsTrailerValidationForMergeCommits(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "merge-trailer-range");
+        createInitialCommit(repository);
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        String trailers = """
+
+                Changelog: n/a
+                Guide: n/a
+                Known-Discrepancies: n/a
+                S3K-Known-Discrepancies: n/a
+                Agent-Docs: n/a
+                Configuration-Docs: n/a
+                Skills: n/a
+                """;
+
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "topic.txt", "topic\n");
+        commit(repository, "topic change" + trailers);
+
+        git(repository, "switch", "main");
+        writeAndStage(repository, "main.txt", "main\n");
+        commit(repository, "main change" + trailers);
+        git(repository, "merge", "--no-ff", "topic", "-m", "Merge topic");
+        String tipOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicy(
+                repository, "ci-push", baseOid, tipOid, "develop"));
+        String powershell = availablePowerShell();
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(
+                    repository, powershell,
+                    "ci-push", baseOid, tipOid, "develop"));
+        }
+    }
+
+    @Test
     void hookDispatcherShouldProbePwshBeforeSkippingPowerShellFallback() throws Exception {
         String runPolicy = Files.readString(Path.of(".githooks/run-policy"));
         List<String> violations = new ArrayList<>();
