@@ -19,6 +19,7 @@ import com.sun.source.tree.VariableTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
@@ -703,6 +704,102 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void sourceGuardPropagatesTypedReceiversThroughGenericHelpersExactly() {
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "TypedReceiverRuntime.java:3 getDeclaredField uses an "
+                                + "unresolved field name on com.openggf."
+                                + "TraceSessionLauncher",
+                        "TypedReceiverRuntime.java", """
+                                class TypedReceiverRuntime {
+                                    Object acquire(TraceSessionLauncher target, String name) throws Exception {
+                                        return target.getClass().getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "OneHelperGraph.java:6 getDeclaredField acquires field "
+                                + "activeRunPayload on com.openggf."
+                                + "TraceSessionLauncher",
+                        "OneHelperGraph.java", """
+                                class OneHelperGraph {
+                                    Object acquire(TraceSessionLauncher target) throws Exception {
+                                        return field(target, "activeRunPayload");
+                                    }
+                                    private Object field(Object target, String name) throws Exception {
+                                        return target.getClass().getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "MultiHelperGraph.java:9 getDeclaredField acquires field "
+                                + "activeSpecialRows on com.openggf.tests."
+                                + "trace.runs.AbstractRunChainTest",
+                        "MultiHelperGraph.java", """
+                                class MultiHelperGraph {
+                                    Object acquire(AbstractRunChainTest target) throws Exception {
+                                        return outer(target, "activeSpecialRows");
+                                    }
+                                    private Object outer(Object target, String name) throws Exception {
+                                        return inner(target, name);
+                                    }
+                                    private Object inner(Object target, String name) throws Exception {
+                                        return target.getClass().getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "HelperRuntimeName.java:6 getDeclaredField uses an "
+                                + "unresolved field name on com.openggf."
+                                + "TraceSessionLauncher",
+                        "HelperRuntimeName.java", """
+                                class HelperRuntimeName {
+                                    Object acquire(TraceSessionLauncher target, String name) throws Exception {
+                                        return field(target, name);
+                                    }
+                                    private Object field(Object target, String name) throws Exception {
+                                        return target.getClass().getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "HelperFindGetter.java:8 findGetter acquires field "
+                                + "activeRunPayload on com.openggf."
+                                + "TraceSessionLauncher",
+                        "HelperFindGetter.java", """
+                                class HelperFindGetter {
+                                    Object acquire(TraceSessionLauncher target,
+                                            MethodHandles.Lookup lookup) throws Exception {
+                                        return getter(target, "activeRunPayload", lookup);
+                                    }
+                                    private Object getter(Object target, String name,
+                                            MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findGetter(target.getClass(), name,
+                                                ActiveSegmentPayload.class);
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void sourceGuardAllowsHarmlessAndUnrelatedTypedHelperFields() {
+        assertNoSourceViolation(
+                "TypedHelperControls.java", """
+                        class TypedHelperControls {
+                            Object harmless(TraceSessionLauncher target) throws Exception {
+                                return field(target, "runSpecialTimingRow");
+                            }
+                            Object unrelated(StringBuilder target, String name) throws Exception {
+                                return field(target, name);
+                            }
+                            private Object field(Object target, String name) throws Exception {
+                                return target.getClass().getDeclaredField(name);
+                            }
+                        }
+                        """);
+    }
+
+    @Test
     void sourceGuardAllowsOnlyProvenHarmlessExactOwnerFields() {
         assertNoSourceViolation(
                 "HarmlessOwnerFields.java", """
@@ -964,8 +1061,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private final CompilationUnitTree unit;
         private final SourcePositions positions;
         private final List<String> violations;
+        private final Map<SourceMethodKey, List<SourceMethod>> sourceMethods =
+                new HashMap<>();
         private final Deque<Map<String, KnownValue>> scopes = new ArrayDeque<>();
         private final Deque<String> sourceOrigins = new ArrayDeque<>();
+        private final Set<MethodTree> activeHelperMethods = new HashSet<>();
 
         private ReflectiveAcquisitionScanner(
                 String fileName,
@@ -977,20 +1077,42 @@ class TestActiveSegmentPayloadAuthorityGuard {
             this.positions = positions;
             this.violations = violations;
             scopes.push(new HashMap<>());
+            collectSourceMethods();
+        }
+
+        private void collectSourceMethods() {
+            new TreeScanner<Void, Void>() {
+                private final Deque<String> owners = new ArrayDeque<>();
+
+                @Override
+                public Void visitClass(ClassTree node, Void unused) {
+                    String owner = sourceOwner(owners, node);
+                    owners.push(owner);
+                    try {
+                        return super.visitClass(node, unused);
+                    } finally {
+                        owners.pop();
+                    }
+                }
+
+                @Override
+                public Void visitMethod(MethodTree node, Void unused) {
+                    if (!owners.isEmpty()) {
+                        SourceMethodKey key = new SourceMethodKey(
+                                node.getName().toString(),
+                                node.getParameters().size());
+                        sourceMethods.computeIfAbsent(
+                                key, ignored -> new ArrayList<>())
+                                .add(new SourceMethod(owners.peek(), node));
+                    }
+                    return super.visitMethod(node, unused);
+                }
+            }.scan(unit, null);
         }
 
         @Override
         public Void visitClass(ClassTree node, Void unused) {
-            String simpleName = node.getSimpleName().toString();
-            String sourceOrigin;
-            if (sourceOrigins.isEmpty()) {
-                String packageName = unit.getPackageName() == null
-                        ? "" : unit.getPackageName().toString();
-                sourceOrigin = packageName.isEmpty()
-                        ? simpleName : packageName + "." + simpleName;
-            } else {
-                sourceOrigin = sourceOrigins.peek() + "$" + simpleName;
-            }
+            String sourceOrigin = sourceOwner(sourceOrigins, node);
             sourceOrigins.push(sourceOrigin);
             scopes.push(new HashMap<>());
             try {
@@ -1005,6 +1127,13 @@ class TestActiveSegmentPayloadAuthorityGuard {
         public Void visitMethod(MethodTree node, Void unused) {
             scopes.push(new HashMap<>());
             try {
+                for (VariableTree parameter : node.getParameters()) {
+                    KnownValue type = typedTarget(parameter.getType());
+                    if (type != null) {
+                        scopes.peek().put(
+                                parameter.getName().toString(), type);
+                    }
+                }
                 return super.visitMethod(node, unused);
             } finally {
                 scopes.pop();
@@ -1024,6 +1153,9 @@ class TestActiveSegmentPayloadAuthorityGuard {
         @Override
         public Void visitVariable(VariableTree node, Void unused) {
             KnownValue value = evaluate(node.getInitializer());
+            if (value == null) {
+                value = typedTarget(node.getType());
+            }
             if (value != null) {
                 scopes.peek().put(node.getName().toString(), value);
             }
@@ -1126,7 +1258,69 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 recordFieldAcquisition(invocation, primitive,
                         targetName(evaluate(arguments.get(0))),
                         text(evaluate(arguments.get(1))));
+                return;
             }
+            recordSameSourceHelperCall(invocation);
+        }
+
+        private void recordSameSourceHelperCall(
+                MethodInvocationTree invocation) {
+            List<? extends ExpressionTree> arguments = invocation.getArguments();
+            List<KnownValue> values = arguments.stream()
+                    .map(this::evaluate)
+                    .toList();
+            if (values.stream().map(TestActiveSegmentPayloadAuthorityGuard::targetName)
+                    .noneMatch(target -> isRestrictedFieldTarget(target)
+                            || isRestrictedTarget(target))) {
+                return;
+            }
+            SourceMethodKey key = new SourceMethodKey(
+                    invokedName(invocation), arguments.size());
+            for (SourceMethod sourceMethod : sourceMethods
+                    .getOrDefault(key, List.of())) {
+                MethodTree method = sourceMethod.method();
+                if (!matchesHelperOwner(invocation, sourceMethod.owner())
+                        || method.getBody() == null
+                        || !activeHelperMethods.add(method)) {
+                    continue;
+                }
+                Map<String, KnownValue> bindings = new HashMap<>();
+                for (int index = 0; index < values.size(); index++) {
+                    KnownValue value = values.get(index);
+                    if (value != null) {
+                        bindings.put(method.getParameters().get(index)
+                                .getName().toString(), value);
+                    }
+                }
+                scopes.push(bindings);
+                boolean pushedOwner = !sourceMethod.owner().equals(
+                        sourceOrigins.peek());
+                if (pushedOwner) {
+                    sourceOrigins.push(sourceMethod.owner());
+                }
+                try {
+                    scan(method.getBody(), null);
+                } finally {
+                    if (pushedOwner) {
+                        sourceOrigins.pop();
+                    }
+                    scopes.pop();
+                    activeHelperMethods.remove(method);
+                }
+            }
+        }
+
+        private boolean matchesHelperOwner(
+                MethodInvocationTree invocation, String owner) {
+            ExpressionTree helperReceiver = receiver(invocation);
+            if (helperReceiver == null || "this".equals(helperReceiver.toString())) {
+                return owner.equals(sourceOrigins.peek());
+            }
+            int lastDot = owner.lastIndexOf('.');
+            String simpleOwner = lastDot < 0
+                    ? owner : owner.substring(lastDot + 1);
+            return simpleOwner.equals(helperReceiver.toString())
+                    || owner.equals(helperReceiver.toString());
         }
 
         private void recordAccessorAcquisition(
@@ -1180,7 +1374,8 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 return evaluate(parenthesized.getExpression());
             }
             if (expression instanceof TypeCastTree cast) {
-                return evaluate(cast.getExpression());
+                KnownValue value = evaluate(cast.getExpression());
+                return value != null ? value : typedTarget(cast.getType());
             }
             if (expression instanceof IdentifierTree identifier) {
                 return lookup(identifier.getName().toString());
@@ -1249,6 +1444,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     && receiverValue != null && receiverValue.builder()) {
                 return KnownValue.string(receiverValue.text());
             }
+            if ("getClass".equals(method) && arguments.isEmpty()
+                    && targetName(receiverValue) != null) {
+                return KnownValue.target(targetName(receiverValue));
+            }
             if (isClassForName(invocation) && !arguments.isEmpty()) {
                 return KnownValue.target(normalizeTargetName(
                         text(evaluate(arguments.getFirst()))));
@@ -1275,7 +1474,27 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private void report(Tree tree, String message) {
             long position = positions.getStartPosition(unit, tree);
             long line = unit.getLineMap().getLineNumber(position);
-            violations.add(fileName + ":" + line + " " + message);
+            String diagnostic = fileName + ":" + line + " " + message;
+            if (!violations.contains(diagnostic)) {
+                violations.add(diagnostic);
+            }
+        }
+
+        private KnownValue typedTarget(Tree type) {
+            return type == null ? null : KnownValue.target(
+                    normalizeTargetName(type.toString()));
+        }
+
+        private String sourceOwner(
+                Deque<String> owners, ClassTree node) {
+            String simpleName = node.getSimpleName().toString();
+            if (!owners.isEmpty()) {
+                return owners.peek() + "$" + simpleName;
+            }
+            String packageName = unit.getPackageName() == null
+                    ? "" : unit.getPackageName().toString();
+            return packageName.isEmpty()
+                    ? simpleName : packageName + "." + simpleName;
         }
 
         private KnownValue lookup(String name) {
@@ -1315,6 +1534,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     ? member.getExpression() : null;
         }
     }
+
+    private record SourceMethodKey(String name, int parameterCount) { }
+
+    private record SourceMethod(String owner, MethodTree method) { }
 
     private record KnownValue(String text, String targetName, boolean builder) {
         private static KnownValue string(String value) {

@@ -76,6 +76,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1953,8 +1954,9 @@ class TestTraceSessionLauncherRunBranch {
                         frame(0), frame(1),
                         new Bk2FrameInput(2, 1, 0, false, ""), frame(3)),
                 4);
+        AtomicInteger payloadCloseCount = new AtomicInteger();
         TraceSessionLauncher session = TestRunPayloads.session(
-                null, movie, plans, null);
+                null, movie, plans, null, payloadCloseCount);
         TraceRunExternalDiagnostics diagnostics =
                 new TraceRunExternalDiagnostics(null);
         setField(session, "runExternalDiagnostics", diagnostics);
@@ -1994,7 +1996,8 @@ class TestTraceSessionLauncherRunBranch {
                 diagnostics.recentMismatches().getFirst().field());
         assertNull(getField(session, "comparator"),
                 "bridge comparison must not resurrect a closed segment alias");
-        assertNotNull(getField(session, "activeRunPayload"));
+        assertEquals(2, payloadCloseCount.get(),
+                "the admitted bridge lease must remain open");
     }
 
     @Test
@@ -2045,8 +2048,9 @@ class TestTraceSessionLauncherRunBranch {
         Bk2Movie movie = new Bk2Movie(
                 Path.of("terminal-special-return-bridge.bk2"), "logkey",
                 Map.of(), List.of(frame(0), frame(1), frame(2)), 3);
+        AtomicInteger payloadCloseCount = new AtomicInteger();
         TraceSessionLauncher session = TestRunPayloads.session(
-                null, movie, plans, null);
+                null, movie, plans, null, payloadCloseCount);
         TraceRunExternalDiagnostics diagnostics =
                 new TraceRunExternalDiagnostics(null);
         setField(session, "runExternalDiagnostics", diagnostics);
@@ -2095,9 +2099,6 @@ class TestTraceSessionLauncherRunBranch {
                 "terminal bridge mismatch"));
         assertNull(structural.completePostProduction(before, published),
                 "the terminal comparison must remain deferred until lease close");
-        ActiveSegmentPayload bridgePayload =
-                (ActiveSegmentPayload) getField(session, "activeRunPayload");
-
         closeRunSegment(session, 2);
 
         assertEquals(1, diagnostics.errorCount(),
@@ -2107,9 +2108,8 @@ class TestTraceSessionLauncherRunBranch {
         assertNull(getField(session, "comparator"),
                 "terminal publication must not restore a stale segment sink");
         assertNull(getField(session, "runStructuralComparator"));
-        assertNull(getField(session, "activeRunPayload"));
-        assertTrue(bridgePayload.isClosed(),
-                "closing the bridge segment must close its real payload lease");
+        assertEquals(3, payloadCloseCount.get(),
+                "closing the bridge must close each real payload lease once");
     }
 
     @Test
@@ -2787,7 +2787,7 @@ final class TestRunPayloads {
             Bk2Movie movie,
             List<TraceRunReplayWalker.SegmentPlan> plans,
             com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot) {
-        return session(entry, movie, plans, snapshot, null);
+        return session(entry, movie, plans, snapshot, (Runnable) null);
     }
 
     static TraceSessionLauncher session(
@@ -2796,6 +2796,26 @@ final class TestRunPayloads {
             List<TraceRunReplayWalker.SegmentPlan> plans,
             com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot,
             java.util.concurrent.atomic.AtomicBoolean payloadClosed) {
+        return session(entry, movie, plans, snapshot,
+                () -> payloadClosed.set(true));
+    }
+
+    static TraceSessionLauncher session(
+            com.openggf.trace.catalog.TraceEntry entry,
+            Bk2Movie movie,
+            List<TraceRunReplayWalker.SegmentPlan> plans,
+            com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot,
+            java.util.concurrent.atomic.AtomicInteger payloadCloseCount) {
+        return session(entry, movie, plans, snapshot,
+                payloadCloseCount::incrementAndGet);
+    }
+
+    private static TraceSessionLauncher session(
+            com.openggf.trace.catalog.TraceEntry entry,
+            Bk2Movie movie,
+            List<TraceRunReplayWalker.SegmentPlan> plans,
+            com.openggf.trace.replay.TraceReplaySessionBootstrap.ConfigSnapshot snapshot,
+            Runnable payloadClosed) {
         List<TraceRunSegmentDescriptor> descriptors = descriptors(plans);
         ActiveSegmentPayload initial = plans.isEmpty()
                 ? null : payload(descriptors.getFirst(), plans.getFirst());
@@ -2812,7 +2832,7 @@ final class TestRunPayloads {
             public void close(ActiveSegmentPayload payload) {
                 payload.close();
                 if (payloadClosed != null) {
-                    payloadClosed.set(payload.isClosed());
+                    payloadClosed.run();
                 }
             }
         };

@@ -17,7 +17,6 @@ import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
-import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
@@ -34,6 +33,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -258,7 +258,7 @@ class TestVisualTraceRunTerminalTail {
                 new TraceRunPlaybackCoordinator.CompleteRun(0)));
         finishFade(fixture.gameplay());
 
-        assertTrue(fixture.payload().isClosed());
+        assertTrue(fixture.payloadClosed().get());
         assertNull(TraceSessionLauncher.active());
         verify(fixture.loop()).returnToMasterTitle();
         verify(fixture.timing(), times(1)).enterTransitionGap();
@@ -278,7 +278,7 @@ class TestVisualTraceRunTerminalTail {
                                 3, 0, GameMode.TITLE_SCREEN))));
         finishFade(fixture.gameplay());
 
-        assertTrue(fixture.payload().isClosed());
+        assertTrue(fixture.payloadClosed().get());
         assertNull(TraceSessionLauncher.active());
         verify(fixture.loop()).returnToMasterTitle();
         verify(fixture.timing(), times(1)).enterTransitionGap();
@@ -298,12 +298,11 @@ class TestVisualTraceRunTerminalTail {
                 java.util.stream.IntStream.range(0, movieFrames)
                         .mapToObj(index -> frame(index, index))
                         .toList(), 1);
+        AtomicBoolean payloadClosed = new AtomicBoolean();
         TraceSessionLauncher session = TestRunPayloads.session(
                 null, movie,
                 List.of(new TraceRunReplayWalker.SegmentPlan(
-                        segment, trace, null, null)), null);
-        ActiveSegmentPayload payload = (ActiveSegmentPayload) field(
-                session, "activeRunPayload");
+                        segment, trace, null, null)), null, payloadClosed);
         DynamicArtLifecycleService lifecycle =
                 new DynamicArtLifecycleService();
         lifecycle.beginRun();
@@ -332,7 +331,7 @@ class TestVisualTraceRunTerminalTail {
                 movieFrames == 3 ? 1 : 0);
         setActiveSession(session);
         return new TerminalFixture(
-                session, payload, coordinator, timing, gameplay, loop);
+                session, payloadClosed, coordinator, timing, gameplay, loop);
     }
 
     private static void finishFade(GameplayModeContext gameplay) {
@@ -353,7 +352,7 @@ class TestVisualTraceRunTerminalTail {
 
     private record TerminalFixture(
             TraceSessionLauncher session,
-            ActiveSegmentPayload payload,
+            AtomicBoolean payloadClosed,
             TraceRunPlaybackCoordinator coordinator,
             TraceRunReplayWalker.HardwareTimingCoordinator timing,
             GameplayModeContext gameplay,
