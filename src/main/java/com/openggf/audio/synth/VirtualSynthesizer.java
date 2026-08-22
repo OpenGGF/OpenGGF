@@ -5,6 +5,8 @@ import com.openggf.audio.smps.DacData;
 import java.util.Arrays;
 
 public class VirtualSynthesizer implements Synthesizer {
+    private static final int YM_WRITE_TIMELINE_CAPACITY = 4_096;
+
     public enum ChipClockProfile {
         // Mega Drive master clocks: NTSC 53,693,175 Hz and PAL 53,203,424 Hz.
         // YM2612 = master/7; Z80 and PSG input use the regional /15 clock.
@@ -21,6 +23,7 @@ public class VirtualSynthesizer implements Synthesizer {
     }
     private final PsgChip psg;
     private final Ym2612Chip ym;
+    private final YmWriteTimeline ymWriteTimeline;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
     private boolean chipWriteObserverEnabled;
 
@@ -41,6 +44,9 @@ public class VirtualSynthesizer implements Synthesizer {
         // Use the GPGX PSG core for better timing/pitch parity with Genesis hardware.
         this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.ym = new Ym2612Chip();
+        this.ymWriteTimeline = new YmWriteTimeline(
+                YM_WRITE_TIMELINE_CAPACITY);
+        this.ym.setWriteTimeline(ymWriteTimeline);
         setChipWriteObserver(observer);
         setOutputSampleRate(outputSampleRate);
         // Match typical driver init: silence chips on startup to avoid power-on noise.
@@ -71,6 +77,10 @@ public class VirtualSynthesizer implements Synthesizer {
 
     public final double psgInputClockForTesting() {
         return psg.inputClockForTesting();
+    }
+
+    final YmWriteTimeline ymWriteTimelineForTesting() {
+        return ymWriteTimeline;
     }
 
     /**

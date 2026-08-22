@@ -3,7 +3,9 @@ package com.openggf.audio.synth;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,6 +136,131 @@ class TestYm2612ChipGpgxParity {
                 768, 832, 864, 960, 992, 1088,
                 1120, 1184, 1280, 1312, 1376, 1440
         }, left);
+    }
+
+    @Test
+    void scheduledWriteDrainsAtTheExactPreInternalSampleBoundary() {
+        assertScheduledWriteBoundary(Ym2612Chip.getInternalRate(), false, 5);
+    }
+
+    @Test
+    void linearResamplingCannotMoveTheScheduledWriteBoundary() {
+        assertScheduledWriteBoundary(44_100.0, false, 8);
+    }
+
+    @Test
+    void blipResamplingCannotMoveTheScheduledWriteBoundary() {
+        assertScheduledWriteBoundary(44_100.0, true, 64);
+    }
+
+    @Test
+    void hybridSizedRenderCannotSkipTheScheduledWriteBoundary() {
+        assertScheduledWriteBoundary(44_100.0, true, 735);
+    }
+
+    @Test
+    void scheduledChipAndKeyOnCallbacksFireOnlyAtDrainAndNotAfterDiscard() {
+        Ym2612Chip drainedChip = configuredEnhancedChip();
+        YmWriteTimeline drainedTimeline = new YmWriteTimeline(1);
+        drainedChip.setWriteTimeline(drainedTimeline);
+        RecordingObserver drainedObserver = new RecordingObserver(drainedChip);
+        drainedChip.setWriteObserver(drainedObserver);
+        drainedTimeline.commit(List.of(
+                scheduledEntry(3_150, 0, 0x28, 0xF0, 1)));
+
+        drainedChip.renderStereo(new int[4], new int[4]);
+        assertEquals(List.of(), drainedObserver.writeFrontiers);
+        assertEquals(List.of(), drainedObserver.keyOnFrontiers);
+        drainedChip.renderStereo(new int[1], new int[1]);
+        assertEquals(List.of(4_032L), drainedObserver.writeFrontiers);
+        assertEquals(List.of(4_032L, 4_032L, 4_032L, 4_032L),
+                drainedObserver.keyOnFrontiers);
+
+        Ym2612Chip discardedChip = configuredEnhancedChip();
+        YmWriteTimeline discardedTimeline = new YmWriteTimeline(1);
+        discardedChip.setWriteTimeline(discardedTimeline);
+        RecordingObserver discardedObserver = new RecordingObserver(discardedChip);
+        discardedChip.setWriteObserver(discardedObserver);
+        discardedTimeline.commit(List.of(
+                scheduledEntry(3_150, 0, 0x28, 0xF0, 1)));
+
+        discardedChip.renderStereo(new int[4], new int[4]);
+        assertEquals(List.of(), discardedObserver.writeFrontiers);
+        assertEquals(List.of(), discardedObserver.keyOnFrontiers);
+
+        discardedTimeline.discardBeforeGeneration(2);
+        discardedChip.renderStereo(new int[2], new int[2]);
+        assertEquals(List.of(), discardedObserver.writeFrontiers);
+        assertEquals(List.of(), discardedObserver.keyOnFrontiers);
+    }
+
+    private static void assertScheduledWriteBoundary(
+            double outputRate, boolean blip, int outputSamples) {
+        Ym2612Chip chip = new Ym2612Chip();
+        chip.setOutputSampleRate(outputRate);
+        chip.setUseBlipResampler(blip);
+        YmWriteTimeline timeline = new YmWriteTimeline(1);
+        chip.setWriteTimeline(timeline);
+        RecordingObserver observer = new RecordingObserver(chip);
+        chip.setWriteObserver(observer);
+        timeline.commit(List.of(scheduledEntry(3_150, 0, 0x22, 0x08, 1)));
+
+        chip.renderStereo(new int[outputSamples], new int[outputSamples]);
+
+        assertEquals(List.of(4_032L), observer.writeFrontiers);
+        assertEquals(List.of(
+                "sample@0", "sample@1008", "sample@2016", "sample@3024",
+                "write@4032", "sample@4032"),
+                observer.boundaries.subList(0, 6));
+        assertTrue(chip.renderedMasterCyclesForTesting() >= 5_040L);
+    }
+
+    private static YmWriteTimeline.Entry scheduledEntry(
+            long dueMasterCycle, long sourceOrdinal,
+            int register, int value, long generation) {
+        return new YmWriteTimeline.Entry(
+                dueMasterCycle, sourceOrdinal, 0, register, value,
+                generation, 0,
+                new com.openggf.audio.rewind.SmpsSourceDescriptor(
+                        com.openggf.audio.rewind.SmpsSourceDescriptor.Kind.UNKNOWN,
+                        -1, null, null, 0, 0, 0, false, 0),
+                com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind.KEY_OFF);
+    }
+
+    private static final class RecordingObserver implements ChipWriteObserver {
+        private final Ym2612Chip chip;
+        private final List<Long> writeFrontiers = new ArrayList<>();
+        private final List<Long> keyOnFrontiers = new ArrayList<>();
+        private final List<String> boundaries = new ArrayList<>();
+
+        private RecordingObserver(Ym2612Chip chip) {
+            this.chip = chip;
+        }
+
+        @Override
+        public void onYm2612Write(int port, int register, int value) {
+            writeFrontiers.add(chip.renderedMasterCyclesForTesting());
+            boundaries.add("write@" + chip.renderedMasterCyclesForTesting());
+        }
+
+        @Override
+        public void onYm2612KeyOn(int channel, int operator, int attenuation) {
+            keyOnFrontiers.add(chip.renderedMasterCyclesForTesting());
+        }
+
+        @Override
+        public int ym2612ChannelSampleMask() {
+            return 1;
+        }
+
+        @Override
+        public void onYm2612ChannelSample(int channel, int output) {
+            boundaries.add("sample@" + chip.renderedMasterCyclesForTesting());
+        }
+
+        @Override
+        public void onPsgWrite(int value) {
+        }
     }
 
     private static Ym2612Chip configuredEnhancedChip() {

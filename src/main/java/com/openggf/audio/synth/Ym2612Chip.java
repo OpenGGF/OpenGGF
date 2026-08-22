@@ -3,6 +3,8 @@ package com.openggf.audio.synth;
 import com.openggf.audio.smps.DacData;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -572,6 +574,10 @@ public class Ym2612Chip {
     private int en0, en1, en2, en3;
     private int traceEvents;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private YmWriteTimeline writeTimeline;
+    private final Consumer<YmWriteTimeline.Entry> scheduledWriteMutation =
+            this::applyScheduledWrite;
+    private long renderedMasterCycles;
 
     public Ym2612Chip() {
         for (int i = 0; i < 6; i++) {
@@ -611,6 +617,7 @@ public class Ym2612Chip {
 
         // Reset resampling state
         resampleAccum = 0.0;
+        renderedMasterCycles = 0;
         lastLeft = lastRight = 0;
         prevLeft = prevRight = 0;
         blipResampler.reset();
@@ -968,7 +975,23 @@ public class Ym2612Chip {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
     }
 
+    void setWriteTimeline(YmWriteTimeline timeline) {
+        writeTimeline = Objects.requireNonNull(timeline, "timeline");
+    }
+
+    long renderedMasterCyclesForTesting() {
+        return renderedMasterCycles;
+    }
+
     public void write(int port, int reg, int val) {
+        writeImmediate(port, reg, val);
+    }
+
+    private void applyScheduledWrite(YmWriteTimeline.Entry entry) {
+        writeImmediate(entry.port(), entry.register(), entry.value());
+    }
+
+    private void writeImmediate(int port, int reg, int val) {
         int resolvedPort = port & 1;
         int resolvedReg = reg & 0x1FF;
         if ((resolvedReg & 0x100) != 0) {
@@ -1591,6 +1614,11 @@ public class Ym2612Chip {
      * Generate one internal sample at ~53kHz. Updates lastLeft/lastRight.
      */
     private void renderOneSample() {
+        if (writeTimeline != null) {
+            writeTimeline.drainDue(
+                    renderedMasterCycles, scheduledWriteMutation);
+        }
+
         // GPGX: LFO values are read BEFORE update (for use in channel calc)
         // and then updated AFTER channel calculation
         int pmLfo = lfoPm;
@@ -1667,6 +1695,8 @@ public class Ym2612Chip {
         }
 
         tickTimers();
+        renderedMasterCycles = Math.addExact(renderedMasterCycles,
+                YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE);
     }
 
     // DEBUG: Set to true to mute FM4 (channel 3) for Signpost SFX debugging
