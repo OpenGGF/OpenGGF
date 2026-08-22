@@ -21,6 +21,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -119,8 +122,8 @@ class TestSmpsDriverYmWriteTimeline {
         driver.endSequencerService(service);
 
         assertEquals(List.of("0:28:00"), callbacks);
-        assertTrue(driver.captureSnapshot().synthSnapshot()
-                .ymWriteTimeline().pending().isEmpty());
+        assertEquals(List.of(), driver.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending());
     }
 
     @Test
@@ -151,6 +154,39 @@ class TestSmpsDriverYmWriteTimeline {
         assertEquals(List.of(0L, 1L),
                 pending.stream().map(YmWriteTimeline.Entry::sourceOrdinal)
                         .toList());
+    }
+
+    @Test
+    void suppressedOnlyServiceCarriesItsCommittedCursorIntoNextService() {
+        // Break caught: a suppressed final slot advances no pending entry, so
+        // the next service re-anchors at zero and schedules backwards.
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer source = sequencer(driver, PROFILE, 0xA0);
+        SmpsDriverServiceObserver.ServiceEvent suppressedService =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        try (Synthesizer.YmTimingScope timing = driver.beginYmTiming(
+                source, SegmentKind.COMPLETION_RESTORE, VARIANT)) {
+            timing.consumeSuppressedHardwareAttempt();
+            timing.consumeSuppressedHardwareAttempt();
+        }
+        driver.endSequencerService(suppressedService);
+
+        assertEquals(3_150L, driver.captureSnapshot().ymServiceCursor());
+        SmpsDriverServiceObserver.ServiceEvent nextService =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                source, SegmentKind.KEY_OFF, VARIANT)) {
+            driver.writeFm(source, 0, 0x28, 0x00);
+        }
+        driver.endSequencerService(nextService);
+
+        YmWriteTimeline.Entry pending = driver.captureSnapshot()
+                .synthSnapshot().ymWriteTimeline().pending().getFirst();
+        assertEquals(3_150L, pending.dueMasterCycle());
+        assertEquals(0L, pending.sourceOrdinal());
+        assertEquals(1L, pending.serviceOrdinal());
     }
 
     @Test
@@ -245,6 +281,100 @@ class TestSmpsDriverYmWriteTimeline {
         retry.endSequencerService(service);
         assertEquals(1, retry.captureSnapshot().synthSnapshot()
                 .ymWriteTimeline().pending().size());
+    }
+
+    @Test
+    void rejectedArbitrationConsumesOnlyAnExplicitSuppressedSlot() {
+        // Break caught: OpenGGF arbitration silently consumes a native slot,
+        // or leaves a rejected audited attempt unclassified.
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer incumbent = prioritySequencer(driver, 0xA0);
+        SmpsSequencer challenger = prioritySequencer(driver, 0xA1);
+        incumbent.setSfxPriority(0x60);
+        challenger.setSfxPriority(0x20);
+        driver.addSequencer(incumbent, true);
+        driver.writeFm(incumbent, 0, 0x28, 0x00);
+        driver.addSequencer(challenger, false);
+        challenger.setIsSfx(true);
+
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(challenger,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        try (Synthesizer.YmTimingScope timing = driver.beginYmTiming(
+                challenger, SegmentKind.KEY_OFF, VARIANT)) {
+            driver.writeFm(challenger, 0, 0x28, 0x00);
+            timing.consumeSuppressedHardwareAttempt();
+        }
+        driver.endSequencerService(service);
+
+        assertEquals(List.of(), driver.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending());
+        assertEquals(0L, driver.captureSnapshot().ymServiceCursor());
+    }
+
+    @Test
+    void profiledSetInstrumentIsRejectedBeforeDirectChipMutation() {
+        // Break caught: VirtualSynthesizer.setInstrument expands directly into
+        // thirty YM writes and bypasses timing slots and the drain callback.
+        List<String> profiledCallbacks = new ArrayList<>();
+        SmpsDriver profiled = new SmpsDriver(
+                44_100.0, recordingObserver(profiledCallbacks));
+        profiledCallbacks.clear();
+        SmpsSequencer timedSource = sequencer(profiled, PROFILE, 0xA0);
+        profiledCallbacks.clear();
+        SmpsDriverSnapshot before = profiled.captureSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                () -> profiled.setInstrument(
+                        timedSource, 0, new byte[25]));
+        assertEquals(List.of(), profiledCallbacks);
+        assertDeepEquals(before, profiled.captureSnapshot());
+
+        List<String> immediateCallbacks = new ArrayList<>();
+        SmpsDriver immediate = new SmpsDriver(
+                44_100.0, recordingObserver(immediateCallbacks));
+        immediateCallbacks.clear();
+        SmpsSequencer immediateSource = sequencer(
+                immediate, YmServiceTimingProfile.none(), 0x81);
+        immediateCallbacks.clear();
+        immediate.setInstrument(immediateSource, 0, new byte[25]);
+
+        assertEquals(30, immediateCallbacks.size());
+        assertEquals("0:28:00", immediateCallbacks.getFirst());
+        assertTrue(immediate.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending().isEmpty());
+    }
+
+    @Test
+    void psgWriteBeforeYmPoisonPublishesNoHardwareOrLogicalCallback() {
+        // Break caught: PSG mutation is immediate while the sibling YM journal
+        // is transactional, so a later YM count poison cannot retract it.
+        List<String> chip = new ArrayList<>();
+        List<String> logical = new ArrayList<>();
+        SmpsDriver driver = new SmpsDriver(
+                44_100.0, recordingAllObserver(chip));
+        chip.clear();
+        SmpsSequencer source = sequencer(driver, PROFILE, 0xA0);
+        driver.addSequencer(source, true);
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                logical.add("begin:" + event.ordinal());
+            }
+        });
+        chip.clear();
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        driver.beginSequencerService(source,
+                SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        driver.writePsg(source, 0x9F);
+        Synthesizer.YmTimingScope timing = driver.beginYmTiming(
+                source, SegmentKind.COMPLETION_RESTORE, VARIANT);
+        driver.writeFm(source, 0, 0xB0, 0x01);
+
+        assertThrows(IllegalStateException.class, timing::close);
+        assertEquals(List.of(), chip);
+        assertEquals(List.of(), logical);
+        assertDeepEquals(before, driver.captureSnapshot());
     }
 
     @Test
@@ -389,41 +519,48 @@ class TestSmpsDriverYmWriteTimeline {
 
     @Test
     void aggregateCapacityNCommitsAndNMinusOneFailsBeforeMutation() {
-        // Break caught: capacity is sized to one segment instead of every live
-        // music/SFX profile plus the PAL repeated service horizon.
+        // Break caught: each sequencer transaction recomputes the whole bound,
+        // so the first of four eight-write services consumes capacity which
+        // makes the second spuriously reject.
         int aggregateBound = 32; // (music 8 + SFX 8) * (normal + PAL repeat)
         SmpsDriver exact = new SmpsDriver();
         exact.setRegion(SmpsSequencer.Region.PAL);
-        SmpsSequencer exactMusic = palSequencer(exact, 0x81);
-        SmpsSequencer exactSfx = palSequencer(exact, 0xA0);
+        fillRemainingCapacity(exact, aggregateBound);
+        AggregateWritingSequencer exactMusic =
+                new AggregateWritingSequencer(exact, 0x81);
+        AggregateWritingSequencer exactSfx =
+                new AggregateWritingSequencer(exact, 0xA0);
         exact.addSequencer(exactMusic, false);
         exact.addSequencer(exactSfx, true);
-        fillRemainingCapacity(exact, aggregateBound);
-        exactMusic = exact.sequencersForTesting().getFirst();
-        SmpsDriverServiceObserver.ServiceEvent exactService =
-                exact.beginSequencerService(exactMusic,
-                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
-        try (Synthesizer.YmTimingScope ignored = exact.beginYmTiming(
-                exactMusic, SegmentKind.KEY_OFF, VARIANT)) {
-            exact.writeFm(exactMusic, 0, 0x22, 0x08);
-        }
-        exact.endSequencerService(exactService);
-        assertEquals(4_096 - aggregateBound + 1,
+        setPalFullUpdateCounter(exact, 0);
+        long serviceOrdinalBefore =
+                exact.captureSnapshot().nextYmServiceOrdinal();
+
+        advanceSequencersWithoutRender(exact, 1);
+
+        assertEquals(4_096,
                 exact.captureSnapshot().synthSnapshot()
                         .ymWriteTimeline().pending().size());
+        assertEquals(1, exactMusic.advanceCalls);
+        assertEquals(1, exactMusic.repeatCalls);
+        assertEquals(1, exactSfx.advanceCalls);
+        assertEquals(1, exactSfx.repeatCalls);
+        assertEquals(serviceOrdinalBefore + 4,
+                exact.captureSnapshot().nextYmServiceOrdinal());
 
         List<String> logical = new ArrayList<>();
         List<String> chip = new ArrayList<>();
         SmpsDriver shortDriver = new SmpsDriver(
                 44_100.0, recordingObserver(chip));
         shortDriver.setRegion(SmpsSequencer.Region.PAL);
-        SmpsSequencer shortMusic = palSequencer(shortDriver, 0x81);
-        SmpsSequencer shortSfx = palSequencer(shortDriver, 0xA0);
+        fillRemainingCapacity(shortDriver, aggregateBound - 1);
+        AggregateWritingSequencer shortMusic =
+                new AggregateWritingSequencer(shortDriver, 0x81);
+        AggregateWritingSequencer shortSfx =
+                new AggregateWritingSequencer(shortDriver, 0xA0);
         shortDriver.addSequencer(shortMusic, false);
         shortDriver.addSequencer(shortSfx, true);
-        fillRemainingCapacity(shortDriver, aggregateBound - 1);
-        SmpsSequencer restoredShortMusic =
-                shortDriver.sequencersForTesting().getFirst();
+        setPalFullUpdateCounter(shortDriver, 0);
         shortDriver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
             public void onServiceBegin(ServiceEvent event) {
@@ -431,18 +568,44 @@ class TestSmpsDriverYmWriteTimeline {
             }
         });
         chip.clear();
-        StableState before = stableState(shortDriver);
+        SmpsDriverSnapshot before = shortDriver.captureSnapshot();
 
         IllegalStateException failure = assertThrows(
                 IllegalStateException.class,
-                () -> shortDriver.beginSequencerService(
-                        restoredShortMusic,
-                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK));
+                () -> advanceSequencersWithoutRender(shortDriver, 1));
 
         assertTrue(failure.getMessage().contains("aggregate service bound 32"));
+        assertEquals(0, shortMusic.advanceCalls);
+        assertEquals(0, shortMusic.repeatCalls);
+        assertEquals(0, shortSfx.advanceCalls);
+        assertEquals(0, shortSfx.repeatCalls);
         assertEquals(List.of(), logical);
         assertEquals(List.of(), chip);
-        assertStableState(before, shortDriver);
+        assertDeepEquals(before, shortDriver.captureSnapshot());
+    }
+
+    @Test
+    void aggregateCapacityCountsActivePendingRemovalOwnerOnlyOnce() {
+        // Break caught: one sequencer present in both the active list and the
+        // pending-removal queue contributes its profile maximum twice.
+        SmpsDriver driver = new SmpsDriver();
+        fillRemainingCapacity(driver, 8);
+        SmpsSequencer source = sequencer(driver, PROFILE, 0xA0);
+        driver.addSequencer(source, true);
+        addPendingRemoval(driver, source);
+
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind
+                                .COMPLETION_CLEANUP);
+        try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                source, SegmentKind.KEY_OFF, VARIANT)) {
+            driver.writeFm(source, 0, 0x22, 0x08);
+        }
+        driver.endSequencerService(service);
+
+        assertEquals(4_089, driver.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending().size());
     }
 
     @Test
@@ -680,8 +843,52 @@ class TestSmpsDriverYmWriteTimeline {
         assertEquals(hybridCallbacks, accurateCallbacks);
         assertEquals(List.of("0:A4:22", "0:A0:69", "0:28:F0"),
                 hybridCallbacks);
-        assertDeepEquals(hybrid.captureSnapshot().synthSnapshot(),
-                accurate.captureSnapshot().synthSnapshot());
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+        assertDeepEquals(hybrid.captureSnapshot(),
+                accurate.captureSnapshot());
+    }
+
+    @Test
+    void hybridStaysSampleBoundedWhenTimedWorkAppearsMidRead() {
+        // Break caught: HYBRID starts with no pending entry, schedules delayed
+        // work at a later sample, then returns to chunk rendering in the same
+        // call and diverges in resampler phase from SAMPLE_ACCURATE.
+        List<String> hybridCallbacks = new ArrayList<>();
+        MinimalData sharedData = data(0xA0);
+        SmpsSequencerConfig sharedConfig = timedConfig(PROFILE);
+        SmpsDriver hybrid = new SmpsDriver(
+                44_100.0, recordingObserver(hybridCallbacks));
+        MidReadTimedSequencer hybridSource =
+                new MidReadTimedSequencer(
+                        hybrid, sharedData, sharedConfig, 16);
+        hybrid.addSequencer(hybridSource, false);
+        hybridCallbacks.clear();
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
+
+        List<String> accurateCallbacks = new ArrayList<>();
+        SmpsDriver accurate = new SmpsDriver(
+                44_100.0, recordingObserver(accurateCallbacks));
+        MidReadTimedSequencer accurateSource =
+                new MidReadTimedSequencer(
+                        accurate, sharedData, sharedConfig, 16);
+        accurate.addSequencer(accurateSource, false);
+        accurateCallbacks.clear();
+        accurate.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+
+        short[] hybridPcm = new short[512];
+        short[] accuratePcm = new short[512];
+        hybrid.read(hybridPcm);
+        accurate.read(accuratePcm);
+
+        assertEquals(0, hybrid.getHybridChunkCountForTesting(),
+                "a timed owner fences the complete read to sample boundaries");
+        assertArrayEquals(accuratePcm, hybridPcm);
+        assertEquals(accurateCallbacks, hybridCallbacks);
+        assertEquals(List.of("0:A4:22", "0:A0:69", "0:28:F0"),
+                hybridCallbacks);
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+        assertDeepEquals(accurate.captureSnapshot(),
+                hybrid.captureSnapshot());
     }
 
     @Test
@@ -748,6 +955,87 @@ class TestSmpsDriverYmWriteTimeline {
         assertStableState(before, driver);
     }
 
+    @Test
+    void poisonedServiceRetryReusesDenseDiagnosticIdentities() {
+        // Break caught: rollback restores audio state but leaks the rejected
+        // service and sequencer observer ordinals into the retry.
+        List<SmpsDriverServiceObserver.ServiceEvent> retriedEvents =
+                new ArrayList<>();
+        MinimalData sharedData = data(0xA0);
+        SmpsSequencerConfig sharedConfig = timedConfig(PROFILE);
+        SmpsDriver retried = new SmpsDriver();
+        SmpsSequencer retriedSource = sequencer(
+                retried, sharedData, sharedConfig);
+        retried.addSequencer(retriedSource, false);
+        retried.setServiceObserver(recordingServiceObserver(retriedEvents));
+        SmpsDriverSnapshot before = retried.captureSnapshot();
+
+        retried.beginSequencerService(retriedSource,
+                SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        Synthesizer.YmTimingScope poison = retried.beginYmTiming(
+                retriedSource, SegmentKind.COMPLETION_RESTORE, VARIANT);
+        retried.writeFm(retriedSource, 0, 0xB0, 0x01);
+        assertThrows(IllegalStateException.class, poison::close);
+        assertDeepEquals(before, retried.captureSnapshot());
+        assertEquals(List.of(), retriedEvents);
+
+        publishFrequencyService(retried, retriedSource);
+
+        List<SmpsDriverServiceObserver.ServiceEvent> cleanEvents =
+                new ArrayList<>();
+        SmpsDriver clean = new SmpsDriver();
+        SmpsSequencer cleanSource = sequencer(
+                clean, sharedData, sharedConfig);
+        clean.addSequencer(cleanSource, false);
+        clean.setServiceObserver(recordingServiceObserver(cleanEvents));
+        publishFrequencyService(clean, cleanSource);
+
+        assertEquals(1, retriedEvents.size());
+        assertEquals(0L, retriedEvents.getFirst().ordinal());
+        assertEquals(0L, retriedEvents.getFirst().sequencer()
+                .instanceOrdinal());
+        assertEquals(cleanEvents, retriedEvents);
+        assertEquals(clean.nextServiceSequencerOrdinalForTesting(),
+                retried.nextServiceSequencerOrdinalForTesting());
+        assertDeepEquals(clean.captureSnapshot(), retried.captureSnapshot());
+    }
+
+    @Test
+    void ordinaryCompletionRetainsCommittedDelayedWriteUntilOneDrain() {
+        // Break caught: removing a completed sequencer treats its committed
+        // self-contained entry like an unpublished journal and cancels it.
+        YmServiceTimingProfile delayed = YmServiceTimingProfile.of(2,
+                new Segment(SegmentKind.COMPLETION_RESTORE, VARIANT,
+                        new long[] { 0, 100_000 }));
+        List<String> callbacks = new ArrayList<>();
+        SmpsDriver driver = new SmpsDriver(
+                44_100.0, recordingObserver(callbacks));
+        CompletingSequencer source =
+                new CompletingSequencer(driver, delayed, 0xA0);
+        driver.addSequencer(source, true);
+        callbacks.clear();
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(source,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        try (Synthesizer.YmTimingScope timing = driver.beginYmTiming(
+                source, SegmentKind.COMPLETION_RESTORE, VARIANT)) {
+            timing.consumeSuppressedHardwareAttempt();
+            driver.writeFm(source, 0, 0x22, 0x08);
+        }
+        driver.endSequencerService(service);
+
+        driver.read(new short[2]);
+
+        assertTrue(driver.sequencersForTesting().isEmpty());
+        assertEquals(1, driver.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending().size());
+        assertEquals(List.of(), callbacks);
+        driver.render(new short[512]);
+        assertEquals(List.of("0:22:08"), callbacks);
+        driver.render(new short[512]);
+        assertEquals(1, callbacks.size());
+    }
+
     private static void publishFromAnotherJavaMethod(
             SmpsDriver driver, SmpsSequencer source,
             int register, int value) {
@@ -792,6 +1080,33 @@ class TestSmpsDriverYmWriteTimeline {
 
             @Override
             public void onPsgWrite(int value) {
+            }
+        };
+    }
+
+    private static ChipWriteObserver recordingAllObserver(
+            List<String> events) {
+        return new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                events.add("YM:%d:%02X:%02X".formatted(
+                        port, register, value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                events.add("PSG:%02X".formatted(value));
+            }
+        };
+    }
+
+    private static SmpsDriverServiceObserver recordingServiceObserver(
+            List<SmpsDriverServiceObserver.ServiceEvent> events) {
+        return new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                events.add(event);
             }
         };
     }
@@ -894,10 +1209,9 @@ class TestSmpsDriverYmWriteTimeline {
         return sequencer;
     }
 
-    private static SmpsSequencer palSequencer(
+    private static SmpsSequencer prioritySequencer(
             SmpsDriver driver, int id) {
-        MinimalData data = new MinimalData();
-        data.setId(id);
+        MinimalData data = data(id);
         SmpsSequencer sequencer = new SmpsSequencer(
                 data, AudioTestFixtures.EMPTY_DAC, driver,
                 AudioManager.getInstance(),
@@ -906,12 +1220,66 @@ class TestSmpsDriverYmWriteTimeline {
                         .fmSfxTakeoverMode(
                                 SmpsSequencerConfig.FmSfxTakeoverMode
                                         .REGISTER_SEQUENCE)
-                        .palServicePolicy(
-                                SmpsSequencerConfig.PalServicePolicy
-                                        .FULL_DRIVER_REPEAT_EVERY_SIXTH)
+                        .sfxPriorityPolicy(
+                                SmpsSequencerConfig.SfxPriorityPolicy.NONE)
                         .build());
         sequencer.addTrack(track());
         return sequencer;
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver, MinimalData data,
+            SmpsSequencerConfig config) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), config);
+        sequencer.addTrack(track());
+        return sequencer;
+    }
+
+    private static void setPalFullUpdateCounter(
+            SmpsDriver driver, int value) {
+        try {
+            Field field = SmpsDriver.class.getDeclaredField(
+                    "palFullUpdateCounter");
+            field.setAccessible(true);
+            field.setInt(driver, value);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void addPendingRemoval(
+            SmpsDriver driver, SmpsSequencer sequencer) {
+        try {
+            Field field = SmpsDriver.class.getDeclaredField(
+                    "pendingRemovals");
+            field.setAccessible(true);
+            ((List<SmpsSequencer>) field.get(driver)).add(sequencer);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private static void advanceSequencersWithoutRender(
+            SmpsDriver driver, int frames) {
+        try {
+            Method method = SmpsDriver.class.getDeclaredMethod(
+                    "advanceSequencersBatch", int.class);
+            method.setAccessible(true);
+            method.invoke(driver, frames);
+        } catch (InvocationTargetException failure) {
+            if (failure.getCause() instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (failure.getCause() instanceof Error error) {
+                throw error;
+            }
+            throw new AssertionError(failure.getCause());
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static void fillRemainingCapacity(
@@ -1003,6 +1371,160 @@ class TestSmpsDriverYmWriteTimeline {
             throw new IllegalStateException(
                     "failure after timed preparation");
         }
+    }
+
+    private static final class AggregateWritingSequencer
+            extends SmpsSequencer {
+        private final SmpsDriver driver;
+        private int advanceCalls;
+        private int repeatCalls;
+
+        private AggregateWritingSequencer(
+                SmpsDriver driver, int id) {
+            super(data(id), AudioTestFixtures.EMPTY_DAC, driver,
+                    AudioManager.getInstance(), timedPalConfig(PROFILE));
+            this.driver = driver;
+        }
+
+        @Override
+        public int advanceBatchAndCountDriverFrames(int samples) {
+            advanceCalls++;
+            publishEightWrites();
+            return 1;
+        }
+
+        @Override
+        public void repeatDriverService() {
+            repeatCalls++;
+            publishEightWrites();
+        }
+
+        @Override
+        public int getSamplesUntilNextTempoFrame() {
+            return 1;
+        }
+
+        @Override
+        public int getSamplesUntilNextObservableEvent() {
+            return 1;
+        }
+
+        @Override
+        public boolean isComplete() {
+            return false;
+        }
+
+        private void publishEightWrites() {
+            SmpsDriverServiceObserver.ServiceEvent service =
+                    driver.beginSequencerService(this,
+                            SmpsDriverServiceObserver.ServiceKind
+                                    .SEQUENCER_TICK);
+            try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                    this, SegmentKind.SFX_ADMISSION_PREP, VARIANT)) {
+                for (int index = 0; index < 5; index++) {
+                    driver.writeFm(this, 0, 0x22, index);
+                }
+            }
+            try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                    this, SegmentKind.FREQUENCY_AND_KEY_ON, VARIANT)) {
+                for (int index = 0; index < 3; index++) {
+                    driver.writeFm(this, 0, 0x22, 5 + index);
+                }
+            }
+            driver.endSequencerService(service);
+        }
+    }
+
+    private static final class MidReadTimedSequencer
+            extends SmpsSequencer {
+        private final SmpsDriver driver;
+        private final int publishAtSample;
+        private int elapsed;
+        private boolean published;
+
+        private MidReadTimedSequencer(
+                SmpsDriver driver, MinimalData data,
+                SmpsSequencerConfig config, int publishAtSample) {
+            super(data, AudioTestFixtures.EMPTY_DAC, driver,
+                    AudioManager.getInstance(), config);
+            this.driver = driver;
+            this.publishAtSample = publishAtSample;
+        }
+
+        @Override
+        public int advanceBatchAndCountDriverFrames(int samples) {
+            elapsed += samples;
+            if (!published && elapsed >= publishAtSample) {
+                published = true;
+                publishFrequencyService(driver, this);
+            }
+            return 0;
+        }
+
+        @Override
+        public int getSamplesUntilNextTempoFrame() {
+            return published ? Integer.MAX_VALUE
+                    : Math.max(1, publishAtSample - elapsed);
+        }
+
+        @Override
+        public int getSamplesUntilNextObservableEvent() {
+            return getSamplesUntilNextTempoFrame();
+        }
+
+        @Override
+        public boolean isComplete() {
+            return false;
+        }
+    }
+
+    private static final class CompletingSequencer extends SmpsSequencer {
+        private CompletingSequencer(
+                SmpsDriver driver, YmServiceTimingProfile profile, int id) {
+            super(data(id), AudioTestFixtures.EMPTY_DAC, driver,
+                    AudioManager.getInstance(), timedConfig(profile));
+        }
+
+        @Override
+        public boolean isComplete() {
+            return true;
+        }
+    }
+
+    private static MinimalData data(int id) {
+        MinimalData data = new MinimalData();
+        data.setId(id);
+        return data;
+    }
+
+    private static SmpsSequencerConfig timedConfig(
+            YmServiceTimingProfile profile) {
+        return new SmpsSequencerConfig.Builder()
+                .ymServiceTimingProfile(profile)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode
+                                .REGISTER_SEQUENCE)
+                .sfxPriorityPolicy(
+                        SmpsSequencerConfig.SfxPriorityPolicy.NONE)
+                .build();
+    }
+
+    private static SmpsSequencerConfig timedPalConfig(
+            YmServiceTimingProfile profile) {
+        return new SmpsSequencerConfig.Builder()
+                .ymServiceTimingProfile(profile)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode
+                                .REGISTER_SEQUENCE)
+                .sfxPriorityPolicy(
+                        SmpsSequencerConfig.SfxPriorityPolicy.NONE)
+                .driverServiceOrder(
+                        SmpsSequencerConfig.DriverServiceOrder
+                                .SFX_THEN_MUSIC)
+                .palServicePolicy(
+                        SmpsSequencerConfig.PalServicePolicy
+                                .FULL_DRIVER_REPEAT_EVERY_SIXTH)
+                .build();
     }
 
     private record StableState(
