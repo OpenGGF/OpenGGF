@@ -1152,6 +1152,12 @@ public class SidekickCpuController {
         }
 
         if (shouldEnterLevelEventDormantMarker()) {
+            // Keep the presentation decision at the same ROM owner boundary as
+            // the gameplay marker. A level rebind can clear the setup-only
+            // hidden latch before this first routine-0 dispatch; loc_13A10
+            // (sonic3k.asm:26389-26397) still suppresses Player_2 before
+            // object_control=$83 parks her at the dormant sentinel.
+            suppressInitialLevelEventPresentationIfNeeded();
             // ROM Tails_Init (sonic3k.asm:26101-26156) plus the loc_13A10
             // dormant-marker block (sonic3k.asm:26389-26397) run inside one
             // ROM tick: SpawnLevelMainSprites installs the Tails object,

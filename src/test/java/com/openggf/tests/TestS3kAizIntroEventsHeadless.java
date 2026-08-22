@@ -117,6 +117,40 @@ public class TestS3kAizIntroEventsHeadless {
                 "Dormant intro Tails should be locked before the first replay frame renders");
         assertTrue(tails.isHidden(),
                 "AIZ dormant Tails remains hidden until the level-event release boundary");
+
+        for (int frame = 0; frame < 8; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "dormant intro Tails must remain at the ROM marker while routine $0A is active");
+        assertEquals(0, tails.getCentreY() & 0xFFFF,
+                "dormant intro Tails must not enter generic falling physics before release");
+        assertTrue(tails.isHidden(),
+                "dormant intro Tails remains suppressed throughout the pre-release frames");
+    }
+
+    @Test
+    void aizDormantMarkerDispatchReassertsSuppressionIfSetupRevealedTails() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+
+        // Model a production setup/rebind that reconstructs the CPU state after
+        // the event provider has made the AIZ decision but before Tails_Control's
+        // routine-0 dispatch. The ROM branch itself must still own the dormant
+        // presentation gate (sonic3k.asm:26389-26397).
+        controller.reset();
+        tails.setHidden(false);
+        controller.setInitialState(SidekickCpuController.State.INIT);
+        assertFalse(tails.isHidden(), "test setup must model a revealed sidekick");
+
+        controller.update(1);
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState());
+        assertTrue(tails.isHidden(),
+                "the routine-0 AIZ dormant-marker branch must reassert suppression before physics/render");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF);
+        assertEquals(0, tails.getCentreY() & 0xFFFF);
     }
 
     @Test

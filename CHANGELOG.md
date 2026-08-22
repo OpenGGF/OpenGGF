@@ -2,8 +2,9 @@
 
 - **S3K intro sidekicks stay suppressed until their ROM-owned release:** AIZ
   and ICZ now hide the registered Player 2 presentation during setup and
-  restore it at the existing dormant-marker release, while preserving the
-  first CPU dispatch, cutscene timing, rewind state, and ordinary S2 Tails
+  reassert that gate at the routine-0 dormant-marker dispatch if setup has
+  rebuilt the sidekick, then restore it at the existing release. This preserves
+  the first CPU dispatch, cutscene timing, rewind state, and ordinary S2 Tails
   rendering.
 
 - **CI push validation again recognizes merge commits:** nested content checks
