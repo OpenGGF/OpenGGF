@@ -410,6 +410,10 @@ class TestAudioPresentationArchitectureGuard {
                 "public void commitSfxAdmission() { "
                         + "if (hasChipWriteObserver()) { "
                         + "captureLiveCommandMutation(); } }",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "captureLiveCommandMutation(); } }",
                 "public void commitSfxAdmission() { Object state = "
                         + "this.hasChipWriteObserver() "
                         + "? captureLiveCommandMutation() : null; }")) {
@@ -420,6 +424,18 @@ class TestAudioPresentationArchitectureGuard {
                     "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
                     driver);
         }
+    }
+
+    @Test
+    void driverGuardAllowsTheReviewedYmTransactionRollbackSeam() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { beginYmServiceTransaction(); } "
+                        + "private void beginYmServiceTransaction() { "
+                        + "captureLiveCommandMutation(); }");
+
+        assertFalse(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
     }
 
     @Test
@@ -1136,6 +1152,10 @@ class TestAudioPresentationArchitectureGuard {
         for (Map.Entry<MethodSignature, String> method : methods.entrySet()) {
             String called = method.getKey().name();
             if (called.equals("captureLiveCommandMutation")
+                    // Source-timed services require an all-or-nothing rollback
+                    // token even without diagnostic observers. This named seam
+                    // is reviewed separately from warmed asset materialization.
+                    || called.equals("beginYmServiceTransaction")
                     || called.equals("hasChipWriteObserver")) {
                 continue;
             }
@@ -1192,6 +1212,8 @@ class TestAudioPresentationArchitectureGuard {
         String compact = condition.replaceAll("\\s+", "");
         return compact.equals("hasChipWriteObserver()")
                 || compact.equals("this.hasChipWriteObserver()")
+                || compact.equals("timingProfileFor(admission.sequencer())"
+                        + "!=YmServiceTimingProfile.none()")
                 || compact.equals("hasPotentiallyThrowingAdmissionObserver()")
                 || compact.equals(
                         "this.hasPotentiallyThrowingAdmissionObserver()")

@@ -209,7 +209,10 @@ raw_writes="$stage/raw-capture/native-writes.tsv"
 raw_instructions="$stage/raw-capture/native-instructions.tsv"
 raw_fm5="$stage/raw-capture/native-fm5.s32le"
 raw_writes_sha=$(sha256 "$raw_writes")
-raw_instructions_sha=$(sha256 "$raw_instructions")
+raw_instructions_sha=none
+if [[ "$game" == s1 || "$game" == s2 ]]; then
+  raw_instructions_sha=$(sha256 "$raw_instructions")
+fi
 raw_projection_sha=$(cut -f1-6 "$raw_writes" | sha256sum | awk '{print $1}')
 raw_fm5_sha=$(sha256 "$raw_fm5")
 if [[ "$game" == s3k ]]; then
@@ -221,8 +224,10 @@ if [[ "$game" == s3k ]]; then
     || fail "native FM5 SHA-256 differs: $raw_fm5_sha"
 fi
 
-ln -- "$raw_instructions" "$instructions_output" \
-  || fail "instruction output appeared during capture: $instructions_output"
+if [[ "$game" == s1 || "$game" == s2 ]]; then
+  ln -- "$raw_instructions" "$instructions_output" \
+    || fail "instruction output appeared during capture: $instructions_output"
+fi
 ln -- "$candidate" "$output" \
   || fail "output appeared during capture: $output"
 printf 'oracle=%s sha256=%s patch=%s core=%s raw_writes=%s instructions=%s projection=%s fm5=%s\n' \

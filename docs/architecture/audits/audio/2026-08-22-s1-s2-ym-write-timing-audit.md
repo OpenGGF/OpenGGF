@@ -155,9 +155,9 @@ the audit does not claim parity during simultaneous VDP DMA.
 
 Deterministic A/B compact result:
 
-- JSON SHA-256 `7af6752daf84249dd2513627e4f1c7260b15e3c28817aaa764440602708296c3`;
-- terminal payload `b522de0b43aa6dbc6b04e53fe6a7b92295be320ae4a986af8a88f8bf48273167`;
-- capture script `a21fbd6ee44173fd8bbe20b0af747bc703f0f1c7f9c521a1866f89e579cd7388`;
+- JSON SHA-256 `e3ce0fa19db864cfdbc79f7f53568c1cdb323ec8b7a1d536444f6e6f8ee9e56b`;
+- terminal payload `ac4566256ebd364bc085c3af8da7ff27884f8f26acee824a7979808ab4f08330`;
+- capture script `b518761c57e7123ad086e6560616929be5cf6a7d91280af4f61ce0d14f618b1e`;
 - raw writes `ea68ebff17ad939b9b17040f7ce846a4bfef895a4401abcf8104a1e972f0179e`;
 - full instruction stream `d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c`;
 - canonical source map `96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c`;
@@ -169,7 +169,7 @@ Deterministic A/B compact result:
 
 The expanded lab regenerated the existing locked-on oracle twice. A/B files
 are byte-identical at SHA-256
-`f420226631d8a98beb0c8d097ad4457eaa9b02efd5429ee9c2c05d7380105220`.
+`5115c7e2bb5443ae7ccf1fa32d3d41dc1f77d17f086405e29bd3c258e96ee7e2`.
 All 12 groups retain the exact 34-write register/value order, group 7 retains
 the 151,590-master-cycle relative terminal delta and
 `[757,976,882,1023]` native key-on attenuation, and every DMA/fault/overflow

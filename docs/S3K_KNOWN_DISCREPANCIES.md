@@ -31,6 +31,45 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 18. [MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)](#mhz2-end-boss-background-vertical-deform-sub_554b8)
 19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
 20. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
+21. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
+
+---
+
+## YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase
+
+**Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and
+`VirtualSynthesizer`.
+
+### Original implementation
+
+The retail Z80 sound driver runs asynchronously and writes the YM2612 through
+the hardware bus. The observed Blue Sphere FM5 upload has stable relative bus
+spacing, while its absolute placement within a VInt depends on scheduling state
+outside the retained bounded capture.
+
+### Our implementation
+
+OpenGGF starts the S3K sound service at its engine-owned service boundary and
+schedules every FM write by the native source-relative master-cycle vector.
+The YM2612 advances and drains the writes at internal-sample boundaries. The
+engine does not claim or synthesize an absolute native VInt phase, and Sonic 1
+and Sonic 2 retain untimed profiles under their separately audited drivers.
+
+### Rationale
+
+The relative vector is reproducible across twelve native upload groups and is
+enough to preserve chip evolution during the write sequence. Inventing an
+absolute phase from a bounded movie would fit the fixture rather than model the
+ROM. The retained evidence also contains no DMA-contended upload, so no special
+DMA timing is inferred. These limits are explicit in the validation report and
+do not introduce trace-fed runtime state.
+
+### Verification
+
+The native lab, compact oracle, transactional service tests, rewind/observer
+guards, bounded playback trace, and three-ROM audio suites are recorded in
+`docs/architecture/validation/audio/2026-08-22-s3k-blue-sphere-audio-validation.md`.
+Human listening remains required before integration.
 
 ---
 

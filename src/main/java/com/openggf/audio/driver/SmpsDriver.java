@@ -1107,14 +1107,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             ServiceTransaction timingTransaction = null;
             boolean claimed = false;
             try {
-                boolean timedAdmission = timingProfileFor(
-                        admission.sequencer())
-                        != YmServiceTimingProfile.none();
-                if (timedAdmission || (captureLocalJournal
+                if (timingProfileFor(admission.sequencer())
+                        != YmServiceTimingProfile.none()
+                        || (captureLocalJournal
                         && hasPotentiallyThrowingAdmissionObserver())) {
                     rollbackState = captureSfxAdmissionMutation(admission);
                 }
-                if (timedAdmission) {
+                if (timingProfileFor(admission.sequencer())
+                        != YmServiceTimingProfile.none()) {
                     timingTransaction = beginYmServiceTransaction(
                             admission.sequencer(), false);
                 }

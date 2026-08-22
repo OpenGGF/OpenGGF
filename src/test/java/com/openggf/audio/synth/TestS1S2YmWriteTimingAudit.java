@@ -174,7 +174,7 @@ class TestS1S2YmWriteTimingAudit {
         if (game.equals("s2")) {
             String scriptSha = sha256(Files.readAllBytes(Path.of(
                     "tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh")));
-            assertEquals("a21fbd6ee44173fd8bbe20b0af747bc703f0f1c7f9c521a1866f89e579cd7388",
+            assertEquals("b518761c57e7123ad086e6560616929be5cf6a7d91280af4f61ce0d14f618b1e",
                     scriptSha);
             assertEquals(scriptSha,
                     oracle.path("provenance").path("capture_script_sha256").asText());
@@ -464,6 +464,18 @@ class TestS1S2YmWriteTimingAudit {
                              String pcText, int pc, String opcodeText, int opcode,
                              long startMasterCycle, String nextPc, long deltaToNextStart,
                              String flow, String branchOutcome, String roles, String source) {
+    }
+
+    @Test
+    void captureScriptPublishesInstructionLedgersOnlyForInstructionAuditGames()
+            throws IOException {
+        String script = Files.readString(Path.of(
+                "tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh"));
+        assertTrue(script.contains("if [[ \"$game\" == s1 || \"$game\" == s2 ]]; then\n"
+                        + "  raw_instructions_sha=$(sha256 \"$raw_instructions\")"),
+                "S3K produces the compact YM oracle but no CPU instruction ledger");
+        assertTrue(script.contains("  ln -- \"$raw_instructions\" \"$instructions_output\""),
+                "S1/S2 must retain their native instruction ledgers");
     }
 
     private record SourceRange(String game, int startPc, int endPc, String label,

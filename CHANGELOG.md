@@ -1,5 +1,15 @@
 # Changelog
 
+- **Sonic 3&K FM writes now reach the YM2612 on the source driver's measured
+  bus timeline instead of collapsing into one host-side instant:** the retained
+  Genesis Plus GX lab records the repeatable 34-write Blue Sphere FM5 upload,
+  and the engine schedules that sequence by source-relative master cycle while
+  retaining atomic service publication, rollback, rewind, pause, fade, and
+  cross-SFX ownership semantics. Sonic 1 and Sonic 2 remain on their audited
+  untimed profiles because their 68k/Z80 service paths do not justify inheriting
+  S3K's timing. Automated native, oracle, ROM-backed, and presentation gates are
+  complete; integration remains deliberately blocked on the listening check.
+
 - **Sonic 3&K FM SFX now publish the retail first-note bus sequence:** the
   Z80-style sequencer applies the initial modulation step before its single
   frequency write and no longer emits an extra pan/frequency pair ahead of

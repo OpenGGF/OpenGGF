@@ -47,10 +47,10 @@ class TestYm2612ChipGpgxParity {
         assertEquals(151_590L,
                 oracle.groups().get(7).relativeLastMasterCycle());
         assertEquals(
-                "42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1",
+                "9c204d55e1c7524bf94180aa930d6be6a88e332d5227f187a2ed3d048b6bd375",
                 oracle.provenance().diagnosticPatchSha256());
         assertEquals(
-                "b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a",
+                "3e2cddbb22c93676046f980926fd14d0689bb5bfd36ee75d0d630c2289b940a3",
                 oracle.provenance().diagnosticCoreSha256());
         assertTrue(oracle.groups().stream()
                 .flatMap(group -> group.writes().stream())
@@ -548,7 +548,7 @@ class TestYm2612ChipGpgxParity {
                 provenance.path("gpgx_commit").asText());
         assertEquals("82d61b0c5547f45a55a2d87e337494c9a1d668cd690b858db1ceba59801fdcb1",
                 provenance.path("harness_sha256").asText());
-        assertEquals("f420226631d8a98beb0c8d097ad4457eaa9b02efd5429ee9c2c05d7380105220",
+        assertEquals("5115c7e2bb5443ae7ccf1fa32d3d41dc1f77d17f086405e29bd3c258e96ee7e2",
                 provenance.path("retained_oracle_sha256").asText());
         List<EnvelopeSeed> isolated = new ArrayList<>();
         for (JsonNode node : root.path("isolated")) {
