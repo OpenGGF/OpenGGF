@@ -1251,7 +1251,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     publishAdmissionFmPreparationWrites(sequencer, port,
                             channel, keyChannel, operatorOffsets);
                 }
-                sequencer.markFirstFm5Admission();
+                markFirstFm5Admission(sequencer);
             } else {
                 publishAdmissionFmPreparationWrites(sequencer, port,
                         channel, keyChannel, operatorOffsets);
@@ -1269,6 +1269,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int operatorOffset : operatorOffsets) {
             publishAuthorizedFmWrite(sequencer, port,
                     0x90 + operatorOffset + channel, 0);
+        }
+    }
+
+    private static void markFirstFm5Admission(SmpsSequencer sequencer) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.type == SmpsSequencer.TrackType.FM
+                    && track.channelId == 4) {
+                track.firstFm5AdmissionVoicePending = true;
+                track.firstFm5AdmissionAttackPending = false;
+            }
         }
     }
 
@@ -3112,12 +3123,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int i = 0; i < 6; i++) {
             if (fmLocks[i] == seq) {
                 if (isSfx && i == 4
-                        && seq.consumeFm5CompletionKeyOffPending()) {
+                        && consumeFm5CompletionKeyOffPending(seq)) {
                     YmServiceTimingProfile.Variant restoreVariant = null;
                     for (SmpsSequencer candidate : sequencers) {
                         if (!isSfx(candidate)) {
-                            restoreVariant = candidate
-                                    .completionRestoreVariant(i);
+                            restoreVariant = completionRestoreVariant(
+                                    candidate, i);
                             if (restoreVariant != null) {
                                 break;
                             }
@@ -3161,6 +3172,48 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         psgLatches.remove(seq);
         sfxAdmissionOrdinals.remove(seq);
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
+    }
+
+    private static boolean consumeFm5CompletionKeyOffPending(
+            SmpsSequencer sequencer) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.channelId == 4
+                    && track.fm5CompletionKeyOffPending) {
+                track.fm5CompletionKeyOffPending = false;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static YmServiceTimingProfile.Variant completionRestoreVariant(
+            SmpsSequencer sequencer, int channelId) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.type == SmpsSequencer.TrackType.FM
+                    && track.channelId == channelId
+                    && track.active && track.overridden
+                    && track.voiceData != null) {
+                return new YmServiceTimingProfile.Variant(
+                        channelId < 3 ? 0 : 1, 4, true, false,
+                        bit7CarrierMask(track.voiceData, 21),
+                        YmServiceTimingProfile.PathKind.COMPLETION_RESTORE);
+            }
+        }
+        return null;
+    }
+
+    private static int bit7CarrierMask(byte[] voice, int totalLevelBase) {
+        int mask = 0;
+        for (int storedOperator = 0; storedOperator < 4;
+                storedOperator++) {
+            int index = totalLevelBase + storedOperator;
+            if (index < voice.length && (voice[index] & 0x80) != 0) {
+                mask |= 1 << storedOperator;
+            }
+        }
+        return mask;
     }
 
     private void updateOverrides(SmpsSequencer.TrackType type, int ch, boolean overridden) {
@@ -3219,15 +3272,26 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
                 if (fmLocks[ch] == source) {
                     publishAuthorizedFmWrite(source, port, reg, val);
+                } else {
+                    consumeSuppressedFmAttemptIfAudited();
                 }
             } else {
                 if (fmLocks[ch] == null) {
                     publishAuthorizedFmWrite(source, port, reg, val);
+                } else {
+                    consumeSuppressedFmAttemptIfAudited();
                 }
             }
         } else {
             // Global or unmapped
             publishAuthorizedFmWrite(source, port, reg, val);
+        }
+    }
+
+    private void consumeSuppressedFmAttemptIfAudited() {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction != null && transaction.activeScope != null) {
+            transaction.activeScope.consumeSuppressedHardwareAttempt();
         }
     }
 

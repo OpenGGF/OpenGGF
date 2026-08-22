@@ -159,6 +159,45 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
+    void overriddenMusicHelperConsumesOneAuditedSlotBeforeSfxKeyOn() {
+        // Break caught: an authentic music note-off rejected by the FM5 SFX
+        // lock consumes no source slot, so the following SFX key-on either
+        // shifts early or the two-slot scope aborts at close.
+        YmServiceTimingProfile twoAttempts = YmServiceTimingProfile.of(2,
+                new Segment(SegmentKind.COMPLETION_RESTORE, VARIANT,
+                        new long[] { 0, 3_150 }));
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer music = sequencer(
+                driver, YmServiceTimingProfile.none(), 0x81);
+        music.trackAt(0).channelId = 4;
+        driver.addSequencer(music, false);
+        SmpsSequencer sfx = sequencer(driver, twoAttempts, 0xA0);
+        sfx.trackAt(0).channelId = 4;
+        driver.addSequencer(sfx, true);
+        setFmLock(driver, 4, sfx);
+        music.trackAt(0).overridden = true;
+
+        SmpsDriverServiceObserver.ServiceEvent service =
+                driver.beginSequencerService(sfx,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
+                sfx, SegmentKind.COMPLETION_RESTORE, VARIANT)) {
+            music.stopNote(music.trackAt(0));
+            driver.writeFm(sfx, 0, 0x28, 0xF5);
+        }
+        driver.endSequencerService(service);
+
+        List<YmWriteTimeline.Entry> pending = driver.captureSnapshot()
+                .synthSnapshot().ymWriteTimeline().pending();
+        assertEquals(1, pending.size(),
+                "the suppressed music helper publishes no entry");
+        assertEquals(3_150L, pending.getFirst().dueMasterCycle(),
+                "the following SFX key-on retains its declared second slot");
+        assertEquals(0x28, pending.getFirst().register());
+        assertEquals(0xF5, pending.getFirst().value());
+    }
+
+    @Test
     void suppressedOnlyServiceCarriesItsCommittedCursorIntoNextService() {
         // Break caught: a suppressed final slot advances no pending entry, so
         // the next service re-anchors at zero and schedules backwards.
@@ -286,9 +325,9 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
-    void rejectedArbitrationConsumesOnlyAnExplicitSuppressedSlot() {
-        // Break caught: OpenGGF arbitration silently consumes a native slot,
-        // or leaves a rejected audited attempt unclassified.
+    void rejectedArbitrationConsumesExactlyOneAuditedSuppressedSlot() {
+        // Break caught: OpenGGF arbitration leaves a rejected native hardware
+        // attempt unclassified, or requires a caller to double-account it.
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer incumbent = prioritySequencer(driver, 0xA0);
         SmpsSequencer challenger = prioritySequencer(driver, 0xA1);
@@ -305,7 +344,6 @@ class TestSmpsDriverYmWriteTimeline {
         try (Synthesizer.YmTimingScope timing = driver.beginYmTiming(
                 challenger, SegmentKind.KEY_OFF, VARIANT)) {
             driver.writeFm(challenger, 0, 0x28, 0x00);
-            timing.consumeSuppressedHardwareAttempt();
         }
         driver.endSequencerService(service);
 

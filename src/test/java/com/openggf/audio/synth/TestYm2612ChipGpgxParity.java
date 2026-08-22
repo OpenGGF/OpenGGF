@@ -32,6 +32,44 @@ class TestYm2612ChipGpgxParity {
     }
 
     @Test
+    void sourceTimedGroupImprovesFourSyntheticEnvelopeStartingStates()
+            throws Exception {
+        YmNativeOracle.Group group = YmNativeOracle.load(ORACLE)
+                .groups().get(7);
+        List<EnvelopeSeed> seeds = List.of(
+                new EnvelopeSeed("attack", 1, false,
+                        new int[] { 1023, 995, 995, 995 }),
+                new EnvelopeSeed("decay", 16, false,
+                        new int[] { 1023, 938, 938, 938 }),
+                new EnvelopeSeed("sustain", 96, false,
+                        new int[] { 1023, 885, 885, 885 }),
+                new EnvelopeSeed("near-release", 96, true,
+                        new int[] { 1023, 1023, 1023, 1023 }));
+
+        List<String> failures = new ArrayList<>();
+        for (EnvelopeSeed seed : seeds) {
+            Ym2612Chip.Snapshot startingState = syntheticFm5State(
+                    group, seed);
+            int[] atomic = replayGroup(startingState, group, true);
+            int[] sourceTimed = replayGroup(startingState, group, false);
+            int atomicError = attenuationError(
+                    atomic, seed.correctedExpected());
+            int timedError = attenuationError(
+                    sourceTimed, seed.correctedExpected());
+
+            if (timedError >= atomicError) {
+                failures.add(seed.name() + ": atomic="
+                        + Arrays.toString(atomic) + " (" + atomicError
+                        + "), timed=" + Arrays.toString(sourceTimed) + " ("
+                        + timedError + ")");
+            }
+        }
+        assertEquals(List.of(), failures,
+                "source timing must improve the fixed corrected-oracle L1 "
+                        + "attenuation metric in every isolated state");
+    }
+
+    @Test
     void dacDefaultsToUnsmoothedHardwareSamples() {
         assertFalse(new Ym2612Chip().captureSnapshot().dacInterpolate());
     }
@@ -225,6 +263,84 @@ class TestYm2612ChipGpgxParity {
                         com.openggf.audio.rewind.SmpsSourceDescriptor.Kind.UNKNOWN,
                         -1, null, null, 0, 0, 0, false, 0),
                 com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind.KEY_OFF);
+    }
+
+    private static Ym2612Chip.Snapshot syntheticFm5State(
+            YmNativeOracle.Group group, EnvelopeSeed seed) {
+        Ym2612Chip chip = configuredEnhancedChip();
+        for (YmNativeOracle.Write write : group.writes()) {
+            chip.write(write.port(), write.register(), write.value());
+        }
+        chip.renderStereo(new int[seed.samples()],
+                new int[seed.samples()]);
+        if (seed.release()) {
+            chip.write(0, 0x28, 0x05);
+            chip.renderStereo(new int[24], new int[24]);
+        }
+        return chip.captureSnapshot();
+    }
+
+    private static int[] replayGroup(
+            Ym2612Chip.Snapshot startingState,
+            YmNativeOracle.Group group,
+            boolean atomic) {
+        Ym2612Chip chip = configuredEnhancedChip();
+        chip.restoreSnapshot(startingState);
+        YmWriteTimeline timeline = new YmWriteTimeline(group.writes().size());
+        chip.setWriteTimeline(timeline);
+        List<Integer> attenuation = new ArrayList<>();
+        chip.setWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+            }
+
+            @Override
+            public void onYm2612KeyOn(
+                    int channel, int operator, int value) {
+                if (channel == 4) {
+                    attenuation.add(value);
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+        List<YmWriteTimeline.Entry> entries = new ArrayList<>();
+        for (YmNativeOracle.Write write : group.writes()) {
+            entries.add(new YmWriteTimeline.Entry(
+                    atomic ? 0 : write.relativeMasterCycle(),
+                    write.sourceOrdinal(), write.port(), write.register(),
+                    write.value(), 0, 0,
+                    new com.openggf.audio.rewind.SmpsSourceDescriptor(
+                            com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
+                                    .UNKNOWN,
+                            -1, null, null, 0, 0, 0, false, 0),
+                    com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind
+                            .FM_VOICE_UPLOAD));
+        }
+        timeline.commit(entries);
+        chip.renderStereo(new int[200], new int[200]);
+        return attenuation.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private static int attenuationError(int[] actual, int[] expected) {
+        assertEquals(expected.length, actual.length);
+        int error = 0;
+        for (int index = 0; index < expected.length; index++) {
+            error += Math.abs(actual[index] - expected[index]);
+        }
+        return error;
+    }
+
+    private record EnvelopeSeed(
+            String name, int samples, boolean release,
+            int[] correctedExpected) {
+        private EnvelopeSeed {
+            correctedExpected = Arrays.copyOf(
+                    correctedExpected, correctedExpected.length);
+        }
     }
 
     private static final class RecordingObserver implements ChipWriteObserver {

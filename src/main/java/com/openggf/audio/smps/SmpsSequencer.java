@@ -2115,16 +2115,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
-    /** Marks only the audited locked-on FM5 admission source path. */
-    public void markFirstFm5Admission() {
-        for (Track track : tracks) {
-            if (track.type == TrackType.FM && track.channelId == 4) {
-                track.firstFm5AdmissionVoicePending = true;
-                track.firstFm5AdmissionAttackPending = false;
-            }
-        }
-    }
-
     private YmServiceTimingProfile.Variant firstAttackVariant(Track track) {
         return new YmServiceTimingProfile.Variant(
                 1, 4, true, false,
@@ -2573,31 +2563,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 return false;
         }
         return true;
-    }
-
-    public boolean consumeFm5CompletionKeyOffPending() {
-        for (Track track : tracks) {
-            if (track.channelId == 4 && track.fm5CompletionKeyOffPending) {
-                track.fm5CompletionKeyOffPending = false;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public YmServiceTimingProfile.Variant completionRestoreVariant(
-            int channelId) {
-        for (Track track : tracks) {
-            if (track.type == TrackType.FM && track.channelId == channelId
-                    && track.active && track.overridden
-                    && track.voiceData != null) {
-                return new YmServiceTimingProfile.Variant(
-                        channelId < 3 ? 0 : 1, 4, true, false,
-                        bit7CarrierMask(track.voiceData, 21),
-                        YmServiceTimingProfile.PathKind.COMPLETION_RESTORE);
-            }
-        }
-        return null;
     }
 
     @Override
