@@ -206,6 +206,34 @@ prescribed groups with fresh reports:
 
 The headless group also supplied the fresh 67-segment oracle above.
 
+## Final integration verification
+
+After a final fetch, `origin/develop` remained exactly
+`d473365ed72facfffcd36d9e07af09666b094d37`; the required fast-forward pull was
+already up to date. Final feature head `8c2487848` completed the exact
+`mvn -Dmse=off test` suite at 15,333 tests / 54 failures / 65 errors / 26
+skips. Merge commit `d3b62c23a` completed the same suite at 15,333 / 54 / 75 /
+26. Against the preserved current-main baseline (15,299 / 55 / 81 / 26), the
+merged tree has 128 shared red identities, eight baseline-only identities, and
+one raw merged-only identity.
+
+The merged-only identity is
+`TestMhzMushroomParachuteObjectInstance#fallingPlayerInGrabWindowIsCarriedAtRomOffsetAndParachuteStartsFalling`.
+Its expected 5378 / actual 5408 payload is byte-identical to an earlier
+main-only full-suite failure, neither its source nor test changes in this
+feature, and the merged class passes 12/12 in isolation. The ten-error swing
+between final feature and merged runs is the established order-dependent S3K
+decoder ROM-property set already present in the current-main baseline. The
+only three shared message differences are the known S2 lag-table first-bucket
+selection and two Mockito identity hashes. No baseline-passing failure or
+baseline red worsening is attributable to the merge.
+
+Fresh merged focused gates passed: authority/ownership/reader 44/44,
+migration/lifecycle 179/179, exact installed-root structure 1/1, and the two
+hash-verified Sonic 1 visual bridge routes 2/2. The complete logs, fresh XML,
+and three-way identity comparison are preserved under the managed task root
+`trace-active-segment-final-integration-20260822T160522Z-1236228-7a08fffb`.
+
 ## Conclusion
 
 Every gate applicable through Task 8 Step 7 passed at the reconciled
@@ -214,5 +242,6 @@ through `7b16dc94b` pass their focused acceptance matrix. The design is
 implemented and feature-branch validated. This conclusion
 includes the controller-owned independent review, which found no Critical,
 Important, or Minor issues and returned GREEN spec and code-quality verdicts
-after a fresh 44/44 focused gate. It does not claim merge, post-merge
-comparison, push, or cleanup.
+after a fresh 44/44 focused gate. The merge and post-merge comparison are also
+complete with zero attributable regression. This report does not yet claim
+push or cleanup.
