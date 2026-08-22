@@ -64,6 +64,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1897,6 +1898,119 @@ class TestTraceSessionLauncherRunBranch {
     }
 
     @Test
+    void specialStageReturnBridgeReportsThroughRunDiagnosticsAfterLeaseDetach()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
+        Engine engine = new Engine(EngineServices.current());
+        engine.getGameLoop().setInputHandler(new InputHandler());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+
+        TraceRunManifest.Segment source = new TraceRunManifest.Segment(
+                "source", "level", "complete_run", 0, 1,
+                0, 1, null, null);
+        TraceRunManifest.Segment special = new TraceRunManifest.Segment(
+                "special", "special_stage", "s1_special_stage", 1, 1,
+                0, 0, 0, null);
+        TraceRunManifest.Segment bridge = new TraceRunManifest.Segment(
+                "bridge", "level", "complete_run", 2, 2,
+                0, 2, null, null);
+        TraceRunManifest.Transition entry = new TraceRunManifest.Transition(
+                0, 1, "giant_ring", 1,
+                null, null, null, null, null, null, null, null);
+        TraceRunManifest.Transition exit = new TraceRunManifest.Transition(
+                1, 2, "stage_exit", 2,
+                null, null, null, null, null, null, null, null);
+        TraceData oneRow = TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1),
+                List.of(TraceFrame.executionTestFrame(0, 1, 1, 0)));
+        TraceData bridgeRows = TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 2),
+                List.of(
+                        TraceFrame.executionTestFrame(0, 10, 20, 0),
+                        TraceFrame.executionTestFrame(1, 11, 20, 0)));
+        TraceRunManifest canonical = TraceRunManifest.load(
+                canonicalEmeraldRunDir.resolve("run_manifest.json"));
+        var specialRows = TraceRunReferencePlanLoader.load(
+                canonical, canonicalEmeraldRunDir).get(1).specialStageRows();
+        List<TraceRunReplayWalker.SegmentPlan> plans = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        source, oneRow, null, entry),
+                new TraceRunReplayWalker.SegmentPlan(
+                        special, oneRow, entry, exit,
+                        specialRows,
+                        TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL),
+                new TraceRunReplayWalker.SegmentPlan(
+                        bridge, bridgeRows, exit, null));
+        assertEquals(TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE,
+                plans.get(2).executionPolicy());
+
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("special-return-bridge.bk2"), "logkey", Map.of(),
+                List.of(
+                        frame(0), frame(1),
+                        new Bk2FrameInput(2, 1, 0, false, ""), frame(3)),
+                4);
+        TraceSessionLauncher session = TestRunPayloads.session(
+                null, movie, plans, null);
+        TraceRunExternalDiagnostics diagnostics =
+                new TraceRunExternalDiagnostics(null);
+        setField(session, "runExternalDiagnostics", diagnostics);
+
+        closeRunSegment(session, 0);
+        openRunPayload(session, 1);
+        closeRunSegment(session, 1);
+        assertNull(getField(session, "comparator"),
+                "the closed special-stage source must not remain a sink");
+        setField(session, "runBoundaryProbe",
+                new TraceRunReplayWalker.BoundaryProbe(
+                        new TraceRunReplayWalker.EngineHooks() {
+                            @Override public int currentBk2Frame() { return 2; }
+                            @Override public com.openggf.game.BonusStageType
+                                    peekBonusRequest() {
+                                return com.openggf.game.BonusStageType.NONE;
+                            }
+                            @Override public boolean isSpecialStageRequested() {
+                                return false;
+                            }
+                            @Override public GameMode currentMode() {
+                                return GameMode.TITLE_CARD;
+                            }
+                        }));
+        GameServices.playbackDebug().startSession(movie, 2);
+        applyRunDestinationAdmission(session, new DestinationAdmissionReceipt(
+                2, DestinationAdmissionReceipt.InputClock.SHARED, 2, 0,
+                new DestinationAdmissionReceipt.LevelPresentationIdentity(
+                        0, 0, 2),
+                -1, 2, 2,
+                TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE));
+
+        TraceRunPlaybackCoordinator coordinator =
+                org.mockito.Mockito.mock(TraceRunPlaybackCoordinator.class);
+        org.mockito.Mockito.when(coordinator.phase()).thenReturn(
+                TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT);
+        org.mockito.Mockito.when(coordinator.currentSegmentIndex()).thenReturn(2);
+        TraceRunFrameDriver frameDriver = new TraceRunFrameDriver();
+        setField(session, "runCoordinator", coordinator);
+        setField(session, "runFrameDriver", frameDriver);
+        context.installTraceRunFrameDriver(frameDriver);
+        setField(session, "activeSession", session);
+
+        assertDoesNotThrow(() -> driveRunPhysicalRow(
+                session, () -> { },
+                GameServices.playbackDebug()::onLevelFrameAdvanced));
+        assertEquals(1, diagnostics.errorCount(),
+                "the bridge mismatch must retain whole-run diagnostic ownership");
+        assertEquals("input_alignment",
+                diagnostics.recentMismatches().getFirst().field());
+        assertNull(getField(session, "comparator"),
+                "bridge comparison must not resurrect a closed segment alias");
+        assertNotNull(getField(session, "activeRunPayload"));
+    }
+
+    @Test
     void specialStageEntryRetainsDestinationPhysicalRowForAdmission()
             throws Exception {
         TraceRunManifest run = TraceRunManifest.load(
@@ -2234,6 +2348,40 @@ class TestTraceSessionLauncherRunBranch {
                     "closeRunSegment", int.class);
             method.setAccessible(true);
             method.invoke(launcher, segmentIndex);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void openRunPayload(
+            TraceSessionLauncher launcher, int segmentIndex) {
+        try {
+            Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "openRunPayload", int.class);
+            method.setAccessible(true);
+            method.invoke(launcher, segmentIndex);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void driveRunPhysicalRow(
+            TraceSessionLauncher launcher,
+            Runnable productionIteration,
+            Runnable advanceRunPhysicalRow) {
+        try {
+            Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "driveRunPhysicalRow", Runnable.class, Runnable.class);
+            method.setAccessible(true);
+            method.invoke(launcher, productionIteration, advanceRunPhysicalRow);
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (e.getCause() instanceof Error error) {
+                throw error;
+            }
+            throw new AssertionError(e.getCause());
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

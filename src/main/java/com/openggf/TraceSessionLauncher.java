@@ -1715,7 +1715,7 @@ public final class TraceSessionLauncher {
             if (runStructuralComparator != null) {
                 FrameComparison terminal = runStructuralComparator.finalizeSegment(
                         GameServices.captureDynamicArtDiagnostics());
-                ingestRunExternalComparison(terminal);
+                ingestRunUndisplayedComparison(terminal);
                 runStructuralComparator = null;
             } else if (comparator != null) {
                 comparator.finalizeTerminalDynamicArtComparison();
@@ -2299,17 +2299,6 @@ public final class TraceSessionLauncher {
         if (runDynamicArtGapJournal != null) {
             runDynamicArtGapJournal.gapOpened(segmentIndex);
         }
-    }
-
-    private void ingestRunExternalComparison(FrameComparison comparison) {
-        if (comparison == null) {
-            return;
-        }
-        if (comparator == null) {
-            throw new IllegalStateException(
-                    "run structural comparison has no diagnostic sink");
-        }
-        comparator.ingestExternalComparison(comparison);
     }
 
     private void ingestRunUndisplayedComparison(FrameComparison comparison) {
@@ -3136,7 +3125,7 @@ public final class TraceSessionLauncher {
                                             row.disposition()
                                                     .runsProductionLifecycle(),
                                             !row.observedVblankCounterAdvance());
-                            ingestRunExternalComparison(result);
+                            ingestRunUndisplayedComparison(result);
                         }
                     }
 
