@@ -129,6 +129,8 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertEquals(SidekickCpuController.State.DORMANT_MARKER, tails.getCpuController().getState());
         assertTrue(tails.isObjectControlled(),
                 "ROM loc_13A74 writes object_control=$83 for the dormant marker");
+        assertTrue(tails.isHidden(),
+                "ICZ setup must suppress the registered Player_2 presentation during the snowboard intro");
 
         for (int frame = 0; frame < 30; frame++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -207,6 +209,8 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "ROM leaves object_control=$83 intact when Obj_LevelIntroICZ1 writes Tails_CPU_routine=2");
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, tails.getCpuController().getState(),
                 "ROM Obj_LevelIntroICZ1 crash release writes Tails_CPU_routine=2");
+        assertFalse(tails.isHidden(),
+                "ICZ crash release must restore Tails presentation before catch-up flight");
     }
 
     @Test

@@ -1039,7 +1039,9 @@ class TestSidekickCpuControllerCarry {
                 mgzReleasedChaseYAccel,
                 source.flightTimer(),
                 source.catchUpTargetX(),
-                source.catchUpTargetY());
+                source.catchUpTargetY(),
+                source.initialPresentationSuppressed(),
+                source.initialPresentationWasHidden());
     }
 
     @Test

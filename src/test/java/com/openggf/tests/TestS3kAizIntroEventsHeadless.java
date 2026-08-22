@@ -100,6 +100,8 @@ public class TestS3kAizIntroEventsHeadless {
                 "Load_Level must not run Tails_Control before its first ordinary Player_2 dispatch");
         assertFalse(tails.isObjectControlled(),
                 "AIZ bootstrap must not eagerly manufacture the dormant object_control state");
+        assertTrue(tails.isHidden(),
+                "AIZ setup must suppress the registered Player_2 presentation before Tails' first CPU dispatch");
 
         fixture.stepFrame(false, false, false, false, false);
 
@@ -113,6 +115,25 @@ public class TestS3kAizIntroEventsHeadless {
                 "ROM object_control=$83 keeps dormant intro Tails under object control");
         assertTrue(tails.isControlLocked(),
                 "Dormant intro Tails should be locked before the first replay frame renders");
+        assertTrue(tails.isHidden(),
+                "AIZ dormant Tails remains hidden until the level-event release boundary");
+    }
+
+    @Test
+    void aizIntroDoesNotReleaseTailsAtKnucklesSpawnThreshold() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        fixture.stepFrame(false, false, false, false, false);
+
+        Sonic3kLevelEventManager levelEvents =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        fixture.camera().setX((short) 0x0918);
+        levelEvents.getAizEvents().updatePrePhysics(ACT_1);
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState(),
+                "Knuckles' $918 spawn threshold must not release AIZ Tails");
+        assertTrue(tails.isHidden(),
+                "AIZ Tails remains suppressed while the Knuckles intro is still active");
     }
 
     @Test
@@ -125,6 +146,9 @@ public class TestS3kAizIntroEventsHeadless {
 
         controller.setInitialState(SidekickCpuController.State.INIT);
         fixture.stepFrame(false, false, false, false, false);
+
+        assertTrue(tails.isHidden(),
+                "AIZ Tails is hidden while the dormant marker owns the intro presentation");
 
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
                 "ROM loc_13A10/sub_13ECA parks AIZ intro Tails at x_pos=$7F00");
@@ -153,6 +177,8 @@ public class TestS3kAizIntroEventsHeadless {
                 "AIZ1_Resize's prior-frame Tails_CPU_routine=2 write is visible before the next sidekick CPU slot");
         assertTrue(tails.isObjectMappingFrameControl(),
                 "routine 2 retains object_control=$83 until its 64-frame catch-up trigger");
+        assertFalse(tails.isHidden(),
+                "AIZ resize release must restore the sidekick presentation state");
     }
 
     @Test
@@ -173,6 +199,8 @@ public class TestS3kAizIntroEventsHeadless {
         aizEvents.updatePrePhysics(ACT_1);
         assertEquals(SidekickCpuController.State.INIT, controller.getState(),
                 "A late dynamic-event release before Tails reaches routine $0A must be a no-op");
+        assertTrue(tails.isHidden(),
+                "A no-op release must not clear the setup-owned presentation latch");
 
         tails.setCentreX((short) 0x7F00);
         tails.setCentreY((short) 0);
@@ -184,6 +212,20 @@ public class TestS3kAizIntroEventsHeadless {
 
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "AIZ pre-physics must retry until the dormant marker is actually released, independent of palette state");
+    }
+
+    @Test
+    void dormantPresentationReleaseRestoresAHiddenValueOwnedBeforeSetup() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        tails.setHidden(true);
+        controller.reset();
+        controller.suppressInitialLevelEventPresentationIfNeeded();
+        controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
+
+        assertTrue(controller.releaseDormantMarkerForLevelEvent());
+        assertTrue(tails.isHidden(),
+                "A dormant release must restore a pre-existing hidden owner value");
     }
 
     @Test

@@ -164,6 +164,9 @@ public class SidekickCpuController {
     private SidekickRespawnStrategy respawnStrategy;
 
     private State state = State.INIT;
+    /** Presentation-only latch while a level-event dormant marker owns the intro. */
+    private boolean initialPresentationSuppressed;
+    private boolean initialPresentationWasHidden;
     private int despawnCounter;
     private int frameCounter;
     private int controlCounter;
@@ -1557,6 +1560,20 @@ public class SidekickCpuController {
         sidekick.setObjectMappingFrameControl(true);
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         diagnosticS3kInteractWord = 0;
+    }
+
+    /**
+     * Suppresses only the setup presentation for a sidekick whose level-event
+     * provider owns a dormant-marker intro. The first ordinary CPU dispatch
+     * still owns the gameplay marker itself (sonic3k.asm:26389-26397).
+     */
+    public void suppressInitialLevelEventPresentationIfNeeded() {
+        if (initialPresentationSuppressed || !shouldEnterLevelEventDormantMarker()) {
+            return;
+        }
+        initialPresentationWasHidden = sidekick.isHidden();
+        initialPresentationSuppressed = true;
+        sidekick.setHidden(true);
     }
 
     /**
@@ -5293,7 +5310,11 @@ public class SidekickCpuController {
             return false;
         }
         if (!usesS3kCatchUpMarker()) {
-            return releaseDormantMarkerThroughRespawnStrategy();
+            boolean released = releaseDormantMarkerThroughRespawnStrategy();
+            if (released) {
+                restoreInitialLevelEventPresentation();
+            }
+            return released;
         }
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager != null) {
@@ -5319,7 +5340,17 @@ public class SidekickCpuController {
         // The level-event write changes only Tails_CPU_routine. Preserve the
         // dormant marker's object_control=$83 animation suppression until
         // Tails_Catch_Up_Flying reaches loc_13B50 and writes $81.
+        restoreInitialLevelEventPresentation();
         return true;
+    }
+
+    private void restoreInitialLevelEventPresentation() {
+        if (!initialPresentationSuppressed) {
+            return;
+        }
+        sidekick.setHidden(initialPresentationWasHidden);
+        initialPresentationSuppressed = false;
+        initialPresentationWasHidden = false;
     }
 
     private boolean releaseDormantMarkerThroughRespawnStrategy() {
@@ -5820,7 +5851,9 @@ public class SidekickCpuController {
                 mgzReleasedChaseYAccel,
                 flightTimer,
                 catchUpTargetX,
-                catchUpTargetY);
+                catchUpTargetY,
+                initialPresentationSuppressed,
+                initialPresentationWasHidden);
     }
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
@@ -5879,6 +5912,8 @@ public class SidekickCpuController {
         flightTimer = snapshot.flightTimer();
         catchUpTargetX = snapshot.catchUpTargetX();
         catchUpTargetY = snapshot.catchUpTargetY();
+        initialPresentationSuppressed = snapshot.initialPresentationSuppressed();
+        initialPresentationWasHidden = snapshot.initialPresentationWasHidden();
     }
 
     public void applyFlyingCarryVerticalVelocity() {
@@ -5915,8 +5950,15 @@ public class SidekickCpuController {
      */
     public void resetForInitialProcessSpritesSlot() {
         int assemblyAnimation = sidekick.getForcedAnimationId();
+        boolean preserveInitialPresentationLatch =
+                initialPresentationSuppressed && sidekick.isHidden();
+        boolean previousInitialPresentationWasHidden = initialPresentationWasHidden;
         carryController().clearState();
         resetCpuState();
+        if (preserveInitialPresentationLatch) {
+            initialPresentationSuppressed = true;
+            initialPresentationWasHidden = previousInitialPresentationWasHidden;
+        }
         // Tails_Init clears the CPU globals but does not write anim(a0).
         // Preserve an animation selected earlier by SpawnLevelMainSprites
         // (for example the simple falling intro's $1B).
@@ -5966,6 +6008,8 @@ public class SidekickCpuController {
         flightTimer = 0;
         catchUpTargetX = 0;
         catchUpTargetY = 0;
+        initialPresentationSuppressed = false;
+        initialPresentationWasHidden = false;
     }
 
     /**

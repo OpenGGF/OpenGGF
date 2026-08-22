@@ -1,5 +1,11 @@
 # Changelog
 
+- **S3K intro sidekicks stay suppressed until their ROM-owned release:** AIZ
+  and ICZ now hide the registered Player 2 presentation during setup and
+  restore it at the existing dormant-marker release, while preserving the
+  first CPU dispatch, cutscene timing, rewind state, and ordinary S2 Tails
+  rendering.
+
 - **CI push validation again recognizes merge commits:** nested content checks
   no longer overwrite the shell field-separator state used to count commit
   parents. True merge commits remain exempt from per-commit trailer checks,

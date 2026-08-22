@@ -146,6 +146,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         super();
     }
 
+    @Override
+    public void initLevel(int zone, int act) {
+        super.initLevel(zone, act);
+        // Shared-level fixtures may reinitialize the provider after the player
+        // roster already exists. Keep the setup presentation decision at the
+        // event-provider boundary so the next initial Process_Sprites pass
+        // cannot expose a dormant intro sidekick.
+        primeSidekickIntroPresentation();
+    }
+
     // =========================================================================
     // AbstractLevelEventManager contract
     // =========================================================================
@@ -664,6 +674,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && currentAct == 0
                 && getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
             applySimpleFallingIntro("LRZ1");
+        }
+        primeSidekickIntroPresentation();
+    }
+
+    private void primeSidekickIntroPresentation() {
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null) {
+                controller.suppressInitialLevelEventPresentationIfNeeded();
+            }
         }
     }
 

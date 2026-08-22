@@ -744,6 +744,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		playable.getDrowningController().reset();
 		playable.setFlipSpeed(4);
 		playable.getAnimationManager().publishPreviousAnimationId(0);
+		cpu.suppressInitialLevelEventPresentationIfNeeded();
 	}
 
 	private static void publishInitialAssemblyInput(

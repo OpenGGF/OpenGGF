@@ -320,7 +320,9 @@ public record PerObjectRewindSnapshot(
             short mgzReleasedChaseYAccel,
             int flightTimer,
             int catchUpTargetX,
-            int catchUpTargetY
+            int catchUpTargetY,
+            boolean initialPresentationSuppressed,
+            boolean initialPresentationWasHidden
     ) {}
 
     /**

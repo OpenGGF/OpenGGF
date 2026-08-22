@@ -404,7 +404,9 @@ class TestInitialPlayableProcessSpritesPass {
                 (short) 0x5678,
                 0x7D,
                 0x1357,
-                0x2468);
+                0x2468,
+                source.initialPresentationSuppressed(),
+                source.initialPresentationWasHidden());
     }
 
     private static void assertSecondaryStatusAndPowerTimersZero(

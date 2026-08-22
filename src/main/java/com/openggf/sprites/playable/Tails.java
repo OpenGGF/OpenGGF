@@ -17,6 +17,9 @@ public class Tails extends AbstractPlayableSprite {
 	}
 
 	public void draw() {
+		if (isHidden()) {
+			return;
+		}
 		// ROM: Obj05 (Tails' tails) renders independently of invulnerability blink
 		if (getTailsTailsController() != null) {
 			getTailsTailsController().draw();
