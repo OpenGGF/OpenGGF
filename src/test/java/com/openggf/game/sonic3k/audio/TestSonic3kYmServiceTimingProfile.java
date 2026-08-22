@@ -129,15 +129,15 @@ class TestSonic3kYmServiceTimingProfile {
         assertArrayEquals(new long[] { 0, 3_150, 3_150, 3_150 },
                 advances(profile, SegmentKind.SFX_MAX_RELEASE, BLUE_SPHERE));
         assertArrayEquals(new long[] {
-                0, 3_225, 3_765,
+                6_435, 3_225, 3_765,
                 3_570, 3_570, 3_570, 3_570, 3_570, 3_570, 3_570,
                 3_570, 3_570, 3_570, 3_570, 3_570, 3_570, 3_570,
                 3_570, 3_570, 3_570, 3_570, 3_570,
                 5_145, 3_825, 3_825, 3_825 },
                 advances(profile, SegmentKind.FM_VOICE_UPLOAD, BLUE_SPHERE));
-        assertArrayEquals(new long[] { 0 },
+        assertArrayEquals(new long[] { 8_055 },
                 advances(profile, SegmentKind.KEY_OFF, BLUE_SPHERE));
-        assertArrayEquals(new long[] { 0, 2_700, 2_880 },
+        assertArrayEquals(new long[] { 30_630, 2_700, 2_880 },
                 advances(profile, SegmentKind.FREQUENCY_AND_KEY_ON, BLUE_SPHERE));
     }
 
@@ -185,7 +185,8 @@ class TestSonic3kYmServiceTimingProfile {
             sumPath(root, segmentNode.path("source_prefix_path").asText());
             long[] derived = derivedAdvances(root, clock,
                     segmentNode.path("writes"));
-            assertEquals(0, derived[0], kind + " slot-zero anchor");
+            derived[0] = Math.addExact(derived[0],
+                    crossSegmentAdvance(root, clock, segmentNode));
             assertArrayEquals(derived, advances(
                     Sonic3kYmServiceTimingProfile.PROFILE, kind, variant),
                     kind + " " + variant);
@@ -384,9 +385,10 @@ class TestSonic3kYmServiceTimingProfile {
         assertThrows(IllegalArgumentException.class,
                 () -> new Segment(SegmentKind.KEY_OFF, variant,
                         new long[] { 0, -1 }));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Segment(SegmentKind.KEY_OFF, variant,
-                        new long[] { 15 }));
+        assertArrayEquals(new long[] { 15 },
+                new Segment(SegmentKind.KEY_OFF, variant,
+                        new long[] { 15 })
+                        .advanceBeforeWriteMasterCycles());
         assertThrows(IllegalArgumentException.class,
                 () -> YmServiceTimingProfile.of(1,
                         new Segment(SegmentKind.KEY_OFF, variant,

@@ -98,6 +98,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * This cached flag eliminates HashSet lookups in the hot path.
      */
     public void setIsSfx(boolean isSfx) {
+        if (isSfx && !this.isSfx
+                && config.getYmServiceTimingProfile()
+                        != YmServiceTimingProfile.none()) {
+            for (Track track : tracks) {
+                if (track.type == TrackType.FM && track.channelId == 4) {
+                    track.firstFm5AdmissionVoicePending = true;
+                    track.firstFm5AdmissionAttackPending = false;
+                }
+            }
+        }
         this.isSfx = isSfx;
     }
 
@@ -362,9 +372,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public boolean forceRefresh;
         // Locked-on zPlaySound -> cfSetVoice -> first note source path. This
         // state is semantic track state, not a sound-id or frame predicate.
-        public boolean firstFm5AdmissionVoicePending;
-        public boolean firstFm5AdmissionAttackPending;
-        public boolean fm5CompletionKeyOffPending;
+        private boolean firstFm5AdmissionVoicePending;
+        private boolean firstFm5AdmissionAttackPending;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
@@ -2535,7 +2544,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                                     .RESTORE_MUSIC_DIRECTLY) {
                 // Locked-on fix_sndbugs=0 cfStopTrack owns this key-off and
                 // the restored music upload as one source-timed operation.
-                t.fm5CompletionKeyOffPending = true;
                 return;
             }
             int hwCh = t.channelId;
@@ -3657,9 +3665,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.fmVolEnvHold,
                 track.fmVolEnvOpMask,
                 track.forceRefresh,
-                track.firstFm5AdmissionVoicePending,
-                track.firstFm5AdmissionAttackPending,
-                track.fm5CompletionKeyOffPending,
+                (track.firstFm5AdmissionVoicePending ? 1 : 0)
+                        | (track.firstFm5AdmissionAttackPending ? 2 : 0),
                 track.ssgEg,
                 track.dacMuted,
                 track.modStepInEffect,
@@ -3749,11 +3756,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.fmVolEnvOpMask = snapshot.fmVolEnvOpMask();
         track.forceRefresh = snapshot.forceRefresh();
         track.firstFm5AdmissionVoicePending =
-                snapshot.firstFm5AdmissionVoicePending();
+                (snapshot.internalStateFlags() & 1) != 0;
         track.firstFm5AdmissionAttackPending =
-                snapshot.firstFm5AdmissionAttackPending();
-        track.fm5CompletionKeyOffPending =
-                snapshot.fm5CompletionKeyOffPending();
+                (snapshot.internalStateFlags() & 2) != 0;
         copyInto(snapshot.ssgEg(), track.ssgEg);
         track.dacMuted = snapshot.dacMuted();
         track.modStepInEffect = snapshot.modStepInEffect();

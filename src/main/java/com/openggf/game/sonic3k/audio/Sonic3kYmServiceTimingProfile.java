@@ -35,11 +35,13 @@ public final class Sonic3kYmServiceTimingProfile {
             segments.add(new Segment(SegmentKind.SFX_MAX_RELEASE,
                     firstAttack, MAX_RELEASE));
             segments.add(new Segment(SegmentKind.FM_VOICE_UPLOAD,
-                    firstAttack, 6_435, voiceUpload(carrierMask)));
+                    firstAttack, withLeadingAdvance(6_435,
+                            voiceUpload(carrierMask))));
             segments.add(new Segment(SegmentKind.KEY_OFF,
-                    firstAttack, 8_055, new long[] { 0 }));
+                    firstAttack, new long[] { 8_055 }));
             segments.add(new Segment(SegmentKind.FREQUENCY_AND_KEY_ON,
-                    firstAttack, 30_630, FREQUENCY_AND_KEY_ON));
+                    firstAttack, withLeadingAdvance(30_630,
+                            FREQUENCY_AND_KEY_ON)));
 
             Variant restore = new Variant(1, 4, true, false,
                     carrierMask, PathKind.COMPLETION_RESTORE);
@@ -80,5 +82,11 @@ public final class Sonic3kYmServiceTimingProfile {
         restore[1] = 16_170;
         System.arraycopy(voice, 1, restore, 2, voice.length - 1);
         return restore;
+    }
+
+    private static long[] withLeadingAdvance(long leading, long[] advances) {
+        long[] combined = advances.clone();
+        combined[0] = Math.addExact(combined[0], leading);
+        return combined;
     }
 }

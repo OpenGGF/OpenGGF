@@ -331,13 +331,13 @@ class TestS3kBlueSphereSfxParity {
 
         SmpsSequencer blue = admit(driver,
                 loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id), loader);
-        assertTrue(blue.trackAt(0).firstFm5AdmissionVoicePending,
+        assertTrue(pending(blue.trackAt(0), "firstFm5AdmissionVoicePending"),
                 "the post-other admission is a fresh source path");
         driver.read(new short[735 * 3]);
         driver.read(new short[735 * 3]);
 
-        assertFalse(blue.trackAt(0).firstFm5AdmissionVoicePending);
-        assertFalse(blue.trackAt(0).firstFm5AdmissionAttackPending,
+        assertFalse(pending(blue.trackAt(0), "firstFm5AdmissionVoicePending"));
+        assertFalse(pending(blue.trackAt(0), "firstFm5AdmissionAttackPending"),
                 "completed-then-idle ownership must consume exactly one first path");
     }
 
@@ -351,29 +351,29 @@ class TestS3kBlueSphereSfxParity {
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer sequencer = admit(driver, data, loader);
         SmpsSequencer.Track track = sequencer.trackAt(0);
-        assertTrue(track.firstFm5AdmissionVoicePending);
-        assertFalse(track.firstFm5AdmissionAttackPending);
+        assertTrue(pending(track, "firstFm5AdmissionVoicePending"));
+        assertFalse(pending(track, "firstFm5AdmissionAttackPending"));
 
         var snapshot = sequencer.captureSnapshot();
-        track.firstFm5AdmissionVoicePending = false;
-        track.firstFm5AdmissionAttackPending = true;
+        setPending(track, "firstFm5AdmissionVoicePending", false);
+        setPending(track, "firstFm5AdmissionAttackPending", true);
         sequencer.restoreSnapshot(snapshot);
-        assertTrue(sequencer.trackAt(0).firstFm5AdmissionVoicePending);
-        assertFalse(sequencer.trackAt(0).firstFm5AdmissionAttackPending);
+        assertTrue(pending(sequencer.trackAt(0), "firstFm5AdmissionVoicePending"));
+        assertFalse(pending(sequencer.trackAt(0), "firstFm5AdmissionAttackPending"));
 
         SmpsSequencer.Track identityTrack = sequencer.trackAt(0);
         var token = sequencer.captureLiveCommandMutation();
-        identityTrack.firstFm5AdmissionVoicePending = false;
-        identityTrack.firstFm5AdmissionAttackPending = true;
+        setPending(identityTrack, "firstFm5AdmissionVoicePending", false);
+        setPending(identityTrack, "firstFm5AdmissionAttackPending", true);
         sequencer.rollbackLiveCommandMutation(token);
         assertEquals(identityTrack, sequencer.trackAt(0));
-        assertTrue(identityTrack.firstFm5AdmissionVoicePending);
-        assertFalse(identityTrack.firstFm5AdmissionAttackPending);
+        assertTrue(pending(identityTrack, "firstFm5AdmissionVoicePending"));
+        assertFalse(pending(identityTrack, "firstFm5AdmissionAttackPending"));
 
         driver.read(new short[735 * 2]);
         driver.read(new short[735 * 2]);
-        assertFalse(identityTrack.firstFm5AdmissionVoicePending);
-        assertFalse(identityTrack.firstFm5AdmissionAttackPending);
+        assertFalse(pending(identityTrack, "firstFm5AdmissionVoicePending"));
+        assertFalse(pending(identityTrack, "firstFm5AdmissionAttackPending"));
         assertEquals(33, driver.captureSnapshot().synthSnapshot()
                 .ymWriteTimeline().pending().size(),
                 "restored admission executes exactly one 34-attempt path; "
@@ -391,7 +391,7 @@ class TestS3kBlueSphereSfxParity {
         SmpsSequencer sequencer = admit(driver, data, loader);
         driver.read(new short[735 * 2]);
         driver.read(new short[735 * 2]);
-        assertFalse(sequencer.trackAt(0).firstFm5AdmissionAttackPending);
+        assertFalse(pending(sequencer.trackAt(0), "firstFm5AdmissionAttackPending"));
 
         SmpsDriverServiceObserver.ServiceEvent service =
                 driver.beginSequencerService(sequencer,
@@ -514,6 +514,29 @@ class TestS3kBlueSphereSfxParity {
     }
 
     @Test
+    void sourceTimingChangesOnlyDueCyclesAcrossCompleteBlueSpherePlayback() {
+        List<String> timed = completeBlueSphereYmStream(
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        List<String> atomic = completeBlueSphereYmStream(
+                withoutYmTiming(Sonic3kSmpsSequencerConfig.CONFIG));
+
+        assertEquals(atomic, timed,
+                "the whole ordered YM port/register/value stream remains "
+                        + "identical when only due cycles are profiled");
+        assertTrue(timed.stream().filter(write -> write.startsWith("1:A5:"))
+                        .count() > 2,
+                "the scenario includes ordinary note/modulation frequency "
+                        + "writes after the first attack");
+        assertTrue(timed.stream().filter(write -> write.equals("0:28:05"))
+                        .count() > 2,
+                "the scenario reaches SFX completion and music restoration");
+        int restoredPanning = timed.lastIndexOf("1:B5:C0");
+        assertTrue(restoredPanning > timed.indexOf("0:28:05"),
+                "completion restores the music FM5 panning before ordinary "
+                        + "music playback continues");
+    }
+
+    @Test
     void lockedOnAggregateCapacityNCommitsAndNMinusOneRollsBack() {
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
                 TestEnvironment.currentRom());
@@ -527,7 +550,7 @@ class TestS3kBlueSphereSfxParity {
         assertTrue(exact.captureSnapshot().nextYmWriteOrdinal()
                         > exactOrdinal,
                 "N=136 admits the complete four-track owner service");
-        assertFalse(exactSfx.trackAt(0).firstFm5AdmissionVoicePending
+        assertFalse(pending(exactSfx.trackAt(0), "firstFm5AdmissionVoicePending")
                         && exactSfx.trackAt(0).channelId == 4,
                 "the admitted service actually executed");
 
@@ -566,6 +589,38 @@ class TestS3kBlueSphereSfxParity {
     }
 
     @Test
+    void pendingFenceAdmitsMaximalMusicServiceAtNAndRollsBackAtNMinusOne() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        SmpsDriver measured = freshSpecialStageMusic(loader);
+        fillRemainingCapacity(measured, 4_095);
+        long measuredOrdinal = measured.captureSnapshot()
+                .nextYmWriteOrdinal();
+
+        assertDoesNotThrow(() -> advanceWithoutRender(measured, 735 * 2));
+        int musicHorizon = Math.toIntExact(measured.captureSnapshot()
+                .nextYmWriteOrdinal() - measuredOrdinal);
+        assertEquals(169, musicHorizon,
+                "the locked-on Special Stage maximum six-FM initial service "
+                        + "has its source-produced YM horizon frozen");
+
+        SmpsDriver exact = freshSpecialStageMusic(loader);
+        fillRemainingCapacity(exact, musicHorizon);
+        assertDoesNotThrow(() -> advanceWithoutRender(exact, 735 * 2));
+
+        List<String> callbacks = new ArrayList<>();
+        SmpsDriver shortDriver = freshSpecialStageMusic(loader, callbacks);
+        fillRemainingCapacity(shortDriver, musicHorizon - 1);
+        callbacks.clear();
+        SmpsDriverSnapshot before = shortDriver.captureSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                () -> advanceWithoutRender(shortDriver, 735 * 2));
+        assertEquals(List.of(), callbacks);
+        assertDeepEquals(before, shortDriver.captureSnapshot());
+    }
+
+    @Test
     void eachCollapseSiblingServicePathFitsTheThirtyFourAttemptBound() {
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
                 TestEnvironment.currentRom());
@@ -596,18 +651,45 @@ class TestS3kBlueSphereSfxParity {
     }
 
     @Test
-    void sourceTimingAddsNoPublicSequencerControlMethods() {
-        List<String> leaked = List.of(SmpsSequencer.class
-                        .getDeclaredMethods()).stream()
-                .filter(method -> Modifier.isPublic(method.getModifiers()))
-                .map(Method::getName)
-                .filter(name -> name.equals("markFirstFm5Admission")
-                        || name.equals("consumeFm5CompletionKeyOffPending")
-                        || name.equals("completionRestoreVariant"))
-                .toList();
+    void sourceTimingAddsNoPublicMutableRuntimeSurface() {
+        List<String> leaked = new ArrayList<>();
+        for (Class<?> type : List.of(SmpsSequencer.class,
+                SmpsSequencer.Track.class, SmpsSequencerConfig.class,
+                SmpsSequencerConfig.Builder.class,
+                YmServiceTimingProfile.Segment.class)) {
+            List.of(type.getDeclaredMethods()).stream()
+                    .filter(method -> Modifier.isPublic(
+                            method.getModifiers()))
+                    .map(Method::getName)
+                    .filter(TestS3kBlueSphereSfxParity::isTimingLeak)
+                    .map(name -> type.getSimpleName() + ".method:" + name)
+                    .forEach(leaked::add);
+            List.of(type.getDeclaredFields()).stream()
+                    .filter(field -> Modifier.isPublic(field.getModifiers()))
+                    .map(field -> field.getName())
+                    .filter(TestS3kBlueSphereSfxParity::isTimingLeak)
+                    .map(name -> type.getSimpleName() + ".field:" + name)
+                    .forEach(leaked::add);
+            List.of(type.getDeclaredClasses()).stream()
+                    .filter(nested -> Modifier.isPublic(nested.getModifiers()))
+                    .map(Class::getSimpleName)
+                    .filter(TestS3kBlueSphereSfxParity::isTimingLeak)
+                    .map(name -> type.getSimpleName() + ".type:" + name)
+                    .forEach(leaked::add);
+        }
 
         assertEquals(List.of(), leaked,
-                "source timing remains internal driver/sequencer state");
+                "source-path flags, controls, owner switches, and leading "
+                        + "delay accessors remain outside the public API");
+    }
+
+    private static boolean isTimingLeak(String name) {
+        String normalized = name.toLowerCase();
+        return normalized.contains("firstfm5")
+                || normalized.contains("fm5completion")
+                || normalized.contains("ymtimingowner")
+                || normalized.contains("advancebeforefirst")
+                || normalized.equals("completionrestorevariant");
     }
 
     private static PlaybackInvariant playbackInvariant(
@@ -657,6 +739,39 @@ class TestS3kBlueSphereSfxParity {
                         ym.dacHasLatched() ? 1L : 0L));
     }
 
+    private static List<String> completeBlueSphereYmStream(
+            SmpsSequencerConfig config) {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        List<String> writes = new ArrayList<>();
+        SmpsDriver driver = new SmpsDriver();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                writes.add("%d:%02X:%02X".formatted(
+                        port, register, value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+        SmpsSequencer music = new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.SPECIAL_STAGE.id),
+                loader.loadDacData(), driver, config);
+        driver.addSequencer(music, false);
+        driver.read(new short[735 * 8]);
+        writes.clear();
+        SmpsSequencer blueSphere = new SmpsSequencer(
+                loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id),
+                loader.loadDacData(), driver, config);
+        driver.addSequencer(blueSphere, true);
+        driver.read(new short[80_000]);
+        assertTrue(blueSphere.isComplete(),
+                "comparison window includes complete SFX playback");
+        return List.copyOf(writes);
+    }
+
     private static SmpsSequencerConfig withoutYmTiming(
             SmpsSequencerConfig source) {
         return new SmpsSequencerConfig.Builder()
@@ -700,7 +815,6 @@ class TestS3kBlueSphereSfxParity {
                         source.isFadeOutStopsSfxImmediately())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .ymServiceTimingProfile(YmServiceTimingProfile.none())
-                .ymTimingOwnerPolicy(source.getYmTimingOwnerPolicy())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
                 .noteOnPrevent(source.getNoteOnPrevent())
@@ -827,6 +941,28 @@ class TestS3kBlueSphereSfxParity {
         }
     }
 
+    private static boolean pending(
+            SmpsSequencer.Track track, String fieldName) {
+        try {
+            var field = SmpsSequencer.Track.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.getBoolean(track);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private static void setPending(
+            SmpsSequencer.Track track, String fieldName, boolean value) {
+        try {
+            var field = SmpsSequencer.Track.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.setBoolean(track, value);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
     private static SmpsSequencer admit(
             SmpsDriver driver,
             AbstractSmpsData data,
@@ -838,5 +974,33 @@ class TestS3kBlueSphereSfxParity {
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(sequencer, true);
         return sequencer;
+    }
+
+    private static SmpsDriver freshSpecialStageMusic(
+            Sonic3kSmpsLoader loader) {
+        return freshSpecialStageMusic(loader, null);
+    }
+
+    private static SmpsDriver freshSpecialStageMusic(
+            Sonic3kSmpsLoader loader, List<String> callbacks) {
+        SmpsDriver driver = callbacks == null
+                ? new SmpsDriver()
+                : new SmpsDriver(44_100.0, new ChipWriteObserver() {
+                    @Override
+                    public void onYm2612Write(
+                            int port, int register, int value) {
+                        callbacks.add("YM");
+                    }
+
+                    @Override
+                    public void onPsgWrite(int value) {
+                        callbacks.add("PSG");
+                    }
+                });
+        driver.addSequencer(new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.SPECIAL_STAGE.id),
+                loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG), false);
+        return driver;
     }
 }

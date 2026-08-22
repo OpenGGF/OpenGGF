@@ -1,11 +1,20 @@
 package com.openggf.audio.synth;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,6 +25,17 @@ class TestYm2612ChipGpgxParity {
     private static final Path ORACLE = Path.of(
             "docs/architecture/research/audio/"
                     + "s3k-blue-sphere-ym-write-oracle-v1.json");
+    private static final Path ENVELOPE_ORACLE = Path.of(
+            "docs/architecture/research/audio/"
+                    + "s3k-ym-envelope-phase-oracle-v1.json");
+    private static final Path ENVELOPE_HARNESS = Path.of(
+            "docs/architecture/research/audio/"
+                    + "s3k-ym-envelope-phase-native-harness-v1.c");
+    private static final Path PINNED_GPGX = Path.of(
+            "target/audio-parity/native/blue-sphere-manual-source/"
+                    + "waterbox/gpgx/Genesis-Plus-GX");
+    private static final Pattern HARNESS_WRITE = Pattern.compile(
+            "\\{(\\d+),(\\d+),(\\d+),(\\d+)\\}");
 
     @Test
     void correctedOracleUsesPostUpdateCyclesAndZeroDmaStalls()
@@ -32,30 +52,82 @@ class TestYm2612ChipGpgxParity {
     }
 
     @Test
+    void trackedEnvelopeHarnessIsBoundToRetainedCorrectedProjection()
+            throws Exception {
+        JsonNode envelope = new ObjectMapper().readTree(
+                ENVELOPE_ORACLE.toFile());
+        assertEquals("retained corrected native internal-ordinal delta",
+                envelope.path("harness_cycle_projection").asText());
+        assertEquals(sha256(ENVELOPE_HARNESS), envelope.path("provenance")
+                .path("harness_sha256").asText());
+        assertEquals(sha256(ORACLE), envelope.path("provenance")
+                .path("retained_oracle_sha256").asText());
+
+        Matcher matcher = HARNESS_WRITE.matcher(
+                Files.readString(ENVELOPE_HARNESS));
+        List<String> harnessProjection = new ArrayList<>();
+        while (matcher.find()) {
+            harnessProjection.add("%s:%s:%s:%s".formatted(
+                    matcher.group(1), matcher.group(2), matcher.group(3),
+                    matcher.group(4)));
+        }
+        YmNativeOracle.Group retainedGroup = YmNativeOracle.load(ORACLE)
+                .groups().getFirst();
+        List<String> retainedProjection = retainedGroup.writes().stream()
+                .map(write -> "%d:%d:%d:%d".formatted(
+                        write.internalOrdinal()
+                                - retainedGroup.firstInternalOrdinal(),
+                        write.port(), write.register(), write.value()))
+                .toList();
+        assertEquals(retainedProjection, harnessProjection,
+                "the native harness GROUP is mechanically derived from the "
+                        + "retained corrected write projection");
+    }
+
+    @Test
+    void nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent()
+            throws Exception {
+        Path ymSource = PINNED_GPGX.resolve("core/sound/ym2612.c");
+        Assumptions.assumeTrue(Files.isRegularFile(ymSource),
+                "pinned native GPGX checkout is not materialized");
+        Path executable = Path.of("target/audio-parity/"
+                + "s3k-ym-envelope-phase-native-harness-v1");
+        Files.createDirectories(executable.getParent());
+        Process compile = new ProcessBuilder("gcc", "-std=c11", "-O2",
+                "-I" + PINNED_GPGX.resolve("core"),
+                "-I" + PINNED_GPGX.resolve("core/sound"),
+                ENVELOPE_HARNESS.toString(), "-lm", "-o",
+                executable.toString()).inheritIO().start();
+        assertEquals(0, compile.waitFor(), "native harness compilation");
+        Process run = new ProcessBuilder(executable.toString())
+                .redirectErrorStream(true).start();
+        String actual = new String(run.getInputStream().readAllBytes(),
+                StandardCharsets.UTF_8).strip();
+        assertEquals(0, run.waitFor(), "native harness execution");
+        assertEquals(expectedNativeHarnessOutput(), actual);
+    }
+
+    @Test
     void sourceTimedGroupImprovesFourSyntheticEnvelopeStartingStates()
             throws Exception {
         YmNativeOracle.Group group = YmNativeOracle.load(ORACLE)
                 .groups().get(7);
-        List<EnvelopeSeed> seeds = List.of(
-                new EnvelopeSeed("attack", 1, false,
-                        new int[] { 1023, 995, 995, 995 }),
-                new EnvelopeSeed("decay", 16, false,
-                        new int[] { 1023, 938, 938, 938 }),
-                new EnvelopeSeed("sustain", 96, false,
-                        new int[] { 1023, 885, 885, 885 }),
-                new EnvelopeSeed("near-release", 96, true,
-                        new int[] { 1023, 1023, 1023, 1023 }));
+        EnvelopeOracle oracle = loadEnvelopeOracle();
 
         List<String> failures = new ArrayList<>();
-        for (EnvelopeSeed seed : seeds) {
-            Ym2612Chip.Snapshot startingState = syntheticFm5State(
-                    group, seed);
+        for (EnvelopeSeed seed : oracle.isolated()) {
+            Ym2612Chip.Snapshot startingState = syntheticFm5State(seed);
+            assertEnvelopeSeed(startingState, seed);
             int[] atomic = replayGroup(startingState, group, true);
             int[] sourceTimed = replayGroup(startingState, group, false);
+            assertArrayEquals(seed.nativeAtomic(), atomic,
+                    seed.name() + " atomic replay must match native GPGX");
+            assertWithinNativeWindow(sourceTimed, seed.nativeMinimum(),
+                    seed.nativeMaximum(), seed.name());
             int atomicError = attenuationError(
-                    atomic, seed.correctedExpected());
+                    atomic, seed.nativeTimed());
             int timedError = attenuationError(
-                    sourceTimed, seed.correctedExpected());
+                    sourceTimed, seed.nativeTimed());
 
             if (timedError >= atomicError) {
                 failures.add(seed.name() + ": atomic="
@@ -65,8 +137,33 @@ class TestYm2612ChipGpgxParity {
             }
         }
         assertEquals(List.of(), failures,
-                "source timing must improve the fixed corrected-oracle L1 "
-                        + "attenuation metric in every isolated state");
+                "source timing must improve the native GPGX L1 attenuation "
+                        + "metric in every authenticated envelope phase");
+    }
+
+    @Test
+    void overlappingGroupsDoNotRegressTheNativeGpgxMetric()
+            throws Exception {
+        YmNativeOracle.Group group = YmNativeOracle.load(ORACLE)
+                .groups().get(7);
+        OverlapSeed overlap = loadEnvelopeOracle().overlap();
+        Ym2612Chip.Snapshot startingState = syntheticFm5State(
+                overlap.seed());
+        assertEnvelopeSeed(startingState, overlap.seed());
+
+        int[] atomic = replayOverlappingGroups(
+                startingState, group, overlap.offsetSamples(), true);
+        int[] sourceTimed = replayOverlappingGroups(
+                startingState, group, overlap.offsetSamples(), false);
+
+        assertArrayEquals(overlap.seed().nativeAtomic(), atomic,
+                "atomic overlap must match native GPGX");
+        assertWithinNativeWindow(sourceTimed, overlap.nativeMinimum(),
+                overlap.nativeMaximum(), "overlap");
+        assertTrue(attenuationError(sourceTimed, overlap.nativeTimed())
+                        <= attenuationError(atomic, overlap.nativeTimed()),
+                "source timing may not regress the pinned native overlap "
+                        + "attenuation metric");
     }
 
     @Test
@@ -266,18 +363,56 @@ class TestYm2612ChipGpgxParity {
     }
 
     private static Ym2612Chip.Snapshot syntheticFm5State(
-            YmNativeOracle.Group group, EnvelopeSeed seed) {
+            EnvelopeSeed seed) {
         Ym2612Chip chip = configuredEnhancedChip();
-        for (YmNativeOracle.Write write : group.writes()) {
-            chip.write(write.port(), write.register(), write.value());
+        int[] offsets = { 0, 4, 8, 12 };
+        for (int offset : offsets) {
+            chip.write(1, 0x31 + offset, 0x01);
+            chip.write(1, 0x41 + offset, 0x00);
+            chip.write(1, 0x51 + offset, 0x1A);
+            chip.write(1, 0x61 + offset, 0x1F);
+            chip.write(1, 0x71 + offset, 0x08);
+            chip.write(1, 0x81 + offset, 0x4F);
         }
+        chip.write(1, 0xB1, 0x07);
+        chip.write(1, 0xB5, 0xC0);
+        chip.write(1, 0xA5, 0x23);
+        chip.write(1, 0xA1, 0x3F);
+        chip.write(0, 0x28, 0xF5);
         chip.renderStereo(new int[seed.samples()],
                 new int[seed.samples()]);
-        if (seed.release()) {
+        if (seed.releaseSamples() > 0) {
             chip.write(0, 0x28, 0x05);
-            chip.renderStereo(new int[24], new int[24]);
+            chip.renderStereo(new int[seed.releaseSamples()],
+                    new int[seed.releaseSamples()]);
         }
         return chip.captureSnapshot();
+    }
+
+    private static void assertEnvelopeSeed(
+            Ym2612Chip.Snapshot snapshot, EnvelopeSeed seed) {
+        Ym2612Chip.OperatorSnapshot[] operators = snapshot.channels()[4].ops();
+        assertEquals(List.of(seed.phase(), seed.phase(), seed.phase(),
+                        seed.phase()),
+                Arrays.stream(operators)
+                        .map(TestYm2612ChipGpgxParity::envelopePhase)
+                        .toList(),
+                seed.name() + " must exercise the named operator phase");
+        assertArrayEquals(seed.seedAttenuation(),
+                Arrays.stream(operators)
+                        .mapToInt(Ym2612Chip.OperatorSnapshot::volume)
+                        .toArray(),
+                seed.name() + " seed must match the native lab vector");
+    }
+
+    private static String envelopePhase(
+            Ym2612Chip.OperatorSnapshot operator) {
+        try {
+            return operator.getClass().getMethod("curEnv")
+                    .invoke(operator).toString();
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static int[] replayGroup(
@@ -325,6 +460,54 @@ class TestYm2612ChipGpgxParity {
         return attenuation.stream().mapToInt(Integer::intValue).toArray();
     }
 
+    private static int[] replayOverlappingGroups(
+            Ym2612Chip.Snapshot startingState,
+            YmNativeOracle.Group group,
+            int offsetSamples,
+            boolean atomic) {
+        Ym2612Chip chip = configuredEnhancedChip();
+        chip.restoreSnapshot(startingState);
+        YmWriteTimeline timeline = new YmWriteTimeline(
+                group.writes().size() * 2);
+        chip.setWriteTimeline(timeline);
+        List<Integer> attenuation = new ArrayList<>();
+        chip.setWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) { }
+
+            @Override
+            public void onYm2612KeyOn(
+                    int channel, int operator, int value) {
+                if (channel == 4) attenuation.add(value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+        List<YmWriteTimeline.Entry> entries = new ArrayList<>();
+        for (int copy = 0; copy < 2; copy++) {
+            for (YmNativeOracle.Write write : group.writes()) {
+                long due = atomic ? 0
+                        : write.relativeMasterCycle()
+                                + copy * offsetSamples * 1_008L;
+                entries.add(new YmWriteTimeline.Entry(
+                        due, entries.size(), write.port(), write.register(),
+                        write.value(), 0, 0,
+                        new com.openggf.audio.rewind.SmpsSourceDescriptor(
+                                com.openggf.audio.rewind.SmpsSourceDescriptor
+                                        .Kind.UNKNOWN,
+                                -1, null, null, 0, 0, 0, false, 0),
+                        com.openggf.audio.smps.YmServiceTimingProfile
+                                .SegmentKind.FM_VOICE_UPLOAD));
+            }
+        }
+        timeline.commit(entries);
+        chip.renderStereo(new int[400], new int[400]);
+        int start = attenuation.size() - 4;
+        return attenuation.subList(start, attenuation.size()).stream()
+                .mapToInt(Integer::intValue).toArray();
+    }
+
     private static int attenuationError(int[] actual, int[] expected) {
         assertEquals(expected.length, actual.length);
         int error = 0;
@@ -334,14 +517,135 @@ class TestYm2612ChipGpgxParity {
         return error;
     }
 
-    private record EnvelopeSeed(
-            String name, int samples, boolean release,
-            int[] correctedExpected) {
-        private EnvelopeSeed {
-            correctedExpected = Arrays.copyOf(
-                    correctedExpected, correctedExpected.length);
+    private static void assertWithinNativeWindow(
+            int[] actual, int[] minimum, int[] maximum, String name) {
+        assertEquals(minimum.length, actual.length);
+        assertEquals(maximum.length, actual.length);
+        for (int operator = 0; operator < actual.length; operator++) {
+            assertTrue(actual[operator] >= minimum[operator]
+                            && actual[operator] <= maximum[operator],
+                    name + " operator " + operator + " attenuation "
+                            + actual[operator] + " outside native window ["
+                            + minimum[operator] + ", "
+                            + maximum[operator] + "]");
         }
     }
+
+    private static EnvelopeOracle loadEnvelopeOracle() throws Exception {
+        JsonNode root = new ObjectMapper().readTree(ENVELOPE_ORACLE.toFile());
+        assertEquals("openggf.s3k-ym-envelope-phase-oracle.v1",
+                root.path("schema").asText());
+        assertEquals("post_fm_update", root.path("event_phase").asText());
+        assertEquals(0, root.path("dma_stall_count").asInt());
+        JsonNode provenance = root.path("provenance");
+        assertEquals("051d430d3d1b54625f9900c8f152d7f232e06daf",
+                provenance.path("gpgx_commit").asText());
+        assertEquals("82d61b0c5547f45a55a2d87e337494c9a1d668cd690b858db1ceba59801fdcb1",
+                provenance.path("harness_sha256").asText());
+        assertEquals("dc3b53ebd572dbbdfbab613b370d5faa36f4aac91b9b4a8ee72ab42892f2d162",
+                provenance.path("retained_oracle_sha256").asText());
+        List<EnvelopeSeed> isolated = new ArrayList<>();
+        for (JsonNode node : root.path("isolated")) {
+            isolated.add(seed(node));
+        }
+        JsonNode overlap = root.path("overlap");
+        EnvelopeSeed overlapSeed = new EnvelopeSeed(
+                "overlap", overlap.path("seed_samples").asInt(), 0,
+                overlap.path("native_phase").asText(),
+                ints(overlap.path("seed_attenuation")),
+                ints(overlap.path("atomic_second_key_on_attenuation")),
+                ints(overlap.path("source_timed_second_key_on_attenuation")),
+                ints(overlap.path("source_timed_min")),
+                ints(overlap.path("source_timed_max")));
+        return new EnvelopeOracle(isolated, new OverlapSeed(
+                overlapSeed,
+                overlap.path("second_group_offset_internal_samples").asInt(),
+                ints(overlap.path("source_timed_second_key_on_attenuation")),
+                ints(overlap.path("source_timed_min")),
+                ints(overlap.path("source_timed_max"))));
+    }
+
+    private static String expectedNativeHarnessOutput() throws Exception {
+        JsonNode root = new ObjectMapper().readTree(ENVELOPE_ORACLE.toFile());
+        List<String> lines = new ArrayList<>();
+        for (JsonNode node : root.path("isolated")) {
+            lines.add(nativeHarnessLine(node.path("name").asText(), node,
+                    "atomic_key_on_attenuation",
+                    "source_timed_key_on_attenuation"));
+        }
+        JsonNode overlap = root.path("overlap");
+        lines.add(nativeHarnessLine("overlap", overlap,
+                "atomic_second_key_on_attenuation",
+                "source_timed_second_key_on_attenuation"));
+        return String.join(System.lineSeparator(), lines);
+    }
+
+    private static String nativeHarnessLine(
+            String name, JsonNode node, String atomicField,
+            String timedField) {
+        String phase = (node.path("native_phase_code").asText() + " ")
+                .repeat(4).stripTrailing();
+        return name + " phase " + phase
+                + " volume " + vector(node.path("seed_attenuation"))
+                + " atomic " + vector(node.path(atomicField))
+                + " timed " + vector(node.path(timedField))
+                + " window-min " + vector(node.path("source_timed_min"))
+                + " window-max " + vector(node.path("source_timed_max"));
+    }
+
+    private static String vector(JsonNode values) {
+        List<String> result = new ArrayList<>();
+        values.forEach(value -> result.add(value.asText()));
+        return String.join(" ", result);
+    }
+
+    private static String sha256(Path path) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(path)));
+    }
+
+    private static EnvelopeSeed seed(JsonNode node) {
+        return new EnvelopeSeed(node.path("name").asText(),
+                node.path("seed_samples").asInt(),
+                node.path("release_samples").asInt(),
+                node.path("native_phase").asText(),
+                ints(node.path("seed_attenuation")),
+                ints(node.path("atomic_key_on_attenuation")),
+                ints(node.path("source_timed_key_on_attenuation")),
+                ints(node.path("source_timed_min")),
+                ints(node.path("source_timed_max")));
+    }
+
+    private static int[] ints(JsonNode array) {
+        int[] values = new int[array.size()];
+        for (int index = 0; index < values.length; index++) {
+            values[index] = array.get(index).asInt();
+        }
+        return values;
+    }
+
+    private record EnvelopeSeed(
+            String name, int samples, int releaseSamples, String phase,
+            int[] seedAttenuation, int[] nativeAtomic, int[] nativeTimed,
+            int[] nativeMinimum, int[] nativeMaximum) {
+        private EnvelopeSeed {
+            seedAttenuation = Arrays.copyOf(
+                    seedAttenuation, seedAttenuation.length);
+            nativeAtomic = Arrays.copyOf(nativeAtomic, nativeAtomic.length);
+            nativeTimed = Arrays.copyOf(nativeTimed, nativeTimed.length);
+            nativeMinimum = Arrays.copyOf(
+                    nativeMinimum, nativeMinimum.length);
+            nativeMaximum = Arrays.copyOf(
+                    nativeMaximum, nativeMaximum.length);
+        }
+    }
+
+    private record EnvelopeOracle(
+            List<EnvelopeSeed> isolated, OverlapSeed overlap) { }
+
+    private record OverlapSeed(
+            EnvelopeSeed seed, int offsetSamples, int[] nativeTimed,
+            int[] nativeMinimum, int[] nativeMaximum) { }
 
     private static final class RecordingObserver implements ChipWriteObserver {
         private final Ym2612Chip chip;

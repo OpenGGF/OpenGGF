@@ -1033,7 +1033,7 @@ class TestSmpsDriverYmWriteTimeline {
         MidReadTimedSequencer hybridSource =
                 new MidReadTimedSequencer(
                         hybrid, sharedData, sharedConfig, 16);
-        hybrid.addSequencer(hybridSource, false);
+        hybrid.addSequencer(hybridSource, true);
         hybridCallbacks.clear();
         hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
 
@@ -1043,7 +1043,7 @@ class TestSmpsDriverYmWriteTimeline {
         MidReadTimedSequencer accurateSource =
                 new MidReadTimedSequencer(
                         accurate, sharedData, sharedConfig, 16);
-        accurate.addSequencer(accurateSource, false);
+        accurate.addSequencer(accurateSource, true);
         accurateCallbacks.clear();
         accurate.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
@@ -1292,7 +1292,7 @@ class TestSmpsDriverYmWriteTimeline {
         SmpsDriver retried = new SmpsDriver();
         SmpsSequencer retriedSource = sequencer(
                 retried, sharedData, sharedConfig);
-        retried.addSequencer(retriedSource, false);
+        retried.addSequencer(retriedSource, true);
         retried.setServiceObserver(recordingServiceObserver(retriedEvents));
         SmpsDriverSnapshot before = retried.captureSnapshot();
 
@@ -1312,7 +1312,7 @@ class TestSmpsDriverYmWriteTimeline {
         SmpsDriver clean = new SmpsDriver();
         SmpsSequencer cleanSource = sequencer(
                 clean, sharedData, sharedConfig);
-        clean.addSequencer(cleanSource, false);
+        clean.addSequencer(cleanSource, true);
         clean.setServiceObserver(recordingServiceObserver(cleanEvents));
         publishFrequencyService(clean, cleanSource);
 

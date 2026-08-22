@@ -95,6 +95,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private long nextYmWriteOrdinal;
     private ServiceTransaction ymServiceTransaction;
     private DriverServiceReservation ymDriverServiceReservation;
+    private SmpsSequencer activeServiceSequencer;
+    private SmpsDriverServiceObserver.ServiceKind activeServiceKind;
 
     @FunctionalInterface
     private interface PostCommitPublication {
@@ -107,6 +109,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final long serviceOrdinal;
         private final long generation;
         private final boolean implicit;
+        private final boolean orderedSiblingFence;
         private final List<YmWriteTimeline.Entry> writes = new ArrayList<>();
         private final List<PostCommitPublication> hardwarePublications =
                 new ArrayList<>();
@@ -121,22 +124,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 long serviceOrdinal,
                 long generation,
                 long cursor,
-                boolean implicit) {
+                boolean implicit,
+                boolean orderedSiblingFence) {
             this.rollback = rollback;
             this.source = source;
             this.serviceOrdinal = serviceOrdinal;
             this.generation = generation;
             this.cursor = cursor;
             this.implicit = implicit;
+            this.orderedSiblingFence = orderedSiblingFence;
         }
     }
 
     private static final class DriverServiceReservation {
         private final int capacity;
+        private final LiveCommandMutationToken rollback;
         private int remaining;
 
-        private DriverServiceReservation(int capacity) {
+        private DriverServiceReservation(
+                int capacity, LiveCommandMutationToken rollback) {
             this.capacity = capacity;
+            this.rollback = rollback;
             this.remaining = capacity;
         }
     }
@@ -169,10 +177,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 throw failure;
             }
             try {
-                if (consumed == 0) {
-                    transaction.cursor = Math.addExact(transaction.cursor,
-                            segment.advanceBeforeFirstWriteMasterCycles());
-                }
                 transaction.cursor = Math.addExact(
                         transaction.cursor, advances[consumed]);
             } catch (ArithmeticException failure) {
@@ -509,9 +513,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (!(source instanceof SmpsSequencer sequencer)) {
             return YmServiceTimingProfile.none();
         }
-        if (sequencer.getConfig().getYmTimingOwnerPolicy()
-                == SmpsSequencerConfig.YmTimingOwnerPolicy.SFX_ONLY
-                && !sequencer.isSfx()) {
+        // The audited source path belongs to SFX. A sibling sequencer only
+        // joins while delayed SFX writes are still pending, acting as an
+        // ordered fence so its ordinary writes cannot overtake them.
+        if (usesSfxOwnedYmSourceTiming(sequencer)
+                && !sequencer.isSfx() && sequencers.contains(sequencer)
+                && pendingYmWriteCount() == 0) {
             return YmServiceTimingProfile.none();
         }
         return sequencer.getConfig().getYmServiceTimingProfile();
@@ -533,7 +540,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         lastPendingYmWriteDueCycle()));
         ymServiceTransaction = new ServiceTransaction(
                 rollback, source, nextYmServiceOrdinal, ymTimelineGeneration(),
-                cursor, implicit);
+                cursor, implicit, isOrderedSiblingFence(source));
         return ymServiceTransaction;
     }
 
@@ -552,6 +559,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
         int aggregateBound = 0;
         for (SmpsSequencer owner : owners.keySet()) {
+            if (isOrderedSiblingFence(owner)) {
+                continue;
+            }
             aggregateBound = Math.addExact(aggregateBound,
                     timingProfileFor(owner)
                             .maximumWritesPerDriverService());
@@ -560,6 +570,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 && usesPalFullDriverRepeat()) {
             for (SmpsSequencer active : sequencers) {
                 if (!pendingRemovals.contains(active)) {
+                    if (isOrderedSiblingFence(active)) {
+                        continue;
+                    }
                     aggregateBound = Math.addExact(aggregateBound,
                             timingProfileFor(active)
                                     .maximumWritesPerDriverService());
@@ -580,6 +593,26 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    private boolean isManagedMusicSequencer(SmpsSequencer sequencer) {
+        return !sequencer.isSfx() && sequencers.contains(sequencer);
+    }
+
+    private static boolean usesSfxOwnedYmSourceTiming(
+            SmpsSequencer sequencer) {
+        SmpsSequencerConfig config = sequencer.getConfig();
+        return config.getSfxStartTiming()
+                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
+                && config.getDriverServiceOrder()
+                == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
+    }
+
+    private boolean isOrderedSiblingFence(Object source) {
+        return source instanceof SmpsSequencer sequencer
+                && isManagedMusicSequencer(sequencer)
+                && usesSfxOwnedYmSourceTiming(sequencer)
+                && pendingYmWriteCount() > 0;
+    }
+
     private void beginYmDriverServiceReservation(int frames) {
         if (ymDriverServiceReservation != null) {
             throw new IllegalStateException(
@@ -591,7 +624,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         int requiredCapacity = aggregateYmServiceWriteBound(null);
         preflightYmServiceCapacity(requiredCapacity);
         ymDriverServiceReservation =
-                new DriverServiceReservation(requiredCapacity);
+                new DriverServiceReservation(requiredCapacity,
+                        captureLiveCommandMutation());
     }
 
     private boolean mayPublishTimedWorkDuringAdvance(int frames) {
@@ -637,11 +671,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         try {
             DriverServiceReservation reservation =
                     ymDriverServiceReservation;
-            if (reservation != null
-                    && transaction.writes.size() > reservation.remaining) {
-                throw new IllegalStateException(
-                        "YM service exceeded reserved driver horizon of "
-                                + reservation.capacity + " writes");
+            if (reservation != null) {
+                if (transaction.orderedSiblingFence) {
+                    int available = Math.subtractExact(
+                            ymWriteTimelineCapacity(), pendingYmWriteCount());
+                    int required = Math.addExact(transaction.writes.size(),
+                            reservation.remaining);
+                    if (available < required) {
+                        throw new IllegalStateException(
+                                "ordered YM sibling fence requires "
+                                        + transaction.writes.size()
+                                        + " writes while preserving "
+                                        + reservation.remaining
+                                        + " reserved slots, but only "
+                                        + available + " remain");
+                    }
+                } else if (transaction.writes.size()
+                        > reservation.remaining) {
+                    throw new IllegalStateException(
+                            "YM service exceeded reserved driver horizon of "
+                                    + reservation.capacity + " writes");
+                }
             }
             commitYmWriteJournal(transaction.writes);
             ymServiceCursor = transaction.cursor;
@@ -649,7 +699,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     nextYmWriteOrdinal, transaction.writes.size());
             nextYmServiceOrdinal = Math.incrementExact(
                     nextYmServiceOrdinal);
-            if (reservation != null) {
+            if (reservation != null
+                    && !transaction.orderedSiblingFence) {
                 reservation.remaining = Math.subtractExact(
                         reservation.remaining, transaction.writes.size());
             }
@@ -732,6 +783,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public void abortSequencerService(Throwable failure) {
         abortYmServiceTransaction(Objects.requireNonNull(
                 failure, "failure"));
+        activeServiceSequencer = null;
+        activeServiceKind = null;
     }
 
     private void stageLogicalObserver(
@@ -780,6 +833,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver.ServiceKind kind) {
         Objects.requireNonNull(sequencer, "sequencer");
         Objects.requireNonNull(kind, "kind");
+        activeServiceSequencer = sequencer;
+        activeServiceKind = kind;
         if (timingProfileFor(sequencer) != YmServiceTimingProfile.none()
                 && ymServiceTransaction == null) {
             beginYmServiceTransaction(sequencer, false);
@@ -814,7 +869,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             stageLogicalObserver(() -> observer.onServiceEnd(
                     event, captureSnapshot()));
         }
-        commitYmServiceTransaction();
+        try {
+            commitYmServiceTransaction();
+        } finally {
+            activeServiceSequencer = null;
+            activeServiceKind = null;
+        }
     }
 
     /**
@@ -1251,7 +1311,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     publishAdmissionFmPreparationWrites(sequencer, port,
                             channel, keyChannel, operatorOffsets);
                 }
-                markFirstFm5Admission(sequencer);
             } else {
                 publishAdmissionFmPreparationWrites(sequencer, port,
                         channel, keyChannel, operatorOffsets);
@@ -1269,17 +1328,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int operatorOffset : operatorOffsets) {
             publishAuthorizedFmWrite(sequencer, port,
                     0x90 + operatorOffset + channel, 0);
-        }
-    }
-
-    private static void markFirstFm5Admission(SmpsSequencer sequencer) {
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.type == SmpsSequencer.TrackType.FM
-                    && track.channelId == 4) {
-                track.firstFm5AdmissionVoicePending = true;
-                track.firstFm5AdmissionAttackPending = false;
-            }
         }
     }
 
@@ -2339,8 +2387,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         entry.source(),
                         dependency.sourceDescriptorTrust());
                 sequencer.setRegion(region);
-                sequencer.restoreSnapshot(entry.snapshot());
                 sequencer.setIsSfx(entry.sfx());
+                sequencer.restoreSnapshot(entry.snapshot());
                 sequencers.add(sequencer);
                 if (entry.sfx()) {
                     sfxSequencers.add(sequencer);
@@ -2954,6 +3002,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             removeCompletedSequencers();
         } catch (RuntimeException | Error failure) {
             abortYmServiceTransaction(failure);
+            DriverServiceReservation reservation =
+                    ymDriverServiceReservation;
+            if (reservation != null) {
+                try {
+                    rollbackLiveCommandMutation(
+                            reservation.rollback, true);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
             throw failure;
         } finally {
             ymDriverServiceReservation = null;
@@ -3123,7 +3181,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int i = 0; i < 6; i++) {
             if (fmLocks[i] == seq) {
                 if (isSfx && i == 4
-                        && consumeFm5CompletionKeyOffPending(seq)) {
+                        && activeServiceSequencer == seq
+                        && activeServiceKind
+                        == SmpsDriverServiceObserver.ServiceKind
+                                .COMPLETION_CLEANUP) {
                     YmServiceTimingProfile.Variant restoreVariant = null;
                     for (SmpsSequencer candidate : sequencers) {
                         if (!isSfx(candidate)) {
@@ -3172,19 +3233,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         psgLatches.remove(seq);
         sfxAdmissionOrdinals.remove(seq);
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
-    }
-
-    private static boolean consumeFm5CompletionKeyOffPending(
-            SmpsSequencer sequencer) {
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.channelId == 4
-                    && track.fm5CompletionKeyOffPending) {
-                track.fm5CompletionKeyOffPending = false;
-                return true;
-            }
-        }
-        return false;
     }
 
     private static YmServiceTimingProfile.Variant completionRestoreVariant(

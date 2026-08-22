@@ -46,22 +46,12 @@ public interface YmServiceTimingProfile {
     }
 
     record Segment(SegmentKind kind, Variant variant,
-                   long advanceBeforeFirstWriteMasterCycles,
                    long[] advanceBeforeWriteMasterCycles) {
-        public Segment(SegmentKind kind, Variant variant,
-                       long[] advanceBeforeWriteMasterCycles) {
-            this(kind, variant, 0, advanceBeforeWriteMasterCycles);
-        }
-
         public Segment {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(variant, "variant");
             Objects.requireNonNull(advanceBeforeWriteMasterCycles,
                     "advanceBeforeWriteMasterCycles");
-            if (advanceBeforeFirstWriteMasterCycles < 0) {
-                throw new IllegalArgumentException(
-                        "segment-leading advance cannot be negative");
-            }
             if (advanceBeforeWriteMasterCycles.length == 0) {
                 throw new IllegalArgumentException(
                         "timed segment must contain at least one write");
@@ -69,10 +59,6 @@ public interface YmServiceTimingProfile {
             advanceBeforeWriteMasterCycles = Arrays.copyOf(
                     advanceBeforeWriteMasterCycles,
                     advanceBeforeWriteMasterCycles.length);
-            if (advanceBeforeWriteMasterCycles[0] != 0) {
-                throw new IllegalArgumentException(
-                        "segment slot zero must be the normalized anchor");
-            }
             for (long advance : advanceBeforeWriteMasterCycles) {
                 if (advance < 0) {
                     throw new IllegalArgumentException(
@@ -114,7 +100,7 @@ public interface YmServiceTimingProfile {
         Map<Key, Segment> byKey = new HashMap<>();
         for (Segment segment : segments) {
             Objects.requireNonNull(segment, "segment");
-            long total = segment.advanceBeforeFirstWriteMasterCycles();
+            long total = 0;
             long[] advances = segment.advanceBeforeWriteMasterCycles();
             if (advances.length > maximumWritesPerDriverService) {
                 throw new IllegalArgumentException(
