@@ -60,6 +60,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "OPENGGF_YM_TIMING_PATCH_SHA256");
             string coreSha256 = RequiredEnvironment(
                 "OPENGGF_YM_TIMING_CORE_SHA256");
+            string captureScriptSha256 = RequiredEnvironment(
+                "OPENGGF_YM_TIMING_CAPTURE_SCRIPT_SHA256");
             AssertEx.Equal(config.RomSha1, Sha1(rom));
             AssertEx.Equal(config.MovieSha256, Sha256(moviePath));
             if (File.Exists(output))
@@ -88,6 +90,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             int previousRequestFrame = -1;
             bool currentOverlap = false;
             bool managedAdmissionPending = false;
+            uint frameInstructionEvents = 0;
             using (var host = GpgxHost.Open(
                 rom, GpgxHost.CreateGhz1SyncSettings()))
             {
@@ -128,6 +131,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     for (int frame = 0; frame <= config.LastCaptureFrame; frame++)
                     {
+                        frameInstructionEvents = 0;
                         AssertEx.Equal(true, rows.MoveNext());
                         S1TraceCaptureRunner.ApplyFrame(rows.Current, host);
                         AssertEx.Equal(0, api.gpgx_ym_timing_lab_begin_frame());
@@ -227,16 +231,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             }
                             if (value.Subject == 16)
                             {
+                                frameInstructionEvents++;
                                 if (currentGroup == null) continue;
-                                uint pc = unchecked((uint)value.Payload);
-                                uint cycles = unchecked((uint)(value.Payload >> 32));
+                                uint pc = value.Pc;
+                                uint cycles = unchecked((uint)value.Payload);
                                 rawInstructions.Add(frame + "\t" + groups.Count
                                     + "\t" + (currentGroup.Count - 1) + "\t"
                                     + value.Flags + "\t0x"
                                     + pc.ToString("X", CultureInfo.InvariantCulture)
-                                    + "\t0x" + value.Value.ToString(
-                                        "X2", CultureInfo.InvariantCulture)
+                                    + "\t0x" + value.Offset.ToString(
+                                        value.Flags == 1 ? "X2" : "X4",
+                                        CultureInfo.InvariantCulture)
                                     + "\t" + cycles);
+                                continue;
+                            }
+                            if (value.Subject == 17)
+                            {
+                                uint eligible = unchecked((uint)(value.Payload >> 32));
+                                AssertEx.Equal(eligible, frameInstructionEvents);
                                 continue;
                             }
                             if (value.Subject != 12) continue;
@@ -295,7 +307,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             WriteInts(fm5Path, fm5);
             PopulateOnsetRms(groups, fm5);
             WriteAuditOracleCreateNew(output, config, groups, patchSha256,
-                coreSha256, Sha256(writesPath), Sha256(instructionsPath),
+                coreSha256, captureScriptSha256,
+                Sha256(writesPath), Sha256(instructionsPath),
                 Sha256(fm5Path));
             Console.WriteLine("YM_TIMING_AUDIT game=" + config.Game
                 + " groups=" + groups.Count
@@ -618,6 +631,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void WriteAuditOracleCreateNew(string path,
             RingAuditConfig config, List<WriteGroup> groups,
             string patchSha256, string coreSha256,
+            string captureScriptSha256,
             string rawWritesSha256, string rawInstructionsSha256,
             string fm5Sha256)
         {
@@ -633,6 +647,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     ["sound_id"] = "0x" + config.SoundId.ToString(
                         "X2", CultureInfo.InvariantCulture),
                     ["fm_channel"] = config.FmChannel,
+                    ["owner_ix"] = config.Z80Admission
+                        ? "0x" + config.OwnerIx.ToString(
+                            "X4", CultureInfo.InvariantCulture)
+                        : null,
                     ["source_duration_frames"] = config.SourceDurationFrames
                 },
                 ["provenance"] = new JObject {
@@ -645,6 +663,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     ["bk2_sha256"] = config.MovieSha256,
                     ["diagnostic_patch_sha256"] = patchSha256,
                     ["diagnostic_core_sha256"] = coreSha256,
+                    ["capture_script_sha256"] = captureScriptSha256,
                     ["native_writes_sha256"] = rawWritesSha256,
                     ["native_instructions_sha256"] = rawInstructionsSha256,
                     ["native_fm5_sha256"] = fm5Sha256

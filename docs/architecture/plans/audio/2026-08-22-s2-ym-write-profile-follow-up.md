@@ -2,7 +2,8 @@
 
 ## Dependency and boundary
 
-Start only from the retained v2 S2 oracle/calculation. Preserve
+Start only from the retained v2 S2 oracle/calculation and hash-locked decoded
+Z80 instruction ledger. Preserve
 `FixDriverBugs = fixBugs = 0`; owner admission is semantic `zSFX_FM5`, not a
 channel synthesis. This is separate from Task 7.
 
@@ -17,8 +18,10 @@ channel synthesis. This is separate from Task 7.
   `cfStopTrack` from `s2.sounddriver.asm:343-389,947+,2090+,3271-3432,3514+`.
   Model GPGX's three-T-state uncontended bank read separately from instruction
   T-states and preserve every branch outcome.
-- Acceptance: independent row sums reproduce every retained gap and poison
-  tests reject `IX != $1D90` and replacement owners.
+- Acceptance: the typed sequence reproduces every exact ordered PC/opcode,
+  branch outcome, 3-T-state bank wait, and retained gap; poison tests reject
+  `IX != $1D90` and replacement owners. Aggregate primitive buckets are not an
+  acceptable substitute.
 
 ## Task 2: snapshot-safe bus transaction
 

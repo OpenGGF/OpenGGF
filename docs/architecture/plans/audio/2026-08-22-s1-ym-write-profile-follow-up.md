@@ -2,8 +2,9 @@
 
 ## Dependency and boundary
 
-Start only from the retained v2 S1 oracle and calculation artifact in
-`docs/architecture/research/audio/`. Preserve `FixBugs = 0`; do not select on
+Start only from the retained v2 S1 oracle, v2 calculation, and hash-locked
+representative instruction ledger in `docs/architecture/research/audio/`.
+Preserve `FixBugs = 0`; do not select on
 sound id, route, frame, or register fingerprint. This is separate from Task 7.
 
 ## Task 1: typed source model
@@ -16,8 +17,9 @@ sound id, route, frame, or register fingerprint. This is separate from Task 7.
 - GREEN: encode busy-poll taken/not-taken, call/return, voice loop, key-on,
   key-off, and music-voice restore as typed operations sourced from
   `s1.sounddriver.asm:436-456,1713-1769,2313-2375,2489+`.
-- Acceptance: independent operation sums reproduce every retained gap; no
-  aggregate fitted duration exists.
+- Acceptance: typed operations reproduce the exact ordered PC/opcode ledger
+  and every retained gap; no aggregate fitted duration or primitive bucket
+  exists.
 
 ## Task 2: transactional scheduling
 

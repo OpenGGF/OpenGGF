@@ -59,20 +59,24 @@ Inputs:
 | S2 ROM | `$OPENGGF_MAIN_WORKSPACE/s2.gen`, SHA-1 `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
 | S2 BK2 | `sonic-2-sonic-tails-complete-emeralds.bk2`, SHA-256 `e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5` |
 | BizHawk/GPGX | BizHawk 2.11 commit `427556b5...`; GPGX commit `051d430d...` |
-| Diagnostic patch/core | SHA-256 `563ef6338c9ddbe41c711842688b3daa2f970d312e581484ac7b2a0196241414` / `1107ce61ea6d2c4cdd80f35cb2c0ec6f5ae58d4bd62a3fd8269a03c09f6eee36` |
+| Diagnostic patch/core | SHA-256 `9c204d55e1c7524bf94180aa930d6be6a88e332d5227f187a2ed3d048b6bd375` / `3e2cddbb22c93676046f980926fd14d0689bb5bfd36ee75d0d630c2289b940a3` |
 
 ## Sonic 1 source calculation
 
-S1 is a 68K driver, so this calculation uses 68K instruction cycles multiplied
-by seven master cycles. It does not import any Z80 T-state constant. The first
-isolated FM5 group executes these successive 68K-cycle gaps:
+S1 is a 68K driver. The retained representative ledger contains all 909 native
+decoded instruction occurrences from source admission through key-on, including
+875 occurrences assigned to the 30 inter-write gaps. Every row records exact
+PC, opcode, start cycle, next PC, delta, call/return or branch outcome, busy-poll
+and YM-write roles, and the source citation. `TestS1S2YmWriteTimingAudit`
+hash-locks that ledger, reconstructs every gap from the ordered occurrence
+chain plus the source-authentic terminal `$13C1` write boundary, and compares
+it to the retained native write. Deleting, reordering, changing PC/opcode/count,
+or injecting a fake primitive is an explicit failing mutation.
 
-`310, 310, 308, 308, 308, 310, 308, 308, 308, 310, 308, 308, 308, 310,
-308, 308, 308, 310, 308, 308, 333, 328, 328, 328, 316, 420, 297, 716,
-333, 310`.
-
-Their sum is 9,881 68K cycles, or 69,167 master cycles, exactly the corrected
-native group. The small isolated variation (66,836–69,167 master cycles) comes
+This supersedes and withdraws the round-1 aggregate decomposition (including
+its suspicious 11/31 synthetic `MOVE.B` counts). The actual captured gaps
+contain 27–63 decoded occurrences; they are not represented as multiplied
+primitive buckets. The small isolated variation (66,836–69,167 master cycles) comes
 from the shipped YM busy-poll exits and branch state; overlap groups span
 66,577–69,426. The 5,000-frame capture contains 38 admitted FM5 groups:
 18 isolated and 20 overlap.
@@ -94,25 +98,28 @@ allows the key-off/restore path to complete.
 
 Deterministic A/B compact result:
 
-- JSON SHA-256 `3ed28d9a1bc456a92446da311332e03056a07043edd235b285afdf211a743a5f`;
-- terminal payload `c0eae0d4b65a6f1a8b3da93b501b377691b883bdf2b41bd3383e470851e74f43`;
+- JSON SHA-256 `a62c26df8363cfdcf622fdbbd31688032c2c3cfa6a51bde04101e8cdfa08c088`;
+- terminal payload `032dee96c0163e089b689c8095ce9c95842e9bdf3a60006bd14953f3e254070a`;
 - raw writes `87265ee3d08d91128faef6338695c426f6697df127b0431b16d77ade6210a509`;
+- full instruction stream `b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa`;
+- representative ledger `327b681c5014ba6224c1b0c8c3b5d37c436410f895581f7074649157db1b517c`;
 - six-column projection `06888e2d89794879947fa2256aaf3bb9ae0244e0c147f400dd6363bc4d42125c`;
 - FM5 samples `10ccfc1aa351f34e9b7be4b7eab44fb8003e73f8bef15bff3ba4218c50285534`.
 
 ## Sonic 2 source calculation
 
-S2 uses its own Z80 driver. The first isolated FM5 group's successive shipped
-T-state gaps are:
+S2 uses its own Z80 driver. The representative ledger contains all 953 decoded
+Z80 instruction occurrences, 899 assigned to the 30 inter-write gaps. It
+records exact conditional outcomes through their next PCs and marks each
+banked `LD r,(HL)` occurrence whose 10-T-state delta consists of the source
+instruction's 7 T-states plus GPGX's exact 3-T-state bank-read wait. The joined
+sequence derives the 135,435-master-cycle group without a copied total.
 
-`252, 258, 258, 258, 278, 258, 258, 258, 258, 258, 258, 258, 258, 258,
-258, 258, 258, 258, 258, 258, 263, 394, 278, 306, 306, 532, 325, 940,
-233, 278`.
-
-Their sum is 9,029 T-states; at 15 master cycles per Z80 T-state this is
-135,435 master cycles, matching every isolated and overlapping captured
-RingRight group. The capture contains 28 admitted FM5 groups: 14 isolated and
-14 overlap.
+This supersedes the round-1 aggregate decomposition and its suspicious 39
+`LD r,(IX+d)` bucket. Thirty-nine is the actual *total decoded occurrence
+count* only for gap 21; the ledger shows the heterogeneous PC/opcode sequence
+and its one exact bank-wait occurrence. The capture contains 28 admitted FM5
+groups: 14 isolated and 14 overlap.
 
 The path audit covers:
 
@@ -132,9 +139,12 @@ the audit does not claim parity during simultaneous VDP DMA.
 
 Deterministic A/B compact result:
 
-- JSON SHA-256 `17be36378af251a6d1a00ca66c268ac607fcc710b75e0445f0dd6afc009f8777`;
-- terminal payload `51d701514d615f86e5c2a6a2619921f7fdd7f1d064a2de335826884146193e02`;
-- raw writes `7198cd1246f6653bc52ee087ffa2f4f626e849d318510a48674efa1932d3ca71`;
+- JSON SHA-256 `7af6752daf84249dd2513627e4f1c7260b15e3c28817aaa764440602708296c3`;
+- terminal payload `b522de0b43aa6dbc6b04e53fe6a7b92295be320ae4a986af8a88f8bf48273167`;
+- capture script `a21fbd6ee44173fd8bbe20b0af747bc703f0f1c7f9c521a1866f89e579cd7388`;
+- raw writes `ea68ebff17ad939b9b17040f7ce846a4bfef895a4401abcf8104a1e972f0179e`;
+- full instruction stream `d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c`;
+- representative ledger `f34d17e2dafabcb70f160303c44cec445f07d926d03d587ed62fd457c4f076ee`;
 - six-column projection `c4dbf980004f7b1af450a0889a6bc5ae8b443b5378cd0fb546d889dd8a1a54d2`;
 - FM5 samples `a277dfd825e9c72706094b837666a3ddeb17b97ed04ad5d6f2b5cf21913ddaeb`.
 

@@ -86,10 +86,26 @@ static void assert_unowned_psg_fault(void)
   assert(gpgx_audio_trace_disable() == 0);
 }
 
+static void assert_wrong_s2_owner_poison(void)
+{
+  uint32_t fault = 0;
+  assert(gpgx_ym_timing_lab_configure_z80_admission(
+    0x0975u, 0x0e03u, 0xb5u, 4u, 0x1d90u) == 0);
+  assert(gpgx_ym_timing_lab_begin_frame() == 0);
+  gpgx_ym_timing_lab_z80_instruction(
+    0x0975u, 0u, 0xb5u, 0u, 0u);
+  gpgx_ym_timing_lab_z80_instruction(
+    0x0e03u, 1u, 0xb5u, 0x1d91u, 0u);
+  assert(gpgx_ym_timing_lab_first_fault(&fault) == 0);
+  assert(fault == 0x7006u);
+  assert(gpgx_ym_timing_lab_abort_frame() == 0);
+}
+
 int main(void)
 {
   assert_unowned_fm_fault();
   assert_unowned_psg_fault();
-  puts("ym-timing-lab-selftest: unowned FM and PSG preserve observer faults");
+  assert_wrong_s2_owner_poison();
+  puts("ym-timing-lab-selftest: observer ownership and S2 IX poison pass");
   return 0;
 }
