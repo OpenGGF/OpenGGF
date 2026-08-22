@@ -822,6 +822,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * and minted DPLC edges the ROM never queues.
 	 */
 	public void advanceTailsTailsAfterObjectExecution() {
+		AbstractPlayableSprite main = getMainPlayable();
+		if (main != null && main.getTailsTailsController() != null) {
+			main.getTailsTailsController().update();
+		}
 		for (AbstractPlayableSprite sidekick : sidekicks) {
 			if (sidekick != null && sidekick.getTailsTailsController() != null) {
 				sidekick.getTailsTailsController().update();
@@ -843,9 +847,16 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void processInitialTailsFixedSlot() {
-		AbstractPlayableSprite player2 = sidekicks.isEmpty() ? null : sidekicks.getFirst();
-		if (player2 != null && player2.getTailsTailsController() != null) {
-			player2.getTailsTailsController().update();
+		// S3K's Level_object_RAM slot 97 is Tails_tails. In a solo Tails
+		// session its parent is the main playable; in a Sonic-and-Tails session
+		// it is the Tails sidekick. Select the parent that owns Obj05 rather than
+		// assuming that the slot always belongs to player two.
+		AbstractPlayableSprite owner = getMainPlayable();
+		if (owner == null || owner.getTailsTailsController() == null) {
+			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+		}
+		if (owner != null && owner.getTailsTailsController() != null) {
+			owner.getTailsTailsController().update();
 		}
 	}
 

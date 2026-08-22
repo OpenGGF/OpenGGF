@@ -23,6 +23,11 @@
   gaps and terminal tails own no payload, while replay timing, comparison,
   dynamic-art, special-stage, input, and audio behaviour remain unchanged.
 
+- **Playable Tails' idle and flying tails now render in Sonic 3 & Knuckles:**
+  the fixed object slot that advances Tails' separate tail sprite now includes
+  the main playable character, while retaining the sidekick path. The initial
+  fixed-slot visit also selects the main Tails object in a solo Tails session.
+
 - **Aquatic Ruin's bubble makers start their next batch on the right frame:**
   a bubble maker only counts down while the game has it on screen, and the game
   decides that from the same camera position the maker itself sees when it runs.
