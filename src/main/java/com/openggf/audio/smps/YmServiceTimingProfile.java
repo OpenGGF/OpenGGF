@@ -59,6 +59,10 @@ public interface YmServiceTimingProfile {
             advanceBeforeWriteMasterCycles = Arrays.copyOf(
                     advanceBeforeWriteMasterCycles,
                     advanceBeforeWriteMasterCycles.length);
+            if (advanceBeforeWriteMasterCycles[0] != 0) {
+                throw new IllegalArgumentException(
+                        "segment slot zero must be the normalized anchor");
+            }
             for (long advance : advanceBeforeWriteMasterCycles) {
                 if (advance < 0) {
                     throw new IllegalArgumentException(

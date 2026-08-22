@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +30,66 @@ class TestSonic3kYmServiceTimingProfile {
     private static final Path ORACLE = Path.of(
             "docs/architecture/research/audio/s3k-blue-sphere-ym-write-oracle-v1.json");
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Map<String, Integer> AUTHORITATIVE_T_STATES = Map.ofEntries(
+            Map.entry("NOP", 4),
+            Map.entry("RET", 10),
+            Map.entry("RET cc taken", 11),
+            Map.entry("RET cc not taken", 5),
+            Map.entry("CALL nn", 17),
+            Map.entry("JP nn", 10),
+            Map.entry("JP cc taken", 10),
+            Map.entry("JR", 12),
+            Map.entry("JR cc taken", 12),
+            Map.entry("JR cc not taken", 7),
+            Map.entry("DJNZ taken", 13),
+            Map.entry("DJNZ not taken", 8),
+            Map.entry("RST p", 11),
+            Map.entry("PUSH AF", 11),
+            Map.entry("PUSH BC", 11),
+            Map.entry("PUSH DE", 11),
+            Map.entry("PUSH HL", 11),
+            Map.entry("PUSH IX", 15),
+            Map.entry("POP AF", 10),
+            Map.entry("POP BC", 10),
+            Map.entry("POP DE", 10),
+            Map.entry("POP HL", 10),
+            Map.entry("POP IX", 14),
+            Map.entry("EX DE,HL", 4),
+            Map.entry("LD r,r", 4),
+            Map.entry("LD r,n", 7),
+            Map.entry("LD rr,nn", 10),
+            Map.entry("LD r,(HL)", 7),
+            Map.entry("LD r,(DE)", 7),
+            Map.entry("LD r,(nn)", 13),
+            Map.entry("LD rr,(nn)", 16),
+            Map.entry("LD r,(IX+d)", 19),
+            Map.entry("LD (HL),r", 7),
+            Map.entry("LD (nn),r", 13),
+            Map.entry("LD (IX+d),r", 19),
+            Map.entry("INC r", 4),
+            Map.entry("DEC r", 4),
+            Map.entry("INC rr", 6),
+            Map.entry("DEC rr", 6),
+            Map.entry("INC (IX+d)", 23),
+            Map.entry("DEC (IX+d)", 23),
+            Map.entry("ADD A,r", 4),
+            Map.entry("ADD A,n", 7),
+            Map.entry("ADD A,(IX+d)", 19),
+            Map.entry("ADD HL,rr", 11),
+            Map.entry("SUB n", 7),
+            Map.entry("AND n", 7),
+            Map.entry("OR r", 4),
+            Map.entry("OR n", 7),
+            Map.entry("OR (IX+d)", 19),
+            Map.entry("XOR A", 4),
+            Map.entry("CP r", 4),
+            Map.entry("CP n", 7),
+            Map.entry("CP (IX+d)", 19),
+            Map.entry("BIT b,r", 8),
+            Map.entry("BIT b,(IX+d)", 20),
+            Map.entry("RES b,(IX+d)", 23),
+            Map.entry("RRA", 4),
+            Map.entry("RRCA", 4));
 
     private static final Variant ADMISSION = new Variant(
             1, 4, false, true, 0, PathKind.FIRST_ADMISSION);
@@ -98,11 +159,22 @@ class TestSonic3kYmServiceTimingProfile {
         JsonNode root = MAPPER.readTree(CALCULATION.toFile());
         assertEquals("openggf.s3k-ym-write-calculation.v1",
                 root.path("schema").asText());
+        Clock clock = checkedClock(root);
+
+        for (JsonNode path : root.path("executed_paths")) {
+            assertEquals(false, path.path("id").asText().isBlank());
+            assertEquals(false, path.path("owner").asText().isBlank());
+            assertEquals(false, path.path("source").asText().isBlank());
+            assertEquals(false, path.path("rows").isEmpty());
+            sumPrimitiveRows(path.path("rows"));
+        }
 
         for (JsonNode segmentNode : root.path("segments")) {
             SegmentKind kind = SegmentKind.valueOf(segmentNode.path("kind").asText());
             Variant variant = variant(segmentNode.path("variant"));
-            long[] derived = derivedAdvances(segmentNode.path("writes"));
+            sumPath(root, segmentNode.path("source_prefix_path").asText());
+            long[] derived = derivedAdvances(root, clock,
+                    segmentNode.path("writes"));
             assertEquals(0, derived[0], kind + " slot-zero anchor");
             assertArrayEquals(derived, advances(
                     Sonic3kYmServiceTimingProfile.PROFILE, kind, variant),
@@ -116,7 +188,94 @@ class TestSonic3kYmServiceTimingProfile {
                 55005, 58575, 62145, 65715, 69285, 72855, 76425,
                 79995, 83565, 87135, 90705, 95850, 99675, 103500,
                 107325, 115380, 146010, 148710, 151590 }, relative);
-        assertEquals(10_106L, relative[33] / 15L);
+        assertEquals(10_106L,
+                relative[33] / clock.masterCyclesPerZ80TState());
+    }
+
+    @Test
+    void calculationFreezesEveryLocalCumulativeVectorAndCrossAdvance()
+            throws IOException {
+        JsonNode root = MAPPER.readTree(CALCULATION.toFile());
+        Clock clock = checkedClock(root);
+
+        assertArrayEquals(new long[] { 0, 3570, 6720, 9870, 13020 },
+                cumulative(derivedAdvances(root, clock,
+                        findSegment(root, "admission-prep").path("writes"))));
+        assertArrayEquals(new long[] { 0, 3150, 6300, 9450 },
+                cumulative(derivedAdvances(root, clock,
+                        findSegment(root, "blue-sphere-max-release")
+                                .path("writes"))));
+        assertArrayEquals(new long[] {
+                0, 3225, 6990, 10560, 14130, 17700, 21270, 24840,
+                28410, 31980, 35550, 39120, 42690, 46260, 49830,
+                53400, 56970, 60540, 64110, 67680, 71250, 74820,
+                79965, 83790, 87615, 91440 },
+                cumulative(derivedAdvances(root, clock,
+                        findSegment(root, "blue-sphere-voice-upload")
+                                .path("writes"))));
+        assertArrayEquals(new long[] { 0 }, cumulative(derivedAdvances(
+                root, clock, findSegment(root, "blue-sphere-key-off")
+                        .path("writes"))));
+        assertArrayEquals(new long[] { 0, 2700, 5580 }, cumulative(
+                derivedAdvances(root, clock,
+                        findSegment(root, "blue-sphere-frequency-key-on")
+                                .path("writes"))));
+        assertArrayEquals(new long[] {
+                0, 16170, 19395, 23160, 26730, 30300, 33870, 37440,
+                41010, 44580, 48150, 51720, 55290, 58860, 62430,
+                66000, 69570, 73140, 76710, 80280, 83850, 87420,
+                90990, 96135, 99675, 103215, 107040 }, cumulative(
+                derivedAdvances(root, clock,
+                        findSegment(root, "blue-sphere-completion-restore")
+                                .path("writes"))));
+
+        assertEquals(0, crossSegmentAdvance(root, clock,
+                findSegment(root, "blue-sphere-max-release")));
+        assertEquals(6435, crossSegmentAdvance(root, clock,
+                findSegment(root, "blue-sphere-voice-upload")));
+        assertEquals(8055, crossSegmentAdvance(root, clock,
+                findSegment(root, "blue-sphere-key-off")));
+        assertEquals(30630, crossSegmentAdvance(root, clock,
+                findSegment(root, "blue-sphere-frequency-key-on")));
+        assertEquals(0, crossSegmentAdvance(root, clock,
+                findSegment(root, "blue-sphere-completion-restore")));
+    }
+
+    @Test
+    void calculationRejectsHeaderDriftAggregateRowsAndArbitraryWaitTotals()
+            throws IOException {
+        JsonNode root = MAPPER.readTree(CALCULATION.toFile());
+        JsonNode clock = root.path("clock");
+        assertEquals(15, clock.path("master_cycles_per_z80_t_state").asInt());
+        assertEquals(1008,
+                clock.path("master_cycles_per_internal_sample").asInt());
+        assertEquals(3,
+                clock.path("gpgx_average_banked_read_wait_t_states").asInt());
+
+        JsonNode drifted = root.deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) drifted.path("clock"))
+                .put("master_cycles_per_z80_t_state", 16);
+        assertThrows(AssertionError.class, () -> checkedClock(drifted));
+
+        JsonNode aggregate = MAPPER.readTree("""
+                [{"opcode":"combined path subtotal","count":1,"t_states":210}]
+                """);
+        assertThrows(AssertionError.class,
+                () -> sumPrimitiveRows(aggregate));
+
+        JsonNode poisonedOpcodeTime = MAPPER.readTree("""
+                [{"opcode":"NOP","count":1,"t_states":210}]
+                """);
+        assertThrows(AssertionError.class,
+                () -> sumPrimitiveRows(poisonedOpcodeTime));
+
+        for (JsonNode segment : root.path("segments")) {
+            for (JsonNode write : segment.path("writes")) {
+                for (JsonNode wait : write.path("bank_waits")) {
+                    assertEquals(false, wait.has("average_t_states"));
+                }
+            }
+        }
     }
 
     @Test
@@ -166,6 +325,9 @@ class TestSonic3kYmServiceTimingProfile {
                 () -> new Segment(SegmentKind.KEY_OFF, variant,
                         new long[] { 0, -1 }));
         assertThrows(IllegalArgumentException.class,
+                () -> new Segment(SegmentKind.KEY_OFF, variant,
+                        new long[] { 15 }));
+        assertThrows(IllegalArgumentException.class,
                 () -> YmServiceTimingProfile.of(1,
                         new Segment(SegmentKind.KEY_OFF, variant,
                                 new long[] { 0, 15 })));
@@ -211,31 +373,108 @@ class TestSonic3kYmServiceTimingProfile {
                 .advanceBeforeWriteMasterCycles();
     }
 
-    private static long[] derivedAdvances(JsonNode writes) {
+    private static long[] derivedAdvances(
+            JsonNode root, Clock clock, JsonNode writes) {
         long[] advances = new long[writes.size()];
         for (int index = 0; index < advances.length; index++) {
             JsonNode write = writes.get(index);
             assertEquals(index, write.path("slot").asInt());
-            long tStates = sumSteps(write.path("advance_before_write_steps"));
-            for (JsonNode wait : write.path("bank_waits")) {
-                tStates = Math.addExact(tStates, Math.multiplyExact(
-                        wait.path("accesses").asLong(),
-                        wait.path("average_t_states").asLong()));
+            String pathId = write.path("advance_before_write_path").asText();
+            if (index == 0) {
+                assertEquals("", pathId, "slot-zero path");
+                assertEquals(0, write.path("bank_waits").size(),
+                        "slot-zero bank waits");
+            } else {
+                assertEquals(false, pathId.isBlank(),
+                        "later write requires an executed path");
             }
-            advances[index] = Math.multiplyExact(tStates, 15L);
+            long tStates = pathId.isBlank() ? 0 : sumPath(root, pathId);
+            tStates = Math.addExact(tStates,
+                    sumBankWaits(clock, write.path("bank_waits")));
+            advances[index] = Math.multiplyExact(tStates,
+                    clock.masterCyclesPerZ80TState());
             assertEquals(write.path("expected_delta_master_cycles").asLong(),
                     advances[index]);
         }
         return advances;
     }
 
-    private static long sumSteps(JsonNode steps) {
+    private static long sumPrimitiveRows(JsonNode steps) {
         long tStates = 0;
         for (JsonNode step : steps) {
-            assertEquals(false, step.path("opcode").asText().isBlank());
+            String opcode = step.path("opcode").asText();
+            Integer authoritative = AUTHORITATIVE_T_STATES.get(opcode);
+            if (authoritative == null) {
+                throw new AssertionError("Unrecognized aggregate/opcode label: "
+                        + opcode);
+            }
+            assertEquals(authoritative.intValue(),
+                    step.path("t_states").asInt(), opcode);
+            if (step.path("count").asLong() <= 0) {
+                throw new AssertionError("Instruction count must be positive");
+            }
             tStates = Math.addExact(tStates, Math.multiplyExact(
                     step.path("count").asLong(),
-                    step.path("t_states").asLong()));
+                    authoritative.longValue()));
+        }
+        return tStates;
+    }
+
+    private static long sumPath(JsonNode root, String pathId) {
+        for (JsonNode path : root.path("executed_paths")) {
+            if (pathId.equals(path.path("id").asText())) {
+                return sumPrimitiveRows(path.path("rows"));
+            }
+        }
+        throw new AssertionError("Missing executed path " + pathId);
+    }
+
+    private static Clock checkedClock(JsonNode root) {
+        JsonNode clock = root.path("clock");
+        assertEquals(15,
+                clock.path("master_cycles_per_z80_t_state").asInt());
+        assertEquals(1008,
+                clock.path("master_cycles_per_internal_sample").asInt());
+        assertEquals(3,
+                clock.path("gpgx_average_banked_read_wait_t_states").asInt());
+        return new Clock(
+                clock.path("master_cycles_per_z80_t_state").asLong(),
+                clock.path("master_cycles_per_internal_sample").asLong(),
+                clock.path("gpgx_average_banked_read_wait_t_states").asLong());
+    }
+
+    private static long[] cumulative(long[] advances) {
+        long[] result = new long[advances.length];
+        long cursor = 0;
+        for (int index = 0; index < advances.length; index++) {
+            cursor = Math.addExact(cursor, advances[index]);
+            result[index] = cursor;
+        }
+        return result;
+    }
+
+    private static long crossSegmentAdvance(
+            JsonNode root, Clock clock, JsonNode segment) {
+        String pathId = segment.path("cross_segment_advance_path").asText();
+        long tStates = pathId.isBlank() ? 0 : sumPath(root, pathId);
+        tStates = Math.addExact(tStates, sumBankWaits(clock,
+                segment.path("cross_segment_bank_waits")));
+        return Math.multiplyExact(tStates,
+                clock.masterCyclesPerZ80TState());
+    }
+
+    private static long sumBankWaits(Clock clock, JsonNode waits) {
+        long tStates = 0;
+        for (JsonNode wait : waits) {
+            assertEquals("GPGX z80_request_68k_bus_access average wait",
+                    wait.path("owner").asText());
+            assertEquals(false, wait.has("average_t_states"));
+            if (wait.path("accesses").asLong() <= 0) {
+                throw new AssertionError("Bank-wait access count must be positive");
+            }
+            tStates = Math.addExact(tStates, Math.multiplyExact(
+                    wait.path("accesses").asLong(),
+                    clock.averageBankWaitTStates()));
         }
         return tStates;
     }
@@ -243,15 +482,16 @@ class TestSonic3kYmServiceTimingProfile {
     private static long[] composeAuditedFirstAttack(JsonNode root) {
         List<Long> relative = new ArrayList<>();
         long cursor = 0;
+        Clock clock = checkedClock(root);
         String[] keys = {
                 "blue-sphere-max-release", "blue-sphere-voice-upload",
                 "blue-sphere-key-off", "blue-sphere-frequency-key-on" };
         for (String key : keys) {
             JsonNode segment = findSegment(root, key);
             cursor = Math.addExact(cursor,
-                    Math.multiplyExact(sumSteps(
-                            segment.path("cross_segment_advance_steps")), 15L));
-            long[] advances = derivedAdvances(segment.path("writes"));
+                    crossSegmentAdvance(root, clock, segment));
+            long[] advances = derivedAdvances(root, clock,
+                    segment.path("writes"));
             for (long advance : advances) {
                 cursor = Math.addExact(cursor, advance);
                 relative.add(cursor);
@@ -267,5 +507,10 @@ class TestSonic3kYmServiceTimingProfile {
             }
         }
         throw new AssertionError("Missing calculation segment " + key);
+    }
+
+    private record Clock(long masterCyclesPerZ80TState,
+                         long masterCyclesPerInternalSample,
+                         long averageBankWaitTStates) {
     }
 }
