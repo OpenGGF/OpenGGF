@@ -67,7 +67,13 @@ event, special-stage row, parser, reader, or generic replay-data surface. Its
 component types remain guarded by an exact whitelist and a transitive
 reachability test.
 
-Replay owns a package-private `ActiveSegmentPayload`. For any
+Replay owns a public final, run-specific `ActiveSegmentPayload` whose
+construction remains confined to the run walker/factory. This narrow visibility
+is required because production launch control and the headless/visual/audio
+harnesses live in different Java packages. It is not a generic replay-data
+interface: it exposes only guarded `trace()` and `specialStageRows()` accessors
+for the two existing eager types, descriptor identity, `isClosed()`, and
+`close()`. Access after close fails. For any
 non-special-stage segment (level, presentation bridge, or `bonus_stage`) it
 contains the existing eager `TraceData`. For a special-stage interior it is a
 composite containing both objects the current driver already requires:
@@ -83,10 +89,13 @@ auxiliary content, but both graphs exist only for the active segment. Removing
 that duplication is not part of this ownership proof.
 
 `ActiveSegmentPayload` implements `AutoCloseable` only as a lifetime boundary.
-The eager readers close their files during construction; `close()` idempotently
-clears the wrapper's strong references so the graphs become collectible. A
-failed composite construction publishes no wrapper and retains no partial
-payload.
+Its constructor and mutable fields are not public, and the factory accepts only
+a validated `TraceRunSegmentDescriptor`. Cross-package callers acquire it only
+through the public run-owned facade
+`TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex)`. The eager
+readers close their files during construction; `close()` idempotently clears the
+wrapper's strong references so the graphs become collectible. A failed
+composite construction publishes no wrapper and retains no partial payload.
 
 ### Authority quarantine
 
@@ -104,7 +113,19 @@ lookup semantics unchanged:
 - `TraceStructuralRowComparator` and `TraceRunSpecialStageRowDriver`.
 
 New code may pass only the active payload's existing `TraceData` or
-`TraceRunSpecialStageRows` into those existing call sites. Descriptor metadata
+`TraceRunSpecialStageRows` into those existing call sites. The lease accessors
+and open facade have an exact source/bytecode allowlist:
+
+- `com.openggf.TraceSessionLauncher`;
+- `com.openggf.tests.trace.runs.AbstractRunChainTest`; and
+- `com.openggf.tests.trace.runs.VisualRunReplayHarness`, which also owns the
+  complete-audio replay path.
+
+Dedicated lease/guard tests may exercise the API but cannot relay the payload
+to another production or harness class. A CI guard rejects every other direct
+call, method reference, reflective lookup, or string-named reflective access to
+`openActiveSegment`, `trace`, or `specialStageRows`; it also locks constructor
+visibility and the exact public method surface. Descriptor metadata
 may replace a payload read only where the old launch path already consumed that
 same metadata without hydrating gameplay. RNG and all other gameplay bootstrap
 calls remain confined to the active eager payload path. The only relocated
@@ -199,7 +220,8 @@ Phase two proceeds in the following compatibility-preserving order:
    and lag-bit lookups; and
 7. remove the eager `SegmentPlan` path from run launch and prove no payload,
    auxiliary-event, special-stage, or I/O owner is reachable from either the
-   run plan or any closed segment's session/observer/HUD/driver roots.
+   run plan or any closed segment's session/observer/HUD/driver roots; and
+8. add the API/caller authority guard for the public lease and open facade.
 
 Do not combine this phase with parser-format, trace-schema, execution-phase,
 bootstrap-authority, RNG, compact-field, or hardware-timing changes.
