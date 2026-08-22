@@ -1,0 +1,1876 @@
+{
+  "schema": "openggf.s1-s2-ym-write-calculation.v1",
+  "game": "s1",
+  "architecture": "m68k",
+  "clock": {
+    "master_cycles_per_cpu_cycle": 7,
+    "master_cycles_per_internal_sample": 1008
+  },
+  "source": {
+    "driver": "docs/s1disasm/s1.sounddriver.asm",
+    "shipped_conditional": "FixBugs=0",
+    "coverage": [
+      "FinishTrackUpdate",
+      "WriteFMIorII",
+      "WriteFMI",
+      "WriteFMII",
+      "cfSetVoice/SetVoice",
+      "cfStopTrack"
+    ]
+  },
+  "native_validation": {
+    "oracle": "s1-ring-ym-write-audit-v2.json",
+    "representative_isolated_group": 0
+  },
+  "gaps": [
+    {
+      "after_source_ordinal": 0,
+      "before_source_ordinal": 1,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 1,
+      "before_source_ordinal": 2,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 2,
+      "before_source_ordinal": 3,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 3,
+      "before_source_ordinal": 4,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 4,
+      "before_source_ordinal": 5,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 5,
+      "before_source_ordinal": 6,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 6,
+      "before_source_ordinal": 7,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 7,
+      "before_source_ordinal": 8,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 8,
+      "before_source_ordinal": 9,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 9,
+      "before_source_ordinal": 10,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 10,
+      "before_source_ordinal": 11,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 11,
+      "before_source_ordinal": 12,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 12,
+      "before_source_ordinal": 13,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 13,
+      "before_source_ordinal": 14,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 14,
+      "before_source_ordinal": 15,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 15,
+      "before_source_ordinal": 16,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 16,
+      "before_source_ordinal": 17,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 17,
+      "before_source_ordinal": 18,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 18,
+      "before_source_ordinal": 19,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 19,
+      "before_source_ordinal": 20,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 20,
+      "before_source_ordinal": 21,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_BUS_ARBITRATION",
+          "count": 3,
+          "cycles_each": 1,
+          "role": "bus_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 12,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 21,
+      "before_source_ordinal": 22,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 22,
+      "before_source_ordinal": 23,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 23,
+      "before_source_ordinal": 24,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_AN_POSTINC",
+          "count": 1,
+          "cycles_each": 8,
+          "role": "voice_read",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 24,
+      "before_source_ordinal": 25,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_BUS_ARBITRATION",
+          "count": 2,
+          "cycles_each": 1,
+          "role": "bus_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_NOP",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "shipped_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 25,
+      "before_source_ordinal": 26,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_DBF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "loop",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 16,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 26,
+      "before_source_ordinal": 27,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_BUS_ARBITRATION",
+          "count": 3,
+          "cycles_each": 1,
+          "role": "bus_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_NOP",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "shipped_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 10,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 27,
+      "before_source_ordinal": 28,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_BUS_ARBITRATION",
+          "count": 2,
+          "cycles_each": 1,
+          "role": "bus_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_NOP",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "shipped_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 31,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 28,
+      "before_source_ordinal": 29,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_BUS_ARBITRATION",
+          "count": 3,
+          "cycles_each": 1,
+          "role": "bus_wait",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 12,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 29,
+      "before_source_ordinal": 30,
+      "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "M68K_RTS",
+          "count": 1,
+          "cycles_each": 16,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_JSR_PC",
+          "count": 1,
+          "cycles_each": 18,
+          "role": "call_return",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_READ",
+          "count": 2,
+          "cycles_each": 16,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BTST_IMMEDIATE",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        },
+        {
+          "primitive": "M68K_BNE_SHORT",
+          "count": 2,
+          "cycles_each": 8,
+          "role": "busy_poll",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "M68K_MOVE_B_ABS_WRITE",
+          "count": 11,
+          "cycles_each": 20,
+          "role": "ym_write",
+          "source": "s1.sounddriver.asm:1713-1769,2313-2375"
+        }
+      ]
+    }
+  ]
+}

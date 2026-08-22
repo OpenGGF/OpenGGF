@@ -31,6 +31,9 @@ elif [[ -n "$sound_id" || -n "$fm_channel" ]]; then
 fi
 [[ "$output" = /* ]] || fail '--output must be absolute'
 [[ ! -e "$output" && ! -L "$output" ]] || fail "output already exists: $output"
+instructions_output=${output%.json}.native-instructions.tsv
+[[ ! -e "$instructions_output" && ! -L "$instructions_output" ]] \
+  || fail "instruction output already exists: $instructions_output"
 output_parent=${output%/*}; [[ -n "$output_parent" ]] || output_parent=/
 [[ -d "$output_parent" && ! -L "$output_parent" ]] \
   || fail "output parent must be an existing non-symlink directory"
@@ -122,7 +125,7 @@ lab_patch_sha=$(sha256 "$lab_patch")
     == 9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c ]] \
   || fail 'production observer patch differs'
 [[ "$lab_patch_sha" \
-    == 42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1 ]] \
+    == 563ef6338c9ddbe41c711842688b3daa2f970d312e581484ac7b2a0196241414 ]] \
   || fail 'diagnostic YM patch differs'
 
 stage=$(mktemp -d "$output_parent/.ym-write-lab.XXXXXX")
@@ -180,7 +183,7 @@ compressed_core="$stage/gpgx.wbx.zst"
 core_sha=$(sha256 "$core")
 compressed_core_sha=$(sha256 "$compressed_core")
 [[ "$compressed_core_sha" \
-    == b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a ]] \
+    == 1107ce61ea6d2c4cdd80f35cb2c0ec6f5ae58d4bd62a3fd8269a03c09f6eee36 ]] \
   || fail "compressed diagnostic core SHA-256 differs: $compressed_core_sha"
 
 cp -a -- "$stock_path/." "$stage/install/"
@@ -201,8 +204,10 @@ BIZHAWK_HOME="$stage/install" \
     --jobs 1
 
 raw_writes="$stage/raw-capture/native-writes.tsv"
+raw_instructions="$stage/raw-capture/native-instructions.tsv"
 raw_fm5="$stage/raw-capture/native-fm5.s32le"
 raw_writes_sha=$(sha256 "$raw_writes")
+raw_instructions_sha=$(sha256 "$raw_instructions")
 raw_projection_sha=$(cut -f1-6 "$raw_writes" | sha256sum | awk '{print $1}')
 raw_fm5_sha=$(sha256 "$raw_fm5")
 if [[ "$game" == s3k ]]; then
@@ -214,8 +219,10 @@ if [[ "$game" == s3k ]]; then
     || fail "native FM5 SHA-256 differs: $raw_fm5_sha"
 fi
 
+ln -- "$raw_instructions" "$instructions_output" \
+  || fail "instruction output appeared during capture: $instructions_output"
 ln -- "$candidate" "$output" \
   || fail "output appeared during capture: $output"
-printf 'oracle=%s sha256=%s patch=%s core=%s raw_writes=%s projection=%s fm5=%s\n' \
+printf 'oracle=%s sha256=%s patch=%s core=%s raw_writes=%s instructions=%s projection=%s fm5=%s\n' \
   "$output" "$(sha256 "$output")" "$lab_patch_sha" "$compressed_core_sha" \
-  "$raw_writes_sha" "$raw_projection_sha" "$raw_fm5_sha"
+  "$raw_writes_sha" "$raw_instructions_sha" "$raw_projection_sha" "$raw_fm5_sha"

@@ -16,11 +16,15 @@ games:
 
 | Game/path | Representative isolated span | Atomic attenuation | Source-timed attenuation | Maximum change | Ruling |
 |---|---:|---|---|---:|---|
-| S1 `SndB5_Ring`, FM5 | 69,167 master cycles | `[0,0,0,0]` | `[24,25,24,25]` | 25 | material |
-| S2 `Sound35_RingRight`, FM5 | 135,435 master cycles | `[0,0,0,0]` | `[56,57,56,57]` | 57 | material |
+| S1 `SndB5_Ring`, FM5 | 69,167 master cycles | `[1,1,311,313]` | `[89,73,391,378]` | 88 | material |
+| S2 `Sound35_RingRight`, FM5 | 135,435 master cycles | `[0,22,0,38]` | `[56,79,57,96]` | 58 | material |
 
-`TestS1S2YmWriteTimingAudit` executes this collapse check through the production
-YM core from one identical active-ring seed per comparison. RMS is not needed
+`TestS1S2YmWriteTimingAudit` verifies every capture's full 3,624-byte native
+YM2612 pre-group context and digest. The diagnostic core saves that context
+immediately before the first data write, replays atomic and timed lanes from
+that exact state, restores the live context transactionally, and asserts that
+the timed lane equals the live key-on attenuation. No OpenGGF seed or fixed
+sample history participates. RMS is not needed
 for the ruling because the independently predeclared attenuation condition is
 already true.
 
@@ -35,8 +39,10 @@ fingerprint.
 - S2: the M68K `PlaySound2` request is at `$1376`. The Z80's shipped ring
   alternation reaches `zPlaySound` at `$0975` with `C=$B5` only for
   `Sound35_RingRight`; the next `cfSetVoice` at `$0E03` emits the ordered
-  group-start event. Left-speaker `$CE` admissions are excluded by source
-  state, not by their register stream.
+  group-start event only when `IX=$1D90`, the exact `zSFX_FM5` owner.
+  Wrong-owner starts and an intervening `cfSetVoice` poison the join rather
+  than synthesising an owner from configured channel state. Left-speaker `$CE`
+  admissions are excluded by source state, not by their register stream.
 
 The event is emitted into the same native lab buffer as post-`fm_update` YM
 writes, so ordering is native and dense. Every admitted group runs from that
@@ -53,7 +59,7 @@ Inputs:
 | S2 ROM | `$OPENGGF_MAIN_WORKSPACE/s2.gen`, SHA-1 `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
 | S2 BK2 | `sonic-2-sonic-tails-complete-emeralds.bk2`, SHA-256 `e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5` |
 | BizHawk/GPGX | BizHawk 2.11 commit `427556b5...`; GPGX commit `051d430d...` |
-| Diagnostic patch/core | SHA-256 `42d233ad4c67b5428fd4649b337d1e53e805d4558567a8171fd968216383e6a1` / `b4d7ef91dafa78df0cc7333de6618ebdfad6a68f03c3b39e6f8c04792426e43a` |
+| Diagnostic patch/core | SHA-256 `563ef6338c9ddbe41c711842688b3daa2f970d312e581484ac7b2a0196241414` / `1107ce61ea6d2c4cdd80f35cb2c0ec6f5ae58d4bd62a3fd8269a03c09f6eee36` |
 
 ## Sonic 1 source calculation
 

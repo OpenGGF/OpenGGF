@@ -1,130 +1,199 @@
 package com.openggf.audio.synth;
 
-import com.openggf.audio.rewind.SmpsSourceDescriptor;
-import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Executable materiality check for the source-authenticated S1/S2 ring audit. */
+/** Executable source/native proof for the S1/S2 ring timing audit. */
 class TestS1S2YmWriteTimingAudit {
 
-    private static final String S1_RING =
-            "0,1,177,4;2170,1,49,55;4340,1,57,114;6496,1,53,119;"
-            + "8652,1,61,73;10808,1,81,31;12978,1,89,31;15134,1,85,31;"
-            + "17290,1,93,31;19446,1,97,7;21616,1,105,10;"
-            + "23772,1,101,7;25928,1,109,13;28084,1,113,0;"
-            + "30254,1,121,11;32410,1,117,0;34566,1,125,11;"
-            + "36722,1,129,31;38892,1,137,15;41048,1,133,31;"
-            + "43204,1,141,15;45535,1,65,35;47831,1,73,133;"
-            + "50127,1,69,35;52423,1,77,133;54635,1,181,192;"
-            + "57575,1,181,64;59654,0,40,5;64666,1,165,43;"
-            + "66997,1,161,45;69167,0,40,245";
-
-    private static final String S2_RING =
-            "0,1,177,4;3780,1,49,55;7650,1,53,119;11520,1,57,114;"
-            + "15390,1,61,73;19560,1,81,31;23430,1,85,31;"
-            + "27300,1,89,31;31170,1,93,31;35040,1,97,7;"
-            + "38910,1,101,7;42780,1,105,10;46650,1,109,13;"
-            + "50520,1,113,0;54390,1,117,0;58260,1,121,11;"
-            + "62130,1,125,11;66000,1,129,31;69870,1,133,31;"
-            + "73740,1,137,15;77610,1,141,15;81555,1,181,192;"
-            + "87465,1,65,35;91635,1,69,35;96225,1,73,133;"
-            + "100815,1,77,133;108795,1,181,64;113670,0,40,5;"
-            + "127770,1,165,43;131265,1,161,45;135435,0,40,245";
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final Path S1_ORACLE = Path.of(
+            "docs/architecture/research/audio/s1-ring-ym-write-audit-v2.json");
+    private static final Path S2_ORACLE = Path.of(
+            "docs/architecture/research/audio/s2-ringright-ym-write-audit-v2.json");
+    private static final Path S1_CALCULATION = Path.of(
+            "docs/architecture/research/audio/s1-ring-ym-write-timing-calculation-v1.json");
+    private static final Path S2_CALCULATION = Path.of(
+            "docs/architecture/research/audio/s2-ringright-ym-write-timing-calculation-v1.json");
 
     @Test
-    void isolatedS1RingCrossesThePredeclaredAttenuationThreshold() {
-        assertMaterial(parse(S1_RING), "S1 Ring/SndB5 FM5");
+    void retainedNativeCounterfactualUsesEveryCapturedPreGroupContext() throws IOException {
+        assertNativeCounterfactual(S1_ORACLE, "s1");
+        assertNativeCounterfactual(S2_ORACLE, "s2");
     }
 
     @Test
-    void isolatedS2RingCrossesThePredeclaredAttenuationThreshold() {
-        assertMaterial(parse(S2_RING), "S2 RingRight/Sound35 FM5");
+    void everySourceGapDerivesFromPrimitiveInstructionRows() throws IOException {
+        assertPrimitiveCalculation(S1_CALCULATION, S1_ORACLE, "m68k");
+        assertPrimitiveCalculation(S2_CALCULATION, S2_ORACLE, "z80");
     }
 
-    private static void assertMaterial(List<AuditWrite> writes, String name) {
-        long span = writes.getLast().cycle();
-        assertTrue(span >= 4 * YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE,
-                name + " must span at least four internal YM samples");
-        Ym2612Chip.Snapshot seed = activeRingSeed(writes);
-        int[] atomic = replay(seed, writes, true);
-        int[] timed = replay(seed, writes, false);
-        int maximumDifference = 0;
-        for (int operator = 0; operator < 4; operator++) {
-            maximumDifference = Math.max(maximumDifference,
-                    Math.abs(atomic[operator] - timed[operator]));
-        }
-        assertTrue(maximumDifference >= 8,
-                name + " collapse must change a key-on attenuation by >= 8; "
-                        + "actual maximum=" + maximumDifference);
-    }
-
-    private static Ym2612Chip.Snapshot activeRingSeed(List<AuditWrite> writes) {
-        Ym2612Chip chip = chip();
-        for (AuditWrite write : writes) {
-            chip.write(write.port(), write.register(), write.value());
-        }
-        chip.renderStereo(new int[64], new int[64]);
-        return chip.captureSnapshot();
-    }
-
-    private static int[] replay(Ym2612Chip.Snapshot seed,
-                                List<AuditWrite> writes, boolean atomic) {
-        Ym2612Chip chip = chip();
-        chip.restoreSnapshot(seed);
-        YmWriteTimeline timeline = new YmWriteTimeline(writes.size());
-        chip.setWriteTimeline(timeline);
-        List<Integer> attenuation = new ArrayList<>();
-        chip.setWriteObserver(new ChipWriteObserver() {
-            @Override
-            public void onYm2612Write(int port, int register, int value) { }
-
-            @Override
-            public void onYm2612KeyOn(int channel, int operator, int value) {
-                if (channel == 4) {
-                    attenuation.add(value);
-                }
+    private static void assertNativeCounterfactual(Path path, String game)
+            throws IOException {
+        JsonNode root = JSON.readTree(Files.readAllBytes(path));
+        assertEquals("openggf.s1-s2-ym-write-timing-audit.v2",
+                root.path("schema").asText());
+        assertEquals(game, root.path("game").asText());
+        boolean isolated = false;
+        boolean overlap = false;
+        boolean materialIsolated = false;
+        for (JsonNode group : root.path("groups")) {
+            String classification = group.path("classification").asText();
+            isolated |= classification.equals("isolated");
+            overlap |= classification.equals("overlap");
+            JsonNode counterfactual = group.path("native_counterfactual");
+            byte[] context = Base64.getDecoder().decode(counterfactual
+                    .path("pre_group_context_base64").asText());
+            assertEquals(counterfactual.path("pre_group_context_size").asInt(),
+                    context.length);
+            assertEquals(counterfactual.path("pre_group_context_sha256").asText(),
+                    sha256(context));
+            assertEquals(4, counterfactual.path("atomic_key_on_attenuation").size());
+            assertEquals(4, counterfactual.path("timed_key_on_attenuation").size());
+            assertFalse(counterfactual.path("pre_group_context_sha256").asText()
+                    .matches("0+") , "native context hash must not be a placeholder");
+            if (classification.equals("isolated")
+                    && group.path("relative_last_master_cycle").asLong() >= 4_032
+                    && counterfactual.path("maximum_attenuation_difference").asInt() >= 8) {
+                materialIsolated = true;
             }
-
-            @Override
-            public void onPsgWrite(int value) { }
-        });
-        List<YmWriteTimeline.Entry> entries = new ArrayList<>();
-        for (int ordinal = 0; ordinal < writes.size(); ordinal++) {
-            AuditWrite write = writes.get(ordinal);
-            entries.add(new YmWriteTimeline.Entry(
-                    atomic ? 0 : write.cycle(), ordinal,
-                    write.port(), write.register(), write.value(), 0, 0,
-                    new SmpsSourceDescriptor(SmpsSourceDescriptor.Kind.UNKNOWN,
-                            -1, null, null, 0, 0, 0, false, 0),
-                    YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD));
         }
-        timeline.commit(entries);
-        chip.renderStereo(new int[200], new int[200]);
-        return attenuation.stream().mapToInt(Integer::intValue).toArray();
+        assertTrue(isolated, game + " capture must retain isolated admissions");
+        assertTrue(overlap, game + " capture must retain overlap admissions separately");
+        assertEquals(materialIsolated,
+                root.path("ruling").path("isolated_material").asBoolean(),
+                "ruling must be derived from native isolated contexts");
     }
 
-    private static Ym2612Chip chip() {
-        Ym2612Chip chip = new Ym2612Chip();
-        chip.setChipType(2);
-        chip.setOutputSampleRate(Ym2612Chip.getInternalRate());
-        return chip;
-    }
-
-    private static List<AuditWrite> parse(String encoded) {
-        List<AuditWrite> writes = new ArrayList<>();
-        for (String row : encoded.split(";")) {
-            String[] fields = row.split(",");
-            writes.add(new AuditWrite(Long.parseLong(fields[0]),
-                    Integer.parseInt(fields[1]), Integer.parseInt(fields[2]),
-                    Integer.parseInt(fields[3])));
+    private static void assertPrimitiveCalculation(Path calculationPath,
+                                                   Path oraclePath,
+                                                   String architecture)
+            throws IOException {
+        JsonNode calculation = JSON.readTree(Files.readAllBytes(calculationPath));
+        JsonNode oracle = JSON.readTree(Files.readAllBytes(oraclePath));
+        assertEquals("openggf.s1-s2-ym-write-calculation.v1",
+                calculation.path("schema").asText());
+        assertEquals(architecture, calculation.path("architecture").asText());
+        if (architecture.equals("z80")) {
+            assertEquals("zSFX_FM5", calculation.path("source")
+                    .path("owner").path("label").asText());
+            assertEquals("0x1D90", calculation.path("source")
+                    .path("owner").path("ix").asText());
         }
-        return List.copyOf(writes);
+        long masterCyclesPerCpuCycle = calculation.path("clock")
+                .path("master_cycles_per_cpu_cycle").asLong();
+        Map<String, Long> timing = primitiveTimings(architecture);
+        JsonNode representative = null;
+        for (JsonNode group : oracle.path("groups")) {
+            if (group.path("classification").asText().equals("isolated")) {
+                representative = group;
+                break;
+            }
+        }
+        assertTrue(representative != null);
+        JsonNode writes = representative.path("writes");
+        JsonNode gaps = calculation.path("gaps");
+        assertEquals(writes.size() - 1, gaps.size());
+        for (int gapIndex = 0; gapIndex < gaps.size(); gapIndex++) {
+            JsonNode gap = gaps.get(gapIndex);
+            assertEquals(gapIndex, gap.path("after_source_ordinal").asInt());
+            assertEquals(gapIndex + 1, gap.path("before_source_ordinal").asInt());
+            assertTrue(gap.path("source").asText().startsWith(
+                    architecture.equals("m68k")
+                            ? "s1.sounddriver.asm:" : "s2.sounddriver.asm:"));
+            long cpuCycles = 0;
+            assertTrue(gap.path("rows").size() > 0);
+            boolean busyPoll = false;
+            boolean callReturn = false;
+            boolean bankWait = architecture.equals("m68k");
+            for (JsonNode row : gap.path("rows")) {
+                String primitive = row.path("primitive").asText();
+                assertTrue(timing.containsKey(primitive),
+                        "unknown primitive " + primitive);
+                assertEquals(timing.get(primitive).longValue(),
+                        row.path("cycles_each").asLong(),
+                        "artifact cannot redefine primitive timing");
+                assertTrue(row.path("count").asLong() > 0);
+                busyPoll |= row.path("role").asText().equals("busy_poll");
+                callReturn |= row.path("role").asText().equals("call_return");
+                bankWait |= row.path("role").asText().equals("bank_wait");
+                if (primitive.equals("M68K_BNE_SHORT")
+                        || primitive.equals("M68K_DBF")
+                        || primitive.startsWith("Z80_JR")
+                        || primitive.equals("Z80_DJNZ")) {
+                    assertTrue(row.hasNonNull("branch_outcome"));
+                }
+                cpuCycles = Math.addExact(cpuCycles, Math.multiplyExact(
+                        timing.get(primitive), row.path("count").asLong()));
+            }
+            assertTrue(busyPoll, "gap " + gapIndex + " must expose busy polling");
+            assertTrue(callReturn, "gap " + gapIndex + " must expose call/return");
+            assertTrue(bankWait, "gap " + gapIndex + " must expose bank wait rules");
+            cpuCycles = Math.addExact(cpuCycles,
+                    gap.path("wait_cpu_cycles").asLong());
+            long actual = writes.get(gapIndex + 1)
+                    .path("relative_master_cycle").asLong()
+                    - writes.get(gapIndex).path("relative_master_cycle").asLong();
+            assertEquals(actual, Math.multiplyExact(cpuCycles,
+                    masterCyclesPerCpuCycle), "gap " + gapIndex);
+        }
     }
 
-    private record AuditWrite(long cycle, int port, int register, int value) { }
+    private static Map<String, Long> primitiveTimings(String architecture) {
+        Map<String, Long> timing = new HashMap<>();
+        if (architecture.equals("m68k")) {
+            timing.put("M68K_RTS", 16L);
+            timing.put("M68K_JSR_PC", 18L);
+            timing.put("M68K_MOVE_B_ABS_READ", 16L);
+            timing.put("M68K_BTST_IMMEDIATE", 4L);
+            timing.put("M68K_BNE_SHORT", 8L);
+            timing.put("M68K_MOVE_B_ABS_WRITE", 20L);
+            timing.put("M68K_DBF", 10L);
+            timing.put("M68K_MOVE_B_AN_POSTINC", 8L);
+            timing.put("M68K_NOP", 4L);
+            timing.put("M68K_BUS_ARBITRATION", 1L);
+        } else {
+            timing.put("Z80_RET", 10L);
+            timing.put("Z80_RST", 11L);
+            timing.put("Z80_LD_ABS_A", 13L);
+            timing.put("Z80_LD_A_ABS", 13L);
+            timing.put("Z80_ADD_A_A", 4L);
+            timing.put("Z80_JR_C", 7L);
+            timing.put("Z80_BIT_IX_D", 20L);
+            timing.put("Z80_JR_Z", 7L);
+            timing.put("Z80_JR", 12L);
+            timing.put("GPGX_BANK_READ_WAIT", 3L);
+            timing.put("Z80_LD_R_IX_D", 19L);
+            timing.put("Z80_DJNZ", 13L);
+            timing.put("Z80_PUSH_AF", 11L);
+            timing.put("Z80_POP_AF", 10L);
+            timing.put("Z80_LD_R_HL", 7L);
+            timing.put("Z80_INC_HL", 6L);
+            timing.put("Z80_LD_R_R", 4L);
+        }
+        return Map.copyOf(timing);
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new AssertionError(impossible);
+        }
+    }
 }

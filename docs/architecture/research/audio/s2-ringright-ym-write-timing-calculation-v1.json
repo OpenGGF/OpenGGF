@@ -1,0 +1,2909 @@
+{
+  "schema": "openggf.s1-s2-ym-write-calculation.v1",
+  "game": "s2",
+  "architecture": "z80",
+  "clock": {
+    "master_cycles_per_cpu_cycle": 15,
+    "master_cycles_per_internal_sample": 1008,
+    "gpgx_uncontended_bank_wait_cpu_cycles": 3
+  },
+  "source": {
+    "driver": "docs/s2disasm/s2.sounddriver.asm",
+    "shipped_conditional": "FixDriverBugs=fixBugs=0",
+    "owner": {
+      "label": "zSFX_FM5",
+      "ix": "0x1D90"
+    },
+    "coverage": [
+      "zWriteFMIorII",
+      "zWriteFMI",
+      "zWriteFMII",
+      "zSetMaxRelRate",
+      "cfSetVoice/zSetVoice",
+      "zFinishTrackUpdate",
+      "cfStopTrack"
+    ]
+  },
+  "native_validation": {
+    "oracle": "s2-ringright-ym-write-audit-v2.json",
+    "representative_isolated_group": 0,
+    "dma_stalls": 0
+  },
+  "gaps": [
+    {
+      "after_source_ordinal": 0,
+      "before_source_ordinal": 1,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_INC_HL",
+          "count": 1,
+          "cycles_each": 6,
+          "role": "bank_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_POP_AF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 1,
+      "before_source_ordinal": 2,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 2,
+      "before_source_ordinal": 3,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 3,
+      "before_source_ordinal": 4,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 4,
+      "before_source_ordinal": 5,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_LD_R_R",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "instruction",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 5,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 5,
+      "before_source_ordinal": 6,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 6,
+      "before_source_ordinal": 7,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 7,
+      "before_source_ordinal": 8,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 8,
+      "before_source_ordinal": 9,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 9,
+      "before_source_ordinal": 10,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 10,
+      "before_source_ordinal": 11,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 11,
+      "before_source_ordinal": 12,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 12,
+      "before_source_ordinal": 13,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 13,
+      "before_source_ordinal": 14,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 14,
+      "before_source_ordinal": 15,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 15,
+      "before_source_ordinal": 16,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 16,
+      "before_source_ordinal": 17,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 17,
+      "before_source_ordinal": 18,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 18,
+      "before_source_ordinal": 19,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 19,
+      "before_source_ordinal": 20,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 2,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 3,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 20,
+      "before_source_ordinal": 21,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_LD_R_R",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "instruction",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 4,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 21,
+      "before_source_ordinal": 22,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_INC_HL",
+          "count": 1,
+          "cycles_each": 6,
+          "role": "bank_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 11,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 22,
+      "before_source_ordinal": 23,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_LD_R_R",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "instruction",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 5,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 23,
+      "before_source_ordinal": 24,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_DJNZ",
+          "count": 1,
+          "cycles_each": 13,
+          "role": "loop",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 6,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 24,
+      "before_source_ordinal": 25,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_DJNZ",
+          "count": 1,
+          "cycles_each": 13,
+          "role": "loop",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 6,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 25,
+      "before_source_ordinal": 26,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_PUSH_AF",
+          "count": 1,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 18,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 26,
+      "before_source_ordinal": 27,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_DJNZ",
+          "count": 1,
+          "cycles_each": 13,
+          "role": "loop",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 7,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 27,
+      "before_source_ordinal": 28,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_LD_R_HL",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "bank_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_DJNZ",
+          "count": 1,
+          "cycles_each": 13,
+          "role": "loop",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 39,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 28,
+      "before_source_ordinal": 29,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_INC_HL",
+          "count": 1,
+          "cycles_each": 6,
+          "role": "bank_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_POP_AF",
+          "count": 1,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 2,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    },
+    {
+      "after_source_ordinal": 29,
+      "before_source_ordinal": 30,
+      "source": "s2.sounddriver.asm:343-389,3271-3432",
+      "wait_cpu_cycles": 0,
+      "rows": [
+        {
+          "primitive": "Z80_RET",
+          "count": 3,
+          "cycles_each": 10,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_RST",
+          "count": 3,
+          "cycles_each": 11,
+          "role": "call_return",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_ABS_A",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "ym_write",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_A_ABS",
+          "count": 2,
+          "cycles_each": 13,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_ADD_A_A",
+          "count": 2,
+          "cycles_each": 4,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_C",
+          "count": 2,
+          "cycles_each": 7,
+          "role": "busy_poll",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_BIT_IX_D",
+          "count": 1,
+          "cycles_each": 20,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_JR_Z",
+          "count": 1,
+          "cycles_each": 7,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "not_taken"
+        },
+        {
+          "primitive": "Z80_JR",
+          "count": 1,
+          "cycles_each": 12,
+          "role": "owner_dispatch",
+          "source": "s2.sounddriver.asm:343-389,3271-3432",
+          "branch_outcome": "taken"
+        },
+        {
+          "primitive": "GPGX_BANK_READ_WAIT",
+          "count": 1,
+          "cycles_each": 3,
+          "role": "bank_wait",
+          "source": "core/memz80.c:z80_request_68k_bus_access@051d430d3d1b54625f9900c8f152d7f232e06daf"
+        },
+        {
+          "primitive": "Z80_LD_R_R",
+          "count": 1,
+          "cycles_each": 4,
+          "role": "instruction",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        },
+        {
+          "primitive": "Z80_LD_R_IX_D",
+          "count": 5,
+          "cycles_each": 19,
+          "role": "track_read",
+          "source": "s2.sounddriver.asm:343-389,3271-3432"
+        }
+      ]
+    }
+  ]
+}

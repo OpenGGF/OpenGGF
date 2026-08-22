@@ -73,9 +73,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var rawWrites = new List<string> {
                 "frame\tfm5_ordinal\tcycles\tport\tregister\tvalue\tdma_stall_count"
             };
+            var rawInstructions = new List<string> {
+                "frame\tgroup_ordinal\tafter_source_ordinal\tcpu\tpc\topcode\tcycles"
+            };
             var groups = new List<WriteGroup>();
             var attenuation = new int[4];
             var fmAddress = new uint[2];
+            var preGroupContext = new List<byte>();
+            int[] atomicAttenuation = null;
+            int[] timedAttenuation = null;
+            bool keyOnPending = false;
             List<TimedWrite> currentGroup = null;
             int currentRequestFrame = -1;
             int previousRequestFrame = -1;
@@ -93,7 +100,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         api.gpgx_ym_timing_lab_configure_z80_admission(
                             config.RequestPc, config.GroupStartPc,
                             config.SoundId,
-                            config.FmChannel));
+                            config.FmChannel,
+                            config.OwnerIx));
                 using (IDisposable admissionCallback = config.Z80Admission
                     ? null : host.RegisterExecuteCallback(config.RequestPc, () =>
                 {
@@ -174,6 +182,61 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                         <= config.SourceDurationFrames;
                                 previousRequestFrame = frame;
                                 currentGroup = new List<TimedWrite>();
+                                preGroupContext.Clear();
+                                atomicAttenuation = null;
+                                timedAttenuation = null;
+                                keyOnPending = false;
+                                continue;
+                            }
+                            if (value.Subject == 14)
+                            {
+                                if ((value.Flags & 1) != 0)
+                                    preGroupContext.Clear();
+                                for (int byteIndex = 0;
+                                     byteIndex < value.PayloadLength; byteIndex++)
+                                    preGroupContext.Add((byte)(value.Payload
+                                            >> (byteIndex * 8)));
+                                continue;
+                            }
+                            if (value.Subject == 15)
+                            {
+                                int[] lane = new int[4];
+                                for (int operatorIndex = 0;
+                                     operatorIndex < 4; operatorIndex++)
+                                    lane[operatorIndex] = (int)((value.Payload
+                                            >> (operatorIndex * 16)) & 0xffffu);
+                                if (value.Flags == 1) atomicAttenuation = lane;
+                                else if (value.Flags == 2) timedAttenuation = lane;
+                                else throw new InvalidDataException(
+                                    "Unknown native counterfactual lane.");
+                                if (keyOnPending && atomicAttenuation != null
+                                    && timedAttenuation != null)
+                                {
+                                    AssertEx.Equal(
+                                        string.Join(",", attenuation),
+                                        string.Join(",", timedAttenuation));
+                                    AddAuditGroup(groups, currentGroup,
+                                        attenuation, currentRequestFrame,
+                                        currentOverlap, preGroupContext,
+                                        atomicAttenuation, timedAttenuation);
+                                    currentGroup = null;
+                                    currentRequestFrame = -1;
+                                    keyOnPending = false;
+                                }
+                                continue;
+                            }
+                            if (value.Subject == 16)
+                            {
+                                if (currentGroup == null) continue;
+                                uint pc = unchecked((uint)value.Payload);
+                                uint cycles = unchecked((uint)(value.Payload >> 32));
+                                rawInstructions.Add(frame + "\t" + groups.Count
+                                    + "\t" + (currentGroup.Count - 1) + "\t"
+                                    + value.Flags + "\t0x"
+                                    + pc.ToString("X", CultureInfo.InvariantCulture)
+                                    + "\t0x" + value.Value.ToString(
+                                        "X2", CultureInfo.InvariantCulture)
+                                    + "\t" + cycles);
                                 continue;
                             }
                             if (value.Subject != 12) continue;
@@ -205,11 +268,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                 if (IsFm5KeyOn(port, register,
                                     checked((int)data)))
                                 {
-                                    AddAuditGroup(groups, currentGroup,
-                                        attenuation, currentRequestFrame,
-                                        currentOverlap);
-                                    currentGroup = null;
-                                    currentRequestFrame = -1;
+                                    keyOnPending = true;
                                 }
                             }
                         }
@@ -228,12 +287,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "An audited ring group overlapped VDP DMA.");
 
             string writesPath = Path.Combine(rawDirectory, "native-writes.tsv");
+            string instructionsPath = Path.Combine(rawDirectory,
+                "native-instructions.tsv");
             string fm5Path = Path.Combine(rawDirectory, "native-fm5.s32le");
             File.WriteAllLines(writesPath, rawWrites);
+            File.WriteAllLines(instructionsPath, rawInstructions);
             WriteInts(fm5Path, fm5);
             PopulateOnsetRms(groups, fm5);
             WriteAuditOracleCreateNew(output, config, groups, patchSha256,
-                coreSha256, Sha256(writesPath), Sha256(fm5Path));
+                coreSha256, Sha256(writesPath), Sha256(instructionsPath),
+                Sha256(fm5Path));
             Console.WriteLine("YM_TIMING_AUDIT game=" + config.Game
                 + " groups=" + groups.Count
                 + " isolated=" + groups.Count(group => !group.Overlapping)
@@ -469,7 +532,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void AddAuditGroup(List<WriteGroup> groups,
             List<TimedWrite> writes, int[] attenuation, int requestFrame,
-            bool overlapping)
+            bool overlapping, List<byte> preGroupContext,
+            int[] atomicAttenuation, int[] timedAttenuation)
         {
             if (writes.Count == 0)
                 throw new InvalidDataException("A ring request produced no FM5 writes.");
@@ -492,6 +556,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 KeyOnAttenuation = new[] {
                     attenuation[0], attenuation[2], attenuation[1], attenuation[3]
                 },
+                PreGroupContext = preGroupContext.ToArray(),
+                AtomicAttenuation = (int[])atomicAttenuation.Clone(),
+                TimedAttenuation = (int[])timedAttenuation.Clone(),
                 Writes = writes
             });
         }
@@ -551,10 +618,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void WriteAuditOracleCreateNew(string path,
             RingAuditConfig config, List<WriteGroup> groups,
             string patchSha256, string coreSha256,
-            string rawWritesSha256, string fm5Sha256)
+            string rawWritesSha256, string rawInstructionsSha256,
+            string fm5Sha256)
         {
             var root = new JObject {
-                ["schema"] = "openggf.s1-s2-ym-write-timing-audit.v1",
+                ["schema"] = "openggf.s1-s2-ym-write-timing-audit.v2",
                 ["game"] = config.Game,
                 ["event_phase"] = "post_fm_update",
                 ["source_authentication"] = new JObject {
@@ -578,13 +646,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     ["diagnostic_patch_sha256"] = patchSha256,
                     ["diagnostic_core_sha256"] = coreSha256,
                     ["native_writes_sha256"] = rawWritesSha256,
+                    ["native_instructions_sha256"] = rawInstructionsSha256,
                     ["native_fm5_sha256"] = fm5Sha256
+                },
+                ["ruling"] = new JObject {
+                    ["isolated_material"] = groups.Any(group =>
+                        !group.Overlapping
+                        && group.RelativeLastMasterCycle >= 4032
+                        && MaximumAttenuationDifference(group) >= 8)
                 },
                 ["groups"] = new JArray(groups.Select(group => {
                     JObject value = ToJson(group);
                     value["request_frame"] = group.RequestFrame;
                     value["classification"] = group.Overlapping
                         ? "overlap" : "isolated";
+                    value["native_counterfactual"] = new JObject {
+                        ["pre_group_context_size"] = group.PreGroupContext.Length,
+                        ["pre_group_context_sha256"] =
+                            Sha256(group.PreGroupContext),
+                        ["pre_group_context_base64"] =
+                            Convert.ToBase64String(group.PreGroupContext),
+                        ["atomic_key_on_attenuation"] =
+                            new JArray(group.AtomicAttenuation),
+                        ["timed_key_on_attenuation"] =
+                            new JArray(group.TimedAttenuation),
+                        ["maximum_attenuation_difference"] =
+                            MaximumAttenuationDifference(group)
+                    };
                     return value;
                 }))
             };
@@ -595,6 +683,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             using (var stream = new FileStream(path, FileMode.CreateNew,
                 FileAccess.Write, FileShare.None))
                 stream.Write(bytes, 0, bytes.Length);
+        }
+
+        private static int MaximumAttenuationDifference(WriteGroup group)
+        {
+            int maximum = 0;
+            for (int index = 0; index < 4; index++)
+                maximum = Math.Max(maximum, Math.Abs(
+                    group.AtomicAttenuation[index]
+                    - group.TimedAttenuation[index]));
+            return maximum;
         }
 
         private static JObject ToJson(WriteGroup group)
@@ -704,6 +802,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             internal int[] KeyOnAttenuation { get; set; }
             internal double OnsetRms { get; set; }
             internal List<TimedWrite> Writes { get; set; }
+            internal byte[] PreGroupContext { get; set; }
+            internal int[] AtomicAttenuation { get; set; }
+            internal int[] TimedAttenuation { get; set; }
         }
 
         private sealed class RingAuditConfig
@@ -713,19 +814,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
                 "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
                 0x721C6u, 0x72C26u, "M68K D7", false, 0xF280u,
-                0xB5u, 4u, 37, 5000);
+                0xB5u, 4u, 0u, 37, 5000);
             internal static readonly RingAuditConfig Sonic2 = new RingAuditConfig(
                 "s2", "S2_ROM_PATH", "S2_BK2_PATH",
                 "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
                 "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5",
                 0x975u, 0xE03u, null, true, 0u,
-                0xB5u, 4u, 37, 5000);
+                0xB5u, 4u, 0x1D90u, 37, 5000);
 
             private RingAuditConfig(string game, string romEnvironment,
                 string movieEnvironment, string romSha1, string movieSha256,
                 uint requestPc, uint groupStartPc, string soundRegister,
                 bool z80Admission, uint fmTrackAddress,
                 uint soundId, uint fmChannel,
+                uint ownerIx,
                 int sourceDurationFrames, int lastCaptureFrame)
             {
                 Game = game;
@@ -740,6 +842,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 FmTrackAddress = fmTrackAddress;
                 SoundId = soundId;
                 FmChannel = fmChannel;
+                OwnerIx = ownerIx;
                 SourceDurationFrames = sourceDurationFrames;
                 LastCaptureFrame = lastCaptureFrame;
             }
@@ -756,6 +859,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             internal uint FmTrackAddress { get; private set; }
             internal uint SoundId { get; private set; }
             internal uint FmChannel { get; private set; }
+            internal uint OwnerIx { get; private set; }
             internal int SourceDurationFrames { get; private set; }
             internal int LastCaptureFrame { get; private set; }
         }
