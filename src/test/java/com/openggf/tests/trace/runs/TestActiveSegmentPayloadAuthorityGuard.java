@@ -13,6 +13,7 @@ import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.NewClassTree;
 import com.sun.source.tree.ParenthesizedTree;
+import com.sun.source.tree.ReturnTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeCastTree;
 import com.sun.source.tree.VariableTree;
@@ -1123,6 +1124,145 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void sameSourceHelperReturnsCannotEraseAuthority() {
+        String lookupDiagnostic =
+                " findVirtual acquires active payload accessor trace on " + PAYLOAD;
+        String accessorDiagnostic =
+                " getDeclaredMethod acquires active payload accessor trace on "
+                        + PAYLOAD;
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "HelperClassAccessor.java:3" + lookupDiagnostic,
+                        "HelperClassAccessor.java", """
+                                class HelperClassAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVirtual(payloadType(), "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                    Class<?> payloadType() {
+                                        return ActiveSegmentPayload.class;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "IdentityHelperAccessor.java:3" + lookupDiagnostic,
+                        "IdentityHelperAccessor.java", """
+                                class IdentityHelperAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVirtual(identity(ActiveSegmentPayload.class), "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                    Class<?> identity(Class<?> type) {
+                                        return type;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolations(
+                        List.of(
+                                "HelperForNameAccessor.java:3" + accessorDiagnostic,
+                                "HelperForNameAccessor.java:3 Class.forName resolves "
+                                        + "active payload owner " + PAYLOAD),
+                        "HelperForNameAccessor.java", """
+                                class HelperForNameAccessor {
+                                    Object acquire() throws Exception {
+                                        return Class.forName(payloadName()).getDeclaredMethod("trace");
+                                    }
+                                    String payloadName() {
+                                        return "com.openggf.trace.replay.runs.ActiveSegmentPayload";
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "MultiHelperAccessor.java:3" + lookupDiagnostic,
+                        "MultiHelperAccessor.java", """
+                                class MultiHelperAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.findVirtual(payloadType(), "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                    Class<?> payloadType() {
+                                        return payloadAlias();
+                                    }
+                                    Class<?> payloadAlias() {
+                                        return ActiveSegmentPayload.class;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "MultipleReturnAccessor.java:3" + lookupDiagnostic,
+                        "MultipleReturnAccessor.java", """
+                                class MultipleReturnAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup, boolean restricted) throws Exception {
+                                        return lookup.findVirtual(maybePayload(restricted), "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                    Class<?> maybePayload(boolean restricted) {
+                                        if (restricted) return StringBuilder.class;
+                                        return ActiveSegmentPayload.class;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "HelperSideEffectAccessor.java:6" + accessorDiagnostic,
+                        "HelperSideEffectAccessor.java", """
+                                class HelperSideEffectAccessor {
+                                    Object acquire() throws Exception {
+                                        return inspect(ActiveSegmentPayload.class);
+                                    }
+                                    Class<?> inspect(Class<?> type) throws Exception {
+                                        type.getDeclaredMethod("trace");
+                                        return StringBuilder.class;
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void sameSourceHelperReturnControlsRemainBoundedAndNarrow() {
+        assertNoSourceViolation(
+                "HelperReturnControls.java", """
+                        class HelperReturnControls {
+                            Object inspect(MethodHandles.Lookup lookup, boolean first)
+                                    throws Exception {
+                                lookup.findVirtual(cycleA(), "trace",
+                                        MethodType.methodType(Object.class));
+                                lookup.findVirtual(overloaded("safe"), "trace",
+                                        MethodType.methodType(Object.class));
+                                lookup.findVirtual(unrelated(), "trace",
+                                        MethodType.methodType(Object.class));
+                                lookup.findVirtual(identity(StringBuilder.class), "trace",
+                                        MethodType.methodType(Object.class));
+                                lookup.findVirtual(maybeUnrelated(first), "trace",
+                                        MethodType.methodType(Object.class));
+                                return Class.forName(unrelatedName())
+                                        .getDeclaredMethod("trace");
+                            }
+                            Class<?> cycleA() {
+                                return cycleB();
+                            }
+                            Class<?> cycleB() {
+                                return cycleA();
+                            }
+                            Class<?> overloaded(String ignored) {
+                                return StringBuilder.class;
+                            }
+                            Class<?> overloaded(int ignored) {
+                                return ActiveSegmentPayload.class;
+                            }
+                            Class<?> unrelated() {
+                                return StringBuilder.class;
+                            }
+                            Class<?> identity(Class<?> type) {
+                                return type;
+                            }
+                            Class<?> maybeUnrelated(boolean first) {
+                                if (first) return StringBuilder.class;
+                                return String.class;
+                            }
+                            String unrelatedName() {
+                                return "java.lang.String";
+                            }
+                        }
+                        """);
+    }
+
+    @Test
     void sourceGuardAllowsOnlyProvenHarmlessExactOwnerFields() {
         assertNoSourceViolation(
                 "HarmlessOwnerFields.java", """
@@ -1380,6 +1520,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
     private static final class ReflectiveAcquisitionScanner
             extends TreePathScanner<Void, Void> {
+        private static final int MAX_HELPER_RETURN_DEPTH = 32;
         private final String fileName;
         private final CompilationUnitTree unit;
         private final SourcePositions positions;
@@ -1389,6 +1530,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private final Deque<Map<String, KnownValue>> scopes = new ArrayDeque<>();
         private final Deque<String> sourceOrigins = new ArrayDeque<>();
         private final Set<MethodTree> activeHelperMethods = new HashSet<>();
+        private final Set<MethodTree> activeHelperReturnMethods = new HashSet<>();
         private final Map<String, Map<String, KnownValue>> sourceFields =
                 new HashMap<>();
         private final Map<String, Map<String, ExpressionTree>>
@@ -1643,14 +1785,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                             || isRestrictedTarget(target))) {
                 return;
             }
-            SourceMethodKey key = new SourceMethodKey(
-                    invokedName(invocation), arguments.size());
-            for (SourceMethod sourceMethod : sourceMethods
-                    .getOrDefault(key, List.of())) {
+            for (SourceMethod sourceMethod : resolvedSourceMethods(
+                    invocation, values)) {
                 MethodTree method = sourceMethod.method();
-                if (!matchesHelperOwner(invocation, sourceMethod.owner())
-                        || method.getBody() == null
-                        || !activeHelperMethods.add(method)) {
+                if (!activeHelperMethods.add(method)) {
                     continue;
                 }
                 Map<String, KnownValue> bindings = new HashMap<>();
@@ -1792,7 +1930,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
             String method = invokedName(invocation);
             List<? extends ExpressionTree> arguments = invocation.getArguments();
             if (isSameSourceHelperCall(invocation)) {
-                return null;
+                return evaluateSameSourceHelperReturn(invocation);
             }
             KnownValue receiverValue = evaluate(receiver(invocation));
             if ("concat".equals(method) && arguments.size() == 1) {
@@ -1848,6 +1986,238 @@ class TestActiveSegmentPayloadAuthorityGuard {
                         text(evaluate(arguments.getFirst()))));
             }
             return null;
+        }
+
+        private KnownValue evaluateSameSourceHelperReturn(
+                MethodInvocationTree invocation) {
+            if (activeHelperReturnMethods.size() >= MAX_HELPER_RETURN_DEPTH) {
+                return KnownValue.unknown();
+            }
+            List<KnownValue> arguments = invocation.getArguments().stream()
+                    .map(this::evaluate)
+                    .map(value -> value != null ? value : KnownValue.unknown())
+                    .toList();
+            List<KnownValue> returns = new ArrayList<>();
+            for (SourceMethod sourceMethod : resolvedSourceMethods(
+                    invocation, arguments)) {
+                MethodTree method = sourceMethod.method();
+                if (!activeHelperReturnMethods.add(method)) {
+                    returns.add(KnownValue.unknown());
+                    continue;
+                }
+                Map<String, KnownValue> bindings = new HashMap<>();
+                for (int index = 0; index < arguments.size(); index++) {
+                    bindings.put(method.getParameters().get(index)
+                            .getName().toString(), arguments.get(index));
+                }
+                scopes.push(bindings);
+                boolean pushedOwner = !sourceMethod.owner().equals(
+                        sourceOrigins.peek());
+                if (pushedOwner) {
+                    sourceOrigins.push(sourceMethod.owner());
+                }
+                try {
+                    collectHelperReturns(method.getBody(), returns);
+                } finally {
+                    if (pushedOwner) {
+                        sourceOrigins.pop();
+                    }
+                    scopes.pop();
+                    activeHelperReturnMethods.remove(method);
+                }
+            }
+            return mergeHelperReturns(returns);
+        }
+
+        private void collectHelperReturns(
+                BlockTree body, List<KnownValue> returns) {
+            new TreeScanner<Void, Void>() {
+                @Override
+                public Void visitBlock(BlockTree node, Void unused) {
+                    scopes.push(new HashMap<>());
+                    try {
+                        return super.visitBlock(node, unused);
+                    } finally {
+                        scopes.pop();
+                    }
+                }
+
+                @Override
+                public Void visitVariable(VariableTree node, Void unused) {
+                    KnownValue value = evaluate(node.getInitializer());
+                    if (value == null) {
+                        value = typedTarget(node.getType());
+                    }
+                    scopes.peek().put(node.getName().toString(),
+                            value != null ? value : KnownValue.unknown());
+                    return null;
+                }
+
+                @Override
+                public Void visitAssignment(AssignmentTree node, Void unused) {
+                    if (node.getVariable() instanceof IdentifierTree identifier) {
+                        KnownValue value = evaluate(node.getExpression());
+                        bind(identifier.getName().toString(), value != null
+                                ? value : KnownValue.unknown());
+                    }
+                    return null;
+                }
+
+                @Override
+                public Void visitReturn(ReturnTree node, Void unused) {
+                    KnownValue value = evaluate(node.getExpression());
+                    returns.add(value != null ? value : KnownValue.unknown());
+                    return null;
+                }
+
+                @Override
+                public Void visitClass(ClassTree node, Void unused) {
+                    return null;
+                }
+            }.scan(body, null);
+        }
+
+        private KnownValue mergeHelperReturns(List<KnownValue> returns) {
+            if (returns.isEmpty()) {
+                return KnownValue.unknown();
+            }
+            KnownValue first = returns.getFirst();
+            if (returns.stream().allMatch(first::equals)) {
+                return first;
+            }
+            return returns.stream()
+                    .filter(this::isSensitiveHelperValue)
+                    .max((left, right) -> Integer.compare(
+                            helperValueRank(left), helperValueRank(right)))
+                    .orElseGet(KnownValue::unknown);
+        }
+
+        private boolean isSensitiveHelperValue(KnownValue value) {
+            return helperValueRank(value) > 0;
+        }
+
+        private int helperValueRank(KnownValue value) {
+            String target = targetName(value);
+            if (PAYLOAD.equals(target)) {
+                return 50;
+            }
+            if (WALKER.equals(target)) {
+                return 40;
+            }
+            if (isRestrictedFieldTarget(target)) {
+                return 30;
+            }
+            String valueText = text(value);
+            String textTarget = normalizeTargetName(valueText);
+            if (PAYLOAD.equals(textTarget)) {
+                return 25;
+            }
+            if (WALKER.equals(textTarget)) {
+                return 20;
+            }
+            if (isRestrictedFieldTarget(textTarget)) {
+                return 15;
+            }
+            if (valueText != null && (PAYLOAD_ACCESSORS.contains(valueText)
+                    || "openActiveSegment".equals(valueText))) {
+                return 10;
+            }
+            return 0;
+        }
+
+        private List<SourceMethod> resolvedSourceMethods(
+                MethodInvocationTree invocation, List<KnownValue> arguments) {
+            SourceMethodKey key = new SourceMethodKey(
+                    invokedName(invocation), invocation.getArguments().size());
+            List<SourceMethod> candidates = sourceMethods
+                    .getOrDefault(key, List.of()).stream()
+                    .filter(method -> method.method().getBody() != null
+                            && matchesHelperOwner(invocation, method.owner()))
+                    .toList();
+            if (candidates.size() < 2) {
+                return candidates;
+            }
+            Map<SourceMethod, Integer> scores = new HashMap<>();
+            int bestScore = Integer.MIN_VALUE;
+            for (SourceMethod candidate : candidates) {
+                int score = sourceMethodMatchScore(
+                        invocation, arguments, candidate.method());
+                scores.put(candidate, score);
+                bestScore = Math.max(bestScore, score);
+            }
+            if (bestScore < 0) {
+                return List.of();
+            }
+            int selectedScore = bestScore;
+            return candidates.stream()
+                    .filter(candidate -> scores.get(candidate) == selectedScore)
+                    .toList();
+        }
+
+        private int sourceMethodMatchScore(
+                MethodInvocationTree invocation,
+                List<KnownValue> arguments,
+                MethodTree method) {
+            int score = 0;
+            for (int index = 0; index < arguments.size(); index++) {
+                int argumentScore = argumentMatchScore(
+                        invocation.getArguments().get(index),
+                        arguments.get(index),
+                        method.getParameters().get(index).getType().toString());
+                if (argumentScore < 0) {
+                    return -1;
+                }
+                score += argumentScore;
+            }
+            return score;
+        }
+
+        private int argumentMatchScore(
+                ExpressionTree expression,
+                KnownValue value,
+                String declaredType) {
+            String type = simpleRawType(declaredType);
+            if (value.classObject()) {
+                return "Class".equals(type) ? 4
+                        : "Object".equals(type) ? 1 : -1;
+            }
+            if (text(value) != null) {
+                return "String".equals(type) ? 4
+                        : "CharSequence".equals(type) ? 3
+                        : "Object".equals(type) ? 1 : -1;
+            }
+            if (expression instanceof LiteralTree literal) {
+                Object literalValue = literal.getValue();
+                if (literalValue instanceof Boolean) {
+                    return Set.of("boolean", "Boolean").contains(type)
+                            ? 4 : "Object".equals(type) ? 1 : -1;
+                }
+                if (literalValue instanceof Number) {
+                    return Set.of(
+                            "byte", "short", "int", "long", "float", "double",
+                            "Byte", "Short", "Integer", "Long", "Float", "Double")
+                            .contains(type) ? 4
+                            : "Number".equals(type) ? 2
+                            : "Object".equals(type) ? 1 : -1;
+                }
+            }
+            String target = targetName(value);
+            if (target != null) {
+                int lastDot = target.lastIndexOf('.');
+                String simpleTarget = lastDot < 0
+                        ? target : target.substring(lastDot + 1);
+                return simpleTarget.equals(type) ? 4
+                        : "Object".equals(type) ? 1 : -1;
+            }
+            return 0;
+        }
+
+        private String simpleRawType(String declaredType) {
+            int genericStart = declaredType.indexOf('<');
+            String rawType = genericStart < 0
+                    ? declaredType : declaredType.substring(0, genericStart);
+            int lastDot = rawType.lastIndexOf('.');
+            return lastDot < 0 ? rawType : rawType.substring(lastDot + 1);
         }
 
         private boolean isStringJoin(MethodInvocationTree invocation) {
