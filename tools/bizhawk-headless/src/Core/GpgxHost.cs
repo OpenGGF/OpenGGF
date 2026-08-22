@@ -150,6 +150,16 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
+        internal short[] DrainDiagnosticAudio(out int stereoFrames)
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            short[] samples;
+            soundProvider.GetSamplesSync(out samples, out stereoFrames);
+            var copy = new short[checked(stereoFrames * 2)];
+            Array.Copy(samples, copy, copy.Length);
+            return copy;
+        }
+
         internal void LoadSavestate(byte[] state)
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");
@@ -258,6 +268,17 @@ namespace OpenGGF.BizHawk.Headless
         public void Advance()
         {
             core.FrameAdvance(controller, false, false);
+            ThrowPendingExecuteCallbackException();
+        }
+
+        internal void AdvanceDiagnosticAudio()
+        {
+            core.FrameAdvance(controller, false, true);
+            ThrowPendingExecuteCallbackException();
+        }
+
+        private void ThrowPendingExecuteCallbackException()
+        {
             if (pendingExecuteCallbackException != null)
             {
                 Exception callbackFailure =

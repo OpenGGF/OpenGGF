@@ -59,6 +59,7 @@
     <Compile Include="tests/S3kCompleteAudioCaptureRunnerTests.cs" />
     <Compile Include="tests/S3kCompleteAudioRawSinkTests.cs" />
     <Compile Include="tests/GpgxZ80AudioCapabilityTests.cs" />
+    <Compile Include="tests/GpgxYmWriteTimingLabTests.cs" />
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/RunSegmentCollector.cs" />

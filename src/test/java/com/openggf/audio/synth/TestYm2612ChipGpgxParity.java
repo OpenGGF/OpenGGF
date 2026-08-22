@@ -2,12 +2,33 @@ package com.openggf.audio.synth;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestYm2612ChipGpgxParity {
+    private static final Path ORACLE = Path.of(
+            "docs/architecture/research/audio/"
+                    + "s3k-blue-sphere-ym-write-oracle-v1.json");
+
+    @Test
+    void correctedOracleUsesPostUpdateCyclesAndZeroDmaStalls()
+            throws Exception {
+        YmNativeOracle oracle = YmNativeOracle.load(ORACLE);
+        assertEquals("post_fm_update", oracle.eventPhase());
+        assertEquals(33,
+                oracle.groups().get(7).writes().getLast().sourceOrdinal());
+        assertEquals(151_590L,
+                oracle.groups().get(7).relativeLastMasterCycle());
+        assertTrue(oracle.groups().stream()
+                .flatMap(group -> group.writes().stream())
+                .allMatch(write -> write.dmaStallCount() == 0));
+    }
+
     @Test
     void dacDefaultsToUnsmoothedHardwareSamples() {
         assertFalse(new Ym2612Chip().captureSnapshot().dacInterpolate());
