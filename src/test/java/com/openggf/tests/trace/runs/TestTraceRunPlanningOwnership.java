@@ -31,10 +31,12 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestTraceRunPlanningOwnership {
@@ -56,7 +58,7 @@ class TestTraceRunPlanningOwnership {
     }
 
     @Test
-    void payloadReachabilityProbeRejectsNestedPayloadOwners(
+    void payloadReachabilityProbeRejectsNestedPayloadOwnersWithoutConsumingStreams(
             @TempDir Path root) throws Exception {
         Path s3kRun = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
         TraceRunManifest s3kManifest = TraceRunManifest.load(
@@ -90,6 +92,18 @@ class TestTraceRunPlanningOwnership {
                         () -> assertNoPayloadReachable(new PayloadWrapper(
                                 Optional.of(Map.of("payloads", List.of(payload))))));
             }
+            AtomicBoolean consumed = new AtomicBoolean();
+            AtomicBoolean closed = new AtomicBoolean();
+            Stream<TraceData> lazy = Stream.generate(() -> {
+                consumed.set(true);
+                return trace;
+            }).limit(1).onClose(() -> closed.set(true));
+
+            assertThrows(AssertionError.class,
+                    () -> assertNoPayloadReachable(new PayloadWrapper(lazy)));
+
+            assertFalse(consumed.get(), "ownership proof must not consume streams");
+            assertFalse(closed.get(), "ownership proof must not close streams");
         }
     }
 
@@ -118,13 +132,8 @@ class TestTraceRunPlanningOwnership {
             visit(reference.get(), path + ".reference", visited);
             return;
         }
-        if (value instanceof Stream<?> stream) {
-            try (stream) {
-                stream.forEach(nested -> visit(nested, path + ".stream", visited));
-            } catch (RuntimeException e) {
-                throw new AssertionError("cannot inspect stream at " + path, e);
-            }
-            return;
+        if (value instanceof Stream<?>) {
+            throw new AssertionError("one-shot platform stream reachable at " + path);
         }
         if (value instanceof Iterable<?> iterable) {
             int index = 0;
