@@ -91,10 +91,12 @@ deterministic synth/driver/sequencer/presentation snapshots, and observer
 rollback. The Task 7 three-ROM audio selector passed 102 tests with zero
 failures, errors, or skips.
 
-Final-verification tests also corrected two stale assumptions exposed by the
-new delayed timeline. The bounded playback trace enumerates the exact 13-event
-committed Spring tail separately from the pending Blue Sphere service. That
-pending service must contain exactly the reviewed 34 source/segment-tagged
+Final-verification tests also corrected stale assumptions exposed by the new
+delayed timeline. The bounded playback trace requires a closed-world drained
+prefix: the exact 13-event committed Spring tail is followed immediately by
+the exact Blue Sphere attack stream, including its four derived key-on trace
+events, with no intervening or extra event inside that prefix. The pending Blue
+Sphere service must contain exactly the reviewed 34 source/segment-tagged
 writes and rejects every `BASE_MUSIC` or `COMPLETION_RESTORE` prefix, including
 `B5`, `B1`, key-off, and operator programming. The architecture guard no longer
 exempts a helper globally by name: it parses the helper's top-level statements,
@@ -105,8 +107,8 @@ timing-dominated callsites. Conditional capture, late capture after mutation,
 unexpected work, and duplicate capture poisons were each observed failing
 before the structural constraint was implemented. The pre-review focused run
 actually passed 53 tests, not the 52 reported in the first handoff. The final
-corrected focused group passes 62 tests with zero failures, errors, or skips:
-37 architecture tests, 6 playback tests, and 19 parity tests.
+corrected focused group passes 63 tests with zero failures, errors, or skips:
+37 architecture tests, 7 playback tests, and 19 parity tests.
 
 The exact focused commands in the correction round used this common prefix:
 
@@ -126,7 +128,7 @@ TestSonic3kYmServiceTimingProfile,TestS3kBlueSphereSfxParity test
 
 Each run passed 51 tests. The review selector appended
 `-Dtest=TestAudioPresentationArchitectureGuard,TestS3kBlueSpherePlaybackTrace,TestS3kBlueSphereSfxParity test`
-and passed 62 tests. The rewind/observer/cadence/presentation selector appended:
+and passed 63 tests. The rewind/observer/cadence/presentation selector appended:
 
 ```text
 -Dtest=TestSmpsSequencerSnapshot,TestS3kPalDriverCadence,
@@ -143,7 +145,7 @@ It passed 263 tests. Final correction-round log SHA-256 values are
 `cfafcc43c830cc32cd9501f3f99f75f8cabaabca49a6f1622613c2cd13121ba4`
 and `d608db3cbbb70f3f73224ef53f2d0c6ca8ca5161fea0720e4333a4df0fa670b7`
 for the oracle repetitions,
-`5416071c33c0dfb4b226f27dbff19e98fb062d1ea7c060dfbcf75dce08b5042f`
+`1f62d679b0fca5136b58c382b54d2d5a85c31cb1584dd9d9df172b3aa613b6ec`
 for the review selector, and
 `13c4e7ad49e0c547d21b274bae6b34eeff50961a72a93e8d4b96d923350b1a6c`
 for the 263-test selector. All commands used Maven 3.9.16 and OpenJDK 21.0.11.
@@ -169,7 +171,7 @@ JAVA_HOME=/usr/lib/jvm/java-21-openjdk mvn -Dmse=off \
   -Ds3k.rom.path="$OPENGGF_MAIN_WORKSPACE/s3k.gen" test
 ```
 
-The final correction-round candidate ran 15,409 tests with 53 failures, 64
+The round-two correction candidate ran 15,409 tests with 53 failures, 64
 errors, and 18 skips. Its log SHA-256 is
 `02c642e58735cb63de51b338ce0ff4bde17030d6a5cdf30bb1ba8e86f285630e`.
 The higher test total is the feature's added coverage, not a changed selector.
@@ -215,7 +217,12 @@ no trace data is consulted by gameplay.
 ## Listening handoff
 
 Automated verification is complete, but this change is not approved for merge
-or push. Listen to the exact packaged handoff commit for:
+or push. The exact clean-HEAD handoff package is built with tests enabled via
+the same JDK 21 and three absolute ROM properties as the full-suite command;
+`-Dmaven.test.failure.ignore=true` permits assembly only after Surefire executes
+the known-red suite. Its commit identity, JAR SHA-256, log SHA-256, and exact
+117-red identity comparison are recorded in the listening handoff because a
+commit cannot contain its own final identity. Listen to that packaged commit for:
 
 1. the first Blue Sphere pickup;
 2. rapid consecutive pickups;

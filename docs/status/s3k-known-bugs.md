@@ -76,9 +76,11 @@ and no observer fault or overflow. OpenGGF schedules the S3K service against
 that source-relative vector and drains it at YM internal-sample boundaries.
 Focused playback, service-order, contention, rewind, observer, pause, fade,
 one-up, PAL, ring-panning, special-stage, OpenAL, and snapshot tests pass. The
-replacement playback gate enumerates the committed Spring tail, requires the
-pending Blue Sphere service to be exactly its reviewed 34 source/segment-tagged
-writes, and rejects any music or completion-restore prefix. Its architecture
+replacement playback gate requires a closed-world drained prefix: the exact
+13-event committed Spring tail is followed immediately by the exact Blue Sphere
+attack stream, with no intervening event. The pending Blue Sphere service stays
+exactly 34 reviewed source/segment-tagged writes and rejects any music or
+completion-restore prefix. Its architecture
 guard also requires rollback capture as the helper's first unconditional
 statement and permits only the reviewed transaction setup. The
 full three-ROM suite introduces no failure attributable to this change when

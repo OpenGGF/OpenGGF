@@ -7,11 +7,13 @@
   retaining atomic service publication, rollback, rewind, pause, fade, and
   cross-SFX ownership semantics. Sonic 1 and Sonic 2 remain on their audited
   untimed profiles because their 68k/Z80 service paths do not justify inheriting
-  S3K's timing. The replacement playback oracle enumerates the exact committed
-  Spring tail separately from the pending Blue Sphere service, whose exact
-  source/segment sequence rejects every music or completion-restore prefix,
-  including pan/algorithm writes. The rollback architecture guard structurally
-  requires capture as the first unconditional helper statement and admits only
+  S3K's timing. The replacement playback oracle requires a closed-world drained
+  prefix: the exact 13-event committed Spring tail is followed immediately by
+  the exact Blue Sphere attack stream, with no intervening event. The pending
+  service remains an exact 34-write source/segment sequence that rejects every
+  music or completion-restore prefix, including pan/algorithm writes. The
+  rollback architecture guard structurally requires capture as the first
+  unconditional helper statement and admits only
   the reviewed transaction setup plus timing-dominated callsites. Automated
   native, oracle, ROM-backed, and presentation gates are complete against an
   isolated feature-base comparison; integration remains blocked on the

@@ -63,6 +63,24 @@ class TestS3kBlueSpherePlaybackTrace {
             new AudioPlaybackTraceEvent.PsgWrite(0xC0),
             new AudioPlaybackTraceEvent.PsgWrite(0x00),
             new AudioPlaybackTraceEvent.PsgWrite(0xF6));
+    private static final List<AudioPlaybackTraceEvent>
+            REVIEWED_DRAINED_BLUE_ATTACK = List.of(
+            yw(1, 0x81, 0xFF), yw(1, 0x85, 0xFF), yw(1, 0x89, 0xFF),
+            yw(1, 0x8D, 0xFF), yw(1, 0xB5, 0xC0), yw(1, 0xB1, 0x05),
+            yw(1, 0x31, 0x07), yw(1, 0x39, 0x12), yw(1, 0x35, 0x22),
+            yw(1, 0x3D, 0x32), yw(1, 0x51, 0x0A), yw(1, 0x59, 0x0F),
+            yw(1, 0x55, 0x0F), yw(1, 0x5D, 0x0F), yw(1, 0x61, 0x00),
+            yw(1, 0x69, 0x00), yw(1, 0x65, 0x00), yw(1, 0x6D, 0x00),
+            yw(1, 0x71, 0x00), yw(1, 0x79, 0x10), yw(1, 0x75, 0x10),
+            yw(1, 0x7D, 0x10), yw(1, 0x81, 0x0F), yw(1, 0x89, 0x0F),
+            yw(1, 0x85, 0x0F), yw(1, 0x8D, 0x0F), yw(1, 0x41, 0x21),
+            yw(1, 0x49, 0x05), yw(1, 0x45, 0x05), yw(1, 0x4D, 0x05),
+            yw(0, 0x28, 0x05), yw(1, 0xA5, 0x23), yw(1, 0xA1, 0x3F),
+            new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 0, 1023),
+            new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 1, 1023),
+            new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 2, 1023),
+            new AudioPlaybackTraceEvent.Ym2612KeyOn(4, 3, 1023),
+            yw(0, 0x28, 0xF5));
 
     private AudioManager audio;
     private LiveCaptureAudioHandle capture;
@@ -195,12 +213,13 @@ class TestS3kBlueSpherePlaybackTrace {
 
         List<AudioPlaybackTraceEvent> replacementEvents =
                 chipTrace.snapshot().eventsAfter(marker);
-        assertTrue(replacementEvents.size()
-                        >= REVIEWED_COMMITTED_SPRING_PREDECESSOR.size());
-        assertEquals(REVIEWED_COMMITTED_SPRING_PREDECESSOR,
-                replacementEvents.subList(0,
-                        REVIEWED_COMMITTED_SPRING_PREDECESSOR.size()),
-                "only the exact committed Spring tail may precede Blue Sphere");
+        int reviewedDrainSize = REVIEWED_COMMITTED_SPRING_PREDECESSOR.size()
+                + REVIEWED_DRAINED_BLUE_ATTACK.size();
+        List<AudioPlaybackTraceEvent> reviewedDrain = replacementEvents.subList(
+                0, Math.min(reviewedDrainSize, replacementEvents.size()));
+        assertTrue(isReviewedDrainedReplacement(reviewedDrain),
+                () -> "drained replacement differs from the reviewed Spring "
+                        + "tail and Blue Sphere attack: " + reviewedDrain);
         List<Integer> levels = fm5CarrierLevels(replacementEvents);
         assertTrue(levels.size() >= 3, () -> "missing Blue Sphere voice: " + levels);
         assertTrue(containsSubsequence(levels, List.of(5, 5, 5)),
@@ -260,6 +279,18 @@ class TestS3kBlueSpherePlaybackTrace {
 
         assertFalse(isReviewedBlueSphereReplacement(pending),
                 "no completion-restore prefix may precede the Blue upload");
+    }
+
+    @Test
+    void reviewedDrainedReplacementRejectsInterveningNonmusicEvent() {
+        List<AudioPlaybackTraceEvent> events = new ArrayList<>(
+                REVIEWED_COMMITTED_SPRING_PREDECESSOR);
+        events.add(new AudioPlaybackTraceEvent.PsgWrite(0x80));
+        events.addAll(REVIEWED_DRAINED_BLUE_ATTACK);
+
+        assertFalse(isReviewedDrainedReplacement(events),
+                "an unrelated committed event must not hide between the "
+                        + "Spring tail and first Blue Sphere write");
     }
 
     @Test
@@ -415,6 +446,17 @@ class TestS3kBlueSpherePlaybackTrace {
         return true;
     }
 
+    private static boolean isReviewedDrainedReplacement(
+            List<AudioPlaybackTraceEvent> events) {
+        int predecessorSize = REVIEWED_COMMITTED_SPRING_PREDECESSOR.size();
+        int reviewedSize = predecessorSize + REVIEWED_DRAINED_BLUE_ATTACK.size();
+        return events.size() == reviewedSize
+                && events.subList(0, predecessorSize).equals(
+                REVIEWED_COMMITTED_SPRING_PREDECESSOR)
+                && events.subList(predecessorSize, reviewedSize).equals(
+                REVIEWED_DRAINED_BLUE_ATTACK);
+    }
+
     private static YmWriteTimeline.Entry timelineEntry(
             long ordinal, SmpsSourceDescriptor.Kind kind, int id,
             SegmentKind segment, int port, int register, int value) {
@@ -453,6 +495,12 @@ class TestS3kBlueSpherePlaybackTrace {
 
     private static ExpectedYmWrite w(int port, int register, int value) {
         return new ExpectedYmWrite(port, register, value);
+    }
+
+    private static AudioPlaybackTraceEvent.Ym2612Write yw(
+            int port, int register, int value) {
+        return new AudioPlaybackTraceEvent.Ym2612Write(
+                port, register, value);
     }
 
     private record ExpectedYmWrite(int port, int register, int value) {
