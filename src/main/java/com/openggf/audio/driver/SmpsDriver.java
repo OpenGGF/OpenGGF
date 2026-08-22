@@ -140,6 +140,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final int capacity;
         private final LiveCommandMutationToken rollback;
         private int remaining;
+        private RuntimeException publicationFailure;
 
         private DriverServiceReservation(
                 int capacity, LiveCommandMutationToken rollback) {
@@ -720,7 +721,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         publicationFailure = publishAll(
                 logicalPublications, publicationFailure);
         if (publicationFailure != null) {
-            throw publicationFailure;
+            DriverServiceReservation reservation =
+                    ymDriverServiceReservation;
+            if (reservation == null) {
+                throw publicationFailure;
+            }
+            reservation.publicationFailure = appendPublicationFailure(
+                    reservation.publicationFailure,
+                    publicationFailure);
         }
     }
 
@@ -731,12 +739,21 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             try {
                 publication.publish();
             } catch (RuntimeException failure) {
-                if (primaryFailure == null) {
-                    primaryFailure = failure;
-                } else if (failure != primaryFailure) {
-                    primaryFailure.addSuppressed(failure);
-                }
+                primaryFailure = appendPublicationFailure(
+                        primaryFailure, failure);
             }
+        }
+        return primaryFailure;
+    }
+
+    private static RuntimeException appendPublicationFailure(
+            RuntimeException primaryFailure,
+            RuntimeException laterFailure) {
+        if (primaryFailure == null) {
+            return laterFailure;
+        }
+        if (laterFailure != primaryFailure) {
+            primaryFailure.addSuppressed(laterFailure);
         }
         return primaryFailure;
     }
@@ -2997,6 +3014,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void advanceSequencersBatch(int frames) {
         beginYmDriverServiceReservation(frames);
+        RuntimeException publicationFailure = null;
         try {
             advanceSequencersWithinReservation(frames);
             removeCompletedSequencers();
@@ -3014,7 +3032,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
             throw failure;
         } finally {
+            DriverServiceReservation reservation =
+                    ymDriverServiceReservation;
+            if (reservation != null) {
+                publicationFailure = reservation.publicationFailure;
+            }
             ymDriverServiceReservation = null;
+        }
+        if (publicationFailure != null) {
+            throw publicationFailure;
         }
     }
 

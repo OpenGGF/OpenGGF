@@ -574,6 +574,7 @@ public class Ym2612Chip {
     private int en0, en1, en2, en3;
     private int traceEvents;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private RuntimeException writeObserverFailure;
     private YmWriteTimeline writeTimeline;
     private final Consumer<YmWriteTimeline.Entry> scheduledWriteMutation =
             this::applyScheduledWrite;
@@ -1077,6 +1078,7 @@ public class Ym2612Chip {
 
     public void write(int port, int reg, int val) {
         writeImmediate(port, reg, val);
+        throwPendingWriteObserverFailure();
     }
 
     private void applyScheduledWrite(YmWriteTimeline.Entry entry) {
@@ -1092,7 +1094,48 @@ public class Ym2612Chip {
         }
         writeAddress(resolvedPort, resolvedReg);
         writeData(resolvedPort, val);
-        writeObserver.onYm2612Write(resolvedPort, resolvedReg, val & 0xFF);
+        int observedPort = resolvedPort;
+        int observedRegister = resolvedReg;
+        observeWrite(() -> writeObserver.onYm2612Write(
+                observedPort, observedRegister, val & 0xFF));
+    }
+
+    private void observeWrite(Runnable callback) {
+        try {
+            callback.run();
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+        }
+    }
+
+    private void recordWriteObserverFailure(RuntimeException failure) {
+        if (writeObserverFailure == null) {
+            writeObserverFailure = failure;
+        } else if (failure != writeObserverFailure) {
+            writeObserverFailure.addSuppressed(failure);
+        }
+    }
+
+    private int observedChannelMask() {
+        try {
+            return writeObserver.ym2612ChannelSampleMask() & 0x3F;
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+            return 0;
+        }
+    }
+
+    RuntimeException takePendingWriteObserverFailure() {
+        RuntimeException failure = writeObserverFailure;
+        writeObserverFailure = null;
+        return failure;
+    }
+
+    private void throwPendingWriteObserverFailure() {
+        RuntimeException failure = takePendingWriteObserverFailure();
+        if (failure != null) {
+            throw failure;
+        }
     }
 
     public void writeAddress(int port, int reg) {
@@ -1483,7 +1526,8 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
         }
         Operator sl = ch.ops[idx];
-        writeObserver.onYm2612KeyOn(channelIndex(ch), idx, sl.volume);
+        observeWrite(() -> writeObserver.onYm2612KeyOn(
+                channelIndex(ch), idx, sl.volume));
         // GPGX-style: use separate key flag instead of checking envelope state.
         // This properly gates key-on to only trigger on 0->1 transitions.
         if (!sl.key && csmKeyFlag == 0) {
@@ -1731,7 +1775,7 @@ public class Ym2612Chip {
 
         int leftSum = 0;
         int rightSum = 0;
-        int observedChannelMask = writeObserver.ym2612ChannelSampleMask() & 0x3F;
+        int observedChannelMask = observedChannelMask();
         for (int ch = 0; ch < 6; ch++) {
             Channel chan = channels[ch];
             int out = 0;
@@ -1742,7 +1786,10 @@ public class Ym2612Chip {
             }
 
             if ((observedChannelMask & (1 << ch)) != 0) {
-                writeObserver.onYm2612ChannelSample(ch, out);
+                int observedChannel = ch;
+                int observedOutput = out;
+                observeWrite(() -> writeObserver.onYm2612ChannelSample(
+                        observedChannel, observedOutput));
             }
 
             if (chan.leftMask != 0)

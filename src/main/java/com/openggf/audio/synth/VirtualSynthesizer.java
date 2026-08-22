@@ -349,6 +349,12 @@ public class VirtualSynthesizer implements Synthesizer {
             buffer[sampleIndex] = (short) l;
             buffer[sampleIndex + 1] = (short) r;
         }
+
+        RuntimeException observerFailure =
+                ym.takePendingWriteObserverFailure();
+        if (observerFailure != null) {
+            throw observerFailure;
+        }
     }
 
     @Override

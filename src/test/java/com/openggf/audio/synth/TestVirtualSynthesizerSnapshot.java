@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -97,6 +98,82 @@ class TestVirtualSynthesizerSnapshot {
                 .ymWriteTimeline().pending());
         assertEquals(3, first.finalSnapshot()
                 .ymWriteTimeline().nextOrdinal());
+    }
+
+    @Test
+    void throwingWriteObserverCannotInterruptCommittedTimelineDrain() {
+        // Break caught: drain removes the first due entry and mutates its chip
+        // register before its observer throws, stranding later due writes at
+        // the old sample frontier with neither atomic retry nor completion.
+        VirtualSynthesizer clean = configuredSynth();
+        VirtualSynthesizer observed = configuredSynth();
+        VirtualSynthesizer.Snapshot initial = clean.captureSynthSnapshot();
+        long frontier = initial.renderedYmMasterCycle();
+        long generation = initial.ymTimelineGeneration();
+        List<YmWriteTimeline.Entry> journal = List.of(
+                entry(frontier, 0, 0x22, 0x08, generation),
+                entry(frontier, 1, 0x24, 0x12, generation),
+                entry(frontier, 2, 0x26, 0x34, generation));
+        clean.ymWriteTimelineForTesting().commit(journal);
+        observed.ymWriteTimelineForTesting().commit(journal);
+
+        RecordingObserver cleanObserver = observe(clean);
+        IllegalStateException first =
+                new IllegalStateException("first callback failure");
+        IllegalStateException second =
+                new IllegalStateException("second callback failure");
+        IllegalStateException third =
+                new IllegalStateException("third callback failure");
+        List<String> observedCallbacks = new ArrayList<>();
+        List<IllegalStateException> failures =
+                List.of(first, second, third);
+        observed.setChipWriteObserver(new ChipWriteObserver() {
+            private int callbackIndex;
+
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                observedCallbacks.add("YM:%d:%02X:%02X".formatted(
+                        port, register, value));
+                throw failures.get(callbackIndex++);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+
+        short[] expectedPcm = new short[2];
+        short[] observedPcm = new short[2];
+        clean.renderFrames(expectedPcm, 0, 1);
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> observed.renderFrames(observedPcm, 0, 1));
+
+        assertSame(first, failure);
+        assertEquals(List.of(second, third),
+                List.of(failure.getSuppressed()));
+        assertEquals(cleanObserver.events, observedCallbacks);
+        assertEquals(List.of(
+                "YM:0:22:08", "YM:0:24:12", "YM:0:26:34"),
+                observedCallbacks);
+        assertArrayEquals(expectedPcm, observedPcm);
+        assertEquals(clean.captureSynthSnapshot(),
+                observed.captureSynthSnapshot());
+        assertEquals(List.of(), observed.captureSynthSnapshot()
+                .ymWriteTimeline().pending());
+
+        cleanObserver.events.clear();
+        RecordingObserver retryObserver = observe(observed);
+        short[] expectedFuture = new short[2];
+        short[] observedFuture = new short[2];
+        clean.renderFrames(expectedFuture, 0, 1);
+        observed.renderFrames(observedFuture, 0, 1);
+
+        assertArrayEquals(expectedFuture, observedFuture);
+        assertEquals(List.of(), cleanObserver.events);
+        assertEquals(List.of(), retryObserver.events);
+        assertEquals(clean.captureSynthSnapshot(),
+                observed.captureSynthSnapshot());
     }
 
     @Test

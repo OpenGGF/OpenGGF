@@ -497,6 +497,69 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
+    void postCommitLogicalFailureDoesNotRollbackEnclosingDriverAdvance() {
+        // Break caught: a diagnostic failure thrown after service commit is
+        // mistaken for a construction failure by the outer reservation, so
+        // committed state is restored and retry repeats service identity 0.
+        IllegalStateException injected =
+                new IllegalStateException("injected post-commit failure");
+        List<String> retriedEvents = new ArrayList<>();
+        int[] remainingFailures = { 1 };
+        MinimalData sharedData = data(0xA0);
+        SmpsSequencerConfig sharedConfig = timedPalConfig(PROFILE);
+        SmpsDriver retried = new SmpsDriver();
+        AggregateWritingSequencer retriedSource =
+                new AggregateWritingSequencer(
+                        retried, sharedData, sharedConfig);
+        retried.addSequencer(retriedSource, false);
+        retried.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                retriedEvents.add("begin:" + event.ordinal());
+                if (remainingFailures[0]-- > 0) {
+                    throw injected;
+                }
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                retriedEvents.add("end:" + event.ordinal());
+            }
+        });
+
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> advanceSequencersWithoutRender(retried, 1));
+
+        assertSame(injected, failure);
+        assertEquals(List.of("begin:0", "end:0"), retriedEvents);
+        SmpsDriverSnapshot committed = retried.captureSnapshot();
+        assertEquals(1L, committed.nextYmServiceOrdinal());
+        assertEquals(8L, committed.nextYmWriteOrdinal());
+        assertEquals(8, committed.synthSnapshot()
+                .ymWriteTimeline().pending().size());
+
+        advanceSequencersWithoutRender(retried, 1);
+        assertEquals(List.of(
+                "begin:0", "end:0", "begin:1", "end:1"),
+                retriedEvents);
+
+        List<String> cleanEvents = new ArrayList<>();
+        SmpsDriver clean = new SmpsDriver();
+        AggregateWritingSequencer cleanSource =
+                new AggregateWritingSequencer(
+                        clean, sharedData, sharedConfig);
+        clean.addSequencer(cleanSource, false);
+        clean.setServiceObserver(recordingStringServiceObserver(cleanEvents));
+        advanceSequencersWithoutRender(clean, 1);
+        advanceSequencersWithoutRender(clean, 1);
+
+        assertEquals(cleanEvents, retriedEvents);
+        assertDeepEquals(clean.captureSnapshot(),
+                retried.captureSnapshot());
+    }
+
+    @Test
     void admissionPreparationUsesOneAuthorizedPublicationBoundary() {
         // Break caught: admission key-off/SSG-EG clear re-enters arbitration,
         // skips a timing slot, or invokes chip callbacks before timeline drain.
@@ -1437,6 +1500,22 @@ class TestSmpsDriverYmWriteTimeline {
         };
     }
 
+    private static SmpsDriverServiceObserver recordingStringServiceObserver(
+            List<String> events) {
+        return new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                events.add("begin:" + event.ordinal());
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                events.add("end:" + event.ordinal());
+            }
+        };
+    }
+
     private static StableState stableState(SmpsDriver driver) {
         SmpsDriverSnapshot snapshot = driver.captureSnapshot();
         return new StableState(
@@ -1732,8 +1811,19 @@ class TestSmpsDriverYmWriteTimeline {
 
         private AggregateWritingSequencer(
                 SmpsDriver driver, int id) {
-            super(data(id), AudioTestFixtures.EMPTY_DAC, driver,
-                    AudioManager.getInstance(), timedPalConfig(PROFILE));
+            this(driver, data(id));
+        }
+
+        private AggregateWritingSequencer(
+                SmpsDriver driver, MinimalData data) {
+            this(driver, data, timedPalConfig(PROFILE));
+        }
+
+        private AggregateWritingSequencer(
+                SmpsDriver driver, MinimalData data,
+                SmpsSequencerConfig config) {
+            super(data, AudioTestFixtures.EMPTY_DAC, driver,
+                    AudioManager.getInstance(), config);
             this.driver = driver;
         }
 
