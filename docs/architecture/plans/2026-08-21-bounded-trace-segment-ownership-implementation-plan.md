@@ -548,8 +548,8 @@ Commit as `docs(traces): validate active segment ownership`, staging all listed 
 
 Steps 1-7 are evidenced by
 [`2026-08-22-active-segment-ownership-validation.md`](../validation/trace/2026-08-22-active-segment-ownership-validation.md).
-Independent review and integration remain controller-owned Steps 8 and 9 and
-are intentionally unchecked here.
+Independent review and integration remain controller-owned Steps 8 and 9.
+Step 8 is complete; Step 9 remains pending below.
 
 The authoritative Step 1/5 baseline was refreshed after upstream moved:
 measured `develop` / `origin/develop` is `d473365ed`, and the feature suite
@@ -567,9 +567,15 @@ point above are unchanged. At that correction head the authority guard passes
 passes 44/44. Focused migration remains 179/179, the benchmark-root structural
 test is 1/1, and policy/docs guards are 156/156.
 
-- [ ] **Step 8: Independent final code/spec review**
+- [x] **Step 8: Independent final code/spec review**
 
 Review authority expansion, allowlist bypass, aliases, boundary ordering, special-stage parity, benchmark bias, and regression accounting. Fix material findings test-first and repeat until GREEN.
+
+The final independent whole-branch review at `c811c9d2d` reported no Critical,
+Important, or Minor findings. Its fresh authority/ownership/reader gate passed
+44/44, all earlier ruled-in mutations remained diagnostic, `git diff --check`
+was clean, and the worktree was clean. The spec and code-quality verdicts were
+both GREEN.
 
 - [ ] **Step 9: Recheck upstream and integrate according to `AGENTS.md`**
 

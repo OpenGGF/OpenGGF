@@ -20,7 +20,7 @@ Their focused authority, ownership, reader, migration, structural benchmark,
 and policy results are recorded below. The expensive full/default/trace suite
 figures remain explicitly attributable to `1a96fbdf1`, not the later head.
 Independent final review and integration remain controller-owned Task 8 Steps
-8 and 9.
+8 and 9. Step 8 completed GREEN at `c811c9d2d`; Step 9 remains pending.
 
 All commands used Maven 3.9.16 on OpenJDK 21.0.11, an unset
 `JAVA_TOOL_OPTIONS`, and managed `TMPDIR` / `java.io.tmpdir` paths under:
@@ -212,5 +212,7 @@ Every gate applicable through Task 8 Step 7 passed at the reconciled
 `1a96fbdf1` measurement point, and the subsequent enforcement corrections
 through `7b16dc94b` pass their focused acceptance matrix. The design is
 implemented and feature-branch validated. This conclusion
-does not claim controller-owned independent review, merge, post-merge
+includes the controller-owned independent review, which found no Critical,
+Important, or Minor issues and returned GREEN spec and code-quality verdicts
+after a fresh 44/44 focused gate. It does not claim merge, post-merge
 comparison, push, or cleanup.
