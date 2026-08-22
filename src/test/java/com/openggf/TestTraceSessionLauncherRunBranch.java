@@ -50,6 +50,7 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver.Step;
 import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunReferencePlanLoader;
+import com.openggf.trace.replay.runs.TraceStructuralRowComparator;
 import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
@@ -1963,21 +1964,7 @@ class TestTraceSessionLauncherRunBranch {
         closeRunSegment(session, 1);
         assertNull(getField(session, "comparator"),
                 "the closed special-stage source must not remain a sink");
-        setField(session, "runBoundaryProbe",
-                new TraceRunReplayWalker.BoundaryProbe(
-                        new TraceRunReplayWalker.EngineHooks() {
-                            @Override public int currentBk2Frame() { return 2; }
-                            @Override public com.openggf.game.BonusStageType
-                                    peekBonusRequest() {
-                                return com.openggf.game.BonusStageType.NONE;
-                            }
-                            @Override public boolean isSpecialStageRequested() {
-                                return false;
-                            }
-                            @Override public GameMode currentMode() {
-                                return GameMode.TITLE_CARD;
-                            }
-                        }));
+        setField(session, "runBoundaryProbe", inertBoundaryProbe());
         GameServices.playbackDebug().startSession(movie, 2);
         applyRunDestinationAdmission(session, new DestinationAdmissionReceipt(
                 2, DestinationAdmissionReceipt.InputClock.SHARED, 2, 0,
@@ -2008,6 +1995,121 @@ class TestTraceSessionLauncherRunBranch {
         assertNull(getField(session, "comparator"),
                 "bridge comparison must not resurrect a closed segment alias");
         assertNotNull(getField(session, "activeRunPayload"));
+    }
+
+    @Test
+    void presentationBridgeTerminalReportsThroughRunDiagnosticsAndClosesLease()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
+        new Engine(EngineServices.current());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+
+        TraceRunManifest.Segment source = new TraceRunManifest.Segment(
+                "source", "level", "complete_run", 0, 1,
+                0, 1, null, null);
+        TraceRunManifest.Segment special = new TraceRunManifest.Segment(
+                "special", "special_stage", "s1_special_stage", 1, 1,
+                0, 0, 0, null);
+        TraceRunManifest.Segment bridge = new TraceRunManifest.Segment(
+                "bridge", "level", "complete_run", 2, 1,
+                0, 2, null, null);
+        TraceRunManifest.Transition entry = new TraceRunManifest.Transition(
+                0, 1, "giant_ring", 1,
+                null, null, null, null, null, null, null, null);
+        TraceRunManifest.Transition exit = new TraceRunManifest.Transition(
+                1, 2, "stage_exit", 2,
+                null, null, null, null, null, null, null, null);
+        TraceData oneRow = TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1),
+                List.of(TraceFrame.executionTestFrame(0, 1, 1, 0)));
+        TraceRunManifest canonical = TraceRunManifest.load(
+                canonicalEmeraldRunDir.resolve("run_manifest.json"));
+        var specialRows = TraceRunReferencePlanLoader.load(
+                canonical, canonicalEmeraldRunDir).get(1).specialStageRows();
+        List<TraceRunReplayWalker.SegmentPlan> plans = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        source, oneRow, null, entry),
+                new TraceRunReplayWalker.SegmentPlan(
+                        special, oneRow, entry, exit,
+                        specialRows,
+                        TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL),
+                new TraceRunReplayWalker.SegmentPlan(
+                        bridge, dynamicArtTrace(1), exit, null, null,
+                        TraceRunReplayWalker.SegmentExecutionPolicy
+                                .LEVEL_PRESENTATION_BRIDGE));
+        assertEquals(TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE,
+                plans.get(2).executionPolicy());
+
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("terminal-special-return-bridge.bk2"), "logkey",
+                Map.of(), List.of(frame(0), frame(1), frame(2)), 3);
+        TraceSessionLauncher session = TestRunPayloads.session(
+                null, movie, plans, null);
+        TraceRunExternalDiagnostics diagnostics =
+                new TraceRunExternalDiagnostics(null);
+        setField(session, "runExternalDiagnostics", diagnostics);
+
+        closeRunSegment(session, 0);
+        openRunPayload(session, 1);
+        closeRunSegment(session, 1);
+        assertNull(getField(session, "comparator"),
+                "the closed source and special-stage leases must not remain sinks");
+        setField(session, "runBoundaryProbe", inertBoundaryProbe());
+        GameServices.playbackDebug().startSession(movie, 2);
+        applyRunDestinationAdmission(session, new DestinationAdmissionReceipt(
+                2, DestinationAdmissionReceipt.InputClock.SHARED, 2, 0,
+                new DestinationAdmissionReceipt.LevelPresentationIdentity(
+                        0, 0, 2),
+                -1, 2, 2,
+                TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE));
+
+        var lifecycle = context.dynamicArtLifecycle();
+        TraceRunReplayWalker.DynamicArtSegmentController dynamicArt =
+                new TraceRunReplayWalker.DynamicArtSegmentController(
+                        new TraceRunReplayWalker.DynamicArtSegmentWindow() {
+                            @Override
+                            public void open() {
+                                lifecycle.openComparisonSegment();
+                            }
+
+                            @Override
+                            public void close() {
+                                lifecycle.closeComparisonSegment();
+                            }
+                        });
+        dynamicArt.beginSegment();
+        setField(session, "runDynamicArtSegments", dynamicArt);
+        setField(session, "dynamicArtSegmentGameplayMode", context);
+
+        TraceStructuralRowComparator structural =
+                (TraceStructuralRowComparator) getField(
+                        session, "runStructuralComparator");
+        DynamicArtDiagnosticsSnapshot before =
+                GameServices.captureDynamicArtDiagnostics();
+        DynamicArtDiagnosticsSnapshot published = lifecycle.publishRow(0, false);
+        structural.prepareRow(new Bk2FrameInput(
+                2, AbstractPlayableSprite.INPUT_LEFT, 0, false,
+                "terminal bridge mismatch"));
+        assertNull(structural.completePostProduction(before, published),
+                "the terminal comparison must remain deferred until lease close");
+        ActiveSegmentPayload bridgePayload =
+                (ActiveSegmentPayload) getField(session, "activeRunPayload");
+
+        closeRunSegment(session, 2);
+
+        assertEquals(1, diagnostics.errorCount(),
+                "terminal divergence must reach the run-scoped owner");
+        assertEquals("input_alignment",
+                diagnostics.recentMismatches().getFirst().field());
+        assertNull(getField(session, "comparator"),
+                "terminal publication must not restore a stale segment sink");
+        assertNull(getField(session, "runStructuralComparator"));
+        assertNull(getField(session, "activeRunPayload"));
+        assertTrue(bridgePayload.isClosed(),
+                "closing the bridge segment must close its real payload lease");
     }
 
     @Test
@@ -2385,6 +2487,31 @@ class TestTraceSessionLauncherRunBranch {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
+    }
+
+    private static TraceRunReplayWalker.BoundaryProbe inertBoundaryProbe() {
+        return new TraceRunReplayWalker.BoundaryProbe(
+                new TraceRunReplayWalker.EngineHooks() {
+                    @Override
+                    public int currentBk2Frame() {
+                        return GameServices.playbackDebug().getCursorFrame();
+                    }
+
+                    @Override
+                    public com.openggf.game.BonusStageType peekBonusRequest() {
+                        return com.openggf.game.BonusStageType.NONE;
+                    }
+
+                    @Override
+                    public boolean isSpecialStageRequested() {
+                        return false;
+                    }
+
+                    @Override
+                    public GameMode currentMode() {
+                        return GameMode.TITLE_CARD;
+                    }
+                });
     }
 
     private static List<TraceRunPlaybackCoordinator.Action> driveCanonicalPolicy(
