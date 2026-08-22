@@ -50,14 +50,16 @@ segment payload while a run is preparing or driving that segment. This phase is
 an ownership-only migration: it removes whole-run reachability without changing
 the row representation or generalising any trace consumer.
 
-Planning continues to scan and validate each segment in manifest order, but
-publishes only the phase-one `TraceRunSegmentDescriptor` shape:
+Planning continues to scan and validate each segment in manifest order. It
+publishes the phase-one `TraceRunSegmentDescriptor` shape extended only by the
+two exact existing coordinator scalars:
 
 - manifest segment, directory, metadata, row count, and opening physics row;
 - local-row-to-raw-frame mapping and a lag bit set indexed by local row;
 - hardware-timing schedule and terminal dynamic-art ledger;
 - entry and exit boundaries; and
-- the existing `SegmentPlan.executionPolicy` scalar, relocated unchanged and
+- the existing `SegmentPlan.executionPolicy` and derived
+  `TraceRunReplayWalker.levelLoopRowCount` scalars, relocated unchanged and
   consumed only by the run coordinator.
 
 The descriptor gains no per-row phase vector, bootstrap projection, auxiliary
@@ -105,9 +107,12 @@ New code may pass only the active payload's existing `TraceData` or
 `TraceRunSpecialStageRows` into those existing call sites. Descriptor metadata
 may replace a payload read only where the old launch path already consumed that
 same metadata without hydrating gameplay. RNG and all other gameplay bootstrap
-calls remain confined to the active eager payload path. True row streaming
-requires a separate authority audit/remediation first; it is not silently
-implemented by adding an authority-bearing forward-window interface.
+calls remain confined to the active eager payload path. The only relocated
+derived values are the already-consumed `executionPolicy` and
+`levelLoopRowCount` coordinator scalars; neither gains another consumer or a
+generic descriptor query. True row streaming requires a separate authority
+audit/remediation first; it is not silently implemented by adding an
+authority-bearing forward-window interface.
 
 ### Alternatives considered
 
