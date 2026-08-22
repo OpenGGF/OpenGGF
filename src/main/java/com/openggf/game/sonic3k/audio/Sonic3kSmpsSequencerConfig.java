@@ -74,6 +74,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
+                .ymServiceTimingProfile(Sonic3kYmServiceTimingProfile.PROFILE)
                 // fix_sndbugs=0 zPlaySound keys off the incumbent and clears
                 // all four SSG-EG registers. It does not reset the YM2612's
                 // internal envelope phase as the legacy engine path did.

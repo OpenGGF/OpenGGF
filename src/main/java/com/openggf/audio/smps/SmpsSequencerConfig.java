@@ -242,6 +242,7 @@ public final class SmpsSequencerConfig {
     private final boolean fadeOutClearsSpeedShoes;
     private final boolean fadeOutStopsSfxImmediately;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
+    private final YmServiceTimingProfile ymServiceTimingProfile;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -294,6 +295,7 @@ public final class SmpsSequencerConfig {
         this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
+        this.ymServiceTimingProfile = b.ymServiceTimingProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -437,6 +439,10 @@ public final class SmpsSequencerConfig {
         return fmVoiceWriteProfile;
     }
 
+    public YmServiceTimingProfile getYmServiceTimingProfile() {
+        return ymServiceTimingProfile;
+    }
+
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
     public VolMode getVolMode() {
         return volMode;
@@ -574,6 +580,8 @@ public final class SmpsSequencerConfig {
         private boolean fadeOutClearsSpeedShoes;
         private boolean fadeOutStopsSfxImmediately;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
+        private YmServiceTimingProfile ymServiceTimingProfile =
+                YmServiceTimingProfile.none();
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -618,6 +626,7 @@ public final class SmpsSequencerConfig {
         public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
+        public Builder ymServiceTimingProfile(YmServiceTimingProfile val) { ymServiceTimingProfile = Objects.requireNonNull(val, "val"); return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }

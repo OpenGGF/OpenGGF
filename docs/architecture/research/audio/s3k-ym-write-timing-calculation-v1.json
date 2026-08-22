@@ -1,0 +1,137 @@
+{
+  "schema": "openggf.s3k-ym-write-calculation.v1",
+  "clock": {
+    "z80_t_state_master_cycles": 15,
+    "gpgx_average_banked_read_wait_t_states": 3
+  },
+  "source": {
+    "driver": "docs/skdisasm/Sound/Z80 Sound Driver.asm",
+    "shipped_conditional": "fix_sndbugs=0",
+    "gpgx_wait": "core/memz80.c:z80_request_68k_bus_access"
+  },
+  "native_validation": {
+    "oracle": "s3k-blue-sphere-ym-write-oracle-v1.json",
+    "isolated_groups": 12,
+    "banked_access_dma_stalls": 0
+  },
+  "segments": [
+    {
+      "key": "admission-prep",
+      "kind": "SFX_ADMISSION_PREP",
+      "variant": {"port":1,"operators":4,"banked_voice":false,"ssg_eg":true,"carrier_mask":0,"path":"FIRST_ADMISSION"},
+      "source_prefix_steps": [{"opcode":"zKeyOff -> CALL zWriteFMI (fix_sndbugs=0)","count":1,"t_states":17}],
+      "cross_segment_advance_steps": [],
+      "writes": [
+        {"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0},
+        {"slot":1,"advance_before_write_steps":[{"opcode":"admission key-off return and first zWriteFMIorII SSG-EG clear","count":1,"t_states":238}],"bank_waits":[],"expected_delta_master_cycles":3570},
+        {"slot":2,"advance_before_write_steps":[{"opcode":"zFMOperatorWriteLoop port-II next operator","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150},
+        {"slot":3,"advance_before_write_steps":[{"opcode":"zFMOperatorWriteLoop port-II next operator","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150},
+        {"slot":4,"advance_before_write_steps":[{"opcode":"zFMOperatorWriteLoop port-II next operator","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150}
+      ]
+    },
+    {
+      "key": "blue-sphere-max-release",
+      "kind": "SFX_MAX_RELEASE",
+      "variant": {"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":14,"path":"FIRST_VOICE_ATTACK"},
+      "source_prefix_steps": [{"opcode":"zSetMaxRelRate LD A,n + LD C,n + zFMOperatorWriteLoop LD B,n + PUSH AF + CALL zWriteFMIorII","count":1,"t_states":70}],
+      "cross_segment_advance_steps": [],
+      "writes": [
+        {"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0},
+        {"slot":1,"advance_before_write_steps":[{"opcode":"zWriteFMII RET + POP AF + ADD A,n + DJNZ taken + PUSH AF + CALL/port-II write path","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150},
+        {"slot":2,"advance_before_write_steps":[{"opcode":"zWriteFMII RET + POP AF + ADD A,n + DJNZ taken + PUSH AF + CALL/port-II write path","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150},
+        {"slot":3,"advance_before_write_steps":[{"opcode":"zWriteFMII RET + POP AF + ADD A,n + DJNZ taken + PUSH AF + CALL/port-II write path","count":1,"t_states":210}],"bank_waits":[],"expected_delta_master_cycles":3150}
+      ]
+    },
+    {
+      "key": "blue-sphere-voice-upload",
+      "kind": "FM_VOICE_UPLOAD",
+      "variant": {"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":14,"path":"FIRST_VOICE_ATTACK"},
+      "source_prefix_steps": [{"opcode":"zSendFMInstrument setup through CALL zWriteFMIorII panning","count":1,"t_states":139}],
+      "cross_segment_advance_steps": [{"opcode":"final zFMOperatorWriteLoop return through zSendFMInstrument first panning data write","count":1,"t_states":429}],
+      "writes": [
+        {"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0},
+        {"slot":1,"advance_before_write_steps":[{"opcode":"panning return + CALL zSendFMInstrData + algorithm dispatch","count":1,"t_states":212}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3225},
+        {"slot":2,"advance_before_write_steps":[{"opcode":"algorithm return/store + fix_sndbugs=0 loop setup + first operator dispatch","count":1,"t_states":248}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3765},
+        {"slot":3,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":4,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":5,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":6,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":7,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":8,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":9,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":10,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":11,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":12,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":13,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":14,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":15,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":16,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":17,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":18,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":19,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":20,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":21,"advance_before_write_steps":[{"opcode":"zSendFMInstrData RET + DJNZ taken + next operator dispatch","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":22,"advance_before_write_steps":[{"opcode":"final instrument-field return + TL pointer stores + JP zSendTL setup + noncarrier TL dispatch","count":1,"t_states":340}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":5145},
+        {"slot":23,"advance_before_write_steps":[{"opcode":"zSendTL loop + carrier ADD A,(IX+Volume) + next port-II write","count":1,"t_states":252}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3825},
+        {"slot":24,"advance_before_write_steps":[{"opcode":"zSendTL loop + carrier ADD A,(IX+Volume) + next port-II write","count":1,"t_states":252}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3825},
+        {"slot":25,"advance_before_write_steps":[{"opcode":"zSendTL loop + carrier ADD A,(IX+Volume) + next port-II write","count":1,"t_states":252}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3825}
+      ]
+    },
+    {
+      "key": "blue-sphere-key-off",
+      "kind": "KEY_OFF",
+      "variant": {"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":14,"path":"FIRST_VOICE_ATTACK"},
+      "source_prefix_steps": [{"opcode":"zKeyOff LD C,(IX+VoiceControl) + BIT/RET + zKeyOnOff LD A,n + CALL zWriteFMI","count":1,"t_states":76}],
+      "cross_segment_advance_steps": [{"opcode":"zSendTL completion through note-start zKeyOff data write","count":1,"t_states":537}],
+      "writes": [{"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0}]
+    },
+    {
+      "key": "blue-sphere-frequency-key-on",
+      "kind": "FREQUENCY_AND_KEY_ON",
+      "variant": {"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":14,"path":"FIRST_VOICE_ATTACK"},
+      "source_prefix_steps": [{"opcode":"zFMSendFreq guards and MSB setup through CALL zWriteFMIorII","count":1,"t_states":86}],
+      "cross_segment_advance_steps": [{"opcode":"key-off return + modulation/frequency preparation + first zFMSendFreq MSB write","count":1,"t_states":2042}],
+      "writes": [
+        {"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0},
+        {"slot":1,"advance_before_write_steps":[{"opcode":"MSB zWriteFMII RET + LSB setup + CALL/port-II write","count":1,"t_states":180}],"bank_waits":[],"expected_delta_master_cycles":2700},
+        {"slot":2,"advance_before_write_steps":[{"opcode":"LSB return + zFMNoteOn guards/setup + zKeyOnOff CALL zWriteFMI","count":1,"t_states":192}],"bank_waits":[],"expected_delta_master_cycles":2880}
+      ]
+    },
+    {
+      "key": "blue-sphere-completion-restore",
+      "kind": "COMPLETION_RESTORE",
+      "variant": {"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":8,"path":"COMPLETION_RESTORE"},
+      "source_prefix_steps": [{"opcode":"cfStopTrack fix_sndbugs=0 RES/LD junk/CALL zKeyOffIfActive","count":1,"t_states":72}],
+      "cross_segment_advance_steps": [],
+      "writes": [
+        {"slot":0,"advance_before_write_steps":[],"bank_waits":[],"expected_delta_master_cycles":0},
+        {"slot":1,"advance_before_write_steps":[{"opcode":"cfStopTrack FM5 voice-zero music lookup + bankswitchToMusicS3 + zGetFMInstrumentOffset + zSendFMInstrument panning","count":1,"t_states":1078}],"bank_waits":[],"expected_delta_master_cycles":16170},
+        {"slot":2,"advance_before_write_steps":[{"opcode":"restore panning return + algorithm dispatch","count":1,"t_states":212}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3225},
+        {"slot":3,"advance_before_write_steps":[{"opcode":"restore algorithm return and first operator dispatch","count":1,"t_states":248}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3765},
+        {"slot":4,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":5,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":6,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":7,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":8,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":9,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":10,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":11,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":12,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":13,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":14,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":15,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":16,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":17,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":18,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":19,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":20,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":21,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":22,"advance_before_write_steps":[{"opcode":"restore zSendFMInstrData loop","count":1,"t_states":235}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3570},
+        {"slot":23,"advance_before_write_steps":[{"opcode":"restore first noncarrier zSendTL dispatch","count":1,"t_states":340}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":5145},
+        {"slot":24,"advance_before_write_steps":[{"opcode":"restore noncarrier zSendTL dispatch","count":1,"t_states":233}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3540},
+        {"slot":25,"advance_before_write_steps":[{"opcode":"restore noncarrier zSendTL dispatch","count":1,"t_states":233}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3540},
+        {"slot":26,"advance_before_write_steps":[{"opcode":"restore carrier zSendTL dispatch","count":1,"t_states":252}],"bank_waits":[{"source":"GPGX average 68k-ROM read wait","accesses":1,"average_t_states":3}],"expected_delta_master_cycles":3825}
+      ]
+    }
+  ]
+}
