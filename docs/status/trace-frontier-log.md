@@ -114578,3 +114578,30 @@ protecting from. The next round should read the engine's animation selection aga
 carry semantics before changing anything.
 
 The other three death arms remain coordinates only.
+
+## 2026-08-22 - S3K main-playable Tails Obj05 fixed-slot dispatch restored
+
+- Worktree: `bugfix/ai-s3k-tails`, candidate over `d9650fd7d`.
+- Root cause: commit `0a8d80caa9` moved Obj05 advancement out of the playable
+  animation pass but dispatched only registered sidekicks. A main playable
+  Tails therefore left its `TailsTailsController` at the blank animation, so
+  the S3K idle and flight appendage frames were never selected. The initial
+  S3K slot 97 (`Tails_tails`, `docs/skdisasm/sonic3k.constants.asm:314-317`)
+  made the same player-two assumption.
+- Fix: the post-dynamic fixed-slot pass advances the resolved main playable
+  before the existing sidekick iteration. The initial slot selects the main
+  Tails object in solo mode and preserves the first-sidekick fallback for
+  Sonic-and-Tails sessions. No trace data, timing input, route, zone, or frame
+  condition is consumed.
+- Focused validation: 4 new main-playable idle/flight/initial-slot/fallback
+  tests pass; the adjacent tails suite passes all 6 tests. The one
+  `TestInitialPlayableProcessSpritesPass` red (`expected 37, was 36`) matches
+  the pre-change baseline.
+- Full-suite baseline from unchanged `develop`: 15,272 tests, 56 failures,
+  61 errors, 36 skips. The isolated checkout's clean control was 15,272 tests,
+  50 failures, 63 errors, 96 skips; the final candidate was 15,276 tests, 50
+  failures, 62 errors, 96 skips (the four added tests). Its 56 red classes had
+  no new red class; one pre-existing `TestDrowningControllerMusicSelection`
+  red cleared during the run. The differing skipped/error counts from
+  `develop` are the checkout's missing untracked default-ROM/config files, not
+  code deltas.
