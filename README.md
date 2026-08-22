@@ -220,9 +220,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
   forced-GC forks measured 9.25 MB descriptor graphs and 115.6 MB maximum
   installed graphs, 89.36-89.37% below the 1.087 GB eager baseline; the largest
   special-stage graph was 22.7 MB. The recorded 67-segment oracle consumed all
-  1,653 AIZ rows with its exact established frontier, and the JDK 21 default
-  suite introduced zero new or worsened failure identities against synchronized
-  `develop`.
+  1,653 AIZ rows with its exact established frontier. Fresh current-main and
+  feature trace sweeps share the same ten red identities, all 82
+  baseline-green replay completions have a row/terminal invariant, and the JDK
+  21 default suite has zero attributable new or worsened red. Task 8 also found
+  two real S1 visual bridge regressions. The reconciled feature fixed retained
+  transition diagnostics and their coverage before this validation; current
+  main passes those routes through its unchanged eager-ownership control path.
 
 - **S3K playable Tails tails dispatch restored (2026-08-22):** the fixed
   `Tails_tails` object slot now advances the main playable Tails controller as

@@ -5,9 +5,18 @@
   115.6 MB with a real active payload installed, an 89.36-89.37% reduction from
   the 1.087 GB eager baseline. The maximum real special-stage sample was 22.7
   MB, 100-cycle resource checks balanced every open and close, the 67-segment
-  oracle consumed all 1,653 AIZ rows at its unchanged frontier, and the JDK 21
-  default suite introduced no new or worsened failure identity against
-  synchronized `develop`.
+  oracle consumed all 1,653 AIZ rows at its unchanged frontier, and 82
+  baseline-green replay completions have explicit row or terminal proof.
+  Current-main and feature sweeps share the same ten trace reds, while exhaustive
+  JDK 21 default-suite message comparison found zero feature-attributable new or
+  worsened red.
+
+- **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
+  exposed two real bridge regressions that aborted after destination segment 2
+  with no diagnostic sink. The feature transition now keeps the run diagnostics
+  through bridge admission; both routes are green in the fresh feature sweep
+  and focused validation, while current main passes as the unchanged eager-
+  ownership control.
 
 - **Long visual trace runs now finish and exit cleanly from every unrepresented
   span:** terminal tails enter their final payload-free gap exactly once, and

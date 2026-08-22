@@ -537,6 +537,15 @@ Steps 1-7 are evidenced by
 Independent review and integration remain controller-owned Steps 8 and 9 and
 are intentionally unchecked here.
 
+The authoritative Step 1/5 baseline was refreshed after upstream moved:
+current `develop` / `origin/develop` is `d473365ed`, and the feature was
+reconciled at merge head `1a96fbdf1`. The fresh main/feature trace sweeps share
+ten exact red identities and the completion audit accounts for all
+baseline-green replay families. Task 8 initially exposed two real S1 visual
+bridge regressions at `3a3c1fc5`; Task 4 fixes `25d4a41b7` and `c8cb56808`
+closed them before the refreshed gates. Older `d9650fd7` measurements remain
+historical only.
+
 - [ ] **Step 8: Independent final code/spec review**
 
 Review authority expansion, allowlist bypass, aliases, boundary ordering, special-stage parity, benchmark bias, and regression accounting. Fix material findings test-first and repeat until GREEN.

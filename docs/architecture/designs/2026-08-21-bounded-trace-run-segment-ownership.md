@@ -27,12 +27,15 @@ classes occupied 102,864 bytes (0.0094%).
 The ownership boundary, rather than parsing throughput, is therefore the
 measured problem.
 
-## Phase-one result
+## Historical phase-one checkpoint
 
-`TraceRunReplayWalker.planDescriptors()` now performs the existing validation
-scan sequentially and publishes payload-independent summaries.
-`TraceCatalog.validateRunLaunch()` consumes those summaries, while
-`prepareRunLaunch()` and every replay caller retain the eager `plan()` path.
+At the phase-one checkpoint, `TraceRunReplayWalker.planDescriptors()` performed
+the existing validation scan sequentially and published payload-independent
+summaries. `TraceCatalog.validateRunLaunch()` consumed those summaries, while
+the then-live `prepareRunLaunch()` API and replay callers still retained the
+eager `plan()` path. Phase two subsequently removed that API and those eager
+callers; this paragraph records the intermediate measurement state, not the
+current interface.
 
 On the real 67-segment Knuckles super-emerald run, both planners first ran
 unmeasured whole-run warmups whose graphs were released before separate
@@ -65,11 +68,14 @@ and 1,000 closes. Authority/ownership guards passed 12/12 and focused migration
 tests passed 177/177. The recorded 67-segment oracle consumed all 1,653 AIZ
 rows, retained the first `camera_x` mismatch (`0x1300` / `0x1308`), the terminal
 segment-0 `giant_ring` miss, both unmatched timing completions, and zero
-dynamic-art gaps/failures. A fresh all-game trace sweep completed every one of
-its 165 classes with the established 12 failures and no errors. The exact JDK
-21 default-suite comparison found zero new or worsened `kind + class#method`
-identities against synchronized `develop`; focused groups were message-identical
-before and after that suite.
+dynamic-art gaps/failures. Fresh current-main and feature all-game trace sweeps
+reported the same ten red identities and no errors; the feature sweep launched
+all 165 of its XML classes, and separate replay-family accounting proved every
+baseline-green replay completed without starvation. The exact JDK 21 default-
+suite comparison found one raw feature-only order-dependent red, which identical
+predecessor controls reproduced on synchronized `develop`; exhaustive shared-
+red comparison and those controls found zero feature-attributable new or
+worsened failures. Focused groups retained the same frontiers after that suite.
 
 This validation does not certify the quarantined phase/bootstrap authority
 listed below. The reachability guard also lacks a historical live-leak RED,

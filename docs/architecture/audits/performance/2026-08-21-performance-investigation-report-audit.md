@@ -170,24 +170,28 @@ red-set churn. No new failure was attributable to the documentation changes.
 
 ### Active-segment implementation comparison
 
-The final feature comparison used synchronized `develop` at
-`d9650fd7dff2828c75c39ca575ffbafbbde7409d` and the implementation head
-`3a3c1fc52169a16f390a1d1b8083cf74473fb357`, both on JDK 21 with the exact
-`mvn -Dmse=off test` command. The baseline completed 15,295 tests with 56
-failures, 81 errors, and 26 skips; the feature completed 15,324 tests with 54
-failures, 65 errors, and 26 skips. Exact fresh-Surefire `kind + class#method`
-comparison found 119 shared identities, zero new or worsened identities, and
-18 baseline identities absent from the feature result.
+The authoritative comparison uses current synchronized `develop` at
+`d473365ed72facfffcd36d9e07af09666b094d37` and reconciled feature head
+`1a96fbdf1588564d584afb57040f749656f3cbf4`, both on JDK 21 with the exact
+`mvn -Dmse=off test` command. Main completed 15,299 tests with 55 failures, 81
+errors, and 26 skips; the feature rerun completed 15,330 tests with 55 failures,
+65 errors, and 26 skips. The 119 shared reds have complete message/root-detail
+comparison: 116 raw-identical, two identical after only a demonstrated object
+identity-hash normalization, and one identical except for a moved source line.
+The raw feature-only ICZ result and the first run's MGZ result both reproduce
+exactly on current main under their same-fork predecessors, proving upstream
+singleton/order leaks rather than feature attribution. Attributable new or
+worsened reds are zero.
 
-The fresh all-game trace-profile sweep completed all 165 launched classes: 840
-tests, 12 established failures, zero errors, and 6 skips. The 67-segment oracle
-consumed every one of its 1,653 AIZ rows and retained the exact first mismatch,
-terminal `giant_ring` miss, unmatched timing completions, and dynamic-art
-result. Focused catalog/ownership, special-stage, headless-chain, and
-visual/audio groups were rerun after the default suite; their failure identities
-and complete messages were byte-identical to the pre-suite controls. Full
-evidence, including the baseline-equivalent reds and quarantined authority debt,
-is in
+Fresh all-game sweeps completed current main at 811 tests / 10 failures and
+feature at 840 / 10, with exact red identity equality and complete-message
+parity. The earlier two S1 visual failures were real feature regressions, fixed
+by `25d4a41b7` and `c8cb56808`. They are green on the reconciled feature;
+current main is the passing unchanged eager-ownership control. Completion
+accounting covers 796 baseline-green executions and 82 actual replay methods
+across generic, credits, special-stage, bounded-chain, visual, and bonus
+families; no completion issue remains. The 67-segment oracle still consumes all
+1,653 AIZ rows with its exact frontier and terminal result. Full evidence is in
 [`2026-08-22-active-segment-ownership-validation.md`](../../validation/trace/2026-08-22-active-segment-ownership-validation.md).
 
 ## Report-level assessment
