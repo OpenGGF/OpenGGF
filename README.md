@@ -214,6 +214,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **S3K playable Tails tails dispatch restored (2026-08-22):** the fixed
+  `Tails_tails` object slot now advances the main playable Tails controller as
+  well as the existing sidekick path, restoring idle and flying tail frames;
+  initial slot 97 ownership and the native Player 2 fallback are covered by
+  focused tests.
+
 - **Compact trace-run catalog validation (2026-08-21):** run manifests now
   validate through immutable descriptors produced one segment at a time. On
   the real 67-segment Knuckles super-emerald run, warmed retained planning heap
