@@ -145,44 +145,7 @@ public final class TraceRunReplayWalker {
         }
     }
 
-    /** True when any segment has a recorded timing stream. */
-    public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        return plans.stream().anyMatch(
-                plan -> plan.trace().hardwareTimingSchedule().hasRecordedInput());
-    }
-
-    /**
-     * Builds the run timing view. Metadata-only special-stage segments use the
-     * recorder-audited mapping {@code raw_frame = segment-local trace index};
-     * their BK2 location remains {@code bk2_frame_offset + raw_frame}.
-     */
-    public static List<HardwareTimingSegment> hardwareTimingSegments(
-            List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        List<HardwareTimingSegment> result = new ArrayList<>(plans.size());
-        for (SegmentPlan plan : plans) {
-            int parsedFrameCount = plan.trace().frameCount();
-            int representedFrameCount = parsedFrameCount > 0
-                    ? parsedFrameCount
-                    : plan.segment().traceFrameCount();
-            List<Integer> rawFrames = new ArrayList<>(representedFrameCount);
-            for (int traceIndex = 0;
-                    traceIndex < representedFrameCount;
-                    traceIndex++) {
-                rawFrames.add(parsedFrameCount > 0
-                        ? plan.trace().getFrame(traceIndex).frame()
-                        : traceIndex);
-            }
-            result.add(new HardwareTimingSegment(
-                    plan.segment().bk2FrameOffset(),
-                    rawFrames,
-                    plan.trace().hardwareTimingSchedule()));
-        }
-        return List.copyOf(result);
-    }
-
-    /** Descriptor-only counterpart retained beside the eager headless helper. */
+    /** True when any compact run descriptor has a recorded timing stream. */
     public static boolean hasDescriptorHardwareTimingStream(
             List<TraceRunSegmentDescriptor> descriptors) {
         Objects.requireNonNull(descriptors, "descriptors");
@@ -1082,9 +1045,9 @@ public final class TraceRunReplayWalker {
 
     /**
      * Scans and validates run segments sequentially into payload-independent
-     * descriptors. The eager {@link #plan} path remains the replay/reference
-     * path during the staged launch migration; this boundary supports
-     * whole-run validation and compact planning without retaining payloads.
+     * descriptors. The eager {@link #plan} path remains only as a benchmark
+     * reference; launch and replay owners use this compact boundary and open
+     * one segment payload at a time.
      */
     public static List<TraceRunSegmentDescriptor> planDescriptors(
             TraceRunManifest run, Path runDir) throws IOException {

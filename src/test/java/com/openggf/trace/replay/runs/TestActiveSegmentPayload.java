@@ -50,8 +50,15 @@ class TestActiveSegmentPayload {
                 runDirectory.resolve("run_manifest.json"));
         TraceRunSegmentDescriptor descriptor = TraceRunReplayWalker
                 .planDescriptors(run, runDirectory).get(1);
-        TraceRunReplayWalker.SegmentPlan eager = TraceRunReplayWalker
-                .plan(run, runDirectory).get(1);
+        TraceRunManifest.Segment segment = run.segments().get(1);
+        TraceRunSpecialStageRows expectedRows = TraceRunSpecialStageRows.load(
+                segment.traceProfile(), runDirectory.resolve(segment.dir()),
+                segment.dynamicArtInitialLedgerDescriptors());
+        com.openggf.trace.TraceData expectedTrace =
+                com.openggf.trace.TraceData.loadMetadataOnly(
+                        runDirectory.resolve(segment.dir()),
+                        com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
+                        segment.dynamicArtInitialLedgerDescriptors());
 
         try (ActiveSegmentPayload payload = TraceRunReplayWalker.openActiveSegment(
                 descriptor, 1)) {
@@ -60,18 +67,18 @@ class TestActiveSegmentPayload {
             assertNotNull(payload.specialStageRows());
             assertEquals(0, payload.trace().frameCount(),
                     "special-stage TraceData remains metadata-only");
-            assertEquals(eager.trace().metadata(), payload.trace().metadata());
-            assertEquals(eager.trace().hardwareTimingSchedule(),
+            assertEquals(expectedTrace.metadata(), payload.trace().metadata());
+            assertEquals(expectedTrace.hardwareTimingSchedule(),
                     payload.trace().hardwareTimingSchedule());
-            assertEquals(eager.specialStageRows().metadata(),
+            assertEquals(expectedRows.metadata(),
                     payload.specialStageRows().metadata());
-            assertEquals(eager.specialStageRows().rowCount(),
+            assertEquals(expectedRows.rowCount(),
                     payload.specialStageRows().rowCount());
-            assertEquals(eager.specialStageRows().hardwareTimingSchedule(),
+            assertEquals(expectedRows.hardwareTimingSchedule(),
                     payload.specialStageRows().hardwareTimingSchedule());
-            assertEquals(eager.specialStageRows().newRunObjectsPassBinder().isPresent(),
+            assertEquals(expectedRows.newRunObjectsPassBinder().isPresent(),
                     payload.specialStageRows().newRunObjectsPassBinder().isPresent());
-            assertEquals(eager.specialStageRows().normalizedDynamicArtRows(),
+            assertEquals(expectedRows.normalizedDynamicArtRows(),
                     payload.specialStageRows().normalizedDynamicArtRows());
         }
     }
@@ -90,15 +97,17 @@ class TestActiveSegmentPayload {
                 runDirectory.resolve("run_manifest.json"));
         TraceRunSegmentDescriptor descriptor = TraceRunReplayWalker
                 .planDescriptors(run, runDirectory).get(1);
-        TraceRunSpecialStageRows eager = TraceRunReplayWalker.plan(
-                run, runDirectory).get(1).specialStageRows();
+        TraceRunManifest.Segment segment = run.segments().get(1);
+        TraceRunSpecialStageRows expectedRows = TraceRunSpecialStageRows.load(
+                segment.traceProfile(), specialStage,
+                segment.dynamicArtInitialLedgerDescriptors());
 
         try (ActiveSegmentPayload payload = TraceRunReplayWalker.openActiveSegment(
                 descriptor, 1)) {
             TraceRunSpecialStageRows rows = payload.specialStageRows();
             assertTrue(rows.newRunObjectsPassBinder().isPresent());
-            assertEquals(eager.passPacedFromRow(), rows.passPacedFromRow());
-            assertEquals(eager.normalizedDynamicArtRows(),
+            assertEquals(expectedRows.passPacedFromRow(), rows.passPacedFromRow());
+            assertEquals(expectedRows.normalizedDynamicArtRows(),
                     rows.normalizedDynamicArtRows());
         }
     }

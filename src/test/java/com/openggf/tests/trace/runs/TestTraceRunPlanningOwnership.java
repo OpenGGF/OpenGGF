@@ -2,11 +2,8 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
-import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
-import com.openggf.trace.replay.runs.ActiveSegmentPayload;
-import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
@@ -61,21 +58,7 @@ class TestTraceRunPlanningOwnership {
     void payloadReachabilityProbeRejectsNestedPayloadOwnersWithoutConsumingStreams(
             @TempDir Path root) throws Exception {
         Path s3kRun = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
-        TraceRunManifest s3kManifest = TraceRunManifest.load(
-                s3kRun.resolve("run_manifest.json"));
-        TraceData trace;
-        try (ActiveSegmentPayload active = TraceRunReplayWalker.openActiveSegment(
-                TraceRunReplayWalker.planDescriptors(s3kManifest, s3kRun).getFirst(), 0)) {
-            trace = active.trace();
-        }
-        Path s2Run = TraceV5RunFixture.writeS2SpecialStageRun(root.resolve("s2/runs"));
-        TraceRunManifest s2Manifest = TraceRunManifest.load(
-                s2Run.resolve("run_manifest.json"));
-        TraceRunSpecialStageRows specialRows;
-        try (ActiveSegmentPayload active = TraceRunReplayWalker.openActiveSegment(
-                TraceRunReplayWalker.planDescriptors(s2Manifest, s2Run).get(1), 1)) {
-            specialRows = active.specialStageRows();
-        }
+        TraceData trace = TraceData.load(s3kRun.resolve("seg00_aiz"));
         Reader reader = new BufferedReader(new StringReader("trace"));
         InputStream stream = new ByteArrayInputStream(new byte[] {1});
         Path mappedPath = root.resolve("payload.bin");
@@ -83,7 +66,7 @@ class TestTraceRunPlanningOwnership {
         try (FileChannel channel = FileChannel.open(mappedPath, StandardOpenOption.READ)) {
             MappedByteBuffer mapped = channel.map(FileChannel.MapMode.READ_ONLY, 0, 1);
             List<Object> payloads = List.of(trace,
-                    new TraceEvent.ObjectRemoved(0, 1, "badnik"), specialRows,
+                    new TraceEvent.ObjectRemoved(0, 1, "badnik"),
                     reader, stream, mapped, new AtomicReference<>(trace),
                     new WeakReference<>(trace), Stream.of(trace));
 
@@ -187,7 +170,7 @@ class TestTraceRunPlanningOwnership {
                 || value instanceof Reader
                 || value instanceof InputStream
                 || value instanceof MappedByteBuffer
-                || value instanceof ActiveSegmentPayload;
+                || value instanceof com.openggf.trace.replay.runs.ActiveSegmentPayload;
     }
 
     private static boolean isLeaf(Object value) {

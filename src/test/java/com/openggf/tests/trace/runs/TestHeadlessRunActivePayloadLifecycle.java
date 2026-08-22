@@ -107,7 +107,8 @@ class TestHeadlessRunActivePayloadLifecycle {
         RecordingFactory factory = new RecordingFactory();
         Harness harness = new Harness(factory);
         ActiveSegmentPayload active = harness.open(descriptors.get(1), 1);
-        Reachability reachability = harness.installEveryAlias(active);
+        Reachability reachability = harness.installEveryAlias(
+                active.trace(), active.specialStageRows());
         assertReferentsReachable(reachability);
         AssertionError primary = new AssertionError("injected comparison failure");
 
@@ -383,12 +384,11 @@ class TestHeadlessRunActivePayloadLifecycle {
             slotProbeFactory = (trace, label) -> probe;
         }
 
-        private Reachability installEveryAlias(ActiveSegmentPayload active) {
-            TraceData trace = active.trace();
+        private Reachability installEveryAlias(
+                TraceData trace, TraceRunSpecialStageRows rows) {
             TraceEvent aux = trace.getEventsForFrame(0).getFirst();
             LiveTraceComparator comparator = new LiveTraceComparator(
                     trace, ToleranceConfig.DEFAULT, 0, () -> null);
-            TraceRunSpecialStageRows rows = active.specialStageRows();
             TraceRunSpecialStageRowDriver driver =
                     new TraceRunSpecialStageRowDriver(rows, trace);
             SpecialStageRunObjectsPassBinder binder =
@@ -468,7 +468,7 @@ class TestHeadlessRunActivePayloadLifecycle {
                 throw new IOException("injected open failure " + segmentIndex);
             }
             ActiveSegmentPayload payload =
-                    TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex);
+                    openActiveSegment(descriptor, segmentIndex);
             transcript.add("open " + segmentIndex);
             leases.add(new WeakReference<>(payload));
             leaseIndexes.add(segmentIndex);
@@ -499,5 +499,11 @@ class TestHeadlessRunActivePayloadLifecycle {
             }
             return active;
         }
+    }
+
+    private static ActiveSegmentPayload openActiveSegment(
+            TraceRunSegmentDescriptor descriptor, int segmentIndex)
+            throws IOException {
+        return TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex);
     }
 }

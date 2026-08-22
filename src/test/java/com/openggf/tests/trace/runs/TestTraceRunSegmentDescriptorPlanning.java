@@ -29,7 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTraceRunSegmentDescriptorPlanning {
 
     @Test
-    void descriptorPlanMatchesEagerPlanSummaries(@TempDir Path root) throws Exception {
+    void descriptorPlanMatchesIndependentlyLoadedSummaries(@TempDir Path root)
+            throws Exception {
         Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
         Path firstMetadata = runDir.resolve("seg00_aiz/metadata.json");
         Files.writeString(firstMetadata, Files.readString(firstMetadata).replace(
@@ -45,32 +46,39 @@ class TestTraceRunSegmentDescriptorPlanning {
         TraceRunManifest run = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
 
-        var eagerPlans = TraceRunReplayWalker.plan(run, runDir);
         var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
 
         assertEquals(3, descriptors.size());
         for (int index = 0; index < descriptors.size(); index++) {
-            var eager = eagerPlans.get(index);
+            TraceRunManifest.Segment segment = run.segments().get(index);
+            TraceData expected = TraceData.load(
+                    runDir.resolve(segment.dir()),
+                    segment.dynamicArtInitialLedgerDescriptors());
             var descriptor = descriptors.get(index);
-            assertEquals(eager.segment(), descriptor.segment());
-            assertEquals(runDir.resolve(eager.segment().dir()),
+            assertEquals(segment, descriptor.segment());
+            assertEquals(runDir.resolve(segment.dir()),
                     descriptor.segmentDirectory());
-            assertEquals(eager.trace().metadata(), descriptor.metadata());
-            assertEquals(eager.segment().traceProfile(),
+            assertEquals(expected.metadata(), descriptor.metadata());
+            assertEquals(segment.traceProfile(),
                     descriptor.metadata().traceProfile());
             assertEquals(2, descriptor.rowCount());
             assertEquals(List.of(0, 1), descriptor.rawFrames());
-            assertEquals(eager.trace().getFrame(0), descriptor.openingFrame());
-            assertEquals(eager.trace().terminalDynamicArtLedger(),
+            assertEquals(expected.getFrame(0), descriptor.openingFrame());
+            assertEquals(expected.terminalDynamicArtLedger(),
                     descriptor.terminalDynamicArtLedger());
-            assertEquals(eager.trace().hardwareTimingSchedule().hasRecordedInput(),
+            assertEquals(expected.hardwareTimingSchedule().hasRecordedInput(),
                     descriptor.hardwareTimingSchedule().hasRecordedInput());
-            assertEquals(eager.trace().hardwareTimingSchedule().edges(),
+            assertEquals(expected.hardwareTimingSchedule().edges(),
                     descriptor.hardwareTimingSchedule().edges());
-            assertEquals(eager.entryBoundary(), descriptor.entryBoundary());
-            assertEquals(eager.exitBoundary(), descriptor.exitBoundary());
-            assertEquals(eager.executionPolicy(), descriptor.executionPolicy());
-            assertEquals(TraceRunReplayWalker.levelLoopRowCount(eager.trace()),
+            var pairing = TraceRunReplayWalker.pairBoundaries(run);
+            assertEquals(pairing.entryBoundaries()[index],
+                    descriptor.entryBoundary());
+            assertEquals(pairing.exitBoundaries()[index],
+                    descriptor.exitBoundary());
+            assertEquals(TraceRunReplayWalker.segmentExecutionPolicy(
+                            segment, pairing.entryBoundaries()[index], expected),
+                    descriptor.executionPolicy());
+            assertEquals(TraceRunReplayWalker.levelLoopRowCount(expected),
                     descriptor.levelLoopRowCount());
         }
         assertFalse(descriptors.getFirst().laggedRows().get(0));
@@ -238,8 +246,10 @@ class TestTraceRunSegmentDescriptorPlanning {
         assertEquals(TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL,
                 special.executionPolicy());
         assertEquals(0, special.levelLoopRowCount());
-        TraceFrame ordinaryOpening = TraceRunReplayWalker.plan(run, runDir)
-                .getFirst().trace().getFrame(0);
+        TraceRunManifest.Segment ordinary = run.segments().getFirst();
+        TraceFrame ordinaryOpening = TraceData.load(
+                runDir.resolve(ordinary.dir()),
+                ordinary.dynamicArtInitialLedgerDescriptors()).getFrame(0);
         assertThrows(IllegalArgumentException.class,
                 () -> copyWithRowShape(special, 2, List.of(0, 1),
                         ordinaryOpening));

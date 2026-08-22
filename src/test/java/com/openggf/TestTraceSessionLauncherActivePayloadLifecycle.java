@@ -597,7 +597,7 @@ class TestTraceSessionLauncherActivePayloadLifecycle {
                 throw new IOException("injected open failure " + segmentIndex);
             }
             ActiveSegmentPayload payload =
-                    TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex);
+                    openActiveSegment(descriptor, segmentIndex);
             transcript.add("open " + segmentIndex);
             leases.add(new WeakReference<>(payload));
             leaseIndexes.add(segmentIndex);
@@ -631,5 +631,11 @@ class TestTraceSessionLauncherActivePayloadLifecycle {
             }
             return active;
         }
+    }
+
+    private static ActiveSegmentPayload openActiveSegment(
+            TraceRunSegmentDescriptor descriptor, int segmentIndex)
+            throws IOException {
+        return TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex);
     }
 }

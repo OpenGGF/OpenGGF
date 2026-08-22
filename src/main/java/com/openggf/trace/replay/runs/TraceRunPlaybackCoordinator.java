@@ -109,22 +109,6 @@ public final class TraceRunPlaybackCoordinator {
         this(run, profile, movieFrameCount, null, null);
     }
 
-    public TraceRunPlaybackCoordinator(
-            TraceRunManifest run,
-            TracePlaybackProfile profile,
-            int movieFrameCount,
-            List<TraceRunReplayWalker.SegmentPlan> plans) {
-        this(run, profile, movieFrameCount,
-                plans == null ? null : plans.stream()
-                        .map(TraceRunReplayWalker.SegmentPlan::executionPolicy)
-                        .toList(),
-                plans == null ? null : plans.stream()
-                        .map(plan -> plan.trace() == null
-                                ? -1
-                                : TraceRunReplayWalker.levelLoopRowCount(plan.trace()))
-                        .toList());
-    }
-
     /**
      * Creates a coordinator from compact planning summaries without retaining
      * eager trace payloads.

@@ -23,6 +23,7 @@ import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -315,8 +316,9 @@ class TestTraceRunPlaybackCoordinator {
                 new TraceRunReplayWalker.SegmentPlan(
                         segments.get(2), bridge, transitions.get(1), null));
         TraceRunPlaybackCoordinator coordinator =
-                new TraceRunPlaybackCoordinator(
-                        run, TracePlaybackProfile.DISABLED, 30, plans);
+                TraceRunPlaybackCoordinator.fromDescriptors(
+                        run, TracePlaybackProfile.DISABLED, 30,
+                        descriptors(plans));
         coordinator.activateInitialLevel(
                 levelObservation(1, 0, 0, 0, false, 0));
         coordinator.observeBoundary(
@@ -452,8 +454,10 @@ class TestTraceRunPlaybackCoordinator {
                         transitions.get(1), null),
                 new TraceRunReplayWalker.SegmentPlan(
                         segments.get(3), executionTrace(11, 12, 13), null, null));
-        TraceRunPlaybackCoordinator coordinator = new TraceRunPlaybackCoordinator(
-                run, TracePlaybackProfile.DISABLED, 30, plans);
+        TraceRunPlaybackCoordinator coordinator =
+                TraceRunPlaybackCoordinator.fromDescriptors(
+                        run, TracePlaybackProfile.DISABLED, 30,
+                        descriptors(plans));
         return parkCoordinatorAtBridgeHandoff(coordinator);
     }
 
@@ -689,6 +693,31 @@ class TestTraceRunPlaybackCoordinator {
                 run(segments, transitions,
                         TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED),
                 TracePlaybackProfile.DISABLED, movieFrameCount);
+    }
+
+    private static List<TraceRunSegmentDescriptor> descriptors(
+            List<TraceRunReplayWalker.SegmentPlan> plans) {
+        return plans.stream().map(plan -> {
+            boolean special = "special_stage".equals(plan.segment().kind());
+            int rowCount = special
+                    ? plan.segment().traceFrameCount()
+                    : plan.trace().frameCount();
+            List<Integer> rawFrames = special
+                    ? java.util.stream.IntStream.range(0, rowCount).boxed().toList()
+                    : java.util.stream.IntStream.range(0, rowCount)
+                            .mapToObj(index -> plan.trace().getFrame(index).frame())
+                            .toList();
+            return new TraceRunSegmentDescriptor(
+                    plan.segment(), Path.of(plan.segment().dir()),
+                    plan.trace().metadata(), rowCount,
+                    special ? null : plan.trace().getFrame(0),
+                    rawFrames, new java.util.BitSet(),
+                    plan.trace().hardwareTimingSchedule(), List.of(),
+                    plan.entryBoundary(), plan.exitBoundary(),
+                    special ? 0
+                            : TraceRunReplayWalker.levelLoopRowCount(plan.trace()),
+                    plan.executionPolicy());
+        }).toList();
     }
 
     private static TraceRunManifest run(

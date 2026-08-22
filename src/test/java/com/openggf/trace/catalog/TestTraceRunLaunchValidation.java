@@ -36,7 +36,7 @@ class TestTraceRunLaunchValidation {
     }
 
     @Test
-    void preparationLoadsGeneratedV5MovieAndSegmentPayloadsExactlyOnce(
+    void preparationLoadsGeneratedV5MovieAndDescriptorsExactlyOnce(
             @TempDir Path root) throws Exception {
         prepareSyntheticRunWithValidMovie(root);
         TraceEntry entry = TraceCatalog.scan(root).stream()
@@ -46,26 +46,22 @@ class TestTraceRunLaunchValidation {
                 .findFirst()
                 .orElseThrow();
         AtomicInteger movieLoads = new AtomicInteger();
-        AtomicInteger planLoads = new AtomicInteger();
+        AtomicInteger descriptorLoads = new AtomicInteger();
 
-        TraceCatalog.PreparedRunLaunch prepared = TraceCatalog.prepareRunLaunch(
+        TraceCatalog.PreparedDescriptorRunLaunch prepared =
+                TraceCatalog.prepareDescriptorRunLaunch(
                 entry,
                 movie -> {
                     movieLoads.incrementAndGet();
                     return new com.openggf.debug.playback.Bk2MovieLoader().load(movie);
                 },
-                new TraceCatalog.RunPlannerPair(
-                        (manifest, runDir) -> {
-                            throw new AssertionError(
-                                    "preparation must not plan only descriptors");
-                        },
-                        (manifest, runDir) -> {
-                            planLoads.incrementAndGet();
-                            return TraceRunReplayWalker.plan(manifest, runDir);
-                        }));
+                (manifest, runDir) -> {
+                    descriptorLoads.incrementAndGet();
+                    return TraceRunReplayWalker.planDescriptors(manifest, runDir);
+                });
 
         assertEquals(1, movieLoads.get());
-        assertEquals(1, planLoads.get());
+        assertEquals(1, descriptorLoads.get());
         assertFalse(prepared.segments().isEmpty());
     }
 
@@ -79,7 +75,6 @@ class TestTraceRunLaunchValidation {
                 .orElseThrow();
         AtomicInteger movieLoads = new AtomicInteger();
         AtomicInteger descriptorPlans = new AtomicInteger();
-        AtomicInteger eagerPlans = new AtomicInteger();
 
         TraceCatalog.PreparedDescriptorRunLaunch prepared =
                 TraceCatalog.prepareDescriptorRunLaunch(
@@ -89,22 +84,14 @@ class TestTraceRunLaunchValidation {
                             return new com.openggf.debug.playback.Bk2MovieLoader()
                                     .load(movie);
                         },
-                        new TraceCatalog.RunPlannerPair(
-                                (manifest, runDir) -> {
-                                    descriptorPlans.incrementAndGet();
-                                    return TraceRunReplayWalker.planDescriptors(
-                                            manifest, runDir);
-                                },
-                                (manifest, runDir) -> {
-                                    eagerPlans.incrementAndGet();
-                                    throw new AssertionError(
-                                            "descriptor preparation must not call "
-                                                    + "the eager planner");
-                                }));
+                        (manifest, runDir) -> {
+                            descriptorPlans.incrementAndGet();
+                            return TraceRunReplayWalker.planDescriptors(
+                                    manifest, runDir);
+                        });
 
         assertEquals(1, movieLoads.get());
         assertEquals(1, descriptorPlans.get());
-        assertEquals(0, eagerPlans.get());
         assertEquals(entry.runManifest().segments().size(),
                 prepared.segments().size());
     }
@@ -127,13 +114,7 @@ class TestTraceRunLaunchValidation {
                 () -> TraceCatalog.prepareDescriptorRunLaunch(
                         entry, movie -> new com.openggf.debug.playback.Bk2MovieLoader()
                                 .load(movie),
-                        new TraceCatalog.RunPlannerPair(
-                                (manifest, directory) -> sentinels,
-                                (manifest, directory) -> {
-                                    throw new AssertionError(
-                                            "descriptor preparation must not call "
-                                                    + "the eager planner");
-                                })));
+                        (manifest, directory) -> sentinels));
 
         assertTrue(error.getMessage().contains("BK2 range"), error.getMessage());
     }
@@ -156,13 +137,7 @@ class TestTraceRunLaunchValidation {
                 () -> TraceCatalog.prepareDescriptorRunLaunch(
                         entry, movie -> new com.openggf.debug.playback.Bk2MovieLoader()
                                 .load(movie),
-                        new TraceCatalog.RunPlannerPair(
-                                (manifest, directory) -> sentinels,
-                                (manifest, directory) -> {
-                                    throw new AssertionError(
-                                            "descriptor preparation must not call "
-                                                    + "the eager planner");
-                                })));
+                        (manifest, directory) -> sentinels));
 
         assertTrue(rowError.getMessage().contains("row count mismatch"),
                 rowError.getMessage());
@@ -188,28 +163,22 @@ class TestTraceRunLaunchValidation {
                 () -> TraceCatalog.prepareDescriptorRunLaunch(
                         entry, movie -> new com.openggf.debug.playback.Bk2MovieLoader()
                                 .load(movie),
-                        new TraceCatalog.RunPlannerPair(
-                                (manifest, directory) -> sentinels,
-                                (manifest, directory) -> {
-                                    throw new AssertionError(
-                                            "descriptor preparation must not call "
-                                                    + "the eager planner");
-                                })));
+                        (manifest, directory) -> sentinels));
 
         assertTrue(profileError.getMessage().contains("profile mismatch"),
                 profileError.getMessage());
     }
 
     @Test
-    void generatedV5RunPlansEverySegment(@TempDir Path root) throws Exception {
+    void generatedV5RunPlansEveryDescriptor(@TempDir Path root) throws Exception {
         Path runDir = prepareSyntheticRunWithValidMovie(root);
         TraceRunManifest run = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
 
-        var plans = TraceRunReplayWalker.plan(run, runDir);
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
 
-        assertEquals(3, plans.size());
-        assertTrue(plans.stream().allMatch(plan -> plan.trace().metadata()
+        assertEquals(3, descriptors.size());
+        assertTrue(descriptors.stream().allMatch(descriptor -> descriptor.metadata()
                 .hasPerFrameDynamicArtTransferState()));
     }
 
@@ -240,10 +209,10 @@ class TestTraceRunLaunchValidation {
                 .findFirst()
                 .orElseThrow();
 
-        TraceCatalog.PreparedRunLaunch prepared =
-                TraceCatalog.prepareRunLaunch(entry);
+        TraceCatalog.PreparedDescriptorRunLaunch prepared =
+                TraceCatalog.prepareDescriptorRunLaunch(entry);
 
-        assertEquals(2, prepared.segments().getFirst().trace().frameCount());
+        assertEquals(2, prepared.segments().getFirst().rowCount());
     }
 
     @Test

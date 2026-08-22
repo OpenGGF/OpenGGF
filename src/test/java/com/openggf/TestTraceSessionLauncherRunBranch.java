@@ -49,6 +49,7 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver.Hooks;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver.Step;
 import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunReferencePlanLoader;
 import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
@@ -109,7 +110,7 @@ class TestTraceSessionLauncherRunBranch {
         canonicalEmeraldRunDir = canonicalizeInstalledRun(
                 S1_EMERALD_RUN_DIR, root.resolve("s1"));
         TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-        segments = TraceRunReplayWalker.plan(run, runDir);
+        segments = TraceRunReferencePlanLoader.load(run, runDir);
     }
 
     @AfterEach
@@ -406,7 +407,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(twoLevels)));
+                        TestRunPayloads.hardwareTimingSegments(twoLevels)));
         session.installRunDynamicArtSegments(context);
         GameServices.playbackDebug().setFrameObserver(sourceBoundaryProbe);
 
@@ -1185,7 +1186,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(advertised)));
+                        TestRunPayloads.hardwareTimingSegments(advertised)));
         TraceRunExternalDiagnostics diagnostics =
                 new TraceRunExternalDiagnostics(null);
         setField(session, "runExternalDiagnostics", diagnostics);
@@ -1255,7 +1256,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(ssFirst)));
+                        TestRunPayloads.hardwareTimingSegments(ssFirst)));
         session.installRunDynamicArtSegments(context);
 
         long alreadyOpenGeneration = context.dynamicArtDiagnostics()
@@ -1311,7 +1312,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(advertised)));
+                        TestRunPayloads.hardwareTimingSegments(advertised)));
         TraceRunExternalDiagnostics diagnostics =
                 new TraceRunExternalDiagnostics(
                         engine.getGameLoop()::toggleUserPause);
@@ -1400,7 +1401,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(advertised)));
+                        TestRunPayloads.hardwareTimingSegments(advertised)));
         session.installRunDynamicArtSegments(context);
         context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
             row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
@@ -1447,7 +1448,8 @@ class TestTraceSessionLauncherRunBranch {
         try {
             TraceRunManifest run = TraceRunManifest.load(
                     specialStageRunDir.resolve("run_manifest.json"));
-            plans = List.of(TraceRunReplayWalker.plan(run, specialStageRunDir).get(1));
+            plans = List.of(TraceRunReferencePlanLoader.load(
+                    run, specialStageRunDir).get(1));
         } catch (Exception e) {
             throw new AssertionError(e);
         }
@@ -1550,7 +1552,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(plans)));
+                        TestRunPayloads.hardwareTimingSegments(plans)));
         session.installRunDynamicArtSegments(context);
         context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
             row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
@@ -1754,7 +1756,7 @@ class TestTraceSessionLauncherRunBranch {
         TraceRunManifest run = TraceRunManifest.load(
                 canonicalEmeraldRunDir.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans =
-                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
+                TraceRunReferencePlanLoader.load(run, canonicalEmeraldRunDir);
         List<FrameComparison> observed = new ArrayList<>();
         LiveTraceComparator destination = new LiveTraceComparator(
                 plans.get(2).trace(), ToleranceConfig.DEFAULT, 0,
@@ -1797,7 +1799,7 @@ class TestTraceSessionLauncherRunBranch {
         TraceRunManifest run = TraceRunManifest.load(
                 canonicalEmeraldRunDir.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans =
-                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
+                TraceRunReferencePlanLoader.load(run, canonicalEmeraldRunDir);
         Bk2Movie movie = new Bk2MovieLoader().load(
                 canonicalEmeraldRunDir.resolve(run.sourceBk2()));
         TraceSessionLauncher session = TestRunPayloads.session(
@@ -1844,7 +1846,7 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runHardwareTiming",
                 new TraceRunReplayWalker.HardwareTimingCoordinator(
                         fixture,
-                        TraceRunReplayWalker.hardwareTimingSegments(plans)));
+                        TestRunPayloads.hardwareTimingSegments(plans)));
         session.installRunDynamicArtSegments(context);
 
         RunPlaybackObservation source = new RunPlaybackObservation(
@@ -1900,13 +1902,13 @@ class TestTraceSessionLauncherRunBranch {
         TraceRunManifest run = TraceRunManifest.load(
                 canonicalEmeraldRunDir.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans =
-                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
+                TraceRunReferencePlanLoader.load(run, canonicalEmeraldRunDir);
         Bk2Movie movie = new Bk2MovieLoader().load(
                 canonicalEmeraldRunDir.resolve(run.sourceBk2()));
         TraceRunPlaybackCoordinator coordinator =
-                new TraceRunPlaybackCoordinator(
+                TraceRunPlaybackCoordinator.fromDescriptors(
                         run, TracePlaybackProfile.SONIC_1,
-                        movie.getFrameCount(), plans);
+                        movie.getFrameCount(), TestRunPayloads.descriptors(plans));
         TraceSessionLauncher session = TestRunPayloads.session(
                 null, movie, plans, null);
         TraceRunFrameDriver frameDriver = new TraceRunFrameDriver();
@@ -1977,7 +1979,8 @@ class TestTraceSessionLauncherRunBranch {
         try {
             TraceRunManifest run = TraceRunManifest.load(
                     specialStageRunDir.resolve("run_manifest.json"));
-            specialSegments = TraceRunReplayWalker.plan(run, specialStageRunDir);
+            specialSegments = TraceRunReferencePlanLoader.load(
+                    run, specialStageRunDir);
         } catch (Exception e) {
             throw new AssertionError(e);
         }
@@ -2489,6 +2492,23 @@ final class TestRunPayloads {
     static List<TraceRunSegmentDescriptor> descriptors(
             List<TraceRunReplayWalker.SegmentPlan> plans) {
         return plans.stream().map(TestRunPayloads::descriptor).toList();
+    }
+
+    static List<TraceRunReplayWalker.HardwareTimingSegment> hardwareTimingSegments(
+            List<TraceRunReplayWalker.SegmentPlan> plans) {
+        return plans.stream().map(plan -> {
+            int parsedRows = plan.trace().frameCount();
+            int representedRows = parsedRows > 0
+                    ? parsedRows : plan.segment().traceFrameCount();
+            List<Integer> rawFrames = new ArrayList<>(representedRows);
+            for (int row = 0; row < representedRows; row++) {
+                rawFrames.add(parsedRows > 0
+                        ? plan.trace().getFrame(row).frame() : row);
+            }
+            return new TraceRunReplayWalker.HardwareTimingSegment(
+                    plan.segment().bk2FrameOffset(), rawFrames,
+                    plan.trace().hardwareTimingSchedule());
+        }).toList();
     }
 
     private static TraceRunSegmentDescriptor descriptor(
