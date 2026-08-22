@@ -115,6 +115,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 new ArrayList<>();
         private final List<PostCommitPublication> logicalPublications =
                 new ArrayList<>();
+        private final List<Runnable> publicationStateFreezes =
+                new ArrayList<>();
         private long cursor;
         private DriverYmTimingScope activeScope;
 
@@ -139,8 +141,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private static final class DriverServiceReservation {
         private final int capacity;
         private final LiveCommandMutationToken rollback;
+        private final List<PostCommitPublication> hardwarePublications =
+                new ArrayList<>();
+        private final List<PostCommitPublication> logicalPublications =
+                new ArrayList<>();
         private int remaining;
-        private RuntimeException publicationFailure;
 
         private DriverServiceReservation(
                 int capacity, LiveCommandMutationToken rollback) {
@@ -714,6 +719,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         List<PostCommitPublication> logicalPublications =
                 List.copyOf(transaction.logicalPublications);
         ymServiceTransaction = null;
+        for (Runnable freeze : transaction.publicationStateFreezes) {
+            freeze.run();
+        }
+        DriverServiceReservation reservation =
+                ymDriverServiceReservation;
+        if (reservation != null) {
+            reservation.hardwarePublications.addAll(hardwarePublications);
+            reservation.logicalPublications.addAll(logicalPublications);
+            return;
+        }
         // Hardware belongs to the committed service. Diagnostic failures can
         // be reported afterward, but cannot gate or interrupt chip mutation.
         RuntimeException publicationFailure = publishAll(
@@ -721,14 +736,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         publicationFailure = publishAll(
                 logicalPublications, publicationFailure);
         if (publicationFailure != null) {
-            DriverServiceReservation reservation =
-                    ymDriverServiceReservation;
-            if (reservation == null) {
-                throw publicationFailure;
-            }
-            reservation.publicationFailure = appendPublicationFailure(
-                    reservation.publicationFailure,
-                    publicationFailure);
+            throw publicationFailure;
         }
     }
 
@@ -806,19 +814,24 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void stageLogicalObserver(
             PostCommitPublication notification) {
-        if (ymServiceTransaction == null) {
-            notification.publish();
-        } else {
+        if (ymServiceTransaction != null) {
             ymServiceTransaction.logicalPublications.add(notification);
+        } else if (ymDriverServiceReservation != null) {
+            ymDriverServiceReservation.logicalPublications.add(notification);
+        } else {
+            notification.publish();
         }
     }
 
     private void publishAuthorizedPsgWrite(Object source, int value) {
-        if (ymServiceTransaction == null) {
-            super.writePsg(source, value);
-        } else {
+        if (ymServiceTransaction != null) {
             ymServiceTransaction.hardwarePublications.add(
                     () -> super.writePsg(source, value));
+        } else if (ymDriverServiceReservation != null) {
+            ymDriverServiceReservation.hardwarePublications.add(
+                    () -> super.writePsg(source, value));
+        } else {
+            super.writePsg(source, value);
         }
     }
 
@@ -883,8 +896,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver.ServiceEvent event) {
         if (event != null) {
             SmpsDriverServiceObserver observer = serviceObserver;
-            stageLogicalObserver(() -> observer.onServiceEnd(
-                    event, captureSnapshot()));
+            ServiceTransaction transaction = ymServiceTransaction;
+            if (transaction == null) {
+                SmpsDriverSnapshot stableSnapshot = captureSnapshot();
+                stageLogicalObserver(() -> observer.onServiceEnd(
+                        event, stableSnapshot));
+            } else {
+                SmpsDriverSnapshot[] stableSnapshot = { null };
+                transaction.publicationStateFreezes.add(() ->
+                        stableSnapshot[0] = captureSnapshot());
+                stageLogicalObserver(() -> observer.onServiceEnd(
+                        event, stableSnapshot[0]));
+            }
         }
         try {
             commitYmServiceTransaction();
@@ -3014,7 +3037,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void advanceSequencersBatch(int frames) {
         beginYmDriverServiceReservation(frames);
-        RuntimeException publicationFailure = null;
+        DriverServiceReservation completedReservation = null;
         try {
             advanceSequencersWithinReservation(frames);
             removeCompletedSequencers();
@@ -3032,13 +3055,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
             throw failure;
         } finally {
-            DriverServiceReservation reservation =
-                    ymDriverServiceReservation;
-            if (reservation != null) {
-                publicationFailure = reservation.publicationFailure;
-            }
+            completedReservation = ymDriverServiceReservation;
             ymDriverServiceReservation = null;
         }
+        if (completedReservation == null) {
+            return;
+        }
+        RuntimeException publicationFailure = publishAll(
+                completedReservation.hardwarePublications, null);
+        publicationFailure = publishAll(
+                completedReservation.logicalPublications,
+                publicationFailure);
         if (publicationFailure != null) {
             throw publicationFailure;
         }

@@ -560,6 +560,113 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
+    void outerBatchPublishesOnlyAfterEverySiblingCommits() {
+        // Break caught: service A publishes its begin/end callbacks before
+        // sibling B poisons, then the outer rollback erases A and retry
+        // duplicates identities which an observer has already seen.
+        IllegalStateException observerFailure =
+                new IllegalStateException("injected batch observer failure");
+        List<String> retriedEvents = new ArrayList<>();
+        List<String> retriedChipEvents = new ArrayList<>();
+        List<Long> retriedEndSnapshotOrdinals = new ArrayList<>();
+        int[] remainingPoisons = { 1 };
+        MinimalData sharedMusicData = data(0x81);
+        MinimalData sharedSfxData = data(0xA0);
+        SmpsSequencerConfig sharedConfig = timedPalConfig(PROFILE);
+        SmpsDriver retried = new SmpsDriver(
+                44_100.0, recordingAllObserver(retriedChipEvents));
+        AggregateWritingSequencer retriedMusic =
+                new AggregateWritingSequencer(
+                        retried, sharedMusicData, sharedConfig,
+                        null, 0x9F);
+        AggregateWritingSequencer retriedSfx =
+                new AggregateWritingSequencer(
+                        retried, sharedSfxData, sharedConfig,
+                        remainingPoisons);
+        retried.addSequencer(retriedMusic, false);
+        retried.addSequencer(retriedSfx, false);
+        retriedMusic.setIsSfx(true);
+        retriedChipEvents.clear();
+        retried.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                retriedEvents.add("begin:" + event.ordinal());
+                if (event.ordinal() == 0) {
+                    throw observerFailure;
+                }
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                retriedEvents.add("end:" + event.ordinal());
+                retriedEndSnapshotOrdinals.add(
+                        snapshot.nextYmServiceOrdinal());
+            }
+        });
+        SmpsDriverSnapshot before = retried.captureSnapshot();
+
+        assertThrows(IllegalStateException.class,
+                () -> advanceSequencersWithoutRender(retried, 1));
+
+        assertEquals(List.of(), retriedEvents);
+        assertEquals(List.of(), retriedChipEvents);
+        assertEquals(List.of(), retriedEndSnapshotOrdinals);
+        assertDeepEquals(before, retried.captureSnapshot());
+
+        RuntimeException failure = assertThrows(RuntimeException.class,
+                () -> advanceSequencersWithoutRender(retried, 1));
+
+        assertSame(observerFailure, failure);
+        assertEquals(List.of(
+                "begin:0", "end:0", "begin:1", "end:1"),
+                retriedEvents);
+        assertEquals(List.of("PSG:9F", "PSG:9F"),
+                retriedChipEvents);
+        assertEquals(List.of(1L, 2L), retriedEndSnapshotOrdinals);
+        SmpsDriverSnapshot committed = retried.captureSnapshot();
+        assertEquals(2L, committed.nextYmServiceOrdinal());
+        assertEquals(16L, committed.nextYmWriteOrdinal());
+        assertEquals(16, committed.synthSnapshot()
+                .ymWriteTimeline().pending().size());
+
+        advanceSequencersWithoutRender(retried, 1);
+        assertEquals(List.of(
+                "begin:0", "end:0", "begin:1", "end:1",
+                "begin:2", "end:2", "begin:3", "end:3"),
+                retriedEvents);
+        assertEquals(List.of(
+                "PSG:9F", "PSG:9F", "PSG:9F"),
+                retriedChipEvents);
+        assertEquals(List.of(1L, 2L, 3L, 4L),
+                retriedEndSnapshotOrdinals);
+
+        List<String> cleanEvents = new ArrayList<>();
+        List<String> cleanChipEvents = new ArrayList<>();
+        SmpsDriver clean = new SmpsDriver(
+                44_100.0, recordingAllObserver(cleanChipEvents));
+        AggregateWritingSequencer cleanMusic =
+                new AggregateWritingSequencer(
+                        clean, sharedMusicData, sharedConfig,
+                        null, 0x9F);
+        AggregateWritingSequencer cleanSfx =
+                new AggregateWritingSequencer(
+                        clean, sharedSfxData, sharedConfig);
+        clean.addSequencer(cleanMusic, false);
+        clean.addSequencer(cleanSfx, false);
+        cleanMusic.setIsSfx(true);
+        cleanChipEvents.clear();
+        clean.setServiceObserver(recordingStringServiceObserver(cleanEvents));
+        advanceSequencersWithoutRender(clean, 1);
+        advanceSequencersWithoutRender(clean, 1);
+
+        assertEquals(cleanEvents, retriedEvents);
+        assertEquals(cleanChipEvents, retriedChipEvents);
+        assertDeepEquals(clean.captureSnapshot(),
+                retried.captureSnapshot());
+    }
+
+    @Test
     void admissionPreparationUsesOneAuthorizedPublicationBoundary() {
         // Break caught: admission key-off/SSG-EG clear re-enters arbitration,
         // skips a timing slot, or invokes chip callbacks before timeline drain.
@@ -1806,6 +1913,8 @@ class TestSmpsDriverYmWriteTimeline {
     private static final class AggregateWritingSequencer
             extends SmpsSequencer {
         private final SmpsDriver driver;
+        private final int[] remainingPoisons;
+        private final Integer stagedPsgWrite;
         private int advanceCalls;
         private int repeatCalls;
 
@@ -1822,9 +1931,24 @@ class TestSmpsDriverYmWriteTimeline {
         private AggregateWritingSequencer(
                 SmpsDriver driver, MinimalData data,
                 SmpsSequencerConfig config) {
+            this(driver, data, config, null);
+        }
+
+        private AggregateWritingSequencer(
+                SmpsDriver driver, MinimalData data,
+                SmpsSequencerConfig config, int[] remainingPoisons) {
+            this(driver, data, config, remainingPoisons, null);
+        }
+
+        private AggregateWritingSequencer(
+                SmpsDriver driver, MinimalData data,
+                SmpsSequencerConfig config, int[] remainingPoisons,
+                Integer stagedPsgWrite) {
             super(data, AudioTestFixtures.EMPTY_DAC, driver,
                     AudioManager.getInstance(), config);
             this.driver = driver;
+            this.remainingPoisons = remainingPoisons;
+            this.stagedPsgWrite = stagedPsgWrite;
         }
 
         @Override
@@ -1860,6 +1984,19 @@ class TestSmpsDriverYmWriteTimeline {
                     driver.beginSequencerService(this,
                             SmpsDriverServiceObserver.ServiceKind
                                     .SEQUENCER_TICK);
+            if (stagedPsgWrite != null) {
+                driver.writePsg(this, stagedPsgWrite);
+            }
+            if (remainingPoisons != null
+                    && remainingPoisons[0]-- > 0) {
+                try (Synthesizer.YmTimingScope ignored =
+                             driver.beginYmTiming(
+                                     this, SegmentKind.COMPLETION_RESTORE,
+                                     VARIANT)) {
+                    driver.writeFm(this, 0, 0xB0, 0x01);
+                }
+                throw new AssertionError("poison scope unexpectedly closed");
+            }
             try (Synthesizer.YmTimingScope ignored = driver.beginYmTiming(
                     this, SegmentKind.SFX_ADMISSION_PREP, VARIANT)) {
                 for (int index = 0; index < 5; index++) {
