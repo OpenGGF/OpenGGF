@@ -22,6 +22,14 @@ SHA-256. This is intentionally stricter than checking totals: changing a
 5-T-state non-taken `RET` fails even though the derived write cycle is
 unchanged.
 
+The source tree itself is a local research input and is intentionally ignored
+by Git. Clean-checkout tests therefore do not open `docs/skdisasm` or validate
+against its filesystem line count. The tracked calculation carries the
+citation grammar and inclusive numeric bounds (`1..3506`); tests validate every
+row against that self-contained schema, then apply the ordered digest and
+cost-equivalent poison checks. This preserves auditable citations without
+making CI depend on an untracked disassembly or embedding source text.
+
 The frozen clock header is 15 master cycles per Z80 T-state, 1,008 master
 cycles per YM2612 internal sample (`42 * 24`), and the selected GPGX average of
 three Z80 T-states per uncontended banked read. Tests consume those parsed

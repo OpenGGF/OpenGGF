@@ -8,7 +8,12 @@
   "source": {
     "driver": "docs/skdisasm/Sound/Z80 Sound Driver.asm",
     "shipped_conditional": "fix_sndbugs=0 at lines 15-16",
-    "gpgx_wait": "core/memz80.c:z80_request_68k_bus_access at pinned commit 051d430d3d1b54625f9900c8f152d7f232e06daf, lines 95-117"
+    "gpgx_wait": "core/memz80.c:z80_request_68k_bus_access at pinned commit 051d430d3d1b54625f9900c8f152d7f232e06daf, lines 95-117",
+    "citation_schema": {
+      "format": "Z80 Sound Driver.asm:first[-last]",
+      "minimum_line": 1,
+      "maximum_line": 3506
+    }
   },
   "native_validation": {
     "oracle": "s3k-blue-sphere-ym-write-oracle-v1.json",

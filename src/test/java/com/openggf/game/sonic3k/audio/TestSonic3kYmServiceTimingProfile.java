@@ -35,8 +35,6 @@ class TestSonic3kYmServiceTimingProfile {
             "docs/architecture/research/audio/s3k-ym-write-timing-calculation-v1.json");
     private static final Path ORACLE = Path.of(
             "docs/architecture/research/audio/s3k-blue-sphere-ym-write-oracle-v1.json");
-    private static final Path DRIVER = Path.of(
-            "docs/skdisasm/Sound/Z80 Sound Driver.asm");
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Pattern SOURCE_ROW = Pattern.compile(
             "Z80 Sound Driver\\.asm:(\\d+)(?:-(\\d+))?");
@@ -291,7 +289,7 @@ class TestSonic3kYmServiceTimingProfile {
     }
 
     @Test
-    void sourceRowsFreezeExactShippedInstructionCountsAndRejectEqualCostSwap()
+    void sourceRowsAreSelfContainedForCleanCheckoutAndRejectEqualCostSwap()
             throws IOException, NoSuchAlgorithmException {
         JsonNode root = MAPPER.readTree(CALCULATION.toFile());
         JsonNode voicePath = findExecutedPath(root,
@@ -301,10 +299,14 @@ class TestSonic3kYmServiceTimingProfile {
         assertEquals(2, opcodeCount(voicePath, "JR cc taken"));
         assertEquals(3, opcodeCount(voicePath, "RET cc not taken"));
 
-        long driverLines;
-        try (var lines = java.nio.file.Files.lines(DRIVER)) {
-            driverLines = lines.count();
-        }
+        JsonNode citationSchema = root.path("source").path("citation_schema");
+        assertEquals("Z80 Sound Driver.asm:first[-last]",
+                citationSchema.path("format").asText());
+        int minimumLine = citationSchema.path("minimum_line").asInt();
+        int maximumLine = citationSchema.path("maximum_line").asInt();
+        assertEquals(1, minimumLine);
+        assertEquals(3506, maximumLine);
+
         for (JsonNode path : root.path("executed_paths")) {
             for (JsonNode row : path.path("rows")) {
                 Matcher citation = SOURCE_ROW.matcher(
@@ -314,8 +316,9 @@ class TestSonic3kYmServiceTimingProfile {
                 int firstLine = Integer.parseInt(citation.group(1));
                 int lastLine = citation.group(2) == null
                         ? firstLine : Integer.parseInt(citation.group(2));
-                assertEquals(true, firstLine > 0 && lastLine >= firstLine
-                                && lastLine <= driverLines,
+                assertEquals(true, firstLine >= minimumLine
+                                && lastLine >= firstLine
+                                && lastLine <= maximumLine,
                         row.path("source").asText());
             }
         }
