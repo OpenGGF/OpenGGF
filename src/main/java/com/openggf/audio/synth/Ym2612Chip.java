@@ -983,6 +983,14 @@ public class Ym2612Chip {
         return renderedMasterCycles;
     }
 
+    void restoreRenderedMasterCycles(long renderedMasterCycles) {
+        if (renderedMasterCycles < 0) {
+            throw new IllegalArgumentException(
+                    "rendered master cycles cannot be negative");
+        }
+        this.renderedMasterCycles = renderedMasterCycles;
+    }
+
     public void write(int port, int reg, int val) {
         writeImmediate(port, reg, val);
     }

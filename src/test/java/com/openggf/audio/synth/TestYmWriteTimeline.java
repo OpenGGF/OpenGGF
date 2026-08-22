@@ -156,9 +156,18 @@ class TestYmWriteTimeline {
                 3, 2, callerOwned);
         callerOwned.clear();
 
+        YmWriteTimeline.Entry[] callerOwnedArray =
+                captured.pending().toArray(YmWriteTimeline.Entry[]::new);
+        YmWriteTimeline.Snapshot arraySupplied = new YmWriteTimeline.Snapshot(
+                3, 2, List.of(callerOwnedArray));
+        callerOwnedArray[0] = entry(4_032, 2, 0x42, 1);
+
         YmWriteTimeline restored = new YmWriteTimeline(3);
         restored.restoreSnapshot(supplied);
         assertEquals(captured, restored.captureSnapshot());
+        YmWriteTimeline arrayRestored = new YmWriteTimeline(3);
+        arrayRestored.restoreSnapshot(arraySupplied);
+        assertEquals(captured, arrayRestored.captureSnapshot());
         restored.commit(List.of(entry(4_032, 2, 0x42, 1)));
         assertEquals(3, restored.captureSnapshot().nextOrdinal());
 

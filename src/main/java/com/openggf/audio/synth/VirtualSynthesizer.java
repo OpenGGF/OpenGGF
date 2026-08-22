@@ -3,6 +3,8 @@ package com.openggf.audio.synth;
 import com.openggf.audio.smps.DacData;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class VirtualSynthesizer implements Synthesizer {
     private static final int YM_WRITE_TIMELINE_CAPACITY = 4_096;
@@ -24,6 +26,7 @@ public class VirtualSynthesizer implements Synthesizer {
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private final YmWriteTimeline ymWriteTimeline;
+    private long ymTimelineGeneration;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
     private boolean chipWriteObserverEnabled;
 
@@ -83,6 +86,42 @@ public class VirtualSynthesizer implements Synthesizer {
         return ymWriteTimeline;
     }
 
+    /** Named causes which invalidate already-published writes from older owners. */
+    protected enum YmTimelineGenerationBarrier {
+        HARD_RESET,
+        SYNTH_REPLACEMENT,
+        FULL_SILENCE
+    }
+
+    /** Returns the generation which must stamp newly published YM writes. */
+    protected final long ymTimelineGeneration() {
+        return ymTimelineGeneration;
+    }
+
+    /** Returns the internal YM frontier used to anchor source-timed writes. */
+    protected final long renderedYmMasterCycle() {
+        return ym.renderedMasterCyclesForTesting();
+    }
+
+    /** Atomically publishes one already-authorized source write journal. */
+    protected final void commitYmWriteJournal(
+            List<YmWriteTimeline.Entry> journal) {
+        ymWriteTimeline.commit(journal);
+    }
+
+    /**
+     * Invalidates older committed writes before a hardware ownership barrier.
+     * The named cause keeps reset/replacement call sites explicit when driver
+     * wiring is added.
+     */
+    protected final void crossYmTimelineGenerationBarrier(
+            YmTimelineGenerationBarrier barrier) {
+        Objects.requireNonNull(barrier, "barrier");
+        long nextGeneration = Math.incrementExact(ymTimelineGeneration);
+        ymTimelineGeneration = nextGeneration;
+        ymWriteTimeline.discardBeforeGeneration(nextGeneration);
+    }
+
     /**
      * Installs one diagnostic observer at both resolved chip-write boundaries.
      * Passing {@code null} restores the disabled no-op observer.
@@ -100,13 +139,27 @@ public class VirtualSynthesizer implements Synthesizer {
     }
 
     public Snapshot captureSynthSnapshot() {
-        return new Snapshot(outputSampleRate, ym.captureSnapshot(), psg.captureSnapshot());
+        return new Snapshot(
+                outputSampleRate,
+                ym.captureSnapshot(),
+                psg.captureSnapshot(),
+                ymWriteTimeline.captureSnapshot(),
+                ym.renderedMasterCyclesForTesting(),
+                ymTimelineGeneration);
     }
 
     public void restoreSynthSnapshot(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        YmWriteTimeline restoredTimeline = new YmWriteTimeline(
+                YM_WRITE_TIMELINE_CAPACITY);
+        restoredTimeline.restoreSnapshot(snapshot.ymWriteTimeline());
+
         outputSampleRate = snapshot.outputSampleRate();
         ym.restoreSnapshot(snapshot.ym());
         psg.restoreSnapshot(snapshot.psg());
+        ymWriteTimeline.restoreSnapshot(restoredTimeline.captureSnapshot());
+        ym.restoreRenderedMasterCycles(snapshot.renderedYmMasterCycle());
+        ymTimelineGeneration = snapshot.ymTimelineGeneration();
     }
 
     /** Channel-bounded rollback state for one prepared SFX admission. */
@@ -243,6 +296,8 @@ public class VirtualSynthesizer implements Synthesizer {
 
     @Override
     public void silenceAll() {
+        crossYmTimelineGenerationBarrier(
+                YmTimelineGenerationBarrier.FULL_SILENCE);
         ym.silenceAll();
         psg.silenceAll();
     }
@@ -258,6 +313,26 @@ public class VirtualSynthesizer implements Synthesizer {
     public record Snapshot(
             double outputSampleRate,
             Ym2612Chip.Snapshot ym,
-            PsgChip.Snapshot psg) {
+            PsgChip.Snapshot psg,
+            YmWriteTimeline.Snapshot ymWriteTimeline,
+            long renderedYmMasterCycle,
+            long ymTimelineGeneration) {
+        public Snapshot {
+            if (outputSampleRate <= 0.0) {
+                throw new IllegalArgumentException(
+                        "output sample rate must be positive");
+            }
+            Objects.requireNonNull(ym, "ym");
+            Objects.requireNonNull(psg, "psg");
+            Objects.requireNonNull(ymWriteTimeline, "ymWriteTimeline");
+            if (renderedYmMasterCycle < 0) {
+                throw new IllegalArgumentException(
+                        "rendered YM master cycle cannot be negative");
+            }
+            if (ymTimelineGeneration < 0) {
+                throw new IllegalArgumentException(
+                        "YM timeline generation cannot be negative");
+            }
+        }
     }
 }
