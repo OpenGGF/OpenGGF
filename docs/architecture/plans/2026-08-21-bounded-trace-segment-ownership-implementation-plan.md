@@ -1,496 +1,541 @@
-# Bounded Trace Segment Ownership Implementation Plan
+# Active Trace Segment Ownership Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace whole-run retention of every segment's parsed physics and auxiliary payload with immutable run descriptors plus one deterministically closed, streaming active-segment cursor.
+**Goal:** Replace whole-run eager trace-payload retention with descriptor-only planning plus at most one closeable eager segment payload, reducing the warmed 67-segment retained graph by at least 75% without changing replay semantics or broadening trace authority.
 
-**Architecture:** Planning scans one segment at a time, preserves only compact metadata, timing, lag, bootstrap, opening, and terminal summaries, and drops each eager validation object before scanning the next segment. Replay opens a `TraceSegmentCursor` whose physics reader keeps previous/current/lookahead rows and whose auxiliary reader materialises only pre-trace and current-raw-frame events; run drivers close that cursor on every boundary, abort, and failure path. Existing single-trace replay continues using `TraceData`; shared comparator/bootstrap code consumes a narrow `TraceReplayData` contract implemented by both representations.
+**Architecture:** `TraceRunSegmentDescriptor` remains the whole-run representation, retains its existing `executionPolicy`, and gains only the already-materialised `levelLoopRowCount` coordinator scalar. `TraceRunReplayWalker.openActiveSegment(...)` creates a guarded `ActiveSegmentPayload` containing the existing eager ordinary payload or existing composite special-stage payload; production, headless, visual, and complete-audio drivers detach all aliases and close it before another segment opens. Comparator, bootstrap, row-policy, binder, and special-stage APIs remain unchanged.
 
-**Tech Stack:** Java 21, JUnit 5/Jupiter, Jackson streaming JSON parsing, Maven Surefire, gzip/plain trace files.
+**Tech Stack:** Java 21, JUnit 5/Jupiter, Maven Surefire, gzip/plain v5 trace fixtures, forced-GC retained-heap sampling.
 
 **Spec:** `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`
 
 ## Global Constraints
 
-- Trace payloads remain comparison-only and cannot hydrate or choose gameplay state.
-- V5 remains the sole live trace contract; do not change fixture formats, schema fields, or hardware-timing authority.
-- Preserve raw-frame identity, previous/current/lookahead semantics, row order, typed auxiliary lookups, dynamic-art ledgers, and bootstrap policy.
-- Keep hardware-timing schedules and compact per-row lag mappings run-scoped.
-- Close physics and auxiliary readers on successful boundary, comparison failure, cursor-construction failure, and launcher abort.
-- Runtime assets remain ROM-only; this feature reads only comparison fixtures.
-- Build and test with JDK 21 and JUnit Jupiter.
-- Use test-first RED/GREEN cycles for every production behavior.
+- Build and test with Maven running on JDK 21; verify with `mvn -v`.
+- Keep v5 as the only trace contract. Do not change trace schemas, recorder formats, parser ordering, hardware-timing authority, RNG, execution-phase derivation, or gameplay behavior.
+- Preserve `LiveTraceComparator`, `TraceReplaySessionBootstrap`, `TraceReplayBootstrap`, `TraceReplayRowPolicy`, `TraceBinder`, `LoadQueueComparisonProjection`, `TraceStructuralRowComparator`, and `TraceRunSpecialStageRowDriver` eager semantics.
+- The descriptor retains `executionPolicy` and may add only `levelLoopRowCount`, the exact additional coordinator scalar already computed by the eager path.
+- `ActiveSegmentPayload.trace()`, `specialStageRows()`, and `TraceRunReplayWalker.openActiveSegment(...)` are available only to `TraceSessionLauncher`, `AbstractRunChainTest`, `VisualRunReplayHarness`, and the exact non-relaying test FQCNs enumerated in Task 7; no package or naming-pattern allowance is valid.
+- At every observed instant there are zero or one active payloads. Close and detach on normal boundary, terminal tail, launch failure, comparison failure, production failure, abort, user exit, and repeated teardown.
+- Retained-heap gates are descriptor graph `<= 16,777,216` bytes, installed live ownership graph `<= 268,435,456` bytes, and reduction `>= 75%` from the warmed eager baseline `1,087,200,800` bytes.
+- Store durable logs under `$AGENT_SCRATCH_ROOT/tasks/trace-active-segment-cursor-20260822T002616Z-260779-06974cb7/`.
+- Use test-first RED/GREEN cycles and commit each independently reviewable task with all required repository trailers.
 
 ---
 
-### Task 1: Extract a payload-independent replay contract and immutable descriptor
+### Task 1: Extend descriptors with the exact coordinator scalars
 
 **Files:**
-- Create: `src/main/java/com/openggf/trace/TraceReplayData.java`
-- Create: `src/main/java/com/openggf/trace/replay/runs/TraceRunSegmentDescriptor.java`
-- Create: `src/main/java/com/openggf/trace/replay/runs/TraceReplayBootstrapSummary.java`
-- Modify: `src/main/java/com/openggf/trace/TraceData.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunSegmentDescriptor.java`
 - Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`
-- Test: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunSegmentDescriptor.java`
-- Test: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunReplayWalkerControlFlow.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunSegmentDescriptorPlanning.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunReplayWalkerControlFlow.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunPlaybackCoordinator.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java`
 
 **Interfaces:**
-- Produces: `TraceReplayData`, the read-only comparison/bootstrap surface implemented by eager `TraceData` and the streaming cursor in Task 3.
-- Produces: `TraceRunSegmentDescriptor`, the whole-run-safe segment summary and cursor factory input.
-- Produces: `TraceReplayBootstrapSummary.from(TraceData)`, which evaluates whole-segment bootstrap scans while the planning payload is still available.
-- Produces: `SegmentPlan.descriptor()` alongside the temporary legacy `trace()` component; Task 4 removes payload ownership after Task 5 has migrated every run consumer.
+- Produces: `TraceRunSegmentDescriptor.levelLoopRowCount()` with range `0..rowCount`.
+- Preserves: `TraceRunSegmentDescriptor.executionPolicy()` exactly as phase one computes it.
+- Produces: `TraceRunPlaybackCoordinator.fromDescriptors(TraceRunManifest, TracePlaybackProfile, int, List<TraceRunSegmentDescriptor>)` while the eager constructor remains during migration; generic-list erasure forbids overloading the constructor.
 
-- [ ] **Step 1: Write the failing descriptor ownership tests**
+- [ ] **Step 1: Add failing scalar-parity and coordinator tests**
 
-Add tests proving that a planned segment exposes metadata, row count, timing/raw-frame mapping, compact lag outcomes, opening frame, terminal dynamic-art ledger, and source directory. Task 1 is a compile-safe migration step: the existing payload remains temporarily until the run consumers move in Task 5, and Task 4 owns the final no-payload assertion.
+For synthetic level, presentation-bridge, and special-stage descriptors, assert constructor range checks and that the coordinator consumes descriptor values without loading a payload. On a synthetic run, compare each descriptor with the current eager reference:
 
 ```java
-@Test
-void plannedRunRetainsDescriptorsInsteadOfTraceData(@TempDir Path root) throws Exception {
-    Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
-    TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-
-    var plans = TraceRunReplayWalker.plan(run, runDir);
-
-    assertEquals(run.segments().size(), plans.size());
-    assertEquals(2, plans.getFirst().descriptor().rowCount());
-    assertEquals("s3k", plans.getFirst().descriptor().metadata().game());
-    assertEquals(runDir.resolve(run.segments().getFirst().dir()),
-            plans.getFirst().descriptor().segmentDirectory());
-    assertSame(plans.getFirst().trace().metadata(),
-            plans.getFirst().descriptor().metadata());
+List<SegmentPlan> eager = TraceRunReplayWalker.plan(run, runDir);
+List<TraceRunSegmentDescriptor> compact =
+        TraceRunReplayWalker.planDescriptors(run, runDir);
+for (int i = 0; i < eager.size(); i++) {
+    assertEquals(eager.get(i).executionPolicy(),
+            compact.get(i).executionPolicy());
+    assertEquals(TraceRunReplayWalker.levelLoopRowCount(eager.get(i).trace()),
+            compact.get(i).levelLoopRowCount());
 }
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+Add `levelLoopRowCount:int` to the exact descriptor component whitelist; approve no other component.
 
-Run:
+- [ ] **Step 2: Run focused tests and verify RED**
 
 ```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunSegmentDescriptor,com.openggf.tests.trace.runs.TestTraceRunReplayWalkerControlFlow" test
+mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunSegmentDescriptorPlanning,com.openggf.tests.trace.runs.TestTraceRunReplayWalkerControlFlow,com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator" test
 ```
 
-Expected: compilation failure because `descriptor()` and `TraceRunSegmentDescriptor` do not exist.
+Expected: compilation failures for the missing descriptor component and descriptor-backed coordinator factory.
 
-- [ ] **Step 3: Introduce the contract and descriptor**
+- [ ] **Step 3: Implement the minimal descriptor extension**
 
-Define the shared read-only interface around existing consumer-visible behavior:
+Add `int levelLoopRowCount` immediately before `executionPolicy` and validate:
 
 ```java
-public interface TraceReplayData {
-    TraceMetadata metadata();
-    HardwareTimingSchedule hardwareTimingSchedule();
-    int frameCount();
-    TraceFrame getFrame(int traceIndex);
-    List<TraceEvent> getEventsForFrame(int rawFrame);
-    List<TraceEvent.LoadQueueState> loadQueueStatesForComparisonFrame(int rawFrame);
-    TraceEvent.DynamicArtTransferState dynamicArtTransferStateForFrame(int rawFrame);
-    HardwareCompletionEdge unobservedDirectChildForComparisonFrame(int rawFrame);
-    List<TraceEvent.ObjectStateSnapshot> preTraceObjectSnapshots();
-    TraceEvent.PlayerHistorySnapshot preTracePlayerHistorySnapshot();
-    TraceEvent.CpuStateSnapshot preTraceCpuStateSnapshot(String characterCode);
-    TraceEvent.CpuState cpuStateForFrame(int rawFrame, String characterCode);
+if (levelLoopRowCount < 0 || levelLoopRowCount > rowCount) {
+    throw new IllegalArgumentException(
+            "levelLoopRowCount must be within the segment row range");
 }
 ```
 
-Make `TraceData implements TraceReplayData`. Define `TraceRunSegmentDescriptor` as an immutable record containing `Path segmentDirectory`, `TraceMetadata metadata`, `int rowCount`, `TraceFrame openingFrame`, `List<Integer> rawFrames`, `BitSet laggedRows`, `HardwareTimingSchedule hardwareTimingSchedule`, `List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger`, `TraceReplayBootstrapSummary bootstrapSummary`, and the advertised auxiliary event-type set. Copy every mutable collection/bit set in the compact constructor.
+In `planDescriptors`, compute it from the already-loaded validation payload before releasing that local. For metadata-only special-stage payloads the existing result is zero. Have `fromDescriptors` copy only:
 
-Define `TraceReplayBootstrapSummary.from(TraceData)` in this task with the exact scalar/pre-trace values currently discovered by whole-segment scans: recording start, pre-level row count/presence, replay seed index, initial VBlank/V-int phase, level-loop row count, prior-input policy, complete-run/handoff predicates, release blockers, pre-trace object/player/CPU snapshots, and the first full-level/opening frames. Task 3 changes bootstrap consumers to read these stored values; the descriptor must not need to reopen a payload to answer them.
-
-- [ ] **Step 4: Add the descriptor without breaking legacy consumers**
-
-Add `TraceRunSegmentDescriptor descriptor` to `SegmentPlan` while retaining its existing `TraceData trace` component for compile-safe migration. Calculate execution policy during planning and update hardware-timing helpers to read descriptor fields. Do not add any new production consumer of `trace()`; Task 5 migrates the existing consumers and Task 4 removes the component.
-
-- [ ] **Step 5: Run focused tests and verify GREEN**
-
-Run the Task 1 command and require zero failures/errors.
-
-- [ ] **Step 6: Commit Task 1**
-
-```bash
-git add src/main/java/com/openggf/trace/TraceReplayData.java \
-  src/main/java/com/openggf/trace/TraceData.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceReplayBootstrapSummary.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceRunSegmentDescriptor.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java \
-  src/test/java/com/openggf/tests/trace/runs/TestTraceRunSegmentDescriptor.java \
-  src/test/java/com/openggf/tests/trace/runs/TestTraceRunReplayWalkerControlFlow.java
-git commit -m "refactor(traces): describe run segments without payload ownership"
+```java
+this.executionPolicies = descriptors.stream()
+        .map(TraceRunSegmentDescriptor::executionPolicy).toList();
+this.levelLoopRows = descriptors.stream()
+        .map(TraceRunSegmentDescriptor::levelLoopRowCount).toList();
 ```
 
-### Task 2: Stream bounded physics and auxiliary row windows
+Do not add a public descriptor helper for either scalar.
+Keep the eager `List<SegmentPlan>` constructor compiling until Task 5 migrates its last caller; share initialization through a private constructor that takes non-generic scalar lists or another erasure-safe internal shape.
+
+- [ ] **Step 4: Run focused tests and descriptor benchmark GREEN**
+
+Run Step 2, then:
+
+```bash
+mvn -Ptrace-replay -Dmse=off \
+  -Dopenggf.trace.segmentDescriptorBenchmark=true \
+  "-Dtest=com.openggf.tests.trace.runs.TestTraceRunDescriptorPlanningPerformance" test
+```
+
+Require zero failures/errors and descriptor retained bytes `<= 16,777,216`.
+
+- [ ] **Step 5: Commit Task 1**
+
+Stage only the listed files and commit as `refactor(traces): retain coordinator scalars in descriptors` with policy trailers.
+
+---
+
+### Task 2: Add the guarded active-payload lease and factory
 
 **Files:**
-- Create: `src/main/java/com/openggf/trace/TracePhysicsRowCursor.java`
-- Create: `src/main/java/com/openggf/trace/TraceAuxRowCursor.java`
-- Test: `src/test/java/com/openggf/trace/TestTracePhysicsRowCursor.java`
-- Test: `src/test/java/com/openggf/trace/TestTraceAuxRowCursor.java`
-
-**Interfaces:**
-- Consumes: `TraceFiles.openReader(Path)`, `TraceFrame.parseCsvRow(String)`, and `TraceEvent.parseJsonLine(String, ObjectMapper, boolean)`.
-- Produces: closeable monotonic cursors used by `TraceSegmentCursor` in Task 3.
-
-- [ ] **Step 1: Write failing physics-window tests**
-
-Cover plain and gzip inputs, optional headers/comments, monotonic advance, previous/current/lookahead identity, bounds failures, and close idempotence. Assert `retainedFrameCount() <= 3` after every advance so a future list-backed implementation fails.
-
-- [ ] **Step 2: Run physics cursor tests and verify RED**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.trace.TestTracePhysicsRowCursor" test
-```
-
-Expected: compilation failure because `TracePhysicsRowCursor` is absent.
-
-- [ ] **Step 3: Implement the physics cursor**
-
-Use one `BufferedReader`, parse the header once, preload current/lookahead, and reject backward or skipped indices:
-
-```java
-public final class TracePhysicsRowCursor implements AutoCloseable {
-    public static TracePhysicsRowCursor open(Path physicsPath) throws IOException;
-    public int index();
-    public TraceFrame previous();
-    public TraceFrame current();
-    public TraceFrame lookahead();
-    public void advance() throws IOException;
-    int retainedFrameCount();
-    @Override public void close() throws IOException;
-}
-```
-
-- [ ] **Step 4: Run physics cursor tests and verify GREEN**
-
-Run the Step 2 command and require zero failures/errors.
-
-- [ ] **Step 5: Write failing auxiliary-window tests**
-
-Use ordered literal JSONL rows with pre-trace frame `-1`, multiple events on one frame, gaps, and the next frame. Assert only pre-trace plus the selected raw frame is exposed and `retainedEventFrameCount() <= 2`. Cover plain/gzip, malformed line propagation, monotonic advance, constructor failure closing its stream, and idempotent close.
-
-- [ ] **Step 6: Run auxiliary cursor tests and verify RED**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.trace.TestTraceAuxRowCursor" test
-```
-
-Expected: compilation failure because `TraceAuxRowCursor` is absent.
-
-- [ ] **Step 7: Implement the auxiliary cursor**
-
-Use one lookahead event and group only the requested raw frame:
-
-```java
-public final class TraceAuxRowCursor implements AutoCloseable {
-    public static TraceAuxRowCursor open(Path auxPath, TraceMetadata metadata)
-            throws IOException;
-    public List<TraceEvent> preTraceEvents();
-    public List<TraceEvent> eventsForRawFrame(int rawFrame) throws IOException;
-    int retainedEventFrameCount();
-    @Override public void close() throws IOException;
-}
-```
-
-Reject decreasing raw-frame requests and input whose event frames decrease; return `List.of()` across gaps.
-
-- [ ] **Step 8: Run both cursor suites and verify GREEN**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.trace.TestTracePhysicsRowCursor,com.openggf.trace.TestTraceAuxRowCursor" test
-```
-
-- [ ] **Step 9: Commit Task 2**
-
-```bash
-git add src/main/java/com/openggf/trace/TracePhysicsRowCursor.java \
-  src/main/java/com/openggf/trace/TraceAuxRowCursor.java \
-  src/test/java/com/openggf/trace/TestTracePhysicsRowCursor.java \
-  src/test/java/com/openggf/trace/TestTraceAuxRowCursor.java
-git commit -m "feat(traces): stream bounded segment row windows"
-```
-
-### Task 3: Build the active segment cursor and preserve comparison behavior
-
-**Files:**
-- Create: `src/main/java/com/openggf/trace/replay/runs/TraceSegmentCursor.java`
-- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceReplayBootstrapSummary.java`
-- Modify: `src/main/java/com/openggf/trace/TraceReplayBootstrap.java`
-- Modify: `src/main/java/com/openggf/trace/TraceBinder.java`
-- Modify: `src/main/java/com/openggf/trace/LoadQueueComparisonProjection.java`
-- Modify: `src/main/java/com/openggf/trace/live/LiveTraceComparator.java`
-- Modify: `src/main/java/com/openggf/trace/replay/TraceReplayRowPolicy.java`
-- Modify: `src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java`
-- Test: `src/test/java/com/openggf/tests/trace/runs/TestTraceSegmentCursor.java`
-- Test: `src/test/java/com/openggf/trace/live/TestLiveTraceComparator.java`
-
-**Interfaces:**
-- Consumes: Task 1 descriptor/contract and Task 2 bounded readers.
-- Produces: `TraceSegmentCursor.open(TraceRunSegmentDescriptor)` implementing `TraceReplayData` and `AutoCloseable`.
-
-- [ ] **Step 1: Write failing cursor parity tests**
-
-Load the same synthetic segment through eager `TraceData` and `TraceSegmentCursor`; for each row assert equal previous/current/lookahead physics, row policy, events, load-queue projection, dynamic-art state, CPU state, and raw-frame identity. Assert backward/out-of-window access fails and all cursor methods fail after close.
-
-- [ ] **Step 2: Run cursor tests and verify RED**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceSegmentCursor" test
-```
-
-- [ ] **Step 3: Implement `TraceSegmentCursor`**
-
-Open both readers failure-atomically, seed pre-trace events from the aux cursor, maintain latest checkpoint/zone-act summaries while advancing, and implement typed lookups by filtering only the current raw-frame event list. The cursor advances through one method:
-
-```java
-public final class TraceSegmentCursor implements TraceReplayData, AutoCloseable {
-    public static TraceSegmentCursor open(TraceRunSegmentDescriptor descriptor)
-            throws IOException;
-    public int index();
-    public TraceFrame previousFrame();
-    public TraceFrame currentFrame();
-    public TraceFrame lookaheadFrame();
-    public void advance() throws IOException;
-    public boolean isClosed();
-    @Override public void close() throws IOException;
-}
-```
-
-- [ ] **Step 4: Migrate shared comparator and policy APIs**
-
-Change only run-compatible read paths from `TraceData` to `TraceReplayData`. Keep single-trace APIs source-compatible. Replace all per-row random lookups with the cursor's current window; derive deferred-VBlank and phase decisions from explicit previous/current arguments. Move whole-segment bootstrap scans into `TraceReplayBootstrapSummary.from(TraceData)` during planning and make run bootstrap consume the summary.
-
-- [ ] **Step 5: Run comparator/bootstrap/policy suites and verify GREEN**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceSegmentCursor,com.openggf.trace.live.*,com.openggf.trace.replay.*,com.openggf.tests.trace.TestTraceReplayBootstrap" test
-```
-
-- [ ] **Step 6: Commit Task 3**
-
-```bash
-git add src/main/java/com/openggf/trace/replay/runs/TraceSegmentCursor.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceReplayBootstrapSummary.java \
-  src/main/java/com/openggf/trace/TraceReplayBootstrap.java \
-  src/main/java/com/openggf/trace/TraceBinder.java \
-  src/main/java/com/openggf/trace/LoadQueueComparisonProjection.java \
-  src/main/java/com/openggf/trace/live/LiveTraceComparator.java \
-  src/main/java/com/openggf/trace/replay/TraceReplayRowPolicy.java \
-  src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java \
-  src/test/java/com/openggf/tests/trace/runs/TestTraceSegmentCursor.java \
-  src/test/java/com/openggf/trace/live/TestLiveTraceComparator.java
-git commit -m "feat(traces): compare through an active segment cursor"
-```
-
-### Task 4: Remove legacy payload ownership and make planning one-segment-at-a-time
-
-**Files:**
-- Modify: `src/main/java/com/openggf/trace/TraceRunManifest.java`
+- Create: `src/main/java/com/openggf/trace/replay/runs/ActiveSegmentPayload.java`
 - Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`
+- Modify: `src/main/java/com/openggf/trace/TraceFiles.java`
+- Create: `src/test/java/com/openggf/trace/replay/runs/TestActiveSegmentPayload.java`
+- Create: `src/test/java/com/openggf/trace/TestTraceReaderLifecycle.java`
+
+**Interfaces:**
+- Produces: `public static ActiveSegmentPayload TraceRunReplayWalker.openActiveSegment(TraceRunSegmentDescriptor descriptor, int segmentIndex) throws IOException`.
+- Produces: public final lease methods `descriptor()`, `trace()`, `specialStageRows()`, `isClosed()`, and idempotent `close()`; constructor/mutable fields remain non-public.
+- Produces: package-private `TraceFiles.ReaderLifecycleEvent { OPENED, CLOSED }`, `ReaderLifecycleObserver.onEvent(ReaderLifecycleEvent, Path)`, and `AutoCloseable observeReadersForTest(ReaderLifecycleObserver)`; observation is thread-confined and defaults to no-op.
+
+- [ ] **Step 1: Write failing lease tests**
+
+Cover ordinary, special-stage composite, construction failure, post-close access, and repeated close:
+
+```java
+ActiveSegmentPayload payload =
+        TraceRunReplayWalker.openActiveSegment(descriptor, 0);
+assertSame(descriptor, payload.descriptor());
+assertNotNull(payload.trace());
+assertNull(payload.specialStageRows());
+payload.close();
+assertTrue(payload.isClosed());
+assertThrows(IllegalStateException.class, payload::trace);
+assertThrows(IllegalStateException.class, payload::specialStageRows);
+assertThrows(IllegalStateException.class, payload::descriptor);
+payload.close();
+```
+
+For special stages require non-null metadata-only `TraceData` and game-owned rows with matching row count, metadata, timing schedule, optional S2 pass-binder shape, and spill-normalised rows equal to the eager reference.
+Treat S2 pass-binder presence as parity with the eager reference rather than universally non-empty; add a separate positive fixture containing `run_objects_end` that proves the binder and spill-normalised rows are retained when present.
+
+- [ ] **Step 2: Write failing reader-balance tests**
+
+Install `TraceFiles.ReaderLifecycleObserver` around actual plain/gzip loads. Count every successful open and close, including a special-stage composite whose second parser fails. Require `opened == closed`; restore the thread-confined observer in `finally`.
+
+- [ ] **Step 3: Run suites and verify RED**
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.trace.replay.runs.TestActiveSegmentPayload,com.openggf.trace.TestTraceReaderLifecycle" test
+```
+
+Expected: compilation failure because the lease, facade, and observer do not exist.
+
+- [ ] **Step 4: Implement the lease and failure-atomic facade**
+
+Use nullable mutable payload fields only so close breaks reachability:
+
+```java
+public final class ActiveSegmentPayload implements AutoCloseable {
+    private final TraceRunSegmentDescriptor descriptor;
+    private TraceData trace;
+    private TraceRunSpecialStageRows specialStageRows;
+    private boolean closed;
+
+    ActiveSegmentPayload(TraceRunSegmentDescriptor descriptor,
+            TraceData trace, TraceRunSpecialStageRows specialStageRows) {
+        this.descriptor = Objects.requireNonNull(descriptor, "descriptor");
+        this.trace = Objects.requireNonNull(trace, "trace");
+        this.specialStageRows = specialStageRows;
+        boolean special = "special_stage".equals(
+                descriptor.segment().kind());
+        if (special != (specialStageRows != null)) {
+            throw new IllegalArgumentException(
+                    "special-stage payload shape does not match descriptor");
+        }
+    }
+
+    public TraceRunSegmentDescriptor descriptor() {
+        requireOpen(); return descriptor;
+    }
+    public TraceData trace() { requireOpen(); return trace; }
+    public TraceRunSpecialStageRows specialStageRows() {
+        requireOpen(); return specialStageRows;
+    }
+    @Override public void close() {
+        if (closed) return;
+        closed = true;
+        specialStageRows = null;
+        trace = null;
+    }
+    private void requireOpen() {
+        if (closed) throw new IllegalStateException("segment payload is closed");
+    }
+}
+```
+
+Move current `loadSegmentPayload` logic behind `openActiveSegment`; construct the lease only after both special-stage components succeed. Retain exact parsing order and diagnostics. Wrap readers from `TraceFiles.openReader` so the observer sees one `OPENED` and one `CLOSED`; production no-observer state retains no observer/path.
+
+- [ ] **Step 5: Run Task 2 suites GREEN**
+
+Run Step 3; require balanced reader events, correct ordinary/composite shapes, post-close guards, and idempotent close.
+
+- [ ] **Step 6: Commit Task 2**
+
+Commit as `feat(traces): lease one active run segment payload`, staging Task 2 files and `CHANGELOG.md` if required by the hook.
+
+---
+
+### Task 3: Add a descriptor-only run launch path
+
+**Files:**
 - Modify: `src/main/java/com/openggf/trace/catalog/TraceCatalog.java`
-- Test: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunPlanningOwnership.java`
-- Test: `src/test/java/com/openggf/trace/catalog/TestTraceRunLaunchValidation.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceRunLaunchValidation.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceCatalogRunDiscovery.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceCatalogDescriptorOwnership.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunPlanningOwnership.java`
 
 **Interfaces:**
-- Consumes: Task 5's completed migration away from `SegmentPlan.trace()`; execute this task after Task 5.
-- Consumes: eager `TraceData` only inside one planning-loop iteration.
-- Produces: `TraceRunManifest.DynamicArtRunValidator`, an incremental run-wide lifecycle validator.
+- Produces in parallel: `TraceCatalog.PreparedDescriptorRunLaunch(Bk2Movie movie, List<TraceRunSegmentDescriptor> segments)` and `prepareDescriptorRunLaunch(TraceEntry)`.
+- Preserves temporarily: eager `PreparedRunLaunch`, `prepareRunLaunch`, `RunSegmentPlanner`, and `RunPlannerPair.segmentPlanner` so every intermediate commit compiles; Task 7 removes them after the final caller migrates.
+- Retains `TraceRunReplayWalker.plan(...)` only as benchmark/reference until Task 7.
+- Preserves validation ordering, diagnostics, profiles, row ranges, dynamic-art validation, and BK2 parsing.
 
-- [ ] **Step 1: Write failing planning-lifetime tests**
+- [ ] **Step 1: Write failing descriptor-only launch tests**
 
-Inject a package-visible `SegmentPayloadLoader` ownership seam returning one eager validation payload at a time. Assert the sequence is `load 0, extract 0, load 1, extract 1...`, that a parser failure retains no completed payload, that `SegmentPlan` has no `TraceData` record component, and that the returned plan opens no cursor. Assert catalog validation uses descriptor metadata/row count. The loader is a real planning boundary, not a test-only cleanup hook.
+Inject a descriptor planner returning sentinel descriptors and an eager loader that throws if called. Assert `prepareDescriptorRunLaunch` returns the descriptors, validates profile/row/range from them, and opens no payload. Add a transitive assertion that `PreparedDescriptorRunLaunch` reaches no `TraceData`, `TraceRunSpecialStageRows`, `TraceEvent`, `Reader`, `InputStream`, or mapped buffer. Also assert the legacy eager result remains available and unchanged during this migration task.
 
-- [ ] **Step 2: Run planning tests and verify RED**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunPlanningOwnership,com.openggf.trace.catalog.TestTraceRunLaunchValidation" test
-```
-
-- [ ] **Step 3: Implement incremental dynamic-art validation**
-
-Extract the existing `validateDynamicArtRun(List<TraceData>)` loop into:
-
-```java
-public final class DynamicArtRunValidator {
-    public void accept(int segmentIndex, TraceData trace);
-    public void finish();
-}
-```
-
-The validator owns the single `LifecycleIdentity`, gap index, and opening ledger. `accept` performs the same capability, fingerprint, declared-ledger, segment lifecycle, and adjacent-gap checks before the caller drops the eager trace. `finish` enforces no remaining gap transition.
-
-- [ ] **Step 4: Rewrite planning as a scan/extract/release loop**
-
-For each segment: load and validate exactly as today, feed the incremental validator, build the immutable descriptor and special-stage summary, then drop the eager local before loading the next segment. Retain only the descriptor. Finish the dynamic-art validator before returning plans. Remove the legacy `TraceData` component/accessor from `SegmentPlan`; `TraceCatalog` validates profiles and row counts from descriptors.
-
-- [ ] **Step 5: Run planning/catalog tests and verify GREEN**
-
-Run the Step 2 command and require zero failures/errors.
-
-- [ ] **Step 6: Commit Task 4**
+- [ ] **Step 2: Run tests and verify RED**
 
 ```bash
-git add src/main/java/com/openggf/trace/TraceRunManifest.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java \
-  src/main/java/com/openggf/trace/catalog/TraceCatalog.java \
-  src/test/java/com/openggf/tests/trace/runs/TestTraceRunPlanningOwnership.java \
-  src/test/java/com/openggf/trace/catalog/TestTraceRunLaunchValidation.java
-git commit -m "perf(traces): release segment payloads during run planning"
+mvn -Dmse=off "-Dtest=com.openggf.trace.catalog.TestTraceRunLaunchValidation,com.openggf.trace.catalog.TestTraceCatalogDescriptorOwnership,com.openggf.tests.trace.runs.TestTraceRunPlanningOwnership" test
 ```
 
-### Task 5: Own one cursor across every run driver and failure path
+Expected: the parallel descriptor preparation API does not exist.
+
+- [ ] **Step 3: Add descriptor preparation**
+
+Add the parallel descriptor result/method and validate metadata and row counts from each descriptor, returning an immutable descriptor list. Keep the eager result and planner pair compiling for visual/headless consumers not migrated until Tasks 5-6. No migrated production path may call the eager method.
+
+- [ ] **Step 4: Run catalog/planning suites GREEN**
+
+Run Step 2, then `mvn -Dmse=off "-Dtest=com.openggf.trace.catalog.*" test`.
+
+- [ ] **Step 5: Commit Task 3**
+
+Commit as `perf(traces): prepare run launch from descriptors` with policy trailers.
+
+---
+
+### Task 4: Migrate production run ownership and cleanup
 
 **Files:**
 - Modify: `src/main/java/com/openggf/TraceSessionLauncher.java`
-- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunFrameDriver.java`
+- Modify: `src/main/java/com/openggf/RunSegmentAdvancer.java`
 - Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java`
-- Modify: `src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`
+- Modify: `src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java`
+- Modify: `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
+- Modify: `src/test/java/com/openggf/TestTraceSessionLauncherProductionFailureCleanup.java`
+- Modify: `src/test/java/com/openggf/TestLevelIterationAdmissionController.java`
+- Modify: `src/test/java/com/openggf/TestTraceSessionSpecialStageTerminalExit.java`
+- Modify: `src/test/java/com/openggf/TestVisualTraceRunTerminalTail.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunHardwareTimingCoordinator.java`
 - Modify: `src/test/java/com/openggf/tests/trace/runs/VisualRunReplayHarness.java`
-- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioTrace.java`
-- Test: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunCursorLifecycle.java`
-- Test: `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
-- Test: `src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestS2CompleteEmeraldVisualRun.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestCompleteRunAudioReplayCadence.java`
+- Create: `src/test/java/com/openggf/TestTraceSessionLauncherActivePayloadLifecycle.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestVisualRunActivePayloadLifecycle.java`
 
 **Interfaces:**
-- Consumes: `SegmentPlan.descriptor()` and `TraceSegmentCursor.open`.
-- Produces: one active cursor owned by each run drive, closed before the next segment opens.
-- Produces: no remaining run-control consumer of `SegmentPlan.trace()`, allowing Task 4 to remove it and release planning payloads.
+- `TraceSessionLauncher.runSegments` becomes `List<TraceRunSegmentDescriptor>`.
+- `RunSegmentAdvancer` becomes descriptor-backed because it consumes only segment topology.
+- Produces an erasure-safe run constructor `TraceSessionLauncher(TraceEntry, Bk2Movie, List<TraceRunSegmentDescriptor>, ActiveSegmentPayload, TraceReplaySessionBootstrap.ConfigSnapshot)`; migrate/remove the four-argument eager run constructor rather than reusing its erased `List` slot.
+- Adds nullable `ActiveSegmentPayload activeRunPayload` and package-private `ActiveSegmentFactory` test seam with `open(TraceRunSegmentDescriptor, int) throws IOException` plus a default `close(ActiveSegmentPayload)` that delegates to the lease's no-throw close.
+- Adds distinctly named descriptor helpers `hasDescriptorHardwareTimingStream` and `descriptorHardwareTimingSegments`; retain eager helpers until the headless consumer migrates.
 
-- [ ] **Step 1: Write failing lifecycle tests**
+- [ ] **Step 1: Write failing lifecycle transcript tests**
 
-Inject a `SegmentCursorFactory` into run control. Cover normal handoff (`open 0, close 0, open 1, close 1`), comparator assertion, constructor failure after physics opens, launcher abort, visual gap/handoff lookup without an active cursor, and complete-audio termination. Assert at most one cursor is open.
+Use an injected factory that calls the real facade, records each opened lease,
+and asserts every preceding lease is closed before returning the next. Cover
+initial launch, two-segment handoff, gap, terminal tail, open failure, assertion,
+production exception, cleanup failure, abort, user exit, and repeated teardown. The real lease close is deliberately idempotent and no-throw; exercise suppression by injecting a factory `close` implementation that closes first and then throws. Reconstruct the
+normal transcript from factory calls and observed `isClosed()` transitions:
 
-- [ ] **Step 2: Run lifecycle tests and verify RED**
-
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunCursorLifecycle,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.tools.audio.completerun.TestCompleteRunAudioTrace" test
+```text
+open 0
+close 0
+open 1
+close 1
 ```
 
-- [ ] **Step 3: Migrate the production launcher and run driver**
+Assert maximum active count one and zero during gap/terminal tail.
+For each visual/audio entry point, inject one failure before the reflective session constructor accepts the lease and one failure after ownership transfer but before replay bootstrap completes. Require the local owner to close before transfer, and session teardown to detach aliases and close after transfer.
 
-Introduce:
+- [ ] **Step 2: Write failing alias-release tests**
+
+Hold weak references to source `TraceData`, special rows, comparator/driver, and aux graph. Advance/fail, clear only test locals, force GC with bounded retries, and require each source reference clears while destination remains usable. Attach boundary probe, playback observer, HUD/camera model, fixture, dynamic-art comparison, and S2 pass binder.
+
+- [ ] **Step 3: Run launcher lifecycle tests RED**
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherActivePayloadLifecycle,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.TestTraceSessionLauncherProductionFailureCleanup,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestLevelIterationAdmissionController,com.openggf.TestTraceSessionSpecialStageTerminalExit,com.openggf.TestVisualTraceRunTerminalTail,com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle" test
+```
+
+- [ ] **Step 4: Implement production ownership**
+
+Call `prepareDescriptorRunLaunch`, open segment zero in `launchRun` before `prepareConfiguration`, and pass descriptors and lease through the five-argument session constructor. Existing eager consumers receive `activeRunPayload.trace()` or `.specialStageRows()` unchanged. Convert all package-level tests that directly construct run sessions to this constructor, using null only for deliberately empty/non-driving lifecycle states.
+
+As a compile- and runtime-safe transition, have both visual harness entry points call `prepareDescriptorRunLaunch`, open segment zero, and pass the descriptors plus lease to `newRunSession`, which reflectively invokes the new five-argument constructor. Give each entry point an outer `try/finally` with explicit ownership transfer: the harness-local owner closes on configuration, fixture creation, callback, or reflective-construction failure before the session accepts the lease; after successful construction, the session is the sole owner and every activation, `finishRunLaunch`, replay, abort, observer, or teardown exit invokes session detachment/close. Never let both local and session owners remain armed. Convert `frameView` to descriptors in this same task so the harness retains no parallel eager list: derive the local row from the BK2 offset, the lag bit from `descriptor.laggedRows()`, and the physical frame only from `rawFrames()` for display/reporting. This avoids an intermediate whole-run payload graph as well as the erased-constructor cast.
+
+At source close, preserve verification order, then detach all aliases and close in `finally`. Clear comparator/structural/special driver, pass binder, dynamic-art comparison, boundary delegate, HUD/camera suppliers, fixture observers, and launcher aliases. Suppress cleanup exceptions onto the primary failure.
+
+During destination admission: enter hardware timing, open destination, run return-boundary/adopted-row comparison, attach consumers. Attachment failure detaches and closes before `failRun`. Construct the coordinator through `fromDescriptors`; no new consumer reads coordinator scalars. Use the distinctly named descriptor timing helpers, leaving eager helpers only for not-yet-migrated headless code.
+
+- [ ] **Step 5: Run launcher/run-control suites GREEN**
+
+Run Step 3 plus:
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator,com.openggf.tests.trace.runs.TestTraceRunFrameDriver,com.openggf.tests.trace.runs.TestTraceRunHardwareTimingCoordinator,com.openggf.tests.trace.runs.TestCompleteRunAudioReplayCadence,com.openggf.trace.live.*,com.openggf.trace.replay.*" test
+mvn -Ptrace-replay -Dmse=off \
+  "-Dsonic2.rom.path=$TRACE_S2_ROM_PATH" \
+  "-Dtest=com.openggf.tests.trace.runs.TestS2CompleteEmeraldVisualRun" test
+```
+
+Before the ROM-backed command, discover `.gen` files from the project root as required by `AGENTS.md`, identify the Sonic 2 World REV01 image, verify SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, and set the task-local `TRACE_S2_ROM_PATH` to that verified absolute path. Do not assume a filename, copy, rename, or symlink a ROM.
+
+Document known base-equivalent launcher errors only if each reproduces unchanged in an isolated one-method fork; no new error is acceptable.
+
+- [ ] **Step 6: Commit Task 4**
+
+Commit as `perf(traces): own one active production run payload`, including `CHANGELOG.md` and required release summary.
+
+---
+
+### Task 5: Migrate the headless chain driver
+
+**Files:**
+- Modify: `src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestS2EhzHalfpipeRoundTripChain.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestHeadlessRunActivePayloadLifecycle.java`
+
+**Interfaces:**
+- Headless setup uses `List<TraceRunSegmentDescriptor>` and one lease per driven segment.
+- `HeadlessRunCoordinatorAdapter` owns coordinator results; `sourceComparatorExhausted` no longer calls `levelLoopRowCount` directly.
+
+- [ ] **Step 1: Write failing headless lifecycle tests**
+
+Drive ordinary -> special -> bridge -> return. Assert open/close order, zero payload in gaps, adopted row parity, S2 pass parity, and source weak-reference collection. Exercise a failing comparison and failing destination open to prove the per-boundary `finally` clears every alias before propagating the primary failure.
+
+- [ ] **Step 2: Run tests RED**
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle,com.openggf.tests.trace.runs.TestTraceRunReplayWalkerControlFlow" test
+```
+
+- [ ] **Step 3: Convert `AbstractRunChainTest` by ownership**
+
+Use descriptors for all topology/history variables, including replacing retained `SegmentPlan` values and `uncomparedInteriorSourceLevel`. Use `descriptor.openingFrame()` plus metadata for return-boundary comparison, and the active destination lease only for the adopted row. The current lease is the only payload source:
 
 ```java
-@FunctionalInterface
-public interface SegmentCursorFactory {
-    TraceSegmentCursor open(TraceRunSegmentDescriptor descriptor) throws IOException;
+try (ActiveSegmentPayload active =
+        TraceRunReplayWalker.openActiveSegment(descriptor, segmentIndex)) {
+    driveActiveSegment(descriptor, active, coordinator);
 }
 ```
 
-Open segment 0 immediately before bootstrap/comparator attachment. At every boundary, detach the comparator, close the source cursor in `finally`, perform immutable opening-summary comparison, then open the destination cursor. Session teardown closes the active cursor before restoring configuration and timing authority.
+Do not capture `TraceData` beyond the block or store it in lists/report fields. Route direct `levelLoopRowCount` logic through the coordinator adapter. In a per-boundary `finally`, clear the probe delegate, `productionComparator`, active/structural comparator, special driver/pass binder, dynamic-art comparison, slot probe, fixture aliases, and current lease before the next open. Mark the eager coordinator constructor and eager timing helpers eligible for removal, but defer removal to Task 7's whole-repository caller proof.
 
-- [ ] **Step 4: Migrate headless, visual, and audio harnesses**
+- [ ] **Step 4: Run headless chain suites GREEN**
 
-Use descriptor row counts and compact lag mappings for arbitrary BK2 `frameView` calls during gaps. Never open a payload cursor for catalog listing or gap-only presentation. Wrap each harness run in try-with-resources or an equivalent `finally` that closes the active cursor.
+Find subclasses with `rg -l "extends AbstractRunChainTest" src/test/java | sort`, pass their class names to Maven `-Dtest=` under `-Ptrace-replay`, and preserve exact frontiers. No baseline-passing trace may regress.
 
-- [ ] **Step 5: Run lifecycle and run-control suites and verify GREEN**
+- [ ] **Step 5: Commit Task 5**
 
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.*,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.trace.catalog.*,com.openggf.tools.audio.completerun.*" test
-```
+Commit as `test(traces): bound headless run payload ownership`.
 
-- [ ] **Step 6: Commit Task 5**
+---
 
-```bash
-git add src/main/java/com/openggf/TraceSessionLauncher.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceRunFrameDriver.java \
-  src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java \
-  src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioTrace.java \
-  src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java \
-  src/test/java/com/openggf/tests/trace/runs/VisualRunReplayHarness.java \
-  src/test/java/com/openggf/tests/trace/runs/TestTraceRunCursorLifecycle.java \
-  src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java \
-  src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java
-git commit -m "perf(traces): bound run payload ownership to one segment"
-```
-
-### Task 6: Prove memory, accuracy, and resource acceptance gates
+### Task 6: Harden visual and complete-audio lease lifecycles
 
 **Files:**
-- Create: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunSegmentOwnershipPerformance.java`
-- Modify: `docs/architecture/audits/performance/2026-08-21-performance-investigation-report-audit.md`
-- Modify: `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`
-- Modify: `docs/architecture/plans/2026-08-21-bounded-trace-segment-ownership-implementation-plan.md`
-- Modify: `docs/status/trace-frontier-log.md` if a complete-run frontier changes.
-- Modify: `CHANGELOG.md`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/VisualRunReplayHarness.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestVisualRunActivePayloadLifecycle.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestCompleteRunAudioReplayCadence.java`
+
+**Interfaces:**
+- Preserves Task 4's descriptor-only `frameView`, which opens no payload.
+- Visual and complete-audio replay share one failure-safe active-lease lifecycle.
+- Adds only inside the test harness a package-private `VisualPayloadCloser.close(ActiveSegmentPayload)` injection seam whose normal default delegates to the lease's idempotent no-throw close; it is not an acquisition or relay path.
+
+- [ ] **Step 1: Write a failing cleanup-suppression test, then add lifecycle characterization**
+
+First inject a closer that invokes the real close and then throws while a distinct primary observer/replay failure is active. Assert the primary failure remains primary, the cleanup failure is suppressed exactly once, and lease/payload aliases are collectible; this test must fail because the injection seam is absent. Then cover active first/last row, gap, handoff, adopted row, tail, visual/audio failure, abort, repeated teardown, and normal audio completion. Preserve the Task 4 proof that frame view leaves the factory transcript empty and uses `descriptor.laggedRows().get(localRow)`.
+
+- [ ] **Step 2: Run tests RED**
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle,com.openggf.tests.trace.runs.TestCompleteRunAudioReplayCadence" test
+```
+
+- [ ] **Step 3: Implement failure-safe visual/audio cleanup**
+
+Keep the descriptor preparation/session/frame-view path established in Task 4. Add the closer seam only to make cleanup failure observable, and route both entrypoint `finally` blocks through it after clearing HUD/camera/observer aliases. Complete-audio replay remains owned inside `VisualRunReplayHarness`; update its cadence regression rather than inventing a second audio lease owner. Suppress injected cleanup failures onto the primary replay failure and throw cleanup alone only when no primary exists. Add the remaining assertion, observer, audio, abort, reachability, and repeated-teardown cases without adding another acquisition path.
+
+- [ ] **Step 4: Run visual/audio/special-stage suites GREEN**
+
+```bash
+mvn -Ptrace-replay -Dmse=off "-Dtest=com.openggf.tests.trace.runs.*Visual*,com.openggf.tools.audio.completerun.*,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRows,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver" test
+```
+
+- [ ] **Step 5: Commit Task 6**
+
+Commit as `perf(traces): bound visual and audio run payloads`.
+
+---
+
+### Task 7: Enforce authority, reachability, memory, and resources
+
+**Files:**
+- Modify: `src/main/java/com/openggf/trace/catalog/TraceCatalog.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java`
+- Modify: `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`
+- Modify: `src/test/java/com/openggf/trace/TestTraceReaderLifecycle.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceRunLaunchValidation.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceCatalogRunDiscovery.java`
+- Modify: `src/test/java/com/openggf/trace/catalog/TestTraceCatalogDescriptorOwnership.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunPlaybackCoordinator.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadOwnership.java`
+- Create: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadPerformance.java`
+- Modify: `src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java`
+
+**Interfaces:**
+- Exact accessor/facade allowlist: `com.openggf.TraceSessionLauncher`, `com.openggf.tests.trace.runs.AbstractRunChainTest`, `com.openggf.tests.trace.runs.VisualRunReplayHarness`, `com.openggf.trace.replay.runs.TestActiveSegmentPayload`, `com.openggf.trace.TestTraceReaderLifecycle`, `com.openggf.TestTraceSessionLauncherActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle`, `com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership`, `com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance`, and `com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard`. No naming pattern or package-wide allowance is permitted.
+- Benchmark property: `openggf.trace.activePayloadBenchmark=true` under `-Ptrace-replay`.
+
+- [ ] **Step 1: Write failing public-surface/caller guard**
+
+Require final lease, non-public constructor, exact public methods `descriptor`, `trace`, `specialStageRows`, `isClosed`, `close`, and one public walker open facade. Use the existing ArchUnit dependency to inspect compiled production and test bytecode and reject every direct call or method reference targeting `trace`, `specialStageRows`, or the walker facade outside the exact FQCN allowlist above. Lock the exact public API and constructor visibility with reflection. Do not derive test permission from a class-name pattern or package.
+
+Add a separate source scan for reflective and method-handle acquisition (`Class.forName`, class literals, `getMethod`, `getDeclaredMethod`, `MethodHandles.Lookup.findVirtual/findStatic`, accessor-name literals, concatenated/constructed string variants) and fail with file/line. Unit-test the guard rules against nested synthetic mutation classes/source snippets that contain an unauthorized direct call, method reference, reflective call, method-handle call, and constructed accessor string; assert each is rejected without checking in a real unauthorized caller that would permanently fail the suite.
+
+Also reject relay APIs: none of the allowlisted callers may add a public/protected method or field that exposes `ActiveSegmentPayload`, its raw `TraceData`, or `TraceRunSpecialStageRows`, and no helper class may acquire on an allowlisted caller's behalf. Dedicated tests may inspect/use the lease but must not become production acquisition paths.
+
+- [ ] **Step 2: Write failing installed-consumer reachability proof**
+
+Attach real ordinary comparator and special driver/pass binder, then detach/close. Keep the complete installed ownership roots reachable—session/launcher, playback observer, boundary delegate, HUD/camera suppliers, fixture, comparator/structural comparator, special driver/pass binder, dynamic-art comparison, slot probe, descriptor list, and active lease—through sampling. After normal and injected-failure teardown, keep all non-payload session roots alive, force GC, and require prior `TraceData`, special rows, aux events, comparator/driver/binder, and lease graphs to clear. Mutation-control by intentionally retaining a comparator and proving the reference remains until removed.
+
+- [ ] **Step 3: Write opt-in memory/resource benchmark**
+
+Warm/release planners before both arms. Measure both arm orders or fresh forks, use isolated lexical scopes for each arm, clear locals between them, and call `Reference.reachabilityFence` on every root after the sample so JIT liveness cannot bias the result. Keep the fixed warmed eager baseline `1,087,200,800` bytes as the denominator; do not replace it with a same-run noisy measurement. Keep descriptors plus the complete installed-consumer roots enumerated in Step 2 reachable while sampling all 67 S3K segments and representative S1/S2 special stages. Print:
+
+```text
+TRACE_ACTIVE_PAYLOAD_BENCH eager_retained_bytes=... descriptor_retained_bytes=... max_installed_bytes=... reduction_percent=... max_segment=...
+```
+
+Assert descriptor `<= 16,777,216`, installed `<= 268,435,456`, and `100 * (1 - max_installed_bytes / 1_087_200_800.0) >= 75`. Keep deterministic 100-cycle plain/gzip/ordinary/S1/S2/S3K balance assertions in package-peer `com.openggf.trace.TestTraceReaderLifecycle`, where the package-private observer is accessible. The performance test runs that suite as a separate acceptance command and uses `/proc/self/fd` only as a Linux smoke check, never as the deterministic oracle.
+
+- [ ] **Step 4: Remove the transitional eager launch path**
+
+After `rg` and ArchUnit prove no production/headless/visual/audio caller remains, remove `PreparedRunLaunch`, `prepareRunLaunch`, `RunSegmentPlanner`, `RunPlannerPair.segmentPlanner`, the eager timing helpers, and any non-benchmark use of `TraceRunReplayWalker.plan(...)`. Update catalog discovery/validation tests to the descriptor result. Convert every remaining four-argument eager-coordinator call in `TestTraceRunPlaybackCoordinator` to `fromDescriptors` (or an explicit three-argument no-plan case) before removing that constructor. Retain `plan(...)` only if the eager benchmark/reference still requires it, and guard that no runtime or replay harness calls it.
+
+- [ ] **Step 5: Run guard/ownership RED, then fix only enforcement gaps**
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard,com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership" test
+```
+
+Do not relax allowlists or reachability assertions; remove leaked aliases or excess API.
+
+- [ ] **Step 6: Run benchmark and reader lifecycle GREEN twice and preserve logs**
+
+```bash
+mvn -Ptrace-replay -Dmse=off \
+  -Dopenggf.trace.activePayloadBenchmark=true \
+  "-Dtest=com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance" test
+mvn -Dmse=off "-Dtest=com.openggf.trace.TestTraceReaderLifecycle" test
+```
+
+Repeat in a fresh Maven fork and require both passes meet every cap.
+
+- [ ] **Step 7: Commit Task 7**
+
+Commit as `test(traces): enforce active payload ownership`.
+
+---
+
+### Task 8: Establish the baseline, verify accuracy, document evidence, and integrate
+
+**Files:**
 - Modify: `README.md`
+- Modify: `CHANGELOG.md`
+- Modify: `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`
+- Modify: `docs/architecture/audits/performance/2026-08-21-performance-investigation-report-audit.md`
+- Modify: `docs/architecture/plans/2026-08-21-bounded-trace-segment-ownership-implementation-plan.md`
+- Create: `docs/architecture/validation/trace/2026-08-22-active-segment-ownership-validation.md`
 
 **Interfaces:**
-- Consumes: the completed descriptor/cursor/run lifecycle.
-- Produces: repeatable retained-heap and descriptor/cursor ownership evidence plus release documentation.
+- Produces exact before/after heap, frontier, resource, suite, branch, and commit evidence.
+- Marks design implemented only after every gate passes.
 
-- [ ] **Step 1: Write the opt-in performance/resource test**
+- [ ] **Step 1: Synchronize the main workspace and establish the exact baseline**
 
-The test plans the 67-segment fixture, forces GC, records retained heap, opens/closes every cursor, samples `/proc/self/fd` when available, and asserts structural bounds independent of host noise: no plan component is `TraceData`, every physics cursor retains at most three frames, every aux cursor retains at most two frame buckets, open descriptors return to baseline after every close, and exactly one cursor is active.
+Inspect the main workspace for user changes without switching its branch. Fetch `origin`, fast-forward pull the checked-out `develop` only when doing so preserves all user changes, record the resulting commit, and run `mvn -Dmse=off test` there on JDK 21. Preserve the complete baseline log and exact failing method identities. If the main workspace cannot be safely fast-forwarded, stop integration work and report the unresolved state rather than using a stale or destructive baseline.
 
-- [ ] **Step 2: Run focused structural and resource verification**
+- [ ] **Step 2: Run focused acceptance suites**
 
-```bash
-mvn -Dmse=off "-Dopenggf.trace.segmentOwnershipBenchmark=true" \
-  "-Dtest=com.openggf.tests.trace.runs.TestTraceRunSegmentOwnershipPerformance" test
-```
+Run catalog/planning, lease/reader, coordinator/frame driver, launcher lifecycle, live/structural comparator, timing authority, S1/S2/S3K special stage, headless chain, visual, and complete-audio suites on JDK 21. Preserve complete logs in managed scratch.
 
-Record forced-GC retained bytes and peak heap in managed task scratch storage; compare with the 1,094,956,904-byte retained baseline.
+- [ ] **Step 3: Run recorded 67-segment oracle**
 
-- [ ] **Step 3: Run the recorded 67-segment acceptance fixture**
+Require all 1,653 AIZ rows, first mismatch `camera_x` expected `0x1300` actual `0x1308`, same terminal segment-0 `giant_ring` failure, and identical unmatched timing completions/dynamic-art result.
 
-Use the same fixture and JVM envelope recorded by the audit. Require segment 0 to consume all 1,653 rows, first mismatch `camera_x` expected `0x1300` actual `0x1308`, the same terminal `giant_ring` boundary failure, identical unmatched hardware completions, and identical dynamic-art result.
+- [ ] **Step 4: Run fresh complete trace sweep**
 
-- [ ] **Step 4: Run focused trace ownership and authority suites**
+Use the trace-replay profile with all discovered ROM properties. Record counts, failures/errors/skips, first-error frame/field, and base-equivalent errors. No baseline-passing trace may fail/starve.
 
-```bash
-mvn -Dmse=off "-Dtest=com.openggf.tests.trace.runs.*,com.openggf.trace.catalog.*,com.openggf.trace.timing.TestHardwareTimingAuthorityGuard,com.openggf.tools.audio.completerun.*" test
-```
+- [ ] **Step 5: Run the development full-suite comparison required by `AGENTS.md`**
 
-- [ ] **Step 5: Run the complete JDK 21 three-ROM suite**
+Run the same `mvn -Dmse=off test` command in the development worktree and compare exact failing method identities with Step 1. A red baseline is acceptable; a new or worsened failure is not. Run the focused suites again in the development worktree after this full-suite command so both broad and relevant evidence are fresh.
 
-```bash
-mvn -Dmse=off \
-  "-Dsonic1.rom.path=${PROJECT_ROOT}/s1.gen" \
-  "-Dsonic2.rom.path=${PROJECT_ROOT}/s2.gen" \
-  "-Ds3k.rom.path=${PROJECT_ROOT}/s3k.gen" test
-```
+- [ ] **Step 6: Update documentation and self-review**
 
-Compare normalized failing `Class.method` identities with the freshly updated integration baseline. Existing baseline failures may remain; no new or worsened failure attributable to this branch is allowed.
+Record exact measurements, special-stage maxima, resource cycles, oracle, full-suite comparison, and authority debt. Mark completed plan boxes. Run `git diff --check` and `git status --short`.
 
-- [ ] **Step 6: Update evidence and release documentation**
+- [ ] **Step 7: Commit documentation**
 
-Record measured before/after heap, cursor/resource results, exact trace frontier, test commands, and limitations. Mark the design status implemented only if every accuracy and ownership gate passes. Add the required `CHANGELOG.md` and README release summary.
+Commit as `docs(traces): validate active segment ownership`, staging all listed artifacts with truthful `updated` trailers.
 
-- [ ] **Step 7: Commit Task 6**
+- [ ] **Step 8: Independent final code/spec review**
 
-```bash
-git add src/test/java/com/openggf/tests/trace/runs/TestTraceRunSegmentOwnershipPerformance.java \
-  docs/architecture/audits/performance/2026-08-21-performance-investigation-report-audit.md \
-  docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md \
-  docs/architecture/plans/2026-08-21-bounded-trace-segment-ownership-implementation-plan.md \
-  docs/status/trace-frontier-log.md CHANGELOG.md README.md
-git commit -m "perf(traces): validate bounded run segment ownership"
-```
+Review authority expansion, allowlist bypass, aliases, boundary ordering, special-stage parity, benchmark bias, and regression accounting. Fix material findings test-first and repeat until GREEN.
 
-### Task 7: Review, reconcile, integrate, and clean up
+- [ ] **Step 9: Recheck upstream and integrate according to `AGENTS.md`**
 
-**Files:**
-- Review every file changed by Tasks 1-6.
-
-**Interfaces:**
-- Consumes: completed implementation and recorded verification evidence.
-- Produces: pushed `develop` with no new regression and no leftover task worktree/branch.
-
-- [ ] **Step 1: Request independent code review**
-
-Review specifically for trace-to-gameplay authority expansion, payload reachability from `SegmentPlan`, cursor cleanup holes, row-window off-by-one errors, aux ordering assumptions, and visual/audio gap behavior. Correct every material finding test-first.
-
-- [ ] **Step 2: Fetch and establish the updated integration baseline**
-
-Fast-forward/reconcile `origin/develop` without switching the main workspace branch. Run the complete suite on the updated baseline and preserve exact failing-method identities.
-
-- [ ] **Step 3: Merge the feature branch into main `develop`**
-
-Resolve conflicts while preserving concurrent upstream behavior and stage the required README summary.
-
-- [ ] **Step 4: Run post-merge verification and compare both directions**
-
-Repeat the complete suite and focused ownership/trace commands. Require zero new normalized failing methods and no worsened baseline failure attributable to the branch.
-
-- [ ] **Step 5: Push and clean up**
-
-Push only `develop`. Confirm the feature commit is merged, inspect the worktree for generated versus unknown changes, remove the clean task worktree, delete the merged local feature branch, and prune worktree metadata.
+Fetch `origin` again. If `origin/develop` moved after Step 1, fast-forward the main-workspace `develop`, rerun its exact baseline command, and replace the comparison baseline with those fresh method identities before merging. Reconcile feature conflicts without switching the main workspace, ensure the feature branch includes the required README release-summary update, merge into main-workspace `develop`, run the post-merge full suite and focused suites, and compare with the latest recorded baseline. Push only `develop`. After push succeeds, inspect every feature-worktree change, discard only identified workflow-generated outputs, preserve/report unknown or unmerged work, remove the worktree, verify the feature branch is fully merged, delete that local branch, and prune metadata. Do not claim completion if synchronization, comparison, merge, push, or required cleanup fails; preserve all integration logs and report pushed commits.

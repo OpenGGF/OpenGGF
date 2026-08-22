@@ -51,14 +51,14 @@ an ownership-only migration: it removes whole-run reachability without changing
 the row representation or generalising any trace consumer.
 
 Planning continues to scan and validate each segment in manifest order. It
-publishes the phase-one `TraceRunSegmentDescriptor` shape extended only by the
-two exact existing coordinator scalars:
+publishes the phase-one `TraceRunSegmentDescriptor` shape, extending it only
+with the exact existing coordinator scalar `levelLoopRowCount`:
 
 - manifest segment, directory, metadata, row count, and opening physics row;
 - local-row-to-raw-frame mapping and a lag bit set indexed by local row;
 - hardware-timing schedule and terminal dynamic-art ledger;
 - entry and exit boundaries; and
-- the existing `SegmentPlan.executionPolicy` and derived
+- the already-present `SegmentPlan.executionPolicy` and newly retained
   `TraceRunReplayWalker.levelLoopRowCount` scalars, relocated unchanged and
   consumed only by the run coordinator.
 
@@ -121,8 +121,20 @@ and open facade have an exact source/bytecode allowlist:
 - `com.openggf.tests.trace.runs.VisualRunReplayHarness`, which also owns the
   complete-audio replay path.
 
-Dedicated lease/guard tests may exercise the API but cannot relay the payload
-to another production or harness class. A CI guard rejects every other direct
+The only test classes that may exercise the API directly are:
+
+- `com.openggf.trace.replay.runs.TestActiveSegmentPayload`;
+- `com.openggf.trace.TestTraceReaderLifecycle`;
+- `com.openggf.TestTraceSessionLauncherActivePayloadLifecycle`;
+- `com.openggf.tests.trace.runs.TestHeadlessRunActivePayloadLifecycle`;
+- `com.openggf.tests.trace.runs.TestVisualRunActivePayloadLifecycle`;
+- `com.openggf.tests.trace.runs.TestTraceRunActivePayloadOwnership`;
+- `com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance`; and
+- `com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard`.
+
+These tests cannot relay the payload to another production or harness class.
+Mutation fixtures are analysed as explicit guard inputs and are not members of
+the repository allowlist. A CI guard rejects every other direct
 call, method reference, reflective lookup, or string-named reflective access to
 `openActiveSegment`, `trace`, or `specialStageRows`; it also locks constructor
 visibility and the exact public method surface. Descriptor metadata
@@ -208,16 +220,15 @@ idempotently. Cleanup exceptions are suppressed onto the primary failure.
 
 Phase two proceeds in the following compatibility-preserving order:
 
-1. expose a package-private factory that recreates the current eager ordinary or
-   composite special-stage payload for one descriptor;
-2. introduce the closeable active-payload holder and exact open/close counters
-   for lifecycle tests;
-3. change catalog launch preparation and run plans to retain descriptors only;
-4. migrate production launcher/coordinator ownership without changing the eager
-   comparator/bootstrap APIs;
-5. migrate headless chain, visual, and complete-audio harness ownership;
-6. replace arbitrary BK2 `frameView()` payload reads with descriptor local-row
-   and lag-bit lookups; and
+1. extend descriptors with the exact existing coordinator row-count scalar;
+2. introduce the closeable active-payload holder, one-descriptor factory, and
+   exact open/close counters for lifecycle tests;
+3. add descriptor-only catalog launch preparation alongside the eager path;
+4. atomically migrate production plus visual/complete-audio acquisition,
+   ownership transfer, minimum failure cleanup, and arbitrary BK2 `frameView()`
+   lookup to descriptors without changing eager comparator/bootstrap APIs;
+5. migrate headless chain ownership;
+6. harden exhaustive visual and complete-audio failure cleanup; and
 7. remove the eager `SegmentPlan` path from run launch and prove no payload,
    auxiliary-event, special-stage, or I/O owner is reachable from either the
    run plan or any closed segment's session/observer/HUD/driver roots; and
