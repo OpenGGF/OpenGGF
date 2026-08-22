@@ -30,6 +30,7 @@ import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
@@ -100,6 +101,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
             UnauthorizedOpenHelper.class.getName(),
             UnauthorizedEagerPlan.class.getName(),
             ErasedMultiHelperRelayMutation.class.getName());
+    private static final Set<String> RESTRICTED_FIELD_ENUMERATION_TARGETS =
+            Stream.concat(
+                    Stream.of(PAYLOAD, WALKER),
+                    EXACT_CALLER_ALLOWLIST.stream())
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
     private static final Set<String> EAGER_PLAN_CALLER_ALLOWLIST = Set.of(
             "com.openggf.tests.trace.runs.TestTraceRunDescriptorPlanningPerformance",
             "com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance");
@@ -420,6 +426,122 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void sourceGuardReportsEachRestrictedFieldEnumerationPrimitiveExactly() {
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "DeclaredFieldsRuntimeName.java:4 getDeclaredFields "
+                                + "enumerates active payload fields on "
+                                + "com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "DeclaredFieldsRuntimeName.java", """
+                                class DeclaredFieldsRuntimeName {
+                                    Object acquire(ActiveSegmentPayload payload, String name)
+                                            throws Exception {
+                                        for (Field field : ActiveSegmentPayload.class
+                                                .getDeclaredFields()) {
+                                            if (field.getName().equals(name)) {
+                                                field.setAccessible(true);
+                                                return field.get(payload);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "FieldsRuntimeType.java:3 getFields enumerates active payload "
+                                + "fields on com.openggf.trace.replay.runs."
+                                + "TraceRunReplayWalker",
+                        "FieldsRuntimeType.java", """
+                                class FieldsRuntimeType {
+                                    Object acquire(Class<?> type) throws Exception {
+                                        for (Field field : TraceRunReplayWalker.class
+                                                .getFields()) {
+                                            if (field.getType() == type) {
+                                                return field.get(null);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "DeclaredFieldsUnreflectGetter.java:4 getDeclaredFields "
+                                + "enumerates active payload fields on "
+                                + "com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "DeclaredFieldsUnreflectGetter.java", """
+                                class DeclaredFieldsUnreflectGetter {
+                                    Object acquire(MethodHandles.Lookup lookup, String name)
+                                            throws Exception {
+                                        Field[] fields = ActiveSegmentPayload.class
+                                                .getDeclaredFields();
+                                        for (Field field : fields) {
+                                            if (field.getName().equals(name)) {
+                                                return lookup.unreflectGetter(field);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "FieldsUnreflectSetter.java:4 getFields enumerates active payload "
+                                + "fields on com.openggf.trace.replay.runs."
+                                + "TraceRunReplayWalker",
+                        "FieldsUnreflectSetter.java", """
+                                class FieldsUnreflectSetter {
+                                    Object acquire(MethodHandles.Lookup lookup, Class<?> type)
+                                            throws Exception {
+                                        Field[] fields = TraceRunReplayWalker.class.getFields();
+                                        for (Field field : fields) {
+                                            if (field.getType() == type) {
+                                                return lookup.unreflectSetter(field);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "LauncherDeclaredFields.java:3 getDeclaredFields enumerates "
+                                + "active payload fields on com.openggf."
+                                + "TraceSessionLauncher",
+                        "LauncherDeclaredFields.java", """
+                                class LauncherDeclaredFields {
+                                    Object acquire(String name) throws Exception {
+                                        for (Field field : TraceSessionLauncher.class
+                                                .getDeclaredFields()) {
+                                            if (field.getName().equals(name)) {
+                                                field.setAccessible(true);
+                                                return field.get(this);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "HarnessDeclaredFields.java:3 getDeclaredFields enumerates "
+                                + "active payload fields on com.openggf.tests.trace.runs."
+                                + "AbstractRunChainTest",
+                        "HarnessDeclaredFields.java", """
+                                class HarnessDeclaredFields {
+                                    Object acquire(Class<?> type) throws Exception {
+                                        Field[] fields = AbstractRunChainTest.class
+                                                .getDeclaredFields();
+                                        for (Field field : fields) {
+                                            if (field.getType() == type) {
+                                                return field.get(this);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
     void sourceGuardDoesNotFailClosedForUnrelatedReflection() {
         assertNoSourceViolation(
                 "UnrelatedReflection.java", """
@@ -428,6 +550,19 @@ class TestActiveSegmentPayloadAuthorityGuard {
                                     throws Exception {
                                 Class.forName(type);
                                 return target.getDeclaredMethod(name);
+                            }
+                        }
+                        """);
+        assertNoSourceViolation(
+                "UnrelatedFieldEnumeration.java", """
+                        class UnrelatedFieldEnumeration {
+                            Object acquire(Class<?> target, String name) throws Exception {
+                                for (Field field : target.getDeclaredFields()) {
+                                    if (field.getName().equals(name)) {
+                                        return field.get(null);
+                                    }
+                                }
+                                return null;
                             }
                         }
                         """);
@@ -477,7 +612,14 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 () -> assertExactRelayViolation(
                         TypeVariableRelayMutation.class, "method rows"),
                 () -> assertExactRelayViolation(
-                        ErasedMultiHelperRelayMutation.class, "method relay"));
+                        ErasedMultiHelperRelayMutation.class, "method relay"),
+                () -> assertExactRelayViolation(
+                        ErasedLeaseFieldRelayMutation.class, "method relay"),
+                () -> assertExactRelayViolation(
+                        ErasedRowsFieldRelayMutation.class, "method relay"),
+                () -> assertExactRelayViolation(
+                        ErasedWrapperFieldRelayMutation.class, "method relay"),
+                () -> assertNoRelayViolation(UnrelatedFieldRelayControl.class));
     }
 
     private static JavaClasses importProjectClasses() {
@@ -668,7 +810,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     && !arguments.isEmpty()) {
                 String target = normalizeTargetName(
                         text(evaluate(arguments.getFirst())));
-                if (target != null) {
+                if (isRestrictedTarget(target)) {
                     report(invocation, "Class.forName resolves active payload owner "
                             + target);
                 }
@@ -681,6 +823,16 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 if (isRestrictedTarget(target)) {
                     report(invocation, primitive
                             + " enumerates active payload accessors on " + target);
+                }
+                return;
+            }
+            if (("getFields".equals(primitive)
+                    || "getDeclaredFields".equals(primitive))
+                    && arguments.isEmpty()) {
+                String target = targetName(evaluate(receiver(invocation)));
+                if (isRestrictedFieldEnumerationTarget(target)) {
+                    report(invocation, primitive
+                            + " enumerates active payload fields on " + target);
                 }
                 return;
             }
@@ -951,6 +1103,14 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 || candidate.equals(TraceRunReplayWalker.class.getSimpleName())) {
             return WALKER;
         }
+        for (String target : EXACT_CALLER_ALLOWLIST) {
+            int lastDot = target.lastIndexOf('.');
+            String simpleName = lastDot < 0
+                    ? target : target.substring(lastDot + 1);
+            if (candidate.equals(target) || candidate.equals(simpleName)) {
+                return target;
+            }
+        }
         return null;
     }
 
@@ -964,6 +1124,11 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
     private static boolean isRestrictedTarget(String target) {
         return PAYLOAD.equals(target) || WALKER.equals(target);
+    }
+
+    private static boolean isRestrictedFieldEnumerationTarget(String target) {
+        return target != null
+                && RESTRICTED_FIELD_ENUMERATION_TARGETS.contains(target);
     }
 
     private static void assertExactSourceViolation(
@@ -983,6 +1148,12 @@ class TestActiveSegmentPayloadAuthorityGuard {
         inspectRelaySurface(owner, violations);
         assertEquals(List.of(owner.getName() + " " + memberDescription),
                 violations);
+    }
+
+    private static void assertNoRelayViolation(Class<?> owner) {
+        List<String> violations = new ArrayList<>();
+        inspectRelaySurface(owner, violations);
+        assertEquals(List.of(), violations);
     }
 
     private static void inspectRelaySurface(
@@ -1021,6 +1192,15 @@ class TestActiveSegmentPayloadAuthorityGuard {
             Set<String> inspectedMethods) {
         if (!inspectedMethods.add(method.getFullName())) {
             return false;
+        }
+        for (JavaFieldAccess access : method.getFieldAccesses()) {
+            if (access.getAccessType() == JavaFieldAccess.AccessType.GET
+                    && ownerName.equals(access.getTargetOwner().getName())
+                    && access.getTarget().resolveMember().isPresent()
+                    && containsPayloadGraph(access.getTarget().resolveMember()
+                    .orElseThrow().reflect().getGenericType())) {
+                return true;
+            }
         }
         for (JavaMethodCall call : method.getMethodCallsFromSelf()) {
             String targetOwner = call.getTargetOwner().getName();
@@ -1188,6 +1368,58 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
         private Object privateRelay() {
             return payload.trace();
+        }
+    }
+
+    private static final class ErasedLeaseFieldRelayMutation {
+        private ActiveSegmentPayload activeRunPayload;
+
+        public Object relay() {
+            return privateLease();
+        }
+
+        private ActiveSegmentPayload privateLease() {
+            return activeRunPayload;
+        }
+    }
+
+    private static final class ErasedRowsFieldRelayMutation {
+        private TraceRunSpecialStageRows rows;
+
+        public Object relay() {
+            return packageRows();
+        }
+
+        Object packageRows() {
+            return privateRows();
+        }
+
+        private Object privateRows() {
+            return rows;
+        }
+    }
+
+    private static final class ErasedWrapperFieldRelayMutation {
+        private List<TraceData> traces;
+
+        public Object relay() {
+            return privateWrapper();
+        }
+
+        private Object privateWrapper() {
+            return traces;
+        }
+    }
+
+    private static final class UnrelatedFieldRelayControl {
+        private String label;
+
+        public Object relay() {
+            return privateLabel();
+        }
+
+        private String privateLabel() {
+            return label;
         }
     }
 }
