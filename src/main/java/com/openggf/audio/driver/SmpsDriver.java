@@ -595,12 +595,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             if (timingProfileFor(sequencer)
                     != YmServiceTimingProfile.none()
                     && (sequencer.isComplete()
-                    || sequencer.getSamplesUntilNextTempoFrame()
-                    <= frames)) {
+                    || sequencer.getSamplesUntilNextDriverService()
+                    <= frames
+                    || palRepeatCanPublishAtNextBoundary(
+                            sequencer, frames))) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean palRepeatCanPublishAtNextBoundary(
+            SmpsSequencer sequencer, int frames) {
+        return region == SmpsSequencer.Region.PAL
+                && palFullUpdateCounter == 0
+                && usesPalFullDriverRepeat()
+                && sequencer.getSamplesUntilNextTempoFrame() <= frames;
     }
 
     private void commitYmServiceTransaction() {

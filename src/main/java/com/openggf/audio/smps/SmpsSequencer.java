@@ -1077,6 +1077,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     /**
+     * Returns the next ordinary driver service which can publish sequencer
+     * work. S3K admits a new SFX after {@code zUpdateSFXTracks}, so its first
+     * tempo boundary only consumes the admission defer and the real service is
+     * one boundary later. Driver-owned PAL full-update repeats are accounted
+     * for separately by {@code SmpsDriver}.
+     */
+    public int getSamplesUntilNextDriverService() {
+        return deferNextDriverService
+                ? samplesUntilTempoTicks(2)
+                : getSamplesUntilNextTempoFrame();
+    }
+
+    /**
      * Return the next observable boundary caused by driver state changes that are
      * scheduled from tempo ticks.
      *

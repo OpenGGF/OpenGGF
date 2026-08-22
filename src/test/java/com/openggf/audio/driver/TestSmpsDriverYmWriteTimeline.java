@@ -17,6 +17,7 @@ import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.audio.synth.YmWriteTimeline;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -1058,6 +1059,127 @@ class TestSmpsDriverYmWriteTimeline {
     }
 
     @Test
+    void hybridBatchesAcrossDeferredS3kBoundaryWhenRealServiceIsOutsideRead() {
+        // Break caught: S3K admission defers the first tempo boundary, but the
+        // HYBRID horizon treated that no-op boundary as a possible timed
+        // publication and needlessly sample-fenced the complete read.
+        assertEquals(SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE,
+                Sonic3kSmpsSequencerConfig.CONFIG.getSfxStartTiming());
+        MinimalData sharedData = data(0xA0);
+
+        List<String> hybridCallbacks = new ArrayList<>();
+        SmpsDriver hybrid = new SmpsDriver(
+                44_100.0, recordingObserver(hybridCallbacks));
+        SmpsSequencer hybridSource = deferredS3kSfx(
+                hybrid, sharedData);
+        hybridCallbacks.clear();
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
+
+        List<String> accurateCallbacks = new ArrayList<>();
+        SmpsDriver accurate = new SmpsDriver(
+                44_100.0, recordingObserver(accurateCallbacks));
+        SmpsSequencer accurateSource = deferredS3kSfx(
+                accurate, sharedData);
+        accurateCallbacks.clear();
+        accurate.setReadModeForTesting(
+                SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+
+        short[] hybridPcm = new short[96 * 2];
+        short[] accuratePcm = new short[96 * 2];
+        hybrid.read(hybridPcm);
+        accurate.read(accuratePcm);
+
+        assertTrue(hybrid.getHybridChunkCountForTesting() > 0,
+                "the deferred first boundary must not fence a read which cannot reach the real service");
+        assertArrayEquals(accuratePcm, hybridPcm);
+        assertEquals(accurateCallbacks, hybridCallbacks);
+        assertEquals(List.of(), hybridCallbacks);
+        assertEquals(0L, hybrid.captureSnapshot().nextYmServiceOrdinal());
+        assertEquals(0L, accurate.captureSnapshot().nextYmServiceOrdinal());
+        assertFalse(hybridSource.captureSnapshot().deferNextDriverService());
+        assertFalse(accurateSource.captureSnapshot().deferNextDriverService());
+    }
+
+    @Test
+    void hybridSampleFencesWhenDeferredS3kRealServiceIsInsideRead() {
+        // Break caught: accounting for the deferred boundary must not move the
+        // fence past the following real S3K SFX service.
+        MinimalData sharedData = data(0xA0);
+
+        List<String> hybridCallbacks = new ArrayList<>();
+        SmpsDriver hybrid = new SmpsDriver(
+                44_100.0, recordingObserver(hybridCallbacks));
+        deferredS3kSfx(hybrid, sharedData);
+        hybridCallbacks.clear();
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
+
+        List<String> accurateCallbacks = new ArrayList<>();
+        SmpsDriver accurate = new SmpsDriver(
+                44_100.0, recordingObserver(accurateCallbacks));
+        deferredS3kSfx(accurate, sharedData);
+        accurateCallbacks.clear();
+        accurate.setReadModeForTesting(
+                SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+
+        short[] hybridPcm = new short[128 * 2];
+        short[] accuratePcm = new short[128 * 2];
+        hybrid.read(hybridPcm);
+        accurate.read(accuratePcm);
+
+        assertEquals(0, hybrid.getHybridChunkCountForTesting(),
+                "the real service at the second boundary fences the complete read");
+        assertArrayEquals(accuratePcm, hybridPcm);
+        assertEquals(accurateCallbacks, hybridCallbacks);
+        assertFalse(hybridCallbacks.isEmpty(),
+                "the following real service must publish its chip callbacks");
+        hybrid.setReadModeForTesting(
+                SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+        assertDeepEquals(accurate.captureSnapshot(),
+                hybrid.captureSnapshot());
+    }
+
+    @Test
+    void hybridCountsPalRepeatAsServiceAtDeferredS3kBoundary() {
+        // Break caught: the ordinary SFX pass consumes the admission defer,
+        // then a due locked-on PAL full-update repeat services that same SFX
+        // at the first boundary after all.
+        MinimalData sharedData = data(0xA0);
+
+        List<String> hybridCallbacks = new ArrayList<>();
+        SmpsDriver hybrid = new SmpsDriver(
+                44_100.0, recordingObserver(hybridCallbacks));
+        deferredS3kSfx(hybrid, sharedData);
+        hybrid.setRegion(SmpsSequencer.Region.PAL);
+        setPalFullUpdateCounter(hybrid, 0);
+        hybridCallbacks.clear();
+        hybrid.setReadModeForTesting(SmpsDriver.ReadMode.HYBRID);
+
+        List<String> accurateCallbacks = new ArrayList<>();
+        SmpsDriver accurate = new SmpsDriver(
+                44_100.0, recordingObserver(accurateCallbacks));
+        deferredS3kSfx(accurate, sharedData);
+        accurate.setRegion(SmpsSequencer.Region.PAL);
+        setPalFullUpdateCounter(accurate, 0);
+        accurateCallbacks.clear();
+        accurate.setReadModeForTesting(
+                SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+
+        short[] hybridPcm = new short[96 * 2];
+        short[] accuratePcm = new short[96 * 2];
+        hybrid.read(hybridPcm);
+        accurate.read(accuratePcm);
+
+        assertEquals(0, hybrid.getHybridChunkCountForTesting());
+        assertArrayEquals(accuratePcm, hybridPcm);
+        assertEquals(accurateCallbacks, hybridCallbacks);
+        assertFalse(hybridCallbacks.isEmpty());
+        hybrid.setReadModeForTesting(
+                SmpsDriver.ReadMode.SAMPLE_ACCURATE);
+        assertDeepEquals(accurate.captureSnapshot(),
+                hybrid.captureSnapshot());
+    }
+
+    @Test
     void cursorOverflowAndNegativeProfileAdvanceRejectWithoutMutation() {
         // Break caught: checked cycle arithmetic wraps a later slot to the
         // front of the queue, or a negative source delay reaches the driver.
@@ -1400,6 +1522,20 @@ class TestSmpsDriverYmWriteTimeline {
                 data, AudioTestFixtures.EMPTY_DAC, driver,
                 AudioManager.getInstance(), config);
         sequencer.addTrack(track());
+        return sequencer;
+    }
+
+    private static SmpsSequencer deferredS3kSfx(
+            SmpsDriver driver, MinimalData data) {
+        SmpsSequencer sequencer = sequencer(
+                driver, data, Sonic3kSmpsSequencerConfig.CONFIG);
+        // 64 samples per NTSC VInt gives the read a useful batch window on
+        // both sides of the first, deliberately deferred S3K boundary.
+        sequencer.setSampleRate(3_840.0);
+        driver.addSequencer(sequencer, false);
+        sequencer.setIsSfx(true);
+        sequencer.setSfxMode(true);
+        sequencer.beginSfxAdmission();
         return sequencer;
     }
 
