@@ -1096,6 +1096,7 @@ public final class TraceRunReplayWalker {
             int rowCount = specialStageRows != null
                     ? specialStageRows.rowCount()
                     : trace.frameCount();
+            int levelLoopRowCount = levelLoopRowCount(trace);
             validateDescriptorManifestFields(
                     segmentIndex, segment, metadata, rowCount);
 
@@ -1132,6 +1133,7 @@ public final class TraceRunReplayWalker {
                     trace.terminalDynamicArtLedger(),
                     pairing.entryBoundaries()[segmentIndex],
                     pairing.exitBoundaries()[segmentIndex],
+                    levelLoopRowCount,
                     segmentExecutionPolicy(
                             segment,
                             pairing.entryBoundaries()[segmentIndex],

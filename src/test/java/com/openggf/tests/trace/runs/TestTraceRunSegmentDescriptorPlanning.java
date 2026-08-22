@@ -69,6 +69,8 @@ class TestTraceRunSegmentDescriptorPlanning {
             assertEquals(eager.entryBoundary(), descriptor.entryBoundary());
             assertEquals(eager.exitBoundary(), descriptor.exitBoundary());
             assertEquals(eager.executionPolicy(), descriptor.executionPolicy());
+            assertEquals(TraceRunReplayWalker.levelLoopRowCount(eager.trace()),
+                    descriptor.levelLoopRowCount());
         }
         assertFalse(descriptors.getFirst().laggedRows().get(0));
         assertTrue(descriptors.getFirst().laggedRows().get(1));
@@ -112,7 +114,8 @@ class TestTraceRunSegmentDescriptorPlanning {
                 planned.rowCount(), planned.openingFrame(), rawFrames,
                 laggedRows, planned.hardwareTimingSchedule(),
                 planned.terminalDynamicArtLedger(), planned.entryBoundary(),
-                planned.exitBoundary(), planned.executionPolicy());
+                planned.exitBoundary(), planned.levelLoopRowCount(),
+                planned.executionPolicy());
         rawFrames.clear();
         laggedRows.clear();
 
@@ -155,7 +158,8 @@ class TestTraceRunSegmentDescriptorPlanning {
                 planned.rowCount(), planned.openingFrame(), planned.rawFrames(),
                 planned.laggedRows(), planned.hardwareTimingSchedule(),
                 planned.terminalDynamicArtLedger(), planned.entryBoundary(),
-                exitBoundary, planned.executionPolicy());
+                exitBoundary, planned.levelLoopRowCount(),
+                planned.executionPolicy());
         auxSchemaExtras.add("mutated");
         characters.clear();
         sidekicks.add("knuckles");
@@ -194,6 +198,22 @@ class TestTraceRunSegmentDescriptorPlanning {
     }
 
     @Test
+    void descriptorRejectsLevelLoopRowsOutsideItsRowRange(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+        TraceRunSegmentDescriptor descriptor =
+                TraceRunReplayWalker.planDescriptors(run, runDir).getFirst();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithLevelLoopRows(descriptor, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithLevelLoopRows(descriptor,
+                        descriptor.rowCount() + 1));
+    }
+
+    @Test
     void specialStageDescriptorUsesMetadataOnlyOpeningAndCompactRowMappings(
             @TempDir Path root) throws Exception {
         Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
@@ -210,6 +230,7 @@ class TestTraceRunSegmentDescriptorPlanning {
         assertNull(special.openingFrame());
         assertEquals(TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL,
                 special.executionPolicy());
+        assertEquals(0, special.levelLoopRowCount());
         TraceFrame ordinaryOpening = TraceRunReplayWalker.plan(run, runDir)
                 .getFirst().trace().getFrame(0);
         assertThrows(IllegalArgumentException.class,
@@ -298,7 +319,20 @@ class TestTraceRunSegmentDescriptorPlanning {
                 descriptor.metadata(), rowCount, openingFrame, rawFrames,
                 descriptor.laggedRows(), descriptor.hardwareTimingSchedule(),
                 descriptor.terminalDynamicArtLedger(), descriptor.entryBoundary(),
-                descriptor.exitBoundary(), descriptor.executionPolicy());
+                descriptor.exitBoundary(), descriptor.levelLoopRowCount(),
+                descriptor.executionPolicy());
+    }
+
+    private static TraceRunSegmentDescriptor copyWithLevelLoopRows(
+            TraceRunSegmentDescriptor descriptor, int levelLoopRowCount) {
+        return new TraceRunSegmentDescriptor(
+                descriptor.segment(), descriptor.segmentDirectory(),
+                descriptor.metadata(), descriptor.rowCount(),
+                descriptor.openingFrame(), descriptor.rawFrames(),
+                descriptor.laggedRows(), descriptor.hardwareTimingSchedule(),
+                descriptor.terminalDynamicArtLedger(), descriptor.entryBoundary(),
+                descriptor.exitBoundary(), levelLoopRowCount,
+                descriptor.executionPolicy());
     }
 
     private static TraceMetadata copyMetadataWithLists(

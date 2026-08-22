@@ -182,6 +182,15 @@ class TestTraceRunReplayWalkerControlFlow {
                 "a generated S3K stage-exit destination with an advancing "
                         + "gameplay clock remains ordinary gameplay");
         assertNull(plans.get(2).exitBoundary());
+
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
+        for (int index = 0; index < plans.size(); index++) {
+            assertEquals(plans.get(index).executionPolicy(),
+                    descriptors.get(index).executionPolicy());
+            assertEquals(TraceRunReplayWalker.levelLoopRowCount(
+                            plans.get(index).trace()),
+                    descriptors.get(index).levelLoopRowCount());
+        }
     }
 
     @Test

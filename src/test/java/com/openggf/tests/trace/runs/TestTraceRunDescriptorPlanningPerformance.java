@@ -32,6 +32,7 @@ class TestTraceRunDescriptorPlanningPerformance {
     private static final String RUN_ID =
             "s3k-knuckles-complete-superemeralds";
     private static final int EXPECTED_SEGMENTS = 67;
+    private static final long MAX_DESCRIPTOR_RETAINED_BYTES = 16_777_216;
 
     @Test
     void compactDescriptorsRetainLessHeapWithoutOwningEagerPayloads()
@@ -64,6 +65,10 @@ class TestTraceRunDescriptorPlanningPerformance {
                 () -> "descriptor retained heap " + descriptor.retainedBytes()
                         + " must be below eager retained heap "
                         + eager.retainedBytes());
+        assertTrue(descriptor.retainedBytes() <= MAX_DESCRIPTOR_RETAINED_BYTES,
+                () -> "descriptor retained heap " + descriptor.retainedBytes()
+                        + " must not exceed "
+                        + MAX_DESCRIPTOR_RETAINED_BYTES);
 
         long reductionBytes = eager.retainedBytes()
                 - descriptor.retainedBytes();
@@ -152,6 +157,7 @@ class TestTraceRunDescriptorPlanningPerformance {
                 "terminalDynamicArtLedger:java.util.List<com.openggf.trace.DynamicArtTransfer$Descriptor>",
                 "entryBoundary:com.openggf.trace.TraceRunManifest$Transition",
                 "exitBoundary:com.openggf.trace.TraceRunManifest$Transition",
+                "levelLoopRowCount:int",
                 "executionPolicy:com.openggf.trace.replay.runs.TraceRunReplayWalker$SegmentExecutionPolicy");
         List<String> actualComponents = java.util.Arrays.stream(
                         TraceRunSegmentDescriptor.class.getRecordComponents())

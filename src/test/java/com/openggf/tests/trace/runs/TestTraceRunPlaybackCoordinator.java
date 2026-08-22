@@ -19,6 +19,7 @@ import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CloseSegment;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.EnterTransitionGap;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.FailRun;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -371,6 +372,18 @@ class TestTraceRunPlaybackCoordinator {
     }
 
     @Test
+    void descriptorFactoryPreservesBridgeHandoffWithoutPayloadPlans() {
+        TraceRunPlaybackCoordinator coordinator =
+                descriptorBackedBridgeAtGameplayHandoff();
+
+        assertTrue(coordinator.beforeAdmission(
+                        bridgeExitObservation(13, false)).isEmpty());
+        assertInstanceOf(AdmitDestination.class,
+                coordinator.beforeAdmission(
+                        bridgeExitObservation(14, false)).getFirst());
+    }
+
+    @Test
     void bridgeHandoffWaitsForTheTitleCardToRelease() {
         TraceRunPlaybackCoordinator coordinator = bridgeAtGameplayHandoff();
 
@@ -384,6 +397,15 @@ class TestTraceRunPlaybackCoordinator {
 
     /** A coordinator parked in the gap between a bridge and its gameplay. */
     private static TraceRunPlaybackCoordinator bridgeAtGameplayHandoff() {
+        return bridgeAtGameplayHandoff(false);
+    }
+
+    private static TraceRunPlaybackCoordinator descriptorBackedBridgeAtGameplayHandoff() {
+        return bridgeAtGameplayHandoff(true);
+    }
+
+    private static TraceRunPlaybackCoordinator bridgeAtGameplayHandoff(
+            boolean descriptorBacked) {
         List<TraceRunManifest.Segment> segments = List.of(
                 level("ghz1", 0, 1, 0, 5),
                 special("ss", 5, 5, 0),
@@ -408,8 +430,13 @@ class TestTraceRunPlaybackCoordinator {
                         transitions.get(1), null),
                 new TraceRunReplayWalker.SegmentPlan(
                         segments.get(3), executionTrace(11, 12, 13), null, null));
-        TraceRunPlaybackCoordinator coordinator =
-                new TraceRunPlaybackCoordinator(
+        TraceRunPlaybackCoordinator coordinator = descriptorBacked
+                ? TraceRunPlaybackCoordinator.fromDescriptors(
+                        run, TracePlaybackProfile.DISABLED, 30,
+                        plans.stream()
+                                .map(TestTraceRunPlaybackCoordinator::descriptorFor)
+                                .toList())
+                : new TraceRunPlaybackCoordinator(
                         run, TracePlaybackProfile.DISABLED, 30, plans);
         coordinator.activateInitialLevel(levelObservation(1, 0, 0, 0, false, 0));
         coordinator.observeBoundary(
@@ -427,6 +454,23 @@ class TestTraceRunPlaybackCoordinator {
         // Close the bridge so the run sits in the gap ahead of gameplay.
         coordinator.afterProduction(bridgeExitObservation(13, false, true));
         return coordinator;
+    }
+
+    private static TraceRunSegmentDescriptor descriptorFor(
+            TraceRunReplayWalker.SegmentPlan plan) {
+        TraceData trace = plan.trace();
+        List<Integer> rawFrames = new ArrayList<>(trace.frameCount());
+        for (int row = 0; row < trace.frameCount(); row++) {
+            rawFrames.add(trace.getFrame(row).frame());
+        }
+        return new TraceRunSegmentDescriptor(
+                plan.segment(), java.nio.file.Path.of(plan.segment().dir()),
+                trace.metadata(), trace.frameCount(),
+                trace.frameCount() == 0 ? null : trace.getFrame(0), rawFrames,
+                new java.util.BitSet(), trace.hardwareTimingSchedule(),
+                trace.terminalDynamicArtLedger(), plan.entryBoundary(),
+                plan.exitBoundary(), TraceRunReplayWalker.levelLoopRowCount(trace),
+                plan.executionPolicy());
     }
 
     private static RunPlaybackObservation bridgeExitObservation(
