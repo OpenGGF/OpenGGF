@@ -19,8 +19,9 @@ Later whole-branch review produced enforcement-only correction commits through
 Their focused authority, ownership, reader, migration, structural benchmark,
 and policy results are recorded below. The expensive full/default/trace suite
 figures remain explicitly attributable to `1a96fbdf1`, not the later head.
-Independent final review and integration remain controller-owned Task 8 Steps
-8 and 9. Step 8 completed GREEN at `c811c9d2d`; Step 9 remains pending.
+Independent final review and integration were controller-owned Task 8 Steps 8
+and 9. Step 8 completed GREEN at `c811c9d2d`; Step 9 completed on `develop`
+through `f2b27262f`.
 
 All commands used Maven 3.9.16 on OpenJDK 21.0.11, an unset
 `JAVA_TOOL_OPTIONS`, and managed `TMPDIR` / `java.io.tmpdir` paths under:
@@ -234,6 +235,17 @@ hash-verified Sonic 1 visual bridge routes 2/2. The complete logs, fresh XML,
 and three-way identity comparison are preserved under the managed task root
 `trace-active-segment-final-integration-20260822T160522Z-1236228-7a08fffb`.
 
+The final `ci-push` range check exposed a shell-scoping defect in the policy
+hook: a nested content validator overwrote the caller's saved `IFS`, causing a
+true two-parent merge to be treated as a trailer-bearing ordinary commit.
+Commit `f2b27262f` fixes that behavior and adds a real temporary-repository
+merge regression. The focused test passed 1/1, the complete tooling and
+architecture policy matrix passed 157/157, and the actual delivery range then
+passed `ci-push`. `develop` was pushed to `origin`; the clean, fully merged
+feature worktree and local feature branch were removed and worktree metadata
+was pruned. Its ignored SDD working reports were archived under the controller
+scratch root before removal.
+
 ## Conclusion
 
 Every gate applicable through Task 8 Step 7 passed at the reconciled
@@ -243,5 +255,5 @@ implemented and feature-branch validated. This conclusion
 includes the controller-owned independent review, which found no Critical,
 Important, or Minor issues and returned GREEN spec and code-quality verdicts
 after a fresh 44/44 focused gate. The merge and post-merge comparison are also
-complete with zero attributable regression. This report does not yet claim
-push or cleanup.
+complete with zero attributable regression. `develop` was pushed and the
+required feature-worktree and local-branch cleanup completed.

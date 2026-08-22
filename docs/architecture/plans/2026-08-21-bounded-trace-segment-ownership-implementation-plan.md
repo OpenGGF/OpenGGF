@@ -577,10 +577,13 @@ Important, or Minor findings. Its fresh authority/ownership/reader gate passed
 was clean, and the worktree was clean. The spec and code-quality verdicts were
 both GREEN.
 
-- [ ] **Step 9: Recheck upstream and integrate according to `AGENTS.md`**
+- [x] **Step 9: Recheck upstream and integrate according to `AGENTS.md`**
 
 Fetch `origin` again. If `origin/develop` moved after Step 1, fast-forward the main-workspace `develop`, rerun its exact baseline command, and replace the comparison baseline with those fresh method identities before merging. Reconcile feature conflicts without switching the main workspace, ensure the feature branch includes the required README release-summary update, merge into main-workspace `develop`, run the post-merge full suite and focused suites, and compare with the latest recorded baseline. Push only `develop`. After push succeeds, inspect every feature-worktree change, discard only identified workflow-generated outputs, preserve/report unknown or unmerged work, remove the worktree, verify the feature branch is fully merged, delete that local branch, and prune metadata. Do not claim completion if synchronization, comparison, merge, push, or required cleanup fails; preserve all integration logs and report pushed commits.
 
-Synchronization, merge, and post-merge regression comparison are complete at
-merge commit `d3b62c23a`; no regression is attributable to the merge. Push and
-worktree/branch cleanup remain pending, so Step 9 stays unchecked.
+Synchronization, merge, and post-merge regression comparison completed at
+merge commit `d3b62c23a`; no regression is attributable to the merge. The
+final range policy exposed and test-first fixed a merge-parent parsing defect
+at `f2b27262f`; the actual `ci-push` range then passed. `develop` was pushed,
+the clean fully merged feature worktree and local branch were removed, and
+worktree metadata was pruned. Step 9 is complete.
