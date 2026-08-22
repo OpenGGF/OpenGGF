@@ -25,6 +25,10 @@ class TestS1S2YmWriteTimingAudit {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Path RESEARCH = Path.of("docs/architecture/research/audio");
+    private static final Path SOURCE_MAP = RESEARCH.resolve("s1-s2-ym-write-source-map-v1.tsv");
+    private static final String SOURCE_MAP_SHA256 =
+            "96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c";
+    private static final List<SourceRange> SOURCE_RANGES = readSourceMap();
 
     @Test
     void retainedNativeCounterfactualUsesEveryCapturedPreGroupContext() throws IOException {
@@ -34,24 +38,26 @@ class TestS1S2YmWriteTimingAudit {
 
     @Test
     void everyGapIsAnExactOrderedJoinOfCapturedInstructionOccurrences() throws IOException {
+        assertEquals(SOURCE_MAP_SHA256, sha256(Files.readAllBytes(SOURCE_MAP)));
+        assertSourceMapIntegrity();
         assertInstructionJoin(
                 "s1", "m68k", 2, 7,
                 "s1-ring-ym-write-audit-v2.json",
                 "s1-ring-ym-write-timing-calculation-v2.json",
-                "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
+                "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
                 "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa");
         assertInstructionJoin(
                 "s2", "z80", 1, 15,
                 "s2-ringright-ym-write-audit-v2.json",
                 "s2-ringright-ym-write-timing-calculation-v2.json",
-                "b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4",
+                "b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372",
                 "d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c");
     }
 
     @Test
     void captureDigestRejectsDeletionPcOpcodeCountOrderAndFakePrimitive() throws IOException {
         Path ledger = RESEARCH.resolve("s2-ringright-ym-write-instruction-ledger-v1.tsv");
-        String expected = "b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4";
+        String expected = "b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372";
         List<String> original = Files.readAllLines(ledger);
         List<List<String>> mutations = new ArrayList<>();
         mutations.add(without(original, 59));
@@ -77,7 +83,7 @@ class TestS1S2YmWriteTimingAudit {
                 .findFirst().orElseThrow();
         List<String> wrongJump = replaced(s1, indexedJump, "\tjump\t", "\tlinear\t");
         assertThrows(AssertionError.class, () -> assertEquals(
-                "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
+                "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
                 sha256((String.join("\n", wrongJump) + "\n").getBytes(
                         java.nio.charset.StandardCharsets.UTF_8))));
         LedgerRow authenticJump = readLedger(RESEARCH.resolve(
@@ -92,6 +98,25 @@ class TestS1S2YmWriteTimingAudit {
         assertThrows(AssertionError.class, () -> assertClassification("s1", "m68k",
                 authenticJump.pc(), authenticJump.opcode(), authenticJump.flow(),
                 authenticJump.roles(), "CoordFlag@wrong.asm:1-2"));
+        assertThrows(AssertionError.class, () -> sourceFor("s1", 0x71ceb));
+        assertThrows(AssertionError.class, () -> assertEquals(
+                "coordflagLookup@s1.sounddriver.asm:2074-2076",
+                sourceFor("s1", 0x72a60)));
+    }
+
+    @Test
+    void canonicalSourceMapRejectsShiftedBoundaryWrongLabelAndWrongLine() throws IOException {
+        List<String> original = Files.readAllLines(SOURCE_MAP);
+        List<List<String>> mutations = List.of(
+                replaced(original, 1, "0x71CEA", "0x71CEC"),
+                replaced(original, 1, "FMUpdateTrack", "FinishTrackUpdate"),
+                replaced(original, 1, "\t348\t362", "\t349\t362"));
+        for (List<String> mutation : mutations) {
+            byte[] bytes = (String.join("\n", mutation) + "\n").getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8);
+            assertThrows(AssertionError.class,
+                    () -> assertEquals(SOURCE_MAP_SHA256, sha256(bytes)));
+        }
     }
 
     private static void assertNativeCounterfactual(Path path, String game)
@@ -136,6 +161,10 @@ class TestS1S2YmWriteTimingAudit {
                 calculation.path("schema").asText());
         assertEquals(game, calculation.path("game").asText());
         assertEquals(architecture, calculation.path("architecture").asText());
+        assertEquals(SOURCE_MAP.getFileName().toString(),
+                calculation.path("source").path("map_path").asText());
+        assertEquals(SOURCE_MAP_SHA256,
+                calculation.path("source").path("map_sha256").asText());
         assertEquals(masterCyclesPerCpuCycle,
                 calculation.path("clock").path("master_cycles_per_cpu_cycle").asLong());
         assertEquals(expectedFullCaptureSha,
@@ -348,30 +377,54 @@ class TestS1S2YmWriteTimingAudit {
     }
 
     private static String expectedSource(String game, int pc) {
-        if (game.equals("s1")) {
-            if (pc >= 0x71cd8 && pc <= 0x71e48) return "FinishTrackUpdate@s1.sounddriver.asm:436-544";
-            if (pc >= 0x726e2 && pc <= 0x72714) return "FMNoteOn_FMNoteOff@s1.sounddriver.asm:1670-1704";
-            if (pc >= 0x72716 && pc <= 0x72720) return "WriteFMIorIIMain@s1.sounddriver.asm:1707-1717";
-            if (pc >= 0x72722 && pc <= 0x72728) return "WriteFMIorII@s1.sounddriver.asm:1720-1726";
-            if (pc >= 0x7272e && pc <= 0x72758) return "WriteFMI@s1.sounddriver.asm:1737-1755";
-            if (pc >= 0x7275a && pc <= 0x72762) return "WriteFMIIPart@s1.sounddriver.asm:1759-1763";
-            if (pc >= 0x72764 && pc <= 0x7278e) return "WriteFMII@s1.sounddriver.asm:1766-1784";
-            if (pc >= 0x72a5a && pc <= 0x72a64) return "CoordFlag@s1.sounddriver.asm:2066-2072";
-            if (pc >= 0x72acc && pc <= 0x72ae6) return "cfPanningAMSFMS@s1.sounddriver.asm:2128-2140";
-            if (pc >= 0x72c26 && pc <= 0x72c48) return "cfSetVoice@s1.sounddriver.asm:2313-2326";
-            if (pc >= 0x72c4e && pc <= 0x72caa) return "SetVoice@s1.sounddriver.asm:2329-2375";
-        } else {
-            if (pc >= 0x8 && pc <= 0x35) return "zFMBusyWait_zWriteFM@s2.sounddriver.asm:343-389";
-            if (pc >= 0x243 && pc <= 0x2d9) return "zFinishTrackUpdate@s2.sounddriver.asm:947-1076";
-            if (pc >= 0x3e5 && pc <= 0x413) return "zTrackRun@s2.sounddriver.asm:1078-1124";
-            if (pc >= 0xc46 && pc <= 0xc94) return "zBankSwitchToMusic@s2.sounddriver.asm:2796-2829";
-            if (pc >= 0xcfc && pc <= 0xd19) return "zSetMaxRelRate@s2.sounddriver.asm:3005-3024";
-            if (pc >= 0xe06 && pc <= 0xe11) return "cfSetVoice@s2.sounddriver.asm:3271-3282";
-            if (pc >= 0xe12 && pc <= 0xe1f) return "cfSetVoiceCont@s2.sounddriver.asm:3285-3295";
-            if (pc >= 0xe24 && pc <= 0xe64) return "zSetVoice@s2.sounddriver.asm:3305-3396";
-            if (pc >= 0xe65 && pc <= 0xe89) return "zSetFMTLs@s2.sounddriver.asm:3399-3432";
+        return sourceFor(game, pc);
+    }
+
+    private static String sourceFor(String game, int pc) {
+        List<SourceRange> matches = SOURCE_RANGES.stream()
+                .filter(range -> range.game().equals(game)
+                        && pc >= range.startPc() && pc <= range.endPc()).toList();
+        assertEquals(1, matches.size(), "source-map coverage at " + game + ":" + Integer.toHexString(pc));
+        SourceRange range = matches.get(0);
+        return range.label() + "@" + range.source() + ":"
+                + range.lineStart() + "-" + range.lineEnd();
+    }
+
+    private static List<SourceRange> readSourceMap() {
+        try {
+            List<String> lines = Files.readAllLines(SOURCE_MAP);
+            assertEquals("game\tstart_pc\tend_pc\tlabel\tsource\tline_start\tline_end", lines.get(0));
+            List<SourceRange> result = new ArrayList<>();
+            for (int index = 1; index < lines.size(); index++) {
+                String[] part = lines.get(index).split("\t", -1);
+                assertEquals(7, part.length);
+                result.add(new SourceRange(part[0], parseHex(part[1]), parseHex(part[2]),
+                        part[3], part[4], Integer.parseInt(part[5]), Integer.parseInt(part[6])));
+            }
+            return List.copyOf(result);
+        } catch (IOException exception) {
+            throw new AssertionError(exception);
         }
-        throw new AssertionError("unmapped source PC " + Integer.toHexString(pc));
+    }
+
+    private static void assertSourceMapIntegrity() {
+        for (int left = 0; left < SOURCE_RANGES.size(); left++) {
+            SourceRange range = SOURCE_RANGES.get(left);
+            assertTrue(range.startPc() <= range.endPc());
+            assertTrue(range.lineStart() <= range.lineEnd());
+            for (int right = left + 1; right < SOURCE_RANGES.size(); right++) {
+                SourceRange other = SOURCE_RANGES.get(right);
+                if (range.game().equals(other.game())) {
+                    assertTrue(range.endPc() < other.startPc() || other.endPc() < range.startPc());
+                }
+            }
+        }
+        assertEquals("FMUpdateTrack@s1.sounddriver.asm:348-362", sourceFor("s1", 0x71cd8));
+        assertEquals("FinishTrackUpdate@s1.sounddriver.asm:435-456", sourceFor("s1", 0x71d60));
+        assertEquals("coordflagLookup@s1.sounddriver.asm:2074-2076", sourceFor("s1", 0x72a64));
+        assertEquals("zFMNoteOn@s2.sounddriver.asm:2796-2807", sourceFor("s2", 0xc46));
+        assertEquals("zBankSwitchToMusic@s2.sounddriver.asm:2833-2848", sourceFor("s2", 0xc63));
+        assertEquals("cfPanningAMSFMS@s2.sounddriver.asm:3004-3045", sourceFor("s2", 0xcfc));
     }
 
     private static boolean contains(int value, int... candidates) {
@@ -411,5 +464,9 @@ class TestS1S2YmWriteTimingAudit {
                              String pcText, int pc, String opcodeText, int opcode,
                              long startMasterCycle, String nextPc, long deltaToNextStart,
                              String flow, String branchOutcome, String roles, String source) {
+    }
+
+    private record SourceRange(String game, int startPc, int endPc, String label,
+                               String source, int lineStart, int lineEnd) {
     }
 }

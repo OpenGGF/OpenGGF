@@ -4,6 +4,8 @@ set -euo pipefail
 game=${1:?usage: build-representative-ledger.sh s1|s2 INPUT OUTPUT}
 input=${2:?usage: build-representative-ledger.sh s1|s2 INPUT OUTPUT}
 output=${3:?usage: build-representative-ledger.sh s1|s2 INPUT OUTPUT}
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+source_map="$script_dir/../../../../docs/architecture/research/audio/s1-s2-ym-write-source-map-v1.tsv"
 [[ "$game" == s1 || "$game" == s2 ]] || { echo 'game must be s1 or s2' >&2; exit 2; }
 [[ -f "$input" && ! -e "$output" ]] || { echo 'input must exist and output must not' >&2; exit 2; }
 
@@ -67,34 +69,15 @@ function roles(op, pc, flow, result) {
   }
   return result
 }
-function source(pc) {
-  if (game == "s1") {
-    if (pc >= 0x71cd8 && pc <= 0x71e48) return "FinishTrackUpdate@s1.sounddriver.asm:436-544"
-    if (pc >= 0x726e2 && pc <= 0x72714) return "FMNoteOn_FMNoteOff@s1.sounddriver.asm:1670-1704"
-    if (pc >= 0x72716 && pc <= 0x72720) return "WriteFMIorIIMain@s1.sounddriver.asm:1707-1717"
-    if (pc >= 0x72722 && pc <= 0x72728) return "WriteFMIorII@s1.sounddriver.asm:1720-1726"
-    if (pc >= 0x7272e && pc <= 0x72758) return "WriteFMI@s1.sounddriver.asm:1737-1755"
-    if (pc >= 0x7275a && pc <= 0x72762) return "WriteFMIIPart@s1.sounddriver.asm:1759-1763"
-    if (pc >= 0x72764 && pc <= 0x7278e) return "WriteFMII@s1.sounddriver.asm:1766-1784"
-    if (pc >= 0x72a5a && pc <= 0x72a64) return "CoordFlag@s1.sounddriver.asm:2066-2072"
-    if (pc >= 0x72acc && pc <= 0x72ae6) return "cfPanningAMSFMS@s1.sounddriver.asm:2128-2140"
-    if (pc >= 0x72c26 && pc <= 0x72c48) return "cfSetVoice@s1.sounddriver.asm:2313-2326"
-    if (pc >= 0x72c4e && pc <= 0x72caa) return "SetVoice@s1.sounddriver.asm:2329-2375"
-  } else {
-    if (pc >= 0x8 && pc <= 0x35) return "zFMBusyWait_zWriteFM@s2.sounddriver.asm:343-389"
-    if (pc >= 0x243 && pc <= 0x2d9) return "zFinishTrackUpdate@s2.sounddriver.asm:947-1076"
-    if (pc >= 0x3e5 && pc <= 0x413) return "zTrackRun@s2.sounddriver.asm:1078-1124"
-    if (pc >= 0xc46 && pc <= 0xc94) return "zBankSwitchToMusic@s2.sounddriver.asm:2796-2829"
-    if (pc >= 0xcfc && pc <= 0xd19) return "zSetMaxRelRate@s2.sounddriver.asm:3005-3024"
-    if (pc >= 0xe06 && pc <= 0xe11) return "cfSetVoice@s2.sounddriver.asm:3271-3282"
-    if (pc >= 0xe12 && pc <= 0xe1f) return "cfSetVoiceCont@s2.sounddriver.asm:3285-3295"
-    if (pc >= 0xe24 && pc <= 0xe64) return "zSetVoice@s2.sounddriver.asm:3305-3396"
-    if (pc >= 0xe65 && pc <= 0xe89) return "zSetFMTLs@s2.sounddriver.asm:3399-3432"
-  }
+function source(pc, j) {
+  for (j=1; j<=map_n; j++) if (map_game[j] == game && pc >= map_start[j] && pc <= map_end[j])
+    return map_label[j] "@" map_file[j] ":" map_line_start[j] "-" map_line_end[j]
   return "UNKNOWN"
 }
-NR == 1 { next }
-$2 == 0 { n++; frame[n]=$1; after[n]=$3; cpu[n]=$4; pc_text[n]=$5; op_text[n]=$6; cycle[n]=$7; pc[n]=hex($5); op[n]=hex($6) }
+ARGIND == 1 && FNR == 1 { next }
+ARGIND == 1 { map_n++; map_game[map_n]=$1; map_start[map_n]=hex($2); map_end[map_n]=hex($3); map_label[map_n]=$4; map_file[map_n]=$5; map_line_start[map_n]=$6; map_line_end[map_n]=$7; next }
+ARGIND == 2 && FNR == 1 { next }
+ARGIND == 2 && $2 == 0 { n++; frame[n]=$1; after[n]=$3; cpu[n]=$4; pc_text[n]=$5; op_text[n]=$6; cycle[n]=$7; pc[n]=hex($5); op[n]=hex($6) }
 END {
   print "occurrence_ordinal","frame","after_source_ordinal","cpu","pc","opcode","start_master_cycle","next_pc","delta_to_next_start","flow","branch_outcome","roles","source"
   for (i=1; i<=n; i++) {
@@ -105,4 +88,4 @@ END {
     citation = source(pc[i]); if (citation == "UNKNOWN") { print "unmapped source PC " pc_text[i] > "/dev/stderr"; exit 3 }
     print i-1,frame[i],after[i],cpu[i],pc_text[i],op_text[i],cycle[i],next_pc_value,delta,flow,outcome,roles(op[i],pc[i],flow),citation
   }
-}' "$input" > "$output"
+}' "$source_map" "$input" > "$output"

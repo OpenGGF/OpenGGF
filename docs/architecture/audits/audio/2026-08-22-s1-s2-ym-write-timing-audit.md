@@ -93,6 +93,10 @@ The path audit covers:
 - `cfStopTrack` at lines 2489 onward, including FM key-off and the active
   overridden music-voice restore.
 
+The retained source map observes the actual symbol boundaries: `$71CD8` is
+owned by `FMUpdateTrack`, `$71D60` begins `FinishTrackUpdate`, and `$72A64`
+is the `coordflagLookup` table entry rather than `CoordFlag` itself.
+
 The shipped `FixBugs = 0` path is the authority. Completion/restore is audited
 as the same FM5 owner lifetime ending after the 37-frame source duration; an
 overlap replaces the owner before that completion path, while an isolated group
@@ -104,7 +108,8 @@ Deterministic A/B compact result:
 - terminal payload `032dee96c0163e089b689c8095ce9c95842e9bdf3a60006bd14953f3e254070a`;
 - raw writes `87265ee3d08d91128faef6338695c426f6697df127b0431b16d77ade6210a509`;
 - full instruction stream `b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa`;
-- representative ledger `790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643`;
+- canonical source map `96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c`;
+- representative ledger `59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689`;
 - six-column projection `06888e2d89794879947fa2256aaf3bb9ae0244e0c147f400dd6363bc4d42125c`;
 - FM5 samples `10ccfc1aa351f34e9b7be4b7eab44fb8003e73f8bef15bff3ba4218c50285534`.
 
@@ -129,11 +134,19 @@ The path audit covers:
 - `zWriteFMIorII`, `zWriteFMI`, and `zWriteFMII` at
   `s2.sounddriver.asm:343-389`;
 - `zFinishTrackUpdate` at lines 947 onward;
-- `zSetMaxRelRate` and its four-operator write loop at lines 2090 onward;
+- `zSetMaxRelRate` is at source lines 2088-2101, but is inside the
+  `FixDriverBugs` block and therefore has no address or executed occurrence in
+  the shipped `fixBugs = 0` driver. The earlier `$CFC` attribution is
+  withdrawn: `$CFC-$D19` is `cfPanningAMSFMS` at lines 3004-3045;
 - `cfSetVoice` / `zSetVoice` at lines 3271-3432, including banked voice reads,
   stored carrier TL, panning, frequency, and key-on;
 - `cfStopTrack` at lines 3514 onward, including key-off, bank switch back to
   music, and active music-voice restore.
+
+Likewise, `$C46` is `zFMNoteOn`, `$C63` begins `zBankSwitchToMusic`, and
+`$CFC` is `cfPanningAMSFMS`. The canonical map is consumed by the generator;
+the Java gate hash-locks it, requires exactly one range for every ledger PC,
+and rejects overlapping/unknown coverage and boundary, label, or line edits.
 
 The driver is built with `FixDriverBugs = fixBugs = 0`; the shipped NOP/busy
 wait and un-fixed branches are retained. All audited groups report zero DMA
@@ -147,7 +160,8 @@ Deterministic A/B compact result:
 - capture script `a21fbd6ee44173fd8bbe20b0af747bc703f0f1c7f9c521a1866f89e579cd7388`;
 - raw writes `ea68ebff17ad939b9b17040f7ce846a4bfef895a4401abcf8104a1e972f0179e`;
 - full instruction stream `d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c`;
-- representative ledger `b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4`;
+- canonical source map `96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c`;
+- representative ledger `b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372`;
 - six-column projection `c4dbf980004f7b1af450a0889a6bc5ae8b443b5378cd0fb546d889dd8a1a54d2`;
 - FM5 samples `a277dfd825e9c72706094b837666a3ddeb17b97ed04ad5d6f2b5cf21913ddaeb`.
 

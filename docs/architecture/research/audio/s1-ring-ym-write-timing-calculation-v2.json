@@ -5,7 +5,7 @@
   "representative_group_ordinal": 0,
   "ledger": {
     "path": "s1-ring-ym-write-instruction-ledger-v1.tsv",
-    "sha256": "790fe245386f77d09309bb7eeb7f653bfdbd6312d4600eba04520d143ec95643",
+    "sha256": "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
     "full_capture_sha256": "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa",
     "row_count": 909
   },
@@ -25,7 +25,9 @@
     "citation": "per-occurrence PC-to-label mapping in ledger",
     "owner": null,
     "bank_wait": null,
-    "method": "Exact ordered native PC/opcode/start/next occurrence join; no primitive counts or aggregate fitting."
+    "method": "Exact ordered native PC/opcode/start/next occurrence join; no primitive counts or aggregate fitting.",
+    "map_path": "s1-s2-ym-write-source-map-v1.tsv",
+    "map_sha256": "96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c"
   },
   "gaps": [
     {

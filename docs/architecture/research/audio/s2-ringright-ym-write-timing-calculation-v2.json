@@ -5,7 +5,7 @@
   "representative_group_ordinal": 0,
   "ledger": {
     "path": "s2-ringright-ym-write-instruction-ledger-v1.tsv",
-    "sha256": "b3326be2fd908d2914f55828f2c7734627fa319da9aa496f75d862d74d60c6b4",
+    "sha256": "b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372",
     "full_capture_sha256": "d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c",
     "row_count": 953
   },
@@ -37,7 +37,9 @@
       ],
       "source": "s2.sounddriver.asm:3271-3432; GPGX banked Z80 read wait"
     },
-    "method": "Exact ordered native PC/opcode/start/next occurrence join; no primitive counts or aggregate fitting."
+    "method": "Exact ordered native PC/opcode/start/next occurrence join; no primitive counts or aggregate fitting.",
+    "map_path": "s1-s2-ym-write-source-map-v1.tsv",
+    "map_sha256": "96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c"
   },
   "gaps": [
     {
