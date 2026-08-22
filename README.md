@@ -230,10 +230,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
   two real S1 visual bridge regressions. The reconciled feature fixed retained
   transition diagnostics and their coverage before this validation; current
   main passes those routes through its unchanged eager-ownership control path.
-  Later test-only enforcement corrections through `4c6f38dd8` close typed
-  receiver, same-source reflection-helper, and primitive-name collision
-  bypasses without changing the measured ownership graph: authority is 19/19,
-  authority plus ownership is 22/22, and the combined reader gate is 28/28.
+  Later test-only enforcement corrections through `4b21e4b33` close typed
+  receiver, same-source reflection-helper, primitive-name collision, and
+  transformed method-handle lookup bypasses without changing the measured
+  ownership graph: authority is 21/21, authority plus ownership is 24/24, and
+  the combined reader gate is 30/30.
 
 - **S3K playable Tails tails dispatch restored (2026-08-22):** the fixed
   `Tails_tails` object slot now advances the main playable Tails controller as

@@ -12,10 +12,10 @@
   Current-main and feature sweeps share the same ten trace reds, while exhaustive
   JDK 21 default-suite message comparison found zero feature-attributable new or
   worsened red. Subsequent test-only enforcement corrections close typed
-  receiver, same-source reflection-helper, and primitive-name collision
-  bypasses; the current authority, authority/ownership, and
-  authority/ownership/reader gates pass 19/19, 22/22, and 28/28 respectively
-  without changing the measured ownership graph.
+  receiver, same-source reflection-helper, primitive-name collision, and
+  transformed method-handle lookup bypasses; the current authority,
+  authority/ownership, and authority/ownership/reader gates pass 21/21, 24/24,
+  and 30/30 respectively without changing the measured ownership graph.
 
 - **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
   exposed two real bridge regressions that aborted after destination segment 2

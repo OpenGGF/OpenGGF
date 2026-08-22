@@ -561,10 +561,10 @@ closed them before the refreshed gates. Older `d9650fd7` measurements remain
 historical only.
 
 Later whole-branch authority review produced enforcement-only corrections
-through `4c6f38dd8`; the production ownership graph and the suite measurement
+through `4b21e4b33`; the production ownership graph and the suite measurement
 point above are unchanged. At that correction head the authority guard passes
-19/19, authority plus ownership passes 22/22, and the combined reader gate
-passes 28/28. Focused migration remains 179/179, the benchmark-root structural
+21/21, authority plus ownership passes 24/24, and the combined reader gate
+passes 30/30. Focused migration remains 179/179, the benchmark-root structural
 test is 1/1, and policy/docs guards are 156/156.
 
 - [ ] **Step 8: Independent final code/spec review**
