@@ -1,5 +1,12 @@
 # Changelog
 
+- **Long visual trace runs now keep only one segment payload in memory:** the
+  production launcher and both visual/audio replay routes retain compact run
+  descriptors, open an eager payload only for the active segment, and release
+  every payload-backed observer before closing that segment's lease. Transition
+  gaps and terminal tails own no payload, while replay timing, comparison,
+  dynamic-art, special-stage, input, and audio behaviour remain unchanged.
+
 - **Aquatic Ruin's bubble makers start their next batch on the right frame:**
   a bubble maker only counts down while the game has it on screen, and the game
   decides that from the same camera position the maker itself sees when it runs.

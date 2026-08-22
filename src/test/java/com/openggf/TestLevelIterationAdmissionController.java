@@ -94,8 +94,8 @@ class TestLevelIterationAdmissionController {
             throws Exception {
         TraceSessionLauncher session = new TraceSessionLauncher(
                 null, null,
-                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
-                        .SegmentPlan>of(), null);
+                List.<com.openggf.trace.replay.runs.TraceRunSegmentDescriptor>of(),
+                null, null);
         session.beginTitleCardPresentation(
                 new TraceSessionLauncher.TitleCardPresentation() {
                     @Override
@@ -118,8 +118,8 @@ class TestLevelIterationAdmissionController {
             throws Exception {
         TraceSessionLauncher session = new TraceSessionLauncher(
                 null, null,
-                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
-                        .SegmentPlan>of(), null);
+                List.<com.openggf.trace.replay.runs.TraceRunSegmentDescriptor>of(),
+                null, null);
         session.beginTitleCardPresentation(
                 new TraceSessionLauncher.TitleCardPresentation() {
                     @Override
@@ -156,8 +156,8 @@ class TestLevelIterationAdmissionController {
             throws Exception {
         TraceSessionLauncher session = new TraceSessionLauncher(
                 null, null,
-                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
-                        .SegmentPlan>of(), null);
+                List.<com.openggf.trace.replay.runs.TraceRunSegmentDescriptor>of(),
+                null, null);
         session.beginTitleCardPresentation(
                 new TraceSessionLauncher.TitleCardPresentation() {
                     @Override

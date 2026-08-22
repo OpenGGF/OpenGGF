@@ -52,7 +52,7 @@ class TestVisualTraceRunTerminalTail {
                 Path.of("tail.bk2"), "", Map.of(),
                 List.of(frame(0, 0), frame(1, 1), frame(2, 2)), 1);
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, movie, List.of(), null);
+                null, movie, List.of(), null, null);
         GameServices.playbackDebug().startSession(movie, 1);
 
         invokeBeginTail(session,
@@ -69,7 +69,7 @@ class TestVisualTraceRunTerminalTail {
                 Path.of("tail.bk2"), "", Map.of(),
                 List.of(frame(0, 0), frame(1, 1), frame(2, 2)), 1);
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, movie, List.of(), null);
+                null, movie, List.of(), null, null);
         TraceRunPlaybackCoordinator coordinator =
                 mock(TraceRunPlaybackCoordinator.class);
         when(coordinator.finishTerminalTail(GameMode.TITLE_SCREEN))
@@ -110,7 +110,7 @@ class TestVisualTraceRunTerminalTail {
                 Path.of("tail.bk2"), "", Map.of(),
                 List.of(frame(0, 0), frame(1, 1), frame(2, 2)), 1);
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, movie, List.of(), null);
+                null, movie, List.of(), null, null);
         TraceRunPlaybackCoordinator coordinator =
                 mock(TraceRunPlaybackCoordinator.class);
         when(coordinator.phase()).thenReturn(
@@ -156,7 +156,7 @@ class TestVisualTraceRunTerminalTail {
     @Test
     void runHudShowsThePhysicalClockAndCompletesOnlyWithTheWholeRun() {
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, null, List.of(), null);
+                null, null, List.of(), null, null);
         TraceRunPlaybackCoordinator coordinator =
                 mock(TraceRunPlaybackCoordinator.class);
         when(coordinator.phase()).thenReturn(
@@ -189,7 +189,7 @@ class TestVisualTraceRunTerminalTail {
     @Test
     void runHudMismatchRingPreservesComparisonOwnerSequence() {
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, null, List.of(), null);
+                null, null, List.of(), null, null);
         TraceRunExternalDiagnostics diagnostics =
                 new TraceRunExternalDiagnostics(null);
         diagnostics.acceptDisplayed(errorComparison(1, "source"));
@@ -218,7 +218,7 @@ class TestVisualTraceRunTerminalTail {
                 Path.of("tail.bk2"), "", Map.of(),
                 List.of(frame(0, 0), frame(1, 1), frame(2, 2)), 1);
         TraceSessionLauncher session = new TraceSessionLauncher(
-                null, movie, List.of(), null);
+                null, movie, List.of(), null, null);
         TraceRunDynamicArtGapJournal gapJournal =
                 mock(TraceRunDynamicArtGapJournal.class);
         FrameComparison terminalComparison =

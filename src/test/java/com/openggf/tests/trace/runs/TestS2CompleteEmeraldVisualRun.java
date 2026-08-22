@@ -1,5 +1,6 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.TraceSessionLauncher;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2CompleteEmeraldVisualRun {
@@ -29,5 +31,7 @@ class TestS2CompleteEmeraldVisualRun {
         assertEquals(4_479, result.sharedCursor(),
                 "769 + 3710 is the first row after the complete EHZ1 body: " + result);
         assertEquals(0, result.currentSegmentIndex());
+        assertNull(TraceSessionLauncher.active(),
+                "the harness must tear down its transferred run lease");
     }
 }

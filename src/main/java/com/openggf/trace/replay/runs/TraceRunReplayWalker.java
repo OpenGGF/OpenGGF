@@ -182,6 +182,26 @@ public final class TraceRunReplayWalker {
         return List.copyOf(result);
     }
 
+    /** Descriptor-only counterpart retained beside the eager headless helper. */
+    public static boolean hasDescriptorHardwareTimingStream(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream().anyMatch(descriptor ->
+                descriptor.hardwareTimingSchedule().hasRecordedInput());
+    }
+
+    /** Descriptor-only timing view for production and visual run ownership. */
+    public static List<HardwareTimingSegment> descriptorHardwareTimingSegments(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream()
+                .map(descriptor -> new HardwareTimingSegment(
+                        descriptor.segment().bk2FrameOffset(),
+                        descriptor.rawFrames(),
+                        descriptor.hardwareTimingSchedule()))
+                .toList();
+    }
+
     /**
      * Run-scoped adapter that latches physical raw frames and changes schedules
      * exactly when the playback cursor first enters the next structural
@@ -1316,6 +1336,18 @@ public final class TraceRunReplayWalker {
                 preparedDelegate = delegate;
                 delegate.prepareFrame(preparedFrame);
             }
+        }
+
+        /**
+         * Releases every observer alias when the represented segment lease
+         * closes. Unlike {@link #setDelegate}, no prepared row may remain
+         * pinned across this ownership boundary.
+         */
+        public void detachDelegate() {
+            delegate = null;
+            preparedDelegate = null;
+            preparedFrame = null;
+            framePrepared = false;
         }
 
         /**

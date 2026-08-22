@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.timing.HardwareCompletionEdge;
@@ -36,6 +37,8 @@ import com.openggf.timer.TimerManager;
 
 import java.util.List;
 import java.util.Map;
+import java.util.BitSet;
+import java.nio.file.Path;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -338,9 +341,22 @@ class TestTraceRunHardwareTimingCoordinator {
 
         List<TraceRunReplayWalker.HardwareTimingSegment> timing =
                 TraceRunReplayWalker.hardwareTimingSegments(plans);
+        TraceRunSegmentDescriptor descriptor = new TraceRunSegmentDescriptor(
+                segment, Path.of("ss"), trace.metadata(), 3, null,
+                List.of(0, 1, 2), new BitSet(),
+                trace.hardwareTimingSchedule(),
+                trace.terminalDynamicArtLedger(), null, null, 0,
+                TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL);
+        List<TraceRunReplayWalker.HardwareTimingSegment> descriptorTiming =
+                TraceRunReplayWalker.descriptorHardwareTimingSegments(
+                        List.of(descriptor));
 
         assertTrue(TraceRunReplayWalker.hasHardwareTimingStream(plans));
+        assertTrue(TraceRunReplayWalker.hasDescriptorHardwareTimingStream(
+                List.of(descriptor)));
         assertEquals(List.of(0, 1, 2), timing.getFirst().rawFrames());
+        assertEquals(timing, descriptorTiming,
+                "descriptor timing must preserve eager headless semantics");
         assertEquals(900, timing.getFirst().bk2FrameOffset());
     }
 

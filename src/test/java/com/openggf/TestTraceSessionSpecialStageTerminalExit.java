@@ -90,8 +90,8 @@ class TestTraceSessionSpecialStageTerminalExit {
 
     private static TraceSessionLauncher session() {
         return new TraceSessionLauncher(null, null,
-                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
-                        .SegmentPlan>of(), null);
+                List.<com.openggf.trace.replay.runs.TraceRunSegmentDescriptor>of(),
+                null, null);
     }
 
     private static void setBoolean(
