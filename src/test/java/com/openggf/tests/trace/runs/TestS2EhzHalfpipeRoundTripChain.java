@@ -416,6 +416,7 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ehzHalfpipeRoundTrip() throws Exception {
+        auditHeadlessPayloadReleaseAtBoundaries();
         DynamicArtGapJournalEvidence evidence = assertChainReplay(RUN_DIR);
         assertHeadlessPayloadReleased();
         DynamicArtStructuralGapEvidence returnGap =
