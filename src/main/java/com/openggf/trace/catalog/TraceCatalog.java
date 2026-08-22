@@ -100,6 +100,16 @@ public final class TraceCatalog {
         }
     }
 
+    /** Immutable launch metadata that retains no eagerly opened segment payload. */
+    public record PreparedDescriptorRunLaunch(
+            Bk2Movie movie,
+            List<TraceRunSegmentDescriptor> segments) {
+        public PreparedDescriptorRunLaunch {
+            Objects.requireNonNull(movie, "movie");
+            segments = List.copyOf(segments);
+        }
+    }
+
     public static List<TraceEntry> scan(Path root) {
         if (!Files.isDirectory(root)) {
             return List.of();
@@ -212,6 +222,85 @@ public final class TraceCatalog {
                 entry,
                 path -> new Bk2MovieLoader().load(path),
                 DEFAULT_RUN_PLANNERS);
+    }
+
+    /**
+     * Parses the selected run's BK2 movie and compact segment descriptors
+     * without constructing eager replay payloads.
+     */
+    public static PreparedDescriptorRunLaunch prepareDescriptorRunLaunch(
+            TraceEntry entry) throws IOException {
+        return prepareDescriptorRunLaunch(
+                entry,
+                path -> new Bk2MovieLoader().load(path),
+                DEFAULT_RUN_PLANNERS);
+    }
+
+    static PreparedDescriptorRunLaunch prepareDescriptorRunLaunch(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunPlannerPair planners) throws IOException {
+        Objects.requireNonNull(planners, "planners");
+        return prepareDescriptorRunLaunch(
+                entry, movieLoader, planners.descriptorPlanner());
+    }
+
+    static PreparedDescriptorRunLaunch prepareDescriptorRunLaunch(
+            TraceEntry entry,
+            RunMovieLoader movieLoader,
+            RunDescriptorPlanner descriptorPlanner) throws IOException {
+        Objects.requireNonNull(entry, "entry");
+        Objects.requireNonNull(movieLoader, "movieLoader");
+        Objects.requireNonNull(descriptorPlanner, "descriptorPlanner");
+        if (!entry.isRun()) {
+            throw new IllegalArgumentException("Catalog entry is not a trace run");
+        }
+        TraceRunManifest manifest = entry.runManifest();
+        TraceRunManifest.Segment first = manifest.segments().getFirst();
+        if (!"level".equals(first.kind())) {
+            throw new IllegalArgumentException(
+                    "Visual run segment 0 must be level, got " + first.kind());
+        }
+        Bk2Movie movie;
+        try {
+            movie = movieLoader.load(entry.bk2Path());
+        } catch (IOException | RuntimeException e) {
+            throw new IOException(
+                    "Run BK2 parser failed: " + diagnosticMessage(e), e);
+        }
+        List<TraceRunSegmentDescriptor> descriptors =
+                descriptorPlanner.plan(manifest, entry.runDir());
+        for (int i = 0; i < manifest.segments().size(); i++) {
+            TraceRunManifest.Segment segment = manifest.segments().get(i);
+            int end;
+            try {
+                end = Math.addExact(
+                        segment.bk2FrameOffset(), segment.traceFrameCount());
+            } catch (ArithmeticException e) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " BK2 range overflows", e);
+            }
+            if (segment.bk2FrameOffset() < 0 || end > movie.getFrameCount()) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " BK2 range ["
+                                + segment.bk2FrameOffset() + ", " + end
+                                + ") exceeds movie row count " + movie.getFrameCount());
+            }
+            TraceRunSegmentDescriptor descriptor = descriptors.get(i);
+            if (!profilesCompatible(segment, descriptor.metadata())) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " profile mismatch: manifest='"
+                                + segment.traceProfile() + "', metadata='"
+                                + descriptor.metadata().traceProfile() + "'");
+            }
+            if (descriptor.rowCount() != segment.traceFrameCount()) {
+                throw new IllegalArgumentException(
+                        "Segment " + i + " row count mismatch: manifest="
+                                + segment.traceFrameCount() + ", parsed="
+                                + descriptor.rowCount());
+            }
+        }
+        return new PreparedDescriptorRunLaunch(movie, descriptors);
     }
 
     static PreparedRunLaunch prepareRunLaunch(

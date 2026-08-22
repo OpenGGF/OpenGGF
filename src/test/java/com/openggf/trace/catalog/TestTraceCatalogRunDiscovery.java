@@ -55,6 +55,15 @@ class TestTraceCatalogRunDiscovery {
 
         assertEquals(run.runManifest().segments().size(),
                 prepared.segments().size());
+
+        TraceCatalog.PreparedDescriptorRunLaunch descriptors =
+                TraceCatalog.prepareDescriptorRunLaunch(run);
+
+        assertEquals(prepared.movie().getFrameCount(), descriptors.movie().getFrameCount());
+        assertEquals(prepared.segments().stream()
+                        .map(segment -> segment.segment()).toList(),
+                descriptors.segments().stream()
+                        .map(descriptor -> descriptor.segment()).toList());
     }
 
     @Test

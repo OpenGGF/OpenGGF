@@ -1062,8 +1062,9 @@ public final class TraceRunReplayWalker {
 
     /**
      * Scans and validates run segments sequentially into payload-independent
-     * descriptors. Actual replay continues to use the eager {@link #plan}
-     * path; this boundary is for whole-run validation and compact planning.
+     * descriptors. The eager {@link #plan} path remains the replay/reference
+     * path during the staged launch migration; this boundary supports
+     * whole-run validation and compact planning without retaining payloads.
      */
     public static List<TraceRunSegmentDescriptor> planDescriptors(
             TraceRunManifest run, Path runDir) throws IOException {
