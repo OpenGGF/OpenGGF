@@ -57,6 +57,12 @@ public final class SmpsSequencerConfig {
         NEXT_DRIVER_UPDATE
     }
 
+    /** Semantic owners which may consume an audited YM service profile. */
+    public enum YmTimingOwnerPolicy {
+        ALL_SEQUENCERS,
+        SFX_ONLY
+    }
+
     /** How carrier operators are determined for volume scaling. */
     public enum VolMode {
         /** S1/S2: carrier mask derived from algorithm number via ALGO_OUT_MASK table. */
@@ -243,6 +249,7 @@ public final class SmpsSequencerConfig {
     private final boolean fadeOutStopsSfxImmediately;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
     private final YmServiceTimingProfile ymServiceTimingProfile;
+    private final YmTimingOwnerPolicy ymTimingOwnerPolicy;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -296,6 +303,7 @@ public final class SmpsSequencerConfig {
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.ymServiceTimingProfile = b.ymServiceTimingProfile;
+        this.ymTimingOwnerPolicy = b.ymTimingOwnerPolicy;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -443,6 +451,10 @@ public final class SmpsSequencerConfig {
         return ymServiceTimingProfile;
     }
 
+    public YmTimingOwnerPolicy getYmTimingOwnerPolicy() {
+        return ymTimingOwnerPolicy;
+    }
+
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
     public VolMode getVolMode() {
         return volMode;
@@ -582,6 +594,8 @@ public final class SmpsSequencerConfig {
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
         private YmServiceTimingProfile ymServiceTimingProfile =
                 YmServiceTimingProfile.none();
+        private YmTimingOwnerPolicy ymTimingOwnerPolicy =
+                YmTimingOwnerPolicy.ALL_SEQUENCERS;
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -627,6 +641,7 @@ public final class SmpsSequencerConfig {
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder ymServiceTimingProfile(YmServiceTimingProfile val) { ymServiceTimingProfile = Objects.requireNonNull(val, "val"); return this; }
+        public Builder ymTimingOwnerPolicy(YmTimingOwnerPolicy val) { ymTimingOwnerPolicy = Objects.requireNonNull(val, "val"); return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }

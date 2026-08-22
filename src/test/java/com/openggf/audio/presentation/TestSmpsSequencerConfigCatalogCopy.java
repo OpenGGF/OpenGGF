@@ -7,6 +7,7 @@ import com.openggf.audio.smps.YmServiceTimingProfile;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestSmpsSequencerConfigCatalogCopy {
     @Test
@@ -19,6 +20,8 @@ class TestSmpsSequencerConfigCatalogCopy {
                         new long[] { 0 }));
         SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
                 .ymServiceTimingProfile(profile)
+                .ymTimingOwnerPolicy(
+                        SmpsSequencerConfig.YmTimingOwnerPolicy.SFX_ONLY)
                 .build();
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
@@ -28,5 +31,12 @@ class TestSmpsSequencerConfigCatalogCopy {
                 .getYmServiceTimingProfile());
         assertSame(profile, SmpsAssetCatalog.bindLegacyConfig(
                 "s3k", source, false, handlers).getYmServiceTimingProfile());
+        assertEquals(SmpsSequencerConfig.YmTimingOwnerPolicy.SFX_ONLY,
+                SmpsAssetCatalog.copyConfigWithoutHandler(source)
+                        .getYmTimingOwnerPolicy());
+        assertEquals(SmpsSequencerConfig.YmTimingOwnerPolicy.SFX_ONLY,
+                SmpsAssetCatalog.bindLegacyConfig(
+                        "s3k", source, false, handlers)
+                        .getYmTimingOwnerPolicy());
     }
 }

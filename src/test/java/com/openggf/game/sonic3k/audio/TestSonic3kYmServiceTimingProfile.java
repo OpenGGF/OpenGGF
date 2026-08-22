@@ -117,7 +117,7 @@ class TestSonic3kYmServiceTimingProfile {
         assertSame(Sonic3kYmServiceTimingProfile.PROFILE,
                 Sonic3kSmpsSequencerConfig.create(null)
                         .getYmServiceTimingProfile());
-        assertEquals(34, Sonic3kYmServiceTimingProfile.PROFILE
+        assertEquals(4 * 34, Sonic3kYmServiceTimingProfile.PROFILE
                 .maximumWritesPerDriverService());
     }
 

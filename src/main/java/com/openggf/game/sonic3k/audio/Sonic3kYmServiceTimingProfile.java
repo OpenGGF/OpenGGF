@@ -11,6 +11,10 @@ import java.util.List;
 
 /** Source-derived locked-on S3K timing for the audited FM5 first-attack path. */
 public final class Sonic3kYmServiceTimingProfile {
+    private static final int MAX_LOCKED_ON_SFX_TRACKS = 4;
+    private static final int MAX_HARDWARE_ATTEMPTS_PER_TRACK = 34;
+    private static final int MAX_WRITES_PER_DRIVER_SERVICE =
+            MAX_LOCKED_ON_SFX_TRACKS * MAX_HARDWARE_ATTEMPTS_PER_TRACK;
     private static final long[] MAX_RELEASE = { 0, 3_150, 3_150, 3_150 };
     private static final long[] FREQUENCY_AND_KEY_ON = { 0, 2_700, 2_880 };
     public static final YmServiceTimingProfile PROFILE = create();
@@ -31,18 +35,22 @@ public final class Sonic3kYmServiceTimingProfile {
             segments.add(new Segment(SegmentKind.SFX_MAX_RELEASE,
                     firstAttack, MAX_RELEASE));
             segments.add(new Segment(SegmentKind.FM_VOICE_UPLOAD,
-                    firstAttack, voiceUpload(carrierMask)));
+                    firstAttack, 6_435, voiceUpload(carrierMask)));
             segments.add(new Segment(SegmentKind.KEY_OFF,
-                    firstAttack, new long[] { 0 }));
+                    firstAttack, 8_055, new long[] { 0 }));
             segments.add(new Segment(SegmentKind.FREQUENCY_AND_KEY_ON,
-                    firstAttack, FREQUENCY_AND_KEY_ON));
+                    firstAttack, 30_630, FREQUENCY_AND_KEY_ON));
 
             Variant restore = new Variant(1, 4, true, false,
                     carrierMask, PathKind.COMPLETION_RESTORE);
             segments.add(new Segment(SegmentKind.COMPLETION_RESTORE,
                     restore, completionRestore(carrierMask)));
         }
-        return YmServiceTimingProfile.of(34,
+        // Sound_59 (Collapse) and Sound_66 (All Spheres Collected) are the
+        // largest shipped locked-on headers at four tracks. The complete SFX
+        // owner service is transactional, so reserve every sibling track at
+        // the audited 34-attempt FM upper bound (PSG tracks use fewer slots).
+        return YmServiceTimingProfile.of(MAX_WRITES_PER_DRIVER_SERVICE,
                 segments.toArray(Segment[]::new));
     }
 

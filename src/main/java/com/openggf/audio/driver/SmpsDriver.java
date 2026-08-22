@@ -169,6 +169,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 throw failure;
             }
             try {
+                if (consumed == 0) {
+                    transaction.cursor = Math.addExact(transaction.cursor,
+                            segment.advanceBeforeFirstWriteMasterCycles());
+                }
                 transaction.cursor = Math.addExact(
                         transaction.cursor, advances[consumed]);
             } catch (ArithmeticException failure) {
@@ -502,9 +506,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private YmServiceTimingProfile timingProfileFor(Object source) {
-        return source instanceof SmpsSequencer sequencer
-                ? sequencer.getConfig().getYmServiceTimingProfile()
-                : YmServiceTimingProfile.none();
+        if (!(source instanceof SmpsSequencer sequencer)) {
+            return YmServiceTimingProfile.none();
+        }
+        if (sequencer.getConfig().getYmTimingOwnerPolicy()
+                == SmpsSequencerConfig.YmTimingOwnerPolicy.SFX_ONLY
+                && !sequencer.isSfx()) {
+            return YmServiceTimingProfile.none();
+        }
+        return sequencer.getConfig().getYmServiceTimingProfile();
     }
 
     private ServiceTransaction beginYmServiceTransaction(
@@ -1227,12 +1237,38 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             int port = track.channelId < 3 ? 0 : 1;
             int channel = track.channelId % 3;
             int keyChannel = port == 0 ? channel : channel + 4;
-            publishAuthorizedFmWrite(
-                    sequencer, 0, 0x28, keyChannel);
-            for (int operatorOffset : operatorOffsets) {
-                publishAuthorizedFmWrite(sequencer, port,
-                        0x90 + operatorOffset + channel, 0);
+            if (track.channelId == 4) {
+                YmServiceTimingProfile.Variant variant =
+                        new YmServiceTimingProfile.Variant(
+                                port, 4, false, true, 0,
+                                YmServiceTimingProfile.PathKind
+                                        .FIRST_ADMISSION);
+                try (Synthesizer.YmTimingScope ignored = beginYmTiming(
+                        sequencer,
+                        YmServiceTimingProfile.SegmentKind
+                                .SFX_ADMISSION_PREP,
+                        variant)) {
+                    publishAdmissionFmPreparationWrites(sequencer, port,
+                            channel, keyChannel, operatorOffsets);
+                }
+                sequencer.markFirstFm5Admission();
+            } else {
+                publishAdmissionFmPreparationWrites(sequencer, port,
+                        channel, keyChannel, operatorOffsets);
             }
+        }
+    }
+
+    private void publishAdmissionFmPreparationWrites(
+            SmpsSequencer sequencer,
+            int port,
+            int channel,
+            int keyChannel,
+            int[] operatorOffsets) {
+        publishAuthorizedFmWrite(sequencer, 0, 0x28, keyChannel);
+        for (int operatorOffset : operatorOffsets) {
+            publishAuthorizedFmWrite(sequencer, port,
+                    0x90 + operatorOffset + channel, 0);
         }
     }
 
@@ -3075,6 +3111,33 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         boolean isSfx = isSfx(seq);
         for (int i = 0; i < 6; i++) {
             if (fmLocks[i] == seq) {
+                if (isSfx && i == 4
+                        && seq.consumeFm5CompletionKeyOffPending()) {
+                    YmServiceTimingProfile.Variant restoreVariant = null;
+                    for (SmpsSequencer candidate : sequencers) {
+                        if (!isSfx(candidate)) {
+                            restoreVariant = candidate
+                                    .completionRestoreVariant(i);
+                            if (restoreVariant != null) {
+                                break;
+                            }
+                        }
+                    }
+                    if (restoreVariant != null) {
+                        try (Synthesizer.YmTimingScope ignored = beginYmTiming(
+                                seq,
+                                YmServiceTimingProfile.SegmentKind
+                                        .COMPLETION_RESTORE,
+                                restoreVariant)) {
+                            publishAuthorizedFmWrite(seq, 0, 0x28, 0x05);
+                            fmLocks[i] = null;
+                            updateOverrides(SmpsSequencer.TrackType.FM,
+                                    i, false);
+                        }
+                        continue;
+                    }
+                    publishAuthorizedFmWrite(seq, 0, 0x28, 0x05);
+                }
                 if (isSfx && seq.getConfig().getFmSfxReleaseMode()
                         == SmpsSequencerConfig.FmSfxReleaseMode
                                 .FORCE_SILENCE_THEN_RESTORE) {

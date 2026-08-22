@@ -360,6 +360,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public boolean fmVolEnvHold;
         public int fmVolEnvOpMask;
         public boolean forceRefresh;
+        // Locked-on zPlaySound -> cfSetVoice -> first note source path. This
+        // state is semantic track state, not a sound-id or frame predicate.
+        public boolean firstFm5AdmissionVoicePending;
+        public boolean firstFm5AdmissionAttackPending;
+        public boolean fm5CompletionKeyOffPending;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
@@ -2051,12 +2056,37 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
-        prepareVoiceSelection(t);
-        if (selectVoice(t, voiceId) && !t.tieNext) {
-            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
-            // Preserve the existing Z80 HOLD behavior rather than refreshing the
-            // live channel mid-sustain.
-            refreshInstrument(t);
+        if (t.firstFm5AdmissionVoicePending) {
+            boolean selected = selectVoice(t, voiceId);
+            if (!selected) {
+                prepareVoiceSelection(t);
+                t.firstFm5AdmissionVoicePending = false;
+                return;
+            }
+            YmServiceTimingProfile.Variant variant = firstAttackVariant(t);
+            try (Synthesizer.YmTimingScope ignored = synth.beginYmTiming(
+                    this, YmServiceTimingProfile.SegmentKind.SFX_MAX_RELEASE,
+                    variant)) {
+                prepareVoiceSelection(t);
+            }
+            if (!t.tieNext) {
+                try (Synthesizer.YmTimingScope ignored = synth.beginYmTiming(
+                        this,
+                        YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD,
+                        variant)) {
+                    refreshInstrument(t);
+                }
+                t.firstFm5AdmissionAttackPending = true;
+            }
+            t.firstFm5AdmissionVoicePending = false;
+        } else {
+            prepareVoiceSelection(t);
+            if (selectVoice(t, voiceId) && !t.tieNext) {
+                // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
+                // Preserve the existing Z80 HOLD behavior rather than refreshing the
+                // live channel mid-sustain.
+                refreshInstrument(t);
+            }
         }
     }
 
@@ -2083,6 +2113,23 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             synth.writeFm(this, port,
                     0x80 + operator * 4 + channel, 0xFF);
         }
+    }
+
+    /** Marks only the audited locked-on FM5 admission source path. */
+    public void markFirstFm5Admission() {
+        for (Track track : tracks) {
+            if (track.type == TrackType.FM && track.channelId == 4) {
+                track.firstFm5AdmissionVoicePending = true;
+                track.firstFm5AdmissionAttackPending = false;
+            }
+        }
+    }
+
+    private YmServiceTimingProfile.Variant firstAttackVariant(Track track) {
+        return new YmServiceTimingProfile.Variant(
+                1, 4, true, false,
+                bit7CarrierMask(track.voiceData, 21),
+                YmServiceTimingProfile.PathKind.FIRST_VOICE_ATTACK);
     }
 
     private boolean selectVoice(Track t, int voiceId) {
@@ -2235,6 +2282,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             fnum = packed & 0x7FF;
 
             int chVal = (port == 0) ? ch : (ch + 4); // YM2612 0x28: bit2 selects upper port
+            boolean timedFirstAttack = t.firstFm5AdmissionAttackPending
+                    && !preventAttack && hwCh == 4;
+            YmServiceTimingProfile.Variant firstAttack = timedFirstAttack
+                    ? firstAttackVariant(t) : null;
 
             // SMPSPlay DoNoteOn: skip KEY_OFF and KEY_ON when tieNext (HOLD) is set.
             // This allows smpsNoAttack (E7) to work correctly for both music and SFX.
@@ -2244,46 +2295,66 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     synth.writeFm(this, 0, 0x2B, 0x00);
                 }
 
-                synth.writeFm(this, 0, 0x28, chVal); // Key Off before frequency change
+                if (timedFirstAttack) {
+                    try (Synthesizer.YmTimingScope ignored =
+                                 synth.beginYmTiming(this,
+                                         YmServiceTimingProfile.SegmentKind
+                                                 .KEY_OFF,
+                                         firstAttack)) {
+                        synth.writeFm(this, 0, 0x28, chVal);
+                    }
+                } else {
+                    synth.writeFm(this, 0, 0x28, chVal);
+                }
             }
 
-            boolean z80Modulation = config.getModAlgo()
-                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
-                    && t.modEnabled && config.isApplyModOnNote();
-            if (z80Modulation) {
-                // S3K zUpdateFMorPSGTrack prepares modulation in HL before its
-                // sole zFMSendFreq call. Do not expose an unmodulated A4/A0
-                // pair (or a second pan write) before the final frequency.
-                t.forceModulationWrite = true;
-                if (!applyModulation(t)) {
-                    writeFmFreq(port, ch, fnum, block);
-                }
-            } else {
-                writeFmFreq(port, ch, fnum, block);
-                // S1/S2 FMPrepareNote writes only A4/A0; the historical Z80
-                // compatibility path refreshes pan here. S3K uploads pan as
-                // part of zSendFMInstrument instead.
-                if (!config.isDirect68kDriver()
-                        && config.getModAlgo()
-                        != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
-                    applyFmPanAmsFms(t);
-                }
-                // S2 (ModAlgo 68k_a) applies modulation before note-on; S1
-                // (ModAlgo 68k) does not.
-                if (t.modEnabled && config.isApplyModOnNote()) {
+            try (Synthesizer.YmTimingScope ignored = timedFirstAttack
+                    ? synth.beginYmTiming(this,
+                            YmServiceTimingProfile.SegmentKind
+                                    .FREQUENCY_AND_KEY_ON,
+                            firstAttack)
+                    : Synthesizer.YmTimingScope.immediate()) {
+                boolean z80Modulation = config.getModAlgo()
+                        == SmpsSequencerConfig.ModAlgo.MOD_Z80
+                        && t.modEnabled && config.isApplyModOnNote();
+                if (z80Modulation) {
+                    // S3K zUpdateFMorPSGTrack prepares modulation in HL before its
+                    // sole zFMSendFreq call. Do not expose an unmodulated A4/A0
+                    // pair (or a second pan write) before the final frequency.
                     t.forceModulationWrite = true;
-                    applyModulation(t);
+                    if (!applyModulation(t)) {
+                        writeFmFreq(port, ch, fnum, block);
+                    }
+                } else {
+                    writeFmFreq(port, ch, fnum, block);
+                    // S1/S2 FMPrepareNote writes only A4/A0; the historical Z80
+                    // compatibility path refreshes pan here. S3K uploads pan as
+                    // part of zSendFMInstrument instead.
+                    if (!config.isDirect68kDriver()
+                            && config.getModAlgo()
+                            != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+                        applyFmPanAmsFms(t);
+                    }
+                    // S2 (ModAlgo 68k_a) applies modulation before note-on; S1
+                    // (ModAlgo 68k) does not.
+                    if (t.modEnabled && config.isApplyModOnNote()) {
+                        t.forceModulationWrite = true;
+                        applyModulation(t);
+                    }
+                }
+
+                // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
+                // reset, but FMUpdateTrack still branches to FMNoteOn after the
+                // tied frequency has been prepared. Preserve the Z80-family HOLD
+                // behavior, which suppresses its key-on too.
+                if (config.isDirect68kDriver() || !preventAttack) {
+                    synth.writeFm(this, 0, 0x28, 0xF0 | chVal);
+                    LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
+                            + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
                 }
             }
-
-            // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
-            // reset, but FMUpdateTrack still branches to FMNoteOn after the
-            // tied frequency has been prepared. Preserve the Z80-family HOLD
-            // behavior, which suppresses its key-on too.
-            if (config.isDirect68kDriver() || !preventAttack) {
-                synth.writeFm(this, 0, 0x28, 0xF0 | chVal); // Key On after latching frequency/pan
-                LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
-                        + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
+            if (timedFirstAttack) {
+                t.firstFm5AdmissionAttackPending = false;
             }
 
         } else {
@@ -2468,6 +2539,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
+            if (!t.active && isSfx && t.channelId == 4
+                    && config.getFmSfxReleaseMode()
+                            == SmpsSequencerConfig.FmSfxReleaseMode
+                                    .RESTORE_MUSIC_DIRECTLY) {
+                // Locked-on fix_sndbugs=0 cfStopTrack owns this key-off and
+                // the restored music upload as one source-timed operation.
+                t.fm5CompletionKeyOffPending = true;
+                return;
+            }
             int hwCh = t.channelId;
             int port = (hwCh < 3) ? 0 : 1;
             int ch = hwCh % 3;
@@ -2493,6 +2573,31 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 return false;
         }
         return true;
+    }
+
+    public boolean consumeFm5CompletionKeyOffPending() {
+        for (Track track : tracks) {
+            if (track.channelId == 4 && track.fm5CompletionKeyOffPending) {
+                track.fm5CompletionKeyOffPending = false;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public YmServiceTimingProfile.Variant completionRestoreVariant(
+            int channelId) {
+        for (Track track : tracks) {
+            if (track.type == TrackType.FM && track.channelId == channelId
+                    && track.active && track.overridden
+                    && track.voiceData != null) {
+                return new YmServiceTimingProfile.Variant(
+                        channelId < 3 ? 0 : 1, 4, true, false,
+                        bit7CarrierMask(track.voiceData, 21),
+                        YmServiceTimingProfile.PathKind.COMPLETION_RESTORE);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -3587,6 +3692,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.fmVolEnvHold,
                 track.fmVolEnvOpMask,
                 track.forceRefresh,
+                track.firstFm5AdmissionVoicePending,
+                track.firstFm5AdmissionAttackPending,
+                track.fm5CompletionKeyOffPending,
                 track.ssgEg,
                 track.dacMuted,
                 track.modStepInEffect,
@@ -3675,6 +3783,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.fmVolEnvHold = snapshot.fmVolEnvHold();
         track.fmVolEnvOpMask = snapshot.fmVolEnvOpMask();
         track.forceRefresh = snapshot.forceRefresh();
+        track.firstFm5AdmissionVoicePending =
+                snapshot.firstFm5AdmissionVoicePending();
+        track.firstFm5AdmissionAttackPending =
+                snapshot.firstFm5AdmissionAttackPending();
+        track.fm5CompletionKeyOffPending =
+                snapshot.fm5CompletionKeyOffPending();
         copyInto(snapshot.ssgEg(), track.ssgEg);
         track.dacMuted = snapshot.dacMuted();
         track.modStepInEffect = snapshot.modStepInEffect();

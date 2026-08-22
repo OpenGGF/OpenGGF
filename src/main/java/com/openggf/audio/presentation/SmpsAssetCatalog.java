@@ -485,6 +485,7 @@ final class SmpsAssetCatalog {
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .ymServiceTimingProfile(source.getYmServiceTimingProfile())
+                .ymTimingOwnerPolicy(source.getYmTimingOwnerPolicy())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
                 .noteOnPrevent(source.getNoteOnPrevent())

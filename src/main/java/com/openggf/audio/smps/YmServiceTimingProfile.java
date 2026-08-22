@@ -46,12 +46,22 @@ public interface YmServiceTimingProfile {
     }
 
     record Segment(SegmentKind kind, Variant variant,
+                   long advanceBeforeFirstWriteMasterCycles,
                    long[] advanceBeforeWriteMasterCycles) {
+        public Segment(SegmentKind kind, Variant variant,
+                       long[] advanceBeforeWriteMasterCycles) {
+            this(kind, variant, 0, advanceBeforeWriteMasterCycles);
+        }
+
         public Segment {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(variant, "variant");
             Objects.requireNonNull(advanceBeforeWriteMasterCycles,
                     "advanceBeforeWriteMasterCycles");
+            if (advanceBeforeFirstWriteMasterCycles < 0) {
+                throw new IllegalArgumentException(
+                        "segment-leading advance cannot be negative");
+            }
             if (advanceBeforeWriteMasterCycles.length == 0) {
                 throw new IllegalArgumentException(
                         "timed segment must contain at least one write");
@@ -104,7 +114,7 @@ public interface YmServiceTimingProfile {
         Map<Key, Segment> byKey = new HashMap<>();
         for (Segment segment : segments) {
             Objects.requireNonNull(segment, "segment");
-            long total = 0;
+            long total = segment.advanceBeforeFirstWriteMasterCycles();
             long[] advances = segment.advanceBeforeWriteMasterCycles();
             if (advances.length > maximumWritesPerDriverService) {
                 throw new IllegalArgumentException(
