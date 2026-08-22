@@ -280,7 +280,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>
  * special stage is a boundary-model over-reach (an emerald is awarded only on a WON
  * stage, which the chain does not reproduce) — see
- * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}. Instead of
+ * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(TraceRunSegmentDescriptor)}.
+ * Instead of
  * silently no-op'ing, the base now asserts the RECORDED manifest's own emerald
  * progression across a cleared special stage
  * ({@link AbstractRunChainTest#assertRecordedEmeraldProgression}: emeralds_after ==
@@ -415,7 +416,9 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ehzHalfpipeRoundTrip() throws Exception {
+        auditHeadlessPayloadReleaseAtBoundaries();
         DynamicArtGapJournalEvidence evidence = assertChainReplay(RUN_DIR);
+        assertHeadlessPayloadReleased();
         DynamicArtStructuralGapEvidence returnGap =
                 evidence.structuralGap("ss_2", "seg3_ehz1");
         assertTrue(returnGap.transitionCountAfterNextArm()

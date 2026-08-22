@@ -119,17 +119,21 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ghzMazeSpecialStageReturnPresentationBridge() throws Exception {
+        auditHeadlessPayloadReleaseAtBoundaries();
         assertChainReplayThroughSegmentRow(
                 DEFAULT_RUN_DIR, 2, 812);
+        assertHeadlessPayloadReleased();
     }
 
     @Test
     void ghzMazeRoundTrip() throws Exception {
+        auditHeadlessPayloadReleaseAtBoundaries();
         String configuredRunDir = System.getProperty(EXTERNAL_RUN_DIR_PROPERTY);
         activeRunDir = configuredRunDir == null || configuredRunDir.isBlank()
                 ? DEFAULT_RUN_DIR
                 : Path.of(configuredRunDir).toAbsolutePath().normalize();
         DynamicArtGapJournalEvidence evidence = assertChainReplay(activeRunDir);
+        assertHeadlessPayloadReleased();
         assertEquals(List.of(
                         AdmitDestination.class,
                         CloseSegment.class, EnterTransitionGap.class,

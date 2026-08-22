@@ -10,13 +10,15 @@ import com.openggf.game.GameMode;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.TraceData;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.runs.ActiveSegmentPayload;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.testmode.TraceLaunchStatus;
 import com.openggf.tests.HeadlessTestFixture;
 
@@ -124,6 +126,66 @@ public final class VisualRunReplayHarness {
 
         default void afterOuterFrame(FrameView frame) { }
     }
+
+    @FunctionalInterface
+    interface RunSessionConstructor {
+        TraceSessionLauncher create(
+                TraceEntry entry, Bk2Movie movie,
+                List<TraceRunSegmentDescriptor> segments,
+                ActiveSegmentPayload activePayload) throws Exception;
+    }
+
+    /** Injectable lifecycle boundary used to prove ownership on either side. */
+    interface RunBootstrap {
+        GameLoop beforeTransfer(
+                TraceEntry entry, TraceData firstTrace,
+                FrameObserver observer) throws Exception;
+
+        void afterTransfer(
+                TraceSessionLauncher session, GameLoop loop) throws Exception;
+    }
+
+    /**
+     * Test-only cleanup seam. The production closer preserves the active
+     * payload's idempotent, no-throw lease close.
+     */
+    @FunctionalInterface
+    interface VisualPayloadCloser {
+        void close(ActiveSegmentPayload payload);
+    }
+
+    private static final RunSessionConstructor PRODUCTION_SESSION_CONSTRUCTOR =
+            VisualRunReplayHarness::newRunSession;
+    private static final VisualPayloadCloser PRODUCTION_PAYLOAD_CLOSER =
+            ActiveSegmentPayload::close;
+    private static final RunBootstrap PRODUCTION_BOOTSTRAP = new RunBootstrap() {
+        @Override
+        public GameLoop beforeTransfer(
+                TraceEntry entry, TraceData firstTrace,
+                FrameObserver observer) throws Exception {
+            GraphicsManager.getInstance().resetState();
+            GraphicsManager.getInstance().initHeadless();
+            TraceLaunchStatus.clear();
+            TraceReplaySessionBootstrap.prepareConfiguration(
+                    firstTrace, firstTrace.metadata());
+            HeadlessTestFixture.builder()
+                    .withZoneAndAct(entry.zone(), entry.act())
+                    .withHardwareReadinessAdmissionPolicy(
+                            HardwareReadinessAdmissionPolicy.LIVE)
+                    .build();
+            observer.beforeReplayBootstrap();
+            GameLoop loop = new GameLoop(new InputHandler());
+            installCurrentGameLoop(loop);
+            return loop;
+        }
+
+        @Override
+        public void afterTransfer(
+                TraceSessionLauncher session, GameLoop loop) throws Exception {
+            setActiveSession(session);
+            finishRunLaunch(session);
+        }
+    };
 
     /** Exact half-open complete-audio epoch and diagnostic bootstrap budget. */
     public record CompleteAudioStop(int firstFrame, int exclusiveEnd,
@@ -272,144 +334,162 @@ public final class VisualRunReplayHarness {
     public static CompleteAudioCadenceResult replayCompleteAudio(
             Path runDir, CompleteAudioStop stop,
             FrameObserver observer) throws Exception {
+        return replayCompleteAudio(runDir, stop, observer,
+                PRODUCTION_SESSION_CONSTRUCTOR, PRODUCTION_BOOTSTRAP);
+    }
+
+    static CompleteAudioCadenceResult replayCompleteAudio(
+            Path runDir, CompleteAudioStop stop,
+            FrameObserver observer,
+            RunSessionConstructor sessionConstructor,
+            RunBootstrap bootstrap) throws Exception {
+        return replayCompleteAudio(runDir, stop, observer, sessionConstructor,
+                bootstrap, PRODUCTION_PAYLOAD_CLOSER);
+    }
+
+    static CompleteAudioCadenceResult replayCompleteAudio(
+            Path runDir, CompleteAudioStop stop,
+            FrameObserver observer,
+            RunSessionConstructor sessionConstructor,
+            RunBootstrap bootstrap,
+            VisualPayloadCloser payloadCloser) throws Exception {
         java.util.Objects.requireNonNull(stop, "stop");
         java.util.Objects.requireNonNull(observer, "observer");
-        TraceRunManifest manifest =
-                TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-        Path bk2 = runDir.resolve(manifest.sourceBk2());
-        TraceEntry entry = TraceEntry.forRun(runDir, manifest, bk2);
-        TraceCatalog.PreparedRunLaunch prepared = TraceCatalog.prepareRunLaunch(entry);
-        List<TraceRunReplayWalker.SegmentPlan> segments = prepared.segments();
-        Bk2Movie movie = prepared.movie();
-        TraceData seg0 = segments.get(0).trace();
-        int manifestFirst = segments.get(0).segment().bk2FrameOffset();
-        if (manifestFirst != stop.firstFrame()) {
-            throw new IllegalStateException(
-                    "complete-audio first frame " + stop.firstFrame()
-                            + " does not match manifest first segment row "
-                            + manifestFirst);
+        java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
+        java.util.Objects.requireNonNull(bootstrap, "bootstrap");
+        java.util.Objects.requireNonNull(payloadCloser, "payloadCloser");
+        ActiveSegmentPayload localPayload = null;
+        ActiveSegmentPayload leasedPayload = null;
+        TraceSessionLauncher transferredSession = null;
+        Throwable primary = null;
+        try {
+            TraceRunManifest manifest =
+                    TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+            Path bk2 = runDir.resolve(manifest.sourceBk2());
+            TraceEntry entry = TraceEntry.forRun(runDir, manifest, bk2);
+            TraceCatalog.PreparedDescriptorRunLaunch prepared =
+                    TraceCatalog.prepareDescriptorRunLaunch(entry);
+            List<TraceRunSegmentDescriptor> segments = prepared.segments();
+            Bk2Movie movie = prepared.movie();
+            localPayload = TraceRunReplayWalker.openActiveSegment(
+                    segments.getFirst(), 0);
+            leasedPayload = localPayload;
+            var seg0 = localPayload.trace();
+            int manifestFirst = segments.getFirst().segment().bk2FrameOffset();
+            if (manifestFirst != stop.firstFrame()) {
+                throw new IllegalStateException(
+                        "complete-audio first frame " + stop.firstFrame()
+                                + " does not match manifest first segment row "
+                                + manifestFirst);
+            }
+
+            GameLoop loop = bootstrap.beforeTransfer(entry, seg0, observer);
+            transferredSession = sessionConstructor.create(
+                    entry, movie, segments, localPayload);
+            localPayload = null;
+            TraceSessionLauncher session = transferredSession;
+            bootstrap.afterTransfer(session, loop);
+
+            ArrayDeque<String> recent = new ArrayDeque<>();
+            List<String> timeline = new ArrayList<>();
+            TIMELINE.set(timeline);
+            String[] lastKey = {""};
+
+            CompleteAudioDriver driver = new CompleteAudioDriver() {
+                private long outerPresentations;
+                private long audioUpdates;
+                private int hostSteps;
+
+                @Override
+                public int cursor() {
+                    return GameServices.playbackDebug().getCursorFrame();
+                }
+
+                @Override
+                public int movieFrameCount() {
+                    return movie.getFrameCount();
+                }
+
+                @Override
+                public boolean playbackPlaying() {
+                    return GameServices.playbackDebug().isSessionPlaying();
+                }
+
+                @Override
+                public boolean paused() {
+                    return loop.isPaused();
+                }
+
+                @Override
+                public String playbackRateDisplay() {
+                    return session.playbackRateDisplay();
+                }
+
+                @Override
+                public String abortDiagnostic() {
+                    return null;
+                }
+
+                @Override
+                public boolean coordinatorComplete() {
+                    return runFinished(session);
+                }
+
+                @Override
+                public long outerPresentationCount() {
+                    return outerPresentations;
+                }
+
+                @Override
+                public long audioUpdateCount() {
+                    return audioUpdates;
+                }
+
+                @Override
+                public void step() {
+                    loop.step();
+                    hostSteps++;
+                }
+
+                @Override
+                public void presentOuterFrame() {
+                    loop.presentOuterFrame(false, false);
+                    outerPresentations++;
+                }
+
+                @Override
+                public void updateAudio() {
+                    GameServices.audio().update();
+                    audioUpdates++;
+                }
+
+                @Override
+                public FrameView frameView(int consumedCursor, int loopStep,
+                                           boolean semanticRow) {
+                    return VisualRunReplayHarness.frameView(
+                            consumedCursor, loopStep, loop, segments,
+                            semanticRow);
+                }
+
+                @Override
+                public void verifyAfterFrame() {
+                    record(recent, hostSteps, session, loop);
+                    recordTimeline(timeline, lastKey, hostSteps, session, loop);
+                    rethrowIfAborted(session, recent);
+                }
+            };
+            return driveCompleteAudioCadence(stop, observer, driver);
+        } catch (Exception | Error failure) {
+            primary = failure;
+            throw failure;
+        } finally {
+            Throwable cleanup = closeVisualPayloadLifecycle(
+                    transferredSession, localPayload, leasedPayload, primary,
+                    payloadCloser);
+            if (primary == null) {
+                rethrowCleanup(cleanup);
+            }
         }
-
-        GraphicsManager.getInstance().resetState();
-        GraphicsManager.getInstance().initHeadless();
-        TraceLaunchStatus.clear();
-        TraceReplaySessionBootstrap.prepareConfiguration(seg0, seg0.metadata());
-
-        // A visual run boots LIVE, exactly as the windowed launch does
-        // (TraceSessionLauncher.launchRun's armNextGameplayAdmissionPolicy).
-        // The session's title-card prelude is production-live work, so its
-        // submissions must be admitted live and retired before the level
-        // starts; TraceReplayDriver.startPreparedLevel then converts the
-        // drained service in place via beginRecordedAdmissionAfterLiveEpoch.
-        // Constructing RECORDED here instead takes beginRecordedAdmission's
-        // must-precede-the-first-submission path, which both admits the
-        // prelude's own art from the recorded stream and consumes the
-        // ordinals the stream numbers from the level's first RunPLC.
-        HeadlessTestFixture.builder()
-                .withZoneAndAct(entry.zone(), entry.act())
-                .withHardwareReadinessAdmissionPolicy(
-                        HardwareReadinessAdmissionPolicy.LIVE)
-                .build();
-
-        // HeadlessTestFixture resets transient audio state. Install capture
-        // observers after that reset and before the first title-card or replay
-        // driver can construct a sequencer/chip owner.
-        observer.beforeReplayBootstrap();
-
-        GameLoop loop = new GameLoop(new InputHandler());
-        installCurrentGameLoop(loop);
-        TraceSessionLauncher session = newRunSession(entry, movie, segments);
-        setActiveSession(session);
-        finishRunLaunch(session);
-
-        ArrayDeque<String> recent = new ArrayDeque<>();
-        List<String> timeline = new ArrayList<>();
-        TIMELINE.set(timeline);
-        String[] lastKey = {""};
-
-        CompleteAudioDriver driver = new CompleteAudioDriver() {
-            private long outerPresentations;
-            private long audioUpdates;
-            private int hostSteps;
-
-            @Override
-            public int cursor() {
-                return GameServices.playbackDebug().getCursorFrame();
-            }
-
-            @Override
-            public int movieFrameCount() {
-                return movie.getFrameCount();
-            }
-
-            @Override
-            public boolean playbackPlaying() {
-                return GameServices.playbackDebug().isSessionPlaying();
-            }
-
-            @Override
-            public boolean paused() {
-                return loop.isPaused();
-            }
-
-            @Override
-            public String playbackRateDisplay() {
-                return session.playbackRateDisplay();
-            }
-
-            @Override
-            public String abortDiagnostic() {
-                return null;
-            }
-
-            @Override
-            public boolean coordinatorComplete() {
-                return runFinished(session);
-            }
-
-            @Override
-            public long outerPresentationCount() {
-                return outerPresentations;
-            }
-
-            @Override
-            public long audioUpdateCount() {
-                return audioUpdates;
-            }
-
-            @Override
-            public void step() {
-                loop.step();
-                hostSteps++;
-            }
-
-            @Override
-            public void presentOuterFrame() {
-                loop.presentOuterFrame(false, false);
-                outerPresentations++;
-            }
-
-            @Override
-            public void updateAudio() {
-                GameServices.audio().update();
-                audioUpdates++;
-            }
-
-            @Override
-            public FrameView frameView(int consumedCursor, int loopStep,
-                                       boolean semanticRow) {
-                return VisualRunReplayHarness.frameView(
-                        consumedCursor, loopStep, loop, segments, semanticRow);
-            }
-
-            @Override
-            public void verifyAfterFrame() {
-                record(recent, hostSteps, session, loop);
-                recordTimeline(timeline, lastKey, hostSteps, session, loop);
-                rethrowIfAborted(session, recent);
-            }
-        };
-        return driveCompleteAudioCadence(stop, observer, driver);
     }
 
     static CompleteAudioCadenceResult driveCompleteAudioCadence(
@@ -617,136 +697,163 @@ public final class VisualRunReplayHarness {
     private static Result replay(Path runDir, Stop stop,
                                  FrameObserver observer,
                                  boolean rejectFastForward) throws Exception {
-        java.util.Objects.requireNonNull(observer, "observer");
-        TraceRunManifest manifest =
-                TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-        Path bk2 = runDir.resolve(manifest.sourceBk2());
-        TraceEntry entry = TraceEntry.forRun(runDir, manifest, bk2);
-        TraceCatalog.PreparedRunLaunch prepared = TraceCatalog.prepareRunLaunch(entry);
-        List<TraceRunReplayWalker.SegmentPlan> segments = prepared.segments();
-        Bk2Movie movie = prepared.movie();
-        TraceData seg0 = segments.get(0).trace();
-
-        // Same ordering the windowed launch uses: configuration (recorded team,
-        // cross-game, intro skip) is prepared before any level load, because the
-        // bootstrap registers the active team off it.
-        GraphicsManager.getInstance().resetState();
-        GraphicsManager.getInstance().initHeadless();
-        TraceLaunchStatus.clear();
-        TraceReplaySessionBootstrap.prepareConfiguration(seg0, seg0.metadata());
-
-        // A visual run boots LIVE, exactly as the windowed launch does
-        // (TraceSessionLauncher.launchRun's armNextGameplayAdmissionPolicy).
-        // The session's title-card prelude is production-live work, so its
-        // submissions must be admitted live and retired before the level
-        // starts; TraceReplayDriver.startPreparedLevel then converts the
-        // drained service in place via beginRecordedAdmissionAfterLiveEpoch.
-        // Constructing RECORDED here instead takes beginRecordedAdmission's
-        // must-precede-the-first-submission path, which both admits the
-        // prelude's own art from the recorded stream and consumes the
-        // ordinals the stream numbers from the level's first RunPLC.
-        HeadlessTestFixture.builder()
-                .withZoneAndAct(entry.zone(), entry.act())
-                .withHardwareReadinessAdmissionPolicy(
-                        HardwareReadinessAdmissionPolicy.LIVE)
-                .build();
-
-        GameLoop loop = new GameLoop(new InputHandler());
-        installCurrentGameLoop(loop);
-
-        TraceSessionLauncher session = newRunSession(entry, movie, segments);
-        setActiveSession(session);
-        // The SAME callback launchRun hands to the master-title fade. It plays
-        // segment 0's title card and only then reaches finishRunReplayLaunch,
-        // so the run starts from the state a windowed session starts from.
-        finishRunLaunch(session);
-        if (rejectFastForward && !"< 1x >".equals(session.playbackRateDisplay())) {
-            throw new IllegalStateException("audio timeline capture rejects enabled fast-forward");
-        }
-
-        ArrayDeque<String> recent = new ArrayDeque<>();
-        List<String> timeline = new ArrayList<>();
-        TIMELINE.set(timeline);
-        String[] lastKey = {""};
-        int steps = 0;
-        boolean stalled = false;
-        boolean reachedTarget = false;
-        boolean baselineObserved = false;
-        while (steps < stop.maxSteps() && !runFinished(session)) {
-            int cursorBefore = GameServices.playbackDebug().getCursorFrame();
-            FrameView before = frameView(cursorBefore, steps + 1, loop, segments, false);
-            if (!baselineObserved && before.segmentIndex() == 0 && before.segmentRow() == 0) {
-                observer.beforeFirstSegmentRow(before);
-                baselineObserved = true;
-            }
-            loop.step();
-            steps++;
-            // This is the Engine-owned outer audio placement, deliberately
-            // repeated for bootstrap/title-card diagnostics as well as rows.
-            loop.presentOuterFrame(false, false);
-            GameServices.audio().update();
-            int cursorAfter = GameServices.playbackDebug().getCursorFrame();
-            boolean semanticStart = before.segmentIndex() >= 0 && before.segmentRow() >= 0;
-            int consumed = semanticStart && cursorAfter == cursorBefore + 1
-                    ? cursorBefore : cursorAfter;
-            boolean semanticRow = semanticStart && cursorAfter == cursorBefore + 1;
-            if (rejectFastForward && semanticStart && cursorAfter != cursorBefore + 1) {
-                throw new IllegalStateException("audio timeline capture rejects fast-forwarded BK2 rows");
-            }
-            observer.afterOuterFrame(frameView(consumed, steps, loop, segments, semanticRow));
-            record(recent, steps, session, loop);
-            recordTimeline(timeline, lastKey, steps, session, loop);
-            rethrowIfAborted(session, recent);
-            // Only meaningful once the title card has handed off and the run
-            // coordinator exists; before that there is no session to stall.
-            if (loop.isPaused()) {
-                throw new AssertionError(
-                        "visual run paused itself on its first comparison error"
-                                + " -- a windowed session pauses so the user can"
-                                + " read the HUD, which headlessly is a stall"
-                                + gapLedger() + window(recent));
-            }
-            if (coordinator(session) != null
-                    && !GameServices.playbackDebug().isSessionPlaying()) {
-                stalled = true;
-                break;
-            }
-            // Checked LAST, so a target that lands on the same step as a pause
-            // or a stall reports the failure rather than a hollow success.
-            if (stop.untilSegmentIndex() >= 0
-                    && reachedStopTarget(session, stop)) {
-                reachedTarget = true;
-                break;
-            }
-        }
-        Outcome outcome = runFinished(session) ? Outcome.COMPLETED
-                : reachedTarget ? Outcome.REACHED_SEGMENT
-                : stalled ? Outcome.PLAYBACK_STALLED : Outcome.BUDGET_EXHAUSTED;
-        Result result = new Result(outcome, steps,
-                GameServices.playbackDebug().getCursorFrame(),
-                coordinatorPhase(session), currentSegmentIndex(session),
-                List.copyOf(timeline));
-        if (outcome == Outcome.PLAYBACK_STALLED) {
-            throw new AssertionError("visual run stalled: BK2 playback stopped with "
-                    + "the coordinator still on segment "
-                    + result.currentSegmentIndex() + " (" + result.phase() + ")"
-                    + window(recent));
-        }
-        return result;
+        return replay(runDir, stop, observer, rejectFastForward,
+                PRODUCTION_SESSION_CONSTRUCTOR, PRODUCTION_BOOTSTRAP);
     }
 
-    private static FrameView frameView(int cursor, int loopStep, GameLoop loop,
-                                       List<TraceRunReplayWalker.SegmentPlan> segments,
-                                       boolean semanticRow) {
+    static Result replay(Path runDir, Stop stop,
+                         FrameObserver observer,
+                         boolean rejectFastForward,
+                         RunSessionConstructor sessionConstructor,
+                         RunBootstrap bootstrap) throws Exception {
+        return replay(runDir, stop, observer, rejectFastForward,
+                sessionConstructor, bootstrap, PRODUCTION_PAYLOAD_CLOSER);
+    }
+
+    static Result replay(Path runDir, Stop stop,
+                         FrameObserver observer,
+                         boolean rejectFastForward,
+                         RunSessionConstructor sessionConstructor,
+                         RunBootstrap bootstrap,
+                         VisualPayloadCloser payloadCloser) throws Exception {
+        java.util.Objects.requireNonNull(observer, "observer");
+        java.util.Objects.requireNonNull(sessionConstructor, "sessionConstructor");
+        java.util.Objects.requireNonNull(bootstrap, "bootstrap");
+        java.util.Objects.requireNonNull(payloadCloser, "payloadCloser");
+        ActiveSegmentPayload localPayload = null;
+        ActiveSegmentPayload leasedPayload = null;
+        TraceSessionLauncher transferredSession = null;
+        Throwable primary = null;
+        try {
+            TraceRunManifest manifest =
+                    TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+            Path bk2 = runDir.resolve(manifest.sourceBk2());
+            TraceEntry entry = TraceEntry.forRun(runDir, manifest, bk2);
+            TraceCatalog.PreparedDescriptorRunLaunch prepared =
+                    TraceCatalog.prepareDescriptorRunLaunch(entry);
+            List<TraceRunSegmentDescriptor> segments = prepared.segments();
+            Bk2Movie movie = prepared.movie();
+            localPayload = TraceRunReplayWalker.openActiveSegment(
+                    segments.getFirst(), 0);
+            leasedPayload = localPayload;
+            var seg0 = localPayload.trace();
+
+            GameLoop loop = bootstrap.beforeTransfer(entry, seg0, observer);
+            transferredSession = sessionConstructor.create(
+                    entry, movie, segments, localPayload);
+            localPayload = null;
+            TraceSessionLauncher session = transferredSession;
+            bootstrap.afterTransfer(session, loop);
+            if (rejectFastForward
+                    && !"< 1x >".equals(session.playbackRateDisplay())) {
+                throw new IllegalStateException(
+                        "audio timeline capture rejects enabled fast-forward");
+            }
+
+            ArrayDeque<String> recent = new ArrayDeque<>();
+            List<String> timeline = new ArrayList<>();
+            TIMELINE.set(timeline);
+            String[] lastKey = {""};
+            int steps = 0;
+            boolean stalled = false;
+            boolean reachedTarget = false;
+            boolean baselineObserved = false;
+            while (steps < stop.maxSteps() && !runFinished(session)) {
+                int cursorBefore =
+                        GameServices.playbackDebug().getCursorFrame();
+                FrameView before = frameView(
+                        cursorBefore, steps + 1, loop, segments, false);
+                if (!baselineObserved && before.segmentIndex() == 0
+                        && before.segmentRow() == 0) {
+                    observer.beforeFirstSegmentRow(before);
+                    baselineObserved = true;
+                }
+                loop.step();
+                steps++;
+                // This is the Engine-owned outer audio placement, deliberately
+                // repeated for bootstrap/title-card diagnostics as well as rows.
+                loop.presentOuterFrame(false, false);
+                GameServices.audio().update();
+                int cursorAfter =
+                        GameServices.playbackDebug().getCursorFrame();
+                boolean semanticStart = before.segmentIndex() >= 0
+                        && before.segmentRow() >= 0;
+                int consumed = semanticStart && cursorAfter == cursorBefore + 1
+                        ? cursorBefore : cursorAfter;
+                boolean semanticRow = semanticStart
+                        && cursorAfter == cursorBefore + 1;
+                if (rejectFastForward && semanticStart
+                        && cursorAfter != cursorBefore + 1) {
+                    throw new IllegalStateException(
+                            "audio timeline capture rejects fast-forwarded BK2 rows");
+                }
+                observer.afterOuterFrame(frameView(
+                        consumed, steps, loop, segments, semanticRow));
+                record(recent, steps, session, loop);
+                recordTimeline(timeline, lastKey, steps, session, loop);
+                rethrowIfAborted(session, recent);
+                // Only meaningful once the title card has handed off and the run
+                // coordinator exists; before that there is no session to stall.
+                if (loop.isPaused()) {
+                    throw new AssertionError(
+                            "visual run paused itself on its first comparison error"
+                                    + " -- a windowed session pauses so the user can"
+                                    + " read the HUD, which headlessly is a stall"
+                                    + gapLedger() + window(recent));
+                }
+                if (coordinator(session) != null
+                        && !GameServices.playbackDebug().isSessionPlaying()) {
+                    stalled = true;
+                    break;
+                }
+                // Checked LAST, so a target that lands on the same step as a pause
+                // or a stall reports the failure rather than a hollow success.
+                if (stop.untilSegmentIndex() >= 0
+                        && reachedStopTarget(session, stop)) {
+                    reachedTarget = true;
+                    break;
+                }
+            }
+            Outcome outcome = runFinished(session) ? Outcome.COMPLETED
+                    : reachedTarget ? Outcome.REACHED_SEGMENT
+                    : stalled ? Outcome.PLAYBACK_STALLED
+                    : Outcome.BUDGET_EXHAUSTED;
+            Result result = new Result(outcome, steps,
+                    GameServices.playbackDebug().getCursorFrame(),
+                    coordinatorPhase(session), currentSegmentIndex(session),
+                    List.copyOf(timeline));
+            if (outcome == Outcome.PLAYBACK_STALLED) {
+                throw new AssertionError(
+                        "visual run stalled: BK2 playback stopped with "
+                                + "the coordinator still on segment "
+                                + result.currentSegmentIndex() + " ("
+                                + result.phase() + ")" + window(recent));
+            }
+            return result;
+        } catch (Exception | Error failure) {
+            primary = failure;
+            throw failure;
+        } finally {
+            Throwable cleanup = closeVisualPayloadLifecycle(
+                    transferredSession, localPayload, leasedPayload, primary,
+                    payloadCloser);
+            if (primary == null) {
+                rethrowCleanup(cleanup);
+            }
+        }
+    }
+
+    static FrameView frameView(int cursor, int loopStep, GameLoop loop,
+                              List<TraceRunSegmentDescriptor> segments,
+                              boolean semanticRow) {
         for (int index = 0; index < segments.size(); index++) {
-            TraceRunReplayWalker.SegmentPlan plan = segments.get(index);
+            TraceRunSegmentDescriptor plan = segments.get(index);
             int start = plan.segment().bk2FrameOffset();
             int row = cursor - start;
-            if (row >= 0 && row < plan.trace().frameCount()) {
-                var lagState = plan.trace().lagStateForFrame(row);
+            if (row >= 0 && row < plan.rowCount()) {
                 return new FrameView(cursor,
                         new SegmentCoordinate(index, row), loopStep,
-                        lagState != null && lagState.lagged(),
+                        plan.laggedRows().get(row),
                         loop.getCurrentGameMode() == GameMode.LEVEL, semanticRow);
             }
         }
@@ -770,14 +877,85 @@ public final class VisualRunReplayHarness {
     // through the master-title callback rather than a public API.
     // ------------------------------------------------------------------
 
-    private static TraceSessionLauncher newRunSession(
+    static TraceSessionLauncher newRunSession(
             TraceEntry entry, Bk2Movie movie,
-            List<TraceRunReplayWalker.SegmentPlan> segments) throws Exception {
+            List<TraceRunSegmentDescriptor> segments,
+            ActiveSegmentPayload activePayload) throws Exception {
         var ctor = TraceSessionLauncher.class.getDeclaredConstructor(
                 TraceEntry.class, Bk2Movie.class, List.class,
+                ActiveSegmentPayload.class,
                 TraceReplaySessionBootstrap.ConfigSnapshot.class);
         ctor.setAccessible(true);
-        return ctor.newInstance(entry, movie, segments, null);
+        return ctor.newInstance(entry, movie, segments, activePayload, null);
+    }
+
+    /**
+     * Lets the session detach HUD/camera/observer aliases first, then closes
+     * the idempotent local lease exactly once through the harness seam.
+     */
+    private static Throwable closeVisualPayloadLifecycle(
+            TraceSessionLauncher transferredSession,
+            ActiveSegmentPayload localPayload,
+            ActiveSegmentPayload leasedPayload,
+            Throwable primary,
+            VisualPayloadCloser payloadCloser) throws Exception {
+        Throwable failure = primary;
+        if (transferredSession != null) {
+            failure = closeTransferredRunSession(transferredSession, failure);
+        }
+        ActiveSegmentPayload payload = transferredSession != null
+                ? leasedPayload : localPayload;
+        if (payload != null) {
+            failure = closeVisualPayload(payload, failure, payloadCloser);
+        }
+        return failure;
+    }
+
+    private static Throwable closeVisualPayload(
+            ActiveSegmentPayload payload, Throwable primary,
+            VisualPayloadCloser payloadCloser) {
+        try {
+            payloadCloser.close(payload);
+            return primary;
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (primary != null) {
+                primary.addSuppressed(cleanupFailure);
+                return primary;
+            }
+            return cleanupFailure;
+        }
+    }
+
+    static Throwable closeTransferredRunSession(
+            TraceSessionLauncher session, Throwable primary) throws Exception {
+        Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                "abortIncompleteSession", Throwable.class, String.class,
+                GameLoop.class);
+        method.setAccessible(true);
+        try {
+            return (Throwable) method.invoke(session, primary,
+                    "visual run harness teardown", null);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cleanup = e.getCause();
+            if (primary != null) {
+                primary.addSuppressed(cleanup);
+                return primary;
+            }
+            if (cleanup instanceof Exception exception) {
+                throw exception;
+            }
+            throw (Error) cleanup;
+        }
+    }
+
+    private static void rethrowCleanup(Throwable cleanup) throws Exception {
+        if (cleanup == null) {
+            return;
+        }
+        if (cleanup instanceof Exception exception) {
+            throw exception;
+        }
+        throw (Error) cleanup;
     }
 
     private static void finishRunLaunch(TraceSessionLauncher session)

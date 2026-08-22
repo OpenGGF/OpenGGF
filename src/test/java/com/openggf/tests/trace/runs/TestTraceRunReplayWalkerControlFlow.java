@@ -170,18 +170,18 @@ class TestTraceRunReplayWalkerControlFlow {
             throws Exception {
         Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
         TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, runDir);
-        assertEquals(3, plans.size());
-        assertNull(plans.get(0).entryBoundary());
-        assertEquals("starpost_bonus", plans.get(0).exitBoundary().entryKind());
-        assertEquals("starpost_bonus", plans.get(1).entryBoundary().entryKind());
-        assertEquals("stage_exit", plans.get(1).exitBoundary().entryKind());
-        assertEquals("stage_exit", plans.get(2).entryBoundary().entryKind());
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
+        assertEquals(3, descriptors.size());
+        assertNull(descriptors.get(0).entryBoundary());
+        assertEquals("starpost_bonus", descriptors.get(0).exitBoundary().entryKind());
+        assertEquals("starpost_bonus", descriptors.get(1).entryBoundary().entryKind());
+        assertEquals("stage_exit", descriptors.get(1).exitBoundary().entryKind());
+        assertEquals("stage_exit", descriptors.get(2).entryBoundary().entryKind());
         assertEquals(SegmentExecutionPolicy.GAMEPLAY,
-                plans.get(2).executionPolicy(),
+                descriptors.get(2).executionPolicy(),
                 "a generated S3K stage-exit destination with an advancing "
                         + "gameplay clock remains ordinary gameplay");
-        assertNull(plans.get(2).exitBoundary());
+        assertNull(descriptors.get(2).exitBoundary());
     }
 
     @Test
@@ -210,7 +210,7 @@ class TestTraceRunReplayWalkerControlFlow {
                 runDir.resolve("run_manifest.json"));
         IOException error = assertThrows(
                 IOException.class,
-                () -> TraceRunReplayWalker.plan(manifest, runDir));
+                () -> TraceRunReplayWalker.planDescriptors(manifest, runDir));
         assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
     }
 

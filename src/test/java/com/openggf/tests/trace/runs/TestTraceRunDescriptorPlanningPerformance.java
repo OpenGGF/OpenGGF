@@ -32,6 +32,9 @@ class TestTraceRunDescriptorPlanningPerformance {
     private static final String RUN_ID =
             "s3k-knuckles-complete-superemeralds";
     private static final int EXPECTED_SEGMENTS = 67;
+    private static final long MAX_DESCRIPTOR_RETAINED_BYTES = 16_777_216;
+    private static final long FIXED_WARMED_EAGER_BASELINE_BYTES =
+            1_087_200_800L;
 
     @Test
     void compactDescriptorsRetainLessHeapWithoutOwningEagerPayloads()
@@ -60,22 +63,25 @@ class TestTraceRunDescriptorPlanningPerformance {
         assertEquals(eager.segmentCount(), descriptor.segmentCount());
         assertEquals(eager.rowCount(), descriptor.rowCount());
         assertEquals(descriptor.rowCount(), descriptor.rawFrameCount());
-        assertTrue(descriptor.retainedBytes() < eager.retainedBytes(),
+        assertTrue(descriptor.retainedBytes() < FIXED_WARMED_EAGER_BASELINE_BYTES,
                 () -> "descriptor retained heap " + descriptor.retainedBytes()
-                        + " must be below eager retained heap "
-                        + eager.retainedBytes());
+                        + " must be below fixed warmed eager retained heap "
+                        + FIXED_WARMED_EAGER_BASELINE_BYTES);
+        assertTrue(descriptor.retainedBytes() <= MAX_DESCRIPTOR_RETAINED_BYTES,
+                () -> "descriptor retained heap " + descriptor.retainedBytes()
+                        + " must not exceed "
+                        + MAX_DESCRIPTOR_RETAINED_BYTES);
 
-        long reductionBytes = eager.retainedBytes()
+        long reductionBytes = FIXED_WARMED_EAGER_BASELINE_BYTES
                 - descriptor.retainedBytes();
-        long reductionPercent = eager.retainedBytes() == 0
-                ? 0
-                : Math.round(reductionBytes * 100.0 / eager.retainedBytes());
+        long reductionPercent = Math.round(reductionBytes * 100.0
+                / FIXED_WARMED_EAGER_BASELINE_BYTES);
         System.out.printf(
                 "TRACE_SEGMENT_DESCRIPTOR_BENCH segments=%d "
                         + "eager_retained_bytes=%d descriptor_retained_bytes=%d "
                         + "reduction_bytes=%d reduction_percent=%d "
                         + "descriptor_raw_frames=%d%n",
-                descriptor.segmentCount(), eager.retainedBytes(),
+                descriptor.segmentCount(), FIXED_WARMED_EAGER_BASELINE_BYTES,
                 descriptor.retainedBytes(), reductionBytes,
                 reductionPercent, descriptor.rawFrameCount());
     }
@@ -152,6 +158,7 @@ class TestTraceRunDescriptorPlanningPerformance {
                 "terminalDynamicArtLedger:java.util.List<com.openggf.trace.DynamicArtTransfer$Descriptor>",
                 "entryBoundary:com.openggf.trace.TraceRunManifest$Transition",
                 "exitBoundary:com.openggf.trace.TraceRunManifest$Transition",
+                "levelLoopRowCount:int",
                 "executionPolicy:com.openggf.trace.replay.runs.TraceRunReplayWalker$SegmentExecutionPolicy");
         List<String> actualComponents = java.util.Arrays.stream(
                         TraceRunSegmentDescriptor.class.getRecordComponents())

@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.timing.HardwareCompletionEdge;
@@ -36,6 +37,8 @@ import com.openggf.timer.TimerManager;
 
 import java.util.List;
 import java.util.Map;
+import java.util.BitSet;
+import java.nio.file.Path;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -333,21 +336,27 @@ class TestTraceRunHardwareTimingCoordinator {
                 TraceFixtures.metadataWithHardwareTiming("s3k", 0, 0, 3),
                 List.of(),
                 HardwareTimingSchedule.recordedEmpty());
-        var plans = List.of(new TraceRunReplayWalker.SegmentPlan(
-                segment, trace, null, null));
+        TraceRunSegmentDescriptor descriptor = new TraceRunSegmentDescriptor(
+                segment, Path.of("ss"), trace.metadata(), 3, null,
+                List.of(0, 1, 2), new BitSet(),
+                trace.hardwareTimingSchedule(),
+                trace.terminalDynamicArtLedger(), null, null, 0,
+                TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL);
+        List<TraceRunReplayWalker.HardwareTimingSegment> descriptorTiming =
+                TraceRunReplayWalker.descriptorHardwareTimingSegments(
+                        List.of(descriptor));
 
-        List<TraceRunReplayWalker.HardwareTimingSegment> timing =
-                TraceRunReplayWalker.hardwareTimingSegments(plans);
-
-        assertTrue(TraceRunReplayWalker.hasHardwareTimingStream(plans));
-        assertEquals(List.of(0, 1, 2), timing.getFirst().rawFrames());
-        assertEquals(900, timing.getFirst().bk2FrameOffset());
+        assertTrue(TraceRunReplayWalker.hasDescriptorHardwareTimingStream(
+                List.of(descriptor)));
+        assertEquals(List.of(0, 1, 2), descriptorTiming.getFirst().rawFrames());
+        assertEquals(900, descriptorTiming.getFirst().bk2FrameOffset());
     }
 
     @Test
     void laterFirstTimingSegmentStillSelectsRecordedRunPolicy() {
         var firstSegment = new TraceRunManifest.Segment(
-                "level", "level", null, 10, 1, 0, 0, null, null);
+                "first-ss", "special_stage", "special_stage", 10, 1,
+                null, null, 0, null);
         var laterSegment = new TraceRunManifest.Segment(
                 "ss", "special_stage", "special_stage", 20, 1,
                 null, null, 0, null);
@@ -358,11 +367,18 @@ class TestTraceRunHardwareTimingCoordinator {
                 List.of(),
                 HardwareTimingSchedule.recordedEmpty());
 
-        assertTrue(TraceRunReplayWalker.hasHardwareTimingStream(List.of(
-                new TraceRunReplayWalker.SegmentPlan(
-                        firstSegment, first, null, null),
-                new TraceRunReplayWalker.SegmentPlan(
-                        laterSegment, later, null, null))));
+        TraceRunSegmentDescriptor firstDescriptor = new TraceRunSegmentDescriptor(
+                firstSegment, Path.of("first-ss"), first.metadata(), 1,
+                null, List.of(0), new BitSet(),
+                first.hardwareTimingSchedule(), List.of(), null, null, 0,
+                TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL);
+        TraceRunSegmentDescriptor laterDescriptor = new TraceRunSegmentDescriptor(
+                laterSegment, Path.of("ss"), later.metadata(), 1,
+                null, List.of(0), new BitSet(), later.hardwareTimingSchedule(),
+                List.of(), null, null, 0,
+                TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL);
+        assertTrue(TraceRunReplayWalker.hasDescriptorHardwareTimingStream(
+                List.of(firstDescriptor, laterDescriptor)));
 
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic2GameModule()),

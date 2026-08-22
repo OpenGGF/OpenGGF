@@ -1,5 +1,46 @@
 # Changelog
 
+- **Complete-run trace ownership is measured and regression-checked:** two
+  warmed, forced-GC forks retained 9.25 MB of whole-run descriptors and at most
+  170.6-170.9 MB with a real active payload installed, an 84.28-84.31% reduction from
+  the 1.087 GB eager baseline. Each installed sample retains the real catalog
+  entry, parsed movie, launcher, exact headless harness/fixture, descriptors,
+  and ordinary or special consumers installed in their actual owner fields.
+  The 100-cycle resource checks balanced every open and close, the 67-segment
+  oracle consumed all 1,653 AIZ rows at its unchanged frontier, and 82
+  baseline-green replay completions have explicit row or terminal proof.
+  Current-main and feature sweeps share the same ten trace reds, while exhaustive
+  JDK 21 default-suite message comparison found zero feature-attributable new or
+  worsened red. Subsequent test-only enforcement corrections close typed
+  receiver, same-source reflection-helper, primitive-name collision, and
+  transformed lookup/class-producer, loader, field-alias, and helper-return
+  branch/class-producer, reachable switch-baseline, component-type symmetry,
+  transformed lookup-target, and direct lookup-bind bypasses; the current
+  authority, authority/ownership, and authority/ownership/reader gates pass
+  35/35, 38/38, and 44/44 respectively without changing the measured ownership
+  graph.
+
+- **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
+  exposed two real bridge regressions that aborted after destination segment 2
+  with no diagnostic sink. The feature transition now keeps the run diagnostics
+  through bridge admission; both routes are green in the fresh feature sweep
+  and focused validation, while current main passes as the unchanged eager-
+  ownership control.
+
+- **Long visual trace runs now finish and exit cleanly from every unrepresented
+  span:** terminal tails enter their final payload-free gap exactly once, and
+  Escape can tear down a run while it is between segments, inside a
+  special-stage-local span, or replaying the movie tail. Invalid destination
+  ownership and failures observed after coordinator completion also close the
+  active segment lease while preserving the original failure.
+
+- **Long visual trace runs now keep only one segment payload in memory:** the
+  production launcher and both visual/audio replay routes retain compact run
+  descriptors, open an eager payload only for the active segment, and release
+  every payload-backed observer before closing that segment's lease. Transition
+  gaps and terminal tails own no payload, while replay timing, comparison,
+  dynamic-art, special-stage, input, and audio behaviour remain unchanged.
+
 - **Playable Tails' idle and flying tails now render in Sonic 3 & Knuckles:**
   the fixed object slot that advances Tails' separate tail sprite now includes
   the main playable character, while retaining the sidekick path. The initial
@@ -30,9 +71,9 @@
 - **Trace catalog validation now uses compact run-segment descriptors:** the
   planner scans and validates one segment at a time, retaining 8,660,152 bytes
   after warmed forced-GC measurement on the 67-segment run instead of the eager
-  plan's 1,087,200,800 bytes (99.20% lower). Actual replay deliberately remains
-  on the eager plan in this phase, so replay memory and behaviour are unchanged;
-  active-segment cursor ownership remains separately approved future work.
+  plan's 1,087,200,800 bytes (99.20% lower). That phase established compact
+  planning; active replay now uses the separately measured one-segment
+  ownership boundary described above.
 
 - **A Flybot767 spawned by an LBZ alarm no longer wakes a frame early:** the
   drone waits behind an offscreen placeholder, and the game only lets it start

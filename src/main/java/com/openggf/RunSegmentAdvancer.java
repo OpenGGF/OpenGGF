@@ -2,7 +2,7 @@ package com.openggf;
 
 import com.openggf.game.GameMode;
 import com.openggf.trace.TraceRunManifest;
-import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 
 import java.util.List;
 
@@ -37,12 +37,12 @@ final class RunSegmentAdvancer {
     /** The run's last segment has exhausted its trace frames while still in its expected mode. */
     enum EndOfRun implements Event { INSTANCE }
 
-    private final List<SegmentPlan> segments;
+    private final List<TraceRunSegmentDescriptor> segments;
     private int segmentIndex;
     private boolean inTransition;
     private boolean done;
 
-    RunSegmentAdvancer(List<SegmentPlan> segments) {
+    RunSegmentAdvancer(List<TraceRunSegmentDescriptor> segments) {
         if (segments == null || segments.isEmpty()) {
             throw new IllegalArgumentException("RunSegmentAdvancer requires at least one segment");
         }
@@ -52,6 +52,10 @@ final class RunSegmentAdvancer {
     /** The segment index currently being compared (or just advanced onto). */
     int currentSegmentIndex() {
         return segmentIndex;
+    }
+
+    boolean inTransition() {
+        return inTransition;
     }
 
     /**

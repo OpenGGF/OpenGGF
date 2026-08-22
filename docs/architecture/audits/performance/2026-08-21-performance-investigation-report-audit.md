@@ -63,7 +63,7 @@ renderer tests passed; the 15 headless tests had two pre-existing errors in the
 fire-continuation queue fixture (`AIZ fire continuation has no prepared
 fire-overlay payload`).
 
-### Complete-run trace retention: promoted to an ownership design
+### Complete-run trace retention: implemented and validated
 
 The 67-segment Knuckles super-emerald fixture contains 58,796,492 uncompressed
 physics bytes and 1,548,327,089 uncompressed auxiliary bytes, for
@@ -99,8 +99,9 @@ closeable segment-local cursor, documented in
 `docs/architecture/designs/2026-08-21-bounded-trace-run-segment-ownership.md`.
 Confidence: **confirmed and measured**.
 
-Phase-one implementation now scans one segment at a time into immutable
-descriptors and routes catalog launch validation through those descriptors.
+At the phase-one checkpoint, implementation scanned one segment at a time into
+immutable descriptors and routed catalog launch validation through those
+descriptors.
 An opt-in forced-GC comparison on the same 67-segment run, from the Task 3
 working tree based at `b89a732e4`, measured 1,087,200,800 retained bytes for
 the eager plan and 8,660,152 retained bytes for the descriptor plan: a
@@ -108,11 +109,25 @@ the eager plan and 8,660,152 retained bytes for the descriptor plan: a
 whole-run warmups and released those graphs before either measured arm, so
 persistent parser/cache initialization is outside both deltas. Both plans
 represented 67 segments and
-409,630 rows/raw-frame mappings. This establishes the planning boundary and
-benefits catalog validation now; actual replay still owns the eager
-`SegmentPlan` graph, so its retained heap is unchanged in this phase. Moving
-replay to a closeable active-segment cursor remains separately approved future
-work.
+409,630 rows/raw-frame mappings. This established the planning boundary and
+benefited catalog validation at that checkpoint; actual replay still owned the
+eager `SegmentPlan` graph, so its retained heap was unchanged in that phase.
+Moving replay to a closeable active-segment cursor remained separately approved
+future work.
+
+Phase two has now completed that approved migration. Two warmed, forced-GC
+forks retained 9,253,296 and 9,252,768 bytes for the complete descriptor graph
+and peaked at 170,550,952 and 170,910,128 bytes with one real segment payload
+installed into its consumers. Those are 84.31% and 84.28% reductions from the
+fixed eager baseline; both overall maxima were `s3k-59-soz_2`. The ownership
+graph now includes the real catalog entry, parsed movie, complete descriptor
+set, `TraceSessionLauncher`, exact headless harness/fixture, and installed
+consumer roots linked through the actual launcher and harness fields; the
+earlier lower figures omitted or synthesized required owners and are superseded.
+Representative S1 and S2 special samples remain included. Reader lifecycle
+checks balanced exactly 1,000 opens and
+1,000 closes per run across 100 cycles of every ordinary and special-stage
+shape.
 
 The benchmark passed 1/1 and the descriptor-plus-six-catalog functional set
 passed 49/49. Of 151 requested authority/replay controls, 148 passed and three
@@ -156,6 +171,38 @@ explicitly requires a clean tool environment. Its clean-environment focused
 rerun passed all 7 tests. Four baseline failures were absent from the
 development run, consistent with the repository's documented order-dependent
 red-set churn. No new failure was attributable to the documentation changes.
+
+### Active-segment implementation comparison
+
+The authoritative full-suite comparison uses synchronized `develop` at
+`d473365ed72facfffcd36d9e07af09666b094d37` and reconciled feature measurement
+point `1a96fbdf1588564d584afb57040f749656f3cbf4`, both on JDK 21 with the exact
+`mvn -Dmse=off test` command. Main completed 15,299 tests with 55 failures, 81
+errors, and 26 skips; the feature rerun completed 15,330 tests with 55 failures,
+65 errors, and 26 skips. The 119 shared reds have complete message/root-detail
+comparison: 116 raw-identical, two identical after only a demonstrated object
+identity-hash normalization, and one identical except for a moved source line.
+The raw feature-only ICZ result and the first run's MGZ result both reproduce
+exactly on current main under their same-fork predecessors, proving upstream
+singleton/order leaks rather than feature attribution. Attributable new or
+worsened reds are zero.
+
+Subsequent whole-branch review added enforcement-only corrections through
+`7b16dc94b`. They did not change the production ownership graph or supersede
+the full-suite/trace measurements above. At that correction head the authority
+guard passes 35/35, authority plus ownership passes 38/38, and the combined
+reader gate passes 44/44.
+
+Fresh all-game sweeps completed current main at 811 tests / 10 failures and
+feature at 840 / 10, with exact red identity equality and complete-message
+parity. The earlier two S1 visual failures were real feature regressions, fixed
+by `25d4a41b7` and `c8cb56808`. They are green on the reconciled feature;
+current main is the passing unchanged eager-ownership control. Completion
+accounting covers 796 baseline-green executions and 82 actual replay methods
+across generic, credits, special-stage, bounded-chain, visual, and bonus
+families; no completion issue remains. The 67-segment oracle still consumes all
+1,653 AIZ rows with its exact frontier and terminal result. Full evidence is in
+[`2026-08-22-active-segment-ownership-validation.md`](../../validation/trace/2026-08-22-active-segment-ownership-validation.md).
 
 ## Report-level assessment
 
@@ -318,10 +365,11 @@ tests do not execute this GLFW/vsync pacing path and cannot validate it.
 
 ## Corrected priority
 
-1. **Complete bounded trace-segment ownership only as a separately approved
-   replay migration.** Compact descriptor planning and catalog validation are
-   implemented and measured; the active-segment cursor remains the larger
-   change and its cross-boundary oracle must remain exact.
+1. **Keep bounded trace-segment ownership enforced by its measured gates.**
+   Descriptor planning and the active-segment replay migration are implemented
+   and feature-branch validated. Further row/profile streaming remains a
+   separate change that first requires an authority audit and must preserve the
+   exact cross-boundary oracle.
 2. **Resolve dynamic rewind identity ownership before pruning.** Add the
    previous/partial collision-list and destroyed-child cleanup tests, then
    choose an identity retirement owner that covers every reference holder and

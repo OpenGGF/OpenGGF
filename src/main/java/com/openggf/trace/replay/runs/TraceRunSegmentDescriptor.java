@@ -28,6 +28,7 @@ public record TraceRunSegmentDescriptor(
         List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger,
         TraceRunManifest.Transition entryBoundary,
         TraceRunManifest.Transition exitBoundary,
+        int levelLoopRowCount,
         TraceRunReplayWalker.SegmentExecutionPolicy executionPolicy) {
 
     public TraceRunSegmentDescriptor {
@@ -43,6 +44,10 @@ public record TraceRunSegmentDescriptor(
         if (rawFrames.size() != rowCount) {
             throw new IllegalArgumentException(
                     "rawFrames size must equal rowCount");
+        }
+        if (levelLoopRowCount < 0 || levelLoopRowCount > rowCount) {
+            throw new IllegalArgumentException(
+                    "levelLoopRowCount must be within the segment row range");
         }
         boolean ordinaryRowsParsed = !"special_stage".equals(segment.kind())
                 && rowCount > 0;

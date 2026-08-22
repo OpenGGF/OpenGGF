@@ -112,11 +112,16 @@ class TestTraceRunSpecialStageRowDriver {
                 """);
         TraceRunManifest run = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
-        TraceRunReplayWalker.SegmentPlan special =
-                TraceRunReplayWalker.plan(run, runDir).getFirst();
-        TraceRunSpecialStageRows rows = special.specialStageRows();
+        TraceRunManifest.Segment segment = run.segments().getFirst();
+        TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
+                segment.traceProfile(), runDir.resolve(segment.dir()),
+                segment.dynamicArtInitialLedgerDescriptors());
+        TraceData trace = TraceData.loadMetadataOnly(
+                runDir.resolve(segment.dir()),
+                com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
+                segment.dynamicArtInitialLedgerDescriptors());
         TraceRunSpecialStageRowDriver driver = new TraceRunSpecialStageRowDriver(
-                rows, special.trace());
+                rows, trace);
         long generation = 23;
         long serial = 0;
 
@@ -125,7 +130,7 @@ class TestTraceRunSpecialStageRowDriver {
                     DynamicArtDiagnosticsSnapshot.unpublished(serial, generation));
             serial++;
             driver.publishAdmittedRow(published(
-                    special.trace().dynamicArtTransferStateForFrame(row),
+                    trace.dynamicArtTransferStateForFrame(row),
                     serial, generation));
         }
 

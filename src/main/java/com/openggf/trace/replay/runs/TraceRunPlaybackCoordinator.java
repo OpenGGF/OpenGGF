@@ -106,14 +106,35 @@ public final class TraceRunPlaybackCoordinator {
             TraceRunManifest run,
             TracePlaybackProfile profile,
             int movieFrameCount) {
-        this(run, profile, movieFrameCount, null);
+        this(run, profile, movieFrameCount, null, null);
     }
 
-    public TraceRunPlaybackCoordinator(
+    /**
+     * Creates a coordinator from compact planning summaries without retaining
+     * eager trace payloads.
+     */
+    public static TraceRunPlaybackCoordinator fromDescriptors(
             TraceRunManifest run,
             TracePlaybackProfile profile,
             int movieFrameCount,
-            List<TraceRunReplayWalker.SegmentPlan> plans) {
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return new TraceRunPlaybackCoordinator(
+                run, profile, movieFrameCount,
+                descriptors.stream()
+                        .map(TraceRunSegmentDescriptor::executionPolicy)
+                        .toList(),
+                descriptors.stream()
+                        .map(TraceRunSegmentDescriptor::levelLoopRowCount)
+                        .toList());
+    }
+
+    private TraceRunPlaybackCoordinator(
+            TraceRunManifest run,
+            TracePlaybackProfile profile,
+            int movieFrameCount,
+            List<TraceRunReplayWalker.SegmentExecutionPolicy> executionPolicies,
+            List<Integer> levelLoopRows) {
         this.run = Objects.requireNonNull(run, "run");
         this.profile = Objects.requireNonNull(profile, "profile");
         if (run.segments() == null || run.segments().isEmpty()) {
@@ -128,19 +149,15 @@ public final class TraceRunPlaybackCoordinator {
         }
         this.movieFrameCount = movieFrameCount;
         this.boundaries = TraceRunReplayWalker.pairBoundaries(run);
-        if (plans != null) {
-            if (plans.size() != run.segments().size()) {
+        if (executionPolicies != null || levelLoopRows != null) {
+            if (executionPolicies == null || levelLoopRows == null
+                    || executionPolicies.size() != run.segments().size()
+                    || levelLoopRows.size() != run.segments().size()) {
                 throw new IllegalArgumentException(
-                        "segment plans must match manifest segment count");
+                        "segment scalars must match manifest segment count");
             }
-            this.executionPolicies = plans.stream()
-                    .map(TraceRunReplayWalker.SegmentPlan::executionPolicy)
-                    .toList();
-            this.levelLoopRows = plans.stream()
-                    .map(plan -> plan.trace() == null
-                            ? -1
-                            : TraceRunReplayWalker.levelLoopRowCount(plan.trace()))
-                    .toList();
+            this.executionPolicies = List.copyOf(executionPolicies);
+            this.levelLoopRows = List.copyOf(levelLoopRows);
         } else {
             this.executionPolicies = run.segments().stream()
                     .map(segment -> "special_stage".equals(segment.kind())

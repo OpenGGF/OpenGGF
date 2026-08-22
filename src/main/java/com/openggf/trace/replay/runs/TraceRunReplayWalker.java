@@ -145,41 +145,24 @@ public final class TraceRunReplayWalker {
         }
     }
 
-    /** True when any segment has a recorded timing stream. */
-    public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        return plans.stream().anyMatch(
-                plan -> plan.trace().hardwareTimingSchedule().hasRecordedInput());
+    /** True when any compact run descriptor has a recorded timing stream. */
+    public static boolean hasDescriptorHardwareTimingStream(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream().anyMatch(descriptor ->
+                descriptor.hardwareTimingSchedule().hasRecordedInput());
     }
 
-    /**
-     * Builds the run timing view. Metadata-only special-stage segments use the
-     * recorder-audited mapping {@code raw_frame = segment-local trace index};
-     * their BK2 location remains {@code bk2_frame_offset + raw_frame}.
-     */
-    public static List<HardwareTimingSegment> hardwareTimingSegments(
-            List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        List<HardwareTimingSegment> result = new ArrayList<>(plans.size());
-        for (SegmentPlan plan : plans) {
-            int parsedFrameCount = plan.trace().frameCount();
-            int representedFrameCount = parsedFrameCount > 0
-                    ? parsedFrameCount
-                    : plan.segment().traceFrameCount();
-            List<Integer> rawFrames = new ArrayList<>(representedFrameCount);
-            for (int traceIndex = 0;
-                    traceIndex < representedFrameCount;
-                    traceIndex++) {
-                rawFrames.add(parsedFrameCount > 0
-                        ? plan.trace().getFrame(traceIndex).frame()
-                        : traceIndex);
-            }
-            result.add(new HardwareTimingSegment(
-                    plan.segment().bk2FrameOffset(),
-                    rawFrames,
-                    plan.trace().hardwareTimingSchedule()));
-        }
-        return List.copyOf(result);
+    /** Descriptor-only timing view for production and visual run ownership. */
+    public static List<HardwareTimingSegment> descriptorHardwareTimingSegments(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream()
+                .map(descriptor -> new HardwareTimingSegment(
+                        descriptor.segment().bk2FrameOffset(),
+                        descriptor.rawFrames(),
+                        descriptor.hardwareTimingSchedule()))
+                .toList();
     }
 
     /**
@@ -1062,8 +1045,9 @@ public final class TraceRunReplayWalker {
 
     /**
      * Scans and validates run segments sequentially into payload-independent
-     * descriptors. Actual replay continues to use the eager {@link #plan}
-     * path; this boundary is for whole-run validation and compact planning.
+     * descriptors. The eager {@link #plan} path remains only as a benchmark
+     * reference; launch and replay owners use this compact boundary and open
+     * one segment payload at a time.
      */
     public static List<TraceRunSegmentDescriptor> planDescriptors(
             TraceRunManifest run, Path runDir) throws IOException {
@@ -1096,6 +1080,7 @@ public final class TraceRunReplayWalker {
             int rowCount = specialStageRows != null
                     ? specialStageRows.rowCount()
                     : trace.frameCount();
+            int levelLoopRowCount = levelLoopRowCount(trace);
             validateDescriptorManifestFields(
                     segmentIndex, segment, metadata, rowCount);
 
@@ -1132,6 +1117,7 @@ public final class TraceRunReplayWalker {
                     trace.terminalDynamicArtLedger(),
                     pairing.entryBoundaries()[segmentIndex],
                     pairing.exitBoundaries()[segmentIndex],
+                    levelLoopRowCount,
                     segmentExecutionPolicy(
                             segment,
                             pairing.entryBoundaries()[segmentIndex],
@@ -1139,6 +1125,21 @@ public final class TraceRunReplayWalker {
         }
         dynamicArtValidator.finish();
         return List.copyOf(descriptors);
+    }
+
+    /**
+     * Opens the parsed comparison payload for one descriptor at the point a
+     * replay drive takes ownership of that segment. No lease is constructed
+     * until both halves of a special-stage composite load successfully.
+     */
+    public static ActiveSegmentPayload openActiveSegment(
+            TraceRunSegmentDescriptor descriptor, int segmentIndex)
+            throws IOException {
+        Objects.requireNonNull(descriptor, "descriptor");
+        LoadedSegmentPayload payload = loadSegmentPayload(
+                descriptor.segment(), descriptor.segmentDirectory(), segmentIndex);
+        return new ActiveSegmentPayload(
+                descriptor, payload.trace(), payload.specialStageRows());
     }
 
     private static LoadedSegmentPayload loadSegmentPayload(
@@ -1298,6 +1299,18 @@ public final class TraceRunReplayWalker {
                 preparedDelegate = delegate;
                 delegate.prepareFrame(preparedFrame);
             }
+        }
+
+        /**
+         * Releases every observer alias when the represented segment lease
+         * closes. Unlike {@link #setDelegate}, no prepared row may remain
+         * pinned across this ownership boundary.
+         */
+        public void detachDelegate() {
+            delegate = null;
+            preparedDelegate = null;
+            preparedFrame = null;
+            framePrepared = false;
         }
 
         /**
