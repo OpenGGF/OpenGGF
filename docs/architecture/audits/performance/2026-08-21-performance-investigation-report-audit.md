@@ -188,10 +188,10 @@ singleton/order leaks rather than feature attribution. Attributable new or
 worsened reds are zero.
 
 Subsequent whole-branch review added enforcement-only corrections through
-`0fe4a79bc`. They did not change the production ownership graph or supersede
+`4c6f38dd8`. They did not change the production ownership graph or supersede
 the full-suite/trace measurements above. At that correction head the authority
-guard passes 17/17, authority plus ownership passes 20/20, and the combined
-reader gate passes 26/26.
+guard passes 19/19, authority plus ownership passes 22/22, and the combined
+reader gate passes 28/28.
 
 Fresh all-game sweeps completed current main at 811 tests / 10 failures and
 feature at 840 / 10, with exact red identity equality and complete-message
