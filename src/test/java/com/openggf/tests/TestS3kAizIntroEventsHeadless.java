@@ -8,6 +8,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
@@ -128,6 +129,54 @@ public class TestS3kAizIntroEventsHeadless {
                 "dormant intro Tails must not enter generic falling physics before release");
         assertTrue(tails.isHidden(),
                 "dormant intro Tails remains suppressed throughout the pre-release frames");
+    }
+
+    @Test
+    void aizDormantMarkerUsesProviderStateWhenRosterMetadataIsStale() throws Exception {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        Sonic3kLevelEventManager levelEvents =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldConfiguredSidekick =
+                config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        ZoneRuntimeState oldRuntimeState = GameServices.zoneRuntimeRegistry().current();
+        Field gameRulesField = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        gameRulesField.setAccessible(true);
+        Object oldGameRules = gameRulesField.get(tails);
+        try {
+            // The live Player_2 object is authoritative at this boundary. Model
+            // a session rebind that has already created Tails but has stale
+            // roster/rules metadata, then verify the provider-owned ROM branch
+            // still parks the object before generic falling physics can run.
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            GameServices.zoneRuntimeRegistry().clear();
+            gameRulesField.set(tails, null);
+
+            assertTrue(levelEvents.getAizEvents()
+                            .shouldEnterIntroSidekickDormantMarker(tails),
+                    "AIZ provider state must not be vetoed by stale roster metadata");
+            controller.reset();
+            tails.setHidden(false);
+            controller.setInitialState(SidekickCpuController.State.INIT);
+            controller.update(1);
+
+            assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState());
+            assertTrue(tails.isHidden());
+            // With the synthetic rules metadata removed, the controller's
+            // documented no-rules fallback is the S2 marker. The important
+            // boundary here is that the provider branch still owns the tick
+            // and prevents normal falling; production S3K rules retain $7F00.
+            assertEquals(0x4000, tails.getCentreX() & 0xFFFF);
+            assertEquals(0, tails.getCentreY() & 0xFFFF);
+        } finally {
+            gameRulesField.set(tails, oldGameRules);
+            GameServices.zoneRuntimeRegistry().install(oldRuntimeState);
+            config.setConfigValue(
+                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                    oldConfiguredSidekick != null ? oldConfiguredSidekick : "tails");
+        }
     }
 
     @Test

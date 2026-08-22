@@ -1509,10 +1509,11 @@ public class SidekickCpuController {
     }
 
     private boolean shouldEnterLevelEventDormantMarker() {
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        if (rules == null || !rules.sidekickRespawnEntersCatchUpFlight()) {
-            return false;
-        }
+        // The level-event provider owns the ROM's Current_zone_and_act and
+        // Tails_CPU_star_post_flag decision. Do not pre-filter it through the
+        // sidekick physics rules: those rules describe later catch-up/respawn
+        // behavior and can be stale during a live level rebind even though the
+        // already-created Player_2 object still has a valid provider branch.
         // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
         // with routine=0 (uninitialized Tails) and Current_zone_and_act=0
         // (AIZ Act 1), the special AIZ1 dormant-marker branch fires

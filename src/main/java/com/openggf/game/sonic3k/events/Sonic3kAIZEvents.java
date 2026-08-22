@@ -1059,10 +1059,15 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * gameplay that cannot happen before that tick.
      */
     public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
+        // The ROM branch is selected by Tails_CPU_Control's Current_zone_and_act
+        // and Tails_CPU_star_post_flag tests. It does not re-resolve the active
+        // team from Player_mode. The existence of this Player_2 object is the
+        // corresponding engine boundary; keeping a configuration/team check
+        // here lets a stale session roster metadata value expose a live Tails
+        // object that the ROM would park at sub_13ECA instead.
         return sidekick != null
                 && shouldSpawnIntro(currentActOrIntro())
-                && romLastStarPostHit() == 0
-                && playerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
+                && romLastStarPostHit() == 0;
     }
 
     /**

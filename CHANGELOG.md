@@ -1,5 +1,10 @@
 # Changelog
 
+- **S3K AIZ dormant-sidekick selection follows the ROM owner:** the initial
+  Tails CPU branch now relies on the active level-event provider's zone/act and
+  star-post state instead of stale roster or physics-rule metadata, preventing
+  a live Player 2 object from entering normal falling physics during the intro.
+
 - **S3K intro sidekicks stay suppressed until their ROM-owned release:** AIZ
   and ICZ now hide the registered Player 2 presentation during setup and
   reassert that gate at the routine-0 dormant-marker dispatch if setup has
