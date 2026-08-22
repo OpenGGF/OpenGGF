@@ -56,8 +56,7 @@ public final class TraceFiles {
         if (observer == null) {
             return reader;
         }
-        observer.onEvent(ReaderLifecycleEvent.OPENED, path);
-        return new ObservedBufferedReader(reader, observer, path);
+        return observeReader(reader, observer, path);
     }
 
     static AutoCloseable observeReadersForTest(ReaderLifecycleObserver observer) {
@@ -65,6 +64,31 @@ public final class TraceFiles {
         ReaderLifecycleObserver previous = READER_OBSERVER.get();
         READER_OBSERVER.set(installed);
         return new ReaderObservation(previous);
+    }
+
+    static BufferedReader observeReaderForTest(
+            BufferedReader reader, Path path) {
+        ReaderLifecycleObserver observer = READER_OBSERVER.get();
+        return observer == null ? reader : observeReader(reader, observer, path);
+    }
+
+    private static BufferedReader observeReader(
+            BufferedReader reader,
+            ReaderLifecycleObserver observer,
+            Path path) {
+        try {
+            observer.onEvent(ReaderLifecycleEvent.OPENED, path);
+        } catch (RuntimeException | Error openedFailure) {
+            try {
+                reader.close();
+            } catch (Throwable closeFailure) {
+                if (closeFailure != openedFailure) {
+                    openedFailure.addSuppressed(closeFailure);
+                }
+            }
+            throw openedFailure;
+        }
+        return new ObservedBufferedReader(reader, observer, path);
     }
 
     /** True when a meaningful CSV line is the recorder's optional header. */
@@ -123,11 +147,38 @@ public final class TraceFiles {
                 return;
             }
             closed = true;
+            Throwable primaryFailure = null;
             try {
                 super.close();
-            } finally {
-                observer.onEvent(ReaderLifecycleEvent.CLOSED, path);
+            } catch (Throwable closeFailure) {
+                primaryFailure = closeFailure;
             }
+            try {
+                observer.onEvent(ReaderLifecycleEvent.CLOSED, path);
+            } catch (Throwable observerFailure) {
+                if (primaryFailure == null) {
+                    rethrowCloseFailure(observerFailure);
+                } else if (observerFailure != primaryFailure) {
+                    primaryFailure.addSuppressed(observerFailure);
+                }
+            }
+            if (primaryFailure != null) {
+                rethrowCloseFailure(primaryFailure);
+            }
+        }
+
+        private static void rethrowCloseFailure(Throwable failure)
+                throws IOException {
+            if (failure instanceof IOException ioFailure) {
+                throw ioFailure;
+            }
+            if (failure instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            if (failure instanceof Error error) {
+                throw error;
+            }
+            throw new IOException("reader close failed", failure);
         }
     }
 }

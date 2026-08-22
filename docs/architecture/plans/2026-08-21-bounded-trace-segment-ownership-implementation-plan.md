@@ -484,6 +484,20 @@ mvn -Dmse=off "-Dtest=com.openggf.trace.TestTraceReaderLifecycle" test
 
 Repeat in a fresh Maven fork and require both passes meet every cap.
 
+Whole-branch review correction: the installed benchmark root must be a real
+prepared launch graph, not the JUnit instance standing in for a session. The
+final corrected graph also replaces the synthetic fixture consumer and
+parallel consumer roots with the exact headless harness/`LiveEngineFixture`
+and the consumers installed in the launcher's and harness's actual fields.
+Both fresh final forks retained actual catalog entries, parsed BK2 movies,
+complete descriptor sets, a `TraceSessionLauncher`, the exact fixture/harness,
+and all installed ordinary/special consumers. They printed respectively:
+
+```text
+TRACE_ACTIVE_PAYLOAD_BENCH eager_retained_bytes=1087200800 descriptor_retained_bytes=9253296 max_installed_bytes=170550952 reduction_percent=84.31 max_segment=s3k-59-soz_2
+TRACE_ACTIVE_PAYLOAD_BENCH eager_retained_bytes=1087200800 descriptor_retained_bytes=9252768 max_installed_bytes=170910128 reduction_percent=84.28 max_segment=s3k-59-soz_2
+```
+
 - [x] **Step 7: Commit Task 7**
 
 Commit as `test(traces): enforce active payload ownership`.

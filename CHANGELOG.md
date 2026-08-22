@@ -2,9 +2,11 @@
 
 - **Complete-run trace ownership is measured and regression-checked:** two
   warmed, forced-GC forks retained 9.25 MB of whole-run descriptors and at most
-  115.6 MB with a real active payload installed, an 89.36-89.37% reduction from
-  the 1.087 GB eager baseline. The maximum real special-stage sample was 22.7
-  MB, 100-cycle resource checks balanced every open and close, the 67-segment
+  170.6-170.9 MB with a real active payload installed, an 84.28-84.31% reduction from
+  the 1.087 GB eager baseline. Each installed sample retains the real catalog
+  entry, parsed movie, launcher, exact headless harness/fixture, descriptors,
+  and ordinary or special consumers installed in their actual owner fields.
+  The 100-cycle resource checks balanced every open and close, the 67-segment
   oracle consumed all 1,653 AIZ rows at its unchanged frontier, and 82
   baseline-green replay completions have explicit row or terminal proof.
   Current-main and feature sweeps share the same ten trace reds, while exhaustive

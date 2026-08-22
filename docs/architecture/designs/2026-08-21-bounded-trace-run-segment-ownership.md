@@ -56,16 +56,22 @@ owners detach their aliases and close the old lease before another payload is
 retained. Descriptor-only planning has no eager launch escape path.
 
 Two independent warmed, forced-GC forks measured descriptor graphs of
-9,255,056 and 9,254,968 bytes. Their maximum installed consumer graphs were
-115,657,656 and 115,553,504 bytes, reductions of 89.36% and 89.37% from the
+9,253,296 and 9,252,768 bytes. Their maximum installed consumer graphs were
+170,550,952 and 170,910,128 bytes, reductions of 84.31% and 84.28% from the
 fixed 1,087,200,800-byte eager baseline. Both maxima came from `s3k-59-soz_2`.
-A disposable diagnostic measured the largest real special-stage graph at
-22,737,320 and 22,604,408 bytes, both from the S2 composite `s2-1-ss`.
+Unlike the superseded initial benchmark, every installed sample retains the
+real catalog `TraceEntry`, parsed `Bk2Movie`, complete descriptor sets, a real
+`TraceSessionLauncher`, the exact headless harness and `LiveEngineFixture`, and
+the installed ordinary or special consumer graph. The benchmark asserts each
+consumer's identity in the launcher's and harness's actual owner field rather
+than retaining parallel consumer roots. Representative S1 and S2 special
+stages remain in both runs, including the S2 recorded-pass binder.
 
-The deterministic resource oracle passed twice: each run completed 100 cycles
+The deterministic resource oracle passed with three failure-atomicity controls
+in addition to its 100-cycle matrix: each matrix run completed 100 cycles
 per ordinary and special-stage shape and observed exactly 1,000 reader opens
-and 1,000 closes. Authority/ownership guards passed 12/12 and focused migration
-tests passed 177/177. The recorded 67-segment oracle consumed all 1,653 AIZ
+and 1,000 closes. Authority/ownership guards passed 14/14 and focused migration
+tests passed 179/179. The recorded 67-segment oracle consumed all 1,653 AIZ
 rows, retained the first `camera_x` mismatch (`0x1300` / `0x1308`), the terminal
 segment-0 `giant_ring` miss, both unmatched timing completions, and zero
 dynamic-art gaps/failures. Fresh current-main and feature all-game trace sweeps

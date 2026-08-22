@@ -29,7 +29,9 @@ import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaMethodReference;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -96,7 +98,8 @@ class TestActiveSegmentPayloadAuthorityGuard {
             UnauthorizedDirectCall.class.getName(),
             UnauthorizedMethodReference.class.getName(),
             UnauthorizedOpenHelper.class.getName(),
-            UnauthorizedEagerPlan.class.getName());
+            UnauthorizedEagerPlan.class.getName(),
+            ErasedMultiHelperRelayMutation.class.getName());
     private static final Set<String> EAGER_PLAN_CALLER_ALLOWLIST = Set.of(
             "com.openggf.tests.trace.runs.TestTraceRunDescriptorPlanningPerformance",
             "com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance");
@@ -317,7 +320,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                                     }
                                 }
                                 """),
-                () -> assertNoSourceViolation(
+                () -> assertExactSourceViolation(
+                        "UnknownAccessor.java:3 getMethod uses an unresolved accessor "
+                                + "name on com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
                         "UnknownAccessor.java", """
                                 class UnknownAccessor {
                                     Object acquire(String name) throws Exception {
@@ -325,6 +331,106 @@ class TestActiveSegmentPayloadAuthorityGuard {
                                     }
                                 }
                                 """));
+    }
+
+    @Test
+    void sourceGuardFailsClosedForRestrictedRuntimeNamesAndEnumeration() {
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "RuntimeDeclaredLocal.java:5 getDeclaredMethod uses an unresolved "
+                                + "accessor name on com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "RuntimeDeclaredLocal.java", """
+                                class RuntimeDeclaredLocal {
+                                    Object acquire(String supplied) throws Exception {
+                                        String name = supplied;
+                                        Class<?> target = ActiveSegmentPayload.class;
+                                        return target.getDeclaredMethod(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "RuntimeFindVirtual.java:4 findVirtual uses an unresolved accessor "
+                                + "name on com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "RuntimeFindVirtual.java", """
+                                class RuntimeFindVirtual {
+                                    Object acquire(MethodHandles.Lookup lookup, String name)
+                                            throws Exception {
+                                        return lookup.findVirtual(ActiveSegmentPayload.class,
+                                                name, MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "RuntimeFindStatic.java:4 findStatic uses an unresolved accessor "
+                                + "name on com.openggf.trace.replay.runs."
+                                + "TraceRunReplayWalker",
+                        "RuntimeFindStatic.java", """
+                                class RuntimeFindStatic {
+                                    Object acquire(MethodHandles.Lookup lookup, String name)
+                                            throws Exception {
+                                        return lookup.findStatic(TraceRunReplayWalker.class,
+                                                name, MethodType.methodType(Object.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "DeclaredMethodEnumeration.java:4 getDeclaredMethods enumerates "
+                                + "active payload accessors on com.openggf.trace.replay."
+                                + "runs.ActiveSegmentPayload",
+                        "DeclaredMethodEnumeration.java", """
+                                class DeclaredMethodEnumeration {
+                                    Object acquire(ActiveSegmentPayload payload, String name)
+                                            throws Exception {
+                                        for (Method method : ActiveSegmentPayload.class
+                                                .getDeclaredMethods()) {
+                                            if (method.getName().equals(name)) {
+                                                return method.invoke(payload);
+                                            }
+                                        }
+                                        return null;
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "RuntimeDeclaredField.java:3 getDeclaredField uses an unresolved "
+                                + "field name on com.openggf.trace.replay.runs."
+                                + "ActiveSegmentPayload",
+                        "RuntimeDeclaredField.java", """
+                                class RuntimeDeclaredField {
+                                    Object acquire(String name) throws Exception {
+                                        return ActiveSegmentPayload.class
+                                                .getDeclaredField(name);
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "RuntimeFindGetter.java:4 findGetter uses an unresolved field name "
+                                + "on com.openggf.trace.replay.runs.ActiveSegmentPayload",
+                        "RuntimeFindGetter.java", """
+                                class RuntimeFindGetter {
+                                    Object acquire(MethodHandles.Lookup lookup, String name)
+                                            throws Exception {
+                                        return lookup.findGetter(ActiveSegmentPayload.class,
+                                                name, Object.class);
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void sourceGuardDoesNotFailClosedForUnrelatedReflection() {
+        assertNoSourceViolation(
+                "UnrelatedReflection.java", """
+                        class UnrelatedReflection {
+                            Object acquire(Class<?> target, String type, String name)
+                                    throws Exception {
+                                Class.forName(type);
+                                return target.getDeclaredMethod(name);
+                            }
+                        }
+                        """);
     }
 
     @Test
@@ -369,7 +475,9 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 () -> assertExactRelayViolation(
                         LowerWildcardRelayMutation.class, "method traces"),
                 () -> assertExactRelayViolation(
-                        TypeVariableRelayMutation.class, "method rows"));
+                        TypeVariableRelayMutation.class, "method rows"),
+                () -> assertExactRelayViolation(
+                        ErasedMultiHelperRelayMutation.class, "method relay"));
     }
 
     private static JavaClasses importProjectClasses() {
@@ -566,6 +674,16 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 }
                 return;
             }
+            if (("getMethods".equals(primitive)
+                    || "getDeclaredMethods".equals(primitive))
+                    && arguments.isEmpty()) {
+                String target = targetName(evaluate(receiver(invocation)));
+                if (isRestrictedTarget(target)) {
+                    report(invocation, primitive
+                            + " enumerates active payload accessors on " + target);
+                }
+                return;
+            }
             if (("getMethod".equals(primitive)
                     || "getDeclaredMethod".equals(primitive))
                     && !arguments.isEmpty()) {
@@ -574,10 +692,29 @@ class TestActiveSegmentPayloadAuthorityGuard {
                         text(evaluate(arguments.getFirst())));
                 return;
             }
-            if (("findVirtual".equals(primitive)
-                    || "findStatic".equals(primitive))
+            if (("getField".equals(primitive)
+                    || "getDeclaredField".equals(primitive))
+                    && !arguments.isEmpty()) {
+                recordFieldAcquisition(invocation, primitive,
+                        targetName(evaluate(receiver(invocation))),
+                        text(evaluate(arguments.getFirst())));
+                return;
+            }
+            if (Set.of("findVirtual", "findStatic", "findSpecial")
+                    .contains(primitive)
                     && arguments.size() >= 2) {
                 recordAccessorAcquisition(invocation, primitive,
+                        targetName(evaluate(arguments.get(0))),
+                        text(evaluate(arguments.get(1))));
+                return;
+            }
+            if (Set.of(
+                    "findGetter", "findSetter",
+                    "findStaticGetter", "findStaticSetter",
+                    "findVarHandle", "findStaticVarHandle")
+                    .contains(primitive)
+                    && arguments.size() >= 2) {
+                recordFieldAcquisition(invocation, primitive,
                         targetName(evaluate(arguments.get(0))),
                         text(evaluate(arguments.get(1))));
             }
@@ -588,11 +725,33 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 String primitive,
                 String target,
                 String accessor) {
-            if (!isAcquisition(target, accessor)) {
+            if (!isRestrictedTarget(target)) {
                 return;
             }
-            report(invocation, primitive + " acquires active payload accessor "
-                    + accessor + " on " + target);
+            if (accessor == null) {
+                report(invocation, primitive
+                        + " uses an unresolved accessor name on " + target);
+            } else if (isAcquisition(target, accessor)) {
+                report(invocation, primitive + " acquires active payload accessor "
+                        + accessor + " on " + target);
+            }
+        }
+
+        private void recordFieldAcquisition(
+                MethodInvocationTree invocation,
+                String primitive,
+                String target,
+                String fieldName) {
+            if (!isRestrictedTarget(target)) {
+                return;
+            }
+            if (fieldName == null) {
+                report(invocation, primitive
+                        + " uses an unresolved field name on " + target);
+            } else {
+                report(invocation, primitive + " acquires field "
+                        + fieldName + " on " + target);
+            }
         }
 
         private KnownValue evaluate(ExpressionTree expression) {
@@ -803,6 +962,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 && "openActiveSegment".equals(accessor)));
     }
 
+    private static boolean isRestrictedTarget(String target) {
+        return PAYLOAD.equals(target) || WALKER.equals(target);
+    }
+
     private static void assertExactSourceViolation(
             String expected, String fileName, String source) {
         List<String> violations = scanReflectiveAcquisition(fileName, source);
@@ -832,10 +995,51 @@ class TestActiveSegmentPayloadAuthorityGuard {
         }
         for (Method method : owner.getDeclaredMethods()) {
             if (isPublicOrProtected(method.getModifiers())
-                    && containsPayloadGraph(method.getGenericReturnType())) {
+                    && (containsPayloadGraph(method.getGenericReturnType())
+                    || isErasedPayloadRelay(owner, method))) {
                 violations.add(owner.getName() + " method " + method.getName());
             }
         }
+    }
+
+    private static boolean isErasedPayloadRelay(Class<?> owner, Method method) {
+        if (method.getReturnType() != Object.class) {
+            return false;
+        }
+        JavaClass importedOwner = new ClassFileImporter()
+                .importClasses(owner)
+                .get(owner);
+        JavaMethod importedMethod = importedOwner.getMethod(
+                method.getName(), method.getParameterTypes());
+        return reachesRestrictedAccessor(
+                importedOwner.getName(), importedMethod, new HashSet<>());
+    }
+
+    private static boolean reachesRestrictedAccessor(
+            String ownerName,
+            JavaMethod method,
+            Set<String> inspectedMethods) {
+        if (!inspectedMethods.add(method.getFullName())) {
+            return false;
+        }
+        for (JavaMethodCall call : method.getMethodCallsFromSelf()) {
+            String targetOwner = call.getTargetOwner().getName();
+            String targetMethod = call.getTarget().getName();
+            if ((PAYLOAD.equals(targetOwner)
+                    && PAYLOAD_ACCESSORS.contains(targetMethod))
+                    || (WALKER.equals(targetOwner)
+                    && "openActiveSegment".equals(targetMethod))) {
+                return true;
+            }
+            if (ownerName.equals(targetOwner)
+                    && call.getTarget().resolveMember().isPresent()
+                    && reachesRestrictedAccessor(ownerName,
+                    call.getTarget().resolveMember().orElseThrow(),
+                    inspectedMethods)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean containsPayloadGraph(Type type) {
@@ -968,6 +1172,22 @@ class TestActiveSegmentPayloadAuthorityGuard {
     private static final class TypeVariableRelayMutation {
         public <T extends TraceRunSpecialStageRows> T rows() {
             return null;
+        }
+    }
+
+    private static final class ErasedMultiHelperRelayMutation {
+        private ActiveSegmentPayload payload;
+
+        public Object relay() {
+            return packageRelay();
+        }
+
+        Object packageRelay() {
+            return privateRelay();
+        }
+
+        private Object privateRelay() {
+            return payload.trace();
         }
     }
 }

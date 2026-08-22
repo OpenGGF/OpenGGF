@@ -116,12 +116,16 @@ Moving replay to a closeable active-segment cursor remained separately approved
 future work.
 
 Phase two has now completed that approved migration. Two warmed, forced-GC
-forks retained 9,255,056 and 9,254,968 bytes for the complete descriptor graph
-and peaked at 115,657,656 and 115,553,504 bytes with one real segment payload
-installed into its consumers. Those are 89.36% and 89.37% reductions from the
-fixed eager baseline; both overall maxima were `s3k-59-soz_2`. The largest real
-special-stage samples were 22,737,320 and 22,604,408 bytes, both the S2
-composite `s2-1-ss`. Reader lifecycle checks balanced exactly 1,000 opens and
+forks retained 9,253,296 and 9,252,768 bytes for the complete descriptor graph
+and peaked at 170,550,952 and 170,910,128 bytes with one real segment payload
+installed into its consumers. Those are 84.31% and 84.28% reductions from the
+fixed eager baseline; both overall maxima were `s3k-59-soz_2`. The ownership
+graph now includes the real catalog entry, parsed movie, complete descriptor
+set, `TraceSessionLauncher`, exact headless harness/fixture, and installed
+consumer roots linked through the actual launcher and harness fields; the
+earlier lower figures omitted or synthesized required owners and are superseded.
+Representative S1 and S2 special samples remain included. Reader lifecycle
+checks balanced exactly 1,000 opens and
 1,000 closes per run across 100 cycles of every ordinary and special-stage
 shape.
 

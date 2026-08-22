@@ -42,19 +42,26 @@ denominator.
 
 | Fork | Descriptor graph | Maximum installed graph | Reduction | Maximum segment |
 |---|---:|---:|---:|---|
-| 1 | 9,255,056 | 115,657,656 | 89.36% | `s3k-59-soz_2` |
-| 2 | 9,254,968 | 115,553,504 | 89.37% | `s3k-59-soz_2` |
+| 1 | 9,253,296 | 170,550,952 | 84.31% | `s3k-59-soz_2` |
+| 2 | 9,252,768 | 170,910,128 | 84.28% | `s3k-59-soz_2` |
 
 Both descriptor samples are below 16 MiB, both installed samples are below
-256 MiB, and both reductions exceed 75%. Disposable diagnostics measured the
-largest real special-stage graphs at 22,737,320 and 22,604,408 bytes, both the
-S2 composite `s2-1-ss`.
+256 MiB, and both reductions exceed 75%. These corrected samples retain the
+real catalog entry, parsed movie, complete descriptor sets, real
+`TraceSessionLauncher`, exact headless harness/fixture, and installed consumer
+roots linked through the owners' actual fields. The prior lower installed
+figures omitted or synthesized required owners and are superseded.
+Both forks still sample representative S1 and S2 special stages, including the
+S2 recorded-pass binder.
 
-`TestTraceReaderLifecycle` passed 3/3 in two fresh forks. Each run completed 100
-cycles per payload shape and balanced exactly 1,000 opens with 1,000 closes:
+`TestTraceReaderLifecycle` passes 6/6, including three observer-failure
+atomicity controls. Its deterministic matrix completed 100 cycles per payload
+shape and balanced exactly 1,000 opens with 1,000 closes:
 plain physics 100, plain aux 100, gzip physics 100, gzip aux 100, S1 physics
 200, S2 physics 200, S2 aux 100, and S3K physics 100. The authority/ownership
-gate passed 12/12 and the focused migration set passed 177/177. Existing
+gate passes 14/14 after runtime-name, enumeration, field/method-handle, and
+erased-helper relay mutations were added. The focused migration set passed
+179/179. Existing
 physics/aux-derived bootstrap and row-policy authority remains quarantined; the
 lease does not broaden it.
 

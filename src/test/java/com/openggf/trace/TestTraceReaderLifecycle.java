@@ -8,8 +8,10 @@ import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -123,6 +126,86 @@ class TestTraceReaderLifecycle {
         assertBalanced(events);
     }
 
+    @Test
+    void openedObserverFailureClosesDelegateAndKeepsCloseFailureSuppressed()
+            throws Exception {
+        Path path = Path.of("opened-observer.csv");
+        IOException closeFailure = new IOException("delegate close failed");
+        CloseTrackingReader delegate = new CloseTrackingReader(closeFailure);
+        IllegalStateException openedFailure =
+                new IllegalStateException("opened observer failed");
+        AutoCloseable restore = TraceFiles.observeReadersForTest((event, ignored) -> {
+            if (event == TraceFiles.ReaderLifecycleEvent.OPENED) {
+                throw openedFailure;
+            }
+        });
+
+        IllegalStateException thrown;
+        try {
+            thrown = assertThrows(IllegalStateException.class,
+                    () -> TraceFiles.observeReaderForTest(delegate, path));
+        } finally {
+            restore.close();
+        }
+
+        assertSame(openedFailure, thrown);
+        assertEquals(1, delegate.closeAttempts);
+        assertEquals(List.of(closeFailure), List.of(thrown.getSuppressed()));
+    }
+
+    @Test
+    void closedObserverFailureIsSuppressedBehindDelegateIOException()
+            throws Exception {
+        Path path = Path.of("closed-observer-after-io.csv");
+        IOException closeFailure = new IOException("delegate close failed");
+        CloseTrackingReader delegate = new CloseTrackingReader(closeFailure);
+        IllegalStateException observerFailure =
+                new IllegalStateException("closed observer failed");
+        AutoCloseable restore = TraceFiles.observeReadersForTest((event, ignored) -> {
+            if (event == TraceFiles.ReaderLifecycleEvent.CLOSED) {
+                throw observerFailure;
+            }
+        });
+
+        IOException thrown;
+        try {
+            BufferedReader observed = TraceFiles.observeReaderForTest(delegate, path);
+            thrown = assertThrows(IOException.class, observed::close);
+        } finally {
+            restore.close();
+        }
+
+        assertSame(closeFailure, thrown);
+        assertEquals(1, delegate.closeAttempts);
+        assertEquals(List.of(observerFailure), List.of(thrown.getSuppressed()));
+    }
+
+    @Test
+    void closedObserverFailureIsPrimaryWhenDelegateCloseSucceeds()
+            throws Exception {
+        Path path = Path.of("closed-observer-after-success.csv");
+        CloseTrackingReader delegate = new CloseTrackingReader(null);
+        IllegalStateException observerFailure =
+                new IllegalStateException("closed observer failed");
+        AutoCloseable restore = TraceFiles.observeReadersForTest((event, ignored) -> {
+            if (event == TraceFiles.ReaderLifecycleEvent.CLOSED) {
+                throw observerFailure;
+            }
+        });
+
+        IllegalStateException thrown;
+        try {
+            BufferedReader observed = TraceFiles.observeReaderForTest(delegate, path);
+            thrown = assertThrows(IllegalStateException.class, observed::close);
+        } finally {
+            restore.close();
+        }
+
+        assertSame(observerFailure, thrown);
+        assertEquals(1, delegate.closeAttempts);
+        assertEquals(0, thrown.getSuppressed().length);
+    }
+
     private static void gzip(Path source) throws IOException {
         try (OutputStream output = new GZIPOutputStream(Files.newOutputStream(
                 source.resolveSibling(source.getFileName() + ".gz")))) {
@@ -207,5 +290,24 @@ class TestTraceReaderLifecycle {
     }
 
     private record ReaderEvent(TraceFiles.ReaderLifecycleEvent event, Path path) {
+    }
+
+    private static final class CloseTrackingReader extends BufferedReader {
+        private final IOException closeFailure;
+        private int closeAttempts;
+
+        private CloseTrackingReader(IOException closeFailure) {
+            super(new StringReader(""));
+            this.closeFailure = closeFailure;
+        }
+
+        @Override
+        public void close() throws IOException {
+            closeAttempts++;
+            if (closeFailure != null) {
+                throw closeFailure;
+            }
+            super.close();
+        }
     }
 }

@@ -217,9 +217,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 - **Bounded active-segment trace ownership (2026-08-22, validated for
   integration):** complete-run replay now retains compact descriptors for the
   whole run and one eager payload only for the active segment. Two warmed,
-  forced-GC forks measured 9.25 MB descriptor graphs and 115.6 MB maximum
-  installed graphs, 89.36-89.37% below the 1.087 GB eager baseline; the largest
-  special-stage graph was 22.7 MB. The recorded 67-segment oracle consumed all
+  forced-GC forks measured 9.25 MB descriptor graphs and 170.6-170.9 MB maximum
+  installed graphs, 84.28-84.31% below the 1.087 GB eager baseline. The
+  installed samples retain the real catalog entry, parsed movie, launcher,
+  exact headless harness/fixture, descriptors, and ordinary or special
+  consumers through their actual owner fields. The recorded
+  67-segment oracle consumed all
   1,653 AIZ rows with its exact established frontier. Fresh current-main and
   feature trace sweeps share the same ten red identities, all 82
   baseline-green replay completions have a row/terminal invariant, and the JDK
