@@ -48,6 +48,21 @@ class TestS3kBlueSpherePlaybackTrace {
             w(1, 0x49, 0x05), w(1, 0x45, 0x05), w(1, 0x4D, 0x05),
             w(0, 0x28, 0x05), w(1, 0xA5, 0x23), w(1, 0xA1, 0x3F),
             w(0, 0x28, 0xF5));
+    private static final List<AudioPlaybackTraceEvent>
+            REVIEWED_COMMITTED_SPRING_PREDECESSOR = List.of(
+            new AudioPlaybackTraceEvent.Ym2612Write(0, 0x28, 0x05),
+            new AudioPlaybackTraceEvent.Ym2612Write(1, 0x91, 0x00),
+            new AudioPlaybackTraceEvent.Ym2612Write(1, 0x99, 0x00),
+            new AudioPlaybackTraceEvent.Ym2612Write(1, 0x95, 0x00),
+            new AudioPlaybackTraceEvent.Ym2612Write(1, 0x9D, 0x00),
+            new AudioPlaybackTraceEvent.PsgWrite(0x99),
+            new AudioPlaybackTraceEvent.PsgWrite(0xB9),
+            new AudioPlaybackTraceEvent.PsgWrite(0xFF),
+            new AudioPlaybackTraceEvent.PsgWrite(0x9F),
+            new AudioPlaybackTraceEvent.PsgWrite(0xBF),
+            new AudioPlaybackTraceEvent.PsgWrite(0xC0),
+            new AudioPlaybackTraceEvent.PsgWrite(0x00),
+            new AudioPlaybackTraceEvent.PsgWrite(0xF6));
 
     private AudioManager audio;
     private LiveCaptureAudioHandle capture;
@@ -178,8 +193,15 @@ class TestS3kBlueSpherePlaybackTrace {
         assertTrue(audio.playSfx(Sonic3kSfx.BLUE_SPHERE.id));
         drainFrames(fixture, null, 4);
 
-        List<Integer> levels = fm5CarrierLevels(
-                chipTrace.snapshot().eventsAfter(marker));
+        List<AudioPlaybackTraceEvent> replacementEvents =
+                chipTrace.snapshot().eventsAfter(marker);
+        assertTrue(replacementEvents.size()
+                        >= REVIEWED_COMMITTED_SPRING_PREDECESSOR.size());
+        assertEquals(REVIEWED_COMMITTED_SPRING_PREDECESSOR,
+                replacementEvents.subList(0,
+                        REVIEWED_COMMITTED_SPRING_PREDECESSOR.size()),
+                "only the exact committed Spring tail may precede Blue Sphere");
+        List<Integer> levels = fm5CarrierLevels(replacementEvents);
         assertTrue(levels.size() >= 3, () -> "missing Blue Sphere voice: " + levels);
         assertTrue(containsSubsequence(levels, List.of(5, 5, 5)),
                 () -> "retail shared-SFX overwrite must reach the Blue Sphere voice after "
@@ -200,13 +222,11 @@ class TestS3kBlueSpherePlaybackTrace {
     @Test
     void reviewedReplacementRejectsMusicVoiceProgrammingBeforeBlueSource() {
         List<YmWriteTimeline.Entry> pending = new ArrayList<>();
-        pending.add(timelineEntry(0, SmpsSourceDescriptor.Kind.BASE_SFX_ID,
-                Sonic3kSfx.SPRING.id, null, 1, 0xA1, 0x44));
-        pending.add(timelineEntry(1, SmpsSourceDescriptor.Kind.BASE_MUSIC,
+        pending.add(timelineEntry(0, SmpsSourceDescriptor.Kind.BASE_MUSIC,
                 7, null, 1, 0x41, 0x18));
         for (int index = 0; index < BLUE_SPHERE_FIRST_ATTACK.size(); index++) {
             ExpectedYmWrite write = BLUE_SPHERE_FIRST_ATTACK.get(index);
-            pending.add(timelineEntry(index + 2,
+            pending.add(timelineEntry(index + 1,
                     SmpsSourceDescriptor.Kind.BASE_SFX_ID,
                     Sonic3kSfx.BLUE_SPHERE.id,
                     expectedSegment(index), write.port(), write.register(),
@@ -215,6 +235,31 @@ class TestS3kBlueSpherePlaybackTrace {
 
         assertFalse(isReviewedBlueSphereReplacement(pending),
                 "a raw-value subsequence must not hide a music voice restore");
+    }
+
+    @Test
+    void reviewedReplacementRejectsMusicB5BeforeBlueUpload() {
+        List<YmWriteTimeline.Entry> pending = reviewedBlueTimeline(1);
+        pending.addFirst(timelineEntry(0,
+                SmpsSourceDescriptor.Kind.BASE_MUSIC, 7,
+                SegmentKind.COMPLETION_RESTORE, 1, 0xB5, 0xC0));
+
+        assertFalse(isReviewedBlueSphereReplacement(pending),
+                "music B5 restore must not hide before the Blue upload");
+    }
+
+    @Test
+    void reviewedReplacementRejectsOtherCompletionRestorePrefix() {
+        List<YmWriteTimeline.Entry> pending = reviewedBlueTimeline(2);
+        pending.addFirst(timelineEntry(1,
+                SmpsSourceDescriptor.Kind.BASE_MUSIC, 7,
+                SegmentKind.COMPLETION_RESTORE, 0, 0x28, 0x05));
+        pending.addFirst(timelineEntry(0,
+                SmpsSourceDescriptor.Kind.BASE_MUSIC, 7,
+                SegmentKind.COMPLETION_RESTORE, 1, 0xB1, 0x04));
+
+        assertFalse(isReviewedBlueSphereReplacement(pending),
+                "no completion-restore prefix may precede the Blue upload");
     }
 
     @Test
@@ -339,6 +384,13 @@ class TestS3kBlueSpherePlaybackTrace {
 
     private static boolean isReviewedBlueSphereReplacement(
             List<YmWriteTimeline.Entry> pending) {
+        if (pending.size() != BLUE_SPHERE_FIRST_ATTACK.size()
+                || pending.stream().anyMatch(entry ->
+                entry.sourceDescriptor().kind()
+                                == SmpsSourceDescriptor.Kind.BASE_MUSIC
+                        || entry.segment() == SegmentKind.COMPLETION_RESTORE)) {
+            return false;
+        }
         List<YmWriteTimeline.Entry> blue = pending.stream()
                 .filter(entry -> entry.sourceDescriptor().kind()
                         == SmpsSourceDescriptor.Kind.BASE_SFX_ID)
@@ -360,29 +412,7 @@ class TestS3kBlueSpherePlaybackTrace {
                 return false;
             }
         }
-        YmWriteTimeline.Entry blueVoiceStart = blue.get(4);
-        return pending.stream().noneMatch(entry ->
-                entry.sourceDescriptor().kind()
-                                == SmpsSourceDescriptor.Kind.BASE_MUSIC
-                        && isFm5VoiceProgramming(entry)
-                        && drainsBefore(entry, blueVoiceStart));
-    }
-
-    private static boolean isFm5VoiceProgramming(
-            YmWriteTimeline.Entry entry) {
-        return entry.port() == 1
-                && entry.register() >= 0x30
-                && entry.register() <= 0x9F
-                && (entry.register() & 0x03) == 1;
-    }
-
-    private static boolean drainsBefore(
-            YmWriteTimeline.Entry candidate,
-            YmWriteTimeline.Entry boundary) {
-        int dueOrder = Long.compare(
-                candidate.dueMasterCycle(), boundary.dueMasterCycle());
-        return dueOrder < 0 || (dueOrder == 0
-                && candidate.sourceOrdinal() < boundary.sourceOrdinal());
+        return true;
     }
 
     private static YmWriteTimeline.Entry timelineEntry(
@@ -393,6 +423,19 @@ class TestS3kBlueSpherePlaybackTrace {
         return new YmWriteTimeline.Entry(ordinal, ordinal, port, register,
                 value, 1, kind == SmpsSourceDescriptor.Kind.BASE_MUSIC ? 1 : 2,
                 source, segment);
+    }
+
+    private static List<YmWriteTimeline.Entry> reviewedBlueTimeline(
+            long firstOrdinal) {
+        List<YmWriteTimeline.Entry> pending = new ArrayList<>();
+        for (int index = 0; index < BLUE_SPHERE_FIRST_ATTACK.size(); index++) {
+            ExpectedYmWrite write = BLUE_SPHERE_FIRST_ATTACK.get(index);
+            pending.add(timelineEntry(firstOrdinal + index,
+                    SmpsSourceDescriptor.Kind.BASE_SFX_ID,
+                    Sonic3kSfx.BLUE_SPHERE.id, expectedSegment(index),
+                    write.port(), write.register(), write.value()));
+        }
+        return pending;
     }
 
     private static SegmentKind expectedSegment(int index) {

@@ -69,6 +69,11 @@ do not introduce trace-fed runtime state.
 The native lab, compact oracle, transactional service tests, rewind/observer
 guards, bounded playback trace, and three-ROM audio suites are recorded in
 `docs/architecture/validation/audio/2026-08-22-s3k-blue-sphere-audio-validation.md`.
+The replacement trace separately enumerates its exact committed Spring tail,
+requires the pending Blue Sphere service to contain only the reviewed 34
+source/segment-tagged writes, and rejects every music or completion-restore
+prefix. The rollback guard structurally requires its capture as the first
+unconditional transaction-helper statement and rejects any additional work.
 Human listening remains required before integration.
 
 ---

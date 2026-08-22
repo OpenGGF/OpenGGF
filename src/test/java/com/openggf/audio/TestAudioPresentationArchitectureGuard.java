@@ -433,7 +433,21 @@ class TestAudioPresentationArchitectureGuard {
                         + "private ServiceTransaction beginYmServiceTransaction("
                         + "Object source, boolean implicit) { "
                         + "LiveCommandMutationToken rollback = "
-                        + "captureLiveCommandMutation(); return transaction; }");
+                        + "captureLiveCommandMutation(); "
+                        + "if (ymServiceTransaction != null) { "
+                        + "throw new IllegalStateException("
+                        + "\"a YM driver service transaction is already active\"); } "
+                        + "if (ymDriverServiceReservation == null) { "
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source)); } "
+                        + "long cursor = Math.max(ymServiceCursor, Math.max("
+                        + "renderedYmMasterCycle(), "
+                        + "lastPendingYmWriteDueCycle())); "
+                        + "ymServiceTransaction = new ServiceTransaction("
+                        + "rollback, source, nextYmServiceOrdinal, "
+                        + "ymTimelineGeneration(), cursor, implicit, "
+                        + "isOrderedSiblingFence(source)); "
+                        + "return ymServiceTransaction; }");
 
         assertFalse(smpsOwnershipViolations(sources).contains(
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
@@ -473,6 +487,59 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void driverGuardRejectsConditionalCaptureInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { if (implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); } return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsCaptureAfterMutationInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { mutateDriverState(); "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; } "
+                        + "private void mutateDriverState() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsUnexpectedWorkInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); unexpectedWork(); "
+                        + "return transaction; } private void unexpectedWork() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
     void productionYmRollbackSeamRetainsItsReviewedShape() throws IOException {
         String source = Files.readString(
                 AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
@@ -482,7 +549,11 @@ class TestAudioPresentationArchitectureGuard {
                         "beginYmServiceTransaction"))
                 .findFirst().orElseThrow();
         assertTrue(reviewedYmTransactionHelper(
-                helper.getKey(), helper.getValue()));
+                helper.getKey(), helper.getValue()),
+                () -> "unreviewed statements: "
+                        + topLevelStatements(helper.getValue()).stream()
+                        .map(statement -> statement.replaceAll("\\s+", ""))
+                        .toList());
         String admission = methodsNamed(methods, "commitSfxAdmission")
                 .getFirst().getValue();
         int call = admission.indexOf("beginYmServiceTransaction(");
@@ -1241,12 +1312,76 @@ class TestAudioPresentationArchitectureGuard {
     private static boolean reviewedYmTransactionHelper(
             MethodSignature method, String body) {
         String parameters = method.parameters().replaceAll("\\s+", "");
-        String compact = body.replaceAll("\\s+", "");
+        List<String> statements = topLevelStatements(body).stream()
+                .map(statement -> statement.replaceAll("\\s+", ""))
+                .toList();
+        List<String> setup = List.of(
+                "if(ymDriverServiceReservation==null){"
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source));}",
+                "longcursor=Math.max(ymServiceCursor,Math.max("
+                        + "renderedYmMasterCycle(),"
+                        + "lastPendingYmWriteDueCycle()));",
+                "ymServiceTransaction=newServiceTransaction("
+                        + "rollback,source,nextYmServiceOrdinal,"
+                        + "ymTimelineGeneration(),cursor,implicit,"
+                        + "isOrderedSiblingFence(source));",
+                "returnymServiceTransaction;");
         return parameters.equals("Objectsource,booleanimplicit")
-                && occurrences(compact,
+                && occurrences(body.replaceAll("\\s+", ""),
                         "captureLiveCommandMutation()") == 1
-                && compact.contains("LiveCommandMutationTokenrollback="
-                        + "captureLiveCommandMutation();");
+                && statements.size() == 6
+                && statements.get(0).equals(
+                "LiveCommandMutationTokenrollback="
+                        + "captureLiveCommandMutation();")
+                && (statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException("
+                        + "\"aYMdriverservicetransactionisalreadyactive\");}")
+                || statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException();}"))
+                && statements.subList(2, 6).equals(setup);
+    }
+
+    private static List<String> topLevelStatements(String body) {
+        List<String> statements = new ArrayList<>();
+        int start = skipWhitespace(body, 0);
+        int parentheses = 0;
+        int brackets = 0;
+        int braces = 0;
+        for (int index = start; index < body.length(); index++) {
+            char value = body.charAt(index);
+            switch (value) {
+                case '(' -> parentheses++;
+                case ')' -> parentheses--;
+                case '[' -> brackets++;
+                case ']' -> brackets--;
+                case '{' -> braces++;
+                case '}' -> braces--;
+                default -> {
+                }
+            }
+            boolean simpleEnd = value == ';'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            boolean blockEnd = value == '}'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            if (!simpleEnd && !blockEnd) {
+                continue;
+            }
+            int next = skipWhitespace(body, index + 1);
+            if (blockEnd && body.startsWith("else", next)
+                    && identifierEndsAt(body, next + 4)) {
+                continue;
+            }
+            statements.add(body.substring(start, index + 1));
+            start = next;
+            index = next - 1;
+        }
+        if (start < body.length() && !body.substring(start).isBlank()) {
+            return List.of();
+        }
+        return statements;
     }
 
     private static boolean reviewedYmTransactionCallDominates(

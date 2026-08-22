@@ -526,6 +526,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private ServiceTransaction beginYmServiceTransaction(
             Object source, boolean implicit) {
+        LiveCommandMutationToken rollback = captureLiveCommandMutation();
         if (ymServiceTransaction != null) {
             throw new IllegalStateException(
                     "a YM driver service transaction is already active");
@@ -534,7 +535,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             preflightYmServiceCapacity(
                     aggregateYmServiceWriteBound(source));
         }
-        LiveCommandMutationToken rollback = captureLiveCommandMutation();
         long cursor = Math.max(ymServiceCursor,
                 Math.max(renderedYmMasterCycle(),
                         lastPendingYmWriteDueCycle()));

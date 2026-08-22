@@ -92,16 +92,21 @@ rollback. The Task 7 three-ROM audio selector passed 102 tests with zero
 failures, errors, or skips.
 
 Final-verification tests also corrected two stale assumptions exposed by the
-new delayed timeline. The bounded playback trace admits already-committed
-predecessor writes, but now inspects the pending timeline's source descriptors
-and segment kinds, rejects any FM5 music-voice programming before the Blue
-Sphere source, and requires the exact reviewed 34-write sequence. The
-architecture guard no longer exempts a helper globally by name: it admits only
-the timing-dominated callsites and the one-capture implementation shape. Tests
-were observed failing against both broader checks before the constraints were
-implemented. The pre-review focused run actually passed 53 tests, not the 52
-reported in the first handoff. The corrected focused group passes 57 tests with
-zero failures, errors, or skips.
+new delayed timeline. The bounded playback trace enumerates the exact 13-event
+committed Spring tail separately from the pending Blue Sphere service. That
+pending service must contain exactly the reviewed 34 source/segment-tagged
+writes and rejects every `BASE_MUSIC` or `COMPLETION_RESTORE` prefix, including
+`B5`, `B1`, key-off, and operator programming. The architecture guard no longer
+exempts a helper globally by name: it parses the helper's top-level statements,
+requires exactly one unconditional rollback capture as the first executable
+statement, and admits only the reviewed active-transaction guard, capacity
+preflight, cursor calculation, transaction construction, return, and
+timing-dominated callsites. Conditional capture, late capture after mutation,
+unexpected work, and duplicate capture poisons were each observed failing
+before the structural constraint was implemented. The pre-review focused run
+actually passed 53 tests, not the 52 reported in the first handoff. The final
+corrected focused group passes 62 tests with zero failures, errors, or skips:
+37 architecture tests, 6 playback tests, and 19 parity tests.
 
 The exact focused commands in the correction round used this common prefix:
 
@@ -121,7 +126,7 @@ TestSonic3kYmServiceTimingProfile,TestS3kBlueSphereSfxParity test
 
 Each run passed 51 tests. The review selector appended
 `-Dtest=TestAudioPresentationArchitectureGuard,TestS3kBlueSpherePlaybackTrace,TestS3kBlueSphereSfxParity test`
-and passed 57 tests. The rewind/observer/cadence/presentation selector appended:
+and passed 62 tests. The rewind/observer/cadence/presentation selector appended:
 
 ```text
 -Dtest=TestSmpsSequencerSnapshot,TestS3kPalDriverCadence,
@@ -134,13 +139,13 @@ TestAudioPresentationSnapshotParity,TestSmpsSequencerFadeTiming,
 TestAudioDiagnosticObservers,TestSonic3kUnifiedAudioPresentationRomIntegration test
 ```
 
-It passed 263 tests. Log SHA-256 values are
-`6f240ee0a0a8b7bc5d53cea3fea4ae43ecf5eec28ac2347549560b888715fbf1`
-and `64bec44152d2da0a5437d82d3fa1f5b6344d8feb65700bbc2b4382fdd91eaa04`
+It passed 263 tests. Final correction-round log SHA-256 values are
+`cfafcc43c830cc32cd9501f3f99f75f8cabaabca49a6f1622613c2cd13121ba4`
+and `d608db3cbbb70f3f73224ef53f2d0c6ca8ca5161fea0720e4333a4df0fa670b7`
 for the oracle repetitions,
-`aeb892b921c4e475e4bd474b8eee6ca93b657eaa8e06ce0f60c6bf346f12ebf7`
+`5416071c33c0dfb4b226f27dbff19e98fb062d1ea7c060dfbcf75dce08b5042f`
 for the review selector, and
-`66d9c857f095dc9b7e1dc7c6973918ff034b37f8681ede2568e846fa8024e5ca`
+`13c4e7ad49e0c547d21b274bae6b34eeff50961a72a93e8d4b96d923350b1a6c`
 for the 263-test selector. All commands used Maven 3.9.16 and OpenJDK 21.0.11.
 
 ## Full-suite comparison
@@ -164,9 +169,9 @@ JAVA_HOME=/usr/lib/jvm/java-21-openjdk mvn -Dmse=off \
   -Ds3k.rom.path="$OPENGGF_MAIN_WORKSPACE/s3k.gen" test
 ```
 
-The candidate ran 15,404 tests with 53 failures, 64 errors, and 18 skips. Its
-log SHA-256 is
-`a5612865fe4ba8f85ca4df0081f2762eddfebe73ec420419d4a9c6496b8e939b`.
+The final correction-round candidate ran 15,409 tests with 53 failures, 64
+errors, and 18 skips. Its log SHA-256 is
+`02c642e58735cb63de51b338ce0ff4bde17030d6a5cdf30bb1ba8e86f285630e`.
 The higher test total is the feature's added coverage, not a changed selector.
 
 XML parsing compared the fully qualified class and test method plus failure
@@ -177,6 +182,22 @@ SHA-256
 No baseline-passing test fails, no baseline-red test changes failure class, and
 no red identity is added, removed, or waived. This is the applicable regression
 comparison for the feature branch.
+
+An earlier correction-round repetition reported one additional
+`TestHeaderNameRomDetectors` failure. The method and its complete 14-test class
+both passed in isolation; inspection showed its first test can inherit a stale
+global bootstrap module from a prior class in a reused Surefire fork because it
+resets only after each test. The identical full command was therefore repeated
+rather than waiving the result, and the accepted run above restored the exact
+117-identity baseline ledger. The rejected log remains preserved with SHA-256
+`f0dc8210dfac094d478777b8f7795de3e920a7a8e25f1c5a2c988273d5c9a286`.
+
+The detached feature-base worktree was removed after confirming it was clean
+and detached at `914ac9a87badbad5c574cd8edaadc81c743e390a`; worktree metadata was
+pruned and no branch was deleted. Its preserved baseline log remains at
+`$AGENT_SCRATCH_ROOT/tasks/smps-ym-task8-round1-baseline-20260822T215753Z-1620546-d3ab87e0/baseline.log`
+with SHA-256
+`3c6266ba425ae8b20ddbf3c456c8b0d870c782a0511b4cc85fa821b4fc3e09bc`.
 
 ## Cross-game ruling and limits
 
