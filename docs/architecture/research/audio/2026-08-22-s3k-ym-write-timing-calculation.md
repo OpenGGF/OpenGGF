@@ -14,6 +14,14 @@ only the separately declared GPGX bank-read wait rows. The parser rejects an
 unknown opcode label, a T-state value which differs from its opcode, an empty
 later-write path, or a per-wait timing override.
 
+Every primitive row also owns a `Z80 Sound Driver.asm:first-last` source
+location. The test validates those locations against the shipped source and
+freezes the complete ordered `(path, source, opcode, count, T-states)` table by
+SHA-256. This is intentionally stricter than checking totals: changing a
+17-T-state `CALL` into a cost-equivalent 12-T-state taken `JR` plus a
+5-T-state non-taken `RET` fails even though the derived write cycle is
+unchanged.
+
 The frozen clock header is 15 master cycles per Z80 T-state, 1,008 master
 cycles per YM2612 internal sample (`42 * 24`), and the selected GPGX average of
 three Z80 T-states per uncontended banked read. Tests consume those parsed
@@ -61,6 +69,17 @@ modulation, frequency preparation, and the first `zFMSendFreq` data write is
 key-off through the restored panning data write is 1,078 primitive T-states.
 These rows cite the shipped `fix_sndbugs=0` driver spans in the JSON; none is an
 oracle-derived or arbitrary subtotal.
+
+For the maximum-release-to-panning path specifically, the shipped trace has
+three `CALL`s (`zGetFMInstrumentPointer`, `zSendFMInstrument`, and
+`zWriteFMIorII` at lines 3379, 3382, and 1535), two taken conditional `JR`s
+(the zero-updating-SFX branch to `zGetFMInstrumentOffset` and the FM5 port-II
+branch at lines 1465 and 569), and three non-taken conditional `RET`s (the
+nonzero voice-index test and the two `zWriteFMIorII` guards at lines 1473, 564,
+and 566). Their contribution is `3*17 + 2*12 + 3*5 = 90` T-states. A previous
+cost-equivalent `4/1/2` encoding also summed to 90 but did not describe the
+shipped instruction path; the frozen source-row expectation now rejects that
+substitution.
 
 ## Segment partition and checked result
 

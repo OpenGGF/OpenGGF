@@ -12,11 +12,17 @@ import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +35,13 @@ class TestSonic3kYmServiceTimingProfile {
             "docs/architecture/research/audio/s3k-ym-write-timing-calculation-v1.json");
     private static final Path ORACLE = Path.of(
             "docs/architecture/research/audio/s3k-blue-sphere-ym-write-oracle-v1.json");
+    private static final Path DRIVER = Path.of(
+            "docs/skdisasm/Sound/Z80 Sound Driver.asm");
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Pattern SOURCE_ROW = Pattern.compile(
+            "Z80 Sound Driver\\.asm:(\\d+)(?:-(\\d+))?");
+    private static final String SOURCE_ROW_DIGEST =
+            "e345a0148cb5e284b36a0572facc2b8bfd7f5e4de5b1a2e58c3f07cf038a7e4f";
     private static final Map<String, Integer> AUTHORITATIVE_T_STATES = Map.ofEntries(
             Map.entry("NOP", 4),
             Map.entry("RET", 10),
@@ -279,6 +291,51 @@ class TestSonic3kYmServiceTimingProfile {
     }
 
     @Test
+    void sourceRowsFreezeExactShippedInstructionCountsAndRejectEqualCostSwap()
+            throws IOException, NoSuchAlgorithmException {
+        JsonNode root = MAPPER.readTree(CALCULATION.toFile());
+        JsonNode voicePath = findExecutedPath(root,
+                "voice.max-release-to-panning-data");
+
+        assertEquals(3, opcodeCount(voicePath, "CALL nn"));
+        assertEquals(2, opcodeCount(voicePath, "JR cc taken"));
+        assertEquals(3, opcodeCount(voicePath, "RET cc not taken"));
+
+        long driverLines;
+        try (var lines = java.nio.file.Files.lines(DRIVER)) {
+            driverLines = lines.count();
+        }
+        for (JsonNode path : root.path("executed_paths")) {
+            for (JsonNode row : path.path("rows")) {
+                Matcher citation = SOURCE_ROW.matcher(
+                        row.path("source").asText());
+                assertEquals(true, citation.matches(),
+                        path.path("id").asText() + " source row");
+                int firstLine = Integer.parseInt(citation.group(1));
+                int lastLine = citation.group(2) == null
+                        ? firstLine : Integer.parseInt(citation.group(2));
+                assertEquals(true, firstLine > 0 && lastLine >= firstLine
+                                && lastLine <= driverLines,
+                        row.path("source").asText());
+            }
+        }
+        assertEquals(SOURCE_ROW_DIGEST, sourceRowDigest(root));
+
+        JsonNode poisoned = root.deepCopy();
+        JsonNode poisonedVoice = findExecutedPath(poisoned,
+                "voice.max-release-to-panning-data");
+        long expectedTStates = sumPrimitiveRows(poisonedVoice.path("rows"));
+        setOpcodeCount(poisonedVoice, "CALL nn", 4);
+        setOpcodeCount(poisonedVoice, "JR cc taken", 1);
+        setOpcodeCount(poisonedVoice, "RET cc not taken", 2);
+        assertEquals(expectedTStates,
+                sumPrimitiveRows(poisonedVoice.path("rows")),
+                "poison must preserve the arithmetic subtotal");
+        assertThrows(AssertionError.class,
+                () -> checkedSourceRows(poisoned));
+    }
+
+    @Test
     void sourceCalculationAgreesIndependentlyWithNativeOracleAndNoDmaStalls()
             throws IOException {
         JsonNode calculation = MAPPER.readTree(CALCULATION.toFile());
@@ -421,12 +478,61 @@ class TestSonic3kYmServiceTimingProfile {
     }
 
     private static long sumPath(JsonNode root, String pathId) {
+        return sumPrimitiveRows(findExecutedPath(root, pathId).path("rows"));
+    }
+
+    private static JsonNode findExecutedPath(JsonNode root, String pathId) {
         for (JsonNode path : root.path("executed_paths")) {
             if (pathId.equals(path.path("id").asText())) {
-                return sumPrimitiveRows(path.path("rows"));
+                return path;
             }
         }
         throw new AssertionError("Missing executed path " + pathId);
+    }
+
+    private static int opcodeCount(JsonNode path, String opcode) {
+        for (JsonNode row : path.path("rows")) {
+            if (opcode.equals(row.path("opcode").asText())) {
+                return row.path("count").asInt();
+            }
+        }
+        throw new AssertionError("Missing opcode " + opcode + " in "
+                + path.path("id").asText());
+    }
+
+    private static void setOpcodeCount(
+            JsonNode path, String opcode, int count) {
+        for (JsonNode row : path.path("rows")) {
+            if (opcode.equals(row.path("opcode").asText())) {
+                ((com.fasterxml.jackson.databind.node.ObjectNode) row)
+                        .put("count", count);
+                return;
+            }
+        }
+        throw new AssertionError("Missing opcode " + opcode + " in "
+                + path.path("id").asText());
+    }
+
+    private static void checkedSourceRows(JsonNode root)
+            throws NoSuchAlgorithmException {
+        assertEquals(SOURCE_ROW_DIGEST, sourceRowDigest(root));
+    }
+
+    private static String sourceRowDigest(JsonNode root)
+            throws NoSuchAlgorithmException {
+        StringBuilder canonical = new StringBuilder();
+        for (JsonNode path : root.path("executed_paths")) {
+            canonical.append(path.path("id").asText()).append('\n');
+            for (JsonNode row : path.path("rows")) {
+                canonical.append(row.path("source").asText()).append('|')
+                        .append(row.path("opcode").asText()).append('|')
+                        .append(row.path("count").asLong()).append('|')
+                        .append(row.path("t_states").asLong()).append('\n');
+            }
+        }
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(
+                canonical.toString().getBytes(StandardCharsets.UTF_8));
+        return HexFormat.of().formatHex(digest);
     }
 
     private static Clock checkedClock(JsonNode root) {
