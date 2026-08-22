@@ -13,10 +13,10 @@
   JDK 21 default-suite message comparison found zero feature-attributable new or
   worsened red. Subsequent test-only enforcement corrections close typed
   receiver, same-source reflection-helper, primitive-name collision, and
-  transformed lookup/class-producer and qualified-alias bypasses; the current
-  authority, authority/ownership, and authority/ownership/reader gates pass
-  23/23, 26/26, and 32/32 respectively without changing the measured ownership
-  graph.
+  transformed lookup/class-producer, loader, and field-alias bypasses; the
+  current authority, authority/ownership, and authority/ownership/reader gates
+  pass 25/25, 28/28, and 34/34 respectively without changing the measured
+  ownership graph.
 
 - **Sonic 1 complete-run visual bridges retain their diagnostic owner:** Task 8
   exposed two real bridge regressions that aborted after destination segment 2
