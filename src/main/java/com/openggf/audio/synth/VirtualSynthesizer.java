@@ -26,6 +26,7 @@ public class VirtualSynthesizer implements Synthesizer {
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private final YmWriteTimeline ymWriteTimeline;
+    private final Object ymTimelineStateLock = new Object();
     private long ymTimelineGeneration;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
     private boolean chipWriteObserverEnabled;
@@ -95,18 +96,36 @@ public class VirtualSynthesizer implements Synthesizer {
 
     /** Returns the generation which must stamp newly published YM writes. */
     protected final long ymTimelineGeneration() {
-        return ymTimelineGeneration;
+        synchronized (ymTimelineStateLock) {
+            return ymTimelineGeneration;
+        }
     }
 
     /** Returns the internal YM frontier used to anchor source-timed writes. */
     protected final long renderedYmMasterCycle() {
-        return ym.renderedMasterCyclesForTesting();
+        return ym.renderedMasterCycleFrontier();
     }
 
-    /** Atomically publishes one already-authorized source write journal. */
+    /**
+     * Atomically verifies the current synth generation and publishes one
+     * already-authorized source write journal. A journal built against an old
+     * generation cannot cross a reset/replacement barrier unnoticed.
+     */
     protected final void commitYmWriteJournal(
             List<YmWriteTimeline.Entry> journal) {
-        ymWriteTimeline.commit(journal);
+        Objects.requireNonNull(journal, "journal");
+        synchronized (ymTimelineStateLock) {
+            for (YmWriteTimeline.Entry entry : journal) {
+                if (entry == null
+                        || entry.driverGeneration()
+                        != ymTimelineGeneration) {
+                    throw new IllegalArgumentException(
+                            "every YM write must use the current synth generation "
+                                    + ymTimelineGeneration);
+                }
+            }
+            ymWriteTimeline.commit(journal);
+        }
     }
 
     /**
@@ -117,9 +136,12 @@ public class VirtualSynthesizer implements Synthesizer {
     protected final void crossYmTimelineGenerationBarrier(
             YmTimelineGenerationBarrier barrier) {
         Objects.requireNonNull(barrier, "barrier");
-        long nextGeneration = Math.incrementExact(ymTimelineGeneration);
-        ymTimelineGeneration = nextGeneration;
-        ymWriteTimeline.discardBeforeGeneration(nextGeneration);
+        synchronized (ymTimelineStateLock) {
+            long nextGeneration = Math.incrementExact(
+                    ymTimelineGeneration);
+            ymTimelineGeneration = nextGeneration;
+            ymWriteTimeline.discardBeforeGeneration(nextGeneration);
+        }
     }
 
     /**
@@ -139,27 +161,65 @@ public class VirtualSynthesizer implements Synthesizer {
     }
 
     public Snapshot captureSynthSnapshot() {
-        return new Snapshot(
-                outputSampleRate,
-                ym.captureSnapshot(),
-                psg.captureSnapshot(),
-                ymWriteTimeline.captureSnapshot(),
-                ym.renderedMasterCyclesForTesting(),
-                ymTimelineGeneration);
+        synchronized (ymTimelineStateLock) {
+            return new Snapshot(
+                    outputSampleRate,
+                    ym.captureSnapshot(),
+                    psg.captureSnapshot(),
+                    ymWriteTimeline.captureSnapshot(),
+                    ym.renderedMasterCycleFrontier(),
+                    ymTimelineGeneration);
+        }
     }
 
     public void restoreSynthSnapshot(Snapshot snapshot) {
-        Objects.requireNonNull(snapshot, "snapshot");
+        synchronized (ymTimelineStateLock) {
+            YmWriteTimeline.Snapshot restoredTimeline =
+                    validateSynthSnapshot(snapshot);
+
+            outputSampleRate = snapshot.outputSampleRate();
+            ym.restoreSnapshot(snapshot.ym());
+            psg.restoreSnapshot(snapshot.psg());
+            ymWriteTimeline.restoreSnapshot(restoredTimeline);
+            ym.restoreRenderedMasterCycles(
+                    snapshot.renderedYmMasterCycle());
+            ymTimelineGeneration = snapshot.ymTimelineGeneration();
+        }
+    }
+
+    private static YmWriteTimeline.Snapshot validateSynthSnapshot(
+            Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "synth snapshot cannot be null");
+        }
+        Ym2612Chip.validateSnapshot(snapshot.ym());
+        PsgChip.validateSnapshot(snapshot.psg());
+        if (Double.compare(snapshot.outputSampleRate(),
+                snapshot.ym().outputRate()) != 0
+                || Double.compare(snapshot.outputSampleRate(),
+                snapshot.psg().outputRate()) != 0) {
+            throw new IllegalArgumentException(
+                    "synth and chip output rates do not match");
+        }
+        if (snapshot.renderedYmMasterCycle()
+                % YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE != 0) {
+            throw new IllegalArgumentException(
+                    "rendered YM frontier is not on an internal sample boundary");
+        }
+
         YmWriteTimeline restoredTimeline = new YmWriteTimeline(
                 YM_WRITE_TIMELINE_CAPACITY);
         restoredTimeline.restoreSnapshot(snapshot.ymWriteTimeline());
-
-        outputSampleRate = snapshot.outputSampleRate();
-        ym.restoreSnapshot(snapshot.ym());
-        psg.restoreSnapshot(snapshot.psg());
-        ymWriteTimeline.restoreSnapshot(restoredTimeline.captureSnapshot());
-        ym.restoreRenderedMasterCycles(snapshot.renderedYmMasterCycle());
-        ymTimelineGeneration = snapshot.ymTimelineGeneration();
+        for (YmWriteTimeline.Entry entry
+                : snapshot.ymWriteTimeline().pending()) {
+            if (entry.driverGeneration()
+                    != snapshot.ymTimelineGeneration()) {
+                throw new IllegalArgumentException(
+                        "pending YM write generation does not match snapshot");
+            }
+        }
+        return restoredTimeline.captureSnapshot();
     }
 
     /** Channel-bounded rollback state for one prepared SFX admission. */
@@ -318,9 +378,10 @@ public class VirtualSynthesizer implements Synthesizer {
             long renderedYmMasterCycle,
             long ymTimelineGeneration) {
         public Snapshot {
-            if (outputSampleRate <= 0.0) {
+            if (!Double.isFinite(outputSampleRate)
+                    || outputSampleRate <= 0.0) {
                 throw new IllegalArgumentException(
-                        "output sample rate must be positive");
+                        "output sample rate must be finite and positive");
             }
             Objects.requireNonNull(ym, "ym");
             Objects.requireNonNull(psg, "psg");

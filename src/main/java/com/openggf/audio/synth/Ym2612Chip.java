@@ -979,7 +979,7 @@ public class Ym2612Chip {
         writeTimeline = Objects.requireNonNull(timeline, "timeline");
     }
 
-    long renderedMasterCyclesForTesting() {
+    long renderedMasterCycleFrontier() {
         return renderedMasterCycles;
     }
 
@@ -989,6 +989,90 @@ public class Ym2612Chip {
                     "rendered master cycles cannot be negative");
         }
         this.renderedMasterCycles = renderedMasterCycles;
+    }
+
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "YM snapshot cannot be null");
+        }
+        requireFinitePositive(snapshot.chipClock(), "YM chip clock");
+        requireFinitePositive(snapshot.z80Clock(), "YM Z80 clock");
+        requireFinitePositive(snapshot.internalRate(), "YM internal rate");
+        requireFinitePositive(snapshot.outputRate(), "YM output rate");
+        requireFinitePositive(snapshot.resampleRatio(),
+                "YM resample ratio");
+        requireFinitePositive(snapshot.inverseResampleRatio(),
+                "YM inverse resample ratio");
+        requireFinite(snapshot.dacPos(), "YM DAC position");
+        requireFinite(snapshot.dacStep(), "YM DAC step");
+        requireFinite(snapshot.resampleAccum(), "YM resample accumulator");
+        requireFinite(snapshot.busyCycles(), "YM busy cycles");
+        if (Double.compare(snapshot.internalRate(),
+                snapshot.chipClock() / 144.0) != 0
+                || Double.compare(snapshot.resampleRatio(),
+                snapshot.internalRate() / snapshot.outputRate()) != 0
+                || Double.compare(snapshot.inverseResampleRatio(),
+                1.0 / snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM snapshot rates are inconsistent");
+        }
+        BlipResampler.validateSnapshot(snapshot.blipResampler());
+        if (Double.compare(snapshot.blipResampler().ratio(),
+                snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM resampler ratio does not match chip rates");
+        }
+        ChannelSnapshot[] channels = snapshot.channels();
+        if (channels.length != 6 || snapshot.mutes().length != 6) {
+            throw new IllegalArgumentException(
+                    "YM snapshot channel arrays have invalid lengths");
+        }
+        for (ChannelSnapshot channel : channels) {
+            validateChannelSnapshot(channel);
+        }
+        if (snapshot.chipType() < YM2612_DISCRETE
+                || snapshot.chipType() > YM2612_ENHANCED
+                || snapshot.currentDacSampleId() < -1
+                || snapshot.ssgEgActiveCount() < 0
+                || snapshot.ssgEgActiveCount() > 24
+                || snapshot.egTimer() < 0 || snapshot.egTimer() >= 3) {
+            throw new IllegalArgumentException(
+                    "YM snapshot scalar state is invalid");
+        }
+    }
+
+    private static void validateChannelSnapshot(ChannelSnapshot channel) {
+        if (channel == null
+                || channel.slotFnum().length != 4
+                || channel.slotBlock().length != 4
+                || channel.slotKCode().length != 4
+                || channel.slotFc().length != 4
+                || channel.slotBlockFnum().length != 4
+                || channel.opOut().length != 4
+                || channel.ops().length != 4) {
+            throw new IllegalArgumentException(
+                    "YM channel snapshot shape is invalid");
+        }
+        for (OperatorSnapshot operator : channel.ops()) {
+            if (operator == null || operator.curEnv() == null) {
+                throw new IllegalArgumentException(
+                        "YM operator snapshot is invalid");
+            }
+        }
+    }
+
+    private static void requireFinitePositive(double value, String name) {
+        requireFinite(value, name);
+        if (value <= 0.0) {
+            throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private static void requireFinite(double value, String name) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(name + " must be finite");
+        }
     }
 
     public void write(int port, int reg, int val) {

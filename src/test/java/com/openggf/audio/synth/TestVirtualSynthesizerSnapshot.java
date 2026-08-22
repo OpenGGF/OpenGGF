@@ -1,5 +1,8 @@
 package com.openggf.audio.synth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.YmServiceTimingProfile;
@@ -12,8 +15,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestVirtualSynthesizerSnapshot {
+    private static final ObjectMapper JSON = new ObjectMapper();
     private static final SmpsSourceDescriptor SOURCE =
             new SmpsSourceDescriptor(
                     SmpsSourceDescriptor.Kind.BASE_SFX_ID,
@@ -124,11 +129,13 @@ class TestVirtualSynthesizerSnapshot {
     void hardResetBarrierDiscardsPendingWritesWithoutAChipCallback() {
         TestableSynth synth = synthWithOnePendingWrite();
         RecordingObserver observer = observe(synth);
+        long oldGeneration = synth.currentGeneration();
 
         synth.crossBarrier(
                 VirtualSynthesizer.YmTimelineGenerationBarrier.HARD_RESET);
         renderPendingWrites(synth);
 
+        assertEquals(oldGeneration + 1, synth.currentGeneration());
         assertEquals(List.of(), observer.events);
         assertEquals(List.of(), synth.captureSynthSnapshot()
                 .ymWriteTimeline().pending());
@@ -140,11 +147,13 @@ class TestVirtualSynthesizerSnapshot {
     void synthReplacementBarrierDiscardsPendingWritesWithoutAChipCallback() {
         TestableSynth synth = synthWithOnePendingWrite();
         RecordingObserver observer = observe(synth);
+        long oldGeneration = synth.currentGeneration();
 
         synth.crossBarrier(
                 VirtualSynthesizer.YmTimelineGenerationBarrier.SYNTH_REPLACEMENT);
         renderPendingWrites(synth);
 
+        assertEquals(oldGeneration + 1, synth.currentGeneration());
         assertEquals(List.of(), observer.events);
         assertEquals(List.of(), synth.captureSynthSnapshot()
                 .ymWriteTimeline().pending());
@@ -153,15 +162,114 @@ class TestVirtualSynthesizerSnapshot {
     @Test
     void fullSilenceBarrierDiscardsPendingWritesBeforeItsImmediateWrites() {
         TestableSynth synth = synthWithOnePendingWrite();
-        RecordingObserver observer = observe(synth);
+        long oldGeneration = synth.currentGeneration();
+        GenerationObserver observer = new GenerationObserver(synth);
+        synth.setChipWriteObserver(observer);
 
         synth.silenceAll();
-        observer.events.clear();
+        assertEquals(oldGeneration + 1, synth.currentGeneration());
+        assertEquals(202, observer.generations.size());
+        assertTrue(observer.generations.stream().allMatch(
+                generation -> generation == oldGeneration + 1));
+        observer.generations.clear();
         renderPendingWrites(synth);
 
-        assertEquals(List.of(), observer.events);
+        assertEquals(List.of(), observer.generations);
         assertEquals(List.of(), synth.captureSynthSnapshot()
                 .ymWriteTimeline().pending());
+    }
+
+    @Test
+    void publicationRejectsStaleFutureAndMixedGenerationsAtomically() {
+        TestableSynth stale = configuredTestableSynth();
+        long staleGeneration = stale.currentGeneration();
+        stale.crossBarrier(
+                VirtualSynthesizer.YmTimelineGenerationBarrier.HARD_RESET);
+        assertJournalRejectedWithoutMutation(stale, List.of(
+                entry(3_150, 0, 0x40, 0x11, staleGeneration)));
+
+        TestableSynth future = configuredTestableSynth();
+        long currentGeneration = future.currentGeneration();
+        assertJournalRejectedWithoutMutation(future, List.of(
+                entry(3_150, 0, 0x40, 0x11,
+                        currentGeneration + 1)));
+
+        TestableSynth mixed = configuredTestableSynth();
+        currentGeneration = mixed.currentGeneration();
+        assertJournalRejectedWithoutMutation(mixed, List.of(
+                entry(3_150, 0, 0x40, 0x11, currentGeneration),
+                entry(6_300, 1, 0x41, 0x22,
+                        currentGeneration + 1)));
+    }
+
+    @Test
+    void restoreRejectsMismatchedPendingGenerationWithoutMutation() {
+        TestableSynth target = poisonRestoreTarget();
+        VirtualSynthesizer.Snapshot valid = target.captureSynthSnapshot();
+        YmWriteTimeline.Entry pending = valid.ymWriteTimeline()
+                .pending().getFirst();
+        YmWriteTimeline.Snapshot poisonedTimeline =
+                new YmWriteTimeline.Snapshot(
+                        valid.ymWriteTimeline().capacity(),
+                        valid.ymWriteTimeline().nextOrdinal(),
+                        List.of(entry(
+                                pending.dueMasterCycle(),
+                                pending.sourceOrdinal(),
+                                pending.register(),
+                                pending.value(),
+                                valid.ymTimelineGeneration() + 1)));
+        VirtualSynthesizer.Snapshot poisoned = new VirtualSynthesizer.Snapshot(
+                valid.outputSampleRate(), valid.ym(), valid.psg(),
+                poisonedTimeline, valid.renderedYmMasterCycle(),
+                valid.ymTimelineGeneration());
+
+        assertRestoreRejectedWithoutMutation(target, poisoned);
+    }
+
+    @Test
+    void restorePrevalidatesYmArraysBeforeMutatingLiveSynth() {
+        TestableSynth target = poisonRestoreTarget();
+        ObjectNode json = JSON.valueToTree(target.captureSynthSnapshot());
+        ArrayNode channels = (ArrayNode) json.path("ym").path("channels");
+        channels.remove(channels.size() - 1);
+
+        assertRestoreRejectedWithoutMutation(
+                target, snapshotFromJson(json));
+    }
+
+    @Test
+    void restorePrevalidatesPsgArraysBeforeMutatingLiveSynth() {
+        TestableSynth target = poisonRestoreTarget();
+        ObjectNode json = JSON.valueToTree(target.captureSynthSnapshot());
+        ArrayNode registers = (ArrayNode) json.path("psg").path("regs");
+        registers.remove(registers.size() - 1);
+
+        assertRestoreRejectedWithoutMutation(
+                target, snapshotFromJson(json));
+    }
+
+    @Test
+    void restorePrevalidatesNestedResamplerBeforeMutatingLiveSynth() {
+        TestableSynth target = poisonRestoreTarget();
+        ObjectNode json = JSON.valueToTree(target.captureSynthSnapshot());
+        ObjectNode resampler = (ObjectNode) json.path("ym")
+                .path("blipResampler");
+        resampler.put("head", -1);
+
+        assertRestoreRejectedWithoutMutation(
+                target, snapshotFromJson(json));
+    }
+
+    @Test
+    void outerSnapshotRejectsNonFiniteOutputRates() {
+        VirtualSynthesizer.Snapshot valid = configuredSynth()
+                .captureSynthSnapshot();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithOutputRate(valid, Double.NaN));
+        assertThrows(IllegalArgumentException.class,
+                () -> copyWithOutputRate(
+                        valid, Double.POSITIVE_INFINITY));
     }
 
     @Test
@@ -217,6 +325,50 @@ class TestVirtualSynthesizerSnapshot {
                         1, 0x2A, 0x5A,
                         snapshot.ymTimelineGeneration())));
         return synth;
+    }
+
+    private static TestableSynth poisonRestoreTarget() {
+        TestableSynth synth = configuredTestableSynth();
+        prime(synth);
+        synth.renderFrames(new short[20], 0, 10);
+        VirtualSynthesizer.Snapshot snapshot = synth.captureSynthSnapshot();
+        synth.publish(List.of(entry(
+                snapshot.renderedYmMasterCycle() + 100_800,
+                0, 0x40, 0x21, snapshot.ymTimelineGeneration())));
+        return synth;
+    }
+
+    private static void assertJournalRejectedWithoutMutation(
+            TestableSynth synth, List<YmWriteTimeline.Entry> journal) {
+        VirtualSynthesizer.Snapshot before = synth.captureSynthSnapshot();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> synth.publish(journal));
+        assertEquals(before, synth.captureSynthSnapshot());
+    }
+
+    private static void assertRestoreRejectedWithoutMutation(
+            VirtualSynthesizer synth,
+            VirtualSynthesizer.Snapshot poisoned) {
+        VirtualSynthesizer.Snapshot before = synth.captureSynthSnapshot();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> synth.restoreSynthSnapshot(poisoned));
+        assertEquals(before, synth.captureSynthSnapshot());
+    }
+
+    private static VirtualSynthesizer.Snapshot snapshotFromJson(
+            ObjectNode json) {
+        return JSON.convertValue(json, VirtualSynthesizer.Snapshot.class);
+    }
+
+    private static VirtualSynthesizer.Snapshot copyWithOutputRate(
+            VirtualSynthesizer.Snapshot snapshot, double outputSampleRate) {
+        return new VirtualSynthesizer.Snapshot(
+                outputSampleRate, snapshot.ym(), snapshot.psg(),
+                snapshot.ymWriteTimeline(),
+                snapshot.renderedYmMasterCycle(),
+                snapshot.ymTimelineGeneration());
     }
 
     private static RecordingObserver observe(VirtualSynthesizer synth) {
@@ -311,6 +463,25 @@ class TestVirtualSynthesizerSnapshot {
         }
     }
 
+    private static final class GenerationObserver implements ChipWriteObserver {
+        private final TestableSynth synth;
+        private final List<Long> generations = new ArrayList<>();
+
+        private GenerationObserver(TestableSynth synth) {
+            this.synth = synth;
+        }
+
+        @Override
+        public void onYm2612Write(int port, int register, int value) {
+            generations.add(synth.currentGeneration());
+        }
+
+        @Override
+        public void onPsgWrite(int value) {
+            generations.add(synth.currentGeneration());
+        }
+    }
+
     private static final class TestableSynth extends VirtualSynthesizer {
         private TestableSynth(double outputSampleRate) {
             super(outputSampleRate);
@@ -318,6 +489,14 @@ class TestVirtualSynthesizerSnapshot {
 
         private void crossBarrier(YmTimelineGenerationBarrier barrier) {
             crossYmTimelineGenerationBarrier(barrier);
+        }
+
+        private long currentGeneration() {
+            return ymTimelineGeneration();
+        }
+
+        private void publish(List<YmWriteTimeline.Entry> journal) {
+            commitYmWriteJournal(journal);
         }
     }
 }

@@ -212,7 +212,7 @@ class TestYm2612ChipGpgxParity {
                 "sample@0", "sample@1008", "sample@2016", "sample@3024",
                 "write@4032", "sample@4032"),
                 observer.boundaries.subList(0, 6));
-        assertTrue(chip.renderedMasterCyclesForTesting() >= 5_040L);
+        assertTrue(chip.renderedMasterCycleFrontier() >= 5_040L);
     }
 
     private static YmWriteTimeline.Entry scheduledEntry(
@@ -239,13 +239,13 @@ class TestYm2612ChipGpgxParity {
 
         @Override
         public void onYm2612Write(int port, int register, int value) {
-            writeFrontiers.add(chip.renderedMasterCyclesForTesting());
-            boundaries.add("write@" + chip.renderedMasterCyclesForTesting());
+            writeFrontiers.add(chip.renderedMasterCycleFrontier());
+            boundaries.add("write@" + chip.renderedMasterCycleFrontier());
         }
 
         @Override
         public void onYm2612KeyOn(int channel, int operator, int attenuation) {
-            keyOnFrontiers.add(chip.renderedMasterCyclesForTesting());
+            keyOnFrontiers.add(chip.renderedMasterCycleFrontier());
         }
 
         @Override
@@ -255,7 +255,7 @@ class TestYm2612ChipGpgxParity {
 
         @Override
         public void onYm2612ChannelSample(int channel, int output) {
-            boundaries.add("sample@" + chip.renderedMasterCyclesForTesting());
+            boundaries.add("sample@" + chip.renderedMasterCycleFrontier());
         }
 
         @Override
