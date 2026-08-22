@@ -859,6 +859,74 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
+    void lookupTransformationsCannotEraseAccessorAuthority() {
+        String diagnostic = " findVirtual acquires active payload accessor trace on "
+                + "com.openggf.trace.replay.runs.ActiveSegmentPayload";
+        assertAll(
+                () -> assertExactSourceViolation(
+                        "PublicLookupAccessor.java:3" + diagnostic,
+                        "PublicLookupAccessor.java", """
+                                class PublicLookupAccessor {
+                                    Object acquire() throws Exception {
+                                        return MethodHandles.publicLookup().findVirtual(ActiveSegmentPayload.class, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "PrivateLookupAccessor.java:3" + diagnostic,
+                        "PrivateLookupAccessor.java", """
+                                class PrivateLookupAccessor {
+                                    Object acquire() throws Exception {
+                                        return MethodHandles.privateLookupIn(ActiveSegmentPayload.class, MethodHandles.lookup()).findVirtual(ActiveSegmentPayload.class, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "NarrowedLookupAccessor.java:3" + diagnostic,
+                        "NarrowedLookupAccessor.java", """
+                                class NarrowedLookupAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.in(ActiveSegmentPayload.class).findVirtual(ActiveSegmentPayload.class, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """),
+                () -> assertExactSourceViolation(
+                        "DroppedLookupAccessor.java:3" + diagnostic,
+                        "DroppedLookupAccessor.java", """
+                                class DroppedLookupAccessor {
+                                    Object acquire(MethodHandles.Lookup lookup) throws Exception {
+                                        return lookup.dropLookupMode(1).findVirtual(ActiveSegmentPayload.class, "trace", MethodType.methodType(TraceData.class));
+                                    }
+                                }
+                                """));
+    }
+
+    @Test
+    void transformedLookupControlsRemainNarrow() {
+        assertNoSourceViolation(
+                "TransformedLookupControls.java", """
+                        class TransformedLookupControls {
+                            Object unrelated() throws Exception {
+                                return MethodHandles.publicLookup().findVirtual(StringBuilder.class,
+                                        "append", MethodType.methodType(
+                                                StringBuilder.class, String.class));
+                            }
+                            Object harmless() throws Exception {
+                                return MethodHandles.publicLookup().findVirtual(
+                                        ActiveSegmentPayload.class, "isClosed",
+                                        MethodType.methodType(boolean.class));
+                            }
+                            Object collidingHelper(ActiveSegmentPayload target) {
+                                return findVirtual(target, "isClosed");
+                            }
+                            private Object findVirtual(Object target, String name) {
+                                return name;
+                            }
+                        }
+                        """);
+    }
+
+    @Test
     void sourceGuardAllowsOnlyProvenHarmlessExactOwnerFields() {
         assertNoSourceViolation(
                 "HarmlessOwnerFields.java", """
@@ -1264,6 +1332,10 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 }
                 return;
             }
+            if (isSameSourceHelperCall(invocation)) {
+                recordSameSourceHelperCall(invocation);
+                return;
+            }
             if (("getMethods".equals(primitive)
                     || "getDeclaredMethods".equals(primitive))
                     && arguments.isEmpty()
@@ -1306,8 +1378,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
             }
             if (Set.of("findVirtual", "findStatic", "findSpecial")
                     .contains(primitive)
-                    && arguments.size() >= 2
-                    && isLookupReceiver(receiver(invocation))) {
+                    && arguments.size() >= 2) {
                 recordAccessorAcquisition(invocation, primitive,
                         targetName(evaluate(arguments.get(0))),
                         text(evaluate(arguments.get(1))));
@@ -1318,8 +1389,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     "findStaticGetter", "findStaticSetter",
                     "findVarHandle", "findStaticVarHandle")
                     .contains(primitive)
-                    && arguments.size() >= 2
-                    && isLookupReceiver(receiver(invocation))) {
+                    && arguments.size() >= 2) {
                 recordFieldAcquisition(invocation, primitive,
                         targetName(evaluate(arguments.get(0))),
                         text(evaluate(arguments.get(1))));
@@ -1333,9 +1403,13 @@ class TestActiveSegmentPayloadAuthorityGuard {
             return value != null && value.classObject();
         }
 
-        private boolean isLookupReceiver(ExpressionTree receiver) {
-            KnownValue value = evaluate(receiver);
-            return value != null && value.methodHandleLookup();
+        private boolean isSameSourceHelperCall(
+                MethodInvocationTree invocation) {
+            SourceMethodKey key = new SourceMethodKey(
+                    invokedName(invocation), invocation.getArguments().size());
+            return sourceMethods.getOrDefault(key, List.of()).stream()
+                    .anyMatch(method -> method.method().getBody() != null
+                            && matchesHelperOwner(invocation, method.owner()));
         }
 
         private void recordSameSourceHelperCall(
@@ -1527,9 +1601,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
                 return KnownValue.classTarget(normalizeTargetName(
                         text(evaluate(arguments.getFirst()))));
             }
-            if (isMethodHandlesLookup(invocation) && arguments.isEmpty()) {
-                return KnownValue.lookupValue();
-            }
             return null;
         }
 
@@ -1549,15 +1620,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
                     .contains(receiver.toString());
         }
 
-        private boolean isMethodHandlesLookup(
-                MethodInvocationTree invocation) {
-            ExpressionTree receiver = receiver(invocation);
-            return "lookup".equals(invokedName(invocation))
-                    && receiver != null
-                    && Set.of("MethodHandles", "java.lang.invoke.MethodHandles")
-                    .contains(receiver.toString());
-        }
-
         private void report(Tree tree, String message) {
             long position = positions.getStartPosition(unit, tree);
             long line = unit.getLineMap().getLineNumber(position);
@@ -1570,11 +1632,6 @@ class TestActiveSegmentPayloadAuthorityGuard {
         private KnownValue typedTarget(Tree type) {
             if (type == null) {
                 return null;
-            }
-            if (Set.of("MethodHandles.Lookup",
-                    "java.lang.invoke.MethodHandles.Lookup")
-                    .contains(type.toString())) {
-                return KnownValue.lookupValue();
             }
             return KnownValue.target(normalizeTargetName(type.toString()));
         }
@@ -1637,30 +1694,25 @@ class TestActiveSegmentPayloadAuthorityGuard {
             String text,
             String targetName,
             boolean builder,
-            boolean classObject,
-            boolean methodHandleLookup) {
+            boolean classObject) {
         private static KnownValue string(String value) {
             return value == null ? null
-                    : new KnownValue(value, null, false, false, false);
+                    : new KnownValue(value, null, false, false);
         }
 
         private static KnownValue target(String value) {
             return value == null ? null
-                    : new KnownValue(null, value, false, false, false);
+                    : new KnownValue(null, value, false, false);
         }
 
         private static KnownValue classTarget(String value) {
             return value == null ? null
-                    : new KnownValue(null, value, false, true, false);
+                    : new KnownValue(null, value, false, true);
         }
 
         private static KnownValue builder(String value) {
             return value == null ? null
-                    : new KnownValue(value, null, true, false, false);
-        }
-
-        private static KnownValue lookupValue() {
-            return new KnownValue(null, null, false, false, true);
+                    : new KnownValue(value, null, true, false);
         }
     }
 
