@@ -1143,6 +1143,21 @@ public final class TraceRunReplayWalker {
         return List.copyOf(descriptors);
     }
 
+    /**
+     * Opens the parsed comparison payload for one descriptor at the point a
+     * replay drive takes ownership of that segment. No lease is constructed
+     * until both halves of a special-stage composite load successfully.
+     */
+    public static ActiveSegmentPayload openActiveSegment(
+            TraceRunSegmentDescriptor descriptor, int segmentIndex)
+            throws IOException {
+        Objects.requireNonNull(descriptor, "descriptor");
+        LoadedSegmentPayload payload = loadSegmentPayload(
+                descriptor.segment(), descriptor.segmentDirectory(), segmentIndex);
+        return new ActiveSegmentPayload(
+                descriptor, payload.trace(), payload.specialStageRows());
+    }
+
     private static LoadedSegmentPayload loadSegmentPayload(
             TraceRunManifest.Segment segment,
             Path segmentDirectory,

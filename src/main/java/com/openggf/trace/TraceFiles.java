@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Objects;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +12,19 @@ import java.util.zip.GZIPInputStream;
 
 /** Shared resolution and UTF-8 reader support for plain or gzip trace files. */
 public final class TraceFiles {
+
+    enum ReaderLifecycleEvent {
+        OPENED,
+        CLOSED
+    }
+
+    @FunctionalInterface
+    interface ReaderLifecycleObserver {
+        void onEvent(ReaderLifecycleEvent event, Path path);
+    }
+
+    private static final ThreadLocal<ReaderLifecycleObserver> READER_OBSERVER =
+            new ThreadLocal<>();
 
     private TraceFiles() {
     }
@@ -25,17 +39,32 @@ public final class TraceFiles {
     }
 
     public static BufferedReader openReader(Path path) throws IOException {
+        BufferedReader reader;
         if (!path.getFileName().toString().endsWith(".gz")) {
-            return Files.newBufferedReader(path, StandardCharsets.UTF_8);
+            reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
+        } else {
+            InputStream input = Files.newInputStream(path);
+            try {
+                reader = new BufferedReader(new InputStreamReader(
+                        new GZIPInputStream(input), StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                input.close();
+                throw e;
+            }
         }
-        InputStream input = Files.newInputStream(path);
-        try {
-            return new BufferedReader(new InputStreamReader(
-                    new GZIPInputStream(input), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            input.close();
-            throw e;
+        ReaderLifecycleObserver observer = READER_OBSERVER.get();
+        if (observer == null) {
+            return reader;
         }
+        observer.onEvent(ReaderLifecycleEvent.OPENED, path);
+        return new ObservedBufferedReader(reader, observer, path);
+    }
+
+    static AutoCloseable observeReadersForTest(ReaderLifecycleObserver observer) {
+        ReaderLifecycleObserver installed = Objects.requireNonNull(observer, "observer");
+        ReaderLifecycleObserver previous = READER_OBSERVER.get();
+        READER_OBSERVER.set(installed);
+        return new ReaderObservation(previous);
     }
 
     /** True when a meaningful CSV line is the recorder's optional header. */
@@ -52,5 +81,53 @@ public final class TraceFiles {
                 ? trimmed.substring(0, comma).strip()
                 : trimmed;
         return "frame".equalsIgnoreCase(firstColumn);
+    }
+
+    private static final class ReaderObservation implements AutoCloseable {
+        private final ReaderLifecycleObserver previous;
+        private boolean closed;
+
+        private ReaderObservation(ReaderLifecycleObserver previous) {
+            this.previous = previous;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            if (previous == null) {
+                READER_OBSERVER.remove();
+            } else {
+                READER_OBSERVER.set(previous);
+            }
+        }
+    }
+
+    private static final class ObservedBufferedReader extends BufferedReader {
+        private final ReaderLifecycleObserver observer;
+        private final Path path;
+        private boolean closed;
+
+        private ObservedBufferedReader(BufferedReader delegate,
+                ReaderLifecycleObserver observer, Path path) {
+            super(delegate);
+            this.observer = observer;
+            this.path = path;
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            try {
+                super.close();
+            } finally {
+                observer.onEvent(ReaderLifecycleEvent.CLOSED, path);
+            }
+        }
     }
 }
