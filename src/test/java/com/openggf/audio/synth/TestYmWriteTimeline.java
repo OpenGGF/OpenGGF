@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestYmWriteTimeline {
@@ -79,6 +80,49 @@ class TestYmWriteTimeline {
     }
 
     @Test
+    void drainedOrdinalsCannotBeReusedAndTheExactNextOrdinalStillCommits() {
+        YmWriteTimeline timeline = new YmWriteTimeline(2);
+        timeline.commit(List.of(entry(0, 0, 0x40, 1)));
+        timeline.drainDue(0, ignored -> { });
+        YmWriteTimeline.Snapshot afterDrain = timeline.captureSnapshot();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> timeline.commit(List.of(entry(1_008, 0, 0x41, 1))));
+        assertEquals(afterDrain, timeline.captureSnapshot());
+        assertThrows(IllegalArgumentException.class,
+                () -> timeline.commit(List.of(entry(1_008, 2, 0x41, 1))));
+        assertEquals(afterDrain, timeline.captureSnapshot());
+
+        timeline.commit(List.of(entry(1_008, 1, 0x41, 1)));
+        assertEquals(2, timeline.captureSnapshot().nextOrdinal());
+        assertEquals(List.of(entry(1_008, 1, 0x41, 1)),
+                timeline.captureSnapshot().pending());
+    }
+
+    @Test
+    void discardedOrdinalsCannotBeReusedAndFailureIsAtomic() {
+        YmWriteTimeline timeline = new YmWriteTimeline(3);
+        timeline.commit(List.of(
+                entry(0, 0, 0x40, 1),
+                entry(1_008, 1, 0x41, 2)));
+        timeline.discardBeforeGeneration(2);
+        YmWriteTimeline.Snapshot afterDiscard = timeline.captureSnapshot();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> timeline.commit(List.of(
+                        entry(2_016, 2, 0x42, 2),
+                        entry(3_024, 0, 0x43, 2))));
+        assertEquals(afterDiscard, timeline.captureSnapshot());
+
+        timeline.commit(List.of(entry(2_016, 2, 0x42, 2)));
+        assertEquals(3, timeline.captureSnapshot().nextOrdinal());
+        assertEquals(List.of(
+                entry(1_008, 1, 0x41, 2),
+                entry(2_016, 2, 0x42, 2)),
+                timeline.captureSnapshot().pending());
+    }
+
+    @Test
     void committedEntriesAreIndependentOfTheJournalAndGenerationDiscardIsSilent() {
         YmWriteTimeline timeline = new YmWriteTimeline(3);
         ArrayList<YmWriteTimeline.Entry> journal = new ArrayList<>(List.of(
@@ -115,8 +159,47 @@ class TestYmWriteTimeline {
         YmWriteTimeline restored = new YmWriteTimeline(3);
         restored.restoreSnapshot(supplied);
         assertEquals(captured, restored.captureSnapshot());
+        restored.commit(List.of(entry(4_032, 2, 0x42, 1)));
+        assertEquals(3, restored.captureSnapshot().nextOrdinal());
+
+        YmWriteTimeline watermarked = new YmWriteTimeline(3);
+        watermarked.restoreSnapshot(new YmWriteTimeline.Snapshot(
+                3, 2, List.of(entry(2_016, 0, 0x40, 1))));
+        YmWriteTimeline.Snapshot restoredWatermark =
+                watermarked.captureSnapshot();
+        assertThrows(IllegalArgumentException.class,
+                () -> watermarked.commit(List.of(
+                        entry(4_032, 1, 0x42, 1))));
+        assertEquals(restoredWatermark, watermarked.captureSnapshot());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> restored.restoreSnapshot(new YmWriteTimeline.Snapshot(
+                        3, 1, List.of(entry(0, 1, 0x40, 1)))));
         assertThrows(IllegalArgumentException.class,
                 () -> new YmWriteTimeline(2).restoreSnapshot(captured));
+    }
+
+    @Test
+    void nullSegmentIsTheImmutableUnprofiledOrderedFenceMarker() {
+        YmWriteTimeline.Entry fence = new YmWriteTimeline.Entry(
+                1_008, 0, 1, 0x1A0, 0xFF,
+                3, 7, SOURCE, null);
+        YmWriteTimeline timeline = new YmWriteTimeline(1);
+
+        assertNull(fence.segment());
+        assertEquals(SOURCE, fence.sourceDescriptor());
+        assertThrows(NullPointerException.class,
+                () -> new YmWriteTimeline.Entry(
+                        1_008, 0, 1, 0x1A0, 0xFF,
+                        3, 7, null, null));
+
+        timeline.commit(List.of(fence));
+        YmWriteTimeline.Snapshot snapshot = timeline.captureSnapshot();
+        assertEquals(List.of(fence), snapshot.pending());
+        assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.pending().set(0,
+                        entry(2_016, 1, 0x40, 3)));
+        assertEquals(List.of(fence), timeline.captureSnapshot().pending());
     }
 
     private static YmWriteTimeline.Entry entry(

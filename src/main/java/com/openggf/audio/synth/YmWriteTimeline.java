@@ -35,6 +35,12 @@ public final class YmWriteTimeline {
         pending = new Entry[capacity];
     }
 
+    /**
+     * One immutable write publication.
+     *
+     * @param segment audited source-timing segment, or {@code null} only for
+     *                an unprofiled write retained as an ordered fence
+     */
     public record Entry(
             long dueMasterCycle,
             long sourceOrdinal,
@@ -77,6 +83,10 @@ public final class YmWriteTimeline {
         }
     }
 
+    /**
+     * Immutable queue state. {@code nextOrdinal} is the first unused source
+     * identity, so every pending entry must have a smaller ordinal.
+     */
     public record Snapshot(
             int capacity,
             long nextOrdinal,
@@ -99,7 +109,11 @@ public final class YmWriteTimeline {
         }
     }
 
-    /** Atomically validates and publishes a complete write journal. */
+    /**
+     * Atomically validates and publishes a complete write journal. Its unique
+     * source ordinals must exactly fill the contiguous range beginning at the
+     * current {@link Snapshot#nextOrdinal()} watermark; list order is ignored.
+     */
     public void commit(List<Entry> journal) {
         Objects.requireNonNull(journal, "journal");
         int committedSize = Math.addExact(size, journal.size());
@@ -108,12 +122,21 @@ public final class YmWriteTimeline {
         }
 
         Entry[] incoming = journal.toArray(Entry[]::new);
-        long committedNextOrdinal = nextOrdinal;
+        long committedNextOrdinal = Math.addExact(
+                nextOrdinal, (long) incoming.length);
         for (int i = 0; i < incoming.length; i++) {
             Entry entry = Objects.requireNonNull(incoming[i], "journal entry");
-            committedNextOrdinal = Math.max(committedNextOrdinal,
-                    Math.addExact(entry.sourceOrdinal(), 1));
-            requireUniqueOrdinal(entry.sourceOrdinal(), incoming, i);
+            long ordinalAfterEntry = Math.addExact(
+                    entry.sourceOrdinal(), 1);
+            if (entry.sourceOrdinal() < nextOrdinal
+                    || ordinalAfterEntry > committedNextOrdinal) {
+                throw new IllegalArgumentException(
+                        "YM source ordinals must be the contiguous range ["
+                                + nextOrdinal + ", "
+                                + committedNextOrdinal + ")");
+            }
+            requireUniqueJournalOrdinal(
+                    entry.sourceOrdinal(), incoming, i);
         }
 
         Arrays.sort(incoming, DRAIN_ORDER);
@@ -144,14 +167,8 @@ public final class YmWriteTimeline {
         nextOrdinal = committedNextOrdinal;
     }
 
-    private void requireUniqueOrdinal(
+    private static void requireUniqueJournalOrdinal(
             long ordinal, Entry[] incoming, int incomingLimit) {
-        for (int i = 0; i < size; i++) {
-            if (pending[i].sourceOrdinal() == ordinal) {
-                throw new IllegalArgumentException(
-                        "duplicate YM source ordinal " + ordinal);
-            }
-        }
         for (int i = 0; i < incomingLimit; i++) {
             if (incoming[i].sourceOrdinal() == ordinal) {
                 throw new IllegalArgumentException(
