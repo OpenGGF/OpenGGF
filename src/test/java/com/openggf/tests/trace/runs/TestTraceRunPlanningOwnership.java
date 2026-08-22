@@ -17,6 +17,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.MappedByteBuffer;
@@ -24,10 +26,13 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -77,7 +82,8 @@ class TestTraceRunPlanningOwnership {
             MappedByteBuffer mapped = channel.map(FileChannel.MapMode.READ_ONLY, 0, 1);
             List<Object> payloads = List.of(trace,
                     new TraceEvent.ObjectRemoved(0, 1, "badnik"), specialRows,
-                    reader, stream, mapped);
+                    reader, stream, mapped, new AtomicReference<>(trace),
+                    new WeakReference<>(trace), Stream.of(trace));
 
             for (Object payload : payloads) {
                 assertThrows(AssertionError.class,
@@ -104,6 +110,22 @@ class TestTraceRunPlanningOwnership {
             optional.ifPresent(nested -> visit(nested, path + ".optional", visited));
             return;
         }
+        if (value instanceof AtomicReference<?> reference) {
+            visit(reference.get(), path + ".atomicReference", visited);
+            return;
+        }
+        if (value instanceof Reference<?> reference) {
+            visit(reference.get(), path + ".reference", visited);
+            return;
+        }
+        if (value instanceof Stream<?> stream) {
+            try (stream) {
+                stream.forEach(nested -> visit(nested, path + ".stream", visited));
+            } catch (RuntimeException e) {
+                throw new AssertionError("cannot inspect stream at " + path, e);
+            }
+            return;
+        }
         if (value instanceof Iterable<?> iterable) {
             int index = 0;
             for (Object nested : iterable) {
@@ -127,7 +149,8 @@ class TestTraceRunPlanningOwnership {
             return;
         }
         if (value.getClass().getPackageName().startsWith("java.")) {
-            return;
+            throw new AssertionError("opaque platform object reachable at " + path + ": "
+                    + value.getClass().getName());
         }
         for (Class<?> type = value.getClass(); type != null; type = type.getSuperclass()) {
             for (Field field : type.getDeclaredFields()) {
@@ -161,7 +184,7 @@ class TestTraceRunPlanningOwnership {
     private static boolean isLeaf(Object value) {
         return value instanceof String || value instanceof Number || value instanceof Boolean
                 || value instanceof Character || value instanceof Enum<?> || value instanceof Class<?>
-                || value instanceof Path;
+                || value instanceof Path || value instanceof BitSet;
     }
 
     private record PayloadWrapper(Object nested) {
