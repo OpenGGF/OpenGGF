@@ -2698,12 +2698,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
-            if (!t.active && isSfx && t.channelId == 4
-                    && config.getFmSfxReleaseMode()
-                            == SmpsSequencerConfig.FmSfxReleaseMode
-                                    .RESTORE_MUSIC_DIRECTLY) {
-                // Locked-on fix_sndbugs=0 cfStopTrack owns this key-off and
-                // the restored music upload as one source-timed operation.
+            if (!t.active && isSfx && synth instanceof SmpsDriver driver
+                    && driver.releaseStoppedSfxFmTrackFromSequencer(
+                            this, t.channelId)) {
+                // Locked-on fix_sndbugs=0 cfStopTrack releases this individual
+                // hardware track and restores overridden music immediately.
                 return;
             }
             int hwCh = t.channelId;

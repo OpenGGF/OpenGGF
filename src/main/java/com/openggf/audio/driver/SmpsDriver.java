@@ -1680,6 +1680,91 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    /**
+     * Applies locked-on {@code fix_sndbugs=0} {@code cfStopTrack} ownership at
+     * the exact retiring FM track boundary. Returns true when this driver has
+     * published the key-off and released the channel on the caller's behalf.
+     */
+    public final boolean releaseStoppedSfxFmTrackFromSequencer(
+            SmpsSequencer sequencer, int channel) {
+        if (activeServiceSequencer != sequencer
+                || activeServiceKind
+                != SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK
+                || !sequencer.isSfx()
+                || channel < 0 || channel >= fmLocks.length
+                || !hasStoppedFmTrack(sequencer, channel)
+                || sequencer.getConfig().getFmSfxReleaseMode()
+                != SmpsSequencerConfig.FmSfxReleaseMode
+                        .RESTORE_MUSIC_DIRECTLY) {
+            return false;
+        }
+
+        // F2 stops the track inside handleFlag(), then tickTracks() observes
+        // the inactive track and calls stopNote() once more. Native cfStopTrack
+        // executes only once; after the first call releases this lock, the
+        // second Java cleanup call must not reacquire the channel.
+        if (fmLocks[channel] != sequencer) {
+            return true;
+        }
+
+        if (channel == 4) {
+            YmServiceTimingProfile.Variant restoreVariant = null;
+            for (SmpsSequencer candidate : sequencers) {
+                if (!isSfx(candidate)) {
+                    restoreVariant = completionRestoreVariant(
+                            candidate, channel);
+                    if (restoreVariant != null) {
+                        break;
+                    }
+                }
+            }
+            YmServiceTimingProfile profile = timingProfileFor(sequencer);
+            if (restoreVariant != null && profile.supports(
+                    YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
+                    restoreVariant)) {
+                try (Synthesizer.YmTimingScope ignored = beginYmTiming(
+                        sequencer,
+                        YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
+                        restoreVariant)) {
+                    publishAuthorizedFmWrite(sequencer, 0, 0x28, 0x05);
+                    releaseStoppedFmOwnership(sequencer, channel);
+                }
+                return true;
+            }
+        }
+
+        int keyOffChannel = channel < 3 ? channel : channel + 1;
+        publishAuthorizedFmWrite(sequencer, 0, 0x28, keyOffChannel);
+        releaseStoppedFmOwnership(sequencer, channel);
+        return true;
+    }
+
+    private static boolean hasStoppedFmTrack(
+            SmpsSequencer sequencer, int channel) {
+        boolean stopped = false;
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.type != SmpsSequencer.TrackType.FM
+                    || track.channelId != channel) {
+                continue;
+            }
+            if (track.active) {
+                return false;
+            }
+            stopped = true;
+        }
+        return stopped;
+    }
+
+    private void releaseStoppedFmOwnership(
+            SmpsSequencer sequencer, int channel) {
+        fmLocks[channel] = null;
+        if (fmSfxClaims[channel] == sequencer) {
+            fmSfxClaims[channel] = null;
+        }
+        updateOverrides(SmpsSequencer.TrackType.FM, channel, false);
+    }
+
     int sfxPriorityLatchForTesting() {
         return activeSfxPriorityPolicy()
                 == SmpsSequencerConfig.SfxPriorityPolicy.NONE

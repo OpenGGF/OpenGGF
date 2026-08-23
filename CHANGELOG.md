@@ -6,7 +6,11 @@
   modulated period, adding a short wrong pitch to Collapse's repeated noise
   bursts and to the Dash/spindash-release attack. PSG3/noise writes also retain
   their one logical track lock instead of injecting a second noise-channel
-  silence during the note.
+  silence during the note. FM5 now keys off when its own track reaches
+  `cfStopTrack`, even when a longer PSG sibling keeps the overall effect alive;
+  the interrupted music voice is restored at that same boundary instead of at
+  whole-effect cleanup. This removes Collapse's left-only ringing tail and
+  Dash's prolonged FM ending.
 
 - **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
   the first authenticated SetVoice-to-note path now preserves the shipped

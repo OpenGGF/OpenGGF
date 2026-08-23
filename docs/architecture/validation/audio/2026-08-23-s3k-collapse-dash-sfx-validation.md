@@ -9,6 +9,10 @@ integration are pending.
   matching the single upload in `zUpdatePSGTrack`.
 - Noise-latch/volume writes from a live PSG3/noise SFX use that logical track's
   PSG3 lock, avoiding a non-native mid-note noise silence.
+- Each retiring FM track now releases its hardware lock at its own
+  `cfStopTrack` boundary. FM5's terminal key-off and interrupted music-voice
+  restore remain one audited transaction even while a longer PSG sibling is
+  active; whole-SFX cleanup does not repeat them.
 - The diagnostic host gained bounded Z80 RAM writes so isolated native SFX
   lifecycles can be regenerated without Lua Z80 hooks or production changes.
 
@@ -19,6 +23,13 @@ production code. S1/S2 retain their existing modulation algorithms.
 
 - Native injected lifecycle: Collapse active through frame 121; Dash active
   through frame 86; two quiet terminal frames each.
+- Native `cfStopTrack` key-offs FM5 on Collapse frame 18 and Dash frame 16,
+  while their PSG3 siblings remain active. Before the correction the engine
+  emitted neither terminal FM5 key-off and kept the music channel overridden
+  until whole-SFX cleanup (Collapse frame 121 / Dash frame 86).
+- Native Collapse rendered stereo RMS is 2566.75 left / 2398.23 right
+  (ratio 1.070). The engine moved from 5734.37 / 3118.86 (ratio 1.839) to
+  3116.01 / 3139.11 (ratio 1.007) after restoring the FM5 terminal key-off.
 - Java ROM-backed lifecycle: 122 and 87 request-through-terminal updates.
 - Effective native PSG state SHA-256:
   - Collapse: `d85bbd997725b5804d5990cb222f13a1c367ce2e76b628ab5ec61c515d81c584`
@@ -33,7 +44,7 @@ mvn -Dmse=off -Ds3k.rom.path="$S3K_ROM" \
   -Dtest=TestS3kCollapseDashSfxParity,TestS3kBlueSphereSfxParity,\
 TestSonic3kCoordFlagParity,TestPreparedSfxAdmission,\
 TestSmpsSequencerSnapshot,TestPsgChipSnapshot,TestVirtualSynthesizerSnapshot test
-# 94 tests, 0 failures/errors/skips
+# 97 tests, 0 failures/errors/skips
 
 mvn -Dmse=off -Dsonic1.rom.path="$S1_ROM" \
   -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" \
@@ -58,7 +69,8 @@ The identical full JDK 21/all-three-ROM suite was run against exact parent
 `e0c94ea181a03a87cc42d4317cd6eb4452106ef3` and implementation commit
 `9a5e242a1`. The parent ran 15,500 tests with 56 failures, 56 errors, and 19
 skips; the implementation ran 15,506 tests with 53 failures, 56 errors, and 19
-skips. Its six additional tests are the new Collapse/Dash parity cases.
+skips. Its six additional tests were the initial Collapse/Dash parity cases;
+the per-track terminal correction adds three more.
 
 The sorted failure/error identity comparison contained no candidate-only red
 test. The parent ledger has 112 identities (SHA-256
@@ -77,6 +89,27 @@ The broad capability-class selector also exposes an existing combined service
 manifest mismatch (`90cf...` expected, `0b96...` generated) on the integration
 base. The isolated lifecycle selector is green and this change does not modify
 the service manifest or native observer patch.
+
+The focused terminal/timeline regression after this correction used:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path="$S3K_ROM" \
+  -Dtest=TestS3kCollapseDashSfxParity,TestS3kBlueSphereSfxParity,\
+TestSmpsDriverYmWriteTimeline,TestSmpsFmVoiceWriteProfiles test
+# 77 tests, 0 failures/errors/skips
+```
+
+The combined S3K snapshot/admission and cross-game control selector ran
+125 tests with zero failures, errors, or skips.
+
+After the per-track terminal correction and structural call-site guard, the
+fresh all-three-ROM suite ran 15,510 tests with 53 failures, 56 errors, and 19
+skips. Its 109-entry sorted failure/error ledger is byte-identical to the
+implementation ledger above (SHA-256
+`f1284d5aa7ed356866a508271609c6e36c8e64176efe489af4596038b55d81a0`),
+so the four additional terminal/guard tests introduced no new red identity.
+The full log SHA-256 is
+`f1c637ff6258dd097528d08bfc3f565631ef3297d3e5faa3200b1bb96f33201c`.
 
 ## Remaining gate
 
