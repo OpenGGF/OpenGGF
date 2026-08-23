@@ -2522,19 +2522,27 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
-
-            if (writeToneFreq) {
-                int data = reg & 0xF;
-                int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
-                // baseFnum stores detune-free period; modulation applies detune dynamically.
-            }
-
-            // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
-            if (t.modEnabled && config.isApplyModOnNote()) {
+            boolean z80Modulation = config.getModAlgo()
+                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
+                    && t.modEnabled && config.isApplyModOnNote();
+            if (z80Modulation) {
+                // zUpdatePSGTrack prepares and applies modulation before its
+                // single PSG frequency upload. Publishing the base period
+                // first creates a short, non-native pitch at every attack.
                 t.forceModulationWrite = true;
-                applyModulation(t);
+                if (!applyModulation(t) && writeToneFreq) {
+                    writePsgFrequency(t, reg);
+                }
+            } else {
+                if (writeToneFreq) {
+                    writePsgFrequency(t, reg);
+                }
+                // S2 (ModAlgo 68k_a) applies modulation before PSG volume
+                // write; S1 (ModAlgo 68k) does not.
+                if (t.modEnabled && config.isApplyModOnNote()) {
+                    t.forceModulationWrite = true;
+                    applyModulation(t);
+                }
             }
 
         }
@@ -2567,6 +2575,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
         }
         clearTransientNoAttack(t);
+    }
+
+    private void writePsgFrequency(Track t, int period) {
+        int ch = t.channelId;
+        synth.writePsg(this, 0x80 | (ch << 5) | (period & 0x0F));
+        synth.writePsg(this, (period >> 4) & 0x3F);
     }
 
     private void clearTransientNoAttack(Track t) {

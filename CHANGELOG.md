@@ -1,5 +1,13 @@
 # Changelog
 
+- **S3K modulated PSG effects no longer chirp at note boundaries:** the
+  locked-on Z80 driver applies modulation before its single PSG frequency
+  upload. The engine was first publishing the unmodulated period and then the
+  modulated period, adding a short wrong pitch to Collapse's repeated noise
+  bursts and to the Dash/spindash-release attack. PSG3/noise writes also retain
+  their one logical track lock instead of injecting a second noise-channel
+  silence during the note.
+
 - **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
   the first authenticated SetVoice-to-note path now preserves the shipped
   68K driver's source costs and discrete-YM BUSY polling across voice upload,

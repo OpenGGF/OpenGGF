@@ -135,6 +135,12 @@ namespace OpenGGF.BizHawk.Headless
             return z80Ram.PeekByte(offset);
         }
 
+        internal void WriteZ80RamByte(int offset, byte value)
+        {
+            if (offset < 0 || offset >= z80Ram.Size) throw new ArgumentOutOfRangeException("offset");
+            z80Ram.PokeByte(offset, value);
+        }
+
         internal byte[] CaptureDeterministicCheckpoint()
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");

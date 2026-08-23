@@ -3674,6 +3674,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if ((val & 0x80) != 0) {
             // Latch
             int ch = (val >> 5) & 0x03;
+            int lockChannel = psgLockChannelForWrite(seq, ch);
 
             // Cache latch channel on sequencer (fast path) and in HashMap (fallback)
             if (seq != null) {
@@ -3683,19 +3684,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
 
             if (isSfx(source)) {
-                LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG, ch,
-                        psgLocks[ch], (SmpsSequencer) source);
+                LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
+                        lockChannel, psgLocks[lockChannel],
+                        (SmpsSequencer) source);
                 if (decision.acquired()) {
                     // Silence channel if stealing from music (not from another SFX or self)
-                    if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
+                    if (psgLocks[lockChannel] != source
+                            && !isSfx(psgLocks[lockChannel])) {
                         silencePsgChannel(ch);
                     }
-                    psgLocks[ch] = (SmpsSequencer) source;
-                    updateOverrides(SmpsSequencer.TrackType.PSG, ch, true);
+                    psgLocks[lockChannel] = (SmpsSequencer) source;
+                    updateOverrides(SmpsSequencer.TrackType.PSG,
+                            lockChannel, true);
                 }
                 reportLockDecision(decision);
 
-                if (psgLocks[ch] == source) {
+                if (psgLocks[lockChannel] == source) {
                     publishAuthorizedPsgWrite(source, val);
                 }
             } else {
@@ -3714,20 +3718,24 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
             if (ch >= 0) {
                 if (isSfx(source)) {
+                    int lockChannel = psgLockChannelForWrite(seq, ch);
                     // Update lock just in case? Already locked by Latch.
-                    LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG, ch,
-                            psgLocks[ch], (SmpsSequencer) source);
+                    LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
+                            lockChannel, psgLocks[lockChannel],
+                            (SmpsSequencer) source);
                     if (decision.acquired()) {
                         // Silence channel if stealing from music (not from another SFX or self)
-                        if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
+                        if (psgLocks[lockChannel] != source
+                                && !isSfx(psgLocks[lockChannel])) {
                             silencePsgChannel(ch);
                         }
-                        psgLocks[ch] = (SmpsSequencer) source;
-                        updateOverrides(SmpsSequencer.TrackType.PSG, ch, true);
+                        psgLocks[lockChannel] = (SmpsSequencer) source;
+                        updateOverrides(SmpsSequencer.TrackType.PSG,
+                                lockChannel, true);
                     }
                     reportLockDecision(decision);
 
-                    if (psgLocks[ch] == (SmpsSequencer) source) {
+                    if (psgLocks[lockChannel] == (SmpsSequencer) source) {
                         publishAuthorizedPsgWrite(source, val);
                     }
                 } else {
@@ -3741,6 +3749,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 publishAuthorizedPsgWrite(source, val);
             }
         }
+    }
+
+    private static int psgLockChannelForWrite(
+            SmpsSequencer sequencer, int hardwareChannel) {
+        if (sequencer == null || hardwareChannel != 3) {
+            return hardwareChannel;
+        }
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.active
+                    && track.type == SmpsSequencer.TrackType.PSG
+                    && track.channelId == 2
+                    && track.noiseMode) {
+                // SMPS PSG3/noise is one logical track. Noise-latch and noise-
+                // volume writes therefore use the PSG3 track's existing lock;
+                // acquiring a second hardware-channel lock injects a silence
+                // byte that the shipped driver never sends mid-note.
+                return 2;
+            }
+        }
+        return hardwareChannel;
     }
 
     @Override

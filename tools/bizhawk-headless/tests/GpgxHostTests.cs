@@ -55,6 +55,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 serial: true,
                 estimatedSeconds: 2.0));
             tests.Add(new TestMain.TestCase(
+                "GpgxHost exposes bounded diagnostic Z80 RAM writing",
+                WritesBoundedZ80Ram,
+                game: "s1",
+                serial: true,
+                estimatedSeconds: 2.0));
+            tests.Add(new TestMain.TestCase(
                 "GpgxHost S1 boot accepts a delayed title Start",
                 BootAcceptsDelayedTitleStart,
                 game: "s1",
@@ -142,6 +148,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     () => writer.WriteMainRamByte(-1, 0), "offset");
                 AssertEx.Throws<ArgumentOutOfRangeException>(
                     () => writer.WriteMainRamByte(65536, 0), "offset");
+            }
+        }
+
+        private static void WritesBoundedZ80Ram()
+        {
+            using (var host = GpgxHost.Open(
+                Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                GpgxHost.CreateGhz1SyncSettings()))
+            {
+                host.WriteZ80RamByte(0, 0x5A);
+                AssertEx.Equal((byte)0x5A, host.ReadZ80RamByte(0));
+                AssertEx.Throws<ArgumentOutOfRangeException>(
+                    () => host.WriteZ80RamByte(-1, 0), "offset");
+                AssertEx.Throws<ArgumentOutOfRangeException>(
+                    () => host.WriteZ80RamByte(8192, 0), "offset");
             }
         }
 
