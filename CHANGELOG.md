@@ -1,5 +1,11 @@
 # Changelog
 
+- **CI and release jobs consume session manifests:** Maven test and packaging
+  jobs now run through the test-session coordinator, while coverage checks and
+  platform packaging resolve their report, build, artifact, and distribution
+  roots from the completed session. Native libraries are included in the
+  manifest inventory alongside executables and JARs.
+
 - **Test sessions isolate LWJGL native extraction per fork:** generated test
   outputs and temporary files remain session-owned, while every Surefire fork
   now gets its own LWJGL extraction directory so concurrent suites cannot

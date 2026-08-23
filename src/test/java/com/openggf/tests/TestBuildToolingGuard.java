@@ -720,6 +720,9 @@ class TestBuildToolingGuard {
             if (!guardJob.contains("-Pguards")) {
                 violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
             }
+            if (!guardJob.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --")) {
+                violations.add(".github/workflows/ci.yml guards job bypasses the test-session coordinator");
+            }
             if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
                 violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
                         + " push, which is how work lands");
@@ -919,8 +922,9 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Assert trace replay coverage")) {
             violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
         }
-        if (!workflow.contains("target/surefire-reports")) {
-            violations.add(".github/workflows/release.yml does not inspect trace replay surefire reports");
+        if (!workflow.contains("MANIFEST: ${{ steps.release-trace-tests.outputs.manifest }}")
+                || !workflow.contains("session[\"surefire_reports\"]")) {
+            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned surefire report root");
         }
         if (!workflow.contains("com.openggf.tests.trace*TraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not narrow release coverage to TraceReplay reports");
@@ -994,8 +998,8 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("target/trace-reports")) {
-            violations.add(".github/workflows/release.yml does not inspect trace replay divergence reports");
+        if (!workflow.contains("trace_dir = Path(session[\"trace_reports\"])")) {
+            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned trace report root");
         }
         if (!workflow.contains("warning_count")) {
             violations.add(".github/workflows/release.yml does not check trace replay warning counts");
@@ -1063,6 +1067,57 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void ciAndReleaseMavenJobsMustUseCoordinatorManifests() throws Exception {
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        String release = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+        String wrapper = "tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --";
+
+        for (String command : List.of(
+                "mvn -Dmse=off -Pguards test -B",
+                "mvn -Dmse=off test -B",
+                "mvn -Dmse=off test -Ptrace-replay -B")) {
+            if (!ci.contains(wrapper + " " + command)) {
+                violations.add(".github/workflows/ci.yml does not coordinator-wrap " + command);
+            }
+        }
+        for (String command : List.of(
+                "mvn -Dmse=off test -B",
+                "mvn -Dmse=off test -Ptrace-replay -B",
+                "mvn -Dmse=off package -Pnative -DskipTests -B",
+                "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
+            if (!release.contains(wrapper + " " + command)) {
+                violations.add(".github/workflows/release.yml does not coordinator-wrap " + command);
+            }
+        }
+        for (String output : List.of(
+                "steps.default-tests.outputs.manifest",
+                "steps.develop-trace.outputs.manifest",
+                "steps.release-trace-tests.outputs.manifest",
+                "steps.native-build.outputs.build_root",
+                "steps.native-build.outputs.artifact_root",
+                "steps.native-build.outputs.distribution_root",
+                "steps.universal-jar-build.outputs.artifact_root",
+                "steps.universal-jar-build.outputs.distribution_root")) {
+            if (!ci.contains(output) && !release.contains(output)) {
+                violations.add("CI/release workflows do not consume coordinator output " + output);
+            }
+        }
+        if (ci.contains("target/surefire-reports") || ci.contains("target/trace-reports")
+                || release.contains("target/surefire-reports") || release.contains("target/trace-reports")) {
+            violations.add("CI/release workflows still read shared target report roots");
+        }
+        if (release.contains("target/OpenGGF") || release.contains("dist/")) {
+            violations.add("release workflow still publishes generated artifacts through shared target/dist roots");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("CI and release Maven jobs must publish and consume coordinator-owned session paths:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void developCiShouldProtectPullRequests() throws Exception {
         // 2026-07-02: the full Maven suite on direct develop pushes was
         // deliberately removed by f18d4d9be ("fix: stop develop push CI").
@@ -1100,14 +1155,14 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("Copy-Item \"target/config.yaml\" \"dist/OpenGGF/\"")) {
-            violations.add(".github/workflows/release.yml Windows package does not include target/config.yaml");
+        if (!workflow.contains("Copy-Item \"$env:BUILD_ROOT/config.yaml\" \"$env:DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Windows package does not include the session config.yaml");
         }
         if (!workflow.contains("zip -r OpenGGF-macos.zip OpenGGF.app config.yaml")) {
             violations.add(".github/workflows/release.yml macOS package does not include exported config.yaml");
         }
-        if (!workflow.contains("cp target/config.yaml dist/OpenGGF/")) {
-            violations.add(".github/workflows/release.yml Linux package does not include target/config.yaml");
+        if (!workflow.contains("cp \"$BUILD_ROOT/config.yaml\" \"$DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Linux package does not include the session config.yaml");
         }
 
         if (!violations.isEmpty()) {
@@ -1147,8 +1202,8 @@ class TestBuildToolingGuard {
         if (smokeIndex < 0 || uploadIndex < 0 || smokeIndex > uploadIndex) {
             violations.add(".github/workflows/release.yml must smoke validate artifacts before upload");
         }
-        if (!workflow.contains("target/OpenGGF-{version}-jar-with-dependencies.jar")) {
-            violations.add(".github/workflows/release.yml does not inspect the packaged JVM jar");
+        if (!workflow.contains("artifact_root / f\"OpenGGF-{version}-jar-with-dependencies.jar\"")) {
+            violations.add(".github/workflows/release.yml does not inspect the session packaged JVM jar");
         }
         if (!workflow.contains("META-INF/MANIFEST.MF") || !workflow.contains("Main-Class: com.openggf.Engine")) {
             violations.add(".github/workflows/release.yml does not validate manifest bootstrap metadata");

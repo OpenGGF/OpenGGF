@@ -666,7 +666,17 @@ public final class TestSessionCoordinator {
             Files.createDirectories(absolute.getParent());
         }
         Path temp = absolute.resolveSibling(absolute.getFileName() + ".tmp");
-        Files.writeString(temp, "manifest=" + manifest + "\nrun_id=" + runId + "\n",
+        Path session = manifest.toAbsolutePath().normalize().getParent();
+        String exported = "manifest=" + manifest + "\n"
+                + "run_id=" + runId + "\n"
+                + "build_root=" + session.resolve("build") + "\n"
+                + "tmp_root=" + session.resolve("tmp") + "\n"
+                + "surefire_reports=" + session.resolve("surefire-reports") + "\n"
+                + "trace_reports=" + session.resolve("trace-reports") + "\n"
+                + "diagnostics_root=" + session.resolve("diagnostics") + "\n"
+                + "artifact_root=" + session.resolve("artifacts") + "\n"
+                + "distribution_root=" + session.resolve("distribution") + "\n";
+        Files.writeString(temp, exported,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
         moveAtomic(temp, absolute);
@@ -735,11 +745,16 @@ public final class TestSessionCoordinator {
 
     private static List<String> artifactInventory(Paths paths) throws IOException {
         List<String> files = new ArrayList<>(inventory(paths.artifacts, paths.distribution));
+        Path nativeRoot = paths.build.resolve("native-libs");
         try (Stream<Path> tree = Files.walk(paths.build)) {
-            tree.filter(path -> path.getParent() != null && path.getParent().equals(paths.build))
+            tree.filter(path -> (path.getParent() != null && path.getParent().equals(paths.build))
+                    || path.startsWith(nativeRoot))
                     .filter(path -> Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS))
                     .filter(path -> path.getFileName().toString().endsWith(".jar")
-                            || path.getFileName().toString().equals("OpenGGF"))
+                            || path.getFileName().toString().equals("OpenGGF")
+                            || path.getFileName().toString().endsWith(".dylib")
+                            || path.getFileName().toString().endsWith(".dll")
+                            || path.getFileName().toString().endsWith(".so"))
                     .map(path -> path.toAbsolutePath().normalize().toString())
                     .forEach(files::add);
         }

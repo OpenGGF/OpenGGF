@@ -95,6 +95,10 @@ public final class TestSessionCoordinatorSelfTest {
         check(json.matches("(?s).*\"source_digest\": \"[0-9a-f]{64}\".*"), "source digest must be SHA-256");
         check(json.matches("(?s).*\"runtime_inputs_digest\": \"[0-9a-f]{64}\".*"),
                 "runtime-input digest must be SHA-256");
+        check(json.contains("libopenggf-selftest.so"),
+                "manifest artifact inventory must include native libraries under build/native-libs");
+        check(json.contains("/build/libopenggf-selftest.so"),
+                "manifest artifact inventory must include native libraries beside the build binary");
 
         Path lease = Path.of(jsonString(json, "lease_path"));
         check(Files.isRegularFile(lease), "owner namespace must retain a regular lease.lock");
@@ -110,8 +114,18 @@ public final class TestSessionCoordinatorSelfTest {
         check(ownerJson.contains("\"head\""), "owner metadata must record the starting HEAD");
 
         String exported = Files.readString(exportFile);
-        check(exported.equals("manifest=" + manifest + "\nrun_id=" + runId + "\n"),
-                "export file must contain exactly the manifest and run ID records:\n" + exported);
+        Path session = manifest.getParent();
+        String expectedExport = "manifest=" + manifest + "\n"
+                + "run_id=" + runId + "\n"
+                + "build_root=" + session.resolve("build") + "\n"
+                + "tmp_root=" + session.resolve("tmp") + "\n"
+                + "surefire_reports=" + session.resolve("surefire-reports") + "\n"
+                + "trace_reports=" + session.resolve("trace-reports") + "\n"
+                + "diagnostics_root=" + session.resolve("diagnostics") + "\n"
+                + "artifact_root=" + session.resolve("artifacts") + "\n"
+                + "distribution_root=" + session.resolve("distribution") + "\n";
+        check(exported.equals(expectedExport),
+                "export file must contain the manifest and session roots:\n" + exported);
         check(Files.readString(manifest.getParent().resolve("maven.log")).contains("CHILD_ENV_OK"),
                 "child output must be streamed to maven.log");
         check(result.output.contains("CHILD_ENV_OK"), "child output must also be streamed to stdout");
@@ -562,6 +576,20 @@ public final class TestSessionCoordinatorSelfTest {
     }
 
     private static void runChild(String mode) {
+        if (mode.equals("child-success")) {
+            try {
+                Path build = Path.of(System.getenv("OPENGGF_BUILD_DIRECTORY"));
+                Files.createDirectories(build.resolve("native-libs"));
+                Files.writeString(build.resolve("OpenGGF"), "native-binary\n",
+                        StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                Files.writeString(build.resolve("native-libs/libopenggf-selftest.so"), "native-library\n",
+                        StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                Files.writeString(build.resolve("libopenggf-selftest.so"), "native-library\n",
+                        StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
         if (mode.equals("child-mutate")) {
             try {
                 Path worktree = Path.of(System.getenv("OPENGGF_TEST_WORKTREE"));
