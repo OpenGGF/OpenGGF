@@ -86,6 +86,6 @@
 - [x] Run `mvn -v` and the focused S3K ROM-backed suite.
 - [x] Run affected audio snapshot/rewind, S1, and S2 regression suites.
 - [x] Compare an identical JDK21/all-ROM full suite against an isolated exact-parent baseline; no base-passing test may newly fail.
-- [ ] Package exact clean HEAD, record JAR SHA-256 and embedded commit, and run ZIP integrity validation.
+- [x] Package exact clean HEAD, record JAR SHA-256 and embedded commit in the handoff, and run ZIP integrity validation.
 - [x] Commit with all seven policy trailers; do not merge or push until the listening gate passes.
 - [ ] Listen to Collapse from first onset through its final tail and to low/high-charge Dash release, including after another SFX; only then integrate according to `AGENTS.md`.
