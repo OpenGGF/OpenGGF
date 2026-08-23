@@ -92,6 +92,26 @@ class TestSessionOutputPathsTest {
     }
 
     @Test
+    void equivalentPublicationIsIdempotentAndPreservesOwnerMetadata() throws IOException {
+        Path sessionRoot = Files.createTempDirectory("openggf report repeat ");
+        System.setProperty(TRACE_REPORTS, sessionRoot.toString());
+
+        TestSessionOutputPaths.ReportAllocation allocation =
+                TestSessionOutputPaths.allocateReport(
+                        "trace", "com.openggf.tests.ExampleTest", "replay", 2,
+                        "0123456789abcdef", "lane-a", "s2_mtz1", ".json");
+
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "report");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "report");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+
+        assertEquals("report", Files.readString(allocation.physicalPath()));
+        assertTrue(Files.readString(allocation.metadataPath()).contains(
+                "\"owner_key\": \"" + allocation.ownerKey() + "\""));
+    }
+
+    @Test
     void pathComponentsCannotEscapeTheirParent() throws IOException {
         Path sessionRoot = Files.createTempDirectory("openggf component safety ");
         System.setProperty(DIAGNOSTICS, sessionRoot.toString());

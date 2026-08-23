@@ -435,23 +435,19 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), lives);
     }
 
-    private void writeReport(DivergenceReport report, int demoIndex) {
-        try {
-            String prefix = String.format("s1_credits_%02d_%s%d",
-                demoIndex,
-                zoneSlug(demoIndex),
-                Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
-            TraceVerificationScope scope = verificationScope();
-            String scopeSuffix = scope == TraceVerificationScope.ALL
-                    ? ""
-                    : "_" + scope.name().toLowerCase();
-            TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
-                    SessionInvocationExtension.SessionInvocation.current(),
-                    "credits-" + demoIndex, prefix + scopeSuffix, scope,
-                    TraceReplayConsole.contextRadius());
-        } catch (IOException e) {
-            System.err.println("Warning: failed to write report: " + e.getMessage());
-        }
+    private void writeReport(DivergenceReport report, int demoIndex) throws IOException {
+        String prefix = String.format("s1_credits_%02d_%s%d",
+            demoIndex,
+            zoneSlug(demoIndex),
+            Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
+        TraceVerificationScope scope = verificationScope();
+        String scopeSuffix = scope == TraceVerificationScope.ALL
+                ? ""
+                : "_" + scope.name().toLowerCase();
+        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                SessionInvocationExtension.SessionInvocation.current(),
+                "credits-" + demoIndex, prefix + scopeSuffix, scope,
+                TraceReplayConsole.contextRadius());
     }
 
     private boolean observeFrontierAndShouldStop(

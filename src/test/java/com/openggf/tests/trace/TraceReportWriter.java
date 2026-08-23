@@ -68,14 +68,44 @@ public final class TraceReportWriter {
                                 profile, invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),
                                 laneId, logicalKey, ".json");
-        TestSessionOutputPaths.publish(allocation.physicalPath(), report.toJson());
+        publish(allocation, allocation.physicalPath(), report.toJson(), "report");
         if (report.hasErrors(scope)) {
             Path contextPath = contextPath(allocation.physicalPath());
-            TestSessionOutputPaths.publish(contextPath,
-                    report.getContextWindow(report.firstErrorFrame(scope), contextRadius));
+            publish(allocation, contextPath,
+                    report.getContextWindow(report.firstErrorFrame(scope), contextRadius),
+                    "context");
         }
-        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        try {
+            TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        } catch (IOException failure) {
+            throw publicationFailure(allocation, allocation.metadataPath(), "owner metadata",
+                    failure);
+        }
         return allocation;
+    }
+
+    private static void publish(
+            TestSessionOutputPaths.ReportAllocation allocation,
+            Path path,
+            String content,
+            String artifactKind) throws IOException {
+        try {
+            TestSessionOutputPaths.publish(path, content);
+        } catch (IOException failure) {
+            throw publicationFailure(allocation, path, artifactKind, failure);
+        }
+    }
+
+    private static IOException publicationFailure(
+            TestSessionOutputPaths.ReportAllocation allocation,
+            Path path,
+            String artifactKind,
+            IOException failure) {
+        return new IOException(
+                "failed to publish trace " + artifactKind
+                        + " for logical key '" + allocation.logicalKey()
+                        + "' at " + path,
+                failure);
     }
 
     private static Path contextPath(Path reportPath) {
