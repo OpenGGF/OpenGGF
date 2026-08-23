@@ -9,9 +9,10 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.PsgChip;
 import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
-import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.YmWriteTimeline;
 
 import java.util.ArrayList;
@@ -103,6 +104,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         void publish();
     }
 
+    @FunctionalInterface
+    private interface PublicationStateFreeze {
+        void freeze(PsgChip.Snapshot psgSnapshot);
+    }
+
+    private record PsgHardwarePublication(Object source, int value) {
+    }
+
     private static final class ServiceTransaction {
         private final LiveCommandMutationToken rollback;
         private final Object source;
@@ -111,11 +120,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final boolean implicit;
         private final boolean orderedSiblingFence;
         private final List<YmWriteTimeline.Entry> writes = new ArrayList<>();
-        private final List<PostCommitPublication> hardwarePublications =
+        private final List<PsgHardwarePublication> hardwarePublications =
                 new ArrayList<>();
         private final List<PostCommitPublication> logicalPublications =
                 new ArrayList<>();
-        private final List<Runnable> publicationStateFreezes =
+        private final List<PublicationStateFreeze> publicationStateFreezes =
                 new ArrayList<>();
         private long cursor;
         private DriverYmTimingScope activeScope;
@@ -141,10 +150,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private static final class DriverServiceReservation {
         private final int capacity;
         private final LiveCommandMutationToken rollback;
-        private final List<PostCommitPublication> hardwarePublications =
+        private final List<PsgHardwarePublication> hardwarePublications =
                 new ArrayList<>();
         private final List<PostCommitPublication> logicalPublications =
                 new ArrayList<>();
+        private final PsgChip psgShadow;
         private int remaining;
 
         private DriverServiceReservation(
@@ -152,6 +162,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.capacity = capacity;
             this.rollback = rollback;
             this.remaining = capacity;
+            this.psgShadow = new PsgChip(
+                    rollback.synthSnapshot.outputSampleRate(),
+                    PsgChip.ChipType.INTEGRATED);
+            this.psgShadow.restoreSnapshot(
+                    rollback.synthSnapshot.psg());
         }
     }
 
@@ -714,29 +729,63 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             abortYmServiceTransaction(failure);
             throw failure;
         }
-        List<PostCommitPublication> hardwarePublications =
+        List<PsgHardwarePublication> hardwarePublications =
                 List.copyOf(transaction.hardwarePublications);
         List<PostCommitPublication> logicalPublications =
                 List.copyOf(transaction.logicalPublications);
         ymServiceTransaction = null;
-        for (Runnable freeze : transaction.publicationStateFreezes) {
-            freeze.run();
-        }
         DriverServiceReservation reservation =
                 ymDriverServiceReservation;
         if (reservation != null) {
+            replayPsgPublications(
+                    hardwarePublications, reservation.psgShadow);
+            freezePublicationState(transaction,
+                    reservation.psgShadow.captureSnapshot());
             reservation.hardwarePublications.addAll(hardwarePublications);
             reservation.logicalPublications.addAll(logicalPublications);
             return;
         }
         // Hardware belongs to the committed service. Diagnostic failures can
         // be reported afterward, but cannot gate or interrupt chip mutation.
-        RuntimeException publicationFailure = publishAll(
+        RuntimeException publicationFailure = publishPsgPublications(
                 hardwarePublications, null);
+        freezePublicationState(transaction,
+                captureSynthSnapshot().psg());
         publicationFailure = publishAll(
                 logicalPublications, publicationFailure);
         if (publicationFailure != null) {
             throw publicationFailure;
+        }
+    }
+
+    private void replayPsgPublications(
+            List<PsgHardwarePublication> publications,
+            PsgChip psgShadow) {
+        for (PsgHardwarePublication publication : publications) {
+            psgShadow.write(publication.value());
+        }
+    }
+
+    private RuntimeException publishPsgPublications(
+            List<PsgHardwarePublication> publications,
+            RuntimeException primaryFailure) {
+        for (PsgHardwarePublication publication : publications) {
+            try {
+                super.writePsg(publication.source(), publication.value());
+            } catch (RuntimeException failure) {
+                primaryFailure = appendPublicationFailure(
+                        primaryFailure, failure);
+            }
+        }
+        return primaryFailure;
+    }
+
+    private void freezePublicationState(
+            ServiceTransaction transaction,
+            PsgChip.Snapshot psgSnapshot) {
+        for (PublicationStateFreeze freeze
+                : transaction.publicationStateFreezes) {
+            freeze.freeze(psgSnapshot);
         }
     }
 
@@ -826,10 +875,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private void publishAuthorizedPsgWrite(Object source, int value) {
         if (ymServiceTransaction != null) {
             ymServiceTransaction.hardwarePublications.add(
-                    () -> super.writePsg(source, value));
+                    new PsgHardwarePublication(source, value));
         } else if (ymDriverServiceReservation != null) {
-            ymDriverServiceReservation.hardwarePublications.add(
-                    () -> super.writePsg(source, value));
+            PsgHardwarePublication publication =
+                    new PsgHardwarePublication(source, value);
+            ymDriverServiceReservation.hardwarePublications.add(publication);
+            ymDriverServiceReservation.psgShadow.write(value);
         } else {
             super.writePsg(source, value);
         }
@@ -898,13 +949,19 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver observer = serviceObserver;
             ServiceTransaction transaction = ymServiceTransaction;
             if (transaction == null) {
-                SmpsDriverSnapshot stableSnapshot = captureSnapshot();
+                DriverServiceReservation reservation =
+                        ymDriverServiceReservation;
+                SmpsDriverSnapshot stableSnapshot = reservation == null
+                        ? captureSnapshot()
+                        : captureSnapshotWithPsg(
+                                reservation.psgShadow.captureSnapshot());
                 stageLogicalObserver(() -> observer.onServiceEnd(
                         event, stableSnapshot));
             } else {
                 SmpsDriverSnapshot[] stableSnapshot = { null };
-                transaction.publicationStateFreezes.add(() ->
-                        stableSnapshot[0] = captureSnapshot());
+                transaction.publicationStateFreezes.add(psgSnapshot ->
+                        stableSnapshot[0] = captureSnapshotWithPsg(
+                                psgSnapshot));
                 stageLogicalObserver(() -> observer.onServiceEnd(
                         event, stableSnapshot[0]));
             }
@@ -2220,6 +2277,32 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    private SmpsDriverSnapshot captureSnapshotWithPsg(
+            PsgChip.Snapshot psgSnapshot) {
+        SmpsDriverSnapshot snapshot = captureSnapshot();
+        VirtualSynthesizer.Snapshot synth = snapshot.synthSnapshot();
+        VirtualSynthesizer.Snapshot shadowSynth =
+                new VirtualSynthesizer.Snapshot(
+                        synth.outputSampleRate(), synth.ym(), psgSnapshot,
+                        synth.ymWriteTimeline(),
+                        synth.renderedYmMasterCycle(),
+                        synth.ymTimelineGeneration());
+        return new SmpsDriverSnapshot(
+                snapshot.region(), snapshot.readMode(),
+                snapshot.palFullUpdateCounter(),
+                snapshot.sfxPriorityLatch(),
+                snapshot.spindashRevPlayingCounter(),
+                snapshot.spindashRevFrequencyIndex(),
+                snapshot.continuousSfxId(),
+                snapshot.continuousSfxFlag(), snapshot.contSfxLoopCnt(),
+                snapshot.sequencers(), snapshot.fmLockSequencerIds(),
+                snapshot.psgLockSequencerIds(), shadowSynth,
+                snapshot.ymServiceCursor(),
+                snapshot.nextYmServiceOrdinal(),
+                snapshot.nextYmWriteOrdinal(),
+                snapshot.driverGeneration());
+    }
+
     /**
      * Atomically adopts the live SFX state of another driver while retaining
      * this driver's newly loaded music. Sonic 1 uses this during ordinary BGM
@@ -3061,7 +3144,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (completedReservation == null) {
             return;
         }
-        RuntimeException publicationFailure = publishAll(
+        RuntimeException publicationFailure = publishPsgPublications(
                 completedReservation.hardwarePublications, null);
         publicationFailure = publishAll(
                 completedReservation.logicalPublications,

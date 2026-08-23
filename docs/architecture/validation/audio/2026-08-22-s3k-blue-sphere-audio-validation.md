@@ -232,3 +232,41 @@ commit cannot contain its own final identity. Listen to that packaged commit for
 6. special-stage entry while speed shoes were active.
 
 Only a positive result lifts the integration gate.
+
+## Whole-review correction: service-end PSG snapshot fidelity
+
+Review after `a80640ac84b9f05d3c6eda3259ef20585ccf3771` found one
+transactional observer defect. The outer driver batch correctly withheld PSG
+hardware writes and all logical callbacks until every sibling service
+succeeded, but each service-end snapshot was frozen before those withheld PSG
+writes were applied. A successful service could therefore report committed YM
+state alongside stale pre-service PSG state.
+
+The corrected driver retains the no-live-mutation rule. PSG publications are
+now typed transaction entries and an outer reservation restores a private
+`PsgChip` from its pre-batch synth snapshot. Each successful service replays
+only its PSG prefix into that private chip before freezing the service-end
+snapshot. The live chip still receives the writes only after the whole batch
+succeeds, then logical observers receive the already-frozen per-service
+snapshots. A later poisoned sibling discards the private chip and publishes no
+hardware write or callback.
+
+The regression uses two sibling services with distinct non-default PSG volume
+writes plus eight timed YM writes each. Its first RED run observed the startup
+PSG latch in the first successful service snapshot. GREEN proves exact PSG
+snapshot equality against an independently restored/replayed `PsgChip`, YM
+pending counts of 8 then 16, zero live mutation/callback after a later sibling
+poison, dense retry equality against a clean run, and deferred observer
+exception delivery after all hardware and logical publications.
+
+Verification on OpenJDK 21:
+
+- focused RED/then-GREEN method:
+  `TestSmpsDriverYmWriteTimeline#outerBatchPublishesOnlyAfterEverySiblingCommits`
+  (1 test, GREEN after correction);
+- complete timeline class: 37 tests, zero failures/errors/skips;
+- timeline, contention, service-observer, driver/synth snapshot, chip-observer,
+  audio-rewind wildcard, and diagnostic-observer selector: 111 tests, zero
+  failures/errors/skips;
+- the established ROM-backed rewind/observer/cadence/presentation selector:
+  266 tests, zero failures/errors/skips.

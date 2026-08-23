@@ -13,6 +13,7 @@ import com.openggf.audio.smps.YmServiceTimingProfile.Segment;
 import com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind;
 import com.openggf.audio.smps.YmServiceTimingProfile.Variant;
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.PsgChip;
 import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.synth.Ym2612Chip;
@@ -569,6 +570,7 @@ class TestSmpsDriverYmWriteTimeline {
         List<String> retriedEvents = new ArrayList<>();
         List<String> retriedChipEvents = new ArrayList<>();
         List<Long> retriedEndSnapshotOrdinals = new ArrayList<>();
+        List<SmpsDriverSnapshot> retriedEndSnapshots = new ArrayList<>();
         int[] remainingPoisons = { 1 };
         MinimalData sharedMusicData = data(0x81);
         MinimalData sharedSfxData = data(0xA0);
@@ -578,14 +580,13 @@ class TestSmpsDriverYmWriteTimeline {
         AggregateWritingSequencer retriedMusic =
                 new AggregateWritingSequencer(
                         retried, sharedMusicData, sharedConfig,
-                        null, 0x9F);
+                        null, 0x91);
         AggregateWritingSequencer retriedSfx =
                 new AggregateWritingSequencer(
                         retried, sharedSfxData, sharedConfig,
-                        remainingPoisons);
+                        remainingPoisons, 0x93);
         retried.addSequencer(retriedMusic, false);
         retried.addSequencer(retriedSfx, false);
-        retriedMusic.setIsSfx(true);
         retriedChipEvents.clear();
         retried.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
@@ -602,6 +603,7 @@ class TestSmpsDriverYmWriteTimeline {
                 retriedEvents.add("end:" + event.ordinal());
                 retriedEndSnapshotOrdinals.add(
                         snapshot.nextYmServiceOrdinal());
+                retriedEndSnapshots.add(snapshot);
             }
         });
         SmpsDriverSnapshot before = retried.captureSnapshot();
@@ -612,6 +614,7 @@ class TestSmpsDriverYmWriteTimeline {
         assertEquals(List.of(), retriedEvents);
         assertEquals(List.of(), retriedChipEvents);
         assertEquals(List.of(), retriedEndSnapshotOrdinals);
+        assertEquals(List.of(), retriedEndSnapshots);
         assertDeepEquals(before, retried.captureSnapshot());
 
         RuntimeException failure = assertThrows(RuntimeException.class,
@@ -621,9 +624,22 @@ class TestSmpsDriverYmWriteTimeline {
         assertEquals(List.of(
                 "begin:0", "end:0", "begin:1", "end:1"),
                 retriedEvents);
-        assertEquals(List.of("PSG:9F", "PSG:9F"),
+        assertEquals(List.of("PSG:91", "PSG:93"),
                 retriedChipEvents);
         assertEquals(List.of(1L, 2L), retriedEndSnapshotOrdinals);
+        assertEquals(2, retriedEndSnapshots.size());
+        PsgChip psgOracle = new PsgChip();
+        psgOracle.restoreSnapshot(before.synthSnapshot().psg());
+        psgOracle.write(0x91);
+        assertEquals(psgOracle.captureSnapshot(), retriedEndSnapshots.get(0)
+                .synthSnapshot().psg());
+        assertEquals(8, retriedEndSnapshots.get(0).synthSnapshot()
+                .ymWriteTimeline().pending().size());
+        psgOracle.write(0x93);
+        assertEquals(psgOracle.captureSnapshot(), retriedEndSnapshots.get(1)
+                .synthSnapshot().psg());
+        assertEquals(16, retriedEndSnapshots.get(1).synthSnapshot()
+                .ymWriteTimeline().pending().size());
         SmpsDriverSnapshot committed = retried.captureSnapshot();
         assertEquals(2L, committed.nextYmServiceOrdinal());
         assertEquals(16L, committed.nextYmWriteOrdinal());
@@ -636,32 +652,46 @@ class TestSmpsDriverYmWriteTimeline {
                 "begin:2", "end:2", "begin:3", "end:3"),
                 retriedEvents);
         assertEquals(List.of(
-                "PSG:9F", "PSG:9F", "PSG:9F"),
+                "PSG:91", "PSG:93", "PSG:91", "PSG:93"),
                 retriedChipEvents);
         assertEquals(List.of(1L, 2L, 3L, 4L),
                 retriedEndSnapshotOrdinals);
 
         List<String> cleanEvents = new ArrayList<>();
         List<String> cleanChipEvents = new ArrayList<>();
+        List<SmpsDriverSnapshot> cleanEndSnapshots = new ArrayList<>();
         SmpsDriver clean = new SmpsDriver(
                 44_100.0, recordingAllObserver(cleanChipEvents));
         AggregateWritingSequencer cleanMusic =
                 new AggregateWritingSequencer(
                         clean, sharedMusicData, sharedConfig,
-                        null, 0x9F);
+                        null, 0x91);
         AggregateWritingSequencer cleanSfx =
                 new AggregateWritingSequencer(
-                        clean, sharedSfxData, sharedConfig);
+                        clean, sharedSfxData, sharedConfig,
+                        null, 0x93);
         clean.addSequencer(cleanMusic, false);
         clean.addSequencer(cleanSfx, false);
-        cleanMusic.setIsSfx(true);
         cleanChipEvents.clear();
-        clean.setServiceObserver(recordingStringServiceObserver(cleanEvents));
+        clean.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                cleanEvents.add("begin:" + event.ordinal());
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                cleanEvents.add("end:" + event.ordinal());
+                cleanEndSnapshots.add(snapshot);
+            }
+        });
         advanceSequencersWithoutRender(clean, 1);
         advanceSequencersWithoutRender(clean, 1);
 
         assertEquals(cleanEvents, retriedEvents);
         assertEquals(cleanChipEvents, retriedChipEvents);
+        assertDeepEquals(cleanEndSnapshots, retriedEndSnapshots);
         assertDeepEquals(clean.captureSnapshot(),
                 retried.captureSnapshot());
     }
