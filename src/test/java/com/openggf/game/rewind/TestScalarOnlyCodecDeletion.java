@@ -10,6 +10,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
@@ -12764,7 +12765,8 @@ public class TestScalarOnlyCodecDeletion {
 
     private static SonicConfigurationService createDefaultConfiguration() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(
-                java.nio.file.Path.of("target", "rewind-scalar-codec-deletion-config"));
+                TestSessionOutputPaths.diagnostics("rewind")
+                        .resolve("rewind-scalar-codec-deletion-config"));
         config.resetToDefaults();
         return config;
     }

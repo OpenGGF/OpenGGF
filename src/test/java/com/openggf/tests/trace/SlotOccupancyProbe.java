@@ -1,5 +1,7 @@
 package com.openggf.tests.trace;
 
+import com.openggf.tests.TestSessionOutputPaths;
+
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
@@ -65,8 +67,10 @@ public final class SlotOccupancyProbe {
             return null;
         }
         String dir = System.getenv(OUTPUT_VAR);
-        Path path = Path.of(dir == null || dir.isBlank() ? "target" : dir,
-                "slot-occupancy-" + label + ".txt");
+        Path outputRoot = dir == null || dir.isBlank()
+                ? TestSessionOutputPaths.diagnostics("slot-occupancy")
+                : Path.of(dir);
+        Path path = outputRoot.resolve("slot-occupancy-" + label + ".txt");
         try {
             Files.createDirectories(path.getParent());
             Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8);

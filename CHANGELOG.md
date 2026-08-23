@@ -14,6 +14,24 @@
   music DAC track. The engine now restores that DAC-owned FM6 pan as well,
   instead of leaving it at zero until a music change reprograms the channel.
 
+- **CI and release jobs consume session manifests:** Maven test and packaging
+  jobs now run through the test-session coordinator, while coverage checks and
+  platform packaging resolve their report, build, artifact, and distribution
+  roots from the completed session. Native libraries are included in the
+  manifest inventory alongside executables and JARs.
+
+- **Test sessions isolate LWJGL native extraction per fork:** generated test
+  outputs and temporary files remain session-owned, while every Surefire fork
+  now gets its own LWJGL extraction directory so concurrent suites cannot
+  replace one another's native libraries and turn the run into a false mass
+  failure.
+
+- **Trace reports are isolated per test session and invocation:** replay
+  diagnostics now publish into coordinator-owned roots with collision-resistant
+  owner metadata, so parallel suites cannot overwrite one another's evidence;
+  triage follows the same session report root while explicit report directories
+  remain supported for fixture-specific diagnostics.
+
 - **S3K AIZ dormant-sidekick selection follows the ROM owner:** the initial
   Tails CPU branch now relies on the active level-event provider's zone/act and
   star-post state instead of stale roster or physics-rule metadata, preventing

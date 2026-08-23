@@ -1,5 +1,6 @@
 package com.openggf.audio.synth;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assumptions;
@@ -31,6 +32,7 @@ class TestYm2612ChipGpgxParity {
     private static final Path ENVELOPE_HARNESS = Path.of(
             "docs/architecture/research/audio/"
                     + "s3k-ym-envelope-phase-native-harness-v1.c");
+    // Fixture input: this optional checkout is not produced by the test.
     private static final Path PINNED_GPGX = Path.of(
             "target/audio-parity/native/blue-sphere-manual-source/"
                     + "waterbox/gpgx/Genesis-Plus-GX");
@@ -96,8 +98,8 @@ class TestYm2612ChipGpgxParity {
         Path ymSource = PINNED_GPGX.resolve("core/sound/ym2612.c");
         Assumptions.assumeTrue(Files.isRegularFile(ymSource),
                 "pinned native GPGX checkout is not materialized");
-        Path executable = Path.of("target/audio-parity/"
-                + "s3k-ym-envelope-phase-native-harness-v1");
+        Path executable = TestSessionOutputPaths.diagnostics("audio-parity")
+                .resolve("s3k-ym-envelope-phase-native-harness-v1");
         Files.createDirectories(executable.getParent());
         Process compile = new ProcessBuilder("gcc", "-std=c11", "-O2",
                 "-I" + PINNED_GPGX.resolve("core"),

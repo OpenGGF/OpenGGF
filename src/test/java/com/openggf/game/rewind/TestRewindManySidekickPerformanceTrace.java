@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import com.openggf.tests.TestSessionOutputPaths;
+
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.rewind.snapshot.SpriteManagerSnapshot;
@@ -114,7 +116,7 @@ class TestRewindManySidekickPerformanceTrace {
     private static Path writeTrace(
             TimedSpriteManagerSnapshottable timedSprites,
             LongSummaryStatistics seekStats) throws IOException {
-        Path targetDir = Path.of("target");
+        Path targetDir = TestSessionOutputPaths.diagnostics("rewind");
         Files.createDirectories(targetDir);
         Path tracePath = targetDir.resolve("rewind-many-sidekick-performance-trace.json");
         String json = String.format(Locale.ROOT, """

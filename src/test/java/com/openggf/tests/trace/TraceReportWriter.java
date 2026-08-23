@@ -1,9 +1,11 @@
 package com.openggf.tests.trace;
 
+import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.TraceVerificationScope;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,24 +21,72 @@ public final class TraceReportWriter {
     private TraceReportWriter() {
     }
 
-    /**
-     * Write a divergence report (and, when there are errors, a context window)
-     * using {@code prefix} for the on-disk filenames. Mirrors the original
-     * special-stage {@code writeReport} body exactly.
-     */
-    public static void writeSpecialStageReport(DivergenceReport report, Path outDir,
-                                               String prefix, int contextRadius) throws IOException {
+    public static TestSessionOutputPaths.ReportAllocation writeSpecialStageReport(
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String prefix,
+            int contextRadius) throws IOException {
         assertGroupAccountingHolds(report);
-        Files.createDirectories(outDir);
-        Path jsonPath = outDir.resolve(prefix + "_report.json");
-        Files.writeString(jsonPath, report.toJson());
-        if (report.hasErrors()) {
-            Path contextPath = outDir.resolve(prefix + "_context.txt");
-            int firstErrorFrame = report.errors().isEmpty()
-                    ? 0
-                    : report.errors().get(0).startFrame();
-            Files.writeString(contextPath, report.getContextWindow(firstErrorFrame, contextRadius));
+        return writeReport(report, profile, invocation, laneId, prefix,
+                TraceVerificationScope.ALL, contextRadius);
+    }
+
+    public static TestSessionOutputPaths.ReportAllocation writeReport(
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String logicalKey,
+            TraceVerificationScope scope,
+            int contextRadius) throws IOException {
+        return writeReport(null, report, profile, invocation, laneId, logicalKey,
+                scope, contextRadius);
+    }
+
+    /** Writes to a caller-selected report directory while retaining its legacy basename. */
+    public static TestSessionOutputPaths.ReportAllocation writeReport(
+            Path outputDirectory,
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String logicalKey,
+            TraceVerificationScope scope,
+            int contextRadius) throws IOException {
+        assertGroupAccountingHolds(report);
+        TestSessionOutputPaths.ReportAllocation allocation =
+                outputDirectory == null
+                        || outputDirectory.toAbsolutePath().normalize().equals(
+                                TestSessionOutputPaths.traceReports().toAbsolutePath().normalize())
+                        ? TestSessionOutputPaths.allocateReport(profile,
+                                invocation.className(), invocation.methodName(),
+                                invocation.parameterIndex(), invocation.invocationId(),
+                                laneId, logicalKey, ".json")
+                        : TestSessionOutputPaths.allocateReport(outputDirectory,
+                                profile, invocation.className(), invocation.methodName(),
+                                invocation.parameterIndex(), invocation.invocationId(),
+                                laneId, logicalKey, ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), report.toJson());
+        if (report.hasErrors(scope)) {
+            Path contextPath = contextPath(allocation.physicalPath());
+            TestSessionOutputPaths.publish(contextPath,
+                    report.getContextWindow(report.firstErrorFrame(scope), contextRadius));
         }
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        return allocation;
+    }
+
+    private static Path contextPath(Path reportPath) {
+        String filename = reportPath.getFileName().toString();
+        String stem = filename.endsWith(".json")
+                ? filename.substring(0, filename.length() - ".json".length())
+                : filename;
+        String contextName = stem.endsWith("_report")
+                ? stem.substring(0, stem.length() - "_report".length()) + "_context.txt"
+                : stem + "_context.txt";
+        return reportPath.resolveSibling(contextName);
     }
 
     /**

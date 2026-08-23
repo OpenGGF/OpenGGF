@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.openggf.testing</groupId>
+    <artifactId>session-guard-fixture</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>session-guard-before-clean</id>
+                        <phase>pre-clean</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target><exec executable="${java.home}/bin/java" failonerror="true">
+                                <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
+                                <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
+                                <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
+                                <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
+                                <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
+                                <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
+                                <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
+                                <arg value="--source"/><arg value="21"/>
+                                <arg value="${project.basedir}/../../TestSessionCoordinator.java"/>
+                                <arg value="--guard"/><arg value="pre-clean"/>
+                            </exec></target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>session-guard-before-lifecycle</id>
+                        <phase>validate</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target><exec executable="${java.home}/bin/java" failonerror="true">
+                                <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
+                                <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
+                                <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
+                                <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
+                                <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
+                                <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
+                                <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
+                                <arg value="--source"/><arg value="21"/>
+                                <arg value="${project.basedir}/../../TestSessionCoordinator.java"/>
+                                <arg value="--guard"/><arg value="validate"/>
+                            </exec></target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

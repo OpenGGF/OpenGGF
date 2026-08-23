@@ -129,7 +129,8 @@ Contents:
 
 2. **Download or build** — Two paths:
    - Release ZIP: download, extract, place ROMs alongside JAR, run.
-   - Build from source: clone, `mvn package`, same ROM placement, run.
+   - Build from source: clone, install hooks, run `tools/testing/test-session.sh -- mvn package`,
+     use the session manifest's artifact root, then run.
    Mention `run.cmd` for Windows.
 
 3. **First launch** — What to expect: master title screen, game selection, title screen,
@@ -493,10 +494,10 @@ Contents:
 1. Prerequisites: Java 21, Maven 3.8+, IntelliJ IDEA recommended (Gradle not used)
 2. Clone the repository
 3. Place ROM files (same as playing guide, link rather than duplicate)
-4. Build: `mvn package`
+4. Build: `tools/testing/test-session.sh -- mvn package`
 5. Run: `java -jar target/...jar`
-6. Run tests: `mvn test` (note: ROM-dependent tests skip gracefully if ROMs absent)
-7. Run a single test: `mvn test -Dtest=TestClassName`
+6. Run tests: `tools/testing/test-session.sh -- mvn test` (note: ROM-dependent tests skip gracefully if ROMs absent)
+7. Run a single test: `tools/testing/test-session.sh -- mvn test -Dtest=TestClassName`
 8. GraalVM native image build (optional, for ahead-of-time compilation)
 9. Project structure orientation — brief pointer to architecture.md
 
@@ -748,7 +749,8 @@ Length: ~200-250 lines.
 
 Sections:
 
-1. **Running tests** — `mvn test`, single class, parallel execution (8 JVMs).
+1. **Running tests** — `tools/testing/test-session.sh -- mvn test`, single class,
+   parallel execution (8 JVMs); use the session manifest for reports.
    ROM-optional behavior.
 
 2. **HeadlessTestFixture** — Builder pattern for setting up a test level. Show a

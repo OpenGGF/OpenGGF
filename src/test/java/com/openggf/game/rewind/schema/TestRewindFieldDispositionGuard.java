@@ -1,5 +1,7 @@
 package com.openggf.game.rewind.schema;
 
+import com.openggf.tests.TestSessionOutputPaths;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -25,14 +27,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * policy entry in {@link DefaultObjectRewindPolicies} is preferred over
  * annotations) or make the class compact-reachable. Only intentionally
  * deferred debt belongs in the baseline. The current audit result is also
- * written to {@code target/rewind-field-disposition-current.txt} to make
+ * written to the session diagnostics rewind namespace to make
  * baseline tightening mechanical.
  */
 class TestRewindFieldDispositionGuard {
     private static final Path BASELINE =
             Path.of("src/test/resources/rewind/field-disposition-baseline.txt");
     private static final Path CURRENT_REPORT =
-            Path.of("target/rewind-field-disposition-current.txt");
+            TestSessionOutputPaths.diagnostics("rewind")
+                    .resolve("rewind-field-disposition-current.txt");
 
     @Test
     void noNewSilentlyDroppedRewindFieldsBeyondBaseline() throws Exception {

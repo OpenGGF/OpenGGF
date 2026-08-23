@@ -39,11 +39,17 @@ removes active duplication or risk — but don't let cleanup displace playable S
 ## Build, test, run
 
 ```bash
-mvn package                          # executable JAR with dependencies
-mvn test
-mvn "-Dtest=TestCollisionLogic" test # focused run
-java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+tools/testing/install-hooks.sh
+tools/testing/test-session.sh -- mvn package                          # executable JAR with dependencies
+tools/testing/test-session.sh -- mvn test
+tools/testing/test-session.sh -- mvn "-Dtest=TestCollisionLogic" test # focused run
+java -jar <session-artifact-root>/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
+
+PowerShell uses `tools/testing/install-hooks.ps1` and
+`tools/testing/test-session.ps1 -- ...` with the same Maven arguments. The
+coordinator owns temporary/output paths and prints the session manifest at the
+start and end of each run; raw Maven lifecycle commands are non-certifying.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
@@ -58,8 +64,9 @@ java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
 - Tests are **JUnit 5 / Jupiter only** — no JUnit 4 tests, rules, runners, or `org.junit.*`
   imports.
-- Git hooks auto-install during any Maven build's `validate` phase. If you commit without
-  building first, run `git config core.hooksPath .githooks` once.
+- Git hooks are installed explicitly once per worktree with
+  `tools/testing/install-hooks.sh` (or `tools/testing/install-hooks.ps1` on
+  PowerShell). Maven never mutates Git configuration during `validate`.
 
 ## ROMs
 
