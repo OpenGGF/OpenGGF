@@ -2984,6 +2984,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void applyFmPanAmsFms(Track t) {
         if (t.type != TrackType.FM)
             return;
+        writePanAmsFms(t);
+    }
+
+    private void applyDacPanAmsFms(Track t) {
+        if (t.type != TrackType.DAC)
+            return;
+        writePanAmsFms(t);
+    }
+
+    private void writePanAmsFms(Track t) {
         int hwCh = t.channelId;
         int port = (hwCh < 3) ? 0 : 1;
         int ch = (hwCh % 3);
@@ -3362,16 +3372,26 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
-    /** Restores the active, non-overridden FM tracks after a driver pause. */
-    public void resumeFmAfterPause(boolean reloadVoice) {
+    /** Restores active, non-overridden tracks after a driver pause. */
+    public void resumeAfterPause(SmpsSequencerConfig.PausePolicy policy) {
+        boolean reloadVoice = policy
+                == SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD;
+        boolean restoreDacPan = policy
+                == SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF;
         for (Track track : tracks) {
-            if (!track.active || track.overridden || track.type != TrackType.FM) {
+            if (!track.active || track.overridden) {
                 continue;
             }
-            if (reloadVoice) {
-                refreshInstrument(track);
-            } else {
-                applyFmPanAmsFms(track);
+            if (track.type == TrackType.FM) {
+                if (reloadVoice) {
+                    refreshInstrument(track);
+                } else {
+                    applyFmPanAmsFms(track);
+                }
+            } else if (restoreDacPan && track.type == TrackType.DAC) {
+                // S1 FixBugs=0 PauseMusic deliberately includes all six FM
+                // tracks plus the DAC track in its unpause panning loop.
+                applyDacPanAmsFms(track);
             }
         }
     }

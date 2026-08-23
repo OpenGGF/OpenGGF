@@ -2856,11 +2856,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (policy == SmpsSequencerConfig.PausePolicy.NONE) {
             return;
         }
-        boolean reloadVoice = policy
-                == SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD;
         synchronized (sequencersLock) {
             for (SmpsSequencer sequencer : sequencers) {
-                sequencer.resumeFmAfterPause(reloadVoice);
+                sequencer.resumeAfterPause(policy);
             }
         }
     }

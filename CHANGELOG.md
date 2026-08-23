@@ -1,5 +1,10 @@
 # Changelog
 
+- **Sonic 1 restores DAC percussion after focus pause/resume:** the shipped
+  `PauseMusic` unpause loop restores panning for six FM tracks and the current
+  music DAC track. The engine now restores that DAC-owned FM6 pan as well,
+  instead of leaving it at zero until a music change reprograms the channel.
+
 - **S3K AIZ dormant-sidekick selection follows the ROM owner:** the initial
   Tails CPU branch now relies on the active level-event provider's zone/act and
   star-post state instead of stale roster or physics-rule metadata, preventing
