@@ -278,10 +278,10 @@ user explicitly disabled subagents for the remainder of this session.
 **Files:**
 - Create: `src/main/java/com/openggf/tools/audio/s3kparity/S3kAudioParityManifest.java`
 - Create: `src/test/java/com/openggf/tools/audio/s3kparity/TestS3kAudioParityManifest.java`
-- Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/0001-buffer-z80-audio-events.patch`
-- Modify: `tools/bizhawk-headless/tests/GpgxZ80AudioCapabilityTests.cs`
-- Create: `tools/bizhawk-headless/tests/GpgxS3kAudioParityManifestTests.cs`
-- Modify: `tools/bizhawk-headless/BizHawk.Headless.Gpgx.Tests.csproj`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/0002-s3k-audio-parity-events.patch`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/s3k-parity-artifact-lock.json`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k_parity_harness.c`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k-parity-run.sh`
 
 **Interfaces:**
 - Produces strict schemas `openggf.s3k-audio-write-parity.v1`,
@@ -350,8 +350,9 @@ user explicitly disabled subagents for the remainder of this session.
 
 - [ ] **Step 4: Add native typed owner events before chip writes.**
 
-  Extend the diagnostic patch without changing the production ABI used by
-  ordinary runs. A compiled descriptor at each first-slice source boundary
+  Layer a separate diagnostic-only patch after the unchanged ordinary ABI4
+  patch; do not repin the production core or complete-run capability. A compiled
+  descriptor at each first-slice source boundary
   opens one transaction from exact Z80 PC/opcode plus track-base/type/channel
   and service state. Every instruction/write carries the transaction ID until a
   terminal. The collector rejects nested ambiguity, missing terminal, owner
@@ -372,13 +373,16 @@ user explicitly disabled subagents for the remainder of this session.
   ```bash
   mvn -v
   mvn -Dmse=off -Dtest=com.openggf.tools.audio.s3kparity.TestS3kAudioParityManifest test
-  tools/bizhawk-headless/test.sh GpgxZ80AudioCapabilityTests
-  tools/bizhawk-headless/test.sh GpgxS3kAudioParityManifestTests
+  tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k-parity-run.sh \
+    "$PINNED_SOURCE" "$PINNED_TOOLCHAIN" "$MANAGED_SCRATCH"
+  tools/bizhawk-headless/test.sh --filter GpgxAudioObserverBuildTests
   ```
 
   Commit the native prerequisite separately after independent local review,
-  staging only the manifest parser/tests, native patch/tests/project, and exact
-  diagnostic artifact lock if it changed. Use `feat(audio): authenticate S3K
+  staging only the manifest parser/tests, diagnostic patch/selftest, plan
+  correction, and exact diagnostic artifact lock. The managed reflection/capture
+  adapter remains Task 3 work so this slice cannot change the frozen complete-run
+  harness executable identity. Use `feat(audio): authenticate S3K
   chip-write groups` with all seven explicit trailers; use
   `Changelog: n/a: diagnostic parity infrastructure only`.
 
