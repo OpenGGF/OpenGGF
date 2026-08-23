@@ -23,7 +23,8 @@ public final class TestSessionCoordinatorSelfTest {
     private static final List<String> MANIFEST_KEYS = List.of(
             "run_id", "state", "manifest", "worktree", "lease_path", "source_digest",
             "runtime_inputs_digest", "build_root", "tmp_root", "surefire_reports", "trace_reports",
-            "diagnostics_root", "artifact_root", "distribution_root", "reports", "artifacts");
+            "diagnostics_root", "artifact_root", "distribution_root", "isolation",
+            "lwjgl_extraction", "lwjgl_extract_template", "reports", "artifacts");
 
     private TestSessionCoordinatorSelfTest() {
     }
@@ -83,6 +84,14 @@ public final class TestSessionCoordinatorSelfTest {
         check(RUN_ID.matcher(runId).matches(), "run ID must use UTC-pid-random format: " + runId);
         check(runId.equals(markerValue(endLine, "run_id")), "start and end markers must identify the same run");
         check("0".equals(markerValue(endLine, "exit_code")), "end marker must report child exit code");
+        check("worktree-session".equals(markerValue(startLine, "isolation")),
+                "start marker must identify the coordinator-owned isolation policy");
+        check("per-surefire-fork".equals(markerValue(startLine, "lwjgl")),
+                "start marker must identify per-fork LWJGL extraction");
+        check("worktree-session".equals(markerValue(endLine, "isolation")),
+                "end marker must identify the coordinator-owned isolation policy");
+        check("per-surefire-fork".equals(markerValue(endLine, "lwjgl")),
+                "end marker must identify per-fork LWJGL extraction");
 
         Path manifest = Path.of(markerValue(startLine, "manifest"));
         check(manifest.isAbsolute() && Files.isRegularFile(manifest), "manifest path must be absolute and regular");
@@ -654,6 +663,13 @@ public final class TestSessionCoordinatorSelfTest {
                 "JAVA_TOOL_OPTIONS must contain the session temp option");
         check(environment.getOrDefault("JAVA_TOOL_OPTIONS", "").contains("-Dselftest.java=preserved"),
                 "JAVA_TOOL_OPTIONS must preserve the caller's value");
+        check("worktree-session".equals(environment.get("OPENGGF_TEST_ISOLATION")),
+                "child must receive the coordinator isolation policy");
+        check(tmpDir.equals(environment.get("OPENGGF_TEST_TMP_ROOT")),
+                "child must receive the session temp root");
+        check((tmpDir + "/lwjgl-${surefire.forkNumber}").equals(
+                        environment.get("OPENGGF_TEST_LWJGL_ROOT_TEMPLATE")),
+                "child must receive the per-Surefire-fork LWJGL extraction template");
         if (mode.equals("child-sleep")) {
             try {
                 Thread.sleep(Duration.ofSeconds(30).toMillis());

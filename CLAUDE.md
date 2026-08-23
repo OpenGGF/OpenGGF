@@ -43,6 +43,7 @@ tools/testing/install-hooks.sh
 tools/testing/test-session.sh -- mvn package                          # executable JAR with dependencies
 tools/testing/test-session.sh -- mvn test
 tools/testing/test-session.sh -- mvn "-Dtest=TestCollisionLogic" test # focused run
+tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B   # structural guards in a fresh session
 java -jar <session-artifact-root>/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
@@ -50,6 +51,25 @@ PowerShell uses `tools/testing/install-hooks.ps1` and
 `tools/testing/test-session.ps1 -- ...` with the same Maven arguments. The
 coordinator owns temporary/output paths and prints the session manifest at the
 start and end of each run; raw Maven lifecycle commands are non-certifying.
+For release evidence, run both the ordinary suite and the separate `-Pguards`
+session; the structural guards are intentionally excluded from the long reused
+ordinary fork so whole-production graph imports receive a fresh JVM.
+
+### Agent test-session isolation contract
+
+Codex and Claude agents must use `tools/testing/test-session.sh` on POSIX systems
+and must use `tools/testing/test-session.ps1` in PowerShell for every certifying
+build, test, trace replay, or capture run. The wrapper is the sandbox boundary:
+it creates a unique session-owned temporary root, routes build/report/diagnostic
+output there, and gives every Surefire fork a per-Surefire-fork LWJGL extraction
+directory. Agents must not reuse another run's temporary directory, point
+LWJGL at a shared extraction directory, or treat a raw Maven lifecycle command
+as release evidence. Parallel agents must use separate worktrees and separate
+wrapper sessions, even when they are testing the same commit.
+
+The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
+the referenced manifest, are part of the evidence. Report the run ID and
+manifest path; if those markers are absent, the result is non-certifying.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.

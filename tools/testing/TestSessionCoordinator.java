@@ -37,6 +37,9 @@ public final class TestSessionCoordinator {
     private static final int EX_TEMPFAIL = 75;
     private static final int MAX_RETRIES = 3;
     private static final long[] RETRY_DELAYS_MS = {50, 100, 200};
+    private static final String SESSION_ISOLATION = "worktree-session";
+    private static final String LWJGL_EXTRACTION_ISOLATION = "per-surefire-fork";
+    private static final String LWJGL_EXTRACTION_TEMPLATE = "lwjgl-${surefire.forkNumber}";
     private static final DateTimeFormatter RUN_TIME = DateTimeFormatter
             .ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -101,7 +104,8 @@ public final class TestSessionCoordinator {
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
                 commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
                 List.of(), List.of()));
-        System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " manifest="
+        System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " isolation="
+                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " manifest="
                 + paths.manifest + " lease=" + leasePath);
 
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
@@ -163,8 +167,9 @@ public final class TestSessionCoordinator {
             if (options.exportFile != null) {
                 writeExport(options.exportFile, paths.manifest, runId);
             }
-            System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " exit_code=" + exitCode
-                    + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest);
+            System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
+                    + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " exit_code="
+                    + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest);
             shutdown.completed = true;
             lease.close();
         }
@@ -598,6 +603,10 @@ public final class TestSessionCoordinator {
         properties.put("openggf.session.command-hash", commandHash);
         properties.put("openggf.session.worktree", worktree.toString());
         properties.put("openggf.session.lease-path", lease.toString());
+        properties.put("openggf.session.isolation", SESSION_ISOLATION);
+        properties.put("openggf.session.lwjgl-extraction", LWJGL_EXTRACTION_ISOLATION);
+        properties.put("openggf.session.lwjgl-extraction-template", paths.tmp.resolve(
+                LWJGL_EXTRACTION_TEMPLATE).toString());
         properties.put("openggf.session.allowed-phases", allowedPhases(command));
         properties.put("OPENGGF_TEST_RUN_ID", runId);
         properties.put("OPENGGF_TEST_MANIFEST", paths.manifest.toString());
@@ -605,6 +614,10 @@ public final class TestSessionCoordinator {
         properties.put("OPENGGF_TEST_WORKTREE", worktree.toString());
         properties.put("OPENGGF_TEST_LEASE", lease.toString());
         properties.put("OPENGGF_TEST_COMMAND_HASH", commandHash);
+        properties.put("OPENGGF_TEST_ISOLATION", SESSION_ISOLATION);
+        properties.put("OPENGGF_TEST_TMP_ROOT", paths.tmp.toString());
+        properties.put("OPENGGF_TEST_LWJGL_ROOT_TEMPLATE", paths.tmp.resolve(
+                LWJGL_EXTRACTION_TEMPLATE).toString());
         properties.put("OPENGGF_TEST_ALLOWED_PHASES", allowedPhases(command));
         properties.put("OPENGGF_TEST_DIAGNOSTICS", paths.diagnostics.toString());
         properties.put("OPENGGF_ARTIFACT_ROOT", paths.artifacts.toString());
@@ -728,6 +741,10 @@ public final class TestSessionCoordinator {
                 + "  \"lease_path\": \"" + escape(lease.toString()) + "\",\n"
                 + "  \"command_hash\": \"" + commandHash + "\",\n"
                 + "  \"allowed_phases\": \"" + escape(allowedPhases) + "\",\n"
+                + "  \"isolation\": \"" + SESSION_ISOLATION + "\",\n"
+                + "  \"lwjgl_extraction\": \"" + LWJGL_EXTRACTION_ISOLATION + "\",\n"
+                + "  \"lwjgl_extract_template\": \""
+                + escape(paths.tmp.resolve(LWJGL_EXTRACTION_TEMPLATE).toString()) + "\",\n"
                 + "  \"source_digest\": \"" + source + "\",\n"
                 + "  \"runtime_inputs_digest\": \"" + runtime + "\",\n"
                 + "  \"build_root\": \"" + escape(paths.build.toString()) + "\",\n"
@@ -1201,7 +1218,8 @@ public final class TestSessionCoordinator {
                 if (exportFile != null) {
                     writeExport(exportFile, paths.manifest, runId);
                 }
-                System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId
+                System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
+                        + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION
                         + " exit_code=143 state=" + state + " valid=false process_tree_stopped="
                         + treeStopped + " manifest=" + paths.manifest);
                 System.out.flush();

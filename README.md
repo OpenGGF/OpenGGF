@@ -214,6 +214,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Agent test sessions are isolated (2026-08-23):** certifying Maven runs now use
+  session-owned temporary roots and per-Surefire-fork LWJGL extraction; structural
+  guards run in a fresh session so broad architecture imports cannot exhaust the
+  ordinary suite's heap.
 - **Test-session entrypoints remain executable in fresh checkouts (2026-08-23):** the
   coordinator, hook bootstrap, and external-process harness POSIX launchers are tracked
   with their executable mode, and the tooling guard rejects a checkout that loses it.

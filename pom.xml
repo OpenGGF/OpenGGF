@@ -130,7 +130,9 @@
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci
 
-             Current release suite size requires a single 1GB fork in CI.
+             The ordinary suite uses a single 1GB fork in CI. Structural guards
+             run separately through -Pguards, so broad source-graph imports do
+             not accumulate behind the ordinary suite's reused fork.
              Keeping one fork also avoids native-library races between test JVMs.
         -->
         <profile>
@@ -542,7 +544,7 @@
              trace fixture can prove and that must never silently stop being
              enforced.
 
-             They lived only in the default profile, which the trace suites do
+             They previously lived in the default profile, which the trace suites do
              not run and which is expensive and ROM-sensitive locally, so a red
              guard could sit unnoticed on develop (TestS1S2PlcComparisonOnlyGuard
              did). This profile is source-only, needs no ROM, and runs in about
@@ -596,6 +598,9 @@
                                      picked up automatically. -->
                                 <include>**/TestNo*.java</include>
                                 <include>**/TestArchUnit*.java</include>
+                                <!-- This boundary test performs a whole-production ArchUnit
+                                     import but predates the structural-guard naming convention. -->
+                                <include>**/TestAudioPresentationBoundary.java</include>
                             </includes>
                             <excludedGroups>performance-measurement</excludedGroups>
                         </configuration>
@@ -1266,6 +1271,14 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                     </systemPropertyVariables>
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>
+                        <!-- Structural guards, especially whole-production ArchUnit
+                             imports, run in the separate -Pguards session. Keeping
+                             them out of the long ordinary suite gives that graph a
+                             fresh JVM and prevents the known late-suite heap failure. -->
+                        <exclude>**/Test*Guard*.java</exclude>
+                        <exclude>**/TestNo*.java</exclude>
+                        <exclude>**/TestArchUnit*.java</exclude>
+                        <exclude>**/TestAudioPresentationBoundary.java</exclude>
                         <exclude>**/TestGraphicsManagerHeadless.java</exclude>
                         <exclude>**/VisualRegressionTest.java</exclude>
                         <exclude>**/VisualReferenceGenerator.java</exclude>
