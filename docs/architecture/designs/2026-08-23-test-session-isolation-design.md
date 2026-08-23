@@ -486,6 +486,20 @@ and non-certifying; the lifecycle guards reject them when they reach the
 project. A separate explicit hook-bootstrap command installs `.githooks` once
 and does not run from Maven `validate`.
 
+The agent-facing isolation contract is explicit in both mirrored instruction
+files. Codex and Claude must enter through the POSIX or PowerShell session
+wrapper for certifying builds, tests, trace replays, and captures. The wrapper's
+session-owned temporary root is the sandbox boundary: Maven, Surefire, reports,
+diagnostics, and every fork's LWJGL native extraction directory remain below
+that run's root. Parallel agents use separate worktrees and wrapper sessions;
+they never share a temporary or LWJGL extraction directory. The start/end
+markers (`OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END`) and their manifest
+are required evidence, while raw Maven lifecycle commands are non-certifying.
+The ordinary test profile excludes structural guards; release validation runs
+the separate `-Pguards` profile through a fresh wrapper session so whole-
+production ArchUnit imports cannot retain their graph behind the long ordinary
+suite.
+
 ## Failure handling and cleanup
 
 - No writable root: emit `STARTUP_FAILED`, explain each candidate path, and do

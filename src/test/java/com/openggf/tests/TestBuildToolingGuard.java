@@ -521,6 +521,32 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void defaultSuiteMustLeaveStructuralGuardsToTheFreshGuardsSession() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        Element excludes = directChild(configuration, "excludes");
+        assertTrue(excludes != null, "default Surefire execution must define exclusions");
+        List<String> defaultExcludes = textValues(excludes, "exclude");
+        for (String pattern : List.of(
+                "**/Test*Guard*.java", "**/TestNo*.java", "**/TestArchUnit*.java",
+                "**/TestAudioPresentationBoundary.java")) {
+            assertTrue(defaultExcludes.contains(pattern),
+                    "default Surefire execution must exclude structural guards: " + pattern);
+        }
+
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml must retain a separate guards profile");
+        assertTrue(guards.getElementsByTagName("includes").getLength() >= 1,
+                "guards profile must select the excluded structural guard suite");
+        assertTrue(textValues(guards, "include").contains("**/TestAudioPresentationBoundary.java"),
+                "guards profile must select the heavyweight audio architecture boundary test");
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
@@ -616,6 +642,21 @@ class TestBuildToolingGuard {
         if (!agents.contains("tools/testing/install-hooks.sh")
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
+        }
+        if (!agents.contains("Codex") || !agents.contains("Claude")) {
+            violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
+        }
+        for (String requiredText : List.of(
+                "must use `tools/testing/test-session.sh`",
+                "must use `tools/testing/test-session.ps1`",
+                "session-owned temporary root",
+                "per-Surefire-fork LWJGL extraction",
+                "raw Maven lifecycle commands are non-certifying",
+                "OPENGGF_TEST_RUN_START",
+                "OPENGGF_TEST_RUN_END")) {
+            if (!agents.contains(requiredText)) {
+                violations.add("AGENTS.md/CLAUDE.md do not contain required isolation guidance: " + requiredText);
+            }
         }
         for (String script : List.of("tools/testing/install-hooks.sh",
                 "tools/testing/test-session.sh", "tools/testing/run-session-process-harness.sh")) {
@@ -981,6 +1022,24 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("release validation must run default tests against the same verified ROM fixtures:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnSession() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Run structural guards in a fresh session")) {
+            violations.add(".github/workflows/release.yml does not name the isolated structural-guard step");
+        }
+        if (!workflow.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" -- mvn -Dmse=off -Pguards test -B")) {
+            violations.add(".github/workflows/release.yml does not run -Pguards through the session coordinator");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release validation must keep structural guards in a fresh coordinator session:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -3572,6 +3631,19 @@ class TestBuildToolingGuard {
         for (int i = 0; i < children.getLength(); i++) {
             Node child = children.item(i);
             if (child instanceof Element element && tagName.equals(element.getTagName())) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private static Element directChildWithText(Element root, String tagName,
+                                               String textTagName, String expectedText) {
+        NodeList children = root.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child instanceof Element element && tagName.equals(element.getTagName())
+                    && expectedText.equals(directChildText(element, textTagName))) {
                 return element;
             }
         }

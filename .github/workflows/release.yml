@@ -69,6 +69,11 @@ jobs:
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
+      - name: Run structural guards in a fresh session
+        id: release-guard-tests
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+
       - name: Run trace replay policy tests
         id: release-trace-tests
         shell: bash
