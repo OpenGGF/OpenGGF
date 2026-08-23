@@ -52,6 +52,54 @@ Entries should include:
 26. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
 27. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
 28. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
+29. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
+
+---
+
+## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
+
+**Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and
+`VirtualSynthesizer`.
+
+### Previous symptom
+
+Repeated Blue Sphere pickups could sound harder or more abrupt than the retail
+game because an entire 34-write FM5 voice upload reached the emulated YM2612 at
+one host instant. Register order was correct, but the source Z80 bus spacing and
+the YM chip's internal advancement between writes were absent.
+
+### Narrowed status (2026-08-22)
+
+The retained Genesis Plus GX lab now reproduces twelve Blue Sphere upload
+groups with one byte-identical 34-write relative-cycle vector, no DMA stalls,
+and no observer fault or overflow. OpenGGF schedules the S3K service against
+that source-relative vector and drains it at YM internal-sample boundaries.
+Focused playback, service-order, contention, rewind, observer, pause, fade,
+one-up, PAL, ring-panning, special-stage, OpenAL, and snapshot tests pass. The
+replacement playback gate requires a closed-world drained prefix: the exact
+13-event committed Spring tail is followed immediately by the exact Blue Sphere
+attack stream, with no intervening event. The pending Blue Sphere service stays
+exactly 34 reviewed source/segment-tagged writes and rejects any music or
+completion-restore prefix. Its architecture
+guard also requires rollback capture as the helper's first unconditional
+statement and permits only the reviewed transaction setup. The
+full three-ROM suite introduces no failure attributable to this change when
+compared by test identity with the isolated feature-base baseline at
+`914ac9a87badbad5c574cd8edaadc81c743e390a`; the 117 red identities and their
+failure/error classifications are byte-identical.
+
+The evidence establishes relative write spacing, not an absolute phase within
+VInt, and the native capture contains no DMA-contended upload. Those are limits
+on the claim rather than known runtime mismatches. The implementation branch is
+therefore intentionally held out of integration until a human listen covers the
+first pickup, rapid pickups, completion/turn boundaries, replacement of another
+FM5 SFX, rings, and special-stage speed-shoes entry.
+
+### Removal condition
+
+Remove this entry after a positive listen and integration of the exact verified
+handoff commit. Reopen source-timing investigation if the listen identifies a
+repeatable onset defect within the scenarios above.
 
 ---
 

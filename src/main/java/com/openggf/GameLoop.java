@@ -4323,6 +4323,12 @@ public class GameLoop {
     }
 
     private void playSpecialStageStageMusic(SpecialStageProvider ssProvider) {
+        // Special-stage entry clears gameplay power-ups. Clear both audio
+        // speed mechanisms at the same boundary, immediately before the new
+        // song is constructed, so it cannot inherit the outgoing level's
+        // speed-shoes tempo. S3K's stage-local acceleration starts from here.
+        audioManager.setSpeedShoes(false);
+        audioManager.setSpeedMultiplier(1);
         int musicId = ssProvider.getStageMusicId();
         if (!audioManager.playMusic(ssProvider.getStageMusic()) && musicId >= 0) {
             audioManager.playMusic(musicId);

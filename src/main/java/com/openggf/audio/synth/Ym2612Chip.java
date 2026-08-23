@@ -3,6 +3,8 @@ package com.openggf.audio.synth;
 import com.openggf.audio.smps.DacData;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -572,6 +574,11 @@ public class Ym2612Chip {
     private int en0, en1, en2, en3;
     private int traceEvents;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private RuntimeException writeObserverFailure;
+    private YmWriteTimeline writeTimeline;
+    private final Consumer<YmWriteTimeline.Entry> scheduledWriteMutation =
+            this::applyScheduledWrite;
+    private long renderedMasterCycles;
 
     public Ym2612Chip() {
         for (int i = 0; i < 6; i++) {
@@ -611,6 +618,7 @@ public class Ym2612Chip {
 
         // Reset resampling state
         resampleAccum = 0.0;
+        renderedMasterCycles = 0;
         lastLeft = lastRight = 0;
         prevLeft = prevRight = 0;
         blipResampler.reset();
@@ -968,7 +976,116 @@ public class Ym2612Chip {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
     }
 
+    void setWriteTimeline(YmWriteTimeline timeline) {
+        writeTimeline = Objects.requireNonNull(timeline, "timeline");
+    }
+
+    long renderedMasterCycleFrontier() {
+        return renderedMasterCycles;
+    }
+
+    void restoreRenderedMasterCycles(long renderedMasterCycles) {
+        if (renderedMasterCycles < 0) {
+            throw new IllegalArgumentException(
+                    "rendered master cycles cannot be negative");
+        }
+        this.renderedMasterCycles = renderedMasterCycles;
+    }
+
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "YM snapshot cannot be null");
+        }
+        requireFinitePositive(snapshot.chipClock(), "YM chip clock");
+        requireFinitePositive(snapshot.z80Clock(), "YM Z80 clock");
+        requireFinitePositive(snapshot.internalRate(), "YM internal rate");
+        requireFinitePositive(snapshot.outputRate(), "YM output rate");
+        requireFinitePositive(snapshot.resampleRatio(),
+                "YM resample ratio");
+        requireFinitePositive(snapshot.inverseResampleRatio(),
+                "YM inverse resample ratio");
+        requireFinite(snapshot.dacPos(), "YM DAC position");
+        requireFinite(snapshot.dacStep(), "YM DAC step");
+        requireFinite(snapshot.resampleAccum(), "YM resample accumulator");
+        requireFinite(snapshot.busyCycles(), "YM busy cycles");
+        if (Double.compare(snapshot.internalRate(),
+                snapshot.chipClock() / 144.0) != 0
+                || Double.compare(snapshot.resampleRatio(),
+                snapshot.internalRate() / snapshot.outputRate()) != 0
+                || Double.compare(snapshot.inverseResampleRatio(),
+                1.0 / snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM snapshot rates are inconsistent");
+        }
+        BlipResampler.validateSnapshot(snapshot.blipResampler());
+        if (Double.compare(snapshot.blipResampler().ratio(),
+                snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM resampler ratio does not match chip rates");
+        }
+        ChannelSnapshot[] channels = snapshot.channels();
+        if (channels.length != 6 || snapshot.mutes().length != 6) {
+            throw new IllegalArgumentException(
+                    "YM snapshot channel arrays have invalid lengths");
+        }
+        for (ChannelSnapshot channel : channels) {
+            validateChannelSnapshot(channel);
+        }
+        if (snapshot.chipType() < YM2612_DISCRETE
+                || snapshot.chipType() > YM2612_ENHANCED
+                || snapshot.currentDacSampleId() < -1
+                || snapshot.ssgEgActiveCount() < 0
+                || snapshot.ssgEgActiveCount() > 24
+                || snapshot.egTimer() < 0 || snapshot.egTimer() >= 3) {
+            throw new IllegalArgumentException(
+                    "YM snapshot scalar state is invalid");
+        }
+    }
+
+    private static void validateChannelSnapshot(ChannelSnapshot channel) {
+        if (channel == null
+                || channel.slotFnum().length != 4
+                || channel.slotBlock().length != 4
+                || channel.slotKCode().length != 4
+                || channel.slotFc().length != 4
+                || channel.slotBlockFnum().length != 4
+                || channel.opOut().length != 4
+                || channel.ops().length != 4) {
+            throw new IllegalArgumentException(
+                    "YM channel snapshot shape is invalid");
+        }
+        for (OperatorSnapshot operator : channel.ops()) {
+            if (operator == null || operator.curEnv() == null) {
+                throw new IllegalArgumentException(
+                        "YM operator snapshot is invalid");
+            }
+        }
+    }
+
+    private static void requireFinitePositive(double value, String name) {
+        requireFinite(value, name);
+        if (value <= 0.0) {
+            throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private static void requireFinite(double value, String name) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(name + " must be finite");
+        }
+    }
+
     public void write(int port, int reg, int val) {
+        writeImmediate(port, reg, val);
+        throwPendingWriteObserverFailure();
+    }
+
+    private void applyScheduledWrite(YmWriteTimeline.Entry entry) {
+        writeImmediate(entry.port(), entry.register(), entry.value());
+    }
+
+    private void writeImmediate(int port, int reg, int val) {
         int resolvedPort = port & 1;
         int resolvedReg = reg & 0x1FF;
         if ((resolvedReg & 0x100) != 0) {
@@ -977,7 +1094,48 @@ public class Ym2612Chip {
         }
         writeAddress(resolvedPort, resolvedReg);
         writeData(resolvedPort, val);
-        writeObserver.onYm2612Write(resolvedPort, resolvedReg, val & 0xFF);
+        int observedPort = resolvedPort;
+        int observedRegister = resolvedReg;
+        observeWrite(() -> writeObserver.onYm2612Write(
+                observedPort, observedRegister, val & 0xFF));
+    }
+
+    private void observeWrite(Runnable callback) {
+        try {
+            callback.run();
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+        }
+    }
+
+    private void recordWriteObserverFailure(RuntimeException failure) {
+        if (writeObserverFailure == null) {
+            writeObserverFailure = failure;
+        } else if (failure != writeObserverFailure) {
+            writeObserverFailure.addSuppressed(failure);
+        }
+    }
+
+    private int observedChannelMask() {
+        try {
+            return writeObserver.ym2612ChannelSampleMask() & 0x3F;
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+            return 0;
+        }
+    }
+
+    RuntimeException takePendingWriteObserverFailure() {
+        RuntimeException failure = writeObserverFailure;
+        writeObserverFailure = null;
+        return failure;
+    }
+
+    private void throwPendingWriteObserverFailure() {
+        RuntimeException failure = takePendingWriteObserverFailure();
+        if (failure != null) {
+            throw failure;
+        }
     }
 
     public void writeAddress(int port, int reg) {
@@ -1368,6 +1526,8 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
         }
         Operator sl = ch.ops[idx];
+        observeWrite(() -> writeObserver.onYm2612KeyOn(
+                channelIndex(ch), idx, sl.volume));
         // GPGX-style: use separate key flag instead of checking envelope state.
         // This properly gates key-on to only trigger on 0->1 transitions.
         if (!sl.key && csmKeyFlag == 0) {
@@ -1590,6 +1750,11 @@ public class Ym2612Chip {
      * Generate one internal sample at ~53kHz. Updates lastLeft/lastRight.
      */
     private void renderOneSample() {
+        if (writeTimeline != null) {
+            writeTimeline.drainDue(
+                    renderedMasterCycles, scheduledWriteMutation);
+        }
+
         // GPGX: LFO values are read BEFORE update (for use in channel calc)
         // and then updated AFTER channel calculation
         int pmLfo = lfoPm;
@@ -1610,6 +1775,7 @@ public class Ym2612Chip {
 
         int leftSum = 0;
         int rightSum = 0;
+        int observedChannelMask = observedChannelMask();
         for (int ch = 0; ch < 6; ch++) {
             Channel chan = channels[ch];
             int out = 0;
@@ -1617,6 +1783,13 @@ public class Ym2612Chip {
                 out = dacMixedOut;
             } else if (!mutes[ch]) {
                 out = renderChannel(ch, envLfo, pmLfo);
+            }
+
+            if ((observedChannelMask & (1 << ch)) != 0) {
+                int observedChannel = ch;
+                int observedOutput = out;
+                observeWrite(() -> writeObserver.onYm2612ChannelSample(
+                        observedChannel, observedOutput));
             }
 
             if (chan.leftMask != 0)
@@ -1661,6 +1834,8 @@ public class Ym2612Chip {
         }
 
         tickTimers();
+        renderedMasterCycles = Math.addExact(renderedMasterCycles,
+                YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE);
     }
 
     // DEBUG: Set to true to mute FM4 (channel 3) for Signpost SFX debugging

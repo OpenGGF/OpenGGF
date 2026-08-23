@@ -254,6 +254,76 @@ public class PsgChip {
         blip.restoreSnapshot(snapshot.blip());
     }
 
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot cannot be null");
+        }
+        requireFinitePositive(snapshot.inputClock(), "PSG input clock");
+        requireFinitePositive(snapshot.internalRate(), "PSG internal rate");
+        requireFinitePositive(snapshot.outputRate(), "PSG output rate");
+        if (Double.compare(snapshot.internalRate(),
+                snapshot.inputClock() / 16.0) != 0) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot rates are inconsistent");
+        }
+        requireLength(snapshot.regs(), 8, "PSG registers");
+        requireLength(snapshot.freqInc(), 4, "PSG frequency increments");
+        requireLength(snapshot.freqCounter(), 4,
+                "PSG frequency counters");
+        requireLength(snapshot.polarity(), 4, "PSG polarities");
+        requireLength(snapshot.mutes(), 4, "PSG mutes");
+        requireMatrix(snapshot.chanOut(), "PSG channel output");
+        requireMatrix(snapshot.chanAmp(), "PSG channel amplitude");
+        requireMatrix(snapshot.chanDelta(), "PSG channel deltas");
+        if (snapshot.latch() < 0 || snapshot.latch() >= 8
+                || snapshot.clocksPerSampleFixed() <= 0
+                || snapshot.clockFrac() < 0
+                || snapshot.clockFrac() >= CLOCK_FRAC_UNIT
+                || (snapshot.noiseShiftWidth() != 14
+                && snapshot.noiseShiftWidth() != 15)) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot scalar state is invalid");
+        }
+        BlipDeltaBuffer.validateSnapshot(snapshot.blip());
+    }
+
+    private static void requireLength(
+            int[] values, int length, String name) {
+        if (values.length != length) {
+            throw new IllegalArgumentException(
+                    name + " has invalid length");
+        }
+    }
+
+    private static void requireLength(
+            boolean[] values, int length, String name) {
+        if (values.length != length) {
+            throw new IllegalArgumentException(
+                    name + " has invalid length");
+        }
+    }
+
+    private static void requireMatrix(int[][] values, String name) {
+        if (values.length != 4) {
+            throw new IllegalArgumentException(
+                    name + " has invalid channel count");
+        }
+        for (int[] row : values) {
+            if (row == null || row.length != 2) {
+                throw new IllegalArgumentException(
+                        name + " has invalid channel width");
+            }
+        }
+    }
+
+    private static void requireFinitePositive(double value, String name) {
+        if (!Double.isFinite(value) || value <= 0.0) {
+            throw new IllegalArgumentException(
+                    name + " must be finite and positive");
+        }
+    }
+
     public void setMute(int ch, boolean mute) {
         if (ch < 0 || ch >= 4) {
             return;

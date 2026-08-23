@@ -50,6 +50,13 @@ public final class SmpsSequencerConfig {
         SFX_THEN_MUSIC
     }
 
+    public enum SfxStartTiming {
+        /** S1/S2: queue processing precedes the SFX track loop. */
+        SAME_DRIVER_UPDATE,
+        /** S3K: zUpdateSFXTracks precedes queue processing. */
+        NEXT_DRIVER_UPDATE
+    }
+
     /** How carrier operators are determined for volume scaling. */
     public enum VolMode {
         /** S1/S2: carrier mask derived from algorithm number via ALGO_OUT_MASK table. */
@@ -94,8 +101,18 @@ public final class SmpsSequencerConfig {
     public enum FmSfxTakeoverMode {
         /** Legacy engine behavior: clear internal chip state and inject a key-off. */
         FORCE_RESET,
+        /** S3K fix_sndbugs=0: key off and clear all four SSG-EG registers. */
+        KEY_OFF_CLEAR_SSG_EG,
         /** Shipped-driver behavior: let the SFX bytecode perform all visible writes. */
         REGISTER_SEQUENCE
+    }
+
+    /** Hardware writes performed when an ordinary FM SFX track ends. */
+    public enum FmSfxReleaseMode {
+        /** Legacy behavior: force maximum release/TL before restoring music. */
+        FORCE_SILENCE_THEN_RESTORE,
+        /** S3K fix_sndbugs=0 cfStopTrack: key off, then restore music directly. */
+        RESTORE_MUSIC_DIRECTLY
     }
 
     public enum PsgSfxReleaseMode {
@@ -203,6 +220,7 @@ public final class SmpsSequencerConfig {
     private final TempoPhasePolicy tempoPhasePolicy;
     private final SfxPriorityPolicy sfxPriorityPolicy;
     private final DriverServiceOrder driverServiceOrder;
+    private final SfxStartTiming sfxStartTiming;
     private final Map<Integer, Integer> coordFlagParamOverrides;
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
@@ -210,6 +228,7 @@ public final class SmpsSequencerConfig {
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final FmSfxReleaseMode fmSfxReleaseMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
     private final FadeOutChannelPolicy fadeOutChannelPolicy;
     private final MusicOverrideSpeedPolicy musicOverrideSpeedPolicy;
@@ -223,6 +242,7 @@ public final class SmpsSequencerConfig {
     private final boolean fadeOutClearsSpeedShoes;
     private final boolean fadeOutStopsSfxImmediately;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
+    private final YmServiceTimingProfile ymServiceTimingProfile;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -249,6 +269,7 @@ public final class SmpsSequencerConfig {
         this.tempoPhasePolicy = b.tempoPhasePolicy;
         this.sfxPriorityPolicy = b.sfxPriorityPolicy;
         this.driverServiceOrder = b.driverServiceOrder;
+        this.sfxStartTiming = b.sfxStartTiming;
         this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
                 ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
                 : Collections.emptyMap();
@@ -260,6 +281,7 @@ public final class SmpsSequencerConfig {
         this.relativePointers = b.relativePointers;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
         this.fadeOutChannelPolicy = b.fadeOutChannelPolicy;
         this.musicOverrideSpeedPolicy = b.musicOverrideSpeedPolicy;
@@ -273,6 +295,7 @@ public final class SmpsSequencerConfig {
         this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
+        this.ymServiceTimingProfile = b.ymServiceTimingProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -337,6 +360,10 @@ public final class SmpsSequencerConfig {
         return driverServiceOrder;
     }
 
+    public SfxStartTiming getSfxStartTiming() {
+        return sfxStartTiming;
+    }
+
     /**
      * Returns overrides for coordination flag parameter lengths.
      * Keys are flag commands (0xE0-0xFF), values are the param length for that flag.
@@ -388,6 +415,10 @@ public final class SmpsSequencerConfig {
         return fmSfxTakeoverMode;
     }
 
+    public FmSfxReleaseMode getFmSfxReleaseMode() {
+        return fmSfxReleaseMode;
+    }
+
     public PsgSfxReleaseMode getPsgSfxReleaseMode() {
         return psgSfxReleaseMode;
     }
@@ -406,6 +437,10 @@ public final class SmpsSequencerConfig {
 
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
         return fmVoiceWriteProfile;
+    }
+
+    public YmServiceTimingProfile getYmServiceTimingProfile() {
+        return ymServiceTimingProfile;
     }
 
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
@@ -512,6 +547,8 @@ public final class SmpsSequencerConfig {
         private SfxPriorityPolicy sfxPriorityPolicy = SfxPriorityPolicy.NONE;
         private DriverServiceOrder driverServiceOrder =
                 DriverServiceOrder.MUSIC_THEN_SFX;
+        private SfxStartTiming sfxStartTiming =
+                SfxStartTiming.SAME_DRIVER_UPDATE;
         private Map<Integer, Integer> coordFlagParamOverrides = null;
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
@@ -519,6 +556,8 @@ public final class SmpsSequencerConfig {
         private boolean relativePointers = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private FmSfxReleaseMode fmSfxReleaseMode =
+                FmSfxReleaseMode.FORCE_SILENCE_THEN_RESTORE;
         private PsgSfxReleaseMode psgSfxReleaseMode =
                 PsgSfxReleaseMode.RESTORE_LIVE_STATE;
         private FadeOutChannelPolicy fadeOutChannelPolicy =
@@ -541,6 +580,8 @@ public final class SmpsSequencerConfig {
         private boolean fadeOutClearsSpeedShoes;
         private boolean fadeOutStopsSfxImmediately;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
+        private YmServiceTimingProfile ymServiceTimingProfile =
+                YmServiceTimingProfile.none();
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -563,6 +604,7 @@ public final class SmpsSequencerConfig {
         public Builder tempoPhasePolicy(TempoPhasePolicy val) { tempoPhasePolicy = val; return this; }
         public Builder sfxPriorityPolicy(SfxPriorityPolicy val) { sfxPriorityPolicy = val; return this; }
         public Builder driverServiceOrder(DriverServiceOrder val) { driverServiceOrder = val; return this; }
+        public Builder sfxStartTiming(SfxStartTiming val) { sfxStartTiming = val; return this; }
         public Builder coordFlagParamOverrides(Map<Integer, Integer> val) { coordFlagParamOverrides = val; return this; }
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
@@ -570,6 +612,7 @@ public final class SmpsSequencerConfig {
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
         public Builder fadeOutChannelPolicy(FadeOutChannelPolicy val) { fadeOutChannelPolicy = val; return this; }
         public Builder musicOverrideSpeedPolicy(MusicOverrideSpeedPolicy val) { musicOverrideSpeedPolicy = val; return this; }
@@ -583,6 +626,7 @@ public final class SmpsSequencerConfig {
         public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
+        public Builder ymServiceTimingProfile(YmServiceTimingProfile val) { ymServiceTimingProfile = Objects.requireNonNull(val, "val"); return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }
@@ -603,7 +647,9 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(tempoPhasePolicy, "tempoPhasePolicy");
             Objects.requireNonNull(sfxPriorityPolicy, "sfxPriorityPolicy");
             Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
+            Objects.requireNonNull(sfxStartTiming, "sfxStartTiming");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
             Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
             Objects.requireNonNull(fadeOutChannelPolicy, "fadeOutChannelPolicy");
             Objects.requireNonNull(musicOverrideSpeedPolicy, "musicOverrideSpeedPolicy");

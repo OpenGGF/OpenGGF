@@ -75,6 +75,7 @@ public record SmpsTrackSnapshot(
         boolean fmVolEnvHold,
         int fmVolEnvOpMask,
         boolean forceRefresh,
+        int internalStateFlags,
         int[] ssgEg,
         boolean dacMuted,
         boolean modStepInEffect,

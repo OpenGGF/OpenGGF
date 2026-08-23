@@ -193,7 +193,55 @@
   object pass. The engine installs it during the player's touch scan and now
   consumes that dispatch instead of running the new handler on the frame that
   installed it. The killing frame ends with the wait at $7F, as in ROM.
+- **Sonic 3&K FM writes now reach the YM2612 on the source driver's measured
+  bus timeline instead of collapsing into one host-side instant:** the retained
+  Genesis Plus GX lab records the repeatable 34-write Blue Sphere FM5 upload,
+  and the engine schedules that sequence by source-relative master cycle while
+  retaining atomic service publication, rollback, rewind, pause, fade, and
+  cross-SFX ownership semantics. Sonic 1 and Sonic 2 remain on their audited
+  untimed profiles because their 68k/Z80 service paths do not justify inheriting
+  S3K's timing. The replacement playback oracle requires a closed-world drained
+  prefix: the exact 13-event committed Spring tail is followed immediately by
+  the exact Blue Sphere attack stream, with no intervening event. The pending
+  service remains an exact 34-write source/segment sequence that rejects every
+  music or completion-restore prefix, including pan/algorithm writes. The
+  rollback architecture guard structurally requires capture as the first
+  unconditional helper statement and admits only
+  the reviewed transaction setup plus timing-dominated callsites. Automated
+  native, oracle, ROM-backed, and presentation gates are complete against an
+  isolated feature-base comparison; integration remains blocked on the
+  listening check.
 
+- **Sonic 3&K FM SFX now publish the retail first-note bus sequence:** the
+  Z80-style sequencer applies the initial modulation step before its single
+  frequency write and no longer emits an extra pan/frequency pair ahead of
+  key-on. The bounded playback trace can now align selected-channel samples to
+  exact YM2612 key-ons, and its special-stage replay continues clocking audio
+  across lag frames so isolated Blue Sphere restarts are checked at the
+  boundary where the reported onset problem occurs. Sonic 1 and Sonic 2 retain
+  their existing 68k/Z80 voice-write profiles.
+
+- **YM2612 and PSG output now retain the retail mixer level in all three
+  games:** the shared synthesizer no longer halves the already-clipped chip
+  mix through a synthetic `-6 dB` headroom stage. A native Genesis Plus GX
+  capture exposed the exact loss during repeated Blue Sphere pickups; the
+  corrected OpenGGF segment is within 0.2 dB RMS of the native reference while
+  preserving the ROM's intentional two-note `$05` then `$0A` FM attenuation.
+
+- **Sonic 3&K special-stage audio now crosses the same driver boundaries as
+  the retail game:** entry clears the level's speed-shoes tempo before loading
+  special-stage music, ring pickups use the Z80 driver's alternating speaker
+  selection, and rapid Blue Sphere SFX replacements retain FM5 ownership
+  without transiently restoring the music voice when they replace another
+  FM5 SFX, or injecting a full-channel `RR=FF` / `TL=7F` silence between notes
+  or at the ordinary track-stop boundary. Newly admitted S3K SFX now wait for
+  the next driver update because retail queue processing follows that update's
+  SFX loop; S1 and S2 retain their same-update start because their queue logic
+  precedes their SFX loops. A new bounded playback trace exercises the real
+  presentation/cache path at several retrigger phases and records ordered
+  requests, YM2612/PSG writes, key-on envelope state, selected-channel samples,
+  and final stereo PCM fingerprints without expanding the complete-run trace
+  contract.
 - **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
   retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
   longer inherit that destructive policy from shared presentation code. Direct
@@ -2364,8 +2412,8 @@ All notable changes to the OpenGGF project are documented in this file.
   published total, reading the published values rather than recomputing them.
 
 ## Unreleased
-- Fix(s3k): blue-sphere special-stage ring collection now plays the ROM's
-  `sfx_RingRight` sound directly instead of using gameplay ring-channel alternation.
+- Fix(s3k): blue-sphere special-stage ring collection now submits the ROM's
+  `sfx_RingRight` request through the driver-owned left/right alternation.
 - Fix(s2): the Egg Prison's break delay now runs the 30 passes the ROM runs, not
   29. `loc_3F2FC` is `subq.w #1,objoff_34(a0)` / `bpl.s return_3F352`
   (s2disasm/s2.asm:84909-84910), and `bpl` branches on zero as well as on

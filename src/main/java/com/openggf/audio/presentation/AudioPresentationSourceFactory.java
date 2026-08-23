@@ -1150,6 +1150,27 @@ public final class AudioPresentationSourceFactory
                         AudioDiagnosticObserverException.invoke(() ->
                                 observer.onPsgWrite(value)));
             }
+
+            @Override
+            public int ym2612ChannelSampleMask() {
+                return observer.ym2612ChannelSampleMask();
+            }
+
+            @Override
+            public void onYm2612ChannelSample(int channel, int output) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612ChannelSample(channel, output)));
+            }
+
+            @Override
+            public void onYm2612KeyOn(
+                    int channel, int operator, int attenuation) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612KeyOn(
+                                        channel, operator, attenuation)));
+            }
         };
     }
 

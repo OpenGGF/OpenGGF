@@ -64,6 +64,10 @@ public final class Sonic2SmpsSequencerConfig {
                         SmpsSequencerConfig.SfxRequestTransformPolicy
                                 .SONIC2_SPINDASH_REV)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
+                // zUpdateEverything cycles the queue before zUpdateMusic and
+                // the SFX loops, so admission and first service share a VInt.
+                .sfxStartTiming(
+                        SmpsSequencerConfig.SfxStartTiming.SAME_DRIVER_UPDATE)
                 .fmSfxTakeoverMode(
                         SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .psgSfxReleaseMode(

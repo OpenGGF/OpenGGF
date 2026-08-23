@@ -237,6 +237,7 @@ Cleanup is not allowed to lead the roadmap or broaden a parity change.
 
 The bounded playback-authenticity implementation is complete through Phase 6.
 Final delivery is limited to JDK 21 regression comparison, integration, and the
-manual listening checklist. Phase 7 remains intentionally deferred cleanup; it
-is not a prerequisite for authentic playback and must not reopen native
-observer schemas or complete-run evidence.
+[manual listening checklist](../../validation/audio/2026-08-21-smps-playback-listening-checklist.md).
+Human approval is still pending while that checklist is unchecked. Phase 7
+remains intentionally deferred cleanup; it is not a prerequisite for authentic
+playback and must not reopen native observer schemas or complete-run evidence.

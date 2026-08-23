@@ -117,6 +117,12 @@ namespace OpenGGF.BizHawk.Headless
             return new GpgxAudioTraceNative(new GpgxAudioObserverAdapter(core));
         }
 
+        internal T BindDiagnosticDeparture<T>() where T : class
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            return new GpgxAudioObserverAdapter(core).BindDeparture<T>();
+        }
+
         internal byte[] CloneSavestate()
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");
@@ -148,6 +154,16 @@ namespace OpenGGF.BizHawk.Headless
                 writer.Write(count); for (int i = 0; i < count * 2; i++) writer.Write(samples[i]);
                 writer.Flush(); return stream.ToArray();
             }
+        }
+
+        internal short[] DrainDiagnosticAudio(out int stereoFrames)
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            short[] samples;
+            soundProvider.GetSamplesSync(out samples, out stereoFrames);
+            var copy = new short[checked(stereoFrames * 2)];
+            Array.Copy(samples, copy, copy.Length);
+            return copy;
         }
 
         internal void LoadSavestate(byte[] state)
@@ -258,6 +274,17 @@ namespace OpenGGF.BizHawk.Headless
         public void Advance()
         {
             core.FrameAdvance(controller, false, false);
+            ThrowPendingExecuteCallbackException();
+        }
+
+        internal void AdvanceDiagnosticAudio()
+        {
+            core.FrameAdvance(controller, false, true);
+            ThrowPendingExecuteCallbackException();
+        }
+
+        private void ThrowPendingExecuteCallbackException()
+        {
             if (pendingExecuteCallbackException != null)
             {
                 Exception callbackFailure =
@@ -400,5 +427,45 @@ namespace OpenGGF.BizHawk.Headless
                 GC.KeepAlive(observedAction);
             }
         }
+    }
+
+    public abstract class GpgxYmTimingLabDepartures
+    {
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract uint gpgx_ym_timing_lab_event_size();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract uint gpgx_ym_timing_lab_capacity();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_begin_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_end_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_event_count(
+            out uint count, out uint overflow);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_drain(
+            [System.Runtime.InteropServices.Out] GpgxAudioTraceEvent[] events,
+            uint capacity, out uint count);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_first_fault(out uint fault);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_abort_frame();
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_mark_sound_request(
+            uint soundId, uint fmChannel);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_configure_z80_admission(
+            uint admissionPc, uint groupStartPc,
+            uint soundId, uint fmChannel, uint ownerIx);
     }
 }

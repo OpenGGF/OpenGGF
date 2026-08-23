@@ -362,6 +362,19 @@ public class BlipDeltaBuffer {
         this.integR = snapshot.integR();
     }
 
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "blip delta snapshot cannot be null");
+        }
+        if (snapshot.factorFp() <= 0 || snapshot.size() < BUF_EXTRA
+                || snapshot.bufferLRef().length != snapshot.size()
+                || snapshot.bufferRRef().length != snapshot.size()) {
+            throw new IllegalArgumentException(
+                    "blip delta snapshot shape is invalid");
+        }
+    }
+
     public record Snapshot(
             long factorFp,
             long offsetFp,

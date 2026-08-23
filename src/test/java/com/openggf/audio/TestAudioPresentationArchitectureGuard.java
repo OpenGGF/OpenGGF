@@ -423,6 +423,146 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void driverGuardAllowsOnlyTheReviewedTimedAdmissionRollbackCallsite() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); "
+                        + "if (ymServiceTransaction != null) { "
+                        + "throw new IllegalStateException("
+                        + "\"a YM driver service transaction is already active\"); } "
+                        + "if (ymDriverServiceReservation == null) { "
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source)); } "
+                        + "long cursor = Math.max(ymServiceCursor, Math.max("
+                        + "renderedYmMasterCycle(), "
+                        + "lastPendingYmWriteDueCycle())); "
+                        + "ymServiceTransaction = new ServiceTransaction("
+                        + "rollback, source, nextYmServiceOrdinal, "
+                        + "ymTimelineGeneration(), cursor, implicit, "
+                        + "isOrderedSiblingFence(source)); "
+                        + "return ymServiceTransaction; }");
+
+        assertFalse(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsYmTransactionRollbackAtAnUnreviewedCallsite() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsAnExtraSnapshotInsideTheReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsConditionalCaptureInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { if (implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); } return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsCaptureAfterMutationInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { mutateDriverState(); "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; } "
+                        + "private void mutateDriverState() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsUnexpectedWorkInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); unexpectedWork(); "
+                        + "return transaction; } private void unexpectedWork() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void productionYmRollbackSeamRetainsItsReviewedShape() throws IOException {
+        String source = Files.readString(
+                AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Map.Entry<MethodSignature, String> helper = methods.entrySet().stream()
+                .filter(entry -> entry.getKey().name().equals(
+                        "beginYmServiceTransaction"))
+                .findFirst().orElseThrow();
+        assertTrue(reviewedYmTransactionHelper(
+                helper.getKey(), helper.getValue()),
+                () -> "unreviewed statements: "
+                        + topLevelStatements(helper.getValue()).stream()
+                        .map(statement -> statement.replaceAll("\\s+", ""))
+                        .toList());
+        String admission = methodsNamed(methods, "commitSfxAdmission")
+                .getFirst().getValue();
+        int call = admission.indexOf("beginYmServiceTransaction(");
+        assertTrue(call >= 0 && reviewedYmTransactionCallDominates(
+                new MethodSignature("commitSfxAdmission", ""),
+                admission, call));
+    }
+
+    @Test
     void warmedMaterializationGuardTraversesAnnotatedHelpers() {
         for (String forbidden : List.of(
                 "SmpsSourceDescriptor.from(data);",
@@ -1114,7 +1254,7 @@ class TestAudioPresentationArchitectureGuard {
         return !roots.isEmpty() && roots.stream().allMatch(root ->
                 observerSafe(root.getValue(), methods,
                         allowDriverObserverGate, false,
-                        new HashSet<>(Set.of(root.getKey()))));
+                        new HashSet<>(Set.of(root.getKey())), root.getKey()));
     }
 
     private static boolean observerSafe(
@@ -1122,7 +1262,8 @@ class TestAudioPresentationArchitectureGuard {
             Map<MethodSignature, String> methods,
             boolean allowDriverObserverGate,
             boolean inheritedObserverDominance,
-            Set<MethodSignature> activeMethods) {
+            Set<MethodSignature> activeMethods,
+            MethodSignature currentMethod) {
         int capture = body.indexOf("captureLiveCommandMutation(");
         while (capture >= 0) {
             if (!allowDriverObserverGate
@@ -1142,12 +1283,22 @@ class TestAudioPresentationArchitectureGuard {
             Matcher calls = localCallPattern(called).matcher(body);
             while (calls.find()) {
                 int call = calls.start();
+                if (called.equals("beginYmServiceTransaction")) {
+                    if (!reviewedYmTransactionCallDominates(
+                                    currentMethod, body, call)
+                            || !reviewedYmTransactionHelper(
+                                    method.getKey(), method.getValue())) {
+                        return false;
+                    }
+                    continue;
+                }
                 if (activeMethods.add(method.getKey())) {
                     boolean dominated = allowDriverObserverGate
                             && (inheritedObserverDominance
                             || observerDominates(body, call));
                     boolean safe = observerSafe(method.getValue(), methods,
-                            allowDriverObserverGate, dominated, activeMethods);
+                            allowDriverObserverGate, dominated, activeMethods,
+                            method.getKey());
                     activeMethods.remove(method.getKey());
                     if (!safe) {
                         return false;
@@ -1156,6 +1307,122 @@ class TestAudioPresentationArchitectureGuard {
             }
         }
         return true;
+    }
+
+    private static boolean reviewedYmTransactionHelper(
+            MethodSignature method, String body) {
+        String parameters = method.parameters().replaceAll("\\s+", "");
+        List<String> statements = topLevelStatements(body).stream()
+                .map(statement -> statement.replaceAll("\\s+", ""))
+                .toList();
+        List<String> setup = List.of(
+                "if(ymDriverServiceReservation==null){"
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source));}",
+                "longcursor=Math.max(ymServiceCursor,Math.max("
+                        + "renderedYmMasterCycle(),"
+                        + "lastPendingYmWriteDueCycle()));",
+                "ymServiceTransaction=newServiceTransaction("
+                        + "rollback,source,nextYmServiceOrdinal,"
+                        + "ymTimelineGeneration(),cursor,implicit,"
+                        + "isOrderedSiblingFence(source));",
+                "returnymServiceTransaction;");
+        return parameters.equals("Objectsource,booleanimplicit")
+                && occurrences(body.replaceAll("\\s+", ""),
+                        "captureLiveCommandMutation()") == 1
+                && statements.size() == 6
+                && statements.get(0).equals(
+                "LiveCommandMutationTokenrollback="
+                        + "captureLiveCommandMutation();")
+                && (statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException("
+                        + "\"aYMdriverservicetransactionisalreadyactive\");}")
+                || statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException();}"))
+                && statements.subList(2, 6).equals(setup);
+    }
+
+    private static List<String> topLevelStatements(String body) {
+        List<String> statements = new ArrayList<>();
+        int start = skipWhitespace(body, 0);
+        int parentheses = 0;
+        int brackets = 0;
+        int braces = 0;
+        for (int index = start; index < body.length(); index++) {
+            char value = body.charAt(index);
+            switch (value) {
+                case '(' -> parentheses++;
+                case ')' -> parentheses--;
+                case '[' -> brackets++;
+                case ']' -> brackets--;
+                case '{' -> braces++;
+                case '}' -> braces--;
+                default -> {
+                }
+            }
+            boolean simpleEnd = value == ';'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            boolean blockEnd = value == '}'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            if (!simpleEnd && !blockEnd) {
+                continue;
+            }
+            int next = skipWhitespace(body, index + 1);
+            if (blockEnd && body.startsWith("else", next)
+                    && identifierEndsAt(body, next + 4)) {
+                continue;
+            }
+            statements.add(body.substring(start, index + 1));
+            start = next;
+            index = next - 1;
+        }
+        if (start < body.length() && !body.substring(start).isBlank()) {
+            return List.of();
+        }
+        return statements;
+    }
+
+    private static boolean reviewedYmTransactionCallDominates(
+            MethodSignature currentMethod, String body, int offset) {
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            int conditionClose = conditionOpen < 0 ? -1
+                    : matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && offset > blockOpen && offset < blockClose) {
+                String compact = body.substring(
+                        conditionOpen + 1, conditionClose)
+                        .replaceAll("\\s+", "");
+                if (currentMethod.name().equals("commitSfxAdmission")
+                        && compact.equals(
+                                "timingProfileFor(admission.sequencer())"
+                                        + "!=YmServiceTimingProfile.none()")) {
+                    return true;
+                }
+                if (currentMethod.name().equals("beginYmTiming")
+                        && compact.equals("ymServiceTransaction==null")) {
+                    return true;
+                }
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static int occurrences(String text, String needle) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = text.indexOf(needle, offset)) >= 0) {
+            count++;
+            offset += needle.length();
+        }
+        return count;
     }
 
     private static boolean observerDominates(String body, int offset) {

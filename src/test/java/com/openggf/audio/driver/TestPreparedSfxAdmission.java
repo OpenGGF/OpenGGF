@@ -41,6 +41,41 @@ class TestPreparedSfxAdmission {
     private static volatile Object allocationSink;
 
     @Test
+    void s3kAdmissionUsesRetailKeyOffAndSsgEgWritesWithoutAChipReset() {
+        SmpsDriver driver = new SmpsDriver();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add(port + ":" + Integer.toHexString(register)
+                        + ":" + Integer.toHexString(value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode
+                                .KEY_OFF_CLEAR_SSG_EG)
+                .build();
+        SmpsSequencer blueSphere = sequencer(
+                driver, 0x65, config, track(5, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                blueSphere, 0, 1);
+
+        blueSphere.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(
+                "0:28:5",
+                "1:91:0", "1:99:0", "1:95:0", "1:9d:0"),
+                writes,
+                "fix_sndbugs=0 zPlaySound keys off FM5 and clears its four SSG-EG operators");
+    }
+
+    @Test
     void sfxConstructionAndPreparationDoNotMutateDriverSynthOrCoordination() {
         SmpsDriver driver = new SmpsDriver();
         AtomicInteger starts = new AtomicInteger();

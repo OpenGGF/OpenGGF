@@ -71,6 +71,10 @@ public final class Sonic1SmpsSequencerConfig {
                 .tempoPhasePolicy(SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO)
                 .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
                 .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
+                // UpdateMusic processes PlaySoundID before the music/SFX
+                // loops, so a newly admitted SFX is serviced immediately.
+                .sfxStartTiming(
+                        SmpsSequencerConfig.SfxStartTiming.SAME_DRIVER_UPDATE)
                 .coordFlagParamOverrides(coordOverrides)
                 .applyModOnNote(false)   // S1: don't apply modulation during note start (ModAlgo = 68k)
                 .halveModSteps(true)     // S1 cfModulation and FinishTrackUpdate both use lsr.b #1

@@ -428,6 +428,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K FM sound-effect service writes now retain the locked-on driver's source timing.** The
+  Blue Sphere collection sound no longer collapses its admission, voice upload, first attack, and
+  completion/restore writes into a single YM2612 instant, fixing the attenuated first replay after
+  an idle gap while preserving rapid retriggers, ring panning, and special-stage tempo. A bounded,
+  source-derived YM write timeline, transactional observer/rewind support, and reproducible GPGX
+  timing oracles cover the path; independent audits record equivalent S1/S2 timing gaps for later
+  game-specific work rather than applying the S3K model by symmetry.
+
 - **The Tails full-chain all-emeralds trace, and the run-chain test that was running in
   neither profile (`feature/ai-s3k-tails-fullchain-gating`, merged 2026-08-19 -- new 70-segment
   fixture, one gating hole closed).** `s3k-full-chain-tails-all-emeralds.bk2` (499,823 frames,

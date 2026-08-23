@@ -17,6 +17,31 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSmpsDriverSnapshot {
 
     @Test
+    void snapshotRestoresTheSynthOwnedGenerationAndDriverTimelineWatermarks() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsDriverSnapshot generationOne = driver.captureSnapshot();
+        assertEquals(1, generationOne.driverGeneration());
+        assertEquals(0, generationOne.ymServiceCursor());
+        assertEquals(0, generationOne.nextYmServiceOrdinal());
+        assertEquals(0, generationOne.nextYmWriteOrdinal());
+
+        driver.silenceAll();
+        assertEquals(2, driver.captureSnapshot().driverGeneration());
+
+        driver.restoreSnapshot(generationOne);
+        SmpsDriverSnapshot restored = driver.captureSnapshot();
+        assertEquals(generationOne.driverGeneration(),
+                restored.driverGeneration());
+        assertEquals(generationOne.ymServiceCursor(),
+                restored.ymServiceCursor());
+        assertEquals(generationOne.nextYmServiceOrdinal(),
+                restored.nextYmServiceOrdinal());
+        assertEquals(generationOne.nextYmWriteOrdinal(),
+                restored.nextYmWriteOrdinal());
+        assertEquals(generationOne.synthSnapshot(), restored.synthSnapshot());
+    }
+
+    @Test
     void precomputedTrustRequiresAnExplicitDescriptor() {
         CountingSmpsData data = new CountingSmpsData(
                 new byte[] {1, 2, 3, 4}, 0x81);

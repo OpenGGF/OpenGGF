@@ -29,6 +29,7 @@ public record SmpsSequencerSnapshot(
         int tempoAccumulator,
         int dividingTiming,
         boolean primed,
+        boolean deferNextDriverService,
         List<SmpsTrackSnapshot> tracks) {
 
     public SmpsSequencerSnapshot {

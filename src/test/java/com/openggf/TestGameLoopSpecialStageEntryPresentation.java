@@ -84,11 +84,26 @@ class TestGameLoopSpecialStageEntryPresentation {
 
         InOrder order = inOrder(provider, audio, fade, listener);
         order.verify(provider).initializeStage(2, SpecialStageStartupPolicy.FAST);
+        order.verify(audio).setSpeedShoes(false);
+        order.verify(audio).setSpeedMultiplier(1);
         order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
         order.verify(fade).startFadeFromWhite(any());
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+    }
+
+    @Test
+    void specialStageMusicClearsGameplayTempoBeforeLoadingTheSong()
+            throws Exception {
+        SpecialStageProvider provider = readyProvider();
+
+        loop.doEnterSpecialStage(provider, 2, false);
+
+        InOrder order = inOrder(audio);
+        order.verify(audio).setSpeedShoes(false);
+        order.verify(audio).setSpeedMultiplier(1);
+        order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
     }
 
     @Test

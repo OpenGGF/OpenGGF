@@ -457,6 +457,7 @@ final class SmpsAssetCatalog {
                 .tempoPhasePolicy(source.getTempoPhasePolicy())
                 .sfxPriorityPolicy(source.getSfxPriorityPolicy())
                 .driverServiceOrder(source.getDriverServiceOrder())
+                .sfxStartTiming(source.getSfxStartTiming())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
@@ -466,6 +467,7 @@ final class SmpsAssetCatalog {
                 .relativePointers(source.isRelativePointers())
                 .direct68kDriver(source.isDirect68kDriver())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .fmSfxReleaseMode(source.getFmSfxReleaseMode())
                 .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
                 .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
                 .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
@@ -482,6 +484,7 @@ final class SmpsAssetCatalog {
                 .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
+                .ymServiceTimingProfile(source.getYmServiceTimingProfile())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
                 .noteOnPrevent(source.getNoteOnPrevent())
