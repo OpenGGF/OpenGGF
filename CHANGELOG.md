@@ -1,5 +1,12 @@
 # Changelog
 
+- **S3K audio parity can now be localized through exact PCM boundaries:** a
+  diagnostic-only path records YM2612 stereo mix samples, held DAC codes, PSG
+  native stereo samples, and final presented PCM on their owning clocks. The
+  production fast path remains inert, while the pinned native core and Java
+  chips expose bounded, snapshot-stable evidence for distinguishing SMPS
+  interpreter errors from chip and presentation errors.
+
 - **S3K modulated PSG effects no longer chirp at note boundaries:** the
   locked-on Z80 driver applies modulation before its single PSG frequency
   upload. The engine was first publishing the unmodulated period and then the

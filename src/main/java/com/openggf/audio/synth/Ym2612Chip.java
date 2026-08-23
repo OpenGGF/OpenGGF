@@ -579,6 +579,7 @@ public class Ym2612Chip {
     private final Consumer<YmWriteTimeline.Entry> scheduledWriteMutation =
             this::applyScheduledWrite;
     private long renderedMasterCycles;
+    private ChipPcmDiagnosticTap pcmDiagnosticTap = ChipPcmDiagnosticTap.NONE;
 
     public Ym2612Chip() {
         for (int i = 0; i < 6; i++) {
@@ -990,6 +991,10 @@ public class Ym2612Chip {
                     "rendered master cycles cannot be negative");
         }
         this.renderedMasterCycles = renderedMasterCycles;
+    }
+
+    void installPcmDiagnosticTap(ChipPcmDiagnosticTap tap) {
+        pcmDiagnosticTap = tap == null ? ChipPcmDiagnosticTap.NONE : tap;
     }
 
     static void validateSnapshot(Snapshot snapshot) {
@@ -1810,6 +1815,11 @@ public class Ym2612Chip {
 
         lastLeft = leftSum;
         lastRight = rightSum;
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            pcmDiagnosticTap.onSample(new YmMixStereo(renderedMasterCycles,
+                    renderedMasterCycles / YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE,
+                    lastLeft, lastRight));
+        }
 
         // GPGX: LFO updated AFTER channel calculation
         advanceLfo();
@@ -2272,6 +2282,12 @@ public class Ym2612Chip {
             sample = dacLatchedValue;
         } else {
             return 0;
+        }
+
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            pcmDiagnosticTap.onSample(new DacLatch(renderedMasterCycles,
+                    renderedMasterCycles / YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE,
+                    sample));
         }
 
         sample = (int) (sample * DAC_GAIN);

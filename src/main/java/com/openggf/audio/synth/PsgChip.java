@@ -84,6 +84,8 @@ public class PsgChip {
     private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
     private boolean noiseShiftOnEveryToggle = false; // GPGX/libvgm positive-edge reference default
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private ChipPcmDiagnosticTap pcmDiagnosticTap = ChipPcmDiagnosticTap.NONE;
+    private long renderedMasterCycles;
 
     public PsgChip() {
         this(DEFAULT_SAMPLE_RATE, ChipType.INTEGRATED);
@@ -177,6 +179,7 @@ public class PsgChip {
                 clocksPerSampleFixed,
                 hqPsg,
                 noiseShiftOnEveryToggle,
+                renderedMasterCycles,
                 blip.captureSnapshot());
     }
 
@@ -251,6 +254,7 @@ public class PsgChip {
         clocksPerSampleFixed = snapshot.clocksPerSampleFixed();
         hqPsg = snapshot.hqPsg();
         noiseShiftOnEveryToggle = snapshot.noiseShiftOnEveryToggle();
+        renderedMasterCycles = snapshot.renderedMasterCycles();
         blip.restoreSnapshot(snapshot.blip());
     }
 
@@ -383,6 +387,7 @@ public class PsgChip {
         blip.reset(internalRate * CLOCK_RATIO, outputRate);
         clocks = 0;
         clockFrac = 0;
+        renderedMasterCycles = 0;
     }
 
     /**
@@ -398,6 +403,10 @@ public class PsgChip {
 
     void setWriteObserver(ChipWriteObserver observer) {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
+    void installPcmDiagnosticTap(ChipPcmDiagnosticTap tap) {
+        pcmDiagnosticTap = tap == null ? ChipPcmDiagnosticTap.NONE : tap;
     }
 
     /**
@@ -487,9 +496,64 @@ public class PsgChip {
         long total = clockFrac + clocksPerSampleFixed * len;
         int target = (int) (total >> CLOCK_FRAC_BITS);
         clockFrac = total & (CLOCK_FRAC_UNIT - 1);
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            emitNativeDiagnosticSamples(target);
+        }
         psgUpdate(target);
         endFrame(target);
         blip.readSamples(left, right, len);
+        renderedMasterCycles = Math.addExact(renderedMasterCycles, target);
+    }
+
+    private void emitNativeDiagnosticSamples(int targetClocks) {
+        int[] simulatedCounter = freqCounter.clone();
+        int[] simulatedPolarity = polarity.clone();
+        int simulatedNoise = noiseShiftValue;
+        long endCycle = Math.addExact(renderedMasterCycles, targetClocks);
+        long cycle = Math.multiplyExact(
+                Math.floorDiv(Math.addExact(renderedMasterCycles, CLOCK_RATIO - 1L),
+                        CLOCK_RATIO), CLOCK_RATIO);
+        while (cycle < endCycle) {
+            int localCycle = Math.toIntExact(cycle - renderedMasterCycles);
+            for (int channel = 0; channel < 3; channel++) {
+                while (simulatedCounter[channel] <= localCycle) {
+                    simulatedPolarity[channel] = -simulatedPolarity[channel];
+                    simulatedCounter[channel] = Math.addExact(
+                            simulatedCounter[channel], freqInc[channel]);
+                }
+            }
+            while (simulatedCounter[3] <= localCycle) {
+                simulatedPolarity[3] = -simulatedPolarity[3];
+                if (noiseShiftOnEveryToggle || simulatedPolarity[3] > 0) {
+                    int output = simulatedNoise & 1;
+                    if ((regs[6] & 0x04) != 0) {
+                        int feedback = NOISE_FEEDBACK[simulatedNoise & noiseBitMask];
+                        simulatedNoise = (simulatedNoise >> 1)
+                                | (feedback << noiseShiftWidth);
+                    } else {
+                        simulatedNoise = (simulatedNoise >> 1)
+                                | (output << noiseShiftWidth);
+                    }
+                }
+                simulatedCounter[3] = Math.addExact(
+                        simulatedCounter[3], freqInc[3]);
+            }
+            int left = 0;
+            int right = 0;
+            for (int channel = 0; channel < 3; channel++) {
+                if (!mutes[channel] && simulatedPolarity[channel] > 0) {
+                    left += chanOut[channel][0];
+                    right += chanOut[channel][1];
+                }
+            }
+            if (!mutes[3] && (simulatedNoise & 1) != 0) {
+                left += chanOut[3][0];
+                right += chanOut[3][1];
+            }
+            pcmDiagnosticTap.onSample(new PsgNativeStereo(cycle,
+                    cycle / CLOCK_RATIO, left, right));
+            cycle = Math.addExact(cycle, CLOCK_RATIO);
+        }
     }
 
     private void psgUpdate(int targetClocks) {
@@ -633,6 +697,7 @@ public class PsgChip {
             long clocksPerSampleFixed,
             boolean hqPsg,
             boolean noiseShiftOnEveryToggle,
+            long renderedMasterCycles,
             BlipDeltaBuffer.Snapshot blip) {
         public Snapshot {
             regs = copy(regs);

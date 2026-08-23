@@ -393,9 +393,11 @@ user explicitly disabled subagents for the remainder of this session.
 - Modify: `src/main/java/com/openggf/audio/synth/Ym2612Chip.java`
 - Modify: `src/main/java/com/openggf/audio/synth/PsgChip.java`
 - Modify: `src/main/java/com/openggf/audio/presentation/AudioPresentationParityProbe.java`
-- Modify: `tools/bizhawk-headless/native/gpgx-audio-lab/0001-trace-ym-write-cycles.patch`
-- Modify: `tools/bizhawk-headless/tests/GpgxYmWriteTimingLabTests.cs`
-- Modify: `tools/bizhawk-headless/tests/GpgxS3kAudioParityManifestTests.cs`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/0003-s3k-chip-pcm-events.patch`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/s3k-pcm-artifact-lock.json`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k_pcm_harness.c`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k_pcm_replay_harness.c`
+- Create: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/s3k-pcm-run.sh`
 - Create: `src/test/java/com/openggf/audio/synth/TestS3kChipPcmDiagnosticTap.java`
 - Create: `src/test/java/com/openggf/audio/presentation/TestS3kFinalPcmParityProbe.java`
 
@@ -419,7 +421,7 @@ user explicitly disabled subagents for the remainder of this session.
   }
   ```
 
-- [ ] **Step 1: Add RED boundary tests.**
+- [x] **Step 1: Add RED boundary tests.**
 
   Assert `YM2612_MIX_STEREO` fires immediately after one internal YM sample and
   before resampling/gain/PSG mix; `PSG_STEREO_NATIVE` fires after tone/noise,
@@ -429,7 +431,7 @@ user explicitly disabled subagents for the remainder of this session.
   digest tests covering YM phase/envelope/feedback/LFO/timer/DAC and PSG
   latch/counter/LFSR/pending state.
 
-- [ ] **Step 2: Observe RED.**
+- [x] **Step 2: Observe RED.**
 
   ```bash
   mvn -v
@@ -437,7 +439,7 @@ user explicitly disabled subagents for the remainder of this session.
     -Dtest=com.openggf.audio.synth.TestS3kChipPcmDiagnosticTap,com.openggf.audio.presentation.TestS3kFinalPcmParityProbe test
   ```
 
-- [ ] **Step 3: Implement inert Java taps.**
+- [x] **Step 3: Implement inert Java taps.**
 
   Keep the fast observer-free branch free of sample-record allocation. Use
   checked master-cycle/ordinal counters and immutable records. Do not expose the
@@ -445,24 +447,27 @@ user explicitly disabled subagents for the remainder of this session.
   packages; architecture tests import all `com.openggf` production classes and
   permit only the diagnostic factory/probe call sites.
 
-- [ ] **Step 4: Implement equivalent native taps.**
+- [x] **Step 4: Implement equivalent native taps.**
 
-  Add diagnostic callbacks at the exact named GPGX core boundaries. The native
-  terminal includes clock epoch, first-sample phase, tap layout/format, complete
-  initial-state digest, write-group digest, sample count/digest, and zero
-  overflow/fault. The standalone PSG selftest remains core-conformance evidence
-  unless integrated clock/reset/panning equality is proved.
+  Layer a separate diagnostic-only ABI after the frozen ordinary observer and
+  Task 2 parity ABI. Add callbacks at the actual GPGX YM pre-buffer mixed-sample
+  boundary, held DAC-code boundary, and PSG pre-Blip native-sample boundary.
+  Prove exact ABI layout, dense ordinals, master-cycle units, and N/N+1 capacity
+  behavior. Task 4 owns the case terminal that binds clock epoch, initial-state
+  digest, write-group digest, sample digest/count, and zero overflow/fault; the
+  raw ABI must not fabricate those case-level facts.
 
-- [ ] **Step 5: Implement same-core replay.**
+- [x] **Step 5: Implement actual-core replay.**
 
-  In the native C# harness, restore one authenticated GPGX state, replay the
-  native write schedule, restore again, replay the OpenGGF schedule, and require
-  byte-identical tap streams. The input coordinate is absolute master cycles
-  from reset; reject per-case offsets. Direct Java-vs-GPGX samples are emitted
-  as diagnostics with exact anchor-relative metrics but have no passing
-  tolerance.
+  In a standalone native harness compiled against the exact patched GPGX
+  `ym2612.c`, save one real core state, replay one absolute-master-cycle
+  schedule, restore the same state, and replay the identical projected schedule.
+  Require byte-identical mixed/DAC tap samples, and require a one-internal-sample
+  schedule poison to differ. Task 4 substitutes the authenticated native and
+  OpenGGF case schedules; direct Java-vs-GPGX samples remain diagnostics with
+  exact anchor-relative metrics and no invented passing tolerance.
 
-- [ ] **Step 6: Prove presentation transparency.**
+- [x] **Step 6: Prove presentation transparency.**
 
   Feed a fixed component stream through `AudioPresentationParityProbe` using
   multiple output chunk partitions. Require exact final left/right samples,

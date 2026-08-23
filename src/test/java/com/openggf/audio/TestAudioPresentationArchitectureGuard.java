@@ -7,6 +7,8 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.PsgChip;
+import com.openggf.audio.synth.Ym2612Chip;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -49,6 +51,22 @@ class TestAudioPresentationArchitectureGuard {
      * explicit review here; mutating owners are never allow-listed.
      */
     private static final Set<String> TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES = Set.of();
+
+    @Test
+    void chipPcmTapInstallationIsConfinedToItsPackageDiagnosticFactory() {
+        JavaClasses classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        List<JavaMethodCall> calls = classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getName().equals("installPcmDiagnosticTap"))
+                .filter(call -> call.getTargetOwner().isEquivalentTo(Ym2612Chip.class)
+                        || call.getTargetOwner().isEquivalentTo(PsgChip.class))
+                .toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOriginOwner().getFullName()
+                .equals("com.openggf.audio.synth.ChipPcmDiagnosticFactory")));
+    }
 
     /**
      * Superseded split-runtime / recording-lease-switch identifiers. None may
