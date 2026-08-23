@@ -30,5 +30,5 @@ for ($index = 0; $index -lt $args.Count; $index++) {
 }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-& java --source 21 (Join-Path $scriptDir 'TestSessionCoordinator.java') $translated
+& java --source 21 (Join-Path $scriptDir 'TestSessionCoordinator.java') --reuse-stale $translated
 exit $LASTEXITCODE

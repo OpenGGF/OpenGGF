@@ -73,6 +73,12 @@ public final class TestSessionCoordinator {
         Path lockParent = resolveLockParent(worktree, options.lockRoot);
         String runId = createRunId();
         Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
+        if (options.reuseStale && Files.isDirectory(namespace)) {
+            int reclaimResult = reclaimStaleLease(namespace.resolve("lease.lock"));
+            if (reclaimResult != 0 && reclaimResult != EX_TEMPFAIL) {
+                return reclaimResult;
+            }
+        }
         Lease lease = acquireLease(lockParent, namespace, worktree, runId, options.command,
                 options.debugGuard == null);
         if (lease == null) {
@@ -163,6 +169,16 @@ public final class TestSessionCoordinator {
         }
         return interrupted || identityChanged
                 ? (exitCode == 0 ? 1 : exitCode) : exitCode;
+    }
+
+    /** Reuses a completed wrapper lease only after the normal reclaim checks pass. */
+    private static int reclaimStaleLease(Path leasePath) throws Exception {
+        if (!Files.isDirectory(leasePath.getParent())) {
+            return 0;
+        }
+        Options reclaim = new Options();
+        reclaim.reclaim = leasePath;
+        return reclaim(reclaim);
     }
 
     private static int debugGuard(Options options) throws Exception {
@@ -1203,6 +1219,7 @@ public final class TestSessionCoordinator {
         Path exportFile;
         Path lockRoot;
         Path reclaim;
+        boolean reuseStale;
         boolean allowSystemTmp;
         String guard;
         String debugGuard;
@@ -1223,6 +1240,7 @@ public final class TestSessionCoordinator {
                     case "--lock-root" -> options.lockRoot = Path.of(require(args, ++i, arg));
                     case "--allow-system-tmp" -> options.allowSystemTmp = true;
                     case "--reclaim" -> options.reclaim = Path.of(require(args, ++i, arg));
+                    case "--reuse-stale" -> options.reuseStale = true;
                     case "--guard" -> {
                         String phase = require(args, ++i, arg);
                         if (isLifecycleGuard(phase)) {
