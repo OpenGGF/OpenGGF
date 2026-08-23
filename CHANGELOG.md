@@ -1,5 +1,11 @@
 # Changelog
 
+- **Trace reports are isolated per test session and invocation:** replay
+  diagnostics now publish into coordinator-owned roots with collision-resistant
+  owner metadata, so parallel suites cannot overwrite one another's evidence;
+  triage follows the same session report root while explicit report directories
+  remain supported for fixture-specific diagnostics.
+
 - **S3K AIZ dormant-sidekick selection follows the ROM owner:** the initial
   Tails CPU branch now relies on the active level-event provider's zone/act and
   star-post state instead of stale roster or physics-rule metadata, preventing

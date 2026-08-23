@@ -27,6 +27,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
@@ -81,6 +83,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntConsumer;
 
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -111,9 +115,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * state; every comparator and boundary assertion observes an engine that reached
  * its position by replaying the recorded BK2 inputs.
  */
+@ExtendWith(SessionInvocationExtension.class)
 abstract class AbstractRunChainTest {
-
-    private static final Path REPORT_OUTPUT_DIR = Path.of("target", "trace-reports");
 
     /**
      * Failing axes accumulated during one {@link #assertChainReplay} walk.
@@ -216,7 +219,7 @@ abstract class AbstractRunChainTest {
      * asserted at that seam were the boundary observation and dynamic art, never
      * the comparator's own {@code errorCount()} -- which the chain had already
      * computed and written into
-     * {@code target/trace-reports/<run>_seg<N>_report.json}. Thirteen rounds of
+     * the session-owned {@code run-chain} report directory. Thirteen rounds of
      * candidate fixes were consequently judged by which route a broken-but-
      * unasserted segment happened to take downstream, which measured noise.
      *
@@ -251,6 +254,8 @@ abstract class AbstractRunChainTest {
      * race-free source for {@link #writtenSegmentReport}.
      */
     private final Map<Integer, String> writtenSegmentReports =
+            new LinkedHashMap<>();
+    private final Map<Integer, Path> writtenSegmentReportPaths =
             new LinkedHashMap<>();
 
     protected record DynamicArtGapJournalEvidence(
@@ -5082,8 +5087,7 @@ abstract class AbstractRunChainTest {
                         + first.frame() + " field " + first.field()
                         + " rom=" + first.romValue()
                         + " engine=" + first.engineValue())
-                + "; report=" + REPORT_OUTPUT_DIR.resolve(
-                        runId + "_seg" + segmentIndex + "_report.json"));
+                + "; report=" + writtenSegmentReportPaths.get(segmentIndex));
     }
 
     /** Adapter-neutral assertions a committed route can add at a completed source segment. */
@@ -5097,7 +5101,7 @@ abstract class AbstractRunChainTest {
      *
      * <p>A segment writes its own report from {@link #maybeWriteReport} only
      * once it closes. A walk that fails mid-segment never reaches that call, so
-     * {@code target/trace-reports/} ends up holding reports for exactly the
+     * shared legacy report directory ended up holding reports for exactly the
      * segments that went fine and none for the segment that failed -- triage
      * from the reports alone sees a set of clean segments and no evidence at
      * all, which is the opposite of what happened. Two separate rounds (S2 and
@@ -5128,27 +5132,36 @@ abstract class AbstractRunChainTest {
 
     private void writeChainSegmentReport(String runId, int segmentIndex, LiveTraceComparator comparator)
             throws IOException {
-        Files.createDirectories(REPORT_OUTPUT_DIR);
-        Path jsonPath = REPORT_OUTPUT_DIR.resolve(runId + "_seg" + segmentIndex + "_report.json");
         String json = buildComparatorSummaryJson(comparator);
+        SessionInvocationExtension.SessionInvocation invocation =
+                SessionInvocationExtension.SessionInvocation.current();
+        TestSessionOutputPaths.ReportAllocation allocation =
+                TestSessionOutputPaths.allocateReport("run-chain",
+                        invocation.className(), invocation.methodName(),
+                        invocation.parameterIndex(), invocation.invocationId(),
+                        "segment-" + segmentIndex,
+                        runId + "_seg" + segmentIndex, ".json");
+        Path jsonPath = allocation.physicalPath();
         writtenSegmentReports.put(segmentIndex, json);
-        Files.writeString(jsonPath, json);
+        writtenSegmentReportPaths.put(segmentIndex, jsonPath);
+        TestSessionOutputPaths.publish(jsonPath, json);
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
         assertTrue(Files.exists(jsonPath), "Chain segment report must be written: " + jsonPath);
     }
 
     /**
      * The comparator summary this walk wrote for {@code segmentIndex}, as JSON.
      *
-     * <p><b>Why a test must read this and not the file.</b> The report path is
-     * {@code <runId>_seg<N>_report.json} -- keyed on the run id and the
-     * <em>re-based</em> segment index, and on nothing that distinguishes one
-     * lane of that run from another. Every class replaying a run therefore
-     * writes the same names into the one shared {@code target/trace-reports/}
-     * directory: for {@code s1-sonic-complete-withemeralds}, the full chain's
-     * real segment 0 and a {@link #assertChainReplayFromSegment} boot segment
-     * both land on {@code _seg0_report.json}. The trace-replay profile runs
-     * {@code forkCount=4}, so those lanes run in PARALLEL JVMs and the last
-     * writer before a read wins.
+     * <p><b>Why a test must read this and not the file.</b> Before session
+     * ownership, the report path was {@code <runId>_seg<N>_report.json} --
+     * keyed on the run id and the <em>re-based</em> segment index, and on
+     * nothing that distinguished one lane of that run from another. Every
+     * class replaying a run therefore wrote the same names into one shared
+     * legacy directory: for {@code s1-sonic-complete-withemeralds}, the full
+     * chain's real segment 0 and a {@link #assertChainReplayFromSegment} boot
+     * segment both landed on {@code _seg0_report.json}. The trace-replay
+     * profile runs {@code forkCount=4}, so those lanes ran in PARALLEL JVMs
+     * and the last writer before a read won.
      *
      * <p>That made {@code TestS1ColdStartAttribution} flaky in a way that read
      * as a game result rather than an instrument fault: it saw the full chain's
@@ -5177,7 +5190,6 @@ abstract class AbstractRunChainTest {
             String runId,
             DynamicArtGapJournalProbe journal,
             List<String> gapFailures) throws IOException {
-        Files.createDirectories(REPORT_OUTPUT_DIR);
         List<Map<String, Object>> gaps = new ArrayList<>();
         for (DynamicArtStructuralGapEvidence gap : journal.structuralGaps) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -5203,18 +5215,23 @@ abstract class AbstractRunChainTest {
         summary.put("failureCount", gapFailures.size());
         summary.put("failures", List.copyOf(gapFailures));
         summary.put("gaps", gaps);
-        Path jsonPath = REPORT_OUTPUT_DIR.resolve(
-                runId + "_dynamic_art_gap_report.json");
-        Files.writeString(jsonPath, new ObjectMapper()
+        SessionInvocationExtension.SessionInvocation invocation =
+                SessionInvocationExtension.SessionInvocation.current();
+        TestSessionOutputPaths.ReportAllocation allocation =
+                TestSessionOutputPaths.allocateReport("run-chain",
+                        invocation.className(), invocation.methodName(),
+                        invocation.parameterIndex(), invocation.invocationId(),
+                        "dynamic-art-gap", runId + "_dynamic_art_gap", ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .writeValueAsString(summary));
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
     }
 
     private void writeDynamicArtInteriorReport(
             String runId,
             int segmentIndex,
             List<FrameComparison> comparisons) throws IOException {
-        Files.createDirectories(REPORT_OUTPUT_DIR);
         List<Map<String, Object>> mismatches = new ArrayList<>();
         for (FrameComparison comparison : comparisons) {
             comparison.divergentFields().forEach(field -> {
@@ -5235,12 +5252,19 @@ abstract class AbstractRunChainTest {
                         == com.openggf.trace.Severity.ERROR)
                 .count());
         summary.put("mismatches", mismatches);
-        Path jsonPath = REPORT_OUTPUT_DIR.resolve(
-                runId + "_seg" + segmentIndex
-                        + "_dynamic_art_report.json");
         ObjectMapper mapper =
                 new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-        Files.writeString(jsonPath, mapper.writeValueAsString(summary));
+        SessionInvocationExtension.SessionInvocation invocation =
+                SessionInvocationExtension.SessionInvocation.current();
+        TestSessionOutputPaths.ReportAllocation allocation =
+                TestSessionOutputPaths.allocateReport("run-chain",
+                        invocation.className(), invocation.methodName(),
+                        invocation.parameterIndex(), invocation.invocationId(),
+                        "segment-" + segmentIndex + "-dynamic-art",
+                        runId + "_seg" + segmentIndex + "_dynamic_art", ".json");
+        Path jsonPath = allocation.physicalPath();
+        TestSessionOutputPaths.publish(jsonPath, mapper.writeValueAsString(summary));
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
         assertTrue(mismatches.isEmpty(),
                 "DPLC divergence in named-run special-stage segment "
                         + segmentIndex + "; report=" + jsonPath);

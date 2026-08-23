@@ -257,4 +257,66 @@ class TestTraceTriageTool {
         assertTrue(brief.contains("BOOTSTRAP (frame 0) ERROR present"),
                 "bootstrap error should surface ahead of per-frame divergence");
     }
+
+    @Test
+    void defaultAndExplicitReportPathsRemainDistinct() {
+        String property = System.getProperty("openggf.trace.reports");
+        try {
+            System.setProperty("openggf.trace.reports", "/session/trace reports");
+            assertEquals("/session/trace reports",
+                    TraceTriageTool.configuredReportDirectory());
+            assertEquals(Path.of("/session/trace reports/s2_mtz1_report.json"),
+                    TraceTriageTool.defaultReportPath(
+                            TraceTriageTool.configuredReportDirectory(), "s2", "mtz1"));
+            assertEquals(Path.of("/caller/report.json"),
+                    TraceTriageTool.resolveReportPath(
+                            "/caller/report.json", "/ignored", "s2", "mtz1"),
+                    "--report remains an explicit caller-owned path");
+            assertEquals(Path.of("/session/trace reports/s2_mtz1_context.txt"),
+                    TraceTriageTool.contextPathForReport(
+                            Path.of("/session/trace reports/s2_mtz1_report.json")));
+        } finally {
+            if (property == null) {
+                System.clearProperty("openggf.trace.reports");
+            } else {
+                System.setProperty("openggf.trace.reports", property);
+            }
+        }
+    }
+
+    @Test
+    void defaultTriageDiscoversOneSessionReport(@TempDir Path tempDir) throws Exception {
+        Path traceDirectory = tempDir.resolve("trace");
+        Files.createDirectories(traceDirectory);
+        Path report = traceDirectory.resolve("trace/s2_mtz1_physics-single-0123456789abcdef.json");
+        Files.createDirectories(report.getParent());
+        Files.writeString(report, SYNTHETIC_REPORT, StandardCharsets.UTF_8);
+
+        assertEquals(report, TraceTriageTool.resolveDefaultReportPath(
+                tempDir.toString(), "s2", "mtz1"));
+    }
+
+    @Test
+    void defaultTriageDiscoversSpecialStageReportProfile(@TempDir Path tempDir) throws Exception {
+        Path report = tempDir.resolve(
+                "special-stage/s2_special_stage_0-s2-0-0123456789abcdef.json");
+        Files.createDirectories(report.getParent());
+        Files.writeString(report, SYNTHETIC_REPORT, StandardCharsets.UTF_8);
+
+        assertEquals(report, TraceTriageTool.resolveDefaultReportPath(
+                tempDir.toString(), "s2", "special_stage_0"));
+    }
+
+    @Test
+    void sessionReportTakesPrecedenceOverStaleLegacyReport(@TempDir Path tempDir) throws Exception {
+        Path legacy = tempDir.resolve("s2_mtz1_report.json");
+        Files.writeString(legacy, SYNTHETIC_REPORT, StandardCharsets.UTF_8);
+        Path sessionReport = tempDir.resolve(
+                "trace/s2_mtz1-single-0123456789abcdef.json");
+        Files.createDirectories(sessionReport.getParent());
+        Files.writeString(sessionReport, SYNTHETIC_REPORT, StandardCharsets.UTF_8);
+
+        assertEquals(sessionReport, TraceTriageTool.resolveDefaultReportPath(
+                tempDir.toString(), "s2", "mtz1"));
+    }
 }

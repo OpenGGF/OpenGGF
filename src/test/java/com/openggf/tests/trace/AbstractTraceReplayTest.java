@@ -27,6 +27,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.s2.S2SkyChaseBadnikDiagnostics;
@@ -61,6 +63,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -81,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>Originally used JUnit 4 because the ROM fixture was exposed as a JUnit 4 rule.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
     private static final boolean QUIET_TRACE_LOGS =
@@ -133,7 +137,7 @@ public abstract class AbstractTraceReplayTest {
 
     /** Override to change report output directory. */
     protected Path reportOutputDir() {
-        return Path.of("target/trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     /** Override only for explicitly diagnostic trace fixtures that are not release gates. */
@@ -1620,23 +1624,15 @@ public abstract class AbstractTraceReplayTest {
 
     private void writeReport(DivergenceReport report, TraceMetadata meta) {
         try {
-            Path outDir = reportOutputDir();
-            Files.createDirectories(outDir);
-
             String prefix = meta.game() + "_" + meta.zone() + meta.act();
             TraceVerificationScope scope = verificationScope();
             String scopeSuffix = scope == TraceVerificationScope.ALL
                     ? ""
                     : "_" + scope.name().toLowerCase();
-            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
-            Files.writeString(jsonPath, report.toJson());
-
-            if (report.hasErrors(scope)) {
-                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
-                Files.writeString(contextPath,
-                    report.getContextWindow(
-                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
-            }
+            TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                    SessionInvocationExtension.SessionInvocation.current(),
+                    "single", prefix + scopeSuffix, scope,
+                    TraceReplayConsole.contextRadius());
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());
         }
